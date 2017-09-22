@@ -3401,8 +3401,8 @@ class TestSummationExpression(unittest.TestCase):
     def test_summation5(self):
         e = summation(self.m.b, denom=self.m.a)
         self.assertEqual( e(), 10 )
-        self.assertIs(type(e), EXPR._SumExpression)
-        self.assertEqual(e.size(False), 24)
+        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertEqual(e.size(False), 22)
 
     def test_summation6(self):
         e = summation(self.m.a, denom=self.m.p)
@@ -3415,13 +3415,94 @@ class TestSummationExpression(unittest.TestCase):
     def test_summation7(self):
         e = summation(self.m.p, self.m.q, index=self.m.I)
         self.assertEqual( e(), 15 )
-        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
-        self.assertEqual( len(e._args), 1)
-        self.assertEqual(e.size(False), 20)
+        self.assertIs(type(e), EXPR._NPV_SumExpression)
+        self.assertEqual( len(e._args), 2)
+        self.assertEqual(e.size(False), 19)
 
     def test_summation_compression(self):
         e1 = summation(self.m.a)
         e2 = summation(self.m.b)
+        e = e1+e2
+        e_ = EXPR.compress_expression(e)
+        self.assertEqual( e_(), 75 )
+        self.assertIs(type(e_), EXPR._CompressedSumExpression)
+        self.assertEqual( len(e_._args), 3)
+        self.assertEqual(e_.size(False), 16)
+
+
+class TestSumExpression(unittest.TestCase):
+
+    def setUp(self):
+        # This class tests the Pyomo 5.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
+
+        self.m = ConcreteModel()
+        self.m.I = RangeSet(5)
+        self.m.a = Var(self.m.I, initialize=5)
+        self.m.b = Var(self.m.I, initialize=10)
+        self.m.p = Param(self.m.I, initialize=1, mutable=True)
+        self.m.q = Param(self.m.I, initialize=3, mutable=False)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common._default_mode)
+        self.m = None
+
+    def test_summation1(self):
+        e = Sum(self.m.a[i] for i in self.m.a)
+        self.assertEqual( e(), 25 )
+        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertEqual( id(self.m.a[1]), id(e._args[1]) )
+        self.assertEqual( id(self.m.a[2]), id(e._args[2]) )
+        self.assertEqual(e.size(), 7)
+
+    def test_summation2(self):
+        e = Sum(self.m.p[i]*self.m.a[i] for i in self.m.a)
+        self.assertEqual( e(), 25 )
+        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertEqual( id(self.m.a[1]), id(e._args[1]._args[1]) )
+        self.assertEqual( id(self.m.a[2]), id(e._args[2]._args[1]) )
+        self.assertEqual(e.size(), 17)
+
+    def test_summation3(self):
+        e = Sum(self.m.q[i]*self.m.a[i] for i in self.m.a)
+        self.assertEqual( e(), 75 )
+        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertEqual( id(self.m.a[1]), id(e._args[1]._args[1]) )
+        self.assertEqual( id(self.m.a[2]), id(e._args[2]._args[1]) )
+        self.assertEqual(e.size(), 17)
+
+    def test_summation4(self):
+        e = Sum(self.m.a[i]*self.m.b[i] for i in self.m.a)
+        self.assertEqual( e(), 250 )
+        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertEqual( id(self.m.a[1]), id(e._args[1]._args[0]) )
+        self.assertEqual( id(self.m.a[2]), id(e._args[2]._args[0]) )
+        self.assertEqual(e.size(), 17)
+
+    def test_summation5(self):
+        e = Sum(self.m.b[i]/self.m.a[i] for i in self.m.a)
+        self.assertEqual( e(), 10 )
+        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertEqual(e.size(False), 22)
+
+    def test_summation6(self):
+        e = Sum(self.m.a[i]/self.m.p[i] for i in self.m.a)
+        self.assertEqual( e(), 25 )
+        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertEqual( id(self.m.a[1]), id(e._args[1]._args[0]) )
+        self.assertEqual( id(self.m.a[2]), id(e._args[2]._args[0]) )
+        self.assertEqual(e.size(), 22)
+
+    def test_summation7(self):
+        e = Sum(self.m.p[i]*self.m.q[i] for i in self.m.I)
+        self.assertEqual( e(), 15 )
+        self.assertIs(type(e), EXPR._NPV_SumExpression)
+        self.assertEqual( len(e._args), 2)
+        self.assertEqual(e.size(False), 19)
+
+    def test_summation_compression(self):
+        e1 = Sum(self.m.a[i] for i in self.m.a)
+        e2 = Sum(self.m.b[i] for i in self.m.b)
         e = e1+e2
         e_ = EXPR.compress_expression(e)
         self.assertEqual( e_(), 75 )
