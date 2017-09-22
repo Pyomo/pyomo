@@ -96,6 +96,18 @@ class ignore_entangled_expressions(object):
         ignore_entangled_expressions.detangle = True
 
 
+class mutable_sum_context(object):
+
+    def __enter__(self):
+        self.e = _MultiSumExpression([0])
+        return self.e
+
+    def __exit__(self, *args):
+        self.e.__class__ = _StaticMultiSumExpression
+
+linear_expression = mutable_sum_context()
+
+
 #-------------------------------------------------------
 #
 # Functions used to process expression trees
@@ -116,7 +128,8 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
     if expr.__class__ in native_numeric_types or not expr.is_expression():
         return expr
     if expr.__class__ == _MultiSumExpression:
-        return _CompressedSumExpression(tuple(expr._args))
+        expr.__class__ = _CompressedMultiSumExpression
+        return expr
     if isinstance(expr, _MultiSumExpression):
         return expr
     #
@@ -205,7 +218,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
         # Now replace the current expression object if it's a sum
         #
         if _obj.__class__ == _SumExpression or _obj.__class__ == _NPV_SumExpression or _obj.__class__ == _Constant_SumExpression:
-            ans = _obj._combine_expr(_result)
+            ans = _SumExpression._combine_expr(*_result)
             if _stack:
                 #
                 # We've replaced a node, so set the context for the parent's search to
@@ -213,10 +226,21 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
                 #
                 _stack[-2] = True
         #
-        # Now replace the current expression object if it's a product or reciprocal
+        # Now replace the current expression object if it's a product
         #
-        elif multiprod and (isinstance(_obj, (_ProductExpression, _ReciprocalExpression))):
-            ans = _obj._combine_expr(_result)
+        elif multiprod and isinstance(_obj, _ProductExpression):
+            ans = _ProductExpression._combine_expr(*_result)
+            if _stack:
+                #
+                # We've replaced a node, so set the context for the parent's search to
+                # ensure that it is cloned.
+                #
+                _stack[-2] = True
+        #
+        # Now replace the current expression object if it's a reciprocal
+        #
+        elif multiprod and isinstance(_obj, _ReciprocalExpression):
+            ans = _ReciprocalExpression._combine_expr(*_result)
             if _stack:
                 #
                 # We've replaced a node, so set the context for the parent's search to
@@ -243,7 +267,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
             _stack[-1][-1].append( ans )
         else:
             if ans.__class__ == _MultiSumExpression:
-                return _CompressedSumExpression(tuple(ans._args))
+                ans.__class__ = _CompressedSumExpression
             return ans
 
 
@@ -1176,8 +1200,8 @@ class _ProductExpression(_ExpressionBase):
         _l, _r = result
         return _l * _r
 
-    def _combine_expr(self, _result):
-        _l, _r = _result
+    @staticmethod
+    def _combine_expr(_l, _r):
         #
         # p * X
         #
@@ -1369,9 +1393,10 @@ class _ReciprocalExpression(_ExpressionBase):
     def _apply_operation(self, result):
         return 1 / result[0]
 
-    def _combine_expr(self, _result):
+    @staticmethod
+    def _combine_expr(_r):
         _l = 1
-        _r = _result[0]
+        #_r = _result
         #
         # 1 / X
         #
@@ -1438,8 +1463,8 @@ class _SumExpression(_LinearOperatorExpression):
     def getname(self, *args, **kwds):
         return 'sum'
 
-    def _combine_expr(self, _result):
-        _l, _r = _result
+    @staticmethod
+    def _combine_expr(_l, _r):
         #
         # Augment the current multi-sum (LHS)
         #
@@ -1450,7 +1475,7 @@ class _SumExpression(_LinearOperatorExpression):
             #
             # Add the RHS to the first term of the multisum
             #
-            if not _r._potentially_variable():
+            if _r.__class__ in native_numeric_types or not _r._potentially_variable():
                 #print("H4")
                 _l._args[0] += _r
                 ans = _l
@@ -1614,6 +1639,9 @@ class _MultiSumExpression(_SumExpression):
     def getname(self, *args, **kwds):
         return 'multisum'
 
+    def is_constant(self):
+        return len(self._args) <= 1
+
     def _potentially_variable(self):
         return len(self._args) > 1
 
@@ -1636,10 +1664,14 @@ class _MultiSumExpression(_SumExpression):
 class _StaticMultiSumExpression(_MultiSumExpression):
     """A temporary object that defines a summation with 1 or more terms and a constant term."""
     
+    __slots__ = ()
+
 
 class _CompressedSumExpression(_MultiSumExpression):
     """A temporary object that defines a summation with 1 or more terms and a constant term."""
     
+    __slots__ = ()
+
 
 class _GetItemExpression(_ExpressionBase):
     """Expression to call "__getitem__" on the base"""
@@ -1938,12 +1970,13 @@ def _process_arg(obj):
     return obj
 
 
-def generate_expression(etype, _self, _other, _process=0):
-
-    _self = _process_arg(_self)
+def generate_expression(etype, _self, _other):
 
     if etype > _inplace:
         etype -= _inplace
+
+    if _self.__class__ is not _MultiSumExpression:
+        _self = _process_arg(_self)
 
     if etype >= _unary:
         #
@@ -1975,7 +2008,8 @@ def generate_expression(etype, _self, _other, _process=0):
             raise DeveloperError(
                 "Unexpected unary operator id (%s)" % ( etype, ))
 
-    _other = _process_arg(_other)
+    if _self.__class__ is not _MultiSumExpression:
+        _other = _process_arg(_other)
 
     if etype < 0:
         #
@@ -2027,7 +2061,9 @@ def generate_expression(etype, _self, _other, _process=0):
         #
         # x + y
         #
-        if _other.__class__ in native_numeric_types:
+        if _self.__class__ is _MultiSumExpression or _other.__class__ is _MultiSumExpression:
+            return _SumExpression._combine_expr(_self, _other)
+        elif _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
                 return _self + _other
             elif _other == 0:   #isclose(_other, 0):
