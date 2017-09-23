@@ -22,6 +22,8 @@ from six import StringIO, next, string_types, itervalues
 from six.moves import xrange, builtins
 from weakref import ref
 
+from pyutilib.math.util import isclose
+
 from pyomo.core.kernel.numvalue import \
     (NumericValue,
      NumericConstant,
@@ -39,6 +41,14 @@ from pyomo.core.kernel.expr_common import \
      chainedInequalityErrorMessage as cIEM)
 from pyomo.core.kernel import expr_common as common
 from pyomo.core.base.param import _ParamData, SimpleParam
+from pyomo.core.base.template_expr import TemplateExpressionError
+
+##
+## NEEDS TO BE REMOVED
+##
+
+def _clear_expression_pool():
+    pass
 
 sum = builtins.sum
 _getrefcount_available = False
@@ -70,32 +80,39 @@ component to store the subexpression and use the subexpression in each
 expression.  Common subexpression:\n\t%s""" % (str(sub_expr),)
         super(EntangledExpressionError, self).__init__(msg)
 
+#-------------------------------------------------------
+#
+# Global Data
+#
+#-------------------------------------------------------
 
-class bypass_clone_check(object):
-
-    def __init__(self):
-        pass
+class ignore_entangled_expressions(object):
+    detangle = True
 
     def __enter__(self):
-        pass
+        ignore_entangled_expressions.detangle = False
 
     def __exit__(self, *args):
-        pass
+        ignore_entangled_expressions.detangle = True
 
 
-import time
-class Timer:    
+class mutable_sum_context(object):
+
     def __enter__(self):
-        self.start = time.time()
-        return self
+        self.e = _MultiSumExpression([0])
+        return self.e
 
     def __exit__(self, *args):
-        self.end = time.time()
-        self.interval = self.end - self.start
+        self.e.__class__ = _StaticMultiSumExpression
+
+linear_expression = mutable_sum_context()
 
 
-_compressed_expressions = set()
-
+#-------------------------------------------------------
+#
+# Functions used to process expression trees
+#
+#-------------------------------------------------------
 
 def compress_expression(expr, verbose=False, dive=False, multiprod=False):
     #
@@ -111,7 +128,8 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
     if expr.__class__ in native_numeric_types or not expr.is_expression():
         return expr
     if expr.__class__ == _MultiSumExpression:
-        return _CompressedSumExpression(tuple(expr._args))
+        expr.__class__ = _CompressedSumExpression
+        return expr
     if isinstance(expr, _MultiSumExpression):
         return expr
     #
@@ -169,7 +187,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
                 # Store a native or numeric object
                 #
                 _result.append( _sub )
-            elif not isinstance(_sub, _ExpressionBase) or isinstance(_sub, _MultiSumExpression) or isinstance(_sub, _MultiProdExpression):
+            elif _sub.__class__ not in pyomo5_expression_types or isinstance(_sub, _MultiSumExpression) or isinstance(_sub, _MultiProdExpression):
                 _result.append( _sub )
             else:
                 #
@@ -200,7 +218,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
         # Now replace the current expression object if it's a sum
         #
         if _obj.__class__ == _SumExpression or _obj.__class__ == _NPV_SumExpression or _obj.__class__ == _Constant_SumExpression:
-            ans = _obj._combine_expr(_result)
+            ans = _SumExpression._combine_expr(*_result)
             if _stack:
                 #
                 # We've replaced a node, so set the context for the parent's search to
@@ -208,10 +226,21 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
                 #
                 _stack[-2] = True
         #
-        # Now replace the current expression object if it's a product or reciprocal
+        # Now replace the current expression object if it's a product
         #
-        elif multiprod and (isinstance(_obj, (_ProductExpression, _ReciprocalExpression))):
-            ans = _obj._combine_expr(_result)
+        elif multiprod and isinstance(_obj, _ProductExpression):
+            ans = _ProductExpression._combine_expr(*_result)
+            if _stack:
+                #
+                # We've replaced a node, so set the context for the parent's search to
+                # ensure that it is cloned.
+                #
+                _stack[-2] = True
+        #
+        # Now replace the current expression object if it's a reciprocal
+        #
+        elif multiprod and isinstance(_obj, _ReciprocalExpression):
+            ans = _ReciprocalExpression._combine_expr(*_result)
             if _stack:
                 #
                 # We've replaced a node, so set the context for the parent's search to
@@ -220,7 +249,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
                 _stack[-2] = True
 
         elif _clone:
-            ans = _obj.__class__( tuple(_result) )
+            ans = _obj._clone( tuple(_result) )
             if _stack:
                 _stack[-2] = True
 
@@ -238,11 +267,11 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
             _stack[-1][-1].append( ans )
         else:
             if ans.__class__ == _MultiSumExpression:
-                return _CompressedSumExpression(tuple(ans._args))
+                ans.__class__ = _CompressedSumExpression
             return ans
 
 
-def clone_expression(expr, substitute=None, verbose=False):
+def clone_expression(expr, substitute=None, verbose=False, clone_leaves=True):
     from pyomo.core.kernel.numvalue import native_numeric_types
     #
     memo = {'__block_scope__': { id(None): False }}
@@ -288,16 +317,19 @@ def clone_expression(expr, substitute=None, verbose=False):
 
             _sub = _argList[_idx]
             _idx += 1
-            if _sub.__class__ in native_numeric_types or not _sub.is_expression():
+            if _sub.__class__ in native_numeric_types:
                 #
                 # Store a native or numeric object
                 #
                 _result.append( deepcopy(_sub, memo) )
-            elif not isinstance(_sub, _ExpressionBase):
+            elif _sub.__class__ not in pyomo5_expression_types:
                 #
                 # Store a kernel object that is cloned
                 #
-                _result.append( deepcopy(_sub, memo) )
+                if clone_leaves:
+                    _result.append( deepcopy(_sub, memo) )
+                else:
+                    _result.append( _sub )
             else:
                 #
                 # Push an expression onto the stack
@@ -415,50 +447,60 @@ def _expression_size(expr, verbose=False):
             return ans
 
 
-def evaluate_expression(exp, exception=None, only_fixed_vars=False):
-    from pyomo.core.base import _VarData # TODO
-    from pyomo.core.kernel.component_variable import IVariable # TODO
+def evaluate_expression(exp, exception=True, only_fixed_vars=False):
+    from pyomo.core.base import _VarData
+    from pyomo.core.kernel.component_variable import IVariable
 
-    if isinstance(exp, (_VarData, IVariable)):
-        if not only_fixed_vars or exp.fixed:
-            return exp.value
-        else:
-            raise ValueError("Cannot evaluate an unfixed variable with only_fixed_vars=True")
-    elif exp.__class__ in native_numeric_types:
-        return exp
-    elif not exp.is_expression():
-        return exp()
+    try:
+        if isinstance(exp, (_VarData, IVariable)):
+            if not only_fixed_vars or exp.fixed:
+                return exp.value
+            else:
+                raise ValueError("Cannot evaluate an unfixed variable with only_fixed_vars=True")
+        elif exp.__class__ in native_numeric_types:
+            return exp
+        elif not exp.is_expression():
+            return exp()
 
-    _stack = [ (exp, exp._args, 0, len(exp._args), []) ]
-    while 1:  # Note: 1 is faster than True for Python 2.x
-        _obj, _argList, _idx, _len, _result = _stack.pop()
-        while _idx < _len:
-            _sub = _argList[_idx]
-            _idx += 1
-            if _sub.__class__ in native_numeric_types:
-                _result.append( _sub )
-            elif _sub.is_expression():
-                _stack.append( (_obj, _argList, _idx, _len, _result) )
-                _obj     = _sub
-                _argList = _sub._args
-                _idx     = 0
-                _len     = len(_argList)
-                _result  = []
-            elif isinstance(_sub, (_VarData, IVariable)):
-                if only_fixed_vars:
-                    if _sub.fixed:
-                        _result.append( _sub.value )
+        _stack = [ (exp, exp._args, 0, len(exp._args), []) ]
+        while 1:  # Note: 1 is faster than True for Python 2.x
+            _obj, _argList, _idx, _len, _result = _stack.pop()
+            while _idx < _len:
+                _sub = _argList[_idx]
+                _idx += 1
+                if _sub.__class__ in native_numeric_types:
+                    _result.append( _sub )
+                elif _sub.is_expression():
+                    _stack.append( (_obj, _argList, _idx, _len, _result) )
+                    _obj     = _sub
+                    _argList = _sub._args
+                    _idx     = 0
+                    _len     = len(_argList)
+                    _result  = []
+                elif isinstance(_sub, (_VarData, IVariable)):
+                    if only_fixed_vars:
+                        if _sub.fixed:
+                            _result.append( _sub.value )
+                        else:
+                            raise ValueError("Cannot evaluate an unfixed variable with only_fixed_vars=True")
                     else:
-                        raise ValueError("Cannot evaluate an unfixed variable with only_fixed_vars=True")
+                        _result.append( value(_sub) )
                 else:
                     _result.append( value(_sub) )
+            ans = _obj._apply_operation(_result)
+            if _stack:
+                _stack[-1][-1].append( ans )
             else:
-                _result.append( value(_sub) )
-        ans = _obj._apply_operation(_result)
-        if _stack:
-            _stack[-1][-1].append( ans )
-        else:
-            return ans
+                return ans
+    except TemplateExpressionError:
+        if exception:
+            raise
+        return None
+    except ValueError:
+        if exception:
+            raise
+        return None
+
 
 def identify_variables(expr,
                        include_fixed=True,
@@ -498,33 +540,11 @@ def identify_variables(expr,
                 yield _sub
 
 
-def process_arg(obj):
-    if obj.__class__ in native_types:
-        return obj
-    elif obj.__class__ == NumericConstant:
-        return value(obj)
-    elif (obj.__class__ == _ParamData or obj.__class__ == SimpleParam) and not obj._component()._mutable:
-        if not obj._constructed:
-            return obj
-        if obj.value is None:
-            return obj
-        return obj.value
-
-    try:
-        obj_expr = obj.is_expression()
-    except AttributeError:
-        try:
-            if obj.is_indexed():
-                raise TypeError(
-                    "Argument for expression is an indexed numeric "
-                    "value\nspecified without an index:\n\t%s\nIs this "
-                    "value defined over an index that you did not specify?"
-                    % (obj.name, ) )
-        except AttributeError:
-            pass
-
-    return obj
-
+#-------------------------------------------------------
+#
+# Expression classes
+#
+#-------------------------------------------------------
 
 
 class _ExpressionBase(NumericValue):
@@ -544,11 +564,15 @@ class _ExpressionBase(NumericValue):
     fixed                   T       T       F       T
     """
 
-    __slots__ =  ('_args',)
+    __slots__ =  ('_args','_owned')
     PRECEDENCE = 0
 
     def __init__(self, args):
         self._args = args
+        self._owned = False
+        for arg in args:
+            if arg.__class__ in pyomo5_expression_types:
+                arg._owned = True
 
     def __getstate__(self):
         state = super(_ExpressionBase, self).__getstate__()
@@ -589,11 +613,11 @@ class _ExpressionBase(NumericValue):
                 #    repn1 = generate_standard_repn(self._args[1], compress=False, quadratic=False, compute_values=False)
                 #    expr = _InequalityExpression( (repn0.to_expression(), repn1.to_expression()), self._strict, self._cloned_from)
             elif self.__class__ is _EqualityExpression:
-                repn0 = generate_standard_repn(self._args[0], compress=False, quadratic=False, compute_values=False)
-                repn1 = generate_standard_repn(self._args[1], compress=False, quadratic=False, compute_values=False)
+                repn0 = generate_standard_repn(self._args[0], quadratic=False, compute_values=False)
+                repn1 = generate_standard_repn(self._args[1], quadratic=False, compute_values=False)
                 expr = _EqualityExpression( (repn0.to_expression(), repn1.to_expression()) )
             else:
-                repn = generate_standard_repn(self, compress=False, quadratic=False, compute_values=False)
+                repn = generate_standard_repn(self, quadratic=False, compute_values=False)
                 expr = repn.to_expression()
         except Exception as e:
             print(str(e))
@@ -607,9 +631,11 @@ class _ExpressionBase(NumericValue):
         #
         buf = StringIO()
         self.to_string(buf, expr=expr)
-        return buf.getvalue()
+        ans = buf.getvalue()
+        buf.close()
+        return ans
 
-    def __call__(self, exception=None):
+    def __call__(self, exception=True):
         return evaluate_expression(self, exception)
 
     def clone(self, substitute=None, verbose=False):
@@ -898,12 +924,17 @@ class _NPV_NegationExpression(_NegationExpression):
 class _ExternalFunctionExpression(_ExpressionBase):
     __slots__ = ('_fcn',)
 
-    def __init__(self, fcn, args=None):
+    def __init__(self, args, fcn=None):
         """Construct a call to an external function"""
-        if type(fcn) is tuple and args==None:
-            fcn, args = fcn
-        self._fcn = fcn
         self._args = args
+        self._fcn = fcn
+        self._owned = False
+        for arg in args:
+            if arg.__class__ in pyomo5_expression_types:
+                arg._owned = True
+
+    def _clone(self, args):
+        return self.__class__(args, self._fcn)
 
     def __getstate__(self):
         result = super(_ExternalFunctionExpression, self).__getstate__()
@@ -915,7 +946,7 @@ class _ExternalFunctionExpression(_ExpressionBase):
         return self._fcn.getname(*args, **kwds)
 
     def _polynomial_degree(self, result):
-        if math.isclose(result[0], 0):
+        if isclose(result[0], 0):
             return 0
         else:
             return None
@@ -958,8 +989,8 @@ class _PowExpression(_ExpressionBase):
         # call this a non-polynomial expression, these exceptions occur
         # too frequently (and in particular, a**2)
         l,r = result
-        if math.isclose(r, 0):
-            if math.isclose(l, 0):
+        if isclose(r, 0):
+            if isclose(l, 0):
                 return 0
             try:
                 # NOTE: use value before int() so that we don't
@@ -979,7 +1010,7 @@ class _PowExpression(_ExpressionBase):
         def impl(args):
             if not args[1]:
                 return False
-            return args[0] or math.isclose(value(self._args[1]), 0)
+            return args[0] or isclose(value(self._args[1]), 0)
         return impl
 
     # the local _is_fixed_combiner override is identical to
@@ -1049,14 +1080,14 @@ class _InequalityExpression(_LinearOperatorExpression):
         self._strict = strict
         self._cloned_from = cloned_from
 
+    def _clone(self, args):
+        return self.__class__(args, self._strict, self._cloned_from)
+
     def __getstate__(self):
         result = super(_InequalityExpression, self).__getstate__()
         for i in _InequalityExpression.__slots__:
             result[i] = getattr(self, i)
         return result
-
-    def _clone(self, args):
-        return self.__class__(args, self._strict, self._cloned_from)
 
     def __nonzero__(self):
         if generate_relational_expression.chainedInequality is not None:
@@ -1065,6 +1096,7 @@ class _InequalityExpression(_LinearOperatorExpression):
             generate_relational_expression.call_info \
                 = traceback.extract_stack(limit=2)[-2]
             generate_relational_expression.chainedInequality = self
+            #return bool(self())                - This is needed to apply simple evaluation of inequalities
             return True
 
         return bool(self())
@@ -1168,8 +1200,8 @@ class _ProductExpression(_ExpressionBase):
         _l, _r = result
         return _l * _r
 
-    def _combine_expr(self, _result):
-        _l, _r = _result
+    @staticmethod
+    def _combine_expr(_l, _r):
         #
         # p * X
         #
@@ -1301,10 +1333,15 @@ class _MultiProdExpression(_ProductExpression):
     PRECEDENCE = 4
 
     def __init__(self, args, nnum=None):
-        if type(args) is tuple and nnum==None:
-            args, nnum = base
         self._args = args
         self._nnum = nnum
+        self._owned = False
+        for arg in args:
+            if arg.__class__ in pyomo5_expression_types:
+                arg._owned = True
+
+    def _clone(self, args):
+        return self.__class__(args, self._nnum)
 
     def _precedence(self):
         return _MultiProdExpression.PRECEDENCE
@@ -1340,7 +1377,7 @@ class _ReciprocalExpression(_ExpressionBase):
         return _ReciprocalExpression.PRECEDENCE
 
     def _polynomial_degree(self, result):
-        if math.isclose(result[0], 0):
+        if isclose(result[0], 0):
             return 0
         return None
 
@@ -1356,9 +1393,10 @@ class _ReciprocalExpression(_ExpressionBase):
     def _apply_operation(self, result):
         return 1 / result[0]
 
-    def _combine_expr(self, _result):
+    @staticmethod
+    def _combine_expr(_r):
         _l = 1
-        _r = _result[0]
+        #_r = _result
         #
         # 1 / X
         #
@@ -1425,8 +1463,8 @@ class _SumExpression(_LinearOperatorExpression):
     def getname(self, *args, **kwds):
         return 'sum'
 
-    def _combine_expr(self, _result):
-        _l, _r = _result
+    @staticmethod
+    def _combine_expr(_l, _r):
         #
         # Augment the current multi-sum (LHS)
         #
@@ -1437,8 +1475,7 @@ class _SumExpression(_LinearOperatorExpression):
             #
             # Add the RHS to the first term of the multisum
             #
-            if not _r._potentially_variable():
-                #print("H4")
+            if _r.__class__ in native_numeric_types or not _r._potentially_variable():
                 _l._args[0] += _r
                 ans = _l
             #
@@ -1446,10 +1483,18 @@ class _SumExpression(_LinearOperatorExpression):
             #
             # Add the constant terms, and place the others
             #
-            elif _r.__class__ == _MultiSumExpression:
-                #print("H2")
+            elif _r.__class__ is _MultiSumExpression:
                 _l._args[0] += _r._args[0]
                 _l._args += _r._args[1:]
+                ans = _l
+            #
+            # MultiSum + StaticMultiSum
+            #
+            # Add the constant terms, and place the others
+            #
+            elif _r.__class__ is _CompressedSumExpression or _r.__class__ is _StaticMultiSumExpression:
+                _l._args[0] += _r._args[0]
+                _l._args += list(_r._args[1:])
                 ans = _l
             #
             # Multisum + expr
@@ -1462,109 +1507,55 @@ class _SumExpression(_LinearOperatorExpression):
                 ans = _l
 
         #
-        # 1 + *
-        # p + *
-        #
-        elif _l.__class__ in native_numeric_types or not _l._potentially_variable():
-            if _r.__class__ == _MultiSumExpression:
-                #
-                # 1 + MultiSum
-                # p + MultiSum
-                #
-                # Add the LHS to the first term of the multisum
-                #
-                _r._args[0] += _l
-                ans = _r
-            else:
-                #
-                # 1 + expr
-                # p + expr
-                #
-                ans = _MultiSumExpression([_l, _r])
-        #
         # Augment the current multi-sum (RHS)
-        #
-        # WEH:  I'm not sure that this branch is possible with normal
-        #       iteratively created sums, but I still think it's 
-        #       technically possible to create an expression tree that 
-        #       has no sums on the LHS and sums on the RHS.
         #
         elif _r.__class__ == _MultiSumExpression:
             #
-            # expr + MultiSum
-            #
-            # Insert the expression
-            #
-            #print(("H3",_r_clone))
-            _r._args.append(_l)
-            ans = _r
-
-        elif not (_r.__class__ == _CompressedSumExpression or \
-                  _l.__class__ == _CompressedSumExpression):
-            #
-            # expr + expr
-            #
-            ans = _MultiSumExpression([0, _l, _r])
-
-        #
-        # RHS needs to be cloned
-        #
-        elif _r.__class__ == _CompressedSumExpression:
-            #
-            # 1 + CompressedMultiSum
-            # p + CompressedMultiSum
+            # 1 + MultiSum
+            # p + MultiSum
             #
             # Add the LHS to the first term of the multisum
             #
             if _l.__class__ in native_numeric_types or not _l._potentially_variable():
-                #print("H1-c")
-                ans = _MultiSumExpression([_r._args[0]+_l,] + list(_r._args[1:]))
+                _r._args[0] += _l
+                ans = _r
             #
-            # MultiSum + CompressedMultiSum
-            #
-            # Add the constant terms, and place the others
-            #
-            elif _l.__class__ == _MultiSumExpression:
-                #print("H2-c")
-                _l._args[0] += _r._args[0]
-                _l._args += list(_r._args[1:])
-                ans = _l
-            #
-            # CompressedMultiSum + CompressedMultiSum
+            # StaticMultiSum + MultiSum
             #
             # Add the constant terms, and place the others
             #
-            elif _l.__class__ == _CompressedSumExpression:
-                ans = _MultiSumExpression([_r._args[0]+_l._args[0],] + list(_r._args[1:]) + list(_l._args[1:]))
+            elif _l.__class__ is _CompressedSumExpression or _l.__class__ is _StaticMultiSumExpression:
+                _r._args[0] += _l._args[0]
+                _r._args += list(_l._args[1:])
+                ans = _r
             #
             # expr + MultiSum
             #
             # Insert the expression
             #
             else:
-                #print("H3-c")
-                ans = _MultiSumExpression(list(_r._args) + [_l,])
+                _r._args.append(_l)
+                ans = _r
 
         #
-        # LHS needs to be cloned
+        # 1 + expr
+        # p + expr
         #
-        else:   # _l.__class__ == _CompressedSumExpression
-            #
-            # CompressedMultiSum + p
-            #
-            # Add the RHS to the first term of the multisum
-            #
-            if not _r._potentially_variable():
-                #print("H4-c")
-                ans = _MultiSumExpression([_l._args[0]+_r,] + list(_l._args[1:]))
-            #
-            # CompressedMultisum + expr
-            #
-            # Insert the expression
-            #
-            else:
-                #print("H5-c")
-                ans = _MultiSumExpression(list(_l._args) + [_r,])
+        elif _l.__class__ in native_numeric_types or not _l._potentially_variable():
+            ans = _MultiSumExpression([_l, _r])
+
+        #
+        # expr + 1
+        # expr + p
+        #
+        elif _r.__class__ in native_numeric_types or not _r._potentially_variable():
+            ans = _MultiSumExpression([_r, _l])
+
+        #
+        # expr + expr
+        #
+        else:
+            ans = _MultiSumExpression([0, _l, _r])
 
         return ans
 
@@ -1601,13 +1592,16 @@ class _MultiSumExpression(_SumExpression):
     def getname(self, *args, **kwds):
         return 'multisum'
 
+    def is_constant(self):
+        return len(self._args) <= 1
+
     def _potentially_variable(self):
         return len(self._args) > 1
 
     def _to_string_skip(self, _idx):
         return  _idx == 0 and \
                 self._args[0].__class__ in native_numeric_types and \
-                math.isclose(self._args[0], 0)
+                isclose(self._args[0], 0)
 
     def X_to_string_infix(self, ostream, idx, verbose):
         if verbose:
@@ -1620,14 +1614,17 @@ class _MultiSumExpression(_SumExpression):
                 ostream.write(' + ')
 
 
-
 class _StaticMultiSumExpression(_MultiSumExpression):
     """A temporary object that defines a summation with 1 or more terms and a constant term."""
     
+    __slots__ = ()
+
 
 class _CompressedSumExpression(_MultiSumExpression):
     """A temporary object that defines a summation with 1 or more terms and a constant term."""
     
+    __slots__ = ()
+
 
 class _GetItemExpression(_ExpressionBase):
     """Expression to call "__getitem__" on the base"""
@@ -1638,15 +1635,17 @@ class _GetItemExpression(_ExpressionBase):
     def _precedence(self):
         return _GetItemExpression.PRECEDENCE
 
-    def __init__(self, base, args=None):
+    def __init__(self, args, base=None):
         """Construct an expression with an operation and a set of arguments"""
-        if type(base) is tuple and args==None:
-            base, args = base
         self._args = args
         self._base = base
+        self._owned = False
+        for arg in args:
+            if arg.__class__ in pyomo5_expression_types:
+                arg._owned = True
 
     def _clone(self, args):
-        return self.__class__(self._base, args)
+        return self.__class__(args, self._base)
 
     def __getstate__(self):
         result = super(_GetItemExpression, self).__getstate__()
@@ -1657,28 +1656,19 @@ class _GetItemExpression(_ExpressionBase):
     def getname(self, *args, **kwds):
         return self._base.getname(*args, **kwds)
 
-    def X_is_constant_combiner(self):
-        # This must be false to prevent automatic expression simplification
-        def impl(args):
-            return False
-        return impl
-
-    def X_is_fixed_combiner(self):
-        # FIXME: This is tricky.  I think the correct answer is that we
-        # should iterate over the members of the args and make sure all
-        # are fixed
-        def impl(args):
-            return all(args) and \
-                all( True if x.__class__ in native_types else x.is_fixed()
-                     for x in itervalues(self._base) )
-        return impl
-
     def _potentially_variable(self):
-        if any(self._args):
+        if any(evaluate_expression(arg, exception=False) for arg in self._args):
             for x in itervalues(self._base):
                 if not x.__class__ in native_types and x._potentially_variable():
                     return True
         return False
+        
+    def is_fixed(self):
+        if any(self._args):
+            for x in itervalues(self._base):
+                if not x.__class__ in native_types and not x.is_fixed():
+                    return False
+        return True
         
     def _polynomial_degree(self, result):
         if any(x != 0 for x in result):
@@ -1723,6 +1713,13 @@ class Expr_if(_ExpressionBase):
         self._else = ELSE
         if self._if.__class__ in native_types:
             self._if = as_numeric(self._if)
+        self._owned = False
+        if IF.__class__ in pyomo5_expression_types:
+            IF._owned = True
+        if THEN.__class__ in pyomo5_expression_types:
+            THEN._owned = True
+        if ELSE.__class__ in pyomo5_expression_types:
+            ELSE._owned = True
 
     def __getstate__(self):
         state = super(Expr_if, self).__getstate__()
@@ -1788,13 +1785,150 @@ class Expr_if(_ExpressionBase):
         return _then if _if else _else
 
 
+class _UnaryFunctionExpression(_ExpressionBase):
+    """An object that defines a mathematical expression that can be evaluated"""
 
-def generate_expression(etype, _self, _other, _process=0):
+    # TODO: Unary functions should define their own subclasses so as to
+    # eliminate the need for the fcn and name slots
+    __slots__ = ('_fcn', '_name')
 
-    _self = process_arg(_self)
+    def __init__(self, args, name=None, fcn=None):
+        """Construct an expression with an operation and a set of arguments"""
+        if not type(args) is tuple:
+            args = (args,)
+        self._args = args
+        self._name = name
+        self._fcn = fcn
+        self._owned = False
+        if args[0].__class__ in pyomo5_expression_types:
+            args[0]._owned = True
+
+    def _clone(self, args):
+        return self.__class__(args, self._name, self._fcn)
+
+    def __getstate__(self):
+        result = super(_UnaryFunctionExpression, self).__getstate__()
+        for i in _UnaryFunctionExpression.__slots__:
+            result[i] = getattr(self, i)
+        return result
+
+    def getname(self, *args, **kwds):
+        return self._name
+
+    def _to_string_prefix(self, ostream, verbose):
+        ostream.write(self.getname())
+
+    def _polynomial_degree(self, result):
+        if isclose(result[0], 0):
+            return 0
+        else:
+            return None
+
+    def _apply_operation(self, result):
+        return self._fcn(result[0])
+
+
+class _Constant_UnaryFunctionExpression(_UnaryFunctionExpression):
+    __slots__ = ()
+
+    def is_constant(self):
+        return True
+
+    def _potentially_variable(self):
+        return False
+
+
+class _NPV_UnaryFunctionExpression(_UnaryFunctionExpression):
+    __slots__ = ()
+
+    def _potentially_variable(self):
+        return False
+
+
+
+# TODO: Should this actually be a special class, or just an instance of
+#       _UnaryFunctionExpression (like sin, cos, etc)?
+class _AbsExpression(_UnaryFunctionExpression):
+
+    __slots__ = ()
+
+    def __init__(self, arg):
+        super(_AbsExpression, self).__init__(arg, 'abs', abs)
+
+    def _clone(self, args):
+        return self.__class__(args)
+
+
+class _Constant_AbsExpression(_AbsExpression):
+    __slots__ = ()
+
+    def is_constant(self):
+        return True
+
+    def _potentially_variable(self):
+        return False
+
+
+class _NPV_AbsExpression(_AbsExpression):
+    __slots__ = ()
+
+    def _potentially_variable(self):
+        return False
+
+
+#-------------------------------------------------------
+#
+# Functions used to generate expressions
+#
+#-------------------------------------------------------
+
+def _process_arg(obj):
+    if obj.__class__ in native_types:
+        return obj
+
+    if obj.is_expression():
+        if ignore_entangled_expressions.detangle and \
+           obj.__class__ in pyomo5_expression_types and obj._owned:
+            #
+            # If the expression is owned, then we need to
+            # clone it to avoid creating an entangled expression.
+            #
+            # But we don't have to worry about entanglement amongst non-expression
+            # objects.
+            #
+            # Compress the expression before cloning, which 
+            # should make cloning less expensive.
+            #
+            return clone_expression( compress_expression( obj ), clone_leaves=False )
+        return obj
+
+    if obj.__class__ == NumericConstant:
+        return value(obj)
+
+    if (obj.__class__ == _ParamData or obj.__class__ == SimpleParam) and not obj._component()._mutable:
+        if not obj._constructed:
+            return obj
+        if obj.value is None:
+            return obj
+        return obj.value
+
+    if obj.is_indexed():
+        raise TypeError(
+                "Argument for expression is an indexed numeric "
+                "value\nspecified without an index:\n\t%s\nIs this "
+                "value defined over an index that you did not specify?"
+                % (obj.name, ) )
+
+    return obj
+
+
+def generate_expression(etype, _self, _other):
 
     if etype > _inplace:
         etype -= _inplace
+
+    if _self.__class__ is not _MultiSumExpression:
+        _self = _process_arg(_self)
 
     if etype >= _unary:
         #
@@ -1826,6 +1960,9 @@ def generate_expression(etype, _self, _other, _process=0):
             raise DeveloperError(
                 "Unexpected unary operator id (%s)" % ( etype, ))
 
+    if _self.__class__ is not _MultiSumExpression:
+        _other = _process_arg(_other)
+
     if etype < 0:
         #
         # This may seem obvious, but if we are performing an
@@ -1836,8 +1973,6 @@ def generate_expression(etype, _self, _other, _process=0):
         etype *= -1
         _self, _other = _other, _self
 
-    _other = process_arg(_other)
-
     if etype == _mul:
         #
         # x * y
@@ -1845,7 +1980,7 @@ def generate_expression(etype, _self, _other, _process=0):
         if _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
                 return _self * _other
-            elif math.isclose(_other, 0):
+            elif _other == 0:   # isclose(_other, 0)
                 return 0
             elif _other == 1:
                 return _self
@@ -1855,7 +1990,7 @@ def generate_expression(etype, _self, _other, _process=0):
                 return _ProductExpression((_other, _self))
             return _NPV_ProductExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
-            if math.isclose(_self, 0):
+            if _self == 0:  # isclose(_self, 0)
                 return 0
             elif _self == 1:
                 return _other
@@ -1878,10 +2013,12 @@ def generate_expression(etype, _self, _other, _process=0):
         #
         # x + y
         #
-        if _other.__class__ in native_numeric_types:
+        if _self.__class__ is _MultiSumExpression or _other.__class__ is _MultiSumExpression:
+            return _SumExpression._combine_expr(_self, _other)
+        elif _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
                 return _self + _other
-            elif math.isclose(_other, 0):
+            elif _other == 0:   #isclose(_other, 0):
                 return _self
             if _self.is_constant():
                 return _Constant_SumExpression((_self, _other))
@@ -1889,7 +2026,7 @@ def generate_expression(etype, _self, _other, _process=0):
                 return _SumExpression((_other, _self))
             return _NPV_SumExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
-            if math.isclose(_self, 0):
+            if _self == 0:      #isclose(_self, 0):
                 return _other
             if _other.is_constant():
                 return _Constant_SumExpression((_self, _other))
@@ -1913,7 +2050,7 @@ def generate_expression(etype, _self, _other, _process=0):
         if _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
                 return _self - _other
-            elif math.isclose(_other, 0):
+            elif isclose(_other, 0):
                 return _self
             if _self.is_constant():
                 return _Constant_SumExpression((-_other, _self))
@@ -1921,7 +2058,7 @@ def generate_expression(etype, _self, _other, _process=0):
                 return _SumExpression((-_other, _self))
             return _NPV_SumExpression((-_other, _self))
         elif _self.__class__ in native_numeric_types:
-            if math.isclose(_self, 0):
+            if isclose(_self, 0):
                 if _other.is_constant():
                     return _Constant_NegationExpression((_other,))
                 elif _other._potentially_variable():
@@ -1960,7 +2097,7 @@ def generate_expression(etype, _self, _other, _process=0):
                 return _ProductExpression((1/_other, _self))
             return _NPV_ProductExpression((1/_other, _self))
         elif _self.__class__ in native_numeric_types:
-            if math.isclose(_self, 0):
+            if isclose(_self, 0):
                 return 0
             elif _self == 1:
                 if _other.is_constant():
@@ -2033,8 +2170,8 @@ def generate_relational_expression(etype, lhs, rhs):
     # arguments in the relational Expression's _args will be guaranteed
     # to be NumericValues (just as they are for all other Expressions).
     #
-    lhs = process_arg(lhs)
-    rhs = process_arg(rhs)
+    lhs = _process_arg(lhs)
+    rhs = _process_arg(rhs)
 
     if lhs.__class__ in native_numeric_types:
         lhs = as_numeric(lhs)
@@ -2160,104 +2297,50 @@ def generate_relational_expression(etype, lhs, rhs):
 generate_relational_expression.chainedInequality = None
 
 
-# ---------------------------------------------------------------------------
-#  Expressions for unary/intrinsic functions
-# ---------------------------------------------------------------------------
-
-class _UnaryFunctionExpression(_ExpressionBase):
-    """An object that defines a mathematical expression that can be evaluated"""
-
-    # TODO: Unary functions should define their own subclasses so as to
-    # eliminate the need for the fcn and name slots
-    __slots__ = ('_fcn', '_name')
-
-    def __init__(self, arg, name=None, fcn=None):
-        """Construct an expression with an operation and a set of arguments"""
-        if type(arg) is tuple and name==None and fcn==None:
-            arg, name, fcn = arg
-        self._args = (arg,)
-        self._fcn = fcn
-        self._name = name
-
-    def _clone(self, args):
-        return self.__class__(args, self._fcn, self._name)
-
-    def __getstate__(self):
-        result = super(_UnaryFunctionExpression, self).__getstate__()
-        for i in _UnaryFunctionExpression.__slots__:
-            result[i] = getattr(self, i)
-        return result
-
-    def getname(self, *args, **kwds):
-        return self._name
-
-    def _to_string_prefix(self, ostream, verbose):
-        ostream.write(self.getname())
-
-    def _polynomial_degree(self, result):
-        if math.isclose(result[0], 0):
-            return 0
-        else:
-            return None
-
-    def _apply_operation(self, result):
-        return self._fcn(result[0])
-
-
-class _Constant_UnaryFunctionExpression(_UnaryFunctionExpression):
-    __slots__ = ()
-
-    def is_constant(self):
-        return True
-
-    def _potentially_variable(self):
-        return False
-
-
-class _NPV_UnaryFunctionExpression(_UnaryFunctionExpression):
-    __slots__ = ()
-
-    def _potentially_variable(self):
-        return False
-
-
-
-# TODO: Should this actually be a special class, or just an instance of
-#       _UnaryFunctionExpression (like sin, cos, etc)?
-class _AbsExpression(_UnaryFunctionExpression):
-
-    __slots__ = ()
-
-    def __init__(self, arg):
-        super(_AbsExpression, self).__init__(arg, 'abs', abs)
-
-
-class _Constant_AbsExpression(_AbsExpression):
-    __slots__ = ()
-
-    def is_constant(self):
-        return True
-
-    def _potentially_variable(self):
-        return False
-
-
-class _NPV_AbsExpression(_AbsExpression):
-    __slots__ = ()
-
-    def _potentially_variable(self):
-        return False
-
-
 def generate_intrinsic_function_expression(arg, name, fcn):
     if arg.__class__ in native_types:
         return fcn(arg)
 
+    _process_arg(arg)
     if arg._potentially_variable():
         return _UnaryFunctionExpression(arg, name, fcn)
     return _NPV_UnaryFunctionExpression(arg, name, fcn)
 
 
-def _clear_expression_pool():
-    pass
+pyomo5_expression_types = set([
+        _ExpressionBase,
+        _NegationExpression,
+        _Constant_NegationExpression,
+        _NPV_NegationExpression,
+        _ExternalFunctionExpression,
+        _Constant_ExternalFunctionExpression,
+        _NPV_ExternalFunctionExpression,
+        _PowExpression,
+        _Constant_PowExpression,
+        _NPV_PowExpression,
+        _LinearOperatorExpression,
+        _InequalityExpression,
+        _EqualityExpression,
+        _ProductExpression,
+        _Constant_ProductExpression,
+        _NPV_ProductExpression,
+        _MultiProdExpression,
+        _ReciprocalExpression,
+        _Constant_ReciprocalExpression,
+        _NPV_ReciprocalExpression,
+        _SumExpression,
+        _Constant_SumExpression,
+        _NPV_SumExpression,
+        _MultiSumExpression,
+        _StaticMultiSumExpression,
+        _CompressedSumExpression,
+        _GetItemExpression,
+        Expr_if,
+        _UnaryFunctionExpression,
+        _Constant_UnaryFunctionExpression,
+        _NPV_UnaryFunctionExpression,
+        _AbsExpression,
+        _Constant_AbsExpression,
+        _NPV_AbsExpression
+        ])
 

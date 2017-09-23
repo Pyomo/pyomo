@@ -128,7 +128,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
     if expr.__class__ in native_numeric_types or not expr.is_expression():
         return expr
     if expr.__class__ == _MultiSumExpression:
-        expr.__class__ = _CompressedMultiSumExpression
+        expr.__class__ = _CompressedSumExpression
         return expr
     if isinstance(expr, _MultiSumExpression):
         return expr
@@ -1476,7 +1476,6 @@ class _SumExpression(_LinearOperatorExpression):
             # Add the RHS to the first term of the multisum
             #
             if _r.__class__ in native_numeric_types or not _r._potentially_variable():
-                #print("H4")
                 _l._args[0] += _r
                 ans = _l
             #
@@ -1484,10 +1483,18 @@ class _SumExpression(_LinearOperatorExpression):
             #
             # Add the constant terms, and place the others
             #
-            elif _r.__class__ == _MultiSumExpression:
-                #print("H2")
+            elif _r.__class__ is _MultiSumExpression:
                 _l._args[0] += _r._args[0]
                 _l._args += _r._args[1:]
+                ans = _l
+            #
+            # MultiSum + StaticMultiSum
+            #
+            # Add the constant terms, and place the others
+            #
+            elif _r.__class__ is _CompressedSumExpression or _r.__class__ is _StaticMultiSumExpression:
+                _l._args[0] += _r._args[0]
+                _l._args += list(_r._args[1:])
                 ans = _l
             #
             # Multisum + expr
@@ -1500,109 +1507,55 @@ class _SumExpression(_LinearOperatorExpression):
                 ans = _l
 
         #
-        # 1 + *
-        # p + *
-        #
-        elif _l.__class__ in native_numeric_types or not _l._potentially_variable():
-            if _r.__class__ == _MultiSumExpression:
-                #
-                # 1 + MultiSum
-                # p + MultiSum
-                #
-                # Add the LHS to the first term of the multisum
-                #
-                _r._args[0] += _l
-                ans = _r
-            else:
-                #
-                # 1 + expr
-                # p + expr
-                #
-                ans = _MultiSumExpression([_l, _r])
-        #
         # Augment the current multi-sum (RHS)
-        #
-        # WEH:  I'm not sure that this branch is possible with normal
-        #       iteratively created sums, but I still think it's 
-        #       technically possible to create an expression tree that 
-        #       has no sums on the LHS and sums on the RHS.
         #
         elif _r.__class__ == _MultiSumExpression:
             #
-            # expr + MultiSum
-            #
-            # Insert the expression
-            #
-            #print(("H3",_r_clone))
-            _r._args.append(_l)
-            ans = _r
-
-        elif not (_r.__class__ == _CompressedSumExpression or \
-                  _l.__class__ == _CompressedSumExpression):
-            #
-            # expr + expr
-            #
-            ans = _MultiSumExpression([0, _l, _r])
-
-        #
-        # RHS needs to be cloned
-        #
-        elif _r.__class__ == _CompressedSumExpression:
-            #
-            # 1 + CompressedMultiSum
-            # p + CompressedMultiSum
+            # 1 + MultiSum
+            # p + MultiSum
             #
             # Add the LHS to the first term of the multisum
             #
             if _l.__class__ in native_numeric_types or not _l._potentially_variable():
-                #print("H1-c")
-                ans = _MultiSumExpression([_r._args[0]+_l,] + list(_r._args[1:]))
+                _r._args[0] += _l
+                ans = _r
             #
-            # MultiSum + CompressedMultiSum
-            #
-            # Add the constant terms, and place the others
-            #
-            elif _l.__class__ == _MultiSumExpression:
-                #print("H2-c")
-                _l._args[0] += _r._args[0]
-                _l._args += list(_r._args[1:])
-                ans = _l
-            #
-            # CompressedMultiSum + CompressedMultiSum
+            # StaticMultiSum + MultiSum
             #
             # Add the constant terms, and place the others
             #
-            elif _l.__class__ == _CompressedSumExpression:
-                ans = _MultiSumExpression([_r._args[0]+_l._args[0],] + list(_r._args[1:]) + list(_l._args[1:]))
+            elif _l.__class__ is _CompressedSumExpression or _l.__class__ is _StaticMultiSumExpression:
+                _r._args[0] += _l._args[0]
+                _r._args += list(_l._args[1:])
+                ans = _r
             #
             # expr + MultiSum
             #
             # Insert the expression
             #
             else:
-                #print("H3-c")
-                ans = _MultiSumExpression(list(_r._args) + [_l,])
+                _r._args.append(_l)
+                ans = _r
 
         #
-        # LHS needs to be cloned
+        # 1 + expr
+        # p + expr
         #
-        else:   # _l.__class__ == _CompressedSumExpression
-            #
-            # CompressedMultiSum + p
-            #
-            # Add the RHS to the first term of the multisum
-            #
-            if not _r._potentially_variable():
-                #print("H4-c")
-                ans = _MultiSumExpression([_l._args[0]+_r,] + list(_l._args[1:]))
-            #
-            # CompressedMultisum + expr
-            #
-            # Insert the expression
-            #
-            else:
-                #print("H5-c")
-                ans = _MultiSumExpression(list(_l._args) + [_r,])
+        elif _l.__class__ in native_numeric_types or not _l._potentially_variable():
+            ans = _MultiSumExpression([_l, _r])
+
+        #
+        # expr + 1
+        # expr + p
+        #
+        elif _r.__class__ in native_numeric_types or not _r._potentially_variable():
+            ans = _MultiSumExpression([_r, _l])
+
+        #
+        # expr + expr
+        #
+        else:
+            ans = _MultiSumExpression([0, _l, _r])
 
         return ans
 
@@ -1921,7 +1874,6 @@ class _NPV_AbsExpression(_AbsExpression):
 
     def _potentially_variable(self):
         return False
-
 
 
 #-------------------------------------------------------
@@ -2391,3 +2343,4 @@ pyomo5_expression_types = set([
         _Constant_AbsExpression,
         _NPV_AbsExpression
         ])
+
