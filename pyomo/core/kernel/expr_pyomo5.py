@@ -782,7 +782,7 @@ class _ExpressionBase(NumericValue):
             while _idx < _len:
                 _sub = _argList[_idx]
                 _idx += 1
-                if _sub.__class__ in native_numeric_types:
+                if _sub.__class__ in native_numeric_types or not _sub._potentially_variable():
                     _result.append( 0 )
                 elif _sub.is_expression():
                     _stack.append( (_obj, _argList, _idx, _len, _result) )
@@ -969,7 +969,7 @@ class _ExternalFunctionExpression(_ExpressionBase):
         return self._fcn.getname(*args, **kwds)
 
     def _polynomial_degree(self, result):
-        if isclose(result[0], 0):
+        if result[0] is 0:
             return 0
         else:
             return None
@@ -1400,7 +1400,7 @@ class _ReciprocalExpression(_ExpressionBase):
         return _ReciprocalExpression.PRECEDENCE
 
     def _polynomial_degree(self, result):
-        if isclose(result[0], 0):
+        if result[0] is 0:
             return 0
         return None
 
@@ -1842,7 +1842,7 @@ class _UnaryFunctionExpression(_ExpressionBase):
         ostream.write(self.getname())
 
     def _polynomial_degree(self, result):
-        if isclose(result[0], 0):
+        if result[0] is 0:
             return 0
         else:
             return None
