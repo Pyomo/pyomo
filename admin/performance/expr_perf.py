@@ -208,6 +208,131 @@ def evaluate(expr, seconds):
 
     return seconds
 
+#
+# Evaluate standard operations on an expression
+#
+def evaluate_all(expr, seconds):
+    try:
+        seconds['size'] = sum(e.size() for e in expr)
+    except:
+        seconds['size'] = -1
+
+    gc.collect()
+    _clear_expression_pool()
+    try:
+        with timeout(seconds=_timeout):
+            start = time.time()
+            for e in expr:
+                EXPR.compress_expression(e, verbose=False)
+            stop = time.time()
+            seconds['compress'] = stop-start
+            seconds['compressed_size'] = expr.size()
+    except TimeoutError:
+        print("TIMEOUT")
+        seconds['compressed_size'] = -999.0
+    except:
+        seconds['compressed_size'] = 0
+
+    # NOTE: All other tests after this are on the compressed expression!
+
+    gc.collect()
+    _clear_expression_pool()
+    try:
+        with timeout(seconds=_timeout):
+            start = time.time()
+            for e in expr:
+                e.clone()
+            stop = time.time()
+            seconds['clone'] = stop-start
+    except RecursionError:
+        seconds['clone'] = -888.0
+    except TimeoutError:
+        print("TIMEOUT")
+        seconds['clone'] = -999.0
+
+    gc.collect()
+    _clear_expression_pool()
+    try:
+        with timeout(seconds=_timeout):
+            start = time.time()
+            for e in expr:
+                e.polynomial_degree()
+            stop = time.time()
+            seconds['polynomial_degree'] = stop-start
+    except RecursionError:
+        seconds['polynomial_degree'] = -888.0
+    except TimeoutError:
+        print("TIMEOUT")
+        seconds['polynomial_degree'] = -999.0
+
+    gc.collect()
+    _clear_expression_pool()
+    try:
+        with timeout(seconds=_timeout):
+            start = time.time()
+            for e in expr:
+                e.is_constant()
+            stop = time.time()
+            seconds['is_constant'] = stop-start
+    except RecursionError:
+        seconds['is_constant'] = -888.0
+    except TimeoutError:
+        print("TIMEOUT")
+        seconds['is_constant'] = -999.0
+
+    gc.collect()
+    _clear_expression_pool()
+    try:
+        with timeout(seconds=_timeout):
+            start = time.time()
+            for e in expr:
+                e.is_fixed()
+            stop = time.time()
+            seconds['is_fixed'] = stop-start
+    except RecursionError:
+        seconds['is_fixed'] = -888.0
+    except TimeoutError:
+        print("TIMEOUT")
+        seconds['is_fixed'] = -999.0
+
+    gc.collect()
+    _clear_expression_pool()
+    try:
+        from pyomo.repn import generate_standard_repn
+        with timeout(seconds=_timeout):
+            start = time.time()
+            for e in expr:
+                generate_standard_repn(e, quadratic=False)
+            stop = time.time()
+            seconds['generate_repn'] = stop-start
+    except RecursionError:
+        seconds['generate_repn'] = -888.0
+    except ImportError:
+        seconds['generate_repn'] = -999.0
+    except TimeoutError:
+        print("TIMEOUT")
+        seconds['generate_repn'] = -999.0
+
+    if False:
+        gc.collect()
+        _clear_expression_pool()
+        try:
+            from pyomo.repn import generate_ampl_repn
+            with timeout(seconds=_timeout):
+                start = time.time()
+                for e in expr:
+                    generate_ampl_repn(e)
+                stop = time.time()
+                seconds['generate_repn'] = stop-start
+        except RecursionError:
+            seconds['generate_repn'] = -888.0
+        except ImportError:
+            seconds['generate_repn'] = -999.0
+        except TimeoutError:
+            print("TIMEOUT")
+            seconds['generate_repn'] = -999.0
+
+    return seconds
 
 #
 # Create a linear expression
@@ -229,45 +354,49 @@ def linear(N, flag):
         gc.collect()
         _clear_expression_pool()
         try:
-            with timeout(seconds=_timeout):
-                start = time.time()
-                #
-                if flag == 1:
-                    expr = summation(model.p, model.x)
-                elif flag == 2:
-                    expr=sum(model.p[i]*model.x[i] for i in model.A)
-                elif flag == 3:
-                    expr=0
-                    for i in model.A:
-                        expr += model.p[i] * model.x[i]
-                elif flag == 4:
-                    expr=0
-                    for i in model.A:
-                        expr = expr + model.p[i] * model.x[i]
-                elif flag == 5:
-                    expr=0
-                    for i in model.A:
-                        expr = model.p[i] * model.x[i] + expr
-                elif flag == 6:
-                    expr=Sum(model.p[i]*model.x[i] for i in model.A)
-                elif flag == 12:
-                    with EXPR.linear_expression as expr:
-                        expr=sum((model.p[i]*model.x[i] for i in model.A), expr)
-                elif flag == 13:
-                    with EXPR.linear_expression as expr:
+            with EXPR.clone_counter as ctr:
+                nclones = ctr.count
+
+                with timeout(seconds=_timeout):
+                    start = time.time()
+                    #
+                    if flag == 1:
+                        expr = summation(model.p, model.x)
+                    elif flag == 2:
+                        expr=sum(model.p[i]*model.x[i] for i in model.A)
+                    elif flag == 3:
+                        expr=0
                         for i in model.A:
                             expr += model.p[i] * model.x[i]
-                elif flag == 14:
-                    with EXPR.linear_expression as expr:
+                    elif flag == 4:
+                        expr=0
                         for i in model.A:
                             expr = expr + model.p[i] * model.x[i]
-                elif flag == 15:
-                    with EXPR.linear_expression as expr:
+                    elif flag == 5:
+                        expr=0
                         for i in model.A:
                             expr = model.p[i] * model.x[i] + expr
-                #
-                stop = time.time()
-                seconds['construction'] = stop-start
+                    elif flag == 6:
+                        expr=Sum(model.p[i]*model.x[i] for i in model.A)
+                    elif flag == 12:
+                        with EXPR.linear_expression as expr:
+                            expr=sum((model.p[i]*model.x[i] for i in model.A), expr)
+                    elif flag == 13:
+                        with EXPR.linear_expression as expr:
+                            for i in model.A:
+                                expr += model.p[i] * model.x[i]
+                    elif flag == 14:
+                        with EXPR.linear_expression as expr:
+                            for i in model.A:
+                                expr = expr + model.p[i] * model.x[i]
+                    elif flag == 15:
+                        with EXPR.linear_expression as expr:
+                            for i in model.A:
+                                expr = model.p[i] * model.x[i] + expr
+                    #
+                    stop = time.time()
+                    seconds['construction'] = stop-start
+                    seconds['nclones'] = ctr.count - nclones
                 seconds = evaluate(expr, seconds)
         except RecursionError:
             seconds['construction'] = -888.0
@@ -298,33 +427,54 @@ def nested_linear(N, flag):
         gc.collect()
         _clear_expression_pool()
         try:
-            with timeout(seconds=_timeout):
-                start = time.time()
-                #
-                if flag == 1:
-                    expr = 2* summation(model.p, model.x)
-                elif flag == 2:
-                    expr= 2 * sum(model.p[i]*model.x[i] for i in model.A)
-                elif flag == 3:
-                    expr=0
-                    for i in model.A:
-                        expr += model.p[i] * model.x[i]
-                    expr *= 2
-                elif flag == 4:
-                    expr=0
-                    for i in model.A:
-                        expr = expr + model.p[i] * model.x[i]
-                    expr *= 2
-                elif flag == 5:
-                    expr=0
-                    for i in model.A:
-                        expr = model.p[i] * model.x[i] + expr
-                    expr *= 2
-                elif flag == 6:
-                    expr= 2 * Sum(model.p[i]*model.x[i] for i in model.A)
-                #
-                stop = time.time()
-                seconds['construction'] = stop-start
+            with EXPR.clone_counter as ctr:
+                nclones = ctr.count
+                with timeout(seconds=_timeout):
+                    start = time.time()
+                    #
+                    if flag == 1:
+                        expr = 2* summation(model.p, model.x)
+                    elif flag == 2:
+                        expr= 2 * sum(model.p[i]*model.x[i] for i in model.A)
+                    elif flag == 3:
+                        expr=0
+                        for i in model.A:
+                            expr += model.p[i] * model.x[i]
+                        expr *= 2
+                    elif flag == 4:
+                        expr=0
+                        for i in model.A:
+                            expr = expr + model.p[i] * model.x[i]
+                        expr *= 2
+                    elif flag == 5:
+                        expr=0
+                        for i in model.A:
+                            expr = model.p[i] * model.x[i] + expr
+                        expr *= 2
+                    elif flag == 6:
+                        expr= 2 * Sum(model.p[i]*model.x[i] for i in model.A)
+                    elif flag == 12:
+                        with EXPR.linear_expression as expr:
+                            expr= 2 * sum((model.p[i]*model.x[i] for i in model.A), expr)
+                    elif flag == 13:
+                        with EXPR.linear_expression as expr:
+                            for i in model.A:
+                                expr += model.p[i] * model.x[i]
+                            expr *= 2
+                    elif flag == 14:
+                        with EXPR.linear_expression as expr:
+                            for i in model.A:
+                                expr = expr + model.p[i] * model.x[i]
+                            expr *= 2
+                    elif flag == 15:
+                        with EXPR.linear_expression as expr:
+                            for i in model.A:
+                                expr = model.p[i] * model.x[i] + expr
+                            expr *= 2
+                    #
+                    stop = time.time()
+                    seconds['construction'] = stop-start
+                    seconds['nclones'] = ctr.count - nclones
                 seconds = evaluate(expr, seconds)
         except RecursionError:
             seconds['construction'] = -888.0
@@ -352,22 +502,33 @@ def constant(N, flag):
         gc.collect()
         _clear_expression_pool()
         try:
-            with timeout(seconds=_timeout):
-                start = time.time()
-                #
-                if flag == 1:
-                    expr = summation(model.p, model.q, index=model.A)
-                elif flag == 2:
-                    expr=sum(model.p[i]*model.q[i] for i in model.A)
-                elif flag == 3:
-                    expr=0
-                    for i in model.A:
-                        expr += model.p[i] * model.q[i]
-                elif flag == 4:
-                    expr=Sum(model.p[i]*model.q[i] for i in model.A)
-                #
-                stop = time.time()
-                seconds['construction'] = stop-start
+            with EXPR.clone_counter as ctr:
+                nclones = ctr.count
+
+                with timeout(seconds=_timeout):
+                    start = time.time()
+                    #
+                    if flag == 1:
+                        expr = summation(model.p, model.q, index=model.A)
+                    elif flag == 2:
+                        expr=sum(model.p[i]*model.q[i] for i in model.A)
+                    elif flag == 3:
+                        expr=0
+                        for i in model.A:
+                            expr += model.p[i] * model.q[i]
+                    elif flag == 4:
+                        expr=Sum(model.p[i]*model.q[i] for i in model.A)
+                    elif flag == 12:
+                        with EXPR.linear_expression as expr:
+                            expr=sum((model.p[i]*model.q[i] for i in model.A), expr)
+                    elif flag == 13:
+                        with EXPR.linear_expression as expr:
+                            for i in model.A:
+                                expr += model.p[i] * model.q[i]
+                    #
+                    stop = time.time()
+                    seconds['construction'] = stop-start
+                    seconds['nclones'] = ctr.count - nclones
                 seconds = evaluate(expr, seconds)
         except RecursionError:
             seconds['construction'] = -888.0
@@ -401,22 +562,33 @@ def bilinear(N, flag):
         gc.collect()
         _clear_expression_pool()
         try:
-            with timeout(seconds=_timeout):
-                start = time.time()
-                #
-                if flag == 1:
-                    expr = summation(model.p, model.x, model.y)
-                elif flag == 2:
-                    expr=sum(model.p[i]*model.x[i]*model.y[i] for i in model.A)
-                elif flag == 3:
-                    expr=0
-                    for i in model.A:
-                        expr += model.p[i] * model.x[i] * model.y[i]
-                elif flag == 4:
-                    expr=Sum(model.p[i]*model.x[i]*model.y[i] for i in model.A)
-                #
-                stop = time.time()
-                seconds['construction'] = stop-start
+            with EXPR.clone_counter as ctr:
+                nclones = ctr.count
+
+                with timeout(seconds=_timeout):
+                    start = time.time()
+                    #
+                    if flag == 1:
+                        expr = summation(model.p, model.x, model.y)
+                    elif flag == 2:
+                        expr=sum(model.p[i]*model.x[i]*model.y[i] for i in model.A)
+                    elif flag == 3:
+                        expr=0
+                        for i in model.A:
+                            expr += model.p[i] * model.x[i] * model.y[i]
+                    elif flag == 4:
+                        expr=Sum(model.p[i]*model.x[i]*model.y[i] for i in model.A)
+                    elif flag == 12:
+                        with EXPR.linear_expression as expr:
+                            expr=sum((model.p[i]*model.x[i]*model.y[i] for i in model.A), expr)
+                    elif flag == 13:
+                        with EXPR.linear_expression as expr:
+                            for i in model.A:
+                                expr += model.p[i] * model.x[i] * model.y[i]
+                    #
+                    stop = time.time()
+                    seconds['construction'] = stop-start
+                    seconds['nclones'] = ctr.count - nclones
                 seconds = evaluate(expr, seconds)
         except RecursionError:
             seconds['construction'] = -888.0
@@ -448,20 +620,31 @@ def nonlinear(N, flag):
         gc.collect()
         _clear_expression_pool()
         try:
-            with timeout(seconds=_timeout):
-                start = time.time()
-                #
-                if flag == 2:
-                    expr=sum(model.p[i]*tan(model.x[i]) for i in model.A)
-                elif flag == 3:
-                    expr=0
-                    for i in model.A:
-                        expr += model.p[i] * tan(model.x[i])
-                elif flag == 4:
-                    expr=Sum(model.p[i]*tan(model.x[i]) for i in model.A)
-                #
-                stop = time.time()
-                seconds['construction'] = stop-start
+            with EXPR.clone_counter as ctr:
+                nclones = ctr.count
+
+                with timeout(seconds=_timeout):
+                    start = time.time()
+                    #
+                    if flag == 2:
+                        expr=sum(model.p[i]*tan(model.x[i]) for i in model.A)
+                    elif flag == 3:
+                        expr=0
+                        for i in model.A:
+                            expr += model.p[i] * tan(model.x[i])
+                    elif flag == 4:
+                        expr=Sum(model.p[i]*tan(model.x[i]) for i in model.A)
+                    if flag == 12:
+                        with EXPR.linear_expression as expr:
+                            expr=sum((model.p[i]*tan(model.x[i]) for i in model.A), expr)
+                    elif flag == 13:
+                        with EXPR.linear_expression as expr:
+                            for i in model.A:
+                                expr += model.p[i] * tan(model.x[i])
+                    #
+                    stop = time.time()
+                    seconds['construction'] = stop-start
+                    seconds['nclones'] = ctr.count - nclones
                 seconds = evaluate(expr, seconds)
         except RecursionError:
             seconds['construction'] = -888.0
@@ -489,17 +672,20 @@ def polynomial(N, flag):
         gc.collect()
         _clear_expression_pool()
         try:
-            with timeout(seconds=_timeout):
-                start = time.time()
-                #
-                if True:
-                    expr=0
-                    for i in model.A:
-                        expr = model.x[i] * (1 + expr)
-                #
-                stop = time.time()
-                seconds['construction'] = stop-start
+            with EXPR.clone_counter as ctr:
+                nclones = ctr.count
 
+                with timeout(seconds=_timeout):
+                    start = time.time()
+                    #
+                    if True:
+                        expr=0
+                        for i in model.A:
+                            expr = model.x[i] * (1 + expr)
+                    #
+                    stop = time.time()
+                    seconds['construction'] = stop-start
+                    seconds['nclones'] = ctr.count - nclones
                 seconds = evaluate(expr, seconds)
         except RecursionError:
             seconds['construction'] = -888.0
@@ -527,22 +713,26 @@ def product(N, flag):
         gc.collect()
         _clear_expression_pool()
         try:
-            with timeout(seconds=_timeout):
-                start = time.time()
-                #
-                if flag == 1:
-                    expr=model.x+model.x
-                    for i in model.A:
-                        expr = model.p[i]*expr
-                elif flag == 2:
-                    expr=model.x+model.x
-                    for i in model.A:
-                        expr *= model.p[i]
-                elif flag == 3:
-                    expr=(model.x+model.x) * prod(model.p[i] for i in model.A)
-                #
-                stop = time.time()
-                seconds['construction'] = stop-start
+            with EXPR.clone_counter as ctr:
+                nclones = ctr.count
+
+                with timeout(seconds=_timeout):
+                    start = time.time()
+                    #
+                    if flag == 1:
+                        expr=model.x+model.x
+                        for i in model.A:
+                            expr = model.p[i]*expr
+                    elif flag == 2:
+                        expr=model.x+model.x
+                        for i in model.A:
+                            expr *= model.p[i]
+                    elif flag == 3:
+                        expr=(model.x+model.x) * prod(model.p[i] for i in model.A)
+                    #
+                    stop = time.time()
+                    seconds['construction'] = stop-start
+                    seconds['nclones'] = ctr.count - nclones
                 seconds = evaluate(expr, seconds)
         except RecursionError:
             seconds['construction'] = -888.0
@@ -553,6 +743,48 @@ def product(N, flag):
 
     return f
 
+
+#
+# Create many small linear expressions
+#
+def many_linear(N, flag):
+
+    def f():
+        seconds = {}
+
+        model = ConcreteModel()
+        model.A = RangeSet(N)
+        model.p = Param(model.A, default=2)
+        model.x = Var(model.A, initialize=2)
+
+        gc.collect()
+        _clear_expression_pool()
+        if True:
+            with EXPR.clone_counter as ctr:
+                nclones = ctr.count
+
+                with timeout(seconds=_timeout):
+                    start = time.time()
+                    #
+                    expr = []
+                    if flag == 2:
+                        for i in model.A:
+                            expr.append( model.x[1] + model.x[i] )
+                    #
+                    stop = time.time()
+                    seconds['construction'] = stop-start
+                    seconds['nclones'] = ctr.count - nclones
+                seconds = evaluate_all(expr, seconds)
+        try:
+            pass
+        except RecursionError:
+            seconds['construction'] = -888.0
+        except TimeoutError:
+            print("TIMEOUT")
+            seconds['construction'] = -999.0
+        return seconds
+
+    return f
 
 #
 # Utility function used by runall()
@@ -573,22 +805,35 @@ def print_results(factors_, ans_, output):
 def runall(factors, res, output=True):
 
     if True:
+        factors_ = tuple(factors+['ManyLinear','Loop 2'])
+        ans_ = res[factors_] = measure(many_linear(NTerms, 2), n=N)
+        print_results(factors_, ans_, output)
+
+    if True:
         factors_ = tuple(factors+['Constant','Loop 1'])
         ans_ = res[factors_] = measure(constant(NTerms, 1), n=N)
         print_results(factors_, ans_, output)
 
+    if True:
         factors_ = tuple(factors+['Constant','Loop 2'])
         ans_ = res[factors_] = measure(constant(NTerms, 2), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['Constant','Loop 12'])
+        ans_ = res[factors_] = measure(constant(NTerms, 12), n=N)
         print_results(factors_, ans_, output)
 
         factors_ = tuple(factors+['Constant','Loop 3'])
         ans_ = res[factors_] = measure(constant(NTerms, 3), n=N)
         print_results(factors_, ans_, output)
 
+        factors_ = tuple(factors+['Constant','Loop 13'])
+        ans_ = res[factors_] = measure(constant(NTerms, 13), n=N)
+        print_results(factors_, ans_, output)
+
         factors_ = tuple(factors+['Constant','Loop 4'])
         ans_ = res[factors_] = measure(constant(NTerms, 4), n=N)
         print_results(factors_, ans_, output)
-
 
     if True:
         factors_ = tuple(factors+['Linear','Loop 1'])
@@ -642,16 +887,32 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(nested_linear(NTerms, 2), n=N)
         print_results(factors_, ans_, output)
 
+        factors_ = tuple(factors+['NestedLinear','Loop 12'])
+        ans_ = res[factors_] = measure(nested_linear(NTerms, 12), n=N)
+        print_results(factors_, ans_, output)
+
         factors_ = tuple(factors+['NestedLinear','Loop 3'])
         ans_ = res[factors_] = measure(nested_linear(NTerms, 3), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['NestedLinear','Loop 13'])
+        ans_ = res[factors_] = measure(nested_linear(NTerms, 13), n=N)
         print_results(factors_, ans_, output)
 
         factors_ = tuple(factors+['NestedLinear','Loop 4'])
         ans_ = res[factors_] = measure(nested_linear(NTerms, 4), n=N)
         print_results(factors_, ans_, output)
 
+        factors_ = tuple(factors+['NestedLinear','Loop 14'])
+        ans_ = res[factors_] = measure(nested_linear(NTerms, 14), n=N)
+        print_results(factors_, ans_, output)
+
         factors_ = tuple(factors+['NestedLinear','Loop 5'])
         ans_ = res[factors_] = measure(nested_linear(NTerms, 5), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['NestedLinear','Loop 15'])
+        ans_ = res[factors_] = measure(nested_linear(NTerms, 15), n=N)
         print_results(factors_, ans_, output)
 
         factors_ = tuple(factors+['NestedLinear','Loop 6'])
@@ -668,8 +929,16 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(bilinear(NTerms, 2), n=N)
         print_results(factors_, ans_, output)
 
+        factors_ = tuple(factors+['Bilinear','Loop 12'])
+        ans_ = res[factors_] = measure(bilinear(NTerms, 12), n=N)
+        print_results(factors_, ans_, output)
+
         factors_ = tuple(factors+['Bilinear','Loop 3'])
         ans_ = res[factors_] = measure(bilinear(NTerms, 3), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['Bilinear','Loop 13'])
+        ans_ = res[factors_] = measure(bilinear(NTerms, 13), n=N)
         print_results(factors_, ans_, output)
 
         factors_ = tuple(factors+['Bilinear','Loop 4'])
@@ -682,8 +951,16 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(nonlinear(NTerms, 2), n=N)
         print_results(factors_, ans_, output)
 
+        factors_ = tuple(factors+['Nonlinear','Loop 12'])
+        ans_ = res[factors_] = measure(nonlinear(NTerms, 12), n=N)
+        print_results(factors_, ans_, output)
+
         factors_ = tuple(factors+['Nonlinear','Loop 3'])
         ans_ = res[factors_] = measure(nonlinear(NTerms, 3), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['Nonlinear','Loop 13'])
+        ans_ = res[factors_] = measure(nonlinear(NTerms, 13), n=N)
         print_results(factors_, ans_, output)
 
         factors_ = tuple(factors+['Nonlinear','Loop 4'])
