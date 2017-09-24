@@ -194,7 +194,6 @@ representations be temporary.  They should be used to interface
 to a solver and then be deleted.
 
 """
-#@profile
 def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None):
     #
     # Disable implicit cloning while creating a standard representation.
@@ -214,7 +213,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         # Eliminate top-level negations
         #
         _multiplier = 1
-        while expr.__class__ == EXPR._NegationExpression:
+        while expr.__class__ is EXPR._NegationExpression:
             #
             # Replace a negation sub-expression
             #
@@ -224,16 +223,16 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         # The expression is a number or a non-variable constant
         # expression.
         #
-        if type(expr) in native_numeric_types or not expr._potentially_variable():
+        if expr.__class__ in native_numeric_types or not expr._potentially_variable():
             if compute_values:
-                repn.constant = _multiplier*value(expr)
+                repn.constant = _multiplier*EXPR.evaluate_expression(expr)
             else:
                 repn.constant = _multiplier*expr
             return repn
         #
         # The expression is a variable
         #
-        if isinstance(expr, (_VarData, IVariable)):
+        elif isinstance(expr, (_VarData, IVariable)):
             if expr.fixed:
                 if compute_values:
                     repn.constant = _multiplier*value(expr)
@@ -247,7 +246,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         #
         # Unknown expression object
         #
-        if not expr.is_expression():
+        elif not expr.is_expression():
             raise ValueError("Unexpected expression type: "+str(expr))
 
         ##
@@ -299,7 +298,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
 
                 # No special processing for _ProductExpression
 
-                if _obj.__class__ == EXPR._PowExpression:
+                if _obj.__class__ is EXPR._PowExpression:
                     if _idx == 0:
                         #
                         # Evaluate the RHS (_args[1]) first, and compute its value
@@ -344,7 +343,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                                 linear = False
                                 break
 
-                elif _obj.__class__ == EXPR.Expr_if:
+                elif _obj.__class__ is EXPR.Expr_if:
                     if _idx == 0:
                         #
                         # Compute the value of the condition argument
@@ -521,11 +520,11 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                             else:
                                 ans[2][key] = res[2][key]           # We shouldn't need to check if this is zero
 
-            elif _obj.__class__ == EXPR._ProductExpression or (_obj.__class__ == EXPR._PowExpression and len(_result) == 2):
+            elif _obj.__class__ is EXPR._ProductExpression or (_obj.__class__ is EXPR._PowExpression and len(_result) == 2):
                 #
                 # The POW expression is a special case.  This the length==2 indicates that this is a quadratic.
                 #
-                if _obj.__class__ == EXPR._PowExpression:
+                if _obj.__class__ is EXPR._PowExpression:
                     _tmp, _l = _result
                     _r = _l
                 else:
@@ -654,7 +653,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                                     else:
                                         ans[2][key_] = _l[1][lkey]*_r[1][rkey]
 
-            elif _obj.__class__ == EXPR._NegationExpression:
+            elif _obj.__class__ is EXPR._NegationExpression:
                 ans = _result[0]
                 if None in ans:
                     ans[None] *= -1
@@ -667,21 +666,21 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                     for i in ans[2]:
                         ans[2][i] *= -1
 
-            elif _obj.__class__ == EXPR._ReciprocalExpression:
+            elif _obj.__class__ is EXPR._ReciprocalExpression:
                 if None in _result[0] or 1 in _result[0] or 2 in _result[0]:
                     ans = {None:_obj}
                     linear = False
                 else:
                     ans = {0:1/_result[0][0]}
 
-            elif _obj.__class__ == EXPR._AbsExpression or _obj.__class__ == EXPR._UnaryFunctionExpression:
+            elif _obj.__class__ is EXPR._AbsExpression or _obj.__class__ is EXPR._UnaryFunctionExpression:
                 if None in _result[0] or 1 in _result[0] or 2 in _result[0]:
                     ans = {None:_obj}
                     linear = False
                 else:
                     ans = {0:_obj(_result[0][0])}
 
-            elif _obj.__class__ == EXPR.Expr_if:
+            elif _obj.__class__ is EXPR.Expr_if:
                 ans = _result[0]
 
             else:
