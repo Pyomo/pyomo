@@ -86,6 +86,22 @@ expression.  Common subexpression:\n\t%s""" % (str(sub_expr),)
 #
 #-------------------------------------------------------
 
+class clone_counter_context(object):
+    _count = 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return self
+
+    @property
+    def count(self):
+        return clone_counter_context._count
+
+clone_counter = clone_counter_context()
+
+
 class ignore_entangled_expressions(object):
     detangle = True
 
@@ -125,12 +141,12 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
     #   parent should be cloned (because a child has been replaced), and the
     #   tuple represents the current context during the tree search.
     #
-    if expr.__class__ in native_numeric_types or not expr.is_expression():
+    if expr.__class__ in native_numeric_types or not expr.is_expression() or not expr._potentially_variable():
         return expr
-    if expr.__class__ == _MultiSumExpression:
+    if expr.__class__ is _MultiSumExpression:
         expr.__class__ = _CompressedSumExpression
         return expr
-    if isinstance(expr, _MultiSumExpression):
+    if expr.__class__ in pyomo5_multisum_types:
         return expr
     #
     # Only compress trees whose root is _SumExpression
@@ -140,7 +156,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
     # different class.
     #
     if not dive and \
-       not (expr.__class__ == _SumExpression or expr.__class__ == _NPV_SumExpression or expr.__class__ == _Constant_SumExpression):
+       not (expr.__class__ is _SumExpression or expr.__class__ is _NPV_SumExpression or expr.__class__ is _Constant_SumExpression):
         return expr
     #
     # The stack starts with the current expression
@@ -187,7 +203,10 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
                 # Store a native or numeric object
                 #
                 _result.append( _sub )
-            elif _sub.__class__ not in pyomo5_expression_types or isinstance(_sub, _MultiSumExpression) or isinstance(_sub, _MultiProdExpression):
+            elif _sub.__class__ not in pyomo5_expression_types or \
+                 _sub.__class__ in pyomo5_multisum_types or \
+                 _sub.__class__ is _MultiProdExpression or \
+                 not _sub._potentially_variable():
                 _result.append( _sub )
             else:
                 #
@@ -217,7 +236,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
         #
         # Now replace the current expression object if it's a sum
         #
-        if _obj.__class__ == _SumExpression or _obj.__class__ == _NPV_SumExpression or _obj.__class__ == _Constant_SumExpression:
+        if _obj.__class__ is _SumExpression or _obj.__class__ is _NPV_SumExpression or _obj.__class__ is _Constant_SumExpression:
             ans = _SumExpression._combine_expr(*_result)
             if _stack:
                 #
@@ -228,7 +247,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
         #
         # Now replace the current expression object if it's a product
         #
-        elif multiprod and isinstance(_obj, _ProductExpression):
+        elif multiprod and _obj.__class__ in pyomo5_product_types:
             ans = _ProductExpression._combine_expr(*_result)
             if _stack:
                 #
@@ -239,7 +258,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
         #
         # Now replace the current expression object if it's a reciprocal
         #
-        elif multiprod and isinstance(_obj, _ReciprocalExpression):
+        elif multiprod and _obj.__class__ in pyomo5_reciprocal_types:
             ans = _ReciprocalExpression._combine_expr(*_result)
             if _stack:
                 #
@@ -266,7 +285,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
             #
             _stack[-1][-1].append( ans )
         else:
-            if ans.__class__ == _MultiSumExpression:
+            if ans.__class__ is _MultiSumExpression:
                 ans.__class__ = _CompressedSumExpression
             return ans
 
@@ -274,6 +293,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
 def clone_expression(expr, substitute=None, verbose=False, clone_leaves=True):
     from pyomo.core.kernel.numvalue import native_numeric_types
     #
+    clone_counter_context._count += 1
     memo = {'__block_scope__': { id(None): False }}
     if substitute:
         memo.update(substitute)
@@ -448,11 +468,12 @@ def _expression_size(expr, verbose=False):
 
 
 def evaluate_expression(exp, exception=True, only_fixed_vars=False):
-    from pyomo.core.base import _VarData
-    from pyomo.core.kernel.component_variable import IVariable
+    from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
+    from pyomo.core.kernel.component_variable import IVariable, variable
+    pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
 
     try:
-        if isinstance(exp, (_VarData, IVariable)):
+        if exp.__class__ in pyomo5_variable_types:
             if not only_fixed_vars or exp.fixed:
                 return exp.value
             else:
@@ -477,7 +498,7 @@ def evaluate_expression(exp, exception=True, only_fixed_vars=False):
                     _idx     = 0
                     _len     = len(_argList)
                     _result  = []
-                elif isinstance(_sub, (_VarData, IVariable)):
+                elif _sub.__class__ in pyomo5_variable_types:
                     if only_fixed_vars:
                         if _sub.fixed:
                             _result.append( _sub.value )
@@ -506,8 +527,10 @@ def identify_variables(expr,
                        include_fixed=True,
                        allow_duplicates=False,
                        include_potentially_variable=False):
-    from pyomo.core.base import _VarData # TODO
-    from pyomo.core.kernel.component_variable import IVariable # TODO
+    from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
+    from pyomo.core.kernel.component_variable import IVariable, variable
+    pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
+
     if not allow_duplicates:
         _seen = set()
     _stack = [ ([expr], 0, 1) ]
@@ -523,7 +546,7 @@ def identify_variables(expr,
                 _argList = _sub._args
                 _idx = 0
                 _len = len(_argList)
-            elif isinstance(_sub, (_VarData, IVariable)):
+            elif _sub.__class__ in pyomo5_variable_types:
                 if ( include_fixed
                      or not _sub.is_fixed()
                      or include_potentially_variable ):
@@ -670,7 +693,7 @@ class _ExpressionBase(NumericValue):
                 if _sub.__class__ in native_numeric_types:
                     _result.append( native_result )
                     continue
-                elif not isinstance(_sub, _ExpressionBase):
+                elif not _sub.__class__ in pyomo5_expression_types:
                     _result.append( getattr(_sub, test)() )
                     if _combiner is all:
                         if not _result[-1]:
@@ -822,7 +845,7 @@ class _ExpressionBase(NumericValue):
                         #    ostream.write(str(type(_args[1])))
                         #    ostream.write(" % ")
                     _infix = True
-                if isinstance(_sub, _ExpressionBase):
+                if _sub.__class__ in pyomo5_expression_types:
                 #if hasattr(_sub, '_args'): # _args is a proxy for Expression
                     argList = _sub._args
                     _stack.append([ _sub, argList, 0, len(argList), _my_precedence ])
@@ -1206,7 +1229,7 @@ class _ProductExpression(_ExpressionBase):
         # p * X
         #
         if _l.__class__ in native_numeric_types:
-            if _r.__class__ == _MultiProdExpression:
+            if _r.__class__ is _MultiProdExpression:
                 #
                 # p * MultiProd
                 #
@@ -1222,7 +1245,7 @@ class _ProductExpression(_ExpressionBase):
         #
         # Augment the current multiprod (LHS)
         #
-        elif _l.__class__ == _MultiProdExpression:
+        elif _l.__class__ is _MultiProdExpression:
             #
             # MultiProd * 1
             # MultiProd * p
@@ -1238,7 +1261,7 @@ class _ProductExpression(_ExpressionBase):
             #
             # Multiply the constant terms, and place the others
             #
-            elif _r.__class__ == _MultiProdExpression:
+            elif _r.__class__ is _MultiProdExpression:
                 tmp = []
                 tmp.append(_l._args[0] * _r._args[0])
                 for i in range(1,_l._nnum):
@@ -1272,7 +1295,7 @@ class _ProductExpression(_ExpressionBase):
         # p * X
         #
         elif not _l._potentially_variable():
-            if _r.__class__ == _MultiProdExpression:
+            if _r.__class__ is _MultiProdExpression:
                 #
                 # p * MultiProd
                 #
@@ -1293,7 +1316,7 @@ class _ProductExpression(_ExpressionBase):
         #       technically possible to create an expression tree that 
         #       has no products on the LHS and products on the RHS.
         #
-        elif _r.__class__ == _MultiProdExpression:
+        elif _r.__class__ is _MultiProdExpression:
             #
             # expr * MultiProd
             #
@@ -1396,11 +1419,10 @@ class _ReciprocalExpression(_ExpressionBase):
     @staticmethod
     def _combine_expr(_r):
         _l = 1
-        #_r = _result
         #
         # 1 / X
         #
-        if _r.__class__ == _MultiProdExpression:
+        if _r.__class__ is _MultiProdExpression:
             #
             # 1 / MultiProd
             #
@@ -1463,12 +1485,13 @@ class _SumExpression(_LinearOperatorExpression):
     def getname(self, *args, **kwds):
         return 'sum'
 
+    #@profile
     @staticmethod
     def _combine_expr(_l, _r):
         #
         # Augment the current multi-sum (LHS)
         #
-        if _l.__class__ == _MultiSumExpression:
+        if _l.__class__ is _MultiSumExpression:
             #
             # Multisum + 1
             # MultiSum + p
@@ -1509,7 +1532,7 @@ class _SumExpression(_LinearOperatorExpression):
         #
         # Augment the current multi-sum (RHS)
         #
-        elif _r.__class__ == _MultiSumExpression:
+        elif _r.__class__ is _MultiSumExpression:
             #
             # 1 + MultiSum
             # p + MultiSum
@@ -1902,10 +1925,10 @@ def _process_arg(obj):
             return clone_expression( compress_expression( obj ), clone_leaves=False )
         return obj
 
-    if obj.__class__ == NumericConstant:
+    if obj.__class__ is NumericConstant:
         return value(obj)
 
-    if (obj.__class__ == _ParamData or obj.__class__ == SimpleParam) and not obj._component()._mutable:
+    if (obj.__class__ is _ParamData or obj.__class__ is SimpleParam) and not obj._component()._mutable:
         if not obj._constructed:
             return obj
         if obj.value is None:
@@ -1922,6 +1945,7 @@ def _process_arg(obj):
     return obj
 
 
+#@profile
 def generate_expression(etype, _self, _other):
 
     if etype > _inplace:
@@ -2041,7 +2065,7 @@ def generate_expression(etype, _self, _other):
             return _NPV_SumExpression((_self, _other))
         elif not _self.is_constant():
             return _NPV_SumExpression((_self, _other))
-        return _NPV_SumExpression((_self, _other))
+        return _Constant_SumExpression((_self, _other))
 
     elif etype == _sub:
         #
@@ -2342,5 +2366,20 @@ pyomo5_expression_types = set([
         _AbsExpression,
         _Constant_AbsExpression,
         _NPV_AbsExpression
+        ])
+pyomo5_multisum_types = set([
+        _MultiSumExpression,
+        _StaticMultiSumExpression,
+        _CompressedSumExpression
+        ])
+pyomo5_product_types = set([
+        _ProductExpression,
+        _Constant_ProductExpression,
+        _NPV_ProductExpression
+        ])
+pyomo5_reciprocal_types = set([
+        _ReciprocalExpression,
+        _Constant_ReciprocalExpression,
+        _NPV_ReciprocalExpression
         ])
 
