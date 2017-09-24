@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['Var', '_VarData', 'VarList']
+__all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar']
 
 import logging
 from weakref import ref as weakref_ref
