@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 #
 # The formats that are supported by Pyomo
@@ -28,8 +29,9 @@ from pyutilib.enum import Enum
 #                   pyomo.opt.colin.OptProblem (this can wrap a COLIN shell
 #                   command, or provide a runtime optimization problem)
 # bar - A Baron input file
+# gams - A GAMS input file
 #
-ProblemFormat = Enum('colin', 'pyomo', 'cpxlp', 'nl', 'mps', 'mod', 'lpxlp', 'osil', 'colin_optproblem', 'FuncDesigner','bar')
+ProblemFormat = Enum('colin', 'pyomo', 'cpxlp', 'nl', 'mps', 'mod', 'lpxlp', 'osil', 'colin_optproblem', 'FuncDesigner','bar','gams')
 
 #
 # osrl - osrl XML file defined by the COIN-OR OS project: Result
@@ -51,6 +53,9 @@ def guess_format(filename):
     formats['mod']=ProblemFormat.mod
     formats['lp']=ProblemFormat.cpxlp
     formats['osil']=ProblemFormat.osil
+    formats['gms']=ProblemFormat.gams
+    formats['gams']=ProblemFormat.gams
+
     formats['sol']=ResultsFormat.sol
     formats['osrl']=ResultsFormat.osrl
     formats['soln']=ResultsFormat.soln
@@ -59,7 +64,7 @@ def guess_format(filename):
     formats['jsn']=ResultsFormat.json
     formats['json']=ResultsFormat.json
     formats['results']=ResultsFormat.yaml
-    for fmt in formats:
-        if filename.endswith('.'+fmt):
-            return formats[fmt]
-    return None
+    if filename:
+        return formats.get(filename.split('.')[-1].strip(), None)
+    else:
+        return None

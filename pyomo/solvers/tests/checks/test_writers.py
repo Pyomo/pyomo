@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import os
 from os.path import join, dirname, abspath
@@ -21,7 +22,7 @@ import pyutilib.th as unittest
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.testcases import test_scenarios
-
+from pyomo.core.kernel.component_block import IBlockStorage
 
 # The test directory
 thisDir = dirname(abspath( __file__ ))
@@ -72,12 +73,16 @@ def create_test_method(model,
 
         model_class.post_solve_test_validation(self, results)
         if termination_condition == TerminationCondition.unbounded or \
-           termination_condition == TerminationCondition.infeasible:
+           termination_condition == TerminationCondition.infeasible or \
+           termination_condition == TerminationCondition.infeasibleOrUnbounded:
             return
 
         # validate the solution returned by the solver
-        model_class.model.solutions.load_from(results, default_variable_value=opt.default_variable_value())
-        model_class.save_current_solution(save_filename, suffixes=model_class.test_suffixes)
+        if isinstance(model_class.model, IBlockStorage):
+            model_class.model.load_solution(results.Solution)
+        else:
+            model_class.model.solutions.load_from(results, default_variable_value=opt.default_variable_value())
+            model_class.save_current_solution(save_filename, suffixes=model_class.test_suffixes)
         rc = model_class.validate_current_solution(suffixes=model_class.test_suffixes)
 
         if is_expected_failure:
@@ -94,10 +99,11 @@ def create_test_method(model,
                 os.remove(save_filename)
 
         if not rc[0]:
-            try:
-                model_class.model.solutions.store_to(results)
-            except ValueError:
-                pass
+            if not isinstance(model_class.model, IBlockStorage):
+                try:
+                    model_class.model.solutions.store_to(results)
+                except ValueError:
+                    pass
             self.fail("Solution mismatch for plugin "+name
                       +', '+io+
                       " interface and problem type "

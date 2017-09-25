@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 __all__ = ['Expression', '_ExpressionData']
 
@@ -103,7 +104,7 @@ class _ExpressionData(NumericValue):
     def _polynomial_degree(self, result):
         return result.pop()
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         if ostream is None:
             ostream = sys.stdout
         _verbose = pyomo.core.base.expr_common.TO_STRING_VERBOSE if \
@@ -115,7 +116,7 @@ class _ExpressionData(NumericValue):
             ostream.write("Undefined")
         else:
             self.expr.to_string( ostream=ostream, verbose=verbose,
-                                   precedence=precedence )
+                                   precedence=precedence, labeler=labeler )
         if _verbose:
             ostream.write("}")
 

@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 __all__ = ['Model', 'ConcreteModel', 'AbstractModel', 'global_option']
 
@@ -121,7 +122,11 @@ class ModelSolution(object):
 
     def __getattr__(self, name):
         if name[0] == '_':
-            return self.__dict__[name]
+            if name in self.__dict__:
+                return self.__dict__[name]
+            else:
+                raise AttributeError( "'%s' object has no attribute '%s'"
+                                      % (self.__class__.__name__, name) )
         return self.__dict__['_metadata'][name]
 
     def __setattr__(self, name, val):
@@ -129,6 +134,36 @@ class ModelSolution(object):
             self.__dict__[name] = val
             return
         self.__dict__['_metadata'][name] = val
+
+    def __getstate__(self):
+        state = {
+            '_metadata': self._metadata,
+            '_entry': {}
+        }
+        for (name, data) in iteritems(self._entry):
+            tmp = state['_entry'][name] = []
+            # Note: We must convert all weakrefs to hard refs and
+            # not indirect references like ComponentUIDs because
+            # when it comes time to unpickle, we cannot count on the
+            # model instance to have already been reconstructed --
+            # so things like CUID.find_component will fail (return
+            # None).
+            for obj, entry in itervalues(data):
+                if obj is None or obj() is None:
+                    logger.warn(
+                        "Solution component in '%s' no longer "
+                        "accessible: %s!" % ( name, entry ))
+                else:
+                    tmp.append( ( obj(), entry ) )
+        return state
+
+    def __setstate__(self, state):
+        self._metadata = state['_metadata']
+        self._entry = {}
+        for name, data in iteritems(state['_entry']):
+            tmp = self._entry[name] = {}
+            for obj, entry in data:
+                tmp[ id(obj) ] = ( weakref_ref(obj), entry )
 
 
 class ModelSolutions(object):
@@ -148,33 +183,15 @@ class ModelSolutions(object):
         state = {}
         state['index'] = self.index
         state['_instance'] = self._instance()
-        solutions = []
-        for soln in self.solutions:
-            soln_ = {}
-            soln_['metadata'] = soln._metadata
-            tmp = {}
-            for (name, data) in iteritems(soln._entry):
-                tmp[name] = {}
-                tmp[name].update( (ComponentUID(obj()), entry) for (obj, entry) in itervalues(data) )
-            soln_['entry'] = tmp
-            solutions.append(soln_)
-        state['solutions'] = solutions
+        state['solutions'] = self.solutions
+        state['symbol_map'] = self.symbol_map
         return state
 
     def __setstate__(self, state):
-        self.clear()
-        self.index = state['index']
-        self._instance = weakref_ref(state['_instance'])
-        instance = self._instance()
-        for soln in state['solutions']:
-            soln_ = ModelSolution()
-            soln_._metadata = soln['metadata']
-            for key,value in iteritems(soln['entry']):
-                d = soln_._entry[key]
-                for cuid, entry in iteritems(value):
-                    obj = cuid.find_component(instance)
-                    d[id(obj)] = (obj, entry)
-            self.solutions.append(soln_)
+        for key, val in iteritems(state):
+            setattr(self, key, val)
+        # Restore the instance weakref
+        self._instance = weakref_ref(self._instance)
 
     def __len__(self):
         return len(self.solutions)
@@ -208,20 +225,21 @@ class ModelSolutions(object):
         # If there is a warning, then print a warning message.
         #
         if (results.solver.status == pyomo.opt.SolverStatus.warning):
-            print('WARNING - Loading a SolverResults object with a ' \
-                  'warning status into model=%s; message from solver=%s' % (instance.name,
-                                                                            results.solver.Message))
+            logger.warn('Loading a SolverResults object with a '
+                        'warning status into model=%s;\nmessage from solver=%s'
+                        % (instance.name, results.solver.Message))
         #
         # If the solver status not one of either OK or Warning, then generate an error.
         #
         elif results.solver.status != pyomo.opt.SolverStatus.ok:
             if (results.solver.status == pyomo.opt.SolverStatus.aborted) and \
                (len(results.solution) > 0):
-               print("WARNING - Loading a SolverResults object with "
-                     "an 'aborted' status, but containing a solution")
+                logger.warn("Loading a SolverResults object with "
+                            "an 'aborted' status, but containing a solution")
             else:
-               raise ValueError("Cannot load a SolverResults object "
-                                "with bad status: %s" % str(results.solver.status))
+                raise ValueError("Cannot load a SolverResults object "
+                                 "with bad status: %s"
+                                 % str(results.solver.status))
         if clear:
             #
             # Clear the solutions, but not the symbol map
@@ -728,12 +746,6 @@ constructed model; returning a clone of the current model instance.""")
         instance._constructed = True
         return instance
 
-    def clone(self):
-        instance = SimpleBlock.clone(self)
-        # Do not keep cloned solutions, which point to the original model
-        instance.solutions.clear()
-        instance.solutions._instance = weakref_ref(instance)
-        return instance
 
     def preprocess(self, preprocessor=None):
         """Apply the preprocess plugins defined by the user"""

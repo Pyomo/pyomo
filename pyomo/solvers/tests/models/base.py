@@ -1,16 +1,19 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 from os.path import join, dirname, abspath
 import json
 import six
 
+import pyomo.kernel as pmo
+from pyomo.core.kernel.component_block import IBlockStorage
 from pyomo.core import Suffix, Var, Constraint, Objective
 from pyomo.opt import ProblemFormat, PersistentSolver, SolverFactory, TerminationCondition
 
@@ -29,7 +32,8 @@ def test_models(arg=None):
 def register_model(cls):
     """ Decorator for test model classes """
     global _test_models
-    _test_models[cls.description] = cls
+    assert cls.__name__ not in _test_models
+    _test_models[cls.__name__] = cls
     return cls
 
 
@@ -60,8 +64,12 @@ class _BaseTestModel(object):
         # Add suffixes
         self.test_suffixes = [] if self.disable_suffix_tests else \
                         import_suffixes
-        for suffix in self.test_suffixes:
-            setattr(self.model, suffix, Suffix(direction=Suffix.IMPORT))
+        if isinstance(self.model, IBlockStorage):
+            for suffix in self.test_suffixes:
+                setattr(self.model, suffix, pmo.suffix(direction=pmo.suffix.IMPORT))
+        else:
+            for suffix in self.test_suffixes:
+                setattr(self.model, suffix, Suffix(direction=Suffix.IMPORT))
 
     def solve(self,
               solver,
@@ -117,8 +125,12 @@ class _BaseTestModel(object):
         suffixes = dict((suffix, getattr(model,suffix))
                         for suffix in kwds.pop('suffixes',[]))
         for suf in suffixes.values():
-            assert isinstance(suf,Suffix)
-            assert suf.import_enabled()
+            if isinstance(self.model, IBlockStorage):
+                assert isinstance(suf,pmo.suffix)
+                assert suf.import_enabled
+            else:
+                assert isinstance(suf,Suffix)
+                assert suf.import_enabled()
 
         with open(filename,'w') as f:
             #
@@ -166,8 +178,12 @@ class _BaseTestModel(object):
         suffixes = dict((suffix, getattr(model,suffix))
                         for suffix in kwds.pop('suffixes',[]))
         for suf in suffixes.values():
-            assert isinstance(suf,Suffix)
-            assert suf.import_enabled()
+            if isinstance(self.model, IBlockStorage):
+                assert isinstance(suf,pmo.suffix)
+                assert suf.import_enabled
+            else:
+                assert isinstance(suf,Suffix)
+                assert suf.import_enabled()
         solution = None
         error_str = ("Difference in solution for {0}.{1}:\n\tBaseline "
                      "- {2}\n\tCurrent - {3}")

@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 #
 # Utility functions
@@ -13,7 +14,6 @@
 
 __all__ = ['summation', 'dot_product', 'sequence', 'prod']
 
-import pyomo.core.base.var
 import inspect
 from six.moves import xrange
 from functools import reduce
@@ -47,6 +47,8 @@ def summation(*args, **kwds):
     summation(denom=(a,b))
     Sum the product of 1/(a_i*b_i)
     """
+    # breaks import loop between var.py and util.py
+    import pyomo.core.base.var
 
     denom = kwds.pop('denom', tuple() )
 

@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 
 import re
@@ -45,7 +46,7 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     model = read(model_file)
 
     # if the use wants to extract duals or reduced costs and the
-    # model has quadratic constraints then we need to set the 
+    # model has quadratic constraints then we need to set the
     # QCPDual param to 1 (which apparently makes the solve more
     # expensive in the quadratic case). If we do not set this param
     # and and we attempt to access these suffixes in the solution
@@ -81,6 +82,11 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     # optimize the model
     model.optimize()
 
+    # This attribute needs to be extracted before
+    # calling model.getVars() or model.getConstrs().
+    # Apparently it gets reset by those methods.
+    wall_time = model.getAttr(GRB.Attr.Runtime)
+
     solver_status = model.getAttr(GRB.Attr.Status)
     solution_status = None
     return_code = 0
@@ -102,8 +108,8 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     elif (solver_status == GRB.INF_OR_UNBD):
         status = 'warning'
         message = 'Problem proven to be infeasible or unbounded.'
-        term_cond = 'unbounded' # Pyomo doesn't have an analog to "infeasible or unbounded", which is a weird concept anyway.
-        solution_status = 'unbounded'
+        term_cond = 'infeasibleOrUnbounded'
+        solution_status = 'unsure'
     elif (solver_status == GRB.UNBOUNDED):
         status = 'warning'
         message = 'Model was proven to be unbounded.'
@@ -169,6 +175,13 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
             else:
                 # minimize
                 obj_value = float('-inf')
+        elif term_cond == "infeasible":
+            if (sense < 0):
+                # maximize
+                obj_value = float('-inf')
+            else:
+                # minimize
+                obj_value = float('inf')
 
     # write the solution file
     solnfile = open(soln_file, "w+")
@@ -230,8 +243,7 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     solnfile.write('status: %s\n' % status)
     solnfile.write('return_code: %s\n' % return_code)
     solnfile.write('message: %s\n' % message)
-    solnfile.write('user_time: %s\n' % str(model.getAttr(GRB.Attr.Runtime)))
-    solnfile.write('system_time: %s\n' % str(0.0))
+    solnfile.write('wall_time: %s\n' % str(wall_time))
     solnfile.write('termination_condition: %s\n' % term_cond)
     solnfile.write('termination_message: %s\n' % message)
 

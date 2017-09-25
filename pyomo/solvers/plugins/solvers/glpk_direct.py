@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 # NOTE: this solver is disabled (see the first try block below).  This
 # code is out of date, and this code is not regularly tested by Pyomo developers.
@@ -174,12 +175,13 @@ class GLPKDirect ( OptSolver ):
                     continue
 
                 lb = ub = 0.0
-                if var.lb is None and var.ub is None:
+                if (not var.has_lb()) and \
+                   (not var.has_ub()):
                     var_type = GLP_FR
-                elif var.lb is None:
+                elif not var.has_lb():
                     var_type = GLP_UB
                     ub = value(var.ub)
-                elif var.ub is None:
+                elif not var.has_ub():
                     var_type = GLP_LO
                     lb = value(var.lb)
                 else:
@@ -217,7 +219,8 @@ class GLPKDirect ( OptSolver ):
             for ii in constraint_set:
                 constraint = constraint_set[ ii ]
                 if not constraint.active: continue
-                elif constraint.lower is None and constraint.upper is None:
+                elif (not constraint.has_lb()) and \
+                     (not constraint.has_ub()):
                     continue
 
                 expression = model_canonical_repn.get(constraint)
@@ -236,10 +239,10 @@ class GLPKDirect ( OptSolver ):
                 if constraint.equality:
                     var_type = GLP_FX    # Fixed
                     lbound = ubound = constraint.lower() - offset
-                elif constraint.lower is None:
+                elif not constraint.has_lb():
                     var_type = GLP_UP    # Upper bounded only
                     ubound += constraint.upper()
-                elif constraint.upper is None:
+                elif not constraint.has_ub():
                     var_type = GLP_LO    # Lower bounded only
                     lbound += constraint.lower()
                 else:

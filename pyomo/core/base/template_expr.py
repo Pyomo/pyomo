@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 from pyomo.core.base.numvalue import (
     NumericValue, native_numeric_types, as_numeric, value )
@@ -92,7 +93,7 @@ class IndexTemplate(NumericValue):
     def getname(self, fully_qualified=False, name_buffer=None):
         return "{"+self._set.getname(fully_qualified, name_buffer)+"}"
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         if ostream is None:
             ostream = sys.stdout
         ostream.write( self.name )
@@ -211,6 +212,10 @@ class _GetItemIndexer(object):
             return self._hash == other._hash
         else:
             return False
+
+    def __str__(self):
+        return "%s[%s]" % (
+            self._base.name, ','.join(str(x) for x in self._args) )
 
 def substitute_getitem_with_param(expr, _map):
     """A simple substituter to replace _GetItem nodes with mutable Params.

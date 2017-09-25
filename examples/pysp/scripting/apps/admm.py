@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import os
 import sys
@@ -254,14 +255,14 @@ def EXTERNAL_initialize_for_admm(manager,
         node_block = Block(concrete=True)
         admm_block.add_component(tree_node.name,
                                  node_block)
-        node_block.index = Set(
+        node_block.node_index = Set(
             ordered=True,
             initialize=sorted(tree_node._standard_variable_ids))
-        node_block.z = Param(node_block.index, initialize=0.0, mutable=True)
-        node_block.y = Param(node_block.index, initialize=0.0, mutable=True)
-        node_block.rho = Param(node_block.index, initialize=0.0, mutable=True)
+        node_block.z = Param(node_block.node_index, initialize=0.0, mutable=True)
+        node_block.y = Param(node_block.node_index, initialize=0.0, mutable=True)
+        node_block.rho = Param(node_block.node_index, initialize=0.0, mutable=True)
 
-        for id_ in node_block.index:
+        for id_ in node_block.node_index:
             varname, index = tree_node._variable_ids[id_]
             var = scenario._instance.find_component(varname)[index]
             admm_block.lagrangian_expression.expr += \

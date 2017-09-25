@@ -1,15 +1,14 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
-__all__ = []
-
-from pyomo.core.base.numvalue import \
+from pyomo.core.kernel.numvalue import \
    RegisterNumericType, \
    RegisterIntegerType, \
    RegisterBooleanType
@@ -17,7 +16,7 @@ from pyomo.core.base.numvalue import \
 try:
     import numpy
     _has_numpy = True
-except:
+except:     #pragma:nocover
     _has_numpy = False
 
 #
@@ -37,7 +36,7 @@ if _has_numpy:
         try:
             _type = getattr(numpy,_type_name)
             numpy_bool.append(_type)
-        except:
+        except:     #pragma:nocover
             pass
 
 # Integers
@@ -59,7 +58,7 @@ if _has_numpy:
         try:
             _type = getattr(numpy,_type_name)
             numpy_int.append(_type)
-        except:
+        except:     #pragma:nocover
             pass
 
 # Reals
@@ -74,7 +73,7 @@ if _has_numpy:
         try:
             _type = getattr(numpy,_type_name)
             numpy_float.append(_type)
-        except:
+        except:     #pragma:nocover
             pass
 
 # Complex
@@ -88,7 +87,7 @@ if _has_numpy:
         try:
             _type = getattr(numpy,_type_name)
             numpy_complex.append(_type)
-        except:
+        except:     #pragma:nocover
             pass
 
 

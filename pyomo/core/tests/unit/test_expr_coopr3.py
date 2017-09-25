@@ -1,17 +1,15 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 #
 # Unit Tests for expression generation
 #
-#
-
-from __future__ import print_function
 
 import os
 import six
@@ -25,11 +23,13 @@ from pyutilib.th import nottest
 
 from pyomo.environ import *
 from pyomo.core.base import expr_common, expr as EXPR
+from pyomo.core.base.var import SimpleVar
+from pyomo.core.base.numvalue import potentially_variable
+
 from pyomo.core.base.expr_coopr3 import UNREFERENCED_EXPR_COUNT, \
      UNREFERENCED_RELATIONAL_EXPR_COUNT, UNREFERENCED_INTRINSIC_EXPR_COUNT, \
      _getrefcount_available
-from pyomo.core.base.var import SimpleVar
-from pyomo.core.base.numvalue import potentially_variable
+
 
 class TestExpression_EvaluateNumericConstant(unittest.TestCase):
 

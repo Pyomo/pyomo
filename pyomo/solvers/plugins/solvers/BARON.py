@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import itertools
 import logging
@@ -76,6 +77,53 @@ class BARONSHELL(SystemCallSolver):
         self._precision_string = '.17g'
 
     @staticmethod
+    def _get_dummy_input_files(check_license=False):
+        with tempfile.NamedTemporaryFile(mode='w',
+                                         delete=False) as f:
+            # For some reason, if results: 0 is added to the options
+            # section, it causes a file named fort.71 to appear.
+            # So point the ResName option to a temporary file that
+            # we will delete
+            with tempfile.NamedTemporaryFile(mode='w',
+                                             delete=False) as fr:
+                pass
+            # Doing this for the remaining output files as well.
+            # Can't seem to reliably control the files created by
+            # Baron otherwise.
+            with tempfile.NamedTemporaryFile(mode='w',
+                                             delete=False) as fs:
+                pass
+            with tempfile.NamedTemporaryFile(mode='w',
+                                             delete=False) as ft:
+                pass
+            f.write("//This is a dummy .bar file created to "
+                    "return the baron version//\n"
+                    "OPTIONS {\n"
+                    "results: 1;\n"
+                    "ResName: \""+fr.name+"\";\n"
+                    "summary: 1;\n"
+                    "SumName: \""+fs.name+"\";\n"
+                    "times: 1;\n"
+                    "TimName: \""+ft.name+"\";\n"
+                    "}\n")
+            f.write("POSITIVE_VARIABLES ")
+            if check_license:
+                f.write(", ".join("x"+str(i) for i in range(11)))
+            else:
+                f.write("x1")
+            f.write(";\n")
+            f.write("OBJ: minimize x1;")
+        return (f.name, fr.name, fs.name, ft.name)
+
+    @staticmethod
+    def _remove_dummy_input_files(fnames):
+        for name in fnames:
+            try:
+                os.remove(name)
+            except OSError:
+                pass
+
+    @staticmethod
     def license_is_valid(executable='baron'):
         """
         Runs a check for a valid Baron license using the
@@ -84,34 +132,26 @@ class BARONSHELL(SystemCallSolver):
         the executable being invalid), then this function
         will return False.
         """
-        with tempfile.NamedTemporaryFile(mode='w',
-                                         delete=False) as f:
-            with tempfile.NamedTemporaryFile(mode='w',
-                                             delete=False) as fr:
-                pass
-            f.write("//This is a dummy .bar file created to "
-                    "return the baron version//\n"
-                    "OPTIONS {\n"
-                    "ResName: \""+fr.name+"\";\n"
-                    "Summary: 0;\n"
-                    "}\n"
-                    "POSITIVE_VARIABLES x1;\n"
-                    "OBJ: minimize x1;")
+        fnames= BARONSHELL._get_dummy_input_files(check_license=True)
         try:
-            rc = subprocess.call([executable, f.name],
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT)
+            process = subprocess.Popen([executable, fnames[0]],
+                                       stdout=subprocess.PIPE,
+                                       stderr=subprocess.STDOUT)
+            stdout, stderr = process.communicate()
+            assert stderr is None
+            rc = 0
+            if process.returncode:
+                rc = 1
+            else:
+                stdout = stdout.decode()
+                for line in stdout.splitlines():
+                    if ("License file" in line) and ("not valid" in line):
+                        rc = 1
+                        break
         except OSError:
             rc = 1
         finally:
-            try:
-                os.remove(fr.name)
-            except OSError:
-                pass
-            try:
-                os.remove(f.name)
-            except OSError:
-                pass
+            BARONSHELL._remove_dummy_input_files(fnames)
         if rc:
             return False
         else:
@@ -135,13 +175,12 @@ class BARONSHELL(SystemCallSolver):
         if solver_exec is None:
             return _extract_version('')
         else:
-            dummy_prob_file = tempfile.NamedTemporaryFile(mode='w')
-            dummy_prob_file.write("//This is a dummy .bar file created to "
-                                  "return the baron version//\nPOSITIVE_VARIABLES "
-                                  "x1;\nOBJ: minimize x1;")
-            dummy_prob_file.seek(0)
-            results = pyutilib.subprocess.run( [solver_exec,dummy_prob_file.name])
-            return _extract_version(results[1],length=3)
+            fnames = self._get_dummy_input_files(check_license=False)
+            try:
+                results = pyutilib.subprocess.run([solver_exec, fnames[0]])
+                return _extract_version(results[1])
+            finally:
+                self._remove_dummy_input_files(fnames)
 
     def create_command_line(self, executable, problem_files):
 

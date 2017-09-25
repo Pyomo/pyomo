@@ -1,21 +1,21 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
-
-__all__ = ( 'DerivativeVar', 'DAE_Error', )
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import weakref
-
 from pyomo.core.base.var import Var, _VarData
 from pyomo.core.base.component import register_component
 from pyomo.dae.contset import ContinuousSet
-
 from six import iterkeys
+
+__all__ = ('DerivativeVar', 'DAE_Error',)
+
 
 def create_access_function(var):
     """
@@ -26,131 +26,159 @@ def create_access_function(var):
         return var[args]
     return _fun
 
+
 class DAE_Error(Exception):
     """Exception raised while processing DAE Models"""
 
-def derivative(self,*args):
-    """
-    This function allows the user to use a derivative without
-    declaring a DerivativeVar. It will add a DerivativeVar component
-    to the model if one doesn't already exist. The argument to this
-    method is the ContinuousSet(s) that the derivative is being taken
-    with respect to.
-    """
+# Depricated functionality for creating a derivative on the fly
+#
+# def derivative(self, *args):
+#     """
+#     This function allows the user to use a derivative without
+#     declaring a DerivativeVar. It will add a DerivativeVar component
+#     to the model if one doesn't already exist. The argument to this
+#     method is the ContinuousSet(s) that the derivative is being taken
+#     with respect to.
+#     """
+#     wrt = [i for i in args]
+#     svar = self.parent_component()
+#     idx = self.index()
+#
+#     try:
+#         num_contset = len(svar._contset)
+#     except:
+#         svar._contset = {}
+#         svar._derivative = {}
+#         if svar.dim() == 0:
+#             raise DAE_Error("The variable %s is not indexed by any "
+#                             ":py:class:`ContinuousSets<pyomo.dae"
+#                             ".ContinuousSet>`. A derivative may only be "
+#                             "taken with respect to a continuous domain"
+#                             % (svar))
+#         elif svar.dim() == 1:
+#             sidx_sets = svar._index
+#             if sidx_sets.type() is ContinuousSet:
+#                 svar._contset[sidx_sets] = 0
+#         else:
+#             sidx_sets = svar._implicit_subsets
+#             for i,s in enumerate(sidx_sets):
+#                 if s.type() is ContinuousSet:
+#                     svar._contset[s] = i
+#             num_contset = len(svar._contset)
+#
+#     if len(args)==0:
+#         if num_contset != 1:
+#             raise ValueError(
+#                 "The Var %s is indexed by multiple ContinuousSets. The "
+#                 "desired ContinuousSet must be specified" % (svar))
+#         args = (self.model().find_component(next(iterkeys(svar._contset))), )
+#     try:
+#         deriv = self.model().find_component(svar.get_derivative(*args))
+#     except:
+#         nme = '_'
+#         for i in args:
+#             nme = nme+'d'+i.local_name
+#         self.model().add_component('d' + svar.local_name + nme,
+#                                    DerivativeVar(svar, wrt=args))
+#         deriv = svar.get_derivative(*args)
+#
+#     try:
+#         return deriv[idx]
+#     except:
+#         new_indices = set(deriv._index)-set(iterkeys(deriv._data))
+#         deriv._add_members(new_indices)
+#         deriv._initialize_members(new_indices)
+#         return deriv[idx]
+#
+#
+# def get_derivative(self, *args):
+#     """
+#     Returns the dictionary mapping derivatives to their DerivativeVar or
+#     returns a certain DerivativeVar specified by the keyword arguments
+#     """
+#     try:
+#         if len(args) == 0:
+#             return self._derivative
+#         else:
+#             key = [str(i) for i in args]
+#             key.sort()
+#             key = tuple(key)
+#             return self._derivative[key]()
+#     except AttributeError:
+#         return {}
+#
+#
+# def is_fully_discretized(self):
+#     """
+#     Checks to see if all ContinuousSets indexing this Var have been
+#     discretized
+#     """
+#     for i in self._contset:
+#         if 'scheme' not in i.get_discretization_info():
+#             return False
+#         return True
+#
+# # The following code adds a few methods and attributes to Var and
+# # _VarData which allow them to be indexed by discretized and
+# # differentiated. All Vars in the model will have these methods and
+# # attributes after importing pyomo.dae.
+#
+# _VarData.derivative = derivative
+# Var.get_derivative = get_derivative
+# Var.is_fully_discretized = is_fully_discretized
 
-    wrt = [i for i in args]
-    svar = self.parent_component()
-    idx = self.index()
-
-    try:
-        num_contset = len(svar._contset)
-    except:
-        svar._contset = {}
-        svar._derivative = {}
-        if svar.dim() == 0:
-            raise DAE_Error("The variable %s is not indexed by any ContinuousSets. A derivative may "
-                            "only be taken with respect to a continuous domain" % (svar))
-        elif svar.dim() == 1:
-            sidx_sets = svar._index
-            if sidx_sets.type() is ContinuousSet:
-                svar._contset[sidx_sets] = 0
-        else:
-            sidx_sets = svar._implicit_subsets
-            for i,s in enumerate(sidx_sets):
-                if s.type() is ContinuousSet:
-                    svar._contset[s] = i
-            num_contset = len(svar._contset)
-
-    if len(args)==0:
-        if  num_contset != 1:
-            raise ValueError(
-                "The Var %s is indexed by multiple ContinuousSets. The desired "
-                "ContinuousSet must be specified" % (svar))
-        args = ( self.model().find_component(next(iterkeys(svar._contset))), )
-    try:
-        deriv = self.model().find_component(svar.get_derivative(*args))
-    except:
-        nme = '_'
-        for i in args:
-            nme = nme+'d'+i.local_name
-        self.model().add_component('d'+svar.local_name+nme,DerivativeVar(svar,wrt=args))
-        deriv = svar.get_derivative(*args)
-
-    try:
-        return deriv[idx]
-    except:
-        new_indices = set(deriv._index)-set(iterkeys(deriv._data))
-        deriv._add_members(new_indices)
-        deriv._initialize_members(new_indices)
-        return deriv[idx]
-
-def get_derivative(self,*args):
-    """
-    Returns the dictionary mapping derivatives to their DerivativeVar or
-    returns a certain DerivativeVar specified by the keyword arguments
-    """
-    try:
-        if len(args) == 0:
-            return self._derivative
-        else:
-            key = [str(i) for i in args]
-            key.sort()
-            key = tuple(key)
-            return self._derivative[key]()
-    except AttributeError:
-        return {}
-
-def is_fully_discretized(self):
-    """
-    Checks to see if all ContinuousSets indexing this Var have been
-    discretized
-    """
-    for i in self._contset:
-        if 'scheme' not in i.get_discretization_info():
-            return False
-        return True
-
-# The following code adds a few methods and attributes to Var and
-# _VarData which allow them to be indexed by discretized and
-# differentiated. All Vars in the model will have these methods and
-# attributes after importing pyomo.dae.
-
-_VarData.derivative = derivative
-Var.get_derivative = get_derivative
-Var.is_fully_discretized = is_fully_discretized
 
 class DerivativeVar(Var):
     """
-    A variable which the derivative of a StateVar with respect to one or more ContinuousSets.
-    The constructor accepts a single positional argument which is the StateVar that's being
-    differentiated.
+    Represents derivatives in a model and defines how a
+    :py:class:`Var<pyomo.environ.Var>` is differentiated
 
-    Keyword Arguments:
-    wrt, withrespectto     A ContinuousSet or a tuple(or list) of ContinuousSets that the
-                           derivative is being taken with respect to. Higher order derivatives
-                           are represented by including the ContinuousSet multiple times in
-                           the tuple sent to this keyword. i.e. wrt=(m.t,m.t) would be the second
-                           order derivative with respect to m.t
+    The :py:class:`DerivativeVar <pyomo.dae.DerivativeVar>` component is
+    used to declare a derivative of a :py:class:`Var <pyomo.environ.Var>`.
+    The constructor accepts a single positional argument which is the
+    :py:class:`Var<pyomo.environ.Var>` that's being differentiated. A
+    :py:class:`Var <pyomo.environ.Var>` may only be differentiated with
+    respect to a :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` that it
+    is indexed by. The indexing sets of a :py:class:`DerivativeVar
+    <pyomo.dae.DerivativeVar>` are identical to those of the :py:class:`Var
+    <pyomo.environ.Var>` it is differentiating.
 
-    Private Attributes:
-    _stateVar     The StateVar being differentiated
-    _wrt          A list of the ContinuousSets the derivative is being taken with respect to
-    _expr         An expression representing the discretization equations linking the DerivativeVar
-                  to its StateVar.
+    Parameters
+    ----------
+    sVar : ``pyomo.environ.Var``
+        The variable being differentiated
+
+    wrt : ``pyomo.dae.ContinuousSet`` or tuple
+        Equivalent to `withrespectto` keyword argument. The
+        :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` that the
+        derivative is being taken with respect to. Higher order derivatives
+        are represented by including the
+        :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` multiple times in
+        the tuple sent to this keyword. i.e. ``wrt=(m.t, m.t)`` would be the
+        second order derivative with respect to ``m.t``
     """
+
+    # Private Attributes:
+    # _stateVar   The :class:`Var` being differentiated
+    # _wrt        A list of the :class:`ContinuousSet` components the
+    #             derivative is being taken with respect to
+    # _expr       An expression representing the discretization equations
+    #             linking the :class:`DerivativeVar` to its state :class:`Var`.
 
     def __init__(self, sVar, **kwds):
 
-        if not isinstance(sVar,Var):
+        if not isinstance(sVar, Var):
             raise DAE_Error(
-                "%s is not a variable. Can only take the derivative of a Var component." % (sVar))
+                "%s is not a variable. Can only take the derivative of a Var"
+                "component." % sVar)
+
         if "wrt" in kwds and "withrespectto" in kwds:
             raise TypeError(
                 "Cannot specify both 'wrt' and 'withrespectto keywords "
                 "in a DerivativeVar")
 
-        wrt = kwds.pop('wrt',None)
-        wrt = kwds.pop('withrespectto',wrt)
+        wrt = kwds.pop('wrt', None)
+        wrt = kwds.pop('withrespectto', wrt)
 
         try:
             num_contset = len(sVar._contset)
@@ -165,44 +193,48 @@ class DerivativeVar(Var):
                     sVar._contset[sidx_sets] = 0
             else:
                 sidx_sets = sVar._implicit_subsets
-                for i,s in enumerate(sidx_sets):
+                for i, s in enumerate(sidx_sets):
                     if s.type() is ContinuousSet:
                         sVar._contset[s] = i
             num_contset = len(sVar._contset)
 
         if num_contset == 0:
-            raise DAE_Error("The variable %s is not indexed by any ContinuousSets. A derivative may "
-                            "only be taken with respect to a continuous domain" % (sVar))
+            raise DAE_Error(
+                "The variable %s is not indexed by any ContinuousSets. A "
+                "derivative may only be taken with respect to a continuous "
+                "domain" % sVar)
 
-        if wrt == None:
+        if wrt is None:
             # Check to be sure Var is indexed by single ContinuousSet and take
             # first deriv wrt that set
             if num_contset != 1:
                 raise DAE_Error(
-                    "The variable %s is indexed by multiple ContinuousSets. The desired "
-                    "ContinuousSet must be specified using the keyword argument 'wrt'" % (sVar))
-            wrt = [next(iterkeys(sVar._contset)),]
+                    "The variable %s is indexed by multiple ContinuousSets. "
+                    "The desired ContinuousSet must be specified using the "
+                    "keyword argument 'wrt'" % sVar)
+            wrt = [next(iterkeys(sVar._contset)), ]
         elif type(wrt) is ContinuousSet:
             if wrt not in sVar._contset:
                 raise DAE_Error(
                     "Invalid derivative: The variable %s is not indexed by "
-                    "the ContinuousSet %s" %(sVar,wrt))
-            wrt = [wrt,]
+                    "the ContinuousSet %s" % (sVar, wrt))
+            wrt = [wrt, ]
         elif type(wrt) is tuple or type(wrt) is list:
             for i in wrt:
                 if type(i) is not ContinuousSet:
                     raise DAE_Error(
                         "Cannot take the derivative with respect to %s. "
-                        "Expected a ContinuousSet or a tuple of ContinuousSets"% (i))
+                        "Expected a ContinuousSet or a tuple of "
+                        "ContinuousSets" % i)
                 if i not in sVar._contset:
                     raise DAE_Error(
-                        "Invalid derivative: The variable %s is not indexed by "
-                        "the ContinuousSet %s" %(sVar,i))
+                        "Invalid derivative: The variable %s is not indexed "
+                        "by the ContinuousSet %s" % (sVar, i))
             wrt = list(wrt)
         else:
             raise DAE_Error(
                 "Cannot take the derivative with respect to %s. "
-                "Expected a ContinuousSet or a tuple of ContinuousSets"% (i))
+                "Expected a ContinuousSet or a tuple of ContinuousSets" % i)
 
         wrtkey = [str(i) for i in wrt]
         wrtkey.sort()
@@ -212,7 +244,7 @@ class DerivativeVar(Var):
             raise DAE_Error(
                 "Cannot create a new derivative variable for variable "
                 "%s: derivative already defined as %s"
-                % ( sVar.name, sVar.get_derivative(*tuple(wrt)).name ) )
+                % (sVar.name, sVar.get_derivative(*tuple(wrt)).name ))
 
         sVar._derivative[wrtkey] = weakref.ref(self)
         self._sVar = sVar
@@ -228,12 +260,24 @@ class DerivativeVar(Var):
         Var.__init__(self,*arg,**kwds)
 
     def get_continuousset_list(self):
+        """ Return the a list of :py:class:`ContinuousSet` components the
+        derivative is being taken with respect to.
+
+        Returns
+        -------
+        `list`
+        """
         return self._wrt
 
     def is_fully_discretized(self):
         """
-        Check to see if all the ContinuousSets this derivative is taken with
-        respect to have been discretized.
+        Check to see if all the
+        :py:class:`ContinuousSets<pyomo.dae.ContinuousSet>` this derivative
+        is taken with respect to have been discretized.
+
+        Returns
+        -------
+        `boolean`
         """
         for i in self._wrt:
             if 'scheme' not in i.get_discretization_info():
@@ -241,14 +285,21 @@ class DerivativeVar(Var):
         return True
 
     def get_state_var(self):
+        """ Return the :py:class:`Var` that is being differentiated.
+
+        Returns
+        -------
+        :py:class:`Var<pyomo.environ.Var>`
+        """
         return self._sVar
 
     def get_derivative_expression(self):
         """
-        Returns the current discretization expression for this derivative or creates
-        an access function to its StateVar the first time this method is called.
-        The expression gets built up as the discretization transformations are
-        sequentially applied to each ContinuousSet in the model.
+        Returns the current discretization expression for this derivative or
+        creates an access function to its :py:class:`Var` the first time
+        this method is called. The expression gets built up as the
+        discretization transformations are sequentially applied to each
+        :py:class:`ContinuousSet` in the model.
         """
         try:
             return self._expr
@@ -256,7 +307,12 @@ class DerivativeVar(Var):
             self._expr = create_access_function(self._sVar)
             return self._expr
 
-    def set_derivative_expression(self,expr):
+    def set_derivative_expression(self, expr):
+        """ Sets``_expr``, an expression representing the discretization
+        equations linking the :class:`DerivativeVar` to its state
+        :class:`Var`
+        """
         self._expr = expr
 
-register_component(DerivativeVar, "Derivative of a State variable in a DAE model.")
+register_component(DerivativeVar,
+                   "Derivative of a Var in a DAE model.")

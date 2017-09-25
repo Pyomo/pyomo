@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import logging
 from six import itervalues
@@ -461,11 +462,31 @@ class Collocation_Discretization_Transformation(Transformation):
                 tmpn = (n,)
             return tmpn[0:l]+(tik,)+tmpn[l:]
 
-    def reduce_collocation_points(self, instance, var=None, ncp=None, contset=None):
+    def reduce_collocation_points(self, instance, var=None, ncp=None,
+                                  contset=None):
         """
-        This method will add additional constraints to a model if some
-        of the Variables are specified as having less collocation points
-        than the default
+        This method will add additional constraints to a model to reduce the
+        number of free collocation points (degrees of freedom) for a particular
+        variable.
+
+        Parameters
+        ----------
+        instance : Pyomo model
+            The discretized Pyomo model to add constraints to
+
+        var : ``pyomo.environ.Var``
+            The Pyomo variable for which the degrees of freedom will be reduced
+
+        ncp : int
+            The new number of free collocation points for `var`. Must be
+            less that the number of collocation points used in discretizing
+            the model.
+
+        contset : ``pyomo.dae.ContinuousSet``
+            The :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` that was
+            discretized and for which the `var` will have a reduced number
+            of degrees of freedom
+
         """
         if contset is None:
             raise TypeError("A continuous set must be specified using the keyword 'contset'")

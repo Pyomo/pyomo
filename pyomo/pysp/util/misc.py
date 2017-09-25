@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 __all__ = ("launch_command", "load_external_module")
 
@@ -460,13 +461,14 @@ def _get_test_dispatcher(ns_host=None,
             dispatcher_port = find_unused_port()
             print("Trying dispatcher with port: "
                   +str(dispatcher_port))
+            cmd = ["dispatch_srvr",
+                   "--host="+str(ns_host),
+                   "--port="+str(ns_port),
+                   "--daemon-host="+str(dispatcher_host),
+                   "--daemon-port="+str(dispatcher_port)]
+            print(' '.join(cmd))
             dispatcher_process = \
-                subprocess.Popen(["dispatch_srvr"] + \
-                                 ["--host="+str(ns_host)] + \
-                                 ["--port="+str(ns_port)] + \
-                                 ["--daemon-host="+str(dispatcher_host)] + \
-                                 ["--daemon-port="+str(dispatcher_port)],
-                                 stdout=subprocess.PIPE)
+                subprocess.Popen(cmd, stdout=subprocess.PIPE)
             time.sleep(5)
             _poll(dispatcher_process)
             break

@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import glob
 import pyutilib.dev.runtests
@@ -48,6 +49,16 @@ def runPyomoTests():
         dest='output',
         default=None,
         help='Redirect output to a file')
+    parser.add_option('--with-doctest',
+        action='store_true',
+        dest='doctests',
+        default=False,
+        help='Run tests included in Sphinx documentation')
+    parser.add_option('--doc-dir',
+        action='store',
+        dest='docdir',
+        default=None,
+        help='Top-level source directory for Sphinx documentation')
 
     _options, args = parser.parse_args(sys.argv)
 
@@ -55,6 +66,17 @@ def runPyomoTests():
         outfile = os.path.abspath(_options.output)
     else:
         outfile = None
+
+    if _options.docdir:
+        docdir = os.path.abspath(_options.docdir)
+        if not os.path.exists(docdir):
+            raise ValueError("Invalid documentation directory, "
+                             "path does not exist")
+    elif _options.doctests:
+        docdir = os.path.join('pyomo','doc','OnlineDocs')
+    else:
+        docdir = None
+
     if _options.dir is None:
         # the /src directory (for development installations)
         os.chdir( os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))) )
@@ -76,6 +98,8 @@ def runPyomoTests():
         options.append('--coverage')
     if _options.verbose:
         options.append('-v')
+    if _options.doctests:
+        options.append('--with-doctest')
     if outfile:
         options.append('-o')
         options.append(outfile)
@@ -121,4 +145,7 @@ def runPyomoTests():
                         testdirs.append(root)
                     break
     #
+    if docdir:
+        testdirs.append(docdir)
+
     return pyutilib.dev.runtests.run('pyomo', ['runtests']+options+['-p','pyomo']+testdirs)

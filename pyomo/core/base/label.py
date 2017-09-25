@@ -1,20 +1,23 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 __all__ = ['CounterLabeler', 'NumericLabeler', 'CNameLabeler', 'TextLabeler',
-           'AlphaNumTextLabeler','NameLabeler', 'CuidLabeler']
+           'AlphaNumericTextLabeler','NameLabeler', 'CuidLabeler']
 
 import six
 if six.PY3:
-    _string = str
+    _translate = str.translate
 else:
-    import string as _string
+    import string
+    _translate = string.translate
+
 from pyomo.core.base.component import ComponentUID
 
 # This module provides some basic functionality for generating labels
@@ -23,30 +26,64 @@ from pyomo.core.base.component import ComponentUID
 # optimization input file formats, e.g., CPLEX LP files.  The purpose of
 # this module is to provide a simple remap function, that will satisfy
 # broadly problematic symbols. if solver-specific remaps are required,
-# they should be handled either in the corresponding solver plugin.
+# they should be handled in the corresponding solver plugin.
 
-# NOTE: Simple single-character substitutions should be handled by adding
-#       to the translation table constructed below - first argument is the
-#       "from" characters, second argument is the "to" characters.
-cpxlp_translation_table = _string.maketrans("[]{} -#$%&*+.,/;<=>?@^!~':",
-                                             "()()______________________")
+class _CharMapper(object):
+    def __init__(self, preserve, translate, other):
+        """
+        Arguments::
+           preserve: a string of characters to preserve
+           translate: a dict or key/value list of characters to translate
+           other: the character to return for all characters not in
+                  preserve or translate
+        """
+        self.table = dict(
+            (k if isinstance(k, int) else ord(k), v)
+            for k,v in six.iteritems(dict(translate)) )
+        for c in preserve:
+            _c = ord(c)
+            if _c in self.table and self.table[_c] != c:
+                raise RuntimeError("Duplicate character '%s' appears in both "
+                                   "translate table and preserve list" % (c,))
+            self.table[_c] = c
+        self.other = other
+
+    def __getitem__(self, c):
+        # Most of the time c should be known.  For the rare cases we
+        # encounter a new character, remember it by adding a new entry
+        # into the translation table and return the default character
+        try:
+            return self.table[c]
+        except:
+            self.table[c] = self.other
+            return self.other
+
+    def make_table(self):
+        return ''.join(self[i] for i in range(256))
+
+_alpha = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJLKMNOPQRSTUVWXYZ'
+_digit = '1234567890'
+_cpxlp_translation_table = _CharMapper( preserve=_alpha+_digit+'()_',
+                                        translate = zip('[]{}', '()()'),
+                                        other='_' ).make_table()
 def cpxlp_label_from_name(name):
 
     if name is None:
         raise RuntimeError("Illegal name=None supplied to "
                            "cpxlp_label_from_name function")
 
-    return _string.translate(name, cpxlp_translation_table)
+    return _translate(name, _cpxlp_translation_table)
 
-alphanum_translation_table = _string.maketrans("()[]{} -#$%&*+.,/;<=>?@^!~':",
-                                               "____________________________")
+_alphanum_translation_table = _CharMapper( preserve=_alpha+_digit+'_',
+                                       translate = {},
+                                       other='_' ).make_table()
 def alphanum_label_from_name(name):
 
     if name is None:
         raise RuntimeError("Illegal name=None supplied to "
                            "alphanum_label_from_name function")
 
-    return _string.translate(name, alphanum_translation_table)
+    return _translate(name, _alphanum_translation_table)
 
 class CuidLabeler(object):
 
@@ -94,7 +131,7 @@ class TextLabeler(object):
     def __call__(self, obj):
         return cpxlp_label_from_name(obj.getname(True, self.name_buffer))
 
-class AlphaNumTextLabeler(object):
+class AlphaNumericTextLabeler(object):
     def __init__(self):
         self.name_buffer = {}
 

@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 #
 # Unit Tests for indexed components
 #
@@ -163,29 +164,29 @@ class TestComponentSlices(unittest.TestCase):
         self.m = None
 
     def test_simple_getitem(self):
-        self.assertTrue(isinstance(self.m.b[1,4], _BlockData))
+        self.assertIsInstance(self.m.b[1,4], _BlockData)
 
     def test_simple_getslice(self):
         _slicer = self.m.b[:,4]
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         ans = [ str(x) for x in _slicer ]
         self.assertEqual(
             ans, ['b[1,4]', 'b[2,4]', 'b[3,4]'] )
 
         _slicer = self.m.b[1,4].c[:,4]
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         ans = [ str(x) for x in _slicer ]
         self.assertEqual(
             ans, ['b[1,4].c[1,4]', 'b[1,4].c[2,4]', 'b[1,4].c[3,4]'] )
 
     def test_wildcard_slice(self):
         _slicer = self.m.b[:]
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         ans = [ str(x) for x in _slicer ]
         self.assertEqual( ans, [] )
 
         _slicer = self.m.b[...]
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         ans = [ str(x) for x in _slicer ]
         self.assertEqual(
             ans, [ 'b[1,4]', 'b[1,5]', 'b[1,6]',
@@ -194,14 +195,14 @@ class TestComponentSlices(unittest.TestCase):
                ] )
 
         _slicer = self.m.b[1,...]
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         ans = [ str(x) for x in _slicer ]
         self.assertEqual(
             ans, [ 'b[1,4]', 'b[1,5]', 'b[1,6]',
                ] )
 
         _slicer = self.m.b[...,5]
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         ans = [ str(x) for x in _slicer ]
         self.assertEqual(
             ans, [ 'b[1,5]',
@@ -210,14 +211,14 @@ class TestComponentSlices(unittest.TestCase):
                ] )
 
         _slicer = self.m.bb[2,...,8]
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         ans = [ str(x) for x in _slicer ]
         self.assertEqual(
             ans, [ 'bb[2,4,8]', 'bb[2,5,8]', 'bb[2,6,8]',
                ] )
 
         _slicer = self.m.bb[:,...,8]
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         ans = [ str(x) for x in _slicer ]
         self.assertEqual(
             ans, [ 'bb[1,4,8]', 'bb[1,5,8]', 'bb[1,6,8]',
@@ -226,7 +227,7 @@ class TestComponentSlices(unittest.TestCase):
                ] )
 
         _slicer = self.m.bb[:,:,...,8]
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         ans = [ str(x) for x in _slicer ]
         self.assertEqual(
             ans, [ 'bb[1,4,8]', 'bb[1,5,8]', 'bb[1,6,8]',
@@ -235,7 +236,7 @@ class TestComponentSlices(unittest.TestCase):
                ] )
 
         _slicer = self.m.bb[:,...,:,8]
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         ans = [ str(x) for x in _slicer ]
         self.assertEqual(
             ans, [ 'bb[1,4,8]', 'bb[1,5,8]', 'bb[1,6,8]',
@@ -244,19 +245,19 @@ class TestComponentSlices(unittest.TestCase):
                ] )
 
         _slicer = self.m.b[1,4,...]
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         ans = [ str(x) for x in _slicer ]
         self.assertEqual(
             ans, [ 'b[1,4]',
                ] )
 
         _slicer = self.m.b[1,2,3,...]
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         ans = [ str(x) for x in _slicer ]
         self.assertEqual( ans, [] )
 
         _slicer = self.m.b[1,:,2]
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         ans = [ str(x) for x in _slicer ]
         self.assertEqual( ans, [] )
 
@@ -267,20 +268,20 @@ class TestComponentSlices(unittest.TestCase):
 
     def test_nonterminal_slice(self):
         _slicer = self.m.b[:,4].x
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         ans = [ str(x) for x in _slicer ]
         self.assertEqual(
             ans, ['b[1,4].x', 'b[2,4].x', 'b[3,4].x'] )
 
         _slicer = self.m.b[:,4].x[7]
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         ans = [ str(x) for x in _slicer ]
         self.assertEqual(
             ans, ['b[1,4].x[7]', 'b[2,4].x[7]', 'b[3,4].x[7]'] )
 
     def test_nested_slices(self):
         _slicer = self.m.b[1,:].c[:,4].x
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         ans = [ str(x) for x in _slicer ]
         self.assertEqual(
             ans, ['b[1,4].c[1,4].x', 'b[1,4].c[2,4].x', 'b[1,4].c[3,4].x',
@@ -289,7 +290,7 @@ class TestComponentSlices(unittest.TestCase):
               ] )
 
         _slicer = self.m.b[1,:].c[:,4].x[8]
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         ans = [ str(x) for x in _slicer ]
         self.assertEqual(
             ans,
@@ -298,9 +299,9 @@ class TestComponentSlices(unittest.TestCase):
               'b[1,6].c[1,4].x[8]', 'b[1,6].c[2,4].x[8]', 'b[1,6].c[3,4].x[8]',
                ] )
 
-    def test_function_slices(self):
+    def test_component_function_slices(self):
         _slicer = self.m.component('b')[1,:].component('c')[:,4].component('x')
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         ans = [ str(x) for x in _slicer ]
         self.assertEqual(
             ans, ['b[1,4].c[1,4].x', 'b[1,4].c[2,4].x', 'b[1,4].c[3,4].x',
@@ -308,48 +309,60 @@ class TestComponentSlices(unittest.TestCase):
                   'b[1,6].c[1,4].x', 'b[1,6].c[2,4].x', 'b[1,6].c[3,4].x',
               ] )
 
+    def test_noncomponent_function_slices(self):
+        ans = self.m.component('b')[1,:].component('c')[:,4].x.fix(5)
+        self.assertIsInstance(ans, list)
+        self.assertEqual( ans, [None]*9 )
+
+        ans = self.m.component('b')[1,:].component('c')[:,4].x[:].is_fixed()
+        self.assertIsInstance(ans, list)
+        self.assertEqual( ans, [True]*(9*3) )
+
+        ans = self.m.component('b')[1,:].component('c')[:,5].x[:].is_fixed()
+        self.assertIsInstance(ans, list)
+        self.assertEqual( ans, [False]*(9*3) )
 
     def test_empty_slices(self):
         _slicer = self.m.b[1,:].c[:,1].x
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         ans = [ str(x) for x in _slicer ]
         self.assertEqual( ans, [] )
 
         _slicer = self.m.b[1,:].c[:,4].x[1]
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         _slicer.key_errors_generate_exceptions = False
         ans = [ str(x) for x in _slicer ]
         self.assertEqual( ans, [] )
 
         _slicer = self.m.b[1,:].c[:,4].y
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         _slicer.attribute_errors_generate_exceptions = False
         ans = [ str(x) for x in _slicer ]
         self.assertEqual( ans, [] )
 
         _slicer = self.m.b[1,:].c[:,4].component('y', False)
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         _slicer.call_errors_generate_exceptions = False
         ans = [ str(x) for x in _slicer ]
         self.assertEqual( ans, [] )
 
         _slicer = self.m.b[1,:].c[:,4].x[1]
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         _slicer.key_errors_generate_exceptions = True
         self.assertRaises( KeyError, _slicer.next )
 
         _slicer = self.m.b[1,:].c[:,4].y
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         _slicer.attribute_errors_generate_exceptions = True
         self.assertRaises( AttributeError, _slicer.next )
 
         _slicer = self.m.b[1,:].c[:,4].component('y', False)
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         _slicer.call_errors_generate_exceptions = True
         self.assertRaises( TypeError,_slicer.next )
 
         _slicer = self.m.b[1,:].c[:,4].component()
-        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        self.assertIsInstance(_slicer, _IndexedComponent_slicer)
         _slicer.call_errors_generate_exceptions = True
         self.assertRaises( TypeError, _slicer.next )
 

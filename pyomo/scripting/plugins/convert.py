@@ -1,18 +1,19 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import json
 import sys
 import argparse
 
 from pyutilib.misc import Options
-from pyomo.opt import ProblemFormat, ProblemConfigFactory
+from pyomo.opt import ProblemFormat, ProblemConfigFactory, guess_format
 from pyomo.scripting.pyomo_parser import add_subparser, CustomHelpFormatter
 
 
@@ -43,19 +44,21 @@ def create_parser(parser=None):
 
 def run_convert(options=Options(), parser=None):
     from pyomo.scripting.convert import convert, convert_dakota
-    if options.model.save_format is None and not options.model.save_file is None and '.' in options.model.save_file:
+    if options.model.save_format is None and options.model.save_file:
         options.model.save_format = options.model.save_file.split('.')[-1]
     #
+    _format = guess_format(options.model.save_format)
+
     if options.model.save_format == 'dakota':
         return convert_dakota(options, parser)
-    elif options.model.save_format == 'lp':
-        return convert(options, parser, ProblemFormat.cpxlp)
-    elif options.model.save_format == 'nl':
-        return convert(options, parser, ProblemFormat.nl)
-    elif options.model.save_format == 'osil':
-        return convert(options, parser, ProblemFormat.osil)
+    elif _format is None:
+        if options.model.save_format is None:
+            raise RuntimeError("Unspecified target conversion format!")
+        else:
+            raise RuntimeError("Unrecognized target conversion format (%s)!"
+                               % (options.model.save_format,) )
     else:
-        raise RuntimeError("Unspecified target conversion format!")
+        return convert(options, parser, _format)
 
 
 def convert_exec(args, unparsed):

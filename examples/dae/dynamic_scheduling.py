@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 # 
 # This is a toy example for scheduling a sequence of reactions taking
 # place in a single reactor. It combines the Pyomo DAE and GDP
@@ -30,10 +31,10 @@ m.cost = Param(m.products, initialize={'A':15000, 'B':20000})
 
 m.tstart = Var(m.products,bounds=(0,None)) # Start Time
 m.tproc = Var(m.products,bounds=(0,None)) # Processing Time
-m.time = Var(m.products, m.tau) # Scaled time over each job
+m.time = Var(m.products, m.tau, bounds=(0,None)) # Scaled time over each job
 m.totaltime = Var() # Total job time
 
-m.c = Var(m.products, m.tau)
+m.c = Var(m.products, m.tau, bounds=(0,None))
 m.dc = DerivativeVar(m.c, wrt=m.tau)
 m.dtime = DerivativeVar(m.time, wrt=m.tau)
 
@@ -100,7 +101,7 @@ gdp_relax = TransformationFactory('gdp.bigm')
 gdp_relax.apply_to(m, default_bigM=50.0)
 
 # Solve the model
-solver = SolverFactory('bonmin')
+solver = SolverFactory('couenne')
 solver.solve(m,tee=True)
 
 # Plot the results

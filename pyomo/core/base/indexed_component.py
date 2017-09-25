@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 
@@ -142,7 +143,7 @@ class _IndexedComponent_slicer(object):
                             break
                 elif _call[0] == _IndexedComponent_slicer.call:
                     try:
-                        _comp = _comp( *(_call[1]) )
+                        _comp = _comp( *(_call[1]), **(_call[2]) )
                     except:
                         # Since we are slicing, we may only be
                         # interested in things that match.  We will
@@ -217,7 +218,7 @@ class _IndexedComponent_slicer(object):
             _IndexedComponent_slicer.getitem, idx ) )
         return self
 
-    def __call__(self, *idx):
+    def __call__(self, *idx, **kwds):
         """Override the "()" operator to defer resolution until iteration.
 
         Creating a slice of a component returns a
@@ -228,8 +229,13 @@ class _IndexedComponent_slicer(object):
         """
         self._iter_stack.append(None)
         self._call_stack.append( (
-            _IndexedComponent_slicer.call, idx ) )
-        return self
+            _IndexedComponent_slicer.call, idx, kwds ) )
+        if self._call_stack[-2][1] == 'component':
+            return self
+        else:
+            # Note: simply calling "list(self)" results in infinite
+            # recursion in python2.6
+            return list( i for i in self )
 
 
 class IndexedComponent(Component):
@@ -319,7 +325,7 @@ class IndexedComponent(Component):
         # UnindexedComponent_set set
         if state['_index'] is None:
             state['_index'] = UnindexedComponent_set
-        return super(IndexedComponent, self).__setstate__(state)
+        super(IndexedComponent, self).__setstate__(state)
 
     def to_dense_data(self):
         """TODO"""
