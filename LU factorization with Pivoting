@@ -1,0 +1,98 @@
+# Objective: solving system of equations by using PU_Pivot decomposition
+# Description: PA=LU
+# Constraint: Assuming A belongs to Rm*m and b belongs to R1*m
+
+# P=Pm-1*Pm-2*...*Pn*...*P2*P1
+# L=(L'm-1*L'm-2*...*L'n*...*L'2*L'1)-1
+# Lk'=Pm-1*...*Pk+1LkP-1k+1*...*P-1m-1
+
+# Note that only matrix A is involved in the computation of L and U
+
+# ----------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------
+
+# Import
+from pyomo.environ import *
+from pyomo.dae import *
+import math
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Creation of Model
+m = ConcreteModel()
+
+
+# Creation of Target Matrix(Example)
+x= np.array([[2,1,1,0,],[4,3,3,1],[8,7,9,5],[6,7,9,8]])
+print 'the matrix is '
+print x
+shape_of_A = x.shape
+
+# Creation of the first column
+first_column = x[:,::4] # 4 represents the interval between two columns
+print 'the first column is '
+print first_column
+
+m=first_column.size
+
+def max_of_column(amatrix):
+# This function produces a: max value of first column
+#                        index_of_row: the index of the row which contains the max value
+    a = amatrix[0, 0]
+    for i in range(0,amatrix.size):
+        if amatrix[i,0] >= a:
+            a = amatrix[i,0]
+            index_of_row = i
+            i = i+1
+        else:
+            i = i+1
+    return a
+max_value_of_column = max_of_column(first_column)
+
+def index_of_maxcolumn(amatrix):
+# This function produces a: max value of first column
+#                        index_of_row: the index of the row which contains the max value
+    a = amatrix[0, 0]
+    for i in range(0,amatrix.size):
+        if amatrix[i,0] >= a:
+            a = amatrix[i,0]
+            index_of_row = i
+            i = i+1
+        else:
+            i = i+1
+    return index_of_row
+
+index_of_row = index_of_maxcolumn(first_column)
+
+
+def produce_P1(index):
+    P1 = np.zeros(shape_of_A)
+    P1[0,index]=1
+    P1[1,index-1]=1
+    P1[2,index-2]=1
+    P1[3,index+1]=1
+    return P1
+print 'Matrix P1 is '
+print produce_P1(index_of_row)
+
+A = np.dot(produce_P1(index_of_row),x)
+print 'Matrix P1*A is '
+print A
+
+def produce_L1(m):
+    L1 = np.eye(m)
+    i = 1
+    for i in range(m):
+        L1[i,0] = (-1)*A[i,0]/max_value_of_column
+        i = i+1
+    return L1
+print 'L1 is '
+print produce_L1(m)
+
+A = np.dot(produce_L1(m),A)
+print 'Matrix P1*A is '
+print A
+
+
+
+
