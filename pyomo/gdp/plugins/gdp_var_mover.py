@@ -19,6 +19,8 @@ from pyomo.util.plugin import alias
 from pyomo.core.base import Transformation, Block, Constraint
 from pyomo.gdp import Disjunct
 
+from six import itervalues
+
 logger = logging.getLogger('pyomo.core')
 
 
@@ -59,22 +61,24 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
 
     def _apply_to(self, instance, **kwds):
         assert not kwds
-        disjunct_generator = instance.component_data_objects(
+        disjunct_generator = instance.component_objects(
             Disjunct, descend_into=(Block, Disjunct))
-        for disjunct in disjunct_generator:
-            if disjunct.active:
-                logger.error("""Reclassifying an active Disjunct as a Block.
+        for disjunct_component in disjunct_generator:
+            for disjunct in itervalues(disjunct_component._data):
+                if disjunct.active:
+                    logger.error("""Reclassifying an active Disjunct as a Block.
 This is generally as error as it indicates that the model was not
 completely relaxed before applying the gdp.reclassify transformation""")
 
-            # Deactivate all constraints.  Note that we only need to
-            # descent into blocks: we will catch disjuncts in the outer
-            # loop.
-            cons_in_disjunct = disjunct.component_objects(
-                Constraint, descend_into=Block, active=True)
-            for con in cons_in_disjunct:
-                con.deactivate()
+                # Deactivate all constraints.  Note that we only need to
+                # descent into blocks: we will catch disjuncts in the outer
+                # loop.
+                cons_in_disjunct = disjunct.component_objects(
+                    Constraint, descend_into=Block, active=True)
+                for con in cons_in_disjunct:
+                    con.deactivate()
 
             # Reclassify this disjunct as a block
-            disjunct.parent_block().reclassify_component_type(disjunct, Block)
-            disjunct.activate()
+            disjunct_component.parent_block().reclassify_component_type(
+                disjunct_component, Block)
+            disjunct_component.activate()
