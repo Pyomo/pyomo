@@ -127,7 +127,7 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
             new_upper_bounds.append((var_cplex_id, var_ub))
 
         if len(vars_to_update) == 0:
-            for var_data in pyomo_instance.component_data_objects(Var, active=True):
+            for var_data in pyomo_instance.component_data_objects(Var):
                 var_name = self._symbol_map.getSymbol(var_data, self._labeler)
                 update_bounds_lists(var_name)
         else:
@@ -325,7 +325,7 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
         # immediately following loop termination.
         var_label_pairs = []
 
-        for var_data in pyomo_instance.component_data_objects(Var, active=True):
+        for var_data in pyomo_instance.component_data_objects(Var):
 
             if var_data.fixed and not self._output_fixed_variable_bounds:
                 # if a variable is fixed, and we're preprocessing

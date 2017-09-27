@@ -173,7 +173,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
             smap = instance.solutions.symbol_map[self._smap_id]
         byObject = smap.byObject
         with open(self._warm_start_file_name, 'w') as mst_file:
-            for vdata in instance.component_data_objects(Var, active=True):
+            for vdata in instance.component_data_objects(Var):
                 if (vdata.value is not None) and \
                    (id(vdata) in byObject):
                     name = byObject[id(vdata)]

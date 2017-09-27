@@ -605,7 +605,6 @@ class ProblemWriter_bar(AbstractProblemWriter):
         for block in all_blocks_list:
             tmp = active_components_data_var[id(block)] = \
                   list(obj for obj in block.component_data_objects(Var,
-                                                                   active=True,
                                                                    sort=sorter,
                                                                    descend_into=False))
             create_symbols_func(symbol_map, tmp, labeler)

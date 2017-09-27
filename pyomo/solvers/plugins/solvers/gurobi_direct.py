@@ -259,7 +259,7 @@ class gurobi_direct ( OptSolver ):
         # cache to avoid dictionary getitem calls in the loop below.
         grb_infinity = gurobi_direct._gurobi_module.GRB.INFINITY
 
-        for var_value in pyomo_instance.component_data_objects(Var, active=True):
+        for var_value in pyomo_instance.component_data_objects(Var):
 
             lb = -grb_infinity
             ub = grb_infinity

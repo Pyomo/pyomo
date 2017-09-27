@@ -210,11 +210,11 @@ class TestCPXLP_writer(unittest.TestCase):
 
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
-        self.assertRaisesRegexp(
-            KeyError,
-            "'other.a' exists within deactivated Block 'other'",
-            model.write, test_fname, format='lp' )
-        self._cleanup(test_fname)
+        model.write(test_fname, format='lp')
+        self.assertFileEqualsBaseline(
+            test_fname,
+            baseline_fname,
+            delete=True)
 
     def test_var_on_nonblock(self):
         class Foo(Block().__class__):
