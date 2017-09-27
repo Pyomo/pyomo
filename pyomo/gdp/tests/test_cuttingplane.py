@@ -6,6 +6,7 @@ from pyomo.core.base import expr_common, expr as EXPR
 import pyomo.opt
 
 import random
+from six import StringIO
 
 from nose.tools import set_trace
 from pyomo.opt import SolverFactory
@@ -102,3 +103,32 @@ class TwoTermDisj(unittest.TestCase):
             self.assertAlmostEqual(cut.body._args[i]._const, -1*xhat[i])
             self.assertEqual(cut.body._args[i]._coef[0], 1)
             self.assertIs(cut.body._args[i]._args[0], variables[i])
+
+    @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
+    def test_create_using(self):
+        m = self.makeModel()
+
+        # TODO: this is duplicate code with other transformation tests
+        modelcopy = TransformationFactory('gdp.cuttingplane').create_using(m)
+        modelcopy_buf = StringIO()
+        modelcopy.pprint(ostream=modelcopy_buf)
+        modelcopy_output = modelcopy_buf.getvalue()
+
+        TransformationFactory('gdp.cuttingplane').apply_to(m)
+        model_buf = StringIO()
+        m.pprint(ostream=model_buf)
+        model_output = model_buf.getvalue()
+        self.maxDiff = None
+        self.assertMultiLineEqual(modelcopy_output, model_output)
+
+    @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
+    def test_active_objective_err(self):
+        m = self.makeModel()
+        m.obj.deactivate()
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Cannot apply cutting planes transformation without an active "
+            "objective in the model*",
+            TransformationFactory('gdp.cuttingplane').apply_to,
+            m
+        )
