@@ -61,9 +61,15 @@ _pyomo4_module_members = [
     'sum',
 ]
 _pyomo5_module_members = [
+    '_LinearExpression',
+    '_StaticLinearExpression',
+    '_QuadraticExpression',
+    '_StaticQuadraticExpression',
     'ignore_entangled_expressions',
     'clone_counter',
     'linear_expression',
+    'nonlinear_expression',
+    'quadratic_expression',
     'evaluate_expression',
     '_ReciprocalExpression',
     '_NegationExpression',
