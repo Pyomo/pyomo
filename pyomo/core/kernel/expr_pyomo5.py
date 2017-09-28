@@ -490,7 +490,6 @@ def _expression_size(expr, verbose=False):
         else:
             return ans
 
-pyomo5_variable_types = None
 
 #@profile
 def evaluate_expression(exp, exception=True, only_fixed_vars=False):
@@ -555,9 +554,11 @@ def identify_variables(expr,
                        include_fixed=True,
                        allow_duplicates=False,
                        include_potentially_variable=False):
-    from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
-    from pyomo.core.kernel.component_variable import IVariable, variable
-    pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
+    global pyomo5_variable_types
+    if pyomo5_variable_types is None:
+        from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
+        from pyomo.core.kernel.component_variable import IVariable, variable
+        pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
 
     if not allow_duplicates:
         _seen = set()
@@ -1970,6 +1971,7 @@ class _LinearExpression(_ExpressionBase):
     def _apply_operation(self, result):
         return self.constant + sum(c*v.value for c,v in zip(self.linear_coefs, self.linear_vars))
 
+    #@profile
     @staticmethod
     def _decompose_term(expr):
         if expr.__class__ in native_numeric_types:
@@ -1978,6 +1980,14 @@ class _LinearExpression(_ExpressionBase):
             return 0,1,expr
         elif not expr._potentially_variable():
             return expr,None,None
+        elif expr.__class__ is _ProductExpression:
+            C,c,v = _LinearExpression._decompose_term(expr._args[0])
+            C_,c_,v_ = _LinearExpression._decompose_term(expr._args[1])
+            if not v_ is None:
+                if not v is None:
+                    raise ValueError("Expected a single linear term")
+                return C*C_,C*c_,v_
+            return C*C_,C_*c,v
         elif expr.__class__ is _SumExpression:
             C,c,v = _LinearExpression._decompose_term(expr._args[0])
             C_,c_,v_ = _LinearExpression._decompose_term(expr._args[1])
@@ -1989,14 +1999,6 @@ class _LinearExpression(_ExpressionBase):
                         raise ValueError("Expected a single linear term")
                 return C+C_,c_,v_
             return C+C_,c,v
-        elif expr.__class__ is _ProductExpression:
-            C,c,v = _LinearExpression._decompose_term(expr._args[0])
-            C_,c_,v_ = _LinearExpression._decompose_term(expr._args[1])
-            if not v_ is None:
-                if not v is None:
-                    raise ValueError("Expected a single linear term")
-                return C*C_,C*c_,v_
-            return C*C_,C_*c,v
         elif expr.__class__ is _NegationExpression:
             C,c,v = _LinearExpression._decompose_term(expr._args[0])
             return -C,-c,v
@@ -2030,16 +2032,49 @@ class _LinearExpression(_ExpressionBase):
         #
         raise ValueError("Expected expression type in _decompose_term: %s" % str(type(expr)))
 
+    #@profile
     def _combine_expr(self, etype, _other):
-        from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
-        from pyomo.core.kernel.component_variable import IVariable, variable
-        pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
-        _LinearExpression.vtypes = pyomo5_variable_types
+        global pyomo5_variable_types
+        if pyomo5_variable_types is None:
+            from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
+            from pyomo.core.kernel.component_variable import IVariable, variable
+            pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
+            _LinearExpression.vtypes = pyomo5_variable_types
 
-        if etype == _neg:
-            self.constant *= -1
-            for i,c in enumerate(self.linear_coefs):
-                self.linear_coefs[i] = - c
+        if etype == _add or etype == _sub or etype == -_add or etype == -_sub:
+            #
+            # if etype == _sub,  then _LinearExpression - VAL
+            # if etype == -_sub, then VAL - _LinearExpression
+            #
+            if etype == _sub:
+                omult = -1
+            else:
+                omult = 1
+            if etype == -_sub:
+                self.constant *= -1
+                for i,c in enumerate(self.linear_coefs):
+                    self.linear_coefs[i] = -c
+
+            if _other.__class__ in native_numeric_types or not _other._potentially_variable():
+                self.constant = self.constant + omult * _other
+            elif _other.__class__ is _LinearExpression:
+                self.constant = self.constant + omult * _other.constant
+                for c,v in zip(_other.linear_coefs, _other.linear_vars):
+                    self.linear_coefs.append(omult*c)
+                    self.linear_vars.append(v)
+            elif _other.__class__ in pyomo5_multisum_types:
+                for e in _other._args[:]:
+                    C,c,v = _LinearExpression._decompose_term(e)
+                    self.constant = self.constant + omult * C
+                    if not v is None:
+                        self.linear_coefs.append(omult*c)
+                        self.linear_vars.append(v)
+            else:
+                C,c,v = _LinearExpression._decompose_term(_other)
+                self.constant = self.constant + omult * C
+                if not v is None:
+                    self.linear_coefs.append(omult*c)
+                    self.linear_vars.append(v)
 
         elif etype == _mul or etype == -_mul:
             if _other.__class in native_numeric_types:
@@ -2068,43 +2103,6 @@ class _LinearExpression(_ExpressionBase):
                 for i,c in enumerate(self.linear_coefs):
                     self.linear_coefs[i] = c*multiplier
 
-        elif etype == _add or etype == -_add or etype == _sub or etype == -_sub:
-            #
-            # if etype == _sub,  then _LinearExpression - VAL
-            # if etype == -_sub, then VAL - _LinearExpression
-            #
-            if etype == _sub:
-                omult = -1
-            else:
-                omult = 1
-            if etype == -_sub:
-                self.constant *= -1
-                for i,c in enumerate(self.linear_coefs):
-                    self.linear_coefs[i] = -c
-
-            if _other.__class__ in native_numeric_types:
-                self.constant = self.constant + omult * _other
-            elif not _other._potentially_variable():
-                self.constant = self.constant + omult * _other
-            elif _other.__class__ is _LinearExpression:
-                self.constant = self.constant + omult * _other.constant
-                for c,v in zip(_other.linear_coefs, _other.linear_vars):
-                    self.linear_coefs.append(omult*c)
-                    self.linear_vars.append(v)
-            elif isinstance(_other.__class__, _MultiSumExpression):     # OPTIMIZE
-                for e in _other._args[:]:
-                    C,c,v = _LinearExpression._decompose_term(e)
-                    self.constant = self.constant + omult * C
-                    if not v is None:
-                        self.linear_coefs.append(omult*c)
-                        self.linear_vars.append(v)
-            else:
-                C,c,v = _LinearExpression._decompose_term(_other)
-                self.constant = self.constant + omult * C
-                if not v is None:
-                    self.linear_coefs.append(omult*c)
-                    self.linear_vars.append(v)
-
         elif etype == _div:
             if _other.__class__ in native_numeric_types:
                 divisor = _other
@@ -2125,6 +2123,11 @@ class _LinearExpression(_ExpressionBase):
                 self.linear_var = [v]
                 self.linear_coef = [c/self.constant]
             
+        elif etype == _neg:
+            self.constant *= -1
+            for i,c in enumerate(self.linear_coefs):
+                self.linear_coefs[i] = - c
+
         else:
             raise ValueError("Unallowed operation on linear expression: %d" % etype)
 
@@ -2682,4 +2685,5 @@ pyomo5_reciprocal_types = set([
         _Constant_ReciprocalExpression,
         _NPV_ReciprocalExpression
         ])
+pyomo5_variable_types = None
 

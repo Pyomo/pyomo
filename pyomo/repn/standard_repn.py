@@ -254,21 +254,27 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                 C_ = expr.constant
             v_ = []
             c_ = []
-            for c,v in zip(expr.linear_coefs, expr.linear_vars):
-                if v.fixed:
-                    if compute_values:
+            if compute_values:
+                for c,v in zip(expr.linear_coefs, expr.linear_vars):
+                    if v.fixed:
                         if c.__class__ in native_numeric_types:
                             C_ += c*v.value
-                        else:
+                        elif c.is_expression():
                             C_ += EXPR.evaluate_expression(c)*v.value
+                        else:
+                            C_ += value(c)*v.value
                     else:
-                        C_ += c*v
-                else:
-                    if compute_values:
                         if c.__class__ in native_numeric_types:
                             c_.append( c )
-                        else:
+                        elif c.is_expression():
                             c_.append( EXPR.evaluate_expression(c) )
+                        else:
+                            c_.append( value(c) )
+                    v_.append( v )
+            else:
+                for c,v in zip(expr.linear_coefs, expr.linear_vars):
+                    if v.fixed:
+                        C_ += c*v
                     else:
                         c_.append( c )
                     v_.append( v )

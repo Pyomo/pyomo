@@ -85,8 +85,6 @@ def summation(*args, **kwds):
     summation(denom=(a,b))
     Sum the product of 1/(a_i*b_i)
     """
-    # breaks import loop between var.py and util.py
-
     denom = kwds.pop('denom', tuple() )
     if type(denom) not in (list, tuple):
         denom = [denom]
