@@ -47,7 +47,7 @@ from pyomo.core.base.PyomoModel import *
 #
 import pyomo.core.base._pyomo
 #
-from pyomo.core.base.util import *
+import pyomo.core.base.util
 from pyomo.core.base.rangeset import *
 
 from pyomo.core.base.instance2dat import *
