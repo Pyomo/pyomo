@@ -36,7 +36,7 @@ from pyomo.core.base.param import _ParamData
 from pyomo.core.base.numvalue import (NumericConstant,
                                       native_numeric_types,
                                       is_fixed)
-from pyomo.core.base import expr_common, Sum
+from pyomo.core.util import Sum
 from pyomo.core.kernel.component_expression import IIdentityExpression
 from pyomo.core.kernel.component_variable import IVariable
 
@@ -194,6 +194,7 @@ representations be temporary.  They should be used to interface
 to a solver and then be deleted.
 
 """
+#@profile
 def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None):
     #
     # Disable implicit cloning while creating a standard representation.
@@ -244,6 +245,45 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             return repn
 
         #
+        # The expression is linear
+        #
+        if expr.__class__ is EXPR._StaticLinearExpression:
+            if compute_values:
+                C_ = EXPR.evaluate_expression(expr.constant)
+            else:
+                C_ = expr.constant
+            v_ = []
+            c_ = []
+            for c,v in zip(expr.linear_coefs, expr.linear_vars):
+                if v.fixed:
+                    if compute_values:
+                        if c.__class__ in native_numeric_types:
+                            C_ += c*v.value
+                        else:
+                            C_ += EXPR.evaluate_expression(c)*v.value
+                    else:
+                        C_ += c*v
+                else:
+                    if compute_values:
+                        if c.__class__ in native_numeric_types:
+                            c_.append( c )
+                        else:
+                            c_.append( EXPR.evaluate_expression(c) )
+                    else:
+                        c_.append( c )
+                    v_.append( v )
+            repn.constant = C_
+            repn.linear_coefs = tuple(c_)
+            repn.linear_vars = tuple(v_)
+            for v in repn.linear_vars[:]:
+                id_ = id(v)
+                if not id_ in idMap[None]:
+                    key = len(idMap) - 1
+                    idMap[None][id_] = key
+                    idMap[key] = v
+            return repn
+
+        #
         # Unknown expression object
         #
         elif not expr.is_expression():
@@ -283,7 +323,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                 if verbose: #pragma:nocover
                     print("-"*30)
                     print(type(_obj))
-                    print(_obj)
+                    print(_obj.to_string())
                     print(_argList)
                     print(_idx)
                     print(_len)
@@ -369,9 +409,6 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                             else:
                                 _argList = [_argList[2]]
                 
-                #if -999 in _result[0]:
-                #    break
-
                 ##
                 ## Process the next current _obj object
                 ##
@@ -428,6 +465,38 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                     else:
                         _result.append( {0:_sub} )
 
+                elif _sub.__class__ is EXPR._StaticLinearExpression:
+                    #
+                    # Extract data from the linear expression
+                    #
+                    val = {}
+                    if not isclose(_sub.constant, 0):
+                        val[0] = _sub.constant
+                    if len(_sub.linear_vars) > 0:
+                        ans = {}
+                        for c,v in zip(_sub.linear_coefs, _sub.linear_vars):
+                            if v.fixed:
+                                if compute_values:
+                                    val[0] += EXPR.evaluate_expression(c)*v.value
+                                else:
+                                    val[0] += c*v
+                            else:
+                                #
+                                # Store a variable 
+                                #
+                                id_ = id(v)
+                                if id_ in idMap[None]:
+                                    key = idMap[None][id_]
+                                else:
+                                    key = len(idMap) - 1
+                                    idMap[None][id_] = key
+                                    idMap[key] = v
+                                if compute_values:
+                                    ans[key] = EXPR.evaluate_expression(c)
+                                else:
+                                    ans[key] = c
+                        val[1] = ans
+                    _result.append( val )
                 else:
                     #
                     # Push an expression onto the stack
@@ -449,7 +518,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             if verbose: #pragma:nocover
                 print("="*30)
                 print(type(_obj))
-                print(_obj)
+                print(_obj.to_string())
                 print(_argList)
                 print(_idx)
                 print(_len)
@@ -697,7 +766,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                 print("*"*10 + " RETURN  " + "*"*10)
                 print("."*30)
                 print(type(_obj))
-                print(_obj)
+                print(_obj.to_string())
                 print(_argList)
                 print(_idx)
                 print(_len)
