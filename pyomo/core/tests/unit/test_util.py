@@ -29,10 +29,28 @@ _using_pyomo5_trees = expr_common.mode == expr_common.Mode.pyomo5_trees
 
 class Test(unittest.TestCase):
 
+    def test_expr0(self):
+        model = AbstractModel()
+        model.A = Set(initialize=[1,2,3])
+        model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
+        model.C = Param(model.A,initialize={1:100,2:200,3:300}, mutable=False)
+        model.x = Var(model.A)
+        model.y = Var(model.A)
+        instance=model.create_instance()
+        expr = dot_product(instance.B,instance.y)
+        if _using_pyomo5_trees:
+            baseline = "B[1]*y[1] + B[2]*y[2] + B[3]*y[3]"
+        else:
+            baseline = "B[1] * y[1] + B[2] * y[2] + B[3] * y[3]"
+        self.assertEqual( str(expr), baseline )
+        expr = dot_product(instance.C,instance.y)
+        self.assertEqual( str(expr), "100*y[1] + 200*y[2] + 300*y[3]" )
+
     def test_expr1(self):
         model = AbstractModel()
         model.A = Set(initialize=[1,2,3])
         model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
+        model.C = Param(model.A,initialize={1:100,2:200,3:300}, mutable=False)
         model.x = Var(model.A)
         model.y = Var(model.A)
         instance=model.create_instance()
@@ -42,11 +60,14 @@ class Test(unittest.TestCase):
         else:
             baseline = "x[1] * B[1] * y[1] + x[2] * B[2] * y[2] + x[3] * B[3] * y[3]"
         self.assertEqual( str(expr), baseline )
+        expr = dot_product(instance.x,instance.C,instance.y)
+        self.assertEqual( str(expr), "100*x[1]*y[1] + 200*x[2]*y[2] + 300*x[3]*y[3]" )
 
     def test_expr2(self):
         model = AbstractModel()
         model.A = Set(initialize=[1,2,3])
         model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
+        model.C = Param(model.A,initialize={1:100,2:200,3:300}, mutable=False)
         model.x = Var(model.A)
         model.y = Var(model.A)
         instance=model.create_instance()
@@ -56,11 +77,14 @@ class Test(unittest.TestCase):
         else:
             baseline = "x[1] * B[1] * y[1] + x[3] * B[3] * y[3]"
         self.assertEqual( str(expr), baseline )
+        expr = dot_product(instance.x,instance.C,instance.y, index=[1,3])
+        self.assertEqual( str(expr), "100*x[1]*y[1] + 300*x[3]*y[3]" )
 
     def test_expr3(self):
         model = AbstractModel()
         model.A = Set(initialize=[1,2,3])
         model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
+        model.C = Param(model.A,initialize={1:100,2:200,3:300}, mutable=False)
         model.x = Var(model.A)
         model.y = Var(model.A)
         instance=model.create_instance()
@@ -70,6 +94,8 @@ class Test(unittest.TestCase):
         else:
             baseline = "x[1] * B[1] / y[1] + x[3] * B[3] / y[3]"
         self.assertEqual( str(expr), baseline )
+        expr = dot_product(instance.x,instance.C,denom=instance.y, index=[1,3])
+        self.assertEqual( str(expr), "100*x[1]*(1/y[1]) + 300*x[3]*(1/y[3])" )
 
     def test_expr4(self):
         model = AbstractModel()

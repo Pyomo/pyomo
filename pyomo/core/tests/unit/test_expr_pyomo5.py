@@ -3369,26 +3369,26 @@ class TestSummationExpression(unittest.TestCase):
     def test_summation1(self):
         e = summation(self.m.a)
         self.assertEqual( e(), 25 )
-        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
-        self.assertEqual( id(self.m.a[1]), id(e._args[1]) )
-        self.assertEqual( id(self.m.a[2]), id(e._args[2]) )
-        self.assertEqual(e.size(), 7)
+        self.assertIs(type(e), EXPR._StaticLinearExpression)
+        self.assertEqual( id(self.m.a[1]), id(e.linear_vars[0]) )
+        self.assertEqual( id(self.m.a[2]), id(e.linear_vars[1]) )
+        self.assertEqual(e.size(), 1)
 
     def test_summation2(self):
         e = summation(self.m.p, self.m.a)
         self.assertEqual( e(), 25 )
-        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
-        self.assertEqual( id(self.m.a[1]), id(e._args[1]._args[1]) )
-        self.assertEqual( id(self.m.a[2]), id(e._args[2]._args[1]) )
-        self.assertEqual(e.size(), 17)
+        self.assertIs(type(e), EXPR._StaticLinearExpression)
+        self.assertEqual( id(self.m.a[1]), id(e.linear_vars[0]) )
+        self.assertEqual( id(self.m.a[2]), id(e.linear_vars[1]) )
+        self.assertEqual(e.size(), 1)
 
     def test_summation3(self):
         e = summation(self.m.q, self.m.a)
         self.assertEqual( e(), 75 )
-        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
-        self.assertEqual( id(self.m.a[1]), id(e._args[1]._args[1]) )
-        self.assertEqual( id(self.m.a[2]), id(e._args[2]._args[1]) )
-        self.assertEqual(e.size(), 17)
+        self.assertIs(type(e), EXPR._StaticLinearExpression)
+        self.assertEqual( id(self.m.a[1]), id(e.linear_vars[0]) )
+        self.assertEqual( id(self.m.a[2]), id(e.linear_vars[1]) )
+        self.assertEqual(e.size(), 1)
 
     def test_summation4(self):
         e = summation(self.m.a, self.m.b)
@@ -3427,7 +3427,7 @@ class TestSummationExpression(unittest.TestCase):
         self.assertEqual( e_(), 75 )
         self.assertIs(type(e_), EXPR._CompressedSumExpression)
         self.assertEqual( len(e_._args), 3)
-        self.assertEqual(e_.size(False), 16)
+        self.assertEqual(e_.size(False), 4)
 
 
 class TestSumExpression(unittest.TestCase):
@@ -4241,5 +4241,82 @@ con : Size=5
         self.assertEqual(OUT.getvalue(), reference)
 
 
+class TestLinearDecomp(unittest.TestCase):
+
+    def setUp(self):
+        #
+        # A hack to setup the _LinearExpression.vtypes data
+        #
+        try:
+            l = EXPR._LinearExpression()
+            l._combine_expr(None,None)
+        except:
+            pass
+
+    def test_numeric(self):
+        self.assertEqual(EXPR._LinearExpression._decompose_term(2.0), (2.0,None,None))
+
+    def test_NPV(self):
+        M = ConcreteModel()
+        M.q = Param(initialize=2)
+        self.assertEqual(EXPR._LinearExpression._decompose_term(M.q), (M.q,None,None))
+
+    def test_var(self):
+        M = ConcreteModel()
+        M.v = Var()
+        self.assertEqual(EXPR._LinearExpression._decompose_term(M.v), (0,1,M.v))
+
+    def test_simple(self):
+        M = ConcreteModel()
+        M.v = Var()
+        self.assertEqual(EXPR._LinearExpression._decompose_term(2*M.v), (0,2,M.v))
+
+    def test_sum(self):
+        M = ConcreteModel()
+        M.v = Var()
+        M.w = Var()
+        M.q = Param(initialize=2)
+        self.assertEqual(EXPR._LinearExpression._decompose_term(2+M.v), (2,1,M.v))
+        self.assertEqual(EXPR._LinearExpression._decompose_term(M.q+M.v), (2,1,M.v))
+        self.assertEqual(EXPR._LinearExpression._decompose_term(M.v+M.q), (2,1,M.v))
+        self.assertRaises(ValueError, EXPR._LinearExpression._decompose_term, M.w+M.v)
+
+    def test_prod(self):
+        M = ConcreteModel()
+        M.v = Var()
+        M.w = Var()
+        M.q = Param(initialize=2)
+        self.assertEqual(EXPR._LinearExpression._decompose_term(2*M.v), (0,2,M.v))
+        self.assertEqual(EXPR._LinearExpression._decompose_term(M.q*M.v), (0,2,M.v))
+        self.assertEqual(EXPR._LinearExpression._decompose_term(M.v*M.q), (0,2,M.v))
+        self.assertRaises(ValueError, EXPR._LinearExpression._decompose_term, M.w*M.v)
+
+    def test_negation(self):
+        M = ConcreteModel()
+        M.v = Var()
+        self.assertEqual(EXPR._LinearExpression._decompose_term(-M.v), (0,-1,M.v))
+        self.assertEqual(EXPR._LinearExpression._decompose_term(-(2+M.v)), (-2,-1,M.v))
+
+    def test_reciprocal(self):
+        M = ConcreteModel()
+        M.v = Var()
+        M.q = Param(initialize=2)
+        self.assertRaises(ValueError, EXPR._LinearExpression._decompose_term, 1/M.v)
+        self.assertEqual(EXPR._LinearExpression._decompose_term(1/M.q), (0.5,None,None))
+        
+    def test_multisum(self):
+        M = ConcreteModel()
+        M.v = Var()
+        M.w = Var()
+        M.q = Param(initialize=2)
+        e = EXPR._MultiSumExpression([2])
+        self.assertEqual(EXPR._LinearExpression._decompose_term(e), (2,None,None))
+        e = EXPR._MultiSumExpression([2,M.v])
+        self.assertEqual(EXPR._LinearExpression._decompose_term(e), (2,1,M.v))
+        e = EXPR._MultiSumExpression([2,M.q+M.v])
+        self.assertEqual(EXPR._LinearExpression._decompose_term(e), (4,1,M.v))
+        e = EXPR._MultiSumExpression([2,M.q+M.v,M.w])
+        self.assertRaises(ValueError, EXPR._LinearExpression._decompose_term, e)
+        
 if __name__ == "__main__":
     unittest.main()
