@@ -93,7 +93,7 @@ class clone_counter_context(object):
         return self
 
     def __exit__(self, *args):
-        return self
+        pass
 
     @property
     def count(self):
@@ -121,7 +121,31 @@ class mutable_sum_context(object):
     def __exit__(self, *args):
         self.e.__class__ = _StaticMultiSumExpression
 
-linear_expression = mutable_sum_context()
+nonlinear_expression = mutable_sum_context()
+
+
+class mutable_linear_context(object):
+
+    def __enter__(self):
+        self.e = _LinearExpression()
+        return self.e
+
+    def __exit__(self, *args):
+        self.e.__class__ = _StaticLinearExpression
+
+linear_expression = mutable_linear_context()
+
+
+class mutable_quadratic_context(object):
+
+    def __enter__(self):
+        self.e = _QuadraticExpression()
+        return self.e
+
+    def __exit__(self, *args):
+        self.e.__class__ = _StaticQuadraticExpression
+
+quadratic_expression = mutable_quadratic_context()
 
 
 #-------------------------------------------------------
@@ -466,11 +490,15 @@ def _expression_size(expr, verbose=False):
         else:
             return ans
 
+pyomo5_variable_types = None
 
+#@profile
 def evaluate_expression(exp, exception=True, only_fixed_vars=False):
-    from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
-    from pyomo.core.kernel.component_variable import IVariable, variable
-    pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
+    global pyomo5_variable_types
+    if pyomo5_variable_types is None:
+        from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
+        from pyomo.core.kernel.component_variable import IVariable, variable
+        pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
 
     try:
         if exp.__class__ in pyomo5_variable_types:
@@ -1899,6 +1927,264 @@ class _NPV_AbsExpression(_AbsExpression):
         return False
 
 
+class _LinearExpression(_ExpressionBase):
+    __slots__ = ('constant',          # The constant term
+                 'linear_coefs',      # Linear coefficients
+                 'linear_vars')       # Linear variables
+
+    PRECEDENCE = 6
+
+    def __init__(self, args=None):
+        self.constant = 0
+        self.linear_coefs = []
+        self.linear_vars = []
+        self._args = tuple()
+        self._owned = False
+
+    def _clone(self, args=None):
+        repn = self.__class__()
+        repn.constant = self.constant
+        repn.linear_coefs = list(self.linear_coefs)
+        repn.linear_vars = list(self.linear_vars)
+
+    def getname(self, *args, **kwds):
+        return 'sum'
+
+    def _polynomial_degree(self, result):
+        return 1 if len(self.linear_vars) > 0 else 0
+
+    def is_constant(self):
+        return len(self.linear_vars) == 0
+
+    def is_fixed(self):
+        if len(self.linear_vars) == 0:
+            return True
+        for v in self.linear_vars:
+            if v.fixed:
+                return True
+        return False
+
+    def _potentially_variable(self):
+        return len(self.linear_vars) > 0
+
+    def _apply_operation(self, result):
+        return self.constant + sum(c*v.value for c,v in zip(self.linear_coefs, self.linear_vars))
+
+    @staticmethod
+    def _decompose_term(expr):
+        if expr.__class__ in native_numeric_types:
+            return expr,None,None
+        elif expr.__class__ in _LinearExpression.vtypes:
+            return 0,1,expr
+        elif not expr._potentially_variable():
+            return expr,None,None
+        elif expr.__class__ is _SumExpression:
+            C,c,v = _LinearExpression._decompose_term(expr._args[0])
+            C_,c_,v_ = _LinearExpression._decompose_term(expr._args[1])
+            if not v_ is None:
+                if not v is None:
+                    if id(v) == id(v_):
+                        return C+C_,c+c_,v
+                    else:
+                        raise ValueError("Expected a single linear term")
+                return C+C_,c_,v_
+            return C+C_,c,v
+        elif expr.__class__ is _ProductExpression:
+            C,c,v = _LinearExpression._decompose_term(expr._args[0])
+            C_,c_,v_ = _LinearExpression._decompose_term(expr._args[1])
+            if not v_ is None:
+                if not v is None:
+                    raise ValueError("Expected a single linear term")
+                return C*C_,C*c_,v_
+            return C*C_,C_*c,v
+        elif expr.__class__ is _NegationExpression:
+            C,c,v = _LinearExpression._decompose_term(expr._args[0])
+            return -C,-c,v
+        elif expr.__class__ is _ReciprocalExpression:
+            if expr._potentially_variable():
+                raise ValueError("Unexpected nonlinear term")
+            return 1/expr,None,None
+        elif expr.__class__ is _LinearExpression:
+            l = len(expr.linear_vars)
+            if l == 0:
+                return expr.constant, None, None
+            elif l == 1:
+                return expr.constant, expr.linear_coefs[0], expr.linear_vars[0]
+            else:
+                raise ValueError("Expected a single linear term")
+        elif expr.__class__ in pyomo5_multisum_types:
+            C = 0
+            c = None
+            v = None
+            for e in expr._args[:]:
+                C_,c_,v_ = _LinearExpression._decompose_term(e)
+                C += C_
+                if not v_ is None:
+                    if not v is None:
+                        raise ValueError("Expected a single linear term")
+                    c=c_
+                    v=v_
+            return C,c,v
+        #
+        # TODO: ExprIf, POW, Abs?
+        #
+        raise ValueError("Expected expression type in _decompose_term: %s" % str(type(expr)))
+
+    def _combine_expr(self, etype, _other):
+        from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
+        from pyomo.core.kernel.component_variable import IVariable, variable
+        pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
+        _LinearExpression.vtypes = pyomo5_variable_types
+
+        if etype == _neg:
+            self.constant *= -1
+            for i,c in enumerate(self.linear_coefs):
+                self.linear_coefs[i] = - c
+
+        elif etype == _mul or etype == -_mul:
+            if _other.__class in native_numeric_types:
+                multiplier = _other
+            elif _other._potentially_variable():
+                if len(self.linear_vars) > 0:
+                    raise ValueError("Cannot multiply a linear expression with a variable expression")
+                #
+                # The linear expression is a constant, so re-initialize it with
+                # a single term that multiplies the expression by the constant value.
+                #
+                C,c,v = _LinearExpression._decompose_term(_other)
+                self.constant = C*self.constant
+                self.linear_vars.append(v)
+                self.linear_coefs.append(c*self.constant)
+                return self
+            else:
+                multiplier = _other
+
+            if multiplier.__class__ in native_numeric_types and isclose(multiplier, 0.0):
+                self.constant = 0
+                self.linear_vars = []
+                self.linear_coefs = []
+            else:
+                self.constant *= multiplier
+                for i,c in enumerate(self.linear_coefs):
+                    self.linear_coefs[i] = c*multiplier
+
+        elif etype == _add or etype == -_add or etype == _sub or etype == -_sub:
+            #
+            # if etype == _sub,  then _LinearExpression - VAL
+            # if etype == -_sub, then VAL - _LinearExpression
+            #
+            if etype == _sub:
+                omult = -1
+            else:
+                omult = 1
+            if etype == -_sub:
+                self.constant *= -1
+                for i,c in enumerate(self.linear_coefs):
+                    self.linear_coefs[i] = -c
+
+            if _other.__class__ in native_numeric_types:
+                self.constant = self.constant + omult * _other
+            elif not _other._potentially_variable():
+                self.constant = self.constant + omult * _other
+            elif _other.__class__ is _LinearExpression:
+                self.constant = self.constant + omult * _other.constant
+                for c,v in zip(_other.linear_coefs, _other.linear_vars):
+                    self.linear_coefs.append(omult*c)
+                    self.linear_vars.append(v)
+            elif isinstance(_other.__class__, _MultiSumExpression):     # OPTIMIZE
+                for e in _other._args[:]:
+                    C,c,v = _LinearExpression._decompose_term(e)
+                    self.constant = self.constant + omult * C
+                    if not v is None:
+                        self.linear_coefs.append(omult*c)
+                        self.linear_vars.append(v)
+            else:
+                C,c,v = _LinearExpression._decompose_term(_other)
+                self.constant = self.constant + omult * C
+                if not v is None:
+                    self.linear_coefs.append(omult*c)
+                    self.linear_vars.append(v)
+
+        elif etype == _div:
+            if _other.__class__ in native_numeric_types:
+                divisor = _other
+            elif _self._potentially_variable():
+                raise ValueError("Unallowed operation on linear expression: division with a variable RHS")
+            else:
+                divisor = _other
+            self.constant /= divisor
+            for i,c in enumerate(self.linear_coefs):
+                self.linear_coefs[i] = c/divisor
+
+        elif etype == -_div:
+            if _self._potentially_variable():
+                raise ValueError("Unallowed operation on linear expression: division with a variable RHS")
+            C,c,v = _LinearExpression._decompose_term(_other)
+            self.constant = C/self.constant
+            if not v is None:
+                self.linear_var = [v]
+                self.linear_coef = [c/self.constant]
+            
+        else:
+            raise ValueError("Unallowed operation on linear expression: %d" % etype)
+
+        return self
+
+
+class _StaticLinearExpression(_LinearExpression):
+    __slots__ = ()
+
+
+class _QuadraticExpression(_ExpressionBase):
+    __slots__ = ('constant',          # The constant term
+                 'linear_coefs',      # Linear coefficients
+                 'linear_vars',       # Linear variables
+                 'quadratic_coefs',   # Quadratic coefficients
+                 'quadratic_vars')    # Quadratic variables
+
+    PRECEDENCE = 6
+
+    def __init__(self):
+        self.constant = 0
+        self.linear_coefs = []
+        self.linear_vars = []
+        self.quadratic_coefs = []
+        self.quadratic_vars = []
+        self._args = tuple()
+        self._owned = False
+
+    def getname(self, *args, **kwds):
+        return 'sum'
+
+    def _polynomial_degree(self, result):
+        if len(self.quadratic_vars) > 0:
+            return 2
+        elif len(self.linear_vars) > 0:
+            return 1
+        return 0
+
+    def is_constant(self):
+        return len(self.quadratic_vars) == 0 and len(self.linear_vars) == 0
+
+    def is_fixed(self):
+        if len(self.linear_vars) == 0 and len(self.quadratic_vars) == 0:
+            return True
+        for v,w in self.quadratic_vars:
+            if not (v.fixed or w.fixed):
+                return False
+        for v in self.linear_vars:
+            if not v.fixed:
+                return False
+        return True
+
+    def _potentially_variable(self):
+        return len(self.quadratic_vars) > 0 or len(self.linear_vars) > 0
+
+
+class _StaticQuadraticExpression(_QuadraticExpression):
+    __slots__ = ()
+
+
 #-------------------------------------------------------
 #
 # Functions used to generate expressions
@@ -1950,6 +2236,15 @@ def generate_expression(etype, _self, _other):
 
     if etype > _inplace:
         etype -= _inplace
+
+    if _self.__class__ is _LinearExpression:
+        if etype >= _unary:
+            return _self._combine_expr(etype, None)
+        if _other.__class__ is not _LinearExpression:
+            _other = _process_arg(_other)
+        return _self._combine_expr(etype, _other)
+    elif _other.__class__ is _LinearExpression:
+        return _other._combine_expr(-etype, _process_arg(_self))
 
     if _self.__class__ is not _MultiSumExpression:
         _self = _process_arg(_self)
@@ -2376,6 +2671,11 @@ pyomo5_product_types = set([
         _ProductExpression,
         _Constant_ProductExpression,
         _NPV_ProductExpression
+        ])
+pyomo5_sum_types = set([
+        _SumExpression,
+        _Constant_SumExpression,
+        _NPV_SumExpression
         ])
 pyomo5_reciprocal_types = set([
         _ReciprocalExpression,
