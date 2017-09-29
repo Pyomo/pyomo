@@ -1058,6 +1058,13 @@ class Piecewise(Block):
         # translate the user input to the enum type
         pw_rep = kwds.pop('pw_repn','SOS2')
         pw_rep = translate_repn.get(pw_rep,pw_rep)
+        if (pw_rep == PWRepn.BIGM_BIN) or \
+           (pw_rep == PWRepn.BIGM_SOS1):
+            logger.warning(
+                "DEPRECATED: The 'BIGM_BIN' and 'BIGM_SOS1' "
+                "piecewise representations will be removed in "
+                "a future version of Pyomo. They produce incorrect "
+                "results in certain cases")
         # translate the user input to the enum type
         bound_type = kwds.pop('pw_constr_type',None)
         bound_type = translate_bound.get(bound_type,bound_type)
