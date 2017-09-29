@@ -119,7 +119,8 @@ class mutable_sum_context(object):
         return self.e
 
     def __exit__(self, *args):
-        self.e.__class__ = _StaticMultiSumExpression
+        if self.e.__class__ == _MultiSumExpression:
+            self.e.__class__ = _StaticMultiSumExpression
 
 nonlinear_expression = mutable_sum_context()
 
@@ -131,7 +132,8 @@ class mutable_linear_context(object):
         return self.e
 
     def __exit__(self, *args):
-        self.e.__class__ = _StaticLinearExpression
+        if self.e.__class__ == _LinearExpression:
+            self.e.__class__ = _StaticLinearExpression
 
 linear_expression = mutable_linear_context()
 
@@ -143,7 +145,8 @@ class mutable_quadratic_context(object):
         return self.e
 
     def __exit__(self, *args):
-        self.e.__class__ = _StaticQuadraticExpression
+        if self.e.__class__ == _QuadraticExpression:
+            self.e.__class__ = _StaticQuadraticExpression
 
 #quadratic_expression = mutable_quadratic_context()
 quadratic_expression = nonlinear_expression
@@ -293,7 +296,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
                 _stack[-2] = True
 
         elif _clone:
-            ans = _obj._clone( tuple(_result) )
+            ans = _obj._clone( tuple(_result), None )
             if _stack:
                 _stack[-2] = True
 
@@ -399,7 +402,7 @@ def clone_expression(expr, substitute=None, verbose=False, clone_leaves=True):
         #
         # Now replace the current expression object
         #
-        ans = _obj._clone( tuple(_result) )
+        ans = _obj._clone( tuple(_result), memo )
         if verbose: #pragma:nocover
             print("STACK LEN %d" % len(_stack))
         if _stack:
@@ -702,7 +705,7 @@ class _ExpressionBase(NumericValue):
     def __deepcopy__(self, memo):
         return clone_expression(self, substitute=memo)
 
-    def _clone(self, args):
+    def _clone(self, args, memo):
         return self.__class__(args)
 
     def getname(self, *args, **kwds):
@@ -988,7 +991,7 @@ class _ExternalFunctionExpression(_ExpressionBase):
             if arg.__class__ in pyomo5_expression_types:
                 arg._owned = True
 
-    def _clone(self, args):
+    def _clone(self, args, memo):
         return self.__class__(args, self._fcn)
 
     def __getstate__(self):
@@ -1135,7 +1138,7 @@ class _InequalityExpression(_LinearOperatorExpression):
         self._strict = strict
         self._cloned_from = cloned_from
 
-    def _clone(self, args):
+    def _clone(self, args, memo):
         return self.__class__(args, self._strict, self._cloned_from)
 
     def __getstate__(self):
@@ -1395,7 +1398,7 @@ class _MultiProdExpression(_ProductExpression):
             if arg.__class__ in pyomo5_expression_types:
                 arg._owned = True
 
-    def _clone(self, args):
+    def _clone(self, args, memo):
         return self.__class__(args, self._nnum)
 
     def _precedence(self):
@@ -1699,7 +1702,7 @@ class _GetItemExpression(_ExpressionBase):
             if arg.__class__ in pyomo5_expression_types:
                 arg._owned = True
 
-    def _clone(self, args):
+    def _clone(self, args, memo):
         return self.__class__(args, self._base)
 
     def __getstate__(self):
@@ -1858,7 +1861,7 @@ class _UnaryFunctionExpression(_ExpressionBase):
         if args[0].__class__ in pyomo5_expression_types:
             args[0]._owned = True
 
-    def _clone(self, args):
+    def _clone(self, args, memo):
         return self.__class__(args, self._name, self._fcn)
 
     def __getstate__(self):
@@ -1910,7 +1913,7 @@ class _AbsExpression(_UnaryFunctionExpression):
     def __init__(self, arg):
         super(_AbsExpression, self).__init__(arg, 'abs', abs)
 
-    def _clone(self, args):
+    def _clone(self, args, memo):
         return self.__class__(args)
 
 
@@ -1945,11 +1948,21 @@ class _LinearExpression(_ExpressionBase):
         self._args = tuple()
         self._owned = False
 
-    def _clone(self, args=None):
+    def __getstate__(self):
+        state = super(_LinearExpression, self).__getstate__()
+        for i in _LinearExpression.__slots__:
+           state[i] = getattr(self,i)
+        return state
+
+    def __deepcopy__(self, memo):
+        return self._clone(None, memo)
+
+    def _clone(self, args, memo):
         repn = self.__class__()
-        repn.constant = self.constant
-        repn.linear_coefs = list(self.linear_coefs)
-        repn.linear_vars = list(self.linear_vars)
+        repn.constant = deepcopy(self.constant, memo=memo)
+        repn.linear_coefs = deepcopy(self.linear_coefs, memo=memo)
+        repn.linear_vars = deepcopy(self.linear_vars, memo=memo)
+        return repn
 
     def getname(self, *args, **kwds):
         return 'sum'
@@ -1967,6 +1980,14 @@ class _LinearExpression(_ExpressionBase):
             if v.fixed:
                 return True
         return False
+
+    def _to_string_suffix(self, ostream, verbose):
+        ostream.write("(%f" % self.constant)
+        for c,v in zip(self.linear_coefs, self.linear_vars):
+            if c.__class__ in native_numeric_types and isclose(value(c),1):
+                ostream.write(" + %s" % str(v))
+            else:
+                ostream.write(" + %s*%s" % (str(c),  str(v)))
 
     def _potentially_variable(self):
         return len(self.linear_vars) > 0
@@ -2158,6 +2179,15 @@ class _QuadraticExpression(_ExpressionBase):
         self.quadratic_vars = []
         self._args = tuple()
         self._owned = False
+
+    def _clone(self, args=None):
+        repn = self.__class__()
+        repn.constant = deepcopy(self.constant)
+        repn.linear_coefs = deepcopy(self.linear_coefs)
+        repn.linear_vars = deepcopy(self.linear_vars)
+        repn.quadratic_coefs = deepcopy(self.quadratic_coefs)
+        repn.quadratic_vars = deepcopy(self.quadratic_vars)
+        return repn
 
     def getname(self, *args, **kwds):
         return 'sum'
@@ -2666,7 +2696,11 @@ pyomo5_expression_types = set([
         _NPV_UnaryFunctionExpression,
         _AbsExpression,
         _Constant_AbsExpression,
-        _NPV_AbsExpression
+        _NPV_AbsExpression,
+        _LinearExpression,
+        _StaticLinearExpression,
+        _QuadraticExpression,
+        _StaticQuadraticExpression,
         ])
 pyomo5_multisum_types = set([
         _MultiSumExpression,
