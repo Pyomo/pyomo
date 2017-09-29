@@ -498,6 +498,7 @@ def evaluate_expression(exp, exception=True, only_fixed_vars=False):
         from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
         from pyomo.core.kernel.component_variable import IVariable, variable
         pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
+        _LinearExpression.vtypes = pyomo5_variable_types
 
     try:
         if exp.__class__ in pyomo5_variable_types:
@@ -559,6 +560,7 @@ def identify_variables(expr,
         from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
         from pyomo.core.kernel.component_variable import IVariable, variable
         pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
+        _LinearExpression.vtypes = pyomo5_variable_types
 
     if not allow_duplicates:
         _seen = set()
