@@ -145,7 +145,8 @@ class mutable_quadratic_context(object):
     def __exit__(self, *args):
         self.e.__class__ = _StaticQuadraticExpression
 
-quadratic_expression = mutable_quadratic_context()
+#quadratic_expression = mutable_quadratic_context()
+quadratic_expression = nonlinear_expression
 
 
 #-------------------------------------------------------
@@ -2079,7 +2080,7 @@ class _LinearExpression(_ExpressionBase):
                     self.linear_vars.append(v)
 
         elif etype == _mul or etype == -_mul:
-            if _other.__class in native_numeric_types:
+            if _other.__class__ in native_numeric_types:
                 multiplier = _other
             elif _other._potentially_variable():
                 if len(self.linear_vars) > 0:

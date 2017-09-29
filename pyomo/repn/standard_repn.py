@@ -476,16 +476,15 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                     # Extract data from the linear expression
                     #
                     val = {}
-                    if not isclose(_sub.constant, 0):
-                        val[0] = _sub.constant
+                    constant = _sub.constant
                     if len(_sub.linear_vars) > 0:
                         ans = {}
                         for c,v in zip(_sub.linear_coefs, _sub.linear_vars):
                             if v.fixed:
                                 if compute_values:
-                                    val[0] += EXPR.evaluate_expression(c)*v.value
+                                    constant += EXPR.evaluate_expression(c)*v.value
                                 else:
-                                    val[0] += c*v
+                                    constant += c*v
                             else:
                                 #
                                 # Store a variable 
@@ -502,6 +501,8 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                                 else:
                                     ans[key] = c
                         val[1] = ans
+                    if not isclose(constant, 0):
+                        val[0] = constant
                     _result.append( val )
                 else:
                     #
