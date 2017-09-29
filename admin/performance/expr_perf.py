@@ -49,6 +49,8 @@ class timeout:
 
 
 _timeout = 20
+#NTerms = 100
+#N = 1
 NTerms = 100000
 N = 30
 
@@ -408,6 +410,75 @@ def linear(N, flag):
     return f
 
 #
+# Create a linear expression
+#
+def simple_linear(N, flag):
+
+    def f():
+        seconds = {}
+
+        model = ConcreteModel()
+        model.A = RangeSet(N)
+        model.p = Param(model.A, default=2)
+        model.x = Var(model.A, initialize=2)
+
+        gc.collect()
+        _clear_expression_pool()
+        try:
+            with EXPR.clone_counter as ctr:
+                nclones = ctr.count
+
+                with timeout(seconds=_timeout):
+                    start = time.time()
+                    #
+                    if flag == 1:
+                        expr = summation(model.p, model.x)
+                    elif flag == 2:
+                        expr=sum(model.p[i]*model.x[i] for i in model.A)
+                    elif flag == 3:
+                        expr=0
+                        for i in model.A:
+                            expr += model.p[i] * model.x[i]
+                    elif flag == 4:
+                        expr=0
+                        for i in model.A:
+                            expr = expr + model.p[i] * model.x[i]
+                    elif flag == 5:
+                        expr=0
+                        for i in model.A:
+                            expr = model.p[i] * model.x[i] + expr
+                    elif flag == 6:
+                        expr=Sum(model.p[i]*model.x[i] for i in model.A)
+                    elif flag == 12:
+                        with EXPR.linear_expression as expr:
+                            expr=sum((model.p[i]*model.x[i] for i in model.A), expr)
+                    elif flag == 13:
+                        with EXPR.linear_expression as expr:
+                            for i in model.A:
+                                expr += model.p[i] * model.x[i]
+                    elif flag == 14:
+                        with EXPR.linear_expression as expr:
+                            for i in model.A:
+                                expr = expr + model.p[i] * model.x[i]
+                    elif flag == 15:
+                        with EXPR.linear_expression as expr:
+                            for i in model.A:
+                                expr = model.p[i] * model.x[i] + expr
+                    #
+                    stop = time.time()
+                    seconds['construction'] = stop-start
+                    seconds['nclones'] = ctr.count - nclones
+                seconds = evaluate(expr, seconds)
+        except RecursionError:
+            seconds['construction'] = -888.0
+        except TimeoutError:
+            print("TIMEOUT")
+            seconds['construction'] = -999.0
+        return seconds
+
+    return f
+
+#
 # Create a nested linear expression
 #
 def nested_linear(N, flag):
@@ -579,10 +650,10 @@ def bilinear(N, flag):
                     elif flag == 4:
                         expr=Sum(model.p[i]*model.x[i]*model.y[i] for i in model.A)
                     elif flag == 12:
-                        with EXPR.linear_expression as expr:
+                        with EXPR.quadratic_expression as expr:
                             expr=sum((model.p[i]*model.x[i]*model.y[i] for i in model.A), expr)
                     elif flag == 13:
-                        with EXPR.linear_expression as expr:
+                        with EXPR.quadratic_expression as expr:
                             for i in model.A:
                                 expr += model.p[i] * model.x[i] * model.y[i]
                     #
@@ -635,10 +706,10 @@ def nonlinear(N, flag):
                     elif flag == 4:
                         expr=Sum(model.p[i]*tan(model.x[i]) for i in model.A)
                     if flag == 12:
-                        with EXPR.linear_expression as expr:
+                        with EXPR.nonlinear_expression as expr:
                             expr=sum((model.p[i]*tan(model.x[i]) for i in model.A), expr)
                     elif flag == 13:
-                        with EXPR.linear_expression as expr:
+                        with EXPR.nonlinear_expression as expr:
                             for i in model.A:
                                 expr += model.p[i] * tan(model.x[i])
                     #
@@ -814,7 +885,6 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(constant(NTerms, 1), n=N)
         print_results(factors_, ans_, output)
 
-    if True:
         factors_ = tuple(factors+['Constant','Loop 2'])
         ans_ = res[factors_] = measure(constant(NTerms, 2), n=N)
         print_results(factors_, ans_, output)
@@ -872,9 +942,51 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(linear(NTerms, 15), n=N)
         print_results(factors_, ans_, output)
 
-    if True:
         factors_ = tuple(factors+['Linear','Loop 6'])
         ans_ = res[factors_] = measure(linear(NTerms, 6), n=N)
+        print_results(factors_, ans_, output)
+
+    if True:
+        factors_ = tuple(factors+['SimpleLinear','Loop 1'])
+        ans_ = res[factors_] = measure(simple_linear(NTerms, 1), n=N)
+        print_results(factors_, ans_, output)
+
+    if True:
+        factors_ = tuple(factors+['SimpleLinear','Loop 2'])
+        ans_ = res[factors_] = measure(simple_linear(NTerms, 2), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['SimpleLinear','Loop 12'])
+        ans_ = res[factors_] = measure(simple_linear(NTerms, 12), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['SimpleLinear','Loop 3'])
+        ans_ = res[factors_] = measure(simple_linear(NTerms, 3), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['SimpleLinear','Loop 13'])
+        ans_ = res[factors_] = measure(simple_linear(NTerms, 13), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['SimpleLinear','Loop 4'])
+        ans_ = res[factors_] = measure(simple_linear(NTerms, 4), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['SimpleLinear','Loop 14'])
+        ans_ = res[factors_] = measure(simple_linear(NTerms, 14), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['SimpleLinear','Loop 5'])
+        ans_ = res[factors_] = measure(simple_linear(NTerms, 5), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['SimpleLinear','Loop 15'])
+        ans_ = res[factors_] = measure(simple_linear(NTerms, 15), n=N)
+        print_results(factors_, ans_, output)
+
+    if True:
+        factors_ = tuple(factors+['SimpleLinear','Loop 6'])
+        ans_ = res[factors_] = measure(simple_linear(NTerms, 6), n=N)
         print_results(factors_, ans_, output)
 
 
@@ -999,7 +1111,7 @@ res = {}
 
 #EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo5_trees) 
 #import cProfile
-#cProfile.run('runall(["PYOMO5"], res)', 'restats3')
+#cProfile.run('runall(["PYOMO5"], res)', 'restats4')
 runall(["PYOMO5"], res)
 
 if args.output:
