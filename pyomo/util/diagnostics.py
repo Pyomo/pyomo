@@ -8,7 +8,7 @@ import logging
 
 
 __author__ = "Qi Chen <https://github.com/qtothec>"
-logger = logging.getLogger('pyomo.diagnostics')
+logger = logging.getLogger('pyomo.util.diagnostics')
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
