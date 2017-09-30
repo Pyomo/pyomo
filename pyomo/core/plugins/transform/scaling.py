@@ -9,12 +9,13 @@
 #  ___________________________________________________________________________
 
 from pyomo.util.plugin import alias
-from pyomo.core.base import Var, Constraint, Objective, Param, _VarData, _ConstraintData, _ObjectiveData
+from pyomo.core.base import Var, Constraint, Objective, Param, _VarData, _ConstraintData, _ObjectiveData, Suffix
 from pyomo.core.plugins.transform.hierarchy import Transformation
 from pyomo.core.kernel import ComponentMap
 
-from pyomo.core.base import expr as EXPR
-from pyomo.core.base import expr_common as common
+from pyomo.core.base import expr_coopr3, clone_expression
+#from pyomo.core.base import expr_common as common
+
 
 def substitute_var(expression, sub_component_map):
     stack = list()
@@ -25,12 +26,13 @@ def substitute_var(expression, sub_component_map):
         e = stack.pop()
         e_type = type(e)
         print(e_type, e)
-        if e_type is EXPR._ProductExpression and common.mode is common.Mode.coopr3_trees:
+        if e_type is expr_coopr3._ProductExpression:
             # _ProductExpression is fundamentally different in _Coopr3
             for i, child in enumerate(e._numerator):
+                ## TODO: don't need the isinstance... just check in sub_component_map
                 if isinstance(child, _VarData):
                     if child in sub_component_map:
-                        e._numerator[i] = sub_component_map[i]
+                        e._numerator[i] = clone_expression(sub_component_map[i])
                 else:
                     stack.append(child)
             for i, child in enumerate(e._denominator):
@@ -43,7 +45,7 @@ def substitute_var(expression, sub_component_map):
             for i, child in enumerate(e._args):
                 if isinstance(child, _VarData):
                     if child in sub_component_map:
-                        e._args[i] = sub_component_map[child]
+                        e._args[i] = clone_expression(sub_component_map[child])
                 else:
                     stack.append(child)
 
@@ -92,9 +94,8 @@ class ScaleModel(Transformation):
         if component_data not in instance.scaling_factor or instance.scaling_factor[component_data] is None:
             return 1.0
         
-        scaling_factor = instance.scaling_factor[component_data]
         try:
-            scaling_factor = float(scaling_factor)
+            scaling_factor = float(instance.scaling_factor[component_data])
         except ValueError:
             raise ValueError("Suffix 'scaling_factor' has a value %s for component %s that cannot be converted to a float. Floating point values are required for this suffix in the ScaleModel transformation." % (instance.scaling_factor[component_data], component_data))
         return scaling_factor
@@ -112,78 +113,66 @@ class ScaleModel(Transformation):
                                  " first done a forward transformation." % (transformation_name))
         return instance.transformation_data[transformation_name].pop()
 
-    def _default_dict(dictionary, index, default_value):
-        if index in dictionary:
-            return dictionary[index]
-        return default_value
-    
-    def _create_using(self, model, **kwds):
-        assert not kwds
-        instance = model.clone()
-
-        # if the scaling_method is 'user', get the scaling parameters from the suffixes
+    def _apply_to(self, model, **kwds):
+        # need to have a map of unscaled components to scaling factors
+        # and a map of scaled components to unscaled components
         component_scaling_factor_map = ComponentMap()
+        transformed_to_original_component_map = ComponentMap()
+        
+        # if the scaling_method is 'user', get the scaling parameters from the suffixes
         if self._scaling_method == 'user':
             # perform some checks to make sure we have the necessary suffixes
-            if not hasattr(instance, 'scaling_factor'):
+            if type(model.component('scaling_factor')) is not Suffix:
                 raise ValueError("ScaleModel transformation called with scaling_method='user'"
                                  ", but cannot find the suffix 'scaling_factor' on the model")
 
             # get the scaling factors
-            for c in instance.component_data_objects(ctype=(Var,Constraint,Objective), descend_into=True):
-                scaling_factor = self._get_float_scaling_factor(instance, c)
-                component_scaling_factor_map[c] = scaling_factor
+            for c in model.component_data_objects(ctype=(Var,Constraint,Objective), descend_into=True):
+                component_scaling_factor_map[c] = self._get_float_scaling_factor(model, c)
 
         else:
             raise ValueError("ScaleModel transformation: unknown scaling_method found"
                              "-- supported values: 'user' ")
 
-        """
-        # loop through constraints, vars and objectives and create the necessary param objects
-        # to store the scaling factors
-        def _scaling_factor_param_rule(parent, component, index, scaling_factor_component_map):
-            return scaling_factor_component_map[component[index]]
-        component_scaling_parameters_map = ComponentMap()
-        for c in instance.component_objects(ctype=(Var, Constraint, Objective), descend_into=True):
-            # create the parameters to store the scaling factors
-            param_name = '_scaling_factor_' + c.local_name
-            if c.is_indexed():
-                _lambda_scaling_factor_param_rule = lambda model, index: _scaling_factor_param_rule(model, c, index, component_scaling_factor_map)
-                c.parent_block().add_component(param_name, Param(c._index,
-                                                                 rule=_lambda_scaling_factor_param_rule,
-                                                                 default=1,
-                                                                 mutable=False))
-            else:
-                c.parent_block().add_component(param_name, Param(initialize=component_scaling_factor_map[c], mutable=False))
-            component_scaling_parameters_map[c] = getattr(c.parent_block(), param_name)
-        """
-        
-        # loop through all the variables and build the scaled variables and
-        # the substitution map
+        # build the scaled variables and the variable substitution map
+        # for replacing unscaled with scaled vars
         variable_substitution_map = ComponentMap()
-        for v in list(instance.component_objects(ctype=Var, descend_into=True)):
-            new_v = None
+        unscaled_variables = [v for v in model.component_objects(ctype=Var, descend_into=True)]
+        for v in unscaled_variables:
+            # create the scaled variable
+            scaled_v = None
             if v.is_indexed():
-                new_v = Var(v._index)
+                scaled_v = Var(v.index())
             else:
-                new_v = Var()
-                
-            for k in new_v:
-                new_v_data = new_v[k]
-                scaling_factor = component_scaling_factor_map[v]
-                variable_substitution_map[v] = new_v_data/scaling_factor
-                new_v_data.setlb(v.lb * scaling_factor)
-                new_v_data.setub(v.ub * scaling_factor)
-                if pe.value(scaling_factor) < 0:
-                    temp = new_v_data.lb
-                    new_v_data.setlb(new_v_data.ub)
-                    new_v_data.setub(temp)
-                new_v_data.value = pe.value(v) * pe.value(scaling_factor)
+                scaled_v = Var()
+
+            # add the scaled variable to the model
             setattr(v.parent_block(), '_scaled_variable_' + v.local_name, new_v)
 
+            # set the bounds/value for the scaled variable
+            # and extend the component maps
+            for k in scaled_v.index():
+                scaled_v_data = scale_v[k]
+                scaling_factor = component_scaling_factor_map[v[k]]
+                transformed_to_original_component_map[scaled_v_data] = v[k]
+                variable_substitution_map[v[k]] = scaled_v_data/scaling_factor
+                
+                scaled_v_data.setlb(v.lb * scaling_factor)
+                scaled_v_data.setub(v.ub * scaling_factor)
+                if pe.value(scaling_factor) < 0:
+                    temp = scaled_v_data.lb
+                    scaled_v_data.setlb(new_v_data.ub)
+                    scaled_v_data.setub(temp)
+                scaled_v_data.value = pe.value(v) * pe.value(scaling_factor)
+
+        # create the scaled constraints
+        CRASH HERE!
+        Write a loop to create a copy of the scaled constraints....
+
+        
         # loop through all the constraint and objectives, perform substitution
         # and apply scaling factors
-        for component in instance.component_objects(ctype=(Constraint,Objective), descend_into=True):
+        for component in model.component_objects(ctype=(Constraint,Objective), descend_into=True):
             for k in component:
                 c = component[k]
                 # perform the constraint/objective scaling and variable sub
@@ -213,3 +202,13 @@ class ScaleModel(Transformation):
         self._push_transformation_data_to_model(instance, 'ScaleModel', component_scaling_factor_map)
 
         return instance
+
+
+    def propagate_solution(scaled_model, original_model, primal_variables=True, dual_variables=True):
+        '''
+        This method takes the solution in the scaled model and reverses the transformation to put
+        the solution in the original model. It will do primal, dual, or both depending on keyword arguments.
+        '''
+
+        # 
+        
