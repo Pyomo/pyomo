@@ -91,7 +91,7 @@ install:
 
 - conda install -q -y --channel conda-forge glpk
 - glpsol -v
-- conda install -q -y --channel cachemeorg ipopt_bin
+- conda install -q -y --channel conda-forge ipopt
 - ipopt -v
 #
 # Clone but don't install pyomo-model-libraries
