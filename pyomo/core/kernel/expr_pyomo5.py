@@ -1389,7 +1389,7 @@ class _ExpressionBase(NumericValue):
         return evaluate_expression(self, exception)
 
     def clone(self, substitute=None, verbose=False):
-        return clone_expression(self, substitute=None, verbose=verbose)
+        return clone_expression(self, substitute=substitute, verbose=verbose)
 
     def size(self, verbose=False):
         return _expression_size(self, verbose=verbose)
