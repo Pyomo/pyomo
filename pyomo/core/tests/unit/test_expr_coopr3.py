@@ -25,13 +25,20 @@ from pyomo.environ import *
 from pyomo.core.base import expr_common, expr as EXPR
 from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.numvalue import potentially_variable
-
-from pyomo.core.base.expr_coopr3 import UNREFERENCED_EXPR_COUNT, \
-     UNREFERENCED_RELATIONAL_EXPR_COUNT, UNREFERENCED_INTRINSIC_EXPR_COUNT, \
-     _getrefcount_available
+from pyomo.core.base import expr_common
 
 
-class TestExpression_EvaluateNumericConstant(unittest.TestCase):
+if expr_common.mode is expr_common.Mode.coopr3_trees:
+    TestCase = unittest.TestCase
+    from pyomo.core.base.expr_coopr3 import UNREFERENCED_EXPR_COUNT, \
+         UNREFERENCED_RELATIONAL_EXPR_COUNT, UNREFERENCED_INTRINSIC_EXPR_COUNT, \
+         _getrefcount_available
+else:
+    TestCase = object
+    _getrefcount_available=False
+
+
+class TestExpression_EvaluateNumericConstant(TestCase):
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
@@ -245,7 +252,7 @@ class TestExpression_EvaluateMutableParam(TestExpression_EvaluateNumericConstant
         tmp.construct()
         return tmp
 
-class TestNumericValue(unittest.TestCase):
+class TestNumericValue(TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
@@ -299,7 +306,7 @@ class TestNumericValue(unittest.TestCase):
 @unittest.skipIf(
     not _getrefcount_available, "Coopr 3-style expressions are not "
     "supported on platforms that do not implement sys.getrefcount")
-class TestGenerate_SumExpression(unittest.TestCase):
+class TestGenerate_SumExpression(TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
@@ -653,7 +660,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
 @unittest.skipIf(
     not _getrefcount_available, "Coopr 3-style expressions are not "
     "supported on platforms that do not implement sys.getrefcount")
-class TestGenerate_ProductExpression(unittest.TestCase):
+class TestGenerate_ProductExpression(TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
@@ -888,7 +895,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(e), float)
         self.assertEqual(e, 1.5)
 
-class TestGenerate_RelationalExpression(unittest.TestCase):
+class TestGenerate_RelationalExpression(TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
@@ -1254,7 +1261,7 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         except TypeError:
             pass
 
-class TestPrettyPrinter_oldStyle(unittest.TestCase):
+class TestPrettyPrinter_oldStyle(TestCase):
     _save = None
 
     def setUp(self):
@@ -1371,7 +1378,7 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
             "pow( prod( num=( a , a ) , denom=( a ) ) , b ) ) ) ) ) ) ) )",
             str(expr) )
 
-class TestPrettyPrinter_newStyle(unittest.TestCase):
+class TestPrettyPrinter_newStyle(TestCase):
     _save = None
 
     def setUp(self):
@@ -1577,7 +1584,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
 @unittest.skipIf(
     not _getrefcount_available, "Coopr 3-style expressions are not "
     "supported on platforms that do not implement sys.getrefcount")
-class TestInplaceExpressionGeneration(unittest.TestCase):
+class TestInplaceExpressionGeneration(TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
@@ -1766,7 +1773,7 @@ class TestInplaceExpressionGeneration(unittest.TestCase):
         self.assertIs(x._args[0]._args[1], m.a)
         self.assertEqual(EXPR.generate_expression.clone_counter, count+1)
 
-class TestGeneralExpressionGeneration(unittest.TestCase):
+class TestGeneralExpressionGeneration(TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
@@ -1866,7 +1873,7 @@ class TestGeneralExpressionGeneration(unittest.TestCase):
         e = EXPR._ExpressionBase([m.a, m.b])
         self.assertRaises(NotImplementedError, e)
 
-class TestExprConditionalContext(unittest.TestCase):
+class TestExprConditionalContext(TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
@@ -2156,7 +2163,7 @@ class TestExprConditionalContext(unittest.TestCase):
         self.checkCondition(value(1 == instance.v), True)
         self.checkCondition(value(2 == instance.v), False)
 
-class TestPolynomialDegree(unittest.TestCase):
+class TestPolynomialDegree(TestCase):
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
@@ -2384,7 +2391,7 @@ def TrapRefCount_fcn(obj, target = None):
 @unittest.skipIf(
     not _getrefcount_available, "Coopr 3-style expressions are not "
     "supported on platforms that do not implement sys.getrefcount")
-class TestCloneIfNeeded(unittest.TestCase):
+class TestCloneIfNeeded(TestCase):
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
@@ -2661,7 +2668,7 @@ class TestCloneIfNeeded(unittest.TestCase):
         self.assertEqual(len(expr1._args), 3)
         self.assertEqual( EXPR.generate_expression.clone_counter, count + 1)
 
-class TestCloneExpression(unittest.TestCase):
+class TestCloneExpression(TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
@@ -2854,7 +2861,7 @@ class TestCloneExpression(unittest.TestCase):
         self.assertEqual(expr1._then(), expr2._then())
         self.assertEqual(expr1._else(), expr2._else())
 
-class TestIsFixedIsConstant(unittest.TestCase):
+class TestIsFixedIsConstant(TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
@@ -3080,7 +3087,7 @@ class TestIsFixedIsConstant(unittest.TestCase):
         self.assertEqual(expr.is_constant(), False)
         m.a.fixed = False
 
-class TestPotentiallyVariable(unittest.TestCase):
+class TestPotentiallyVariable(TestCase):
 
     def test_var(self):
         m = ConcreteModel()
@@ -3144,7 +3151,7 @@ class TestPotentiallyVariable(unittest.TestCase):
         self.assertEqual(potentially_variable('a'), False)
         self.assertEqual(potentially_variable(None), False)
 
-class TestExpressionUtilities(unittest.TestCase):
+class TestExpressionUtilities(TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
@@ -3201,7 +3208,7 @@ class TestExpressionUtilities(unittest.TestCase):
                           [ m.a, m.a, m.a,  ] )
 
         
-class TestMultiArgumentExpressions(unittest.TestCase):
+class TestMultiArgumentExpressions(TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
