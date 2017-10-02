@@ -17,11 +17,6 @@ try:
     from sys import getrefcount
     _getrefcount_available = True
 except ImportError:
-    logger = logging.getLogger('pyomo.core')
-    logger.warning(
-        "This python interpreter does not support sys.getrefcount()\n"
-        "Pyomo cannot automatically guarantee that expressions do not become\n"
-        "entangled (multiple expressions that share common subexpressions).\n")
     getrefcount = None
     _getrefcount_available = False
 
