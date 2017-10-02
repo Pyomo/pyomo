@@ -15,6 +15,7 @@ import logging
 import sys
 import traceback
 from copy import deepcopy
+from collections import deque
 
 logger = logging.getLogger('pyomo.core')
 
@@ -22,6 +23,7 @@ from six import StringIO, next, string_types, itervalues
 from six.moves import xrange, builtins
 from weakref import ref
 
+from pyutilib.misc.visitor import SimpleVisitor, ValueVisitor
 from pyutilib.math.util import isclose
 
 from pyomo.core.kernel.numvalue import \
@@ -154,9 +156,249 @@ quadratic_expression = nonlinear_expression
 
 #-------------------------------------------------------
 #
+# Visitor Logic
+#
+#-------------------------------------------------------
+
+class SimpleExpressionVisitor(SimpleVisitor):
+
+    def xbfs(self, node):
+        """
+        Breadth-first search, except that 
+        leaf nodes are immediately visited.
+        """
+        dq = deque([node])
+        while dq:
+            current = dq.popleft()
+            self.visit(current)
+            #for c in self.children(current):
+            for c in current._args:
+                #if self.is_leaf(c):
+                if c.__class__ in native_numeric_types or not c.is_expression() or len(c._args) == 0:
+                    self.visit(c)
+                else:
+                    dq.append(c)
+        return self.finalize()
+
+    def xbfs_yield_leaves(self, node):
+        """
+        Breadth-first search, except that 
+        leaf nodes are immediately visited.
+        """
+        dq = deque([node])
+        while dq:
+            current = dq.popleft()
+            #self.visit(current)
+            #for c in self.children(current):
+            for c in current._args:
+                #if self.is_leaf(c):
+                if c.__class__ in native_numeric_types or not c.is_expression() or len(c._args) == 0:
+                    ans = self.visit(c)
+                    if not ans is None:
+                        yield ans
+                else:
+                    dq.append(c)
+        return self.finalize()
+
+
+class ValueExpressionVisitor(ValueVisitor):
+
+    def dfs_postorder_deque(self, node):
+        """
+        Depth-first search - postorder
+
+        This function is slightly optimized from 
+        ValueVisitor.dfs_postorder_deque
+        """
+        _values = [[]]
+        expanded = set()
+        dq = deque([node])
+        while dq:
+            current = dq[-1]
+            if id(current) in expanded:
+                dq.pop()
+                values = _values.pop()
+                _values[-1].append( self.visit(current, values) )
+            elif self.visiting_potential_leaf(current, _values[-1]):
+                dq.pop()
+            else:
+                #for c in reversed(self.children(current)):
+                for c in reversed(current._args):
+                    dq.append(c)
+                expanded.add(id(current))
+                _values.append( [] )
+        return self.finalize(_values[-1][0])
+
+    def dfs_postorder_stack(self, node):
+        """
+        Depth-first search - postorder
+
+        This function is slightly optimized from 
+        ValueVisitor.dfs_postorder_stack
+        """
+        #_stack = [ (node, self.children(node), 0, len(self.children(node)), [])]
+        _stack = [ (node, node._args, 0, len(node._args), [])]
+        #
+        # Iterate until the stack is empty
+        #
+        # Note: 1 is faster than True for Python 2.x
+        #
+        while 1:
+            #
+            # Get the top of the stack
+            #   _obj        Current expression object
+            #   _argList    The arguments for this expression objet
+            #   _idx        The current argument being considered
+            #   _len        The number of arguments
+            #   _result     The return values
+            #
+            _obj, _argList, _idx, _len, _result = _stack.pop()
+            #
+            # Iterate through the arguments
+            #
+            while _idx < _len:
+                _sub = _argList[_idx]
+                _idx += 1
+                if not self.visiting_potential_leaf(_sub, _result):
+                    #
+                    # Push an expression onto the stack
+                    #
+                    _stack.append( (_obj, _argList, _idx, _len, _result) )
+                    _obj                    = _sub
+                    #_argList                = self.children(_sub)
+                    _argList                = _sub._args
+                    _idx                    = 0
+                    _len                    = len(_argList)
+                    _result                 = []
+            #
+            # Process the current node
+            #
+            ans = self.visit(_obj, _result)
+            if _stack:
+                #
+                # "return" the recursion by putting the return value on the end of the results stack
+                #
+                _stack[-1][-1].append( ans )
+            else:
+                return self.finalize(ans)
+
+
+
+
+#-------------------------------------------------------
+#
 # Functions used to process expression trees
 #
 #-------------------------------------------------------
+
+# =====================================================
+#  compress_expression
+# =====================================================
+
+class CompressVisitor(ValueExpressionVisitor):
+
+    def __init__(self, multiprod=False):
+        self._clone = [None, False]
+        self.multiprod = multiprod
+
+    def visit(self, node, values):
+        """ Visit nodes that have been expanded """
+        clone = self._clone.pop()
+        #
+        # Now replace the current expression object if it's a sum
+        #
+        if node.__class__ is _SumExpression or node.__class__ is _NPV_SumExpression or node.__class__ is _Constant_SumExpression:
+            ans = _SumExpression._combine_expr(*values)
+            #
+            # We've replaced a node, so set the context for the parent's search to
+            # ensure that it is cloned.
+            #
+            self._clone[-1] = True
+        #
+        # Now replace the current expression object if it's a product
+        #
+        elif self.multiprod and node.__class__ in pyomo5_product_types:
+            ans = _ProductExpression._combine_expr(*values)
+            #
+            # We've replaced a node, so set the context for the parent's search to
+            # ensure that it is cloned.
+            #
+            self._clone[-1] = True
+        #
+        # Now replace the current expression object if it's a reciprocal
+        #
+        elif self.multiprod and node.__class__ in pyomo5_reciprocal_types:
+            ans = _ReciprocalExpression._combine_expr(*values)
+            #
+            # We've replaced a node, so set the context for the parent's search to
+            # ensure that it is cloned.
+            #
+            self._clone[-1] = True
+
+        elif clone:
+            ans = node._clone( tuple(values), None )
+            self._clone[-1] = True
+
+        else:
+            ans = node
+        return ans
+
+    def visiting_potential_leaf(self, node, _values):
+        """ 
+        Visiting a potential leaf.
+
+        Return True if the node is not expanded.
+        """
+        if node.__class__ in native_numeric_types or \
+               node.__class__ not in pyomo5_expression_types or \
+               node.__class__ in pyomo5_multisum_types or \
+               node.__class__ is _MultiProdExpression or \
+               not node._potentially_variable():
+            _values.append( node )
+            return True
+        #
+        # This node is expanded, so set its cloning flag.
+        #
+        self._clone.append(False)
+        return False
+
+    def finalize(self, ans):
+        if ans.__class__ is _MultiSumExpression:
+            ans.__class__ = _CompressedSumExpression
+        return ans
+
+
+def NEW_compress_expression(expr, verbose=False, dive=False, multiprod=False):
+    #
+    # Only compress a true expression DAG
+    #
+    # Note: This does not try to optimize the compression to recognize
+    #   subgraphs.
+    #
+    # Note: This uses a two-part stack.  The boolean indicates whether the
+    #   parent should be cloned (because a child has been replaced), and the
+    #   tuple represents the current context during the tree search.
+    #
+    if expr.__class__ in native_numeric_types or not expr.is_expression() or not expr._potentially_variable():
+        return expr
+    if expr.__class__ is _MultiSumExpression:
+        expr.__class__ = _CompressedSumExpression
+        return expr
+    if expr.__class__ in pyomo5_multisum_types:
+        return expr
+    #
+    # Only compress trees whose root is _SumExpression
+    #
+    # Note: This tacitly avoids compressing all trees
+    # that are not potentially variable, since they have a
+    # different class.
+    #
+    if not dive and \
+       not (expr.__class__ is _SumExpression or expr.__class__ is _NPV_SumExpression or expr.__class__ is _Constant_SumExpression):
+        return expr
+    visitor = CompressVisitor(multiprod=multiprod)
+    return visitor.dfs_postorder_stack(expr)
+
 
 def compress_expression(expr, verbose=False, dive=False, multiprod=False):
     #
@@ -318,8 +560,64 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
             return ans
 
 
+# =====================================================
+#  clone_expression
+# =====================================================
+
+class CloneVisitor(ValueExpressionVisitor):
+
+    def __init__(self, clone_leaves=False, memo=None):
+        self.clone_leaves = clone_leaves
+        self.memo = memo
+
+    def visit(self, node, values):
+        """ Visit nodes that have been expanded """
+        return node._clone( tuple(values), self.memo )
+
+    def visiting_potential_leaf(self, node, _values):
+        """ 
+        Visiting a potential leaf.
+
+        Return True if the node is not expanded.
+        """
+        if node.__class__ in native_numeric_types:
+            #
+            # Store a native or numeric object
+            #
+            _values.append( deepcopy(node, self.memo) )
+            return True
+        elif node.__class__ not in pyomo5_expression_types:
+            #
+            # Store a kernel object that is cloned
+            #
+            if self.clone_leaves:
+                _values.append( deepcopy(node, self.memo) )
+            else:
+                _values.append( node )
+            return True
+        return False
+
+    def finalize(self, ans):
+        return ans
+
+
+def NEW_clone_expression(expr, substitute=None, verbose=False, clone_leaves=True):
+    #
+    clone_counter_context._count += 1
+    memo = {'__block_scope__': { id(None): False }}
+    if substitute:
+        memo.update(substitute)
+    #
+    if expr.__class__ in native_numeric_types:
+        return expr
+    if not expr.is_expression():
+        return deepcopy(expr, memo)
+    #
+    visitor = CloneVisitor(clone_leaves=clone_leaves, memo=memo)
+    return visitor.dfs_postorder_stack(expr)
+
+
 def clone_expression(expr, substitute=None, verbose=False, clone_leaves=True):
-    from pyomo.core.kernel.numvalue import native_numeric_types
     #
     clone_counter_context._count += 1
     memo = {'__block_scope__': { id(None): False }}
@@ -414,8 +712,36 @@ def clone_expression(expr, substitute=None, verbose=False, clone_leaves=True):
             return ans
 
 
+# =====================================================
+#  _expression_size
+# =====================================================
+
+class SizeVisitor(SimpleExpressionVisitor):
+
+    def __init__(self):
+        self.counter = 0
+
+    def visit(self, node):
+        self.counter += 1
+
+    def children(self, node):
+        return node._args
+
+    def is_leaf(self, node):
+        return node.__class__ in native_numeric_types or not node.is_expression() or len(node._args) == 0
+
+    def finalize(self):
+        return self.counter
+
+
 def _expression_size(expr, verbose=False):
-    from pyomo.core.kernel.numvalue import native_numeric_types
+    if expr.__class__ in native_numeric_types or not expr.is_expression():
+        return 1
+    visitor = SizeVisitor()
+    return visitor.xbfs(expr)
+    
+ 
+def OLD_expression_size(expr, verbose=False):
     #
     # Note: This does not try to optimize the compression to recognize
     #   subgraphs.
@@ -495,7 +821,80 @@ def _expression_size(expr, verbose=False):
             return ans
 
 
-#@profile
+# =====================================================
+#  evaluate_expression
+# =====================================================
+
+class EvaluationVisitor(ValueExpressionVisitor):
+
+    def __init__(self, only_fixed_vars=False):
+        self.only_fixed_vars = only_fixed_vars
+
+    def visit(self, node, values):
+        """ Visit nodes that have been expanded """
+        return node._apply_operation(values)
+
+    def visiting_potential_leaf(self, node, _values):
+        """ 
+        Visiting a potential leaf.
+
+        Return True if the node is not expanded.
+        """
+        if node.__class__ in native_numeric_types:
+            _values.append( node )
+            return True
+
+        elif node.__class__ in pyomo5_variable_types:
+            if self.only_fixed_vars:
+                if node.fixed:
+                    _values.append( node.value )
+                else:
+                    raise ValueError("Cannot evaluate an unfixed variable with only_fixed_vars=True")
+            else:
+                _values.append( value(node) )
+            return True
+
+        elif not node.is_expression():
+            _values.append( value(node) )
+            return True
+
+        return False
+
+    def finalize(self, ans):
+        return ans
+
+
+def NEW_evaluate_expression(exp, exception=True, only_fixed_vars=False):
+    global pyomo5_variable_types
+    if pyomo5_variable_types is None:
+        from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
+        from pyomo.core.kernel.component_variable import IVariable, variable
+        pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
+        _LinearExpression.vtypes = pyomo5_variable_types
+
+    try:
+        if exp.__class__ in pyomo5_variable_types:
+            if not only_fixed_vars or exp.fixed:
+                return exp.value
+            else:
+                raise ValueError("Cannot evaluate an unfixed variable with only_fixed_vars=True")
+        elif exp.__class__ in native_numeric_types:
+            return exp
+        elif not exp.is_expression():
+            return exp()
+        visitor = EvaluationVisitor(only_fixed_vars=only_fixed_vars)
+        return visitor.dfs_postorder_stack(exp)
+
+    except TemplateExpressionError:
+        if exception:
+            raise
+        return None
+    except ValueError:
+        if exception:
+            raise
+        return None
+
+
 def evaluate_expression(exp, exception=True, only_fixed_vars=False):
     global pyomo5_variable_types
     if pyomo5_variable_types is None:
@@ -555,6 +954,51 @@ def evaluate_expression(exp, exception=True, only_fixed_vars=False):
         return None
 
 
+# =====================================================
+#  identify_variables
+# =====================================================
+
+class VariableVisitor(SimpleExpressionVisitor):
+
+    def __init__(self, include_fixed=True, allow_duplicates=False, include_potentially_variable=False):
+        self.seen = set()
+        self.include_fixed = include_fixed
+        self.allow_duplicates = allow_duplicates
+        self.include_potentially_variable = include_potentially_variable
+        
+    def visit(self, node):
+        if node.__class__ in pyomo5_variable_types:
+            if ( self.include_fixed
+                 or not node.is_fixed()
+                 or self.include_potentially_variable ):
+                if not self.allow_duplicates:
+                    if id(node) in self.seen:
+                        return
+                    self.seen.add(id(node))
+                return node
+        elif self.include_potentially_variable and node._potentially_variable():
+            if not self.allow_duplicates:
+                if id(node) in self.seen:
+                    return
+                self.seen.add(id(node))
+            return node
+
+
+def NEW_identify_variables(expr,
+                       include_fixed=True,
+                       allow_duplicates=False,
+                       include_potentially_variable=False):
+    global pyomo5_variable_types
+    if pyomo5_variable_types is None:
+        from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
+        from pyomo.core.kernel.component_variable import IVariable, variable
+        pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
+        _LinearExpression.vtypes = pyomo5_variable_types
+
+    visitor = VariableVisitor(include_fixed, allow_duplicates, include_potentially_variable)
+    yield from visitor.xbfs_yield_leaves(expr)
+
+
 def identify_variables(expr,
                        include_fixed=True,
                        allow_duplicates=False,
@@ -596,6 +1040,254 @@ def identify_variables(expr,
                         continue
                     _seen.add(id(_sub))
                 yield _sub
+
+
+# =====================================================
+#  polynomial_degree
+# =====================================================
+
+class PolyDegreeVisitor(ValueExpressionVisitor):
+
+    def visit(self, node, values):
+        """ Visit nodes that have been expanded """
+        return node._polynomial_degree(values)
+
+    def visiting_potential_leaf(self, node, _values):
+        """ 
+        Visiting a potential leaf.
+
+        Return True if the node is not expanded.
+        """
+        if node.__class__ in native_numeric_types or not node._potentially_variable():
+            _values.append( 0 )
+            return True
+        elif not node.is_expression():
+            _values.append( 0 if node.is_fixed() else 1 )
+            return True
+        return False
+
+    def finalize(self, ans):
+        return ans
+
+
+def NEW_polynomial_degree(node):
+    visitor = PolyDegreeVisitor()
+    return visitor.dfs_postorder_stack(node)
+
+
+def polynomial_degree(node):
+    _stack = [ (node, node._args, 0, len(node._args), []) ]
+    while 1:  # Note: 1 is faster than True for Python 2.x
+        _obj, _argList, _idx, _len, _result = _stack.pop()
+        while _idx < _len:
+            _sub = _argList[_idx]
+            _idx += 1
+            if _sub.__class__ in native_numeric_types or not _sub._potentially_variable():
+                _result.append( 0 )
+            elif _sub.is_expression():
+                _stack.append( (_obj, _argList, _idx, _len, _result) )
+                _obj     = _sub
+                _argList = _sub._args
+                _idx     = 0
+                _len     = len(_argList)
+                _result  = []
+            else:
+                _result.append( 0 if _sub.is_fixed() else 1 )
+        ans = _obj._polynomial_degree(_result)
+        if _stack:
+            _stack[-1][-1].append( ans )
+        else:
+            return ans
+
+
+# =====================================================
+#  expression_is_fixed
+# =====================================================
+
+class IsFixedVisitor(ValueExpressionVisitor):
+    """
+    NOTE: This doesn't check if combiner logic is 
+    all or any and short-circuit the test.  It's
+    not clear that that is an important optimization.
+    """
+
+    def visit(self, node, values):
+        """ Visit nodes that have been expanded """
+        return node._is_fixed(values)
+
+    def visiting_potential_leaf(self, node, _values):
+        """ 
+        Visiting a potential leaf.
+
+        Return True if the node is not expanded.
+        """
+        if node.__class__ in native_numeric_types or not node._potentially_variable():
+            _values.append( True )
+            return True
+
+        elif not node.__class__ in pyomo5_expression_types:
+            _values.append( node.is_fixed() ) 
+            return True
+
+        return False
+
+    def finalize(self, ans):
+        return ans
+
+
+def NEW_expression_is_fixed(node):
+    global pyomo5_variable_types
+    if pyomo5_variable_types is None:
+        from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
+        from pyomo.core.kernel.component_variable import IVariable, variable
+        pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
+        _LinearExpression.vtypes = pyomo5_variable_types
+
+    if not node._potentially_variable():
+        return True
+    visitor = IsFixedVisitor()
+    return visitor.dfs_postorder_stack(node)
+
+
+def expression_is_fixed(node):
+    if not node._potentially_variable():
+        return True
+    _stack = [ (node, node._args, 0, len(node._args), []) ]
+    while 1:  # Note: 1 is faster than True for Python 2.x
+        _obj, _argList, _idx, _len, _result = _stack.pop()
+        while _idx < _len:
+            _sub = _argList[_idx]
+            _idx += 1
+            if _sub.__class__ in native_numeric_types or not _sub._potentially_variable():
+                _result.append( True )
+            elif not _sub.__class__ in pyomo5_expression_types:
+                _result.append( _sub.is_fixed() ) 
+            else:
+                _stack.append( (_obj, _argList, _idx, _len, _result) )
+                _obj     = _sub
+                _argList = _sub._args
+                _idx     = 0
+                _len     = len(_argList)
+                _result  = []
+
+        ans = _obj._is_fixed(_result)
+        if _stack:
+            _stack[-1][-1].append( ans )
+            #if _obj._is_fixed is all:
+            #    if not _result[-1]:
+            #        _idx = _len
+            #elif _obj._is_fixed is any:
+            #    if _result[-1]:
+            #        _idx = _len
+        else:
+            return ans
+
+
+# =====================================================
+#  expression_to_string
+# =====================================================
+
+"""
+class StringVisitor(SimpleExpressionVisitor):
+
+    def __init__(self, verbose=None, precedence=None):
+        self.buf = StringIO()
+        self.verbose = None
+        self.precedence = None
+        self._infix = False
+        self._bypass_prefix = False
+
+    def visit(self, node):
+        self.counter += 1
+
+    def children(self, node):
+        return node._args
+
+    def is_leaf(self, node):
+        return node.__class__ in native_numeric_types or not node.is_expression() or len(node._args) == 0
+
+    def finalize(self):
+        ans = self.buf.getvalue()
+        buf.close()
+        return ans
+
+    def dfs_inorder(self, node):
+        # Depth-first search - inorder
+        expanded = set()
+        dq = deque([node])
+        while dq:
+            current = dq.pop()
+            if id(current) in expanded or self.is_leaf(current):
+                self.visit(current)
+            else:
+                first = True
+                for c in reversed(self.children(current)):
+                    if first:
+                        first = False
+                    else:
+                        dq.append(current)
+                    dq.append(c)
+                expanded.add(id(current))
+        return self.finalize()
+
+def NEW_expression_to_string(expr, verbose=None, precedence=None):
+    visitor = StringVisitor(verbose=verbose, precedence=precedence)
+    return visitor.dfs_inorder(expr)
+"""
+
+
+def expression_to_string(expr, ostream=None, verbose=None, precedence=None):
+    _name_buffer = {}
+    if ostream is None:
+        ostream = sys.stdout
+    verbose = common.TO_STRING_VERBOSE if verbose is None else verbose
+
+    _infix = False
+    _bypass_prefix = False
+    argList = expr._args
+    _stack = [ [ expr, argList, 0, len(argList), precedence if precedence is not None else expr._precedence() ] ]
+    while _stack:
+        _parent, _args, _idx, _len, _prec = _stack[-1]
+        _my_precedence = _parent._precedence()
+        if _idx < _len:
+            _sub = _args[_idx]
+            _stack[-1][2] += 1
+            if _parent._to_string_skip(_idx):
+                continue
+            if _infix:
+                _bypass_prefix = _parent._to_string_infix(ostream, _idx, verbose)
+            else:
+                if not _bypass_prefix:
+                    _parent._to_string_prefix(ostream, verbose)
+                else:
+                    _bypass_prefix = False
+                if ((_len-_parent._to_string_skip(0) > 1) and _my_precedence > _prec) or not _my_precedence or verbose:
+                    ostream.write("( ")
+                    #ostream.write("%s %s %s %s %s %s( " % (str(_len), str(_idx), str(_my_precedence), str(_prec), str(verbose), str(type(_parent))))
+                    #if _len == 2 and skip == 0:
+                    #    ostream.write(" % ")
+                    #    ostream.write(" %s " % str(_parent._to_string_skip(0)))
+                    #    ostream.write(" % ")
+                    #    ostream.write(str(_args[0]))
+                    #    ostream.write(str(type(_args[0])))
+                    #    ostream.write(" % ")
+                    #    ostream.write(str(_args[1]))
+                    #    ostream.write(str(type(_args[1])))
+                    #    ostream.write(" % ")
+                _infix = True
+            if _sub.__class__ in pyomo5_expression_types:
+                argList = _sub._args
+                _stack.append([ _sub, argList, 0, len(argList), _my_precedence ])
+                _infix = False
+            elif hasattr(_parent, '_to_string_term'):
+                _parent._to_string_term(ostream, _idx, _sub, _name_buffer, verbose)
+            else:
+                expr._to_string_term(ostream, _idx, _sub, _name_buffer, verbose)
+        else:
+            _parent._to_string_suffix(ostream, verbose)
+            _stack.pop()
+            if ((_len-_parent._to_string_skip(0) > 1) and _my_precedence > _prec) or not _my_precedence or verbose:
+                ostream.write(" )")
 
 
 #-------------------------------------------------------
@@ -714,49 +1406,6 @@ class _ExpressionBase(NumericValue):
             "implement getname()" % ( str(self.__class__), ))
 
     # TODO: what if test was a lambda function?  Would that be faster?
-    def _bool_tree_walker(self, test, combiner, native_result):
-        _stack = []
-        _combiner= getattr(self, combiner)()
-        _argList = self._args
-        _idx     = 0
-        _len     = len(_argList)
-        _result  = []
-        while 1:  # Note: 1 is faster than True for Python 2.x
-            while _idx < _len:
-                _sub = _argList[_idx]
-                _idx += 1
-                if _sub.__class__ in native_numeric_types:
-                    _result.append( native_result )
-                    continue
-                elif not _sub.__class__ in pyomo5_expression_types:
-                    _result.append( getattr(_sub, test)() )
-                    if _combiner is all:
-                        if not _result[-1]:
-                            _idx = _len
-                    elif _combiner is any:
-                        if _result[-1]:
-                            _idx = _len
-                else:
-                    _stack.append( (_combiner, _argList, _idx, _len, _result) )
-                    _combiner= getattr(_sub, combiner)()
-                    _argList = _sub._args
-                    _idx     = 0
-                    _len     = len(_argList)
-                    _result  = []
-
-            ans = _combiner(_result)
-            if _stack:
-                _combiner, _argList, _idx, _len, _result = _stack.pop()
-                _result.append( ans )
-                if _combiner is all:
-                    if not _result[-1]:
-                        _idx = _len
-                elif _combiner is any:
-                    if _result[-1]:
-                        _idx = _len
-            else:
-                return ans
-
     def is_constant(self):
         """Return True if this expression is an atomic constant
 
@@ -780,9 +1429,9 @@ class _ExpressionBase(NumericValue):
         are "fixed". hence, the name.
 
         """
-        return self._bool_tree_walker('is_fixed', '_is_fixed_combiner', True)
+        return expression_is_fixed(self)
 
-    def _is_fixed_combiner(self):
+    def _is_fixed(self, values):
         """Private method to be overridden by derived classes requiring special
         handling for computing is_fixed()
 
@@ -791,7 +1440,7 @@ class _ExpressionBase(NumericValue):
         returns True/False for this expression.
 
         """
-        return all
+        return all(values)
 
     def _potentially_variable(self):
         """Return True if this expression can potentially contain a variable
@@ -811,89 +1460,16 @@ class _ExpressionBase(NumericValue):
         return True
 
     def polynomial_degree(self):
-        _stack = [ (self, self._args, 0, len(self._args), []) ]
-        while 1:  # Note: 1 is faster than True for Python 2.x
-            _obj, _argList, _idx, _len, _result = _stack.pop()
-            while _idx < _len:
-                _sub = _argList[_idx]
-                _idx += 1
-                if _sub.__class__ in native_numeric_types or not _sub._potentially_variable():
-                    _result.append( 0 )
-                elif _sub.is_expression():
-                    _stack.append( (_obj, _argList, _idx, _len, _result) )
-                    _obj     = _sub
-                    _argList = _sub._args
-                    _idx     = 0
-                    _len     = len(_argList)
-                    _result  = []
-                else:
-                    _result.append( 0 if _sub.is_fixed() else 1 )
-            ans = _obj._polynomial_degree(_result)
-            if _stack:
-                _stack[-1][-1].append( ans )
-            else:
-                return ans
+        return polynomial_degree(self)
 
     def _polynomial_degree(self, ans):
         raise NotImplementedError("Derived expression (%s) failed to "\
             "implement _polynomial_degree()" % ( str(self.__class__), ))
 
     def to_string(self, ostream=None, verbose=None, precedence=None, expr=None):
-        _name_buffer = {}
-        if ostream is None:
-            ostream = sys.stdout
-        verbose = common.TO_STRING_VERBOSE if verbose is None else verbose
-
         if expr is None:
             expr = self
-        _infix = False
-        _bypass_prefix = False
-        argList = expr._args
-        _stack = [ [ expr, argList, 0, len(argList),
-                     precedence if precedence is not None else expr._precedence() ] ]
-        while _stack:
-            _parent, _args, _idx, _len, _prec = _stack[-1]
-            _my_precedence = _parent._precedence()
-            if _idx < _len:
-                _sub = _args[_idx]
-                _stack[-1][2] += 1
-                if _parent._to_string_skip(_idx):
-                    continue
-                if _infix:
-                    _bypass_prefix = _parent._to_string_infix(ostream, _idx, verbose)
-                else:
-                    if not _bypass_prefix:
-                        _parent._to_string_prefix(ostream, verbose)
-                    else:
-                        _bypass_prefix = False
-                    if ((_len-_parent._to_string_skip(0) > 1) and _my_precedence > _prec) or not _my_precedence or verbose:
-                        ostream.write("( ")
-                        #ostream.write("%s %s %s %s %s %s( " % (str(_len), str(_idx), str(_my_precedence), str(_prec), str(verbose), str(type(_parent))))
-                        #if _len == 2 and skip == 0:
-                        #    ostream.write(" % ")
-                        #    ostream.write(" %s " % str(_parent._to_string_skip(0)))
-                        #    ostream.write(" % ")
-                        #    ostream.write(str(_args[0]))
-                        #    ostream.write(str(type(_args[0])))
-                        #    ostream.write(" % ")
-                        #    ostream.write(str(_args[1]))
-                        #    ostream.write(str(type(_args[1])))
-                        #    ostream.write(" % ")
-                    _infix = True
-                if _sub.__class__ in pyomo5_expression_types:
-                #if hasattr(_sub, '_args'): # _args is a proxy for Expression
-                    argList = _sub._args
-                    _stack.append([ _sub, argList, 0, len(argList), _my_precedence ])
-                    _infix = False
-                elif hasattr(_parent, '_to_string_term'):
-                    _parent._to_string_term(ostream, _idx, _sub, _name_buffer, verbose)
-                else:
-                    expr._to_string_term(ostream, _idx, _sub, _name_buffer, verbose)
-            else:
-                _parent._to_string_suffix(ostream, verbose)
-                _stack.pop()
-                if ((_len-_parent._to_string_skip(0) > 1) and _my_precedence > _prec) or not _my_precedence or verbose:
-                    ostream.write(" )")
+        return expression_to_string(expr, ostream, verbose, precedence)
 
     def _precedence(self):
         return _ExpressionBase.PRECEDENCE
@@ -1064,16 +1640,11 @@ class _PowExpression(_ExpressionBase):
                 pass
         return None
 
-    def _is_constant_combiner(self):
-        def impl(args):
-            if not args[1]:
-                return False
-            return args[0] or isclose(value(self._args[1]), 0)
-        return impl
-
-    # the local _is_fixed_combiner override is identical to
-    # _is_constant_combiner:
-    _is_fixed_combiner = _is_constant_combiner
+    def _is_fixed(self, args):
+        assert(len(args) == 2)
+        if not args[1]:
+            return False
+        return args[0] or isclose(value(self._args[1]), 0)
 
     def _precedence(self):
         return _PowExpression.PRECEDENCE
@@ -1788,20 +2359,15 @@ class Expr_if(_ExpressionBase):
     def getname(self, *args, **kwds):
         return "Expr_if"
 
-    def _is_constant_combiner(self):
-        def impl(args):
-            if args[0]: #self._if.is_constant():
-                if self._if():
-                    return args[1] #self._then.is_constant()
-                else:
-                    return args[2] #self._else.is_constant()
+    def _is_fixed(self, args):
+        assert(len(args) == 3)
+        if args[0]: #self._if.is_constant():
+            if self._if():
+                return args[1] #self._then.is_constant()
             else:
-                return False
-        return impl
-
-    # the local _is_fixed_combiner override is identical to
-    # _is_constant_combiner:
-    _is_fixed_combiner = _is_constant_combiner
+                return args[2] #self._else.is_constant()
+        else:
+            return False
 
     def is_constant(self):
         if self._if.__class__ in native_numeric_types or self._if.is_constant():
@@ -2005,7 +2571,10 @@ class _LinearExpression(_ExpressionBase):
         elif not expr._potentially_variable():
             return expr,None,None
         elif expr.__class__ is _ProductExpression:
-            C,c,v = _LinearExpression._decompose_term(expr._args[0])
+            if expr._args[0].__class__ in native_numeric_types or not expr._args[0]._potentially_variable():
+                C,c,v = expr._args[0],None,None
+            else:
+                C,c,v = _LinearExpression._decompose_term(expr._args[0])
             C_,c_,v_ = _LinearExpression._decompose_term(expr._args[1])
             if not v_ is None:
                 if not v is None:
