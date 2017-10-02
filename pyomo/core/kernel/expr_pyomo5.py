@@ -198,7 +198,6 @@ class SimpleExpressionVisitor(SimpleVisitor):
                         yield ans
                 else:
                     dq.append(c)
-        return self.finalize()
 
 
 class ValueExpressionVisitor(ValueVisitor):
@@ -996,7 +995,8 @@ def NEW_identify_variables(expr,
         _LinearExpression.vtypes = pyomo5_variable_types
 
     visitor = VariableVisitor(include_fixed, allow_duplicates, include_potentially_variable)
-    yield from visitor.xbfs_yield_leaves(expr)
+    for v in visitor.xbfs_yield_leaves(expr):
+        yield v
 
 
 def identify_variables(expr,
