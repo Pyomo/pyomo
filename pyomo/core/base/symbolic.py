@@ -115,7 +115,7 @@ def differentiate(expr, wrt=None, wrt_list=None):
     if all(i is not None for i in ans):
         return ans if wrt is None else ans[0]
 
-    tmp_expr = EXPR.clone_expression( expr, substitute=pyomo2sympy )
+    tmp_expr = EXPR.clone_expression( expr, memo=pyomo2sympy )
     tmp_expr = _map_intrinsic_functions(tmp_expr, sympy2pyomo)
     #
     # Call to_string() directly to create a string version of this expression
