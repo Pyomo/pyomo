@@ -602,6 +602,8 @@ class CloneVisitor(ValueExpressionVisitor):
 
 def NEW_clone_expression(expr, memo=None, verbose=False, clone_leaves=True):
     clone_counter_context._count += 1
+    if not memo:
+        memo = {'__block_scope__': { id(None): False }}
     #
     if expr.__class__ in native_numeric_types:
         return expr
@@ -614,6 +616,8 @@ def NEW_clone_expression(expr, memo=None, verbose=False, clone_leaves=True):
 
 def clone_expression(expr, memo=None, verbose=False, clone_leaves=True):
     clone_counter_context._count += 1
+    if not memo:
+        memo = {'__block_scope__': { id(None): False }}
     #
     if expr.__class__ in native_numeric_types:
         return expr
