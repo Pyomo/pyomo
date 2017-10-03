@@ -59,9 +59,6 @@ from pyomo.pysp.scenariotree.tree_structure import \
     ScenarioTree
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
-from pyomo.pysp.scenariotree.server_pyro_utils import \
-    (WorkerInitType,
-     WorkerInit)
 
 import six
 from six import iteritems
@@ -245,6 +242,7 @@ class ScenarioTreeServerPyro(TaskWorker):
 
             assert self._scenario_instance_factory is not None
             assert self._full_scenario_tree is not None
+
             if worker_name in self._worker_map:
                 raise RuntimeError(
                     "Server %s Cannot initialize worker with name '%s' "
@@ -252,38 +250,12 @@ class ScenarioTreeServerPyro(TaskWorker):
                      % (self.WORKERNAME, worker_name))
 
             worker_type = self._registered_workers[data.worker_type]
-            options = worker_type.register_options()
-            for name, val in iteritems(data.options):
-                options.get(name).set_value(val)
 
-            #
-            # Depending on the Pyro serializer, the namedtuple
-            # may be been converted to a tuple
-            #
-            if not isinstance(data.worker_init, WorkerInit):
-                assert type(data.worker_init) is tuple
-                data.worker_init = WorkerInit(type_=data.worker_init[0],
-                                              names=data.worker_init[1],
-                                              data=data.worker_init[2])
-
-            # replace enum string representation with the actual enum
-            # object now that we've unserialized the Pyro data
-            worker_init = WorkerInit(type_=getattr(WorkerInitType,
-                                                   data.worker_init.type_),
-                                     names=data.worker_init.names,
-                                     data=data.worker_init.data)
-            self._worker_map[worker_name] = worker_type(options)
-            self._worker_map[worker_name].initialize(
-                self.WORKERNAME,
-                self._full_scenario_tree,
+            self._worker_map[worker_name] = worker_type(
+                self,
                 worker_name,
-                worker_init,
-                self._modules_imported,
-                self.MPI,
-                self.mpi_comm_workers.Dup() \
-                if (self.mpi_comm_workers is not None) \
-                else None)
-
+                *data.init_args,
+                **data.init_kwds)
             result = True
 
         elif data.action == "ScenarioTreeServerPyro_release":
@@ -318,22 +290,11 @@ class ScenarioTreeServerPyro(TaskWorker):
         return result
 
 def RegisterWorker(name, class_type):
-    assert name not in ScenarioTreeServerPyro._registered_workers, \
-        ("The name %s is already registered for another worker class"
-         % (name))
+    if name in ScenarioTreeServerPyro._registered_workers:
+        raise ValueError("The name %s is already registered "
+                         "for another worker class"
+                         % (name))
     ScenarioTreeServerPyro._registered_workers[name] = class_type
-
-#
-# Register some known, trusted workers
-#
-from pyomo.pysp.scenariotree.manager_worker_pyro import \
-    ScenarioTreeManagerWorkerPyro
-RegisterWorker('ScenarioTreeManagerWorkerPyro',
-               ScenarioTreeManagerWorkerPyro)
-from pyomo.pysp.scenariotree.manager_solver_worker_pyro import \
-    ScenarioTreeManagerSolverWorkerPyro
-RegisterWorker('ScenarioTreeManagerSolverWorkerPyro',
-               ScenarioTreeManagerSolverWorkerPyro)
 
 #
 # utility method fill a PySPConfigBlock with options associated
@@ -393,7 +354,9 @@ def exec_scenariotreeserver(options):
             modules_imported[module_name] = sys.modules[module_name]
         else:
             modules_imported[module_name] = \
-                load_external_module(module_name, clear_cache=True)[0]
+                load_external_module(module_name,
+                                     clear_cache=True,
+                                     verbose=True)[0]
 
     try:
         # spawn the daemon

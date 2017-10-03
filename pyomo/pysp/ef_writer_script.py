@@ -71,249 +71,141 @@ _ef_group_label = "EF Options"
 
 class ExtensiveFormAlgorithm(PySPConfiguredObject):
 
-    _declared_options = \
-        PySPConfigBlock("Options declared for the "
-                        "ExtensiveFormAlgorithm class")
+    @classmethod
+    def _declare_options(cls, options=None):
+        if options is None:
+            options = PySPConfigBlock()
 
-    safe_declare_unique_option(
-        _declared_options,
-        "cvar_weight",
-        PySPConfigValue(
-            1.0,
-            domain=_domain_nonnegative,
-            description=(
-                "The weight associated with the CVaR term in "
-                "the risk-weighted objective "
-                "formulation. If the weight is 0, then "
-                "*only* a non-weighted CVaR cost will appear "
-                "in the EF objective - the expected cost "
-                "component will be dropped. Default is 1.0."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "generate_weighted_cvar",
-        PySPConfigValue(
-            False,
-            domain=bool,
-            description=(
-                "Add a weighted CVaR term to the "
-                "primary objective. Default is False."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "risk_alpha",
-        PySPConfigValue(
-            0.95,
-            domain=_domain_unit_interval,
-            description=(
-                "The probability threshold associated with "
-                "CVaR (or any future) risk-oriented "
-                "performance metrics. Default is 0.95."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "cc_alpha",
-        PySPConfigValue(
-            0.0,
-            domain=_domain_unit_interval,
-            description=(
-                "The probability threshold associated with a "
-                "chance constraint. The RHS will be one "
-                "minus this value. Default is 0."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "cc_indicator_var",
-        PySPConfigValue(
-            None,
-            domain=_domain_must_be_str,
-            description=(
-                "The name of the binary variable to be used "
-                "to construct a chance constraint. Default "
-                "is None, which indicates no chance "
-                "constraint."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "mipgap",
-        PySPConfigValue(
-            None,
-            domain=_domain_unit_interval,
-            description=(
-                "Specifies the mipgap for the EF solve."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "solver",
-        PySPConfigValue(
-            "cplex",
-            domain=_domain_must_be_str,
-            description=(
-                "Specifies the solver used to solve the "
-                "extensive form model. Default is cplex."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "solver_io",
-        PySPConfigValue(
-            None,
-            domain=_domain_must_be_str,
-            description=(
-                "The type of IO used to execute the "
-                "solver. Different solvers support different "
-                "types of IO, but the following are common "
-                "options: lp - generate LP files, nl - "
-                "generate NL files, python - direct Python "
-                "interface, os - generate OSiL XML files."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "solver_manager",
-        PySPConfigValue(
-            'serial',
-            domain=_domain_must_be_str,
-            description=(
-                "The type of solver manager used to "
-                "coordinate solves. Default is serial."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "solver_options",
-        PySPConfigValue(
-            (),
-            domain=_domain_tuple_of_str_or_dict,
-            description=(
-                "Persistent solver options used when "
-                "solving the extensive form model. This "
-                "option can be used multiple times from "
-                "the command line to specify more than "
-                "one solver option."
-            ),
-            doc=None,
-            visibility=0),
-        ap_kwds={'action': 'append'},
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "disable_warmstart",
-        PySPConfigValue(
-            False,
-            domain=bool,
-            description=(
-                "Disable warm-start of EF solves. "
-                "Default is False."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "pyro_host",
-        PySPConfigValue(
-            None,
-            domain=_domain_must_be_str,
-            description=(
-                "The hostname to bind on when searching "
-                "for a Pyro nameserver."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "pyro_port",
-        PySPConfigValue(
-            None,
-            domain=_domain_nonnegative_integer,
-            description=(
-                "The port to bind on when searching for "
-                "a Pyro nameserver."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "pyro_shutdown",
-        PySPConfigValue(
-            False,
-            domain=bool,
-            description=(
-                "Attempt to shut down all Pyro-related components "
-                "associated with the Pyro name server used by any scenario "
-                "tree manager or solver manager. Components to shutdown "
-                "include the name server, dispatch server, and any "
-                "scenariotreeserver or pyro_mip_server processes. Note "
-                "that if Pyro4 is in use the nameserver will always "
-                "ignore this request."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "pyro_shutdown_workers",
-        PySPConfigValue(
-            False,
-            domain=bool,
-            description=(
-                "Upon exit, send shutdown requests to all worker "
-                "processes that were acquired through the dispatcher. "
-                "This typically includes scenariotreeserver processes "
-                "(used by the Pyro scenario tree manager) and pyro_mip_server "
-                "processes (used by the Pyro solver manager). This leaves "
-                "any dispatchers and namservers running as well as any "
-                "processes registered with the dispather that were not "
-                "acquired for work by this client."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_common_option(_declared_options,
-                               "symbolic_solver_labels",
-                               ap_group=_ef_group_label)
-    safe_declare_common_option(_declared_options,
-                               "output_solver_log",
-                               ap_group=_ef_group_label)
-    safe_declare_common_option(_declared_options,
-                               "verbose",
-                               ap_group=_ef_group_label)
-    safe_declare_common_option(_declared_options,
-                               "output_times",
-                               ap_group=_ef_group_label)
-    safe_declare_common_option(_declared_options,
-                               "keep_solver_files",
-                               ap_group=_ef_group_label)
-    safe_declare_common_option(_declared_options,
-                               "output_solver_results",
-                               ap_group=_ef_group_label)
+        safe_declare_unique_option(
+            options,
+            "cvar_weight",
+            PySPConfigValue(
+                1.0,
+                domain=_domain_nonnegative,
+                description=(
+                    "The weight associated with the CVaR term in "
+                    "the risk-weighted objective "
+                    "formulation. If the weight is 0, then "
+                    "*only* a non-weighted CVaR cost will appear "
+                    "in the EF objective - the expected cost "
+                    "component will be dropped. Default is 1.0."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_ef_group_label)
+        safe_declare_unique_option(
+            options,
+            "generate_weighted_cvar",
+            PySPConfigValue(
+                False,
+                domain=bool,
+                description=(
+                    "Add a weighted CVaR term to the "
+                    "primary objective. Default is False."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_ef_group_label)
+        safe_declare_unique_option(
+            options,
+            "risk_alpha",
+            PySPConfigValue(
+                0.95,
+                domain=_domain_unit_interval,
+                description=(
+                    "The probability threshold associated with "
+                    "CVaR (or any future) risk-oriented "
+                    "performance metrics. Default is 0.95."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_ef_group_label)
+        safe_declare_unique_option(
+            options,
+            "cc_alpha",
+            PySPConfigValue(
+                0.0,
+                domain=_domain_unit_interval,
+                description=(
+                    "The probability threshold associated with a "
+                    "chance constraint. The RHS will be one "
+                    "minus this value. Default is 0."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_ef_group_label)
+        safe_declare_unique_option(
+            options,
+            "cc_indicator_var",
+            PySPConfigValue(
+                None,
+                domain=_domain_must_be_str,
+                description=(
+                    "The name of the binary variable to be used "
+                    "to construct a chance constraint. Default "
+                    "is None, which indicates no chance "
+                    "constraint."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_ef_group_label)
+        safe_declare_unique_option(
+            options,
+            "mipgap",
+            PySPConfigValue(
+                None,
+                domain=_domain_unit_interval,
+                description=(
+                    "Specifies the mipgap for the EF solve."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_ef_group_label)
+        safe_declare_common_option(options,
+                                   "solver")
+        safe_declare_common_option(options,
+                                   "solver_io")
+        safe_declare_common_option(options,
+                                   "solver_manager")
+        safe_declare_common_option(options,
+                                   "solver_options")
+        safe_declare_common_option(options,
+                                   "disable_warmstart")
+        safe_declare_common_option(options,
+                                   "pyro_host")
+        safe_declare_common_option(options,
+                                   "pyro_port")
+        safe_declare_common_option(options,
+                                   "pyro_shutdown")
+        safe_declare_common_option(options,
+                                   "verbose",
+                                   ap_group=_ef_group_label)
+        safe_declare_common_option(options,
+                                   "output_times",
+                                   ap_group=_ef_group_label)
+        safe_declare_common_option(options,
+                                   "output_solver_results",
+                                   ap_group=_ef_group_label)
+        safe_declare_common_option(options,
+                                   "symbolic_solver_labels",
+                                   ap_group=_ef_group_label)
+        safe_declare_common_option(options,
+                                   "output_solver_log",
+                                   ap_group=_ef_group_label)
+        safe_declare_common_option(options,
+                                   "verbose",
+                                   ap_group=_ef_group_label)
+        safe_declare_common_option(options,
+                                   "output_times",
+                                   ap_group=_ef_group_label)
+        safe_declare_common_option(options,
+                                   "keep_solver_files",
+                                   ap_group=_ef_group_label)
+        safe_declare_common_option(options,
+                                   "output_solver_results",
+                                   ap_group=_ef_group_label)
+
+        return options
 
     def __enter__(self):
         return self

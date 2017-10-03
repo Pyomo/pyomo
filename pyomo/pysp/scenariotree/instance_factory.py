@@ -853,9 +853,10 @@ class ScenarioTreeInstanceFactory(object):
                 raise ValueError("Cannot create more random bundles "
                                  "than there are scenarios!")
 
-            print("Creating "+str(random_bundles)+
-                  " random bundles using seed="
-                  +str(random_seed))
+            if verbose:
+                print("Creating "+str(random_bundles)+
+                      " random bundles using seed="
+                      +str(random_seed))
 
             scenario_tree.create_random_bundles(random_bundles,
                                                 random_seed)

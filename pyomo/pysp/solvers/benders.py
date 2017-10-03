@@ -33,7 +33,6 @@ try:
 except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
 
-from pyomo.util import pyomo_command
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
                        PersistentSolver,
@@ -60,12 +59,12 @@ from pyomo.pysp.util.config import (PySPConfigValue,
                                     _domain_tuple_of_str_or_dict)
 from pyomo.pysp.util.misc import (parse_command_line,
                                   launch_command)
-from pyomo.pysp.scenariotree.manager import InvocationType
-from pyomo.pysp.scenariotree.manager_solver import \
-    (ScenarioTreeManagerSolver,
-     ScenarioTreeManagerSolverClientSerial,
-     ScenarioTreeManagerSolverClientPyro,
+from pyomo.pysp.scenariotree.manager import \
+    (InvocationType,
+     ScenarioTreeManager,
      ScenarioTreeManagerFactory)
+from pyomo.pysp.scenariotree.manager_solver import \
+    ScenarioTreeManagerSolverFactory
 from pyomo.pysp.phutils import find_active_objective
 from pyomo.pysp.ef import create_ef_instance
 from pyomo.pysp.solvers.spsolver import (SPSolver,
@@ -380,200 +379,205 @@ class BendersOptimalityCut(object):
 
 class BendersAlgorithm(PySPConfiguredObject):
 
-    _declared_options = \
-        PySPConfigBlock("Options declared for the "
-                        "BendersAlgorithm class")
+    @classmethod
+    def _declare_options(cls, options=None):
+        if options is None:
+            options = PySPConfigBlock()
+        safe_declare_common_option(options,
+                                   "verbose")
+        safe_declare_unique_option(
+            options,
+            "max_iterations",
+            PySPConfigValue(
+                100,
+                domain=_domain_positive_integer,
+                description=(
+                    "The maximum number of iterations. Default is 100."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_benders_group_label)
+        safe_declare_unique_option(
+            options,
+            "percent_gap",
+            PySPConfigValue(
+                0.0001,
+                domain=_domain_percent,
+                description=(
+                    "Percent optimality gap required for convergence. "
+                    "Default is 0.0001%%."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_benders_group_label)
+        safe_declare_unique_option(
+            options,
+            "multicut_level",
+            PySPConfigValue(
+                1,
+                domain=int,
+                description=(
+                    "The number of cut groups added to the "
+                    "master benders problem each iteration. "
+                    "Default is 1. A number less than 1 indicates "
+                    "that the maximum value should be used, which "
+                    "is one cut group for each scenario not included "
+                    "in the master problem."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_benders_group_label)
+        safe_declare_unique_option(
+            options,
+            "optimality_gap_epsilon",
+            PySPConfigValue(
+                1e-10,
+                domain=_domain_nonnegative,
+                description=(
+                    "The epsilon value used in the denominator of "
+                    "the optimality gap calculation. Default is 1e-10."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_benders_group_label)
+        safe_declare_unique_option(
+            options,
+            "master_include_scenarios",
+            PySPConfigValue(
+                (),
+                domain=_domain_tuple_of_str,
+                description=(
+                    "A list of names of scenarios that should be included "
+                    "in the master problem. This option can be used multiple "
+                    "times from the command line to specify more than one "
+                    "scenario name."
+                ),
+                doc=None,
+                visibility=0),
+            ap_kwds={'action': 'append'},
+            ap_group=_benders_group_label)
+        safe_declare_unique_option(
+            options,
+            "master_disable_warmstart",
+            PySPConfigValue(
+                False,
+                domain=bool,
+                description=(
+                    "Disable warm-start of the benders master "
+                    "problem solves. Default is False."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_benders_group_label)
+        safe_declare_unique_option(
+            options,
+            "master_solver",
+            PySPConfigValue(
+                "cplex",
+                domain=_domain_must_be_str,
+                description=(
+                    "Specify the solver with which to solve "
+                    "the master benders problem. Default is cplex."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_benders_group_label)
+        safe_declare_unique_option(
+            options,
+            "master_solver_io",
+            PySPConfigValue(
+                None,
+                domain=_domain_must_be_str,
+                description=(
+                    "The type of IO used to execute the master "
+                    "solver.  Different solvers support different "
+                    "types of IO, but the following are common "
+                    "options: lp - generate LP files, nl - generate "
+                    "NL files, mps - generate MPS files, python - "
+                    "direct Python interface, os - generate OSiL XML files."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_benders_group_label)
+        safe_declare_unique_option(
+            options,
+            "master_mipgap",
+            PySPConfigValue(
+                None,
+                domain=_domain_unit_interval,
+                description=(
+                    "Specifies the mipgap for the master benders solves."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_benders_group_label)
+        safe_declare_unique_option(
+            options,
+            "master_solver_options",
+            PySPConfigValue(
+                (),
+                domain=_domain_tuple_of_str_or_dict,
+                description=(
+                    "Persistent solver options used when solving the master "
+                    "benders problem. This option can be used multiple times from "
+                    "the command line to specify more than one solver option."
+                ),
+                doc=None,
+                visibility=0),
+            ap_kwds={'action': 'append'},
+            ap_group=_benders_group_label)
+        safe_declare_unique_option(
+            options,
+            "master_output_solver_log",
+            PySPConfigValue(
+                False,
+                domain=bool,
+                description=(
+                    "Output solver log during solves of the master problem."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_benders_group_label)
+        safe_declare_unique_option(
+            options,
+            "master_keep_solver_files",
+            PySPConfigValue(
+                False,
+                domain=bool,
+                description=(
+                    "Retain temporary input and output files for master "
+                    "benders solves."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_benders_group_label)
+        safe_declare_unique_option(
+            options,
+            "master_symbolic_solver_labels",
+            PySPConfigValue(
+                False,
+                domain=bool,
+                description=(
+                    "When interfacing with the solver, use "
+                    "symbol names derived from the model. For "
+                    "example, \"my_special_variable[1_2_3]\" "
+                    "instead of \"v1\". Useful for "
+                    "debugging. When using the ASL interface "
+                    "(--solver-io=nl), generates corresponding "
+                    ".row (constraints) and .col (variables) "
+                    "files. The ordering in these files provides "
+                    "a mapping from ASL index to symbolic model "
+                    "names."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_benders_group_label)
 
-    safe_declare_common_option(_declared_options,
-                                "verbose",
-                                ap_group=_benders_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "max_iterations",
-        PySPConfigValue(
-            100,
-            domain=_domain_positive_integer,
-            description=(
-                "The maximum number of iterations. Default is 100."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_benders_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "percent_gap",
-        PySPConfigValue(
-            0.0001,
-            domain=_domain_percent,
-            description=(
-                "Percent optimality gap required for convergence. "
-                "Default is 0.0001%%."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_benders_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "multicut_level",
-        PySPConfigValue(
-            1,
-            domain=int,
-            description=(
-                "The number of cut groups added to the "
-                "master benders problem each iteration. "
-                "Default is 1. A number less than 1 indicates "
-                "that the maximum value should be used, which "
-                "is one cut group for each scenario not included "
-                "in the master problem."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_benders_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "optimality_gap_epsilon",
-        PySPConfigValue(
-            1e-10,
-            domain=_domain_nonnegative,
-            description=(
-                "The epsilon value used in the denominator of "
-                "the optimality gap calculation. Default is 1e-10."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_benders_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "master_include_scenarios",
-        PySPConfigValue(
-            (),
-            domain=_domain_tuple_of_str,
-            description=(
-                "A list of names of scenarios that should be included "
-                "in the master problem. This option can be used multiple "
-                "times from the command line to specify more than one "
-                "scenario name."
-            ),
-            doc=None,
-            visibility=0),
-        ap_kwds={'action': 'append'},
-        ap_group=_benders_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "master_disable_warmstart",
-        PySPConfigValue(
-            False,
-            domain=bool,
-            description=(
-                "Disable warm-start of the benders master "
-                "problem solves. Default is False."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_benders_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "master_solver",
-        PySPConfigValue(
-            "cplex",
-            domain=_domain_must_be_str,
-            description=(
-                "Specify the solver with which to solve "
-                "the master benders problem. Default is cplex."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_benders_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "master_solver_io",
-        PySPConfigValue(
-            None,
-            domain=_domain_must_be_str,
-            description=(
-                "The type of IO used to execute the master "
-                "solver.  Different solvers support different "
-                "types of IO, but the following are common "
-                "options: lp - generate LP files, nl - generate "
-                "NL files, mps - generate MPS files, python - "
-                "direct Python interface, os - generate OSiL XML files."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_benders_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "master_mipgap",
-        PySPConfigValue(
-            None,
-            domain=_domain_unit_interval,
-            description=(
-                "Specifies the mipgap for the master benders solves."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_benders_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "master_solver_options",
-        PySPConfigValue(
-            (),
-            domain=_domain_tuple_of_str_or_dict,
-            description=(
-                "Persistent solver options used when solving the master "
-                "benders problem. This option can be used multiple times from "
-                "the command line to specify more than one solver option."
-            ),
-            doc=None,
-            visibility=0),
-        ap_kwds={'action': 'append'},
-        ap_group=_benders_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "master_output_solver_log",
-        PySPConfigValue(
-            False,
-            domain=bool,
-            description=(
-                "Output solver log during solves of the master problem."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_benders_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "master_keep_solver_files",
-        PySPConfigValue(
-            False,
-            domain=bool,
-            description=(
-                "Retain temporary input and output files for master "
-                "benders solves."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_benders_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "master_symbolic_solver_labels",
-        PySPConfigValue(
-            False,
-            domain=bool,
-            description=(
-                "When interfacing with the solver, use "
-                "symbol names derived from the model. For "
-                "example, \"my_special_variable[1_2_3]\" "
-                "instead of \"v1\". Useful for "
-                "debugging. When using the ASL interface "
-                "(--solver-io=nl), generates corresponding "
-                ".row (constraints) and .col (variables) "
-                "files. The ordering in these files provides "
-                "a mapping from ASL index to symbolic model "
-                "names."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_benders_group_label)
+        ScenarioTreeManagerSolverFactory.register_options(options,
+                                                          options_prefix="subproblem_",
+                                                          setup_argparse=False)
+
+        return options
 
     def __enter__(self):
         return self
@@ -583,45 +587,18 @@ class BendersAlgorithm(PySPConfiguredObject):
 
     def close(self):
         self.cleanup_subproblems()
+        if self._manager_solver is not None:
+            self._manager_solver.close()
         if self._master_solver is not None:
             self._master_solver.deactivate()
+        self._manager = None
+        self._manager_solver = None
+        self._master_solver = None
 
     def __init__(self, manager, *args, **kwds):
-        super(BendersAlgorithm, self).__init__(*args, **kwds)
-
-        if not isinstance(manager, ScenarioTreeManagerSolver):
-            raise TypeError("BendersAlgorithm requires an instance of the "
-                            "ScenarioTreeManagerSolver interface as the "
-                            "second argument")
-        if not manager.initialized:
-            raise ValueError("BendersAlgorithm requires a scenario tree "
-                             "manager that has been fully initialized")
-        if len(manager.scenario_tree.stages) != 2:
-            raise ValueError("BendersAlgorithm requires a two-stage scenario tree")
-
-        self._manager = manager
-        if self.get_option("verbose"):
-            print("Initializing subproblems for benders")
-        self.initialize_subproblems()
-
+        self._manager = None
+        self._manager_solver = None
         self._master_solver = None
-        # setup the master solver
-        self._master_solver = SolverFactory(
-            self.get_option("master_solver"),
-            solver_io=self.get_option("master_solver_io"))
-        if isinstance(self._master_solver, PersistentSolver):
-            raise TypeError("BendersAlgorithm does not support "
-                            "PersistenSolver types")
-        if len(self.get_option("master_solver_options")):
-            if type(self.get_option("master_solver_options")) is tuple:
-                self._master_solver.set_options(
-                    "".join(self.get_option("master_solver_options")))
-            else:
-                self._master_solver.set_options(
-                    self.get_option("master_solver_options"))
-        if self.get_option("master_mipgap") is not None:
-            self._master_solver.options.mipgap = \
-                self.get_option("master_mipgap")
 
         # The following attributes will be modified by the
         # solve() method. For users that are scripting, these
@@ -651,15 +628,51 @@ class BendersAlgorithm(PySPConfiguredObject):
         self.cut_pool = []
         self._num_first_stage_constraints = None
 
+        super(BendersAlgorithm, self).__init__(*args, **kwds)
+
+        if not isinstance(manager, ScenarioTreeManager):
+            raise TypeError("BendersAlgorithm requires an instance of the "
+                            "ScenarioTreeManager interface as the "
+                            "first argument")
+        if not manager.initialized:
+            raise ValueError("BendersAlgorithm requires a scenario tree "
+                             "manager that has been fully initialized")
+        if len(manager.scenario_tree.stages) != 2:
+            raise ValueError("BendersAlgorithm requires a two-stage scenario tree")
+
+        self._manager = manager
+        self._manager_solver = ScenarioTreeManagerSolverFactory(self._manager,
+                                                                self._options,
+                                                                options_prefix="subproblem_")
+
+        self._master_solver = None
+        # setup the master solver
+        self._master_solver = SolverFactory(
+            self.get_option("master_solver"),
+            solver_io=self.get_option("master_solver_io"))
+        if isinstance(self._master_solver, PersistentSolver):
+            raise TypeError("BendersAlgorithm does not support "
+                            "PersistenSolver types")
+        if len(self.get_option("master_solver_options")):
+            if type(self.get_option("master_solver_options")) is tuple:
+                self._master_solver.set_options(
+                    "".join(self.get_option("master_solver_options")))
+            else:
+                self._master_solver.set_options(
+                    self.get_option("master_solver_options"))
+        if self.get_option("master_mipgap") is not None:
+            self._master_solver.options.mipgap = \
+                self.get_option("master_mipgap")
+
     def deactivate_rootnode_costs(self):
-        self._manager_solver.invoke_function(
+        self._manager.invoke_function(
             "EXTERNAL_deactivate_rootnode_costs",
             thisfile,
             invocation_type=InvocationType.PerScenario,
             oneway=True)
 
     def activate_rootnode_costs(self):
-        self._manager_solver.invoke_function(
+        self._manager.invoke_function(
             "EXTERNAL_activate_rootnode_costs",
             thisfile,
             invocation_type=InvocationType.PerScenario,
@@ -695,6 +708,8 @@ class BendersAlgorithm(PySPConfiguredObject):
             async=async)
 
     def initialize_subproblems(self):
+        if self.get_option("verbose"):
+            print("Initializing subproblems for benders")
         self._manager.invoke_function(
             "EXTERNAL_initialize_for_benders",
             thisfile,
@@ -702,6 +717,8 @@ class BendersAlgorithm(PySPConfiguredObject):
             oneway=True)
 
     def cleanup_subproblems(self):
+        if self.get_option("verbose"):
+            print("Cleaning up subproblems for benders")
         self._manager.invoke_function(
             "EXTERNAL_cleanup_from_benders",
             thisfile,
@@ -717,13 +734,13 @@ class BendersAlgorithm(PySPConfiguredObject):
         solving the subproblems. By default, only the stage
         costs and objective values are updated on the local
         scenario tree. Setting update_stages to a list of
-        state names or None (indicating all stages) can be
+        stage names or None (indicating all stages) can be
         used to control how much solution information is
         loaded for the variables on the scenario tree.
         """
         self.update_fix_constraints(xhat)
         solve_results = \
-            self._manager.solve_subproblems(update_stages=update_stages)
+            self._manager_solver.solve_subproblems()
 
         cut_data = self.collect_cut_data()
         benders_cut = BendersOptimalityCut(
@@ -913,8 +930,8 @@ class BendersAlgorithm(PySPConfiguredObject):
             assert len(master_scenario_tree.scenarios) == 1
             master_cost_expr = master.find_component(
                 master_scenario_tree.scenarios[0].name).find_component(
-                    master_firststage._cost_variable[0])\
-                    [master_firststage._cost_variable[1]]
+                    master_rootnode._cost_variable[0])\
+                    [master_rootnode._cost_variable[1]]
         else:
             # NOTE: We include the first-stage cost expression for
             #       each of the scenarios included in the master with
@@ -926,15 +943,18 @@ class BendersAlgorithm(PySPConfiguredObject):
             normalization = sum(scenario.probability
                                 for scenario in master_scenario_tree.scenarios)
             for scenario in master_scenario_tree.scenarios:
-                firststage_cost_expr = scenario._instance.find_component(
-                    master_firststage._cost_variable[0])\
-                    [master_firststage._cost_variable[1]]
-                secondstage_cost_expr = scenario._instance.find_component(
-                    master_secondstage._cost_variable[0])\
-                    [master_secondstage._cost_variable[1]]
+                scenario_rootnode = scenario.node_list[0]
+                assert scenario_rootnode is master_rootnode
+                rootnode_cost_expr = scenario._instance.find_component(
+                    scenario_rootnode._cost_variable[0])\
+                    [scenario_rootnode._cost_variable[1]]
+                scenario_leafnode = scenario.node_list[1]
+                leafnode_cost_expr = scenario._instance.find_component(
+                    scenario_leafnode._cost_variable[0])\
+                    [scenario_leafnode._cost_variable[1]]
                 master_cost_expr += scenario.probability * \
-                                    (firststage_cost_expr / normalization + \
-                                     secondstage_cost_expr)
+                                    (rootnode_cost_expr / normalization + \
+                                     leafnode_cost_expr)
         benders_objective_name = "PYSP_BENDERS_OBJECTIVE"
         assert not hasattr(master, benders_objective_name)
         master.add_component(
@@ -1127,15 +1147,6 @@ class BendersAlgorithm(PySPConfiguredObject):
                                        in rootnode._variable_ids \
                                        if rootnode.is_variable_discrete(variable_id)])
         problem_statistics = []
-#        problem_statistics.append(("Number of first-stage variables"   ,
-#                                   str(len(rootnode._variable_ids)) + \
-#                                   " (" + str(num_discrete_firststage)+" discrete)"))
-#        problem_statistics.append(("Number of first-stage constraints" ,
-#                                   self._num_first_stage_constraints))
-#        problem_statistics.append(("Number of scenarios"               ,
-#                                   len(rootnode.scenarios)))
-#        problem_statistics.append(("Number of bundles"                 ,
-#                                   len(scenario_tree.bundles)))
 #        problem_statistics.append(("Initial number of cuts in pool"    ,
 #                                   len(self.cut_pool)))
 #        problem_statistics.append(("Maximum number of iterations"      ,
@@ -1297,28 +1308,37 @@ class BendersAlgorithm(PySPConfiguredObject):
 
         return self.incumbent_objective
 
-#
-# TODO: Merge this class with the above
-#
 class BendersSolver(SPSolver, PySPConfiguredObject):
 
     @classmethod
     def _declare_options(cls, options=None):
         if options is None:
             options = PySPConfigBlock()
-        return BendersAlgorithm.register_options(options)
+        return BendersAlgorithm._declare_options(options)
 
-    def __init__(self, *args, **kwds):
-        super(BendersSolver, self).__init__(*args, **kwds)
-        self._name = "benders"
-        BendersAlgorithm.validate_options(self._options)
+    def __init__(self):
+        super(BendersSolver, self).__init__(self.register_options())
+        self.set_options_to_default()
+
+    def set_options_to_default(self):
+        self._options = self.register_options()
+
+    @property
+    def options(self):
+        return self._options
+
+    @property
+    def name(self):
+        return "benders"
 
     def _solve_impl(self,
                     sp,
                     output_solver_log=False):
         with BendersAlgorithm(sp, self._options) as benders:
+            benders.initialize_subproblems()
             benders.build_master_problem()
             objective = benders.solve(output_solver_log=output_solver_log)
+
         results = SPSolverResults()
         results.objective = benders.incumbent_objective
         results.bound = benders.bound
@@ -1329,6 +1349,8 @@ class BendersSolver(SPSolver, PySPConfiguredObject):
 def runbenders_register_options(options=None):
     if options is None:
         options = PySPConfigBlock()
+    BendersSolver.register_options(options)
+    ScenarioTreeManagerFactory.register_options(options)
     safe_register_common_option(options,
                                "verbose")
     safe_register_common_option(options,
@@ -1338,10 +1360,9 @@ def runbenders_register_options(options=None):
     safe_register_common_option(options,
                                "traceback")
     safe_register_common_option(options,
-                               "output_scenario_tree_solution")
-    ScenarioTreeManagerFactory.register_options(options)
-    BendersAlgorithm.register_options(options)
-
+                                "output_solver_log")
+    safe_register_common_option(options,
+                                "output_scenario_tree_solution")
     return options
 
 #
@@ -1355,22 +1376,29 @@ def runbenders(options):
     with the Benders solver.
     """
     start_time = time.time()
-    with ScenarioTreeManagerFactory(options) as manager:
-        manager.initialize()
+    with ScenarioTreeManagerFactory(options) as sp:
+        sp.initialize()
 
         print("")
         print("Running Generalized Benders solver for "
               "stochastic programming problems "
               "(i.e., the L-shaped method).")
-        benders = BendersSolver(options)
-        results = benders.solve(manager,
-                                output_solver_log=True)
+        benders = BendersSolver()
+        benders_options = benders.extract_user_options_to_dict(options,
+                                                               sparse=True)
+        results = benders.solve(sp,
+                                options=benders_options,
+                                output_solver_log=options.output_solver_log)
+        xhat = results.xhat
+        del results.xhat
+        print("")
         print(results)
 
         if options.output_scenario_tree_solution:
-            print("Final solution (scenario tree format):")
-            manager.scenario_tree.snapshotSolutionFromScenarios()
-            manager.scenario_tree.pprintSolution()
+            print("")
+            sp.scenario_tree.snapshotSolutionFromScenarios()
+            sp.scenario_tree.pprintSolution()
+            sp.scenario_tree.pprintCosts()
 
     print("")
     print("Total execution time=%.2f seconds"
@@ -1416,11 +1444,8 @@ def main(args=None):
                           profile_count=options.profile,
                           traceback=options.traceback)
 
-@pyomo_command('runbenders', 'Run the Benders solver')
-def RunBenders_main(args=None):
-    return main(args=args)
-
 SPSolverFactory.register_solver("benders", BendersSolver)
 
 if __name__ == "__main__":
-    sys.exit(RunBenders_main())
+    import pyomo.pysp
+    sys.exit(main())

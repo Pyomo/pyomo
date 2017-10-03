@@ -644,7 +644,7 @@ def _convert_external_setup_without_cleanup(
                         symbols[0].startswith('r_u_'))
                 stage2_row_start = symbols[0]
             # don't assume there is always a second stage variable
-            if len(StageToVariableMap[secondstage.name][0][0]) > 0:
+            if len(StageToVariableMap[secondstage.name]) > 0:
                 f_tim.write("    %s "
                             % (StageToVariableMap[secondstage.name][0][0]))
             else:

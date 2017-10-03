@@ -21,6 +21,7 @@ from pyomo.pysp.scenariotree.manager_worker_pyro import \
 from pyomo.pysp.scenariotree.manager_solver import \
     (_ScenarioTreeManagerSolverWorker,
      ScenarioTreeManagerSolver)
+
 from six import iteritems
 
 #
@@ -29,36 +30,39 @@ from six import iteritems
 # client-side ScenarioTreeManagerSolver implementations.
 #
 
-class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
-                                          _ScenarioTreeManagerSolverWorker,
+class ScenarioTreeManagerSolverWorkerPyro(_ScenarioTreeManagerSolverWorker,
                                           ScenarioTreeManagerSolver,
                                           PySPConfiguredObject):
 
-    _declared_options = \
-        PySPConfigBlock("Options declared for the "
-                        "ScenarioTreeManagerSolverWorkerPyro class")
+    @classmethod
+    def _declare_options(cls, options=None):
+        if options is None:
+            options = PySPConfigBlock()
+        return options
 
-    def __init__(self, *args, **kwds):
-
+    def __init__(self,
+                 server,
+                 worker_name,
+                 base_worker_name,
+                 *args,
+                 **kwds):
+        assert len(args) == 0
+        options = self.register_options()
+        for name, val in iteritems(kwds):
+            options.get(name).set_value(val)
+        self._server = server
+        self._worker_name = worker_name
+        manager = self._server._worker_map[base_worker_name]
         super(ScenarioTreeManagerSolverWorkerPyro, self).\
-            __init__(*args, **kwds)
+            __init__(manager, options)
 
     #
     # Abstract methods for ScenarioTreeManager:
     #
 
-    # override what is implemented by ScenarioTreeSolverWorkerPyro
-    def _init(self, *args, **kwds):
-        super(ScenarioTreeManagerSolverWorkerPyro, self).\
-            _init(*args, **kwds)
-        super(ScenarioTreeManagerSolverWorkerPyro, self).\
-            _init_solver_worker()
-
-    # TODO: functionality for returning suffixes
     def _solve_objects_for_client(self,
                                   object_type,
                                   objects,
-                                  update_stages,
                                   ephemeral_solver_options,
                                   disable_warmstart):
 
@@ -78,7 +82,6 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
         manager_results = super(ScenarioTreeManagerSolverWorkerPyro, self).\
                           _solve_objects(object_type,
                                          objects,
-                                         update_stages,
                                          ephemeral_solver_options,
                                          disable_warmstart,
                                          False, # check_status
@@ -92,11 +95,11 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
 
         if object_type == 'bundles':
             if objects is None:
-                objects = self._scenario_tree._scenario_bundle_map
+                objects = self.manager.scenario_tree._scenario_bundle_map
         else:
             assert object_type == 'scenarios'
             if objects is None:
-                objects = self._scenario_tree._scenario_map
+                objects = self.manager.scenario_tree._scenario_map
 
         results = {}
         for object_name in objects:
@@ -112,21 +115,7 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
                 str(manager_object_results['termination_condition'])
             manager_object_results['solution_status'] = \
                 str(manager_object_results['solution_status'])
-
-            if object_type == 'bundles':
-                solution = {}
-                for scenario_name in self._scenario_tree.\
-                       get_bundle(object_name).scenario_names:
-                    scenario = self._scenario_tree.get_scenario(
-                        scenario_name)
-                    solution[scenario_name] = \
-                        scenario.copy_solution()
-            else:
-                scenario = self._scenario_tree.get_scenario(object_name)
-                solution = scenario.copy_solution()
-
-
-            results[object_name] = (manager_object_results, solution)
+            results[object_name] = manager_object_results
 
         return results
 
@@ -140,3 +129,8 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
             tree_node._fix_queue.update(node_fixed_vars)
 
         self.push_fix_queue_to_instances()
+
+# register this worker with the pyro server
+from pyomo.pysp.scenariotree.server_pyro import RegisterWorker
+RegisterWorker('ScenarioTreeManagerSolverWorkerPyro',
+               ScenarioTreeManagerSolverWorkerPyro)

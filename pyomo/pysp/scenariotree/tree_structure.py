@@ -2576,6 +2576,7 @@ class ScenarioTree(object):
 
     def pprintSolution(self, epsilon=1.0e-5):
 
+        #print("Scenario Tree Solution")
         print("----------------------------------------------------")
         print("Tree Nodes:")
         print("")

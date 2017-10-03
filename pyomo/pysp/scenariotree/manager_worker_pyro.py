@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -16,8 +16,6 @@ from pyomo.pysp.util.misc import _EnumValueWithData
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigBlock,
                                     safe_declare_common_option)
-from pyomo.pysp.scenariotree.server_pyro_utils import \
-    WorkerInitType
 from pyomo.pysp.scenariotree.manager \
     import (_ScenarioTreeManagerWorker,
             ScenarioTreeManager,
@@ -42,40 +40,68 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
                                     ScenarioTreeManager,
                                     PySPConfiguredObject):
 
-    _declared_options = \
-        PySPConfigBlock("Options declared for the "
-                        "ScenarioTreeManagerWorkerPyro class")
+    @classmethod
+    def _declare_options(cls, options=None):
+        if options is None:
+            options = PySPConfigBlock()
 
-    #
-    # scenario instance construction
-    #
-    safe_declare_common_option(_declared_options,
-                               "objective_sense_stage_based")
-    safe_declare_common_option(_declared_options,
-                               "output_instance_construction_time")
-    safe_declare_common_option(_declared_options,
-                               "compile_scenario_instances")
+        #
+        # scenario instance construction
+        #
+        safe_declare_common_option(options,
+                                   "objective_sense_stage_based")
+        safe_declare_common_option(options,
+                                   "output_instance_construction_time")
+        safe_declare_common_option(options,
+                                   "compile_scenario_instances")
 
-    #
-    # various
-    #
-    safe_declare_common_option(_declared_options,
-                               "verbose")
-    safe_declare_common_option(_declared_options,
-                               "profile_memory")
+        #
+        # various
+        #
+        safe_declare_common_option(options,
+                                   "verbose")
+        safe_declare_common_option(options,
+                                   "profile_memory")
 
-    def __init__(self, *args, **kwds):
-        super(ScenarioTreeManagerWorkerPyro, self).__init__(*args, **kwds)
+        return options
 
-        self._modules_imported = None
+    @property
+    def server(self):
+        return self._server
+
+    @property
+    def modules_imported(self):
+        assert self._server is not None
+        return self._server._modules_imported
+
+    @property
+    def uncompressed_scenario_tree(self):
+        assert self._server is not None
+        return self._server._full_scenario_tree
+
+    @property
+    def MPI(self):
+        assert self._server is not None
+        return self._server.MPI
+
+    def __init__(self,
+                 server,
+                 worker_name,
+                 init_args,
+                 *args,
+                 **kwds):
+        assert len(args) == 0
+        options = self.register_options()
+        for name, val in iteritems(kwds):
+            options.get(name).set_value(val)
+        super(ScenarioTreeManagerWorkerPyro, self).__init__(options)
+
         # The name of the scenario tree server owning this worker
-        self._server_name = None
-        # The name of the worker on this server
-        self._worker_name = None
-        # a reference to the mpi4py namespace
-        self.MPI = None
-        # a dict of intracommunicators for each tree node
+        self._server = server
+        # The name of this worker on this server
+        self._worker_name = worker_name
         self.mpi_comm_tree = {}
+        self.initialize(*init_args)
 
     def _collect_scenario_tree_data_for_client(self, tree_object_names):
 
@@ -111,13 +137,9 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
     #
 
     def _init(self,
-              server_name,
-              uncompressed_scenario_tree,
-              worker_name,
-              worker_init,
-              modules_imported,
-              MPI,
-              root_comm):
+              init_type,
+              init_names,
+              init_data):
         # check to make sure no base class has implemented _init
         try:
             super(ScenarioTreeManagerWorkerPyro, self)._init()
@@ -126,40 +148,36 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
         else:
             assert False, "developer error"
 
-        self._modules_imported = modules_imported
-        # The name of the scenario tree server owning this worker
-        self._server_name = server_name
-        # So we have access to real scenario and bundle probabilities
-        self._uncompressed_scenario_tree = uncompressed_scenario_tree
-        self._worker_name = worker_name
-
         scenarios_to_construct = []
-        if worker_init.type_ == WorkerInitType.Scenarios:
-            assert type(worker_init.names) in (list, tuple)
-            assert len(worker_init.names) > 0
-            assert worker_init.data is None
+        if init_type == "scenarios":
+            assert type(init_names) in (list, tuple)
+            assert len(init_names) > 0
+            assert init_data is None
 
-            if self._options.verbose:
-                print("Constructing worker with name %s for scenarios: %s"
-                      % (worker_name, str(worker_init.names)))
+            if self.get_option("verbose"):
+                print("Initializing worker with name %s for scenarios: %s"
+                      % (self._worker_name, str(init_names)))
 
-            scenarios_to_construct.extend(worker_init.names)
+            scenarios_to_construct.extend(init_names)
 
-        elif worker_init.type_ == WorkerInitType.Bundles:
-            assert type(worker_init.names) in (list, tuple)
-            assert type(worker_init.data) is dict
-            assert len(worker_init.names) > 0
+        elif init_type == "bundles":
+            assert type(init_names) in (list, tuple)
+            assert type(init_data) is dict
+            assert len(init_names) > 0
+            assert len(init_names) == len(init_data)
 
-            if self._options.verbose:
-                print("Constructing worker with name %s for bundle list:"
-                      % (worker_name))
-                for bundle_name in worker_init.names:
-                    assert type(worker_init.data[bundle_name]) in (list, tuple)
-                    print("  - %s: %s" % (bundle_name, worker_init.data[bundle_name]))
+            if self.get_option("verbose"):
+                print("Initializing worker with name %s for bundle list:"
+                      % (self._worker_name))
+                for bundle_name in init_names:
+                    assert type(init_data[bundle_name]) in (list, tuple)
+                    print("  - %s: %s" % (bundle_name, init_data[bundle_name]))
 
-            for bundle_name in worker_init.names:
-                assert type(worker_init.data[bundle_name]) in (list, tuple)
-                scenarios_to_construct.extend(worker_init.data[bundle_name])
+            for bundle_name in init_names:
+                assert type(init_data[bundle_name]) in (list, tuple)
+                scenarios_to_construct.extend(init_data[bundle_name])
+        else:
+            raise ValueError("Invalid worker init type: %s" % (init_type))
 
         # compress the scenario tree to reflect those instances for
         # which this ph solver server is responsible for constructing.
@@ -172,15 +190,15 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
             construct_instances_for_scenario_tree(
                 self._scenario_tree,
                 output_instance_construction_time=\
-                   self._options.output_instance_construction_time,
-                profile_memory=self._options.profile_memory,
-                compile_scenario_instances=self._options.compile_scenario_instances)
+                   self.get_option("output_instance_construction_time"),
+                profile_memory=self.get_option("profile_memory"),
+                compile_scenario_instances=self.get_option("compile_scenario_instances"))
 
         # with the scenario instances now available, have the scenario
         # tree compute the variable match indices at each node.
         self._scenario_tree.linkInInstances(
             self._instances,
-            objective_sense=self._options.objective_sense_stage_based,
+            objective_sense=self.get_option("objective_sense_stage_based"),
             create_variable_ids=True)
 
         self._objective_sense = \
@@ -191,20 +209,23 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
         #
         # Create bundle if needed
         #
-        if worker_init.type_ == WorkerInitType.Bundles:
-            for bundle_name in worker_init.names:
+        if init_type == "bundles":
+            for bundle_name in init_names:
                 assert not self._scenario_tree.contains_bundle(bundle_name)
-                self.add_bundle(bundle_name, worker_init.data[bundle_name])
+                self._scenario_tree.add_bundle(bundle_name,
+                                               init_data[bundle_name])
+                self._init_bundle(bundle_name,
+                                  init_data[bundle_name])
                 assert self._scenario_tree.contains_bundle(bundle_name)
 
         # now generate the process communicators
-        if MPI is None:
+        root_comm = self.server.mpi_comm_workers
+        if self.MPI is None:
             assert root_comm is None
         else:
             assert root_comm is not None
             root_node = self._scenario_tree.findRootNode()
-            self.MPI = MPI
-            self.mpi_comm_tree[root_node.name] = root_comm
+            self.mpi_comm_tree[root_node.name] = root_comm.Dup()
             # loop over all nodes except the root and leaf
             # nodes and create a communicator between all
             # processes that reference a node
@@ -221,20 +242,9 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
     # Override the implementation on _ScenarioTreeManagerWorker
     def _close_impl(self):
         super(ScenarioTreeManagerWorkerPyro, self)._close_impl()
-        ignored_options = dict((_c._name, _c.value(False))
-                               for _c in self._options.unused_user_values())
+        self._options.check_usage(error=False)
         for comm in self.mpi_comm_tree.values():
             comm.Free()
-        if len(ignored_options):
-            print("")
-            print("*** WARNING: The following options were explicitly "
-                  "set but never accessed by worker %s: "
-                  % (self._worker_name))
-            for name in ignored_options:
-                print(" - %s: %s" % (name, ignored_options[name]))
-            print("*** If you believe this is a bug, please report it "
-                  "to the PySP developers.")
-            print("")
 
     def _invoke_function_impl(self,
                               function,
@@ -245,7 +255,7 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
 
         start_time = time.time()
 
-        if self._options.verbose:
+        if self.get_option("verbose"):
             if module_name is not None:
                 print("Received request to invoke function=%s "
                       "in module=%s" % (str(function), str(module_name)))
@@ -280,8 +290,8 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
             function_kwds=function_kwds)
 
         end_time = time.time()
-        if self._options.output_times or \
-           self._options.verbose:
+        if self.get_option("output_times") or \
+           self.get_option("verbose"):
             print("External function invocation time=%.2f seconds"
                   % (end_time - start_time))
 
@@ -294,7 +304,7 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
 
         start_time = time.time()
 
-        if self._options.verbose:
+        if self.get_option("verbose"):
             print("Received request to invoke method="+method_name)
 
         if method_kwds is None:
@@ -302,18 +312,12 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
         result = getattr(self, method_name)(*method_args, **method_kwds)
 
         end_time = time.time()
-        if self._options.output_times or \
-           self._options.verbose:
+        if self.get_option("output_times") or \
+           self.get_option("verbose"):
             print("Method invocation time=%.2f seconds"
                   % (end_time - start_time))
 
         return result
-
-    # implemented by _ScenarioTreeManagerWorker
-    #def _add_bundle_impl(...)
-
-    # implemented by _ScenarioTreeManagerWorker
-    #def _remove_bundle_impl(...)
 
     #
     # Override the invoke_function and invoke_method interface methods
@@ -400,7 +404,12 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
     #
 
     def assign_data(self, name, data):
-        if self._options.verbose:
+        if self.get_option("verbose"):
             print("Received request to assign data to attribute name %s on "
                   "scenario tree worker %s" % (name, self._worker_name))
         setattr(self, name, data)
+
+# register this worker with the pyro server
+from pyomo.pysp.scenariotree.server_pyro import RegisterWorker
+RegisterWorker('ScenarioTreeManagerWorkerPyro',
+               ScenarioTreeManagerWorkerPyro)

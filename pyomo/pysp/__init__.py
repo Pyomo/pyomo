@@ -38,8 +38,8 @@ import pyomo.pysp.computeconf
 import pyomo.pysp.drive_lagrangian_cc
 import pyomo.pysp.lagrangeMorePR
 import pyomo.pysp.lagrangeParam
-import pyomo.pysp.benders
-import pyomo.pysp.solvers
 import pyomo.pysp.convert
+import pyomo.pysp.solvers
+import pyomo.pysp.benders
 
 PluginGlobals.pop_env()

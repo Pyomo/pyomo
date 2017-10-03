@@ -27,7 +27,6 @@ from pyomo.core.base import ComponentUID
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
                        PersistentSolver,
-                       undefined,
                        UndefinedData,
                        ProblemFormat,
                        UnknownSolver,
@@ -66,6 +65,10 @@ from pyomo.pysp.ef import write_ef, create_ef_instance
 from pyomo.pysp.solvers.spsolver import (SPSolver,
                                          SPSolverResults,
                                          SPSolverFactory)
+from pyomo.pysp.scenariotree.manager import \
+    ScenarioTreeManagerClientPyro
+from pyomo.pysp.scenariotree.manager_solver import \
+    ScenarioTreeManagerSolverClientPyro
 
 logger = logging.getLogger('pyomo.pysp')
 
@@ -73,249 +76,111 @@ _ef_group_label = "EF Options"
 
 class ExtensiveFormAlgorithm(PySPConfiguredObject):
 
-    _declared_options = \
-        PySPConfigBlock("Options declared for the "
-                        "ExtensiveFormAlgorithm class")
+    @classmethod
+    def _declare_options(cls, options=None):
+        if options is None:
+            options = PySPConfigBlock()
 
-    safe_declare_unique_option(
-        _declared_options,
-        "cvar_weight",
-        PySPConfigValue(
-            1.0,
-            domain=_domain_nonnegative,
-            description=(
-                "The weight associated with the CVaR term in "
-                "the risk-weighted objective "
-                "formulation. If the weight is 0, then "
-                "*only* a non-weighted CVaR cost will appear "
-                "in the EF objective - the expected cost "
-                "component will be dropped. Default is 1.0."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "generate_weighted_cvar",
-        PySPConfigValue(
-            False,
-            domain=bool,
-            description=(
-                "Add a weighted CVaR term to the "
-                "primary objective. Default is False."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "risk_alpha",
-        PySPConfigValue(
-            0.95,
-            domain=_domain_unit_interval,
-            description=(
-                "The probability threshold associated with "
-                "CVaR (or any future) risk-oriented "
-                "performance metrics. Default is 0.95."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "cc_alpha",
-        PySPConfigValue(
-            0.0,
-            domain=_domain_unit_interval,
-            description=(
-                "The probability threshold associated with a "
-                "chance constraint. The RHS will be one "
-                "minus this value. Default is 0."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "cc_indicator_var",
-        PySPConfigValue(
-            None,
-            domain=_domain_must_be_str,
-            description=(
-                "The name of the binary variable to be used "
-                "to construct a chance constraint. Default "
-                "is None, which indicates no chance "
-                "constraint."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "mipgap",
-        PySPConfigValue(
-            None,
-            domain=_domain_unit_interval,
-            description=(
-                "Specifies the mipgap for the EF solve."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "solver",
-        PySPConfigValue(
-            "cplex",
-            domain=_domain_must_be_str,
-            description=(
-                "Specifies the solver used to solve the "
-                "extensive form model. Default is cplex."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "solver_io",
-        PySPConfigValue(
-            None,
-            domain=_domain_must_be_str,
-            description=(
-                "The type of IO used to execute the "
-                "solver. Different solvers support different "
-                "types of IO, but the following are common "
-                "options: lp - generate LP files, nl - "
-                "generate NL files, python - direct Python "
-                "interface, os - generate OSiL XML files."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "solver_manager",
-        PySPConfigValue(
-            'serial',
-            domain=_domain_must_be_str,
-            description=(
-                "The type of solver manager used to "
-                "coordinate solves. Default is serial."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "solver_options",
-        PySPConfigValue(
-            (),
-            domain=_domain_tuple_of_str_or_dict,
-            description=(
-                "Persistent solver options used when "
-                "solving the extensive form model. This "
-                "option can be used multiple times from "
-                "the command line to specify more than "
-                "one solver option."
-            ),
-            doc=None,
-            visibility=0),
-        ap_kwds={'action': 'append'},
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "disable_warmstart",
-        PySPConfigValue(
-            False,
-            domain=bool,
-            description=(
-                "Disable warm-start of EF solves. "
-                "Default is False."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "pyro_host",
-        PySPConfigValue(
-            None,
-            domain=_domain_must_be_str,
-            description=(
-                "The hostname to bind on when searching "
-                "for a Pyro nameserver."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "pyro_port",
-        PySPConfigValue(
-            None,
-            domain=_domain_nonnegative_integer,
-            description=(
-                "The port to bind on when searching for "
-                "a Pyro nameserver."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "pyro_shutdown",
-        PySPConfigValue(
-            False,
-            domain=bool,
-            description=(
-                "Attempt to shut down all Pyro-related components "
-                "associated with the Pyro name server used by any scenario "
-                "tree manager or solver manager. Components to shutdown "
-                "include the name server, dispatch server, and any "
-                "scenariotreeserver or pyro_mip_server processes. Note "
-                "that if Pyro4 is in use the nameserver will always "
-                "ignore this request."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_unique_option(
-        _declared_options,
-        "pyro_shutdown_workers",
-        PySPConfigValue(
-            False,
-            domain=bool,
-            description=(
-                "Upon exit, send shutdown requests to all worker "
-                "processes that were acquired through the dispatcher. "
-                "This typically includes scenariotreeserver processes "
-                "(used by the Pyro scenario tree manager) and pyro_mip_server "
-                "processes (used by the Pyro solver manager). This leaves "
-                "any dispatchers and namservers running as well as any "
-                "processes registered with the dispather that were not "
-                "acquired for work by this client."
-            ),
-            doc=None,
-            visibility=0),
-        ap_group=_ef_group_label)
-    safe_declare_common_option(_declared_options,
-                               "symbolic_solver_labels",
-                               ap_group=_ef_group_label)
-    safe_declare_common_option(_declared_options,
-                               "output_solver_log",
-                               ap_group=_ef_group_label)
-    safe_declare_common_option(_declared_options,
-                               "verbose",
-                               ap_group=_ef_group_label)
-    safe_declare_common_option(_declared_options,
-                               "output_times",
-                               ap_group=_ef_group_label)
-    safe_declare_common_option(_declared_options,
-                               "keep_solver_files",
-                               ap_group=_ef_group_label)
-    safe_declare_common_option(_declared_options,
-                               "output_solver_results",
-                               ap_group=_ef_group_label)
+        safe_declare_unique_option(
+            options,
+            "cvar_weight",
+            PySPConfigValue(
+                1.0,
+                domain=_domain_nonnegative,
+                description=(
+                    "The weight associated with the CVaR term in "
+                    "the risk-weighted objective "
+                    "formulation. If the weight is 0, then "
+                    "*only* a non-weighted CVaR cost will appear "
+                    "in the EF objective - the expected cost "
+                    "component will be dropped. Default is 1.0."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_ef_group_label)
+        safe_declare_unique_option(
+            options,
+            "generate_weighted_cvar",
+            PySPConfigValue(
+                False,
+                domain=bool,
+                description=(
+                    "Add a weighted CVaR term to the "
+                    "primary objective. Default is False."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_ef_group_label)
+        safe_declare_unique_option(
+            options,
+            "risk_alpha",
+            PySPConfigValue(
+                0.95,
+                domain=_domain_unit_interval,
+                description=(
+                    "The probability threshold associated with "
+                    "CVaR (or any future) risk-oriented "
+                    "performance metrics. Default is 0.95."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_ef_group_label)
+        safe_declare_unique_option(
+            options,
+            "cc_alpha",
+            PySPConfigValue(
+                0.0,
+                domain=_domain_unit_interval,
+                description=(
+                    "The probability threshold associated with a "
+                    "chance constraint. The RHS will be one "
+                    "minus this value. Default is 0."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_ef_group_label)
+        safe_declare_unique_option(
+            options,
+            "cc_indicator_var",
+            PySPConfigValue(
+                None,
+                domain=_domain_must_be_str,
+                description=(
+                    "The name of the binary variable to be used "
+                    "to construct a chance constraint. Default "
+                    "is None, which indicates no chance "
+                    "constraint."
+                ),
+                doc=None,
+                visibility=0),
+            ap_group=_ef_group_label)
+        safe_declare_common_option(options,
+                                   "solver")
+        safe_declare_common_option(options,
+                                   "solver_io")
+        safe_declare_common_option(options,
+                                   "solver_manager")
+        safe_declare_common_option(options,
+                                   "solver_options")
+        safe_declare_common_option(options,
+                                   "disable_warmstart")
+        safe_declare_common_option(options,
+                                   "solver_manager_pyro_host")
+        safe_declare_common_option(options,
+                                   "solver_manager_pyro_port")
+        safe_declare_common_option(options,
+                                   "solver_manager_pyro_shutdown")
+        safe_declare_common_option(options,
+                                   "verbose",
+                                   ap_group=_ef_group_label)
+        safe_declare_common_option(options,
+                                   "output_times",
+                                   ap_group=_ef_group_label)
+        safe_declare_common_option(options,
+                                   "output_solver_results",
+                                   ap_group=_ef_group_label)
+
+        return options
 
     def __enter__(self):
         return self
@@ -360,16 +225,21 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
         # can be accessed after the solve() method returns.
         # They will be reset each time solve() is called.
         ############################################
-        self.objective = undefined
-        self.gap = undefined
-        self.termination_condition = undefined
-        self.solver_status = undefined
-        self.solution_status = undefined
-        self.solver_results = undefined
-        self.pyomo_solve_time = undefined
-        self.solve_time = undefined
+        self.objective = None
+        self.gap = None
+        self.termination_condition = None
+        self.termination_message = None
+        self.solver_status = None
+        self.solution_status = None
+        self.solver_results = None
+        self.time = None
+        self.pyomo_time = None
         ############################################
 
+        # apparently the SolverFactory does not have sane
+        # behavior when the solver name is None
+        if self.get_option("solver") is None:
+            raise ValueError("The 'solver' option can not be None")
         self._solver = SolverFactory(self.get_option("solver"),
                                      solver_io=self.get_option("solver_io"))
         if isinstance(self._solver, UnknownSolver):
@@ -386,8 +256,8 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
 
         self._solver_manager = SolverManagerFactory(
             solver_manager_type,
-            host=self.get_option("pyro_host"),
-            port=self.get_option("pyro_port"))
+            host=self.get_option("solver_manager_pyro_host"),
+            port=self.get_option("solver_manager_pyro_port"))
         if self._solver_manager is None:
             raise ValueError("Failed to create solver manager of type="
                              +self.get_option("solver")+
@@ -450,14 +320,11 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
                                  "--solver-io option.")
 
         start_time = time.time()
-        if self.get_option("verbose"):
-            print("Starting to write extensive form")
-
+        print("Writing extensive form to file="+filename)
         smap_id = write_ef(self.instance,
                            filename,
                            self.get_option("symbolic_solver_labels"))
 
-        print("Extensive form written to file="+filename)
         if self.get_option("verbose") or self.get_option("output_times"):
             print("Time to write output file=%.2f seconds"
                   % (time.time() - start_time))
@@ -468,6 +335,8 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
               check_status=True,
               exception_on_failure=True,
               output_solver_log=False,
+              symbolic_solver_labels=False,
+              keep_solver_files=False,
               io_options=None):
 
         if self.instance is None:
@@ -479,26 +348,27 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
         if self.get_option("verbose"):
             print("Queuing extensive form solve")
 
-        self.objective = undefined
-        self.gap = undefined
-        self.bound = undefined
-        self.pyomo_solve_time = undefined
-        self.solve_time = undefined
-        self.termination_condition = undefined
-        self.solver_status = undefined
-        self.solution_status = undefined
-        self.solver_results = undefined
+        self.objective = None
+        self.gap = None
+        self.bound = None
+        self.termination_condition = None
+        self.termination_message = None
+        self.solver_status = None
+        self.solution_status = None
+        self.solver_results = None
+        self.time = None
+        self.pyomo_time = None
 
         if isinstance(self._solver, PersistentSolver):
             self._solver.compile_instance(
                 self.instance,
-                symbolic_solver_labels=self.get_option("symbolic_solver_labels"))
+                symbolic_solver_labels=symbolic_solver_labels)
 
         solve_kwds = {}
         solve_kwds['load_solutions'] = False
-        if self.get_option("keep_solver_files"):
+        if keep_solver_files:
             solve_kwds['keepfiles'] = True
-        if self.get_option("symbolic_solver_labels"):
+        if symbolic_solver_labels:
             solve_kwds['symbolic_solver_labels'] = True
         if output_solver_log:
             solve_kwds['tee'] = True
@@ -513,9 +383,6 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
                     solve_kwds["options"][name.strip()] = val.strip()
             else:
                 solve_kwds["options"] = solver_options
-        if self.get_option("mipgap") is not None:
-            solve_kwds.setdefault("options",{})["mipgap"] = \
-                float(self.get_option("mipgap"))
 
         if io_options is not None:
             solve_kwds.update(io_options)
@@ -554,22 +421,27 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
             # not be - we eventually would like more
             # consistency on this front from the solver
             # plugins.
-            self.solve_time = \
+            self.time = \
                 float(results.solver.user_time)
         elif hasattr(results.solver,"time"):
-            self.solve_time = \
+            self.time = \
                 float(results.solver.time)
         else:
-            self.solve_time = undefined
+            self.time = None
 
         if hasattr(results,"pyomo_solve_time"):
-            self.pyomo_solve_time = \
+            self.pyomo_time = \
                 results.pyomo_solve_time
         else:
-            self.pyomo_solve_times = undefined
+            self.pyomo_time = None
 
         self.termination_condition = \
             results.solver.termination_condition
+        self.termination_message = None
+        if hasattr(results.solver,"termination_message"):
+            self.termination_message = results.solver.termination_message
+        elif hasattr(results.solver,"message"):
+            self.termination_message = results.solver.message
         self.solver_status = \
             results.solver.status
 
@@ -581,10 +453,12 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
 
             solution0 = results.solution(0)
             if hasattr(solution0, "gap") and \
-               (solution0.gap is not None):
-                self.gap = solution0.gap
+               (solution0.gap is not None) and \
+               (not isinstance(solution0.gap,
+                               UndefinedData)):
+                self.gap = float(solution0.gap)
             else:
-                self.gap = undefined
+                self.gap = None
 
             self.solution_status = solution0.status
 
@@ -597,7 +471,7 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
             self.objective = self._manager.scenario_tree.\
                              findRootNode().\
                              computeExpectedNodeCost()
-            if self.gap is not undefined:
+            if self.gap is not None:
                 if self.objective_sense == pyomo.core.base.minimize:
                     self.bound = self.objective - self.gap
                 else:
@@ -605,10 +479,10 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
 
         else:
 
-            self.objective = undefined
-            self.gap = undefined
-            self.bound = undefined
-            self.solution_status = undefined
+            self.objective = None
+            self.gap = None
+            self.bound = None
+            self.solution_status = None
 
         failure = False
 
@@ -640,9 +514,6 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
 
         return failure
 
-#
-# TODO: Merge this class with the above
-#
 class EFSolver(SPSolver, PySPConfiguredObject):
 
     @classmethod
@@ -651,82 +522,133 @@ class EFSolver(SPSolver, PySPConfiguredObject):
             options = PySPConfigBlock()
         return ExtensiveFormAlgorithm.register_options(options)
 
-    def __init__(self, *args, **kwds):
-        super(EFSolver, self).__init__(*args, **kwds)
-        self._name = "ef"
-        ExtensiveFormAlgorithm.validate_options(self._options)
-        self._solver_options = self._options
+    def __init__(self):
+        super(EFSolver, self).__init__(self.register_options())
+        self.set_options_to_default()
+
+    def set_options_to_default(self):
+        self._options = self.register_options()
+
+    @property
+    def options(self):
+        return self._options
+
+    @property
+    def name(self):
+        return "ef"
 
     def _solve_impl(self,
                     sp,
-                    output_solver_log=False):
+                    output_solver_log=False,
+                    keep_solver_files=False,
+                    symbolic_solver_labels=False):
+        """
+        Solve a stochastic program by building the extensive form.
 
-        with ExtensiveFormAlgorithm(sp, self._options) as ef:
-            ef.build_ef()
-            # TODO: resolve this preprocessing mess
-            block_attrs = []
+        See the 'solve' method on the base class for
+        additional keyword documentation.
+
+        Args:
+            sp: The stochastic program to solve. Pyro based
+                managers are not accepted. All scenario
+                models must be managed locally.
+            output_solver_log (bool): Stream the solver
+                output during the solve.
+            keep_solver_files (bool): Retain temporary solver
+                input and output files after the solve completes.
+            symbolic_solver_labels (bool): Generate solver
+                input files using human-readable symbols
+                (makes debugging easier).
+
+        Returns: A results object with information about the solution.
+        """
+
+        if isinstance(sp,
+                      (ScenarioTreeManagerClientPyro,
+                       ScenarioTreeManagerSolverClientPyro)):
+            raise TypeError("The EF solver does not handle "
+                            "Pyro-based scenario tree managers")
+
+        orig_parents = {}
+        if sp.scenario_tree.contains_bundles():
             for scenario in sp.scenario_tree.scenarios:
-                for block in scenario._instance.block_data_objects(active=True):
-                    attrs = []
-                    for attr_name in ("_gen_obj_ampl_repn",
-                                      "_gen_con_ampl_repn",
-                                      "_gen_obj_canonical_repn",
-                                      "_gen_con_canonical_repn"):
-                        if hasattr(block, attr_name):
-                            attrs.append((attr_name, getattr(block, attr_name)))
-                            setattr(block, attr_name, True)
-                    if len(attrs):
-                        block_attrs.append((block, attrs))
-            objective = ef.solve(output_solver_log=output_solver_log)
-            # TODO: resolve this preprocessing mess
-            for block, attrs in block_attrs:
-                for attr_name, attr_val in attrs:
-                    setattr(block, attr_name, attr_val)
+                if scenario._instance._parent is not None:
+                    orig_parents[scenario] = scenario._instance._parent
+                    scenario._instance._parent = None
+                    assert not scenario._instance_objective.active
+                    scenario._instance_objective.activate()
+        try:
+            with ExtensiveFormAlgorithm(sp, self._options) as ef:
+                ef.build_ef()
+                ef.solve(
+                    output_solver_log=output_solver_log,
+                    keep_solver_files=keep_solver_files,
+                    symbolic_solver_labels=symbolic_solver_labels,
+                    check_status=False)
+        finally:
+            for scenario, parent in orig_parents.items():
+                scenario._instance._parent = parent
+                assert scenario._instance_objective.active
+                scenario._instance_objective.deactivate()
+
         results = SPSolverResults()
         results.objective = ef.objective
         results.bound = ef.bound
-        results.solver_time = ef.solve_time
-        results.pyomo_solve_time = ef.pyomo_solve_time
-        xhat = results.xhat = {}
-        for stage in sp.scenario_tree.stages[:-1]:
-            for node in stage.nodes:
-                node_xhat = xhat[node.name] = {}
-                reference_scenario = node.scenarios[0]
-                node_x = reference_scenario._x[node.name]
-                for id_ in node._variable_ids:
-                    node_xhat[id_] = node_x[id_]
-                # TODO: stage costs
-                #for stagenum, stage in enumerate(sp.scenario_tree.stages[:-1]):
-                #    cost_variable_name, cost_variable_index = \
-                #        stage._cost_variable
-                #    stage_cost_obj = \
-                #        instance.find_component(cost_variable_name)[cost_variable_index]
-                #    if not stage_cost_obj.is_expression():
-                #        refvar = ComponentUID(stage_cost_obj,cuid_buffer=tmp).\
-                #            find_component(reference_model)
-                #        refvar.value = stage_cost_obj.value
-                #        refvar.stale = stage_cost_obj.stale
+        results.status = ef.solution_status
+        results.solver.status = ef.solver_status
+        results.solver.termination_condition = ef.termination_condition
+        results.solver.message = ef.termination_message
+        results.solver.time = ef.time
+        results.solver.pyomo_time = ef.pyomo_time
+        results.xhat = None
+        if ef.solution_status is not None:
+            xhat = results.xhat = {}
+            for stage in sp.scenario_tree.stages[:-1]:
+                for node in stage.nodes:
+                    node_xhat = xhat[node.name] = {}
+                    reference_scenario = node.scenarios[0]
+                    node_x = reference_scenario._x[node.name]
+                    for id_ in node._variable_ids:
+                        node_xhat[id_] = node_x[id_]
+                    # TODO: stage costs
+                    #for stagenum, stage in enumerate(sp.scenario_tree.stages[:-1]):
+                    #    cost_variable_name, cost_variable_index = \
+                    #        stage._cost_variable
+                    #    stage_cost_obj = \
+                    #        instance.find_component(cost_variable_name)[cost_variable_index]
+                    #    if not stage_cost_obj.is_expression():
+                    #        refvar = ComponentUID(stage_cost_obj,cuid_buffer=tmp).\
+                    #            find_component(reference_model)
+                    #        refvar.value = stage_cost_obj.value
+                    #        refvar.stale = stage_cost_obj.stale
 
         return results
 
 def runef_register_options(options=None):
     if options is None:
         options = PySPConfigBlock()
-
+    EFSolver.register_options(options)
+    ScenarioTreeManagerClientSerial.register_options(options)
     safe_register_common_option(options,
-                               "verbose")
+                                "verbose")
     safe_register_common_option(options,
-                               "disable_gc")
+                                "disable_gc")
     safe_register_common_option(options,
-                               "profile")
+                                "profile")
     safe_register_common_option(options,
-                               "traceback")
+                                "traceback")
     safe_register_common_option(options,
-                               "output_scenario_tree_solution")
+                                "symbolic_solver_labels")
     safe_register_common_option(options,
-                               "solution_saver_extension")
+                                "output_solver_log")
     safe_register_common_option(options,
-                               "solution_loader_extension")
+                                "keep_solver_files")
+    safe_register_common_option(options,
+                                "output_scenario_tree_solution")
+    safe_register_common_option(options,
+                                "solution_saver_extension")
+    safe_register_common_option(options,
+                                "solution_loader_extension")
     safe_register_unique_option(
         options,
         "solution_writer",
@@ -740,7 +662,8 @@ def runef_register_options(options=None):
                 "this option when generating a template configuration file "
                 "or invoking command-line help in order to include any "
                 "plugin-specific options. This option can used multiple "
-                "times from the command line to specify more than one plugin."
+                "times from the command line to specify more than one "
+                "plugin."
             ),
             doc=None,
             visibility=0),
@@ -750,33 +673,21 @@ def runef_register_options(options=None):
         options,
         "output_file",
         PySPConfigValue(
-            "efout",
+            None,
             domain=_domain_must_be_str,
             description=(
                 "The name of the extensive form output file "
                 "(currently LP, MPS, and NL file formats are "
                 "supported). If the option value does not end "
                 "in '.lp', '.mps', or '.nl', then the output format "
-                "will be inferred from the settings for the --solver "
-                "and --solver-io options, and the appropriate suffix "
-                "will be appended to the name. Default is 'efout'."
+                "will be inferred from the settings for the chosen "
+                "solver interface, and the appropriate suffix "
+                "will be appended to the name. Use of this option "
+                "will disable the solve."
             ),
             doc=None,
             visibility=0),
         ap_group=_output_options_group_title)
-    safe_register_unique_option(
-        options,
-        "solve",
-        PySPConfigValue(
-            False,
-            domain=bool,
-            description=(
-                "Solve the extensive form model. Default is "
-                "False, which implies that the EF will be "
-                "saved to a file."
-            ),
-            doc=None,
-            visibility=0))
     safe_register_unique_option(
         options,
         "output_scenario_costs",
@@ -784,27 +695,17 @@ def runef_register_options(options=None):
             None,
             domain=_domain_must_be_str,
             description=(
-                "A file name where individual scenario costs from the solution "
-                "will be stored. The format is determined from the extension used "
-                "in the filename. Recognized extensions: [.csv, .json, .yaml]"
+                "A file name where individual scenario costs from the "
+                "solution will be stored. The format is determined "
+                "from the extension used in the filename. Recognized "
+                "extensions: [.csv, .json, .yaml]"
             ),
             doc=None,
             visibility=0))
-    ScenarioTreeManagerClientSerial.register_options(options)
-    ExtensiveFormAlgorithm.register_options(options)
 
     #
     # Deprecated
     #
-
-    # this will cause the deprecated "shutdown_pyro" version
-    # to appear
-    safe_register_common_option(options,
-                                "pyro_shutdown")
-    # this will cause the deprecated "shutdown_pyro_workers"
-    # version to appear
-    safe_register_common_option(options,
-                                "pyro_shutdown_workers")
 
     class _DeprecatedActivateJSONIOSolutionSaver(
             pyutilib.misc.config.argparse.Action):
@@ -869,26 +770,89 @@ def runef(options,
     with the Extensive Form solver.
     """
     start_time = time.time()
-    with ScenarioTreeManagerClientSerial(options) as manager:
-        manager.initialize()
 
-        print("")
-        print("Running the EF solver for "
-              "stochastic programming problems.")
-        ef = EFSolver(options)
-        results = ef.solve(manager,
-                           output_solver_log=True)
-        print(results)
+    solution_loaders = sort_extensions_by_precedence(solution_loaders)
+    solution_savers = sort_extensions_by_precedence(solution_savers)
+    solution_writers = sort_extensions_by_precedence(solution_writers)
 
-        if options.output_scenario_tree_solution:
-            print("Final solution (scenario tree format):")
-            manager.scenario_tree.snapshotSolutionFromScenarios()
-            manager.scenario_tree.pprintSolution()
+    with ScenarioTreeManagerClientSerial(options) as sp:
+        sp.initialize()
+
+        for plugin in solution_loaders:
+            ret = plugin.load(sp)
+            if not ret:
+                logger.warning(
+                    "Loader extension %s call did not return "
+                    "True. This might indicate failure to load data."
+                    % (plugin))
+
+        if options.output_file is not None:
+            with ExtensiveFormAlgorithm(sp, options) as ef:
+                ef.build_ef()
+                ef.write(filename)
+        else:
+            print("")
+            print("Running the EF solver for "
+                  "stochastic programming problems.")
+            ef = EFSolver()
+            ef_options = ef.extract_user_options_to_dict(options,
+                                                         sparse=True)
+            results = ef.solve(
+                sp,
+                options=ef_options,
+                output_solver_log=options.output_solver_log,
+                keep_solver_files=options.keep_solver_files,
+                symbolic_solver_labels=options.symbolic_solver_labels)
+            xhat = results.xhat
+            del results.xhat
+            print("")
+            print(results)
+            results.xhat = xhat
+
+            if options.output_scenario_tree_solution:
+                print("")
+                sp.scenario_tree.snapshotSolutionFromScenarios()
+                sp.scenario_tree.pprintSolution()
+                sp.scenario_tree.pprintCosts()
+
+            if options.output_scenario_costs is not None:
+                if options.output_scenario_costs.endswith('.json'):
+                    import json
+                    result = {}
+                    for scenario in sp.scenario_tree.scenarios:
+                        result[str(scenario.name)] = scenario._cost
+                    with open(options.output_scenario_costs, 'w') as f:
+                        json.dump(result, f, indent=2, sort_keys=True)
+                elif options.output_scenario_costs.endswith('.yaml'):
+                    import yaml
+                    result = {}
+                    for scenario in sp.scenario_tree.scenarios:
+                        result[str(scenario.name)] = scenario._cost
+                    with open(options.output_scenario_costs, 'w') as f:
+                        yaml.dump(result, f)
+                else:
+                    if not options.output_scenario_costs.endswith('.csv'):
+                        print("Unrecognized file extension. Using CSV "
+                              "format to store scenario costs")
+                    with open(options.output_scenario_costs, 'w') as f:
+                        for scenario in sp.scenario_tree.scenarios:
+                            f.write("%s,%r\n"
+                                    % (scenario.name,scenario._cost))
+
+            for plugin in solution_savers:
+                if not plugin.save(sp):
+                    logger.warning("Saver extension %s call did not "
+                          "return True. This might indicate failure "
+                          "to save data." % (plugin))
+
+            for plugin in solution_writers:
+                plugin.write(sp.scenario_tree, "ef")
 
     print("")
     print("Total EF execution time=%.2f seconds"
           % (time.time() - start_time))
     print("")
+
     return 0
 
 #

@@ -7,19 +7,26 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-# TODO: finishing exposing DDSIP options by declaring them
-#       on the solver config object
+# TODO: have ddsip convert create symbols files for second stage
 # TODO: parse second-stage solution and load into scenario tree workers
+# TODO: objective, cost, stage_costs
+# TODO: make output_scenario_tree_solution work
 
+import io
 import os
 import sys
 import time
 import shutil
+import logging
+import traceback
 
 import pyutilib.subprocess
 import pyutilib.services
 
 from pyomo.core import maximize
+from pyomo.opt import (TerminationCondition,
+                       SolverStatus,
+                       SolutionStatus)
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
@@ -27,17 +34,12 @@ from pyomo.pysp.util.config import (PySPConfigValue,
                                     safe_register_unique_option,
                                     safe_declare_common_option,
                                     safe_declare_unique_option,
-                                    _domain_positive,
-                                    _domain_nonnegative,
-                                    _domain_positive_integer,
-                                    _domain_nonnegative_integer,
-                                    _domain_must_be_str,
-                                    _domain_integer_interval)
+                                    _domain_tuple_of_str_or_dict,
+                                    _domain_must_be_str)
 from pyomo.pysp.util.misc import (parse_command_line,
                                   launch_command)
-from pyomo.pysp.scenariotree.manager import InvocationType
-from pyomo.pysp.scenariotree.manager_solver import \
-    (ScenarioTreeManagerSolver,
+from pyomo.pysp.scenariotree.manager import \
+    (InvocationType,
      ScenarioTreeManagerFactory)
 import pyomo.pysp.convert.ddsip
 from pyomo.pysp.embeddedsp import EmbeddedSP
@@ -46,18 +48,91 @@ from pyomo.pysp.solvers.spsolver import (SPSolverResults,
 from pyomo.pysp.solvers.spsolvershellcommand import \
     SPSolverShellCommand
 
+logger = logging.getLogger('pyomo.pysp')
+
 thisfile = os.path.abspath(__file__)
 
 _ddsip_group_label = "DDSIP Options"
 _firststage_var_suffix = "__DDSIP_FIRSTSTAGE"
 
+# maps the ddsip status code to tuples of the form
+# (SolutionStatus, SolverStatus, TerminationCondition, message)
+# feel free to modify if you have opinions one these
+_ddsip_status_map = {}
+# the process was terminated by the user
+_ddsip_status_map[-1] = (SolutionStatus.unknown,
+                         SolverStatus.aborted,
+                         TerminationCondition.userInterrupt,
+                         "Termination signal received.")
+# the node limit has been reached
+_ddsip_status_map[1] = (SolutionStatus.stoppedByLimit,
+                        SolverStatus.ok,
+                        TerminationCondition.maxEvaluations,
+                        "Node limit reached (total number of nodes).")
+# the gap (absolute or relative) has been reached
+_ddsip_status_map[2] = (SolutionStatus.optimal,
+                        SolverStatus.ok,
+                        TerminationCondition.optimal,
+                        "Gap reached.")
+# the time limit has been reached
+_ddsip_status_map[3] = (SolutionStatus.stoppedByLimit,
+                        SolverStatus.ok,
+                        TerminationCondition.maxTimeLimit,
+                        "Time limit reached.")
+# the maximal dispersion, i.e. the maximal difference of the
+# first-stage components within all remaining front nodes,
+# was less then the parameter NULLDISP (null dispersion)
+_ddsip_status_map[4] = (SolutionStatus.optimal,
+                        SolverStatus.ok,
+                        TerminationCondition.minStepLength,
+                        "Maximal dispersion equals zero.")
+# the whole branching tree was backtracked.
+_ddsip_status_map[5] = (SolutionStatus.optimal,
+                        SolverStatus.ok,
+                        TerminationCondition.minStepLength,
+                        ("The whole branching tree was "
+                         "backtracked. Probably due to MIP "
+                         "gaps (see below) the specified "
+                         "gap tolerance could not be reached."))
+# no valid lower bound
+_ddsip_status_map[6] = (SolutionStatus.unknown,
+                        SolverStatus.warning,
+                        TerminationCondition.invalidProblem,
+                        "No valid lower bound.")
+# problem infeasible
+_ddsip_status_map[7] = (SolutionStatus.infeasible,
+                        SolverStatus.warning,
+                        TerminationCondition.infeasible,
+                        "Problem infeasible.")
+# problem unbounded
+_ddsip_status_map[8] = (SolutionStatus.unbounded,
+                        SolverStatus.warning,
+                        TerminationCondition.unbounded,
+                        "Problem unbounded.")
+
 def _load_solution(manager,
                    scenario,
                    solution_filename,
+                   info_filename,
+                   firststage_symbols_filename,
+                   secondstage_symbols_filename,
                    scenario_id):
-    x_firststage = x[scenario.node_list[0].name] = {}
+
+    # parse the symbol map
+    firststage_symbol_map = {}
+    with open(firststage_symbols_filename) as f:
+        for line in f:
+            lp_symbol, scenario_tree_id = line.strip().split()
+            firststage_symbol_map[lp_symbol] = scenario_tree_id
+    secondstage_symbol_map = {}
+    with open(secondstage_symbols_filename) as f:
+        for line in f:
+            lp_symbol, scenario_tree_id = line.strip().split()
+            secondstage_symbol_map[lp_symbol] = scenario_tree_id
+
+    x_firststage = scenario._x[scenario.node_list[0].name]
     assert scenario.node_list[0] is manager.scenario_tree.findRootNode()
-    x_secondstage = x[scenario.node_list[1].name] = {}
+    x_secondstage = scenario._x[scenario.node_list[1].name]
     with open(solution_filename, 'r') as f:
         line = f.readline()
         while line.strip() != "1. Best Solution":
@@ -68,10 +143,9 @@ def _load_solution(manager,
         assert line.startswith("-----------------------------------")
         line = f.readline().strip()
         while line != "":
-            line = line.split()
-            varname, varsol = line
-            assert varname.endswith(_firststage_var_suffix)
-            x_firststage[varname[:-len(_firststage_var_suffix)]] = float(varsol)
+            varlabel, varsol = line.split()
+            x_firststage[firststage_symbol_map[varlabel]] = \
+                float(varsol)
             line = f.readline().strip()
         while line != "4. Second-stage solutions":
             line = f.readline().strip()
@@ -81,8 +155,10 @@ def _load_solution(manager,
             line = f.readline().strip()
         line = f.readline().strip()
         while (line != "") and (not line.startswith("Scenario ")):
-            name, val = line.split()
-            x_secondstage[name] = float(val)
+            varlabel, varsol = line.split()
+            if varlabel != "ONE_VAR_CONSTANT":
+                x_secondstage[secondstage_symbol_map[varlabel]] = \
+                    float(varsol)
             line = f.readline().strip()
     return x
 
@@ -92,172 +168,79 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
     def _declare_options(cls, options=None):
         if options is None:
             options = PySPConfigBlock()
-        safe_register_unique_option(
+        safe_declare_unique_option(
             options,
-            "output_level",
+            "firststage_suffix",
             PySPConfigValue(
-                5,
-                domain=_domain_integer_interval(0,100),
+                "__DDSIP_FIRSTSTAGE",
+                domain=_domain_must_be_str,
                 description=(
-                    "Amount of output to more.out. Caution: "
-                    "The file more.out may become large for "
-                    "high values of outlevel. Default is 5."
+                    "The suffix used to identity first-stage "
+                    "variables to DDSIP. Default is "
+                    "'__DDSIP_FIRSTSTAGE'"
                 ),
                 doc=None,
                 visibility=0),
             ap_group=_ddsip_group_label)
-        safe_register_unique_option(
+        safe_declare_unique_option(
             options,
-            "output_files",
+            "config_file",
             PySPConfigValue(
-                1,
-                domain=_domain_integer_interval(0,6),
+                None,
+                domain=_domain_must_be_str,
                 description=(
-                    "Amount of output files. See DDSIP "
-                    "manual for more information. Caution: "
-                    "If outfiles is greater than 3, lp- or "
-                    "sav- files are written at each node and "
-                    "for each scenario! Default is 1."
+                    "The name of a partial DDSIP configuration file "
+                    "that contains option specifications unrelated to "
+                    "the problem structure. If specified, the contents "
+                    "of this file will be appended to the "
+                    "configuration created by this solver interface. "
+                    "Default is None."
                 ),
                 doc=None,
                 visibility=0),
             ap_group=_ddsip_group_label)
-        safe_register_unique_option(
-            options,
-            "log_frequency",
-            PySPConfigValue(
-                1,
-                domain=_domain_positive_integer,
-                description=(
-                    "A line of output is printed every i-th "
-                    "iteration. Default is 1."
-                ),
-                doc=None,
-                visibility=0),
-            ap_group=_ddsip_group_label)
-        safe_register_unique_option(
-            options,
-            "node_limit",
-            PySPConfigValue(
-                10000,
-                domain=_domain_nonnegative_integer,
-                description=(
-                    "The node limit for the branch-and-bound "
-                    "procedure. Default is 10000."
-                ),
-                doc=None,
-                visibility=0),
-            ap_group=_ddsip_group_label)
-        safe_register_unique_option(
-            options,
-            "time_limit",
-            PySPConfigValue(
-                86400,
-                domain=_domain_nonnegative_integer,
-                description=(
-                    "The total time limit in seconds (CPU-time) "
-                    "including the time needed to solve the "
-                    "EEV problem. Default is 86400 (1 day)."
-                ),
-                doc=None,
-                visibility=0),
-            ap_group=_ddsip_group_label)
-        safe_register_unique_option(
-            options,
-            "absolute_gap",
-            PySPConfigValue(
-                0,
-                domain=_domain_nonnegative,
-                description=(
-                    "The absolute duality gap. Default is 0."
-                ),
-                doc=None,
-                visibility=0),
-            ap_group=_ddsip_group_label)
-        safe_register_unique_option(
-            options,
-            "relative_gap",
-            PySPConfigValue(
-                1e-4,
-                domain=_domain_nonnegative,
-                description=(
-                    "The relative duality gap. Default is 1e-4."
-                ),
-                doc=None,
-                visibility=0),
-            ap_group=_ddsip_group_label)
-        safe_register_unique_option(
-            options,
-            "eev_problem",
-            PySPConfigValue(
-                False,
-                domain=bool,
-                description=(
-                    "Solve the EEV-problem and report the "
-                    "VSS, cf. Birge and Louveaux (1997). "
-                    "Default is False."
-                ),
-                doc=None,
-                visibility=0),
-            ap_group=_ddsip_group_label)
-        safe_register_unique_option(
-            options,
-            "deterministic_equivalent",
-            PySPConfigValue(
-                False,
-                domain=bool,
-                description=(
-                    "Produce a deterministic equivalent as "
-                    "detequ.lp.gz. Only for expectation based "
-                    "problems (and it takes quite a while). "
-                    "Default is False."
-                ),
-                doc=None,
-                visibility=0),
-            ap_group=_ddsip_group_label)
-        safe_register_unique_option(
-            options,
-            "max_inherit",
-            PySPConfigValue(
-                5,
-                domain=_domain_nonnegative_integer,
-                description=(
-                    "Maximal level of inheritance of "
-                    "scenario solutions in the "
-                    "branch-and-bound tree. Default is 5."
-                ),
-                doc=None,
-                visibility=0),
-            ap_group=_ddsip_group_label)
-        safe_register_unique_option(
-            options,
-            "hotstart_strategy",
-            PySPConfigValue(
-                1,
-                domain=_domain_integer_interval(0,6),
-                description=(
-                    "Hotstart strategy used for solutions in "
-                    "branch-and-bound tree. See DDSIP manual "
-                    "for more information. Valid values fall in "
-                    "the integer range [0,6]. Default is 1."
-                ),
-                doc=None,
-                visibility=0),
-            ap_group=_ddsip_group_label)
+        safe_declare_common_option(options,
+                                   "verbose",
+                                   ap_group=_ddsip_group_label)
 
         return options
 
-    def __init__(self, *args, **kwds):
-        super(DDSIPSolver, self).__init__(*args, **kwds)
-        self._name = "ddsip"
+    def __init__(self):
+        super(DDSIPSolver, self).__init__(self.register_options())
+        self.set_options_to_default()
         self._executable = "ddsip"
-        self._firststage_var_suffix = '__DDSIP_FIRSTSTAGE'
+
+    def set_options_to_default(self):
+        self._options = self.register_options()
+        self._options._implicit_declaration = True
+
+    @property
+    def options(self):
+        return self._options
+
+    @property
+    def name(self):
+        return "ddsip"
 
     def _solve_impl(self,
                     sp,
                     output_solver_log=False,
-                    verbose=False,
                     **kwds):
+        """
+        Solve a stochastic program with the DDSIP solver.
+
+        See the 'solve' method on the base class for
+        additional keyword documentation.
+
+        Args:
+            sp: The stochastic program to solve.
+            output_solver_log (bool): Stream the solver
+                output during the solve.
+            **kwds: Passed to the DDSIP file writer as I/O
+              options (e.g., symbolic_solver_labels=True).
+
+        Returns: A results object with information about the solution.
+        """
 
         if len(sp.scenario_tree.stages) > 2:
             raise ValueError("DDSIP solver does not handle more "
@@ -289,14 +272,14 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
         # Create the DDSIP input files
         #
 
-        if verbose:
+        if self.get_option("verbose"):
             print("Writing solver files in directory: %s"
                   % (working_directory))
 
         input_files = pyomo.pysp.convert.ddsip.\
             convert_external(
                 input_directory,
-                _firststage_var_suffix,
+                self.options.firststage_suffix,
                 sp,
                 io_options=kwds)
         for key in input_files:
@@ -309,7 +292,7 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
         #
 
         _cmd_string = self.executable+" < "+input_files["script"]
-        if verbose:
+        if self.get_option("verbose"):
             print("Launching DDSIP solver with command: %s"
                   % (_cmd_string))
         ddsipstdin = None
@@ -344,7 +327,7 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
         # Parse the DDSIP solution
         #
 
-        if verbose:
+        if self.get_option("verbose"):
             print("Reading DDSIP solution from file: %s"
                   % (solution_filename))
         assert os.path.exists(output_directory)
@@ -369,9 +352,9 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
                                             info_filename,
                                             solution_filename)
 
-        results.xhat = {sp.scenario_tree.findRootNode().name: xhat}
-
-        results.solver_time = stop - start
+        results.xhat = None
+        if xhat is not None:
+            results.xhat = {sp.scenario_tree.findRootNode().name: xhat}
 
         for res in async_responses:
             res.complete()
@@ -379,90 +362,147 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
         return results
 
     def _update_config(self, config_filename):
-        """ Writes an DDSIP config file """
+        """ Writes a DDSIP config file """
 
-        # remove "END" from the config file
-        new_config_filename = \
-            os.path.join(os.path.dirname(config_filename),
-                         os.path.basename(config_filename)+".tmp")
-        with open(new_config_filename, "w") as f:
-            with open(config_filename, "r") as forig:
-                for line in forig:
-                    if line.strip() != "END":
-                        f.write(line)
+        # find the byte position where
+        # we start appending to the config file
+        # (just before END)
+        append_pos = 0
+        with io.open(config_filename,
+                     mode='rb',
+                     buffering=0) as f:
+            f.seek(0)
+            append_pos = f.tell()
+            for line in f:
+                if line.strip().decode() == "END":
+                    break
+                append_pos = f.tell()
+        assert append_pos > 0
 
-            f.write("\n\nCPLEXBEGIN\n")
-            f.write("1035 0 * Output on screen indicator\n")
-            f.write("2008 0.001 * Absolute Gap\n")
-            f.write("2009 0.001 * Relative Gap\n")
-            f.write("1039 1200 * Time limit\n")
-            f.write("1016 1e-9 * simplex feasibility tolerance\n")
-            f.write("1014 1e-9 * simplex optimality tolerance\n")
-            f.write("1065 40000 * Memory available for working storage\n")
-            f.write("2010 1e-20 * integrality tolerance\n")
-            f.write("2008 0 * Absolute gap\n")
-            f.write("2020 0 * Priority order\n")
-            f.write("2012 4 * MIP display level\n")
-            f.write("2053 2 * disjunctive cuts\n")
-            f.write("2040 2 * flow cover cuts\n")
-            f.write("2060 3 *DiveType mip strategy dive (probe=3)\n")
-            f.write("CPLEXEND\n\n")
+        config_lines = {}
+        config_lines[None] = []
+        config_lines['CPLEX'] = []
+        config_lines['CPLEXEEV'] = []
+        config_lines['CPLEXLB'] = []
+        config_lines['CPLEX2LB'] = []
+        config_lines['CPLEXUB'] = []
+        config_lines['CPLEX2UB'] = []
+        config_lines['CPLEXDUAL'] = []
+        config_lines['CPLEX2DUAL'] = []
+        has_cplex_opts = False
 
-            f.write("OUTLEVEL %s * Print info to more.out\n"
-                    % (self.get_option("output_level")))
-            f.write("OUTFILES %s * Print files (models and output)\n"
-                    % (self.get_option("output_files")))
-            f.write("LOGFREQ %s * Output log frequency\n"
-                    % (self.get_option("log_frequency")))
-            f.write("NODELIM %s * Node limit\n"
-                    % (self.get_option("node_limit")))
-            f.write("TIMELIMIT %s * Time limit\n"
-                    % (self.get_option("time_limit")))
-            f.write("ABSOLUTEGAP %r * Absolute duality gap\n"
-                    % (self.get_option("absolute_gap")))
-            f.write("RELATIVEGAP %r * Relative duality gap\n"
-                    % (self.get_option("relative_gap")))
-            f.write("EEVPROB %d * Solve EEV, cf. Birge and Louveaux (1997)\n"
-                    % (self.get_option("eev_problem")))
-            f.write("DETEQU %d * Produce deterministic equivalent\n"
-                    % (self.get_option("deterministic_equivalent")))
-            # TODO
-            f.write("PORDER 0 * Use branching priority order\n")
-            # TODO
-            f.write("STARTI 0 * Use start solution/bound\n")
-            f.write("MAXINHERIT %s * Levels to inherit in B&B tree\n"
-                    % (self.get_option("max_inherit")))
-            f.write("HOTSTART %d * Hotstart strategy used in B&B tree\n"
-                    % (self.get_option("hotstart_strategy")))
+        # parse the user specified config file
+        if self.options.config_file is not None:
+            with open(self.options.config_file) as fconfig:
+                section = config_lines[None]
+                for line in fconfig:
+                    stripped = line.strip()
+                    if (stripped == "BEGIN") and \
+                       (stripped == "END"):
+                        continue
+                    if "CPLEXBEGIN" in stripped:
+                        section = config_lines['CPLEX']
+                        has_cplex_opts = True
+                        continue
+                    elif "CPLEXEEV" in stripped:
+                        section = config_lines['CPLEXEEV']
+                        has_cplex_opts = True
+                        continue
+                    elif "CPLEXLB" in stripped:
+                        section = config_lines['CPLEXLB']
+                        has_cplex_opts = True
+                        continue
+                    elif "CPLEX2LB" in stripped:
+                        section = config_lines['CPLEX2LB']
+                        has_cplex_opts = True
+                        continue
+                    elif "CPLEXUB" in stripped:
+                        section = config_lines['CPLEXUB']
+                        has_cplex_opts = True
+                        continue
+                    elif "CPLEX2UB" in stripped:
+                        section = config_lines['CPLEX2UB']
+                        has_cplex_opts = True
+                        continue
+                    elif "CPLEXDUAL" in stripped:
+                        section = config_lines['CPLEXDUAL']
+                        has_cplex_opts = True
+                        continue
+                    elif "CPLEX2DUAL" in stripped:
+                        section = config_lines['CPLEX2DUAL']
+                        has_cplex_opts = True
+                        continue
+                    elif "CPLEXEND" in stripped:
+                        section = config_lines[None]
+                        continue
+                    section.append(line)
 
-            # TODO: finish declaring these remaining options
-            f.write("HEURISTIC 99 3 7 * Heuristics: Down, Up, Near, Common, Byaverage ...(12)\n")
-            f.write("BRADIRECTION -1 * Branching direction in DD\n")
-            f.write("BRASTRATEGY 1 * Branching strategy in DD (1 = unsolved nodes first, 0 = best bound)\n")
-            f.write("EPSILON 1e-10 * Branch epsilon for cont. var.\n")
-            f.write("ACCURACY 1e-13 * Accuracy\n")
-            f.write("BOUSTRATEGY 1 * Bounding strategy in DD\n")
-            f.write("NULLDISP 5e-10\n")
-            f.write("RELAXF 0\n")
-            f.write("INTFIRST 1 * Branch first on integer\n")
+        for key in self.options:
+            if (key != "firststage_suffix") and \
+               (key != "config_file") and \
+               (key != "verbose"):
+                if key.startswith("CPLEX_"):
+                    section = config_lines["CPLEX"]
+                    prefix = "CPLEX_"
+                    has_cplex_opts = True
+                elif key.startswith("CPLEXEEV_"):
+                    section = config_lines["CPLEXEEV"]
+                    prefix = "CPLEXEEV_"
+                    has_cplex_opts = True
+                elif key.startswith("CPLEXLB_"):
+                    section = config_lines["CPLEXLB"]
+                    prefix = "CPLEXLB_"
+                    has_cplex_opts = True
+                elif key.startswith("CPLEX2LB_"):
+                    section = config_lines["CPLEX2LB"]
+                    prefix = "CPLEX2LB_"
+                    has_cplex_opts = True
+                elif key.startswith("CPLEXUB_"):
+                    section = config_lines["CPLEXUB"]
+                    prefix = "CPLEXUB_"
+                    has_cplex_opts = True
+                elif key.startswith("CPLEX2UB_"):
+                    section = config_lines["CPLEX2UB"]
+                    prefix = "CPLEX2UB_"
+                    has_cplex_opts = True
+                elif key.startswith("CPLEXDUAL_"):
+                    section = config_lines["CPLEXDUAL"]
+                    prefix = "CPLEXDUAL_"
+                    has_cplex_opts = True
+                elif key.startswith("CPLEX2DUAL_"):
+                    section = config_lines["CPLEX2DUAL"]
+                    prefix = "CPLEX2DUAL_"
+                    has_cplex_opts = True
+                else:
+                    section = config_lines[None]
+                    prefix = ""
+                val = self.options[key]
+                line = "%s %s\n" % (key.replace(prefix,'',1), val)
+                section.append(line)
 
-            f.write("\n\nRISKMO 0 * Risk Model\n")
-            f.write("RISKALG 1\n")
-            f.write("WEIGHT 1\n")
-            f.write("TARGET 54 * target if needed\n")
-            f.write("PROBLEV .8 * probability level\n")
-            f.write("RISKBM 11000000 * big M in \n")
-
-            f.write("\n\nCBFREQ 0 * (50) Conic Bundle in every ith node\n")
-            f.write("CBITLIM 20 * (10) Descent iteration limit for conic bundle method\n")
-            f.write("CBTOTITLIM 50 * (1000) Total iteration limit for conic bundle method\n")
-            f.write("NONANT 1 * Non-anticipativity representation\n")
+        with open(config_filename, "r+") as f:
+            f.seek(append_pos)
+            for line in config_lines[None]:
+                f.write(line)
+            if has_cplex_opts:
+                f.write("\nCPLEXBEGIN\n")
+                for line in config_lines["CPLEX"]:
+                    f.write(line)
+                for section_key in ('CPLEXEEV',
+                                    'CPLEXLB',
+                                    'CPLEX2LB',
+                                    'CPLEXUB',
+                                    'CPLEX2UB',
+                                    'CPLEXDUAL',
+                                    'CPLEX2DUAL'):
+                    section = config_lines[section_key]
+                    if len(section) > 0:
+                        f.write(section_key+"\n")
+                        for line in section:
+                            f.write(line)
+                f.write("CPLEXEND\n")
 
             f.write("\n\nEND\n")
-
-        os.remove(config_filename)
-        shutil.copyfile(new_config_filename, config_filename)
-        os.remove(new_config_filename)
 
     def _read_solution(self,
                        sp,
@@ -470,8 +510,6 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
                        info_filename,
                        solution_filename):
         """Parses a DDSIP solution file."""
-
-        results = SPSolverResults()
 
         # parse the symbol map
         symbol_map = {}
@@ -483,72 +521,122 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
         #
         # Xhat
         #
-        xhat = {}
-        with open(solution_filename, 'r') as f:
-            line = f.readline()
-            while line.strip() != "1. Best Solution":
+        try:
+            xhat = {}
+            with open(solution_filename, 'r') as f:
                 line = f.readline()
-            line = f.readline()
-            assert line.startswith("Variable name                Value")
-            line = f.readline()
-            assert line.startswith("-----------------------------------")
-            line = f.readline().strip()
-            while line != "":
-                line = line.split()
-                varlabel, varsol = line
-                xhat[symbol_map[varlabel]] = float(varsol)
+                while line.strip() != "1. Best Solution":
+                    line = f.readline()
+                line = f.readline()
+                assert line.startswith("Variable name                Value")
+                line = f.readline()
+                assert line.startswith("-----------------------------------")
                 line = f.readline().strip()
+                while line != "":
+                    line = line.split()
+                    varlabel, varsol = line
+                    xhat[symbol_map[varlabel]] = float(varsol)
+                    line = f.readline().strip()
+        except (IOError, OSError):
+            logger.warn(
+                "Exception encountered while parsing ddsip "
+                "solution file '%s':\n%s'"
+                % (solution_filename, traceback.format_exc()))
+            xhat = None
 
         #
         # Objective, bound, status, etc.
         #
-        with open(info_filename, 'r') as f:
-
-            line = f.readline()
-            while not line.startswith("Total CPU time:"):
+        results = SPSolverResults()
+        results.solver.status_code = None
+        results.status = None
+        results.solver.status = None
+        results.solver.termination_condition = None
+        results.solver.message = None
+        results.solver.time = None
+        try:
+            with open(info_filename, 'r') as f:
                 line = f.readline()
-            line = f.readline().strip()
-            while (line == "") or \
-                  (line == "----------------------------------------------------------------------------------------"):
+                while True:
+                    if line.startswith("Total CPU time:"):
+                        break
+                    line = f.readline()
+                    if line == '':
+                        # Unexpected file format or the solve failed
+                        logger.warn(
+                            "Unexpected ddsip info file format. No "
+                            "status information will be returned")
+                        return xhat, results
                 line = f.readline().strip()
-            if line.startswith("EEV"):
-                results.eev = float(line.split()[1])
+                while (line == "") or \
+                      (line == "----------------------------------------------------------------------------------------"):
+                    line = f.readline().strip()
+                if line.startswith("EEV"):
+                    results.eev = float(line.split()[1])
+                    line = f.readline().strip()
+                if line.startswith("VSS"):
+                    results.vss = float(line.split()[1])
+                    line = f.readline().strip()
+                assert line.startswith("EVPI")
+                line = line.split()
+                results.evpi = float(line[1])
                 line = f.readline().strip()
-            if line.startswith("VSS"):
-                results.vss = float(line.split()[1])
+                assert line == ""
                 line = f.readline().strip()
-            assert line.startswith("EVPI")
-            line = line.split()
-            results.evpi = float(line[1])
-            line = f.readline().strip()
-            assert line == ""
-            line = f.readline().strip()
-            assert line == "----------------------------------------------------------------------------------------"
-            line = f.readline().strip()
-            assert line.startswith("Status")
-            results.status = int(line.split()[1])
-            line = f.readline().strip()
-            assert line.startswith("Upper")
-            line = f.readline().strip()
-            assert line.startswith("Nodes")
-            line = f.readline().strip()
-            while line != "----------------------------------------------------------------------------------------":
+                assert line == "----------------------------------------------------------------------------------------"
                 line = f.readline().strip()
-            line = f.readline().strip()
-            assert line.startswith("Best Value")
-            results.objective = float(line.split()[2])
-            # NOTE: I think DDSIP refers to the "bound" as
-            #       "Lower Bound", even when the objective
-            #       is being maximized.
-            line = f.readline().strip()
-            assert line.startswith("Lower Bound")
-            results.bound = float(line.split()[2])
+                line = line.split()
+                assert len(line) == 4
+                assert line[0] == "Status"
+                results.solver.status_code = int(line[1])
+                assert line[2] == "Time"
+                results.solver.time = float(line[3])
+                (results.status,
+                 results.solver.status,
+                 results.solver.termination_condition,
+                 results.solver.message) = \
+                    _ddsip_status_map.get(results.solver.status_code,
+                                          (SolutionStatus.unknown,
+                                           SolverStatus.unknown,
+                                           TerminationCondition.unknown,
+                                           None))
+
+                line = f.readline().strip()
+                line = line.split()
+                assert len(line) == 6
+                assert line[0] == "Upper"
+                assert line[3] == "Tree"
+                results.tree_depth = int(line[5])
+                line = f.readline().strip()
+                line = line.split()
+                assert len(line) == 2
+                assert line[0] == "Nodes"
+                results.nodes = int(line[1])
+                line = f.readline().strip()
+                while line != "----------------------------------------------------------------------------------------":
+                    line = f.readline().strip()
+                line = f.readline().strip()
+                assert line.startswith("Best Value")
+                results.objective = float(line.split()[2])
+                # NOTE: I think DDSIP refers to the "bound" as
+                #       "Lower Bound", even when the objective
+                #       is being maximized.
+                line = f.readline().strip()
+                assert line.startswith("Lower Bound")
+                results.bound = float(line.split()[2])
+        except (IOError, OSError):
+            logger.warn(
+                "Exception encountered while parsing ddsip "
+                "info file '%s':\n%s'"
+                % (info_filename, traceback.format_exc()))
 
         return xhat, results
 
 def runddsip_register_options(options=None):
     if options is None:
         options = PySPConfigBlock()
+    DDSIPSolver.register_options(options)
+    ScenarioTreeManagerFactory.register_options(options)
     safe_register_common_option(options,
                                "verbose")
     safe_register_common_option(options,
@@ -562,9 +650,27 @@ def runddsip_register_options(options=None):
     safe_register_common_option(options,
                                 "keep_solver_files")
     safe_register_common_option(options,
+                                "output_solver_log")
+    safe_register_common_option(options,
                                 "symbolic_solver_labels")
-    ScenarioTreeManagerFactory.register_options(options)
-    DDSIPSolver.register_options(options)
+    # used to populate the implicit DDSIP options
+    safe_register_unique_option(
+        options,
+        "solver_options",
+        PySPConfigValue(
+            (),
+            domain=_domain_tuple_of_str_or_dict,
+            description=(
+                "Unregistered solver options that will be passed "
+                "to DDSIP via the config file (e.g., NODELIM=4, "
+                "CPLEX_1067=1). This option can be used multiple "
+                "times from the command line to specify more "
+                "than one DDSIP option."
+            ),
+            doc=None,
+            visibility=0),
+        ap_kwds={'action': 'append'},
+        ap_group=_ddsip_group_label)
 
     return options
 
@@ -574,23 +680,41 @@ def runddsip(options):
     with the DDSIP solver.
     """
     start_time = time.time()
-    with ScenarioTreeManagerFactory(options) as manager:
-        manager.initialize()
+    with ScenarioTreeManagerFactory(options) as sp:
+        sp.initialize()
         print("")
         print("Running DDSIP solver for stochastic "
               "programming problems")
-        ddsip = DDSIPSolver(options)
-        results = ddsip.solve(manager,
-                              output_solver_log=True,
-                              keep_solver_files=options.keep_solver_files,
-                              symbolic_solver_labels=options.symbolic_solver_labels,
-                              verbose=options.verbose)
+        ddsip = DDSIPSolver()
+        # add the implicit ddsip options
+        solver_options = options.solver_options
+        if len(solver_options) > 0:
+            if type(solver_options) is tuple:
+                for name_val in solver_options:
+                    assert "=" in name_val
+                    name, val = name_val.split("=")
+                    ddsip.options[name.strip()] = val.strip()
+            else:
+                for key, val in solver_options.items():
+                    ddsip.options[key] = val
+        ddsip_options = ddsip.extract_user_options_to_dict(options,
+                                                           sparse=True)
+        results = ddsip.solve(
+            sp,
+            options=ddsip_options,
+            output_solver_log=options.output_solver_log,
+            keep_solver_files=options.keep_solver_files,
+            symbolic_solver_labels=options.symbolic_solver_labels)
+        xhat = results.xhat
+        del results.xhat
+        print("")
         print(results)
 
         if options.output_scenario_tree_solution:
-            print("Final solution (scenario tree format):")
-            manager.scenario_tree.snapshotSolutionFromScenarios()
-            manager.scenario_tree.pprintSolution()
+            print("")
+            sp.scenario_tree.snapshotSolutionFromScenarios()
+            sp.scenario_tree.pprintSolution()
+            sp.scenario_tree.pprintCosts()
 
     print("")
     print("Total execution time=%.2f seconds"

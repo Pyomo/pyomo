@@ -11,6 +11,7 @@ __all__ = ("SPSolverShellCommand",)
 
 import os
 import logging
+import pprint
 
 import pyutilib.misc
 
@@ -122,6 +123,24 @@ class SPSolverShellCommand(SPSolver):
             self._executable = exe
 
     def solve(self, sp, *args, **kwds):
+        """
+        Solve a stochastic program.
+
+        See the 'solve' method on the base class for
+        additional keyword documentation.
+
+        Args:
+            sp: The stochastic program to solve.
+            keep_solver_files (bool): Retain temporary solver
+                input and output files after the solve completes.
+            *args: Passed to the derived solver class
+                (see the _solve_impl method).
+            **kwds: Passed to the derived solver class
+                (see the _solve_impl method).
+
+        Returns: A results object with information about the solution.
+        """
+
         self._files.clear()
         assert self.executable is not None
 
@@ -133,3 +152,6 @@ class SPSolverShellCommand(SPSolver):
             # cleanup
             pyutilib.services.TempfileManager.pop(
                 remove=not keep_solver_files)
+            if keep_solver_files:
+                logger.info("Retaining the following solver files:\n"
+                            +pprint.pformat(self.files))

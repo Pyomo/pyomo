@@ -12,16 +12,17 @@ __all__ = ("SPSolverResults",
            "SPSolver",
            "SPSolverFactory")
 
+import sys
 import time
 import logging
 
 import pyutilib.misc
 
+from pyomo.opt import UndefinedData
 from pyomo.core import ComponentUID
-from pyomo.opt import undefined
-from pyomo.pysp.util.configured_object import PySPConfiguredObject
-from pyomo.pysp.util.config import PySPConfigBlock
 from pyomo.pysp.embeddedsp import EmbeddedSP
+
+from six import StringIO
 
 logger = logging.getLogger('pyomo.pysp')
 
@@ -38,54 +39,134 @@ logger = logging.getLogger('pyomo.pysp')
 #   - results.bound
 #   - ddsip validate problem (like in smpsutils)
 
+class SPSolverStatus(object):
+    def __init__(self):
+        self.name = None
+        self.status = None
+        self.termination_condition = None
+
+    def pprint(self, ostream=sys.stdout):
+        attrs = vars(self)
+        names = sorted(list(attrs.keys()))
+        first = ('name','status','termination_condition')
+        for cnt, name in enumerate(first):
+            names.remove(name)
+            if cnt > 0:
+                ostream.write('\n')
+            ostream.write('%s: %s'
+                          % (name, getattr(self, name)))
+        for name in names:
+            ostream.write('\n%s: %s'
+                          % (name, getattr(self, name)))
+
+    def __str__(self):
+        tmp = StringIO()
+        self.pprint(ostream=tmp)
+        return tmp.getvalue()
+
 class SPSolverResults(object):
 
     def __init__(self):
-        self.objective = undefined
-        self.bound = undefined
-        self.solver_name = undefined
-        self.solver_time = undefined
-        self.solver_status = undefined
+        self.objective = None
+        self.bound = None
+        self.status = None
+        self.xhat_loaded = False
+        self.xhat = None
+        self.solver = SPSolverStatus()
 
-    def __str__(self):
+    def pprint(self, ostream=sys.stdout):
         attrs = vars(self)
         names = sorted(list(attrs.keys()))
-        out =  "SPSolverResults:\n"
+        first = ('status','objective','bound','xhat_loaded')
+        for name in first:
+            names.remove(name)
+            ostream.write('%s: %s\n'
+                          % (name, getattr(self, name)))
+        names.remove('solver')
         for name in names:
-            out += "  %s: %s\n" % (name, attrs[name])
-        return out
+            ostream.write('%s: %s\n'
+                          % (name, getattr(self, name)))
+        tmp = StringIO()
+        self.solver.pprint(ostream=tmp)
+        ostream.write("solver:")
+        for line in tmp.getvalue().splitlines():
+            ostream.write("\n  "+line)
 
-class SPSolver(PySPConfiguredObject):
+    def __str__(self):
+        tmp = StringIO()
+        self.pprint(ostream=tmp)
+        return tmp.getvalue()
 
-    def __init__(self, *args, **kwds):
-        super(SPSolver, self).__init__(*args, **kwds)
-        self._name = None
-        self._solver_options = pyutilib.misc.Options()
+class SPSolver(object):
+
+    @property
+    def set_options_to_default(self):
+        """Reset all options on the solver object to their
+        default value"""
+        raise NotImplementedError                  #pragma:nocover
 
     @property
     def options(self):
-        return self._solver_options
+        """Access the solver options"""
+        raise NotImplementedError                  #pragma:nocover
+
+    def _solve_impl(self, *args, **kwds):
+        raise NotImplementedError                  #pragma:nocover
 
     @property
     def name(self):
-        return self._name
+        """The registered solver name"""
+        raise NotImplementedError                  #pragma:nocover
 
     def solve(self, sp, *args, **kwds):
+        """
+        Solve a stochastic program.
+
+        Args:
+            sp: The stochastic program to solve.
+            reference_model: A pyomo model with at least the
+                set of non-anticipative variable objects
+                that were declared on th e scenario tree of
+                the stochastic program. If this keyword is
+                changed from its default value of None, the
+                non leaf-stage variable values in the
+                solution will be stored into the variable
+                objects on the reference model. Otherwise,
+                the results object that is returned will
+                contain a solution dictionary called 'xhat'
+                that stores the solution nested by tree node
+                name.
+            options: Ephemeral solver options that will
+                temporarily overwrite any matching options
+                currently set for the solver.
+            *args: Passed to the derived solver class
+                (see the _solve_impl method).
+            **kwds: Passed to the derived solver class
+                (see the _solve_impl method).
+
+        Returns: A results object with information about the solution.
+        """
 
         start = time.time()
 
         reference_model = kwds.pop('reference_model', None)
+
         tmp_options = kwds.pop('options', None)
         orig_options = self.options
         if tmp_options is not None:
-            self._solver_options = pyutilib.misc.Options()
-            for key, val in orig_options.items():
-                self._solver_options[key] = val
+            self.set_options_to_default()
+            for opt in orig_options.user_values():
+                self.options[opt.name()] = opt.value(accessValue=False)
             for key, val in tmp_options.items():
-                self._solver_options[key] = val
+                self.options[key] = val
+
+        # reset the _userAccessed flag on all options
+        # so we can verify that all set options are used
+        # each time
+        for key in self.options:
+            self.options.get(key)._userAccessed = False
 
         try:
-
             if isinstance(sp, EmbeddedSP):
                 num_scenarios = "<unknown>"
                 num_stages = len(sp.time_stages)
@@ -130,37 +211,47 @@ class SPSolver(PySPConfiguredObject):
             results = self._solve_impl(sp, *args, **kwds)
 
             stop = time.time()
-            results.pysp_time = stop - start
-            results.solver_name = self.name
-        finally:
-            if tmp_options is not None:
-                self._solver_options = orig_options
+            results.solver.pysp_time = stop - start
+            results.solver.name = self.name
+            if (results.status is None) or \
+               isinstance(results.status, UndefinedData):
+                results.status = results.solver.termination_condition
+            results.xhat_loaded = False
+            if (reference_model is not None):
+                # TODO: node/stage costs
+                if results.xhat is not None:
+                    xhat = results.xhat
+                    for tree_obj_name in xhat:
+                        tree_obj_solution = xhat[tree_obj_name]
+                        for id_ in tree_obj_solution:
+                            var = ComponentUID(id_).\
+                                  find_component(reference_model)
+                            if not var.is_expression():
+                                var.value = tree_obj_solution[id_]
+                                var.stale = False
+                    results.xhat_loaded = True
+                del results.xhat
 
-        if reference_model is not None:
-            xhat = results.xhat
-            for tree_obj_name in xhat:
-                tree_obj_solution = xhat[tree_obj_name]
-                for id_ in tree_obj_solution:
-                    var = ComponentUID(id_).\
-                          find_component(reference_model)
-                    if not var.is_expression():
-                        var.value = tree_obj_solution[id_]
-                        var.stale = False
-            del results.xhat
-            # TODO: node/stage costs
+        finally:
+
+            # warn about ignored options
+            self.options.check_usage(error=False)
+
+            # reset options (if temporary ones were provided)
+            if tmp_options is not None:
+                current_options = self.options
+                self.set_options_to_default()
+                for opt in orig_options.user_values():
+                    current = current_options.get(opt.name())
+                    self.options[opt.name()] = \
+                        opt.value(accessValue=current._userAccessed)
 
         return results
 
-    def _solve_impl(self, *args, **kwds):
-        raise NotImplementedError
-
-def SPSolverFactory(solver_name, **kwds):
+def SPSolverFactory(solver_name, *args, **kwds):
     if solver_name in SPSolverFactory._registered_solvers:
         type_ = SPSolverFactory._registered_solvers[solver_name]
-        config = type_.register_options()
-        for key, val in kwds.items():
-            config[key] = val
-        return type_(config)
+        return type_(*args, **kwds)
     else:
         raise ValueError(
             "No SPSolver object has been registered with name: %s"
