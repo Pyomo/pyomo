@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -23,9 +23,10 @@ from pyomo.pysp.util.config import (PySPConfigValue,
 from pyomo.pysp.util.misc import (parse_command_line,
                                   launch_command,
                                   sort_extensions_by_precedence)
+from pyomo.pysp.scenariotree.manager import \
+    ScenarioTreeManagerFactory
 from pyomo.pysp.scenariotree.manager_solver import \
-    (ScenarioTreeManagerSolverClientSerial,
-     ScenarioTreeManagerSolverClientPyro)
+    ScenarioTreeManagerSolverFactory
 from pyomo.pysp.solutionioextensions import \
     (IPySPSolutionSaverExtension,
      IPySPSolutionLoaderExtension)
@@ -35,9 +36,9 @@ from pyomo.pysp.solutionioextensions import \
 # solve, free all variables that weren't already fixed, and
 # return the extensive form objective value
 #
-def evaluate_current_node_solution(manager, **solve_kwds):
+def evaluate_current_node_solution(sp, sp_solver, **solve_kwds):
 
-    scenario_tree = manager.scenario_tree
+    scenario_tree = sp.scenario_tree
 
     # Save the current fixed state and fix queue, then clear the fix queue
     fixed = {}
@@ -67,9 +68,9 @@ def evaluate_current_node_solution(manager, **solve_kwds):
 
     # Push fixed variable statuses on instances (or
     # transmit to the phsolverservers)
-    manager.push_fix_queue_to_instances()
+    sp.push_fix_queue_to_instances()
 
-    failures = manager.solve_subproblems(**solve_kwds)
+    failures = sp_solver.solve_subproblems(**solve_kwds)
 
     # Free all non-anticipative variables
     for stage in scenario_tree._stages[:-1]:
@@ -83,7 +84,7 @@ def evaluate_current_node_solution(manager, **solve_kwds):
         for variable_id in node_fixed:
             tree_node.fix_variable(variable_id, node_fixed[variable_id])
 
-    manager.push_fix_queue_to_instances()
+    sp.push_fix_queue_to_instances()
 
     # Restore the fix_queue
     for tree_node in scenario_tree.nodes:
@@ -135,8 +136,9 @@ def run_evaluate_xhat_register_options(options=None):
             ),
             doc=None,
             visibility=0))
-    ScenarioTreeManagerSolverClientSerial.register_options(options)
-    ScenarioTreeManagerSolverClientPyro.register_options(options)
+    ScenarioTreeManagerFactory.register_options(options)
+    ScenarioTreeManagerSolverFactory.register_options(options,
+                                                      options_prefix="subproblem_")
 
     return options
 
@@ -155,19 +157,12 @@ def run_evaluate_xhat(options,
     solution_loaders = sort_extensions_by_precedence(solution_loaders)
     solution_savers = sort_extensions_by_precedence(solution_savers)
 
-    manager_class = None
-    if options.scenario_tree_manager == 'serial':
-        manager_class = ScenarioTreeManagerSolverClientSerial
-    elif options.scenario_tree_manager == 'pyro':
-        manager_class = ScenarioTreeManagerSolverClientPyro
-
-    with manager_class(options) \
-         as manager:
-        manager.initialize()
+    with ScenarioTreeManagerFactory(options) as sp:
+        sp.initialize()
 
         loaded = False
         for plugin in solution_loaders:
-            ret = plugin.load(manager)
+            ret = plugin.load(sp)
             if not ret:
                 print("WARNING: Loader extension %s call did not return True. "
                       "This might indicate failure to load data." % (plugin))
@@ -181,18 +176,19 @@ def run_evaluate_xhat(options,
                 "To disable this check use the disable_solution_loader_check "
                 "option flag.")
 
-        evaluate_current_node_solution(manager)
+        with ScenarioTreeManagerSolverFactory(sp, options, options_prefix="subproblem_") as sp_solver:
+            evaluate_current_node_solution(sp, sp_solver)
 
         objective = sum(scenario.probability * \
                         scenario.get_current_objective()
-                        for scenario in manager.scenario_tree.scenarios)
-        manager.scenario_tree.snapshotSolutionFromScenarios()
+                        for scenario in sp.scenario_tree.scenarios)
+        sp.scenario_tree.snapshotSolutionFromScenarios()
 
         print("")
         print("***********************************************"
               "************************************************")
         print(">>>THE EXPECTED SUM OF THE STAGE COST VARIABLES="
-              +str(manager.scenario_tree.findRootNode().\
+              +str(sp.scenario_tree.findRootNode().\
                    computeExpectedNodeCost())+"<<<")
         print("***********************************************"
               "************************************************")
@@ -200,27 +196,27 @@ def run_evaluate_xhat(options,
         # handle output of solution from the scenario tree.
         print("")
         print("Extensive form solution:")
-        manager.scenario_tree.pprintSolution()
+        sp.scenario_tree.pprintSolution()
         print("")
         print("Extensive form costs:")
-        manager.scenario_tree.pprintCosts()
+        sp.scenario_tree.pprintCosts()
 
         if options.output_scenario_tree_solution:
             print("Final solution (scenario tree format):")
-            manager.scenario_tree.pprintSolution()
+            sp.scenario_tree.pprintSolution()
 
         if options.output_scenario_costs is not None:
             if options.output_scenario_costs.endswith('.json'):
                 import json
                 result = {}
-                for scenario in manager.scenario_tree.scenarios:
+                for scenario in sp.scenario_tree.scenarios:
                     result[str(scenario.name)] = scenario._cost
                 with open(options.output_scenario_costs, 'w') as f:
                     json.dump(result, f, indent=2, sort_keys=True)
             elif options.output_scenario_costs.endswith('.yaml'):
                 import yaml
                 result = {}
-                for scenario in manager.scenario_tree.scenarios:
+                for scenario in sp.scenario_tree.scenarios:
                     result[str(scenario.name)] = scenario._cost
                 with open(options.output_scenario_costs, 'w') as f:
                     yaml.dump(result, f)
@@ -229,11 +225,11 @@ def run_evaluate_xhat(options,
                     print("Unrecognized file extension. Using CSV format "
                           "to store scenario costs")
                 with open(options.output_scenario_costs, 'w') as f:
-                    for scenario in manager.scenario_tree.scenarios:
+                    for scenario in sp.scenario_tree.scenarios:
                         f.write("%s,%r\n" % (scenario.name, scenario._cost))
 
         for plugin in solution_savers:
-            if not plugin.save(manager):
+            if not plugin.save(sp):
                 print("WARNING: Saver extension %s call did not return True. "
                       "This might indicate failure to save data." % (plugin))
 
