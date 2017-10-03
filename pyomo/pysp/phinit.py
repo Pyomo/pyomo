@@ -1131,8 +1131,8 @@ def run_ph(options, ph):
         ExtensiveFormAlgorithm.update_options_from_argparse(
             ef_options,
             options,
-            prefix="ef_",
-            srcprefix="",
+            options_prefix="ef_",
+            source_options_prefix="",
             skip_userset=True,
             error_if_missing=False)
 
