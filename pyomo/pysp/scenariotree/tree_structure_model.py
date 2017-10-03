@@ -234,7 +234,12 @@ def ScenarioTreeModelFromNetworkX(
                             "in which all edges point away from the "
                             "root (see networkx.is_arborescence)")
 
-    root = [u for u,d in tree.in_degree().items() if d == 0]
+    in_degree_items = tree.in_degree()
+    # Prior to networkx ~2.0, in_degree() returned a dictionary.
+    # Now it is a view on items, so only call .items() for the old case
+    if hasattr(in_degree_items, 'items'):
+        in_degree_items = in_degree_items.items()
+    root = [u for u,d in in_degree_items if d == 0]
     assert len(root) == 1
     root = root[0]
     num_stages = networkx.eccentricity(tree, v=root) + 1
@@ -302,7 +307,12 @@ def ScenarioTreeModelFromNetworkX(
             m.ConditionalProbability[node_name] = 1.0
         else:
             assert u in pred
-            edge = tree.edge[pred[u]][u]
+            # prior to networkx ~2.0, we used a .edge attribute on DiGraph,
+            # which no longer exists.
+            if hasattr(tree, 'edge'):
+                edge = tree.edge[pred[u]][u]
+            else:
+                edge = tree.edges[pred[u],u]
             probability = None
             if edge_probability_attribute is not None:
                 if edge_probability_attribute not in edge:

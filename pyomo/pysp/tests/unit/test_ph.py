@@ -1975,6 +1975,7 @@ class TestPHParallel(unittest.TestCase):
             filter=filter_pyro,
             tolerance=_diff_tolerance_relaxed)
 
+    @unittest.category('fragile')
     def test_farmer_linearized_ipopt_with_phpyro(self):
         if not solver['ipopt','nl']:
             self.skipTest("The 'ipopt' executable is not available")

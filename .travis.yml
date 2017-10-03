@@ -39,6 +39,7 @@ matrix:
 #
 install:
 - sudo apt-get update --quiet
+- sudo apt-get install gfortran
 #
 # Setup miniconda and activate the testenv environment
 #
@@ -57,7 +58,7 @@ install:
 # Install supporting packages
 #
 - conda install -q -y --channel conda-forge setuptools
-- if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then
+- if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then
      pip install --quiet ordereddict;
   fi
 - pip install --quiet coverage
@@ -69,16 +70,28 @@ install:
   fi
 - pip install --quiet xlrd
 - pip install --quiet openpyxl
+- pip install --quiet sphinx_rtd_theme
+
+- if ["${TRAVIS_PYTHON_VERSION}" != "2.6" ]; then
+     pip install scipy;
+  fi
+
+# Install GAMS
+- wget https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/linux/linux_x64_64_sfx.exe
+- chmod u+x linux_x64_64_sfx.exe
+- ./linux_x64_64_sfx.exe > /dev/null
+# Only install API if EXTRAS is not being installed, since
+# those tests segfault on travis for an unknown reason.
+- if [ -z "${EXTRAS}" ]; then
+     bash ./.travis_install_gams_api.sh;
+  fi
+- PATH=${PATH}:$PWD/gams24.8_linux_x64_64_sfx;
 #
 - if [ -n "${EXTRAS}" ]; then conda install -q -y --channel conda-forge pyomo.extras; fi
-- if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-     if [ -n "${EXTRAS}" ]; then
-        pip install scipy;
-     fi
-  fi
+
 - conda install -q -y --channel conda-forge glpk
 - glpsol -v
-- conda install -q -y --channel cachemeorg ipopt_bin
+- conda install -q -y --channel conda-forge ipopt
 - ipopt -v
 #
 # Clone but don't install pyomo-model-libraries
@@ -104,6 +117,9 @@ script:
 - SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
 - echo "import coverage; coverage.process_startup()" > ${SITE_PACKAGES}/run_coverage_at_startup.pth
 - test.pyomo -v --cat=$CATEGORY --cov
+
+# Run documentation tests
+- nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
 #
 #
 #

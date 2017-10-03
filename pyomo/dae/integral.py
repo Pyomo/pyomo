@@ -8,13 +8,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ('Integral', )
-
 from pyomo.core.base.component import register_component
 from pyomo.dae.contset import ContinuousSet
 from pyomo.dae.diffvar import DAE_Error
 from pyomo.core.base.expression import (Expression,
-_GeneralExpressionData, SimpleExpression)
+                                        _GeneralExpressionData,
+                                        SimpleExpression)
+
+__all__ = ('Integral', )
+
 
 def create_access_function(var):
     """
@@ -25,7 +27,8 @@ def create_access_function(var):
         return var[args]
     return _fun
 
-def create_partial_expression(scheme,expr,ind,loc):
+
+def create_partial_expression(scheme, expr, ind, loc):
     """
     This method returns a function which applies a discretization scheme
     to an expression along a particular indexind set. This is admittedly a
@@ -34,11 +37,34 @@ def create_partial_expression(scheme,expr,ind,loc):
     the function to be expanded over any other indexing sets.
     """
     def _fun(*args):
-        return scheme(lambda i: expr(*(args[0:loc]+(i,)+args[loc+1:])),ind)
-    return lambda *args:_fun(*args)(args[loc])
+        return scheme(lambda i:
+                      expr(*(args[0:loc]+(i,) + args[loc + 1:])), ind)
+    return lambda *args: _fun(*args)(args[loc])
 
 
 class Integral(Expression):
+    """
+    Represents an integral over a continuous domain
+
+    The :py:class:`Integral<pyomo.dae.Integral>` component can be used to
+    represent an integral taken over the entire domain of a
+    :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>`. Once every
+    :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` in a model has been
+    discretized, any integrals in the model will be converted to algebraic
+    equations using the trapezoid rule. Future development will include more
+    sophisticated numerical integration methods.
+
+    Parameters
+    ----------
+    *args
+        Every indexing set needed to evaluate the integral expression
+
+    wrt : :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>`
+        The continuous domain over which the integral is being taken
+
+    rule : function
+        Function returning the expression being integrated
+    """
 
     def __new__(cls, *args, **kwds):
         if cls != Integral:
@@ -54,75 +80,84 @@ class Integral(Expression):
 
         if "wrt" in kwds and "withrespectto" in kwds:
             raise TypeError(
-                "Cannot specify both 'wrt' and 'withrespectto keywords "
-                "in a DerivativeVar")
+                "Cannot specify both 'wrt' and 'withrespectto keywords")
 
-        wrt = kwds.pop('wrt',None)
-        wrt = kwds.pop('withrespectto',wrt)
+        wrt = kwds.pop('wrt', None)
+        wrt = kwds.pop('withrespectto', wrt)
 
-        if wrt == None:
+        if wrt is None:
             # Check to be sure Integral is indexed by single
             # ContinuousSet and take Integral with respect to that
             # ContinuousSet
             if len(args) != 1:
                 raise ValueError(
-                    "The Integral %s is indexed by multiple ContinuousSets. The desired "
-                    "ContinuousSet must be specified using the keyword argument 'wrt'" % (self.name))
+                    "The Integral %s is indexed by multiple ContinuousSets. "
+                    "The desired ContinuousSet must be specified using the "
+                    "keyword argument 'wrt'" % self.name)
             wrt = args[0]
 
         if type(wrt) is not ContinuousSet:
             raise ValueError(
-                "Cannot take the integral with respect to '%s'. Must take an integral "\
-                "with respect to a ContinuousSet" %(wrt))
+                "Cannot take the integral with respect to '%s'. Must take an "
+                "integral with respect to a ContinuousSet" % wrt)
         self._wrt = wrt
 
         loc = None
-        for i,s in enumerate(args):
+        for i, s in enumerate(args):
             if s is wrt:
                 loc = i
 
         # Check that the wrt ContinuousSet is in the argument list
         if loc is None:
             raise ValueError(
-                "The ContinuousSet '%s' was not found in the indexing sets of the "
-                "Integral '%s'" %(wrt.name,self.name))
+                "The ContinuousSet '%s' was not found in the indexing sets "
+                "of the Integral '%s'" % (wrt.name, self.name))
         self.loc = loc
 
         # Remove the index that the integral is being expanded over
-        arg = args[0:loc]+args[loc+1:]
+        arg = args[0:loc] + args[loc + 1:]
 
         # Check that if bounds are given
-        bounds = kwds.pop('bounds',None)
+        bounds = kwds.pop('bounds', None)
         if bounds is not None:
             raise DAE_Error(
-                "Setting bounds on integrals has not yet been implemented. Integrals may only be "\
-                "taken over an entire ContinuousSet")
+                "Setting bounds on integrals has not yet been implemented. "
+                "Integrals may only be taken over an entire ContinuousSet")
 
         # Create integral expression and pass to the expression initialization
         intexp = kwds.pop('expr', None)
         intexp = kwds.pop('rule', intexp)
         if intexp is None:
             raise ValueError(
-                "Must specify an integral expression for Integral '%s'" %(self))
+                "Must specify an integral expression for Integral '%s'" % self)
 
-        def _trap_rule(m,*a):
+        def _trap_rule(m, *a):
             ds = sorted(m.find_component(wrt.local_name))
-            return sum(0.5*(ds[i+1]-ds[i])*
-                      (intexp(m,*(a[0:loc]+(ds[i+1],)+a[loc:]))+intexp(m,*(a[0:loc]+(ds[i],)+a[loc:])))
-                      for i in range(len(ds)-1))
+            return sum(0.5 * (ds[i + 1] - ds[i]) *
+                       (intexp(m, *(a[0:loc] + (ds[i + 1],)+a[loc:])) +
+                       intexp(m, *(a[0:loc] + (ds[i],) + a[loc:])))
+                       for i in range(len(ds) - 1))
 
         kwds['rule'] = _trap_rule    
         kwds.setdefault('ctype', Integral)
-        Expression.__init__(self,*arg,**kwds)
+        Expression.__init__(self, *arg, **kwds)
 
     def get_differentialset(self):
+        """ Return the :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>`
+        the integral is being taken over
+        """
         return self._wrt
 
+
 class SimpleIntegral(_GeneralExpressionData, Integral):
+    """
+        An integral that will have no indexing sets after applying a numerical
+        integration transformation
+    """
 
     def __init__(self, *args, **kwds):
         _GeneralExpressionData.__init__(self, None, component=self)
-        Integral.__init__(self,*args,**kwds)
+        Integral.__init__(self, *args, **kwds)
 
     def is_fully_discretized(self):
         """
@@ -144,10 +179,9 @@ class SimpleIntegral(_GeneralExpressionData, Integral):
         if self._constructed:
             return _GeneralExpressionData.expr.fget(self)
         raise ValueError(
-            "Accessing the expression of integral '%s' "
-            "before the Integral has been constructed (there "
-            "is currently no value to return)."
-            % (self.name))
+            "Accessing the expression of integral '%s' before the Integral "
+            "has been constructed (there is currently no value to return)."
+            % self.name)
 
     def set_value(self, expr):
         """Set the expression on this expression."""
@@ -157,7 +191,7 @@ class SimpleIntegral(_GeneralExpressionData, Integral):
             "Setting the expression of integral '%s' "
             "before the Integral has been constructed (there "
             "is currently no object to set)."
-            % (self.name))
+            % self.name)
 
     def is_constant(self):
         """A boolean indicating whether this expression is constant."""
@@ -167,7 +201,7 @@ class SimpleIntegral(_GeneralExpressionData, Integral):
             "Accessing the is_constant flag of integral '%s' "
             "before the Integral has been constructed (there "
             "is currently no value to return)."
-            % (self.name))
+            % self.name)
 
     def is_fixed(self):
         """A boolean indicating whether this expression is fixed."""
@@ -177,7 +211,7 @@ class SimpleIntegral(_GeneralExpressionData, Integral):
             "Accessing the is_fixed flag of integral '%s' "
             "before the Integral has been constructed (there "
             "is currently no value to return)."
-            % (self.name))
+            % self.name)
 
     #
     # Like the SimpleExpression class,
@@ -196,11 +230,16 @@ class SimpleIntegral(_GeneralExpressionData, Integral):
             raise ValueError(
                 "Expression.Skip can not be assigned "
                 "to an Expression that is not indexed: %s"
-                % (self.name))
+                % self.name)
         self.set_value(expr)
         return self
 
+
 class IndexedIntegral(Integral):
+    """
+    An integral that will be indexed after applying a numerical integration
+    transformation
+    """
 
     def is_fully_discretized(self):
         """
@@ -213,7 +252,7 @@ class IndexedIntegral(Integral):
 
         setlist = []
         if self.dim() == 1:
-            setlist =[self.index_set(),]
+            setlist = [self.index_set(), ]
         else:
             setlist = self._implicit_subsets
 
@@ -222,6 +261,7 @@ class IndexedIntegral(Integral):
                 if 'scheme' not in i.get_discretization_info():
                     return False
         return True
+
     #
     # Leaving this method for backward compatibility reasons
     # Note: It allows adding members outside of self._index.
