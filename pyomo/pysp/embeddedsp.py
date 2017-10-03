@@ -44,9 +44,9 @@ from pyomo.pysp.scenariotree.manager import \
     InvocationType
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
-from pyomo.pysp.scenariotree.manager_solver import \
-    (ScenarioTreeManagerSolverClientSerial,
-     ScenarioTreeManagerSolverClientPyro)
+from pyomo.pysp.scenariotree.manager import \
+    (ScenarioTreeManagerClientSerial,
+     ScenarioTreeManagerClientPyro)
 
 from six.moves import xrange, zip
 
@@ -829,10 +829,10 @@ class EmbeddedSP(object):
             model=self.reference_model,
             scenario_tree=scenario_tree_model)
         options = \
-            ScenarioTreeManagerSolverClientPyro.register_options()
+            ScenarioTreeManagerClientPyro.register_options()
         for key in kwds:
             options[key] = kwds[key]
-        manager = ScenarioTreeManagerSolverClientPyro(
+        manager = ScenarioTreeManagerClientPyro(
             options,
             factory=factory)
         try:
@@ -867,11 +867,11 @@ class EmbeddedSP(object):
             model=model_callback,
             scenario_tree=scenario_tree_model)
         options = \
-            ScenarioTreeManagerSolverClientPyro.register_options()
+            ScenarioTreeManagerClientSerial.register_options()
         for key in kwds:
             options[key] = kwds[key]
-        manager = ScenarioTreeManagerSolverClientSerial(options,
-                                                        factory=factory)
+        manager = ScenarioTreeManagerClientSerial(options,
+                                                  factory=factory)
         manager.initialize()
         manager.reference_model = self.reference_model.clone()
         return manager
