@@ -8,6 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+# TODO: have smps convert create symbols files for second stage
+# TODO: parse second-stage solution and load into scenario tree workers
+# TODO: objective, cost, stage_costs
+# TODO: make output_scenario_tree_solution work
+# TODO: results object statuses
+
 # TODO Fix the seed defaults. The I think the default
 #      behavior should be to provide no needs and enable
 #      AUTO_SEED. There are so many seeds to provide that
@@ -20,11 +26,16 @@
 import os
 import sys
 import time
+import traceback
+import logging
 
 import pyutilib.subprocess
 import pyutilib.services
 
 from pyomo.core import maximize
+from pyomo.opt import (TerminationCondition,
+                       SolverStatus,
+                       SolutionStatus)
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
@@ -38,9 +49,8 @@ from pyomo.pysp.util.config import (PySPConfigValue,
                                     _domain_must_be_str)
 from pyomo.pysp.util.misc import (parse_command_line,
                                   launch_command)
-from pyomo.pysp.scenariotree.manager_solver import \
-    (ScenarioTreeManagerSolver,
-     ScenarioTreeManagerFactory)
+from pyomo.pysp.scenariotree.manager import \
+    ScenarioTreeManagerFactory
 import pyomo.pysp.convert.smps
 from pyomo.pysp.embeddedsp import EmbeddedSP
 from pyomo.pysp.solvers.spsolver import (SPSolverResults,
@@ -48,8 +58,29 @@ from pyomo.pysp.solvers.spsolver import (SPSolverResults,
 from pyomo.pysp.solvers.spsolvershellcommand import \
     SPSolverShellCommand
 
+logger = logging.getLogger('pyomo.pysp')
 
 _sd_group_label = "SD Options"
+
+# maps the sd status message to tuples of the form
+# (SolutionStatus, SolverStatus, TerminationCondition)
+# feel free to modify if you have opinions one these
+_sd_status_map = {}
+_sd_status_map["COMPROMISE SOLUTION"] = (SolutionStatus.optimal,
+                                         SolverStatus.ok,
+                                         TerminationCondition.optimal)
+_sd_status_map["MEAN SOLUTION"] = (SolutionStatus.optimal,
+                                   SolverStatus.ok,
+                                   TerminationCondition.optimal)
+_sd_status_map["REPLICATION SOLUTION"] = (SolutionStatus.optimal,
+                                          SolverStatus.ok,
+                                          TerminationCondition.optimal)
+_sd_status_map["NO  SOLUTION"] = (SolutionStatus.unknown,
+                                  SolverStatus.warning,
+                                  TerminationCondition.noSolution)
+_sd_status_map["???"] = (SolutionStatus.unknown,
+                         SolverStatus.error,
+                         TerminationCondition.unknown)
 
 sd_advanced_config_section = \
 """
@@ -194,7 +225,7 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
     def _declare_options(cls, options=None):
         if options is None:
             options = PySPConfigBlock()
-        safe_register_unique_option(
+        safe_declare_unique_option(
             options,
             "stopping_rule_tolerance",
             PySPConfigValue(
@@ -208,7 +239,7 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
                 doc=None,
                 visibility=0),
             ap_group=_sd_group_label)
-        safe_register_unique_option(
+        safe_declare_unique_option(
             options,
             "single_replication",
             PySPConfigValue(
@@ -221,7 +252,7 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
                 doc=None,
                 visibility=0),
             ap_group=_sd_group_label)
-        safe_register_unique_option(
+        safe_declare_unique_option(
             options,
             "print_cycle",
             PySPConfigValue(
@@ -234,7 +265,7 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
                 doc=None,
                 visibility=0),
             ap_group=_sd_group_label)
-        safe_register_unique_option(
+        safe_declare_unique_option(
             options,
             "eval_run_flag",
             PySPConfigValue(
@@ -251,7 +282,7 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
                 doc=None,
                 visibility=0),
             ap_group=_sd_group_label)
-        safe_register_unique_option(
+        safe_declare_unique_option(
             options,
             "eval_flag",
             PySPConfigValue(
@@ -264,7 +295,7 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
                 doc=None,
                 visibility=0),
             ap_group=_sd_group_label)
-        safe_register_unique_option(
+        safe_declare_unique_option(
             options,
             "eval_seed1",
             PySPConfigValue(
@@ -278,7 +309,7 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
                 doc=None,
                 visibility=0),
             ap_group=_sd_group_label)
-        safe_register_unique_option(
+        safe_declare_unique_option(
             options,
             "eval_error",
             PySPConfigValue(
@@ -291,7 +322,7 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
                 doc=None,
                 visibility=0),
             ap_group=_sd_group_label)
-        safe_register_unique_option(
+        safe_declare_unique_option(
             options,
             "mean_dev",
             PySPConfigValue(
@@ -304,7 +335,7 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
                 doc=None,
                 visibility=0),
             ap_group=_sd_group_label)
-        safe_register_unique_option(
+        safe_declare_unique_option(
             options,
             "min_iterations",
             PySPConfigValue(
@@ -318,7 +349,7 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
                 doc=None,
                 visibility=0),
             ap_group=_sd_group_label)
-        safe_register_unique_option(
+        safe_declare_unique_option(
             options,
             "max_iterations",
             PySPConfigValue(
@@ -331,19 +362,47 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
                 doc=None,
                 visibility=0),
             ap_group=_sd_group_label)
+        safe_declare_common_option(options,
+                                   "verbose",
+                                   ap_group=_sd_group_label)
 
         return options
 
-    def __init__(self, *args, **kwds):
-        super(SDSolver, self).__init__(*args, **kwds)
-        self._name = "sd"
+    def __init__(self):
+        super(SDSolver, self).__init__(self.register_options())
+        self.set_options_to_default()
         self._executable = "sd"
+
+    def set_options_to_default(self):
+        self._options = self.register_options()
+
+    @property
+    def options(self):
+        return self._options
+
+    @property
+    def name(self):
+        return "sd"
 
     def _solve_impl(self,
                     sp,
                     output_solver_log=False,
-                    verbose=False,
                     **kwds):
+        """
+        Solve a stochastic program with the SD solver.
+
+        See the 'solve' method on the base class for
+        additional keyword documentation.
+
+        Args:
+            sp: The stochastic program to solve.
+            output_solver_log (bool): Stream the solver
+                output during the solve.
+            **kwds: Passed to the SMPS file writer as I/O
+              options (e.g., symbolic_solver_labels=True).
+
+        Returns: A results object with information about the solution.
+        """
 
         if sp.objective_sense == maximize:
             raise ValueError("SD solver does not yet handle "
@@ -354,19 +413,22 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
         #
 
         working_directory = self._create_tempdir("workdir")
-        config_filename = self._files["configfile"] = \
+        config_filename = self._files["config"] = \
                           os.path.join(working_directory,
                                        "config.sd")
+        self._add_tempfile("config", config_filename)
         sdinput_directory = os.path.join(working_directory,
                                          "sdinput",
                                          "pysp_model")
+        self._add_tempfile("stdinput", sdinput_directory)
         sdoutput_directory = os.path.join(working_directory,
                                           "sdoutput",
                                           "pysp_model")
-        logfile = self._files["logfile"] = \
-                  os.path.join(working_directory, "sd.log")
+        self._add_tempfile("sdoutput", sdoutput_directory)
+        logfile = os.path.join(working_directory, "sd.log")
+        self._add_tempfile("log", logfile)
 
-        if verbose:
+        if self.get_option("verbose"):
             print("Writing solver files in directory: %s"
                   % (working_directory))
 
@@ -383,6 +445,7 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
             solution_filename = os.path.join(
                 sdoutput_directory,
                 "pysp_model.detailed_soln.out")
+        self._add_tempfile("solution", solution_filename)
 
         #
         # Create the SD input files
@@ -412,8 +475,8 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
         #
 
         _cmd_string = self.executable+" < pysp_model"
-        if verbose:
-            print("Launching DDSIP solver with command: %s"
+        if self.get_option("verbose"):
+            print("Launching SD solver with command: %s"
                   % (_cmd_string))
 
         start = time.time()
@@ -430,15 +493,20 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
         # Parse the SD solution
         #
 
+        if self.get_option("verbose"):
+            print("Reading SD solution from file: %s"
+                  % (solution_filename))
+
         xhat, results = self._read_solution(input_files["symbols"],
                                             solution_filename)
+        results.solver.time = stop - start
 
-        if isinstance(sp, EmbeddedSP):
-            results.xhat = {sp.time_stages[0]: xhat}
-        else:
-            results.xhat = {sp.scenario_tree.findRootNode().name: xhat}
-
-        results.solver_time = stop - start
+        results.xhat = None
+        if xhat is not None:
+            if isinstance(sp, EmbeddedSP):
+                results.xhat = {sp.time_stages[0]: xhat}
+            else:
+                results.xhat = {sp.scenario_tree.findRootNode().name: xhat}
 
         return results
 
@@ -487,99 +555,118 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
                 symbol_map[lp_symbol] = scenario_tree_id
 
         results = SPSolverResults()
+        results.status = None
+        results.solver.status = None
+        results.solver.termination_condition = None
+        results.solver.message = None
         xhat = {}
-        with open(solution_filename, 'r') as f:
-            line = f.readline()
-            assert line.startswith("Problem:")
-            assert line.split()[1].strip() == "pysp_model"
-            line = f.readline()
-            assert line.startswith("First Stage Rows:")
-            line = f.readline()
-            assert line.startswith("First Stage Columns:")
-            line = f.readline()
-            assert line.startswith("First Stage Non-zeros:")
-            line = f.readline()
-            assert line.startswith("Replication No.") or \
-                line.startswith("Number of replications:")
-            line = f.readline()
-            assert line.startswith("Status:")
-            results.solver_status = line.split(":")[1].strip()
-
-            #
-            # Objective and Bound
-            #
-
-            line = f.readline()
-            assert line.startswith("Total Objective Function Upper Bound:")
-            line = line.split(':')
-            if line[1].strip() == '':
-                pass
-            else:
-                assert len(line) == 4
-                line = line[1]
-                if "half-width" in line:
-                    # we are given confidence intervals on the objective
-                    line = line.split(',')
-                    assert len(line) == 4
-                    results.objective = float(line[0])
-                    assert line[1].startswith('[')
-                    assert line[2].endswith(']')
-                    results.objective_interval = (float(line[1][1:]),
-                                          float(line[2][:-1]))
-                else:
-                    results.objective = float(line[1])
-            line = f.readline()
-            assert line.startswith("Total Objective Function Lower Bound:")
-            line = line.split(':')
-            if line[1].strip() == '':
-                pass
-            else:
-                assert len(line) == 4
-                line = line[1]
-                if "half-width" in line:
-                    # we are given confidence intervals on the bound
-                    line = line.split(',')
-                    assert len(line) == 4
-                    results.bound = float(line[0])
-                    assert line[1].startswith('[')
-                    assert line[2].endswith(']')
-                    results.bound_interval = (float(line[1][1:]),
-                                      float(line[2][:-1]))
-                else:
-                    results.bound = float(line[1])
-
-            #
-            # Xhat
-            #
-
-            line = f.readline()
-            assert line.strip() == ''
-            line = f.readline()
-            assert line.startswith('First Stage Solutions:')
-            line = f.readline()
-            assert line.startswith('   No.   Row name   Activity      Lower bound   Upper bound   Dual          Dual STDEV')
-            line = f.readline()
-            assert line.startswith('------ ------------ ------------- ------------- ------------- ------------- -------------')
-
-            xhat_start_line = '   No. Column name  Activity      Lower bound   Upper bound   Reduced Cost  RC STDEV'
-            line = f.readline()
-            while not line.startswith(xhat_start_line):
+        try:
+            with open(solution_filename, 'r') as f:
                 line = f.readline()
-            line = f.readline()
-            assert line.startswith('------ ------------ ------------- ------------- ------------- ------------- -------------')
-            line = f.readline().strip().split()
-            while line:
-                varlabel, varvalue = line[1:3]
-                varlabel = varlabel.strip()
-                varvalue = float(varvalue)
-                xhat[symbol_map[varlabel]] = varvalue
+                assert line.startswith("Problem:")
+                assert line.split()[1].strip() == "pysp_model"
+                line = f.readline()
+                assert line.startswith("First Stage Rows:")
+                line = f.readline()
+                assert line.startswith("First Stage Columns:")
+                line = f.readline()
+                assert line.startswith("First Stage Non-zeros:")
+                line = f.readline()
+                assert line.startswith("Replication No.") or \
+                    line.startswith("Number of replications:")
+                line = f.readline()
+                assert line.startswith("Status:")
+                results.solver.message = line.split(":")[1].strip()
+                (results.status,
+                 results.solver.status,
+                 results.solver.termination_condition) = \
+                    _sd_status_map.get(results.solver.message,
+                                       (SolutionStatus.unknown,
+                                        SolverStatus.unknown,
+                                        TerminationCondition.unknown))
+
+                #
+                # Objective and Bound
+                #
+
+                line = f.readline()
+                assert line.startswith("Total Objective Function Upper Bound:")
+                line = line.split(':')
+                if line[1].strip() == '':
+                    pass
+                else:
+                    assert len(line) == 4
+                    line = line[1]
+                    if "half-width" in line:
+                        # we are given confidence intervals on the objective
+                        line = line.split(',')
+                        assert len(line) == 4
+                        results.objective = float(line[0])
+                        assert line[1].startswith('[')
+                        assert line[2].endswith(']')
+                        results.objective_interval = (float(line[1][1:]),
+                                              float(line[2][:-1]))
+                    else:
+                        results.objective = float(line[1])
+                line = f.readline()
+                assert line.startswith("Total Objective Function Lower Bound:")
+                line = line.split(':')
+                if line[1].strip() == '':
+                    pass
+                else:
+                    if "half-width" in line[1]:
+                        # we are given confidence intervals on the bound
+                        line = line[1].split(',')
+                        assert len(line) == 4
+                        results.bound = float(line[0])
+                        assert line[1].startswith('[')
+                        assert line[2].endswith(']')
+                        results.bound_interval = (float(line[1][1:]),
+                                          float(line[2][:-1]))
+                    else:
+                        results.bound = float(line[1].strip())
+
+                #
+                # Xhat
+                #
+
+                line = f.readline()
+                assert line.strip() == ''
+                line = f.readline()
+                assert line.startswith('First Stage Solutions:')
+                line = f.readline()
+                assert line.startswith('   No.   Row name   Activity      Lower bound   Upper bound   Dual          Dual STDEV')
+                line = f.readline()
+                assert line.startswith('------ ------------ ------------- ------------- ------------- ------------- -------------')
+
+                xhat_start_line = '   No. Column name  Activity      Lower bound   Upper bound   Reduced Cost  RC STDEV'
+                line = f.readline()
+                while not line.startswith(xhat_start_line):
+                    line = f.readline()
+                line = f.readline()
+                assert line.startswith('------ ------------ ------------- ------------- ------------- ------------- -------------')
                 line = f.readline().strip().split()
+                while line:
+                    varlabel, varvalue = line[1:3]
+                    varlabel = varlabel.strip()
+                    varvalue = float(varvalue)
+                    xhat[symbol_map[varlabel]] = varvalue
+                    line = f.readline().strip().split()
+
+        except (IOError, OSError):
+            logger.warn(
+                "Exception encountered while parsing sd "
+                "solution file '%s':\n%s'"
+                % (solution_filename, traceback.format_exc()))
+            xhat = None
 
         return xhat, results
 
 def runsd_register_options(options=None):
     if options is None:
         options = PySPConfigBlock()
+    SDSolver.register_options(options)
+    ScenarioTreeManagerFactory.register_options(options)
     safe_register_common_option(options,
                                "verbose")
     safe_register_common_option(options,
@@ -593,10 +680,9 @@ def runsd_register_options(options=None):
     safe_register_common_option(options,
                                 "keep_solver_files")
     safe_register_common_option(options,
+                                "output_solver_log")
+    safe_register_common_option(options,
                                 "symbolic_solver_labels")
-    ScenarioTreeManagerFactory.register_options(options)
-    SDSolver.register_options(options)
-
     return options
 
 def runsd(options):
@@ -605,23 +691,30 @@ def runsd(options):
     with the SD solver.
     """
     start_time = time.time()
-    with ScenarioTreeManagerFactory(options) as manager:
-        manager.initialize()
+    with ScenarioTreeManagerFactory(options) as sp:
+        sp.initialize()
         print("")
         print("Running SD solver for stochastic "
               "programming problems")
-        sd = SDSolver(options)
-        results = sd.solve(manager,
-                           output_solver_log=True,
-                           keep_solver_files=options.keep_solver_files,
-                           symbolic_solver_labels=options.symbolic_solver_labels,
-                           verbose=options.verbose)
+        sd = SDSolver()
+        sd_options = sd.extract_user_options_to_dict(options,
+                                                     sparse=True)
+        results = sd.solve(
+            sp,
+            options=sd_options,
+            output_solver_log=options.output_solver_log,
+            keep_solver_files=options.keep_solver_files,
+            symbolic_solver_labels=options.symbolic_solver_labels)
+        xhat = results.xhat
+        del results.xhat
+        print("")
         print(results)
 
         if options.output_scenario_tree_solution:
-            print("Final solution (scenario tree format):")
-            manager.scenario_tree.snapshotSolutionFromScenarios()
-            manager.scenario_tree.pprintSolution()
+            print("")
+            sp.scenario_tree.snapshotSolutionFromScenarios()
+            sp.scenario_tree.pprintSolution()
+            sp.scenario_tree.pprintCosts()
 
     print("")
     print("Total execution time=%.2f seconds"
