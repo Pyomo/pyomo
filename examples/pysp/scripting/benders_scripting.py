@@ -24,10 +24,9 @@ import sys
 import random
 
 from pyomo.environ import *
-from pyomo.pysp.scenariotree.manager_solver import \
-    (ScenarioTreeManagerSolverClientSerial,
-     ScenarioTreeManagerSolverClientPyro)
-from pyomo.pysp.benders import BendersAlgorithm
+from pyomo.pysp.scenariotree.manager import \
+    ScenarioTreeManagerFactory
+from pyomo.pysp.solvers.benders import BendersAlgorithm
 
 # *** How to run this example using Pyro ***:
 #
@@ -39,67 +38,62 @@ from pyomo.pysp.benders import BendersAlgorithm
 #
 # In this shell launch:
 #   $ python benders_scripting.py
-# with using_pyro set to True
+# with sp_options.scenario_tree_manager = "pyro"
 
-using_pyro = False
-if using_pyro:
-    manager_type = ScenarioTreeManagerSolverClientPyro
-else:
-    manager_type = ScenarioTreeManagerSolverClientSerial
-options = manager_type.register_options()
-BendersAlgorithm.register_options(options)
+sp_options = ScenarioTreeManagerFactory.register_options()
 
 # To see detailed information about options
-#for name in options.keys():
-#    print(options.about(name))
+#for name in sp_options.keys():
+#    print(sp_options.about(name))
 
 # To see a more compact display of options
-#options.display()
+#sp_options.display()
 
 #
 # General options for the scenario tree manager
 #
-
+sp_options.scenario_tree_manager = "pyro"
 # using absolute paths so we can automate testing
 # of this example
 examplesdir = os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))
-options.model_location = \
+sp_options.model_location = \
     os.path.join(examplesdir, "farmerWintegers", "models")
-options.scenario_tree_location = \
+sp_options.scenario_tree_location = \
     os.path.join(examplesdir, "farmerWintegers", "scenariodata")
-options.solver = "cplex"
-#options.verbose = True
-if using_pyro:
-    options.pyro_host = 'localhost'
+if sp_options.scenario_tree_manager == "pyro":
+    sp_options.pyro_host = 'localhost'
     # we allow this option to be overridden from the
     # command line for Pyomo testing purposes
-    options.pyro_port = \
+    sp_options.pyro_port = \
         None if (len(sys.argv) == 1) else int(sys.argv[1])
     # set this option to the number of scenario tree
     # servers currently running
     # Note: it can be fewer than the number of scenarios
-    options.pyro_required_scenariotreeservers = 3
+    sp_options.pyro_required_scenariotreeservers = 3
     # Shutdown all pyro-related components when the scenario
     # tree manager closes. Note that with Pyro4, the nameserver
     # must be shutdown manually.
-    options.pyro_shutdown = False
+    sp_options.pyro_shutdown = False
 
 # using the 'with' block will automatically call
 # manager.close() and gracefully shutdown the
 # scenario tree servers
-with manager_type(options) as manager:
-    manager.initialize()
+with ScenarioTreeManagerFactory(sp_options) as sp:
+    sp.initialize()
 
     #
     # General options for the benders algorithm
     #
 
+    benders_options = BendersAlgorithm.register_options()
+    benders_options.subproblem_solver = "cplex"
+    benders_options.verbose = True
     # include one of the scenarios in the benders master problem
-    options.master_include_scenarios = \
-        [manager.scenario_tree.scenarios[0].name]
+    benders_options.master_include_scenarios = \
+        [sp.scenario_tree.scenarios[0].name]
     # aggregate all scenarios into a single average cut
-    options.multicut_level = 1
+    benders_options.multicut_level = 1
 
     # Using the 'with' block will automatically restore the
     # subproblems to their state before the benders initialization
@@ -107,7 +101,9 @@ with manager_type(options) as manager:
     # the first-stage cost in each scenario's objective). Note that
     # BendersAlgorithm sets up the scenarios for generating
     # cuts immediately upon initialization.
-    with BendersAlgorithm(manager, options) as benders:
+    with BendersAlgorithm(sp, benders_options) as benders:
+        # this must be called before solve()
+        benders.initialize_subproblems()
         # this must be called before solve()
         benders.build_master_problem()
         benders.solve()
@@ -117,8 +113,10 @@ with manager_type(options) as manager:
     print("\nRestarting benders algorithm")
     # Now setup and solve again, but use some more advanced
     # features
-    with BendersAlgorithm(manager, options) as benders:
+    with BendersAlgorithm(sp, benders_options) as benders:
 
+        # this must be called before solve()
+        benders.initialize_subproblems()
         # build the master problem, add the last cut
         # from the previous solve
         benders.build_master_problem()
