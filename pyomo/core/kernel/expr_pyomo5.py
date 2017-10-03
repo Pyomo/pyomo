@@ -600,12 +600,8 @@ class CloneVisitor(ValueExpressionVisitor):
         return ans
 
 
-def NEW_clone_expression(expr, substitute=None, verbose=False, clone_leaves=True):
-    #
+def NEW_clone_expression(expr, memo=None, verbose=False, clone_leaves=True):
     clone_counter_context._count += 1
-    memo = {'__block_scope__': { id(None): False }}
-    if substitute:
-        memo.update(substitute)
     #
     if expr.__class__ in native_numeric_types:
         return expr
@@ -616,12 +612,8 @@ def NEW_clone_expression(expr, substitute=None, verbose=False, clone_leaves=True
     return visitor.dfs_postorder_stack(expr)
 
 
-def clone_expression(expr, substitute=None, verbose=False, clone_leaves=True):
-    #
+def clone_expression(expr, memo=None, verbose=False, clone_leaves=True):
     clone_counter_context._count += 1
-    memo = {'__block_scope__': { id(None): False }}
-    if substitute:
-        memo.update(substitute)
     #
     if expr.__class__ in native_numeric_types:
         return expr
@@ -1389,13 +1381,13 @@ class _ExpressionBase(NumericValue):
         return evaluate_expression(self, exception)
 
     def clone(self, substitute=None, verbose=False):
-        return clone_expression(self, substitute=substitute, verbose=verbose)
+        return clone_expression(self, memo=substitute, verbose=verbose, clone_leaves=False)
 
     def size(self, verbose=False):
         return _expression_size(self, verbose=verbose)
 
     def __deepcopy__(self, memo):
-        return clone_expression(self, substitute=memo)
+        return clone_expression(self, memo=memo)
 
     def _clone(self, args, memo):
         return self.__class__(args)
