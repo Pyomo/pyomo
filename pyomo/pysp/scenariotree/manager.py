@@ -1110,6 +1110,25 @@ class ScenarioTreeManager(PySPConfiguredObject):
                                         async=async,
                                         oneway=oneway)
 
+    def push_fix_queue_to_instances(self):
+        """Push the fixed queue on the scenario tree nodes onto the
+        actual variables on the scenario instances.
+
+        * NOTE: This function is poorly named and this functionality
+                will likely be changed in the near future. Ideally, fixing
+                would be done through the scenario tree manager, rather
+                than through the scenario tree.
+        """
+        if self.get_option("verbose"):
+            print("Synchronizing fixed variable statuses on scenario tree nodes")
+            node_count = self._push_fix_queue_to_instances_impl()
+            if node_count > 0:
+                if self.get_option("verbose"):
+                    print("Updated fixed statuses on %s scenario tree nodes"
+                          % (node_count))
+            else:
+                if self.get_option("verbose"):
+                    print("No synchronization was needed for scenario tree nodes")
 
     #
     # Methods defined by derived class that are not
@@ -1132,6 +1151,9 @@ class ScenarioTreeManager(PySPConfiguredObject):
         raise NotImplementedError                  #pragma:nocover
 
     def _process_scenario_solve_result(self, *args, **kwds):
+        raise NotImplementedError                  #pragma:nocover
+
+    def _push_fix_queue_to_instances_impl(self, *args, **kwds):
         raise NotImplementedError                  #pragma:nocover
 
 #
@@ -1647,6 +1669,9 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
         # solves (keys are bundle name or scenario name)
         self._solve_results = {}
 
+        # set by advanced solver managers
+        self._preprocessor = None
+
     #
     # Extension of the manager interface so code can handle
     # cases where multiple workers own a different portions of the
@@ -2027,6 +2052,33 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
             manager_results.solution_status[scenario_name] = undefined
 
         return manager_results
+
+    def _push_fix_queue_to_instances_impl(self):
+
+        node_count = 0
+        for tree_node in self._scenario_tree._tree_nodes:
+
+            if len(tree_node._fix_queue):
+                node_count += 1
+                if self._preprocessor is not None:
+                    for scenario in tree_node._scenarios:
+                        scenario_name = scenario.name
+                        for variable_id, (fixed_status, new_value) in \
+                              iteritems(tree_node._fix_queue):
+                            variable_name, index = \
+                                tree_node._variable_ids[variable_id]
+                            if fixed_status == tree_node.VARIABLE_FREED:
+                                self._preprocessor.\
+                                    freed_variables[scenario_name].\
+                                    append((variable_name, index))
+                            elif fixed_status == tree_node.VARIABLE_FIXED:
+                                self._preprocessor.\
+                                    fixed_variables[scenario_name].\
+                                    append((variable_name, index))
+
+            tree_node.push_fix_queue_to_instances()
+
+        return node_count
 
 #
 # The Serial scenario tree manager class. This is a full
@@ -3691,6 +3743,39 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
                     str(manager_results.solution_status[scenario_name]))
 
         return manager_results
+
+    def _push_fix_queue_to_instances_impl(self):
+
+        worker_map = {}
+        node_count = 0
+        for stage in self.scenario_tree.stages:
+
+            for tree_node in stage.nodes:
+
+                if len(tree_node._fix_queue):
+                    node_count += 1
+                    for scenario in tree_node.scenarios:
+                        worker_name = self.get_worker_for_scenario(scenario.name)
+                        if worker_name not in worker_map:
+                            worker_map[worker_name] = {}
+                        if tree_node.name not in worker_map[worker_name]:
+                            worker_map[worker_name][tree_node.name] = tree_node._fix_queue
+
+        if node_count > 0:
+
+            assert not self._transmission_paused
+            self.pause_transmit()
+            action_handles = []
+            for worker_name in worker_map:
+                action_handles.append(self._invoke_method_on_worker_pyro(
+                    worker_name,
+                    "_update_fixed_variables_for_client",
+                    method_args=(worker_map[worker_name],),
+                    oneway=False))
+            self.unpause_transmit()
+            self._action_manager.wait_all(action_handles)
+
+        return node_count
 
     #
     # Extended Interface for Pyro

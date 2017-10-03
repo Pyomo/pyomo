@@ -132,6 +132,18 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
 
         return data
 
+    def _update_fixed_variables_for_client(self, fixed_variables):
+
+        if self.get_option("verbose"):
+            print("Received request to update fixed statuses on "
+                  "scenario tree nodes")
+
+        for node_name, node_fixed_vars in iteritems(fixed_variables):
+            tree_node = self._scenario_tree.get_node(node_name)
+            tree_node._fix_queue.update(node_fixed_vars)
+
+        self.push_fix_queue_to_instances()
+
     #
     # Abstract methods for ScenarioTreeManager:
     #

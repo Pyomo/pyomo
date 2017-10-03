@@ -115,7 +115,7 @@ class ScenarioTreeManagerSolverWorkerPyro(_ScenarioTreeManagerSolverWorker,
                 str(manager_object_results['termination_condition'])
             manager_object_results['solution_status'] = \
                 str(manager_object_results['solution_status'])
-            results[object_name] = manager_object_results
+            results[object_name] = (manager_object_results, scenario_tree_results)
 
         return results
 
