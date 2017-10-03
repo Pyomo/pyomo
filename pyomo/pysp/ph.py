@@ -2092,7 +2092,7 @@ class ProgressiveHedging(_PHBase):
                     sys_modules_key = module_name
                 else:
                     module, sys_modules_key = \
-                        load_external_module(module_name, clear_cache=True)
+                        load_external_module(module_name, clear_cache=True, verbose=True)
                     self._modules_imported[module_name] = module
                 callback = None
                 for oname, obj in inspect.getmembers(module):
