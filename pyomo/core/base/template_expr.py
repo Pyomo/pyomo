@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import copy
 from pyomo.core.base.numvalue import (
     NumericValue, native_numeric_types, as_numeric, value )
 import pyomo.core.base
@@ -56,7 +57,7 @@ class IndexTemplate(NumericValue):
         # "Normal" deepcopying outside the context of pyomo.
         #
         ans = memo[id(self)] = self.__class__.__new__(self.__class__)
-        ans.__setstate__(deepcopy(self.__getstate__(), memo))
+        ans.__setstate__(copy.deepcopy(self.__getstate__(), memo))
         return ans
 
     # Note: because NONE of the slots on this class need to be edited,
