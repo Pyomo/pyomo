@@ -76,6 +76,23 @@ def _sum_with_iadd(iterable):
 
 sum = builtins.sum if _getrefcount_available else _sum_with_iadd
 
+class clone_counter_context(object):
+    _count = 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    @property
+    def count(self):
+        return clone_counter_context._count
+
+clone_counter = clone_counter_context()
+
+
+
 def identify_variables(expr,
                        include_fixed=True,
                        allow_duplicates=False,
