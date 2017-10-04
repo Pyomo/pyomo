@@ -4,9 +4,13 @@ from pyomo.gdp import *
 from pyomo.opt import SolverFactory
 
 from pyomo.util.plugin import alias
+from pyomo.util.modeling import unique_component_name
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
 
 from random import randint
+
+import logging
+logger = logging.getLogger('pyomo.core')
 
 # DEBUG
 from nose.tools import set_trace
@@ -22,15 +26,6 @@ class AddSlackVariables(NonIsomorphicTransformation):
     def __init__(self, **kwds):
         kwds['name'] = "add_slack_vars"
         super(AddSlackVariables, self).__init__(**kwds)
-
-    def _get_unique_name(self, instance, name):
-        # test if this name already exists in model. If not, we're good. 
-        # Else, we add random numbers until it doesn't
-        while True:
-            if instance.component(name) is None:
-                return name
-            else:
-                name += str(randint(0,9))
 
     def _apply_to(self, instance, **kwds):
         targets = kwds.pop('targets', None)
@@ -57,7 +52,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
             o.deactivate()
 
         # create block where we can add slack variables safely
-        xblockname = self._get_unique_name(instance, "_core_add_slack_variables")
+        xblockname = unique_component_name(instance, "_core_add_slack_variables")
         instance.add_component(xblockname, Block())
         xblock = instance.component(xblockname)
 

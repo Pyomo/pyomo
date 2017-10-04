@@ -37,6 +37,11 @@ def complements(a, b):
 class _ComplementarityData(_BlockData):
 
     def _canonical_expression(self, e):
+        # Note: as the complimentarity component maintains references to
+        # the original expression (e), it is NOT safe or valid to bypass
+        # the clone checks: bypassing the check can result in corrupting
+        # the original expressions and will result in mind-boggling
+        # pprint output.
         e_ = None
         if e.__class__ is EXPR._EqualityExpression:
             if e._args[1].is_fixed():
@@ -47,8 +52,7 @@ class _ComplementarityData(_BlockData):
             #elif e._args[0].is_fixed():
             #    _e = (e._args[0], e._args[1])
             else:
-                with EXPR.bypass_clone_check():
-                    _e = ( ZeroConstant, e._args[0] - e._args[1])
+                _e = ( ZeroConstant, e._args[0] - e._args[1])
         elif e.__class__ is EXPR._InequalityExpression:
             if len(e._args) == 3:
                 _e = (e._args[0], e._args[1], e._args[2])
@@ -58,8 +62,7 @@ class _ComplementarityData(_BlockData):
                 elif e._args[0].is_fixed():
                     _e = (e._args[0], e._args[1], None)
                 else:
-                    with EXPR.bypass_clone_check():
-                        _e = ( ZeroConstant, e._args[1] - e._args[0], None )
+                    _e = ( ZeroConstant, e._args[1] - e._args[0], None )
         else:
             _e = (None, e, None)
         return _e

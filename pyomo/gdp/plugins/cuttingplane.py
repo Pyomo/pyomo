@@ -8,6 +8,8 @@ from pyomo.opt import SolverFactory
 from pyomo.util.plugin import alias
 from pyomo.core.base import Transformation
 
+from six import iterkeys, itervalues
+
 import logging
 logger = logging.getLogger('pyomo.core')
 
@@ -17,7 +19,7 @@ from nose.tools import set_trace
 # TODO: this should be an option probably, right?
 # do I have other options that won't be mad about the quadratic objective in the
 # separation problem?
-SOLVER = 'ipopt'
+SOLVER = 'gurobi'
 stream_solvers = False
 
 class CuttingPlane_Transformation(Transformation):
@@ -42,6 +44,9 @@ class CuttingPlane_Transformation(Transformation):
         transBlock = self._add_relaxation_block(
             instance, 
             '_pyomo_gdp_cuttingplane_relaxation')
+        # we need to later find the transformation block on transformed versions
+        # of this instance, so we are going to grab the cuid here.
+        transBlockCUID = ComponentUID(transBlock)
 
         # we'll store all the cuts we add together
         transBlock.cuts = Constraint(Any)
@@ -67,32 +72,23 @@ class CuttingPlane_Transformation(Transformation):
         reclassify.apply_to(instance)
         instance_rBigm = relaxIntegrality.create_using(instance)
 
-        # We are also going to need transformation blocks on rChull and rBigm so
-        # that we don't risk any name collisions. These instances are totally
-        # ours, so the names are just for debugging and avoiding collisions.
-        transBlock_rBigm = self._add_relaxation_block(
-            instance_rBigm,
-            '_rBigm_relaxation_block')
-        # We will be adding the same cuts to rBigm also.
-        transBlock_rBigm.cuts = Constraint(Any)
-        transBlock_rChull = self._add_relaxation_block(
-            instance_rChull,
-            '_rBigm_relaxation_block')
-
         self._cuttingplanes_transformation(instance, instance_rBigm,
                                            instance_rChull, transBlock,
-                                           transBlock_rBigm, transBlock_rChull)
+                                           transBlockCUID)
 
 
     def _cuttingplanes_transformation(self, instance, instance_rBigm,
                                       instance_rChull, transBlock,
-                                      transBlock_rBigm, transBlock_rChull):
+                                      transBlockCUID):
         opt = SolverFactory(SOLVER)
 
         improving = True
         iteration = 0
         prev_obj = float("inf")
         epsilon = 0.01
+
+        transBlock_rChull = transBlockCUID.find_component(instance_rChull)
+        transBlock_rBigm = transBlockCUID.find_component(instance_rBigm)
 
         for o in instance_rChull.component_data_objects(Objective):
             o.deactivate()
@@ -101,8 +97,11 @@ class CuttingPlane_Transformation(Transformation):
         # to be able to find the same component on the convex hull instance
         # later.)
         v_map = {}
-        for v in instance_rBigm.component_data_objects(Var, descend_into=\
-                                                       (Block, Disjunct)):
+        for v in instance_rBigm.component_data_objects(
+            Var,
+            descend_into=(Block, Disjunct),
+            sort=SortComponents.deterministic,
+            ):
             v_map[id(v)] = (ComponentUID(v), v, len(v_map))
 
         self._add_separation_objective(v_map, instance_rChull, transBlock_rChull)
@@ -122,7 +121,7 @@ class CuttingPlane_Transformation(Transformation):
             rBigm_objVal = value(rBigM_obj)
 
             # copy over xstar
-            for cuid, v, i in v_map.itervalues():
+            for cuid, v, i in itervalues(v_map):
                 transBlock_rChull.xstar[i] = value(v)
 
             # solve separation problem to get xhat.
@@ -160,7 +159,7 @@ class CuttingPlane_Transformation(Transformation):
         transBlock_rChull.xstar = Param(range(len(v_map)), mutable=True)
         
         obj_expr = 0
-        for cuid, v, i in v_map.itervalues():
+        for cuid, v, i in itervalues(v_map):
             x_star = transBlock_rChull.xstar[i]
             x = cuid.find_component(instance_rChull)
             obj_expr += (x - x_star)**2
@@ -176,7 +175,7 @@ class CuttingPlane_Transformation(Transformation):
 
         cutexpr_bigm = 0
         cutexpr_rBigm = 0
-        for cuid, v, i in v_map.itervalues():
+        for cuid, v, i in itervalues(v_map):
             xhat = cuid.find_component(instance_rChull).value
             xstar = transBlock_rChull.xstar[i].value
             x_bigm = cuid.find_component(instance)

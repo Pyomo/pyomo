@@ -513,24 +513,13 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         #
         # Create variable symbols (and cache the block list)
         #
-        all_blocks = []
-        variable_list = []
-        for block in model.block_data_objects(active=True,
-                                              sort=sortOrder):
-
-            all_blocks.append(block)
-
-            for vardata in block.component_data_objects(
-                    Var,
-                    active=True,
-                    sort=sortOrder,
-                    descend_into=False):
-
-                variable_list.append(vardata)
-                variable_label_pairs.append(
-                    (vardata, create_symbol_func(symbol_map,
-                                                 vardata,
-                                                 labeler)))
+        all_blocks = list( model.block_data_objects(
+                active=True, sort=sortOrder) )
+        variable_list = list( model.component_data_objects(
+                Var, sort=sortOrder) )
+        variable_label_pairs = list(
+            (vardata, create_symbol_func(symbol_map, vardata, labeler))
+            for vardata in variable_list )
 
         variable_symbol_map.addSymbols(variable_label_pairs)
 

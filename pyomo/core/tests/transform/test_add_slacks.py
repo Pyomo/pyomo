@@ -2,9 +2,11 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
+from six import StringIO
+from pyomo.util.log import LoggingIntercept
+
 import pyutilib.th as unittest
 import pyutilib.services
-import logging.handlers
 import random
 
 import pyomo.opt
@@ -16,21 +18,6 @@ solvers = pyomo.opt.check_available_solvers('glpk')
 
 # DEBUG
 from nose.tools import set_trace
-
-# for checking log messages
-# from https://stackoverflow.com/questions/5085257/python-nose-make-assertions-about-logged-text
-class AssertingHandler(logging.handlers.BufferingHandler):
-
-    def __init__(self,capacity):
-        logging.handlers.BufferingHandler.__init__(self,capacity)
-
-    def assert_logged(self, test_case, msg):
-        for record in self.buffer:
-            s = self.format(record)
-            if s == msg:
-                return
-        test_case.assertTrue(False, "Failed to find log message: " + msg)
-
 
 class TestAddSlacks_coopr3(unittest.TestCase):
     def setUp(self):
@@ -63,7 +50,7 @@ class TestAddSlacks_coopr3(unittest.TestCase):
         m = self.makeModel()
         m._core_add_slack_variables = Block()
         TransformationFactory('core.add_slack_variables').apply_to(m)
-        xblock = m.component("_core_add_slack_variables4")
+        xblock = m.component("_core_add_slack_variables_4")
         self.assertIsInstance(xblock, Block)
 
     def test_slack_vars_added(self):
@@ -302,15 +289,14 @@ class TestAddSlacks_coopr3(unittest.TestCase):
 
     def test_err_for_bogus_kwds(self):
         m = self.makeModel()
-        asserting_handler = AssertingHandler(10)
-        logging.getLogger().addHandler(asserting_handler)
-        TransformationFactory('core.add_slack_variables').apply_to(
-            m,
-            notakwd="I want a feasible model")
-        asserting_handler.assert_logged(self,"Unrecognized keyword arguments "
-                                        "in add slack variable transformation:"
-                                        "\nnotakwd")
-        logging.getLogger().removeHandler(asserting_handler)
+        OUTPUT = StringIO()
+        with LoggingIntercept(OUTPUT, 'pyomo.core'):
+            TransformationFactory('core.add_slack_variables').apply_to(
+                m,
+                notakwd="I want a feasible model")
+        self.assertIn("Unrecognized keyword arguments in add slack variable "
+                      "transformation:\nnotakwd",
+                      OUTPUT.getvalue())
 
     def test_transformed_constraints_sumexpression_body(self):
         m = self.makeModel()

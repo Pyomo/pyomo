@@ -59,8 +59,7 @@ class TestBenders(unittest.TestCase):
             self.skipTest("The 'cplex' executable is not available")
         out_file = open(this_test_directory+"benders_cplex.out",'w')
         os.chdir(benders_example_dir)
-        subprocess.Popen(["lbin",
-                          "python",
+        subprocess.Popen([sys.executable,
                           benders_example_dir+"runbenders"],
                          stdout=out_file).wait()
         os.chdir(this_test_directory)

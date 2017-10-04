@@ -627,6 +627,13 @@ class ComponentData(_ComponentBase):
                 # of setting self.__dict__[key] = val.
                 object.__setattr__(self, key, val)
 
+    def type(self):
+        """Return the class type for this component"""
+        _parent = self.parent_component()
+        if _parent is None:
+            return _parent
+        return _parent._type
+
     def parent_component(self):
         """Returns the component associated with this object."""
         if self._component is None:

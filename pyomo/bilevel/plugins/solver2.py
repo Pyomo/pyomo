@@ -38,7 +38,7 @@ class BILEVEL_Solver2(pyomo.opt.OptSolver):
         xfrm = TransformationFactory('mpec.simple_disjunction')
         xfrm.apply_to(self._instance)
         xfrm = TransformationFactory('gdp.bigm')
-        xfrm.apply_to(self._instance, default_bigM=self.options.get('bigM',100000))
+        xfrm.apply_to(self._instance, bigM=self.options.get('bigM',100000))
         #
         # Solve with a specified solver
         #

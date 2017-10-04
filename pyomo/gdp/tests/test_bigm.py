@@ -8,19 +8,20 @@ import random
 import sys
 
 from nose.tools import set_trace
+from six import iteritems, StringIO
 
 
 class CommonTests:
     def diff_apply_to_and_create_using(self, model):
-        stdoutbuffer = sys.stdout.getvalue()
-        starting_index = len(stdoutbuffer)
         modelcopy = TransformationFactory('gdp.bigm').create_using(model)
-        modelcopy.pprint()
-        modelcopy_output = sys.stdout.getvalue()[starting_index:]
-        starting_index = len(modelcopy_output)
+        modelcopy_buf = StringIO()
+        modelcopy.pprint(ostream=modelcopy_buf)
+        modelcopy_output = modelcopy_buf.getvalue()
+
         TransformationFactory('gdp.bigm').apply_to(model)
-        model.pprint()
-        model_output = sys.stdout.getvalue()[starting_index:]
+        model_buf = StringIO()
+        model.pprint(ostream=model_buf)
+        model_output = model_buf.getvalue()
         self.assertMultiLineEqual(modelcopy_output, model_output)
 
 class TwoTermDisj(unittest.TestCase, CommonTests):
@@ -80,7 +81,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
     def test_disjunction_deactivated(self):
         m = self.makeModel()
-        TransformationFactory('gdp.bigm').apply_to(m)
+        TransformationFactory('gdp.bigm').apply_to(m, targets=(m,))
 
         oldblock = m.component("disjunction")
         self.assertIsInstance(oldblock, Disjunction)
@@ -88,7 +89,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
     def test_disjunctdatas_deactivated(self):
         m = self.makeModel()
-        TransformationFactory('gdp.bigm').apply_to(m)
+        TransformationFactory('gdp.bigm').apply_to(m, targets=(m,))
 
         oldblock = m.component("disjunction")
         self.assertFalse(oldblock.disjuncts[0].active)
@@ -378,7 +379,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
     def test_do_not_transform_userDeactivated_disjuncts(self):
         m = self.makeModel()
         m.d[0].deactivate()
-        TransformationFactory('gdp.bigm').apply_to(m)
+        TransformationFactory('gdp.bigm').apply_to(m, targets=(m,))
 
         self.assertFalse(m.disjunction.active)
         self.assertFalse(m.d[1].active)
@@ -482,7 +483,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # give an arg
         self.assertRaisesRegexp(
             GDP_Error,
-            "Big-M \(-18, 19.2, 3\) for constraint d\[0\].c is not of "
+            "Big-M \([^)]*\) for constraint d\[0\].c is not of "
             "length two. Expected either a single value or "
             "tuple or list of length two for M.*",
             TransformationFactory('gdp.bigm').apply_to,
@@ -508,7 +509,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # give an arg
         self.assertRaisesRegexp(
             GDP_Error,
-            "Big-M \[-18, 19.2, 3\] for constraint d\[0\].c is not of "
+            "Big-M \[[^\]]*\] for constraint d\[0\].c is not of "
             "length two. Expected either a single value or "
             "tuple or list of length two for M.*",
             TransformationFactory('gdp.bigm').apply_to,
@@ -720,7 +721,7 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
 
     def test_deactivated_disjuncts(self):
         m = self.makeModel()
-        TransformationFactory('gdp.bigm').apply_to(m)
+        TransformationFactory('gdp.bigm').apply_to(m, targets=(m,))
         # all the disjuncts got transformed, so all should be deactivated
         for i in m.disjunct.index_set():
             self.assertFalse(m.disjunct[i].active)
@@ -728,7 +729,7 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
 
     def test_deactivated_disjunction(self):
         m = self.makeModel()
-        TransformationFactory('gdp.bigm').apply_to(m)
+        TransformationFactory('gdp.bigm').apply_to(m, targets=(m,))
 
         # all the disjunctions got transformed, so they should be
         # deactivated too
@@ -1334,7 +1335,7 @@ class DisjunctInMultipleDisjunctions(unittest.TestCase, CommonTests):
 
     def test_transformed_disjuncts_deactivated(self):
         m = self.makeModel()
-        TransformationFactory('gdp.bigm').apply_to(m)
+        TransformationFactory('gdp.bigm').apply_to(m, targets=(m,))
 
         self.assertFalse(m.disjunct1[0].active)
         self.assertFalse(m.disjunct1[1].active)
@@ -1346,7 +1347,7 @@ class DisjunctInMultipleDisjunctions(unittest.TestCase, CommonTests):
         # He doesn't get transformed, and so he should still be active
         # so the writers will scream. His constraint, also, is still active.
         m = self.makeModel()
-        TransformationFactory('gdp.bigm').apply_to(m)
+        TransformationFactory('gdp.bigm').apply_to(m, targets=(m,))
         
         self.assertTrue(m.disjunct2[1].active)
         self.assertTrue(m.disjunct2[1].c.active)
@@ -1807,7 +1808,7 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
                 (1,3),
             ]
         }
-        for blocknum, lst in pairs.iteritems():
+        for blocknum, lst in iteritems(pairs):
             original = m.b[blocknum].disjunct
             for i, j in lst:
                 dict1 = getattr(disjBlock[j], "_gdp_transformation_info")
@@ -1935,7 +1936,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
 
     def test_disjuncts_inactive(self):
         m = self.makeModel()
-        TransformationFactory('gdp.bigm').apply_to(m)
+        TransformationFactory('gdp.bigm').apply_to(m, targets=(m,))
         
         self.assertFalse(m.disjunction.active)
         self.assertFalse(m.simpledisjunct.active)

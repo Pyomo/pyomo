@@ -139,7 +139,7 @@ class GLPKDirect ( OptSolver ):
         if objective.is_minimizing(): sense = GLP_MIN
 
         constraint_list = model.component_map(Constraint, active=True)
-        variable_list   = model.component_map(Var, active=True)
+        variable_list   = model.component_map(Var)
         num_constraints = model.statistics.number_of_constraints
         num_variables   = model.statistics.number_of_variables
 

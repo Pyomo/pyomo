@@ -1,4 +1,3 @@
-# -*- coding: UTF-8 -*-
 """Big-M Generalized Disjunctive Programming transformation module."""
 #  ___________________________________________________________________________
 #
@@ -23,10 +22,11 @@ from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.disjunct import (IndexedDisjunction, SimpleDisjunction,
                                 _DisjunctData, _DisjunctionData)
+from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 from pyomo.repn import LinearCanonicalRepn, generate_canonical_repn
 from pyomo.util.modeling import unique_component_name
 from pyomo.util.plugin import alias
-from six import iterkeys
+from six import iterkeys, iteritems
 
 logger = logging.getLogger('pyomo.core')
 
@@ -74,7 +74,13 @@ class BigM_Transformation(Transformation):
         # suffixes and estimate as a last resort. More specific args/suffixes
         # override ones anywhere in the tree. Suffixes lower down in the tree
         # override ones higher up.
-        bigM = kwds.pop('bigM', None)
+        if 'default_bigM' in kwds:
+            logger.warn("DEPRECATED: the 'default_bigM=' argument has been "
+                        "replaced by 'bigM='")
+            bigM = kwds.pop('default_bigM')
+        else:
+            bigM = None
+        bigM = kwds.pop('bigM', bigM)
         if bigM is not None and type(bigM) is not dict:
             if type(bigM) in (float, int, tuple, list):
                 bigM = {None: bigM}
@@ -108,6 +114,9 @@ class BigM_Transformation(Transformation):
 
         if targets is None:
             targets = (instance, )
+            _HACK_transform_whole_instance = True
+        else:
+            _HACK_transform_whole_instance = False
         for _t in targets:
             t = _t.find_component(instance)
             if t is None:
@@ -145,9 +154,19 @@ class BigM_Transformation(Transformation):
                 else:
                     obj.deactivate()
 
+        # HACK for backwards compatibility with the older GDP transformations
+        #
+        # Until the writers are updated to find variables on things
+        # other than active blocks, we need to reclassify the Disjuncts
+        # as Blocks after transformation so that the writer will pick up
+        # all the variables that it needs (in this case, indicator_vars).
+        if _HACK_transform_whole_instance:
+            HACK_GDP_Disjunct_Reclassifier().apply_to(instance)
+
+
     def _transformBlock(self, obj, transBlock, bigM):
         if obj.is_indexed():
-            for i in obj:
+            for i in sorted(iterkeys(obj)):
                 self._transformBlockData(obj[i], transBlock, bigM)
         else:
             self._transformBlockData(obj, transBlock, bigM)
@@ -202,7 +221,7 @@ class BigM_Transformation(Transformation):
         orConstraint, xor = self._declareXorConstraint(obj)
         if obj.is_indexed():
             transBlock.disjContainers.add(obj)
-            for i in obj:
+            for i in sorted(iterkeys(obj)):
                 self._transformDisjunctionData(obj[i], transBlock,
                                                bigM, i, orConstraint, xor)
         else:
@@ -246,7 +265,10 @@ class BigM_Transformation(Transformation):
             # relax the disjunct
             self._bigM_relax_disjunct(disjunct, transBlock, bigM, suffix_list)
         # add or (or xor) constraint
-        orConstraint.add(index, (1, or_expr, 1 if xor else None))
+        if xor:
+            orConstraint.add(index, (or_expr, 1))
+        else:
+            orConstraint.add(index, (1, or_expr, None))
         obj.deactivate()
 
     def _bigM_relax_disjunct(self, obj, transBlock, bigM, suffix_list):
@@ -311,7 +333,7 @@ class BigM_Transformation(Transformation):
         # Look through the component map of block and transform
         # everything we have a handler for. Yell if we don't know how
         # to handle it.
-        for name, obj in list(block.component_map().iteritems()):
+        for name, obj in list(iteritems(block.component_map())):
             if hasattr(obj, 'active') and not obj.active:
                 continue
             handler = self.handlers.get(obj.type(), None)
@@ -413,7 +435,7 @@ class BigM_Transformation(Transformation):
         relaxationBlock._gdp_transformation_info.setdefault(
             'srcConstraints', ComponentMap())[newConstraint] = obj
 
-        for i in obj:
+        for i in sorted(iterkeys(obj)):
             c = obj[i]
             if not c.active:
                 continue
@@ -557,10 +579,11 @@ class BigM_Transformation(Transformation):
                     if bounds[i] is not None:
                         M[j] += value(bounds[i]) * coef
                     else:
-                        raise GDP_Error("Cannot estimate M for "
-                                        "expressions with unbounded variables."
-                                        "\n\t(found while processing "
-                                        "constraint %s)" % name)
+                        raise GDP_Error(
+                            "Cannot estimate M for "
+                            "expressions with unbounded variables."
+                            "\n\t(var {0} found while processing "
+                            "constraint {1})".format(var.name, name))
         else:
             raise GDP_Error("Cannot estimate M for nonlinear "
                             "expressions.\n\t(found while processing "
