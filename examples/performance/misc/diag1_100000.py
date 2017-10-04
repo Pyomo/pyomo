@@ -1,4 +1,4 @@
-from pyomo.core import *
+from pyomo.environ import *
 
 def create_model(N):
     model = ConcreteModel()

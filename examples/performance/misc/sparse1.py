@@ -1,8 +1,7 @@
 #
 # This is a performance test that we cannot easily execute right now
 #
-import pyomo.environ
-from pyomo.core import *
+from pyomo.environ import *
 
 
 def f(N):
