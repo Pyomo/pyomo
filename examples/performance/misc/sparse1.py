@@ -5,9 +5,9 @@ import pyomo.environ
 from pyomo.core import *
 
 
-def f(n):
+def f(N):
     M = ConcreteModel()
-    M.A = Set(initialize=range(n))
+    M.A = Set(initialize=range(N))
     M.x = Var()
     M.o = Objective(expr=M.x)
     def rule(m, i):
@@ -20,4 +20,4 @@ def f(n):
 #
 # Generation of this model is slow because set M.A is big
 #
-model = f(10**6)
+model = f(1000000)

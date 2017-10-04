@@ -4,10 +4,14 @@ def create_model(N):
     model = ConcreteModel()
 
     model.A = RangeSet(N)
-    model.x = Var(model.A, bounds=(1,2))
+    model.x = Var(model.A)
 
-    expr=sum(2*model.x[i]*model.x[i+1] for i in model.A if (i+1) in model.A)
+    expr=sum(i*model.x[i] for i in model.A)
     model.obj = Objective(expr=expr)
+
+    def c_rule(model, i):
+        return (N-i+1)*model.x[i] >= N
+    model.c = Constraint(model.A)
 
     return model
 
