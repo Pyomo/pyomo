@@ -8,15 +8,29 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import glob
-import pyutilib.dev.runtests
+#import glob
+#import sys
+#import os.path
+#import optparse
+
+from os.path import dirname, abspath, join
 import sys
-import os.path
-import optparse
+
+import pyutilib.dev.runtests
 import pyomo.util
 
 @pyomo.util.pyomo_command('test.pyomo', "Execute Pyomo tests")
-def runPyomoTests():
+def runPyomoTests(argv=None):
+    if argv is None:
+        argv = sys.argv
+
+    return pyutilib.dev.runtests.run(
+        ['pyomo', join('..','pyomo-model-libraries')],
+        dirname(dirname(dirname(abspath(__file__)))),
+        argv )
+
+
+def OLD_runPyomoTests():
     parser = optparse.OptionParser(usage='test.pyomo [options] <dirs>')
 
     parser.add_option('-d','--dir',
