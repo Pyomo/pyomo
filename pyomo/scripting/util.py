@@ -304,7 +304,11 @@ def create_model(data):
             raise SystemExit(msg % data.options.model.filename)
         else:
             model_options = data.options.model.options.value()
+            tick = time.time()
             model = ep.service().apply( options = pyutilib.misc.Container(*data.options), model_options=pyutilib.misc.Container(*model_options) )
+            if data.options.runtime.report_timing is True:
+                print("      %6.2f seconds required to construct instance" % (time.time() - tick))
+                tick = time.time()
     else:
         if model_name not in _models:
             msg = "Model '%s' is not defined in file '%s'!"
