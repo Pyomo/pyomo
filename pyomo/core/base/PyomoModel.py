@@ -856,7 +856,7 @@ from solvers are immediately loaded into the original model instance.""")
 
                 if report_timing is True:
                     start_time = time.time()
-                    clone_counters = EXPR.generate_expression.clone_counter
+                    clone_counters = EXPR.clone_counter._count
 
                 self._initialize_component(modeldata, namespaces, component_name, profile_memory)
 
@@ -870,7 +870,7 @@ from solvers are immediately loaded into the original model instance.""")
                     print("    %%6.%df seconds required to construct component=%s; %d indicies total" \
                               % (total_time>=0.005 and 2 or 0, component_name, clen) \
                               % total_time)
-                    tmp_clone_counters = EXPR.generate_expression.clone_counter
+                    tmp_clone_counters = EXPR.clone_counter._count
                     if clone_counters != tmp_clone_counters:
                         clone_counters = tmp_clone_counters
                         print("             Cloning detected! (clone counters: %d)" % clone_counters)
