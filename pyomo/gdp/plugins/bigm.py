@@ -582,7 +582,7 @@ class BigM_Transformation(Transformation):
                         raise GDP_Error(
                             "Cannot estimate M for "
                             "expressions with unbounded variables."
-                            "\n\t(var %s found while processing "
+                            "\n\t(found unbounded var %s while processing "
                             "constraint %s)" % (var.name, name))
         else:
             raise GDP_Error("Cannot estimate M for nonlinear "

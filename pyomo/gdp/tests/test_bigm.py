@@ -1025,7 +1025,7 @@ class SimpleDisjIndexedConstraints(unittest.TestCase, CommonTests):
         self.assertRaisesRegexp(
             GDP_Error,
             "Cannot estimate M for expressions with unbounded variables."
-            "\n\t\(found while processing constraint b.simpledisj1.c\)",
+            "\n\t\(found unbounded var a\[1\] while processing constraint b.simpledisj1.c\)",
             TransformationFactory('gdp.bigm').apply_to,
             m)
 
