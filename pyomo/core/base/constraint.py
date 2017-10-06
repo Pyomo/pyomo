@@ -410,7 +410,7 @@ class _GeneralConstraintData(_ConstraintData):
                     self._lower = self._upper = arg0
                     self._body = arg1
                 else:
-                    with EXPR.ignore_entangled_expressions():
+                    with EXPR.ignore_entangled_expressions:
                         self._lower = self._upper = ZeroConstant
                         self._body = arg0
                         self._body -= arg1
@@ -516,7 +516,7 @@ class _GeneralConstraintData(_ConstraintData):
                     self._lower = self._upper = _args[0]
                     self._body = _args[1]
                 else:
-                    with EXPR.ignore_entangled_expressions():
+                    with EXPR.ignore_entangled_expressions:
                         self._lower = self._upper = ZeroConstant
                         self._body = _args[0]
                         self._body -= _args[1]
@@ -583,7 +583,7 @@ class _GeneralConstraintData(_ConstraintData):
                         self._body  = _args[1]
                         self._upper = None
                     else:
-                        with EXPR.ignore_entangled_expressions():
+                        with EXPR.ignore_entangled_expressions:
                             self._lower = None
                             self._body = _args[0]
                             self._body -= _args[1]
