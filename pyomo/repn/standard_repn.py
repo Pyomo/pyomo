@@ -544,7 +544,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                     ans = {}
                     break
 
-            if _obj.__class__ in (EXPR._SumExpression, EXPR._MultiSumExpression, EXPR._CompressedSumExpression, EXPR._StaticMultiSumExpression):
+            if _obj.__class__ in (EXPR._SumExpression, EXPR._MutableMultiSumExpression, EXPR._CompressedSumExpression, EXPR._MultiSumExpression):
                 ans = {}
                 # Add nonlinear terms
                 # Do some extra work to combine the arguments of 'Sum' expressions
@@ -552,7 +552,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                 if not linear:
                     for res in _result:
                         if None in res:
-                            if res[None].__class__ in (EXPR._SumExpression, EXPR._MultiSumExpression, EXPR._CompressedSumExpression, EXPR.            _StaticMultiSumExpression):
+                            if res[None].__class__ in (EXPR._SumExpression, EXPR._MutableMultiSumExpression, EXPR._CompressedSumExpression, EXPR.            _MultiSumExpression):
                                 for arg in res[None]._args:
                                     nonl.append(arg)
                             else:

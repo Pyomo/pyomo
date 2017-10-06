@@ -117,12 +117,12 @@ class ignore_entangled_expressions(object):
 class mutable_sum_context(object):
 
     def __enter__(self):
-        self.e = _MultiSumExpression([0])
+        self.e = _MutableMultiSumExpression([0])
         return self.e
 
     def __exit__(self, *args):
-        if self.e.__class__ == _MultiSumExpression:
-            self.e.__class__ = _StaticMultiSumExpression
+        if self.e.__class__ == _MutableMultiSumExpression:
+            self.e.__class__ = _MultiSumExpression
 
 nonlinear_expression = mutable_sum_context()
 
@@ -362,7 +362,7 @@ class CompressVisitor(ValueExpressionVisitor):
         return False
 
     def finalize(self, ans):
-        if ans.__class__ is _MultiSumExpression:
+        if ans.__class__ is _MutableMultiSumExpression:
             ans.__class__ = _CompressedSumExpression
         return ans
 
@@ -380,7 +380,7 @@ def NEW_compress_expression(expr, verbose=False, dive=False, multiprod=False):
     #
     if expr.__class__ in native_numeric_types or not expr.is_expression() or not expr._potentially_variable():
         return expr
-    if expr.__class__ is _MultiSumExpression:
+    if expr.__class__ is _MutableMultiSumExpression:
         expr.__class__ = _CompressedSumExpression
         return expr
     if expr.__class__ in pyomo5_multisum_types:
@@ -412,7 +412,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
     #
     if expr.__class__ in native_numeric_types or not expr.is_expression() or not expr._potentially_variable():
         return expr
-    if expr.__class__ is _MultiSumExpression:
+    if expr.__class__ is _MutableMultiSumExpression:
         expr.__class__ = _CompressedSumExpression
         return expr
     if expr.__class__ in pyomo5_multisum_types:
@@ -554,7 +554,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
             #
             _stack[-1][-1].append( ans )
         else:
-            if ans.__class__ is _MultiSumExpression:
+            if ans.__class__ is _MutableMultiSumExpression:
                 ans.__class__ = _CompressedSumExpression
             return ans
 
@@ -2093,7 +2093,7 @@ class _SumExpression(_LinearOperatorExpression):
         #
         # Augment the current multi-sum (LHS)
         #
-        if _l.__class__ is _MultiSumExpression:
+        if _l.__class__ is _MutableMultiSumExpression:
             #
             # Multisum + 1
             # MultiSum + p
@@ -2108,7 +2108,7 @@ class _SumExpression(_LinearOperatorExpression):
             #
             # Add the constant terms, and place the others
             #
-            elif _r.__class__ is _MultiSumExpression:
+            elif _r.__class__ is _MutableMultiSumExpression:
                 _l._args[0] += _r._args[0]
                 _l._args += _r._args[1:]
                 ans = _l
@@ -2117,7 +2117,7 @@ class _SumExpression(_LinearOperatorExpression):
             #
             # Add the constant terms, and place the others
             #
-            elif _r.__class__ is _CompressedSumExpression or _r.__class__ is _StaticMultiSumExpression:
+            elif _r.__class__ is _CompressedSumExpression or _r.__class__ is _MultiSumExpression:
                 _l._args[0] += _r._args[0]
                 _l._args += list(_r._args[1:])
                 ans = _l
@@ -2134,7 +2134,7 @@ class _SumExpression(_LinearOperatorExpression):
         #
         # Augment the current multi-sum (RHS)
         #
-        elif _r.__class__ is _MultiSumExpression:
+        elif _r.__class__ is _MutableMultiSumExpression:
             #
             # 1 + MultiSum
             # p + MultiSum
@@ -2149,7 +2149,7 @@ class _SumExpression(_LinearOperatorExpression):
             #
             # Add the constant terms, and place the others
             #
-            elif _l.__class__ is _CompressedSumExpression or _l.__class__ is _StaticMultiSumExpression:
+            elif _l.__class__ is _CompressedSumExpression or _l.__class__ is _MultiSumExpression:
                 _r._args[0] += _l._args[0]
                 _r._args += list(_l._args[1:])
                 ans = _r
@@ -2167,20 +2167,20 @@ class _SumExpression(_LinearOperatorExpression):
         # p + expr
         #
         elif _l.__class__ in native_numeric_types or not _l._potentially_variable():
-            ans = _MultiSumExpression([_l, _r])
+            ans = _MutableMultiSumExpression([_l, _r])
 
         #
         # expr + 1
         # expr + p
         #
         elif _r.__class__ in native_numeric_types or not _r._potentially_variable():
-            ans = _MultiSumExpression([_r, _l])
+            ans = _MutableMultiSumExpression([_r, _l])
 
         #
         # expr + expr
         #
         else:
-            ans = _MultiSumExpression([0, _l, _r])
+            ans = _MutableMultiSumExpression([0, _l, _r])
 
         return ans
 
@@ -2202,14 +2202,14 @@ class _NPV_SumExpression(_SumExpression):
         return False
 
 
-class _MultiSumExpression(_SumExpression):
+class _MutableMultiSumExpression(_SumExpression):
     """An object that defines a summation with 1 or more terms and a constant term."""
 
     __slots__ = ()
     PRECEDENCE = 6
 
     def _precedence(self):
-        return _MultiSumExpression.PRECEDENCE
+        return _MutableMultiSumExpression.PRECEDENCE
 
     def _apply_operation(self, result):
         return sum(result)
@@ -2239,13 +2239,13 @@ class _MultiSumExpression(_SumExpression):
                 ostream.write(' + ')
 
 
-class _StaticMultiSumExpression(_MultiSumExpression):
+class _MultiSumExpression(_MutableMultiSumExpression):
     """A temporary object that defines a summation with 1 or more terms and a constant term."""
     
     __slots__ = ()
 
 
-class _CompressedSumExpression(_MultiSumExpression):
+class _CompressedSumExpression(_MutableMultiSumExpression):
     """A temporary object that defines a summation with 1 or more terms and a constant term."""
     
     __slots__ = ()
@@ -2847,7 +2847,7 @@ def generate_expression(etype, _self, _other):
     elif _other.__class__ is _LinearExpression:
         return _other._combine_expr(-etype, _process_arg(_self))
 
-    if _self.__class__ is not _MultiSumExpression:
+    if _self.__class__ is not _MutableMultiSumExpression:
         _self = _process_arg(_self)
 
     if etype >= _unary:
@@ -2880,7 +2880,7 @@ def generate_expression(etype, _self, _other):
             raise DeveloperError(
                 "Unexpected unary operator id (%s)" % ( etype, ))
 
-    if _self.__class__ is not _MultiSumExpression:
+    if _self.__class__ is not _MutableMultiSumExpression:
         _other = _process_arg(_other)
 
     if etype < 0:
@@ -2933,7 +2933,7 @@ def generate_expression(etype, _self, _other):
         #
         # x + y
         #
-        if _self.__class__ is _MultiSumExpression or _other.__class__ is _MultiSumExpression:
+        if _self.__class__ is _MutableMultiSumExpression or _other.__class__ is _MutableMultiSumExpression:
             return _SumExpression._combine_expr(_self, _other)
         elif _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
@@ -3251,8 +3251,8 @@ pyomo5_expression_types = set([
         _SumExpression,
         _Constant_SumExpression,
         _NPV_SumExpression,
+        _MutableMultiSumExpression,
         _MultiSumExpression,
-        _StaticMultiSumExpression,
         _CompressedSumExpression,
         _GetItemExpression,
         Expr_if,
@@ -3268,8 +3268,8 @@ pyomo5_expression_types = set([
         _StaticQuadraticExpression,
         ])
 pyomo5_multisum_types = set([
+        _MutableMultiSumExpression,
         _MultiSumExpression,
-        _StaticMultiSumExpression,
         _CompressedSumExpression
         ])
 pyomo5_product_types = set([

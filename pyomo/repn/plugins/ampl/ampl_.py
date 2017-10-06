@@ -454,7 +454,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 # We are assuming that _Constant_* expression objects
                 # have been preprocessed to form constant values.
                 #
-                if isinstance(exp, expr._MultiSumExpression):
+                if isinstance(exp, expr._MutableMultiSumExpression):
                     nary_sum_str, binary_sum_str, coef_term_str = \
                         self._op_string[expr._SumExpression]
                     n = len(exp._args)

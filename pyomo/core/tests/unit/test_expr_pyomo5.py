@@ -584,7 +584,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(len(_e._args), 3)
         self.assertEqual(_e._args[0], 0.0)
         self.assertIs(_e._args[2], m.c)
-        self.assertIs(type(_e._args[1]._args[1]), EXPR._MultiSumExpression)
+        self.assertIs(type(_e._args[1]._args[1]), EXPR._MutableMultiSumExpression)
 
         #         *
         #        / \
@@ -610,11 +610,11 @@ class TestGenerate_SumExpression(unittest.TestCase):
 
         _e = EXPR.compress_expression(e, dive=True)
         self.assertIs(type(_e), EXPR._ProductExpression)
-        self.assertIs(type(_e._args[1]), EXPR._MultiSumExpression)
+        self.assertIs(type(_e._args[1]), EXPR._MutableMultiSumExpression)
         self.assertEqual(len(_e._args[1]._args), 3)
         self.assertEqual(_e._args[1]._args[0], 0.0)
         self.assertIs(_e._args[1]._args[2], m.c)
-        self.assertIs(type(_e._args[1]._args[1]._args[1]), EXPR._MultiSumExpression)
+        self.assertIs(type(_e._args[1]._args[1]._args[1]), EXPR._MutableMultiSumExpression)
 
     def test_trivialSum(self):
         #
@@ -3393,7 +3393,7 @@ class TestSummationExpression(unittest.TestCase):
     def test_summation4(self):
         e = summation(self.m.a, self.m.b)
         self.assertEqual( e(), 250 )
-        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertIs(type(e), EXPR._MultiSumExpression)
         self.assertEqual( id(self.m.a[1]), id(e._args[1]._args[0]) )
         self.assertEqual( id(self.m.a[2]), id(e._args[2]._args[0]) )
         self.assertEqual(e.size(), 17)
@@ -3401,13 +3401,13 @@ class TestSummationExpression(unittest.TestCase):
     def test_summation5(self):
         e = summation(self.m.b, denom=self.m.a)
         self.assertEqual( e(), 10 )
-        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertIs(type(e), EXPR._MultiSumExpression)
         self.assertEqual(e.size(False), 22)
 
     def test_summation6(self):
         e = summation(self.m.a, denom=self.m.p)
         self.assertEqual( e(), 25 )
-        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertIs(type(e), EXPR._MultiSumExpression)
         self.assertEqual( id(self.m.a[1]), id(e._args[1]._args[0]) )
         self.assertEqual( id(self.m.a[2]), id(e._args[2]._args[0]) )
         self.assertEqual(e.size(), 22)
@@ -3450,7 +3450,7 @@ class TestSumExpression(unittest.TestCase):
     def test_summation1(self):
         e = Sum(self.m.a[i] for i in self.m.a)
         self.assertEqual( e(), 25 )
-        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertIs(type(e), EXPR._MultiSumExpression)
         self.assertEqual( id(self.m.a[1]), id(e._args[1]) )
         self.assertEqual( id(self.m.a[2]), id(e._args[2]) )
         self.assertEqual(e.size(), 7)
@@ -3458,7 +3458,7 @@ class TestSumExpression(unittest.TestCase):
     def test_summation2(self):
         e = Sum(self.m.p[i]*self.m.a[i] for i in self.m.a)
         self.assertEqual( e(), 25 )
-        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertIs(type(e), EXPR._MultiSumExpression)
         self.assertEqual( id(self.m.a[1]), id(e._args[1]._args[1]) )
         self.assertEqual( id(self.m.a[2]), id(e._args[2]._args[1]) )
         self.assertEqual(e.size(), 17)
@@ -3466,7 +3466,7 @@ class TestSumExpression(unittest.TestCase):
     def test_summation3(self):
         e = Sum(self.m.q[i]*self.m.a[i] for i in self.m.a)
         self.assertEqual( e(), 75 )
-        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertIs(type(e), EXPR._MultiSumExpression)
         self.assertEqual( id(self.m.a[1]), id(e._args[1]._args[1]) )
         self.assertEqual( id(self.m.a[2]), id(e._args[2]._args[1]) )
         self.assertEqual(e.size(), 17)
@@ -3474,7 +3474,7 @@ class TestSumExpression(unittest.TestCase):
     def test_summation4(self):
         e = Sum(self.m.a[i]*self.m.b[i] for i in self.m.a)
         self.assertEqual( e(), 250 )
-        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertIs(type(e), EXPR._MultiSumExpression)
         self.assertEqual( id(self.m.a[1]), id(e._args[1]._args[0]) )
         self.assertEqual( id(self.m.a[2]), id(e._args[2]._args[0]) )
         self.assertEqual(e.size(), 17)
@@ -3482,13 +3482,13 @@ class TestSumExpression(unittest.TestCase):
     def test_summation5(self):
         e = Sum(self.m.b[i]/self.m.a[i] for i in self.m.a)
         self.assertEqual( e(), 10 )
-        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertIs(type(e), EXPR._MultiSumExpression)
         self.assertEqual(e.size(False), 22)
 
     def test_summation6(self):
         e = Sum(self.m.a[i]/self.m.p[i] for i in self.m.a)
         self.assertEqual( e(), 25 )
-        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertIs(type(e), EXPR._MultiSumExpression)
         self.assertEqual( id(self.m.a[1]), id(e._args[1]._args[0]) )
         self.assertEqual( id(self.m.a[2]), id(e._args[2]._args[0]) )
         self.assertEqual(e.size(), 22)
@@ -4309,13 +4309,13 @@ class TestLinearDecomp(unittest.TestCase):
         M.v = Var()
         M.w = Var()
         M.q = Param(initialize=2)
-        e = EXPR._MultiSumExpression([2])
+        e = EXPR._MutableMultiSumExpression([2])
         self.assertEqual(EXPR._LinearExpression._decompose_term(e), (2,None,None))
-        e = EXPR._MultiSumExpression([2,M.v])
+        e = EXPR._MutableMultiSumExpression([2,M.v])
         self.assertEqual(EXPR._LinearExpression._decompose_term(e), (2,1,M.v))
-        e = EXPR._MultiSumExpression([2,M.q+M.v])
+        e = EXPR._MutableMultiSumExpression([2,M.q+M.v])
         self.assertEqual(EXPR._LinearExpression._decompose_term(e), (4,1,M.v))
-        e = EXPR._MultiSumExpression([2,M.q+M.v,M.w])
+        e = EXPR._MutableMultiSumExpression([2,M.q+M.v,M.w])
         self.assertRaises(ValueError, EXPR._LinearExpression._decompose_term, e)
         
 if __name__ == "__main__":
