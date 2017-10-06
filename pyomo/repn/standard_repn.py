@@ -200,7 +200,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
     # Disable implicit cloning while creating a standard representation.
     # We allow the representation to be entangled with the original expression.
     #
-    with EXPR.ignore_entangled_expressions():
+    with EXPR.ignore_entangled_expressions:
         #
         # Setup
         #
