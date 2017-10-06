@@ -44,6 +44,9 @@ class timeout:
         signal.alarm(0)
 
 
+_bin = {'COOPR3': '/Users/wehart/src/pyomo/py36/bin',
+        'PYOMO5': os.path.abspath('../../../../bin')
+       }
 
 large = True
 _timeout = 20
@@ -127,7 +130,7 @@ def evaluate(logfile, seconds, verbose):
 #
 # Convert a test problem
 #
-def run_pyomo(format_, problem, verbose):
+def run_pyomo(code, format_, problem, verbose):
 
     if verbose:
         options = ""  # TODO
@@ -135,7 +138,7 @@ def run_pyomo(format_, problem, verbose):
         options = ""
 
     def f():
-        cmd = '../../../../bin/pyomo convert --report-timing --output=file.%s %s %s' % (format_, options, problem)
+        cmd = _bin[code] + '/pyomo convert --report-timing --output=file.%s %s %s' % (format_, options, problem)
         if verbose:
             print("Command: %s" % cmd)
         res = pyutilib.subprocess.run(cmd, outfile='pyomo.out')
@@ -145,6 +148,33 @@ def run_pyomo(format_, problem, verbose):
 
         seconds = {}
         return evaluate('pyomo.out', seconds, verbose)
+
+    return f
+
+#
+# Convert a test problem
+#
+def run_script(code, format_, problem, verbose, cwd=None):
+
+    if verbose:
+        options = ""  # TODO
+    else:
+        options = ""
+
+    def f():
+        cmd = _bin[code] + '/lpython %s pyomo.%s' % (problem, format_)
+        if verbose:
+            print("Command: %s" % cmd)
+        _cwd = os.getcwd()
+        os.chdir(cwd)
+        res = pyutilib.subprocess.run(cmd, outfile='pyomo.out', verbose=verbose)
+        os.chdir(_cwd)
+        if res[0] != 0:
+            print("Aborting performance testing!")
+            sys.exit(1)
+
+        seconds = {}
+        return evaluate(cwd+'/pyomo.out', seconds, verbose)
 
     return f
 
@@ -166,12 +196,14 @@ def print_results(factors_, ans_, output):
 #
 def runall(factors, res, output=True, filetype=None, verbose=False):
 
+    code = factors[0]
+
     def pmedian1(name, num):
         testname = 'pmedian1_%d' % num
         if not filetype or filetype == name:
             factors_ = tuple(factors+[name,testname])
             print("TESTING: %s" % " ".join(factors_))
-            ans_ = res[factors_] = measure(run_pyomo(name, "../../examples/performance/pmedian/pmedian1.py ../../examples/performance/pmedian/pmedian.test%d.dat" % num, verbose), n=N)
+            ans_ = res[factors_] = measure(run_pyomo(code, name, "../../examples/performance/pmedian/pmedian1.py ../../examples/performance/pmedian/pmedian.test%d.dat" % num, verbose), n=N)
             if not verbose:
                 print_results(factors_, ans_, output)
 
@@ -180,7 +212,7 @@ def runall(factors, res, output=True, filetype=None, verbose=False):
         if not filetype or filetype == name:
             factors_ = tuple(factors+[name,testname])
             print("TESTING: %s" % " ".join(factors_))
-            ans_ = res[factors_] = measure(run_pyomo(name, "../../examples/performance/pmedian/pmedian2.py ../../examples/performance/pmedian/pmedian.test%d.dat" % num, verbose), n=N)
+            ans_ = res[factors_] = measure(run_pyomo(code, name, "../../examples/performance/pmedian/pmedian2.py ../../examples/performance/pmedian/pmedian.test%d.dat" % num, verbose), n=N)
             if not verbose:
                 print_results(factors_, ans_, output)
 
@@ -189,7 +221,7 @@ def runall(factors, res, output=True, filetype=None, verbose=False):
         if not filetype or filetype == name:
             factors_ = tuple(factors+[name,testname])
             print("TESTING: %s" % " ".join(factors_))
-            ans_ = res[factors_] = measure(run_pyomo(name, "../../examples/performance/misc/bilinear1_%d.py" % num, verbose), n=N)
+            ans_ = res[factors_] = measure(run_pyomo(code, name, "../../examples/performance/misc/bilinear1_%d.py" % num, verbose), n=N)
             if not verbose:
                 print_results(factors_, ans_, output)
 
@@ -198,7 +230,7 @@ def runall(factors, res, output=True, filetype=None, verbose=False):
         if not filetype or filetype == name:
             factors_ = tuple(factors+[name,testname])
             print("TESTING: %s" % " ".join(factors_))
-            ans_ = res[factors_] = measure(run_pyomo(name, "../../examples/performance/misc/bilinear2_%d.py" % num, verbose), n=N)
+            ans_ = res[factors_] = measure(run_pyomo(code, name, "../../examples/performance/misc/bilinear2_%d.py" % num, verbose), n=N)
             if not verbose:
                 print_results(factors_, ans_, output)
 
@@ -207,7 +239,7 @@ def runall(factors, res, output=True, filetype=None, verbose=False):
         if not filetype or filetype == name:
             factors_ = tuple(factors+[name,testname])
             print("TESTING: %s" % " ".join(factors_))
-            ans_ = res[factors_] = measure(run_pyomo(name, "../../examples/performance/misc/diag1_%d.py" % num, verbose), n=N)
+            ans_ = res[factors_] = measure(run_pyomo(code, name, "../../examples/performance/misc/diag1_%d.py" % num, verbose), n=N)
             if not verbose:
                 print_results(factors_, ans_, output)
 
@@ -216,15 +248,29 @@ def runall(factors, res, output=True, filetype=None, verbose=False):
         if not filetype or filetype == name:
             factors_ = tuple(factors+[name,testname])
             print("TESTING: %s" % " ".join(factors_))
-            ans_ = res[factors_] = measure(run_pyomo(name, "../../examples/performance/misc/diag2_%d.py" % num, verbose), n=N)
+            ans_ = res[factors_] = measure(run_pyomo(code, name, "../../examples/performance/misc/diag2_%d.py" % num, verbose), n=N)
+            if not verbose:
+                print_results(factors_, ans_, output)
+
+    def stochpdegas1(name, num):
+        testname = 'stochpdegas1_%d' % num
+        if not filetype or filetype == name:
+            factors_ = tuple(factors+[name,testname])
+            print("TESTING: %s" % " ".join(factors_))
+            ans_ = res[factors_] = measure(run_script(code, name, "run_stochpdegas1_automatic.py", verbose, cwd='../../examples/performance/dae/'), n=N)
             if not verbose:
                 print_results(factors_, ans_, output)
 
 
+    if False:
+        if large:
+            stochpdegas1('nl', 0)
+        else:
+            stochpdegas1('nl', 0)
     if True:
         if large:
             pmedian1('lp',7)
-            pmedian1('nl',7)
+            #pmedian1('nl',7)
             #pmedian1('bar',7)
             #pmedian1('mps',7)
         else:
@@ -236,15 +282,16 @@ def runall(factors, res, output=True, filetype=None, verbose=False):
     if True:
         if large:
             pmedian2('lp',7)
-            pmedian2('nl',7)
+            #pmedian2('nl',7)
             #pmedian2('bar',7)
             #pmedian2('mps',7)
         else:
             pmedian2('lp',4)
-            pmedian2('nl',4)
+            #pmedian2('nl',4)
             #pmedian2('bar',4)
             #pmedian2('mps',4)
 
+    return
     if True:
         if large:
             bilinear1('lp',100000)
@@ -286,7 +333,8 @@ def remap_keys(mapping):
 #
 res = {}
 
-runall([], res, filetype=args.type, verbose=args.verbose)
+runall(['COOPR3'], res, filetype=args.type, verbose=args.verbose)
+runall(['PYOMO5'], res, filetype=args.type, verbose=args.verbose)
 
 
 
