@@ -17,6 +17,13 @@ import traceback
 from copy import deepcopy
 from collections import deque
 
+try:
+    from sys import getrefcount
+    _getrefcount_available = False
+except ImportError:
+    _getrefcount_available = False
+
+
 logger = logging.getLogger('pyomo.core')
 
 from six import StringIO, next, string_types, itervalues
@@ -53,15 +60,14 @@ def _clear_expression_pool():
     pass
 
 sum = builtins.sum
-_getrefcount_available = False
 
-UNREFERENCED_EXPR_COUNT = 11
-UNREFERENCED_INTRINSIC_EXPR_COUNT = -2
-UNREFERENCED_EXPR_IF_COUNT = -3
+UNREFERENCED_EXPR_COUNT = 10
+UNREFERENCED_INTRINSIC_EXPR_COUNT = 8 
+UNREFERENCED_EXPR_IF_COUNT = 10
 if sys.version_info[:2] >= (3, 6):
     UNREFERENCED_EXPR_COUNT -= 1
     UNREFERENCED_INTRINSIC_EXPR_COUNT += 1
-    UNREFERENCED_EXPR_IF_COUNT += 2
+    UNREFERENCED_EXPR_IF_COUNT -= 1
 elif sys.version_info[:2] < (2, 7):
     UNREFERENCED_EXPR_IF_COUNT = -4
 
@@ -104,14 +110,16 @@ class clone_counter_context(object):
 clone_counter = clone_counter_context()
 
 
-class ignore_entangled_expressions(object):
-    detangle = True
+class ignore_entangled_context(object):
+    detangle = [True]
 
     def __enter__(self):
-        ignore_entangled_expressions.detangle = False
+        ignore_entangled_expressions.detangle.append(False)
 
     def __exit__(self, *args):
-        ignore_entangled_expressions.detangle = True
+        ignore_entangled_expressions.detangle.pop()
+
+ignore_entangled_expressions = ignore_entangled_context()
 
 
 class mutable_sum_context(object):
@@ -1310,15 +1318,18 @@ class _ExpressionBase(NumericValue):
     fixed                   T       T       F       T
     """
 
-    __slots__ =  ('_args','_owned')
+    __slots__ =  ('_args','clone_info')
     PRECEDENCE = 0
 
     def __init__(self, args):
         self._args = args
-        self._owned = False
-        for arg in args:
-            if arg.__class__ in pyomo5_expression_types:
-                arg._owned = True
+        if _getrefcount_available:
+            self.clone_info = UNREFERENCED_EXPR_COUNT
+        else:
+            self.clone_info = False
+            for arg in args:
+                if arg.__class__ in pyomo5_expression_types:
+                    arg.clone_info = True
 
     def __getstate__(self):
         state = super(_ExpressionBase, self).__getstate__()
@@ -1558,10 +1569,13 @@ class _ExternalFunctionExpression(_ExpressionBase):
         """Construct a call to an external function"""
         self._args = args
         self._fcn = fcn
-        self._owned = False
-        for arg in args:
-            if arg.__class__ in pyomo5_expression_types:
-                arg._owned = True
+        if _getrefcount_available:
+            self.clone_info = UNREFERENCED_EXPR_COUNT
+        else:
+            self.clone_info = False
+            for arg in args:
+                if arg.__class__ in pyomo5_expression_types:
+                    arg.clone_info = True
 
     def _clone(self, args, memo):
         return self.__class__(args, self._fcn)
@@ -1960,10 +1974,13 @@ class _MultiProdExpression(_ProductExpression):
     def __init__(self, args, nnum=None):
         self._args = args
         self._nnum = nnum
-        self._owned = False
-        for arg in args:
-            if arg.__class__ in pyomo5_expression_types:
-                arg._owned = True
+        if _getrefcount_available:
+            self.clone_info = UNREFERENCED_EXPR_COUNT
+        else:
+            self.clone_info = False
+            for arg in args:
+                if arg.__class__ in pyomo5_expression_types:
+                    arg.clone_info = True
 
     def _clone(self, args, memo):
         return self.__class__(args, self._nnum)
@@ -2208,6 +2225,16 @@ class _MutableMultiSumExpression(_SumExpression):
     __slots__ = ()
     PRECEDENCE = 6
 
+    def __init__(self, args):
+        self._args = list(args)
+        if _getrefcount_available:
+            self.clone_info = UNREFERENCED_EXPR_COUNT
+        else:
+            self.clone_info = False
+            for arg in args:
+                if arg.__class__ in pyomo5_expression_types:
+                    arg.clone_info = True
+
     def _precedence(self):
         return _MutableMultiSumExpression.PRECEDENCE
 
@@ -2264,10 +2291,13 @@ class _GetItemExpression(_ExpressionBase):
         """Construct an expression with an operation and a set of arguments"""
         self._args = args
         self._base = base
-        self._owned = False
-        for arg in args:
-            if arg.__class__ in pyomo5_expression_types:
-                arg._owned = True
+        if _getrefcount_available:
+            self.clone_info = UNREFERENCED_EXPR_COUNT
+        else:
+            self.clone_info = False
+            for arg in args:
+                if arg.__class__ in pyomo5_expression_types:
+                    arg.clone_info = True
 
     def _clone(self, args, memo):
         return self.__class__(args, self._base)
@@ -2338,13 +2368,16 @@ class Expr_if(_ExpressionBase):
         self._else = ELSE
         if self._if.__class__ in native_types:
             self._if = as_numeric(self._if)
-        self._owned = False
-        if IF.__class__ in pyomo5_expression_types:
-            IF._owned = True
-        if THEN.__class__ in pyomo5_expression_types:
-            THEN._owned = True
-        if ELSE.__class__ in pyomo5_expression_types:
-            ELSE._owned = True
+        if _getrefcount_available:
+            self.clone_info = UNREFERENCED_EXPR_IF_COUNT
+        else:
+            self.clone_info = False
+            if IF.__class__ in pyomo5_expression_types:
+                IF.clone_info = True
+            if THEN.__class__ in pyomo5_expression_types:
+                THEN.clone_info = True
+            if ELSE.__class__ in pyomo5_expression_types:
+                ELSE.clone_info = True
 
     def __getstate__(self):
         state = super(Expr_if, self).__getstate__()
@@ -2419,9 +2452,12 @@ class _UnaryFunctionExpression(_ExpressionBase):
         self._args = args
         self._name = name
         self._fcn = fcn
-        self._owned = False
-        if args[0].__class__ in pyomo5_expression_types:
-            args[0]._owned = True
+        if _getrefcount_available:
+            self.clone_info = UNREFERENCED_INTRINSIC_EXPR_COUNT
+        else:
+            self.clone_info = False
+            if args[0].__class__ in pyomo5_expression_types:
+                args[0].clone_info = True
 
     def _clone(self, args, memo):
         return self.__class__(args, self._name, self._fcn)
@@ -2508,7 +2544,10 @@ class _LinearExpression(_ExpressionBase):
         self.linear_coefs = []
         self.linear_vars = []
         self._args = tuple()
-        self._owned = False
+        if _getrefcount_available:
+            self.clone_info = UNREFERENCED_EXPR_COUNT
+        else:
+            self.clone_info = False
 
     def __getstate__(self):
         state = super(_LinearExpression, self).__getstate__()
@@ -2571,12 +2610,18 @@ class _LinearExpression(_ExpressionBase):
                 C,c,v = expr._args[0],None,None
             else:
                 C,c,v = _LinearExpression._decompose_term(expr._args[0])
-            C_,c_,v_ = _LinearExpression._decompose_term(expr._args[1])
+            if expr._args[1].__class__ in _LinearExpression.vtypes:
+                v_ = expr._args[1]
+                if not v is None:
+                    raise ValueError("Expected a single linear term")
+                return 0,C,v_
+            else:
+                C_,c_,v_ = _LinearExpression._decompose_term(expr._args[1])
             if not v_ is None:
                 if not v is None:
                     raise ValueError("Expected a single linear term")
                 return C*C_,C*c_,v_
-            return C*C_,C_*c,v
+            return C_C*C,C_*c,v
         elif expr.__class__ is _SumExpression:
             C,c,v = _LinearExpression._decompose_term(expr._args[0])
             C_,c_,v_ = _LinearExpression._decompose_term(expr._args[1])
@@ -2743,7 +2788,10 @@ class _QuadraticExpression(_ExpressionBase):
         self.quadratic_coefs = []
         self.quadratic_vars = []
         self._args = tuple()
-        self._owned = False
+        if _getrefcount_available:
+            self.clone_info = UNREFERENCED_EXPR_COUNT
+        else:
+            self.clone_info = False
 
     def _clone(self, args=None):
         repn = self.__class__()
@@ -2797,8 +2845,8 @@ def _process_arg(obj):
         return obj
 
     if obj.is_expression():
-        if ignore_entangled_expressions.detangle and \
-           obj.__class__ in pyomo5_expression_types and obj._owned:
+        if ignore_entangled_expressions.detangle[-1] and \
+           obj.__class__ in pyomo5_expression_types:
             #
             # If the expression is owned, then we need to
             # clone it to avoid creating an entangled expression.
@@ -2809,7 +2857,8 @@ def _process_arg(obj):
             # Compress the expression before cloning, which 
             # should make cloning less expensive.
             #
-            return clone_expression( compress_expression( obj ), clone_leaves=False )
+            if (_getrefcount_available and getrefcount(obj) > obj.clone_info) or obj.clone_info is True:
+                return clone_expression( compress_expression(obj) , clone_leaves=False )
         return obj
 
     if obj.__class__ is NumericConstant:
@@ -2832,11 +2881,19 @@ def _process_arg(obj):
     return obj
 
 
+if _getrefcount_available:
+    _SumClass_ = _MutableMultiSumExpression
+else:
+    _SumClass_ = _SumExpression
+
 #@profile
 def generate_expression(etype, _self, _other):
 
     if etype > _inplace:
+        inplace = True
         etype -= _inplace
+    else:
+        inplace = False
 
     if _self.__class__ is _LinearExpression:
         if etype >= _unary:
@@ -2847,7 +2904,11 @@ def generate_expression(etype, _self, _other):
     elif _other.__class__ is _LinearExpression:
         return _other._combine_expr(-etype, _process_arg(_self))
 
-    if _self.__class__ is not _MutableMultiSumExpression:
+    #
+    # When not using reference counting, then a mutable sum is guaranteed to not
+    # be shared because it is only used while compressing the sum.
+    #
+    if _getrefcount_available or not _self.__class__ is _MutableMultiSumExpression:
         _self = _process_arg(_self)
 
     if etype >= _unary:
@@ -2880,8 +2941,7 @@ def generate_expression(etype, _self, _other):
             raise DeveloperError(
                 "Unexpected unary operator id (%s)" % ( etype, ))
 
-    if _self.__class__ is not _MutableMultiSumExpression:
-        _other = _process_arg(_other)
+    _other = _process_arg(_other)
 
     if etype < 0:
         #
@@ -2943,7 +3003,7 @@ def generate_expression(etype, _self, _other):
             if _self.is_constant():
                 return _Constant_SumExpression((_self, _other))
             elif _self._potentially_variable():
-                return _SumExpression((_other, _self))
+                return _SumClass_((_other, _self))
             return _NPV_SumExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
             if _self == 0:      #isclose(_self, 0):
@@ -2951,12 +3011,12 @@ def generate_expression(etype, _self, _other):
             if _other.is_constant():
                 return _Constant_SumExpression((_self, _other))
             elif _other._potentially_variable():
-                return _SumExpression((_self, _other))
+                return _SumClass_((_self, _other))
             return _NPV_SumExpression((_self, _other))
         elif _other._potentially_variable():
-            return _SumExpression((_self, _other))
+            return _SumClass_((_self, _other))
         elif _self._potentially_variable():
-            return _SumExpression((_other, _self))
+            return _SumClass_((_other, _self))
         elif not _other.is_constant():
             return _NPV_SumExpression((_self, _other))
         elif not _self.is_constant():
@@ -2975,7 +3035,7 @@ def generate_expression(etype, _self, _other):
             if _self.is_constant():
                 return _Constant_SumExpression((-_other, _self))
             elif _self._potentially_variable():
-                return _SumExpression((-_other, _self))
+                return _SumClass_((-_other, _self))
             return _NPV_SumExpression((-_other, _self))
         elif _self.__class__ in native_numeric_types:
             if isclose(_self, 0):
@@ -2987,12 +3047,12 @@ def generate_expression(etype, _self, _other):
             if _other.is_constant():    
                 return _Constant_SumExpression((_self, _Constant_NegationExpression((_other,))))
             elif _other._potentially_variable():    
-                return _SumExpression((_self, _NegationExpression((_other,))))
+                return _SumClass_((_self, _NegationExpression((_other,))))
             return _NPV_SumExpression((_self, _NPV_NegationExpression((_other,))))
         elif _other._potentially_variable():    
-            return _SumExpression((_self, _NegationExpression((_other,))))
+            return _SumClass_((_self, _NegationExpression((_other,))))
         elif _self._potentially_variable():
-            return _SumExpression((_NPV_NegationExpression((_other,)), _self))
+            return _SumClass_((_NPV_NegationExpression((_other,)), _self))
         elif not _other.is_constant():    
             return _NPV_SumExpression((_self, _NPV_NegationExpression((_other,))))
         elif not _self.is_constant():    
