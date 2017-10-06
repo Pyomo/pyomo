@@ -32,35 +32,42 @@ def prod(factors):
 Prod = prod
 
 
-def Sum(args, start=0):
+def Sum(args, start=0, linear=False):
     """
     A utility function to compute a sum of Pyomo expressions.  The behavior is similar to the
     builtin 'sum' function, but this generates a compact expression.
     """
     if expr_common.mode == expr_common.Mode.pyomo5_trees:
-        #
-        # If we're starting with a numeric value, then 
-        # create a new nonlinear sum expression but 
-        # return a static version to the user.
-        #
-        if start.__class__ in native_numeric_types:
-            with EXPR.nonlinear_expression as e:
-                e += start
-                for arg in args:
-                    e += arg
-            if len(e._args) == 0:
-                return 0
-            elif len(e._args) == 1:
-                return e._args[0]
-            else:
-                return e
-        #
-        # Otherwise, use the context that is provided and return it.
-        #
-        e = start
-        for arg in args:
-            e += arg
-        return e
+        with EXPR.ignore_entangled_expressions:
+            #
+            # If we're starting with a numeric value, then 
+            # create a new nonlinear sum expression but 
+            # return a static version to the user.
+            #
+            if start.__class__ in native_numeric_types:
+                if linear == True:
+                    with EXPR.linear_expression as e:
+                        e += start
+                        for arg in args:
+                            e += arg
+                else:
+                    with EXPR.nonlinear_expression as e:
+                        e += start
+                        for arg in args:
+                            e += arg
+                if len(e._args) == 0:
+                    return 0
+                elif len(e._args) == 1:
+                    return e._args[0]
+                else:
+                    return e
+            #
+            # Otherwise, use the context that is provided and return it.
+            #
+            e = start
+            for arg in args:
+                e += arg
+            return e
     else:
         return sum(*args)
 
