@@ -9,21 +9,21 @@
 #  ___________________________________________________________________________
 
 import pyomo.core.plugins.transform.relax_integrality
-#import pyomo.core.plugins.transform.eliminate_fixed_vars
-#import pyomo.core.plugins.transform.standard_form
+# import pyomo.core.plugins.transform.eliminate_fixed_vars
+# import pyomo.core.plugins.transform.standard_form
 import pyomo.core.plugins.transform.expand_connectors
-#import pyomo.core.plugins.transform.equality_transform
+# import pyomo.core.plugins.transform.equality_transform
 import pyomo.core.plugins.transform.nonnegative_transform
-#import pyomo.core.plugins.transform.dual_transformation
+# import pyomo.core.plugins.transform.dual_transformation
 import pyomo.core.plugins.transform.linear_dual
 import pyomo.core.plugins.transform.radix_linearization
 import pyomo.core.plugins.transform.discrete_vars
 # import pyomo.core.plugins.transform.util
+import pyomo.core.plugins.transform.zero_sum_propagator
 import pyomo.core.plugins.transform.bounds_to_vars
 import pyomo.core.plugins.transform.equality_propagate
 import pyomo.core.plugins.transform.deactivate_trivial_constraints
 import pyomo.core.plugins.transform.detect_fixed_vars
 import pyomo.core.plugins.transform.init_vars
 import pyomo.core.plugins.transform.remove_zero_terms
-import pyomo.core.plugins.transform.zero_sum_propagator
 import pyomo.core.plugins.transform.add_slack_vars

@@ -7,10 +7,10 @@ __author__ = "Qi Chen <https://github.com/qtothec>"
 
 
 class TestConstraintToVarBoundTransform(unittest.TestCase):
-    """Tests explicit to variable bound transformation."""
+    """Tests explicit bound to variable bound transformation."""
 
-    def test_fixed_var_propagate(self):
-        """Test for transitivity in a variable equality set."""
+    def test_constraint_to_var_bound(self):
+        """Test converting explicit constraints into variable bounds."""
         m = ConcreteModel()
         m.v1 = Var(initialize=1)
         m.v2 = Var(initialize=2)
@@ -55,6 +55,21 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
 
         self.assertEquals(value(m.v4.ub), 5)
         self.assertFalse(m.v4.has_lb())
+
+    def test_zero_coefficient(self):
+        """Tests handling of zero coefficients."""
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.z = Var()
+        m.c = Constraint(expr=m.x * m.y == m.z)
+        m.z.fix(0)
+        m.y.fix(0)
+        TransformationFactory('core.constraints_to_var_bounds').apply_to(m)
+        self.assertEqual(m.c.body.polynomial_degree(), 1)
+        self.assertFalse(m.c.active)
+        self.assertFalse(m.x.has_lb())
+        self.assertFalse(m.x.has_ub())
 
 
 if __name__ == '__main__':
