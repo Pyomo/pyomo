@@ -47,26 +47,31 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
                     var = repn.variables[0]
                     const = repn.constant if repn.constant is not None else 0
                     coef = float(repn.linear[0])
-                    if constr.upper is not None:
-                        newbound = (value(constr.upper) - const) / coef
-                        if coef > 0:
-                            var.setub(min(var.ub, newbound)
-                                      if var.ub is not None
-                                      else newbound)
-                        elif coef < 0:
-                            var.setlb(max(var.lb, newbound)
-                                      if var.lb is not None
-                                      else newbound)
-                    if constr.lower is not None:
-                        newbound = (value(constr.lower) - const) / coef
-                        if coef > 0:
-                            var.setlb(max(var.lb, newbound)
-                                      if var.lb is not None
-                                      else newbound)
-                        elif coef < 0:
-                            var.setub(min(var.ub, newbound)
-                                      if var.ub is not None
-                                      else newbound)
+                    if coef == 0:
+                        # This can happen when a one element of a bilinear term
+                        # is fixed to zero. Obviously, do not divide by zero.
+                        pass
+                    else:
+                        if constr.upper is not None:
+                            newbound = (value(constr.upper) - const) / coef
+                            if coef > 0:
+                                var.setub(min(var.ub, newbound)
+                                          if var.ub is not None
+                                          else newbound)
+                            elif coef < 0:
+                                var.setlb(max(var.lb, newbound)
+                                          if var.lb is not None
+                                          else newbound)
+                        if constr.lower is not None:
+                            newbound = (value(constr.lower) - const) / coef
+                            if coef > 0:
+                                var.setlb(max(var.lb, newbound)
+                                          if var.lb is not None
+                                          else newbound)
+                            elif coef < 0:
+                                var.setub(min(var.ub, newbound)
+                                          if var.ub is not None
+                                          else newbound)
                     constr.deactivate()
                     # Sometimes deactivating the constraint will remove the
                     # variable from all active constraints, so that it won't be
