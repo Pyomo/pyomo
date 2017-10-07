@@ -98,7 +98,7 @@ class IIdentityExpression(NumericValue):
             return 0
         return self._expr.polynomial_degree()
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         """Convert this expression into a string."""
         if ostream is None:
             ostream = sys.stdout
@@ -112,11 +112,13 @@ class IIdentityExpression(NumericValue):
         elif isinstance(self._expr, NumericValue):
             self._expr.to_string(ostream=ostream,
                                  verbose=verbose,
-                                 precedence=precedence)
+                                 precedence=precedence,
+                                 labeler=labeler)
         else:
             as_numeric(self._expr).to_string(ostream=ostream,
                                              verbose=verbose,
-                                             precedence=precedence)
+                                             precedence=precedence,
+                                             labeler=labeler)
         if _verbose:
             ostream.write("}")
 

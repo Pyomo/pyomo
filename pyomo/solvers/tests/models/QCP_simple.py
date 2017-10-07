@@ -10,6 +10,7 @@
 
 import pyomo.kernel as pmo
 from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, NonNegativeReals, maximize, ConstraintList
+from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 @register_model
@@ -52,6 +53,16 @@ class QCP_simple(_BaseTestModel):
         model.x.value = 1
         model.y.value = 1
         model.z.value = 1
+
+    def post_solve_test_validation(self, tester, results):
+        if tester is None:
+            assert results['Solver'][0]['termination condition'] in \
+                (TerminationCondition.optimal,
+                 TerminationCondition.locallyOptimal)
+        else:
+            tester.assertIn(results['Solver'][0]['termination condition'],
+                            (TerminationCondition.optimal,
+                             TerminationCondition.locallyOptimal))
 
 @register_model
 class QCP_simple_nosuffixes(QCP_simple):
