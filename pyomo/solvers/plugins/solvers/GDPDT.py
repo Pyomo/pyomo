@@ -451,12 +451,14 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                 self._decomposition_strategy == 'LGBD'):
             if not hasattr(m, 'dual'):  # Set up dual value reporting
                 m.dual = Suffix(direction=Suffix.IMPORT)
+            m.dual.activate()
             # Map Constraint, nlp_iter -> generated OA Constraint
             GDPDT.OA_constr_map = {}
             self._calc_jacobians()  # preload jacobians
         if self._decomposition_strategy == 'PSC':
             if not hasattr(m, 'dual'):  # Set up dual value reporting
                 m.dual = Suffix(direction=Suffix.IMPORT)
+            m.dual.activate()
             if not hasattr(m, 'ipopt_zL_out'):
                 m.ipopt_zL_out = Suffix(direction=Suffix.IMPORT)
             if not hasattr(m, 'ipopt_zU_out'):
@@ -1070,7 +1072,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                 ctype=Disjunct, descend_into=(Block, Disjunct)):
             if value(abs(disj.indicator_var - 1)) <= self.integer_tolerance:
                 # Disjunct is active. Convert to Block.
-                m.reclassify_component_type(disj, Block)
+                disj.parent_block().reclassify_component_type(disj, Block)
             elif value(abs(disj.indicator_var)) <= self.integer_tolerance:
                 disj.deactivate()
             else:
