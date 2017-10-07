@@ -78,7 +78,7 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
                     # updated during the optimization. Therefore, we need to
                     # shift the value of var as necessary in order to keep it
                     # within the constraints.
-                    if var.lb is not None and var.value < var.lb:
+                    if var.has_lb() and var.value < var.lb:
                         var.set_value(var.lb)
-                    if var.ub is not None and var.value > var.ub:
+                    if var.has_ub() and var.value > var.ub:
                         var.set_value(var.ub)
