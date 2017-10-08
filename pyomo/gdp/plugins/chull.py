@@ -280,9 +280,8 @@ class ConvexHull_Transformation(Transformation):
             type(parent_block._gdp_transformation_info) is dict):
                 infodict = parent_block._gdp_transformation_info
                 if parent_component.name in infodict:
-                    # if the orConstraint and disaggregation
-                    # constraints have already been declared, we fetch
-                    # them.
+                    # if the orConstraint and disaggregation constraints have
+                    # already been declared, we fetch them.
                     orConstraint = infodict['disjunction_or_constraint'][
                         parent_component.local_name]
                     disaggregationConstraint = infodict[
@@ -308,7 +307,7 @@ class ConvexHull_Transformation(Transformation):
                 # variables. This means there is trouble if they are
                 # unfixed later...  
                 for var in identify_variables(cons.body, include_fixed=False):
-                    # Note the use of a dict so that we will eventually
+                    # Note the use of a list so that we will eventually
                     # disaggregate the vars in a deterministic order
                     # (the order that we found them)
                     if var not in varSet_tmp:
@@ -329,8 +328,22 @@ class ConvexHull_Transformation(Transformation):
                 disaggregatedVar = disjunct._gdp_transformation_info[
                     'disaggregatedVars'][var]
                 disaggregatedExpr += disaggregatedVar
+            # TODO: ESJ: this can't be right... disjunct is just the last of the
+            # disjuncts from the for loop above. This is all to make sure that
+            # the index of the disaggregation constraint is unique. It has the
+            # index of the disjunction and then the name of the variable. We
+            # really want this to be the name of the disaggregated variable,
+            # right? Which we have already made unique when we added it to the
+            # block for the transformed disjunct. But that was unique with
+            # respect to that disjunct... Now we need something unique across
+            # all the disjunctions?
             consName = unique_component_name(disjunct, var.name)
-            consIdx = index + (consName,) if index is not None else consName
+            # TODO: Is this OK? I'm not sure how to do this cleanly.
+            if type(index) is tuple: 
+                index = consIdx = index + (consName,)
+            else:
+                consIdx = (index,) + (consName,) if index is not None \
+                          else consName
             disaggregationConstraint.add(
                 consIdx,
                 var == disaggregatedExpr)

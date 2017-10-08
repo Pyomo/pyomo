@@ -471,10 +471,37 @@ class TwoTermDisj(unittest.TestCase):
 
 class IndexedDisjunction(unittest.TestCase):
     @staticmethod
-    def makeModel(self):
-        pass
+    def makeModel():
+        m = ConcreteModel()
+        m.A = Set(initialize=[1,2,3])
+        m.B = Set(initialize=['a','b'])
+        m.x = Var(m.A, bounds=(-10, 10))
+        def disjunct_rule(d, i, k):
+            m = d.model()
+            if k == 'a':
+                d.cons_a = Constraint(expr=m.x[i] >= 5)
+            if k == 'b':
+                d.cons_b = Constraint(expr=m.x[i] <= 0)
+        m.disjunct = Disjunct(m.A, m.B, rule=disjunct_rule)
+        def disj_rule(m, i):
+            return [m.disjunct[i, k] for k in m.B]
+        m.disjunction = Disjunction(m.A, rule=disj_rule)
+        return m
+
+    def test_disaggregation_constraints(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.chull').apply_to(m)
+        
+        # TODO: I want to make sure that the disaggregation constraints have
+        # the right indices. And I'm not sure what those should actually be yet.
+        #set_trace()
+
+    # TODO: also test disaggregation constraints for when we have a disjunction
+    # where the indices are tuples. (This is to test that when we combine the
+    # indices and the constraint name we get what we expect in both cases.)
 
 
+# TODO
 # class NestedDisjunction(unittest.TestCase):
 #     @staticmethod
 #     def makeModel():
