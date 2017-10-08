@@ -71,17 +71,15 @@ install:
 - pip install --quiet openpyxl
 #
 - if [ -n "${EXTRAS}" ]; then conda install -q -y --channel conda-forge pyomo.extras; fi
-- if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-     if [ -n "${EXTRAS}" ]; then
-        pip install scipy;
-     fi
-  fi
+
+# Install MIPCL
 - wget http://www.mipcl-cpp.appspot.com/static/download/mipcl-1.4.1.linux-x86_64.tar.gz
 - tar -zxvf mipcl-1.4.1.linux-x86_64.tar.gz
 - cd mipcl-1.4.1
 - sudo ./install_libs
 - cd ..
 - export PATH="$HOME/mipcl-1.4.1/bin:$PATH"
+
 - conda install -q -y --channel conda-forge glpk
 - glpsol -v
 - conda install -q -y --channel cachemeorg ipopt_bin
