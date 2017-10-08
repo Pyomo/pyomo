@@ -57,7 +57,7 @@ class MIPCLSHELL(SystemCallSolver):
         self._valid_problem_formats = [ProblemFormat.mps]
         self._valid_result_formats = {ProblemFormat.mps: ResultsFormat.soln}
         self.set_problem_format(ProblemFormat.mps)
-        
+
         self._capabilities = Options()
         self._capabilities.linear = True
         self._capabilities.integer = True
@@ -79,7 +79,7 @@ class MIPCLSHELL(SystemCallSolver):
         if _mipcl_version is None:
             return _extract_version('')
         return _mipcl_version
-    
+
     def _set_version(self, ver):
         """Sets version while processing log file"""
         global _mipcl_version
@@ -112,11 +112,11 @@ class MIPCLSHELL(SystemCallSolver):
             cmd.extend(['-time', str(self._timelimit)])
 
         return Bunch(cmd=cmd, log_file=self._log_file, env=None)
- 
+
     def process_logfile(self):
         """Process logfile"""
         results = SolverResults()
-        
+
         prob   = results.problem
         solv   = results.solver
         solv.termination_condition = TerminationCondition.unknown
@@ -157,7 +157,7 @@ class MIPCLSHELL(SystemCallSolver):
                 value = eval(toks[2]) # assign ?
                 if toks[-2] + toks[-1] == 'optimalityproven':
                     solv.termination_condition = TerminationCondition.optimal
-            
+
         return results
 
     def process_soln_file(self, results):
@@ -179,7 +179,7 @@ class MIPCLSHELL(SystemCallSolver):
                     results.solution.variable[line[0]] = {"Value" : eval(line[1])} 
         except:
             raise RuntimeError('please debug me')
-                    
-                
+
+
 
 services.register_executable(name="mps_mipcl")
