@@ -369,8 +369,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
         #
         # ROWS section
         #
-        
-        is_min = None
+
         objective_label = None
         numObj = 0
         onames = []
@@ -402,10 +401,9 @@ class ProblemWriter_mps(AbstractProblemWriter):
                                                      labeler)
 
                 symbol_map.alias(objective_data, '__default_objective__')
-                is_min = objective_data.is_minimizing()
                 if not skip_objective_sense:
                     output_file.write("OBJSENSE\n")
-                    if is_min:
+                    if objective_data.is_minimizing():
                         output_file.write(" MIN\n")
                     else:
                         output_file.write(" MAX\n")
@@ -586,16 +584,10 @@ class ProblemWriter_mps(AbstractProblemWriter):
             if len(col_entries) > 0:
                 var_label = variable_symbol_dictionary[id(vardata)]
                 for i, (row_label, coef) in enumerate(col_entries):
-                    if i == 0 and skip_objective_sense and not is_min:
-                        output_file.write(column_template
+                    output_file.write(column_template
                                       % (var_label,
                                          row_label,
-                                         _no_negative_zero(-coef)))
-                    else:
-                        output_file.write(column_template
-                                          % (var_label,
-                                             row_label,
-                                             _no_negative_zero(coef)))
+                                         _no_negative_zero(coef)))
             elif include_all_variable_bounds:
                 # the column is empty, so add a (0 * var)
                 # term to the objective
