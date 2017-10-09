@@ -46,6 +46,22 @@ from pyomo.core.kernel.expr_common import \
 chainedInequalityErrorMessage \
     = lambda *x: cIEM(generate_relational_expression, *x)
 
+class clone_counter_context(object):
+    _count = 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    @property
+    def count(self):
+        return clone_counter_context._count
+
+clone_counter = clone_counter_context()
+
+
 sum = builtins.sum
 
 def identify_variables(expr,

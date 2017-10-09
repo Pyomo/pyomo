@@ -68,5 +68,4 @@ on_success:
 #  See Appveyor's documentation for more details. Or you can simply
 #  access your wheels from the Appveyor "artifacts" tab for your build.
   - pip install codecov
-  - cp ../.coverage .
   - codecov
