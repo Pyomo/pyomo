@@ -38,11 +38,13 @@ model.scaling_factor[model.inequ[1]] = 1.0/101.0 # should give a scaled value of
 model.scaling_factor[model.inequ[2]] = -1.0/99.0 # should give a scaled value of 1.0 at initial pt
 model.scaling_factor[model.eq] = 1.0/13.0 # should give a scaled value of 1.0 at initial pt
 
-model.pprint()
-model.display()
+
+unscaled_model = model
+unscaled_model.pprint()
+unscaled_model.display()
 
 scaling_tx = ScaleModel() #pe.TransformationFactory('scale_model')
-scaled_model = scaling_tx.create_using(model)
+scaled_model = scaling_tx.create_using(unscaled_model)
 
 scaled_model.pprint()
 scaled_model.display()
