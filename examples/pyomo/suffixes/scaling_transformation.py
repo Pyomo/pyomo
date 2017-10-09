@@ -25,26 +25,52 @@ def ineq_rule(m, i):
 model.inequ = pe.Constraint(model.s, rule=ineq_rule)
 
 model.eq = pe.Constraint(expr=model.x[2] == model.x[1]+2.0)
+
+
 ### Declare the scaling_factor suffix 
 model.scaling_factor = pe.Suffix(direction=pe.Suffix.EXPORT)
 # set objective scaling factor
 model.scaling_factor[model.obj] = 1.0/281.0 # should give scaled objective value of 1.0
 # set variable scaling factor
 model.scaling_factor[model.z] = 100.0 # should have scaled initial value of 1.0
-#model.scaling_factor[model.x[1]] = 1.0 # should happen by default - commented to verify
 model.scaling_factor[model.x[2]] = -10.0 # should have scaled initial value of 1.0
 # set constraint scaling factor
 model.scaling_factor[model.inequ[1]] = 1.0/101.0 # should give a scaled value of 1.0 at initial pt
 model.scaling_factor[model.inequ[2]] = -1.0/99.0 # should give a scaled value of 1.0 at initial pt
 model.scaling_factor[model.eq] = 1.0/13.0 # should give a scaled value of 1.0 at initial pt
 
-
+###
+# scale and solve the problem
+###
 unscaled_model = model
-unscaled_model.pprint()
-unscaled_model.display()
-
-scaling_tx = ScaleModel() #pe.TransformationFactory('scale_model')
+# transform the unscaled model to a scaled model
+scaling_tx = pe.TransformationFactory('core.scale_model')
 scaled_model = scaling_tx.create_using(unscaled_model)
-
+# print the scaled model
+print('*** SCALED MODEL ***')
 scaled_model.pprint()
-scaled_model.display()
+# solve the scaled model
+pe.SolverFactory('glpk').solve(unscaled_model)
+# propagate the solution back to the unscaled model
+scaling_tx.propagate_solution(scaled_model, unscaled_model)
+# print the usncaled model with propagated solution
+print('*** UNSCALED MODEL ***')
+scaled_model.pprint()
+
+compare_solutions = False
+if compare_solutions:
+    original_model = model.clone()
+    unscaled_model = model.clone()
+    pe.SolverFactory('glpk').solve(unscaled_model)
+
+    print('*** UNSCALED MODEL SOLN ***')
+    unscaled_model.display()
+
+    scaling_tx = pe.TransformationFactory('core.scale_model')
+    scaled_model = scaling_tx.create_using(unscaled_model)
+    pe.SolverFactory('glpk').solve(scaled_model)
+    scaling_tx.propagate_solution(scaled_model, original_model)
+    print('*** SCALED MODEL SOLN --> BACK TO UNSCALED MODEL ***')
+    original_model.display()
+
+
