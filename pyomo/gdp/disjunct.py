@@ -108,7 +108,7 @@ class Disjunct(Block):
         kwargs.setdefault('ctype', Disjunct)
         Block.__init__(self, *args, **kwargs)
 
-    def _default(self, idx):
+    def _getitem_if_not_present(self, idx):
         return self._data.setdefault(idx, _DisjunctData(self))
 
 

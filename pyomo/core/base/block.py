@@ -1712,8 +1712,8 @@ class Block(ActiveIndexedComponent):
             # picks up any construction rule that the user may provide)
             self.construct()
 
-    def _default(self, idx):
-        return self._setitem(idx, None, new=True)
+    def _getitem_if_not_present(self, idx):
+        return self._setitem_if_not_present(idx, None, new=True)
 
     def find_component(self, label_or_component):
         """
