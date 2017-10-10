@@ -182,7 +182,7 @@ class SimpleExpressionVisitor(SimpleVisitor):
             #for c in self.children(current):
             for c in current._args:
                 #if self.is_leaf(c):
-                if c.__class__ in native_numeric_types or not c.is_expression() or len(c._args) == 0:
+                if c.__class__ in native_numeric_types or not c.is_expression() or c.nargs() == 0:
                     self.visit(c)
                 else:
                     dq.append(c)
@@ -200,7 +200,7 @@ class SimpleExpressionVisitor(SimpleVisitor):
             #for c in self.children(current):
             for c in current._args:
                 #if self.is_leaf(c):
-                if c.__class__ in native_numeric_types or not c.is_expression() or len(c._args) == 0:
+                if c.__class__ in native_numeric_types or not c.is_expression() or c.nargs() == 0:
                     ans = self.visit(c)
                     if not ans is None:
                         yield ans
@@ -244,7 +244,7 @@ class ValueExpressionVisitor(ValueVisitor):
         ValueVisitor.dfs_postorder_stack
         """
         #_stack = [ (node, self.children(node), 0, len(self.children(node)), [])]
-        _stack = [ (node, node._args, 0, len(node._args), [])]
+        _stack = [ (node, node._args, 0, node.nargs(), [])]
         #
         # Iterate until the stack is empty
         #
@@ -275,7 +275,7 @@ class ValueExpressionVisitor(ValueVisitor):
                     #_argList                = self.children(_sub)
                     _argList                = _sub._args
                     _idx                    = 0
-                    _len                    = len(_argList)
+                    _len                    = _sub.nargs()
                     _result                 = []
             #
             # Process the current node
@@ -438,7 +438,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
     #
     # The stack starts with the current expression
     #
-    _stack = [ False, (expr, expr._args, 0, len(expr._args), [])]
+    _stack = [ False, (expr, expr._args, 0, expr.nargs(), [])]
     #
     # Iterate until the stack is empty
     #
@@ -496,7 +496,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
                 _obj                    = _sub
                 _argList                = _sub._args
                 _idx                    = 0
-                _len                    = len(_argList)
+                _len                    = _sub.nargs()
                 _result                 = []
                 _clone                  = False
     
@@ -634,7 +634,7 @@ def clone_expression(expr, memo=None, verbose=False, clone_leaves=True):
     #
     # The stack starts with the current expression
     #
-    _stack = [ (expr, expr._args, 0, len(expr._args), [])]
+    _stack = [ (expr, expr._args, 0, expr.nargs(), [])]
     #
     # Iterate until the stack is empty
     #
@@ -689,7 +689,7 @@ def clone_expression(expr, memo=None, verbose=False, clone_leaves=True):
                 _obj     = _sub
                 _argList = _sub._args
                 _idx     = 0
-                _len     = len(_argList)
+                _len     = _sub.nargs()
                 _result  = []
     
         if verbose: #pragma:nocover
@@ -731,7 +731,7 @@ class SizeVisitor(SimpleExpressionVisitor):
         return node._args
 
     def is_leaf(self, node):
-        return node.__class__ in native_numeric_types or not node.is_expression() or len(node._args) == 0
+        return node.__class__ in native_numeric_types or not node.is_expression() or node.nargs() == 0
 
     def finalize(self):
         return self.counter
@@ -754,7 +754,7 @@ def OLD_expression_size(expr, verbose=False):
     #
     # The stack starts with the current expression
     #
-    _stack = [ (expr, expr._args, 0, len(expr._args), [])]
+    _stack = [ (expr, expr._args, 0, expr.nargs(), [])]
     #
     # Iterate until the stack is empty
     #
@@ -801,7 +801,7 @@ def OLD_expression_size(expr, verbose=False):
                 _obj     = _sub
                 _argList = _sub._args
                 _idx     = 0
-                _len     = len(_argList)
+                _len     = _sub.nargs()
                 _result  = []
     
         if verbose: #pragma:nocover
@@ -917,7 +917,7 @@ def evaluate_expression(exp, exception=True, only_fixed_vars=False):
         elif not exp.is_expression():
             return exp()
 
-        _stack = [ (exp, exp._args, 0, len(exp._args), []) ]
+        _stack = [ (exp, exp._args, 0, exp.nargs(), []) ]
         while 1:  # Note: 1 is faster than True for Python 2.x
             _obj, _argList, _idx, _len, _result = _stack.pop()
             while _idx < _len:
@@ -930,7 +930,7 @@ def evaluate_expression(exp, exception=True, only_fixed_vars=False):
                     _obj     = _sub
                     _argList = _sub._args
                     _idx     = 0
-                    _len     = len(_argList)
+                    _len     = _sub.nargs()
                     _result  = []
                 elif _sub.__class__ in pyomo5_variable_types:
                     if only_fixed_vars:
@@ -1028,7 +1028,7 @@ def identify_variables(expr,
                 _stack.append(( _argList, _idx, _len ))
                 _argList = _sub._args
                 _idx = 0
-                _len = len(_argList)
+                _len = _sub.nargs()
             elif _sub.__class__ in pyomo5_variable_types:
                 if ( include_fixed
                      or not _sub.is_fixed()
@@ -1080,7 +1080,7 @@ def NEW_polynomial_degree(node):
 
 
 def polynomial_degree(node):
-    _stack = [ (node, node._args, 0, len(node._args), []) ]
+    _stack = [ (node, node._args, 0, node.nargs(), []) ]
     while 1:  # Note: 1 is faster than True for Python 2.x
         _obj, _argList, _idx, _len, _result = _stack.pop()
         while _idx < _len:
@@ -1093,7 +1093,7 @@ def polynomial_degree(node):
                 _obj     = _sub
                 _argList = _sub._args
                 _idx     = 0
-                _len     = len(_argList)
+                _len     = _sub.nargs()
                 _result  = []
             else:
                 _result.append( 0 if _sub.is_fixed() else 1 )
@@ -1156,7 +1156,7 @@ def NEW_expression_is_fixed(node):
 def expression_is_fixed(node):
     if not node._potentially_variable():
         return True
-    _stack = [ (node, node._args, 0, len(node._args), []) ]
+    _stack = [ (node, node._args, 0, node.nargs(), []) ]
     while 1:  # Note: 1 is faster than True for Python 2.x
         _obj, _argList, _idx, _len, _result = _stack.pop()
         while _idx < _len:
@@ -1171,7 +1171,7 @@ def expression_is_fixed(node):
                 _obj     = _sub
                 _argList = _sub._args
                 _idx     = 0
-                _len     = len(_argList)
+                _len     = _sub.nargs()
                 _result  = []
 
         ans = _obj._is_fixed(_result)
@@ -1208,7 +1208,7 @@ class StringVisitor(SimpleExpressionVisitor):
         return node._args
 
     def is_leaf(self, node):
-        return node.__class__ in native_numeric_types or not node.is_expression() or len(node._args) == 0
+        return node.__class__ in native_numeric_types or not node.is_expression() or node.nargs() == 0
 
     def finalize(self):
         ans = self.buf.getvalue()
@@ -1249,7 +1249,7 @@ def expression_to_string(expr, ostream=None, verbose=None, precedence=None):
     _infix = False
     _bypass_prefix = False
     argList = expr._args
-    _stack = [ [ expr, argList, 0, len(argList), precedence if precedence is not None else expr._precedence() ] ]
+    _stack = [ [ expr, argList, 0, expr.nargs(), precedence if precedence is not None else expr._precedence() ] ]
     while _stack:
         _parent, _args, _idx, _len, _prec = _stack[-1]
         _my_precedence = _parent._precedence()
@@ -1281,7 +1281,7 @@ def expression_to_string(expr, ostream=None, verbose=None, precedence=None):
                 _infix = True
             if _sub.__class__ in pyomo5_expression_types:
                 argList = _sub._args
-                _stack.append([ _sub, argList, 0, len(argList), _my_precedence ])
+                _stack.append([ _sub, argList, 0, _sub.nargs(), _my_precedence ])
                 _infix = False
             elif hasattr(_parent, '_to_string_term'):
                 _parent._to_string_term(ostream, _idx, _sub, _name_buffer, verbose)
@@ -1330,6 +1330,9 @@ class _ExpressionBase(NumericValue):
             for arg in args:
                 if arg.__class__ in pyomo5_expression_types:
                     arg.clone_info = True
+
+    def nargs(self):
+        return 2
 
     def __getstate__(self):
         state = super(_ExpressionBase, self).__getstate__()
@@ -1523,6 +1526,9 @@ class _NegationExpression(_ExpressionBase):
 
     PRECEDENCE = 4
 
+    def nargs(self):
+        return 1
+
     def getname(self, *args, **kwds):
         return 'neg'
 
@@ -1576,6 +1582,9 @@ class _ExternalFunctionExpression(_ExpressionBase):
             for arg in args:
                 if arg.__class__ in pyomo5_expression_types:
                     arg.clone_info = True
+
+    def nargs(self):
+        return len(self._args)
 
     def _clone(self, args, memo):
         return self.__class__(args, self._fcn)
@@ -1719,6 +1728,9 @@ class _InequalityExpression(_LinearOperatorExpression):
         self._strict = strict
         self._cloned_from = cloned_from
 
+    def nargs(self):
+        return len(self._args)
+
     def _clone(self, args, memo):
         return self.__class__(args, self._strict, self._cloned_from)
 
@@ -1779,6 +1791,9 @@ class _EqualityExpression(_LinearOperatorExpression):
 
     __slots__ = ()
     PRECEDENCE = 9
+
+    def nargs(self):
+        return len(self._args)
 
     def __nonzero__(self):
         if generate_relational_expression.chainedInequality is not None:
@@ -1896,7 +1911,7 @@ class _ProductExpression(_ExpressionBase):
             #
             else:
                 #print("H5")
-                if len(_l._args) == _l._nnum:
+                if _l.nargs() == _l._nnum:
                     _l._args.append(_r)
                     _l._nnum += 1
                     ans = _l
@@ -1968,7 +1983,7 @@ class _NPV_ProductExpression(_ProductExpression):
 class _MultiProdExpression(_ProductExpression):
     """An object that defines a product with 1 or more terms, including denominators."""
 
-    __slots__ = ('_nnum')
+    __slots__ = ('_nnum',)
     PRECEDENCE = 4
 
     def __init__(self, args, nnum=None):
@@ -1981,6 +1996,9 @@ class _MultiProdExpression(_ProductExpression):
             for arg in args:
                 if arg.__class__ in pyomo5_expression_types:
                     arg.clone_info = True
+
+    def nargs(self):
+        return len(self._args)
 
     def _clone(self, args, memo):
         return self.__class__(args, self._nnum)
@@ -2014,6 +2032,9 @@ class _ReciprocalExpression(_ExpressionBase):
 
     __slots__ = ()
     PRECEDENCE = 3.5
+
+    def nargs(self):
+        return 1
 
     def _precedence(self):
         return _ReciprocalExpression.PRECEDENCE
@@ -2219,6 +2240,79 @@ class _NPV_SumExpression(_SumExpression):
         return False
 
 
+class _MutableViewSumExpression(_SumExpression):
+    """An object that defines a summation with 1 or more terms using a shared list."""
+
+    __slots__ = ('_nargs',)
+    PRECEDENCE = 6
+
+    def __init__(self, args, new_arg=None):
+        if args.__class__ is _MutableViewSumExpression:
+            args.clone_info = True
+            self._args = args._args
+        else:
+            self._args = args
+        if new_arg.__class__ is _MutableViewSumExpression:
+            self._args.extend( new_arg._args[:new_arg._nargs] )
+        elif not new_arg is None:
+            self._args.append(new_arg)
+        self._nargs = len(self._args)
+        if _getrefcount_available:
+            self.clone_info = UNREFERENCED_EXPR_COUNT
+        else:
+            self.clone_info = False
+            if not new_arg is None and new_arg.__class__ in pyomo5_expression_types:
+                new_arg.clone_info = True
+
+    def nargs(self):
+        return self._nargs
+
+    def _precedence(self):
+        return _MutableMultiSumExpression.PRECEDENCE
+
+    def _apply_operation(self, result):
+        return sum(result)
+
+    def _clone(self, args, memo):
+        return self.__class__(list(args))
+
+    def __getstate__(self):
+        result = super(_MutableViewSumExpression, self).__getstate__()
+        for i in _MutableViewSumExpression.__slots__:
+            result[i] = getattr(self, i)
+        return result
+
+    def getname(self, *args, **kwds):
+        return 'viewsum'
+
+    def is_constant(self):
+        for v in self._args[:self._nargs]:
+            if not (v.__class__ in native_numeric_types or v.is_constant()):
+                return False
+        return True
+
+    def _potentially_variable(self):
+        global pyomo5_variable_types
+        if pyomo5_variable_types is None:
+            from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
+            from pyomo.core.kernel.component_variable import IVariable, variable
+            pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
+            _LinearExpression.vtypes = pyomo5_variable_types
+
+        for v in self._args[:self._nargs]:
+            if v.__class__ in pyomo5_variable_types:
+                return True
+            if not v.__class__ in native_numeric_types and v._potentially_variable():
+                return True
+        return False
+
+    def _to_string_skip(self, _idx):
+        return  _idx == 0 and \
+                self._args[0].__class__ in native_numeric_types and \
+                isclose(self._args[0], 0)
+
+
+
 class _MutableMultiSumExpression(_SumExpression):
     """An object that defines a summation with 1 or more terms and a constant term."""
 
@@ -2234,6 +2328,9 @@ class _MutableMultiSumExpression(_SumExpression):
             for arg in args:
                 if arg.__class__ in pyomo5_expression_types:
                     arg.clone_info = True
+
+    def nargs(self):
+        return len(self._args)
 
     def _precedence(self):
         return _MutableMultiSumExpression.PRECEDENCE
@@ -2298,6 +2395,9 @@ class _GetItemExpression(_ExpressionBase):
             for arg in args:
                 if arg.__class__ in pyomo5_expression_types:
                     arg.clone_info = True
+
+    def nargs(self):
+        return len(self._args)
 
     def _clone(self, args, memo):
         return self.__class__(args, self._base)
@@ -2379,6 +2479,9 @@ class Expr_if(_ExpressionBase):
             if ELSE.__class__ in pyomo5_expression_types:
                 ELSE.clone_info = True
 
+    def nargs(self):
+        return 3
+
     def __getstate__(self):
         state = super(Expr_if, self).__getstate__()
         for i in Expr_if.__slots__:
@@ -2458,6 +2561,9 @@ class _UnaryFunctionExpression(_ExpressionBase):
             self.clone_info = False
             if args[0].__class__ in pyomo5_expression_types:
                 args[0].clone_info = True
+
+    def nargs(self):
+        return 1
 
     def _clone(self, args, memo):
         return self.__class__(args, self._name, self._fcn)
@@ -2548,6 +2654,9 @@ class _LinearExpression(_ExpressionBase):
             self.clone_info = UNREFERENCED_EXPR_COUNT
         else:
             self.clone_info = False
+
+    def nargs(self):
+        return 0
 
     def __getstate__(self):
         state = super(_LinearExpression, self).__getstate__()
@@ -2793,6 +2902,9 @@ class _QuadraticExpression(_ExpressionBase):
         else:
             self.clone_info = False
 
+    def nargs(self):
+        return 0
+
     def _clone(self, args=None):
         repn = self.__class__()
         repn.constant = deepcopy(self.constant)
@@ -2884,7 +2996,8 @@ def _process_arg(obj):
 if _getrefcount_available:
     _SumClass_ = _MutableMultiSumExpression
 else:
-    _SumClass_ = _SumExpression
+    _SumClass_ = _MutableViewSumExpression
+    #_SumClass_ = _SumExpression
 
 #@profile
 def generate_expression(etype, _self, _other):
@@ -2995,6 +3108,14 @@ def generate_expression(etype, _self, _other):
         #
         if _self.__class__ is _MutableMultiSumExpression or _other.__class__ is _MutableMultiSumExpression:
             return _SumExpression._combine_expr(_self, _other)
+        elif _self.__class__ is _MutableViewSumExpression:
+            if not _other.__class__ in native_numeric_types or _other != 0:
+                return _SumClass_(_self, _other)
+            return _self
+        elif _other.__class__ is _MutableViewSumExpression:
+            if not _self.__class__ in native_numeric_types or _self != 0:
+                return  _SumClass_(_other, _self)
+            return _other
         elif _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
                 return _self + _other
@@ -3003,7 +3124,8 @@ def generate_expression(etype, _self, _other):
             if _self.is_constant():
                 return _Constant_SumExpression((_self, _other))
             elif _self._potentially_variable():
-                return _SumClass_((_other, _self))
+                #return _SumClass_((_other, _self))
+                return _SumClass_([_other, _self])
             return _NPV_SumExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
             if _self == 0:      #isclose(_self, 0):
@@ -3011,12 +3133,15 @@ def generate_expression(etype, _self, _other):
             if _other.is_constant():
                 return _Constant_SumExpression((_self, _other))
             elif _other._potentially_variable():
-                return _SumClass_((_self, _other))
+                #return _SumClass_((_self, _other))
+                return _SumClass_([_self, _other])
             return _NPV_SumExpression((_self, _other))
         elif _other._potentially_variable():
-            return _SumClass_((_self, _other))
+            #return _SumClass_((_self, _other))
+            return _SumClass_([_self, _other])
         elif _self._potentially_variable():
-            return _SumClass_((_other, _self))
+            #return _SumClass_((_other, _self))
+            return _SumClass_([_other, _self])
         elif not _other.is_constant():
             return _NPV_SumExpression((_self, _other))
         elif not _self.is_constant():
@@ -3027,6 +3152,8 @@ def generate_expression(etype, _self, _other):
         #
         # x - y
         #
+        # TODO: _MultiViewSum logic here
+        #
         if _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
                 return _self - _other
@@ -3035,7 +3162,8 @@ def generate_expression(etype, _self, _other):
             if _self.is_constant():
                 return _Constant_SumExpression((-_other, _self))
             elif _self._potentially_variable():
-                return _SumClass_((-_other, _self))
+                #return _SumClass_((-_other, _self))
+                return _SumClass_([-_other, _self])
             return _NPV_SumExpression((-_other, _self))
         elif _self.__class__ in native_numeric_types:
             if isclose(_self, 0):
@@ -3047,12 +3175,15 @@ def generate_expression(etype, _self, _other):
             if _other.is_constant():    
                 return _Constant_SumExpression((_self, _Constant_NegationExpression((_other,))))
             elif _other._potentially_variable():    
-                return _SumClass_((_self, _NegationExpression((_other,))))
+                #return _SumClass_((_self, _NegationExpression((_other,))))
+                return _SumClass_([_self, _NegationExpression((_other,))])
             return _NPV_SumExpression((_self, _NPV_NegationExpression((_other,))))
         elif _other._potentially_variable():    
-            return _SumClass_((_self, _NegationExpression((_other,))))
+            #return _SumClass_((_self, _NegationExpression((_other,))))
+            return _SumClass_([_self, _NegationExpression((_other,))])
         elif _self._potentially_variable():
-            return _SumClass_((_NPV_NegationExpression((_other,)), _self))
+            #return _SumClass_((_NPV_NegationExpression((_other,)), _self))
+            return _SumClass_([_NPV_NegationExpression((_other,)), _self])
         elif not _other.is_constant():    
             return _NPV_SumExpression((_self, _NPV_NegationExpression((_other,))))
         elif not _self.is_constant():    
@@ -3311,6 +3442,7 @@ pyomo5_expression_types = set([
         _SumExpression,
         _Constant_SumExpression,
         _NPV_SumExpression,
+        _MutableViewSumExpression,
         _MutableMultiSumExpression,
         _MultiSumExpression,
         _CompressedSumExpression,
@@ -3328,6 +3460,7 @@ pyomo5_expression_types = set([
         _StaticQuadraticExpression,
         ])
 pyomo5_multisum_types = set([
+        _MutableViewSumExpression,      # This seems dangerous, since ViewSum doesn't have a constant firs term
         _MutableMultiSumExpression,
         _MultiSumExpression,
         _CompressedSumExpression

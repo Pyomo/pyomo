@@ -74,6 +74,7 @@ _pyomo5_module_members = [
     '_ReciprocalExpression',
     '_NegationExpression',
     'EntangledExpressionError',
+    '_MutableViewSumExpression',
     '_MutableMultiSumExpression',
     '_MultiSumExpression',
     '_CompressedSumExpression',

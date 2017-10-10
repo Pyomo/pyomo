@@ -88,6 +88,10 @@ class IIdentityExpression(NumericValue):
         """A tuple of subexpressions involved in this expressions operation."""
         return (self._expr,)
 
+    def nargs(self):
+        """Length of self._nargs()"""
+        return 1
+
     def _arguments(self):
         """A generator of subexpressions involved in this expressions operation."""
         yield self._expr
