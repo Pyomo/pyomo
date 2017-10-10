@@ -629,17 +629,16 @@ class TestExpression(unittest.TestCase):
         model.E = Expression([1,2],initialize=model.x**2+1)
         expr = model.e*model.x**2 + model.E[1]
 
-#sum( prod( num=( e{sum( 2 , x )} , pow( x , 2 ) ) ) , E[1]{sum( 1 , pow( x , 2 ) )} )
         output = \
 """\
-sum( prod( e{multisum( 2 , x )} , pow( x , 2 ) ) , E[1]{multisum( 1 , pow( x , 2 ) )} )
+viewsum( prod( e{viewsum( 2 , x )} , pow( x , 2 ) ) , E[1]{viewsum( 1 , pow( x , 2 ) )} )
 e : Size=1, Index=None
     Key  : Expression
-    None : multisum( 2 , x )
+    None : viewsum( 2 , x )
 E : Size=2, Index=E_index
     Key : Expression
-      1 : multisum( 1 , pow( x , 2 ) )
-      2 : multisum( 1 , pow( x , 2 ) )
+      1 : viewsum( 1 , pow( x , 2 ) )
+      2 : viewsum( 1 , pow( x , 2 ) )
 """
         out = StringIO()
         out.write(str(expr)+"\n")
@@ -652,14 +651,14 @@ E : Size=2, Index=E_index
         model.E[1].set_value(2.0)
         output = \
 """\
-sum( prod( e{1.0} , pow( x , 2 ) ) , E[1]{2.0} )
+viewsum( prod( e{1.0} , pow( x , 2 ) ) , E[1]{2.0} )
 e : Size=1, Index=None
     Key  : Expression
     None :        1.0
 E : Size=2, Index=E_index
     Key : Expression
       1 : 2.0
-      2 : multisum( 1 , pow( x , 2 ) )
+      2 : viewsum( 1 , pow( x , 2 ) )
 """
         out = StringIO()
         out.write(str(expr)+"\n")
@@ -673,14 +672,14 @@ E : Size=2, Index=E_index
         model.E[1].set_value(None)
         output = \
 """\
-sum( prod( e{Undefined} , pow( x , 2 ) ) , E[1]{Undefined} )
+viewsum( prod( e{Undefined} , pow( x , 2 ) ) , E[1]{Undefined} )
 e : Size=1, Index=None
     Key  : Expression
     None :  Undefined
 E : Size=2, Index=E_index
     Key : Expression
       1 : Undefined
-      2 : multisum( 1 , pow( x , 2 ) )
+      2 : viewsum( 1 , pow( x , 2 ) )
 """
         out = StringIO()
         out.write(str(expr)+"\n")

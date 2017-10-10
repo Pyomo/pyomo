@@ -376,18 +376,17 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e = m.a + m.b
         _e = EXPR.compress_expression(e)
         #
-        self.assertIs(type(e), EXPR._SumExpression)
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.a)
         self.assertIs(e._args[1], m.b)
         self.assertEqual(e.size(), 3)
         #
-        self.assertIs(type(_e), EXPR._CompressedSumExpression)
-        self.assertEqual(len(_e._args), 3)
-        self.assertIs(_e._args[0], 0)
-        self.assertIs(_e._args[1], m.a)
-        self.assertIs(_e._args[2], m.b)
-        self.assertEqual(_e.size(), 4)
+        self.assertIs(type(_e), EXPR._MutableViewSumExpression)
+        self.assertEqual(len(_e._args), 2)
+        self.assertIs(_e._args[0], m.a)
+        self.assertIs(_e._args[1], m.b)
+        self.assertEqual(_e.size(), 3)
 
     def test_constSum(self):
         # a + 5
@@ -396,13 +395,13 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e = m.a + 5
         _e = EXPR.compress_expression(e)
         #
-        self.assertIs(type(e), EXPR._SumExpression)
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], 5)
         self.assertIs(e._args[1], m.a)
         self.assertEqual(e.size(), 3)
         #
-        self.assertIs(type(_e), EXPR._CompressedSumExpression)
+        self.assertIs(type(_e), EXPR._MutableViewSumExpression)
         self.assertEqual(len(_e._args), 2)
         self.assertIs(_e._args[0], 5)
         self.assertIs(_e._args[1], m.a)
@@ -411,13 +410,13 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e = 5 + m.a
         _e = EXPR.compress_expression(e)
         #
-        self.assertIs(type(e), EXPR._SumExpression)
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], 5)
         self.assertIs(e._args[1], m.a)
         self.assertEqual(e.size(), 3)
         #
-        self.assertIs(type(_e), EXPR._CompressedSumExpression)
+        self.assertIs(type(_e), EXPR._MutableViewSumExpression)
         self.assertEqual(len(_e._args), 2)
         self.assertIs(_e._args[0], 5)
         self.assertIs(_e._args[1], m.a)
@@ -427,7 +426,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #
         # Check the structure of nested sums
         #
-        expectedType = EXPR._SumExpression
+        expectedType = EXPR._MutableViewSumExpression
 
         m = AbstractModel()
         m.a = Var()
@@ -445,16 +444,17 @@ class TestGenerate_SumExpression(unittest.TestCase):
         _e = EXPR.compress_expression(e)
         #
         self.assertIs(type(e), expectedType)
-        self.assertEqual(len(e._args), 2)
-        self.assertIs(e._args[0], 5)
-        self.assertIs(e._args[1], e1)
-        self.assertEqual(e.size(), 5)
+        self.assertEqual(len(e._args), 3)
+        self.assertIs(e._args[0], m.a)
+        self.assertIs(e._args[1], m.b)
+        self.assertIs(e._args[2], 5)
+        self.assertEqual(e.size(), 4)
         #
-        self.assertIs(type(_e), EXPR._CompressedSumExpression)
+        self.assertIs(type(_e), expectedType)
         self.assertEqual(len(_e._args), 3)
-        self.assertIs(_e._args[0], 5)
-        self.assertIs(_e._args[1], m.a)
-        self.assertIs(_e._args[2], m.b)
+        self.assertIs(_e._args[0], m.a)
+        self.assertIs(_e._args[1], m.b)
+        self.assertIs(_e._args[2], 5)
         self.assertEqual(_e.size(), 4)
 
         #       + 
@@ -467,16 +467,17 @@ class TestGenerate_SumExpression(unittest.TestCase):
         _e = EXPR.compress_expression(e)
         #
         self.assertIs(type(e), expectedType)
-        self.assertEqual(len(e._args), 2)
-        self.assertIs(e._args[0], 5)
-        self.assertIs(e._args[1], e1)
-        self.assertEqual(e.size(), 5)
+        self.assertEqual(len(e._args), 3)
+        self.assertIs(e._args[0], m.a)
+        self.assertIs(e._args[1], m.b)
+        self.assertIs(e._args[2], 5)
+        self.assertEqual(e.size(), 4)
         #
-        self.assertIs(type(_e), EXPR._CompressedSumExpression)
+        self.assertIs(type(_e), expectedType)
         self.assertEqual(len(_e._args), 3)
-        self.assertIs(_e._args[0], 5)
-        self.assertIs(_e._args[1], m.a)
-        self.assertIs(_e._args[2], m.b)
+        self.assertIs(_e._args[0], m.a)
+        self.assertIs(_e._args[1], m.b)
+        self.assertIs(_e._args[2], 5)
         self.assertEqual(_e.size(), 4)
 
         #           +
@@ -489,18 +490,18 @@ class TestGenerate_SumExpression(unittest.TestCase):
         _e = EXPR.compress_expression(e)
         #
         self.assertIs(type(e), expectedType)
-        self.assertEqual(len(e._args), 2)
-        self.assertIs(e._args[0], e1)
-        self.assertIs(e._args[1], m.c)
-        self.assertEqual(e.size(), 5)
+        self.assertEqual(len(e._args), 3)
+        self.assertIs(e._args[0], m.a)
+        self.assertIs(e._args[1], m.b)
+        self.assertIs(e._args[2], m.c)
+        self.assertEqual(e.size(), 4)
         #
-        self.assertIs(type(_e), EXPR._CompressedSumExpression)
-        self.assertEqual(len(_e._args), 4)
-        self.assertIs(_e._args[0], 0)
-        self.assertIs(_e._args[1], m.a)
-        self.assertIs(_e._args[2], m.b)
-        self.assertIs(_e._args[3], m.c)
-        self.assertEqual(_e.size(), 5)
+        self.assertIs(type(_e), expectedType)
+        self.assertEqual(len(_e._args), 3)
+        self.assertIs(_e._args[0], m.a)
+        self.assertIs(_e._args[1], m.b)
+        self.assertIs(_e._args[2], m.c)
+        self.assertEqual(_e.size(), 4)
 
         #       + 
         #      / \ 
@@ -511,20 +512,19 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e = m.c + e1
         _e = EXPR.compress_expression(e)
         #
-        self.assertIs(type(e), EXPR._SumExpression)
-        self.assertEqual(len(e._args), 2)
-        self.assertIs(e._args[0], m.c)
-        self.assertIs(e._args[1]._args[0], m.a)
-        self.assertIs(e._args[1]._args[1], m.b)
-        self.assertEqual(e.size(), 5)
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
+        self.assertEqual(len(e._args), 3)
+        self.assertIs(e._args[0], m.a)
+        self.assertIs(e._args[1], m.b)
+        self.assertIs(e._args[2], m.c)
+        self.assertEqual(e.size(), 4)
         #
-        self.assertIs(type(_e), EXPR._CompressedSumExpression)
-        self.assertEqual(len(_e._args), 4)
-        self.assertIs(_e._args[0], 0)
-        self.assertIs(_e._args[1], m.a)
-        self.assertIs(_e._args[2], m.b)
-        self.assertIs(_e._args[3], m.c)
-        self.assertEqual(_e.size(), 5)
+        self.assertIs(type(_e), EXPR._MutableViewSumExpression)
+        self.assertEqual(len(_e._args), 3)
+        self.assertIs(_e._args[0], m.a)
+        self.assertIs(_e._args[1], m.b)
+        self.assertIs(_e._args[2], m.c)
+        self.assertEqual(_e.size(), 4)
 
         #            +
         #          /   \
@@ -537,25 +537,26 @@ class TestGenerate_SumExpression(unittest.TestCase):
         _e = EXPR.compress_expression(e)
         #
         self.assertIs(type(e), expectedType)
-        self.assertEqual(len(e._args), 2)
-        self.assertIs(e._args[0], e1)
-        self.assertIs(e._args[1], e2)
-        self.assertEqual(e.size(), 7)
+        self.assertEqual(len(e._args), 4)
+        self.assertIs(e._args[0], m.a)
+        self.assertIs(e._args[1], m.b)
+        self.assertIs(e._args[2], m.c)
+        self.assertIs(e._args[3], m.d)
+        self.assertEqual(e.size(), 5)
         #
-        self.assertIs(type(_e), EXPR._CompressedSumExpression)
-        self.assertEqual(len(_e._args), 5)
-        self.assertIs(_e._args[0], 0)
-        self.assertIs(_e._args[1], m.a)
-        self.assertIs(_e._args[2], m.b)
-        self.assertIs(_e._args[3], m.c)
-        self.assertIs(_e._args[4], m.d)
-        self.assertEqual(_e.size(), 6)
+        self.assertIs(type(_e), expectedType)
+        self.assertEqual(len(_e._args), 4)
+        self.assertIs(_e._args[0], m.a)
+        self.assertIs(_e._args[1], m.b)
+        self.assertIs(_e._args[2], m.c)
+        self.assertIs(_e._args[3], m.d)
+        self.assertEqual(_e.size(), 5)
 
     def test_nestedSum2(self):
         #
         # Check the structure of nested sums
         #
-        expectedType = EXPR._SumExpression
+        expectedType = EXPR._MutableViewSumExpression
 
         m = AbstractModel()
         m.a = Var()
@@ -580,11 +581,10 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e._args[1], m.c)
         self.assertEqual(e.size(), 7)
 
-        self.assertIs(type(_e), EXPR._CompressedSumExpression)
-        self.assertEqual(len(_e._args), 3)
-        self.assertEqual(_e._args[0], 0.0)
-        self.assertIs(_e._args[2], m.c)
-        self.assertIs(type(_e._args[1]._args[1]), EXPR._MutableMultiSumExpression)
+        self.assertIs(type(_e), expectedType)
+        self.assertEqual(len(_e._args), 2)
+        self.assertIs(type(_e._args[0]._args[1]), EXPR._MutableViewSumExpression)
+        self.assertIs(_e._args[1], m.c)
 
         #         *
         #        / \
@@ -606,15 +606,14 @@ class TestGenerate_SumExpression(unittest.TestCase):
 
         _e = EXPR.compress_expression(e)
         self.assertIs(type(_e), EXPR._ProductExpression)
-        self.assertIs(type(_e._args[1]), EXPR._SumExpression)
+        self.assertIs(type(_e._args[1]), EXPR._MutableViewSumExpression)
 
         _e = EXPR.compress_expression(e, dive=True)
         self.assertIs(type(_e), EXPR._ProductExpression)
-        self.assertIs(type(_e._args[1]), EXPR._MutableMultiSumExpression)
-        self.assertEqual(len(_e._args[1]._args), 3)
-        self.assertEqual(_e._args[1]._args[0], 0.0)
-        self.assertIs(_e._args[1]._args[2], m.c)
-        self.assertIs(type(_e._args[1]._args[1]._args[1]), EXPR._MutableMultiSumExpression)
+        self.assertIs(type(_e._args[1]), EXPR._MutableViewSumExpression)
+        self.assertEqual(len(_e._args[1]._args), 2)
+        self.assertIs(type(_e._args[1]._args[0]._args[1]), EXPR._MutableViewSumExpression)
+        self.assertIs(_e._args[1]._args[1], m.c)
 
     def test_trivialSum(self):
         #
@@ -648,20 +647,19 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e = e1 + m.b
         _e = EXPR.compress_expression(e)
         #
-        self.assertIs(type(e), EXPR._SumExpression)
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0]._args[0], 5)
         self.assertIs(e._args[0]._args[1], m.a)
         self.assertIs(e._args[1], m.b)
         self.assertEqual(e.size(), 5)
         #
-        self.assertIs(type(_e), EXPR._CompressedSumExpression)
-        self.assertEqual(len(_e._args), 3)
-        self.assertIs(_e._args[0], 0)
-        self.assertIs(_e._args[1]._args[0], 5)
-        self.assertIs(_e._args[1]._args[1], m.a)
-        self.assertIs(_e._args[2], m.b)
-        self.assertEqual(_e.size(), 6)
+        self.assertIs(type(_e), EXPR._MutableViewSumExpression)
+        self.assertEqual(len(_e._args), 2)
+        self.assertIs(_e._args[0]._args[0], 5)
+        self.assertIs(_e._args[0]._args[1], m.a)
+        self.assertIs(_e._args[1], m.b)
+        self.assertEqual(_e.size(), 5)
 
         #       +
         #      / \
@@ -671,20 +669,19 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e = m.b + e1
         _e = EXPR.compress_expression(e)
         #
-        self.assertIs(type(e), EXPR._SumExpression)
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.b)
         self.assertIs(e._args[1]._args[0], 5)
         self.assertIs(e._args[1]._args[1], m.a)
         self.assertEqual(e.size(), 5)
         #
-        self.assertIs(type(_e), EXPR._CompressedSumExpression)
-        self.assertEqual(len(_e._args), 3)
-        self.assertIs(_e._args[0], 0)
-        self.assertIs(_e._args[1], m.b)
-        self.assertIs(_e._args[2]._args[0], 5)
-        self.assertIs(_e._args[2]._args[1], m.a)
-        self.assertEqual(_e.size(), 6)
+        self.assertIs(type(_e), EXPR._MutableViewSumExpression)
+        self.assertEqual(len(_e._args), 2)
+        self.assertIs(_e._args[0], m.b)
+        self.assertIs(_e._args[1]._args[0], 5)
+        self.assertIs(_e._args[1]._args[1], m.a)
+        self.assertEqual(_e.size(), 5)
 
         #            +
         #          /   \
@@ -695,24 +692,21 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e = e1 + e2
         _e = EXPR.compress_expression(e)
         #
-        self.assertIs(type(e), EXPR._SumExpression)
-        self.assertEqual(len(e._args), 2)
-        self.assertIs(type(e._args[0]), EXPR._ProductExpression)
-        self.assertIs(type(e._args[1]), EXPR._SumExpression)
-        self.assertIs(e._args[0]._args[0], 5)
-        self.assertIs(e._args[0]._args[1], m.a)
-        self.assertIs(e._args[1]._args[0], m.b)
-        self.assertIs(e._args[1]._args[1], m.c)
-        self.assertEqual(e.size(), 7)
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
+        self.assertEqual(len(e._args), 3)
+        self.assertIs(e._args[0], m.b)
+        self.assertIs(e._args[1], m.c)
+        self.assertIs(e._args[2]._args[0], 5)
+        self.assertIs(e._args[2]._args[1], m.a)
+        self.assertEqual(e.size(), 6)
         #
-        self.assertIs(type(_e), EXPR._CompressedSumExpression)
-        self.assertEqual(len(_e._args), 4)
-        self.assertIs(_e._args[0], 0)
-        self.assertIs(_e._args[1], m.b)
-        self.assertIs(_e._args[2], m.c)
-        self.assertIs(_e._args[3]._args[0], 5)
-        self.assertIs(_e._args[3]._args[1], m.a)
-        self.assertEqual(_e.size(), 7)
+        self.assertIs(type(_e), EXPR._MutableViewSumExpression)
+        self.assertEqual(len(_e._args), 3)
+        self.assertIs(_e._args[0], m.b)
+        self.assertIs(_e._args[1], m.c)
+        self.assertIs(_e._args[2]._args[0], 5)
+        self.assertIs(_e._args[2]._args[1], m.a)
+        self.assertEqual(_e.size(), 6)
 
         #            +
         #          /   \
@@ -722,25 +716,22 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e2 = m.b + m.c
         e = e2 + e1
         _e = EXPR.compress_expression(e)
+
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
+        self.assertEqual(len(e._args), 3)
+        self.assertIs(e._args[0], m.b)
+        self.assertIs(e._args[1], m.c)
+        self.assertIs(e._args[2]._args[0], 5)
+        self.assertIs(e._args[2]._args[1], m.a)
+        self.assertEqual(e.size(), 6)
         #
-        self.assertIs(type(e), EXPR._SumExpression)
-        self.assertEqual(len(e._args), 2)
-        self.assertIs(type(e._args[0]), EXPR._SumExpression)
-        self.assertIs(type(e._args[1]), EXPR._ProductExpression)
-        self.assertIs(e._args[0]._args[0], m.b)
-        self.assertIs(e._args[0]._args[1], m.c)
-        self.assertIs(e._args[1]._args[0], 5)
-        self.assertIs(e._args[1]._args[1], m.a)
-        self.assertEqual(e.size(), 7)
-        #
-        self.assertIs(type(_e), EXPR._CompressedSumExpression)
-        self.assertEqual(len(_e._args), 4)
-        self.assertIs(_e._args[0], 0)
-        self.assertIs(_e._args[1], m.b)
-        self.assertIs(_e._args[2], m.c)
-        self.assertIs(_e._args[3]._args[0], 5)
-        self.assertIs(_e._args[3]._args[1], m.a)
-        self.assertEqual(_e.size(), 7)
+        self.assertIs(type(_e), EXPR._MutableViewSumExpression)
+        self.assertEqual(len(_e._args), 3)
+        self.assertIs(_e._args[0], m.b)
+        self.assertIs(_e._args[1], m.c)
+        self.assertIs(_e._args[2]._args[0], 5)
+        self.assertIs(_e._args[2]._args[1], m.a)
+        self.assertEqual(_e.size(), 6)
 
     def test_simpleDiff(self):
         #
@@ -754,7 +745,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #   / \
         #  a   b
         e = m.a - m.b
-        self.assertIs(type(e), EXPR._SumExpression)
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.a)
         self.assertIs(type(e._args[1]), EXPR._NegationExpression)
@@ -771,7 +762,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #   / \
         #  a   5
         e = m.a - 5
-        self.assertIs(type(e), EXPR._SumExpression)
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
         self.assertEqual(len(e._args), 2)
         self.assertEqual(e._args[0], -5)
         self.assertIs(e._args[1], m.a)
@@ -781,7 +772,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #   / \
         #  5   a
         e = 5 - m.a
-        self.assertIs(type(e), EXPR._SumExpression)
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], 5)
         self.assertIs(type(e._args[1]), EXPR._NegationExpression)
@@ -805,7 +796,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #   a   b
         e1 = m.a - m.b
         e = e1 - 5
-        self.assertIs(type(e), EXPR._SumExpression)
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
         self.assertIs(e._args[0], -5)
         self.assertIs(e._args[1], e1)
         self.assertEqual(e.size(), 6)
@@ -817,7 +808,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #       a   b
         e1 = m.a - m.b
         e = 5 - e1
-        self.assertIs(type(e), EXPR._SumExpression)
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
         self.assertIs(e._args[0], 5)
         self.assertIs(type(e._args[1]), EXPR._NegationExpression)
         self.assertIs(e._args[1]._args[0], e1)
@@ -830,7 +821,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #   a   b
         e1 = m.a - m.b
         e = e1 - m.c
-        self.assertIs(type(e), EXPR._SumExpression)
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
         self.assertIs(e._args[0], e1)
         self.assertIs(type(e._args[1]), EXPR._NegationExpression)
         self.assertIs(e._args[1]._args[0], m.c)
@@ -843,7 +834,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #       a   b
         e1 = m.a - m.b
         e = m.c - e1
-        self.assertIs(type(e), EXPR._SumExpression)
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.c)
         self.assertIs(e._args[1]._args[0]._args[0], m.a)
@@ -858,7 +849,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e1 = m.a - m.b
         e2 = m.c - m.d
         e = e1 - e2
-        self.assertIs(type(e), EXPR._SumExpression)
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
         self.assertIs(e._args[0], e1)
         self.assertIs(type(e._args[1]), EXPR._NegationExpression)
         self.assertIs(e._args[1]._args[0], e2)
@@ -872,7 +863,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e1 = m.a - m.b
         e2 = m.c - m.d
         e = e2 - e1
-        self.assertIs(type(e), EXPR._SumExpression)
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
         self.assertIs(e._args[0], e2)
         self.assertIs(type(e._args[1]), EXPR._NegationExpression)
         self.assertIs(e._args[1]._args[0], e1)
@@ -910,7 +901,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #   a   5
         e1 = m.a * 5
         e = e1 - m.b
-        self.assertIs(type(e), EXPR._SumExpression)
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
         self.assertIs(e._args[0], e1)
         self.assertIs(type(e._args[1]), EXPR._NegationExpression)
         self.assertIs(e._args[1]._args[0], m.b)
@@ -923,7 +914,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #       a   5
         e1 = m.a * 5
         e = m.b - e1
-        self.assertIs(type(e), EXPR._SumExpression)
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.b)
         self.assertIs(e._args[1]._args[0], e1)
@@ -937,7 +928,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e1 = m.a * 5
         e2 = m.b - m.c
         e = e1 - e2
-        self.assertIs(type(e), EXPR._SumExpression)
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
         self.assertIs(e._args[0], e1)
         self.assertIs(type(e._args[1]), EXPR._NegationExpression)
         self.assertIs(e._args[1]._args[0], e2)
@@ -951,7 +942,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e1 = m.a * 5
         e2 = m.b - m.c
         e = e2 - e1
-        self.assertIs(type(e), EXPR._SumExpression)
+        self.assertIs(type(e), EXPR._MutableViewSumExpression)
         self.assertIs(e._args[0], e2)
         self.assertIs(type(e._args[1]), EXPR._NegationExpression)
         self.assertIs(e._args[1]._args[0], e1)
@@ -1191,20 +1182,21 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         e3 = e1 + m.d
         e = e2 * e3
 
-        self.assertEqual(e.size(), 12)
+        self.assertEqual(e.size(), 9)
         _e = EXPR.compress_expression(e)
         #
         self.assertIs(type(_e), EXPR._ProductExpression)
         self.assertEqual(len(_e._args), 2)
 
-        self.assertIs(type(_e._args[0]), EXPR._SumExpression)
-        self.assertIs(len(_e._args[0]._args), 2)
-        self.assertIs(_e._args[0]._args[0], m.c)
+        self.assertIs(type(_e._args[0]), EXPR._MutableViewSumExpression)
+        self.assertIs(len(_e._args[0]._args), 3)
+        self.assertIs(_e._args[0]._args[0], m.a)
+        self.assertIs(_e._args[0]._args[1], m.b)
+        self.assertIs(_e._args[0]._args[2], m.c)
 
-        self.assertIs(type(_e._args[1]), EXPR._SumExpression)
-        self.assertIs(len(_e._args[1]._args), 2)
-        self.assertIs(_e._args[1]._args[1], m.d)
-        self.assertEqual(_e.size(), 12)
+        self.assertIs(type(_e._args[1]), EXPR._MutableViewSumExpression)
+        self.assertIs(len(_e._args[1]._args), 3)
+        self.assertEqual(_e.size(), 9)
 
         #
         # Check the structure of nested products
@@ -1222,7 +1214,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         e = e2 * e3
         _e = EXPR.compress_expression(e)
         #
-        self.assertEqual(e.size(), 12)
+        self.assertEqual(e.size(), 11)
         #
         self.assertIs(type(_e), EXPR._ProductExpression)
         self.assertEqual(len(_e._args), 2)
@@ -1231,7 +1223,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(len(_e._args[0]._args), 2)
         self.assertIs(_e._args[0]._args[0], m.c)
 
-        self.assertIs(type(_e._args[0]._args[1]), EXPR._SumExpression)
+        self.assertIs(type(_e._args[0]._args[1]), EXPR._MutableViewSumExpression)
         self.assertIs(len(_e._args[0]._args[1]._args), 2)
         self.assertIs(_e._args[0]._args[1]._args[0], m.a)
         self.assertIs(_e._args[0]._args[1]._args[1], m.b)
@@ -1240,11 +1232,11 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(len(_e._args[1]._args), 2)
         self.assertIs(_e._args[1]._args[1], m.d)
 
-        self.assertIs(type(_e._args[1]._args[0]), EXPR._CompressedSumExpression)
-        self.assertIs(len(_e._args[1]._args[0]._args), 3)
-        self.assertIs(_e._args[1]._args[0]._args[1], m.a)
-        self.assertIs(_e._args[1]._args[0]._args[2], m.b)
-        self.assertEqual(_e.size(), 12)
+        self.assertIs(type(_e._args[1]._args[0]), EXPR._MutableViewSumExpression)
+        self.assertIs(len(_e._args[1]._args[0]._args), 2)
+        self.assertIs(_e._args[1]._args[0]._args[0], m.a)
+        self.assertIs(_e._args[1]._args[0]._args[1], m.b)
+        self.assertEqual(_e.size(), 11)
 
 
     def test_trivialProduct(self):
@@ -2188,11 +2180,11 @@ class TestPrettyPrinter_newStyle(object):
         model.a = Var()
 
         expr = 5 + model.a + model.a
-        self.assertIs(type(expr), EXPR._SumExpression)
+        self.assertIs(type(expr), EXPR._MutableViewSumExpression)
         self.assertEqual("5 + a + a", str(expr))
 
         expr += 5
-        self.assertIs(type(expr), EXPR._SumExpression)
+        self.assertIs(type(expr), EXPR._MutableViewSumExpression)
         self.assertEqual("5 + a + a + 5", str(expr))
 
     def test_prod(self):
@@ -2290,15 +2282,15 @@ class TestPrettyPrinter_newStyle(object):
         self.assertEqual( "x - p*y", str(expr) )
 
         expr = m.x - m.p*m.y + 5
-        self.assertIs(type(expr), EXPR._SumExpression)
+        self.assertIs(type(expr), EXPR._MutableViewSumExpression)
         self.assertEqual( "x - p*y + 5", str(expr) )
 
         expr = m.x - m.p*m.y - 5
-        self.assertIs(type(expr), EXPR._SumExpression)
+        self.assertIs(type(expr), EXPR._MutableViewSumExpression)
         self.assertEqual( "x - p*y + -5", str(expr) )
 
         expr = m.x - m.p*m.y - 5 + m.p
-        self.assertIs(type(expr), EXPR._SumExpression)
+        self.assertIs(type(expr), EXPR._MutableViewSumExpression)
         self.assertEqual( "x - p*y + -5 + p", str(expr) )
 
     def test_small_expression(self):
@@ -2444,12 +2436,12 @@ class TestInplaceExpressionGeneration(unittest.TestCase):
         self.assertIs(type(x), type(m.a))
 
         x += m.a
-        self.assertIs(type(x), EXPR._SumExpression)
+        self.assertIs(type(x), EXPR._MutableViewSumExpression)
         self.assertEqual(len(x._args), 2)
 
         x += m.b
-        self.assertIs(type(x), EXPR._SumExpression)
-        self.assertEqual(len(x._args), 2)
+        self.assertIs(type(x), EXPR._MutableViewSumExpression)
+        self.assertEqual(len(x._args), 3)
 
 
     def test_isub(self):
@@ -2465,15 +2457,15 @@ class TestInplaceExpressionGeneration(unittest.TestCase):
         self.assertEqual(len(x._args), 1)
 
         x -= m.a
-        self.assertIs(type(x), EXPR._SumExpression)
+        self.assertIs(type(x), EXPR._MutableViewSumExpression)
         self.assertEqual(len(x._args), 2)
 
         x -= m.a
-        self.assertIs(type(x), EXPR._SumExpression)
+        self.assertIs(type(x), EXPR._MutableViewSumExpression)
         self.assertEqual(len(x._args), 2)
 
         x -= m.b
-        self.assertIs(type(x), EXPR._SumExpression)
+        self.assertIs(type(x), EXPR._MutableViewSumExpression)
         self.assertEqual(len(x._args), 2)
 
     def test_imul(self):
@@ -3339,14 +3331,11 @@ class EntangledExpressionErrors(unittest.TestCase):
         e3 = self.m.d + e1_
         #e3_ = EXPR.compress_expression(e3)
 
-        #print(e1_)
-        #print(e2_)
-        #print(e3_)
-        self.assertEqual( len(e1_._args), 3)
-        self.assertEqual( len(e2._args), 2)
-        self.assertEqual( len(e3._args), 2)
+        self.assertEqual( e1_.nargs(), 2)
+        self.assertEqual( e2.nargs(), 3)
+        self.assertEqual( e3.nargs(), 3)
 
-        self.assertNotEqual( id(e2._args[1]), id(e3._args[1]))
+        self.assertNotEqual( id(e2._args[2]), id(e3._args[2]))
 
 
 class TestSummationExpression(unittest.TestCase):
@@ -3425,9 +3414,9 @@ class TestSummationExpression(unittest.TestCase):
         e = e1+e2
         e_ = EXPR.compress_expression(e)
         self.assertEqual( e_(), 75 )
-        self.assertIs(type(e_), EXPR._CompressedSumExpression)
-        self.assertEqual( len(e_._args), 3)
-        self.assertEqual(e_.size(False), 4)
+        self.assertIs(type(e_), EXPR._MutableViewSumExpression)
+        self.assertEqual( len(e_._args), 2)
+        self.assertEqual(e_.size(False), 3)
 
 
 class TestSumExpression(unittest.TestCase):
@@ -3506,9 +3495,9 @@ class TestSumExpression(unittest.TestCase):
         e = e1+e2
         e_ = EXPR.compress_expression(e)
         self.assertEqual( e_(), 75 )
-        self.assertIs(type(e_), EXPR._CompressedSumExpression)
-        self.assertEqual( len(e_._args), 3)
-        self.assertEqual(e_.size(False), 16)
+        self.assertIs(type(e_), EXPR._MutableViewSumExpression)
+        self.assertEqual( len(e_._args), 2)
+        self.assertEqual(e_.size(False), 15)
 
 
 
@@ -3625,10 +3614,10 @@ class TestCloneExpression(unittest.TestCase):
         self.assertEqual(expr2(), 75)
         self.assertNotEqual(id(expr1), id(expr2))
         self.assertNotEqual(id(expr1._args), id(expr2._args))
-        self.assertEqual(len(expr1._args), 2)
-        self.assertEqual(len(expr2._args), 2)
-        self.assertEqual(expr1._args[0](), expr2())
-        self.assertEqual(expr1._args[1](), 10)
+        self.assertEqual(expr1.nargs(), 3)
+        self.assertEqual(expr2.nargs(), 2)
+        self.assertEqual(expr1._args[0](), 50)
+        self.assertEqual(expr1._args[1](), 25)
         self.assertNotEqual(id(expr1._args[0]), id(expr2._args[0]))
         self.assertNotEqual(id(expr1._args[1]), id(expr2._args[1]))
 
@@ -4066,7 +4055,7 @@ class TestIsFixedIsConstant(unittest.TestCase):
         m = self.instance
 
         expr = m.a + m.b
-        self.assertIs(type(expr), EXPR._SumExpression)
+        self.assertIs(type(expr), EXPR._MutableViewSumExpression)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
         self.assertEqual(expr._potentially_variable(), True)
