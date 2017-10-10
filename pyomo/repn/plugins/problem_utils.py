@@ -60,8 +60,8 @@ class ProblemWriterUtils(pyomo.opt.AbstractProblemWriter):
             # SumExpression
             #
             if isinstance(exp,expr._SumExpression):
-                for i in xrange(len(exp._args)):
-                    self._Collect1(exp._args[i])
+                self._Collect1(exp._args[0])
+                self._Collect1(exp._args[1])
             #
             # Identity
             #

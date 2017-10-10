@@ -301,7 +301,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         #
         # The stack starts with the current expression
         #
-        _stack = [ (expr, expr._args, 0, len(expr._args), False, [])]
+        _stack = [ (expr, expr._args, 0, expr.nargs(), False, [])]
         #
         # Iterate until the stack is empty
         #
@@ -516,7 +516,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                     _obj     = _sub
                     _argList = _sub._args
                     _idx     = 0
-                    _len     = len(_argList)
+                    _len     = _sub.nargs()
                     _result  = []
 
             #
@@ -544,7 +544,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                     ans = {}
                     break
 
-            if _obj.__class__ in (EXPR._SumExpression, EXPR._MutableMultiSumExpression, EXPR._CompressedSumExpression, EXPR._MultiSumExpression):
+            if _obj.__class__ in (EXPR._SumExpression, EXPR._MutableMultiSumExpression, EXPR._CompressedSumExpression, EXPR._MultiSumExpression, EXPR._MutableViewSumExpression):
                 ans = {}
                 # Add nonlinear terms
                 # Do some extra work to combine the arguments of 'Sum' expressions
@@ -552,8 +552,8 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                 if not linear:
                     for res in _result:
                         if None in res:
-                            if res[None].__class__ in (EXPR._SumExpression, EXPR._MutableMultiSumExpression, EXPR._CompressedSumExpression, EXPR.            _MultiSumExpression):
-                                for arg in res[None]._args:
+                            if res[None].__class__ in (EXPR._SumExpression, EXPR._MutableMultiSumExpression, EXPR._CompressedSumExpression, EXPR._MultiSumExpression, EXPR._MutableViewSumExpression):
+                                for arg in res[None]._args[:res[None].nargs()]:
                                     nonl.append(arg)
                             else:
                                 nonl.append(res[None])

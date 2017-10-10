@@ -454,10 +454,33 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 # We are assuming that _Constant_* expression objects
                 # have been preprocessed to form constant values.
                 #
-                if isinstance(exp, expr._MutableMultiSumExpression):
+                if exp.__class__ is expr._MutableViewSumExpression:
                     nary_sum_str, binary_sum_str, coef_term_str = \
                         self._op_string[expr._SumExpression]
-                    n = len(exp._args)
+                    n = exp.nargs()
+                    const = 0
+                    vargs = []
+                    for v in exp._args[:n]:
+                        if v.__class__ in native_numeric_types:
+                            const += v
+                        else:
+                            vargs.append(v)
+                    if not isclose(const, 0.0):
+                        vargs.append(const)
+                    n = len(vargs)
+                    if n == 2:
+                        OUTPUT.write(binary_sum_str)
+                        self._print_nonlinear_terms_NL(vargs[0])
+                        self._print_nonlinear_terms_NL(vargs[1])
+                    else:
+                        OUTPUT.write(nary_sum_str % (n))
+                        for child_exp in vargs:
+                            self._print_nonlinear_terms_NL(child_exp)
+                    
+                elif isinstance(exp, expr._MutableMultiSumExpression):
+                    nary_sum_str, binary_sum_str, coef_term_str = \
+                        self._op_string[expr._SumExpression]
+                    n = exp.nargs()
                     if exp._args[0].__class__ in native_numeric_types and isclose(exp._args[0], 0.0):
                         if n == 2:
                             self._print_nonlinear_terms_NL(exp._args[1])
@@ -476,7 +499,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                             self._print_nonlinear_terms_NL(exp._args[1])
                         else:
                             OUTPUT.write(nary_sum_str % (n))
-                            for child_exp in exp._args:
+                            for child_exp in exp._args[:n]:
                                 self._print_nonlinear_terms_NL(child_exp)
                     
                 elif exp_type is expr._SumExpression or \
@@ -495,7 +518,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
                 elif exp_type is expr._ReciprocalExpression or \
                      exp_type is expr._NPV_ReciprocalExpression:
-                    assert len(exp._args) == 1
+                    assert exp.nargs() == 1
                     div_str = self._op_string[expr._ReciprocalExpression]
                     OUTPUT.write(div_str)
                     self._print_nonlinear_terms_NL(1.0)
@@ -503,7 +526,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
                 elif exp_type is expr._NegationExpression or \
                      exp_type is expr._NPV_NegationExpression:
-                    assert len(exp._args) == 1
+                    assert exp.nargs() == 1
                     OUTPUT.write(self._op_string[expr._NegationExpression])
                     self._print_nonlinear_terms_NL(exp._args[0])
 
@@ -514,12 +537,12 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     if not self._symbolic_solver_labels:
                         OUTPUT.write(fun_str
                                      % (self.external_byFcn[exp._fcn._function][1],
-                                        len(exp._args)))
+                                        exp.nargs()))
                     else:
                         # Note: exp.name fails
                         OUTPUT.write(fun_str
                                      % (self.external_byFcn[exp._fcn._function][1],
-                                        len(exp._args),
+                                        exp.nargs(),
                                         exp.name))
                     for arg in exp._args:
                         if isinstance(arg, basestring):
@@ -535,7 +558,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     self._print_nonlinear_terms_NL(exp._args[1])
 
                 elif isinstance(exp, expr._UnaryFunctionExpression):
-                    assert len(exp._args) == 1
+                    assert exp.nargs() == 1
                     intr_expr_str = self._op_string.get(exp.name)
                     if intr_expr_str is not None:
                         OUTPUT.write(intr_expr_str)
@@ -554,7 +577,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 elif exp_type is expr._InequalityExpression:
                     and_str, lt_str, le_str = \
                         self._op_string[expr._InequalityExpression]
-                    len_args = len(exp._args)
+                    len_args = exp.nargs()
                     assert len_args in [2,3]
                     left = exp._args[0]
                     middle = exp._args[1]
