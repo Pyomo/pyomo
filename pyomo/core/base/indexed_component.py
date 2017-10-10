@@ -285,6 +285,12 @@ class IndexedComponent(Component):
     component data value.  When enabled, the default does not
     change the access and iteration methods.
 
+    IndexedComponent may be given a set over which indexing is restricted.
+    Alternatively, IndexedComponent may be indexed over Any 
+    (pyomo.core.base.set_types.Any), in which case the IndexedComponent
+    behaves like a dictionary - any hashable object can be used as a key
+    and keys can be added on the fly.
+
     Constructor arguments:
         ctype       The class type for the derived subclass
         doc         A text string describing this component

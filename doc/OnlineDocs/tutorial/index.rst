@@ -29,6 +29,58 @@ Concrete vs Abstract Models
 
 Modeling Components
 -------------------
+The primary modeling components defined by Pyomo are
+:class:`Set<pyomo.core.base.sets.Set>`, :class:`Var<pyomo.core.base.var.Var>`,
+:class:`Constraint<pyomo.core.base.constraint.Constraint>`,
+:class:`Objective<pyomo.core.base.objective.Objective>`, and
+:class:`Block<pyomo.core.base.block.Block>`. Each of these may be indexed.
+
+.. doctest::
+   
+   >>> import pyomo.envrion as pe
+   >>> m = pe.ConcreteModel()
+   >>> m.a = pe.Set(initialize=[1, 2, 3])
+   >>> m.x = pe.Var(m.a, initialize=0, bounds=(-10,10))
+   >>> m.y = pe.Var(m.a)
+   >>> def c_rule(m, i):
+   >>>    return m.x[i] >= m.y[i]
+   >>> m.c = pe.Constraint(m.a, rule=c_rule)
+   >>> m.c.pprint()
+   c : Size=3, Index=a, Active=True
+       Key : Lower : Body        : Upper : Active
+         1 :  -Inf : y[1] - x[1] :   0.0 :   True
+	 2 :  -Inf : y[2] - x[2] :   0.0 :   True
+	 3 :  -Inf : y[3] - x[3] :   0.0 :   True
+
+By default, the index set is fixed. New indices may not be added:
+
+.. doctest::
+   
+   >>> m.z = pe.Var()
+   >>> m.c[4] = m.x[1] == 5 * m.z
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+     File "/Users/michaelbynum/Documents/pyomo_dev/pyomo/core/base/indexed_component.py", line 554, in __setitem__
+       index = self._validate_index(index)
+     File "/Users/michaelbynum/Documents/pyomo_dev/pyomo/core/base/indexed_component.py", line 649, in _validate_index
+       % ( idx, self.name, ))
+   KeyError: "Error acccessing indexed component value:\n\nIndex '4' is not valid for indexed component 'c'"
+
+This helps prevent many common mistakes. However, IndexedComponent can behave
+more like a dictionary if Any is used as the index.
+
+.. doctest::
+   
+   >>> m.c2 = pe.Constraint(pe.Any)
+   >>> m.c2[1] = m.x[1] == 5 * m.z
+   >>> m.c2[8] = m.x[2] == m.z * m.y[2]
+   >>> m.c2.pprint()
+   c2 : Size=2, Index=Any, Active=True
+       Key : Lower : Body            : Upper : Active
+         1 :   0.0 :      x[1] - 5*z :   0.0 :   True
+	 8 :   0.0 : x[2] - z * y[2] :   0.0 :   True
+   
+
 
 Pyomo Command
 -------------
