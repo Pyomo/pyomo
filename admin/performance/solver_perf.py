@@ -4,7 +4,8 @@
 
 from pyomo.environ import *
 import pyomo.version
-import pyutilib.subprocess
+from pyomo.core.base.expr_common import _clear_expression_pool
+from pyomo.core.base import expr as EXPR
 
 import pprint as pp
 import gc
@@ -18,16 +19,42 @@ except:
 import sys
 import argparse
 import re
+import pyutilib.subprocess
 
-#N = 50
-N = 5
+## TIMEOUT LOGIC
+from functools import wraps
+import errno
+import os
+import signal
+
+
+class TimeoutError(Exception):
+    pass
+
+class timeout:
+    def __init__(self, seconds=10, error_message='Timeout'):
+        self.seconds = seconds
+        self.error_message = error_message
+    def handle_timeout(self, signum, frame):
+        raise TimeoutError(self.error_message)
+    def __enter__(self):
+        signal.signal(signal.SIGALRM, self.handle_timeout)
+        signal.alarm(self.seconds)
+    def __exit__(self, type, value, traceback):
+        signal.alarm(0)
+
+
+
+_timeout = 20
+#N = 30
+N = 1
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-o", "--output", help="Save results to the specified file", action="store", default=None)
-parser.add_argument("-s", "--solver", help="Specify the solver to test", action="store", default=None)
+#parser.add_argument("-s", "--solver", help="Specify the solver to test", action="store", default=None)
 parser.add_argument("-v", "--verbose", help="Run just a single trial in verbose mode", action="store_true", default=False)
-parser.add_argument("--ntrials", help="The number of test trials", action="store", default=None)
+parser.add_argument("--ntrials", help="The number of test trials", action="store", type=int, default=None)
 args = parser.parse_args()
 
 if args.ntrials:
@@ -39,15 +66,13 @@ print("NTrials %d\n\n" % N)
 # Execute a function 'n' times, collecting performance statistics and
 # averaging them
 #
-def measure(f, n=25, verbose=False):
+def measure(f, n=25):
     """measure average execution time over n trials"""
-    if verbose:
-        f()
-        return None
     data = []
     for i in range(n):
         data.append(f())
         sys.stdout.write('.')
+        sys.stdout.flush()
     sys.stdout.write('\n')
     #
     ans = {}
@@ -58,7 +83,6 @@ def measure(f, n=25, verbose=False):
         ans[key] = {"mean": sum(d_)/float(n), "data": d_}
     #
     return ans
-
 
 
 #
@@ -125,7 +149,7 @@ def run_pyomo(solver, problem, verbose):
 
 
 def solve_pmedian(solver, num, verbose):
-    return run_pyomo(solver, "../../examples/performance/pmedian.py ../../examples/performance/pmedian.test%d.dat" % num, verbose)
+    return run_pyomo(solver, "../../examples/performance/pmedian/pmedian.py ../../examples/performance/pmedian/pmedian.test%d.dat" % num, verbose)
 
 #
 # Utility function used by runall()
@@ -191,7 +215,7 @@ if args.output:
         # Write csv file
         #
         perf_types = sorted(next(iter(res.values())).keys())
-        res_ = [ list(key) + [res[key][k]['mean'] for k in perf_types] for key in res]
+        res_ = [ list(key) + [res.get(key,{}).get(k,{}).get('mean',-777) for k in perf_types] for key in sorted(res.keys())]
         with open(args.output, 'w') as OUTPUT:
             import csv
             writer = csv.writer(OUTPUT)
@@ -200,7 +224,7 @@ if args.output:
                 writer.writerow(line)
 
     elif args.output.endswith(".json"):
-        res_ = {'script': sys.argv[0], 'NTerms':NTerms, 'NTrials':N, 'data': remap_keys(res), 'pyomo_version':pyomo.version.version, 'pyomo_versioninfo':pyomo.version.version_info[:3]}
+        res_ = {'script': sys.argv[0], 'NTrials':N, 'data': remap_keys(res), 'pyomo_version':pyomo.version.version, 'pyomo_versioninfo':pyomo.version.version_info[:3]}
         #
         # Write json file
         #
