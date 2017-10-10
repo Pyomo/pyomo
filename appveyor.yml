@@ -8,11 +8,11 @@ environment:
     # isn't covered by this document) at the time of writing.
 
     - PYTHON: "C:\\Python27"
-      CATEGORY: "nightly"
+      CATEGORY: "nightly,book=0"
     - PYTHON: "C:\\Python35"
-      CATEGORY: "nightly"
+      CATEGORY: "nightly,book=0"
     - PYTHON: "C:\\Python36"
-      CATEGORY: "nightly"
+      CATEGORY: "nightly,book=0"
     ##- PYTHON: "C:\\Python33"
     #- PYTHON: "C:\\Python34"
     #- PYTHON: "C:\\Python27-x64"
