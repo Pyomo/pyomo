@@ -12,6 +12,7 @@
 
 import pyutilib.th as unittest
 import pyomo.environ as pe
+from pyomo.opt.base.solvers import UnknownSolver
 
 from six import iteritems
 
@@ -57,8 +58,13 @@ class TestScaleModelTransformation(unittest.TestCase):
                 
         scaled_model = pe.TransformationFactory('core.scale_model').create_using(unscaled_model)
 
-        pe.SolverFactory('glpk').solve(unscaled_model)
-        pe.SolverFactory('glpk').solve(scaled_model)
+        glpk_solver =  pe.SolverFactory('glpk')        
+        if isinstance(glpk_solver, UnknownSolver) or \
+           (not glpk_solver.available()):
+            raise unittest.SkipTest("glpk solver not available")
+
+        glpk_solver.solve(unscaled_model)
+        glpk_solver.solve(scaled_model)
 
         # check vars
         self.assertAlmostEqual(pe.value(unscaled_model.x[1]), pe.value(scaled_model.x[1])/x_scale, 4)
