@@ -32,6 +32,11 @@ install:
   - "python -m pip install coverage"
   - "python -m pip install nose"
   - "python -m pip install Pyro4"
+  - "python -m pip install conda"
+  - "conda install -q -y --channel conda-forge glpk"
+  - "glpsol -v"
+  - "conda install -q -y --channel conda-forge ipopt"
+  - "ipopt -v"
   #
   # Clone but don't install pyomo-model-libraries
   #
