@@ -365,7 +365,7 @@ class IndexedComponent(Component):
         """TODO"""
         for idx in self._index:
             if idx not in self._data:
-                self._default(idx)
+                self._getitem_if_not_present(idx)
 
     def clear(self):
         """Clear the data in this component"""
@@ -518,14 +518,14 @@ You can silence this warning by one of three ways:
             # Call the _default helper to retrieve/return the default value
             #
             if obj is None:
-                return self._default(index)
+                return self._getitem_if_not_present(index)
 
         return obj
 
     def __setitem__(self, index, val):
         #
-        # Set the value: This relies on _setitem() to insert the correct
-        # ComponentData into the dictionary
+        # Set the value: This relies on _setitem_if_not_present() to
+        # insert the correct ComponentData into the dictionary
         #
         # Note: it is important that we check _constructed is False and not
         # just evaluates to false: when constructing immutable Params,
@@ -547,7 +547,7 @@ You can silence this warning by one of three ways:
         if obj is None and index.__class__ is not _IndexedComponent_slicer:
             index = self._validate_index(index)
         #
-        # Call the _setitem helper to populate the _data
+        # Call the _setitem_if_not_present helper to populate the _data
         # dictionary and set the value
         #
         # Note that we need to RECHECK the class against
@@ -557,11 +557,11 @@ You can silence this warning by one of three ways:
         if index.__class__ is _IndexedComponent_slicer:
             # this supports "m.x[:,1] = 5" through a simple recursive call
             for idx in index:
-                self._setitem(idx.index(), val, new=False)
+                self._setitem_if_not_present(idx.index(), val, new=False)
         else:
             if obj is None :
                 index = self._validate_index(index)
-            return self._setitem(index, val, new=False)
+            return self._setitem_if_not_present(index, val, new=False)
 
     def __delitem__(self, index):
         if self._constructed is False:
@@ -772,7 +772,7 @@ the value() function.""" % ( self.name, i ))
                 "Unknown problem encountered when trying to retrieve "
                 "index for component %s" % (self.name,) )
 
-    def _default(self, index):
+    def _getitem_if_not_present(self, index):
         """Returns the default component data value for this Component.
 
         Override this method if the component allows implicit member
@@ -784,7 +784,7 @@ the value() function.""" % ( self.name, i ))
         and is a legitimate entry in the _data dict. """
         raise KeyError(str(index))
 
-    def _setitem(self, idx, val, new=False):
+    def _setitem_if_not_present(self, idx, val, new=False):
         """Perform the fundamental component item creation and storage.
 
         Components that want to implement a nonstandard storage mechanism
