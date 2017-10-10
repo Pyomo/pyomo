@@ -9,10 +9,13 @@ environment:
 
     - PYTHON: "C:\\Python27"
       CATEGORY: "nightly,book=0"
+      MINICONDA: "C:\Miniconda;C:\Miniconda\Scripts"
     - PYTHON: "C:\\Python35"
       CATEGORY: "nightly,book=0"
+      MINICONDA: "C:\Miniconda3;C:\Miniconda3\Scripts"
     - PYTHON: "C:\\Python36"
       CATEGORY: "nightly,book=0"
+      MINICONDA: "C:\Miniconda3;C:\Miniconda3\Scripts"
     ##- PYTHON: "C:\\Python33"
     #- PYTHON: "C:\\Python34"
     #- PYTHON: "C:\\Python27-x64"
@@ -24,7 +27,7 @@ environment:
 
 install:
   # We need wheel installed to build wheels
-  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+  - "SET PATH=%MINICONDA%;%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - "python --version"
   - "python -m pip install -U pip setuptools"
   - "python -m pip install networkx"
@@ -33,7 +36,6 @@ install:
   - "python -m pip install nose"
   - "python -m pip install Pyro4"
   - "python -m pip install conda"
-  - "conda install -q -y --channel conda-forge glpk"
   - "glpsol -v"
   - "conda install -q -y --channel conda-forge ipopt"
   - "ipopt -v"
