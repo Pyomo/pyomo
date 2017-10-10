@@ -130,7 +130,6 @@ after_success:
 - cd $TRAVIS_BUILD_DIR
 - coverage combine
 - pip install --quiet codecov
-- cp ../.coverage .
 - codecov
 #- pip install python-coveralls
 #- coveralls
