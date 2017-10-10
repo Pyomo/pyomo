@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.environ as pe
-from pyomo.core.plugins.transform.scaling import ScaleModel, substitute_var
+
 ### Create the example model
 model = pe.ConcreteModel()
 model.s = pe.Set(initialize=[1,2])

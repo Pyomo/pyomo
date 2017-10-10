@@ -17,10 +17,10 @@ from pyomo.core.base import expr_coopr3
 from pyomo.core.base.expr import clone_expression
 #from pyomo.core.base import expr_common as common
 
-def substitute_var_in_constraint(constraint, substitution_map):
-    substitute_var(constraint._body, substitution_map)
+def _substitute_var_in_constraint(constraint, substitution_map):
+    _substitute_var(constraint._body, substitution_map)
     
-def substitute_var(expression, sub_component_map):
+def _substitute_var(expression, sub_component_map):
     stack = list()
     # this is a stack of the expression nodes to process
     stack.append(expression)
@@ -48,11 +48,11 @@ def substitute_var(expression, sub_component_map):
                 if isinstance(child, _VarData):
                     if child in sub_component_map:
                         new_expr = clone_expression(sub_component_map[child])
-                        e._args = replace_entry_in_list_or_tuple(e._args, new_expr, i)
+                        e._args = _replace_entry_in_list_or_tuple(e._args, new_expr, i)
                 else:
                     stack.append(child)
 
-def replace_entry_in_list_or_tuple(list_or_tuple, new_entry, i):
+def _replace_entry_in_list_or_tuple(list_or_tuple, new_entry, i):
     if type(list_or_tuple) is tuple:
         return list_or_tuple[:i] + (new_entry,) + list_or_tuple[i+1:]
     else:
@@ -61,30 +61,45 @@ def replace_entry_in_list_or_tuple(list_or_tuple, new_entry, i):
     
 class ScaleModel(Transformation):
     """
-    This plugin performs variable, constraint, and objective scaling. Scaling parameters
-    must be in the suffix 'scaling_parameter'.
+    Transformation to scale a model.
 
-    Given an example:
-       min obj: x^2 + y
-        s.t.  c1: x + y = 4
-              0.5 <= x
-              0 <= y <= 8
-    
-    and a set of scaling parameters: 
-       k_obj = 5.0
-       k_x = 10.0
-       k_y = 3.0
-       k_c1 = 2.0
+    This plugin performs variable, constraint, and objective scaling on
+    a model based on the scaling factors in the suffix 'scaling_parameter'
+    set for the variables, constraints, and/or objective. This is typically 
+    done to scale the problem for improved numerical properties.
 
-    the new problem becomes:
-       min obj: k_obj * (scaled_x/k_x)^2 + scaled_y/k_y
-        s.t.  c1: k_c1 * (scaled_x/k_x + scaled_y/k_y) = k_c1 * 4
-              0.5 * k_x <= scaled_x
-              0.0 * k_y <= scaled_y <= k_y * 8
+    Supported transformation methods:
+        * :py:meth:`apply_to <pyomo.core.plugins.transform.scaling.ScaleModel.apply_to>`
+        * :py:meth:`create_using <pyomo.core.plugins.transform.scaling.ScaleModel.create_using>`
+        * :py:meth:`propagate_solution <pyomo.core.plugins.transform.scaling.ScaleModel.propagate_solution>`
 
-    where:
-       scaled_x is defined as k_x * x
-       scaled_y is defined as k_y * y
+
+    Examples:
+        >>> from pyomo.environ import *
+        >>> # create the model
+        >>> model = ConcreteModel()
+        >>> model.x = Var(bounds=(-5, 5), initialize=1.0)
+        >>> model.y = Var(bounds=(0, 1), initialize=1.0) 
+        >>> model.obj = Objective(expr=1e8*model.x + 1e6*model.y)
+        >>> model.con = Constraint(expr=model.x + model.y == 1.0)
+        >>> # create the scaling factors
+        >>> model.scaling_factor = Suffix(direction=Suffix.EXPORT)
+        >>> model.scaling_factor[model.obj] = 1e-6 # scale the objective
+        >>> model.scaling_factor[model.con] = 2.0  # scale the constraint
+        >>> model.scaling_factor[model.x] = 0.2    # scale the x variable
+        >>> # transform the model 
+        >>> scaled_model = TransformationFactory('core.scale_model').create_using(model)
+        >>> # print the value of the objective function to show scaling has occurred
+        >>> print(value(model.x))
+        1.0
+        >>> print(value(scaled_model.x))
+        0.2
+        >>> print(value(scaled_model.x.lb))
+        -1.0
+        >>> print(value(model.obj))
+        101000000.0
+        >>> print(value(scaled_model.obj))
+        101.0
 
     """
 
@@ -173,7 +188,7 @@ class ScaleModel(Transformation):
                 # perform the constraint/objective scaling and variable sub
                 scaling_factor = component_scaling_factor_map[c]
                 if isinstance(c, _ConstraintData):
-                    substitute_var_in_constraint(c, variable_substitution_map)
+                    _substitute_var_in_constraint(c, variable_substitution_map)
 
                     if c._lower is not None:
                         c._lower = c._lower * scaling_factor
@@ -194,7 +209,7 @@ class ScaleModel(Transformation):
                             model.dual[c] = dual_value/scaling_factor
                     
                 elif isinstance(c, _ObjectiveData):
-                    substitute_var(c.expr, variable_substitution_map)
+                    _substitute_var(c.expr, variable_substitution_map)
                     c.expr = c.expr * scaling_factor
                 else:
                     raise NotImplementedError('Unknown object type found when applying scaling factors in ScaleModel transformation - Internal Error')
@@ -205,8 +220,11 @@ class ScaleModel(Transformation):
 
     def propagate_solution(self, scaled_model, original_model):
         '''
-        This method takes the solution in the scaled model and reverses the transformation to put
-        the solution in the original model. It will do primal, dual, or both depending on keyword arguments.
+        This method takes the solution in scaled_model and maps it back to the original model.
+
+        It will also transform duals and reduced costs if the suffixes 'dual' and/or 'rc' are present.
+        The :code:`scaled_model` argument must be a model that was already scaled using this transformation
+        as it expects data from the transformation to perform the back mapping.
         '''
         if not hasattr(scaled_model, 'component_scaling_factor_map'):
             raise AttributeError('ScaleModel:propagate_solution called with scaled_model that does not '

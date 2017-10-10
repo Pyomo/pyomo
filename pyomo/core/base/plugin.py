@@ -328,7 +328,7 @@ independent transformed model instance.""")
 
     def apply_to(self, model, **kwds):
         """
-        Apply the transformation to the given model.
+        Apply the transformation to the given model (in-place).
         """
         if not hasattr(model, '_transformation_data'):
             model._transformation_data = TransformationData()
@@ -336,7 +336,7 @@ independent transformed model instance.""")
 
     def create_using(self, model, **kwds):
         """
-        Create a new model with this transformation
+        Create a new model with this transformation (out-of-place)
         """
         if not hasattr(model, '_transformation_data'):
             model._transformation_data = TransformationData()
