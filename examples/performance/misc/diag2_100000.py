@@ -11,7 +11,9 @@ def create_model(N):
     model.obj = Objective(expr=expr)
 
     def c_rule(model, i):
-        return (N-i+1)*model.x[i] >= N
+        with linear_expression as expr:
+            expr = (N-i+1)*model.x[i]
+        return expr >= N
     model.c = Constraint(model.A)
 
     return model
