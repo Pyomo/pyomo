@@ -10,67 +10,85 @@
 
 import pyomo.environ as pe
 
-### Create the example model
+###
+# create the original unscaled model
+###
 model = pe.ConcreteModel()
-model.s = pe.Set(initialize=[1,2])
-model.z = pe.Var(initialize=100.0, bounds=(-100, 100.0))
-model.x = pe.Var(model.s, bounds=(-10.0,10.0), initialize={1: 1.0, 2: -10.0})
-model.obj = pe.Objective(expr=model.x[1] + 2.0*model.x[2] + 3.0*model.z)
+model.x = pe.Var([1,2,3], bounds=(-10,10), initialize=5.0)
+model.z = pe.Var(bounds=(10,20))
+model.obj = pe.Objective(expr=model.z + model.x[1])
 
-def ineq_rule(m, i):
+# demonstrate scaling of duals as well
+model.dual = pe.Suffix(direction=pe.Suffix.IMPORT)
+model.rc = pe.Suffix(direction=pe.Suffix.IMPORT)
+        
+def con_rule(m, i):
     if i == 1:
-        return m.z + m.x[1] >= -1.0
-    else:
-        return -m.z + m.x[1] <= 1.0
-model.inequ = pe.Constraint(model.s, rule=ineq_rule)
+        return m.x[1] + 2*m.x[2] + 1*m.x[3] == 4.0
+    if i == 2:
+        return m.x[1] + 2*m.x[2] + 2*m.x[3] == 5.0
+    if i == 3:
+        return m.x[1] + 3.0*m.x[2] + 1*m.x[3] == 5.0
+model.con = pe.Constraint([1,2,3], rule=con_rule)
+model.zcon = pe.Constraint(expr=model.z >= model.x[2])
 
-model.eq = pe.Constraint(expr=model.x[2] == model.x[1]+2.0)
-
-
-### Declare the scaling_factor suffix 
+###
+# set the scaling parameters
+###
 model.scaling_factor = pe.Suffix(direction=pe.Suffix.EXPORT)
-# set objective scaling factor
-model.scaling_factor[model.obj] = 1.0/281.0 # should give scaled objective value of 1.0
-# set variable scaling factor
-model.scaling_factor[model.z] = 100.0 # should have scaled initial value of 1.0
-model.scaling_factor[model.x[2]] = -10.0 # should have scaled initial value of 1.0
-# set constraint scaling factor
-model.scaling_factor[model.inequ[1]] = 1.0/101.0 # should give a scaled value of 1.0 at initial pt
-model.scaling_factor[model.inequ[2]] = -1.0/99.0 # should give a scaled value of 1.0 at initial pt
-model.scaling_factor[model.eq] = 1.0/13.0 # should give a scaled value of 1.0 at initial pt
+model.scaling_factor[model.obj] = 2.0
+model.scaling_factor[model.x] = 0.5
+model.scaling_factor[model.z] = -10.0
+model.scaling_factor[model.con[1]] = 0.5 
+model.scaling_factor[model.con[2]] = 2.0
+model.scaling_factor[model.con[3]] = -5.0
+model.scaling_factor[model.zcon] = -3.0
 
 ###
-# scale and solve the problem
+# build and solve the scaled model
 ###
-unscaled_model = model
-# transform the unscaled model to a scaled model
-scaling_tx = pe.TransformationFactory('core.scale_model')
-scaled_model = scaling_tx.create_using(unscaled_model)
+scaled_model = pe.TransformationFactory('core.scale_model').create_using(model)
+pe.SolverFactory('glpk').solve(scaled_model)
+
+
+###
+# propagate the solution back to the original model
+###
+pe.TransformationFactory('core.scale_model').propagate_solution(scaled_model, model)
+
 # print the scaled model
-print('*** SCALED MODEL ***')
 scaled_model.pprint()
-# solve the scaled model
-pe.SolverFactory('glpk').solve(unscaled_model)
-# propagate the solution back to the unscaled model
-scaling_tx.propagate_solution(scaled_model, unscaled_model)
-# print the usncaled model with propagated solution
-print('*** UNSCALED MODEL ***')
-scaled_model.pprint()
+
+# print the solution on the original model after backmapping
+model.pprint()
 
 compare_solutions = False
 if compare_solutions:
+    # compare the solution of the original model with a clone of the
+    # original that has a backmapped solution from the scaled model
+    
+    # solve the original (unscaled) model
     original_model = model.clone()
-    unscaled_model = model.clone()
-    pe.SolverFactory('glpk').solve(unscaled_model)
+    pe.SolverFactory('glpk').solve(original_model)
 
-    print('*** UNSCALED MODEL SOLN ***')
-    unscaled_model.display()
-
+    # create and solve the scaled model
     scaling_tx = pe.TransformationFactory('core.scale_model')
-    scaled_model = scaling_tx.create_using(unscaled_model)
+    scaled_model = scaling_tx.create_using(model)
     pe.SolverFactory('glpk').solve(scaled_model)
-    scaling_tx.propagate_solution(scaled_model, original_model)
-    print('*** SCALED MODEL SOLN --> BACK TO UNSCALED MODEL ***')
-    original_model.display()
+
+    # propagate the solution from the scaled model back to a clone of the original model
+    backmapped_unscaled_model = model.clone()
+    scaling_tx.propagate_solution(scaled_model, backmapped_unscaled_model)
+
+    # compare the variable values
+    print('\n\n')
+    print('%s\t%12s           %18s' % ('Var', 'Orig.', 'Scaled -> Backmapped'))
+    print('=====================================================')
+    for v in original_model.component_data_objects(ctype=pe.Var, descend_into=True):
+        cuid = pe.ComponentUID(v)
+        bv = cuid.find_component_on(backmapped_unscaled_model)
+        print('%s\t%.16f\t%.16f' % (v.local_name, pe.value(v), pe.value(bv)))
+    print('=====================================================')
+
 
 
