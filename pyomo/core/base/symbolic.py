@@ -186,7 +186,7 @@ def _map_intrinsic_functions(expr, sympySymbols):
                 else:
                     _argList = _sub._args
                 _idx = 0
-                _len = len(_argList)
+                _len = _sub.nargs()
     return _argList[0]
 
 
@@ -207,7 +207,7 @@ def _map_sympy2pyomo(expr, sympy2pyomo):
             _stack.append(( _argList, _idx, _len ))
             _argList = list(_sub._args)
             _idx = 0
-            _len = len(_argList)
+            _len = _sub.nargs()
 
         # Substitute the operator
         if not _stack:

@@ -170,7 +170,7 @@ def substitute_template_expression(expr, substituter, *args):
                 if not _obj._args:
                     continue
                 _stack_idx += 1
-                _ptr = [_obj._args, 0, len(_obj._args), _obj]
+                _ptr = [_obj._args, 0, _obj.nargs(), _obj]
                 if _stack_idx < len(_stack):
                     _stack[_stack_idx] = _ptr
                 else:

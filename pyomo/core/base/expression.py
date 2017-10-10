@@ -67,6 +67,10 @@ class _ExpressionData(NumericValue):
         """A tuple of subexpressions involved in this expressions operation."""
         return (self.expr,)
 
+    def nargs(self):
+        """The value len(self._args)"""
+        return 1
+
     def _arguments(self):
         """A tuple of subexpressions involved in this expressions operation."""
         return (self.expr,)
