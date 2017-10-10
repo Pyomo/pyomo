@@ -45,7 +45,8 @@ class timeout:
 
 
 _bin = {'COOPR3': '/Users/wehart/src/pyomo/py36/bin',
-        'PYOMO5': os.path.abspath('../../../../bin')
+        'PYOMO5': os.path.abspath('../../../../bin'),
+        'PYPY': '/Users/wehart/src/pyomo/pypy/bin'
        }
 
 large = True
@@ -261,37 +262,46 @@ def runall(factors, res, output=True, filetype=None, verbose=False):
             if not verbose:
                 print_results(factors_, ans_, output)
 
+    def dcopf1(name, num):
+        testname = 'dcopf1_%d' % num
+        if not filetype or filetype == name:
+            factors_ = tuple(factors+[name,testname])
+            print("TESTING: %s" % " ".join(factors_))
+            ans_ = res[factors_] = measure(run_script(code, name, "perf_test_dcopf_case2383wp.py", verbose, cwd='../../examples/performance/dcopf/'), n=N)
+            if not verbose:
+                print_results(factors_, ans_, output)
 
-    if False:
+
+    if True:
+        if large:
+            dcopf1('lp', 0)
+            dcopf1('nl', 0)
+        else:
+            dcopf1('lp', 0)
+            dcopf1('nl', 0)
+
+    if True:
         if large:
             stochpdegas1('nl', 0)
         else:
             stochpdegas1('nl', 0)
+
     if True:
         if large:
             pmedian1('lp',7)
-            #pmedian1('nl',7)
-            #pmedian1('bar',7)
-            #pmedian1('mps',7)
+            pmedian1('nl',7)
         else:
             pmedian1('lp',4)
             pmedian1('nl',4)
-            #pmedian1('bar',4)
-            #pmedian1('mps',4)
 
     if True:
         if large:
             pmedian2('lp',7)
-            #pmedian2('nl',7)
-            #pmedian2('bar',7)
-            #pmedian2('mps',7)
+            pmedian2('nl',7)
         else:
             pmedian2('lp',4)
-            #pmedian2('nl',4)
-            #pmedian2('bar',4)
-            #pmedian2('mps',4)
+            pmedian2('nl',4)
 
-    return
     if True:
         if large:
             bilinear1('lp',100000)
@@ -335,6 +345,7 @@ res = {}
 
 runall(['COOPR3'], res, filetype=args.type, verbose=args.verbose)
 runall(['PYOMO5'], res, filetype=args.type, verbose=args.verbose)
+runall(['PYPY'], res, filetype=args.type, verbose=args.verbose)
 
 
 
