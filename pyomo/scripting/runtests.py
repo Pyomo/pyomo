@@ -13,7 +13,7 @@
 #import os.path
 #import optparse
 
-from os.path import dirname, abspath, join
+from os.path import dirname, abspath, exists, join
 import sys
 
 import pyutilib.dev.runtests
@@ -24,10 +24,11 @@ def runPyomoTests(argv=None):
     if argv is None:
         argv = sys.argv
 
-    return pyutilib.dev.runtests.run(
-        ['pyomo', join('..','pyomo-model-libraries')],
-        dirname(dirname(dirname(abspath(__file__)))),
-        argv )
+    basedir=dirname(dirname(dirname(abspath(__file__))))
+    targets=['pyomo']
+    if exists(join(basedir,'..','pyomo-model-libraries')):
+        targets.append(join(basedir,'..','pyomo-model-libraries'))
+    return pyutilib.dev.runtests.run(targets, basedir, argv)
 
 
 def OLD_runPyomoTests():
