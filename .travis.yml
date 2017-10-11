@@ -1,33 +1,30 @@
 language: python
 matrix:
   include:
+  # NOTE: EXTRAS is not yet supported on Python 2.6.
   - python: '2.6'
     env:                             CATEGORY="nightly"
-  # NOTE: EXTRAS is not yet supported on Python 2.6.
-  #
   - python: '2.7'
     env:                             CATEGORY="nightly"
+  #
   - python: '2.7'
     env:                             CATEGORY="nightly"  EXTRAS="yes"  KEY_JOB="yes"
-  - python: '2.7'
-    env:                             CATEGORY="parallel"  EXTRAS="yes"
-  #
   - python: '3.4'
     env:                             CATEGORY="nightly"  EXTRAS="yes"
-  #
   - python: '3.5'
     env:                             CATEGORY="nightly"  EXTRAS="yes"
+  - python: '3.6'
+    env:                             CATEGORY="nightly"  EXTRAS="yes"
+  #
+  # NOTE: EXTRAS is not yet supported on Python 3.6.  Until it is,
+  #   parallel tests will be restricted to Python 3.5
+  - python: '2.7'
+    env:                             CATEGORY="parallel" EXTRAS="yes"
   - python: '3.5'
     env:                             CATEGORY="parallel" EXTRAS="yes"
   #
-  - python: '3.6'
-    env:                             CATEGORY="nightly"
-  # NOTE: EXTRAS is not yet supported on Python 3.6.  Until it is,
-  #   parallel tests will be restricted to Python 3.5
-  #
   #- python: pypy
   #  env:                             CATEGORY="nightly"
-  #
   #- python: '2.7'
   #  env: PYRO="Pyro" JYTHON="org.python:jython-installer:2.7.0"
   #- python: pypy
@@ -86,7 +83,8 @@ install:
      bash ./.travis_install_gams_api.sh;
   fi
 - PATH=${PATH}:$PWD/gams24.8_linux_x64_64_sfx;
-#
+
+# Install Pyomo extras, required solvers
 - if [ -n "${EXTRAS}" ]; then conda install -q -y --channel conda-forge pyomo.extras; fi
 
 - conda install -q -y --channel conda-forge glpk
@@ -107,9 +105,7 @@ install:
 - which python
 - python --version
 - python setup.py develop
-#
-#
-#
+
 script:
 # The next three commands enable tracking of coverage
 # for any subprocesses launched by tests
@@ -120,9 +116,8 @@ script:
 
 # Run documentation tests
 - nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
-#
-#
-#
+
+
 after_success:
 # Trigger PyomoGallery build
 - "if [ -n \"${KEY_JOB}\" ]; then curl -s -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Travis-API-Version: 3' -H 'Authorization: token 4DadIB521uUPyBXMtvQVOw' -d '{\"request\": {\"branch\": \"master\"}}' https://api.travis-ci.org/repo/Pyomo%2FPyomoGallery/requests; fi"
@@ -134,9 +129,8 @@ after_success:
 #- pip install python-coveralls
 #- coveralls
 - cd $TRAVIS_BUILD_DIR
-#
-#
-#
+
+
 deploy:
 - provider: pypi
   server: https://testpypi.python.org/pypi # Updated

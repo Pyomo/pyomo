@@ -7,15 +7,39 @@ environment:
     # The list here is complete (excluding Python 2.6, which
     # isn't covered by this document) at the time of writing.
 
-    - PYTHON: "C:\\Python27"
-      CATEGORY: "nightly,book=0"
-      MINICONDA: "C:\\Miniconda;C:\\Miniconda\\Scripts"
-    - PYTHON: "C:\\Python35"
-      CATEGORY: "nightly,book=0"
-      MINICONDA: "C:\\Miniconda3;C:\\Miniconda3\\Scripts"
-    - PYTHON: "C:\\Python36"
-      CATEGORY: "nightly,book=0"
-      MINICONDA: "C:\\Miniconda3;C:\\Miniconda3\\Scripts"
+    - PYTHON_VERSION: 2.7
+      #PYTHON: "C:\\Python27"
+      PYTHON: "C:\\Miniconda"
+      CATEGORY: "nightly"
+
+    - PYTHON_VERSION: 3.4
+      #PYTHON: "C:\\Python34"
+      PYTHON: "C:\\Miniconda3"
+      CATEGORY: "nightly"
+
+    - PYTHON_VERSION: 3.5
+      #PYTHON: "C:\\Python35"
+      PYTHON: "C:\\Miniconda35"
+      CATEGORY: "nightly"
+
+    - PYTHON_VERSION: 3.6
+      #PYTHON: "C:\\Python36"
+      PYTHON: "C:\\Miniconda36"
+      CATEGORY: "nightly"
+
+    - PYTHON_VERSION: 2.7
+      #PYTHON: "C:\\Python27"
+      PYTHON: "C:\\Miniconda"
+      CATEGORY: "nightly"
+      EXTRAS: YES
+
+    - PYTHON_VERSION: 3.6
+      #PYTHON: "C:\\Python36"
+      PYTHON: "C:\\Miniconda36"
+      CATEGORY: "nightly"
+      EXTRAS: YES
+
+
     ##- PYTHON: "C:\\Python33"
     #- PYTHON: "C:\\Python34"
     #- PYTHON: "C:\\Python27-x64"
@@ -27,15 +51,21 @@ environment:
 
 install:
   # We need wheel installed to build wheels
-  - "SET PATH=%MINICONDA%;%PYTHON%;%PYTHON%\\Scripts;%PATH%"
-  - "python --version"
-  - "python -m pip install -U pip setuptools"
-  - "python -m pip install networkx"
-  - "python -m pip install PyYAML"
-  - "python -m pip install coverage"
-  - "python -m pip install nose"
-  - "python -m pip install Pyro4"
-  - "python -m pip install conda"
+  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+  - python --version
+  - conda install -q -y --channel conda-forge setuptools
+  - "IF %PYTHON_VERSION%==2.6 (pip install --quiet ordereddict)"
+  - python -m pip install coverage
+  - IF DEFINED YAML (python -m pip install pyyaml)
+  - "IF DEFINED PYRO (python -m pip install %PYRO%)"
+  - python -m pip install xlrd
+  - python -m pip install openpyxl
+  - python -m pip install sphinx_rtd_theme
+  - "IF NOT %PYTHON_VERSION%==2.6 (pip install --quiet scipy)"
+  #
+  - IF DEFINED EXTRAS (conda install -q -y --channel conda-forge pyomo.extras)
+  #
+  - "conda install -q -y --channel conda-forge glpk"
   - "glpsol -v"
   - "conda install -q -y --channel conda-forge ipopt"
   - "ipopt -v"
