@@ -637,15 +637,13 @@ You can silence this warning by one of three ways:
         #
         if not self.is_indexed():
             raise KeyError(
-                "Error accessing indexed component value:\n"
-                "\tCannot treat the scalar component '%s'\n"
-                "\tas an indexed component" % ( self.name, ))
+                "Cannot treat the scalar component '%s'"
+                "as an indexed component" % ( self.name, ))
         #
         # Raise an exception
         #
         raise KeyError(
-            "Error acccessing indexed component value:\n"
-            "\nIndex '%s' is not valid for indexed component '%s'"
+            "Index '%s' is not valid for indexed component '%s'"
             % ( idx, self.name, ))
 
     def _processUnhashableIndex(self, idx, _exception=None):
@@ -782,13 +780,16 @@ the value() function.""" % ( self.name, i ))
         """Returns the default component data value for this Component.
 
         Override this method if the component allows implicit member
-        construction.  For classes that do not support a 'default' (at this
-        point, everything except Param), requesting a _default will generate
-        a KeyError (just like a normal dict).
+        construction.  For classes that do not support a 'default' (at
+        this point, everything except Param and Var), requesting
+        _getitem_if_not_present will generate a KeyError (just like a
+        normal dict).
 
         Implementations may assume that the index has already been validated
-        and is a legitimate entry in the _data dict. """
-        raise KeyError(str(index))
+        and is a legitimate entry in the _data dict.
+
+        """
+        raise KeyError(index)
 
     def _setitem_if_not_present(self, idx, val, new=False):
         """Perform the fundamental component item creation and storage.
@@ -796,8 +797,10 @@ the value() function.""" % ( self.name, i ))
         Components that want to implement a nonstandard storage mechanism
         should override this method.
 
-        Implementations may assume that the index has already been validated
-        and is a legitimate entry in the _data dict. """
+        Implementations may assume that the index has already been
+        validated and is a legitimate entry in the _data dict.
+
+        """
         #
         # If we are a scalar, then idx will be None (_validate_index ensures
         # this)

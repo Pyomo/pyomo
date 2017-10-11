@@ -59,12 +59,8 @@ By default, the index set is fixed. New indices may not be added:
    >>> m.z = pe.Var()
    >>> m.c[4] = m.x[1] == 5 * m.z
    Traceback (most recent call last):
-     File "<stdin>", line 1, in <module>
-     File "/Users/michaelbynum/Documents/pyomo_dev/pyomo/core/base/indexed_component.py", line 554, in __setitem__
-       index = self._validate_index(index)
-     File "/Users/michaelbynum/Documents/pyomo_dev/pyomo/core/base/indexed_component.py", line 649, in _validate_index
-       % ( idx, self.name, ))
-   KeyError: "Error acccessing indexed component value:\n\nIndex '4' is not valid for indexed component 'c'"
+     ...
+   KeyError: "Index '4' is not valid for indexed component 'c'"
 
 This helps prevent many common mistakes. However, IndexedComponent can behave
 more like a dictionary if Any is used as the index.

@@ -966,7 +966,7 @@ class TestArrayCon(unittest.TestCase):
 
         m.c[3] = Constraint.Skip
         self.assertEqual(len(m.c), 1)
-        self.assertRaisesRegexp( KeyError, "'3'", m.c.__getitem__, 3)
+        self.assertRaisesRegexp( KeyError, "3", m.c.__getitem__, 3)
 
         self.assertRaisesRegexp( ValueError, "'c\[3\]': rule returned None",
                                  m.c.__setitem__, 3, None)
