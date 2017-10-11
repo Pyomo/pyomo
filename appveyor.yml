@@ -54,14 +54,14 @@ install:
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - python --version
   - conda install -q -y --channel conda-forge setuptools
-  - "IF %PYTHON_VERSION%==2.6 (pip install --quiet ordereddict)"
+  - "IF %PYTHON_VERSION%==2.6 (python -m pip install ordereddict)"
   - python -m pip install coverage
   - IF DEFINED YAML (python -m pip install pyyaml)
   - "IF DEFINED PYRO (python -m pip install %PYRO%)"
   - python -m pip install xlrd
   - python -m pip install openpyxl
   - python -m pip install sphinx_rtd_theme
-  - "IF NOT %PYTHON_VERSION%==2.6 (pip install --quiet scipy)"
+  - "IF NOT %PYTHON_VERSION%==2.6 (conda install -q -y -c anaconda scipy)"
   #
   - IF DEFINED EXTRAS (conda install -q -y --channel conda-forge pyomo.extras)
   #
