@@ -37,13 +37,13 @@ The primary modeling components defined by Pyomo are
 
 .. doctest::
    
-   >>> import pyomo.envrion as pe
+   >>> import pyomo.environ as pe
    >>> m = pe.ConcreteModel()
    >>> m.a = pe.Set(initialize=[1, 2, 3])
    >>> m.x = pe.Var(m.a, initialize=0, bounds=(-10,10))
    >>> m.y = pe.Var(m.a)
    >>> def c_rule(m, i):
-   >>>    return m.x[i] >= m.y[i]
+   ...     return m.x[i] >= m.y[i]
    >>> m.c = pe.Constraint(m.a, rule=c_rule)
    >>> m.c.pprint()
    c : Size=3, Index=a, Active=True
