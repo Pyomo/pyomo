@@ -80,7 +80,25 @@ more like a dictionary if Any is used as the index.
          1 :   0.0 :      x[1] - 5*z :   0.0 :   True
 	 8 :   0.0 : x[2] - z * y[2] :   0.0 :   True
    
+.. note::
+   
+   In order to use Any with an IndexedVar, set dense=False.
 
+.. doctest::
+   
+   >>> m.v = pe.Var(pe.Any, dense=False)
+   >>> m.c2[2] = m.v[1] + m.v[2] == 0
+   >>> m.v.pprint()
+   v : Size=2, Index=Any
+       Key : Lower : Value : Upper : Fixed : Stale : Domain
+         1 :  None :  None :  None : False :  True :  Reals
+	 2 :  None :  None :  None : False :  True :  Reals
+   >>> m.c2.pprint()
+   c2 : Size=3, Index=Any, Active=True
+       Key : Lower : Body            : Upper : Active
+         1 :   0.0 :      x[1] - 5*z :   0.0 :   True
+	 2 :   0.0 :     v[1] + v[2] :   0.0 :   True
+	 8 :   0.0 : x[2] - z * y[2] :   0.0 :   True
 
 Pyomo Command
 -------------
