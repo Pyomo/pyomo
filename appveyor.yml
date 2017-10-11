@@ -9,33 +9,33 @@ environment:
 
     - PYTHON_VERSION: 2.7
       #PYTHON: "C:\\Python27"
-      PYTHON: "C:\\Miniconda"
+      PYTHON: "C:\\Miniconda-x64"
       CATEGORY: "nightly"
 
     - PYTHON_VERSION: 3.4
       #PYTHON: "C:\\Python34"
-      PYTHON: "C:\\Miniconda3"
+      PYTHON: "C:\\Miniconda3-x64"
       CATEGORY: "nightly"
 
     - PYTHON_VERSION: 3.5
       #PYTHON: "C:\\Python35"
-      PYTHON: "C:\\Miniconda35"
+      PYTHON: "C:\\Miniconda35-x64"
       CATEGORY: "nightly"
 
     - PYTHON_VERSION: 3.6
       #PYTHON: "C:\\Python36"
-      PYTHON: "C:\\Miniconda36"
+      PYTHON: "C:\\Miniconda36-x64"
       CATEGORY: "nightly"
 
     - PYTHON_VERSION: 2.7
       #PYTHON: "C:\\Python27"
-      PYTHON: "C:\\Miniconda"
+      PYTHON: "C:\\Miniconda-x64"
       CATEGORY: "nightly"
       EXTRAS: YES
 
     - PYTHON_VERSION: 3.6
       #PYTHON: "C:\\Python36"
-      PYTHON: "C:\\Miniconda36"
+      PYTHON: "C:\\Miniconda36-x64"
       CATEGORY: "nightly"
       EXTRAS: YES
 
