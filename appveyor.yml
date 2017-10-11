@@ -67,7 +67,9 @@ install:
   #
   - "conda install -q -y --channel conda-forge glpk"
   - "glpsol -v"
-  - "conda install -q -y --channel conda-forge ipopt"
+  #- "conda install -q -y --channel conda-forge ipopt"
+  # conda-forge doesn't build ipopt for Windows....
+  - "conda install -q -y --channel cachemeorg ipopt_bin"
   - "ipopt -v"
   #
   # Clone but don't install pyomo-model-libraries
