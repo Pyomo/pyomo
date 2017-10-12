@@ -121,7 +121,7 @@ script:
 - ls -al
 
 # Run documentation tests
-- nosetests -v --with-coverage --cover-erase --with-doctest --doctest-extension=.rst doc/OnlineDocs
+- nosetests -v --with-coverage --with-doctest --doctest-extension=.rst doc/OnlineDocs
 - mv .coverage .coverage.travis.2
 - ls -ld .c*
 
