@@ -59,7 +59,7 @@ install:
      pip install --quiet ordereddict;
   fi
 - pip install --quiet coverage
-- pip install --quiet codecov
+#- pip install --quiet codecov
 - if [ -n "${YAML}" ]; then
      pip install --quiet pyyaml;
   fi
@@ -136,7 +136,8 @@ after_success:
 - coverage combine travis.coverage.1 travis.coverage.2
 - echo `pwd`
 - ls -la
-- codecov
+#- codecov
+- bash <(curl -s https://codecov.io/bash)
 - cd $TRAVIS_BUILD_DIR
 
 
