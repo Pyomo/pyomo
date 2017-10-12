@@ -116,10 +116,13 @@ script:
 
 # Run Pyomo tests
 - test.pyomo -v --cat=$CATEGORY --cov pyomo `pwd`/pyomo-model-libraries
-- ls -ld .c*
+- mv .coverage .coverage.travis.1
+- ls -al ..
+- ls -al
 
 # Run documentation tests
-- nosetests -v --with-coverage --with-doctest --doctest-extension=.rst doc/OnlineDocs
+- nosetests -v --with-coverage --cover-erase --with-doctest --doctest-extension=.rst doc/OnlineDocs
+- mv .coverage .coverage.travis.2
 - ls -ld .c*
 
 
@@ -131,6 +134,8 @@ after_success:
 # Combine coverage reports over all subprocesses
 - cd $TRAVIS_BUILD_DIR
 - coverage combine
+- echo `pwd`
+- ls -la
 - codecov
 - cd $TRAVIS_BUILD_DIR
 
