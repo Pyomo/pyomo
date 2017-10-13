@@ -70,7 +70,8 @@ coverage_omit=','.join([
 
 pyomo_packages = [
     'pyomo.%s' % os.path.basename(x) for x in
-    glob.glob(os.path.join(os.environ['WORKSPACE'], 'src', 'pyomo', '*'))
+    glob.glob(os.path.join(
+            os.environ['WORKSPACE'], 'src', 'pyomo', 'pyomo', '*' ))
     if os.path.isdir(x) ]
 
 if config == "notests":
