@@ -50,7 +50,7 @@ install:
 - hash -r
 - conda config --set always_yes yes --set changeps1 no
 - conda update -q conda
-- conda create -f -q -y -n testenv python=${TRAVIS_PYTHON_VERSION} setuptools pip
+- conda create -f -q -y -n testenv python=${TRAVIS_PYTHON_VERSION} setuptools pip urllib3
 - source activate testenv
 #- if [ -n "${JYTHON}" ]; then source install_jython.sh; fi
 #
