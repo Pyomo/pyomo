@@ -57,10 +57,10 @@ install:
 # Install supporting packages
 #
 - conda install -q -y --channel conda-forge setuptools pip
-- if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then
-     pip install 'urllib3[secure]';
-     pip install --quiet ordereddict;
-  fi
+#
+- if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install urllib3[security]'; fi
+- if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install ordereddict; fi
+#
 - pip install --quiet coverage
 - pip install --quiet codecov
 - if [ -n "${YAML}" ]; then
