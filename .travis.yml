@@ -63,7 +63,9 @@ install:
 - which pip
 - pip --version
 #
-- if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install 'urllib3[secure]'; fi
+- if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install urllib3; fi
+- if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install pyOpenSSL; fi
+- if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install 'cryptography<2.1.1'; fi
 - if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install ordereddict; fi
 #
 - pip install --quiet coverage
