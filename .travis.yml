@@ -58,7 +58,7 @@ install:
 #
 - conda install -q -y --channel conda-forge setuptools pip
 - if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then
-     pip install 'urllib3[secure]'
+     pip install 'urllib3[secure]';
      pip install --quiet ordereddict;
   fi
 - pip install --quiet coverage
