@@ -50,13 +50,13 @@ install:
 - hash -r
 - conda config --set always_yes yes --set changeps1 no
 - conda update -q conda
-- conda create -f -q -y -n testenv python=${TRAVIS_PYTHON_VERSION} setuptools pip urllib3
+- conda create -f -q -y -n testenv python=${TRAVIS_PYTHON_VERSION}
 - source activate testenv
 #- if [ -n "${JYTHON}" ]; then source install_jython.sh; fi
 #
 # Install supporting packages
 #
-#- conda install -q -y --channel anaconda setuptools
+- conda install -q -y --channel anaconda setuptools pip
 - if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then
      pip install --quiet ordereddict;
   fi
