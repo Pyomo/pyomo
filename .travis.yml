@@ -68,8 +68,8 @@ install:
 - if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install 'cryptography<2.1.1'; fi
 - if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install ordereddict; fi
 #
-- pip install --quiet coverage
-- pip install --quiet codecov
+- pip install coverage
+- pip install codecov
 - if [ -n "${YAML}" ]; then
      pip install --quiet pyyaml;
   fi
