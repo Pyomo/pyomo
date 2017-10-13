@@ -48,18 +48,28 @@ install:
 - bash miniconda.sh -b -p $HOME/miniconda
 - export PATH="$HOME/miniconda/bin:$PATH"
 - hash -r
+- conda config --set always_yes yes
+- conda update -q conda
 - conda create -f -q -y -n testenv python=${TRAVIS_PYTHON_VERSION}
 - source activate testenv
 #- if [ -n "${JYTHON}" ]; then source install_jython.sh; fi
 #
 # Install supporting packages
 #
-- conda install -q -y --channel conda-forge setuptools
-- if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then
-     pip install --quiet ordereddict;
-  fi
-- pip install --quiet coverage
-- pip install --quiet codecov
+- conda install -q -y --channel conda-forge setuptools pip
+#
+- which python
+- python --version
+- which pip
+- pip --version
+#
+- if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install 'cryptography<2.1.1'; fi
+- if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install pyOpenSSL; fi
+- if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install urllib3; fi
+- if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install ordereddict; fi
+#
+- pip install coverage
+- pip install codecov
 - if [ -n "${YAML}" ]; then
      pip install --quiet pyyaml;
   fi
@@ -68,10 +78,11 @@ install:
   fi
 - pip install --quiet xlrd
 - pip install --quiet openpyxl
-- pip install --quiet sphinx_rtd_theme
+- pip install sphinx_rtd_theme
+- conda install -q -y -c anaconda pandas networkx
 
-- if ["${TRAVIS_PYTHON_VERSION}" != "2.6" ]; then
-     pip install scipy;
+- if [ "${TRAVIS_PYTHON_VERSION}" != "2.6" -a -n "${EXTRAS}" ]; then
+     conda install -q -y -c anaconda scipy;
   fi
 
 # Install GAMS
@@ -83,14 +94,14 @@ install:
 - if [ -z "${EXTRAS}" ]; then
      bash ./.travis_install_gams_api.sh;
   fi
-- PATH=${PATH}:$PWD/gams24.8_linux_x64_64_sfx;
+- export PATH=${PATH}:$PWD/gams24.8_linux_x64_64_sfx;
 
 # Install Pyomo extras, required solvers
 - if [ -n "${EXTRAS}" ]; then conda install -q -y --channel conda-forge pyomo.extras; fi
 
 - conda install -q -y --channel conda-forge glpk
 - glpsol -v
-- conda install -q -y --channel conda-forge ipopt
+- conda install -q -y --channel conda-forge --no-update-dependencies ipopt
 - ipopt -v
 #
 # Clone but don't install pyomo-model-libraries
@@ -114,11 +125,17 @@ script:
 - SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
 - echo "import coverage; coverage.process_startup()" > ${SITE_PACKAGES}/run_coverage_at_startup.pth
 
-# Run documentation tests
-- nosetests -v --with-coverage --cover-erase --with-doctest --doctest-extension=.rst doc/OnlineDocs
-
 # Run Pyomo tests
 - test.pyomo -v --cat=$CATEGORY --cov pyomo `pwd`/pyomo-model-libraries
+- mv .coverage travis.coverage.1
+- ls -al ..
+- ls -al
+
+# Run documentation tests
+- nosetests -v --with-coverage --with-doctest --doctest-extension=.rst doc/OnlineDocs
+- mv .coverage travis.coverage.2
+- ls -ld .c*
+
 
 
 after_success:
@@ -127,8 +144,11 @@ after_success:
 
 # Combine coverage reports over all subprocesses
 - cd $TRAVIS_BUILD_DIR
-- coverage combine
+- coverage combine travis.coverage.1 travis.coverage.2
+- echo `pwd`
+- ls -la
 - codecov
+#- bash <(curl -s https://codecov.io/bash)
 - cd $TRAVIS_BUILD_DIR
 
 

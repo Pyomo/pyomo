@@ -3,6 +3,29 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 5.3
+-------------------------------------------------------------------------------
+
+- Added exp() to symbolic module (#151)
+- Resolved representation error with 1/var (#153)
+- Added pyomo.core.kernel (#130)
+- Various solver interface fixes: CBC, SCIP, IPOPT, GLPK
+- Add docstring to apply function in Transformation (#174)
+- Adding a TerminationCondition enum value for "Infeasible or Unbounded" (#171)
+- New scripts for performance testing
+- Use the has_lb() and has_ub() helper methods for vars and constraints.
+- Added documentation tests.
+- Updates to DAPS (#200)
+- Fix KeyError message in NL writer (#189)
+- New ODE/DAE simulator interface for pyomo.DAE (#180)
+- Added deprecation decorator (#203)
+- New transformation to fix nonnegative variables in equality constraints (#198)
+- Deprecated BigM piecewise representations (#216)
+- Added GAMS solver interface (#164, #215, #221)
+- Updates to testing configuration on Travis and Appveyor
+- Tracking changes in pyutilib.th
+
+-------------------------------------------------------------------------------
 Pyomo 5.2
 -------------------------------------------------------------------------------
 
