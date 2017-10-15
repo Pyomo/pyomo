@@ -15,6 +15,15 @@ try:
     win32com_available=True
 except ImportError:
     win32com_available=False
+_excel_available = False  #pragma:nocover
+if win32com_available:
+    tmp = ExcelSpreadsheet_win32com()
+    try:
+        tmp._excel_dispatch()
+        tmp._excel_quit()
+        _excel_available = True
+    except:
+        pass
 try:
     import openpyxl
     openpyxl_available=True
@@ -88,7 +97,7 @@ else:
     pyodbc_db_base = pypyodbc_db_Table
 
 
-if win32com_available or xlrd_available:
+if (win32com_available and _excel_available) or xlrd_available:
 
     class SheetTable_xls(SheetTable):
 
@@ -126,7 +135,7 @@ else:
             return pyodbc_db_base.open(self)
 
 
-if win32com_available or openpyxl_available:
+if (win32com_available and _excel_available) or openpyxl_available:
 
     class SheetTable_xlsx(SheetTable):
 
@@ -186,7 +195,7 @@ if 0:
             return pyodbc_db_base.open(self)
 
 
-if win32com_available or openpyxl_available:
+if (win32com_available and _excel_available) or openpyxl_available:
 
     class SheetTable_xlsm(SheetTable):
 
