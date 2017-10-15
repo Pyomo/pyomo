@@ -10,6 +10,9 @@
 
 import os.path
 import six
+from pyutilib.excel import ExcelSpreadsheet
+import pyutilib.common
+
 try:
     import win32com
     win32com_available=True
@@ -17,6 +20,7 @@ except ImportError:
     win32com_available=False
 _excel_available = False  #pragma:nocover
 if win32com_available:
+    from pyutilib.excel.spreadsheet_win32com import ExcelSpreadsheet_win32com
     tmp = ExcelSpreadsheet_win32com()
     try:
         tmp._excel_dispatch()
@@ -34,9 +38,6 @@ try:
     xlrd_available=True
 except ImportError:
     xlrd_available=False
-
-from pyutilib.excel import ExcelSpreadsheet
-import pyutilib.common
 
 from pyomo.util.plugin import alias
 from pyomo.core.data.TableData import TableData
