@@ -105,7 +105,7 @@ if (win32com_available and _excel_available) or xlrd_available:
         alias("xls", "Excel XLS file interface")
 
         def __init__(self):
-            if win32com_available:
+            if win32com_available and _excel_available:
                 SheetTable.__init__(self, ctype='win32com')
             else:
                 SheetTable.__init__(self, ctype='xlrd')
@@ -143,7 +143,7 @@ if (win32com_available and _excel_available) or openpyxl_available:
         alias("xlsx", "Excel XLSX file interface")
 
         def __init__(self):
-            if win32com_available:
+            if win32com_available and _excel_available:
                 SheetTable.__init__(self, ctype='win32com')
             else:
                 SheetTable.__init__(self, ctype='openpyxl')
@@ -203,7 +203,7 @@ if (win32com_available and _excel_available) or openpyxl_available:
         alias("xlsm", "Excel XLSM file interface")
 
         def __init__(self):
-            if win32com_available:
+            if win32com_available and _excel_available:
                 SheetTable.__init__(self, ctype='win32com')
             else:
                 SheetTable.__init__(self, ctype='openpyxl')
