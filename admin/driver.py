@@ -216,10 +216,10 @@ def perform_tests(package, coverage=False, omit=None, cat='nightly'):
         #sys.stdout.write( os.getcwd() + '\n')
         #sys.stdout.write( str(subprocess.call(['ls', '-la'])) + '\n')
         sys.stdout.write( str(subprocess.call(cmd)) + '\n' )
-    keep(covFName, 'package', 'name', '.*\.tests', covFName)
 
     # NB: for Hudson source rendering to work correctly, the XML must include the relative path to the source filenames *from the project workspace*
     try:
+        keep(covFName, 'package', 'name', '.*\.tests', covFName)
         doc = xml.dom.minidom.parse(covFName)
     except:
         return

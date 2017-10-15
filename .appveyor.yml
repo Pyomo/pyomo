@@ -7,12 +7,39 @@ environment:
     # The list here is complete (excluding Python 2.6, which
     # isn't covered by this document) at the time of writing.
 
-    - PYTHON: "C:\\Python27"
+    - PYTHON_VERSION: 2.7
+      #PYTHON: "C:\\Python27"
+      PYTHON: "C:\\Miniconda-x64"
       CATEGORY: "nightly"
-    - PYTHON: "C:\\Python35"
+
+    - PYTHON_VERSION: 3.4
+      #PYTHON: "C:\\Python34"
+      PYTHON: "C:\\Miniconda3-x64"
       CATEGORY: "nightly"
-    - PYTHON: "C:\\Python36"
+
+    - PYTHON_VERSION: 3.5
+      #PYTHON: "C:\\Python35"
+      PYTHON: "C:\\Miniconda35-x64"
       CATEGORY: "nightly"
+
+    - PYTHON_VERSION: 3.6
+      #PYTHON: "C:\\Python36"
+      PYTHON: "C:\\Miniconda36-x64"
+      CATEGORY: "nightly"
+
+    - PYTHON_VERSION: 2.7
+      #PYTHON: "C:\\Python27"
+      PYTHON: "C:\\Miniconda-x64"
+      CATEGORY: "nightly"
+      EXTRAS: YES
+
+    - PYTHON_VERSION: 3.6
+      #PYTHON: "C:\\Python36"
+      PYTHON: "C:\\Miniconda36-x64"
+      CATEGORY: "nightly"
+      EXTRAS: YES
+
+
     ##- PYTHON: "C:\\Python33"
     #- PYTHON: "C:\\Python34"
     #- PYTHON: "C:\\Python27-x64"
@@ -24,14 +51,26 @@ environment:
 
 install:
   # We need wheel installed to build wheels
-  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
-  - "python --version"
-  - "python -m pip install -U pip setuptools"
-  - "python -m pip install networkx"
-  - "python -m pip install PyYAML"
-  - "python -m pip install coverage"
-  - "python -m pip install nose"
-  - "python -m pip install Pyro4"
+  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PYTHON%\\Library\\bin;%PATH%"
+  - python --version
+  - conda install -q -y --channel conda-forge setuptools
+  - "IF %PYTHON_VERSION%==2.6 (python -m pip install ordereddict)"
+  - python -m pip install coverage
+  - IF DEFINED YAML (python -m pip install pyyaml)
+  - "IF DEFINED PYRO (python -m pip install %PYRO%)"
+  - python -m pip install xlrd
+  - python -m pip install openpyxl
+  - python -m pip install sphinx_rtd_theme
+  - "IF NOT %PYTHON_VERSION%==2.6 (conda install -q -y -c anaconda scipy)"
+  #
+  - IF DEFINED EXTRAS (conda install -q -y --channel conda-forge pyomo.extras)
+  #
+  - "conda install -q -y --channel conda-forge glpk"
+  - "glpsol -v"
+  # NOTE: conda-forge doesn't build ipopt for Windows....
+  #- "conda install -q -y --channel conda-forge --no-update-dependencies ipopt"
+  - "conda install -q -y --channel cachemeorg ipopt_bin"
+  - "ipopt -v"
   #
   # Clone but don't install pyomo-model-libraries
   #

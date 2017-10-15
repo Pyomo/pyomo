@@ -46,7 +46,7 @@ def filter_fn(line):
 _diff_tol = 1e-6
 
 solvers = None
-class Test(unittest.TestCase):
+class BaseTester(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -92,6 +92,9 @@ class Test(unittest.TestCase):
 
     def run_pyomo(self, cmd, root=None):
         return pyutilib.subprocess.run('pyomo solve --solver=glpk --results-format=json --save-results=%s.jsn ' % (root) +cmd, outfile=root+'.out')
+
+
+class TestJson(BaseTester):
 
     def test1_simple_pyomo_execution(self):
         # Simple execution of 'pyomo'
@@ -239,7 +242,7 @@ class Test(unittest.TestCase):
 
 
 @unittest.skipIf(not yaml_available, "YAML not available available")
-class TestWithYaml(Test):
+class TestWithYaml(BaseTester):
 
     def test15b_simple_pyomo_execution(self):
         # Simple execution of 'pyomo' with options
