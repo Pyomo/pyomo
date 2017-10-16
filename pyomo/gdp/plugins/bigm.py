@@ -139,7 +139,7 @@ class BigM_Transformation(Transformation):
             else:
                 raise GDP_Error(
                     "Target %s was not a Block, Disjunct, or Disjunction. "
-                    "It was of type %s and can't be transformed"
+                    "It was of type %s and can't be transformed."
                     % (t.name, type(t)))
 
         # Go through our dictionary of indexed things and deactivate
