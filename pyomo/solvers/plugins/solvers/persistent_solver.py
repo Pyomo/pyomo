@@ -263,7 +263,7 @@ class PersistentSolver(DirectOrPersistentSolver):
         """
         raise NotImplementedError('This method should be implemented by subclasses.')
 
-    def load_vars(self, vars_to_load):
+    def load_vars(self, vars_to_load=None):
         """
         Load the values from the solver's variables into the corresponding pyomo variables.
 
