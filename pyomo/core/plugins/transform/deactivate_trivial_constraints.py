@@ -1,6 +1,7 @@
 # -*- coding: UTF-8 -*-
 """Transformation to deactivate trivial constraints."""
 import textwrap
+from math import fabs
 
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.kernel.component_set import ComponentSet
@@ -20,6 +21,7 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
     def __init__(self):
         """Initialize the transformation."""
         super(TrivialConstraintDeactivator, self).__init__()
+        self.tolerance = 1E-14
 
     def _apply_to(self, instance, tmp=False):
         """Apply the transformation."""
@@ -32,16 +34,29 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
                 # Check to make sure constraint not violated.
                 if (constr.has_lb() and
                         value(constr.body) < value(constr.lower)):
-                    raise ValueError('Trivial constraint {} violates {} ≤ {}'
-                                     .format(constr.name,
-                                             value(constr.lower),
-                                             value(constr.body)))
+                    # Sometimes if values are close to zero, but not quite
+                    # zero, we run into issues. From a practical perspective,
+                    # let's apply a tolerance.
+                    if (fabs(value(constr.body)) <= self.tolerance and
+                            fabs(value(constr.lower)) <= self.tolerance):
+                        pass
+                    else:
+                        raise ValueError(
+                            'Trivial constraint {} violates {} ≤ {}.'
+                            .format(constr.name,
+                                    value(constr.lower),
+                                    value(constr.body)))
                 if (constr.has_ub() and
                         value(constr.body) > value(constr.upper)):
-                    raise ValueError('Trivial constraint {} violates {} ≤ {}'
-                                     .format(constr.name,
-                                             value(constr.body),
-                                             value(constr.upper)))
+                    if (fabs(value(constr.body)) <= self.tolerance and
+                            fabs(value(constr.upper)) <= self.tolerance):
+                        pass
+                    else:
+                        raise ValueError(
+                            'Trivial constraint {} violates {} ≤ {}.'
+                            .format(constr.name,
+                                    value(constr.body),
+                                    value(constr.upper)))
                 # Constraint is fine. Deactivate it.
                 if tmp:
                     instance._tmp_trivial_deactivated_constrs.add(constr)
