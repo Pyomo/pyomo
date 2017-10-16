@@ -109,6 +109,7 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
         self.iteration_limit = kwds.pop('iterlim', 30)
         self.decomposition_strategy = kwds.pop('strategy', 'LOA')
         self.initialization_strategy = kwds.pop('init_strategy', None)
+        self.custom_init_disjuncts = kwds.pop('custom_init_disjuncts', None)
         self.max_slack = kwds.pop('max_slack', 1000)
         self.OA_penalty_factor = kwds.pop('OA_penalty', 1000)
         self.nlp_solver_name = kwds.pop('nlp', 'ipopt')
@@ -165,6 +166,7 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
         # Modify in place decides whether to run the algorithm on a copy of the
         # originally model passed to the solver, or whether to manipulate the
         # original model directly.
+        self.original_model = model
         if self.modify_in_place:
             self.working_model = m = model
         else:
@@ -414,7 +416,10 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
         num_objs = len(objs)
         self.results.problem.number_of_objectives = num_objs
         if num_objs == 0:
-            raise ValueError('Model has no active objectives.')
+            logger.warning(
+                'Model has no active objectives. Adding dummy objective.')
+            DAGPy.dummy_objective = Objective(expr=1)
+            main_obj = DAGPy.dummy_objective
         elif num_objs > 1:
             raise ValueError('Model has multiple active objectives.')
         else:
@@ -474,6 +479,8 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
         elif self.initialization_strategy == 'fixed_binary':
             self._validate_disjunctions()
             self._solve_NLP_subproblem()
+        elif self.initialization_strategy == 'custom_disjuncts':
+            self._init_custom_disjuncts()
         else:
             raise ValueError('Unknown initialization strategy: {}'
                              .format(self.initialization_strategy))
@@ -483,6 +490,113 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
         # TODO implement this? If not, the user will simply get an infeasible
         # return value
         pass
+
+    def _init_custom_disjuncts(self):
+        """Initialize by using user-specified custom disjuncts."""
+        m = self.working_model
+        # error checking to make sure that the user gave proper disjuncts
+        orig_model_cuids = generate_cuid_names(
+            self.original_model, ctype=Disjunct,
+            descend_into=(Block, Disjunct))
+        working_model_cuids = generate_cuid_names(
+            m, ctype=Disjunct, descend_into=(Block, Disjunct))
+        model_cuid_to_obj = {cuid: obj
+                             for obj, cuid in iteritems(working_model_cuids)}
+        for disj_set in self.custom_init_disjuncts:
+            fixed_disjs = ComponentSet()
+            for disj in disj_set:
+                disj_to_fix = model_cuid_to_obj[orig_model_cuids[disj]]
+                if not disj_to_fix.indicator_var.fixed:
+                    disj_to_fix.indicator_var.fix(1)
+                    fixed_disjs.add(disj_to_fix)
+            self._solve_init_MIP()
+            for disj in fixed_disjs:
+                disj.indicator_var.unfix()
+            self._solve_NLP_subproblem()
+
+    def _solve_init_MIP(self):
+        """Solves the initialization MIP corresponding to the passed model.
+
+        Intended to consolidate some MIP solution code.
+
+        """
+        m = self.working_model.clone()
+        DAGPy = m.DAGPy_utils
+
+        # deactivate nonlinear constraints
+        nonlinear_constraints = (
+            c for c in m.component_data_objects(
+                ctype=Constraint, active=True, descend_into=(Block, Disjunct))
+            if c.body.polynomial_degree() not in (0, 1))
+        for c in nonlinear_constraints:
+            c.deactivate()
+
+        # Transform disjunctions
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        # Propagate variable bounds
+        TransformationFactory('core.propagate_eq_var_bounds').apply_to(m)
+        # Detect fixed variables
+        TransformationFactory('core.detect_fixed_vars').apply_to(m)
+        # Propagate fixed variables
+        TransformationFactory('core.propagate_fixed_vars').apply_to(m)
+        # Remove zero terms in linear expressions
+        TransformationFactory('core.remove_zero_terms').apply_to(m)
+        # Remove terms in equal to zero summations
+        TransformationFactory('core.propagate_zero_sum').apply_to(m)
+        # Transform bound constraints
+        TransformationFactory('core.constraints_to_var_bounds').apply_to(m)
+        # Detect fixed variables
+        TransformationFactory('core.detect_fixed_vars').apply_to(m)
+        # Remove terms in equal to zero summations
+        TransformationFactory('core.propagate_zero_sum').apply_to(m)
+        # Remove trivial constraints
+        TransformationFactory(
+            'core.deactivate_trivial_constraints').apply_to(m)
+
+        # Deactivate extraneous IMPORT/EXPORT suffixes
+        getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
+        getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
+
+        results = self.mip_solver.solve(m, load_solutions=False,
+                                        **self.mip_solver_kwargs)
+        terminate_cond = results.solver.termination_condition
+        if terminate_cond is tc.infeasibleOrUnbounded:
+            # Linear solvers will sometimes tell me that it's infeasible or
+            # unbounded during presolve, but fails to distinguish. We need to
+            # resolve with a solver option flag on.
+            old_options = deepcopy(self.mip_solver.options)
+            # This solver option is specific to Gurobi.
+            self.mip_solver.options['DualReductions'] = 0
+            results = self.mip_solver.solve(m, load_solutions=False,
+                                            **self.mip_solver_kwargs)
+            terminate_cond = results.solver.termination_condition
+            self.mip_solver.options.update(old_options)
+
+        if terminate_cond is tc.optimal:
+            m.solutions.load_from(results)
+            self._copy_values(m, self.working_model)
+            logger.info('Solved set covering MIP')
+            return True
+        elif terminate_cond is tc.infeasible:
+            logger.info('Set covering problem is infeasible. '
+                        'Problem may have no more feasible '
+                        'binary configurations.')
+            if self.mip_iter <= 1:
+                logger.warn('Problem was infeasible. '
+                            'Check your linear and logical constraints '
+                            'for contradictions.')
+            if DAGPy.objective.sense == minimize:
+                self.LB = float('inf')
+            else:
+                self.UB = float('-inf')
+            return False
+        else:
+            raise ValueError(
+                'DAGPy unable to handle set covering MILP '
+                'termination condition '
+                'of {}. Solver message: {}'.format(
+                    terminate_cond, results.solver.message))
 
     def _init_max_binaries(self):
         """Initialize by maximizing binary variables and disjuncts.
@@ -537,7 +651,7 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
         Carnegie Mellon University.
 
         """
-        m = self.working_model
+        m, DAGPy = self.working_model, self.working_model.DAGPy_utils
         working_map = generate_cuid_names(m, ctype=(Var, Disjunct),
                                           descend_into=(Block, Disjunct))
         nonlinear_disjuncts = frozenset(
@@ -550,6 +664,7 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
         covered_disjuncts = set()
         not_covered_disjuncts = set(nonlinear_disjuncts)
         iter_count = 1
+        DAGPy.feasible_integer_cuts.activate()
         while not_covered_disjuncts and iter_count <= iterlim:
             # Solve set covering MIP
             if not self._solve_set_cover_MIP(
@@ -568,6 +683,8 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
                 covered_disjuncts.update(active_disjuncts)
                 not_covered_disjuncts.difference_update(active_disjuncts)
             iter_count += 1
+            # m.DAGPy_utils.integer_cuts.pprint()
+        DAGPy.feasible_integer_cuts.deactivate()
         if not_covered_disjuncts:
             # Iteration limit was hit without a full covering of all nonlinear
             # disjuncts
@@ -611,7 +728,26 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
 
         # Transform disjunctions
         TransformationFactory('gdp.bigm').apply_to(m)
-        TransformationFactory('gdp.reclassify').apply_to(m)  # HACK
+
+        # Propagate variable bounds
+        TransformationFactory('core.propagate_eq_var_bounds').apply_to(m)
+        # Detect fixed variables
+        TransformationFactory('core.detect_fixed_vars').apply_to(m)
+        # Propagate fixed variables
+        TransformationFactory('core.propagate_fixed_vars').apply_to(m)
+        # Remove zero terms in linear expressions
+        TransformationFactory('core.remove_zero_terms').apply_to(m)
+        # Remove terms in equal to zero summations
+        TransformationFactory('core.propagate_zero_sum').apply_to(m)
+        # Transform bound constraints
+        TransformationFactory('core.constraints_to_var_bounds').apply_to(m)
+        # Detect fixed variables
+        TransformationFactory('core.detect_fixed_vars').apply_to(m)
+        # Remove terms in equal to zero summations
+        TransformationFactory('core.propagate_zero_sum').apply_to(m)
+        # Remove trivial constraints
+        TransformationFactory(
+            'core.deactivate_trivial_constraints').apply_to(m)
 
         # Deactivate extraneous IMPORT/EXPORT suffixes
         getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
@@ -635,6 +771,18 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
         if terminate_cond is tc.optimal:
             m.solutions.load_from(results)
             self._copy_values(m, self.working_model)
+            # m.print_all_units()
+            # int_tol = 1E-4
+            # binary_vars = [
+            #     v for v in m.component_data_objects(
+            #         ctype=Var, descend_into=(Block, Disjunct))
+            #     if v.is_binary() and not v.fixed]
+            #
+            # from pprint import pprint
+            # pprint(list(v.name for v in binary_vars
+            #             if fabs(v.value - 1) <= int_tol))
+            # pprint(list(v.name for v in binary_vars
+            #             if fabs(v.value) <= int_tol))
             logger.info('Solved set covering MIP')
             return True
         elif terminate_cond is tc.infeasible:
@@ -776,7 +924,26 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
 
         # Transform disjunctions
         TransformationFactory('gdp.bigm').apply_to(m)
-        TransformationFactory('gdp.reclassify').apply_to(m)  # HACK
+
+        # Propagate variable bounds
+        TransformationFactory('core.propagate_eq_var_bounds').apply_to(m)
+        # Detect fixed variables
+        TransformationFactory('core.detect_fixed_vars').apply_to(m)
+        # Propagate fixed variables
+        TransformationFactory('core.propagate_fixed_vars').apply_to(m)
+        # Remove zero terms in linear expressions
+        TransformationFactory('core.remove_zero_terms').apply_to(m)
+        # Remove terms in equal to zero summations
+        TransformationFactory('core.propagate_zero_sum').apply_to(m)
+        # Transform bound constraints
+        TransformationFactory('core.constraints_to_var_bounds').apply_to(m)
+        # Detect fixed variables
+        TransformationFactory('core.detect_fixed_vars').apply_to(m)
+        # Remove terms in equal to zero summations
+        TransformationFactory('core.propagate_zero_sum').apply_to(m)
+        # Remove trivial constraints
+        TransformationFactory(
+            'core.deactivate_trivial_constraints').apply_to(m)
 
         # Deactivate extraneous IMPORT/EXPORT suffixes
         getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
@@ -809,6 +976,7 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
             else:
                 self.UB = min(value(DAGPy.oa_obj.expr), self.UB)
                 self.UB_progress.append(self.UB)
+            # m.print_selected_units()
             logger.info('MIP {}: OBJ: {}  LB: {}  UB: {}'
                         .format(self.mip_iter, value(DAGPy.oa_obj.expr),
                                 self.LB, self.UB))
@@ -1091,6 +1259,10 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
         TransformationFactory('core.propagate_zero_sum').apply_to(m)
         # Transform bound constraints
         TransformationFactory('core.constraints_to_var_bounds').apply_to(m)
+        # Detect fixed variables
+        TransformationFactory('core.detect_fixed_vars').apply_to(m)
+        # Remove terms in equal to zero summations
+        TransformationFactory('core.propagate_zero_sum').apply_to(m)
         # Remove trivial constraints
         TransformationFactory(
             'core.deactivate_trivial_constraints').apply_to(m)
@@ -1444,7 +1616,6 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
         DAGPy.slack_vars.fix(0)
         # Transform the model
         TransformationFactory('gdp.bigm').apply_to(m)
-        TransformationFactory('gdp.reclassify').apply_to(m)  # HACK
 
         # Identify transformed OA constraints
         m.display()
@@ -1489,7 +1660,19 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
                 raise ValueError('Binary {} = {} is not 0 or 1'.format(
                     v.name, value(v)))
 
-        if not binary_vars:  # if no binary variables, skip.
+        if not binary_vars:
+            # if no binary variables, add infeasible constraints.
+            if not feasible:
+                logger.info(
+                    'Adding integer cut to a model without binary variables. '
+                    'Model is now infeasible.')
+                DAGPy.integer_cuts.add(expr=DAGPy.objective_value >= 1)
+                DAGPy.integer_cuts.add(expr=DAGPy.objective_value <= 0)
+            else:
+                DAGPy.feasible_integer_cuts.add(
+                    expr=DAGPy.objective_value >= 1)
+                DAGPy.feasible_integer_cuts.add(
+                    expr=DAGPy.objective_value <= 0)
             return
 
         int_cut = (sum(1 - v for v in binary_vars
@@ -1510,6 +1693,7 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
             DAGPy.integer_cuts.add(expr=int_cut)
             # DAGPy.integer_cuts.pprint()
         else:
+            logger.info('Adding feasible integer cut')
             DAGPy.feasible_integer_cuts.add(expr=int_cut)
 
     def _detect_nonlinear_vars(self, m):
