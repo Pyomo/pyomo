@@ -3,6 +3,7 @@
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 from pyomo.core.kernel.numvalue import value
+from pyomo.core.base.block import TraversalStrategy
 from math import fabs
 import logging
 
@@ -87,3 +88,12 @@ def log_close_to_bounds(m, tol=1E-6):
             if (constr.has_lb() and
                     fabs(value(constr.body - constr.lower)) <= tol):
                 logger.info('{} near LB'.format(constr.name))
+
+
+def log_active_constraints(m):
+    """Prints the active constraints in the model."""
+    for constr in m.component_data_objects(
+        ctype=Constraint, active=True, descend_into=True,
+        descent_order=TraversalStrategy.PrefixDepthFirstSearch
+    ):
+        logger.info("%s active" % constr.name)
