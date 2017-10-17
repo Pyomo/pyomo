@@ -68,7 +68,7 @@ m.s = Set(initialize=['1:00','2:00','3:00','4:00','5:00','6:00','7:00','8:00',
 #Superset of iterations
 m.iter = RangeSet(50)
 #Set of iterations for which cuts are generated
-m.k = Set(within=m.iter, dimen=1)
+m.k = Set(within=m.iter, dimen=1, ordered=True)
 
 ####################Import parameters###########################################
 
@@ -202,60 +202,43 @@ def planning_block_rule(b,t):
 			return (0, m.Ng_max[th,r])
 
 	# Declaration of Local Variables
-	b.P = Var(m.i, m.r, m.ss, m.s, within=NonNegativeReals, bounds=bound_P,
-		doc="power output (MW)")
-	b.cu = Var(m.r, m.ss, m.s, within=NonNegativeReals,
-		doc="curtailment slack in reagion r (MW)")
-	b.RES_def = Var(within=NonNegativeReals,
-	    doc="deficit from renewable quota target (MW)")
-	b.P_flow = Var(m.r, m.r, m.ss, m.s, within=NonNegativeReals,
-		bounds=bound_Pflow, doc="power flow from one region to the other (MW)")
-	b.Q_spin = Var(m.th, m.r, m.ss, m.s, within=NonNegativeReals,
-		doc="spinning reserve (MW)")
-	b.Q_Qstart = Var(m.th, m.r, m.ss, m.s, within=NonNegativeReals,
-		doc="quick-start reserve (MW)")
-	b.ngr_rn = Var(m.rn, m.r, bounds=bound_r_rn, domain= NonNegativeReals,
-		doc="number of renewable generaters that are retired in cluster i, \
-		region r, year t")
+	b.P = Var(m.i, m.r, m.ss, m.s, within=NonNegativeReals, bounds=bound_P)
+	b.cu = Var(m.r, m.ss, m.s, within=NonNegativeReals)
+	b.RES_def = Var(within=NonNegativeReals)
+	b.P_flow = Var(m.r, m.r, m.ss, m.s, within=NonNegativeReals)
+	b.Q_spin = Var(m.th, m.r, m.ss, m.s, within=NonNegativeReals)
+	b.Q_Qstart = Var(m.th, m.r, m.ss, m.s, within=NonNegativeReals)
+	b.ngr_rn = Var(m.rn, m.r, bounds=bound_r_rn, domain= NonNegativeReals)
 	for rnew, r  in  m.rnew * m.r :
 	    if t == 1:
 	        b.ngr_rn[rnew,r].fix(0.0)
 	    else:
 	        b.ngr_rn[rnew,r].unfix()
 
-	b.nge_rn = Var(m.rn, m.r, bounds=bound_e_rn, domain= NonNegativeReals,
-		doc="number of renewable generaters that had their life extended in \
-		cluster i, region r, year t")
+	b.nge_rn = Var(m.rn, m.r, bounds=bound_e_rn, domain= NonNegativeReals)
 	for rnew, r in m.rnew * m.r:
 	    if t == 1:
 	        b.nge_rn[rnew,r].fix(0.0)
 	    else:
 	        b.nge_rn[rnew,r].unfix()
 
-	b.ngr_th = Var(m.th, m.r, bounds=bound_r_th, domain=NonNegativeIntegers,
-		doc="number of thermal generaters that are retired in cluster i, \
-		region r, year t")
+	b.ngr_th = Var(m.th, m.r, bounds=bound_r_th, domain=NonNegativeIntegers)
 	for tnew, r in m.tnew * m.r:
 	    if t == 1:
 	        b.ngr_th[tnew,r].fix(0.0)
 	    else:
 	        b.ngr_th[tnew,r].unfix()
 
-	b.nge_th = Var(m.th, m.r, bounds=bound_e_th, domain=NonNegativeIntegers,
-		doc="number of thermal generaters that had their life extended in \
-		cluster i, region r, year t")
+	b.nge_th = Var(m.th, m.r, bounds=bound_e_th, domain=NonNegativeIntegers)
 	for tnew, r in m.tnew * m.r:
 	    if t==1:
 	        b.nge_th[tnew,r].fix(0.0)
 	    else:
 	        b.nge_th[tnew,r].unfix()
 
-	b.u = Var(m.th, m.r, m.ss, m.s, bounds=bound_UC, domain=NonNegativeIntegers,
-		doc="unit commitment status")
-	b.su = Var(m.th, m.r, m.ss, m.s, bounds=bound_UC, domain=NonNegativeIntegers,
-		doc="startup indicator")
-	b.sd = Var(m.th, m.r, m.ss, m.s, bounds=bound_UC, domain=NonNegativeIntegers,
-		doc="shutdown indicator")
+	b.u = Var(m.th, m.r, m.ss, m.s, bounds=bound_UC, domain=NonNegativeIntegers)
+	b.su = Var(m.th, m.r, m.ss, m.s, bounds=bound_UC, domain=NonNegativeIntegers)
+	b.sd = Var(m.th, m.r, m.ss, m.s, bounds=bound_UC, domain=NonNegativeIntegers)
 	for th,r,ss,s in m.th*m.r*m.ss*m.s:
 	    if m.s.ord(s) == 1:
 	        b.sd[th,r,ss,s].fix(0.0)
@@ -265,42 +248,26 @@ def planning_block_rule(b,t):
 	b.alphafut = Var(within=Reals) #cost-to-go function
 
 	# Declaration of State Variables
-	b.ngo_rn = Var(m.rn, m.r, bounds=bound_o_rn, domain= NonNegativeReals,
-		doc="number of renewable generaters that are operational in cluster i, \
-		region r, year t")
+	b.ngo_rn = Var(m.rn, m.r, bounds=bound_o_rn, domain= NonNegativeReals)
 
-	b.ngb_rn = Var(m.rn, m.r, bounds=bound_b_rn, domain= NonNegativeReals,
-		doc="number of renewable generaters that are built in cluster i,\
-		region r, year t")
+	b.ngb_rn = Var(m.rn, m.r, bounds=bound_b_rn, domain= NonNegativeReals)
 	for rold, r in m.rold * m.r:
 	    b.ngb_rn[rold,r].fix(0.0)
 
-	b.ngo_th = Var(m.th, m.r, bounds=bound_o_th, domain=NonNegativeIntegers,
-		doc="number of thermal generaters that are operational in cluster i, \
-		region r, year t")
+	b.ngo_th = Var(m.th, m.r, bounds=bound_o_th, domain=NonNegativeIntegers)
 
-	b.ngb_th = Var(m.th, m.r, bounds=bound_b_th, domain=NonNegativeIntegers,
-		doc="number of thermal generaters that are built in cluster i, region r,\
-		year t")
+	b.ngb_th = Var(m.th, m.r, bounds=bound_b_th, domain=NonNegativeIntegers)
 	for told, r in  m.told * m.r:
 	    b.ngb_th[told,r].fix(0.0)
 
 	# Declaration of the Copy of State Variables
-	b.ngo_rn_prev = Var(m.rn, m.r, bounds=bound_o_rn, domain= NonNegativeReals,
-		doc="number of renewable generaters that are operational in cluster i,\
-		region r, year t")
-	b.ngb_rn_LT = Var(m.rn, m.r, bounds=bound_b_rn, domain= NonNegativeReals,
-		doc="number of renewable generaters that are built in cluster i, \
-		region r, year t")
+	b.ngo_rn_prev = Var(m.rn, m.r, bounds=bound_o_rn, domain= NonNegativeReals)
+	b.ngb_rn_LT = Var(m.rn, m.r, bounds=bound_b_rn, domain= NonNegativeReals)
 	for rold, r in m.rold * m.r:
 	    b.ngb_rn_LT[rold,r].fix(0.0)
 
-	b.ngo_th_prev = Var(m.th, m.r, bounds=bound_o_th, domain=NonNegativeReals,
-		doc="number of thermal generaters that are operational in cluster i, \
-		region r, year t")
-	b.ngb_th_LT = Var(m.th, m.r, bounds=bound_b_th, domain=NonNegativeReals,
-		doc="number of thermal generaters that are built in cluster i, region r,\
-		year t")
+	b.ngo_th_prev = Var(m.th, m.r, bounds=bound_o_th, domain=NonNegativeReals)
+	b.ngb_th_LT = Var(m.th, m.r, bounds=bound_b_th, domain=NonNegativeReals)
 	for told, r in  m.told * m.r:
 	    b.ngb_th_LT[told,r].fix(0.0)
 
@@ -316,7 +283,7 @@ def planning_block_rule(b,t):
 			+ sum(m.FOC[th,t]*m.Qg_np[th,r]*_b.ngo_th[th,r] \
 			    for th,r in m.i_r if th in m.th) \
 			+ sum(m.n_ss[ss]*m.hs*_b.su[th,r,ss,s]*m.Qg_np[th,r] \
-				*(m.f_start[th]*m.P_fuel[th,t] + m.f_start[th]*m.EF_CO2[th] \
+			      *(m.f_start[th]*m.P_fuel[th,t] + m.f_start[th]*m.EF_CO2[th] \
                 	*m.tx_CO2[t] + m.C_start[th]) \
                 for th,r in m.i_r if th in m.th for ss in m.ss for s in m.s) \
 			+ sum(m.DIC[rnew,t]*m.CCm[rnew]*m.Qg_np[rnew,r]*_b.ngb_rn[rnew,r] \
@@ -383,7 +350,7 @@ def planning_block_rule(b,t):
 	def max_output(_b,th,r,ss,s):
 		if (th,r) in m.i_r and th in m.th:
 			return _b.u[th,r,ss,s]*m.Qg_np[th,r] >= _b.P[th,r,ss,s] \
-												+ _b.Q_spin[th,r,ss,s]
+			+ _b.Q_spin[th,r,ss,s]
 		return Constraint.Skip
 	b.max_output = Constraint(m.th,m.r,m.ss,m.s, rule=max_output)
 
@@ -554,88 +521,84 @@ m.su_result = Param(m.th, m.r, m.t, m.ss, m.s, m.iter, default=0, initialize=0,\
 m.sd_result = Param(m.th, m.r, m.t, m.ss, m.s, m.iter, default=0, initialize=0,\
     mutable=True)
 
-m.gs = Set(initialize=['coal', 'NG', 'nuc', 'solar','wind'],
-	   doc="energy sources", ordered=True)
+m.gs = Set(initialize=['coal', 'NG', 'nuc', 'solar','wind'], ordered=True)
 
 def post_process():
+	def fixOp(m,iter_):
+		return sum(m.if_[t]*(sum(m.FOC[rn,t]*m.Qg_np[rn,r]\
+                *m.ngo_rn_result[rn,r,t,iter_]for rn,r in m.i_r if rn in m.rn) \
+                + sum(m.FOC[th,t]*m.Qg_np[th,r]*m.ngo_th_result[th,r,t,iter_] \
+                  for th,r in m.i_r if th in m.th)) for t in m.t)* 10**(-9)
+	m.fixOp = Expression(m.iter, rule=fixOp)
 
-	for iter_ in m.iter:
-		def fixOp(m,iter_):
-			return sum(m.if_[t]*(sum(m.FOC[rn,t]*m.Qg_np[rn,r]\
-                    *m.ngo_rn_result[rn,r,t,iter_]for rn,r in m.i_r if rn in m.rn) \
-                    + sum(m.FOC[th,t]*m.Qg_np[th,r]*m.ngo_th_result[th,r,t,iter_] \
-                      for th,r in m.i_r if th in m.th)) for t in m.t)* 10**(-9)
-		m.fixOp = Expression(m.iter, rule=fixOp)
+	def varOp(m,iter_):
+		return sum(m.if_[t]*sum(m.n_ss[ss]*m.hs*m.VOC[i,t]\
+                *m.P_result[i,r,t,ss,s,iter_] for i,r in m.i_r \
+                for ss in m.ss for s in m.s) for t in m.t)*10**(-9)
+	m.varOp = Expression(m.iter, rule=varOp)
 
-		def varOp(m,iter_):
-			return sum(m.if_[t]*sum(m.n_ss[ss]*m.hs*m.VOC[i,t]\
-                    *m.P_result[i,r,t,ss,s,iter_] for i,r in m.i_r \
-                    for ss in m.ss for s in m.s) for t in m.t)*10**(-9)
-		m.varOp = Expression(m.iter, rule=varOp)
+	def start(m,iter_):
+		return sum(m.if_[t]*sum(m.n_ss[ss]*m.hs*m.su_result[th,r,t,ss,s,iter_]\
+                *m.Qg_np[th,r]*(m.f_start[th]*m.P_fuel[th,t]+m.f_start[th]\
+                *m.EF_CO2[th]*m.tx_CO2[t]+m.C_start[th]) \
+                for th,r in m.i_r if th in m.th for ss in m.ss for s in m.s) \
+                for t in m.t)*10**(-9)
+	m.start = Expression(m.iter, rule=start)
 
-		def start(m,iter_):
-			return sum(m.if_[t]*sum(m.n_ss[ss]*m.hs*m.su_result[th,r,t,ss,s,iter_]\
-                    *m.Qg_np[th,r]*(m.f_start[th]*m.P_fuel[th,t]+m.f_start[th]\
-                    *m.EF_CO2[th]*m.tx_CO2[t]+m.C_start[th]) \
-                    for th,r in m.i_r if th in m.th for ss in m.ss for s in m.s) \
-                    for t in m.t)*10**(-9)
-		m.start = Expression(m.iter, rule=start)
+	def inv(m,iter_):
+		return sum(m.if_[t]*(sum(m.DIC[rnew,t]*m.CCm[rnew]*m.Qg_np[rnew,r]\
+            *m.ngb_rn_result[rnew,r,t,iter_] for rnew,r in m.i_r if rnew in m.rnew) \
+            +sum(m.DIC[tnew,t]*m.CCm[tnew]*m.Qg_np[tnew,r]*m.ngb_th_result[tnew,r,t,iter_]\
+            for tnew,r in m.i_r if tnew in m.tnew)) for t in m.t)*10**(-9)
+	m.inv = Expression(m.iter, rule=inv)
 
-		def inv(m,iter_):
-			return sum(m.if_[t]*(sum(m.DIC[rnew,t]*m.CCm[rnew]*m.Qg_np[rnew,r]\
-                *m.ngb_rn_result[rnew,r,t,iter_] for rnew,r in m.i_r if rnew in m.rnew) \
-                +sum(m.DIC[tnew,t]*m.CCm[tnew]*m.Qg_np[tnew,r]*m.ngb_th_result[tnew,r,t,iter_]\
-                for tnew,r in m.i_r if tnew in m.tnew)) for t in m.t)*10**(-9)
-		m.inv = Expression(m.iter, rule=inv)
+	def ext(m,iter_):
+		return sum(m.if_[t]*(sum(m.DIC[rn,t]*m.LEC[rn]*m.Qg_np[rn,r]*\
+            m.nge_rn_result[rn,r,t,iter_] for rn,r in m.i_r if rn in m.rn)\
+            + sum(m.DIC[th,t]*m.LEC[th]*m.Qg_np[th,r]*m.nge_th_result[th,r,t,iter_] \
+            for th,r in m.i_r if th in m.th)) for t in m.t)*10**(-9)
+	m.ext = Expression(m.iter, rule=ext)
 
-		def ext(m,iter_):
-			return sum(m.if_[t]*(sum(m.DIC[rn,t]*m.LEC[rn]*m.Qg_np[rn,r]*\
-                m.nge_rn_result[rn,r,t,iter_] for rn,r in m.i_r if rn in m.rn)\
-                + sum(m.DIC[th,t]*m.LEC[th]*m.Qg_np[th,r]*m.nge_th_result[th,r,t,iter_] \
-                for th,r in m.i_r if th in m.th)) for t in m.t)*10**(-9)
-		m.ext = Expression(m.iter, rule=ext)
+	def fuel(m,iter_):
+		return sum(m.if_[t]*sum(m.n_ss[ss]*m.hs*m.hr[i,r]*m.P_fuel[i,t]*\
+            m.P_result[i,r,t,ss,s,iter_] for i,r in m.i_r for ss in m.ss \
+            for s in m.s)for t in m.t)*10**(-9)
+	m.fuel = Expression(m.iter, rule=fuel)
 
-		def fuel(m,iter_):
-			return sum(m.if_[t]*sum(m.n_ss[ss]*m.hs*m.hr[i,r]*m.P_fuel[i,t]*\
-                m.P_result[i,r,t,ss,s,iter_] for i,r in m.i_r for ss in m.ss \
-                for s in m.s)for t in m.t)*10**(-9)
-		m.fuel = Expression(m.iter, rule=fuel)
+	def tot(m,iter_):
+		return m.fixOp[iter_] + m.varOp[iter_] + m.start[iter_] + m.inv[iter_] + \
+            m.fuel[iter_] + m.ext[iter_]
+	m.tot = Expression(m.iter, rule=tot)
 
-		def tot(m,iter_):
-			return m.fixOp[iter_] + m.varOp[iter_] + m.start[iter_] + m.inv[iter_] + \
-                m.fuel[iter_] + m.ext[iter_]
-		m.tot = Expression(m.iter, rule=tot)
+	def generation(m, i, t,iter_): #Generation per technology
+		if i in m.rn:
+			return sum(m.ngo_rn_result[i,r,t,iter_]*m.Qg_np[i,r] for r in m.r if (i,r) in m.i_r)*10**(-3)
+		else:
+			return sum(m.ngo_th_result[i,r,t,iter_]*m.Qg_np[i,r] for r in m.r if (i,r) in m.i_r)*10**(-3)
+	m.generation = Expression(m.i,m.t,m.iter, rule=generation)
 
-		def generation(m, i, t,iter_): #Generation per technology
-			if i in m.rn:
-				return sum(m.ngo_rn_result[i,r,t,iter_]*m.Qg_np[i,r] for r in m.r if (i,r) in m.i_r)*10**(-3)
-			else:
-				return sum(m.ngo_th_result[i,r,t,iter_]*m.Qg_np[i,r] for r in m.r if (i,r) in m.i_r)*10**(-3)
-		m.generation = Expression(m.i,m.t,m.iter, rule=generation)
+	def generation_source(m,gs,t,iter_): #Generation per source
+		if gs in m.gs and gs == 'coal':
+			return sum(m.generation[i,t,iter_] for i in m.co)
+		elif gs in m.gs and gs == 'NG':
+			return sum(m.generation[i,t,iter_] for i in m.ng)
+		elif gs in m.gs and gs == 'nuc':
+			return sum(m.generation[i,t,iter_] for i in m.nu)
+		elif gs in m.gs and gs == 'solar':
+			return sum(m.generation[i,t,iter_] for i in m.pv)
+		elif gs in m.gs and gs == 'wind':
+			return sum(m.generation[i,t,iter_] for i in m.wi)
+	m.generation_source = Expression(m.gs,m.t,m.iter, rule=generation_source)
 
-		def generation_source(m,gs,t,iter_): #Generation per source
-			if gs in m.gs and gs == 'coal':
-				return sum(m.generation[i,t,iter_] for i in m.co)
-			elif gs in m.gs and gs == 'NG':
-				return sum(m.generation[i,t,iter_] for i in m.ng)
-			elif gs in m.gs and gs == 'nuc':
-				return sum(m.generation[i,t,iter_] for i in m.nu)
-			elif gs in m.gs and gs == 'solar':
-				return sum(m.generation[i,t,iter_] for i in m.pv)
-			elif gs in m.gs and gs == 'wind':
-				return sum(m.generation[i,t,iter_] for i in m.wi)
-		m.generation_source = Expression(m.gs,m.t,m.iter, rule=generation_source)
-
-		if iter_ == m.iter.last():
-			print ("Fixed Operating Cost", value(m.fixOp[iter_]))
-	        print ("Variable Operating Cost", value(m.varOp[iter_]))
-	        print ("Startup Cost", value(m.start[iter_]))
-	        print ("Investment Cost", value(m.inv[iter_]))
-	        print ("Life Extension Cost", value(m.ext[iter_]))
-	        print ("Fuel Cost", value(m.fuel[iter_]))
-	        print ("obj", value(m.tot[iter_]))
-
-		if iter_ == m.iter.last():
-			print ("Capacity per source per year in GW")
-			for (gs,t) in m.gs*m.t:
-				print (gs, t, value(m.generation_source[gs,t,iter_]))
+        for iter_ in m.iter:
+            if iter_ == m.k.last():
+                print ("Fixed Operating Cost", value(m.fixOp[iter_]))
+                print ("Variable Operating Cost", value(m.varOp[iter_]))
+                print ("Startup Cost", value(m.start[iter_]))
+                print ("Investment Cost", value(m.inv[iter_]))
+                print ("Life Extension Cost", value(m.ext[iter_]))
+                print ("Fuel Cost", value(m.fuel[iter_]))
+                print ("obj", value(m.tot[iter_]))
+                print ("Capacity per source per year in GW")
+                for (gs,t) in m.gs*m.t:
+                    print (gs, t, value(m.generation_source[gs,t,iter_]))

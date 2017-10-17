@@ -23,12 +23,13 @@ for iter_ in m.iter:
         if iter_ == 1:
             m.Bl[t].alphafut.fix(0)
 
-        #Solve the model using CPLEX
-        mipsolver = SolverFactory('cplex')
+        #Solve the model
+#        mipsolver = SolverFactory('cplex')
+        mipsolver = SolverFactory('gurobi')
 #        mipsolver.options['relax_integrality'] = 1
         mipsolver.options['mipgap']=0.0001
-        mipsolver.options['timelimit']=30
-        mipsolver.options['threads']=10
+        mipsolver.options['timelimit']=60
+        mipsolver.options['threads']=6
         results = mipsolver.solve(m.Bl[t])#, tee=True)
 
         #Fix the linking Paramiable as parameter for next t
@@ -116,10 +117,11 @@ for iter_ in m.iter:
                                      for th,r in m.i_r if th in m.th and (t+m.LT[th] <= m.t.last()))
                                      ))
 
-        #Solve the model using CPLEX
-        opt = SolverFactory('cplex')
+        #Solve the model
+#        opt = SolverFactory('cplex')
+        opt = SolverFactory('gurobi')
         opt.options['relax_integrality'] = 1
-        opt.options['threads']=10
+        opt.options['threads']=6
         results = opt.solve(m.Bl[t])#, tee=True)
 #        m.Bl[t].alphafut.pprint()
 
@@ -156,7 +158,7 @@ for iter_ in m.iter:
     m.gap[iter_]=(m.cost_UB[iter_]-m.cost_LB[iter_])/m.cost_UB[iter_]*100
     print m.gap[iter_].value
 
-    if value(m.gap[iter_]) <= 0.01:
+    if value(m.gap[iter_]) <= 1:
         break
 
     elapsed_time = time.time() - start_time
