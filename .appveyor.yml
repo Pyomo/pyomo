@@ -82,7 +82,7 @@ install:
   - python -m pip install xlrd
   - python -m pip install openpyxl
   - python -m pip install sphinx_rtd_theme
-  - %ANACONDA% pandas networkx
+  - "%ANACONDA% pandas networkx"
   - "IF NOT %PYTHON_VERSION%==2.6 (%ANACONDA% scipy)"
   #
   # Install GAMS
