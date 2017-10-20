@@ -76,11 +76,13 @@ install:
   - "%CONDAFORGE% setuptools pip"
   - "IF %PYTHON_VERSION%==2.6 (python -m pip install ordereddict)"
   - python -m pip install coverage
+  - python -m pip install codecov
   - IF DEFINED YAML (python -m pip install pyyaml)
   - "IF DEFINED PYRO (python -m pip install %PYRO%)"
   - python -m pip install xlrd
   - python -m pip install openpyxl
   - python -m pip install sphinx_rtd_theme
+  - %ANACONDA% pandas networkx
   - "IF NOT %PYTHON_VERSION%==2.6 (%ANACONDA% scipy)"
   #
   # Install GAMS
@@ -133,5 +135,4 @@ on_success:
 #  You can use this step to upload your artifacts to a public website.
 #  See Appveyor's documentation for more details. Or you can simply
 #  access your wheels from the Appveyor "artifacts" tab for your build.
-  - pip install codecov
-  - codecov
+  - codecov -X gcov

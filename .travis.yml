@@ -172,7 +172,7 @@ after_success:
 - coverage combine travis.coverage.1 travis.coverage.2
 - echo `pwd`
 - ls -la
-- codecov
+- codecov -X gcov
 #- bash <(curl -s https://codecov.io/bash)
 - cd $TRAVIS_BUILD_DIR
 
