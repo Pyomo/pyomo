@@ -129,8 +129,7 @@ install:
 #
 - which python
 - python --version
-- if [ `python -c 'import sys; print(".".join(str(x) for x in sys.version_info[:2]))'`
-       != ${TRAVIS_PYTHON_VERSION} ]; then
+- if [ `python --version | grep "Python ${TRAVIS_PYTHON_VERSION}" | wc -l` -eq 0 ]; then
      exit 1
   fi
 
