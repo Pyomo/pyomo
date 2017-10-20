@@ -58,7 +58,7 @@ install:
 #
 # Install supporting packages
 #
-- conda install -q -y --channel conda-forge setuptools pip
+- conda install -q -y -c conda-forge --no-update-dependencies setuptools pip
 #
 - which python
 - python --version
@@ -100,17 +100,19 @@ install:
   fi
 - export PATH=${PATH}:$PWD/gams24.8_linux_x64_64_sfx;
 
+#
 # Install Pyomo extras
+#
 - if [ -n "${EXTRAS}" ]; then
-     conda install -q -y --channel conda-forge pyomo.extras;
+     conda install -q -y -c conda-forge --no-update-dependencies pyomo.extras;
   fi
 
 #
 # Install freely available solvers
 #
-- conda install -q -y --channel conda-forge glpk
+- conda install -q -y -c conda-forge --no-update-dependencies glpk
 - glpsol -v
-- conda install -q -y --channel conda-forge --no-update-dependencies ipopt
+- conda install -q -y -c conda-forge --no-update-dependencies ipopt
 - ipopt -v
 
 #
