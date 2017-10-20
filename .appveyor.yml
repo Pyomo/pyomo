@@ -83,7 +83,7 @@ install:
   #
   - ps: Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/windows/windows_x64_64.exe'
   - windows_x64_64.exe /SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS
-  - "SET PATH=%cd%\gams;%PATH%"
+  - "SET PATH=%cd%\\gams;%PATH%"
   #
   # Install pyomo.extras
   #
