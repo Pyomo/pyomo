@@ -106,7 +106,9 @@ install:
   - "cd /d .. && git clone https://github.com/Pyomo/pyomo-model-libraries.git && cd /d pyomo"
   - "python -m pip install git+https://github.com/PyUtilib/pyutilib"
   - "python setup.py develop"
-  - "dir %PYTHON%\\Scripts"
+  #
+  # Verify the python version
+  - python --version
 
 build: off
 
