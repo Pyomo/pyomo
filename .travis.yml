@@ -50,8 +50,13 @@ install:
 - bash miniconda.sh -b -p $HOME/miniconda
 - export PATH="$HOME/miniconda/bin:$PATH"
 - hash -r
+#
+# Update conda, then force it to NOT update itself again
+#
 - conda config --set always_yes yes
 - conda update -q -y -c anaconda conda
+- conda config --set auto_update_conda false
+#
 - conda create -f -q -y -n testenv python=${TRAVIS_PYTHON_VERSION}
 - source activate testenv
 #- if [ -n "${JYTHON}" ]; then source install_jython.sh; fi

@@ -67,8 +67,12 @@ install:
   - "SET CONDAFORGE=%CONDA_INSTALL% -c conda-forge --no-update-dependencies"
   - "SET CACHEMEORG=%CONDA_INSTALL% -c cachemeorg --no-update-dependencies"
   #
+  # Update conda, then force it to NOT update itself again
+  #
   - conda config --set always_yes yes
   - conda update -q -y -c anaconda conda
+  - conda config --set auto_update_conda false
+  #
   - "%CONDAFORGE% setuptools pip"
   - "IF %PYTHON_VERSION%==2.6 (python -m pip install ordereddict)"
   - python -m pip install coverage
