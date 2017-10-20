@@ -12,10 +12,12 @@ environment:
       PYTHON: "C:\\Miniconda-x64"
       CATEGORY: "nightly"
 
-    - PYTHON_VERSION: 3.4
-      #PYTHON: "C:\\Python34"
-      PYTHON: "C:\\Miniconda3-x64"
-      CATEGORY: "nightly"
+    # Removing testing of 3.4, as it inexplicably runs >10x slower than
+    # other Python versions and regularly times out (60 minutes)
+    #- PYTHON_VERSION: 3.4
+    #  #PYTHON: "C:\\Python34"
+    #  PYTHON: "C:\\Miniconda3-x64"
+    #  CATEGORY: "nightly"
 
     - PYTHON_VERSION: 3.5
       #PYTHON: "C:\\Python35"
