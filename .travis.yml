@@ -131,7 +131,7 @@ install:
 #
 - which python
 - python --version
-- if [ `python --version | grep "Python ${TRAVIS_PYTHON_VERSION}" | wc -l` -eq 0 ]; then
+- if [ `python --version |& grep "Python ${TRAVIS_PYTHON_VERSION}" | wc -l` -eq 0 ]; then
      exit 1;
   fi
 
