@@ -85,13 +85,15 @@ install:
      conda install -q -y -c anaconda scipy;
   fi
 
+#
 # Install GAMS
+#
 - wget https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/linux/linux_x64_64_sfx.exe
 - chmod u+x linux_x64_64_sfx.exe
 - ./linux_x64_64_sfx.exe > /dev/null
-# Only install API if EXTRAS is not being installed, since
-# those tests segfault on travis for an unknown reason.
-- if [ -z "${EXTRAS}" ]; then
+# Only install GAMS API if EXTRAS is not being installed and Python is
+# not 2.6, since those tests segfault on travis for an unknown reason.
+- if [ "${TRAVIS_PYTHON_VERSION}" != "2.6" -a -z "${EXTRAS}" ]; then
      bash ./.travis_install_gams_api.sh;
   fi
 - export PATH=${PATH}:$PWD/gams24.8_linux_x64_64_sfx;
