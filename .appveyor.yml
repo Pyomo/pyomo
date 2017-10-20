@@ -53,7 +53,9 @@ install:
   # We need wheel installed to build wheels
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PYTHON%\\Library\\bin;%PATH%"
   - python --version
-  - conda install -q -y --channel conda-forge setuptools
+  - conda config --set always_yes yes
+  - conda update -q conda
+  - conda install -q -y --channel conda-forge setuptools pip
   - "IF %PYTHON_VERSION%==2.6 (python -m pip install ordereddict)"
   - python -m pip install coverage
   - IF DEFINED YAML (python -m pip install pyyaml)
