@@ -232,7 +232,7 @@ class ConvexHull_Transformation(Transformation):
         orC = Constraint(disjunction.index_set()) if \
               disjunction.is_indexed() else Constraint()
         xor = disjunction.xor
-        # Convex hull doesn't work if this is an or constriant. So if
+        # Convex hull doesn't work if this is an or constraint. So if
         # xor is false, give up
         if not xor:
             raise GDP_Error("Cannot do convex hull transformation for "
@@ -328,22 +328,20 @@ class ConvexHull_Transformation(Transformation):
                 disaggregatedVar = disjunct._gdp_transformation_info[
                     'disaggregatedVars'][var]
                 disaggregatedExpr += disaggregatedVar
-            # TODO: ESJ: this can't be right... disjunct is just the last of the
-            # disjuncts from the for loop above. This is all to make sure that
-            # the index of the disaggregation constraint is unique. It has the
-            # index of the disjunction and then the name of the variable. We
-            # really want this to be the name of the disaggregated variable,
-            # right? Which we have already made unique when we added it to the
-            # block for the transformed disjunct. But that was unique with
-            # respect to that disjunct... Now we need something unique across
-            # all the disjunctions?
+            # TODO: The name below is a problem. We could potentially have
+            # variables of the same name because these variables could live on
+            # different blocks. So we really need the name to be unique with
+            # respect to all of the other variables that will be disaggregated
+            # in this disjunction. which is not what the line below does.
             consName = unique_component_name(disjunct, var.name)
-            # TODO: Is this OK? I'm not sure how to do this cleanly.
+            # TODO: This is one idea for how to add an index, Qi has another. We
+            # should probably choose one.
             if type(index) is tuple: 
                 index = consIdx = index + (consName,)
-            else:
+            else:               
                 consIdx = (index,) + (consName,) if index is not None \
                           else consName
+
             disaggregationConstraint.add(
                 consIdx,
                 var == disaggregatedExpr)

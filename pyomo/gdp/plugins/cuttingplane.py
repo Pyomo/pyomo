@@ -1,5 +1,6 @@
 # Implements cutting plane reformulation for linear, convex GDPs
 from __future__ import division
+from collections import OrderedDict
 
 from pyomo.util.modeling import unique_component_name
 from pyomo.core import *
@@ -96,7 +97,7 @@ class CuttingPlane_Transformation(Transformation):
         # build map of components and their cuids. (I need cuids because I need
         # to be able to find the same component on the convex hull instance
         # later.)
-        v_map = {}
+        v_map = OrderedDict()
         for v in instance_rBigm.component_data_objects(
             Var,
             descend_into=(Block, Disjunct),
