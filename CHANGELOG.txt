@@ -6,6 +6,7 @@ Pyomo CHANGELOG
 Pyomo 5.3
 -------------------------------------------------------------------------------
 
+- Removed testing for Python 3.4
 - Added exp() to symbolic module (#151)
 - Resolved representation error with 1/var (#153)
 - Added pyomo.core.kernel (#130)
@@ -21,7 +22,7 @@ Pyomo 5.3
 - Added deprecation decorator (#203)
 - New transformation to fix nonnegative variables in equality constraints (#198)
 - Deprecated BigM piecewise representations (#216)
-- Added GAMS solver interface (#164, #215, #221)
+- Added GAMS solver interface (#164, #215, #221, #240)
 - Updates to testing configuration on Travis and Appveyor
 - Tracking changes in pyutilib.th
 
