@@ -67,6 +67,9 @@ def linear(flag):
     elif flag == 12:
         with EXPR.linear_expression as expr:
             expr=sum((model.p[i]*model.x[i] for i in model.A), expr)
+    elif flag == 22:
+        with EXPR.nonlinear_expression as expr:
+            expr=sum((model.p[i]*model.x[i] for i in model.A), expr)
     elif flag == 13:
         with EXPR.linear_expression as expr:
             for i in model.A:
@@ -111,6 +114,6 @@ if pyomo4:
 if not (coopr3 or pyomo4):
     import pyomo.core.kernel.expr_pyomo5 as PYOMO5
     print("REFCOUNT: "+str(PYOMO5._getrefcount_available))
-    for i in (2,12,3,13,4,14,5,15,7,17):
+    for i in (2,12,22,3,13,4,14,5,15,7,17):
         print((i,timeit.timeit('linear(%d)' % i, "from __main__ import linear", number=1)))
 
