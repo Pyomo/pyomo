@@ -29,12 +29,15 @@ class ConstraintBoundTightener(IsomorphicTransformation):
 			LB = UB
 			for i, coef in enumerate(repn.linear):
                 #TODO:handle case when var has no bound
+                #TODO: check divide by zero
+                #TODO: if infesible print error
+                #TODO: ROunding issues
 				UB = UB + coef * value(repn.variables[i].ub)
 				LB = LB + coef * value(repn.variables[i].lb)
-			if(constr.has_ub() and value(constr.upper) > UB):
-				value(constr.upper) = UB
-			if(constr.has_lb() and value(constr.lower) < LB):
-				value(constr.lower) = LB
+			if(constr.has_ub() and value(constr.upper) > UB) or (not constr.has_ub)::
+				constr._upper = UB
+			if(constr.has_lb() and value(constr.lower) < LB) or (not constr.has_lb):
+				constr._lower = LB
 
             #tighten the coefficient bounds as much as possible
             UB = None
@@ -50,8 +53,8 @@ class ConstraintBoundTightener(IsomorphicTransformation):
                             UB = UB - coefj*repn.variables[j].lb
                         if LB and repn.variables[j].ub
                             LB = LB - coefj*repn.variables[j].ub
-                repn.variables[i].lb = LB/coefi
-                repn.variables[i].ub = UB/coefi
+                repn.variables[i].setlb(LB/coefi)
+                repn.variables[i].setub(UB/coefi)
                 if repn.variables[i].value < LB/coefi:
                     repn.variables[i].value = repn.variables[i].lb
                 if repn.variables[i].value > UB/coefi:
