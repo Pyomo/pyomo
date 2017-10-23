@@ -491,10 +491,33 @@ class IndexedDisjunction(unittest.TestCase):
     def test_disaggregation_constraints(self):
         m = self.makeModel()
         TransformationFactory('gdp.chull').apply_to(m)
-        
-        # TODO: I want to make sure that the disaggregation constraints have
-        # the right indices. And I'm not sure what those should actually be yet.
-        #set_trace()
+
+        disaggregationCons = m._gdp_chull_relaxation_disjunction_disaggregation
+        relaxedDisjuncts = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
+        self.assertIsInstance(disaggregationCons, Constraint)
+        self.assertEqual(len(disaggregationCons), 3)
+
+        disaggregatedVars = {
+            (1, 'x[1]'): [relaxedDisjuncts[0].component('x[1]'), 
+                          relaxedDisjuncts[1].component('x[1]')], 
+            (2, 'x[2]'): [relaxedDisjuncts[2].component('x[2]'), 
+                          relaxedDisjuncts[3].component('x[2]')], 
+            (3, 'x[3]'): [relaxedDisjuncts[4].component('x[3]'), 
+                          relaxedDisjuncts[5].component('x[3]')],
+        }
+
+        for i, disVars in iteritems(disaggregatedVars):
+            cons = disaggregationCons[i]
+            self.assertEqual(cons.lower, 0)
+            self.assertEqual(cons.upper, 0)
+            self.assertEqual(len(cons.body._args), 3)
+            self.assertEqual(len(cons.body._coef), 3)
+            self.assertEqual(cons.body._coef[0], 1)
+            self.assertEqual(cons.body._coef[1], -1)
+            self.assertEqual(cons.body._coef[2], -1)
+            self.assertIs(cons.body._args[0], m.x[i[0]])
+            self.assertIs(cons.body._args[1], disVars[0])
+            self.assertIs(cons.body._args[2], disVars[1])
 
     # TODO: also test disaggregation constraints for when we have a disjunction
     # where the indices are tuples. (This is to test that when we combine the
