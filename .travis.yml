@@ -144,23 +144,22 @@ install:
 
 
 script:
-# The next three commands enable tracking of coverage
-# for any subprocesses launched by tests
-- export COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/.coveragerc
-- SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
-- echo "import coverage; coverage.process_startup()" > ${SITE_PACKAGES}/run_coverage_at_startup.pth
+  # The next three commands enable tracking of coverage
+  # for any subprocesses launched by tests
+  - export COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/coveragerc
+  - cp ${TRAVIS_BUILD_DIR}/.coveragerc ${COVERAGE_PROCESS_START}
+  - echo "[run]\ndata_file=${TRAVIS_BUILD_DIR}/.coverage" >> ${COVERAGE_PROCESS_START}
+  - SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
+  - echo "import coverage; coverage.process_startup()" > ${SITE_PACKAGES}/run_coverage_at_startup.pth
 
-# Run Pyomo tests
-- test.pyomo -v --cat=$CATEGORY --cov pyomo `pwd`/pyomo-model-libraries
-- mv .coverage travis.coverage.1
-- ls -al ..
-- ls -al
+  # Run Pyomo tests
+  - test.pyomo -v --cat=$CATEGORY `pwd`/pyomo-model-libraries
+  - ls -al ..
+  - ls -al
 
-# Run documentation tests
-- nosetests -v --with-coverage --with-doctest --doctest-extension=.rst doc/OnlineDocs
-- mv .coverage travis.coverage.2
-- ls -ld .c*
-
+  # Run documentation tests
+  - nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
+  - ls -ld .c*
 
 
 after_success:
@@ -169,7 +168,7 @@ after_success:
 
 # Combine coverage reports over all subprocesses
 - cd $TRAVIS_BUILD_DIR
-- coverage combine travis.coverage.1 travis.coverage.2
+- coverage combine $TRAVIS_BUILD_DIR
 - echo `pwd`
 - ls -la
 - codecov -X gcov
