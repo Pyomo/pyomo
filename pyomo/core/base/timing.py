@@ -13,6 +13,8 @@ class ConstructionTimer(object):
         self.timer = TicTocTimer()
 
     def report(self):
+        # Record the elapsed time, as some log handlers may not
+        # immediately generate the messge string
         self.timer = self.timer.toc(msg="")
         _logger.info(self)
 
@@ -20,9 +22,15 @@ class ConstructionTimer(object):
         fmt = "%%6.%df seconds to construct %s %s; %d %s total"
         total_time = self.timer
         idx = len(self.obj.index_set())
-        return fmt % ( 2 if total_time>=0.005 else 0,
-                       self.obj.type().__name__,
-                       self.obj.name,
-                       idx,
-                       'indicies' if idx > 1 else 'index' ) \
-            % total_time
+        try:
+            return fmt % ( 2 if total_time>=0.005 else 0,
+                           self.obj.type().__name__,
+                           self.obj.name,
+                           idx,
+                           'indicies' if idx > 1 else 'index' ) \
+                % total_time
+        except TypeError:
+            return "ConstructionTimer object for %s %s; %s elapsed seconds" % (
+                self.obj.type().__name__,
+                self.obj.name,
+                self.timer.toc("") )
