@@ -100,22 +100,26 @@ def evaluate(expr, seconds):
     except:
         seconds['size'] = -1
 
-    gc.collect()
-    _clear_expression_pool()
-    try:
-        with timeout(seconds=_timeout):
-            start = time.time()
-            expr = EXPR.compress_expression(expr, verbose=False)
-            stop = time.time()
-            seconds['compress'] = stop-start
-            seconds['compressed_size'] = expr.size()
-    except TimeoutError:
-        print("TIMEOUT")
-        seconds['compressed_size'] = -999.0
-    except:
-        seconds['compressed_size'] = 0
+    if False:
+        #
+        # Compression is no longer necessary
+        #
+        gc.collect()
+        _clear_expression_pool()
+        try:
+            with timeout(seconds=_timeout):
+                start = time.time()
+                expr = EXPR.compress_expression(expr, verbose=False)
+                stop = time.time()
+                seconds['compress'] = stop-start
+                seconds['compressed_size'] = expr.size()
+        except TimeoutError:
+            print("TIMEOUT")
+            seconds['compressed_size'] = -999.0
+        except:
+            seconds['compressed_size'] = 0
 
-    # NOTE: All other tests after this are on the compressed expression!
+        # NOTE: All other tests after this are on the compressed expression!
 
     gc.collect()
     _clear_expression_pool()
@@ -173,22 +177,23 @@ def evaluate(expr, seconds):
         print("TIMEOUT")
         seconds['is_fixed'] = -999.0
 
-    gc.collect()
-    _clear_expression_pool()
-    try:
-        from pyomo.repn import generate_standard_repn
-        with timeout(seconds=_timeout):
-            start = time.time()
-            r_ = generate_standard_repn(expr, quadratic=False)
-            stop = time.time()
-            seconds['generate_repn'] = stop-start
-    except RecursionError:
-        seconds['generate_repn'] = -888.0
-    except ImportError:
-        seconds['generate_repn'] = -999.0
-    except TimeoutError:
-        print("TIMEOUT")
-        seconds['generate_repn'] = -999.0
+    if True:
+        gc.collect()
+        _clear_expression_pool()
+        try:
+            from pyomo.repn import generate_standard_repn
+            with timeout(seconds=_timeout):
+                start = time.time()
+                r_ = generate_standard_repn(expr, quadratic=False)
+                stop = time.time()
+                seconds['generate_repn'] = stop-start
+        except RecursionError:
+            seconds['generate_repn'] = -888.0
+        except ImportError:
+            seconds['generate_repn'] = -999.0
+        except TimeoutError:
+            print("TIMEOUT")
+            seconds['generate_repn'] = -999.0
 
     if False:
         gc.collect()
@@ -219,23 +224,27 @@ def evaluate_all(expr, seconds):
     except:
         seconds['size'] = -1
 
-    gc.collect()
-    _clear_expression_pool()
-    try:
-        with timeout(seconds=_timeout):
-            start = time.time()
-            for e in expr:
-                EXPR.compress_expression(e, verbose=False)
-            stop = time.time()
-            seconds['compress'] = stop-start
-            seconds['compressed_size'] = expr.size()
-    except TimeoutError:
-        print("TIMEOUT")
-        seconds['compressed_size'] = -999.0
-    except:
-        seconds['compressed_size'] = 0
+    if False:
+        #
+        # Compression is no longer necessary
+        #
+        gc.collect()
+        _clear_expression_pool()
+        try:
+            with timeout(seconds=_timeout):
+                start = time.time()
+                for e in expr:
+                    EXPR.compress_expression(e, verbose=False)
+                stop = time.time()
+                seconds['compress'] = stop-start
+                seconds['compressed_size'] = expr.size()
+        except TimeoutError:
+            print("TIMEOUT")
+            seconds['compressed_size'] = -999.0
+        except:
+            seconds['compressed_size'] = 0
 
-    # NOTE: All other tests after this are on the compressed expression!
+        # NOTE: All other tests after this are on the compressed expression!
 
     gc.collect()
     _clear_expression_pool()
@@ -297,23 +306,24 @@ def evaluate_all(expr, seconds):
         print("TIMEOUT")
         seconds['is_fixed'] = -999.0
 
-    gc.collect()
-    _clear_expression_pool()
-    try:
-        from pyomo.repn import generate_standard_repn
-        with timeout(seconds=_timeout):
-            start = time.time()
-            for e in expr:
-                generate_standard_repn(e, quadratic=False)
-            stop = time.time()
-            seconds['generate_repn'] = stop-start
-    except RecursionError:
-        seconds['generate_repn'] = -888.0
-    except ImportError:
-        seconds['generate_repn'] = -999.0
-    except TimeoutError:
-        print("TIMEOUT")
-        seconds['generate_repn'] = -999.0
+    if True:
+        gc.collect()
+        _clear_expression_pool()
+        try:
+            from pyomo.repn import generate_standard_repn
+            with timeout(seconds=_timeout):
+                start = time.time()
+                for e in expr:
+                    generate_standard_repn(e, quadratic=False)
+                stop = time.time()
+                seconds['generate_repn'] = stop-start
+        except RecursionError:
+            seconds['generate_repn'] = -888.0
+        except ImportError:
+            seconds['generate_repn'] = -999.0
+        except TimeoutError:
+            print("TIMEOUT")
+            seconds['generate_repn'] = -999.0
 
     if False:
         gc.collect()
@@ -380,6 +390,18 @@ def linear(N, flag):
                             expr = model.p[i] * model.x[i] + expr
                     elif flag == 6:
                         expr=Sum(model.p[i]*model.x[i] for i in model.A)
+                    elif flag == 7:
+                        expr=0
+                        for i in model.A:
+                            expr += model.p[i] * (1 + model.x[i])
+                    elif flag == 8:
+                        expr=0
+                        for i in model.A:
+                            expr += (model.x[i]+model.x[i])
+                    elif flag == 9:
+                        expr=0
+                        for i in model.A:
+                            expr += model.p[i]*(model.x[i]+model.x[i])
                     elif flag == 12:
                         with EXPR.linear_expression as expr:
                             expr=sum((model.p[i]*model.x[i] for i in model.A), expr)
@@ -395,6 +417,10 @@ def linear(N, flag):
                         with EXPR.linear_expression as expr:
                             for i in model.A:
                                 expr = model.p[i] * model.x[i] + expr
+                    elif flag == 17:
+                        with EXPR.linear_expression as expr:
+                            for i in model.A:
+                                expr += model.p[i] * (1 + model.x[i])
                     #
                     stop = time.time()
                     seconds['construction'] = stop-start
@@ -449,6 +475,18 @@ def simple_linear(N, flag):
                             expr = model.p[i] * model.x[i] + expr
                     elif flag == 6:
                         expr=Sum(model.p[i]*model.x[i] for i in model.A)
+                    elif flag == 7:
+                        expr=0
+                        for i in model.A:
+                            expr += model.p[i] * (1 + model.x[i])
+                    elif flag == 8:
+                        expr=0
+                        for i in model.A:
+                            expr += (model.x[i]+model.x[i])
+                    elif flag == 9:
+                        expr=0
+                        for i in model.A:
+                            expr += model.p[i]*(model.x[i]+model.x[i])
                     elif flag == 12:
                         with EXPR.linear_expression as expr:
                             expr=sum((model.p[i]*model.x[i] for i in model.A), expr)
@@ -464,6 +502,10 @@ def simple_linear(N, flag):
                         with EXPR.linear_expression as expr:
                             for i in model.A:
                                 expr = model.p[i] * model.x[i] + expr
+                    elif flag == 17:
+                        with EXPR.linear_expression as expr:
+                            for i in model.A:
+                                expr += model.p[i] * (1 + model.x[i])
                     #
                     stop = time.time()
                     seconds['construction'] = stop-start
@@ -946,6 +988,22 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(linear(NTerms, 6), n=N)
         print_results(factors_, ans_, output)
 
+        factors_ = tuple(factors+['Linear','Loop 7'])
+        ans_ = res[factors_] = measure(linear(NTerms, 7), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['Linear','Loop 17'])
+        ans_ = res[factors_] = measure(linear(NTerms, 17), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['Linear','Loop 8'])
+        ans_ = res[factors_] = measure(linear(NTerms, 8), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['Linear','Loop 9'])
+        ans_ = res[factors_] = measure(linear(NTerms, 9), n=N)
+        print_results(factors_, ans_, output)
+
     if True:
         factors_ = tuple(factors+['SimpleLinear','Loop 1'])
         ans_ = res[factors_] = measure(simple_linear(NTerms, 1), n=N)
@@ -984,9 +1042,20 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(simple_linear(NTerms, 15), n=N)
         print_results(factors_, ans_, output)
 
-    if True:
-        factors_ = tuple(factors+['SimpleLinear','Loop 6'])
-        ans_ = res[factors_] = measure(simple_linear(NTerms, 6), n=N)
+        factors_ = tuple(factors+['SimpleLinear','Loop 7'])
+        ans_ = res[factors_] = measure(simple_linear(NTerms, 7), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['SimpleLinear','Loop 17'])
+        ans_ = res[factors_] = measure(simple_linear(NTerms, 17), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['SimpleLinear','Loop 8'])
+        ans_ = res[factors_] = measure(simple_linear(NTerms, 8), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['SimpleLinear','Loop 9'])
+        ans_ = res[factors_] = measure(simple_linear(NTerms, 9), n=N)
         print_results(factors_, ans_, output)
 
 
