@@ -93,6 +93,16 @@ def linear(flag):
             for i in model.A:
                 expr += model.p[i] * (1 + model.x[i])
 
+    elif flag == 8:
+        expr=0
+        for i in model.A:
+            expr += (model.x[i]+model.x[i])
+
+    elif flag == 9:
+        expr=0
+        for i in model.A:
+            expr += model.p[i]*(model.x[i]+model.x[i])
+
     if coopr3 or pyomo4:
         generate_ampl_repn(expr)
     else:
@@ -101,19 +111,19 @@ def linear(flag):
 if coopr3:
     import pyomo.core.kernel.expr_coopr3 as COOPR3
     print("REFCOUNT: "+str(COOPR3._getrefcount_available))
-    for i in (2,3,7):
+    for i in (2,3,7,8,9):
         print((i,timeit.timeit('linear(%d)' % i, "from __main__ import linear", number=1)))
 
 if pyomo4:
     import pyomo.core.kernel.expr_pyomo4 as PYOMO4
     EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo4_trees)
     print("REFCOUNT: "+str(PYOMO4._getrefcount_available))
-    for i in (2,3,7):
+    for i in (2,3,7,8,9):
         print((i,timeit.timeit('linear(%d)' % i, "from __main__ import linear", number=1)))
 
 if not (coopr3 or pyomo4):
     import pyomo.core.kernel.expr_pyomo5 as PYOMO5
     print("REFCOUNT: "+str(PYOMO5._getrefcount_available))
-    for i in (2,12,22,3,13,4,14,5,15,7,17):
+    for i in (2,12,22,3,13,4,14,5,15,7,17,8,9):
         print((i,timeit.timeit('linear(%d)' % i, "from __main__ import linear", number=1)))
 
