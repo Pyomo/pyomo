@@ -98,7 +98,7 @@ class TestJson(BaseTester):
 
     def test1_simple_pyomo_execution(self):
         # Simple execution of 'pyomo'
-        self.pyomo(currdir+'pmedian.py pmedian.dat', root=currdir+'test1')
+        self.pyomo([currdir+'pmedian.py',currdir+'pmedian.dat'], root=currdir+'test1')
         self.assertMatchesJsonBaseline(currdir+"test1.jsn", currdir+"test1.txt",tolerance=_diff_tol)
         os.remove(currdir+'test1.out')
 
