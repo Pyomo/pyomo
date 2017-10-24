@@ -32,12 +32,15 @@ except AttributeError:                         #pragma:nocover
     pympler_available = False
 
 
-from pyomo.util.plugin import ExtensionPoint
 from pyutilib.math import *
 from pyutilib.misc import tuplize, Container, PauseGC, Bunch
 
 import pyomo.util
+from pyomo.util.plugin import ExtensionPoint
 from pyomo.util._task import pyomo_api
+
+from pyomo.core.kernel import expr_common
+
 from pyomo.core.base.var import _VarData, Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
@@ -53,6 +56,7 @@ from pyomo.core.base.sets import Set
 from pyomo.core.base.component import register_component, Component, ComponentUID
 from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.base.label import CNameLabeler, CuidLabeler
+
 import pyomo.opt
 from pyomo.opt.results import SolverResults, Solution, SolutionStatus, UndefinedData
 
@@ -855,7 +859,6 @@ from solvers are immediately loaded into the original model instance.""")
             #
 
             if report_timing is True:
-                import pyomo.core.base.expr as EXPR
                 construction_start_time = time.time()
 
             for component_name, component in iteritems(self.component_map()):
@@ -865,7 +868,7 @@ from solvers are immediately loaded into the original model instance.""")
 
                 if report_timing is True:
                     start_time = time.time()
-                    clone_counters = EXPR.generate_expression.clone_counter
+                    clone_counter = expr_common.clone_counter
 
                 self._initialize_component(modeldata, namespaces, component_name, profile_memory)
 
@@ -879,10 +882,10 @@ from solvers are immediately loaded into the original model instance.""")
                     print("    %%6.%df seconds required to construct component=%s; %d indicies total" \
                               % (total_time>=0.005 and 2 or 0, component_name, clen) \
                               % total_time)
-                    tmp_clone_counters = EXPR.generate_expression.clone_counter
-                    if clone_counters != tmp_clone_counters:
-                        clone_counters = tmp_clone_counters
-                        print("             Cloning detected! (clone counters: %d)" % clone_counters)
+                    tmp_clone_counter = expr_common.clone_counter
+                    if clone_counter != tmp_clone_counter:
+                        clone_counter = tmp_clone_counter
+                        print("             Cloning detected! (clone count: %d)" % clone_counters)
 
             # Note: As is, connectors are expanded when using command-line pyomo but not calling model.create(...) in a Python script.
             # John says this has to do with extension points which are called from commandline but not when writing scripts.
