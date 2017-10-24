@@ -318,7 +318,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                     if e_._args[1].__class__ in pyomo5_variable_types:
                         if e_._args[1].fixed:
                             if e_._args[0].__class__ in native_numeric_types:
-                                repn.constant += e._args[0] * e._args[1].value
+                                repn.constant += e_._args[0] * e_._args[1].value
                             elif not e_._args[0]._potentially_variable():
                                 repn.constant += e._args[0] * value(e._args[1])
                             elif e_._args[0].__class__ in pyomo5_variable_types:
