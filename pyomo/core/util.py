@@ -50,16 +50,16 @@ def Sum(args, start=0, linear=False):
                         e += start
                         for arg in args:
                             e += arg
+                    return e
                 else:
                     with EXPR.nonlinear_expression as e:
                         e += start
                         for arg in args:
                             e += arg
-                if len(e._args) == 0:
-                    return 0
-                elif len(e._args) == 1:
-                    return e._args[0]
-                else:
+                    if len(e._args) == 0:
+                        return 0
+                    elif len(e._args) == 1:
+                        return e._args[0]
                     return e
             #
             # Otherwise, use the context that is provided and return it.
