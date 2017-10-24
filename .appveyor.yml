@@ -125,16 +125,16 @@ test_script:
   # This block of commands enable tracking of coverage for any
   # subprocesses launched by tests
   - "SET BUILD_DIR=%cd%"
-  - "SET COVERAGE_PROCESS_START=%BUILD_DIR%/coveragerc"
-  - "copy %BUILD_DIR%/.coveragerc %COVERAGE_PROCESS_START%"
+  - "SET COVERAGE_PROCESS_START=%BUILD_DIR%\\coveragerc"
+  - "copy %BUILD_DIR%\\.coveragerc %COVERAGE_PROCESS_START%"
   - "echo data_file=%BUILD_DIR%\\.coverage >> %COVERAGE_PROCESS_START%"
   - python -c "from distutils.sysconfig import get_python_lib; import os; FILE=open(os.path.join(get_python_lib(),'run_coverage_at_startup.pth'), 'w'); FILE.write('import coverage; coverage.process_startup()'); FILE.close()"
 
   # Run Pyomo tests
-  - "test.pyomo -v --cat=%CATEGORY% pyomo %BUILD_DIR%/pyomo-model-libraries"
+  - "test.pyomo -v --cat=%CATEGORY% pyomo %BUILD_DIR%\\pyomo-model-libraries"
 
   # Run documentation tests
-  - nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
+  - "nosetests -v --with-doctest --doctest-extension=.rst doc\\OnlineDocs"
 
 
 #after_test:
