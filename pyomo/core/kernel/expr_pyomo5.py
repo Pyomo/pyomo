@@ -125,12 +125,13 @@ ignore_entangled_expressions = ignore_entangled_context()
 class mutable_sum_context(object):
 
     def __enter__(self):
-        self.e = _MutableMultiSumExpression([0])
+        self.e = _MutableViewSumExpression([])
         return self.e
 
     def __exit__(self, *args):
-        if self.e.__class__ == _MutableMultiSumExpression:
-            self.e.__class__ = _MultiSumExpression
+        pass
+        if self.e.__class__ == _MutableViewSumExpression:
+            self.e.__class__ = _ViewSumExpression
 
 nonlinear_expression = mutable_sum_context()
 
@@ -370,8 +371,8 @@ class CompressVisitor(ValueExpressionVisitor):
         return False
 
     def finalize(self, ans):
-        if ans.__class__ is _MutableMultiSumExpression:
-            ans.__class__ = _CompressedSumExpression
+        #if ans.__class__ is _MutableMultiSumExpression:
+        #    ans.__class__ = _CompressedSumExpression
         return ans
 
 
@@ -408,6 +409,9 @@ def NEW_compress_expression(expr, verbose=False, dive=False, multiprod=False):
 
 
 def compress_expression(expr, verbose=False, dive=False, multiprod=False):
+    return expr
+
+def Xcompress_expression(expr, verbose=False, dive=False, multiprod=False):
     #
     # Only compress a true expression DAG
     #
@@ -420,9 +424,9 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
     #
     if expr.__class__ in native_numeric_types or not expr.is_expression() or not expr._potentially_variable():
         return expr
-    if expr.__class__ is _MutableMultiSumExpression:
-        expr.__class__ = _CompressedSumExpression
-        return expr
+    #if expr.__class__ is _MutableMultiSumExpression:
+    #    expr.__class__ = _CompressedSumExpression
+    #    return expr
     if expr.__class__ in pyomo5_multisum_types:
         return expr
     #
@@ -562,8 +566,8 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
             #
             _stack[-1][-1].append( ans )
         else:
-            if ans.__class__ is _MutableMultiSumExpression:
-                ans.__class__ = _CompressedSumExpression
+            #if ans.__class__ is _MutableMultiSumExpression:
+            #    ans.__class__ = _CompressedSumExpression
             return ans
 
 
@@ -1244,6 +1248,9 @@ def expression_to_string(expr, ostream=None, verbose=None, precedence=None):
     _name_buffer = {}
     if ostream is None:
         ostream = sys.stdout
+    if expr.__class__ in native_numeric_types:
+        ostream.write(str(expr))
+        return
     verbose = common.TO_STRING_VERBOSE if verbose is None else verbose
 
     _infix = False
@@ -1347,6 +1354,7 @@ class _ExpressionBase(NumericValue):
 
     def __str__(self):
         from pyomo.repn import generate_standard_repn
+        #if True:
         try:
             #
             # Try to factor the constant and linear terms when printing NONVERBOSE
@@ -1379,8 +1387,9 @@ class _ExpressionBase(NumericValue):
             else:
                 repn = generate_standard_repn(self, quadratic=False, compute_values=False)
                 expr = repn.to_expression()
+        #else:
         except Exception as e:
-            print(str(e))
+            #print(str(e))
             #
             # Fall back to simply printing the expression in an
             # unfactored form.
@@ -2240,19 +2249,19 @@ class _NPV_SumExpression(_SumExpression):
         return False
 
 
-class _MutableViewSumExpression(_SumExpression):
+class _ViewSumExpression(_SumExpression):
     """An object that defines a summation with 1 or more terms using a shared list."""
 
     __slots__ = ('_nargs',)
     PRECEDENCE = 6
 
     def __init__(self, args, new_arg=None):
-        if args.__class__ is _MutableViewSumExpression:
+        if args.__class__ is _ViewSumExpression:
             args.clone_info = True
             self._args = args._args
         else:
             self._args = args
-        if new_arg.__class__ is _MutableViewSumExpression:
+        if new_arg.__class__ is _ViewSumExpression or new_arg.__class__ is _MutableViewSumExpression:
             self._args.extend( new_arg._args[:new_arg._nargs] )
         elif not new_arg is None:
             self._args.append(new_arg)
@@ -2268,7 +2277,7 @@ class _MutableViewSumExpression(_SumExpression):
         return self._nargs
 
     def _precedence(self):
-        return _MutableMultiSumExpression.PRECEDENCE
+        return _ViewSumExpression.PRECEDENCE
 
     def _apply_operation(self, result):
         return sum(result)
@@ -2277,8 +2286,8 @@ class _MutableViewSumExpression(_SumExpression):
         return self.__class__(list(args))
 
     def __getstate__(self):
-        result = super(_MutableViewSumExpression, self).__getstate__()
-        for i in _MutableViewSumExpression.__slots__:
+        result = super(_ViewSumExpression, self).__getstate__()
+        for i in _ViewSumExpression.__slots__:
             result[i] = getattr(self, i)
         return result
 
@@ -2310,6 +2319,25 @@ class _MutableViewSumExpression(_SumExpression):
         return  _idx == 0 and \
                 self._args[0].__class__ in native_numeric_types and \
                 isclose(self._args[0], 0)
+
+
+class _MutableViewSumExpression(_ViewSumExpression):
+
+    __slots__ = ()
+
+    def extend(self, new_arg):
+        if new_arg.__class__ is _ViewSumExpression or new_arg.__class__ is _MutableViewSumExpression:
+            self._args.extend( new_arg._args[:new_arg._nargs] )
+        elif not (new_arg.__class__ in native_numeric_types and isclose(new_arg,0.0)):
+            self._args.append(new_arg)
+        self._nargs = len(self._args)
+        if _getrefcount_available:
+            self.clone_info = UNREFERENCED_EXPR_COUNT
+        else:
+            self.clone_info = False
+            if new_arg.__class__ in pyomo5_expression_types:
+                new_arg.clone_info = True
+
 
 
 
@@ -2806,7 +2834,7 @@ class _LinearExpression(_ExpressionBase):
                     self.linear_coefs.append(omult*c)
                     self.linear_vars.append(v)
             elif _other.__class__ in pyomo5_multisum_types:
-                for e in _other._args[:]:
+                for e in _other._args:
                     C,c,v = _LinearExpression._decompose_term(e)
                     self.constant = self.constant + omult * C
                     if not v is None:
@@ -2953,9 +2981,6 @@ class _StaticQuadraticExpression(_QuadraticExpression):
 #-------------------------------------------------------
 
 def _process_arg(obj):
-    if obj.__class__ in native_types:
-        return obj
-
     if obj.is_expression():
         if ignore_entangled_expressions.detangle[-1] and \
            obj.__class__ in pyomo5_expression_types:
@@ -2996,32 +3021,32 @@ def _process_arg(obj):
 if _getrefcount_available:
     _SumClass_ = _MutableMultiSumExpression
 else:
-    _SumClass_ = _MutableViewSumExpression
+    _SumClass_ = _ViewSumExpression
     #_SumClass_ = _SumExpression
 
 #@profile
 def generate_expression(etype, _self, _other):
 
     if etype > _inplace:
-        inplace = True
         etype -= _inplace
-    else:
-        inplace = False
 
     if _self.__class__ is _LinearExpression:
         if etype >= _unary:
             return _self._combine_expr(etype, None)
         if _other.__class__ is not _LinearExpression:
-            _other = _process_arg(_other)
+            if not _other.__class__ in native_types:
+                _other = _process_arg(_other)
         return _self._combine_expr(etype, _other)
     elif _other.__class__ is _LinearExpression:
-        return _other._combine_expr(-etype, _process_arg(_self))
+        if not _self.__class__ in native_types:
+            _self = _process_arg(_self)
+        return _other._combine_expr(-etype, _self)
 
     #
-    # When not using reference counting, then a mutable sum is guaranteed to not
-    # be shared because it is only used while compressing the sum.
+    # A mutable sum is used as a context manager, so we don't
+    # need to process it to see if it's entangled.
     #
-    if _getrefcount_available or not _self.__class__ is _MutableMultiSumExpression:
+    if not (_self.__class__ in native_types or _self.__class__ is _MutableViewSumExpression):
         _self = _process_arg(_self)
 
     if etype >= _unary:
@@ -3054,7 +3079,8 @@ def generate_expression(etype, _self, _other):
             raise DeveloperError(
                 "Unexpected unary operator id (%s)" % ( etype, ))
 
-    _other = _process_arg(_other)
+    if not (_other.__class__ in native_types or _other.__class__ is _MutableViewSumExpression):
+        _other = _process_arg(_other)
 
     if etype < 0:
         #
@@ -3106,15 +3132,19 @@ def generate_expression(etype, _self, _other):
         #
         # x + y
         #
-        if _self.__class__ is _MutableMultiSumExpression or _other.__class__ is _MutableMultiSumExpression:
-            return _SumExpression._combine_expr(_self, _other)
-        elif _self.__class__ is _MutableViewSumExpression:
+        if _self.__class__ is _ViewSumExpression:
             if not _other.__class__ in native_numeric_types or _other != 0:
                 return _SumClass_(_self, _other)
             return _self
-        elif _other.__class__ is _MutableViewSumExpression:
+        elif _other.__class__ is _ViewSumExpression:
             if not _self.__class__ in native_numeric_types or _self != 0:
                 return  _SumClass_(_other, _self)
+            return _other
+        elif _self.__class__ is _MutableViewSumExpression:
+            _self.extend(_other)
+            return _self
+        elif _other.__class__ is _MutableViewSumExpression:
+            _other.extend(_self)
             return _other
         elif _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
@@ -3281,8 +3311,10 @@ def generate_relational_expression(etype, lhs, rhs):
     # arguments in the relational Expression's _args will be guaranteed
     # to be NumericValues (just as they are for all other Expressions).
     #
-    lhs = _process_arg(lhs)
-    rhs = _process_arg(rhs)
+    if not lhs.__class__ in native_types:
+        lhs = _process_arg(lhs)
+    if not rhs.__class__ in native_types:
+        rhs = _process_arg(rhs)
 
     if lhs.__class__ in native_numeric_types:
         lhs = as_numeric(lhs)
@@ -3412,7 +3444,8 @@ def generate_intrinsic_function_expression(arg, name, fcn):
     if arg.__class__ in native_types:
         return fcn(arg)
 
-    _process_arg(arg)
+    if not arg.__class__ in native_types:
+        _process_arg(arg)
     if arg._potentially_variable():
         return _UnaryFunctionExpression(arg, name, fcn)
     return _NPV_UnaryFunctionExpression(arg, name, fcn)
@@ -3442,7 +3475,7 @@ pyomo5_expression_types = set([
         _SumExpression,
         _Constant_SumExpression,
         _NPV_SumExpression,
-        _MutableViewSumExpression,
+        _ViewSumExpression,
         _MutableMultiSumExpression,
         _MultiSumExpression,
         _CompressedSumExpression,
@@ -3460,10 +3493,11 @@ pyomo5_expression_types = set([
         _StaticQuadraticExpression,
         ])
 pyomo5_multisum_types = set([
-        _MutableViewSumExpression,      # This seems dangerous, since ViewSum doesn't have a constant firs term
-        _MutableMultiSumExpression,
-        _MultiSumExpression,
-        _CompressedSumExpression
+        _ViewSumExpression,
+        _MutableViewSumExpression,
+        #_MutableMultiSumExpression,
+        #_MultiSumExpression,
+        #_CompressedSumExpression
         ])
 pyomo5_product_types = set([
         _ProductExpression,
