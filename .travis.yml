@@ -143,8 +143,8 @@ install:
 
 
 script:
-  # The next three commands enable tracking of coverage
-  # for any subprocesses launched by tests
+  # This block of commands enable tracking of coverage for any
+  # subprocesses launched by tests
   - export COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/coveragerc
   - cp ${TRAVIS_BUILD_DIR}/.coveragerc ${COVERAGE_PROCESS_START}
   - echo "data_file=${TRAVIS_BUILD_DIR}/.coverage" >> ${COVERAGE_PROCESS_START}
@@ -153,12 +153,9 @@ script:
 
   # Run Pyomo tests
   - test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
-  - ls -al ..
-  - ls -al
 
   # Run documentation tests
   - nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
-  - ls -ld .c*
 
 
 after_success:
@@ -167,12 +164,11 @@ after_success:
 
   # Combine coverage reports over all subprocesses
   - cd $TRAVIS_BUILD_DIR
+  - ls -la .cov*
   - coverage combine $TRAVIS_BUILD_DIR
-  - echo `pwd`
-  - ls -la
+  - ls -la .cov*
   - codecov -X gcov
   #- bash <(curl -s https://codecov.io/bash)
-  - cd $TRAVIS_BUILD_DIR
 
 
 deploy:
