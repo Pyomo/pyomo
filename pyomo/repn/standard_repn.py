@@ -16,6 +16,7 @@ __all__ = ['StandardRepn', 'generate_standard_repn', 'compute_standard_repn']
 import sys
 import logging
 import math
+import itertools
 
 from pyomo.core.base import (Constraint,
                              Objective,
@@ -283,7 +284,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             repn.constant = C_
             repn.linear_coefs = tuple(c_)
             repn.linear_vars = tuple(v_)
-            for v in repn.linear_vars[:]:
+            for v in repn.linear_vars:
                 id_ = id(v)
                 if not id_ in idMap[None]:
                     key = len(idMap) - 1
@@ -299,7 +300,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             repn.linear_coefs = []
             repn.linear_vars = []
             linear=True
-            for e_ in expr._args[:expr.nargs()]:
+            for e_ in itertools.islice(expr._args, expr.nargs()):
                 if e_.__class__ in native_numeric_types:
                     repn.constant += e_
                 elif not e_._potentially_variable():
@@ -353,7 +354,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             if linear:
                 repn.linear_vars = tuple(repn.linear_vars)
                 repn.linear_coefs = tuple(repn.linear_coefs)
-                for v in repn.linear_vars[:]:
+                for v in repn.linear_vars:
                     id_ = id(v)
                     if not id_ in idMap[None]:
                         key = len(idMap) - 1
@@ -636,7 +637,7 @@ def nonrecursive_generate_standard_repn(expr, idMap=None, compute_values=True, v
                 for res in _result:
                     if None in res:
                         if res[None].__class__ is EXPR._SumExpression or res[None].__class__ is EXPR._ViewSumExpression:
-                            for arg in res[None]._args[:res[None].nargs()]:
+                            for arg in itertools.islice(res[None]._args, res[None].nargs()):
                                 nonl.append(arg)
                         else:
                             nonl.append(res[None])

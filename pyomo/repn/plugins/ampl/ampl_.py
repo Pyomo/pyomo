@@ -460,7 +460,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     n = exp.nargs()
                     const = 0
                     vargs = []
-                    for v in exp._args[:n]:
+                    for v in itertools.islice(exp._args,n):
                         if v.__class__ in native_numeric_types:
                             const += v
                         else:

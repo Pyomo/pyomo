@@ -16,6 +16,7 @@ import sys
 import traceback
 from copy import deepcopy
 from collections import deque
+from itertools import islice
 
 try:
     from sys import getrefcount
@@ -1864,7 +1865,7 @@ class _ProductExpression(_ExpressionBase):
         return _l * _r
 
     @staticmethod
-    def _combine_expr(_l, _r):
+    def X_combine_expr(_l, _r):
         #
         # p * X
         #
@@ -2066,7 +2067,7 @@ class _ReciprocalExpression(_ExpressionBase):
         return 1 / result[0]
 
     @staticmethod
-    def _combine_expr(_r):
+    def X_combine_expr(_r):
         _l = 1
         #
         # 1 / X
@@ -2136,7 +2137,7 @@ class _SumExpression(_LinearOperatorExpression):
 
     #@profile
     @staticmethod
-    def _combine_expr(_l, _r):
+    def X_combine_expr(_l, _r):
         #
         # Augment the current multi-sum (LHS)
         #
@@ -2262,7 +2263,7 @@ class _ViewSumExpression(_SumExpression):
         else:
             self._args = args
         if new_arg.__class__ is _ViewSumExpression or new_arg.__class__ is _MutableViewSumExpression:
-            self._args.extend( new_arg._args[:new_arg._nargs] )
+            self._args.extend( islice(new_arg._args, new_arg._nargs) )
         elif not new_arg is None:
             self._args.append(new_arg)
         self._nargs = len(self._args)
@@ -2295,7 +2296,7 @@ class _ViewSumExpression(_SumExpression):
         return 'viewsum'
 
     def is_constant(self):
-        for v in self._args[:self._nargs]:
+        for v in islice(self._args, self._nargs):
             if not (v.__class__ in native_numeric_types or v.is_constant()):
                 return False
         return True
@@ -2308,7 +2309,7 @@ class _ViewSumExpression(_SumExpression):
             pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
             _LinearExpression.vtypes = pyomo5_variable_types
 
-        for v in self._args[:self._nargs]:
+        for v in islice(self._args, self._nargs):
             if v.__class__ in pyomo5_variable_types:
                 return True
             if not v.__class__ in native_numeric_types and v._potentially_variable():
@@ -2327,7 +2328,7 @@ class _MutableViewSumExpression(_ViewSumExpression):
 
     def extend(self, new_arg):
         if new_arg.__class__ is _ViewSumExpression or new_arg.__class__ is _MutableViewSumExpression:
-            self._args.extend( new_arg._args[:new_arg._nargs] )
+            self._args.extend( islice(new_arg._args, new_arg._nargs) )
         elif not (new_arg.__class__ in native_numeric_types and isclose(new_arg,0.0)):
             self._args.append(new_arg)
         self._nargs = len(self._args)
@@ -2789,7 +2790,7 @@ class _LinearExpression(_ExpressionBase):
             C = 0
             c = None
             v = None
-            for e in expr._args[:]:
+            for e in expr._args:
                 C_,c_,v_ = _LinearExpression._decompose_term(e)
                 C += C_
                 if not v_ is None:

@@ -116,7 +116,7 @@ def summation(*args, **kwds):
         index = iarg.index_set()
 
     start = kwds.get("start", 0)
-    nvars = sum(1 if isinstance(arg,pyomo.core.base.var.Var) else 0 for arg in args[:])
+    nvars = sum(1 if isinstance(arg,pyomo.core.base.var.Var) else 0 for arg in args)
 
     num_index = range(0,nargs)
     if ndenom == 0:
