@@ -454,7 +454,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 # We are assuming that _Constant_* expression objects
                 # have been preprocessed to form constant values.
                 #
-                if exp.__class__ is expr._MutableViewSumExpression:
+                if exp.__class__ is expr._ViewSumExpression:
                     nary_sum_str, binary_sum_str, coef_term_str = \
                         self._op_string[expr._SumExpression]
                     n = exp.nargs()
@@ -476,31 +476,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         OUTPUT.write(nary_sum_str % (n))
                         for child_exp in vargs:
                             self._print_nonlinear_terms_NL(child_exp)
-                    
-                elif isinstance(exp, expr._MutableMultiSumExpression):
-                    nary_sum_str, binary_sum_str, coef_term_str = \
-                        self._op_string[expr._SumExpression]
-                    n = exp.nargs()
-                    if exp._args[0].__class__ in native_numeric_types and isclose(exp._args[0], 0.0):
-                        if n == 2:
-                            self._print_nonlinear_terms_NL(exp._args[1])
-                        elif n == 3:
-                            OUTPUT.write(binary_sum_str)
-                            self._print_nonlinear_terms_NL(exp._args[1])
-                            self._print_nonlinear_terms_NL(exp._args[2])
-                        else:
-                            OUTPUT.write(nary_sum_str % (n-1))
-                            for i in xrange(1,n):
-                                self._print_nonlinear_terms_NL(exp._args[i])
-                    else:
-                        if n == 2:
-                            OUTPUT.write(binary_sum_str)
-                            self._print_nonlinear_terms_NL(exp._args[0])
-                            self._print_nonlinear_terms_NL(exp._args[1])
-                        else:
-                            OUTPUT.write(nary_sum_str % (n))
-                            for child_exp in exp._args[:n]:
-                                self._print_nonlinear_terms_NL(child_exp)
                     
                 elif exp_type is expr._SumExpression or \
                      exp_type is expr._NPV_SumExpression:
