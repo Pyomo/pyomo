@@ -1,5 +1,10 @@
 import warnings
 warnings.filterwarnings("ignore")
+# The following import/use is needed to prevent matplotlib from using
+# the X-backend on *nix platforms, which would fail when run in
+# automated testing environments or when $DISPLAY is not set.
+import matplotlib
+matplotlib.use('agg')
 # @all:
 from warehouse_data import *
 from pyomo.environ import *

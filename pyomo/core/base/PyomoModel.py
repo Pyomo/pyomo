@@ -691,6 +691,14 @@ constructed model; returning a clone of the current model instance.""")
         # Clone the model and load the data
         #
         instance = self.clone()
+        #
+        # Change this class from "Abstract" to "Concrete".  It is
+        # absolutely crazy that this is allowed in Python, but since the
+        # AbstractModel and ConcreteModel are basically identical, we
+        # can "reassign" the new concrete instance to be an instance of
+        # ConcreteModel
+        #
+        instance.__class__ = ConcreteModel
 
         if name is not None:
             instance._name = name
