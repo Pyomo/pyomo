@@ -153,7 +153,7 @@ script:
   - echo "import coverage; coverage.process_startup()" > ${SITE_PACKAGES}/run_coverage_at_startup.pth
 
   # Run Pyomo tests
-  - test.pyomo -v --cat=$CATEGORY `pwd`/pyomo-model-libraries
+  - test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
   - ls -al ..
   - ls -al
 
