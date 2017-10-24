@@ -179,7 +179,7 @@ class StandardRepn(object):
                 expr -= - self.linear_coefs[i]*self.linear_vars[i]
             else:
                 expr += self.linear_coefs[i]*self.linear_vars[i]
-        expr += Sum(self.quadratic_coefs[i]*self.quadratic_vars[i] for i,v in enumerate(self.quadratic_vars))
+        expr += Sum(self.quadratic_coefs[i]*self.quadratic_vars[i][0]*self.quadratic_vars[i][0] for i,v in enumerate(self.quadratic_vars))
         if not self.nonlinear_expr is None:
             expr += self.nonlinear_expr
         return expr
@@ -295,7 +295,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         # If the expression is a sum, then we try to 
         # extract a linear representation.
         #
-        elif expr.__class__ is EXPR._MutableViewSumExpression:
+        elif expr.__class__ is EXPR._ViewSumExpression:
             repn.linear_coefs = []
             repn.linear_vars = []
             linear=True
@@ -305,22 +305,51 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                 elif not e_._potentially_variable():
                     repn.constant += value(e_)
                 elif e_.__class__ in pyomo5_variable_types:
-                    repn.linear_coefs.append(1)
-                    repn.linear_vars.append(e_)
+                    if e_.fixed:
+                        if compute_values:
+                            repn.constant += e_.value
+                        else:
+                            repn.constant += e_
+                    else:
+                        repn.linear_coefs.append(1)
+                        repn.linear_vars.append(e_)
                 elif e_.__class__ is EXPR._ProductExpression:
                     if e_._args[1].__class__ in pyomo5_variable_types:
-                        if e_._args[0].__class__ in native_numeric_types:
-                            repn.linear_coefs.append(e_._args[0])
-                            repn.linear_vars.append(e_._args[1])
-                        elif not e_._args[0]._potentially_variable():
-                            repn.linear_coefs.append(value(e_._args[0]))
-                            repn.linear_vars.append(e_._args[1])
+                        if e_._args[1].fixed:
+                            if e_._args[0].__class__ in native_numeric_types:
+                                repn.constant += e._args[0] * e._args[1].value
+                            elif not e_._args[0]._potentially_variable():
+                                repn.constant += e._args[0] * value(e._args[1])
+                            elif e_._args[0].__class__ in pyomo5_variable_types:
+                                if e_._args[0].fixed:
+                                    repn.constant += e._args[0].value * e._args[1].value
+                                else:
+                                    v = e_._args[1].value
+                                    if not isclose(v,0.0):
+                                        repn.linear_coefs.append(v)
+                                        repn.linear_vars.append(e_._args[0])
+                            else:
+                                linear=False
+                                break
+                        elif e_._args[0].__class__ in native_numeric_types:
+                            if not isclose(e_._args[0],0.0):
+                                repn.linear_coefs.append(e_._args[0])
+                                repn.linear_vars.append(e_._args[1])
+                        elif not e_._args[0]._potentially_variable() or \
+                             (e_._args[0].__class__ in pyomo5_variable_types and e_._args[0].fixed):
+                            v = value(e_._args[0])
+                            if not isclose(v, 0.0):
+                                repn.linear_coefs.append(v)
+                                repn.linear_vars.append(e_._args[1])
                         else:
                             linear=False
                             break
                     else:
                         linear=False
                         break
+                else:
+                    linear=False
+                    break
             if linear:
                 repn.linear_vars = tuple(repn.linear_vars)
                 repn.linear_coefs = tuple(repn.linear_coefs)
@@ -598,7 +627,7 @@ def nonrecursive_generate_standard_repn(expr, idMap=None, compute_values=True, v
                 ans = {}
                 break
 
-        if _obj.__class__ in (EXPR._SumExpression, EXPR._MutableMultiSumExpression, EXPR._CompressedSumExpression, EXPR._MultiSumExpression, EXPR._MutableViewSumExpression):
+        if _obj.__class__ is EXPR._SumExpression or _obj.__class__ is EXPR._ViewSumExpression:
             ans = {}
             # Add nonlinear terms
             # Do some extra work to combine the arguments of 'Sum' expressions
@@ -606,7 +635,7 @@ def nonrecursive_generate_standard_repn(expr, idMap=None, compute_values=True, v
             if not linear:
                 for res in _result:
                     if None in res:
-                        if res[None].__class__ in (EXPR._SumExpression, EXPR._MutableMultiSumExpression, EXPR._CompressedSumExpression, EXPR._MultiSumExpression, EXPR._MutableViewSumExpression):
+                        if res[None].__class__ is EXPR._SumExpression or res[None].__class__ is EXPR._ViewSumExpression:
                             for arg in res[None]._args[:res[None].nargs()]:
                                 nonl.append(arg)
                         else:
