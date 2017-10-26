@@ -2,21 +2,19 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-import logging
-import os
-from os.path import abspath, dirname
-currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 import pyutilib.misc
 
 from pyomo.util import *
+from pyomo.util.log import LoggingIntercept
+
+from six import StringIO
 
 try:
     import yaml
@@ -24,18 +22,11 @@ try:
 except ImportError:
     yaml_available=False
 
-class Handler(logging.StreamHandler):
-
-    def emit(self, record):
-        raise RuntimeError(str(record))
-
-handler = Handler()
-logger = logging.getLogger('pyomo.util')
 
 class TestData(unittest.TestCase):
 
-    def test1(self):
-        """Print PyomoAPIData string"""
+    def test_print_PyomoAPIData_string(self):
+        #"""Print PyomoAPIData string"""
         data = PyomoAPIData()
         data.a = 1
         data.b = [1,2]
@@ -45,15 +36,19 @@ class TestData(unittest.TestCase):
         data['aa'] = 'here is more'
         data.clean()
         self.assertEqual(sorted(data.unused()), ['a','aa','b','c'])
-        pyutilib.misc.setup_redirect(currdir+'test1.out')
-        print(data) 
-        pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(currdir+'test1.out', currdir+'test1.txt')
+        self.assertEqual(
+            str(data),
+            """a: 1
+aa: here is more
+b: [1, 2]
+c:
+    x: 1
+    y: 2""")
         self.assertEqual(len(data._dirty_), 0)
 
     @unittest.skipIf(not yaml_available, "No YAML interface available")
-    def test2(self):
-        """Print PyomoAPIData representation"""
+    def test_print_PyomoAPIData_repr(self):
+        #"""Print PyomoAPIData representation"""
         data = PyomoAPIData()
         data.a = 1
         data.b = [1,2]
@@ -62,50 +57,39 @@ class TestData(unittest.TestCase):
         data.c.y = 2
         data['aa'] = 'here is more'
         data.clean()
-        pyutilib.misc.setup_redirect(currdir+'test2.out')
-        print(repr(data)) 
-        pyutilib.misc.reset_redirect()
-        self.assertMatchesYamlBaseline(currdir+'test2.out', currdir+'test2.txt')
+        self.assertEqual(
+            repr(data),
+            "{'a': 1, 'aa': 'here is more', 'c': {'y': 2, 'x': 1}, "
+            "'b': [1, 2]}")
         self.assertEqual(len(data._dirty_), 0)
 
-    @unittest.expectedFailure
-    def test_err1(self):
-        """Unknown attribute"""
+    def test_err_unknown_attr(self):
+        #"""Unknown attribute"""
         data = PyomoAPIData()
-        data._x
+        with self.assertRaisesRegexp(AttributeError, 'Unknown attribute _x'):
+            data._x
 
-    @unittest.expectedFailure
-    def test_err2(self):
-        """Undeclared attribute"""
+    def test_err_undeclared_attr(self):
+        #"""Undeclared attribute"""
         data = PyomoAPIData()
         data.declare('a')
-        data.x
+        with self.assertRaisesRegexp( AttributeError,
+                                      "Undeclared attribute 'x'" ):
+            data.x
 
-    @unittest.expectedFailure
-    def test_err3(self):
-        """Undeclared attribute"""
+    def test_err_undeclared_list_attr(self):
+        #"""Undeclared attribute"""
         data = PyomoAPIData()
         data.declare(['a'])
-        data.x
+        with self.assertRaisesRegexp( AttributeError,
+                                      "Undeclared attribute 'x'" ):
+            data.x
 
 
 class TestAPI(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        # Disable the pyomo.util logging handler
-        cls._handler = logger.handlers[0]
-        logger.removeHandler(cls._handler)
-        logger.addHandler(handler)
-
-    @classmethod
-    def tearDownClass(cls):
-        # Re-enable the pyomo.util logging handler
-        logger.removeHandler(handler)
-        logger.addHandler(cls._handler)
-
-    def test1(self):
-        """Simple test: no keyword arguments or return values"""
+    def test1_no_kwds_no_return(self):
+        #"""Simple test: no keyword arguments or return values"""
         @pyomo_api
         def test1(data):
             """
@@ -127,8 +111,8 @@ class TestAPI(unittest.TestCase):
         #
         self.assertTrue('test1' in PyomoAPIFactory.services())
 
-    def test1a(self):
-        """Simple test: no keyword arguments or return values"""
+    def test1a_no_kwds_single_return(self):
+        #"""Simple test: no keyword arguments or return values"""
         @pyomo_api
         def test1a(data):
             """
@@ -150,8 +134,8 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(retval.data.a, 2)
         self.assertEqual(retval.data.b, [2,2])
 
-    def test1b(self):
-        """Simple test: data keyword argument, no return values"""
+    def test1b_data_kwds_no_return(self):
+        #"""Simple test: data keyword argument, no return values"""
         @pyomo_api
         def test1b(data=None):
             data.a = 2
@@ -167,8 +151,8 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(retval.data.a, 2)
         self.assertEqual(retval.data.b, [2,2])
 
-    def test2(self):
-        """Simple test: no keyword arguments, returning data"""
+    def test2_implicit_no_kwds_return_data(self):
+        #"""Simple test: no keyword arguments, returning data"""
         @pyomo_api
         def test2(data):
             data.a = 2
@@ -185,8 +169,8 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(retval.data.a, 2)
         self.assertEqual(retval.data.b, [2,2])
 
-    def test2a(self):
-        """Simple test: no keyword arguments, returning data"""
+    def test2a_no_kwds_return_data(self):
+        #"""Simple test: no keyword arguments, returning data"""
         @pyomo_api
         def test2a(data):
             """
@@ -209,8 +193,8 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(retval.data.a, 2)
         self.assertEqual(retval.data.b, [2,2])
 
-    def test3(self):
-        """Simple test: keyword arguments, no return values"""
+    def test3_kwds_no_return(self):
+        #"""Simple test: keyword arguments, no return values"""
         @pyomo_api
         def test3(data, x=1, y=2):
             """
@@ -233,8 +217,8 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(retval.data.a, 2)
         self.assertEqual(retval.data.b, [2,2])
 
-    def test3a(self):
-        """Simple test: keyword arguments, no return values"""
+    def test3a_kwds_no_return(self):
+        #"""Simple test: keyword arguments, no return values"""
         @pyomo_api
         def test3a(x=1, y=2, data=None):
             """
@@ -257,8 +241,8 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(retval.data.a, 2)
         self.assertEqual(retval.data.b, [2,2])
 
-    def test4(self):
-        """Simple test: keyword arguments, simple return value"""
+    def test4_kwds_return_data(self):
+        #"""Simple test: keyword arguments, simple return value"""
         @pyomo_api
         def test4(data, x=1, y=2):
             """
@@ -284,8 +268,8 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(retval.data.a, 2)
         self.assertEqual(retval.data.b, [2,2])
 
-    def test5(self):
-        """Simple test: keyword arguments, non-data return values"""
+    def test5_kwds_return_apidata(self):
+        #"""Simple test: keyword arguments, non-data return values"""
         @pyomo_api(outputs=('z'))
         def test5(data, x=1, y=2):
             """
@@ -313,8 +297,8 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(retval.data.b, [2,2])
         self.assertEqual(retval.z, 2)
 
-    def test6(self):
-        """Simple test: keyword arguments, non-data return values with data"""
+    def test6_kwds_return_apidata(self):
+        #"""Simple test: keyword arguments, non-data return values with data"""
         @pyomo_api(outputs=('z'))
         def test6(data, x=1, y=2):
             """
@@ -342,8 +326,8 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(retval.data.b, [2,2])
         self.assertEqual(retval.z, 2)
 
-    def test5a(self):
-        """Outputs specified in docstring: keyword arguments, non-data return values"""
+    def test5a_kwds_return_apidata(self):
+        #"""Outputs specified in docstring: keyword arguments, non-data return values"""
         @pyomo_api
         def test5a(data, x=1, y=2):
             """
@@ -371,8 +355,8 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(retval.data.b, [2,2])
         self.assertEqual(retval.z, 2)
 
-    def test6a(self):
-        """Outputs specified in docstring: keyword arguments, non-data return values with data"""
+    def test6a_kwds_return_apidata(self):
+        #"""Outputs specified in docstring: keyword arguments, non-data return values with data"""
         @pyomo_api
         def test6a(data, x=1, y=2):
             """
@@ -400,8 +384,8 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(retval.data.b, [2,2])
         self.assertEqual(retval.z, 2)
 
-    def test7a(self):
-        """Test with dict data"""
+    def test7a_dict_data(self):
+        #"""Test with dict data"""
         @pyomo_api
         def test7a(data, x=1, y=2):
             """
@@ -424,8 +408,8 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(retval.data.a, 2)
         self.assertEqual(retval.data.b, [2,2])
 
-    def test7b(self):
-        """Test with dict data and return a dictionary"""
+    def test7b_dict_data_return_dict(self):
+        #"""Test with dict data and return a dictionary"""
         @pyomo_api
         def test7b(data, x=1, y=2):
             """
@@ -449,8 +433,8 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(retval.data.a, 2)
         self.assertEqual(retval.data.b, [2,2])
 
-    def test7c(self):
-        """Test with dict data and return a dictionary"""
+    def test7c_dict_data_return_dict(self):
+        #"""Test with dict data and return a dictionary"""
         @pyomo_api
         def test7c(data, x=1, y=2):
             """
@@ -477,8 +461,8 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(retval.data.b, [2,2])
         self.assertEqual(retval.z, 2)
 
-    def test8(self):
-        """Simple test with required nested data"""
+    def test8_nested_data(self):
+        #"""Simple test with required nested data"""
         @pyomo_api
         def test8(data):
             """
@@ -503,8 +487,8 @@ class TestAPI(unittest.TestCase):
         #self.assertEqual(retval.data.a, 2)
         #self.assertEqual(retval.data.b, [2,2])
 
-    def test9(self):
-        """Simple test: no keyword arguments or return values"""
+    def test9_complex_documentation(self):
+        #"""Simple test: no keyword arguments or return values"""
         @pyomo_api
         def test9(data):
             """
@@ -515,13 +499,13 @@ class TestAPI(unittest.TestCase):
             This
 
             is
-  
+
             the
-  
+
             long documentation.
             Required:
                 data: multiline
-                      description of 
+                      description of
                       input data object
                 data.a: More data
             """
@@ -542,148 +526,191 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(test9.__short_doc__, 'This is the\nshort\ndocumentation.')
         self.assertEqual(test9.__long_doc__, 'This\n\nis\n\nthe\n\nlong documentation.')
 
-    @unittest.expectedFailure
-    def test10(self):
-        """Simple test: no keyword arguments or return values"""
+    def test10_missing_required_arg(self):
+        #"""Simple test: no keyword arguments or return values"""
         @pyomo_api
         def test10(data=None, x=1):
             """
             Required:
-                x: 
+                x:
             Optional:
                 data:
             """
             return PyomoAPIData(z=2*x)
         #
-        retval = test10(x=3)
-        self.assertEqual(retval.z, 6)
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Cannot return value 'z' that is not a predefined output" ):
+            retval = test10(x=3)
 
-    @unittest.expectedFailure
-    def test_err1(self):
-        """Expect an error when variable length arguments are supported"""
-        @pyomo_api
-        def err1(*args): pass
+    def test_err1_varargs(self):
+        #"""Expect an error when variable length arguments are supported"""
+        buf = StringIO()
+        with LoggingIntercept(buf, 'pyomo.util'):
+            @pyomo_api
+            def err1(*args): pass
+        self.assertIn(
+            "Attempting to declare Pyomo task with function 'err1' "
+            "that contains variable arguments", buf.getvalue())
 
-    @unittest.expectedFailure
-    def test_err2(self):
-        """Expect an error when variable length keyword arguments are supported"""
-        @pyomo_api
-        def err2(**kwargs): pass
-    
-    @unittest.expectedFailure
-    def test_err3(self):
-        """Expect an error when return value is not None or Options()"""
+    def test_err2_kwds(self):
+        #"""Expect an error when variable length keyword arguments are supported"""
+        buf = StringIO()
+        with LoggingIntercept(buf, 'pyomo.util'):
+            @pyomo_api
+            def err2(**kwargs): pass
+        self.assertIn(
+            "Attempting to declare Pyomo task with function 'err2' "
+            "that contains variable keyword arguments", buf.getvalue())
+
+    def test_err3_invalid_return(self):
+        #"""Expect an error when return value is not None or Options()"""
         @pyomo_api
         def err3(data):
             return 1
-        f(PyomoAPIData())
 
-    @unittest.expectedFailure
-    def test_err4(self):
-        """Expect an error when no data argument is specified"""
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "A Pyomo task function must return either None, a "
+                "PyomoAPIData object, or an instance of dict"):
+            err3(PyomoAPIData())
+
+    def test_err4_missing_input_data(self):
+        #"""Expect an error when no data argument is specified"""
         @pyomo_api
         def err4(data):
             data.a = 2
             data.b[0] = 2
-        test1()
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "A PyomoTask instance must be executed with at "
+                "'data' argument"):
+            err4()
 
-    @unittest.expectedFailure
-    def test_err5(self):
-        """Expect an error when an unspecified return value is given"""
+    def test_err5_unexpected_return(self):
+        #"""Expect an error when an unspecified return value is given"""
         @pyomo_api
         def err5(data):
             return PyomoAPIData(z=None)
-        f(PyomoAPIData())
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Cannot return value 'z' that is not a predefined output "
+                "of a Pyomo task" ):
+            err5(PyomoAPIData())
 
-    @unittest.expectedFailure
-    def test_err6(self):
-        """Expect an error when no data argument is specified"""
-        @pyomo_api
-        def err6(): pass
-        f(PyomoAPIData())
+    def test_err6_missing_input_data(self):
+        #"""Expect an error when no data argument is specified"""
 
-    @unittest.expectedFailure
-    def test_err7a(self):
-        """Argument missing from docstring"""
-        @pyomo_api
-        def err7a(data, x=1, y=2):
-            """
-            Optional:
-                y: integer
-            """
-            pass
-    
-    @unittest.expectedFailure
-    def test_err7b(self):
-        """Argument missing from docstring"""
-        @pyomo_api
-        def err7b(data, x=1, y=2):
-            """
-            Required:
-                x: integer
-            """
-            pass
-    
-    @unittest.expectedFailure
-    def test_err7c(self):
-        """Argument missing from docstring"""
-        @pyomo_api(outputs=('z'))
-        def err7c(data, x=1, y=2):
-            """
-            Required:
-                x: integer
-            Optional:
-                y: integer
-            """
-            return PyomoAPIData(z=1)
-    
-    @unittest.expectedFailure
-    def test_err7A(self):
-        """Unexpected required argument"""
-        @pyomo_api
-        def err7A(data, x=1, y=2):
-            """
-            Required:
-                x: integer
-                bad: integer
-            Optional:
-                y: integer
-            """
-            pass
-    
-    @unittest.expectedFailure
-    def test_err7B(self):
-        """Argument missing from docstring"""
-        @pyomo_api
-        def err7B(data, x=1, y=2):
-            """
-            Required:
-                x: integer
-            Optional:
-                y: integer
-                bad: integer
-            """
-            pass
-    
-    @unittest.expectedFailure
-    def test_err7C(self):
-        """Argument missing from docstring"""
-        @pyomo_api(outputs=('z'))
-        def err7C(data, x=1, y=2):
-            """
-            Required:
-                x: integer
-            Optional:
-                y: integer
-            Return:
-                z: integer
-                bad: integer
-            """
-            return PyomoAPIData(z=1)
-    
-    @unittest.expectedFailure
-    def test_err8a(self):
-        """Missing nested value"""
+        buf = StringIO()
+        with LoggingIntercept(buf, 'pyomo.util'):
+            @pyomo_api
+            def err6(): pass
+        self.assertIn("A Pyomo functor 'err6' must have a 'data argument",
+                      buf.getvalue())
+
+        with self.assertRaisesRegexp(
+                TypeError,
+                "err6\(\) takes no arguments \(1 given\)" ):
+            err6(PyomoAPIData())
+
+    def test_err7a_arg_missing_from_docstring(self):
+        #"""Argument missing from docstring"""
+        buf = StringIO()
+        with LoggingIntercept(buf, 'pyomo.util'):
+            @pyomo_api
+            def err7a(data, x=1, y=2):
+                """
+                Optional:
+                   y: integer
+                """
+                pass
+        self.assertIn("Argument 'x' is not specified in the docstring",
+                      buf.getvalue())
+
+    def test_err7b_arg_missing_from_docstring(self):
+        #"""Argument missing from docstring"""
+        buf = StringIO()
+        with LoggingIntercept(buf, 'pyomo.util'):
+            @pyomo_api
+            def err7b(data, x=1, y=2):
+                """
+                Required:
+                    x: integer
+               """
+                pass
+        self.assertIn("Argument 'y' is not specified in the docstring",
+                      buf.getvalue())
+
+    def test_err7c_return_missing_from_docstring(self):
+        #"""Argument missing from docstring"""
+        buf = StringIO()
+        with LoggingIntercept(buf, 'pyomo.util'):
+            @pyomo_api(outputs=('z'))
+            def err7c(data, x=1, y=2):
+                """
+                Required:
+                    x: integer
+                Optional:
+                    y: integer
+                """
+                return PyomoAPIData(z=1)
+        self.assertIn("Return value 'z' is not specified", buf.getvalue())
+
+    def test_err7A_extra_required_arg(self):
+        #"""Unexpected required argument"""
+        buf = StringIO()
+        with LoggingIntercept(buf, 'pyomo.util'):
+            @pyomo_api
+            def err7A(data, x=1, y=2):
+                """
+                Required:
+                    x: integer
+                    bad: integer
+                Optional:
+                    y: integer
+                """
+                pass
+        self.assertIn("Unexpected name 'bad' in list of required inputs",
+                      buf.getvalue())
+
+    def test_err7B_extra_optional_arg(self):
+        #"""Argument missing from docstring"""
+        buf = StringIO()
+        with LoggingIntercept(buf, 'pyomo.util'):
+            @pyomo_api
+            def err7B(data, x=1, y=2):
+                """
+                Required:
+                    x: integer
+                Optional:
+                    y: integer
+                    bad: integer
+                """
+                pass
+        self.assertIn("Unexpected name 'bad' in list of optional inputs",
+                      buf.getvalue())
+
+    def test_err7C_extra_return_arg(self):
+        #"""Argument missing from docstring"""
+        buf = StringIO()
+        with LoggingIntercept(buf, 'pyomo.util'):
+            @pyomo_api(outputs=('z'))
+            def err7C(data, x=1, y=2):
+                """
+                Required:
+                    x: integer
+                Optional:
+                    y: integer
+                Return:
+                    z: integer
+                    bad: integer
+                """
+                return PyomoAPIData(z=1)
+        self.assertIn("Unexpected name 'bad' in list of outputs",
+                      buf.getvalue())
+
+    def test_err8a_missing_nested_apidata(self):
+        #"""Missing nested value"""
         @pyomo_api
         def err8a(data):
             """
@@ -691,11 +718,13 @@ class TestAPI(unittest.TestCase):
                 data.x: integer
             """
             pass
-        err8a(PyomoAPIData())
-    
-    @unittest.expectedFailure
-    def test_err8b(self):
-        """Nested value with None value"""
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "None value found for nested attribute 'data.x'" ):
+            err8a(PyomoAPIData())
+
+    def test_err8b_missing_nested_arg(self):
+        #"""Nested value with None value"""
         @pyomo_api
         def err8b(data):
             """
@@ -703,11 +732,13 @@ class TestAPI(unittest.TestCase):
                 data.x: integer
             """
             pass
-        err8b(PyomoAPIData(data=PyomoAPIData()))
-    
-    @unittest.expectedFailure
-    def test_err8c(self):
-        """Nested value with None value"""
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "None value found for nested attribute 'data.x'" ):
+            err8b(PyomoAPIData(data=PyomoAPIData()))
+
+    def test_err8c_missing_nested_dict_arg(self):
+        #"""Nested value with None value"""
         @pyomo_api
         def err8c(data):
             """
@@ -715,21 +746,13 @@ class TestAPI(unittest.TestCase):
                 data.x.y: integer
             """
             pass
-        err8c(PyomoAPIData(x={}))
-    
-    @unittest.expectedFailure
-    def test_err9(self):
-        """Redefinied test functions"""
-        @pyomo_api
-        def err9(data):
-            pass
-        @pyomo_api
-        def err9(data):
-            pass
-    
-    @unittest.expectedFailure
-    def test_err10(self):
-        """Simple test with required nested data"""
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Failed to verify existence of nested attribute 'data.x.y'" ):
+            err8c(PyomoAPIData(x={}))
+
+    def test_err10_test_with_nested_data(self):
+        #"""Simple test with required nested data"""
         @pyomo_api
         def err10(data):
             """
@@ -738,7 +761,9 @@ class TestAPI(unittest.TestCase):
                 data.foo.bar:
             """
             data.foo.foo = 3
-            data.a = 2
+            with self.assertRaisesRegexp(
+                    AttributeError, "Undeclared attribute 'a'" ):
+                data.a = 2
         #
         options = PyomoAPIData()
         options.foo = PyomoAPIData()
@@ -750,50 +775,73 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(retval.data.b, [1,2])
         self.assertEqual(retval.data.foo.foo, 3)
 
-    @unittest.expectedFailure
-    def test_err10a(self):
-        """Expect an error when the same functor is defined twice"""
-        @pyomo_api
-        def err10a(data): pass
+    def test_err10a_duplicate_function(self):
+        #"""Expect an error when the same functor is defined twice"""
+        buf = StringIO()
+        with LoggingIntercept(buf, 'pyomo.util'):
+            @pyomo_api
+            def err10a(data): pass
 
-        @pyomo_api
-        def err10a(data): pass
+            @pyomo_api
+            def err10a(data): pass
+        self.assertIn("Cannot define API err10a, since this API name "
+                      "is already defined", buf.getvalue())
 
-    @unittest.expectedFailure
-    def test_err10b(self):
-        """Expect an error when the same functor is defined twice"""
+    def test_err10b_duplicate_namespace_function(self):
+        #"""Expect an error when the same functor is defined twice"""
+        buf = StringIO()
+        with LoggingIntercept(buf, 'pyomo.util'):
+            @pyomo_api(namespace='foo')
+            def err10b(data): pass
+
+            @pyomo_api(namespace='foo')
+            def err10b(data): pass
+        self.assertIn("Cannot define API foo.err10b, since this API name "
+                      "is already defined", buf.getvalue())
+
+    def test_err10c_duplicate_namespace_scoping(self):
+        #"""Expect an error when the same functor is defined twice"""
         @pyomo_api(namespace='foo')
-        def err10b(data): pass
+        def err10c(data): pass
 
-        @pyomo_api(namespace='foo')
-        def err10b(data): pass
+        @pyomo_api()
+        def err10c(data): pass
 
-    @unittest.expectedFailure
-    def test_err11(self):
-        """Expect an error when 'data' is not defined when it is required"""
+    def test_err11_missing_data(self):
+        #"""Expect an error when 'data' is not defined when it is required"""
         @pyomo_api
         def err11(data=None, x=1):
             """
             Required:
-                data: 
-                x: 
+                data:
+                x:
             """
-        err11(x=2)
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "A PyomoTask instance must be executed with at 'data' "
+                "argument" ):
+            err11(x=2)
 
-    @unittest.expectedFailure
-    def test_err12(self):
-        """Expect an error when multiple data options are provided"""
+    def test_err12_extra_data(self):
+        #"""Expect an error when multiple data options are provided"""
         @pyomo_api
         def err12(data): pass
-        err12({}, {})
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "A PyomoTask instance can only be executed with a single "
+                "non-keyword argument" ):
+            err12({}, {})
 
-    @unittest.expectedFailure
-    def test_err13(self):
-        """Expect an error when returning something other than None, PyomoAPIData or a dict object"""
+    def test_err13_bad_return_type(self):
+        #"""Expect an error when returning something other than None, PyomoAPIData or a dict object"""
         @pyomo_api
         def err13(data):
             return set()
-        err13({})
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "A Pyomo task function must return either None, a "
+                "PyomoAPIData object, or an instance of dict" ):
+            err13({})
 
 if __name__ == "__main__":
     unittest.main()
