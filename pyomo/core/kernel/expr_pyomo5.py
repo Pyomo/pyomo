@@ -111,6 +111,9 @@ class clone_counter_context(object):
 clone_counter = clone_counter_context()
 
 
+#
+# TODO: Confirm that this is not necessary
+#
 class ignore_entangled_context(object):
     detangle = [True]
 
@@ -182,7 +185,7 @@ class SimpleExpressionVisitor(SimpleVisitor):
             current = dq.popleft()
             self.visit(current)
             #for c in self.children(current):
-            for c in current._args:
+            for c in current.args:
                 #if self.is_leaf(c):
                 if c.__class__ in native_numeric_types or not c.is_expression() or c.nargs() == 0:
                     self.visit(c)
@@ -200,7 +203,7 @@ class SimpleExpressionVisitor(SimpleVisitor):
             current = dq.popleft()
             #self.visit(current)
             #for c in self.children(current):
-            for c in current._args:
+            for c in current.args:
                 #if self.is_leaf(c):
                 if c.__class__ in native_numeric_types or not c.is_expression() or c.nargs() == 0:
                     ans = self.visit(c)
@@ -232,7 +235,7 @@ class ValueExpressionVisitor(ValueVisitor):
                 dq.pop()
             else:
                 #for c in reversed(self.children(current)):
-                for c in reversed(current._args):
+                for c in reversed(current.args):
                     dq.append(c)
                 expanded.add(id(current))
                 _values.append( [] )
@@ -1085,6 +1088,9 @@ def NEW_polynomial_degree(node):
 
 
 def polynomial_degree(node):
+    # TODO: Confirm whether this check works
+    #if not node._potentially_variable():
+    #    return 0
     _stack = [ (node, node._args, 0, node.nargs(), []) ]
     while 1:  # Note: 1 is faster than True for Python 2.x
         _obj, _argList, _idx, _len, _result = _stack.pop()
@@ -1326,18 +1332,27 @@ class _ExpressionBase(NumericValue):
     fixed                   T       T       F       T
     """
 
-    __slots__ =  ('_args','clone_info')
+    __slots__ =  ('_args','_is_owned')
     PRECEDENCE = 0
 
     def __init__(self, args):
         self._args = args
         if _getrefcount_available:
-            self.clone_info = UNREFERENCED_EXPR_COUNT
+            self._is_owned = UNREFERENCED_EXPR_COUNT
         else:
-            self.clone_info = False
+            self._is_owned = False
             for arg in args:
                 if arg.__class__ in pyomo5_expression_types:
-                    arg.clone_info = True
+                    arg._is_owned = True
+
+    def arg(self, index):
+        if index < 0 or index >= self.nargs():
+            raise KeyError("Invalid index for expression argument: %d" % index)
+        return self._args[index]
+
+    @property
+    def args(self):
+        return islice(self._args, self.nargs())
 
     def nargs(self):
         return 2
@@ -1586,12 +1601,12 @@ class _ExternalFunctionExpression(_ExpressionBase):
         self._args = args
         self._fcn = fcn
         if _getrefcount_available:
-            self.clone_info = UNREFERENCED_EXPR_COUNT
+            self._is_owned = UNREFERENCED_EXPR_COUNT
         else:
-            self.clone_info = False
+            self._is_owned = False
             for arg in args:
                 if arg.__class__ in pyomo5_expression_types:
-                    arg.clone_info = True
+                    arg._is_owned = True
 
     def nargs(self):
         return len(self._args)
@@ -2000,12 +2015,12 @@ class _MultiProdExpression(_ProductExpression):
         self._args = args
         self._nnum = nnum
         if _getrefcount_available:
-            self.clone_info = UNREFERENCED_EXPR_COUNT
+            self._is_owned = UNREFERENCED_EXPR_COUNT
         else:
-            self.clone_info = False
+            self._is_owned = False
             for arg in args:
                 if arg.__class__ in pyomo5_expression_types:
-                    arg.clone_info = True
+                    arg._is_owned = True
 
     def nargs(self):
         return len(self._args)
@@ -2258,7 +2273,7 @@ class _ViewSumExpression(_SumExpression):
 
     def __init__(self, args, new_arg=None):
         if args.__class__ is _ViewSumExpression:
-            args.clone_info = True
+            args._is_owned = True
             self._args = args._args
         else:
             self._args = args
@@ -2267,12 +2282,9 @@ class _ViewSumExpression(_SumExpression):
         elif not new_arg is None:
             self._args.append(new_arg)
         self._nargs = len(self._args)
-        if _getrefcount_available:
-            self.clone_info = UNREFERENCED_EXPR_COUNT
-        else:
-            self.clone_info = False
-            if not new_arg is None and new_arg.__class__ in pyomo5_expression_types:
-                new_arg.clone_info = True
+        self._is_owned = False
+        if not new_arg is None and new_arg.__class__ in pyomo5_expression_types:
+            new_arg._is_owned = True
 
     def nargs(self):
         return self._nargs
@@ -2333,11 +2345,11 @@ class _MutableViewSumExpression(_ViewSumExpression):
             self._args.append(new_arg)
         self._nargs = len(self._args)
         if _getrefcount_available:
-            self.clone_info = UNREFERENCED_EXPR_COUNT
+            self._is_owned = UNREFERENCED_EXPR_COUNT
         else:
-            self.clone_info = False
+            self._is_owned = False
             if new_arg.__class__ in pyomo5_expression_types:
-                new_arg.clone_info = True
+                new_arg._is_owned = True
 
 
 
@@ -2351,12 +2363,12 @@ class _MutableMultiSumExpression(_SumExpression):
     def __init__(self, args):
         self._args = list(args)
         if _getrefcount_available:
-            self.clone_info = UNREFERENCED_EXPR_COUNT
+            self._is_owned = UNREFERENCED_EXPR_COUNT
         else:
-            self.clone_info = False
+            self._is_owned = False
             for arg in args:
                 if arg.__class__ in pyomo5_expression_types:
-                    arg.clone_info = True
+                    arg._is_owned = True
 
     def nargs(self):
         return len(self._args)
@@ -2418,12 +2430,12 @@ class _GetItemExpression(_ExpressionBase):
         self._args = args
         self._base = base
         if _getrefcount_available:
-            self.clone_info = UNREFERENCED_EXPR_COUNT
+            self._is_owned = UNREFERENCED_EXPR_COUNT
         else:
-            self.clone_info = False
+            self._is_owned = False
             for arg in args:
                 if arg.__class__ in pyomo5_expression_types:
-                    arg.clone_info = True
+                    arg._is_owned = True
 
     def nargs(self):
         return len(self._args)
@@ -2498,15 +2510,15 @@ class Expr_if(_ExpressionBase):
         if self._if.__class__ in native_types:
             self._if = as_numeric(self._if)
         if _getrefcount_available:
-            self.clone_info = UNREFERENCED_EXPR_IF_COUNT
+            self._is_owned = UNREFERENCED_EXPR_IF_COUNT
         else:
-            self.clone_info = False
+            self._is_owned = False
             if IF.__class__ in pyomo5_expression_types:
-                IF.clone_info = True
+                IF._is_owned = True
             if THEN.__class__ in pyomo5_expression_types:
-                THEN.clone_info = True
+                THEN._is_owned = True
             if ELSE.__class__ in pyomo5_expression_types:
-                ELSE.clone_info = True
+                ELSE._is_owned = True
 
     def nargs(self):
         return 3
@@ -2585,11 +2597,11 @@ class _UnaryFunctionExpression(_ExpressionBase):
         self._name = name
         self._fcn = fcn
         if _getrefcount_available:
-            self.clone_info = UNREFERENCED_INTRINSIC_EXPR_COUNT
+            self._is_owned = UNREFERENCED_INTRINSIC_EXPR_COUNT
         else:
-            self.clone_info = False
+            self._is_owned = False
             if args[0].__class__ in pyomo5_expression_types:
-                args[0].clone_info = True
+                args[0]._is_owned = True
 
     def nargs(self):
         return 1
@@ -2680,9 +2692,9 @@ class _LinearExpression(_ExpressionBase):
         self.linear_vars = []
         self._args = tuple()
         if _getrefcount_available:
-            self.clone_info = UNREFERENCED_EXPR_COUNT
+            self._is_owned = UNREFERENCED_EXPR_COUNT
         else:
-            self.clone_info = False
+            self._is_owned = False
 
     def nargs(self):
         return 0
@@ -2927,9 +2939,9 @@ class _QuadraticExpression(_ExpressionBase):
         self.quadratic_vars = []
         self._args = tuple()
         if _getrefcount_available:
-            self.clone_info = UNREFERENCED_EXPR_COUNT
+            self._is_owned = UNREFERENCED_EXPR_COUNT
         else:
-            self.clone_info = False
+            self._is_owned = False
 
     def nargs(self):
         return 0
@@ -2982,22 +2994,20 @@ class _StaticQuadraticExpression(_QuadraticExpression):
 #-------------------------------------------------------
 
 def _process_arg(obj):
-    if obj.is_expression():
-        if ignore_entangled_expressions.detangle[-1] and \
-           obj.__class__ in pyomo5_expression_types:
+    #if False and obj.__class__ is _ViewSumExpression or obj.__class__ is _MutableViewSumExpression:
+    #    if ignore_entangled_expressions.detangle[-1] and obj._is_owned:
             #
-            # If the expression is owned, then we need to
+            # If the viewsum expression is owned, then we need to
             # clone it to avoid creating an entangled expression.
             #
-            # But we don't have to worry about entanglement amongst non-expression
-            # objects.
+            # But we don't have to worry about entanglement amongst other immutable
+            # expression objects.
             #
-            # Compress the expression before cloning, which 
-            # should make cloning less expensive.
-            #
-            if (_getrefcount_available and getrefcount(obj) > obj.clone_info) or obj.clone_info is True:
-                return clone_expression( compress_expression(obj) , clone_leaves=False )
-        return obj
+    #        return clone_expression( obj, clone_leaves=False )
+    #    return obj
+
+    #if obj.is_expression():
+    #    return obj
 
     if obj.__class__ is NumericConstant:
         return value(obj)
@@ -3019,12 +3029,6 @@ def _process_arg(obj):
     return obj
 
 
-if _getrefcount_available:
-    _SumClass_ = _MutableMultiSumExpression
-else:
-    _SumClass_ = _ViewSumExpression
-    #_SumClass_ = _SumExpression
-
 #@profile
 def generate_expression(etype, _self, _other):
 
@@ -3035,11 +3039,11 @@ def generate_expression(etype, _self, _other):
         if etype >= _unary:
             return _self._combine_expr(etype, None)
         if _other.__class__ is not _LinearExpression:
-            if not _other.__class__ in native_types:
+            if not (_other.__class__ in native_types or _other.is_expression()):
                 _other = _process_arg(_other)
         return _self._combine_expr(etype, _other)
     elif _other.__class__ is _LinearExpression:
-        if not _self.__class__ in native_types:
+        if not (_self.__class__ in native_types or _self.is_expression()):
             _self = _process_arg(_self)
         return _other._combine_expr(-etype, _self)
 
@@ -3047,7 +3051,7 @@ def generate_expression(etype, _self, _other):
     # A mutable sum is used as a context manager, so we don't
     # need to process it to see if it's entangled.
     #
-    if not (_self.__class__ in native_types or _self.__class__ is _MutableViewSumExpression):
+    if not (_self.__class__ in native_types or _self.is_expression()):
         _self = _process_arg(_self)
 
     if etype >= _unary:
@@ -3080,7 +3084,7 @@ def generate_expression(etype, _self, _other):
             raise DeveloperError(
                 "Unexpected unary operator id (%s)" % ( etype, ))
 
-    if not (_other.__class__ in native_types or _other.__class__ is _MutableViewSumExpression):
+    if not (_other.__class__ in native_types or _other.is_expression()):
         _other = _process_arg(_other)
 
     if etype < 0:
@@ -3133,14 +3137,14 @@ def generate_expression(etype, _self, _other):
         #
         # x + y
         #
-        if _self.__class__ is _ViewSumExpression:
-            if not _other.__class__ in native_numeric_types or _other != 0:
-                return _SumClass_(_self, _other)
-            return _self
-        elif _other.__class__ is _ViewSumExpression:
-            if not _self.__class__ in native_numeric_types or _self != 0:
-                return  _SumClass_(_other, _self)
-            return _other
+        if _self.__class__ is _ViewSumExpression and not _self._is_owned:
+            if _other.__class__ in native_numeric_types and _other == 0:
+                return _self
+            return _ViewSumExpression(_self, _other)
+        elif _other.__class__ is _ViewSumExpression and not _other._is_owned:
+            if _self.__class__ in native_numeric_types and _self == 0:
+                return _other
+            return _ViewSumExpression(_other, _self)
         elif _self.__class__ is _MutableViewSumExpression:
             _self.extend(_other)
             return _self
@@ -3155,8 +3159,8 @@ def generate_expression(etype, _self, _other):
             if _self.is_constant():
                 return _Constant_SumExpression((_self, _other))
             elif _self._potentially_variable():
-                #return _SumClass_((_other, _self))
-                return _SumClass_([_other, _self])
+                #return _ViewSumExpression((_other, _self))
+                return _ViewSumExpression([_other, _self])
             return _NPV_SumExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
             if _self == 0:      #isclose(_self, 0):
@@ -3164,15 +3168,15 @@ def generate_expression(etype, _self, _other):
             if _other.is_constant():
                 return _Constant_SumExpression((_self, _other))
             elif _other._potentially_variable():
-                #return _SumClass_((_self, _other))
-                return _SumClass_([_self, _other])
+                #return _ViewSumExpression((_self, _other))
+                return _ViewSumExpression([_self, _other])
             return _NPV_SumExpression((_self, _other))
         elif _other._potentially_variable():
-            #return _SumClass_((_self, _other))
-            return _SumClass_([_self, _other])
+            #return _ViewSumExpression((_self, _other))
+            return _ViewSumExpression([_self, _other])
         elif _self._potentially_variable():
-            #return _SumClass_((_other, _self))
-            return _SumClass_([_other, _self])
+            #return _ViewSumExpression((_other, _self))
+            return _ViewSumExpression([_other, _self])
         elif not _other.is_constant():
             return _NPV_SumExpression((_self, _other))
         elif not _self.is_constant():
@@ -3193,8 +3197,8 @@ def generate_expression(etype, _self, _other):
             if _self.is_constant():
                 return _Constant_SumExpression((-_other, _self))
             elif _self._potentially_variable():
-                #return _SumClass_((-_other, _self))
-                return _SumClass_([-_other, _self])
+                #return _ViewSumExpression((-_other, _self))
+                return _ViewSumExpression([-_other, _self])
             return _NPV_SumExpression((-_other, _self))
         elif _self.__class__ in native_numeric_types:
             if isclose(_self, 0):
@@ -3206,15 +3210,15 @@ def generate_expression(etype, _self, _other):
             if _other.is_constant():    
                 return _Constant_SumExpression((_self, _Constant_NegationExpression((_other,))))
             elif _other._potentially_variable():    
-                #return _SumClass_((_self, _NegationExpression((_other,))))
-                return _SumClass_([_self, _NegationExpression((_other,))])
+                #return _ViewSumExpression((_self, _NegationExpression((_other,))))
+                return _ViewSumExpression([_self, _NegationExpression((_other,))])
             return _NPV_SumExpression((_self, _NPV_NegationExpression((_other,))))
         elif _other._potentially_variable():    
-            #return _SumClass_((_self, _NegationExpression((_other,))))
-            return _SumClass_([_self, _NegationExpression((_other,))])
+            #return _ViewSumExpression((_self, _NegationExpression((_other,))))
+            return _ViewSumExpression([_self, _NegationExpression((_other,))])
         elif _self._potentially_variable():
-            #return _SumClass_((_NPV_NegationExpression((_other,)), _self))
-            return _SumClass_([_NPV_NegationExpression((_other,)), _self])
+            #return _ViewSumExpression((_NPV_NegationExpression((_other,)), _self))
+            return _ViewSumExpression([_NPV_NegationExpression((_other,)), _self])
         elif not _other.is_constant():    
             return _NPV_SumExpression((_self, _NPV_NegationExpression((_other,))))
         elif not _self.is_constant():    
@@ -3312,9 +3316,9 @@ def generate_relational_expression(etype, lhs, rhs):
     # arguments in the relational Expression's _args will be guaranteed
     # to be NumericValues (just as they are for all other Expressions).
     #
-    if not lhs.__class__ in native_types:
+    if not (lhs.__class__ in native_types or lhs.is_expression()):
         lhs = _process_arg(lhs)
-    if not rhs.__class__ in native_types:
+    if not (rhs.__class__ in native_types or rhs.is_expression()):
         rhs = _process_arg(rhs)
 
     if lhs.__class__ in native_numeric_types:
@@ -3445,7 +3449,7 @@ def generate_intrinsic_function_expression(arg, name, fcn):
     if arg.__class__ in native_types:
         return fcn(arg)
 
-    if not arg.__class__ in native_types:
+    if not (arg.__class__ in native_types or arg.is_expression()):
         _process_arg(arg)
     if arg._potentially_variable():
         return _UnaryFunctionExpression(arg, name, fcn)
