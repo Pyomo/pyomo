@@ -1182,9 +1182,6 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         e3 = e1 + m.d
         e = e2 * e3
 
-        self.assertEqual(e.size(), 9)
-        #_e = EXPR.compress_expression(e)
-        #
         self.assertIs(type(e), EXPR._ProductExpression)
         self.assertEqual(len(e._args), 2)
 
@@ -1195,8 +1192,9 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[0]._args[2], m.c)
 
         self.assertIs(type(e._args[1]), EXPR._ViewSumExpression)
-        self.assertIs(len(e._args[1]._args), 3)
-        self.assertEqual(e.size(), 9)
+        self.assertIs(len(e._args[1]._args), 2)
+        self.assertIs(e._args[1]._args[1], m.d)
+        self.assertEqual(e.size(), 10)
 
         #
         # Check the structure of nested products
@@ -3333,9 +3331,9 @@ class EntangledExpressionErrors(unittest.TestCase):
 
         self.assertEqual( e1.nargs(), 2)
         self.assertEqual( e2.nargs(), 3)
-        self.assertEqual( e3.nargs(), 3)
+        self.assertEqual( e3.nargs(), 2)
 
-        self.assertNotEqual( id(e2._args[2]), id(e3._args[2]))
+        self.assertNotEqual( id(e2._args[2]), id(e3._args[1]._args[1]))
 
 
 class TestSummationExpression(unittest.TestCase):
