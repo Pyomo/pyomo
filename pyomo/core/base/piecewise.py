@@ -47,6 +47,7 @@ import types
 from pyutilib.enum import Enum
 from pyutilib.misc import flatten_tuple
 
+from pyomo.util.timing import ConstructionTimer
 from pyomo.core.base.component import register_component
 from pyomo.core.base.block import Block, _BlockData
 from pyomo.core.base.constraint import Constraint, ConstraintList
@@ -1168,8 +1169,12 @@ class Piecewise(Block):
         """
         A quick hack to call add after data has been loaded.
         """
-        generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
+        generate_debug_messages \
+            = __debug__ and logger.isEnabledFor(logging.DEBUG)
 
+        if self._constructed:
+            return
+        timer = ConstructionTimer(self)
         # We need to be able to add and construct new model
         # components on the fly so we make this Block behave concretely
         self._constructed=True
@@ -1187,6 +1192,7 @@ class Piecewise(Block):
                 if generate_debug_messages:
                     logger.debug("  Constructing Piecewise index "+str(index))
                 self.add(index, _is_indexed=is_indexed)
+        timer.report()
 
     def _default(self, idx):
         return self._data.setdefault(idx, _PiecewiseData(self))
