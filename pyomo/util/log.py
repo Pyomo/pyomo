@@ -12,6 +12,23 @@
 #
 
 import logging
+from pyutilib.misc import LogHandler
+
+# __file__ fails if script is called in different ways on Windows
+# __file__ fails if someone does os.chdir() before
+# sys.argv[0] also fails because it doesn't not always contains the path
+from os.path import dirname as _dir, abspath as _abs
+import inspect
+_pyomo_base = _dir(_dir(_dir(_abs(inspect.getfile(inspect.currentframe())))))
+
+#
+# Set up the root Pyomo namespace logger
+#
+pyomo_logger = logging.getLogger('pyomo')
+pyomo_logger.addHandler( LogHandler(
+    _pyomo_base, verbosity=lambda: pyomo_logger.isEnabledFor(logging.DEBUG) ))
+pyomo_logger.setLevel(logging.WARNING)
+
 
 class LoggingIntercept(object):
     """Context manager for intercepting messages sent to a log stream
