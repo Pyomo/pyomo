@@ -42,16 +42,21 @@ class LoggingIntercept(object):
         self.handler = logging.StreamHandler(output)
         self.handler.setFormatter(logging.Formatter('%(message)s'))
         self.handler.setLevel(level)
-        self.level = level
         self.module = module
+        self._save = None
 
     def __enter__(self):
         logger = logging.getLogger(self.module)
-        self.level = logger.level
+        self._save = logger.level, logger.propagate, logger.handlers
+        logger.handlers = []
+        logger.propagate = 0
         logger.setLevel(self.handler.level)
         logger.addHandler(self.handler)
 
     def __exit__(self, et, ev, tb):
         logger = logging.getLogger(self.module)
         logger.removeHandler(self.handler)
-        logger.setLevel(self.level)
+        logger.setLevel(self._save[0])
+        logger.propagate = self._save[1]
+        for h in self._save[2]:
+            logger.handlers.append(h)
