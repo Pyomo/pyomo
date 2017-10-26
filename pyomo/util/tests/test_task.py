@@ -57,10 +57,13 @@ c:
         data.c.y = 2
         data['aa'] = 'here is more'
         data.clean()
+        # Because the PyomoAPIData is a dict, the repr() is subject to
+        # change between python versions.  Cast back to a dict and
+        # verify.
         self.assertEqual(
-            repr(data),
-            "{'a': 1, 'aa': 'here is more', 'c': {'y': 2, 'x': 1}, "
-            "'b': [1, 2]}")
+            eval(repr(data)),
+            eval("{'a': 1, 'aa': 'here is more', 'b': [1, 2], "
+                 "'c': {'y': 2, 'x': 1}}"))
         self.assertEqual(len(data._dirty_), 0)
 
     def test_err_unknown_attr(self):
@@ -608,9 +611,11 @@ class TestAPI(unittest.TestCase):
         self.assertIn("A Pyomo functor 'err6' must have a 'data argument",
                       buf.getvalue())
 
+        # Note: the TypeError message changes in Python 3.6, so we need
+        # a weaker regexp.
         with self.assertRaisesRegexp(
                 TypeError,
-                "err6\(\) takes no arguments \(1 given\)" ):
+                "err6\(\) takes .* arguments .* given" ):
             err6(PyomoAPIData())
 
     def test_err7a_arg_missing_from_docstring(self):
