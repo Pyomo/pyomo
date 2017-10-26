@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -14,8 +14,28 @@
 import logging
 
 class LoggingIntercept(object):
-    """Context manager for temporarily grabbing the output from a log
-    stream.  Useful for testing logged error messages.
+    """Context manager for intercepting messages sent to a log stream
+
+    This class is designed to enable easy testing of log messages.
+
+    The LoggingIntercept context manager will intercept messages sent to
+    a log stream matching a specified level and send the messages to the
+    specified output stream.  Other handlers registered to the target
+    logger will be temporarily removed and the logger will be set not to
+    propagate messages up to higher-level loggers.
+
+    Args:
+        output (FILE): the file stream to send log messages to
+        module (str): the target logger name to intercept
+        level (int): the logging level to intercept
+
+    Examples:
+        >>> import six, logging
+        >>> from pyomo.util.log import LoggingInercept
+        >>> buf = six.String()
+        >>> with LoggingIntercept(buf, 'pyomo.core', logging.WARNING):
+        ...     logging.getLogger('pyomo.core').warn('a simple message')
+        >>> buf.getvalue()
     """
 
     def __init__(self, output, module=None, level=logging.WARNING):
