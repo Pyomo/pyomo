@@ -680,6 +680,8 @@ arguments (which have been ignored):"""
                 "model; returning a clone of the current model instance.")
             return self.clone()
 
+        if report_timing:
+            pyomo.util.timing.report_timing()
 
         if name is None:
             name = self.name
@@ -716,8 +718,7 @@ arguments (which have been ignored):"""
 
         instance.load( data,
                        namespaces=_namespaces,
-                       profile_memory=profile_memory,
-                       report_timing=report_timing )
+                       profile_memory=profile_memory )
 
         #
         # Preprocess the new model
@@ -767,10 +768,15 @@ arguments (which have been ignored):"""
                 preprocessor = self.config.preprocessor
             pyomo.util.PyomoAPIFactory(preprocessor)(self.config, model=self)
 
-    def load(self, arg, namespaces=[None], profile_memory=0, report_timing=False):
+    def load(self, arg, namespaces=[None], profile_memory=0, report_timing=None):
         """
         Load the model with data from a file, dictionary or DataPortal object.
         """
+        if report_timing is not None:
+            deprecation_warning(
+                "The report_timing argument to Model.load() is deprecated.  "
+                "Use pyomo.util.timing.report_timing() to enable reporting "
+                "construction timing")
         if arg is None or isinstance(arg, basestring):
             dp = DataPortal(filename=arg, model=self)
         elif type(arg) is DataPortal:
@@ -795,8 +801,7 @@ from solvers are immediately loaded into the original model instance.""")
             raise ValueError(msg % str( type(arg) ))
         self._load_model_data(dp,
                               namespaces,
-                              profile_memory=profile_memory,
-                              report_timing=report_timing)
+                              profile_memory=profile_memory)
 
     def _tuplize(self, data, setobj):
         if data is None:            #pragma:nocover
@@ -829,12 +834,6 @@ from solvers are immediately loaded into the original model instance.""")
             #
             profile_memory = kwds.get('profile_memory', 0)
 
-            #
-            # It is often useful to report timing results for various
-            # activities during model construction.
-            #
-            report_timing = kwds.get('report_timing', False)
-
             if (pympler_available is True) and (profile_memory >= 2):
                 mem_used = muppy.get_size(muppy.get_objects())
                 print("")
@@ -859,21 +858,14 @@ from solvers are immediately loaded into the original model instance.""")
             # Initialize each component in order.
             #
 
-            if report_timing is True:
-                construction_start_time = time.time()
-
             for component_name, component in iteritems(self.component_map()):
 
                 if component.type() is Model:
                     continue
 
-                if report_timing is True:
-                    start_time = time.time()
-                    clone_counter = expr_common.clone_counter
-
                 self._initialize_component(modeldata, namespaces, component_name, profile_memory)
 
-                if report_timing is True:
+                if False:
                     total_time = time.time() - start_time
                     if isinstance(component, IndexedComponent):
                         clen = len(component)
@@ -893,10 +885,6 @@ from solvers are immediately loaded into the original model instance.""")
             # Uncommenting the next two lines switches this (command-line fails because it tries to expand connectors twice)
             #connector_expander = ConnectorExpander()
             #connector_expander.apply(instance=self)
-
-            if report_timing is True:
-                total_construction_time = time.time() - construction_start_time
-                print("      %6.2f seconds required to construct instance=%s" % (total_construction_time, self.name))
 
             if (pympler_available is True) and (profile_memory >= 2):
                 print("")
