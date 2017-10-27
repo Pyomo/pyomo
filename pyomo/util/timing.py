@@ -12,6 +12,7 @@ def report_timing(stream=True):
         if stream is True:
             stream = sys.stdout
         handler = logging.StreamHandler(stream)
+        handler.setFormatter(logging.Formatter("      %(message)s"))
         _logger.addHandler(handler)
         return handler
     else:
