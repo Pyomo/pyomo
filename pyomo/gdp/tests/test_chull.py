@@ -523,6 +523,35 @@ class IndexedDisjunction(unittest.TestCase):
     # where the indices are tuples. (This is to test that when we combine the
     # indices and the constraint name we get what we expect in both cases.)
 
+class DisaggregatedVarNamingConflict(unittest.TestCase):
+    @staticmethod
+    def makeModel():
+        m = ConcreteModel()
+        m.b = Block()
+        m.b.x = Var(bounds=(0, 10))
+        m.add_component("b.x", Var(bounds=(-9, 9)))
+        def disjunct_rule(d, i):
+            m = d.model()
+            if i:
+                d.cons_block = Constraint(expr=m.b.x >= 5)
+                d.cons_model = Constraint(expr=m.component("b.x")==0)
+            else:
+                d.cons_model = Constraint(expr=m.component("b.x") <= -5)
+        m.disjunct = Disjunct([0,1], rule=disjunct_rule)
+        m.disjunction = Disjunction(expr=[m.disjunct[0], m.disjunct[1]])
+
+        return m
+    
+    def test_disaggregation_constraints(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.chull').apply_to(m)
+
+        disCons = m._gdp_chull_relaxation_disjunction_disaggregation
+        self.assertIsInstance(disCons, Constraint)
+        self.assertEqual(len(disCons), 2)
+        # TODO: the above thing fails because the index gets overwritten. I
+        # don't know how to keep them unique at the moment. When I do, I also
+        # need to test that the indices are actually what we expect.
 
 # TODO
 # class NestedDisjunction(unittest.TestCase):
