@@ -142,7 +142,8 @@ def setup_environment(data):
         else:
             action = "running"
 
-        msg = "Unexpected exception (%s) while %s %s:\n" % (etype.__name__, action, name)
+        msg = "Unexpected exception (%s) while %s %s:\n    " \
+              % (etype.__name__, action, name)
 
         #
         # This handles the case where the error is propagated by a KeyError.
@@ -152,7 +153,7 @@ def setup_environment(data):
         #
         valueStr = str(value)
         if etype == KeyError:
-            valueStr = valueStr.replace("\\n","\n")
+            valueStr = valueStr.replace(r"\n","\n")
             if valueStr[0] == valueStr[-1] and valueStr[0] in "\"'":
                 valueStr = valueStr[1:-1]
 
@@ -994,7 +995,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             else:
                 action = "running"
 
-            msg = "Unexpected exception while %s %s:\n" % (action, model)
+            msg = "Unexpected exception while %s %s:\n    " % (action, model)
             #
             # This handles the case where the error is propagated by a KeyError.
             # KeyError likes to pass raw strings that don't handle newlines

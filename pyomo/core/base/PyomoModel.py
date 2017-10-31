@@ -231,7 +231,8 @@ class ModelSolutions(object):
         #
         if (results.solver.status == pyomo.opt.SolverStatus.warning):
             logger.warn('Loading a SolverResults object with a '
-                        'warning status into model=%s;\nmessage from solver=%s'
+                        'warning status into model=%s;\n'
+                        '    message from solver=%s'
                         % (instance.name, results.solver.Message))
         #
         # If the solver status not one of either OK or Warning, then generate an error.
@@ -934,7 +935,7 @@ from solvers are immediately loaded into the original model instance.""")
         except:
             err = sys.exc_info()[1]
             logger.error(
-                "Constructing component '%s' from data=%s failed:\n%s: %s",
+                "Constructing component '%s' from data=%s failed:\n    %s: %s",
                 str(declaration.name), str(data).strip(),
                 type(err).__name__, err )
             raise
@@ -942,7 +943,7 @@ from solvers are immediately loaded into the original model instance.""")
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
                 _out = StringIO()
                 declaration.pprint(ostream=_out)
-                logger.debug("Constructed component '%s':\n%s"
+                logger.debug("Constructed component '%s':\n    %s"
                              % ( declaration.name, _out.getvalue()))
 
         if (pympler_available is True) and (profile_memory >= 2):
