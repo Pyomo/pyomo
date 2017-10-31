@@ -24,10 +24,10 @@ _pyomo_base = _dir(_dir(_dir(_abs(inspect.getfile(inspect.currentframe())))))
 #
 # Set up the root Pyomo namespace logger
 #
-pyomo_logger = logging.getLogger('pyomo')
-pyomo_logger.addHandler( LogHandler(
-    _pyomo_base, verbosity=lambda: pyomo_logger.isEnabledFor(logging.DEBUG) ))
-pyomo_logger.setLevel(logging.WARNING)
+_logger = logging.getLogger('pyomo')
+_logger.addHandler( LogHandler(
+    _pyomo_base, verbosity=lambda: _logger.isEnabledFor(logging.DEBUG) ))
+_logger.setLevel(logging.WARNING)
 
 
 class LoggingIntercept(object):
