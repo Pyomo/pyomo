@@ -36,6 +36,7 @@ from pyutilib.math import *
 from pyutilib.misc import tuplize, Container, PauseGC, Bunch
 
 import pyomo.util
+from pyomo.util.deprecation import deprecation_warning
 from pyomo.util.plugin import ExtensionPoint
 from pyomo.util._task import pyomo_api
 
@@ -656,15 +657,15 @@ use the AbstractModel or ConcreteModel class instead.""")
 
         if 'clone' in kwds:
             kwds.pop('clone')
-            logger.warning(
-"""DEPRECATION WARNING: Model.create_instance() no longer accepts the
-'clone' argument: the base abstract model is always cloned.""")
+            deprecation_warning(
+                "Model.create_instance() no longer accepts the 'clone' "
+                "argument: the base abstract model is always cloned.")
         if 'preprocess' in kwds:
             kwds.pop('preprocess')
-            logger.warning(
-"""DEPRECATION WARNING: Model.create_instance() no longer accepts the
-'preprocess' argument: preprocessing is always deferred to when the
-model is sent to the solver""")
+            deprecation_warning(
+                "Model.create_instance() no longer accepts the preprocess' "
+                "argument: preprocessing is always deferred to when the "
+                "model is sent to the solver")
         if kwds:
             msg = \
 """Model.create_instance() passed the following unrecognized keyword
@@ -674,9 +675,9 @@ arguments (which have been ignored):"""
             logger.error(msg)
 
         if self.is_constructed():
-            logger.warning(
-"""DEPRECATION WARNING: Cannot call Model.create_instance() on a
-constructed model; returning a clone of the current model instance.""")
+            deprecation_warning(
+                "Cannot call Model.create_instance() on a constructed "
+                "model; returning a clone of the current model instance.")
             return self.clone()
 
 
