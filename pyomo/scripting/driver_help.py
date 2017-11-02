@@ -317,12 +317,7 @@ def help_solvers():
     n = max(map(len, solvermgr_list))
     wrapper = textwrap.TextWrapper(subsequent_indent=' '*(n+9))
     for s in solvermgr_list:
-        # Disable warnings
-        _level = logger.getEffectiveLevel()
-        logger.setLevel(logging.ERROR)
         format = '    %-'+str(n)+'s     %s'
-        # Reset logging level
-        logger.setLevel(level=_level)
         print(wrapper.fill(format % (s , pyomo.opt.SolverManagerFactory.doc(s))))
     print("")
     wrapper = textwrap.TextWrapper(subsequent_indent='')
@@ -338,21 +333,22 @@ def help_solvers():
     solver_list = sorted( filter(lambda x: '_' != x[0], solver_list) )
     n = max(map(len, solver_list))
     wrapper = textwrap.TextWrapper(subsequent_indent=' '*(n+9))
-    for s in solver_list:
+    try:
         # Disable warnings
-        _level = logger.getEffectiveLevel()
-        logger.setLevel(logging.ERROR)
-        # Create a solver, and see if it is available
-        with pyomo.opt.SolverFactory(s) as opt:
-            if s == 'py' or opt._metasolver:
-                format = '    %-'+str(n)+'s   + %s'
-            elif opt.available(False):
-                format = '    %-'+str(n)+'s   * %s'
-            else:
-                format = '    %-'+str(n)+'s     %s'
-            # Reset logging level
-            logger.setLevel(level=_level)
-            print(wrapper.fill(format % (s , pyomo.opt.SolverFactory.doc(s))))
+        logger.disable(logging.WARNING)
+        for s in solver_list:
+            # Create a solver, and see if it is available
+            with pyomo.opt.SolverFactory(s) as opt:
+                if s == 'py' or opt._metasolver:
+                    msg = '    %-'+str(n)+'s   + %s'
+                elif opt.available(False):
+                    msg = '    %-'+str(n)+'s   * %s'
+                else:
+                    msg = '    %-'+str(n)+'s     %s'
+                print(wrapper.fill(msg % (s, pyomo.opt.SolverFactory.doc(s))))
+    finally:
+        # Reset logging level
+        logger.disable(logging.NOTSET)
     print("")
     wrapper = textwrap.TextWrapper(subsequent_indent='')
     print(wrapper.fill("An asterisk indicates solvers that are currently available to be run from Pyomo with the serial solver manager. A plus indicates meta-solvers, that are always available."))
@@ -367,10 +363,8 @@ def help_solvers():
     print('')
     print('   ipopt')
     print('')
-    _level = logger.getEffectiveLevel()
-    logger.setLevel(logging.ERROR)
     try:
-        #logger.setLevel(logging.WARNING)
+        logging.disable(logging.WARNING)
         import pyomo.neos.kestrel
         kestrel = pyomo.neos.kestrel.kestrelAMPL()
         #print "HERE", solver_list
@@ -396,7 +390,8 @@ def help_solvers():
             print("")
     except ImportError:
         pass
-    logger.setLevel(level=_level)
+    finally:
+        logging.disable(logging.NOTSET)
 
 def print_components(data):
     """

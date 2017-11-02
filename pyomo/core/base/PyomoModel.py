@@ -32,12 +32,17 @@ except AttributeError:                         #pragma:nocover
     pympler_available = False
 
 
-from pyomo.util.plugin import ExtensionPoint
 from pyutilib.math import *
 from pyutilib.misc import tuplize, Container, PauseGC, Bunch
 
 import pyomo.util
+from pyomo.util.deprecation import deprecation_warning
+from pyomo.util.plugin import ExtensionPoint
 from pyomo.util._task import pyomo_api
+from pyomo.util.deprecation import deprecation_warning
+
+from pyomo.core.kernel import expr_common
+
 from pyomo.core.base.var import _VarData, Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
@@ -53,6 +58,7 @@ from pyomo.core.base.sets import Set
 from pyomo.core.base.component import register_component, Component, ComponentUID
 from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.base.label import CNameLabeler, CuidLabeler
+
 import pyomo.opt
 from pyomo.opt.results import SolverResults, Solution, SolutionStatus, UndefinedData
 
@@ -226,7 +232,8 @@ class ModelSolutions(object):
         #
         if (results.solver.status == pyomo.opt.SolverStatus.warning):
             logger.warn('Loading a SolverResults object with a '
-                        'warning status into model=%s;\nmessage from solver=%s'
+                        'warning status into model=%s;\n'
+                        '    message from solver=%s'
                         % (instance.name, results.solver.Message))
         #
         # If the solver status not one of either OK or Warning, then generate an error.
@@ -652,15 +659,15 @@ use the AbstractModel or ConcreteModel class instead.""")
 
         if 'clone' in kwds:
             kwds.pop('clone')
-            logger.warning(
-"""DEPRECATION WARNING: Model.create_instance() no longer accepts the
-'clone' argument: the base abstract model is always cloned.""")
+            deprecation_warning(
+                "Model.create_instance() no longer accepts the 'clone' "
+                "argument: the base abstract model is always cloned.")
         if 'preprocess' in kwds:
             kwds.pop('preprocess')
-            logger.warning(
-"""DEPRECATION WARNING: Model.create_instance() no longer accepts the
-'preprocess' argument: preprocessing is always deferred to when the
-model is sent to the solver""")
+            deprecation_warning(
+                "Model.create_instance() no longer accepts the preprocess' "
+                "argument: preprocessing is always deferred to when the "
+                "model is sent to the solver")
         if kwds:
             msg = \
 """Model.create_instance() passed the following unrecognized keyword
@@ -670,11 +677,13 @@ arguments (which have been ignored):"""
             logger.error(msg)
 
         if self.is_constructed():
-            logger.warning(
-"""DEPRECATION WARNING: Cannot call Model.create_instance() on a
-constructed model; returning a clone of the current model instance.""")
+            deprecation_warning(
+                "Cannot call Model.create_instance() on a constructed "
+                "model; returning a clone of the current model instance.")
             return self.clone()
 
+        if report_timing:
+            pyomo.util.timing.report_timing()
 
         if name is None:
             name = self.name
@@ -691,14 +700,6 @@ constructed model; returning a clone of the current model instance.""")
         # Clone the model and load the data
         #
         instance = self.clone()
-        #
-        # Change this class from "Abstract" to "Concrete".  It is
-        # absolutely crazy that this is allowed in Python, but since the
-        # AbstractModel and ConcreteModel are basically identical, we
-        # can "reassign" the new concrete instance to be an instance of
-        # ConcreteModel
-        #
-        instance.__class__ = ConcreteModel
 
         if name is not None:
             instance._name = name
@@ -719,8 +720,7 @@ constructed model; returning a clone of the current model instance.""")
 
         instance.load( data,
                        namespaces=_namespaces,
-                       profile_memory=profile_memory,
-                       report_timing=report_timing )
+                       profile_memory=profile_memory )
 
         #
         # Preprocess the new model
@@ -752,6 +752,14 @@ constructed model; returning a clone of the current model instance.""")
         # Indicate that the model is concrete/constructed
         #
         instance._constructed = True
+        #
+        # Change this class from "Abstract" to "Concrete".  It is
+        # absolutely crazy that this is allowed in Python, but since the
+        # AbstractModel and ConcreteModel are basically identical, we
+        # can "reassign" the new concrete instance to be an instance of
+        # ConcreteModel
+        #
+        instance.__class__ = ConcreteModel
         return instance
 
 
@@ -762,10 +770,15 @@ constructed model; returning a clone of the current model instance.""")
                 preprocessor = self.config.preprocessor
             pyomo.util.PyomoAPIFactory(preprocessor)(self.config, model=self)
 
-    def load(self, arg, namespaces=[None], profile_memory=0, report_timing=False):
+    def load(self, arg, namespaces=[None], profile_memory=0, report_timing=None):
         """
         Load the model with data from a file, dictionary or DataPortal object.
         """
+        if report_timing is not None:
+            deprecation_warning(
+                "The report_timing argument to Model.load() is deprecated.  "
+                "Use pyomo.util.timing.report_timing() to enable reporting "
+                "construction timing")
         if arg is None or isinstance(arg, basestring):
             dp = DataPortal(filename=arg, model=self)
         elif type(arg) is DataPortal:
@@ -790,8 +803,7 @@ from solvers are immediately loaded into the original model instance.""")
             raise ValueError(msg % str( type(arg) ))
         self._load_model_data(dp,
                               namespaces,
-                              profile_memory=profile_memory,
-                              report_timing=report_timing)
+                              profile_memory=profile_memory)
 
     def _tuplize(self, data, setobj):
         if data is None:            #pragma:nocover
@@ -824,12 +836,6 @@ from solvers are immediately loaded into the original model instance.""")
             #
             profile_memory = kwds.get('profile_memory', 0)
 
-            #
-            # It is often useful to report timing results for various
-            # activities during model construction.
-            #
-            report_timing = kwds.get('report_timing', False)
-
             if (pympler_available is True) and (profile_memory >= 2):
                 mem_used = muppy.get_size(muppy.get_objects())
                 print("")
@@ -854,22 +860,14 @@ from solvers are immediately loaded into the original model instance.""")
             # Initialize each component in order.
             #
 
-            if report_timing is True:
-                import pyomo.core.base.expr as EXPR
-                construction_start_time = time.time()
-
             for component_name, component in iteritems(self.component_map()):
 
                 if component.type() is Model:
                     continue
 
-                if report_timing is True:
-                    start_time = time.time()
-                    clone_counters = EXPR.generate_expression.clone_counter
-
                 self._initialize_component(modeldata, namespaces, component_name, profile_memory)
 
-                if report_timing is True:
+                if False:
                     total_time = time.time() - start_time
                     if isinstance(component, IndexedComponent):
                         clen = len(component)
@@ -879,20 +877,16 @@ from solvers are immediately loaded into the original model instance.""")
                     print("    %%6.%df seconds required to construct component=%s; %d indicies total" \
                               % (total_time>=0.005 and 2 or 0, component_name, clen) \
                               % total_time)
-                    tmp_clone_counters = EXPR.generate_expression.clone_counter
-                    if clone_counters != tmp_clone_counters:
-                        clone_counters = tmp_clone_counters
-                        print("             Cloning detected! (clone counters: %d)" % clone_counters)
+                    tmp_clone_counter = expr_common.clone_counter
+                    if clone_counter != tmp_clone_counter:
+                        clone_counter = tmp_clone_counter
+                        print("             Cloning detected! (clone count: %d)" % clone_counters)
 
             # Note: As is, connectors are expanded when using command-line pyomo but not calling model.create(...) in a Python script.
             # John says this has to do with extension points which are called from commandline but not when writing scripts.
             # Uncommenting the next two lines switches this (command-line fails because it tries to expand connectors twice)
             #connector_expander = ConnectorExpander()
             #connector_expander.apply(instance=self)
-
-            if report_timing is True:
-                total_construction_time = time.time() - construction_start_time
-                print("      %6.2f seconds required to construct instance=%s" % (total_construction_time, self.name))
 
             if (pympler_available is True) and (profile_memory >= 2):
                 print("")
@@ -930,7 +924,7 @@ from solvers are immediately loaded into the original model instance.""")
         except:
             err = sys.exc_info()[1]
             logger.error(
-                "Constructing component '%s' from data=%s failed:\n%s: %s",
+                "Constructing component '%s' from data=%s failed:\n    %s: %s",
                 str(declaration.name), str(data).strip(),
                 type(err).__name__, err )
             raise
@@ -938,7 +932,7 @@ from solvers are immediately loaded into the original model instance.""")
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
                 _out = StringIO()
                 declaration.pprint(ostream=_out)
-                logger.debug("Constructed component '%s':\n%s"
+                logger.debug("Constructed component '%s':\n    %s"
                              % ( declaration.name, _out.getvalue()))
 
         if (pympler_available is True) and (profile_memory >= 2):
