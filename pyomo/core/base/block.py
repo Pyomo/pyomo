@@ -1737,10 +1737,11 @@ class Block(ActiveIndexedComponent):
                     obj.construct(_data)
 
         if self._rule is None:
-            # Ensure the _data dirctionary is populated for singleton
+            # Ensure the _data dictionary is populated for singleton
             # blocks
             if not self.is_indexed():
                 self[None]
+            timer.report()
             return
         # If we have a rule, fire the rule for all indices.
         # Notes:
