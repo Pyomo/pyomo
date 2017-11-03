@@ -482,39 +482,34 @@ class BigM_Transformation(Transformation):
                              "after estimating (if needed) is %s." %
                              (obj.name, str(M)))
 
-            # TODO: The commented out code should work here after
-            # issue #116 is resolved. As it is, I can't get this to
-            # work because ('lb',) isn't the same as 'lb'... I get the
-            # DeveloperError about IndexedConstraint failing to define
-            # _default(). So for now I'll just check if the constraint
-            # is indexed below.
+            # Handle indices for both SimpleConstraint and IndexedConstraint
+            if i.__class__ is tuple:
+                pass
+            elif obj.is_indexed():
+                i = (i,)
+            else:
+                i = ()
+            # Append 'lb' or 'ub' to the index for the constraints
+            i_lb = i + ('lb',)
+            i_ub = i + ('ub',)
+            try:  # unpack singleton tuples
+                (i_lb,) = i_lb
+                (i_ub,) = i_ub
+            except ValueError:
+                pass
 
-            # if i.__class__ is tuple:
-            #     pass
-            # elif obj.is_indexed():
-            #     i = (i,)
-            # else:
-            #     i = ()
             if c.lower is not None:
                 if M[0] is None:
                     raise GDP_Error("Cannot relax disjunctive constraint %s "
                                     "because M is not defined." % name)
                 M_expr = M[0] * (1 - disjunct.indicator_var)
-                # newConstraint.add(i+('lb',), c.lower <= c. body - M_expr)
-                if obj.is_indexed():
-                    newConstraint.add((i, 'lb'), c.lower <= c.body - M_expr)
-                else:
-                    newConstraint.add('lb', c.lower <= c.body - M_expr)
+                newConstraint.add(i_lb, c.lower <= c. body - M_expr)
             if c.upper is not None:
                 if M[1] is None:
                     raise GDP_Error("Cannot relax disjunctive constraint %s "
                                     "because M is not defined." % name)
                 M_expr = M[1] * (1 - disjunct.indicator_var)
-                # newConstraint.add(i+('ub',), c.body - M_expr <= c.upper)
-                if obj.is_indexed():
-                    newConstraint.add((i, 'ub'), c.body - M_expr <= c.upper)
-                else:
-                    newConstraint.add('ub', c.body - M_expr <= c.upper)
+                newConstraint.add(i_ub, c.body - M_expr <= c.upper)
 
     def _get_M_from_args(self, constraint, bigMargs):
         M = None
