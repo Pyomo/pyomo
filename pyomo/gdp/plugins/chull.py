@@ -30,7 +30,7 @@ from six import iteritems, iterkeys
 # DEBUG
 from nose.tools import set_trace
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.gdp')
 
 # NL_Mode_LeeGrossmann is the original NL convex hull from Lee &
 # Grossmann (2000), which substitutes nonlinear constraints

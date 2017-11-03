@@ -28,7 +28,7 @@ from pyomo.util.modeling import unique_component_name
 from pyomo.util.plugin import alias
 from six import iterkeys, iteritems
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.gdp')
 
 
 class BigM_Transformation(Transformation):

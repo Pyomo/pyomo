@@ -11,7 +11,7 @@ from pyomo.core.base import Transformation
 from six import iterkeys, itervalues
 
 import logging
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.gdp')
 
 # DEBUG
 from nose.tools import set_trace

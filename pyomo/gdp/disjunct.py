@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
 import sys
 from six import iteritems
 from weakref import ref as weakref_ref
@@ -21,6 +22,7 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
 
+logger = logging.getLogger('pyomo.gdp')
 
 _rule_returned_none_error = """Disjunction '%s': rule returned None.
 
