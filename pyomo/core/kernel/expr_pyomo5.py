@@ -2393,16 +2393,6 @@ class _MutableMultiSumExpression(_SumExpression):
                 self._args[0].__class__ in native_numeric_types and \
                 isclose(self._args[0], 0)
 
-    def X_to_string_infix(self, ostream, idx, verbose):
-        if verbose:
-            ostream.write(" , ")
-        else:
-            if self._args[idx].__class__ is _NegationExpression:
-                ostream.write(' - ')
-                return True
-            else:
-                ostream.write(' + ')
-
 
 class _MultiSumExpression(_MutableMultiSumExpression):
     """A temporary object that defines a summation with 1 or more terms and a constant term."""
@@ -3189,7 +3179,14 @@ def generate_expression(etype, _self, _other):
         #
         # TODO: _MultiViewSum logic here
         #
-        if _other.__class__ in native_numeric_types:
+        if _self.__class__ is _ViewSumExpression and not _self._is_owned:
+            if _other.__class__ in native_numeric_types and _other == 0:
+                return _self
+            return _ViewSumExpression(_self, -_other)
+        elif _self.__class__ is _MutableViewSumExpression:
+            _self.extend(- _other)
+            return _self
+        elif _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
                 return _self - _other
             elif isclose(_other, 0):
@@ -3198,7 +3195,7 @@ def generate_expression(etype, _self, _other):
                 return _Constant_SumExpression((-_other, _self))
             elif _self._potentially_variable():
                 #return _ViewSumExpression((-_other, _self))
-                return _ViewSumExpression([-_other, _self])
+                return _ViewSumExpression([_self, -_other])
             return _NPV_SumExpression((-_other, _self))
         elif _self.__class__ in native_numeric_types:
             if isclose(_self, 0):
@@ -3210,15 +3207,12 @@ def generate_expression(etype, _self, _other):
             if _other.is_constant():    
                 return _Constant_SumExpression((_self, _Constant_NegationExpression((_other,))))
             elif _other._potentially_variable():    
-                #return _ViewSumExpression((_self, _NegationExpression((_other,))))
                 return _ViewSumExpression([_self, _NegationExpression((_other,))])
             return _NPV_SumExpression((_self, _NPV_NegationExpression((_other,))))
         elif _other._potentially_variable():    
-            #return _ViewSumExpression((_self, _NegationExpression((_other,))))
             return _ViewSumExpression([_self, _NegationExpression((_other,))])
         elif _self._potentially_variable():
-            #return _ViewSumExpression((_NPV_NegationExpression((_other,)), _self))
-            return _ViewSumExpression([_NPV_NegationExpression((_other,)), _self])
+            return _ViewSumExpression([_self, _NPV_NegationExpression((_other,))])
         elif not _other.is_constant():    
             return _NPV_SumExpression((_self, _NPV_NegationExpression((_other,))))
         elif not _self.is_constant():    
