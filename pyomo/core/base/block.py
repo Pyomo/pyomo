@@ -21,6 +21,7 @@ from operator import itemgetter, attrgetter
 from six import iteritems, itervalues, StringIO, string_types, \
     advance_iterator, PY3
 
+from pyomo.util.timing import ConstructionTimer
 from pyomo.core.base.plugin import * # register_component, ModelComponentFactory
 from pyomo.core.base.component import Component, ActiveComponentData, \
     ComponentUID
@@ -1730,6 +1731,7 @@ class Block(ActiveIndexedComponent):
                           self.__class__.__name__, self.name, str(data) )
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed = True
 
         # We must check that any pre-existing components are
@@ -1747,10 +1749,11 @@ class Block(ActiveIndexedComponent):
                     obj.construct(_data)
 
         if self._rule is None:
-            # Ensure the _data dirctionary is populated for singleton
+            # Ensure the _data dictionary is populated for singleton
             # blocks
             if not self.is_indexed():
                 self[None]
+            timer.report()
             return
         # If we have a rule, fire the rule for all indices.
         # Notes:
@@ -1785,6 +1788,7 @@ class Block(ActiveIndexedComponent):
             # TBD: Should we allow skipping Blocks???
             #if obj is Block.Skip and idx is not None:
             #   del self._data[idx]
+        timer.report()
 
     def pprint(self, filename=None, ostream=None, verbose=False, prefix=""):
         """

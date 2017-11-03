@@ -14,6 +14,7 @@ import logging
 import math
 from six.moves import xrange
 
+from pyomo.util.timing import ConstructionTimer
 from pyomo.core.base.sets import OrderedSimpleSet
 from pyomo.core.base.expr import _ExpressionBase
 from pyomo.core.base.set_types import Integers, Reals
@@ -72,6 +73,7 @@ class RangeSet(OrderedSimpleSet):
         """
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed=True
         #
         # We call value() here for cases like Expressions, mutable
@@ -114,6 +116,7 @@ class RangeSet(OrderedSimpleSet):
         # Set the bounds information
         #
         self._bounds = (self._start_val, ub)
+        timer.report()
 
     def __len__(self):
         """

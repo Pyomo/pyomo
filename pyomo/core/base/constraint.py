@@ -17,6 +17,7 @@ import logging
 from weakref import ref as weakref_ref
 
 import pyutilib.math
+from pyomo.util.timing import ConstructionTimer
 from pyomo.core.base import expr as EXPR
 from pyomo.core.base.plugin import register_component
 from pyomo.core.base.numvalue import (ZeroConstant,
@@ -724,6 +725,7 @@ class Constraint(ActiveIndexedComponent):
                          % (self.name))
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed=True
 
         _init_expr = self._init_expr
@@ -785,6 +787,7 @@ class Constraint(ActiveIndexedComponent):
                            err))
                     raise
                 self._setitem_if_not_present(ndx, tmp, True)
+        timer.report()
 
     def _pprint(self):
         """

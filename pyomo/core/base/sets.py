@@ -23,6 +23,7 @@ from weakref import ref as weakref_ref
 
 from pyutilib.misc import flatten_tuple as pyutilib_misc_flatten_tuple
 
+from pyomo.util.timing import ConstructionTimer
 from pyomo.core.base.misc import apply_indexed_rule, \
     apply_parameterized_indexed_rule
 from pyomo.core.base.plugin import register_component
@@ -1076,6 +1077,7 @@ class SimpleSetBase(Set):
                 logger.debug("Constructing SimpleSet, name="+self.name+", from data="+repr(values))
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed=True
 
         if self.initialize is None:                             # TODO: deprecate this functionality
@@ -1206,6 +1208,7 @@ class SimpleSetBase(Set):
                 self.add(val)
             if all_numeric:
                 self._bounds = (first,last)
+        timer.report()
 
 
 class SimpleSet(SimpleSetBase,_SetData):
@@ -1295,7 +1298,7 @@ class SetOf(SimpleSet):
         """
         Disabled construction method
         """
-        pass
+        ConstructionTimer(self).report()
 
     def __len__(self):
         """
@@ -1377,7 +1380,7 @@ class _SetOperator(SimpleSet):
 
     def construct(self, values=None):
         """ Disabled construction method """
-        pass
+        timer = ConstructionTimer(self).report()
 
     def __len__(self):
         """The number of items in the set."""
@@ -1694,6 +1697,7 @@ class IndexedSet(Set):
                 logger.debug("Constructing IndexedSet, name="+self.name+", from data="+repr(values))
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed=True
         #
         if self.initialize is None:             # TODO: deprecate this functionality
@@ -1766,7 +1770,7 @@ class IndexedSet(Set):
                     for val in self.initialize[key]:
                         tmp._add(val)
                     self._data[key] = tmp
-
+        timer.report()
 
 
 register_component(SetOf, "Define a Pyomo Set component using an iterable data object.")

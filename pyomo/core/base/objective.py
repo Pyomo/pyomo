@@ -21,6 +21,7 @@ import logging
 from weakref import ref as weakref_ref
 import inspect
 
+from pyomo.util.timing import ConstructionTimer
 from pyomo.core.base.numvalue import as_numeric, value
 from pyomo.core.base.plugin import register_component
 from pyomo.core.base.component import ActiveComponentData
@@ -295,6 +296,7 @@ class Objective(ActiveIndexedComponent):
                 "Constructing objective %s" % (self.name))
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed = True
 
         _init_expr = self._init_expr
@@ -359,6 +361,7 @@ class Objective(ActiveIndexedComponent):
                 ans = self._setitem_if_not_present(ndx, tmp, True)
                 if ans is not None:
                     ans.set_sense(_init_sense)
+        timer.report()
 
     def _pprint(self):
         """

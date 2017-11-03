@@ -15,6 +15,7 @@ import types
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.util.timing import ConstructionTimer
 from pyomo.core.base.plugin import register_component
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent, \
@@ -773,6 +774,7 @@ This has resulted in the conversion of the source to dense form.
         #
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         #
         # If the default value is a simple type, we check it versus
         # the domain.
@@ -824,6 +826,7 @@ This has resulted in the conversion of the source to dense form.
         # (avoids calling _set_contains on self._index at runtime)
         if self._dense_initialize:
             self.to_dense_data()
+        timer.report()
 
     def reconstruct(self, data=None):
         """

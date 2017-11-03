@@ -13,6 +13,7 @@ __all__ = ['BuildCheck']
 import logging
 import types
 
+from pyomo.util.timing import ConstructionTimer
 from pyomo.core.base.plugin import register_component
 from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
@@ -45,11 +46,12 @@ class BuildCheck(IndexedComponent):
 
     def construct(self, data=None):
         """ Apply the rule to construct values in this set """
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):        #pragma:nocover
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
                 logger.debug("Constructing Check, name="+self.name)
         #
-        if self._constructed:                                       #pragma:nocover
+        if self._constructed:                                  #pragma:nocover
             return
+        timer = ConstructionTimer(self)
         self._constructed=True
         #
         if not self.is_indexed():
@@ -63,5 +65,6 @@ class BuildCheck(IndexedComponent):
                 res = apply_indexed_rule(self, self._rule, self._parent(), index)
                 if not res:
                     raise ValueError("BuildCheck %r identified error with index %r" % (self.name, str(index)))
+        timer.report()
 
 register_component(BuildCheck, "A component that performs tests during model construction.  The action rule is applied to every index value.")

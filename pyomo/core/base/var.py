@@ -13,6 +13,7 @@ __all__ = ['Var', '_VarData', 'VarList']
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.util.timing import ConstructionTimer
 from pyomo.core.base.numvalue import NumericValue, value, is_fixed
 from pyomo.core.base.set_types import BooleanSet, IntegerSet, RealSet, Reals
 from pyomo.core.base.plugin import register_component
@@ -534,12 +535,12 @@ class Var(IndexedComponent):
 
     def construct(self, data=None):
         """Construct this component."""
-
         if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
             try:
                 name = str(self.name)
             except:
-                # Some Var components don't have a name yet, so just use the type
+                # Some Var components don't have a name yet, so just use
+                # the type
                 name = type(self)
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug(
@@ -548,6 +549,7 @@ class Var(IndexedComponent):
 
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed=True
 
         #
@@ -568,6 +570,7 @@ class Var(IndexedComponent):
                 self._data[ndx] = cdata
                 #self._initialize_members((ndx,))
             self._initialize_members(self._index)
+        timer.report()
 
     def add(self, index):
         """Add a variable with a particular index."""

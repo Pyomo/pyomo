@@ -223,13 +223,7 @@ def check_available_solvers(*args):
     from pyomo.solvers.plugins.solvers.GUROBI import GUROBISHELL
     from pyomo.solvers.plugins.solvers.BARON import BARONSHELL
 
-    logger_solvers = logging.getLogger('pyomo.solvers')
-    _level_solvers = logger_solvers.getEffectiveLevel()
-    logger_solvers.setLevel( logging.ERROR )
-
-    logger_opt = logging.getLogger('pyomo.opt')
-    _level_opt = logger_opt.getEffectiveLevel()
-    logger_opt.setLevel( logging.ERROR )
+    logging.disable(logging.WARNING)
 
     ans = []
     for arg in args:
@@ -255,8 +249,7 @@ def check_available_solvers(*args):
         if available:
             ans.append(name)
 
-    logger_opt.setLevel( _level_opt )
-    logger_solvers.setLevel( _level_solvers )
+    logging.disable(logging.NOTSET)
 
     return ans
 

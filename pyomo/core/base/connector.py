@@ -16,6 +16,7 @@ from six import iteritems, itervalues, iterkeys
 from six.moves import xrange
 from weakref import ref as weakref_ref
 
+from pyomo.util.timing import ConstructionTimer
 from pyomo.util.plugin import Plugin, implements
 
 from pyomo.core.base.component import ComponentData
@@ -172,6 +173,7 @@ class Connector(IndexedComponent):
                           % (self.name, data) )
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed=True
         #
         # Construct _ConnectorData objects for all index values
@@ -181,6 +183,7 @@ class Connector(IndexedComponent):
         else:
             self._data[None] = self
             self._initialize_members([None])
+        timer.report()
 
     def _initialize_members(self, initSet):
         for idx in initSet:

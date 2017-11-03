@@ -294,9 +294,7 @@ def test_scenarios(arg=None):
 
 
 def run_test_scenarios(options):
-    logger = logging.getLogger('pyomo.core')
-    _level = logger.getEffectiveLevel()
-    logger.setLevel( logging.ERROR )
+    logging.disable(logging.WARNING)
 
     solvers = set(options.solver)
     stat = {}
@@ -416,7 +414,7 @@ def run_test_scenarios(options):
     stream.write(fmtStr.format("TOTALS", str(total.NumEPass), str(total.NumUFail), str(total.NumEFail), str(total.NumUPass), str(int(100.0*(total.NumEPass+total.NumEFail)/(total.NumEPass+total.NumEFail+total.NumUFail+total.NumUPass)))))
     stream.write("=" * (maxSolverNameLen + 66) + "\n")
 
-    logger.setLevel( _level )
+    logging.disable(logging.NOTSET)
 
 
 if __name__ == "__main__":
