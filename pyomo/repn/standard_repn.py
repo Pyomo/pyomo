@@ -425,10 +425,11 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
 
     lhs = _collect_standard_repn(exp._args[0], 1, idMap, 
                                   compute_values, verbose, quadratic)
-    if isclose(lhs.nonl,0) and len(lhs.linear) == 0 and len(lhs.quadratic) == 0 and isclose(lhs.const,0):
-        return Results()
+    lhs_nonl_None = lhs.nonl.__class__ in native_numeric_types and isclose(lhs.nonl,0)
 
-    if isclose(lhs.nonl,0) and len(lhs.linear) == 0 and len(lhs.quadratic) == 0:
+    if lhs_nonl_None and len(lhs.linear) == 0 and len(lhs.quadratic) == 0:
+        if isclose(lhs.const,0):
+            return Results()
         if compute_values:
             val = value(lhs.const)
             if isclose(val,0):
@@ -449,10 +450,11 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     else:
         rhs = _collect_standard_repn(exp._args[1], 1, idMap, 
                                   compute_values, verbose, quadratic)
-    if isclose(rhs.nonl,0) and len(rhs.linear) == 0 and len(rhs.quadratic) == 0 and isclose(rhs.const,0):
+    rhs_nonl_None = rhs.nonl.__class__ in native_numeric_types and isclose(rhs.nonl,0)
+    if rhs_nonl_None and len(rhs.linear) == 0 and len(rhs.quadratic) == 0 and isclose(rhs.const,0):
         return Results()
 
-    if not isclose(lhs.nonl,0) or not isclose(rhs.nonl,0):
+    if not lhs_nonl_None or not rhs_nonl_None:
         return Results(nonl=multiplier*exp)
     if not quadratic and len(lhs.linear) > 0 and len(rhs.linear) > 0:
         # NOTE: We treat a product of linear terms as nonlinear unless quadratic==2
@@ -566,7 +568,7 @@ def _collect_reciprocal(exp, multiplier, idMap, compute_values, verbose, quadrat
             denom = 1.0 * exp._args[0]
     else:
         res =_collect_standard_repn(exp._args[0], 1, idMap, compute_values, verbose, quadratic)
-        if not isclose(res.nonl,0) or len(res.linear) > 0 or len(res.quadratic) > 0:
+        if not (res.nonl.__class__ in native_numeric_types and isclose(res.nonl,0)) or len(res.linear) > 0 or len(res.quadratic) > 0:
             return Results(nonl=multiplier*exp)
         else:
             denom = 1.0*res.const
@@ -584,7 +586,7 @@ def _collect_branching_expr(exp, multiplier, idMap, compute_values, verbose, qua
             return Results(nonl=multiplier*exp)
     else:
         res = _collect_standard_repn(exp._if, 1, idMap, compute_values, verbose, quadratic)
-        if not isclose(res.nonl,0) or len(res.linear) > 0 or len(res.quadratic) > 0:
+        if not (res.nonl.__class__ in native_numeric_types and isclose(res.nonl,0)) or len(res.linear) > 0 or len(res.quadratic) > 0:
             return Results(nonl=multiplier*exp)
         else:
             if_val = res.const
