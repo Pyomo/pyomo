@@ -996,6 +996,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
                 if gen_obj_repn:
                     repn = generate_standard_repn(active_objective.expr, quadratic=False)
+                    #print(active_objective.expr)
+                    #print(repn)
                     block_repn[active_objective] = repn
                 else:
                     repn = block_repn[active_objective]
@@ -1085,10 +1087,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     repn.constant = canonical_repn.constant
                 else:
                     if gen_con_repn:
-                        #print(constraint_data.body.to_string())
-                        #print(constraint_data.body.to_string(verbose=True))
-                        #print("X")
                         repn = generate_standard_repn(constraint_data.body, quadratic=False)
+                        #print(constraint_data.body)
+                        #print(repn)
                         block_repn[constraint_data] = repn
                     else:
                         repn = block_repn[constraint_data]
