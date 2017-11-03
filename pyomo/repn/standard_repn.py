@@ -26,8 +26,11 @@ import pyomo.util
 from pyutilib.misc import Bunch
 from pyutilib.math.util import isclose
 
+from pyomo.core.base.objective import (_GeneralObjectiveData,
+                                       SimpleObjective)
 from pyomo.core.base import expr as EXPR
 from pyomo.core.base import _ExpressionData, Expression
+from pyomo.core.base.expression import SimpleExpression, _GeneralExpressionData
 from pyomo.core.base.var import (SimpleVar,
                                  Var,
                                  _GeneralVarData,
@@ -38,8 +41,9 @@ from pyomo.core.base.numvalue import (NumericConstant,
                                       native_numeric_types,
                                       is_fixed)
 from pyomo.core.util import Sum
-from pyomo.core.kernel.component_expression import IIdentityExpression
+from pyomo.core.kernel.component_expression import IIdentityExpression, expression
 from pyomo.core.kernel.component_variable import IVariable
+from pyomo.core.kernel.component_objective import objective
 
 import six
 from six import iteritems
@@ -131,7 +135,8 @@ class StandardRepn(object):
                 self.nonlinear_expr.to_string(ostream=output)
                 output.write("\n")
             except AttributeError:
-                output.write(str([(i,str(e)) for i,e in self.nonlinear_expr])+"\n")
+                output.write(str(self.nonlinear_expr))
+                output.write("\n")
         output.write("nonlinear vars: "+str([v_.name for v_ in self.nonlinear_vars])+"\n")
         output.write("\n")
 
@@ -180,7 +185,14 @@ class StandardRepn(object):
                 expr -= - self.linear_coefs[i]*self.linear_vars[i]
             else:
                 expr += self.linear_coefs[i]*self.linear_vars[i]
-        expr += Sum(self.quadratic_coefs[i]*self.quadratic_vars[i][0]*self.quadratic_vars[i][0] for i,v in enumerate(self.quadratic_vars))
+        for i,v in enumerate(self.quadratic_vars):
+            val = value(self.quadratic_coefs[i])
+            if isclose(val, 1.0):
+                expr += self.quadratic_vars[i][0]*self.quadratic_vars[i][0]
+            elif isclose(val, -1.0):
+                expr -= self.quadratic_vars[i][0]*self.quadratic_vars[i][0]
+            else:
+                expr += self.quadratic_coefs[i]*self.quadratic_vars[i][0]*self.quadratic_vars[i][0]
         if not self.nonlinear_expr is None:
             expr += self.nonlinear_expr
         return expr
@@ -199,7 +211,7 @@ to a solver and then be deleted.
 
 """
 #@profile
-def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None, quick=False):
+def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None):
     #
     # Disable implicit cloning while creating a standard representation.
     # We allow the representation to be entangled with the original expression.
@@ -226,7 +238,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         #
         # The expression is a variable
         #
-        elif isinstance(expr, (_VarData, IVariable)):
+        elif expr.__class__ in pyomo5_variable_types:
             if expr.fixed:
                 if compute_values:
                     repn.constant = value(expr)
@@ -236,7 +248,6 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             repn.linear_coefs = (1,)
             repn.linear_vars = (expr,)
             return repn
-
         #
         # The expression is linear
         #
@@ -245,9 +256,9 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                 C_ = EXPR.evaluate_expression(expr.constant)
             else:
                 C_ = expr.constant
-            v_ = []
-            c_ = []
             if compute_values:
+                v_ = []
+                c_ = []
                 for c,v in zip(expr.linear_coefs, expr.linear_vars):
                     if v.fixed:
                         if c.__class__ in native_numeric_types:
@@ -264,94 +275,28 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                         else:
                             c_.append( value(c) )
                     v_.append( v )
+                repn.linear_coefs = tuple(c_)
+                repn.linear_vars = tuple(v_)
             else:
+                linear_coefs = {}
                 for c,v in zip(expr.linear_coefs, expr.linear_vars):
                     if v.fixed:
                         C_ += c*v
                     else:
-                        c_.append( c )
-                    v_.append( v )
-            repn.constant = C_
-            repn.linear_coefs = tuple(c_)
-            repn.linear_vars = tuple(v_)
-            for v in repn.linear_vars:
-                id_ = id(v)
-                if not id_ in idMap[None]:
-                    key = len(idMap) - 1
-                    idMap[None][id_] = key
-                    idMap[key] = v
-            return repn
-
-        #
-        # If the expression is a sum, then we try to 
-        # extract a linear representation.
-        #
-        elif quick and expr.__class__ is EXPR._ViewSumExpression:
-            linear_coefs = {}
-            linear=True
-            for e_ in itertools.islice(expr._args, expr.nargs()):
-                if e_.__class__ in pyomo5_variable_types:
-                    if e_.fixed:
-                        if compute_values:
-                            repn.constant += e_.value
-                        else:
-                            repn.constant += e_
-                    else:
-                        id_ = id(e_)
+                        id_ = id(v)
                         if not id_ in idMap[None]:
                             key = len(idMap) - 1
                             idMap[None][id_] = key
-                            idMap[key] = e_
+                            idMap[key] = v
                         if key in linear_coefs:
-                            linear_coefs[key] += 1
+                            linear_coefs[key] += c
                         else:
-                            linear_coefs[key] = 1
-                elif e_.__class__ in native_numeric_types:
-                    repn.constant += e_
-                elif not e_._potentially_variable():
-                    repn.constant += value(e_)
-                elif e_.__class__ is EXPR._ProductExpression:
-                    if e_._args[1].__class__ in pyomo5_variable_types:
-                        if e_._args[1].fixed:
-                            if e_._args[0].__class__ in native_numeric_types:
-                                repn.constant += e_._args[0] * e_._args[1].value
-                            elif not e_._args[0]._potentially_variable():
-                                repn.constant += e._args[0] * value(e._args[1])
-                            elif e_._args[0].__class__ in pyomo5_variable_types:
-                                if e_._args[0].fixed:
-                                    repn.constant += e._args[0].value * e._args[1].value
-                                else:
-                                    v = e_._args[1].value
-                                    if not isclose(v,0.0):
-                                        repn.linear_coefs.append(v)
-                                        repn.linear_vars.append(e_._args[0])
-                            else:
-                                linear=False
-                                break
-                        elif e_._args[0].__class__ in native_numeric_types:
-                            if not isclose(e_._args[0],0.0):
-                                repn.linear_coefs.append(e_._args[0])
-                                repn.linear_vars.append(e_._args[1])
-                        elif not e_._args[0]._potentially_variable() or \
-                             (e_._args[0].__class__ in pyomo5_variable_types and e_._args[0].fixed):
-                            v = value(e_._args[0])
-                            if not isclose(v, 0.0):
-                                repn.linear_coefs.append(v)
-                                repn.linear_vars.append(e_._args[1])
-                        else:
-                            linear=False
-                            break
-                    else:
-                        linear=False
-                        break
-                else:
-                    linear=False
-                    break
-            if linear:
+                            linear_coefs[key] = c
                 keys = list(linear_coefs.keys())
                 repn.linear_vars = tuple(idMap[key] for key in keys)
                 repn.linear_coefs = tuple(linear_coefs[key] for key in keys)
-                return repn
+            repn.constant = C_
+            return repn
 
         #
         # Unknown expression object
@@ -359,12 +304,425 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         elif not expr.is_expression():
             raise ValueError("Unexpected expression type: "+str(expr))
 
-        return nonrecursive_generate_standard_repn(expr, 
+        return _generate_standard_repn(expr, 
                                 idMap=idMap,
                                 compute_values=compute_values,
                                 verbose=verbose,
                                 quadratic=quadratic,
                                 repn=repn)
+
+class Results(object):
+    __slot__ = ('const', 'nonl', 'linear', 'quadratic')
+
+    def __init__(self, const=0, nonl=0, linear=None, quadratic=None):
+        self.const = const
+        self.nonl = nonl
+        if linear is None:
+            self.linear = {}
+        else:
+            self.linear = linear
+        if quadratic is None:
+            self.quadratic = {}
+        else:
+            self.quadratic = quadratic
+
+    def __str__(self):
+        return "Const:\t%f\nLinear:\t%s\nQuadratic:\t%s\nNonlinear:\t%s" % (self.const, str(self.linear), str(self.quadratic), str(self.nonl))
+
+
+#@profile
+def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
+    ans = Results()
+    varkeys = idMap[None]
+
+    for e_ in itertools.islice(exp._args, exp.nargs()):
+        if e_.__class__ in pyomo5_variable_types:
+            if e_.fixed:
+                if compute_values:
+                    ans.const += multiplier*e_.value
+                else:
+                    ans.const += multiplier*e_
+            else:
+                id_ = id(e_)
+                if id_ in varkeys:
+                    key = varkeys[id_]
+                else:
+                    key = len(idMap) - 1
+                    varkeys[id_] = key
+                    idMap[key] = e_
+                if key in ans.linear:
+                    ans.linear[key] += multiplier
+                else:
+                    ans.linear[key] = multiplier
+        elif e_.__class__ in native_numeric_types:
+            ans.const += multiplier*e_
+        elif not e_._potentially_variable():
+            if compute_values:
+                ans.const += multiplier * value(e_)
+            else:
+                ans.const += multiplier * e_
+        elif e_.__class__ is EXPR._ProductExpression and  e_._args[1].__class__ in pyomo5_variable_types and (e_._args[0].__class__ in native_numeric_types or not e_._args[0]._potentially_variable()):
+            if compute_values:
+                lhs = value(e_._args[0])
+            else:
+                lhs = e_._args[0]
+            if e_._args[1].fixed:
+                if compute_values:
+                    ans.const += multiplier*lhs*value(e_.args[1])
+                else:
+                    ans.const += multiplier*lhs*e_.args[1]
+            else:
+                id_ = id(e_._args[1])
+                if id_ in varkeys:
+                    key = varkeys[id_]
+                else:
+                    key = len(idMap) - 1
+                    varkeys[id_] = key
+                    idMap[key] = e_._args[1]
+                if key in ans.linear:
+                    ans.linear[key] += multiplier*lhs*value(e_._args[0])
+                else:
+                    ans.linear[key] = multiplier*lhs*value(e_._args[0])
+        else:
+            res_ = _collect_standard_repn(e_, multiplier, idMap, 
+                                      compute_values, verbose, quadratic)
+            #
+            # Add returned from recursion
+            #
+            ans.const += res_.const
+            ans.nonl += res_.nonl
+            for i in res_.linear:
+                ans.linear[i] = ans.linear.get(i,0) + res_.linear[i]
+            if quadratic:
+                for i, val in res_.quadratic:
+                    ans.quadratic[i] = ans.quadratic.get(i, 0) + res_.quadratic[i]
+
+    return ans
+
+#@profile
+def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
+    #
+    # LHS is a numeric value
+    #
+    if exp._args[0].__class__ in native_numeric_types:
+        if isclose(exp._args[0],0):
+            return Results()
+        return _collect_standard_repn(exp._args[1], multiplier * exp._args[0], idMap, 
+                                  compute_values, verbose, quadratic)
+    #
+    # LHS is a non-variable expression
+    #
+    elif not exp._args[0]._potentially_variable():
+        if compute_values:
+            val = value(exp._args[0])
+            if isclose(val,0):
+                return Results()
+            return _collect_standard_repn(exp._args[1], multiplier * val, idMap, 
+                                  compute_values, verbose, quadratic)
+        else:
+            return _collect_standard_repn(exp._args[1], multiplier*exp._args[0], idMap, 
+                                  compute_values, verbose, quadratic)
+
+    lhs = _collect_standard_repn(exp._args[0], 1, idMap, 
+                                  compute_values, verbose, quadratic)
+    if isclose(lhs.nonl,0) and len(lhs.linear) == 0 and len(lhs.quadratic) == 0 and isclose(lhs.const,0):
+        return Results()
+
+    if isclose(lhs.nonl,0) and len(lhs.linear) == 0 and len(lhs.quadratic) == 0:
+        if compute_values:
+            val = value(lhs.const)
+            if isclose(val,0):
+                return Results()
+            return _collect_standard_repn(exp._args[1], multiplier*val, idMap, 
+                                  compute_values, verbose, quadratic)
+        else:
+            return _collect_standard_repn(exp._args[1], multiplier*lhs.const, idMap, 
+                                  compute_values, verbose, quadratic)
+
+    if exp._args[1].__class__ in native_numeric_types:
+        rhs = Results(const=exp._args[1])
+    elif not exp._args[1]._potentially_variable():
+        if compute_values:
+            rhs = Results(const=value(exp._args[1]))
+        else:
+            rhs = Results(const=exp._args[1])
+    else:
+        rhs = _collect_standard_repn(exp._args[1], 1, idMap, 
+                                  compute_values, verbose, quadratic)
+    if isclose(rhs.nonl,0) and len(rhs.linear) == 0 and len(rhs.quadratic) == 0 and isclose(rhs.const,0):
+        return Results()
+
+    if not isclose(lhs.nonl,0) or not isclose(rhs.nonl,0):
+        return Results(nonl=multiplier*exp)
+    if not quadratic and len(lhs.linear) > 0 and len(rhs.linear) > 0:
+        # NOTE: We treat a product of linear terms as nonlinear unless quadratic==2
+        return Results(nonl=multiplier*exp)
+
+    ans = Results()
+    ans.const = multiplier*lhs.const * rhs.const
+    if not isclose(lhs.const,0):
+        for key, coef in six.iteritems(rhs.linear):
+            ans.linear[key] = multiplier*coef*lhs.const
+    if not isclose(rhs.const,0):
+        for key, coef in six.iteritems(lhs.linear):
+            if key in ans.linear:
+                ans.linear[key] += multiplier*coef*rhs.const
+            else:
+                ans.linear[key] = multiplier*coef*rhs.const
+
+    if quadratic:
+        if not isclose(lhs.const,0):
+            for key, coef in six.iteritems(rhs.quadratic):
+                ans.quadratic[key] = multiplier*coef*lhs.const
+        if not isclose(rhs.const,0):
+            for key, coef in six.iteritems(lhs.quadratic):
+                if key in ans.quadratic:
+                    ans.quadratic[key] += multiplier*coef*rhs.const
+                else:
+                    ans.quadratic[key] = multiplier*coef*rhs.const
+        for lkey, lcoef in six.iteritems(lhs.linear):
+            for rkey, rcoef in six.iteritems(rhs.linear):
+                if lkey <= rkey:
+                    ans.quadratic[lkey,rkey] = multiplier*lcoef*rcoef
+                else:
+                    ans.quadratic[rkey,lkey] = multiplier*lcoef*rcoef
+        el_linear = multiplier*sum(coef*idMap[key] for key, coef in six.iteritems(lhs.linear))
+        er_linear = multiplier*sum(coef*idMap[key] for key, coef in six.iteritems(rhs.linear))
+        el_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in six.iteritems(lhs.quadratic))
+        er_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in six.iteritems(rhs.quadratic))
+        ans.nonl += el_linear*er_quadratic + el_quadratic*er_linear
+    elif len(lhs.linear) + len(rhs.linear) > 1:
+        el_linear = multiplier*sum(coef*idMap[key] for key, coef in six.iteritems(lhs.linear))
+        er_linear = multiplier*sum(coef*idMap[key] for key, coef in six.iteritems(rhs.linear))
+        ans.nonl += el_linear*er_linear
+
+    return ans
+
+#@profile
+def _collect_var(exp, multiplier, idMap, compute_values, verbose, quadratic):
+    ans = Results()
+
+    if exp.fixed:
+        if compute_values:
+            ans.const += multiplier*value(exp)
+        else:
+            ans.const += multiplier*exp
+    else:
+        id_ = id(exp)
+        if id_ in idMap[None]:
+            key = idMap[None][id_]
+        else:
+            key = len(idMap) - 1
+            idMap[None][id_] = key
+            idMap[key] = exp
+        if key in ans.linear:
+            ans.linear[key] += multiplier
+        else:
+            ans.linear[key] = multiplier
+
+    return ans
+
+def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
+    if exp._args[1].__class__ in native_numeric_types:
+            exponent = exp._args[1]
+    elif not exp._args[1]._potentially_variable():
+        if compute_values:
+            exponent = value(exp._args[1])
+        else:
+            exponent = exp._args[1]
+    else:
+        res = _collect_standard_repn(exp._args[1], 1, idMap, compute_values, verbose, quadratic)
+        if not isclose(lhs.nonl,0) or len(lhs.linear) > 0 or len(lhs.quadratic) > 0:
+            # The exponent is variable, so this is a nonlinear expression
+            return Results(nonl=multiplier*exp)
+        exponent = res.const
+
+    if exponent == 0:
+        return Results(const=multiplier)
+    elif exponent == 1:
+        return _collect_standard_repn(exp._args[0], multiplier, idMap, compute_values, verbose, quadratic)
+    # If the exponent is >= 2, then this is a nonlinear expression
+    if exponent == 2 and quadratic:
+        # NOTE: We treat a product of linear terms as nonlinear unless quadratic==2
+        res =_collect_standard_repn(exp._args[0], 1, idMap, compute_values, verbose, quadratic)
+        if not isclose(res.nonl,0) or len(res.quadratic) > 0:
+            return Results(nonl=multiplier*exp)
+        ans = Results()
+        if not isclose(res.const,0):
+            ans.const = multiplier*res.const*res.const
+            for key, coef in six.iteritems(res.linear):
+                ans.linear[key] = 2*multiplier*coef*res.const
+        for key, coef in six.iteritems(res.linear):
+            ans.quadratic[key,key] = multiplier*coef
+        return ans
+        
+    return Results(nonl=multiplier*exp)
+
+def _collect_reciprocal(exp, multiplier, idMap, compute_values, verbose, quadratic):
+    if exp._args[0].__class__ in native_numeric_types or not exp._args[0]._potentially_variable():
+        if compute_values:
+            denom = 1.0 * value(exp._args[0])
+        else:
+            denom = 1.0 * exp._args[0]
+    else:
+        res =_collect_standard_repn(exp._args[0], 1, idMap, compute_values, verbose, quadratic)
+        if not isclose(res.nonl,0) or len(res.linear) > 0 or len(res.quadratic) > 0:
+            return Results(nonl=multiplier*exp)
+        else:
+            denom = 1.0*res.const
+    if compute_values and isclose(denom, 0):
+        raise ZeroDivisionError()
+    return Results(const=multiplier/denom)
+   
+def _collect_branching_expr(exp, multiplier, idMap, compute_values, verbose, quadratic):
+    if exp._if.__class__ in native_numeric_types:
+        if_val = exp._if
+    elif not exp._if._potentially_variable():
+        if compute_values:
+            if_val = value(exp._if)
+        else:
+            return Results(nonl=multiplier*exp)
+    else:
+        res = _collect_standard_repn(exp._if, 1, idMap, compute_values, verbose, quadratic)
+        if not isclose(res.nonl,0) or len(res.linear) > 0 or len(res.quadratic) > 0:
+            return Results(nonl=multiplier*exp)
+        else:
+            if_val = res.const
+    if if_val:
+        return _collect_standard_repn(exp._then, multiplier, idMap, compute_values, verbose, quadratic)
+    else:
+        return _collect_standard_repn(exp._else, multiplier, idMap, compute_values, verbose, quadratic)
+
+def _collect_nonl(exp, multiplier, idMap, compute_values, verbose, quadratic):
+    res = _collect_standard_repn(exp._args[0], 1, idMap, compute_values, verbose, quadratic)
+    if not isclose(res.nonl,0) or len(res.linear) > 0 or len(res.quadratic) > 0:
+        return Results(nonl=multiplier*exp)
+    return Results(const=multiplier*exp._apply_operation([res.const]))
+
+def _collect_negation(exp, multiplier, idMap, compute_values, verbose, quadratic):
+    return _collect_standard_repn(exp._args[0], -1*multiplier, idMap, compute_values, verbose, quadratic)
+
+def _collect_identity(exp, multiplier, idMap, compute_values, verbose, quadratic):
+    if exp._args[0].__class__ in native_numeric_types:
+        return Results(const=exp._args[0])
+    if not exp._args[0]._potentially_variable():
+        if compute_values:
+            return Results(const=value(exp._args[0]))
+        else:
+            return Results(const=exp._args[0])
+    return _collect_standard_repn(exp.expr, multiplier, idMap, compute_values, verbose, quadratic)
+
+def _collect_linear(exp, multiplier, idMap, compute_values, verbose, quadratic):
+    ans = Results()
+    ans.const = multiplier*exp.constant
+
+    for c,v in zip(exp.linear_coefs, exp.linear_vars):
+        if v.fixed:
+            if compute_values:
+                ans.const += multiplier*v.value
+            else:
+                ans.const += multiplier*v
+        else:
+            id_ = id(v)
+            if id_ in idMap[None]:
+                key = idMap[None][id_]
+            else:
+                key = len(idMap) - 1
+                idMap[None][id_] = key
+                idMap[key] = v
+            if key in ans.linear:
+                ans.linear[key] += multiplier*c
+            else:
+                ans.linear[key] = multiplier*c
+    return ans
+
+def _collect_comparison(exp, multiplier, idMap, compute_values, verbose, quadratic):
+    return Results(nonl=multiplier*exp)
+    
+
+_repn_collectors = {
+    EXPR._ViewSumExpression                     : _collect_sum,
+    EXPR._ProductExpression                     : _collect_prod,
+    EXPR._PowExpression                         : _collect_pow,
+    EXPR._ReciprocalExpression                  : _collect_reciprocal,
+    EXPR.Expr_if                                : _collect_branching_expr,
+    EXPR._UnaryFunctionExpression               : _collect_nonl,
+    EXPR._AbsExpression                         : _collect_nonl,
+    EXPR._NegationExpression                    : _collect_negation,
+    EXPR._StaticLinearExpression                : _collect_linear,
+    EXPR._InequalityExpression                  : _collect_comparison,
+    EXPR._EqualityExpression                    : _collect_comparison,
+    #_ConnectorData          : _collect_linear_connector,
+    #SimpleConnector         : _collect_linear_connector,
+    #param._ParamData        : _collect_linear_const,
+    #param.SimpleParam       : _collect_linear_const,
+    #param.Param             : _collect_linear_const,
+    #parameter               : _collect_linear_const,
+    _GeneralVarData                             : _collect_var,
+    SimpleVar                                   : _collect_var,
+    Var                                         : _collect_var,
+    variable                                    : _collect_var,
+    IVariable                                   : _collect_var,
+    _GeneralExpressionData                      : _collect_identity,
+    SimpleExpression                            : _collect_identity,
+    expression                                  : _collect_identity,
+    _ExpressionData                             : _collect_identity,
+    Expression                                  : _collect_identity,
+    _GeneralObjectiveData                       : _collect_identity,
+    SimpleObjective                             : _collect_identity,
+    objective                                   : _collect_identity,
+    }
+
+
+def _collect_standard_repn(exp, multiplier, idMap, 
+                                      compute_values, verbose, quadratic):
+    # We should be checking that an expression is constant *before* calling this function
+    #assert(exp._potentially_variable())
+    try:
+        return _repn_collectors[exp.__class__](exp, multiplier, idMap, 
+                                          compute_values, verbose, quadratic)
+    except KeyError:
+        raise ValueError( "Unexpected expression (type %s): %s" % (type(exp).__name__, str(exp)) )
+
+def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None):
+    #
+    # Call recursive logic
+    #
+    ans = _collect_standard_repn(expr, 1, idMap, compute_values, verbose, quadratic)
+    #
+    # Create the final object here from 'ans'
+    #
+    repn.constant = ans.const
+
+    keys = list(key for key in ans.linear if not isclose(ans.linear[key],0))
+    repn.linear_vars = tuple(idMap[key] for key in keys)
+    repn.linear_coefs = tuple(ans.linear[key] for key in keys)
+
+    if quadratic:
+        keys = list(key for key in ans.quadratic if not isclose(ans.quadratic[key],0))
+        repn.quadratic_vars = tuple((idMap[key[0]],idMap[key[1]]) for key in keys)
+        repn.quadratic_coefs = tuple(ans.quadratic[key] for key in keys)
+
+    if not (ans.nonl.__class__ in native_numeric_types and isclose(ans.nonl,0)):
+        repn.nonlinear_expr = ans.nonl
+        repn.nonlinear_vars = []
+        for v_ in EXPR.identify_variables(repn.nonlinear_expr, include_fixed=False, include_potentially_variable=False):
+            repn.nonlinear_vars.append(v_)
+            #
+            # Update idMap in case we skipped nonlinear sub-expressions
+            #
+            # Q: Should we skip nonlinear sub-expressions?
+            #
+            id_ = id(v_)
+            if id_ in idMap[None]:
+                key = idMap[None][id_]
+            else:
+                key = len(idMap) - 1
+                idMap[None][id_] = key
+                idMap[key] = v_
+        repn.nonlinear_vars = tuple(repn.nonlinear_vars)
+
+    return repn
 
 
 def OLD_nonrecursive_generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None, _multiplier=None):
@@ -897,28 +1255,50 @@ def OLD_nonrecursive_generate_standard_repn(expr, idMap=None, compute_values=Tru
     return repn
 
 
-class Results(object):
-    __slot__ = ('const', 'nonl', 'linear', 'quadratic')
-
-    def __init__(self):
-        self.const = 0
-        self.nonl = 0
-        self.linear = {}
-        self.quadratic = {}
-
-
 #@profile
 def nonrecursive_generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None):
+    if quadratic:
+        class Results(object):
+            __slot__ = ('const', 'nonl', 'linear', 'quadratic')
+
+            def __init__(self, const=0, nonl=0, linear=None, quadratic=None):
+                self.const = const
+                self.nonl = nonl
+                if linear is None:
+                    self.linear = {}
+                else:
+                    self.linear = linear
+                if quadratic is None:
+                    self.quadratic = {}
+                else:
+                    self.quadratic = quadratic
+
+            def __str__(self):
+                return "Const:\t%f\nLinear:\t%s\nQuadratic:\t%s\nNonlinear:\t%s" % (self.const, str(self.linear), str(self.quadratic), str(self.nonl))
+    else:
+        class Results(object):
+            __slot__ = ('const', 'nonl', 'linear')
+
+            def __init__(self, const=0, nonl=0, linear=None):
+                self.const = const
+                self.nonl = nonl
+                if linear is None:
+                    self.linear = {}
+                else:
+                    self.linear = linear
+
+            def __str__(self):
+                return "Const:\t%f\nLinear:\t%s\nNonlinear:\t%s" % (self.const, str(self.linear), str(self.nonl))
+
     ##
     ## Recurse through the expression tree, collecting variables and linear terms, etc
     ##
     linear = True
     varkeys = idMap[None]
-    ans = Results()
     #
     # The stack starts with the current expression
     #
-    _stack = [ [expr, expr._args, 0, expr.nargs(), []]]
+    _stack = [ [[]], [expr, expr._args, 0, expr.nargs(), []]]
     #
     # Iterate until the stack is empty
     #
@@ -935,37 +1315,125 @@ def nonrecursive_generate_standard_repn(expr, idMap=None, compute_values=True, v
         # Note: expressions pushed onto the stack are guaranteed to 
         # be potentially variable.
         #
-        if len(_stack) == 0:
+        if len(_stack) == 1:
             break
+        print("")
+        print("STACK")
+        for i in range(len(_stack)):
+            print("%d %s" % (i, str(_stack[i])))
         _obj, _argList, _idx, _len, _result = _stack[-1]
         if verbose: #pragma:nocover
             print("*"*10 + " POP  " + "*"*10)
-        if len(_stack) > 1:
-            ans_ = _stack[-1][-1]
-        else:
-            ans_ = ans
+        print("TYPE")
+        print(_obj.__class__)
+        print("RESULT")
+        print(_result)
+    
+        input("Hit enter...")
 
-        if _obj.__class__ in native_numeric_types or not _obj._potentially_variable():
-            ans_.const += value(_obj)
+        # Products
+        if _obj.__class__ is EXPR._ProductExpression:
+            if _idx == 0:
+                if _obj._args[0].__class__ in native_numeric_types or not _obj._args[0]._potentially_variable():
+                    ans_ = Results()
+                    _result.append(ans_)
+                    ans_.const += value(_obj._args[0])
+                    _idx = 1
+                elif _obj._args[0].__class__ in pyomo5_variable_types:
+                    _stack[-1][2] = 1
+                    _stack.append( [_obj._args[0], None, None, None, []] )
+                    continue
+                else:
+                    _stack[-1][2] = 1
+                    _stack.append( [_obj._args[0], _obj._args[0]._args, 0, _obj._args[0].nargs(), []] )
+                    continue
+            if _idx == 1:
+                if _obj._args[1].__class__ in native_numeric_types or not _obj._args[1]._potentially_variable():
+                    ans_ = Results()
+                    _result.append(ans_)
+                    ans_.const += value(_obj._args[1])
+                    _idx = 2
+                elif _obj._args[1].__class__ in pyomo5_variable_types:
+                    _stack[-1][2] = 2
+                    _stack.append( [_obj._args[1], None, None, None, []] )
+                    continue
+                else:
+                    _stack[-1][2] = 2
+                    _stack.append( [_obj._args[1], _obj._args[1]._args, 0, _obj._args[1].nargs(), []] )
+                    continue
+            #
+            # Multiply term "returned" from recursion
+            #
+            lhs, rhs = _result
+            #print("LHS")
+            #print(lhs)
+            #print("RHS")
+            #print(rhs)
+            if lhs.nonl != 0 or lhs.nonl != 0:
+                ans = Results(nonl=_obj)
+            else:
+                ans = Results()
+                ans.const = lhs.const * rhs.const
+                if lhs.const != 0:
+                    for key, coef in six.iteritems(rhs.linear):
+                        ans.linear[key] = coef*lhs.const
+                if rhs.const != 0:
+                    for key, coef in six.iteritems(lhs.linear):
+                        if key in ans.linear:
+                            ans.linear[key] += coef*rhs.const
+                        else:
+                            ans.linear[key] = coef*rhs.const
 
+                if quadratic:
+                    if lhs.const != 0:
+                        for key, coef in six.iteritems(rhs.quadratic):
+                            ans.quadratic[key] = coef*lhs.const
+                    if rhs.const != 0:
+                        for key, coef in six.iteritems(lhs.quadratic):
+                            if key in ans.quadratic:
+                                ans.quadratic[key] += coef*rhs.const
+                            else:
+                                ans.quadratic[key] = coef*rhs.const
+                    for lkey, lcoef in six.iteritems(lhs.linear):
+                        for rkey, rcoef in six.iteritems(rhs.linear):
+                            ans.quadratic[lkey,rkey] = lcoef*rcoef
+                    el_linear = sum(coef*idMap[key] for key, coef in six.iteritems(lhs.linear))
+                    er_linear = sum(coef*idMap[key] for key, coef in six.iteritems(rhs.linear))
+                    el_quadratic = sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in six.iteritems(lhs.quadratic))
+                    er_quadratic = sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in six.iteritems(rhs.quadratic))
+                    ans.nonl += el_linear*er_quadratic + el_quadratic*er_linear
+                elif len(lhs.linear) + len(rhs.linear) > 1:
+                    el_linear = sum(coef*idMap[key] for key, coef in six.iteritems(lhs.linear))
+                    er_linear = sum(coef*idMap[key] for key, coef in six.iteritems(rhs.linear))
+                    ans.nonl += el_linear*er_linear
+
+            #print("HERE - prod ends")
+            _stack[-2][-1].append( ans )
+            _stack.pop()
+
+        # Summation
         elif _obj.__class__ is EXPR._ViewSumExpression:
-            if _idx != 0:
+            if _idx == 0:
+                ans_ = Results()
+                _stack[-2][-1].append(ans_)
+            else:
                 #
                 # Add term "returned" from recursion
                 #
-                ans_.const += _result.const
-                ans_.nonl += _result.nonl
-                for i, value in six.iteritems(_result.linear):
-                    ans_.linear[i] = ans_.linear.get(i, 0) + value
+                ans_ = _stack[-2][-1][-1]
+                res_ = _result[-1]
+                ans_.const += res_.const
+                ans_.nonl += res_.nonl
+                for i, val in six.iteritems(res_.linear):
+                    ans_.linear[i] = ans_.linear.get(i, 0) + val
                 if quadratic:
-                    for i, value in six.iteritems(_result.quadratic):
-                        ans_.quadratic[i] = ans_.quadratic.get(i, 0) + value
+                    for i, val in six.iteritems(res_.quadratic):
+                        ans_.quadratic[i] = ans_.quadratic.get(i, 0) + val
             #
             # Loop through remaining terms
             #
-            #for e_ in itertools.islice(expr._args, expr.nargs()):
             for i in range(_idx,_len):
-                e_ = expr._args[i]
+                e_ = _obj._args[i]
                 if e_.__class__ in pyomo5_variable_types:
                     if e_.fixed:
                         if compute_values:
@@ -982,87 +1450,94 @@ def nonrecursive_generate_standard_repn(expr, idMap=None, compute_values=True, v
                             ans_.linear[key] += 1
                         else:
                             ans_.linear[key] = 1
+                elif e_.__class__ is EXPR._ProductExpression:
+                    c_ = True
+                    if e_._args[1].__class__ in pyomo5_variable_types:
+                        if e_._args[1].fixed:
+                            v1 = e_._args[1].value
+                            v_ = e_._args[0]
+                            if v_.__class__ in native_numeric_types:
+                                ans_.const += v_ * v1
+                            elif not v_._potentially_variable():
+                                ans_.const += value(v_) * v1
+                            elif v_.__class__ in pyomo5_variable_types:
+                                if v_.fixed:
+                                    ans_.const += v_.value * v1
+                                else:
+                                    c_ = v1
+                            else:
+                                c_=False
+                        elif e_._args[0].__class__ in native_numeric_types:
+                            c_ = e_._args[0]
+                            v_ = e_._args[1]
+                        elif not e_._args[0]._potentially_variable() or \
+                             (e_._args[0].__class__ in pyomo5_variable_types and e_._args[0].fixed):
+                            c_ = value(e_._args[0])
+                            v_ = e_._args[1]
+                        else:
+                            c_=False
+                    else:
+                        c_=False
+                    #
+                    # Add the variable
+                    #
+                    if c_ is False:
+                        _stack[-1][2] = i+1
+                        _stack.append( [e_, e_._args, 0, e_.nargs(), []] )
+                        break
+                    elif not c_ is True:
+                        id_ = id(v_)
+                        if not id_ in varkeys:
+                            key = len(idMap) - 1
+                            varkeys[id_] = key
+                            idMap[key] = v_
+                        if key in ans_.linear:
+                            ans_.linear[key] += c_
+                        else:
+                            ans_.linear[key] = c_
                 elif e_.__class__ in native_numeric_types:
                     ans_.const += e_
                 elif not e_._potentially_variable():
                     ans_.const += value(e_)
                 else:
-                    _result.clear()
+                    #print("HERE?")
+                    #print(type(e_))
                     _stack[-1][2] = i+1
-                    _stack.append( (e, e._args, 0, e_.nargs(), [Results()]) )
-                    continue
+                    _stack.append( [e_, e_._args, 0, e_.nargs(), []] )
+                    break
+            else:
+                #print("HERE - sum ends")
+                _stack.pop()
+
+        # Variables
+        elif _obj.__class__ in pyomo5_variable_types:
+            ans = Results()
+            if _obj.fixed:
+                if compute_values:
+                    ans.const = _obj.value
+                else:
+                    ans.const = _obj
+            else:
+                id_ = id(_obj)
+                key = varkeys.get(id_, None)
+                if key is None:
+                    key = len(idMap) - 1
+                    varkeys[id_] = key
+                    idMap[key] = _obj
+                ans.linear[key] = 1
+            _stack[-2][-1].append( ans )
             _stack.pop()
 
-        elif _obj.__class__ is EXPR._ProductExpression:
-            if _idx == 0:
-                #
-                # Initialize results
-                #
-                ans_[-1] = 1
-            else:
-                #
-                # Multiply term "returned" from recursion
-                #
-                if -2 in _result:
-                    ans_.clear()
-                    ans_[-2] = _obj
-                    _stack.pop()
-                    continue
-                tmp = {}
-                for akey, aval in ans_.iterall():
-                    if akey == -1:
-                        for rkey, rval in _result.iterall():
-                            if rkey == -1:
-                                tmp[-1] = aval*rval
-                            else:
-                                tmp[akey] = aval*rval
-                    else:
-                        for rkey, rval in _result.iterall():
-                            if rkey == -1:
-                                tmp[rkey] = aval*rval
-                            elif not quadratic or rkey.__class__ is tuple or akey.__class__ is tuple:
-                                ans_.clear()
-                                ans_[-2] = _obj
-                                break
-                            else:
-                                tmp[akey,rkey] = aval*rval
-                else:
-                    break
-                if -2 in ans_:
-                    _stack.pop()
-                    continue
-            #
-            # Loop through remaining terms
-            #
-            while _idx < _len:
-                e = expr._args[_idx]
-                if e_.__class__ in native_numeric_types:
-                    ans_[-1] *= e_
-                elif not e_._potentially_variable():
-                    ans_[-1] *= value(e_)
-                elif e_.__class__ in pyomo5_variable_types:
-                    if e_.fixed:
-                        if compute_values:
-                            ans_[-1] *= e_.value
-                        else:
-                            ans_[-1] *= e_
-                    else:
-                        id_ = id(e_)
-                        key = varkeys.get(id_, None)
-                        if key is None:
-                            key = len(idMap) - 1
-                            varkeys[id_] = key
-                            idMap[key] = e_
-                        ans_[key] = 1
-                else:
-                    _result.clear()
-                    _stack.append( (e, e._args, 0, e_.nargs(), [{}]) )
-                    continue
+        # Constant
+        elif _obj.__class__ in native_numeric_types or not _obj._potentially_variable():
+            ans = Results(const = value(_obj))
+            _stack[-2][-1].append( ans )
             _stack.pop()
 
         else:
             raise RuntimeError("Unknown expression %s" % str(_obj))
                     
+    ans = _stack[-1][-1][-1]
     #
     # Create the final object here from 'ans'
     #
@@ -1074,7 +1549,7 @@ def nonrecursive_generate_standard_repn(expr, idMap=None, compute_values=True, v
 
     if quadratic:
         keys = list(ans.quadratic.keys())
-        repn.quadratic_vars = tuple(idMap[key] for key in keys)
+        repn.quadratic_vars = tuple((idMap[key[0]],idMap[key[1]]) for key in keys)
         repn.quadratic_coefs = tuple(ans.quadratic[key] for key in keys)
 
     if not ans.nonl is 0:
