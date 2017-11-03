@@ -718,9 +718,14 @@ E : Size=2, Index=E_index
 
         model.e.set_value(1.0)
         model.E[1].set_value(2.0)
+        #
+        # WEH - the 1.0 seems unnecessary here, but it results from
+        # a fixed variable in a sub-expression.  I can't decide if this
+        # is the expected behavior or not.
+        #
         output = \
 """\
-2.0 + x**2
+2.0 + 1.0*x**2
 e : Size=1, Index=None
     Key  : Expression
     None :        1.0
