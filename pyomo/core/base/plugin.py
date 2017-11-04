@@ -312,16 +312,12 @@ class Transformation(Plugin):
         kwds["name"] = kwds.get("name", "transformation")
         super(Transformation, self).__init__(**kwds)
 
+    @deprecated(
+        "Transformation.apply() has been deprecated.  Please use either "
+        "Transformation.apply_to() for in-place transformations or "
+        "Transformation.create_using() for transformations that create a "
+        "new, independent transformed model instance.")
     def apply(self, model, **kwds):
-        """DEPRECATION WARNING: Transformation.apply() has been deprecated.
-        Please use either Transformation.apply_to() for in-place
-        transformations or Transformation.create_using() for transformations
-        that create a new, independent transformed model instance."""
-        logger.warning(
-"""DEPRECATION WARNING: Transformation.apply() has been deprecated.
-Please use either Transformation.apply_to() for in-place transformations
-or Transformation.create_using() for transformations that create a new,
-independent transformed model instance.""")
         inplace = kwds.pop('inplace', True)
         if inplace:
             self.apply_to(model, **kwds)
@@ -355,9 +351,8 @@ independent transformed model instance.""")
 
 TransformationFactory = CreatePluginFactory(IModelTransformation)
 
-
-def Xapply_transformation(*args, **kwds):
-    """This function is deprecated"""
+@deprecated()
+def apply_transformation(*args, **kwds):
     if len(args) is 0:
         return TransformationFactory.services()
     xfrm = TransformationFactory(args[0])
