@@ -34,8 +34,13 @@ __all__ = ['pyomo_callback',
         'UnknownDataManager'
         ]
 
-import pyutilib.misc
 import logging
+import pyutilib.misc
+from pyomo.util.deprecation import deprecated
+from pyomo.util.plugin import (
+    alias, implements, Interface, Plugin, PluginFactory, CreatePluginFactory,
+    PluginError, ExtensionPoint )
+from pyomo.util.timing import TransformationTimer
 
 logger = logging.getLogger('pyomo.core')
 registered_callback = {}
@@ -55,9 +60,6 @@ def pyomo_callback( name ):
         registered_callback[name] = f
         return f
     return fn
-
-
-from pyomo.util.plugin import *
 
 
 class IPyomoScriptPreprocess(Interface):
