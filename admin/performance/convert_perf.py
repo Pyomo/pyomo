@@ -48,7 +48,8 @@ _bin = {'COOPR3': '/Users/wehart/src/pyomo/py36/bin',
         'PYOMO5': os.path.abspath('../../../../bin'),
         'PYPY': '/Users/wehart/src/pyomo/pypy/bin'
        }
-exdir = '../../../pyomo_prod/examples/performance'
+#exdir = '../../../pyomo_prod/examples/performance'
+exdir = '../../examples/performance'
 
 large = True
 _timeout = 20
@@ -132,7 +133,7 @@ def evaluate(logfile, seconds, verbose):
 #
 # Convert a test problem
 #
-def run_pyomo(code, format_, problem, verbose):
+def run_pyomo(code, format_, problem, verbose, cwd=None):
 
     if verbose:
         options = ""  # TODO
@@ -141,15 +142,20 @@ def run_pyomo(code, format_, problem, verbose):
 
     def f():
         cmd = _bin[code] + '/pyomo convert --report-timing --output=file.%s %s %s' % (format_, options, problem)
+        _cwd = os.getcwd()
+        if not cwd is None:
+            os.chdir(cwd)
         if verbose:
             print("Command: %s" % cmd)
-        res = pyutilib.subprocess.run(cmd, outfile='pyomo.out')
+        res = pyutilib.subprocess.run(cmd, outfile='pyomo.out', verbose=verbose)
         if res[0] != 0:
             print("Aborting performance testing!")
             sys.exit(1)
 
         seconds = {}
-        return evaluate('pyomo.out', seconds, verbose)
+        eval_ = evaluate('pyomo.out', seconds, verbose)
+        os.chdir(_cwd)
+        return eval_
 
     return f
 
@@ -272,6 +278,54 @@ def runall(factors, res, output=True, filetype=None, verbose=False):
             if not verbose:
                 print_results(factors_, ans_, output)
 
+    def jump_clnlbeam(name, num):
+        testname = 'jump_clnlbeam_%d' % num
+        if not filetype or filetype == name:
+            factors_ = tuple(factors+[name,testname])
+            print("TESTING: %s" % " ".join(factors_))
+            ans_ = res[factors_] = measure(run_pyomo(code, name, "%s/jump/clnlbeam.py %s/jump/clnlbeam-%d.dat" % (exdir, exdir, num), verbose), n=N)
+            if not verbose:
+                print_results(factors_, ans_, output)
+
+    def jump_facility(name, num):
+        testname = 'jump_facility'
+        if not filetype or filetype == name:
+            factors_ = tuple(factors+[name,testname])
+            print("TESTING: %s" % " ".join(factors_))
+            ans_ = res[factors_] = measure(run_pyomo(code, name, "%s/jump/facility.py" % exdir, verbose), n=N)
+            if not verbose:
+                print_results(factors_, ans_, output)
+
+    def jump_lqcp(name, num):
+        testname = 'jump_lqcp'
+        if not filetype or filetype == name:
+            factors_ = tuple(factors+[name,testname])
+            print("TESTING: %s" % " ".join(factors_))
+            ans_ = res[factors_] = measure(run_pyomo(code, name, "%s/jump/lqcp.py" % exdir, verbose), n=N)
+            if not verbose:
+                print_results(factors_, ans_, output)
+
+    def jump_opf(name, num):
+        testname = 'jump_opf_%d' % num
+        if not filetype or filetype == name:
+            factors_ = tuple(factors+[name,testname])
+            print("TESTING: %s" % " ".join(factors_))
+            ans_ = res[factors_] = measure(run_pyomo(code, name, "opf_%dbus.py" % num, verbose, cwd="%s/jump" % exdir), n=N)
+            if not verbose:
+                print_results(factors_, ans_, output)
+
+
+    if True:
+        #jump_clnlbeam('nl', 500000)
+        #jump_opf('nl', 66200)
+        if large:
+            jump_clnlbeam('nl', 50000)
+            jump_opf('nl', 6620)
+        else:
+            jump_clnlbeam('nl', 5000)
+            jump_opf('nl', 662)
+        jump_facility('nl', 0)
+        jump_lqcp('nl', 0)
 
     if True:
         if large:
@@ -289,16 +343,16 @@ def runall(factors, res, output=True, filetype=None, verbose=False):
 
     if True:
         if large:
-            pmedian1('lp',7)
-            pmedian1('nl',7)
+            pmedian1('lp',8)
+            pmedian1('nl',8)
         else:
             pmedian1('lp',4)
             pmedian1('nl',4)
 
     if True:
         if large:
-            pmedian2('lp',7)
-            pmedian2('nl',7)
+            pmedian2('lp',8)
+            pmedian2('nl',8)
         else:
             pmedian2('lp',4)
             pmedian2('nl',4)
