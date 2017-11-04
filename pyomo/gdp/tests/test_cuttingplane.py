@@ -78,22 +78,22 @@ class TwoTermDisj(unittest.TestCase):
         coefs = {
             0: 0.45,
             1: 0.55,
-            2: -0.1,
-            3: 0.1
+            2: 0.1,
+            3: -0.1
         }
 
         xhat = {
             0: 2.7,
             1: 1.3,
-            2: 0.15,
-            3: 0.85
+            2: 0.85,
+            3: 0.15
         }
 
         variables = {
             0: m.x,
             1: m.y,
-            2: m.d[1].indicator_var,
-            3: m.d[0].indicator_var
+            2: m.d[0].indicator_var,
+            3: m.d[1].indicator_var
         }
 
         for i in range(4):
