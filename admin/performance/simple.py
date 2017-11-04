@@ -36,7 +36,13 @@ model.x = Var(model.A, initialize=2)
 
 
 def linear(flag):
-    if flag == 1:
+    if flag == 0:
+        expr=sum(model.x[i] for i in model.A)
+    elif flag == 10:
+        with EXPR.linear_expression as expr:
+            expr=sum((model.x[i] for i in model.A), expr)
+
+    elif flag == 1:
         expr = summation(model.p, model.x)
     elif flag == 6:
         expr=Sum(model.p[i]*model.x[i] for i in model.A)
@@ -111,19 +117,21 @@ def linear(flag):
 if coopr3:
     import pyomo.core.kernel.expr_coopr3 as COOPR3
     print("REFCOUNT: "+str(COOPR3._getrefcount_available))
-    for i in (2,3,6,7,8,9):
+    for i in (0,2,3,6,7,8,9):
         print((i,timeit.timeit('linear(%d)' % i, "from __main__ import linear", number=1)))
 
 if pyomo4:
     import pyomo.core.kernel.expr_pyomo4 as PYOMO4
     EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo4_trees)
     print("REFCOUNT: "+str(PYOMO4._getrefcount_available))
-    for i in (2,3,6,7,8,9):
+    for i in (0,2,3,6,7,8,9):
         print((i,timeit.timeit('linear(%d)' % i, "from __main__ import linear", number=1)))
 
 if not (coopr3 or pyomo4):
     import pyomo.core.kernel.expr_pyomo5 as PYOMO5
     print("REFCOUNT: "+str(PYOMO5._getrefcount_available))
-    for i in (2,12,22,3,13,4,14,5,15,6,7,17,8,9):
+    #import cProfile
+    #cProfile.run("linear(7)", "stats.7")
+    for i in (0,10,2,12,22,3,13,4,14,5,15,6,7,17,8,9):
         print((i,timeit.timeit('linear(%d)' % i, "from __main__ import linear", number=1)))
 
