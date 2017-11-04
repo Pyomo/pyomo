@@ -685,6 +685,44 @@ def _collect_linear(exp, multiplier, idMap, compute_values, verbose, quadratic):
 def _collect_comparison(exp, multiplier, idMap, compute_values, verbose, quadratic):
     return Results(nonl=multiplier*exp)
     
+def _collect_linear_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
+    ans = Results()
+    varkeys = idMap[None]
+
+    for e_ in itertools.islice(exp._args, exp.nargs()):
+        c,v = e_
+        if not v is None:
+            if v.fixed:
+                if compute_values:
+                    ans.const += multiplier*c*v.value
+                else:
+                    ans.const += multiplier*c*v
+            else:
+                id_ = id(v)
+                if id_ in varkeys:
+                    key = varkeys[id_]
+                else:
+                    key = len(idMap) - 1
+                    varkeys[id_] = key
+                    idMap[key] = v
+                if key in ans.linear:
+                    ans.linear[key] += multiplier*c
+                else:
+                    ans.linear[key] = multiplier*c
+        elif c.__class__ in native_numeric_types:
+            ans.const += multiplier*c
+        else:       # not c._potentially_variable()
+            if compute_values:
+                ans.const += multiplier * value(c)
+            else:
+                ans.const += multiplier * c
+
+    return ans
+
+
+#def _collect_linear_term(exp, multiplier, idMap, compute_values, verbose, quadratic):
+#    return _collect_var(exp._args[1], multiplier*exp._args[0], idMap, compute_values, verbose, quadratic)
+
 
 _repn_collectors = {
     EXPR._ViewSumExpression                     : _collect_sum,
@@ -698,6 +736,7 @@ _repn_collectors = {
     EXPR._StaticLinearExpression                : _collect_linear,
     EXPR._InequalityExpression                  : _collect_comparison,
     EXPR._EqualityExpression                    : _collect_comparison,
+    EXPR._LinearViewSumExpression               : _collect_linear_sum,
     #_ConnectorData          : _collect_linear_connector,
     #SimpleConnector         : _collect_linear_connector,
     #param._ParamData        : _collect_linear_const,

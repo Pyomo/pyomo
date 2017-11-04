@@ -75,6 +75,7 @@ _pyomo5_module_members = [
     '_NegationExpression',
     'EntangledExpressionError',
     '_ViewSumExpression',
+    '_LinearViewSumExpression',
     '_UnaryFunctionExpression',
     'sum',
     '_NPV_NegationExpression',

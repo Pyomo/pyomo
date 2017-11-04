@@ -2271,20 +2271,26 @@ class _ViewSumExpression(_SumExpression):
     __slots__ = ('_nargs',)
     PRECEDENCE = 6
 
-    def __init__(self, args, new_arg=None):
-        if args.__class__ is _ViewSumExpression:
-            args._is_owned = True
-            self._args = args._args
-        else:
-            self._args = args
+    def __init__(self, args):
+        self._args = args
+        self._is_owned = False
+        self._nargs = len(self._args)
+
+    def add(self, new_arg):
+        if new_arg.__class__ in native_numeric_types and isclose(new_arg,0):
+            return self
+        # Clone 'self', because _ViewSumExpression are immutable
+        self._is_owned = True
+        self = self.__class__(self._args)
+        #
         if new_arg.__class__ is _ViewSumExpression or new_arg.__class__ is _MutableViewSumExpression:
             self._args.extend( islice(new_arg._args, new_arg._nargs) )
         elif not new_arg is None:
             self._args.append(new_arg)
         self._nargs = len(self._args)
-        self._is_owned = False
         if not new_arg is None and new_arg.__class__ in pyomo5_expression_types:
             new_arg._is_owned = True
+        return self
 
     def nargs(self):
         return self._nargs
@@ -2334,24 +2340,153 @@ class _ViewSumExpression(_SumExpression):
                 isclose(self._args[0], 0)
 
 
+class _LinearViewSumExpression(_ViewSumExpression):
+
+    __slots__ = ()
+
+    def __init__(self, args):
+        global pyomo5_variable_types
+        if pyomo5_variable_types is None:
+            from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
+            from pyomo.core.kernel.component_variable import IVariable, variable
+            pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
+            _LinearExpression.vtypes = pyomo5_variable_types
+
+        if args.__class__ is tuple:
+            self._args = []
+            linear_terms = []
+            nonlinear_terms = []
+            for arg in args:
+                self.decompose(arg, linear_terms, nonlinear_terms)
+            self._args.extend(linear_terms)
+            if len(nonlinear_terms) > 0:
+                # We add nonlinear terms, but change the class type.
+                self._args.extend(nonlinear_terms)
+                self.__class__ = _ViewSumExpression
+        else:
+            self._args = args
+        self._is_owned = False
+        self._nargs = len(self._args)
+
+    def add(self, new_arg):
+        if new_arg.__class__ in native_numeric_types and isclose(new_arg,0):
+            return self
+        # Clone 'self', because _LinearViewSumExpression are immutable
+        self._is_owned = True
+        self = self.__class__(self._args)
+        #
+        if new_arg.__class__ is _LinearViewSumExpression:
+            self._args.extend(islice(new_arg._args, new_arg._nargs))
+        else:
+            linear_terms = []
+            nonlinear_terms = []
+            if new_arg.__class__ is _ViewSumExpression or new_arg.__class__ is _MutableViewSumExpression:
+                for arg in islice(new_arg._args, new_arg._nargs):
+                    self.decompose(arg, linear_terms, nonlinear_terms)
+            elif not new_arg is None:
+                self.decompose(new_arg, linear_terms, nonlinear_terms)
+            self._args.extend(linear_terms)
+            if len(nonlinear_terms) > 0:
+                #
+                # We add nonlinear terms, but change the class type.  Note that
+                # this doesn't change the type of _LinearViewSumExpression
+                # objects that share a prefix of the underlying list.
+                #
+                self._args.extend(nonlinear_terms)
+                self.__class__ = _ViewSumExpression
+        #
+        self._nargs = len(self._args)
+        if not new_arg is None and new_arg.__class__ in pyomo5_expression_types:
+            new_arg._is_owned = True
+        return self
+
+    def decompose(self, term, linear_terms, nonlinear_terms):
+        if term.__class__ in native_numeric_types or \
+            not term._potentially_variable():
+            linear_terms.append((term,None))
+        elif term.__class__ in pyomo5_variable_types:
+            linear_terms.append((1,term))
+        else:
+            try:
+                terms = [t_ for t_ in self._decompose_terms(term)]
+                linear_terms.extend(terms)
+            except ValueError:
+                nonlinear_terms.append(term)
+
+    def _decompose_terms(self, expr, multiplier=1):
+        if expr.__class__ in native_numeric_types or not expr._potentially_variable():
+            yield (multiplier*expr,None)
+        elif expr.__class__ in pyomo5_variable_types:
+            yield (multiplier,expr)
+        elif expr.__class__ is _ProductExpression:
+            if expr._args[0].__class__ in native_numeric_types or not expr._args[0]._potentially_variable():
+                for term in self._decompose_terms(expr._args[1], multiplier*expr._args[0]):
+                    yield term
+            else:
+                raise ValueError("Quadratic terms exist in a product expression.")
+        elif expr.__class__ is _LinearViewSumExpression:
+            for arg in expr.args:
+                yield (multiplier*arg[0], arg[1])
+        elif expr.__class__ is _ViewSumExpression or expr.__class__ is _MutableViewSumExpression:
+            for arg in expr.args:
+                for term in self._decompose_terms(arg, multiplier):
+                    yield term
+        elif expr.__class__ is _NegationExpression:
+            yield (-multiplier,expr._args[0])
+        elif expr.__class__ is _LinearExpression:
+            if expr.constant.__class__ in native_numeric_types and not isclose(expr.constant,0):
+                yield multiplier*expr.constant
+            if len(expr.linear_coefs) > 0:
+                for c,v in izip(expr.linear_coefs, expr.linear_vars):
+                    yield (multiplier*c,v)
+        else:
+            raise ValueError("Unexpected nonlinear term")
+
+    def is_constant(self):
+        for arg in islice(self._args, self._nargs):
+            if not arg[1] is None:
+                return False
+        return True
+
+    def _potentially_variable(self):
+        global pyomo5_variable_types
+        if pyomo5_variable_types is None:
+            from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
+            from pyomo.core.kernel.component_variable import IVariable, variable
+            pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
+            _LinearExpression.vtypes = pyomo5_variable_types
+
+        for arg in islice(self._args, self._nargs):
+            if not arg[1] is None:
+                return True
+        return False
+
+    def _to_string_skip(self, _idx):
+        return  _idx == 0 and \
+                self._args[0][1] is None and \
+                self._args[0][0].__class__ in native_numeric_types and \
+                isclose(self._args[0][0], 0)
+
+
 class _MutableViewSumExpression(_ViewSumExpression):
 
     __slots__ = ()
 
-    def extend(self, new_arg):
+    def add(self, new_arg):
+        if new_arg.__class__ in native_numeric_types and isclose(new_arg,0):
+            return self
+        # Do not clone 'self', because _MutableViewSumExpression are mutable
+        #self._is_owned = True
+        #self = self.__class__(list(self.args))
+        #
         if new_arg.__class__ is _ViewSumExpression or new_arg.__class__ is _MutableViewSumExpression:
             self._args.extend( islice(new_arg._args, new_arg._nargs) )
-        elif not (new_arg.__class__ in native_numeric_types and isclose(new_arg,0.0)):
+        elif not new_arg is None:
             self._args.append(new_arg)
         self._nargs = len(self._args)
-        if _getrefcount_available:
-            self._is_owned = UNREFERENCED_EXPR_COUNT
-        else:
-            self._is_owned = False
-            if new_arg.__class__ in pyomo5_expression_types:
-                new_arg._is_owned = True
-
-
+        if not new_arg is None and new_arg.__class__ in pyomo5_expression_types:
+            new_arg._is_owned = True
+        return self
 
 
 class _MutableMultiSumExpression(_SumExpression):
@@ -2753,13 +2888,13 @@ class _LinearExpression(_ExpressionBase):
             if expr._args[1].__class__ in _LinearExpression.vtypes:
                 v_ = expr._args[1]
                 if not v is None:
-                    raise ValueError("Expected a single linear term")
+                    raise ValueError("Expected a single linear term (1)")
                 return 0,C,v_
             else:
                 C_,c_,v_ = _LinearExpression._decompose_term(expr._args[1])
             if not v_ is None:
                 if not v is None:
-                    raise ValueError("Expected a single linear term")
+                    raise ValueError("Expected a single linear term (2)")
                 return C*C_,C*c_,v_
             return C_C*C,C_*c,v
         elif expr.__class__ is _SumExpression:
@@ -2770,15 +2905,28 @@ class _LinearExpression(_ExpressionBase):
                     if id(v) == id(v_):
                         return C+C_,c+c_,v
                     else:
-                        raise ValueError("Expected a single linear term")
+                        raise ValueError("Expected a single linear term (3)")
                 return C+C_,c_,v_
             return C+C_,c,v
+        elif False or expr.__class__ is _LinearViewSumExpression:
+            C=0
+            c=1
+            v=None
+            for arg in expr.args:
+                if arg[1] is None:
+                    C += arg[0]
+                elif not v is None:
+                    raise ValueError("Expected a single linear term (3a)")
+                else:
+                    c=arg[0]
+                    v=arg[1]
+            return C,c,v
         elif expr.__class__ is _NegationExpression:
             C,c,v = _LinearExpression._decompose_term(expr._args[0])
             return -C,-c,v
         elif expr.__class__ is _ReciprocalExpression:
             if expr._potentially_variable():
-                raise ValueError("Unexpected nonlinear term")
+                raise ValueError("Unexpected nonlinear term (4)")
             return 1/expr,None,None
         elif expr.__class__ is _LinearExpression:
             l = len(expr.linear_vars)
@@ -2787,7 +2935,7 @@ class _LinearExpression(_ExpressionBase):
             elif l == 1:
                 return expr.constant, expr.linear_coefs[0], expr.linear_vars[0]
             else:
-                raise ValueError("Expected a single linear term")
+                raise ValueError("Expected a single linear term (5)")
         elif expr.__class__ in pyomo5_multisum_types:
             C = 0
             c = None
@@ -2797,14 +2945,14 @@ class _LinearExpression(_ExpressionBase):
                 C += C_
                 if not v_ is None:
                     if not v is None:
-                        raise ValueError("Expected a single linear term")
+                        raise ValueError("Expected a single linear term (6)")
                     c=c_
                     v=v_
             return C,c,v
         #
         # TODO: ExprIf, POW, Abs?
         #
-        raise ValueError("Expected expression type in _decompose_term: %s" % str(type(expr)))
+        raise ValueError("Unexpected nonlinear term (7)")
 
     #@profile
     def _combine_expr(self, etype, _other):
@@ -3127,20 +3275,14 @@ def generate_expression(etype, _self, _other):
         #
         # x + y
         #
-        if _self.__class__ is _ViewSumExpression and not _self._is_owned:
-            if _other.__class__ in native_numeric_types and _other == 0:
-                return _self
-            return _ViewSumExpression(_self, _other)
-        elif _other.__class__ is _ViewSumExpression and not _other._is_owned:
-            if _self.__class__ in native_numeric_types and _self == 0:
-                return _other
-            return _ViewSumExpression(_other, _self)
-        elif _self.__class__ is _MutableViewSumExpression:
-            _self.extend(_other)
-            return _self
-        elif _other.__class__ is _MutableViewSumExpression:
-            _other.extend(_self)
-            return _other
+        if (_self.__class__ is _ViewSumExpression and not _self._is_owned) or \
+           _self.__class__ is _MutableViewSumExpression:
+           #(_self.__class__ is _LinearViewSumExpression and not _self._is_owned) or
+            return _self.add(_other)
+        elif (_other.__class__ is _ViewSumExpression and not _other._is_owned) or \
+            _other.__class__ is _MutableViewSumExpression:
+            #_other.__class__ is _LinearViewSumExpression and not _other._is_owned or
+            return _other.add(_self)
         elif _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
                 return _self + _other
@@ -3149,7 +3291,7 @@ def generate_expression(etype, _self, _other):
             if _self.is_constant():
                 return _Constant_SumExpression((_self, _other))
             elif _self._potentially_variable():
-                #return _ViewSumExpression((_other, _self))
+                #return _LinearViewSumExpression((_other, _self))
                 return _ViewSumExpression([_other, _self])
             return _NPV_SumExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
@@ -3158,14 +3300,14 @@ def generate_expression(etype, _self, _other):
             if _other.is_constant():
                 return _Constant_SumExpression((_self, _other))
             elif _other._potentially_variable():
-                #return _ViewSumExpression((_self, _other))
+                #return _LinearViewSumExpression((_self, _other))
                 return _ViewSumExpression([_self, _other])
             return _NPV_SumExpression((_self, _other))
         elif _other._potentially_variable():
-            #return _ViewSumExpression((_self, _other))
+            #return _LinearViewSumExpression((_self, _other))
             return _ViewSumExpression([_self, _other])
         elif _self._potentially_variable():
-            #return _ViewSumExpression((_other, _self))
+            #return _LinearViewSumExpression((_other, _self))
             return _ViewSumExpression([_other, _self])
         elif not _other.is_constant():
             return _NPV_SumExpression((_self, _other))
@@ -3179,13 +3321,10 @@ def generate_expression(etype, _self, _other):
         #
         # TODO: _MultiViewSum logic here
         #
-        if _self.__class__ is _ViewSumExpression and not _self._is_owned:
-            if _other.__class__ in native_numeric_types and _other == 0:
-                return _self
-            return _ViewSumExpression(_self, -_other)
-        elif _self.__class__ is _MutableViewSumExpression:
-            _self.extend(- _other)
-            return _self
+        if (_self.__class__ is _ViewSumExpression and not _self._is_owned) or \
+           _self.__class__ is _MutableViewSumExpression:
+           #(_self.__class__ is _LinearViewSumExpression and not _self._is_owned) or
+            return _self.add(-_other)
         elif _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
                 return _self - _other
@@ -3194,7 +3333,7 @@ def generate_expression(etype, _self, _other):
             if _self.is_constant():
                 return _Constant_SumExpression((-_other, _self))
             elif _self._potentially_variable():
-                #return _ViewSumExpression((-_other, _self))
+                #return _LinearViewSumExpression((_self, -_other))
                 return _ViewSumExpression([_self, -_other])
             return _NPV_SumExpression((-_other, _self))
         elif _self.__class__ in native_numeric_types:
@@ -3207,11 +3346,14 @@ def generate_expression(etype, _self, _other):
             if _other.is_constant():    
                 return _Constant_SumExpression((_self, _Constant_NegationExpression((_other,))))
             elif _other._potentially_variable():    
+                #return _LinearViewSumExpression((_self, _NegationExpression((_other,))))
                 return _ViewSumExpression([_self, _NegationExpression((_other,))])
             return _NPV_SumExpression((_self, _NPV_NegationExpression((_other,))))
         elif _other._potentially_variable():    
+            #return _LinearViewSumExpression((_self, _NegationExpression((_other,))))
             return _ViewSumExpression([_self, _NegationExpression((_other,))])
         elif _self._potentially_variable():
+            #return _LinearViewSumExpression((_self, _NPV_NegationExpression((_other,))))
             return _ViewSumExpression([_self, _NPV_NegationExpression((_other,))])
         elif not _other.is_constant():    
             return _NPV_SumExpression((_self, _NPV_NegationExpression((_other,))))
