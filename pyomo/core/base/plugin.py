@@ -328,20 +328,26 @@ class Transformation(Plugin):
         """
         Apply the transformation to the given model.
         """
+        timer = TransformationTimer(self, 'in-place')
         if not hasattr(model, '_transformation_data'):
             model._transformation_data = TransformationData()
         self._apply_to(model, **kwds)
+        timer.report()
 
     def create_using(self, model, **kwds):
         """
         Create a new model with this transformation
         """
+        timer = TransformationTimer(self, 'out-of-place')
         if not hasattr(model, '_transformation_data'):
             model._transformation_data = TransformationData()
-        return self._create_using(model, **kwds)
+        new_model = self._create_using(model, **kwds)
+        timer.report()
+        return new_model
 
     def _apply_to(self, model, **kwds):
-        raise RuntimeError("The Transformation.apply_to method is not implemented.")
+        raise RuntimeError(
+            "The Transformation.apply_to method is not implemented.")
 
     def _create_using(self, model, **kwds):
         instance = model.clone()
