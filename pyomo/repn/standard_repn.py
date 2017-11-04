@@ -24,7 +24,7 @@ from pyomo.core.base import (Constraint,
 
 import pyomo.util
 from pyutilib.misc import Bunch
-from pyutilib.math.util import isclose
+from pyutilib.math.util import isclose as isclose_default
 
 from pyomo.core.base.objective import (_GeneralObjectiveData,
                                        SimpleObjective)
@@ -61,6 +61,50 @@ using_py3 = six.PY3
 from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
 from pyomo.core.kernel.component_variable import IVariable, variable
 pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
+
+
+#
+# This checks if the first argument is a numeric value.  If not
+# then this is a Pyomo constant expression, and we can only check if its
+# close to 'b' when it is constant.
+#
+def isclose_const(a, b, rel_tol=1e-9, abs_tol=0.0):
+    if not a.__class__ in native_numeric_types:
+        if a.is_constant():
+            a = value(a)
+        else:
+            return False
+    # Copied from pyutilib.math after here
+    diff = math.fabs(a-b)
+    if diff <= rel_tol*max(math.fabs(a),math.fabs(b)):
+        return True
+    if diff <= abs_tol:
+        return True
+    return False
+
+#
+# The global isclose() function used below.  This is either isclose_default
+# (defined in pyutilib) or isclose_const
+#
+isclose = isclose_default
+
+#
+# A context manager that makes sure we set/reset the
+# isclose() function.
+#
+class isclose_context(object):
+
+    def __init__(self, compute_values):
+        self.compute_values = compute_values
+
+    def __enter__(self):
+        if not self.compute_values:
+            global isclose
+            isclose = isclose_const
+
+    def __exit__(self, *args):
+        global isclose
+        isclose = isclose_default
 
 
 class StandardRepn(object):
@@ -177,9 +221,9 @@ class StandardRepn(object):
         expr = self.constant
         for i,v in enumerate(self.linear_vars):
             val = value(self.linear_coefs[i])
-            if isclose(val, 1.0):
+            if isclose_const(val, 1.0):
                 expr += self.linear_vars[i]
-            elif isclose(val, -1.0):
+            elif isclose_const(val, -1.0):
                 expr -= self.linear_vars[i]
             elif val < 0.0:
                 expr -= - self.linear_coefs[i]*self.linear_vars[i]
@@ -187,9 +231,9 @@ class StandardRepn(object):
                 expr += self.linear_coefs[i]*self.linear_vars[i]
         for i,v in enumerate(self.quadratic_vars):
             val = value(self.quadratic_coefs[i])
-            if isclose(val, 1.0):
+            if isclose_const(val, 1.0):
                 expr += self.quadratic_vars[i][0]*self.quadratic_vars[i][0]
-            elif isclose(val, -1.0):
+            elif isclose_const(val, -1.0):
                 expr -= self.quadratic_vars[i][0]*self.quadratic_vars[i][0]
             else:
                 expr += self.quadratic_coefs[i]*self.quadratic_vars[i][0]*self.quadratic_vars[i][0]
@@ -216,7 +260,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
     # Disable implicit cloning while creating a standard representation.
     # We allow the representation to be entangled with the original expression.
     #
-    with EXPR.ignore_entangled_expressions:
+    with isclose_context(compute_values):
         #
         # Setup
         #
@@ -405,7 +449,7 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     # LHS is a numeric value
     #
     if exp._args[0].__class__ in native_numeric_types:
-        if isclose(exp._args[0],0):
+        if isclose_default(exp._args[0],0):
             return Results()
         return _collect_standard_repn(exp._args[1], multiplier * exp._args[0], idMap, 
                                   compute_values, verbose, quadratic)
@@ -415,7 +459,7 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     elif not exp._args[0]._potentially_variable():
         if compute_values:
             val = value(exp._args[0])
-            if isclose(val,0):
+            if isclose_default(val,0):
                 return Results()
             return _collect_standard_repn(exp._args[1], multiplier * val, idMap, 
                                   compute_values, verbose, quadratic)
@@ -425,14 +469,14 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
 
     lhs = _collect_standard_repn(exp._args[0], 1, idMap, 
                                   compute_values, verbose, quadratic)
-    lhs_nonl_None = lhs.nonl.__class__ in native_numeric_types and isclose(lhs.nonl,0)
+    lhs_nonl_None = isclose_const(lhs.nonl,0)
 
     if lhs_nonl_None and len(lhs.linear) == 0 and len(lhs.quadratic) == 0:
         if isclose(lhs.const,0):
             return Results()
         if compute_values:
             val = value(lhs.const)
-            if isclose(val,0):
+            if isclose_default(val,0):
                 return Results()
             return _collect_standard_repn(exp._args[1], multiplier*val, idMap, 
                                   compute_values, verbose, quadratic)
@@ -450,7 +494,7 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     else:
         rhs = _collect_standard_repn(exp._args[1], 1, idMap, 
                                   compute_values, verbose, quadratic)
-    rhs_nonl_None = rhs.nonl.__class__ in native_numeric_types and isclose(rhs.nonl,0)
+    rhs_nonl_None = isclose_const(rhs.nonl,0)
     if rhs_nonl_None and len(rhs.linear) == 0 and len(rhs.quadratic) == 0 and isclose(rhs.const,0):
         return Results()
 
@@ -534,7 +578,7 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
             exponent = exp._args[1]
     else:
         res = _collect_standard_repn(exp._args[1], 1, idMap, compute_values, verbose, quadratic)
-        if not (lhs.nonl.__class__ in native_numeric_types and isclose(lhs.nonl,0)) or len(lhs.linear) > 0 or len(lhs.quadratic) > 0:
+        if not isclose_const(lhs.nonl,0) or len(lhs.linear) > 0 or len(lhs.quadratic) > 0:
             # The exponent is variable, so this is a nonlinear expression
             return Results(nonl=multiplier*exp)
         exponent = res.const
@@ -547,7 +591,7 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if exponent == 2 and quadratic:
         # NOTE: We treat a product of linear terms as nonlinear unless quadratic==2
         res =_collect_standard_repn(exp._args[0], 1, idMap, compute_values, verbose, quadratic)
-        if not (res.nonl.__class__ in native_numeric_types and isclose(res.nonl,0)) or len(res.quadratic) > 0:
+        if not isclose_const(res.nonl,0) or len(res.quadratic) > 0:
             return Results(nonl=multiplier*exp)
         ans = Results()
         if not isclose(res.const,0):
@@ -568,11 +612,11 @@ def _collect_reciprocal(exp, multiplier, idMap, compute_values, verbose, quadrat
             denom = 1.0 * exp._args[0]
     else:
         res =_collect_standard_repn(exp._args[0], 1, idMap, compute_values, verbose, quadratic)
-        if not (res.nonl.__class__ in native_numeric_types and isclose(res.nonl,0)) or len(res.linear) > 0 or len(res.quadratic) > 0:
+        if not isclose_const(res.nonl,0) or len(res.linear) > 0 or len(res.quadratic) > 0:
             return Results(nonl=multiplier*exp)
         else:
             denom = 1.0*res.const
-    if compute_values and isclose(denom, 0):
+    if isclose_const(denom, 0):
         raise ZeroDivisionError()
     return Results(const=multiplier/denom)
    
@@ -586,7 +630,7 @@ def _collect_branching_expr(exp, multiplier, idMap, compute_values, verbose, qua
             return Results(nonl=multiplier*exp)
     else:
         res = _collect_standard_repn(exp._if, 1, idMap, compute_values, verbose, quadratic)
-        if not (res.nonl.__class__ in native_numeric_types and isclose(res.nonl,0)) or len(res.linear) > 0 or len(res.quadratic) > 0:
+        if not isclose_const(res.nonl,0) or len(res.linear) > 0 or len(res.quadratic) > 0:
             return Results(nonl=multiplier*exp)
         else:
             if_val = res.const
@@ -597,7 +641,7 @@ def _collect_branching_expr(exp, multiplier, idMap, compute_values, verbose, qua
 
 def _collect_nonl(exp, multiplier, idMap, compute_values, verbose, quadratic):
     res = _collect_standard_repn(exp._args[0], 1, idMap, compute_values, verbose, quadratic)
-    if not (res.nonl.__class__ in native_numeric_types and isclose(res.nonl,0)) or len(res.linear) > 0 or len(res.quadratic) > 0:
+    if not isclose_const(res.nonl,0) or len(res.linear) > 0 or len(res.quadratic) > 0:
         return Results(nonl=multiplier*exp)
     return Results(const=multiplier*exp._apply_operation([res.const]))
 
@@ -705,7 +749,7 @@ def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False
         repn.quadratic_vars = tuple((idMap[key[0]],idMap[key[1]]) for key in keys)
         repn.quadratic_coefs = tuple(ans.quadratic[key] for key in keys)
 
-    if not (ans.nonl.__class__ in native_numeric_types and isclose(ans.nonl,0)):
+    if not isclose_const(ans.nonl,0):
         repn.nonlinear_expr = ans.nonl
         repn.nonlinear_vars = []
         for v_ in EXPR.identify_variables(repn.nonlinear_expr, include_fixed=False, include_potentially_variable=False):
