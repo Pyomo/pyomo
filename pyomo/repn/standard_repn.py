@@ -412,9 +412,9 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
                 lhs = e_._args[0]
             if e_._args[1].fixed:
                 if compute_values:
-                    ans.const += multiplier*lhs*value(e_.args[1])
+                    ans.const += multiplier*lhs*value(e_._args[1])
                 else:
-                    ans.const += multiplier*lhs*e_.args[1]
+                    ans.const += multiplier*lhs*e_._args[1]
             else:
                 id_ = id(e_._args[1])
                 if id_ in varkeys:
