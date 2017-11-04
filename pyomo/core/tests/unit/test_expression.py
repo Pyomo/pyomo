@@ -725,7 +725,7 @@ E : Size=2, Index=E_index
         #
         output = \
 """\
-1.0*x**2 + 2.0
+2.0 + x**2
 e : Size=1, Index=None
     Key  : Expression
     None :        1.0
