@@ -1009,8 +1009,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         list(self_varID_map[id(var)] for var in repn.nonlinear_vars))
                 except KeyError as err:
                     self._symbolMapKeyError(err, model, self_varID_map,
-                                            repn._linear_vars +
-                                            repn._nonlinear_vars)
+                                            repn.linear_vars +
+                                            repn.nonlinear_vars)
                     raise
 
                 LinearVars.update(wrapped_repn.linear_vars)
@@ -1121,8 +1121,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         list(self_varID_map[id(var)] for var in repn.nonlinear_vars))
                 except KeyError as err:
                     self._symbolMapKeyError(err, model, self_varID_map,
-                                            repn._linear_vars +
-                                            repn._nonlinear_vars)
+                                            repn.linear_vars +
+                                            repn.nonlinear_vars)
                     raise
 
                 if repn.is_nonlinear():
