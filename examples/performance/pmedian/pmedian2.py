@@ -45,10 +45,7 @@ def pyomo_create_model(options=None, model_options=None):
     model.single_x = Constraint(model.Customers, rule=rule)
 
     def rule(model, n,m):
-        with linear_expression as e:
-            e += model.x[n,m] 
-            e -= model.y[n]
-        return (None, e, 0.0)
+        return (None, model.x[n,m] - model.y[n], 0.0)
     model.bound_y = Constraint(model.Locations, model.Customers, rule=rule)
 
     def rule(model):
