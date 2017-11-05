@@ -736,7 +736,7 @@ _repn_collectors = {
     EXPR._StaticLinearExpression                : _collect_linear,
     EXPR._InequalityExpression                  : _collect_comparison,
     EXPR._EqualityExpression                    : _collect_comparison,
-    EXPR._LinearViewSumExpression               : _collect_linear_sum,
+    #EXPR._LinearViewSumExpression               : _collect_linear_sum,
     #_ConnectorData          : _collect_linear_connector,
     #SimpleConnector         : _collect_linear_connector,
     #param._ParamData        : _collect_linear_const,
@@ -1062,7 +1062,7 @@ def OLD_nonrecursive_generate_standard_repn(expr, idMap=None, compute_values=Tru
                 ans = {}
                 break
 
-        if _obj.__class__ is EXPR._SumExpression or _obj.__class__ is EXPR._ViewSumExpression:
+        if _obj.__class__ is EXPR._ViewSumExpression:
             ans = {}
             # Add nonlinear terms
             # Do some extra work to combine the arguments of 'Sum' expressions
