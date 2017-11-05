@@ -21,6 +21,7 @@ from pyomo.core.base import expr_common
 from pyomo.core.kernel.numvalue import native_numeric_types
 from pyomo.core.kernel import expr as EXPR
 import pyomo.core.base.var
+from pyomo.core.kernel.expr_pyomo5 import decompose_term
 
 
 def prod(factors):
@@ -37,68 +38,63 @@ def Sum(args, start=0, linear=None):
     A utility function to compute a sum of Pyomo expressions.  The behavior is similar to the
     builtin 'sum' function, but this generates a compact expression.
     """
-    if expr_common.mode == expr_common.Mode.pyomo5_trees:
-        from pyomo.core.kernel.expr_pyomo5 import decompose_term
-        with EXPR.ignore_entangled_expressions:
+    #
+    # If we're starting with a numeric value, then 
+    # create a new nonlinear sum expression but 
+    # return a static version to the user.
+    #
+    if start.__class__ in native_numeric_types:
+        if linear is None:
             #
-            # If we're starting with a numeric value, then 
-            # create a new nonlinear sum expression but 
-            # return a static version to the user.
+            # Get the first term, which we will test for linearity
             #
-            if start.__class__ in native_numeric_types:
-                if linear is None:
-                    #
-                    # Get the first term, which we will test for linearity
-                    #
-                    first = next(args, None)
-                    if first is None:
-                        return start
-                    #
-                    # Check if the first term is linear, and if so return the terms
-                    #
-                    linear, terms = decompose_term(first)
-                    #
-                    # Right now Pyomo5 expressions can only handle single linear
-                    # terms.
-                    #
-                    if linear:
-                        nvar=0
-                        for term in terms:
-                            c,v = term
-                            if not v is None:
-                                nvar += 1
-                        #
-                        # NOTE: We treat constants as nonlinear since we want to 
-                        # simply keep them in a sum
-                        #
-                        if nvar == 0 or nvar > 1:
-                            linear = False
-                    start = start+first
-                if linear:
-                    with EXPR.linear_expression as e:
-                        e += start
-                        for arg in args:
-                            e += arg
-                    return e
-                else:
-                    with EXPR.nonlinear_expression as e:
-                        e += start
-                        for arg in args:
-                            e += arg
-                    if len(e._args) == 0:
-                        return 0
-                    elif len(e._args) == 1:
-                        return e._args[0]
-                    return e
+            first = next(args, None)
+            if first is None:
+                return start
             #
-            # Otherwise, use the context that is provided and return it.
+            # Check if the first term is linear, and if so return the terms
             #
-            e = start
-            for arg in args:
-                e += arg
+            linear, terms = decompose_term(first)
+            #
+            # Right now Pyomo5 expressions can only handle single linear
+            # terms.
+            #
+            if linear:
+                nvar=0
+                for term in terms:
+                    c,v = term
+                    if not v is None:
+                        nvar += 1
+                #
+                # NOTE: We treat constants as nonlinear since we want to 
+                # simply keep them in a sum
+                #
+                if nvar == 0 or nvar > 1:
+                    linear = False
+            start = start+first
+        if linear:
+            with EXPR.linear_expression as e:
+                e += start
+                for arg in args:
+                    e += arg
             return e
-    else:
-        return sum(*args)
+        else:
+            with EXPR.nonlinear_expression as e:
+                e += start
+                for arg in args:
+                    e += arg
+            if len(e._args) == 0:
+                return 0
+            elif len(e._args) == 1:
+                return e._args[0]
+            return e
+    #
+    # Otherwise, use the context that is provided and return it.
+    #
+    e = start
+    for arg in args:
+        e += arg
+    return e
 
 
 def summation(*args, **kwds):
@@ -179,11 +175,7 @@ def summation(*args, **kwds):
         return Sum((prod(args[j][i] for j in num_index)/prod(denom[j][i] for j in denom_index) for i in index), start)
 
 
-def dot_product(*args, **kwds):
-    """
-    A synonym for the summation() function.
-    """
-    return summation(*args, **kwds)
+dot_product = summation
 
 
 def sequence(*args):

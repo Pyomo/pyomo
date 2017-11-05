@@ -17,6 +17,6 @@ import pyomo.core.data
 import pyomo.core.preprocess
 import pyomo.core.kernel
 from pyomo.core.util import *
-from pyomo.core.kernel.expr_pyomo5 import linear_expression, nonlinear_expression, quadratic_expression
+from pyomo.core.kernel.expr_pyomo5 import linear_expression, nonlinear_expression
 
 PluginGlobals.pop_env()
