@@ -219,7 +219,9 @@ def apply_preprocessing(data, parser=None):
             raise IOError("File "+file+" does not exist!")
     #
     filter_excepthook=True
+    tick = time.time()
     data.local.usermodel = pyutilib.misc.import_file(data.options.model.filename, clear_cache=True)
+    data.local.time_initial_import = time.time()-tick
     filter_excepthook=False
 
     usermodel_dir = dir(data.local.usermodel)
@@ -309,6 +311,7 @@ def create_model(data):
             model = ep.service().apply( options = pyutilib.misc.Container(*data.options), model_options=pyutilib.misc.Container(*model_options) )
             if data.options.runtime.report_timing is True:
                 print("      %6.2f seconds required to construct instance" % (time.time() - tick))
+                data.local.time_initial_import = None
                 tick = time.time()
     else:
         if model_name not in _models:
@@ -348,7 +351,8 @@ def create_model(data):
         # TODO: use a better test for ConcreteModel
         #
         instance = model
-
+        if data.options.runtime.report_timing is True and not data.local.time_initial_import is None:
+            print("      %6.2f seconds required to construct instance" % (data.local.time_initial_import))
     else:
         tick = time.time()
         if len(data.options.data.files) > 1:
