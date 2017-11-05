@@ -48,8 +48,7 @@ class _ComplementarityData(_BlockData):
             #elif e._args[0].is_fixed():
             #    _e = (e._args[0], e._args[1])
             else:
-                with EXPR.ignore_entangled_expressions:
-                    _e = ( ZeroConstant, e._args[0] - e._args[1])
+                _e = ( ZeroConstant, e._args[0] - e._args[1])
         elif e.__class__ is EXPR._InequalityExpression:
             if len(e._args) == 3:
                 _e = (e._args[0], e._args[1], e._args[2])
@@ -59,8 +58,7 @@ class _ComplementarityData(_BlockData):
                 elif e._args[0].is_fixed():
                     _e = (e._args[0], e._args[1], None)
                 else:
-                    with EXPR.ignore_entangled_expressions:
-                        _e = ( ZeroConstant, e._args[1] - e._args[0], None )
+                    _e = ( ZeroConstant, e._args[1] - e._args[0], None )
         else:
             _e = (None, e, None)
         return _e
