@@ -26,10 +26,6 @@ from pyomo.core.base import expr_common, expr as EXPR
 from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.numvalue import potentially_variable, native_types
 
-from pyomo.core.base.expr_pyomo5 import (
-    EntangledExpressionError, _getrefcount_available, UNREFERENCED_EXPR_COUNT
-)
-
 
 class TestExpression_EvaluateNumericConstant(unittest.TestCase):
 
@@ -3289,10 +3285,6 @@ class EntangledExpressionErrors(unittest.TestCase):
         x = Var()
         e = x*2 + 1
         e + 1
-        #try:
-        #    self.fail("Expected EntangledExpressionError")
-        #except EntangledExpressionError as exc:
-        #    self.assertIn(str(e), str(exc))
 
     def test_entangled_test1(self):
         self.m = ConcreteModel()
