@@ -32,7 +32,6 @@ from pyomo.core.kernel.numvalue import *
 from pyomo.core.kernel.numvalue import (native_numeric_types,
                                         native_types)
 
-import pyomo.core.kernel.expr_common
 from pyomo.core.kernel.expr_common import \
     (_add, _sub, _mul, _div, _pow,
      _neg, _abs, _inplace, _unary,
@@ -41,6 +40,7 @@ from pyomo.core.kernel.expr_common import \
      _lt, _le, _eq, 
      chainedInequalityErrorMessage as cIEM,
      _getrefcount_available, getrefcount)
+from pyomo.core.kernel import expr_common as common
 
 # Wrap the common chainedInequalityErrorMessage to pass the
 # local context
@@ -141,7 +141,7 @@ class _ExpressionBase(NumericValue):
         """Print this expression"""
         if ostream is None:
             ostream = sys.stdout
-        _verbose = pyomo.core.kernel.expr_common.TO_STRING_VERBOSE \
+        _verbose = common.TO_STRING_VERBOSE \
                    if verbose is None else verbose
         ostream.write(self.getname() + "( ")
         first = True
@@ -396,7 +396,7 @@ class _PowExpression(_IntrinsicFunctionExpression):
         """Print this expression"""
         # For verbose mode, rely on the underlying base expression
         # (prefix) expression printer
-        _verbose = pyomo.core.kernel.expr_common.TO_STRING_VERBOSE \
+        _verbose = common.TO_STRING_VERBOSE \
                    if verbose is None else verbose
         if _verbose:
             return super(_PowExpression, self).to_string(
@@ -658,7 +658,7 @@ class _ProductExpression(_ExpressionBase):
         """Print this expression"""
         if ostream is None:
             ostream = sys.stdout
-        _verbose = pyomo.core.kernel.expr_common.TO_STRING_VERBOSE \
+        _verbose = common.TO_STRING_VERBOSE \
                    if verbose is None else verbose
         _my_precedence = self._precedence()
         if _verbose:
@@ -773,7 +773,7 @@ class _SumExpression(_LinearExpression):
         """Print this expression"""
         if ostream is None:
             ostream = sys.stdout
-        _verbose = pyomo.core.kernel.expr_common.TO_STRING_VERBOSE \
+        _verbose = common.TO_STRING_VERBOSE \
                    if verbose is None else verbose
         _my_precedence = self._precedence()
         if _verbose:
@@ -942,7 +942,7 @@ def _generate_expression__clone_if_needed(obj, target):
     if getrefcount(obj) - UNREFERENCED_EXPR_COUNT == target:
         return obj
     elif getrefcount(obj) - UNREFERENCED_EXPR_COUNT > target:
-        generate_expression.clone_counter += 1
+        common.clone_counter += 1
         return obj.clone()
     else: #pragma:nocover
         raise RuntimeError("Expression entered generate_expression() " \
@@ -1385,10 +1385,6 @@ def generate_expression(etype, _self, other, targetRefs=None):
 ## "static" variables within the generate_expression function
 ##
 
-# [debugging] clone_counter is a count of the number of calls to
-# expr.clone() made during expression generation.
-generate_expression.clone_counter = 0
-
 # [configuration] UNREFERENCED_EXPR_COUNT is a "magic number" that
 # indicates the stack depth between "normal" modeling and
 # _clone_if_needed().  If an expression enters _clone_if_needed() with
@@ -1409,7 +1405,7 @@ def _generate_relational_expression__clone_if_needed(obj):
     if count == 0:
         return obj
     elif count > 0:
-        generate_expression.clone_counter += 1
+        common.clone_counter += 1
         return obj.clone()
     else:
         raise RuntimeError("Expression entered " \
@@ -1627,7 +1623,7 @@ def _generate_intrinsic_function_expression__clone_if_needed(obj):
     if getrefcount(obj) - UNREFERENCED_INTRINSIC_EXPR_COUNT == 0:
         return obj
     elif getrefcount(obj) - UNREFERENCED_INTRINSIC_EXPR_COUNT > 0:
-        generate_expression.clone_counter += 1
+        common.clone_counter += 1
         return obj.clone()
     else:
         raise RuntimeError("Expression entered " \

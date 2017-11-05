@@ -1,201 +1,195 @@
 language: python
 matrix:
   include:
-  # NOTE: EXTRAS is not yet supported on Python 2.6.
-  - python: '2.6'
-    env:                             CATEGORY="nightly"
-  - python: '2.7'
-    env:                             CATEGORY="nightly"
-  - python: '3.6'
-    env:                             CATEGORY="nightly"
-  #
-  - python: '2.7'
-    env:                             CATEGORY="nightly"  EXTRAS="yes"  KEY_JOB="yes"
-  - python: '3.4'
-    env:                             CATEGORY="nightly"  EXTRAS="yes"
-  - python: '3.5'
-    env:                             CATEGORY="nightly"  EXTRAS="yes"
-  - python: '3.6'
-    env:                             CATEGORY="nightly"  EXTRAS="yes"
-  #
-  # NOTE: EXTRAS is not yet supported on Python 3.6.  Until it is,
-  #   parallel tests will be restricted to Python 3.5
-  - python: '2.7'
-    env:                             CATEGORY="parallel" EXTRAS="yes"
-  - python: '3.5'
-    env:                             CATEGORY="parallel" EXTRAS="yes"
-  #
-  #- python: pypy
-  #  env:                             CATEGORY="nightly"
-  #- python: '2.7'
-  #  env: PYRO="Pyro" JYTHON="org.python:jython-installer:2.7.0"
-  #- python: pypy
-  #  env: PYRO="Pyro"  YAML="pyyaml"
-  #- python: pypy3
-  #  env: PYRO="Pyro4" YAML="pyyaml"
-#
-#
-#
+    # NOTE: EXTRAS is not yet supported on Python 2.6.
+    - python: '2.6'
+      env:                             CATEGORY="nightly"
+    - python: '2.7'
+      env:                             CATEGORY="nightly"
+    - python: '3.6'
+      env:                             CATEGORY="nightly"
+    #
+    - python: '2.7'
+      env:                             CATEGORY="nightly"  EXTRAS="yes"  KEY_JOB="yes"
+    - python: '3.4'
+      env:                             CATEGORY="nightly"  EXTRAS="yes"
+    - python: '3.5'
+      env:                             CATEGORY="nightly"  EXTRAS="yes"
+    - python: '3.6'
+      env:                             CATEGORY="nightly"  EXTRAS="yes"
+    #
+    # NOTE: EXTRAS is not yet supported on Python 3.6.  Until it is,
+    #   parallel tests will be restricted to Python 3.5
+    - python: '2.7'
+      env:                             CATEGORY="parallel" EXTRAS="yes"
+    - python: '3.5'
+      env:                             CATEGORY="parallel" EXTRAS="yes"
+    #
+    #- python: pypy
+    #  env:                             CATEGORY="nightly"
+    #- python: '2.7'
+    #  env: PYRO="Pyro" JYTHON="org.python:jython-installer:2.7.0"
+    #- python: pypy
+    #  env: PYRO="Pyro"  YAML="pyyaml"
+    #- python: pypy3
+    #  env: PYRO="Pyro4" YAML="pyyaml"
+
+
 install:
-- sudo apt-get update --quiet
-- sudo apt-get install gfortran
-#
-# Setup miniconda and activate the testenv environment
-#
-- if [[ "${TRAVIS_PYTHON_VERSION:0:1}" == "2" ]]; then
-     wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
-  else
-     wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-  fi
-- bash miniconda.sh -b -p $HOME/miniconda
-- export PATH="$HOME/miniconda/bin:$PATH"
-- hash -r
-#
-# Update conda, then force it to NOT update itself again
-#
-- conda config --set always_yes yes
-- conda update -q -y -c anaconda conda
-- conda config --set auto_update_conda false
-#
-- conda create -f -q -y -n testenv python=${TRAVIS_PYTHON_VERSION}
-- source activate testenv
-#- if [ -n "${JYTHON}" ]; then source install_jython.sh; fi
-#
-# Install supporting packages
-#
-- conda install -q -y -c conda-forge --no-update-dependencies setuptools pip
-#
-- which python
-- python --version
-- which pip
-- pip --version
-#
-- if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install 'cryptography<2.1.1'; fi
-- if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install pyOpenSSL; fi
-- if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install urllib3; fi
-- if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install ordereddict; fi
-#
-- pip install coverage
-- pip install codecov
-- if [ -n "${YAML}" ]; then
-     pip install --quiet pyyaml;
-  fi
-- if [ -n "${PYRO}" ]; then
-     pip install --quiet $PYRO;
-  fi
-- pip install --quiet xlrd
-- pip install --quiet openpyxl
-- pip install sphinx_rtd_theme
-- conda install -q -y -c anaconda pandas networkx
+  - sudo apt-get update --quiet
+  - sudo apt-get install gfortran
+  #
+  # Setup miniconda and activate the testenv environment
+  #
+  - if [[ "${TRAVIS_PYTHON_VERSION:0:1}" == "2" ]]; then
+       wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
+    else
+       wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    fi
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  #
+  # Update conda, then force it to NOT update itself again
+  #
+  - conda config --set always_yes yes
+  - conda update -q -y -c anaconda conda
+  - conda config --set auto_update_conda false
+  #
+  - conda create -f -q -y -n testenv python=${TRAVIS_PYTHON_VERSION}
+  - source activate testenv
+  #- if [ -n "${JYTHON}" ]; then source install_jython.sh; fi
+  #
+  # Install supporting packages
+  #
+  - conda install -q -y -c conda-forge --no-update-dependencies setuptools pip
+  #
+  - which python
+  - python --version
+  - which pip
+  - pip --version
+  #
+  - if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install 'cryptography<2.1.1'; fi
+  - if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install pyOpenSSL; fi
+  - if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install urllib3; fi
+  - if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install ordereddict; fi
+  #
+  - pip install coverage
+  - pip install codecov
+  - if [ -n "${YAML}" ]; then
+       pip install --quiet pyyaml;
+    fi
+  - if [ -n "${PYRO}" ]; then
+       pip install --quiet $PYRO;
+    fi
+  - pip install --quiet xlrd
+  - pip install --quiet openpyxl
+  - pip install sphinx_rtd_theme
+  - conda install -q -y -c anaconda pandas networkx
 
-- if [ "${TRAVIS_PYTHON_VERSION}" != "2.6" -a -n "${EXTRAS}" ]; then
-     conda install -q -y -c anaconda scipy;
-  fi
+  - if [ "${TRAVIS_PYTHON_VERSION}" != "2.6" -a -n "${EXTRAS}" ]; then
+       conda install -q -y -c anaconda scipy;
+    fi
 
-#
-# Install GAMS
-#
-- wget https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/linux/linux_x64_64_sfx.exe
-- chmod u+x linux_x64_64_sfx.exe
-- ./linux_x64_64_sfx.exe > /dev/null
-# Only install GAMS API if EXTRAS is not being installed and Python is
-# not 2.6, since those tests segfault on travis for an unknown reason.
-- if [ "${TRAVIS_PYTHON_VERSION}" != "2.6" -a -z "${EXTRAS}" ]; then
-     bash ./.travis_install_gams_api.sh;
-  fi
-- export PATH=${PATH}:$PWD/gams24.8_linux_x64_64_sfx;
+  #
+  # Install GAMS
+  #
+  - wget https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/linux/linux_x64_64_sfx.exe
+  - chmod u+x linux_x64_64_sfx.exe
+  - ./linux_x64_64_sfx.exe > /dev/null
+  # Only install GAMS API if EXTRAS is not being installed and Python is
+  # not 2.6, since those tests segfault on travis for an unknown reason.
+  - if [ "${TRAVIS_PYTHON_VERSION}" != "2.6" -a -z "${EXTRAS}" ]; then
+       bash ./.travis_install_gams_api.sh;
+    fi
+  - export PATH=${PATH}:$PWD/gams24.8_linux_x64_64_sfx;
 
-#
-# Install Pyomo extras
-#
-- if [ -n "${EXTRAS}" ]; then
-     conda install -q -y -c conda-forge --no-update-dependencies pyomo.extras;
-  fi
+  #
+  # Install Pyomo extras
+  #
+  - if [ -n "${EXTRAS}" ]; then
+       conda install -q -y -c conda-forge --no-update-dependencies pyomo.extras;
+    fi
 
-#
-# Install freely available solvers
-#
-- conda install -q -y -c conda-forge --no-update-dependencies glpk
-- glpsol -v
-- conda install -q -y -c conda-forge --no-update-dependencies ipopt
-- ipopt -v
+  #
+  # Install freely available solvers
+  #
+  - conda install -q -y -c conda-forge --no-update-dependencies glpk
+  - glpsol -v
+  - conda install -q -y -c conda-forge --no-update-dependencies ipopt
+  - ipopt -v
 
-#
-# Clone but don't install pyomo-model-libraries
-#
-- git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
-#
-# Install PyUtilib (master branch)
-#
-- pip install --quiet git+https://github.com/PyUtilib/pyutilib
-#
-# Install this package
-#
-- python setup.py develop
-#
-# Verify that the Python interpreter hasn't changed (occasionally conda
-# installers will change the installed Python!!)
-#
-- which python
-- python --version
-- if [ `python --version |& grep "Python ${TRAVIS_PYTHON_VERSION}" | wc -l` -eq 0 ]; then
-     exit 1;
-  fi
+  #
+  # Clone but don't install pyomo-model-libraries
+  #
+  - git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
+  #
+  # Install PyUtilib (master branch)
+  #
+  - pip install --quiet git+https://github.com/PyUtilib/pyutilib
+  #
+  # Install this package
+  #
+  - python setup.py develop
+  #
+  # Verify that the Python interpreter hasn't changed (occasionally conda
+  # installers will change the installed Python!!)
+  #
+  - which python
+  - python --version
+  - if [ `python --version |& grep "Python ${TRAVIS_PYTHON_VERSION}" | wc -l` -eq 0 ]; then
+       exit 1;
+    fi
 
 
 script:
-# The next three commands enable tracking of coverage
-# for any subprocesses launched by tests
-- export COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/.coveragerc
-- SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
-- echo "import coverage; coverage.process_startup()" > ${SITE_PACKAGES}/run_coverage_at_startup.pth
+  # This block of commands enable tracking of coverage for any
+  # subprocesses launched by tests
+  - export COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/coveragerc
+  - cp ${TRAVIS_BUILD_DIR}/.coveragerc ${COVERAGE_PROCESS_START}
+  - echo "data_file=${TRAVIS_BUILD_DIR}/.coverage" >> ${COVERAGE_PROCESS_START}
+  - SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
+  - echo "import coverage; coverage.process_startup()" > ${SITE_PACKAGES}/run_coverage_at_startup.pth
 
-# Run Pyomo tests
-- test.pyomo -v --cat=$CATEGORY --cov pyomo `pwd`/pyomo-model-libraries
-- mv .coverage travis.coverage.1
-- ls -al ..
-- ls -al
+  # Run Pyomo tests
+  - test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
 
-# Run documentation tests
-- nosetests -v --with-coverage --with-doctest --doctest-extension=.rst doc/OnlineDocs
-- mv .coverage travis.coverage.2
-- ls -ld .c*
-
+  # Run documentation tests
+  - nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
 
 
 after_success:
-# Trigger PyomoGallery build
-- "if [ -n \"${KEY_JOB}\" ]; then curl -s -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Travis-API-Version: 3' -H 'Authorization: token 4DadIB521uUPyBXMtvQVOw' -d '{\"request\": {\"branch\": \"master\"}}' https://api.travis-ci.org/repo/Pyomo%2FPyomoGallery/requests; fi"
+  # Trigger PyomoGallery build
+  - "if [ -n \"${KEY_JOB}\" ]; then curl -s -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Travis-API-Version: 3' -H 'Authorization: token 4DadIB521uUPyBXMtvQVOw' -d '{\"request\": {\"branch\": \"master\"}}' https://api.travis-ci.org/repo/Pyomo%2FPyomoGallery/requests; fi"
 
-# Combine coverage reports over all subprocesses
-- cd $TRAVIS_BUILD_DIR
-- coverage combine travis.coverage.1 travis.coverage.2
-- echo `pwd`
-- ls -la
-- codecov -X gcov
-#- bash <(curl -s https://codecov.io/bash)
-- cd $TRAVIS_BUILD_DIR
+  # Combine coverage reports over all subprocesses
+  - cd $TRAVIS_BUILD_DIR
+  - ls -la .cov*
+  - coverage combine $TRAVIS_BUILD_DIR
+  - ls -la .cov*
+  - codecov -X gcov
+  #- bash <(curl -s https://codecov.io/bash)
 
 
 deploy:
-- provider: pypi
-  server: https://testpypi.python.org/pypi # Updated
-  user: whart111
-  password:
-    secure: "bxNfz0XywTc4vL2M39eEeYvTzDIjhwddzHRljCPCkP8ANLuxh6DPxFvFZDNGw+TA/U0q7r7POuhloa1zen0WyrcoWtWmC4WlixNoJ5mIl1RWXqpUzV5VqReYfYDE6FJs9G0tCrcgF/vzyzajDH9atxUxCdAoWqUnOdx+XcOBarUuz5PTRbI+GLkI8IJCyOgS0khXvoLbj4qi+SW9aOS4EKTQMxv3EPy9V3HNNe4yzbmnCFfaEWUVCFVs5vH7x4WbD3CN2lyjaE5ZTQHrAx2GZtTgZWtyypmv0nfXQ49s32xw/CRb9POUUQ4IGQybAcD2bEJeqaV+6HB93yJVcy6gYCCm0WV++sL1gsD1vYcmtqpWloF4O/lnQkaW0fD4twJUjapXm8QqCFRtXBt7/DxL72vQu1MWbeBQs3Vxo+1xBqy64txhXmREeTEIBfvmTxMRkIvensxwh8uRlhd252iJQC2K6KlIcG5kyEbsAkQp42JPswqveIZb0DmsHZ3LC2fN+UJICI04+UKDnqISibrtjNtD3HiGkdj1OGyzv3tOZx4ZrfPXQ8o3CR+291SJ/ADZAyMrLoNI6rOl0z9IRyCLUViz3QPZz4g7ClZUoJ9Hm7y9/v3nQcIC3/D7G1QzyLCoRpHEwb6lifyp2o6W8MOcwZYs/Uv0saNYMnftRmVFxhY="
-  distributions: sdist --format=gztar bdist_wheel
-  on:
-    tags: false
-    branch: master
-    python: '2.7'
-    condition: '"$YAML" = "pyyaml"'
-- provider: pypi
-  user: whart111
-  password:
-    secure: "bxNfz0XywTc4vL2M39eEeYvTzDIjhwddzHRljCPCkP8ANLuxh6DPxFvFZDNGw+TA/U0q7r7POuhloa1zen0WyrcoWtWmC4WlixNoJ5mIl1RWXqpUzV5VqReYfYDE6FJs9G0tCrcgF/vzyzajDH9atxUxCdAoWqUnOdx+XcOBarUuz5PTRbI+GLkI8IJCyOgS0khXvoLbj4qi+SW9aOS4EKTQMxv3EPy9V3HNNe4yzbmnCFfaEWUVCFVs5vH7x4WbD3CN2lyjaE5ZTQHrAx2GZtTgZWtyypmv0nfXQ49s32xw/CRb9POUUQ4IGQybAcD2bEJeqaV+6HB93yJVcy6gYCCm0WV++sL1gsD1vYcmtqpWloF4O/lnQkaW0fD4twJUjapXm8QqCFRtXBt7/DxL72vQu1MWbeBQs3Vxo+1xBqy64txhXmREeTEIBfvmTxMRkIvensxwh8uRlhd252iJQC2K6KlIcG5kyEbsAkQp42JPswqveIZb0DmsHZ3LC2fN+UJICI04+UKDnqISibrtjNtD3HiGkdj1OGyzv3tOZx4ZrfPXQ8o3CR+291SJ/ADZAyMrLoNI6rOl0z9IRyCLUViz3QPZz4g7ClZUoJ9Hm7y9/v3nQcIC3/D7G1QzyLCoRpHEwb6lifyp2o6W8MOcwZYs/Uv0saNYMnftRmVFxhY="
-  distributions: sdist --format=gztar bdist_wheel
-  on:
-    tags: true
-    branch: master
-    python: '2.7'
-    condition: '"$YAML" = "pyyaml"'
+  - provider: pypi
+    server: https://testpypi.python.org/pypi # Updated
+    user: whart111
+    password:
+      secure: "bxNfz0XywTc4vL2M39eEeYvTzDIjhwddzHRljCPCkP8ANLuxh6DPxFvFZDNGw+TA/U0q7r7POuhloa1zen0WyrcoWtWmC4WlixNoJ5mIl1RWXqpUzV5VqReYfYDE6FJs9G0tCrcgF/vzyzajDH9atxUxCdAoWqUnOdx+XcOBarUuz5PTRbI+GLkI8IJCyOgS0khXvoLbj4qi+SW9aOS4EKTQMxv3EPy9V3HNNe4yzbmnCFfaEWUVCFVs5vH7x4WbD3CN2lyjaE5ZTQHrAx2GZtTgZWtyypmv0nfXQ49s32xw/CRb9POUUQ4IGQybAcD2bEJeqaV+6HB93yJVcy6gYCCm0WV++sL1gsD1vYcmtqpWloF4O/lnQkaW0fD4twJUjapXm8QqCFRtXBt7/DxL72vQu1MWbeBQs3Vxo+1xBqy64txhXmREeTEIBfvmTxMRkIvensxwh8uRlhd252iJQC2K6KlIcG5kyEbsAkQp42JPswqveIZb0DmsHZ3LC2fN+UJICI04+UKDnqISibrtjNtD3HiGkdj1OGyzv3tOZx4ZrfPXQ8o3CR+291SJ/ADZAyMrLoNI6rOl0z9IRyCLUViz3QPZz4g7ClZUoJ9Hm7y9/v3nQcIC3/D7G1QzyLCoRpHEwb6lifyp2o6W8MOcwZYs/Uv0saNYMnftRmVFxhY="
+    distributions: sdist --format=gztar bdist_wheel
+    on:
+      tags: false
+      branch: master
+      python: '2.7'
+      condition: '"$YAML" = "pyyaml"'
+  - provider: pypi
+    user: whart111
+    password:
+      secure: "bxNfz0XywTc4vL2M39eEeYvTzDIjhwddzHRljCPCkP8ANLuxh6DPxFvFZDNGw+TA/U0q7r7POuhloa1zen0WyrcoWtWmC4WlixNoJ5mIl1RWXqpUzV5VqReYfYDE6FJs9G0tCrcgF/vzyzajDH9atxUxCdAoWqUnOdx+XcOBarUuz5PTRbI+GLkI8IJCyOgS0khXvoLbj4qi+SW9aOS4EKTQMxv3EPy9V3HNNe4yzbmnCFfaEWUVCFVs5vH7x4WbD3CN2lyjaE5ZTQHrAx2GZtTgZWtyypmv0nfXQ49s32xw/CRb9POUUQ4IGQybAcD2bEJeqaV+6HB93yJVcy6gYCCm0WV++sL1gsD1vYcmtqpWloF4O/lnQkaW0fD4twJUjapXm8QqCFRtXBt7/DxL72vQu1MWbeBQs3Vxo+1xBqy64txhXmREeTEIBfvmTxMRkIvensxwh8uRlhd252iJQC2K6KlIcG5kyEbsAkQp42JPswqveIZb0DmsHZ3LC2fN+UJICI04+UKDnqISibrtjNtD3HiGkdj1OGyzv3tOZx4ZrfPXQ8o3CR+291SJ/ADZAyMrLoNI6rOl0z9IRyCLUViz3QPZz4g7ClZUoJ9Hm7y9/v3nQcIC3/D7G1QzyLCoRpHEwb6lifyp2o6W8MOcwZYs/Uv0saNYMnftRmVFxhY="
+    distributions: sdist --format=gztar bdist_wheel
+    on:
+      tags: true
+      branch: master
+      python: '2.7'
+      condition: '"$YAML" = "pyyaml"'

@@ -1,7 +1,7 @@
 """Tests the zero sum propagation module."""
 import pyutilib.th as unittest
 from pyomo.environ import (ConcreteModel, Constraint, TransformationFactory,
-                           Var, NonNegativeReals, NonPositiveReals)
+                           Var, NonNegativeReals, NonPositiveReals, Binary)
 
 __author__ = "Qi Chen <https://github.com/qtothec>"
 
@@ -52,6 +52,14 @@ class TestZeroSumPropagate(unittest.TestCase):
         self.assertTrue(m.v2.fixed)
         self.assertTrue(m.v3.fixed)
         self.assertTrue(m.v4.fixed)
+
+    def test_not_transform_improperly(self):
+        """Tests that invalid constraints are not transformed."""
+        m = ConcreteModel()
+        m.v1 = Var(initialize=0, domain=Binary)
+        m.c1 = Constraint(expr=-1 * m.v1 <= 0)
+        TransformationFactory('core.propagate_zero_sum').apply_to(m)
+        self.assertFalse(m.v1.fixed)
 
     def test_non_positive_propagate(self):
         """Tests zero sum propagation for non-positive vars."""

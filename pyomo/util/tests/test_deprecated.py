@@ -177,5 +177,54 @@ class TestDeprecated(unittest.TestCase):
         # Test that the deprecation warning was logged
         self.assertNotIn('DEPRECATED:', DEP_OUT.getvalue())
 
+    def test_with_class(self):
+        @deprecated()
+        class foo(object):
+            def __init__(self):
+                logger.warn('yeah')
+
+        self.assertIn('DEPRECATION WARNING: This class has been deprecated',
+                      foo.__doc__)
+
+        # Test the default argument
+        DEP_OUT = StringIO()
+        FCN_OUT = StringIO()
+        with LoggingIntercept(DEP_OUT, 'pyomo.core'):
+            with LoggingIntercept(FCN_OUT, 'pyomo.util'):
+                foo()
+        # Test that the function produces output
+        self.assertIn('yeah', FCN_OUT.getvalue())
+        self.assertNotIn('DEPRECATED', FCN_OUT.getvalue())
+        # Test that the deprecation warning was logged
+        self.assertIn('DEPRECATED: This class has been deprecated',
+                      DEP_OUT.getvalue())
+
+
+    def test_with_method(self):
+        class foo(object):
+            def __init__(self):
+                pass
+            @deprecated()
+            def bar(self):
+                logger.warn('yeah')
+
+        self.assertIn('DEPRECATION WARNING: This function has been deprecated',
+                      foo.bar.__doc__)
+
+        # Test the default argument
+        DEP_OUT = StringIO()
+        FCN_OUT = StringIO()
+        with LoggingIntercept(DEP_OUT, 'pyomo.core'):
+            with LoggingIntercept(FCN_OUT, 'pyomo.util'):
+                foo().bar()
+        # Test that the function produces output
+        self.assertIn('yeah', FCN_OUT.getvalue())
+        self.assertNotIn('DEPRECATED', FCN_OUT.getvalue())
+        # Test that the deprecation warning was logged
+        self.assertIn('DEPRECATED: This function has been deprecated',
+                      DEP_OUT.getvalue())
+
+        
+
 if __name__ == '__main__':
     unittest.main()

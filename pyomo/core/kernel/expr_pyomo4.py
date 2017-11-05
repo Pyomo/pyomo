@@ -179,7 +179,7 @@ def _generate_expression__clone_if_needed__getrefcount(target, inplace, *objs):
         if test == target:
             ans = ans + (obj,)
         elif test > target:
-            generate_expression.clone_counter += 1
+            common.clone_counter += 1
             ans = ans + (obj.clone(),)
         else: #pragma:nocover
             raise RuntimeError(
@@ -1678,10 +1678,6 @@ def generate_expression(etype, _self, _other, targetRefs=0):
         if _other_expr and ans is not _other:
             _other._parent_expr = bypass_backreference or ref(ans)
     return ans
-
-# [debugging] clone_counter is a count of the number of calls to
-# expr.clone() made during expression generation.
-generate_expression.clone_counter = 0
 
 
 def generate_relational_expression(etype, lhs, rhs):

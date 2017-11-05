@@ -597,7 +597,6 @@ You can silence this warning by one of three ways:
                     # seeing if it is possible.  Any errors generated
                     # evaluating the expression are not informative to
                     # the user
-                    active_level = logging.root.manager.disable
                     logging.disable(logging.CRITICAL)
                     _num_val()
                 except TemplateExpressionError:
@@ -615,7 +614,7 @@ You can silence this warning by one of three ways:
                     # error... it will come back again below.
                     pass
                 finally:
-                    logging.disable(active_level)
+                    logging.disable(logging.NOTSET)
 
                 if _num_val.is_constant():
                     _found_numeric = True

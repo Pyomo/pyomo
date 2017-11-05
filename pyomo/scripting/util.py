@@ -82,7 +82,7 @@ modelapi = {    'pyomo_create_model':IPyomoScriptCreateModel,
                 'pyomo_postprocess':IPyomoScriptPostprocess}
 
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.scripting')
 start_time = 0.0
 
 
@@ -142,7 +142,8 @@ def setup_environment(data):
         else:
             action = "running"
 
-        msg = "Unexpected exception (%s) while %s %s:\n" % (etype.__name__, action, name)
+        msg = "Unexpected exception (%s) while %s %s:\n    " \
+              % (etype.__name__, action, name)
 
         #
         # This handles the case where the error is propagated by a KeyError.
@@ -152,7 +153,7 @@ def setup_environment(data):
         #
         valueStr = str(value)
         if etype == KeyError:
-            valueStr = valueStr.replace("\\n","\n")
+            valueStr = valueStr.replace(r"\n","\n")
             if valueStr[0] == valueStr[-1] and valueStr[0] in "\"'":
                 valueStr = valueStr[1:-1]
 
@@ -827,55 +828,51 @@ def finalize(data, model=None, instance=None, results=None):
             print('\n# Leaving Interpreter, back to Pyomo\n')
 
 
-def configure_loggers(options=None, reset=False):
-    if reset:
+def configure_loggers(options=None, shutdown=False):
+    if shutdown:
         options = Options()
         options.runtime = Options()
         options.runtime.logging = 'quiet'
-        logging.getLogger('pyomo.core').handlers = []
-        logging.getLogger('pyomo').handlers = []
-        logging.getLogger('pyutilib').handlers = []
+        if configure_loggers.fileLogger is not None:
+            logging.getLogger('pyomo').handlers = []
+            logging.getLogger('pyutilib').handlers = []
+            configure_loggers.fileLogger.close()
+            configure_loggers.fileLogger = None
+            # TBD: This seems dangerous in Windows, as the process will
+            # have multiple open file handles pointint to the same file.
+            pyutilib.misc.reset_redirect()
+
     #
     # Configure the logger
     #
     if options.runtime is None:
         options.runtime = Options()
     if options.runtime.logging == 'quiet':
-        logging.getLogger('pyomo.opt').setLevel(logging.ERROR)
-        logging.getLogger('pyomo.core').setLevel(logging.ERROR)
         logging.getLogger('pyomo').setLevel(logging.ERROR)
-        logging.getLogger('pyutilib').setLevel(logging.ERROR)
     elif options.runtime.logging == 'warning':
-        logging.getLogger('pyomo.opt').setLevel(logging.WARNING)
-        logging.getLogger('pyomo.core').setLevel(logging.WARNING)
         logging.getLogger('pyomo').setLevel(logging.WARNING)
-        logging.getLogger('pyutilib').setLevel(logging.WARNING)
     elif options.runtime.logging == 'info':
-        logging.getLogger('pyomo.opt').setLevel(logging.INFO)
-        logging.getLogger('pyomo.core').setLevel(logging.INFO)
         logging.getLogger('pyomo').setLevel(logging.INFO)
         logging.getLogger('pyutilib').setLevel(logging.INFO)
     elif options.runtime.logging == 'verbose':
-        logger.setLevel(logging.DEBUG)
         logging.getLogger('pyomo').setLevel(logging.DEBUG)
         logging.getLogger('pyutilib').setLevel(logging.DEBUG)
     elif options.runtime.logging == 'debug':
-        logging.getLogger('pyomo.opt').setLevel(logging.DEBUG)
-        logging.getLogger('pyomo.core').setLevel(logging.DEBUG)
         logging.getLogger('pyomo').setLevel(logging.DEBUG)
         logging.getLogger('pyutilib').setLevel(logging.DEBUG)
 
-    fileLogger = None
     if options.runtime.logfile:
-        fileLogger = logging.FileHandler(options.runtime.logfile, 'w')
-        logging.getLogger('pyomo.opt').handlers = []
-        logging.getLogger('pyomo.core').handlers = []
+        configure_loggers.fileLogger \
+            = logging.FileHandler(options.runtime.logfile, 'w')
         logging.getLogger('pyomo').handlers = []
         logging.getLogger('pyutilib').handlers = []
-        logging.getLogger('pyomo.core').addHandler(fileLogger)
-        logging.getLogger('pyomo').addHandler(fileLogger)
-        logging.getLogger('pyutilib').addHandler(fileLogger)
-    return fileLogger
+        logging.getLogger('pyomo').addHandler(configure_loggers.fileLogger)
+        logging.getLogger('pyutilib').addHandler(configure_loggers.fileLogger)
+        # TBD: This seems dangerous in Windows, as the process will
+        # have multiple open file handles pointint to the same file.
+        pyutilib.misc.setup_redirect(options.runtime.logfile)
+
+configure_loggers.fileLogger = None
 
 @pyomo_api(namespace='pyomo.script')
 def run_command(command=None, parser=None, args=None, name='unknown', data=None, options=None):
@@ -931,14 +928,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
     #
     # Configure loggers
     #
-    fileLogger = configure_loggers(options=options)
-    #
-    # Setup I/O redirect to a file
-    #
-    if fileLogger is not None:
-        # TBD: This seems dangerous in Windows, as the process will
-        # have multiple open file handles pointint to the same file.
-        pyutilib.misc.setup_redirect(options.runtime.logfile)
+    configure_loggers(options=options)
     #
     # Call the main Pyomo runner with profiling
     #
@@ -948,10 +938,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
         if not pstats_available:
             msg = "Cannot use the 'profile' option.  The Python 'pstats' "    \
                   'package cannot be imported!'
-            if fileLogger is not None:
-                pyutilib.misc.reset_redirect()
-                fileLogger.close()
-                configure_loggers(options=Options(), reset=True)
+            configure_loggers(shutdown=True)
             raise ValueError(msg)
         tfile = TempfileManager.create_tempfile(suffix=".profile")
         tmp = profile.runctx(
@@ -985,10 +972,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             # exit.  Otherwise, print an "Exiting..." message.
             #
             if __debug__ and (options.runtime.logging == 'debug' or options.runtime.catch_errors):
-                if fileLogger is not None:
-                    pyutilib.misc.reset_redirect()
-                    fileLogger.close()
-                    configure_loggers(options=Options(), reset=True)
+                configure_loggers(shutdown=True)
                 sys.exit(0)
             print('Exiting %s: %s' % (name, str(err)))
             errorcode = err.code
@@ -999,10 +983,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             # pass the exception up the chain (to pyomo_excepthook)
             #
             if __debug__ and (options.runtime.logging == 'debug' or options.runtime.catch_errors):
-                if fileLogger is not None:
-                    pyutilib.misc.reset_redirect()
-                    fileLogger.close()
-                    configure_loggers(options=Options(), reset=True)
+                configure_loggers(shutdown=True)
                 TempfileManager.pop(remove=not options.runtime.keep_files)
                 raise
 
@@ -1017,7 +998,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             else:
                 action = "running"
 
-            msg = "Unexpected exception while %s %s:\n" % (action, model)
+            msg = "Unexpected exception while %s %s:\n    " % (action, model)
             #
             # This handles the case where the error is propagated by a KeyError.
             # KeyError likes to pass raw strings that don't handle newlines
@@ -1028,13 +1009,10 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             if type(err) == KeyError and errStr != "None":
                 errStr = str(err).replace(r"\n","\n")[1:-1]
 
-            logging.getLogger('pyomo.core').error(msg+errStr)
+            logger.error(msg+errStr)
             errorcode = 1
 
-    if fileLogger is not None:
-        pyutilib.misc.reset_redirect()
-        fileLogger.close()
-        configure_loggers(options=Options(), reset=True)
+    configure_loggers(shutdown=True)
 
     if options.runtime.disable_gc:
         gc.enable()

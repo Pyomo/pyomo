@@ -32,6 +32,9 @@ mode = _default_mode = Mode.pyomo5_trees
 #    mode = _default_mode = Mode.pyomo4_trees
 
 
+# This is the global counter for clone operations
+clone_counter = 0
+
 def _clear_expression_pool():
     from pyomo.core.base.expr_coopr3 import _clear_expression_pool as \
         _clear_expression_pool_coopr3

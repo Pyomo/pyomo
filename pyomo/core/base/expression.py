@@ -14,6 +14,7 @@ import sys
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.util.timing import ConstructionTimer
 from pyomo.core.base.component import (ComponentData,
                                        register_component)
 from pyomo.core.base.indexed_component import (
@@ -388,6 +389,7 @@ class Expression(IndexedComponent):
 
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed = True
 
         _init_expr = self._init_expr
@@ -427,6 +429,7 @@ class Expression(IndexedComponent):
             else:
                 for key in self._index:
                     self.add(key, _init_expr)
+        timer.report()
 
 class SimpleExpression(_GeneralExpressionData, Expression):
 
