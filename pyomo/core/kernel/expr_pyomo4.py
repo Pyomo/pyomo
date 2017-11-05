@@ -77,7 +77,6 @@ def _sum_with_iadd(iterable):
 
 sum = builtins.sum if _getrefcount_available else _sum_with_iadd
 
-
 def compress_expression(exp):
     return exp
 
@@ -86,6 +85,22 @@ def clone_expression(exp, substitute=None):
     if substitute:
         memo.update(substitute)
     return deepcopy(exp, memo)
+
+class clone_counter_context(object):
+    _count = 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    @property
+    def count(self):
+        return clone_counter_context._count
+
+clone_counter = clone_counter_context()
+
 
 
 def identify_variables(expr,
@@ -511,7 +526,7 @@ class _ExpressionBase(NumericValue):
             "implement _polynomial_degree()" % ( str(self.__class__), ))
 
 
-    def to_string(self, ostream=None, verbose=None, precedence=None):
+    def to_string(self, ostream=None, verbose=None, precedence=None, labeler=None):
         _name_buffer = {}
         if ostream is None:
             ostream = sys.stdout

@@ -1002,10 +1002,16 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 else:
                     repn = block_repn[active_objective]
 
-                wrapped_repn = RepnWrapper(
-                    repn,
-                    list(self_varID_map[id(var)] for var in repn.linear_vars),
-                    list(self_varID_map[id(var)] for var in repn.nonlinear_vars))
+                try:
+                    wrapped_repn = RepnWrapper(
+                        repn,
+                        list(self_varID_map[id(var)] for var in repn.linear_vars),
+                        list(self_varID_map[id(var)] for var in repn.nonlinear_vars))
+                except KeyError as err:
+                    self._symbolMapKeyError(err, model, self_varID_map,
+                                            repn.linear_vars +
+                                            repn.nonlinear_vars)
+                    raise
 
                 LinearVars.update(wrapped_repn.linear_vars)
                 ObjNonlinearVars.update(wrapped_repn.nonlinear_vars)
@@ -1108,10 +1114,16 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     continue
 
                 con_ID = trivial_labeler(constraint_data)
-                wrapped_repn = RepnWrapper(
-                    repn,
-                    list(self_varID_map[id(var)] for var in repn.linear_vars),
-                    list(self_varID_map[id(var)] for var in repn.nonlinear_vars))
+                try:
+                    wrapped_repn = RepnWrapper(
+                        repn,
+                        list(self_varID_map[id(var)] for var in repn.linear_vars),
+                        list(self_varID_map[id(var)] for var in repn.nonlinear_vars))
+                except KeyError as err:
+                    self._symbolMapKeyError(err, model, self_varID_map,
+                                            repn.linear_vars +
+                                            repn.nonlinear_vars)
+                    raise
 
                 if repn.is_nonlinear():
                     nonlin_con_order_list.append(con_ID)
@@ -1948,6 +1960,44 @@ class ProblemWriter_nl(AbstractProblemWriter):
             overall_timer.report("Total time")
 
         return symbol_map
+
+    def _symbolMapKeyError(self, err, model, map, vars):
+        _errors = []
+        for v in vars:
+            if id(v) in map:
+                continue
+            if v.model() is not model.model():
+                _errors.append(
+                    "Variable '%s' is not part of the model "
+                    "being written out, but appears in an "
+                    "expression used on this model." % (v.name,))
+            else:
+                _parent = v.parent_block()
+                while _parent is not None and _parent is not model:
+                    if _parent.type() is not model.type():
+                        _errors.append(
+                            "Variable '%s' exists within %s '%s', "
+                            "but is used by an active "
+                            "expression.  Currently variables "
+                            "must be reachable through a tree "
+                            "of active Blocks."
+                            % (v.name, _parent.type().__name__,
+                               _parent.name))
+                    if not _parent.active:
+                        _errors.append(
+                            "Variable '%s' exists within "
+                            "deactivated %s '%s', but is used by "
+                            "an active expression.  Currently "
+                            "variables must be reachable through "
+                            "a tree of active Blocks."
+                            % (v.name, _parent.type().__name__,
+                               _parent.name))
+                    _parent = _parent.parent_block()
+
+        if _errors:
+            for e in _errors:
+                logger.error(e)
+            err.args = err.args + tuple(_errors)
 
 
 # Switch from Python to C generate_repn function when possible

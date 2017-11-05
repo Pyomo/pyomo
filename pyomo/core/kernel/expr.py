@@ -44,6 +44,7 @@ _common_module_members = [
     '_PowExpression',
     '_ExternalFunctionExpression',
     '_GetItemExpression',
+    'clone_counter',
     'Expr_if',
 ]
 _coopr3_module_members = [

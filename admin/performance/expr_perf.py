@@ -25,11 +25,13 @@ import errno
 import os
 import signal
 
+coopr3_or_pyomo4 = False
 #
 # Dummy Sum() function used for Coopr3 tests
 #
-#def Sum(*args):
-#    return sum(*args)
+if coopr3_or_pyomo4:
+    def Sum(*args):
+        return sum(*args)
 
 class TimeoutError(Exception):
     pass
@@ -49,10 +51,10 @@ class timeout:
 
 
 _timeout = 20
-#NTerms = 100
-#N = 1
-NTerms = 100000
-N = 30
+NTerms = 100
+N = 1
+#NTerms = 100000
+#N = 30
 
 
 parser = argparse.ArgumentParser()
@@ -195,7 +197,35 @@ def evaluate(expr, seconds):
             print("TIMEOUT")
             seconds['generate_repn'] = -999.0
 
-    if False:
+    gc.collect()
+    _clear_expression_pool()
+    try:
+        with timeout(seconds=_timeout):
+            start = time.time()
+            s_ = expr.is_constant()
+            stop = time.time()
+            seconds['is_constant'] = stop-start
+    except RecursionError:
+        seconds['is_constant'] = -888.0
+    except TimeoutError:
+        print("TIMEOUT")
+        seconds['is_constant'] = -999.0
+
+    gc.collect()
+    _clear_expression_pool()
+    try:
+        with timeout(seconds=_timeout):
+            start = time.time()
+            s_ = expr.is_fixed()
+            stop = time.time()
+            seconds['is_fixed'] = stop-start
+    except RecursionError:
+        seconds['is_fixed'] = -888.0
+    except TimeoutError:
+        print("TIMEOUT")
+        seconds['is_fixed'] = -999.0
+
+    if not coopr3_or_pyomo4:
         gc.collect()
         _clear_expression_pool()
         try:
@@ -223,28 +253,6 @@ def evaluate_all(expr, seconds):
         seconds['size'] = sum(e.size() for e in expr)
     except:
         seconds['size'] = -1
-
-    if False:
-        #
-        # Compression is no longer necessary
-        #
-        gc.collect()
-        _clear_expression_pool()
-        try:
-            with timeout(seconds=_timeout):
-                start = time.time()
-                for e in expr:
-                    EXPR.compress_expression(e, verbose=False)
-                stop = time.time()
-                seconds['compress'] = stop-start
-                seconds['compressed_size'] = expr.size()
-        except TimeoutError:
-            print("TIMEOUT")
-            seconds['compressed_size'] = -999.0
-        except:
-            seconds['compressed_size'] = 0
-
-        # NOTE: All other tests after this are on the compressed expression!
 
     gc.collect()
     _clear_expression_pool()
@@ -306,7 +314,7 @@ def evaluate_all(expr, seconds):
         print("TIMEOUT")
         seconds['is_fixed'] = -999.0
 
-    if True:
+    if not coopr3_or_pyomo4:
         gc.collect()
         _clear_expression_pool()
         try:
@@ -325,7 +333,7 @@ def evaluate_all(expr, seconds):
             print("TIMEOUT")
             seconds['generate_repn'] = -999.0
 
-    if False:
+    if coopr3_or_pyomo4:
         gc.collect()
         _clear_expression_pool()
         try:

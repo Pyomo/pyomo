@@ -108,7 +108,7 @@ class _ExpressionData(NumericValue):
     def _polynomial_degree(self, result):
         return result.pop()
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         if ostream is None:
             ostream = sys.stdout
         _verbose = pyomo.core.base.expr_common.TO_STRING_VERBOSE if \
@@ -120,7 +120,7 @@ class _ExpressionData(NumericValue):
             ostream.write("Undefined")
         else:
             self.expr.to_string( ostream=ostream, verbose=verbose,
-                                   precedence=precedence )
+                                   precedence=precedence, labeler=labeler )
         if _verbose:
             ostream.write("}")
 
