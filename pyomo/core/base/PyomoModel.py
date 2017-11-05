@@ -865,11 +865,7 @@ from solvers are immediately loaded into the original model instance.""")
                 if component.type() is Model:
                     continue
 
-                if report_timing is True:
-                    start_time = time.time()
-                    clone_counters = EXPR.clone_counter._count
                 self._initialize_component(modeldata, namespaces, component_name, profile_memory)
-
                 if False:
                     total_time = time.time() - start_time
                     if isinstance(component, IndexedComponent):
