@@ -35,13 +35,11 @@ def pyomo_create_model(options=None, model_options=None):
     model.y = Var(model.Locations, bounds=(0.0, 1.0), initialize=0.0)
 
     def rule(model):
-        with linear_expression as e:
-            return sum( (model.d[n,m]*model.x[n,m] for n in model.Locations for m in model.Customers), e)
+        return Sum(model.d[n,m]*model.x[n,m] for n in model.Locations for m in model.Customers)
     model.obj = Objective(rule=rule)
 
     def rule(model, m):
-        with linear_expression as e:
-            return (sum( (model.x[n,m] for n in model.Locations), e), 1.0)
+        return (Sum(model.x[n,m] for n in model.Locations), 1.0)
     model.single_x = Constraint(model.Customers, rule=rule)
 
     def rule(model, n,m):
@@ -49,8 +47,7 @@ def pyomo_create_model(options=None, model_options=None):
     model.bound_y = Constraint(model.Locations, model.Customers, rule=rule)
 
     def rule(model):
-        with linear_expression as e:
-            return (sum( (model.y[n] for n in model.Locations), e) - model.P, 0.0)
+        return (Sum(model.y[n] for n in model.Locations) - model.P, 0.0)
     model.num_facilities = Constraint(rule=rule)
 
     return model

@@ -6,8 +6,7 @@ def create_model(N):
     model.A = RangeSet(N)
     model.x = Var(model.A)
 
-    with linear_expression as expr:
-        expr=sum((i*model.x[i] for i in model.A), expr)
+    Sum(i*model.x[i] for i in model.A)
     model.obj = Objective(expr=expr)
 
     def c_rule(model, i):
