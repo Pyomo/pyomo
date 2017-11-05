@@ -25,6 +25,11 @@ import errno
 import os
 import signal
 
+try:
+    RecursionError
+except:
+    RecursionError = RuntimeError
+
 coopr3_or_pyomo4 = False
 #
 # Dummy Sum() function used for Coopr3 tests
@@ -51,11 +56,10 @@ class timeout:
 
 
 _timeout = 20
-NTerms = 100
-N = 1
-#NTerms = 100000
-#N = 30
-
+#NTerms = 100
+#N = 1
+NTerms = 100000
+N = 30 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-o", "--output", help="Save results to the specified file", action="store", default=None)
