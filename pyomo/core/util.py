@@ -67,7 +67,11 @@ def Sum(args, start=0, linear=None):
                             c,v = term
                             if not v is None:
                                 nvar += 1
-                        if nvar > 1:
+                        #
+                        # NOTE: We treat constants as nonlinear since we want to 
+                        # simply keep them in a sum
+                        #
+                        if nvar == 0 or nvar > 1:
                             linear = False
                     start = start+first
                 if linear:
