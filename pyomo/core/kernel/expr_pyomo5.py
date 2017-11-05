@@ -1501,7 +1501,7 @@ class _ExpressionBase(NumericValue):
         raise NotImplementedError("Derived expression (%s) failed to "\
             "implement _polynomial_degree()" % ( str(self.__class__), ))
 
-    def to_string(self, ostream=None, verbose=None, precedence=None, expr=None):
+    def to_string(self, ostream=None, verbose=None, precedence=None, expr=None, labeler=None):
         if expr is None:
             expr = self
         return expression_to_string(expr, ostream, verbose, precedence)

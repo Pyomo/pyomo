@@ -2455,7 +2455,12 @@ class TestExprConditionalContext(TestCase):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=False)
         #
-        # BUG: Inequalities evaluate True when the parameter is unconstructed?
+        # Inequalities evaluate True when the parameter is
+        # unconstructed.  This is needed because we support constructing
+        # expressions using unconstructed scalar (simple) values.
+        # Returning True preventsbthe unexpected condition where simpke
+        # inequalities would work but double-sided inequalities would
+        # not.
         #
         self.checkCondition(model.p > 0, True)
         self.checkCondition(model.p >= 0, True)
@@ -2489,7 +2494,12 @@ class TestExprConditionalContext(TestCase):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=False)
         #
-        # BUG: Inequalities evaluate True when the parameter is unconstructed?
+        # Inequalities evaluate True when the parameter is
+        # unconstructed.  This is needed because we support constructing
+        # expressions using unconstructed scalar (simple) values.
+        # Returning True preventsbthe unexpected condition where simpke
+        # inequalities would work but double-sided inequalities would
+        # not.
         #
         self.checkCondition(0 < model.p, True)
         self.checkCondition(0 <= model.p, True)
@@ -2519,7 +2529,12 @@ class TestExprConditionalContext(TestCase):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=False)
         #
-        # BUG: Inequalities evaluate True when the parameter is unconstructed?
+        # Inequalities evaluate True when the parameter is
+        # unconstructed.  This is needed because we support constructing
+        # expressions using unconstructed scalar (simple) values.
+        # Returning True preventsbthe unexpected condition where simpke
+        # inequalities would work but double-sided inequalities would
+        # not.
         #
         self.checkCondition(0 < model.p, True)
         self.checkCondition(0 <= model.p, True)
@@ -2546,7 +2561,12 @@ class TestExprConditionalContext(TestCase):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=True)
         #
-        # BUG: Inequalities evaluate True when the parameter is unconstructed?
+        # Inequalities evaluate True when the parameter is
+        # unconstructed.  This is needed because we support constructing
+        # expressions using unconstructed scalar (simple) values.
+        # Returning True preventsbthe unexpected condition where simpke
+        # inequalities would work but double-sided inequalities would
+        # not.
         #
         self.checkCondition(model.p > 0, True)
         self.checkCondition(model.p >= 0, True)
@@ -2573,7 +2593,12 @@ class TestExprConditionalContext(TestCase):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=True)
         #
-        # BUG: Inequalities evaluate True when the parameter is unconstructed?
+        # Inequalities evaluate True when the parameter is
+        # unconstructed.  This is needed because we support constructing
+        # expressions using unconstructed scalar (simple) values.
+        # Returning True preventsbthe unexpected condition where simpke
+        # inequalities would work but double-sided inequalities would
+        # not.
         #
         self.checkCondition(0 < model.p, True)
         self.checkCondition(0 <= model.p, True)
@@ -2600,7 +2625,12 @@ class TestExprConditionalContext(TestCase):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
         #
-        # BUG: Inequalities evaluate True when the variable is unconstructed?
+        # Inequalities evaluate True when the parameter is
+        # unconstructed.  This is needed because we support constructing
+        # expressions using unconstructed scalar (simple) values.
+        # Returning True preventsbthe unexpected condition where simpke
+        # inequalities would work but double-sided inequalities would
+        # not.
         #
         self.checkCondition(model.v > 0, True)
         self.checkCondition(model.v >= 0, True)
@@ -2627,7 +2657,12 @@ class TestExprConditionalContext(TestCase):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
         #
-        # BUG: Inequalities evaluate True when the variable is unconstructed?
+        # Inequalities evaluate True when the parameter is
+        # unconstructed.  This is needed because we support constructing
+        # expressions using unconstructed scalar (simple) values.
+        # Returning True preventsbthe unexpected condition where simpke
+        # inequalities would work but double-sided inequalities would
+        # not.
         #
         self.checkCondition(0 < model.v, True)
         self.checkCondition(0 <= model.v, True)

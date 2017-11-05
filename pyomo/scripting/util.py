@@ -861,14 +861,18 @@ def configure_loggers(options=None, reset=False):
         logging.getLogger('pyomo.core').setLevel(logging.DEBUG)
         logging.getLogger('pyomo').setLevel(logging.DEBUG)
         logging.getLogger('pyutilib').setLevel(logging.DEBUG)
+
+    fileLogger = None
     if options.runtime.logfile:
+        fileLogger = logging.FileHandler(options.runtime.logfile, 'w')
         logging.getLogger('pyomo.opt').handlers = []
         logging.getLogger('pyomo.core').handlers = []
         logging.getLogger('pyomo').handlers = []
         logging.getLogger('pyutilib').handlers = []
-        logging.getLogger('pyomo.core').addHandler( logging.FileHandler(options.runtime.logfile, 'w'))
-        logging.getLogger('pyomo').addHandler( logging.FileHandler(options.runtime.logfile, 'w'))
-        logging.getLogger('pyutilib').addHandler( logging.FileHandler(options.runtime.logfile, 'w'))
+        logging.getLogger('pyomo.core').addHandler(fileLogger)
+        logging.getLogger('pyomo').addHandler(fileLogger)
+        logging.getLogger('pyutilib').addHandler(fileLogger)
+    return fileLogger
 
 @pyomo_api(namespace='pyomo.script')
 def run_command(command=None, parser=None, args=None, name='unknown', data=None, options=None):
@@ -924,13 +928,14 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
     #
     # Configure loggers
     #
-    configure_loggers(options=options)
+    fileLogger = configure_loggers(options=options)
     #
     # Setup I/O redirect to a file
     #
-    logfile = options.runtime.logfile
-    if not logfile is None:
-        pyutilib.misc.setup_redirect(logfile)
+    if fileLogger is not None:
+        # TBD: This seems dangerous in Windows, as the process will
+        # have multiple open file handles pointint to the same file.
+        pyutilib.misc.setup_redirect(options.runtime.logfile)
     #
     # Call the main Pyomo runner with profiling
     #
@@ -938,10 +943,12 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
     pcount = options.runtime.profile_count
     if pcount > 0:
         if not pstats_available:
-            if not logfile is None:
-                pyutilib.misc.reset_redirect()
             msg = "Cannot use the 'profile' option.  The Python 'pstats' "    \
                   'package cannot be imported!'
+            if fileLogger is not None:
+                pyutilib.misc.reset_redirect()
+                fileLogger.close()
+                configure_loggers(options=Options(), reset=True)
             raise ValueError(msg)
         tfile = TempfileManager.create_tempfile(suffix=".profile")
         tmp = profile.runctx(
@@ -975,6 +982,10 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             # exit.  Otherwise, print an "Exiting..." message.
             #
             if __debug__ and (options.runtime.logging == 'debug' or options.runtime.catch_errors):
+                if fileLogger is not None:
+                    pyutilib.misc.reset_redirect()
+                    fileLogger.close()
+                    configure_loggers(options=Options(), reset=True)
                 sys.exit(0)
             print('Exiting %s: %s' % (name, str(err)))
             errorcode = err.code
@@ -985,8 +996,10 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             # pass the exception up the chain (to pyomo_excepthook)
             #
             if __debug__ and (options.runtime.logging == 'debug' or options.runtime.catch_errors):
-                if not logfile is None:
+                if fileLogger is not None:
                     pyutilib.misc.reset_redirect()
+                    fileLogger.close()
+                    configure_loggers(options=Options(), reset=True)
                 TempfileManager.pop(remove=not options.runtime.keep_files)
                 raise
 
@@ -1015,8 +1028,10 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             logging.getLogger('pyomo.core').error(msg+errStr)
             errorcode = 1
 
-    if not logfile is None:
+    if fileLogger is not None:
         pyutilib.misc.reset_redirect()
+        fileLogger.close()
+        configure_loggers(options=Options(), reset=True)
 
     if options.runtime.disable_gc:
         gc.enable()

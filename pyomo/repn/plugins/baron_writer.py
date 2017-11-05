@@ -20,7 +20,7 @@ from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
 from pyomo.core.base import (SortComponents,
                              SymbolMap,
-                             AlphaNumTextLabeler,
+                             AlphaNumericTextLabeler,
                              NumericLabeler,
                              BooleanSet, Constraint,
                              IntegerSet, Objective,
@@ -576,7 +576,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         output_file.write("}\n\n")
 
         if symbolic_solver_labels:
-            labeler = AlphaNumTextLabeler()
+            labeler = AlphaNumericTextLabeler()
         elif labeler is None:
             labeler = NumericLabeler('x')
 

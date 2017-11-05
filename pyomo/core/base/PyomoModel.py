@@ -225,20 +225,21 @@ class ModelSolutions(object):
         # If there is a warning, then print a warning message.
         #
         if (results.solver.status == pyomo.opt.SolverStatus.warning):
-            print('WARNING - Loading a SolverResults object with a ' \
-                  'warning status into model=%s; message from solver=%s' % (instance.name,
-                                                                            results.solver.Message))
+            logger.warn('Loading a SolverResults object with a '
+                        'warning status into model=%s;\nmessage from solver=%s'
+                        % (instance.name, results.solver.Message))
         #
         # If the solver status not one of either OK or Warning, then generate an error.
         #
         elif results.solver.status != pyomo.opt.SolverStatus.ok:
             if (results.solver.status == pyomo.opt.SolverStatus.aborted) and \
                (len(results.solution) > 0):
-               print("WARNING - Loading a SolverResults object with "
-                     "an 'aborted' status, but containing a solution")
+                logger.warn("Loading a SolverResults object with "
+                            "an 'aborted' status, but containing a solution")
             else:
-               raise ValueError("Cannot load a SolverResults object "
-                                "with bad status: %s" % str(results.solver.status))
+                raise ValueError("Cannot load a SolverResults object "
+                                 "with bad status: %s"
+                                 % str(results.solver.status))
         if clear:
             #
             # Clear the solutions, but not the symbol map
@@ -690,6 +691,14 @@ constructed model; returning a clone of the current model instance.""")
         # Clone the model and load the data
         #
         instance = self.clone()
+        #
+        # Change this class from "Abstract" to "Concrete".  It is
+        # absolutely crazy that this is allowed in Python, but since the
+        # AbstractModel and ConcreteModel are basically identical, we
+        # can "reassign" the new concrete instance to be an instance of
+        # ConcreteModel
+        #
+        instance.__class__ = ConcreteModel
 
         if name is not None:
             instance._name = name
