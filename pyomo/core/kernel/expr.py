@@ -10,6 +10,7 @@
 
 from __future__ import division
 import math
+import builtins
 
 __all__ = ('fabs', 'log', 'log10', 'sin', 'cos', 'tan', 'cosh', 'sinh', 'tanh',
            'asin', 'acos', 'atan', 'exp', 'sqrt', 'asinh', 'acosh',
@@ -23,12 +24,14 @@ def generate_relational_expression(etype, lhs, rhs):
     raise RuntimeError("incomplete import of Pyomo expression system")
 def generate_intrinsic_function_expression(arg, name, fcn):
     raise RuntimeError("incomplete import of Pyomo expression system")
+def compress_expression(expr, verbose=False, dive=False, multiprod=False):
+    return expr
+sum = builtins.sum
 
 from pyomo.core.kernel import numvalue
 
 # Import global methods that are common to all expression systems
 _common_module_members = [
-    'compress_expression',
     'clone_expression',
     'identify_variables',
     'generate_expression',
@@ -50,7 +53,6 @@ _common_module_members = [
 _coopr3_module_members = [
     '_IntrinsicFunctionExpression',
     'ignore_entangled_expressions',
-    'sum',
 ]
 _pyomo4_module_members = [
     'ignore_entangled_expressions',
@@ -59,26 +61,18 @@ _pyomo4_module_members = [
     '_NegationExpression',
     'EntangledExpressionError',
     '_IntrinsicFunctionExpression',
-    'sum',
 ]
 _pyomo5_module_members = [
     '_LinearExpression',
     '_StaticLinearExpression',
-    '_QuadraticExpression',
-    '_StaticQuadraticExpression',
-    'ignore_entangled_expressions',
     'clone_counter',
     'linear_expression',
     'nonlinear_expression',
-    'quadratic_expression',
     'evaluate_expression',
     '_ReciprocalExpression',
     '_NegationExpression',
-    'EntangledExpressionError',
     '_ViewSumExpression',
-    '_LinearViewSumExpression',
     '_UnaryFunctionExpression',
-    'sum',
     '_NPV_NegationExpression',
     '_NPV_ExternalFunctionExpression',
     '_NPV_PowExpression',

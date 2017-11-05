@@ -445,10 +445,9 @@ class constraint(_MutableBoundsConstraintMixin,
                     self.rhs = arg0
                     self.body = arg1
                 else:
-                    with EXPR.ignore_entangled_expressions:
-                        self.rhs = ZeroConstant
-                        self.body = arg0
-                        self.body -= arg1
+                    self.rhs = ZeroConstant
+                    self.body = arg0
+                    self.body -= arg1
 
             #
             # Form inequality expression
@@ -552,10 +551,9 @@ class constraint(_MutableBoundsConstraintMixin,
                     self.rhs = _args[0]
                     self.body = _args[1]
                 else:
-                    with EXPR.ignore_entangled_expressions:
-                        self.rhs = ZeroConstant
-                        self.body = _args[0]
-                        self.body -= _args[1]
+                    self.rhs = ZeroConstant
+                    self.body = _args[0]
+                    self.body -= _args[1]
             else:
                 # Inequality expression: 2 or 3 arguments
                 if expr._strict:
@@ -619,11 +617,10 @@ class constraint(_MutableBoundsConstraintMixin,
                         self.body  = _args[1]
                         self.ub = None
                     else:
-                        with EXPR.ignore_entangled_expressions:
-                            self.lb = None
-                            self.body  = _args[0]
-                            self.body -= _args[1]
-                            self.ub = ZeroConstant
+                        self.lb = None
+                        self.body  = _args[0]
+                        self.body -= _args[1]
+                        self.ub = ZeroConstant
 
         #
         # Replace numeric bound values with a NumericConstant object,

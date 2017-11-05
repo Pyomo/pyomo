@@ -53,47 +53,10 @@ from pyomo.core.kernel import expr_common as common
 from pyomo.core.base.param import _ParamData, SimpleParam
 from pyomo.core.base.template_expr import TemplateExpressionError
 
-##
-## NEEDS TO BE REMOVED
-##
-
-def _clear_expression_pool():
-    pass
-
-sum = builtins.sum
-
-UNREFERENCED_EXPR_COUNT = 10
-UNREFERENCED_INTRINSIC_EXPR_COUNT = 8 
-UNREFERENCED_EXPR_IF_COUNT = 10
-if sys.version_info[:2] >= (3, 6):
-    UNREFERENCED_EXPR_COUNT -= 1
-    UNREFERENCED_INTRINSIC_EXPR_COUNT += 1
-    UNREFERENCED_EXPR_IF_COUNT -= 1
-elif sys.version_info[:2] < (2, 7):
-    UNREFERENCED_EXPR_IF_COUNT = -4
-
 # Wrap the common chainedInequalityErrorMessage to pass the local context
 chainedInequalityErrorMessage \
     = lambda *x: cIEM(generate_relational_expression, *x)
 
-class EntangledExpressionError(Exception):
-    def __init__(self, sub_expr):
-        msg = \
-"""Attempting to form an expression with a
-subexpression that is already part of another expression of component.
-This would create two expressions that share common subexpressions,
-which is not allowed in Pyomo.  Either clone the subexpression using
-'clone_expression' before creating the new expression, or if you want
-the two expressions to share a common subexpression, use an Expression
-component to store the subexpression and use the subexpression in each
-expression.  Common subexpression:\n\t%s""" % (str(sub_expr),)
-        super(EntangledExpressionError, self).__init__(msg)
-
-#-------------------------------------------------------
-#
-# Global Data
-#
-#-------------------------------------------------------
 
 def initialize_expression_data():
     global pyomo5_variable_types
@@ -118,21 +81,6 @@ class clone_counter_context(object):
         return clone_counter_context._count
 
 clone_counter = clone_counter_context()
-
-
-#
-# TODO: Confirm that this is not necessary
-#
-class ignore_entangled_context(object):
-    detangle = [True]
-
-    def __enter__(self):
-        ignore_entangled_expressions.detangle.append(False)
-
-    def __exit__(self, *args):
-        ignore_entangled_expressions.detangle.pop()
-
-ignore_entangled_expressions = ignore_entangled_context()
 
 
 class mutable_sum_context(object):
@@ -160,20 +108,6 @@ class mutable_linear_context(object):
             self.e.__class__ = _StaticLinearExpression
 
 linear_expression = mutable_linear_context()
-
-
-class mutable_quadratic_context(object):
-
-    def __enter__(self):
-        self.e = _QuadraticExpression()
-        return self.e
-
-    def __exit__(self, *args):
-        if self.e.__class__ == _QuadraticExpression:
-            self.e.__class__ = _StaticQuadraticExpression
-
-#quadratic_expression = mutable_quadratic_context()
-quadratic_expression = nonlinear_expression
 
 
 #-------------------------------------------------------
@@ -311,278 +245,6 @@ class ValueExpressionVisitor(ValueVisitor):
 # Functions used to process expression trees
 #
 #-------------------------------------------------------
-
-# =====================================================
-#  compress_expression
-# =====================================================
-
-class CompressVisitor(ValueExpressionVisitor):
-
-    def __init__(self, multiprod=False):
-        self._clone = [None, False]
-        self.multiprod = multiprod
-
-    def visit(self, node, values):
-        """ Visit nodes that have been expanded """
-        clone = self._clone.pop()
-        #
-        # Now replace the current expression object if it's a sum
-        #
-        if node.__class__ is _SumExpression or node.__class__ is _NPV_SumExpression or node.__class__ is _Constant_SumExpression:
-            ans = _SumExpression._combine_expr(*values)
-            #
-            # We've replaced a node, so set the context for the parent's search to
-            # ensure that it is cloned.
-            #
-            self._clone[-1] = True
-        #
-        # Now replace the current expression object if it's a product
-        #
-        elif self.multiprod and node.__class__ in pyomo5_product_types:
-            ans = _ProductExpression._combine_expr(*values)
-            #
-            # We've replaced a node, so set the context for the parent's search to
-            # ensure that it is cloned.
-            #
-            self._clone[-1] = True
-        #
-        # Now replace the current expression object if it's a reciprocal
-        #
-        elif self.multiprod and node.__class__ in pyomo5_reciprocal_types:
-            ans = _ReciprocalExpression._combine_expr(*values)
-            #
-            # We've replaced a node, so set the context for the parent's search to
-            # ensure that it is cloned.
-            #
-            self._clone[-1] = True
-
-        elif clone:
-            ans = node._clone( tuple(values), None )
-            self._clone[-1] = True
-
-        else:
-            ans = node
-        return ans
-
-    def visiting_potential_leaf(self, node, _values):
-        """ 
-        Visiting a potential leaf.
-
-        Return True if the node is not expanded.
-        """
-        if node.__class__ in native_numeric_types or \
-               node.__class__ not in pyomo5_expression_types or \
-               node.__class__ in pyomo5_multisum_types or \
-               node.__class__ is _MultiProdExpression or \
-               not node._potentially_variable():
-            _values.append( node )
-            return True
-        #
-        # This node is expanded, so set its cloning flag.
-        #
-        self._clone.append(False)
-        return False
-
-    def finalize(self, ans):
-        #if ans.__class__ is _MutableMultiSumExpression:
-        #    ans.__class__ = _CompressedSumExpression
-        return ans
-
-
-def NEW_compress_expression(expr, verbose=False, dive=False, multiprod=False):
-    #
-    # Only compress a true expression DAG
-    #
-    # Note: This does not try to optimize the compression to recognize
-    #   subgraphs.
-    #
-    # Note: This uses a two-part stack.  The boolean indicates whether the
-    #   parent should be cloned (because a child has been replaced), and the
-    #   tuple represents the current context during the tree search.
-    #
-    if expr.__class__ in native_numeric_types or not expr.is_expression() or not expr._potentially_variable():
-        return expr
-    if expr.__class__ is _MutableMultiSumExpression:
-        expr.__class__ = _CompressedSumExpression
-        return expr
-    if expr.__class__ in pyomo5_multisum_types:
-        return expr
-    #
-    # Only compress trees whose root is _SumExpression
-    #
-    # Note: This tacitly avoids compressing all trees
-    # that are not potentially variable, since they have a
-    # different class.
-    #
-    if not dive and \
-       not (expr.__class__ is _SumExpression or expr.__class__ is _NPV_SumExpression or expr.__class__ is _Constant_SumExpression):
-        return expr
-    visitor = CompressVisitor(multiprod=multiprod)
-    return visitor.dfs_postorder_stack(expr)
-
-
-def compress_expression(expr, verbose=False, dive=False, multiprod=False):
-    return expr
-
-def Xcompress_expression(expr, verbose=False, dive=False, multiprod=False):
-    #
-    # Only compress a true expression DAG
-    #
-    # Note: This does not try to optimize the compression to recognize
-    #   subgraphs.
-    #
-    # Note: This uses a two-part stack.  The boolean indicates whether the
-    #   parent should be cloned (because a child has been replaced), and the
-    #   tuple represents the current context during the tree search.
-    #
-    if expr.__class__ in native_numeric_types or not expr.is_expression() or not expr._potentially_variable():
-        return expr
-    #if expr.__class__ is _MutableMultiSumExpression:
-    #    expr.__class__ = _CompressedSumExpression
-    #    return expr
-    if expr.__class__ in pyomo5_multisum_types:
-        return expr
-    #
-    # Only compress trees whose root is _SumExpression
-    #
-    # Note: This tacitly avoids compressing all trees
-    # that are not potentially variable, since they have a
-    # different class.
-    #
-    if not dive and \
-       not (expr.__class__ is _SumExpression or expr.__class__ is _NPV_SumExpression or expr.__class__ is _Constant_SumExpression):
-        return expr
-    #
-    # The stack starts with the current expression
-    #
-    _stack = [ False, (expr, expr._args, 0, expr.nargs(), [])]
-    #
-    # Iterate until the stack is empty
-    #
-    # Note: 1 is faster than True for Python 2.x
-    #
-    while 1:
-        #
-        # Get the top of the stack
-        #   _obj        Current expression object
-        #   _argList    The arguments for this expression objet
-        #   _idx        The current argument being considered
-        #   _len        The number of arguments
-        #
-        _obj, _argList, _idx, _len, _result = _stack.pop()
-        _clone = _stack.pop()
-        if _clone and _stack:
-            _stack[-2] = True
-        if verbose: #pragma:nocover
-            print("*"*10 + " POP  " + "*"*10)
-        #
-        # Iterate through the arguments
-        #
-        while _idx < _len:
-            if verbose: #pragma:nocover
-                print("-"*30)
-                print(type(_obj))
-                print(_obj)
-                print(_argList)
-                print(_idx)
-                print(_len)
-                print(_result)
-                print(_clone)
-                print("-"*30)
-
-            _sub = _argList[_idx]
-            _idx += 1
-            if _sub.__class__ in native_numeric_types:
-                #
-                # Store a native or numeric object
-                #
-                _result.append( _sub )
-            elif _sub.__class__ not in pyomo5_expression_types or \
-                 _sub.__class__ in pyomo5_multisum_types or \
-                 _sub.__class__ is _MultiProdExpression or \
-                 not _sub._potentially_variable():
-                _result.append( _sub )
-            else:
-                #
-                # Push an expression onto the stack
-                #
-                if verbose: #pragma:nocover
-                    print("*"*10 + " PUSH " + "*"*10)
-                _stack.append( False )
-                _stack.append( (_obj, _argList, _idx, _len, _result) )
-                _obj                    = _sub
-                _argList                = _sub._args
-                _idx                    = 0
-                _len                    = _sub.nargs()
-                _result                 = []
-                _clone                  = False
-    
-        if verbose: #pragma:nocover
-            print("="*30)
-            print(type(_obj))
-            print(_obj)
-            print(_argList)
-            print(_idx)
-            print(_len)
-            print(_result)
-            print(_clone)
-            print("="*30)
-        #
-        # Now replace the current expression object if it's a sum
-        #
-        if _obj.__class__ is _SumExpression or _obj.__class__ is _NPV_SumExpression or _obj.__class__ is _Constant_SumExpression:
-            ans = _SumExpression._combine_expr(*_result)
-            if _stack:
-                #
-                # We've replaced a node, so set the context for the parent's search to
-                # ensure that it is cloned.
-                #
-                _stack[-2] = True
-        #
-        # Now replace the current expression object if it's a product
-        #
-        elif multiprod and _obj.__class__ in pyomo5_product_types:
-            ans = _ProductExpression._combine_expr(*_result)
-            if _stack:
-                #
-                # We've replaced a node, so set the context for the parent's search to
-                # ensure that it is cloned.
-                #
-                _stack[-2] = True
-        #
-        # Now replace the current expression object if it's a reciprocal
-        #
-        elif multiprod and _obj.__class__ in pyomo5_reciprocal_types:
-            ans = _ReciprocalExpression._combine_expr(*_result)
-            if _stack:
-                #
-                # We've replaced a node, so set the context for the parent's search to
-                # ensure that it is cloned.
-                #
-                _stack[-2] = True
-
-        elif _clone:
-            ans = _obj._clone( tuple(_result), None )
-            if _stack:
-                _stack[-2] = True
-
-        else:
-            ans = _obj
-
-        #print(ans)
-        #print(ans._args)
-        if verbose: #pragma:nocover
-            print("STACK LEN %d" % len(_stack))
-        if _stack:
-            #
-            # "return" the recursion by putting the return value on the end of the results stack
-            #
-            _stack[-1][-1].append( ans )
-        else:
-            #if ans.__class__ is _MutableMultiSumExpression:
-            #    ans.__class__ = _CompressedSumExpression
-            return ans
-
 
 # =====================================================
 #  clone_expression
@@ -1856,114 +1518,6 @@ class _ProductExpression(_ExpressionBase):
         _l, _r = result
         return _l * _r
 
-    @staticmethod
-    def X_combine_expr(_l, _r):
-        #
-        # p * X
-        #
-        if _l.__class__ in native_numeric_types:
-            if _r.__class__ is _MultiProdExpression:
-                #
-                # p * MultiProd
-                #
-                # Multiply the LHS to the first term of the multiprod
-                #
-                _r._args[0] *= _l
-                ans = _r
-            else:
-                #
-                # p * expr
-                #
-                ans = _MultiProdExpression([_l, _r], nnum=2)
-        #
-        # Augment the current multiprod (LHS)
-        #
-        elif _l.__class__ is _MultiProdExpression:
-            #
-            # MultiProd * 1
-            # MultiProd * p
-            #
-            # Multiply the RHS to the first term of the multiprod
-            #
-            if not _r._potentially_variable():
-                #print("H4")
-                _l._args[0] *= _r
-                ans = _l
-            #
-            # MultiProd * MultiProd
-            #
-            # Multiply the constant terms, and place the others
-            #
-            elif _r.__class__ is _MultiProdExpression:
-                tmp = []
-                tmp.append(_l._args[0] * _r._args[0])
-                for i in range(1,_l._nnum):
-                    tmp.append(_l._args[i])
-                for i in range(1,_r._nnum):
-                    tmp.append(_r._args[i])
-                tmp += _l._args[_l._nnum:]
-                tmp += _r._args[_r._nnum:]
-                _l._args = tmp
-                _l._nnum += _r._nnum-1
-                ans = _l
-            #
-            # MultiProd * expr
-            #
-            # Insert the expression
-            #
-            else:
-                #print("H5")
-                if _l.nargs() == _l._nnum:
-                    _l._args.append(_r)
-                    _l._nnum += 1
-                    ans = _l
-                else:
-                    tmp = _l._args[:_l._nnum]
-                    tmp.append(_r)
-                    tmp += _l._args[_l._nnum:]
-                    _l._args = tmp
-                    _l._nnum += 1
-                    ans = _l
-        #
-        # p * X
-        #
-        elif not _l._potentially_variable():
-            if _r.__class__ is _MultiProdExpression:
-                #
-                # p * MultiProd
-                #
-                # Multiply the LHS to the first term of the multiprod
-                #
-                _r._args[0] *= _l
-                ans = _r
-            else:
-                #
-                # p * expr
-                #
-                ans = _MultiProdExpression([_l, _r], nnum=2)
-        #
-        # Augment the current multiprod (RHS)
-        #
-        # WEH:  I'm not sure that this branch is possible with normal
-        #       iteratively created products, but I still think it's 
-        #       technically possible to create an expression tree that 
-        #       has no products on the LHS and products on the RHS.
-        #
-        elif _r.__class__ is _MultiProdExpression:
-            #
-            # expr * MultiProd
-            #
-            # Insert the expression
-            #
-            #print(("H3",_r_clone))
-            _r._args = [_r._args[0]] + [_l] + _r._args[1:]
-            _r._nnum += 1
-            ans = _r
-
-        else:
-            ans = _MultiProdExpression([1, _l, _r], nnum=3)
-        return ans
-
 
 class _Constant_ProductExpression(_ProductExpression):
     __slots__ = ()
@@ -1980,53 +1534,6 @@ class _NPV_ProductExpression(_ProductExpression):
 
     def _potentially_variable(self):
         return False
-
-
-class _MultiProdExpression(_ProductExpression):
-    """An object that defines a product with 1 or more terms, including denominators."""
-
-    __slots__ = ('_nnum',)
-    PRECEDENCE = 4
-
-    def __init__(self, args, nnum=None):
-        self._args = args
-        self._nnum = nnum
-        if _getrefcount_available:
-            self._is_owned = UNREFERENCED_EXPR_COUNT
-        else:
-            self._is_owned = False
-            for arg in args:
-                if arg.__class__ in pyomo5_expression_types:
-                    arg._is_owned = True
-
-    def nargs(self):
-        return len(self._args)
-
-    def _clone(self, args, memo):
-        return self.__class__(args, self._nnum)
-
-    def _precedence(self):
-        return _MultiProdExpression.PRECEDENCE
-
-    def _apply_operation(self, result):
-        return prod(result)
-
-    def getname(self, *args, **kwds):
-        return 'multiprod'
-
-    def _potentially_variable(self):
-        return len(self._args) > 1
-
-    def _apply_operation(self, result):
-        ans = 1
-        i = 0
-        n_ = len(self._args)
-        for j in xargs(0,nnum):
-            ans *= result[i]
-            i += 1
-        while i < n_:
-            ans /= result[i]
-            i += 1
 
 
 class _ReciprocalExpression(_ExpressionBase):
@@ -2057,31 +1564,6 @@ class _ReciprocalExpression(_ExpressionBase):
 
     def _apply_operation(self, result):
         return 1 / result[0]
-
-    @staticmethod
-    def X_combine_expr(_r):
-        _l = 1
-        #
-        # 1 / X
-        #
-        if _r.__class__ is _MultiProdExpression:
-            #
-            # 1 / MultiProd
-            #
-            # Reciprocate the MultiProd
-            #
-            _tmp = [1/_r._args[0]] + _r._args[_r._nnum:]
-            for i in range(1,_r._nnum):
-                _tmp.append( _r._args[i])
-            _r._args = _tmp
-            _r._nnum = len(_tmp)-_r._nnum+1
-            ans = _r
-        else:
-            #
-            # 1 / expr
-            #
-            ans = _MultiProdExpression([_l, _r], nnum=1)
-        return ans
 
 
 class _Constant_ReciprocalExpression(_ReciprocalExpression):
@@ -2126,103 +1608,6 @@ class _SumExpression(_LinearOperatorExpression):
 
     def getname(self, *args, **kwds):
         return 'sum'
-
-    #@profile
-    @staticmethod
-    def X_combine_expr(_l, _r):
-        #
-        # Augment the current multi-sum (LHS)
-        #
-        if _l.__class__ is _MutableMultiSumExpression:
-            #
-            # Multisum + 1
-            # MultiSum + p
-            #
-            # Add the RHS to the first term of the multisum
-            #
-            if _r.__class__ in native_numeric_types or not _r._potentially_variable():
-                _l._args[0] += _r
-                ans = _l
-            #
-            # MultiSum + MultiSum
-            #
-            # Add the constant terms, and place the others
-            #
-            elif _r.__class__ is _MutableMultiSumExpression:
-                _l._args[0] += _r._args[0]
-                _l._args += _r._args[1:]
-                ans = _l
-            #
-            # MultiSum + StaticMultiSum
-            #
-            # Add the constant terms, and place the others
-            #
-            elif _r.__class__ is _CompressedSumExpression or _r.__class__ is _MultiSumExpression:
-                _l._args[0] += _r._args[0]
-                _l._args += list(_r._args[1:])
-                ans = _l
-            #
-            # Multisum + expr
-            #
-            # Insert the expression
-            #
-            else:
-                #print("H5")
-                _l._args.append(_r)
-                ans = _l
-
-        #
-        # Augment the current multi-sum (RHS)
-        #
-        elif _r.__class__ is _MutableMultiSumExpression:
-            #
-            # 1 + MultiSum
-            # p + MultiSum
-            #
-            # Add the LHS to the first term of the multisum
-            #
-            if _l.__class__ in native_numeric_types or not _l._potentially_variable():
-                _r._args[0] += _l
-                ans = _r
-            #
-            # StaticMultiSum + MultiSum
-            #
-            # Add the constant terms, and place the others
-            #
-            elif _l.__class__ is _CompressedSumExpression or _l.__class__ is _MultiSumExpression:
-                _r._args[0] += _l._args[0]
-                _r._args += list(_l._args[1:])
-                ans = _r
-            #
-            # expr + MultiSum
-            #
-            # Insert the expression
-            #
-            else:
-                _r._args.append(_l)
-                ans = _r
-
-        #
-        # 1 + expr
-        # p + expr
-        #
-        elif _l.__class__ in native_numeric_types or not _l._potentially_variable():
-            ans = _MutableMultiSumExpression([_l, _r])
-
-        #
-        # expr + 1
-        # expr + p
-        #
-        elif _r.__class__ in native_numeric_types or not _r._potentially_variable():
-            ans = _MutableMultiSumExpression([_r, _l])
-
-        #
-        # expr + expr
-        #
-        else:
-            ans = _MutableMultiSumExpression([0, _l, _r])
-
-        return ans
 
 
 class _Constant_SumExpression(_SumExpression):
@@ -2310,78 +1695,6 @@ class _ViewSumExpression(_SumExpression):
                 isclose(self._args[0], 0)
 
 
-class _LinearViewSumExpression(_ViewSumExpression):
-
-    __slots__ = ()
-
-    def __init__(self, args):
-        if args.__class__ is tuple:
-            self._args = []
-            linear_terms = []
-            nonlinear_terms = []
-            for arg in args:
-                self.decompose(arg, linear_terms, nonlinear_terms)
-            self._args.extend(linear_terms)
-            if len(nonlinear_terms) > 0:
-                # We add nonlinear terms, but change the class type.
-                self._args.extend(nonlinear_terms)
-                self.__class__ = _ViewSumExpression
-        else:
-            self._args = args
-        self._is_owned = False
-        self._nargs = len(self._args)
-
-    def add(self, new_arg):
-        if new_arg.__class__ in native_numeric_types and isclose(new_arg,0):
-            return self
-        # Clone 'self', because _LinearViewSumExpression are immutable
-        self._is_owned = True
-        self = self.__class__(self._args)
-        #
-        if new_arg.__class__ is _LinearViewSumExpression:
-            self._args.extend(islice(new_arg._args, new_arg._nargs))
-        else:
-            linear_terms = []
-            nonlinear_terms = []
-            if new_arg.__class__ is _ViewSumExpression or new_arg.__class__ is _MutableViewSumExpression:
-                for arg in islice(new_arg._args, new_arg._nargs):
-                    self.decompose(arg, linear_terms, nonlinear_terms)
-            elif not new_arg is None:
-                self.decompose(new_arg, linear_terms, nonlinear_terms)
-            self._args.extend(linear_terms)
-            if len(nonlinear_terms) > 0:
-                #
-                # We add nonlinear terms, but change the class type.  Note that
-                # this doesn't change the type of _LinearViewSumExpression
-                # objects that share a prefix of the underlying list.
-                #
-                self._args.extend(nonlinear_terms)
-                self.__class__ = _ViewSumExpression
-        #
-        self._nargs = len(self._args)
-        if not new_arg is None and new_arg.__class__ in pyomo5_expression_types:
-            new_arg._is_owned = True
-        return self
-
-    def is_constant(self):
-        for arg in islice(self._args, self._nargs):
-            if not arg[1] is None:
-                return False
-        return True
-
-    def _potentially_variable(self):
-        for arg in islice(self._args, self._nargs):
-            if not arg[1] is None:
-                return True
-        return False
-
-    def _to_string_skip(self, _idx):
-        return  _idx == 0 and \
-                self._args[0][1] is None and \
-                self._args[0][0].__class__ in native_numeric_types and \
-                isclose(self._args[0][0], 0)
-
-
 class _MutableViewSumExpression(_ViewSumExpression):
 
     __slots__ = ()
@@ -2401,58 +1714,6 @@ class _MutableViewSumExpression(_ViewSumExpression):
         if not new_arg is None and new_arg.__class__ in pyomo5_expression_types:
             new_arg._is_owned = True
         return self
-
-
-class _MutableMultiSumExpression(_SumExpression):
-    """An object that defines a summation with 1 or more terms and a constant term."""
-
-    __slots__ = ()
-    PRECEDENCE = 6
-
-    def __init__(self, args):
-        self._args = list(args)
-        if _getrefcount_available:
-            self._is_owned = UNREFERENCED_EXPR_COUNT
-        else:
-            self._is_owned = False
-            for arg in args:
-                if arg.__class__ in pyomo5_expression_types:
-                    arg._is_owned = True
-
-    def nargs(self):
-        return len(self._args)
-
-    def _precedence(self):
-        return _MutableMultiSumExpression.PRECEDENCE
-
-    def _apply_operation(self, result):
-        return sum(result)
-
-    def getname(self, *args, **kwds):
-        return 'multisum'
-
-    def is_constant(self):
-        return len(self._args) <= 1
-
-    def _potentially_variable(self):
-        return len(self._args) > 1
-
-    def _to_string_skip(self, _idx):
-        return  _idx == 0 and \
-                self._args[0].__class__ in native_numeric_types and \
-                isclose(self._args[0], 0)
-
-
-class _MultiSumExpression(_MutableMultiSumExpression):
-    """A temporary object that defines a summation with 1 or more terms and a constant term."""
-    
-    __slots__ = ()
-
-
-class _CompressedSumExpression(_MutableMultiSumExpression):
-    """A temporary object that defines a summation with 1 or more terms and a constant term."""
-    
-    __slots__ = ()
 
 
 class _GetItemExpression(_ExpressionBase):
@@ -2811,30 +2072,37 @@ class _LinearExpression(_ExpressionBase):
                     raise ValueError("Expected a single linear term (2)")
                 return C*C_,C*c_,v_
             return C_C*C,C_*c,v
-        elif expr.__class__ is _SumExpression:
-            C,c,v = _LinearExpression._decompose_term(expr._args[0])
-            C_,c_,v_ = _LinearExpression._decompose_term(expr._args[1])
-            if not v_ is None:
-                if not v is None:
-                    if id(v) == id(v_):
-                        return C+C_,c+c_,v
-                    else:
-                        raise ValueError("Expected a single linear term (3)")
-                return C+C_,c_,v_
-            return C+C_,c,v
-        elif False or expr.__class__ is _LinearViewSumExpression:
-            C=0
-            c=1
-            v=None
-            for arg in expr.args:
-                if arg[1] is None:
-                    C += arg[0]
-                elif not v is None:
-                    raise ValueError("Expected a single linear term (3a)")
-                else:
-                    c=arg[0]
-                    v=arg[1]
-            return C,c,v
+        #
+        # A potentially variable _SumExpression class has been supplanted by
+        # _ViewSumExpression
+        #
+        #elif expr.__class__ is _SumExpression:
+        #    C,c,v = _LinearExpression._decompose_term(expr._args[0])
+        #    C_,c_,v_ = _LinearExpression._decompose_term(expr._args[1])
+        #    if not v_ is None:
+        #        if not v is None:
+        #            if id(v) == id(v_):
+        #                return C+C_,c+c_,v
+        #            else:
+        #                raise ValueError("Expected a single linear term (3)")
+        #        return C+C_,c_,v_
+        #    return C+C_,c,v
+        #
+        # The _LinearViewSumExpression class is not used now
+        #
+        #elif expr.__class__ is _LinearViewSumExpression:
+        #    C=0
+        #    c=1
+        #    v=None
+        #    for arg in expr.args:
+        #        if arg[1] is None:
+        #            C += arg[0]
+        #        elif not v is None:
+        #            raise ValueError("Expected a single linear term (3a)")
+        #        else:
+        #            c=arg[0]
+        #            v=arg[1]
+        #    return C,c,v
         elif expr.__class__ is _NegationExpression:
             C,c,v = _LinearExpression._decompose_term(expr._args[0])
             return -C,-c,v
@@ -2850,7 +2118,7 @@ class _LinearExpression(_ExpressionBase):
                 return expr.constant, expr.linear_coefs[0], expr.linear_vars[0]
             else:
                 raise ValueError("Expected a single linear term (5)")
-        elif expr.__class__ in pyomo5_multisum_types:
+        elif expr.__class__ is _ViewSumExpression or expr.__class__ in _MutableViewSumExpression:
             C = 0
             c = None
             v = None
@@ -2891,7 +2159,7 @@ class _LinearExpression(_ExpressionBase):
                 for c,v in zip(_other.linear_coefs, _other.linear_vars):
                     self.linear_coefs.append(omult*c)
                     self.linear_vars.append(v)
-            elif _other.__class__ in pyomo5_multisum_types:
+            elif _other.__class__ is _ViewSumExpression or _other.__class__ is _MutableViewSumExpression:
                 for e in _other._args:
                     C,c,v = _LinearExpression._decompose_term(e)
                     self.constant = self.constant + omult * C
@@ -2967,71 +2235,6 @@ class _StaticLinearExpression(_LinearExpression):
     __slots__ = ()
 
 
-class _QuadraticExpression(_ExpressionBase):
-    __slots__ = ('constant',          # The constant term
-                 'linear_coefs',      # Linear coefficients
-                 'linear_vars',       # Linear variables
-                 'quadratic_coefs',   # Quadratic coefficients
-                 'quadratic_vars')    # Quadratic variables
-
-    PRECEDENCE = 6
-
-    def __init__(self):
-        self.constant = 0
-        self.linear_coefs = []
-        self.linear_vars = []
-        self.quadratic_coefs = []
-        self.quadratic_vars = []
-        self._args = tuple()
-        if _getrefcount_available:
-            self._is_owned = UNREFERENCED_EXPR_COUNT
-        else:
-            self._is_owned = False
-
-    def nargs(self):
-        return 0
-
-    def _clone(self, args=None):
-        repn = self.__class__()
-        repn.constant = deepcopy(self.constant)
-        repn.linear_coefs = deepcopy(self.linear_coefs)
-        repn.linear_vars = deepcopy(self.linear_vars)
-        repn.quadratic_coefs = deepcopy(self.quadratic_coefs)
-        repn.quadratic_vars = deepcopy(self.quadratic_vars)
-        return repn
-
-    def getname(self, *args, **kwds):
-        return 'sum'
-
-    def _polynomial_degree(self, result):
-        if len(self.quadratic_vars) > 0:
-            return 2
-        elif len(self.linear_vars) > 0:
-            return 1
-        return 0
-
-    def is_constant(self):
-        return len(self.quadratic_vars) == 0 and len(self.linear_vars) == 0
-
-    def is_fixed(self):
-        if len(self.linear_vars) == 0 and len(self.quadratic_vars) == 0:
-            return True
-        for v,w in self.quadratic_vars:
-            if not (v.fixed or w.fixed):
-                return False
-        for v in self.linear_vars:
-            if not v.fixed:
-                return False
-        return True
-
-    def _potentially_variable(self):
-        return len(self.quadratic_vars) > 0 or len(self.linear_vars) > 0
-
-
-class _StaticQuadraticExpression(_QuadraticExpression):
-    __slots__ = ()
-
-
 #-------------------------------------------------------
 #
 # Functions used to generate expressions
@@ -3066,9 +2269,9 @@ def _decompose_terms(expr, multiplier=1):
         if expr._args[0]._potentially_variable():
             raise ValueError("Unexpected nonlinear term")
         yield (multiplier*expr, None)
-    elif expr.__class__ is _LinearViewSumExpression:
-        for arg in expr.args:
-            yield (multiplier*arg[0], arg[1])
+    #elif expr.__class__ is _LinearViewSumExpression:
+    #    for arg in expr.args:
+    #        yield (multiplier*arg[0], arg[1])
     elif expr.__class__ is _ViewSumExpression or expr.__class__ is _MutableViewSumExpression:
         for arg in expr.args:
             for term in _decompose_terms(arg, multiplier):
@@ -3562,7 +2765,6 @@ pyomo5_expression_types = set([
         _ProductExpression,
         _Constant_ProductExpression,
         _NPV_ProductExpression,
-        _MultiProdExpression,
         _ReciprocalExpression,
         _Constant_ReciprocalExpression,
         _NPV_ReciprocalExpression,
@@ -3570,9 +2772,6 @@ pyomo5_expression_types = set([
         _Constant_SumExpression,
         _NPV_SumExpression,
         _ViewSumExpression,
-        _MutableMultiSumExpression,
-        _MultiSumExpression,
-        _CompressedSumExpression,
         _GetItemExpression,
         Expr_if,
         _UnaryFunctionExpression,
@@ -3582,26 +2781,12 @@ pyomo5_expression_types = set([
         _Constant_AbsExpression,
         _NPV_AbsExpression,
         _LinearExpression,
-        _StaticLinearExpression,
-        _QuadraticExpression,
-        _StaticQuadraticExpression,
-        ])
-pyomo5_multisum_types = set([
-        _ViewSumExpression,
-        _MutableViewSumExpression,
-        #_MutableMultiSumExpression,
-        #_MultiSumExpression,
-        #_CompressedSumExpression
+        _StaticLinearExpression
         ])
 pyomo5_product_types = set([
         _ProductExpression,
         _Constant_ProductExpression,
         _NPV_ProductExpression
-        ])
-pyomo5_sum_types = set([
-        _SumExpression,
-        _Constant_SumExpression,
-        _NPV_SumExpression
         ])
 pyomo5_reciprocal_types = set([
         _ReciprocalExpression,
