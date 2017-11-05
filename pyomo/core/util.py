@@ -32,12 +32,13 @@ def prod(factors):
 Prod = prod
 
 
-def Sum(args, start=0, linear=False):
+def Sum(args, start=0, linear=None):
     """
     A utility function to compute a sum of Pyomo expressions.  The behavior is similar to the
     builtin 'sum' function, but this generates a compact expression.
     """
     if expr_common.mode == expr_common.Mode.pyomo5_trees:
+        from pyomo.core.kernel.expr_pyomo5 import decompose_term
         with EXPR.ignore_entangled_expressions:
             #
             # If we're starting with a numeric value, then 
@@ -45,7 +46,31 @@ def Sum(args, start=0, linear=False):
             # return a static version to the user.
             #
             if start.__class__ in native_numeric_types:
-                if linear == True:
+                if linear is None:
+                    #
+                    # Get the first term, which we will test for linearity
+                    #
+                    first = next(args, None)
+                    if first is None:
+                        return start
+                    #
+                    # Check if the first term is linear, and if so return the terms
+                    #
+                    linear, terms = decompose_term(first)
+                    #
+                    # Right now Pyomo5 expressions can only handle single linear
+                    # terms.
+                    #
+                    if linear:
+                        nvar=0
+                        for term in terms:
+                            c,v = term
+                            if not v is None:
+                                nvar += 1
+                        if nvar > 1:
+                            linear = False
+                    start = start+first
+                if linear:
                     with EXPR.linear_expression as e:
                         e += start
                         for arg in args:
