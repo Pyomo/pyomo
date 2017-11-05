@@ -21,7 +21,7 @@ from itertools import islice
 try:
     from sys import getrefcount
     _getrefcount_available = False
-except ImportError:
+except ImportError:                     #pragma: no cover
     _getrefcount_available = False
 
 
@@ -94,6 +94,15 @@ expression.  Common subexpression:\n\t%s""" % (str(sub_expr),)
 # Global Data
 #
 #-------------------------------------------------------
+
+def initialize_expression_data():
+    global pyomo5_variable_types
+    if pyomo5_variable_types is None:
+        from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
+        from pyomo.core.kernel.component_variable import IVariable, variable
+        pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
+        _LinearExpression.vtypes = pyomo5_variable_types
+
 
 class clone_counter_context(object):
     _count = 0
@@ -2400,48 +2409,6 @@ class _LinearViewSumExpression(_ViewSumExpression):
             new_arg._is_owned = True
         return self
 
-    def decompose(self, term, linear_terms, nonlinear_terms):
-        if term.__class__ in native_numeric_types or \
-            not term._potentially_variable():
-            linear_terms.append((term,None))
-        elif term.__class__ in pyomo5_variable_types:
-            linear_terms.append((1,term))
-        else:
-            try:
-                terms = [t_ for t_ in self._decompose_terms(term)]
-                linear_terms.extend(terms)
-            except ValueError:
-                nonlinear_terms.append(term)
-
-    def _decompose_terms(self, expr, multiplier=1):
-        if expr.__class__ in native_numeric_types or not expr._potentially_variable():
-            yield (multiplier*expr,None)
-        elif expr.__class__ in pyomo5_variable_types:
-            yield (multiplier,expr)
-        elif expr.__class__ is _ProductExpression:
-            if expr._args[0].__class__ in native_numeric_types or not expr._args[0]._potentially_variable():
-                for term in self._decompose_terms(expr._args[1], multiplier*expr._args[0]):
-                    yield term
-            else:
-                raise ValueError("Quadratic terms exist in a product expression.")
-        elif expr.__class__ is _LinearViewSumExpression:
-            for arg in expr.args:
-                yield (multiplier*arg[0], arg[1])
-        elif expr.__class__ is _ViewSumExpression or expr.__class__ is _MutableViewSumExpression:
-            for arg in expr.args:
-                for term in self._decompose_terms(arg, multiplier):
-                    yield term
-        elif expr.__class__ is _NegationExpression:
-            yield (-multiplier,expr._args[0])
-        elif expr.__class__ is _LinearExpression:
-            if expr.constant.__class__ in native_numeric_types and not isclose(expr.constant,0):
-                yield multiplier*expr.constant
-            if len(expr.linear_coefs) > 0:
-                for c,v in izip(expr.linear_coefs, expr.linear_vars):
-                    yield (multiplier*c,v)
-        else:
-            raise ValueError("Unexpected nonlinear term")
-
     def is_constant(self):
         for arg in islice(self._args, self._nargs):
             if not arg[1] is None:
@@ -3130,6 +3097,48 @@ class _StaticQuadraticExpression(_QuadraticExpression):
 # Functions used to generate expressions
 #
 #-------------------------------------------------------
+
+def decompose_term(term):
+    if term.__class__ in native_numeric_types or \
+        not term._potentially_variable():
+        return True, [(term,None)]
+    elif term.__class__ in pyomo5_variable_types:
+        return True, [(1,term)]
+    else:
+        try:
+            terms = [t_ for t_ in _decompose_terms(term)]
+            return True, terms
+        except ValueError:
+            return False, None
+
+def _decompose_terms(expr, multiplier=1):
+    if expr.__class__ in native_numeric_types or not expr._potentially_variable():
+        yield (multiplier*expr,None)
+    elif expr.__class__ in pyomo5_variable_types:
+        yield (multiplier,expr)
+    elif expr.__class__ is _ProductExpression:
+        if expr._args[0].__class__ in native_numeric_types or not expr._args[0]._potentially_variable():
+            for term in _decompose_terms(expr._args[1], multiplier*expr._args[0]):
+                yield term
+        else:
+            raise ValueError("Quadratic terms exist in a product expression.")
+    elif expr.__class__ is _LinearViewSumExpression:
+        for arg in expr.args:
+            yield (multiplier*arg[0], arg[1])
+    elif expr.__class__ is _ViewSumExpression or expr.__class__ is _MutableViewSumExpression:
+        for arg in expr.args:
+            for term in _decompose_terms(arg, multiplier):
+                yield term
+    elif expr.__class__ is _NegationExpression:
+        yield (-multiplier,expr._args[0])
+    elif expr.__class__ is _LinearExpression:
+        if expr.constant.__class__ in native_numeric_types and not isclose(expr.constant,0):
+            yield multiplier*expr.constant
+        if len(expr.linear_coefs) > 0:
+            for c,v in izip(expr.linear_coefs, expr.linear_vars):
+                yield (multiplier*c,v)
+    else:
+        raise ValueError("Unexpected nonlinear term")
 
 def _process_arg(obj):
     #if False and obj.__class__ is _ViewSumExpression or obj.__class__ is _MutableViewSumExpression:
