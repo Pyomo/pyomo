@@ -114,7 +114,7 @@ def _check_productexpression(expr, i):
                 return [dv, RHS]                
     else:
         raise TypeError(
-            "Simulator is unable to handle pyomo4 expression trees.")
+            "Simulator is unable to handle pyomo5 expression trees.")
     return None
 
 
