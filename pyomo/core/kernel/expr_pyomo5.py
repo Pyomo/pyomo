@@ -885,13 +885,6 @@ class EvaluationVisitor(ValueExpressionVisitor):
 
 
 def NEW_evaluate_expression(exp, exception=True, only_fixed_vars=False):
-    global pyomo5_variable_types
-    if pyomo5_variable_types is None:
-        from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
-        from pyomo.core.kernel.component_variable import IVariable, variable
-        pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
-        _LinearExpression.vtypes = pyomo5_variable_types
-
     try:
         if exp.__class__ in pyomo5_variable_types:
             if not only_fixed_vars or exp.fixed:
@@ -916,13 +909,6 @@ def NEW_evaluate_expression(exp, exception=True, only_fixed_vars=False):
 
 
 def evaluate_expression(exp, exception=True, only_fixed_vars=False):
-    global pyomo5_variable_types
-    if pyomo5_variable_types is None:
-        from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
-        from pyomo.core.kernel.component_variable import IVariable, variable
-        pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
-        _LinearExpression.vtypes = pyomo5_variable_types
-
     try:
         if exp.__class__ in pyomo5_variable_types:
             if not only_fixed_vars or exp.fixed:
@@ -1008,13 +994,6 @@ def NEW_identify_variables(expr,
                        include_fixed=True,
                        allow_duplicates=False,
                        include_potentially_variable=False):
-    global pyomo5_variable_types
-    if pyomo5_variable_types is None:
-        from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
-        from pyomo.core.kernel.component_variable import IVariable, variable
-        pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
-        _LinearExpression.vtypes = pyomo5_variable_types
-
     visitor = VariableVisitor(include_fixed, allow_duplicates, include_potentially_variable)
     for v in visitor.xbfs_yield_leaves(expr):
         yield v
@@ -1024,13 +1003,6 @@ def identify_variables(expr,
                        include_fixed=True,
                        allow_duplicates=False,
                        include_potentially_variable=False):
-    global pyomo5_variable_types
-    if pyomo5_variable_types is None:
-        from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
-        from pyomo.core.kernel.component_variable import IVariable, variable
-        pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
-        _LinearExpression.vtypes = pyomo5_variable_types
-
     if not allow_duplicates:
         _seen = set()
     _stack = [ ([expr], 0, 1) ]
@@ -1160,13 +1132,6 @@ class IsFixedVisitor(ValueExpressionVisitor):
 
 
 def NEW_expression_is_fixed(node):
-    global pyomo5_variable_types
-    if pyomo5_variable_types is None:
-        from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
-        from pyomo.core.kernel.component_variable import IVariable, variable
-        pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
-        _LinearExpression.vtypes = pyomo5_variable_types
-
     if not node._potentially_variable():
         return True
     visitor = IsFixedVisitor()
@@ -1265,6 +1230,9 @@ def expression_to_string(expr, ostream=None, verbose=None, precedence=None):
     if ostream is None:
         ostream = sys.stdout
     if expr.__class__ in native_numeric_types:
+        ostream.write(str(expr))
+        return
+    elif expr.__class__ in pyomo5_variable_types:
         ostream.write(str(expr))
         return
     verbose = common.TO_STRING_VERBOSE if verbose is None else verbose
@@ -2329,13 +2297,6 @@ class _ViewSumExpression(_SumExpression):
         return True
 
     def _potentially_variable(self):
-        global pyomo5_variable_types
-        if pyomo5_variable_types is None:
-            from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
-            from pyomo.core.kernel.component_variable import IVariable, variable
-            pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
-            _LinearExpression.vtypes = pyomo5_variable_types
-
         for v in islice(self._args, self._nargs):
             if v.__class__ in pyomo5_variable_types:
                 return True
@@ -2354,13 +2315,6 @@ class _LinearViewSumExpression(_ViewSumExpression):
     __slots__ = ()
 
     def __init__(self, args):
-        global pyomo5_variable_types
-        if pyomo5_variable_types is None:
-            from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
-            from pyomo.core.kernel.component_variable import IVariable, variable
-            pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
-            _LinearExpression.vtypes = pyomo5_variable_types
-
         if args.__class__ is tuple:
             self._args = []
             linear_terms = []
@@ -2416,13 +2370,6 @@ class _LinearViewSumExpression(_ViewSumExpression):
         return True
 
     def _potentially_variable(self):
-        global pyomo5_variable_types
-        if pyomo5_variable_types is None:
-            from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
-            from pyomo.core.kernel.component_variable import IVariable, variable
-            pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
-            _LinearExpression.vtypes = pyomo5_variable_types
-
         for arg in islice(self._args, self._nargs):
             if not arg[1] is None:
                 return True
@@ -2923,13 +2870,6 @@ class _LinearExpression(_ExpressionBase):
 
     #@profile
     def _combine_expr(self, etype, _other):
-        global pyomo5_variable_types
-        if pyomo5_variable_types is None:
-            from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
-            from pyomo.core.kernel.component_variable import IVariable, variable
-            pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
-            _LinearExpression.vtypes = pyomo5_variable_types
-
         if etype == _add or etype == _sub or etype == -_add or etype == -_sub:
             #
             # if etype == _sub,  then _LinearExpression - VAL
@@ -3122,6 +3062,10 @@ def _decompose_terms(expr, multiplier=1):
                 yield term
         else:
             raise ValueError("Quadratic terms exist in a product expression.")
+    elif expr.__class__ is _ReciprocalExpression:
+        if expr._args[0]._potentially_variable():
+            raise ValueError("Unexpected nonlinear term")
+        yield (multiplier*expr, None)
     elif expr.__class__ is _LinearViewSumExpression:
         for arg in expr.args:
             yield (multiplier*arg[0], arg[1])
@@ -3404,7 +3348,7 @@ def generate_expression(etype, _self, _other):
         elif _other._potentially_variable():
             return _ProductExpression((_self, _ReciprocalExpression((_other,))))
         elif _self._potentially_variable():
-            return _ProductExpression((_self, _NPV_ReciprocalExpression((_other,))))
+            return _ProductExpression((_NPV_ReciprocalExpression((_other,)), _self))
         elif not _other.is_constant():
             return _NPV_ProductExpression((_self, _NPV_ReciprocalExpression((_other,))))
         elif not _self.is_constant():
