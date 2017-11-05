@@ -305,11 +305,11 @@ def create_model(data):
             raise SystemExit(msg % data.options.model.filename)
         else:
             model_options = data.options.model.options.value()
-            #tick = time.time()
+            tick = time.time()
             model = ep.service().apply( options = pyutilib.misc.Container(*data.options), model_options=pyutilib.misc.Container(*model_options) )
-            #if data.options.runtime.report_timing is True:
-            #    print("      %6.2f seconds required to construct instance" % (time.time() - tick))
-            #    tick = time.time()
+            if data.options.runtime.report_timing is True:
+                print("      %6.2f seconds required to construct instance" % (time.time() - tick))
+                tick = time.time()
     else:
         if model_name not in _models:
             msg = "Model '%s' is not defined in file '%s'!"
@@ -343,87 +343,88 @@ def create_model(data):
         modeldata = DataPortal()
 
 
-    tick = time.time()
     if model._constructed:
         #
         # TODO: use a better test for ConcreteModel
         #
         instance = model
 
-    elif len(data.options.data.files) > 1:
-        #
-        # Load a list of *.dat files
-        #
-        for file in data.options.data.files:
-            suffix = (file).split(".")[-1]
-            if suffix != "dat":
-                msg = 'When specifiying multiple data files, they must all '  \
-                      'be *.dat files.  File specified: %s'
-                raise SystemExit(msg % str( file ))
+    else:
+        tick = time.time()
+        if len(data.options.data.files) > 1:
+            #
+            # Load a list of *.dat files
+            #
+            for file in data.options.data.files:
+                suffix = (file).split(".")[-1]
+                if suffix != "dat":
+                    msg = 'When specifiying multiple data files, they must all '  \
+                          'be *.dat files.  File specified: %s'
+                    raise SystemExit(msg % str( file ))
 
-            modeldata.load(filename=file, model=model)
+                modeldata.load(filename=file, model=model)
 
-        instance = model.create_instance(modeldata,
-                                         namespaces=data.options.data.namespaces,
-                                         profile_memory=data.options.runtime.profile_memory,
-                                         report_timing=data.options.runtime.report_timing)
-
-    elif len(data.options.data.files) == 1:
-        #
-        # Load a *.dat file or process a *.py data file
-        #
-        suffix = (data.options.data.files[0]).split(".")[-1].lower()
-        if suffix == "dat":
-            instance = model.create_instance(data.options.data.files[0],
+            instance = model.create_instance(modeldata,
                                              namespaces=data.options.data.namespaces,
                                              profile_memory=data.options.runtime.profile_memory,
                                              report_timing=data.options.runtime.report_timing)
-        elif suffix == "py":
-            userdata = pyutilib.misc.import_file(data.options.data.files[0], clear_cache=True)
-            if "modeldata" in dir(userdata):
-                if len(ep) == 1:
-                    msg = "Cannot apply 'pyomo_create_modeldata' and use the" \
-                          " 'modeldata' object that is provided in the model"
+
+        elif len(data.options.data.files) == 1:
+            #
+            # Load a *.dat file or process a *.py data file
+            #
+            suffix = (data.options.data.files[0]).split(".")[-1].lower()
+            if suffix == "dat":
+                instance = model.create_instance(data.options.data.files[0],
+                                                 namespaces=data.options.data.namespaces,
+                                                 profile_memory=data.options.runtime.profile_memory,
+                                                 report_timing=data.options.runtime.report_timing)
+            elif suffix == "py":
+                userdata = pyutilib.misc.import_file(data.options.data.files[0], clear_cache=True)
+                if "modeldata" in dir(userdata):
+                    if len(ep) == 1:
+                        msg = "Cannot apply 'pyomo_create_modeldata' and use the" \
+                              " 'modeldata' object that is provided in the model"
+                        raise SystemExit(msg)
+
+                    if userdata.modeldata is None:
+                        msg = "'modeldata' object is 'None' in module %s"
+                        raise SystemExit(msg % str( data.options.data.files[0] ))
+
+                    modeldata=userdata.modeldata
+
+                else:
+                    if len(ep) == 0:
+                        msg = "Neither 'modeldata' nor 'pyomo_create_dataportal' "  \
+                              'is defined in module %s'
+                        raise SystemExit(msg % str( data.options.data.files[0] ))
+
+                modeldata.read(model)
+                instance = model.create_instance(modeldata,
+                                                 namespaces=data.options.data.namespaces,
+                                                 profile_memory=data.options.runtime.profile_memory,
+                                                 report_timing=data.options.runtime.report_timing)
+            elif suffix == "yml" or suffix == 'yaml':
+                try:
+                    import yaml
+                except:
+                    msg = "Cannot apply load data from a YAML file: PyYaml is not installed"
                     raise SystemExit(msg)
 
-                if userdata.modeldata is None:
-                    msg = "'modeldata' object is 'None' in module %s"
-                    raise SystemExit(msg % str( data.options.data.files[0] ))
-
-                modeldata=userdata.modeldata
-
+                modeldata = yaml.load(open(data.options.data.files[0]))
+                instance = model.create_instance(modeldata,
+                                                 namespaces=data.options.data.namespaces,
+                                                 profile_memory=data.options.runtime.profile_memory,
+                                                 report_timing=data.options.runtime.report_timing)
             else:
-                if len(ep) == 0:
-                    msg = "Neither 'modeldata' nor 'pyomo_create_dataportal' "  \
-                          'is defined in module %s'
-                    raise SystemExit(msg % str( data.options.data.files[0] ))
-
-            modeldata.read(model)
-            instance = model.create_instance(modeldata,
-                                             namespaces=data.options.data.namespaces,
-                                             profile_memory=data.options.runtime.profile_memory,
-                                             report_timing=data.options.runtime.report_timing)
-        elif suffix == "yml" or suffix == 'yaml':
-            try:
-                import yaml
-            except:
-                msg = "Cannot apply load data from a YAML file: PyYaml is not installed"
-                raise SystemExit(msg)
-
-            modeldata = yaml.load(open(data.options.data.files[0]))
-            instance = model.create_instance(modeldata,
-                                             namespaces=data.options.data.namespaces,
-                                             profile_memory=data.options.runtime.profile_memory,
-                                             report_timing=data.options.runtime.report_timing)
+                raise ValueError("Unknown data file type: "+data.options.data.files[0])
         else:
-            raise ValueError("Unknown data file type: "+data.options.data.files[0])
-    else:
-        instance = model.create_instance(modeldata,
-                                         namespaces=data.options.data.namespaces,
-                                         profile_memory=data.options.runtime.profile_memory,
-                                         report_timing=data.options.runtime.report_timing)
-    if data.options.runtime.report_timing is True:
-        print("      %6.2f seconds required to construct instance" % (time.time() - tick))
+            instance = model.create_instance(modeldata,
+                                             namespaces=data.options.data.namespaces,
+                                             profile_memory=data.options.runtime.profile_memory,
+                                             report_timing=data.options.runtime.report_timing)
+        if data.options.runtime.report_timing is True:
+            print("      %6.2f seconds required to construct instance" % (time.time() - tick))
 
     #
     modify_start_time = time.time()
