@@ -41,7 +41,7 @@ from pyomo.core.base.numvalue import (NumericConstant,
                                       native_numeric_types,
                                       is_fixed)
 from pyomo.core.util import Sum
-from pyomo.core.kernel.component_expression import IIdentityExpression, expression
+from pyomo.core.kernel.component_expression import IIdentityExpression, expression, noclone
 from pyomo.core.kernel.component_variable import IVariable
 from pyomo.core.kernel.component_objective import objective
 
@@ -751,6 +751,7 @@ _repn_collectors = {
     _GeneralExpressionData                      : _collect_identity,
     SimpleExpression                            : _collect_identity,
     expression                                  : _collect_identity,
+    noclone                                     : _collect_identity,
     _ExpressionData                             : _collect_identity,
     Expression                                  : _collect_identity,
     _GeneralObjectiveData                       : _collect_identity,
