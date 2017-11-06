@@ -278,6 +278,15 @@ def runall(factors, res, output=True, filetype=None, verbose=False):
             if not verbose:
                 print_results(factors_, ans_, output)
 
+    def uc1(name, num):
+        testname = 'uc1_%d' % num
+        if not filetype or filetype == name:
+            factors_ = tuple(factors+[name,testname])
+            print("TESTING: %s" % " ".join(factors_))
+            ans_ = res[factors_] = measure(run_pyomo(code, name, "%s/uc/ReferenceModel.py %s/uc/2014-09-01-expected.dat" % (exdir, exdir), verbose), n=N)
+            if not verbose:
+                print_results(factors_, ans_, output)
+
     def jump_clnlbeam(name, num):
         testname = 'jump_clnlbeam_%d' % num
         if not filetype or filetype == name:
@@ -340,6 +349,14 @@ def runall(factors, res, output=True, filetype=None, verbose=False):
             stochpdegas1('nl', 0)
         else:
             stochpdegas1('nl', 0)
+
+    if True:
+        if large:
+            uc1('lp', 0)
+            uc1('nl', 0)
+        else:
+            uc1('lp', 0)
+            uc1('nl', 0)
 
     if True:
         if large:
