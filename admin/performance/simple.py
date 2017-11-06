@@ -41,10 +41,16 @@ def linear(flag):
     elif flag == 10:
         with EXPR.linear_expression as expr:
             expr=sum((model.x[i] for i in model.A), expr)
+    elif flag == 20:
+        expr=Sum(model.x[i] for i in model.A)
 
     elif flag == 1:
         expr = summation(model.p, model.x)
     elif flag == 6:
+        expr=Sum((model.p[i]*model.x[i] for i in model.A), linear=False)
+    elif flag == 16:
+        expr=Sum((model.p[i]*model.x[i] for i in model.A), linear=True)
+    elif flag == 26:
         expr=Sum(model.p[i]*model.x[i] for i in model.A)
 
     elif flag == 2:
@@ -93,21 +99,31 @@ def linear(flag):
         expr=0
         for i in model.A:
             expr += model.p[i] * (1 + model.x[i])
-
     elif flag == 17:
         with EXPR.linear_expression as expr:
             for i in model.A:
                 expr += model.p[i] * (1 + model.x[i])
+    elif flag == 27:
+        expr = Sum(model.p[i]*(1 + model.x[i]) for i in model.A)
 
     elif flag == 8:
         expr=0
         for i in model.A:
             expr += (model.x[i]+model.x[i])
+    elif flag == 18:
+        # This will assume a nonlinear sum
+        expr = Sum((model.x[i] + model.x[i]) for i in model.A)
 
     elif flag == 9:
         expr=0
         for i in model.A:
             expr += model.p[i]*(model.x[i]+model.x[i])
+    elif flag == 19:
+        # This will assume a nonlinear sum
+        expr = Sum(model.p[i]*(model.x[i] + model.x[i]) for i in model.A)
+
+    elif flag == -9:
+        expr = Sum(sin(model.x[i]) for i in model.A)
 
     if coopr3 or pyomo4:
         generate_ampl_repn(expr)
@@ -132,6 +148,7 @@ if not (coopr3 or pyomo4):
     print("REFCOUNT: "+str(PYOMO5._getrefcount_available))
     #import cProfile
     #cProfile.run("linear(7)", "stats.7")
-    for i in (0,10,2,12,22,3,13,4,14,5,15,6,7,17,8,9):
+    for i in (0,10,20,2,12,22,3,13,4,14,5,15,6,16,26,7,17,27,8,18,9,19,-9):
+    #for i in (6,16,26):
         print((i,timeit.timeit('linear(%d)' % i, "from __main__ import linear", number=1)))
 
