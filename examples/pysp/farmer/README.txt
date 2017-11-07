@@ -6,9 +6,9 @@ This problem serves as a simple, quick smoke-screen test for a functioning stoch
 
 The deterministic, expected-value model can be solved simply by the following command-line: 
 
-pyomo models/ReferenceModel.py scenariodata/AverageScenario.dat
+pyomo solve --solver=clpex models/ReferenceModel.py scenariodata/AverageScenario.dat
 
-The optimal objective value for the deterministic expected-value model is: -118600 (profot if 118600).
+The optimal objective value for the deterministic expected-value model is: -118600 (profit if 118600).
 
 The stochastic farmers problem is split into the following directories:
 - models ; contains the scenario tree and scenario reference model files.
