@@ -1,6 +1,9 @@
 
 ################################################################################
 ##### Model taken from: Ind.Eng.Chem.Res (2003), 42, 3045, 3055 ################
+# "Temporal Decomposition Scheme for Nonlinear Multisite Production Planning   #
+# and Distribution Models", Jackson, J.R. & Grossmann, I.E., ###################
+# Example 1: Linear Network ####################################################
 ################################################################################
 
 from pyomo.environ import *
