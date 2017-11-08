@@ -326,7 +326,7 @@ class Transformation(Plugin):
 
     def apply_to(self, model, **kwds):
         """
-        Apply the transformation to the given model.
+        Apply the transformation to the given model (in-place).
         """
         timer = TransformationTimer(self, 'in-place')
         if not hasattr(model, '_transformation_data'):
@@ -336,7 +336,7 @@ class Transformation(Plugin):
 
     def create_using(self, model, **kwds):
         """
-        Create a new model with this transformation
+        Create a new model with this transformation (out-of-place)
         """
         timer = TransformationTimer(self, 'out-of-place')
         if not hasattr(model, '_transformation_data'):

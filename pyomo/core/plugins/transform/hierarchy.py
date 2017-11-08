@@ -61,7 +61,7 @@ class NonIsomorphicTransformation(Transformation):
     """
 
     def __init__(self, **kwds):
-        kwds["name"] = kwds.get("name", "isomorphic_transformation")
+        kwds["name"] = kwds.get("name", "nonisomorphic_transformation")
         super(NonIsomorphicTransformation, self).__init__(**kwds)
 
 
