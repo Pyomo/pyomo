@@ -6,7 +6,7 @@ This problem serves as a simple, quick smoke-screen test for a functioning stoch
 
 The deterministic, expected-value model can be solved simply by the following command-line: 
 
-pyomo solve --solver=clpex models/ReferenceModel.py scenariodata/AverageScenario.dat
+pyomo solve --solver=cplex models/ReferenceModel.py scenariodata/AverageScenario.dat
 
 The optimal objective value for the deterministic expected-value model is: -118600 (profit if 118600).
 
@@ -20,7 +20,7 @@ The optimal solution for the stochastic model plants 170 acres of wheat, 80 acre
 
 The stochasic farmers problem can be solved via the following command-line:
 
-runph --model-directory=models --instance-directory=nodedata 
+runph --model-directory=models --instance-directory=nodedata --default-rho=1
 
 This should converge in 48 iterations, with an expected profit of 108390 (-108390 objective value). 
 
