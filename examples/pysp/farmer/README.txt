@@ -20,7 +20,7 @@ The optimal solution for the stochastic model plants 170 acres of wheat, 80 acre
 
 The stochasic farmers problem can be solved via the following command-line:
 
-runph --model-directory=models --instance-directory=nodedata -r=1
+runph --model-directory=models --instance-directory=nodedata --default-rho=1
 
 This should converge in 48 iterations, with an expected profit of 108390 (-108390 objective value). 
 
