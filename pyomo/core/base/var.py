@@ -434,18 +434,22 @@ class _GeneralVarData(_VarData):
     free = unfix
 
 class Var(IndexedComponent):
-    """
-    A numeric variable, which may be defined over an index.
+    """A numeric variable, which may be defined over an index.
 
-    Constructor Arguments:
-        domain      A set that defines the type of values that
-                        each variable must be.
-        bounds      A rule for defining bounds values for this
-                        variable.
-        initialize  A rule for setting up this variable with
-                        existing model data
-        rule        A function for declaring variables.
-        dense       An option to specify that the variables are declared densely.
+    Args:
+        domain (Set or function, optional): A Set that defines valid
+            values for the variable (e.g., `Reals`, `NonNegativeReals`,
+            `Binary`), or a rule that returns Sets.  Defaults to `Reals`.
+        bounds (tuple or function, optional): A tuple of (lower, upper)
+            bounds for the variable, or a rule that returns tuples.
+            Defaults to (None, None).
+        initialize (float or function, optional): The initial value for
+            the variable, or a rule that returns initial values.
+        rule (function, optional): An alias for `rule`
+        dense (bool, optional): Instantiate all elements from
+            `index_set()` when constructing the Var (True) or just the
+            variables returned by `initialize`/`rule` (False).  Defaults
+            to True.
     """
 
     _ComponentDataType = _GeneralVarData
