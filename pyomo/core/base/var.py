@@ -452,7 +452,7 @@ class Var(IndexedComponent):
             to True.
     """
 
-    _ComponentDataType = _GeneralVarData
+    _ComponentDataClass = _GeneralVarData
 
     def __new__(cls, *args, **kwds):
         if cls != Var:
@@ -568,7 +568,7 @@ class Var(IndexedComponent):
             # 30% slower
             self_weakref = weakref_ref(self)
             for ndx in self._index:
-                cdata = self._ComponentDataType(
+                cdata = self._ComponentDataClass(
                     domain=self._domain_init_value, component=None)
                 cdata._component = self_weakref
                 self._data[ndx] = cdata
@@ -586,7 +586,7 @@ class Var(IndexedComponent):
     #
     def _getitem_when_not_present(self, idx):
         """Returns the default component data value."""
-        vardata = self._data[idx] = self._ComponentDataType(
+        vardata = self._data[idx] = self._ComponentDataClass(
             self._domain_init_value, component=self)
         self._initialize_members((idx,))
         return vardata
@@ -605,7 +605,7 @@ class Var(IndexedComponent):
         if new or idx not in self._data:
             new = True
             if idx is not None or self.is_indexed():
-                obj = self._data[idx] = self._ComponentDataType(
+                obj = self._data[idx] = self._ComponentDataClass(
                     self._domain_init_value, component=self)
             else:
                 obj = self._data[None] = self

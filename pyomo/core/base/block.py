@@ -1689,7 +1689,7 @@ class Block(ActiveIndexedComponent):
     is deferred.
     """
 
-    _ComponentDataType = _BlockData
+    _ComponentDataClass = _BlockData
 
     def __new__(cls, *args, **kwds):
         if cls != Block:

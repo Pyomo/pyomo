@@ -55,7 +55,7 @@ def _get_indexed_component_data_name(component, index):
     else:
         for i in range(5):
             try:
-                component._data[index] = component._ComponentDataType(
+                component._data[index] = component._ComponentDataClass(
                     *((None,)*i), component=component)
                 i = None
                 break
@@ -64,7 +64,7 @@ def _get_indexed_component_data_name(component, index):
         if i is not None:
             # None of the generic positional arguments worked; raise an
             # exception
-            component._data[index] = component._ComponentDataType(
+            component._data[index] = component._ComponentDataClass(
                 component=component)
         try:
             ans = component._data[index].name
@@ -807,7 +807,7 @@ the value() function.""" % ( self.name, i ))
         if new or idx not in self._data:
             new = True
             if idx is not None or self.is_indexed():
-                obj = self._data[idx] = self._ComponentDataType(component=self)
+                obj = self._data[idx] = self._ComponentDataClass(component=self)
             else:
                 obj = self._data[None] = self
         else:

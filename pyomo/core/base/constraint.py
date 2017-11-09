@@ -683,7 +683,7 @@ class Constraint(ActiveIndexedComponent):
         _type               The class type for the derived subclass
     """
 
-    _ComponentDataType = _GeneralConstraintData
+    _ComponentDataClass = _GeneralConstraintData
     NoConstraint    = (1000,)
     Skip            = (1000,)
     Infeasible      = (1001,)

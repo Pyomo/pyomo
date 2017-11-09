@@ -259,7 +259,7 @@ class Objective(ActiveIndexedComponent):
         _type               The class type for the derived subclass
     """
 
-    _ComponentDataType = _GeneralObjectiveData
+    _ComponentDataClass = _GeneralObjectiveData
     NoObjective = (1000,)
     Skip        = (1000,)
 

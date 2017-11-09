@@ -271,7 +271,7 @@ class Expression(IndexedComponent):
         rule        A rule function used to initialize this object.
     """
 
-    _ComponentDataType = _GeneralExpressionData
+    _ComponentDataClass = _GeneralExpressionData
     NoConstraint    = (1000,)
     Skip            = (1000,)
 
