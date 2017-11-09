@@ -675,7 +675,7 @@ class _BlockData(ActiveComponentData):
 
     def set_value(self, val):
         for k,v in iteritems(getattr(self, '_decl', {})):
-            super(_BlockData, self).__delattr__(name)
+            super(_BlockData, self).__delattr__(k)
         self._ctypes = {}
         self._decl = {}
         self._decl_order = []
@@ -1713,8 +1713,8 @@ class Block(ActiveIndexedComponent):
             # picks up any construction rule that the user may provide)
             self.construct()
 
-    def _getitem_if_not_present(self, idx):
-        return self._setitem_if_not_present(idx, None, new=True)
+    def _getitem_when_not_present(self, idx):
+        return self._setitem_impl(idx, None, new=True)
 
     def find_component(self, label_or_component):
         """

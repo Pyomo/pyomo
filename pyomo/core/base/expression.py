@@ -361,8 +361,8 @@ class Expression(IndexedComponent):
         for index, new_value in iteritems(new_values):
             self._data[index].set_value(new_value)
 
-    def _getitem_if_not_present(self, index):
-        return self._setitem_if_not_present(index, None)
+    def _getitem_when_not_present(self, index):
+        return self._setitem_impl(index, None)
 
     def construct(self, data=None):
         """ Apply the rule to construct values in this set """

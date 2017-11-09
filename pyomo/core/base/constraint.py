@@ -707,13 +707,13 @@ class Constraint(ActiveIndexedComponent):
         kwargs.setdefault('ctype', Constraint)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
-    def _setitem_if_not_present(self, idx, val, new=False):
+    def _setitem_impl(self, idx, val, new=False):
         if self._check_skip_add(idx, val) is None:
             if not new and idx in self._data:
                 del self[idx]
             return None
         else:
-            return super(Constraint, self)._setitem_if_not_present(
+            return super(Constraint, self)._setitem_impl(
                 idx=idx, val=val, new=new)
 
     def construct(self, data=None):
@@ -761,7 +761,7 @@ class Constraint(ActiveIndexedComponent):
                            type(err).__name__,
                            err))
                     raise
-            self._setitem_if_not_present(None, tmp, True)
+            self._setitem_impl(None, tmp, True)
 
         else:
             if _init_expr is not None:
@@ -786,7 +786,7 @@ class Constraint(ActiveIndexedComponent):
                            type(err).__name__,
                            err))
                     raise
-                self._setitem_if_not_present(ndx, tmp, True)
+                self._setitem_impl(ndx, tmp, True)
         timer.report()
 
     def _pprint(self):

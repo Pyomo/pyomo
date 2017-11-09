@@ -26,8 +26,8 @@ class GDP_Error(Exception):
 
 class _DisjunctData(_BlockData):
 
-    def __init__(self, owner):
-        _BlockData.__init__(self, owner)
+    def __init__(self, component):
+        _BlockData.__init__(self, component)
         self._M = None
         self.indicator_var = Var(within=Binary)
 
@@ -97,7 +97,7 @@ class Disjunct(Block):
         kwargs.setdefault('ctype', Disjunct)
         Block.__init__(self, *args, **kwargs)
 
-    def _getitem_if_not_present(self, idx):
+    def _getitem_when_not_present(self, idx):
         return self._data.setdefault(idx, _DisjunctData(self))
 
 

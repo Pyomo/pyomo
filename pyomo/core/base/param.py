@@ -373,7 +373,7 @@ class Param(IndexedComponent):
                         % (self.name,))
                 new_values = new_values[None]
             # scalars have to be handled differently
-            self._setitem_if_not_present(None, new_values)
+            self._setitem_impl(None, new_values)
 
     def set_default(self, val):
         """
@@ -403,7 +403,7 @@ class Param(IndexedComponent):
         """
         return self._default_val
 
-    def _getitem_if_not_present(self, idx):
+    def _getitem_when_not_present(self, idx):
         """
         Returns the default component data value
         """
@@ -448,17 +448,17 @@ class Param(IndexedComponent):
         #
         # If the user wants to validate values, we need to validate the
         # default value as well. For Mutable Params, this is easy:
-        # _setitem_if_not_present will inject the value into _data and
+        # _setitem_impl will inject the value into _data and
         # then call validate.
         #
         if self._mutable:
-            return self._setitem_if_not_present(idx, val, new=True)
+            return self._setitem_impl(idx, val, new=True)
         #
         # For immutable params, we never inject the default into the data
         # dictionary.  This will break validation, as the validation rule is
         # allowed to assume the data is already present (actually, it will
         # die on infinite recursion, as Param.__getitem__() will re-call
-        # _default).
+        # _getitem_when_not_present).
         #
         # So, we will do something very inefficient: if we are
         # validating, we will inject the value into the dictionary,
@@ -473,11 +473,11 @@ class Param(IndexedComponent):
 
         return val
 
-    def _setitem_if_not_present(self, idx, val, new=False, _check_domain=True):
+    def _setitem_impl(self, idx, val, new=False, _check_domain=True):
         """The __setitem__ method performs significant validation around the
         input indices, particularly when the index value is new.  In
         various contexts, we don't need to incur this overhead
-        (e.g. during initialization).  The _setitem_if_not_present
+        (e.g. during initialization).  The _setitem_impl
         assumes the input value is in the set native_types
 
         """
@@ -578,7 +578,7 @@ class Param(IndexedComponent):
                 # A scalar value has a single value.
                 # We call __setitem__, which does checks on the value.
                 #
-                self._setitem_if_not_present(
+                self._setitem_impl(
                     None, _init(self.parent_block()), new=True)
                 return
             else:
@@ -642,16 +642,16 @@ class Param(IndexedComponent):
                         # At this point, we know the value is specific
                         # to this index (i.e., not likely to be a
                         # dict-like thing), and that the index is valid;
-                        # so, it is safe to use _setitem_if_not_present
+                        # so, it is safe to use _setitem_impl
                         # (which will perform all the domain /
                         # validation checking)
                         #
-                        self._setitem_if_not_present(idx, val, new=True)
+                        self._setitem_impl(idx, val, new=True)
                         #
                         # Now iterate over the rest of the index set.
                         #
                         for idx in _iter:
-                            self._setitem_if_not_present(
+                            self._setitem_impl(
                                 idx, apply_indexed_rule(
                                     self, _init, self_parent, idx), new=True)
                         return
@@ -731,7 +731,7 @@ This has resulted in the conversion of the source to dense form.
                 #
                 _iter = self._index.__iter__()
                 idx = next(_iter)
-                self._setitem_if_not_present(idx, _init, new=True)
+                self._setitem_impl(idx, _init, new=True)
                 #
                 # Note: the following is safe for both indexed and
                 # non-indexed parameters: for non-indexed, the first
@@ -741,11 +741,11 @@ This has resulted in the conversion of the source to dense form.
                 if self._mutable:
                     _init = self[idx]._value
                     for idx in _iter:
-                        self._setitem_if_not_present(idx, _init, new=True)
+                        self._setitem_impl(idx, _init, new=True)
                 else:
                     _init = self[idx]
                     for idx in _iter:
-                        self._setitem_if_not_present(
+                        self._setitem_impl(
                             idx, _init, new=True, _check_domain=False )
             except StopIteration:
                 #
@@ -803,7 +803,7 @@ This has resulted in the conversion of the source to dense form.
             try:
                 for key, val in iteritems(data):
                     #self[key] = val
-                    self._setitem_if_not_present(self._validate_index(key), val)
+                    self._setitem_impl(self._validate_index(key), val)
             except Exception:
                 msg = sys.exc_info()[1]
                 if type(data) is not dict:

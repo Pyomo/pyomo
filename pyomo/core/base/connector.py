@@ -162,7 +162,7 @@ class Connector(IndexedComponent):
     # This method must be defined on subclasses of
     # IndexedComponent
     #
-    def _getitem_if_not_present(self, idx):
+    def _getitem_when_not_present(self, idx):
         _conval = self._data[idx] = _ConnectorData(component=self)
         return _conval
 

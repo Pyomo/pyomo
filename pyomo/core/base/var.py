@@ -584,14 +584,14 @@ class Var(IndexedComponent):
     # This method must be defined on subclasses of
     # IndexedComponent that support implicit definition
     #
-    def _getitem_if_not_present(self, idx):
+    def _getitem_when_not_present(self, idx):
         """Returns the default component data value."""
         vardata = self._data[idx] = self._ComponentDataType(
             self._domain_init_value, component=self)
         self._initialize_members((idx,))
         return vardata
 
-    def _setitem_if_not_present(self, idx, val, new=False):
+    def _setitem_impl(self, idx, val, new=False):
         """Perform the fundamental component item creation and storage.
 
         Components that want to implement a nonstandard storage mechanism

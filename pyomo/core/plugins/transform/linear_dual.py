@@ -111,12 +111,12 @@ class LinearDual_PyomoTransformation(Transformation):
         # Add variables
         #
         # TODO: revisit this hack.  We shouldn't be calling
-        # _getitem_if_not_present()
+        # _getitem_when_not_present()
         #
         for name, ndx in b_coef:
             v = getattr(dual, name)
             if not ndx in v:
-                v._getitem_if_not_present(ndx)
+                v._getitem_when_not_present(ndx)
         #
         # Construct the objective
         #

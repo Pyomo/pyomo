@@ -278,13 +278,13 @@ class Objective(ActiveIndexedComponent):
         kwargs.setdefault('ctype', Objective)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
-    def _setitem_if_not_present(self, idx, val, new=False):
+    def _setitem_impl(self, idx, val, new=False):
         if self._check_skip_add(idx, val) is None:
             if not new and idx in self._data:
                 del self[idx]
             return None
         else:
-            return super(Objective, self)._setitem_if_not_present(
+            return super(Objective, self)._setitem_impl(
                 idx=idx, val=val, new=new)
 
     def construct(self, data=None):
@@ -334,7 +334,7 @@ class Objective(ActiveIndexedComponent):
                            type(err).__name__,
                            err))
                     raise
-            if self._setitem_if_not_present(None, tmp, True) is not None:
+            if self._setitem_impl(None, tmp, True) is not None:
                 self.set_sense(_init_sense)
 
         else:
@@ -358,7 +358,7 @@ class Objective(ActiveIndexedComponent):
                            type(err).__name__,
                            err))
                     raise
-                ans = self._setitem_if_not_present(ndx, tmp, True)
+                ans = self._setitem_impl(ndx, tmp, True)
                 if ans is not None:
                     ans.set_sense(_init_sense)
         timer.report()

@@ -1623,7 +1623,7 @@ class IndexedSet(Set):
             #
             pass
 
-    def _getitem_if_not_present(self, index):
+    def _getitem_when_not_present(self, index):
         """
         Return the default component data value
 

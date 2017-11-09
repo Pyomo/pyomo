@@ -285,7 +285,7 @@ class SimpleComplementarity(_ComplementarityData, Complementarity):
 
 class IndexedComplementarity(Complementarity):
 
-    def _getitem_if_not_present(self, idx):
+    def _getitem_when_not_present(self, idx):
         return self._data.setdefault(idx, _ComplementarityData(self))
 
 
