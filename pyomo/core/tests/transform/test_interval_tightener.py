@@ -6,7 +6,7 @@ from pyomo.environ import (ConcreteModel, Constraint, TransformationFactory,
 __author__ = "Sunjeev Kale <https://github.com/sjkale>"
 
 
-class TestBoundsTightener(unittest.TestCase):
+class TestIntervalTightener(unittest.TestCase):
     """Tests Bounds Tightening."""
 
     def test_constraint_bound_tightening(self):
@@ -19,7 +19,7 @@ class TestBoundsTightener(unittest.TestCase):
         m.v4 = Var(initialize=1, bounds=(1,1))
         m.c1 = Constraint(expr=m.v1 >= m.v2 + m.v3 + m.v4)
 
-        TransformationFactory('core.bounds_tightener').apply_to(m)
+        TransformationFactory('core.interval_tightener').apply_to(m)
         self.assertTrue(m.c1._upper == 0)
         self.assertTrue(m.c1._lower == -1)
         del m
@@ -31,7 +31,7 @@ class TestBoundsTightener(unittest.TestCase):
         m.v4 = Var(initialize=1, bounds=(1,1))
         m.c1 = Constraint(expr=m.v1 <= m.v2 + m.v3 + m.v4)
 
-        TransformationFactory('core.bounds_tightener').apply_to(m)
+        TransformationFactory('core.interval_tightener').apply_to(m)
         self.assertTrue(m.c1._upper == 0)
         self.assertTrue(m.c1._lower == -8)
         del m
@@ -44,7 +44,7 @@ class TestBoundsTightener(unittest.TestCase):
         m.v4 = Var(initialize=1, bounds=(1,1))
         m.c1 = Constraint(expr=m.v1 <= 2 *  m.v2 + m.v3 + m.v4)
 
-        TransformationFactory('core.bounds_tightener').apply_to(m)
+        TransformationFactory('core.interval_tightener').apply_to(m)
         self.assertTrue(m.c1._upper == -1)
         self.assertTrue(m.c1._lower == -13)
         del m
@@ -57,9 +57,9 @@ class TestBoundsTightener(unittest.TestCase):
         m.v4 = Var(initialize=1, bounds=(1,1))
         m.c1 = Constraint(expr=m.v1 <= 2 *  m.v2 + m.v3 + m.v4)
 
-        TransformationFactory('core.bounds_tightener').apply_to(m)
+        TransformationFactory('core.interval_tightener').apply_to(m)
         self.assertTrue(m.c1._upper == 0)
-        self.assertTrue(m.c1._lower == -float('inf'))
+        self.assertTrue(not m.c1.has_lb())
         del m
 
         #test for coefficients
@@ -70,9 +70,9 @@ class TestBoundsTightener(unittest.TestCase):
         m.v4 = Var(initialize=1, bounds=(1,1))
         m.c1 = Constraint(expr=m.v1 <= 2 *  m.v2 + m.v3 + m.v4)
 
-        TransformationFactory('core.bounds_tightener').apply_to(m)
+        TransformationFactory('core.interval_tightener').apply_to(m)
         self.assertTrue(m.c1._upper == -1)
-        self.assertTrue(m.c1._lower == -float('inf'))
+        self.assertTrue(not m.c1.has_lb())
         del m
 
 
