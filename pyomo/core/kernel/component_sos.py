@@ -8,6 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import pyomo.core.expr
+from pyomo.core.expr.numvalue import potentially_variable
 from pyomo.core.kernel.component_interface import \
     (IComponent,
      _ActiveComponentMixin,
@@ -17,7 +19,6 @@ from pyomo.core.kernel.component_interface import \
 from pyomo.core.kernel.component_dict import ComponentDict
 from pyomo.core.kernel.component_tuple import ComponentTuple
 from pyomo.core.kernel.component_list import ComponentList
-from pyomo.core.kernel.numvalue import potentially_variable
 
 import six
 from six.moves import zip

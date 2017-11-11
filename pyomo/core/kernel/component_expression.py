@@ -10,6 +10,7 @@
 
 import sys
 
+import pyomo.core.expr.expr_common
 from pyomo.core.kernel.component_interface import \
     (IComponent,
      _abstract_readwrite_property,
@@ -18,8 +19,7 @@ from pyomo.core.kernel.component_dict import ComponentDict
 from pyomo.core.kernel.component_tuple import ComponentTuple
 from pyomo.core.kernel.component_list import ComponentList
 
-import pyomo.core.kernel.expr_common
-from pyomo.core.kernel.numvalue import (NumericValue,
+from pyomo.core.expr.numvalue import (NumericValue,
                                         is_fixed,
                                         is_constant,
                                         potentially_variable,
@@ -106,7 +106,7 @@ class IIdentityExpression(NumericValue):
         """Convert this expression into a string."""
         if ostream is None:
             ostream = sys.stdout
-        _verbose = pyomo.core.kernel.expr_common.TO_STRING_VERBOSE if \
+        _verbose = pyomo.core.expr.expr_common.TO_STRING_VERBOSE if \
             verbose is None else verbose
         if _verbose:
             ostream.write(self._to_string_label())

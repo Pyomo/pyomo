@@ -20,7 +20,7 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 from pyomo.environ import *
-from pyomo.core.kernel import expr_common
+from pyomo.core.expr import expr_common
 
 
 _using_pyomo5_trees = expr_common.mode == expr_common.Mode.pyomo5_trees

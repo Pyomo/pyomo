@@ -22,7 +22,8 @@ import pyutilib.th as unittest
 from pyutilib.th import nottest
 
 from pyomo.environ import *
-from pyomo.core.base import expr_common, expr as EXPR
+from pyomo.core.expr import expr_common
+from pyomo.core.expr import current as EXPR
 from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.numvalue import potentially_variable, native_types
 

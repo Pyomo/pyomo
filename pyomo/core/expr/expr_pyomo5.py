@@ -34,14 +34,14 @@ from weakref import ref
 from pyutilib.misc.visitor import SimpleVisitor, ValueVisitor
 from pyutilib.math.util import isclose
 
-from pyomo.core.kernel.numvalue import \
+from pyomo.core.expr.numvalue import \
     (NumericValue,
      NumericConstant,
      native_types,
      native_numeric_types,
      as_numeric,
      value)
-from pyomo.core.kernel.expr_common import \
+from pyomo.core.expr.expr_common import \
     (_add, _sub, _mul, _div,
      _pow, _neg, _abs, _inplace,
      _unary, _radd, _rsub, _rmul,
@@ -49,15 +49,16 @@ from pyomo.core.kernel.expr_common import \
      _imul, _idiv, _ipow, _lt, _le,
      _eq, 
      chainedInequalityErrorMessage as cIEM)
-from pyomo.core.kernel import expr_common as common
-from pyomo.core.base.param import _ParamData, SimpleParam
-from pyomo.core.base.template_expr import TemplateExpressionError
+from pyomo.core.expr import expr_common as common
 
 # Wrap the common chainedInequalityErrorMessage to pass the local context
 chainedInequalityErrorMessage \
     = lambda *x: cIEM(generate_relational_expression, *x)
 
 
+_ParamData = None
+SimpleParam = None
+TemplateExpressionError = None
 def initialize_expression_data():
     global pyomo5_variable_types
     if pyomo5_variable_types is None:
@@ -65,6 +66,12 @@ def initialize_expression_data():
         from pyomo.core.kernel.component_variable import IVariable, variable
         pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
         _LinearExpression.vtypes = pyomo5_variable_types
+        #
+        global _ParamData
+        global SimpleParam
+        global TemplateExpressionError
+        from pyomo.core.base.param import _ParamData, SimpleParam
+        from pyomo.core.base.template_expr import TemplateExpressionError
 
 
 class clone_counter_context(object):

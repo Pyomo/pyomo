@@ -8,7 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.kernel.numvalue import NumericValue
+import pyomo.core.expr
+from pyomo.core.expr.numvalue import NumericValue, value
 from pyomo.core.kernel.component_interface import \
     (IComponent,
      _ActiveComponentMixin,
@@ -20,7 +21,6 @@ from pyomo.core.kernel.component_tuple import ComponentTuple
 from pyomo.core.kernel.component_list import ComponentList
 from pyomo.core.kernel.component_constraint import (IConstraint,
                                                     constraint_tuple)
-from pyomo.core.kernel.numvalue import value
 
 import six
 from six.moves import zip, xrange

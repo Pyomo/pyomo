@@ -9,5 +9,5 @@
 #  ___________________________________________________________________________
 
 import sys
-from pyomo.core.kernel import expr_pyomo5
+from pyomo.core.expr import expr_pyomo5
 sys.modules[__name__] = expr_pyomo5

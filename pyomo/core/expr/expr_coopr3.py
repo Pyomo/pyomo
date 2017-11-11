@@ -28,11 +28,11 @@ except:
 #from pyomo.util.plugin import *
 
 #from pyomo.core.kernel.component import Component
-from pyomo.core.kernel.numvalue import *
-from pyomo.core.kernel.numvalue import (native_numeric_types,
+from pyomo.core.expr.numvalue import *
+from pyomo.core.expr.numvalue import (native_numeric_types,
                                         native_types)
 
-from pyomo.core.kernel.expr_common import \
+from pyomo.core.expr.expr_common import \
     (_add, _sub, _mul, _div, _pow,
      _neg, _abs, _inplace, _unary,
     _radd, _rsub, _rmul, _rdiv, _rpow,
@@ -40,7 +40,7 @@ from pyomo.core.kernel.expr_common import \
      _lt, _le, _eq, 
      chainedInequalityErrorMessage as cIEM,
      _getrefcount_available, getrefcount)
-from pyomo.core.kernel import expr_common as common
+from pyomo.core.expr import expr_common as common
 
 # Wrap the common chainedInequalityErrorMessage to pass the
 # local context

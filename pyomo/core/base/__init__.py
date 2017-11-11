@@ -8,15 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.core.kernel
-from pyomo.core.base.config import PyomoOptions
-
+from pyomo.core.expr.numvalue import *
 from pyomo.core.kernel import (ComponentMap,
                                minimize,
                                maximize)
+from pyomo.core.base.config import PyomoOptions
 
-from pyomo.core.base.expr import *
-from pyomo.core.base.numvalue import *
 from pyomo.core.base.expression import *
 from pyomo.core.base.label import *
 from pyomo.core.base.plugin import *

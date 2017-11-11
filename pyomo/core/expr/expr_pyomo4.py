@@ -21,14 +21,14 @@ from six import StringIO, next, string_types, itervalues
 from six.moves import xrange, builtins
 from weakref import ref
 
-from pyomo.core.kernel.numvalue import \
+from pyomo.core.expr.numvalue import \
     (NumericValue,
      NumericConstant,
      native_types,
      native_numeric_types,
      as_numeric,
      value)
-from pyomo.core.kernel.expr_common import \
+from pyomo.core.expr.expr_common import \
     (bypass_backreference,
      _getrefcount_available,
      getrefcount,
@@ -39,7 +39,7 @@ from pyomo.core.kernel.expr_common import \
      _imul, _idiv, _ipow, _lt, _le,
      _eq, 
      chainedInequalityErrorMessage as cIEM)
-from pyomo.core.kernel import expr_common as common
+from pyomo.core.expr import expr_common as common
 
 UNREFERENCED_EXPR_COUNT = 11
 UNREFERENCED_INTRINSIC_EXPR_COUNT = -2

@@ -1,6 +1,10 @@
 import pickle
 
 import pyutilib.th as unittest
+from pyomo.core.expr.numvalue import (NumericValue,
+                                        is_fixed,
+                                        is_constant,
+                                        potentially_variable)
 import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
@@ -19,10 +23,6 @@ from pyomo.core.kernel.component_variable import variable
 from pyomo.core.kernel.component_block import block
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet)
-from pyomo.core.kernel.numvalue import (NumericValue,
-                                        is_fixed,
-                                        is_constant,
-                                        potentially_variable)
 from pyomo.core.base.param import Param
 
 class Test_parameter(unittest.TestCase):

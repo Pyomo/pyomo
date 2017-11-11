@@ -3,6 +3,7 @@ import os
 import pickle
 
 import pyutilib.th as unittest
+from pyomo.core.expr.numvalue import native_numeric_types
 import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
@@ -10,7 +11,6 @@ from pyomo.core.tests.unit.test_component_tuple import \
     _TestActiveComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
-from pyomo.core.kernel.numvalue import native_numeric_types
 from pyomo.core.kernel.component_interface import (ICategorizedObject,
                                                  IActiveObject,
                                                  IComponent,

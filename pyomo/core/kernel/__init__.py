@@ -8,23 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from  pyomo.core.kernel.expr import *
+from pyomo.core.expr.numvalue import value
 import pyomo.core.kernel.register_numpy_types
 import pyomo.core.kernel.component_interface
 
-import pyomo.opt
-from pyomo.opt import (SolverFactory,
-                       SolverStatus,
-                       TerminationCondition)
-import pyomo.opt.base
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
-import pyomo.core.kernel.component_block
-from pyomo.core.kernel.component_block import (block,
-                                               tiny_block,
-                                               block_tuple,
-                                               block_list,
-                                               block_dict)
 import pyomo.core.kernel.component_variable
 from pyomo.core.kernel.component_variable import (variable,
                                                   variable_tuple,
@@ -100,7 +89,18 @@ from pyomo.core.kernel.set_types import (RealSet,
                                          Binary,
                                          RealInterval,
                                          IntegerInterval)
-from pyomo.core.kernel.numvalue import value
+import pyomo.core.kernel.component_block
+from pyomo.core.kernel.component_block import (block,
+                                               tiny_block,
+                                               block_tuple,
+                                               block_list,
+                                               block_dict)
+
+import pyomo.opt
+from pyomo.opt import (SolverFactory,
+                       SolverStatus,
+                       TerminationCondition)
+import pyomo.opt.base
 
 # Short term helper method for debugging models
 import pprint as _pprint_
@@ -109,7 +109,7 @@ def pprint(obj, indent=0):
     """pprint a modeling object"""
     import pyomo.core.base
     if not isinstance(obj, pyomo.core.kernel.component_interface.ICategorizedObject):
-        if isinstance(obj, pyomo.core.kernel.numvalue.NumericValue):
+        if isinstance(obj, pyomo.core.expr.numvalue.NumericValue):
             prefix = ""
             if indent > 0:
                 prefix = (" "*indent)+" - "

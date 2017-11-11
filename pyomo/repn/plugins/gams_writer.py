@@ -27,9 +27,9 @@ from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
 import pyomo.util.plugin
 
+from pyomo.core.expr.numvalue import is_fixed, value, as_numeric
 from pyomo.core.kernel.component_block import IBlockStorage
 from pyomo.core.kernel.component_interface import ICategorizedObject
-from pyomo.core.kernel.numvalue import is_fixed, value, as_numeric
 
 import logging
 

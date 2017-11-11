@@ -41,7 +41,7 @@ from pyomo.util.plugin import ExtensionPoint
 from pyomo.util._task import pyomo_api
 from pyomo.util.deprecation import deprecation_warning
 
-from pyomo.core.kernel import expr_common
+from pyomo.core.expr import expr_common
 
 from pyomo.core.base.var import _VarData, Var
 from pyomo.core.base.constraint import Constraint

@@ -9,5 +9,5 @@
 #  ___________________________________________________________________________
 
 import sys
-from pyomo.core.kernel import expr_coopr3
+from pyomo.core.expr import expr_coopr3
 sys.modules[__name__] = expr_coopr3

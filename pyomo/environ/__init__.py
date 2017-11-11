@@ -86,5 +86,5 @@ from pyomo.opt import SolverFactory, SolverManagerFactory, UnknownSolver
 #
 # Initialize expression data
 #
-from pyomo.core.kernel.expr_pyomo5 import initialize_expression_data
+from pyomo.core.expr.expr_pyomo5 import initialize_expression_data
 initialize_expression_data()

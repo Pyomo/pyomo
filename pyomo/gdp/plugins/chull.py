@@ -13,8 +13,8 @@ import logging
 
 from pyomo.util.plugin import alias
 from pyomo.core import *
+from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.base import expr as EXPR, Transformation
-from pyomo.core.kernel.numvalue import native_numeric_types
 from pyomo.core.base.block import SortComponents
 from pyomo.core.base import _ExpressionData
 from pyomo.core.base.var import _VarData

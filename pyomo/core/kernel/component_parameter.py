@@ -8,6 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import pyomo.core.expr
+from pyomo.core.expr.numvalue import NumericValue
 from pyomo.core.kernel.component_interface import \
     (IComponent,
      _abstract_readwrite_property,
@@ -15,7 +17,6 @@ from pyomo.core.kernel.component_interface import \
 from pyomo.core.kernel.component_dict import ComponentDict
 from pyomo.core.kernel.component_tuple import ComponentTuple
 from pyomo.core.kernel.component_list import ComponentList
-from pyomo.core.kernel.numvalue import NumericValue
 
 import six
 

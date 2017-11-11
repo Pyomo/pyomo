@@ -1,6 +1,11 @@
 import pickle
 
 import pyutilib.th as unittest
+from pyomo.core.expr.numvalue import (NumericValue,
+                                        is_fixed,
+                                        is_constant,
+                                        potentially_variable,
+                                        value)
 import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
@@ -20,11 +25,6 @@ from pyomo.core.kernel.component_expression import (IIdentityExpression,
                                                     expression_dict,
                                                     expression_tuple,
                                                     expression_list)
-from pyomo.core.kernel.numvalue import (NumericValue,
-                                        is_fixed,
-                                        is_constant,
-                                        potentially_variable,
-                                        value)
 from pyomo.core.kernel.component_variable import variable
 from pyomo.core.kernel.component_parameter import parameter
 from pyomo.core.kernel.component_objective import objective

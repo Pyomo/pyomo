@@ -28,7 +28,7 @@ import logging
 # really do require (2^n)+1 points or if there is a way to
 # handle the between sizes.
 
-from pyomo.core.kernel.numvalue import value
+from pyomo.core.expr.numvalue import value
 from pyomo.core.kernel.set_types import Binary
 from pyomo.core.kernel.component_block import tiny_block
 from pyomo.core.kernel.component_expression import expression

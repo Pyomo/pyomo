@@ -14,9 +14,9 @@ import builtins
 
 __all__ = ('fabs', 'log', 'log10', 'sin', 'cos', 'tan', 'cosh', 'sinh', 'tanh',
            'asin', 'acos', 'atan', 'exp', 'sqrt', 'asinh', 'acosh',
-           'atanh', 'ceil', 'floor', 'sum')
+           'atanh', 'ceil', 'floor', 'sum', 'linear_expression', 'nonlinear_expression')
 
-from pyomo.core.kernel import expr_common as common
+from pyomo.core.expr import expr_common as common
 
 def generate_expression(etype, _self,_other):
     raise RuntimeError("incomplete import of Pyomo expression system")
@@ -28,7 +28,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
     return expr
 sum = builtins.sum
 
-from pyomo.core.kernel import numvalue
+from pyomo.core.expr import numvalue
 
 # Import global methods that are common to all expression systems
 _common_module_members = [
@@ -93,7 +93,7 @@ _pyomo5_module_members = [
 
 def set_expression_tree_format(mode):
     if mode is common.Mode.coopr3_trees:
-        from pyomo.core.kernel import expr_coopr3 as expr3
+        from pyomo.core.expr import expr_coopr3 as expr3
         for obj in _common_module_members:
             globals()[obj] = getattr(expr3, obj)
         for obj in _pyomo4_module_members:
@@ -106,7 +106,7 @@ def set_expression_tree_format(mode):
             globals()[obj] = getattr(expr3, obj)
 
     elif mode is common.Mode.pyomo4_trees:
-        from pyomo.core.kernel import expr_pyomo4 as expr4
+        from pyomo.core.expr import expr_pyomo4 as expr4
         for obj in _common_module_members:
             globals()[obj] = getattr(expr4, obj)
         for obj in _coopr3_module_members:
@@ -119,7 +119,7 @@ def set_expression_tree_format(mode):
             globals()[obj] = getattr(expr4, obj)
 
     elif mode is common.Mode.pyomo5_trees:
-        from pyomo.core.kernel import expr_pyomo5 as expr5
+        from pyomo.core.expr import expr_pyomo5 as expr5
         for obj in _common_module_members:
             globals()[obj] = getattr(expr5, obj)
         for obj in _coopr3_module_members:

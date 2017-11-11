@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.kernel.numvalue import \
+from pyomo.core.expr.numvalue import \
    RegisterNumericType, \
    RegisterIntegerType, \
    RegisterBooleanType

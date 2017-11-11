@@ -17,11 +17,10 @@ __all__ = ['summation', 'dot_product', 'sequence', 'prod', 'Prod', 'Sum']
 from six.moves import xrange
 from functools import reduce
 import operator
-from pyomo.core.base import expr_common
-from pyomo.core.kernel.numvalue import native_numeric_types
-from pyomo.core.kernel import expr as EXPR
+from pyomo.core.expr.numvalue import native_numeric_types
+from pyomo.core.expr.expr_pyomo5 import decompose_term
+from pyomo.core import expr as EXPR
 import pyomo.core.base.var
-from pyomo.core.kernel.expr_pyomo5 import decompose_term
 
 
 def prod(factors):

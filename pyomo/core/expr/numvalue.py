@@ -12,7 +12,7 @@ import sys
 import logging
 from six import iteritems, PY3, string_types, text_type, binary_type
 
-from pyomo.core.kernel.expr_common import \
+from pyomo.core.expr.expr_common import \
     (_add, _sub, _mul, _div, _pow,
      _neg, _abs, _inplace, _radd,
      _rsub, _rmul, _rdiv, _rpow,
