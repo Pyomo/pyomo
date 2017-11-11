@@ -8,6 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+__all__ = ('value', 'is_constant', 'is_fixed', 'potentially_variable', 'update_KnownConstants', 'as_numeric', 'NumericValue', 'NumericConstant', 'ZeroConstant')
+
 import sys
 import logging
 from six import iteritems, PY3, string_types, text_type, binary_type
