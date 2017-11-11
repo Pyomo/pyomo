@@ -16,6 +16,13 @@ import sys
 import traceback
 from copy import deepcopy
 
+try:
+    from sys import getrefcount
+    _getrefcount_available = True
+except ImportError:
+    getrefcount = None
+    _getrefcount_available = False
+
 logger = logging.getLogger('pyomo.core')
 
 from six import StringIO, next
@@ -38,8 +45,7 @@ from pyomo.core.expr.expr_common import \
     _radd, _rsub, _rmul, _rdiv, _rpow,
      _iadd, _isub, _imul, _idiv, _ipow,
      _lt, _le, _eq, 
-     chainedInequalityErrorMessage as cIEM,
-     _getrefcount_available, getrefcount)
+     chainedInequalityErrorMessage as cIEM)
 from pyomo.core.expr import expr_common as common
 
 # Wrap the common chainedInequalityErrorMessage to pass the

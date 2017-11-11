@@ -15,6 +15,13 @@ import sys
 import traceback
 from copy import deepcopy
 
+try:
+    from sys import getrefcount
+    _getrefcount_available = True
+except ImportError:
+    getrefcount = None
+    _getrefcount_available = False
+
 logger = logging.getLogger('pyomo.core')
 
 from six import StringIO, next, string_types, itervalues
@@ -30,8 +37,6 @@ from pyomo.core.expr.numvalue import \
      value)
 from pyomo.core.expr.expr_common import \
     (bypass_backreference,
-     _getrefcount_available,
-     getrefcount,
      _add, _sub, _mul, _div,
      _pow, _neg, _abs, _inplace,
      _unary, _radd, _rsub, _rmul,

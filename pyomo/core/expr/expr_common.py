@@ -11,25 +11,12 @@
 from __future__ import division
 from six import StringIO
 
-import logging
-
-try:
-    from sys import getrefcount
-    _getrefcount_available = True
-except ImportError:
-    getrefcount = None
-    _getrefcount_available = False
-
 
 class Mode(object):
     coopr3_trees = (1,)
     pyomo4_trees = (2,)
     pyomo5_trees = (3,)
 mode = _default_mode = Mode.pyomo5_trees
-#if _getrefcount_available:
-#    mode = _default_mode = Mode.coopr3_trees
-#else:
-#    mode = _default_mode = Mode.pyomo4_trees
 
 
 # This is the global counter for clone operations
