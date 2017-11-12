@@ -11,6 +11,7 @@
 # Unit Tests for expression generation
 #
 
+import math
 import os
 import re
 import six
@@ -294,14 +295,213 @@ class TestExpression_EvaluateMutableParam(TestExpression_EvaluateNumericConstant
         return tmp
 
 
+class TestExpression_Intrinsic(unittest.TestCase):
+
+    def test_fabs(self):
+        m = ConcreteModel()
+        m.v = Var()
+        e = fabs(m.v)
+        self.assertEqual(e.__class__, EXPR._AbsExpression)
+        m.v.value = 1
+        self.assertAlmostEqual(value(e), 1.0)
+        m.v.value = -1
+        self.assertAlmostEqual(value(e), 1.0)
+
+    def test_ceil(self):
+        m = ConcreteModel()
+        m.v = Var()
+        e = ceil(m.v)
+        self.assertEqual(e.__class__, EXPR._UnaryFunctionExpression)
+        m.v.value = 1.5
+        self.assertAlmostEqual(value(e), 2.0)
+        m.v.value = -1.5
+        self.assertAlmostEqual(value(e), -1.0)
+
+    def test_floor(self):
+        m = ConcreteModel()
+        m.v = Var()
+        e = floor(m.v)
+        self.assertEqual(e.__class__, EXPR._UnaryFunctionExpression)
+        m.v.value = 1.5
+        self.assertAlmostEqual(value(e), 1.0)
+        m.v.value = -1.5
+        self.assertAlmostEqual(value(e), -2.0)
+
+    def test_exp(self):
+        m = ConcreteModel()
+        m.v = Var()
+        e = exp(m.v)
+        self.assertEqual(e.__class__, EXPR._UnaryFunctionExpression)
+        m.v.value = 1
+        self.assertAlmostEqual(value(e), math.e)
+        m.v.value = 0
+        self.assertAlmostEqual(value(e), 1.0)
+
+    def test_log(self):
+        m = ConcreteModel()
+        m.v = Var()
+        e = log(m.v)
+        self.assertEqual(e.__class__, EXPR._UnaryFunctionExpression)
+        m.v.value = 1
+        self.assertAlmostEqual(value(e), 0)
+        m.v.value = math.e
+        self.assertAlmostEqual(value(e), 1)
+
+    def test_log10(self):
+        m = ConcreteModel()
+        m.v = Var()
+        e = log10(m.v)
+        self.assertEqual(e.__class__, EXPR._UnaryFunctionExpression)
+        m.v.value = 1
+        self.assertAlmostEqual(value(e), 0)
+        m.v.value = 10
+        self.assertAlmostEqual(value(e), 1)
+
+    def test_pow(self):
+        m = ConcreteModel()
+        m.v = Var()
+        m.p = Param(mutable=True)
+        e = pow(m.v,m.p)
+        self.assertEqual(e.__class__, EXPR._PowExpression)
+        m.v.value = 2
+        m.p.value = 0
+        self.assertAlmostEqual(value(e), 1.0)
+        m.v.value = 2
+        m.p.value = 1
+        self.assertAlmostEqual(value(e), 2.0)
+
+    def test_sqrt(self):
+        m = ConcreteModel()
+        m.v = Var()
+        e = sqrt(m.v)
+        self.assertEqual(e.__class__, EXPR._UnaryFunctionExpression)
+        m.v.value = 1
+        self.assertAlmostEqual(value(e), 1.0)
+        m.v.value = 4
+        self.assertAlmostEqual(value(e), 2.0)
+
+    def test_sin(self):
+        m = ConcreteModel()
+        m.v = Var()
+        e = sin(m.v)
+        self.assertEqual(e.__class__, EXPR._UnaryFunctionExpression)
+        m.v.value = 0
+        self.assertAlmostEqual(value(e), 0.0)
+        m.v.value = math.pi/2.0 
+        self.assertAlmostEqual(value(e), 1.0)
+
+    def test_cos(self):
+        m = ConcreteModel()
+        m.v = Var()
+        e = cos(m.v)
+        self.assertEqual(e.__class__, EXPR._UnaryFunctionExpression)
+        m.v.value = 0
+        self.assertAlmostEqual(value(e), 1.0)
+        m.v.value = math.pi/2.0 
+        self.assertAlmostEqual(value(e), 0.0)
+
+    def test_tan(self):
+        m = ConcreteModel()
+        m.v = Var()
+        e = tan(m.v)
+        self.assertEqual(e.__class__, EXPR._UnaryFunctionExpression)
+        m.v.value = 0
+        self.assertAlmostEqual(value(e), 0.0)
+        m.v.value = math.pi/4.0 
+        self.assertAlmostEqual(value(e), 1.0)
+
+    def test_asin(self):
+        m = ConcreteModel()
+        m.v = Var()
+        e = asin(m.v)
+        self.assertEqual(e.__class__, EXPR._UnaryFunctionExpression)
+        m.v.value = 0
+        self.assertAlmostEqual(value(e), 0.0)
+        m.v.value = 1.0
+        self.assertAlmostEqual(value(e), math.pi/2.0)
+
+    def test_acos(self):
+        m = ConcreteModel()
+        m.v = Var()
+        e = acos(m.v)
+        self.assertEqual(e.__class__, EXPR._UnaryFunctionExpression)
+        m.v.value = 1.0
+        self.assertAlmostEqual(value(e), 0.0)
+        m.v.value = 0.0 
+        self.assertAlmostEqual(value(e), math.pi/2.0)
+
+    def test_atan(self):
+        m = ConcreteModel()
+        m.v = Var()
+        e = atan(m.v)
+        self.assertEqual(e.__class__, EXPR._UnaryFunctionExpression)
+        m.v.value = 0
+        self.assertAlmostEqual(value(e), 0.0)
+        m.v.value = 1.0
+        self.assertAlmostEqual(value(e), math.pi/4.0)
+
+    def test_sinh(self):
+        m = ConcreteModel()
+        m.v = Var()
+        e = sinh(m.v)
+        self.assertEqual(e.__class__, EXPR._UnaryFunctionExpression)
+        m.v.value = 0.0
+        self.assertAlmostEqual(value(e), 0.0)
+        m.v.value = 1.0
+        self.assertAlmostEqual(value(e), (math.e-1.0/math.e)/2.0)
+
+    def test_cosh(self):
+        m = ConcreteModel()
+        m.v = Var()
+        e = cosh(m.v)
+        self.assertEqual(e.__class__, EXPR._UnaryFunctionExpression)
+        m.v.value = 0.0
+        self.assertAlmostEqual(value(e), 1.0)
+        m.v.value = 1.0
+        self.assertAlmostEqual(value(e), (math.e+1.0/math.e)/2.0)
+
+    def test_tanh(self):
+        m = ConcreteModel()
+        m.v = Var()
+        e = tanh(m.v)
+        self.assertEqual(e.__class__, EXPR._UnaryFunctionExpression)
+        m.v.value = 0.0
+        self.assertAlmostEqual(value(e), 0.0)
+        m.v.value = 1.0
+        self.assertAlmostEqual(value(e), (math.e-1.0/math.e)/(math.e+1.0/math.e))
+
+    def test_asinh(self):
+        m = ConcreteModel()
+        m.v = Var()
+        e = asinh(m.v)
+        self.assertEqual(e.__class__, EXPR._UnaryFunctionExpression)
+        m.v.value = 0.0
+        self.assertAlmostEqual(value(e), 0.0)
+        m.v.value = (math.e-1.0/math.e)/2.0
+        self.assertAlmostEqual(value(e), 1.0)
+
+    def test_acosh(self):
+        m = ConcreteModel()
+        m.v = Var()
+        e = acosh(m.v)
+        self.assertEqual(e.__class__, EXPR._UnaryFunctionExpression)
+        m.v.value = 1.0
+        self.assertAlmostEqual(value(e), 0.0)
+        m.v.value = (math.e+1.0/math.e)/2.0
+        self.assertAlmostEqual(value(e), 1.0)
+
+    def test_atanh(self):
+        m = ConcreteModel()
+        m.v = Var()
+        e = atanh(m.v)
+        self.assertEqual(e.__class__, EXPR._UnaryFunctionExpression)
+        m.v.value = 0.0
+        self.assertAlmostEqual(value(e), 0.0)
+        m.v.value = (math.e-1.0/math.e)/(math.e+1.0/math.e)
+        self.assertAlmostEqual(value(e), 1.0)
+
+
 class TestNumericValue(unittest.TestCase):
-
-    #def setUp(self):
-        # This class tests the Pyomo 5.x expression trees
-        #EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
-
-    #def tearDown(self):
-        #EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_asnum(self):
         try:
