@@ -128,8 +128,7 @@ def substitute_template_expression(expr, substituter, *args):
     """
     # Again, due to circular imports, we cannot import expr at the
     # module scope because this module gets imported by expr
-    from pyomo.core.base import expr as EXPR
-    from pyomo.core.base import expr_common as common
+    import pyomo.core.expr.current as EXPR
 
     _stack = [ [[expr.clone()], 0, 1, None] ]
     _stack_idx = 0
@@ -149,11 +148,11 @@ def substitute_template_expression(expr, substituter, *args):
                     _ptr[0][_ptr[1]-1] = substituter(_obj, *args)
             elif _subType in native_numeric_types or not _obj.is_expression():
                 continue
-            elif not common.mode is common.Mode.pyomo5_trees and _subType is EXPR._ProductExpression:
+            elif not EXPR.mode is EXPR.Mode.pyomo5_trees and _subType is EXPR._ProductExpression:
                 # _ProductExpression is fundamentally different in
                 # Coopr3 / Pyomo4 expression systems and must be handled
                 # specially.
-                if common.mode is common.Mode.coopr3_trees:
+                if EXPR.mode is EXPR.Mode.coopr3_trees:
                     _lists = (_obj._numerator, _obj._denominator)
                 else:
                     _lists = (_obj._args,)
