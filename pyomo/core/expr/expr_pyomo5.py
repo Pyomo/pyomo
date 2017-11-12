@@ -14,7 +14,9 @@ __public__ = ['linear_expression', 'nonlinear_expression']
 __all__ = (
 'linear_expression',
 'nonlinear_expression',
+'clone_counter',
 'clone_expression',
+'evaluate_expression',
 'identify_variables',
 'generate_expression',
 'generate_intrinsic_function_expression',
@@ -32,7 +34,6 @@ __all__ = (
 'Expr_if',
 '_LinearExpression',
 '_StaticLinearExpression',
-'evaluate_expression',
 '_ReciprocalExpression',
 '_NegationExpression',
 '_ViewSumExpression',
@@ -55,19 +56,16 @@ import traceback
 from copy import deepcopy
 from collections import deque
 from itertools import islice
-
+from six import StringIO, next, string_types, itervalues
+from six.moves import xrange, builtins
+from weakref import ref
 try:
     from sys import getrefcount
     _getrefcount_available = False
 except ImportError:                     #pragma: no cover
     _getrefcount_available = False
 
-
 logger = logging.getLogger('pyomo.core')
-
-from six import StringIO, next, string_types, itervalues
-from six.moves import xrange, builtins
-from weakref import ref
 
 from pyutilib.misc.visitor import SimpleVisitor, ValueVisitor
 from pyutilib.math.util import isclose
@@ -87,6 +85,7 @@ from pyomo.core.expr.expr_common import \
      _imul, _idiv, _ipow, _lt, _le,
      _eq) 
 from pyomo.core.expr import expr_common as common
+
 
 def cIEM(gre, msg=None):
     if msg is None:
@@ -220,6 +219,17 @@ class SimpleExpressionVisitor(SimpleVisitor):
         Breadth-first search, except that 
         leaf nodes are immediately visited.
         """
+        #
+        # If we start with a leaf, then yield it and stop iteration
+        #
+        if not node.__class__ in pyomo5_expression_types or node.nargs() == 0:
+            ans = self.visit(node)
+            if not ans is None:
+                yield ans
+            raise StopIteration
+        #
+        # Iterate through the tree.
+        #
         dq = deque([node])
         while dq:
             current = dq.popleft()
@@ -227,12 +237,12 @@ class SimpleExpressionVisitor(SimpleVisitor):
             #for c in self.children(current):
             for c in current.args:
                 #if self.is_leaf(c):
-                if c.__class__ in native_numeric_types or not c.is_expression() or c.nargs() == 0:
+                if c.__class__ in pyomo5_expression_types and c.nargs() > 0:
+                    dq.append(c)
+                else:
                     ans = self.visit(c)
                     if not ans is None:
                         yield ans
-                else:
-                    dq.append(c)
 
 
 class ValueExpressionVisitor(ValueVisitor):
@@ -318,7 +328,6 @@ class ValueExpressionVisitor(ValueVisitor):
 
 
 
-
 #-------------------------------------------------------
 #
 # Functions used to process expression trees
@@ -366,7 +375,7 @@ class CloneVisitor(ValueExpressionVisitor):
         return ans
 
 
-def NEW_clone_expression(expr, memo=None, verbose=False, clone_leaves=True):
+def clone_expression(expr, memo=None, verbose=False, clone_leaves=True):
     clone_counter_context._count += 1
     if not memo:
         memo = {'__block_scope__': { id(None): False }}
@@ -380,101 +389,8 @@ def NEW_clone_expression(expr, memo=None, verbose=False, clone_leaves=True):
     return visitor.dfs_postorder_stack(expr)
 
 
-def clone_expression(expr, memo=None, verbose=False, clone_leaves=True):
-    clone_counter_context._count += 1
-    if not memo:
-        memo = {'__block_scope__': { id(None): False }}
-    #
-    if expr.__class__ in native_numeric_types:
-        return expr
-    if not expr.is_expression():
-        return deepcopy(expr, memo)
-    #
-    # The stack starts with the current expression
-    #
-    _stack = [ (expr, expr._args, 0, expr.nargs(), [])]
-    #
-    # Iterate until the stack is empty
-    #
-    # Note: 1 is faster than True for Python 2.x
-    #
-    while 1:
-        #
-        # Get the top of the stack
-        #   _obj        Current expression object
-        #   _argList    The arguments for this expression objet
-        #   _idx        The current argument being considered
-        #   _len        The number of arguments
-        #
-        _obj, _argList, _idx, _len, _result = _stack.pop()
-        if verbose: #pragma:nocover
-            print("*"*10 + " POP  " + "*"*10)
-        #
-        # Iterate through the arguments
-        #
-        while _idx < _len:
-            if verbose: #pragma:nocover
-                print("-"*30)
-                print(type(_obj))
-                print(_obj)
-                print(_argList)
-                print(_idx)
-                print(_len)
-                print(_result)
-
-            _sub = _argList[_idx]
-            _idx += 1
-            if _sub.__class__ in native_numeric_types:
-                #
-                # Store a native or numeric object
-                #
-                _result.append( deepcopy(_sub, memo) )
-            elif _sub.__class__ not in pyomo5_expression_types:
-                #
-                # Store a kernel object that is cloned
-                #
-                if clone_leaves:
-                    _result.append( deepcopy(_sub, memo) )
-                else:
-                    _result.append( _sub )
-            else:
-                #
-                # Push an expression onto the stack
-                #
-                if verbose: #pragma:nocover
-                    print("*"*10 + " PUSH " + "*"*10)
-                _stack.append( (_obj, _argList, _idx, _len, _result) )
-                _obj     = _sub
-                _argList = _sub._args
-                _idx     = 0
-                _len     = _sub.nargs()
-                _result  = []
-    
-        if verbose: #pragma:nocover
-            print("="*30)
-            print(type(_obj))
-            print(_obj)
-            print(_argList)
-            print(_idx)
-            print(_len)
-            print(_result)
-        #
-        # Now replace the current expression object
-        #
-        ans = _obj._clone( tuple(_result), memo )
-        if verbose: #pragma:nocover
-            print("STACK LEN %d" % len(_stack))
-        if _stack:
-            #
-            # "return" the recursion by putting the return value on the end of the reults stack
-            #
-            _stack[-1][-1].append( ans )
-        else:
-            return ans
-
-
 # =====================================================
-#  _expression_size
+#  sizeof_expression
 # =====================================================
 
 class SizeVisitor(SimpleExpressionVisitor):
@@ -495,93 +411,13 @@ class SizeVisitor(SimpleExpressionVisitor):
         return self.counter
 
 
-def _expression_size(expr, verbose=False):
+def sizeof_expression(expr, verbose=False):
     if expr.__class__ in native_numeric_types or not expr.is_expression():
         return 1
     visitor = SizeVisitor()
     return visitor.xbfs(expr)
     
  
-def OLD_expression_size(expr, verbose=False):
-    #
-    # Note: This does not try to optimize the compression to recognize
-    #   subgraphs.
-    #
-    if expr.__class__ in native_numeric_types or not expr.is_expression():
-        return 1
-    #
-    # The stack starts with the current expression
-    #
-    _stack = [ (expr, expr._args, 0, expr.nargs(), [])]
-    #
-    # Iterate until the stack is empty
-    #
-    # Note: 1 is faster than True for Python 2.x
-    #
-    while 1:
-        #
-        # Get the top of the stack
-        #   _obj        Current expression object
-        #   _argList    The arguments for this expression objet
-        #   _idx        The current argument being considered
-        #   _len        The number of arguments
-        #
-        _obj, _argList, _idx, _len, _result = _stack.pop()
-        if verbose: #pragma:nocover
-            print("*"*10 + " POP  " + "*"*10)
-        #
-        # Iterate through the arguments
-        #
-        while _idx < _len:
-            if verbose: #pragma:nocover
-                print("-"*30)
-                print(type(_obj))
-                print(_obj)
-                print(_argList)
-                print(_idx)
-                print(_len)
-                print(_result)
-
-            _sub = _argList[_idx]
-            _idx += 1
-            if _sub.__class__ in native_numeric_types or not _sub.is_expression():
-                #
-                # Store a native or numeric object
-                #
-                _result.append( 1 )
-            else:
-                #
-                # Push an expression onto the stack
-                #
-                if verbose: #pragma:nocover
-                    print("*"*10 + " PUSH " + "*"*10)
-                _stack.append( (_obj, _argList, _idx, _len, _result) )
-                _obj     = _sub
-                _argList = _sub._args
-                _idx     = 0
-                _len     = _sub.nargs()
-                _result  = []
-    
-        if verbose: #pragma:nocover
-            print("="*30)
-            print(type(_obj))
-            print(_obj)
-            print(_argList)
-            print(_idx)
-            print(_len)
-            print(_result)
-            print("STACK LEN %d" % len(_stack))
-
-        ans = sum(_result)+1
-        if _stack:
-            #
-            # "return" the recursion by putting the return value on the end of the reults stack
-            #
-            _stack[-1][-1].append( ans )
-        else:
-            return ans
-
-
 # =====================================================
 #  evaluate_expression
 # =====================================================
@@ -625,7 +461,7 @@ class EvaluationVisitor(ValueExpressionVisitor):
         return ans
 
 
-def NEW_evaluate_expression(exp, exception=True, only_fixed_vars=False):
+def evaluate_expression(exp, exception=True, only_fixed_vars=False):
     try:
         if exp.__class__ in pyomo5_variable_types:
             if not only_fixed_vars or exp.fixed:
@@ -639,58 +475,6 @@ def NEW_evaluate_expression(exp, exception=True, only_fixed_vars=False):
         visitor = EvaluationVisitor(only_fixed_vars=only_fixed_vars)
         return visitor.dfs_postorder_stack(exp)
 
-    except TemplateExpressionError:
-        if exception:
-            raise
-        return None
-    except ValueError:
-        if exception:
-            raise
-        return None
-
-
-def evaluate_expression(exp, exception=True, only_fixed_vars=False):
-    try:
-        if exp.__class__ in pyomo5_variable_types:
-            if not only_fixed_vars or exp.fixed:
-                return exp.value
-            else:
-                raise ValueError("Cannot evaluate an unfixed variable with only_fixed_vars=True")
-        elif exp.__class__ in native_numeric_types:
-            return exp
-        elif not exp.is_expression():
-            return exp()
-
-        _stack = [ (exp, exp._args, 0, exp.nargs(), []) ]
-        while 1:  # Note: 1 is faster than True for Python 2.x
-            _obj, _argList, _idx, _len, _result = _stack.pop()
-            while _idx < _len:
-                _sub = _argList[_idx]
-                _idx += 1
-                if _sub.__class__ in native_numeric_types:
-                    _result.append( _sub )
-                elif _sub.is_expression():
-                    _stack.append( (_obj, _argList, _idx, _len, _result) )
-                    _obj     = _sub
-                    _argList = _sub._args
-                    _idx     = 0
-                    _len     = _sub.nargs()
-                    _result  = []
-                elif _sub.__class__ in pyomo5_variable_types:
-                    if only_fixed_vars:
-                        if _sub.fixed:
-                            _result.append( _sub.value )
-                        else:
-                            raise ValueError("Cannot evaluate an unfixed variable with only_fixed_vars=True")
-                    else:
-                        _result.append( value(_sub) )
-                else:
-                    _result.append( value(_sub) )
-            ans = _obj._apply_operation(_result)
-            if _stack:
-                _stack[-1][-1].append( ans )
-            else:
-                return ans
     except TemplateExpressionError:
         if exception:
             raise
@@ -723,7 +507,7 @@ class VariableVisitor(SimpleExpressionVisitor):
                         return
                     self.seen.add(id(node))
                 return node
-        elif self.include_potentially_variable and node._potentially_variable():
+        elif self.include_potentially_variable and node.__class__ not in native_numeric_types and node._potentially_variable():
             if not self.allow_duplicates:
                 if id(node) in self.seen:
                     return
@@ -731,49 +515,13 @@ class VariableVisitor(SimpleExpressionVisitor):
             return node
 
 
-def NEW_identify_variables(expr,
+def identify_variables(expr,
                        include_fixed=True,
                        allow_duplicates=False,
                        include_potentially_variable=False):
     visitor = VariableVisitor(include_fixed, allow_duplicates, include_potentially_variable)
     for v in visitor.xbfs_yield_leaves(expr):
         yield v
-
-
-def identify_variables(expr,
-                       include_fixed=True,
-                       allow_duplicates=False,
-                       include_potentially_variable=False):
-    if not allow_duplicates:
-        _seen = set()
-    _stack = [ ([expr], 0, 1) ]
-    while _stack:
-        _argList, _idx, _len = _stack.pop()
-        while _idx < _len:
-            _sub = _argList[_idx]
-            _idx += 1
-            if _sub.__class__ in native_types:
-                pass
-            elif _sub.is_expression():
-                _stack.append(( _argList, _idx, _len ))
-                _argList = _sub._args
-                _idx = 0
-                _len = _sub.nargs()
-            elif _sub.__class__ in pyomo5_variable_types:
-                if ( include_fixed
-                     or not _sub.is_fixed()
-                     or include_potentially_variable ):
-                    if not allow_duplicates:
-                        if id(_sub) in _seen:
-                            continue
-                        _seen.add(id(_sub))
-                    yield _sub
-            elif include_potentially_variable and _sub._potentially_variable():
-                if not allow_duplicates:
-                    if id(_sub) in _seen:
-                        continue
-                    _seen.add(id(_sub))
-                yield _sub
 
 
 # =====================================================
@@ -804,37 +552,9 @@ class PolyDegreeVisitor(ValueExpressionVisitor):
         return ans
 
 
-def NEW_polynomial_degree(node):
+def polynomial_degree(node):
     visitor = PolyDegreeVisitor()
     return visitor.dfs_postorder_stack(node)
-
-
-def polynomial_degree(node):
-    # TODO: Confirm whether this check works
-    #if not node._potentially_variable():
-    #    return 0
-    _stack = [ (node, node._args, 0, node.nargs(), []) ]
-    while 1:  # Note: 1 is faster than True for Python 2.x
-        _obj, _argList, _idx, _len, _result = _stack.pop()
-        while _idx < _len:
-            _sub = _argList[_idx]
-            _idx += 1
-            if _sub.__class__ in native_numeric_types or not _sub._potentially_variable():
-                _result.append( 0 )
-            elif _sub.is_expression():
-                _stack.append( (_obj, _argList, _idx, _len, _result) )
-                _obj     = _sub
-                _argList = _sub._args
-                _idx     = 0
-                _len     = _sub.nargs()
-                _result  = []
-            else:
-                _result.append( 0 if _sub.is_fixed() else 1 )
-        ans = _obj._polynomial_degree(_result)
-        if _stack:
-            _stack[-1][-1].append( ans )
-        else:
-            return ans
 
 
 # =====================================================
@@ -872,45 +592,11 @@ class IsFixedVisitor(ValueExpressionVisitor):
         return ans
 
 
-def NEW_expression_is_fixed(node):
+def expression_is_fixed(node):
     if not node._potentially_variable():
         return True
     visitor = IsFixedVisitor()
     return visitor.dfs_postorder_stack(node)
-
-
-def expression_is_fixed(node):
-    if not node._potentially_variable():
-        return True
-    _stack = [ (node, node._args, 0, node.nargs(), []) ]
-    while 1:  # Note: 1 is faster than True for Python 2.x
-        _obj, _argList, _idx, _len, _result = _stack.pop()
-        while _idx < _len:
-            _sub = _argList[_idx]
-            _idx += 1
-            if _sub.__class__ in native_numeric_types or not _sub._potentially_variable():
-                _result.append( True )
-            elif not _sub.__class__ in pyomo5_expression_types:
-                _result.append( _sub.is_fixed() ) 
-            else:
-                _stack.append( (_obj, _argList, _idx, _len, _result) )
-                _obj     = _sub
-                _argList = _sub._args
-                _idx     = 0
-                _len     = _sub.nargs()
-                _result  = []
-
-        ans = _obj._is_fixed(_result)
-        if _stack:
-            _stack[-1][-1].append( ans )
-            #if _obj._is_fixed is all:
-            #    if not _result[-1]:
-            #        _idx = _len
-            #elif _obj._is_fixed is any:
-            #    if _result[-1]:
-            #        _idx = _len
-        else:
-            return ans
 
 
 # =====================================================
@@ -1145,7 +831,7 @@ class _ExpressionBase(NumericValue):
         return clone_expression(self, memo=substitute, verbose=verbose, clone_leaves=False)
 
     def size(self, verbose=False):
-        return _expression_size(self, verbose=verbose)
+        return sizeof_expression(self, verbose=verbose)
 
     def __deepcopy__(self, memo):
         return clone_expression(self, memo=memo)
