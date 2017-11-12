@@ -11,9 +11,8 @@ from pyomo.core.base import Constraint, Param, value, Suffix, Block
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 
+import pyomo.core.expr.current as EXPR
 from pyomo.core.base.component import register_component
-from pyomo.core.base import expr as EXPR
-from pyomo.core.base import expr_common as common
 from pyomo.core.base.template_expr import (
     IndexTemplate,
     _GetItemIndexer,
@@ -73,7 +72,7 @@ def _check_productexpression(expr, i):
     :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>` and the RHS. If not,
     return None.
     """
-    if common.mode is common.Mode.coopr3_trees:
+    if EXPR.mode is EXPR.Mode.coopr3_trees:
         num = expr._args[i]._numerator
         denom = expr._args[i]._denominator
         coef = expr._args[i]._coef
@@ -208,8 +207,8 @@ def substitute_intrinsic_function(expr, substituter, *args):
 
     # Again, due to circular imports, we cannot import expr at the
     # module scope because this module gets imported by expr
-    from pyomo.core.base import expr as EXPR
-    from pyomo.core.base import expr_common as common
+    #from pyomo.core.base import expr as EXPR
+    #from pyomo.core.base import expr_common as common
     from pyomo.core.base.numvalue import (
         NumericValue, native_numeric_types, as_numeric)
 
@@ -239,7 +238,7 @@ def substitute_intrinsic_function(expr, substituter, *args):
                 # _ProductExpression is fundamentally different in
                 # Coopr3 / Pyomo4 expression systems and must be handled
                 # specially.
-                if common.mode is common.Mode.coopr3_trees:
+                if EXPR.mode is EXPR.Mode.coopr3_trees:
                     _lists = (_obj._numerator, _obj._denominator)
                 else:
                     _lists = (_obj._args,)
