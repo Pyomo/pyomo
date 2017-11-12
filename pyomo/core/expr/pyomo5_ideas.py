@@ -72,6 +72,329 @@ class mutable_quadratic_context(object):
 quadratic_expression = nonlinear_expression
 
 
+def _orig_clone_expression(expr, memo=None, verbose=False, clone_leaves=True):
+    clone_counter_context._count += 1
+    if not memo:
+        memo = {'__block_scope__': { id(None): False }}
+    #
+    if expr.__class__ in native_numeric_types:
+        return expr
+    if not expr.is_expression():
+        return deepcopy(expr, memo)
+    #
+    # The stack starts with the current expression
+    #
+    _stack = [ (expr, expr._args, 0, expr.nargs(), [])]
+    #
+    # Iterate until the stack is empty
+    #
+    # Note: 1 is faster than True for Python 2.x
+    #
+    while 1:
+        #
+        # Get the top of the stack
+        #   _obj        Current expression object
+        #   _argList    The arguments for this expression objet
+        #   _idx        The current argument being considered
+        #   _len        The number of arguments
+        #
+        _obj, _argList, _idx, _len, _result = _stack.pop()
+        if verbose: #pragma:nocover
+            print("*"*10 + " POP  " + "*"*10)
+        #
+        # Iterate through the arguments
+        #
+        while _idx < _len:
+            if verbose: #pragma:nocover
+                print("-"*30)
+                print(type(_obj))
+                print(_obj)
+                print(_argList)
+                print(_idx)
+                print(_len)
+                print(_result)
+
+            _sub = _argList[_idx]
+            _idx += 1
+            if _sub.__class__ in native_numeric_types:
+                #
+                # Store a native or numeric object
+                #
+                _result.append( deepcopy(_sub, memo) )
+            elif _sub.__class__ not in pyomo5_expression_types:
+                #
+                # Store a kernel object that is cloned
+                #
+                if clone_leaves:
+                    _result.append( deepcopy(_sub, memo) )
+                else:
+                    _result.append( _sub )
+            else:
+                #
+                # Push an expression onto the stack
+                #
+                if verbose: #pragma:nocover
+                    print("*"*10 + " PUSH " + "*"*10)
+                _stack.append( (_obj, _argList, _idx, _len, _result) )
+                _obj     = _sub
+                _argList = _sub._args
+                _idx     = 0
+                _len     = _sub.nargs()
+                _result  = []
+    
+        if verbose: #pragma:nocover
+            print("="*30)
+            print(type(_obj))
+            print(_obj)
+            print(_argList)
+            print(_idx)
+            print(_len)
+            print(_result)
+        #
+        # Now replace the current expression object
+        #
+        ans = _obj._clone( tuple(_result), memo )
+        if verbose: #pragma:nocover
+            print("STACK LEN %d" % len(_stack))
+        if _stack:
+            #
+            # "return" the recursion by putting the return value on the end of the reults stack
+            #
+            _stack[-1][-1].append( ans )
+        else:
+            return ans
+
+
+def _orig_sizeof_expression(expr, verbose=False):
+    #
+    # Note: This does not try to optimize the compression to recognize
+    #   subgraphs.
+    #
+    if expr.__class__ in native_numeric_types or not expr.is_expression():
+        return 1
+    #
+    # The stack starts with the current expression
+    #
+    _stack = [ (expr, expr._args, 0, expr.nargs(), [])]
+    #
+    # Iterate until the stack is empty
+    #
+    # Note: 1 is faster than True for Python 2.x
+    #
+    while 1:
+        #
+        # Get the top of the stack
+        #   _obj        Current expression object
+        #   _argList    The arguments for this expression objet
+        #   _idx        The current argument being considered
+        #   _len        The number of arguments
+        #
+        _obj, _argList, _idx, _len, _result = _stack.pop()
+        if verbose: #pragma:nocover
+            print("*"*10 + " POP  " + "*"*10)
+        #
+        # Iterate through the arguments
+        #
+        while _idx < _len:
+            if verbose: #pragma:nocover
+                print("-"*30)
+                print(type(_obj))
+                print(_obj)
+                print(_argList)
+                print(_idx)
+                print(_len)
+                print(_result)
+
+            _sub = _argList[_idx]
+            _idx += 1
+            if _sub.__class__ in native_numeric_types or not _sub.is_expression():
+                #
+                # Store a native or numeric object
+                #
+                _result.append( 1 )
+            else:
+                #
+                # Push an expression onto the stack
+                #
+                if verbose: #pragma:nocover
+                    print("*"*10 + " PUSH " + "*"*10)
+                _stack.append( (_obj, _argList, _idx, _len, _result) )
+                _obj     = _sub
+                _argList = _sub._args
+                _idx     = 0
+                _len     = _sub.nargs()
+                _result  = []
+    
+        if verbose: #pragma:nocover
+            print("="*30)
+            print(type(_obj))
+            print(_obj)
+            print(_argList)
+            print(_idx)
+            print(_len)
+            print(_result)
+            print("STACK LEN %d" % len(_stack))
+
+        ans = sum(_result)+1
+        if _stack:
+            #
+            # "return" the recursion by putting the return value on the end of the reults stack
+            #
+            _stack[-1][-1].append( ans )
+        else:
+            return ans
+
+
+def _orig_evaluate_expression(exp, exception=True, only_fixed_vars=False):
+    try:
+        if exp.__class__ in pyomo5_variable_types:
+            if not only_fixed_vars or exp.fixed:
+                return exp.value
+            else:
+                raise ValueError("Cannot evaluate an unfixed variable with only_fixed_vars=True")
+        elif exp.__class__ in native_numeric_types:
+            return exp
+        elif not exp.is_expression():
+            return exp()
+
+        _stack = [ (exp, exp._args, 0, exp.nargs(), []) ]
+        while 1:  # Note: 1 is faster than True for Python 2.x
+            _obj, _argList, _idx, _len, _result = _stack.pop()
+            while _idx < _len:
+                _sub = _argList[_idx]
+                _idx += 1
+                if _sub.__class__ in native_numeric_types:
+                    _result.append( _sub )
+                elif _sub.is_expression():
+                    _stack.append( (_obj, _argList, _idx, _len, _result) )
+                    _obj     = _sub
+                    _argList = _sub._args
+                    _idx     = 0
+                    _len     = _sub.nargs()
+                    _result  = []
+                elif _sub.__class__ in pyomo5_variable_types:
+                    if only_fixed_vars:
+                        if _sub.fixed:
+                            _result.append( _sub.value )
+                        else:
+                            raise ValueError("Cannot evaluate an unfixed variable with only_fixed_vars=True")
+                    else:
+                        _result.append( value(_sub) )
+                else:
+                    _result.append( value(_sub) )
+            ans = _obj._apply_operation(_result)
+            if _stack:
+                _stack[-1][-1].append( ans )
+            else:
+                return ans
+    except TemplateExpressionError:
+        if exception:
+            raise
+        return None
+    except ValueError:
+        if exception:
+            raise
+        return None
+
+
+def _orig_identify_variables(expr,
+                       include_fixed=True,
+                       allow_duplicates=False,
+                       include_potentially_variable=False):
+    if not allow_duplicates:
+        _seen = set()
+    _stack = [ ([expr], 0, 1) ]
+    while _stack:
+        _argList, _idx, _len = _stack.pop()
+        while _idx < _len:
+            _sub = _argList[_idx]
+            _idx += 1
+            if _sub.__class__ in native_types:
+                pass
+            elif _sub.is_expression():
+                _stack.append(( _argList, _idx, _len ))
+                _argList = _sub._args
+                _idx = 0
+                _len = _sub.nargs()
+            elif _sub.__class__ in pyomo5_variable_types:
+                if ( include_fixed
+                     or not _sub.is_fixed()
+                     or include_potentially_variable ):
+                    if not allow_duplicates:
+                        if id(_sub) in _seen:
+                            continue
+                        _seen.add(id(_sub))
+                    yield _sub
+            elif include_potentially_variable and _sub._potentially_variable():
+                if not allow_duplicates:
+                    if id(_sub) in _seen:
+                        continue
+                    _seen.add(id(_sub))
+                yield _sub
+
+
+def _orig_polynomial_degree(node):
+    # TODO: Confirm whether this check works
+    #if not node._potentially_variable():
+    #    return 0
+    _stack = [ (node, node._args, 0, node.nargs(), []) ]
+    while 1:  # Note: 1 is faster than True for Python 2.x
+        _obj, _argList, _idx, _len, _result = _stack.pop()
+        while _idx < _len:
+            _sub = _argList[_idx]
+            _idx += 1
+            if _sub.__class__ in native_numeric_types or not _sub._potentially_variable():
+                _result.append( 0 )
+            elif _sub.is_expression():
+                _stack.append( (_obj, _argList, _idx, _len, _result) )
+                _obj     = _sub
+                _argList = _sub._args
+                _idx     = 0
+                _len     = _sub.nargs()
+                _result  = []
+            else:
+                _result.append( 0 if _sub.is_fixed() else 1 )
+        ans = _obj._polynomial_degree(_result)
+        if _stack:
+            _stack[-1][-1].append( ans )
+        else:
+            return ans
+
+
+def _orig_expression_is_fixed(node):
+    if not node._potentially_variable():
+        return True
+    _stack = [ (node, node._args, 0, node.nargs(), []) ]
+    while 1:  # Note: 1 is faster than True for Python 2.x
+        _obj, _argList, _idx, _len, _result = _stack.pop()
+        while _idx < _len:
+            _sub = _argList[_idx]
+            _idx += 1
+            if _sub.__class__ in native_numeric_types or not _sub._potentially_variable():
+                _result.append( True )
+            elif not _sub.__class__ in pyomo5_expression_types:
+                _result.append( _sub.is_fixed() ) 
+            else:
+                _stack.append( (_obj, _argList, _idx, _len, _result) )
+                _obj     = _sub
+                _argList = _sub._args
+                _idx     = 0
+                _len     = _sub.nargs()
+                _result  = []
+
+        ans = _obj._is_fixed(_result)
+        if _stack:
+            _stack[-1][-1].append( ans )
+            #if _obj._is_fixed is all:
+            #    if not _result[-1]:
+            #        _idx = _len
+            #elif _obj._is_fixed is any:
+            #    if _result[-1]:
+            #        _idx = _len
+        else:
+            return ans
+
+
 # =====================================================
 #  compress_expression
 # =====================================================
