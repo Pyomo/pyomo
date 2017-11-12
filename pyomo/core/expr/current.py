@@ -35,13 +35,16 @@ if mode == Mode.pyomo5_trees:
     for obj in curr.__all__:
         globals()[obj] = getattr(curr, obj)
 else:
-    raise ValueError("WEH - Other expression systems aren't working right now.")
+    raise ValueError("WEH - Other expression systems aren't working right now.")    #pragma: no cover
 
 
 
 # Initialize numvalue functions
 from pyomo.core.expr import numvalue
 numvalue.generate_expression = generate_expression
+numvalue.generate_sum_expression = generate_expression
+numvalue.generate_mul_expression = generate_expression
+numvalue.generate_other_expression = generate_expression
 numvalue.generate_relational_expression = generate_relational_expression
 
 
@@ -73,8 +76,8 @@ def log(arg):
 def log10(arg):
     return generate_intrinsic_function_expression(arg, 'log10', math.log10)
 
-def pow(*args):
-    return generate_expression(common._pow, *args)
+#def pow(*args):
+#    return generate_expression(common._pow, *args)
 
 # FIXME: this is nominally the same as x ** 0.5, but follows a different
 # path and produces a different NL file!
