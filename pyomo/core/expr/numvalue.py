@@ -23,7 +23,13 @@ from pyomo.core.expr.expr_common import \
 
 logger = logging.getLogger('pyomo.core')
 
-def generate_expression(etype, _self,_other):
+def generate_expression(etype, _self, _other):
+    raise RuntimeError("incomplete import of Pyomo expression system")
+def generate_sum_expression(etype, _self, _other):
+    raise RuntimeError("incomplete import of Pyomo expression system")
+def generate_mul_expression(etype, _self, _other):
+    raise RuntimeError("incomplete import of Pyomo expression system")
+def generate_other_expression(etype, _self, _other):
     raise RuntimeError("incomplete import of Pyomo expression system")
 def generate_relational_expression(etype, lhs, rhs):
     raise RuntimeError("incomplete import of Pyomo expression system")
@@ -468,126 +474,126 @@ functions.""" % (self.name,))
 
         (Called in response to 'self + other'.)
         """
-        return generate_expression(_add,self,other)
+        return generate_sum_expression(_add,self,other)
 
     def __sub__(self,other):
         """ Binary subtraction
 
         (Called in response to 'self - other'.)
         """
-        return generate_expression(_sub,self,other)
+        return generate_sum_expression(_sub,self,other)
 
     def __mul__(self,other):
         """ Binary multiplication
 
         (Called in response to 'self * other'.)
         """
-        return generate_expression(_mul,self,other)
+        return generate_mul_expression(_mul,self,other)
 
     def __div__(self,other):
         """ Binary division
 
         (Called in response to 'self / other'.)
         """
-        return generate_expression(_div,self,other)
+        return generate_mul_expression(_div,self,other)
 
     def __truediv__(self,other):
         """ Binary division
 
         (Called in response to 'self / other' with __future__.division.)
         """
-        return generate_expression(_div,self,other)
+        return generate_mul_expression(_div,self,other)
 
     def __pow__(self,other):
         """ Binary power
 
         (Called in response to 'self ** other'.)
         """
-        return generate_expression(_pow,self,other)
+        return generate_other_expression(_pow,self,other)
 
     def __radd__(self,other):
         """Binary addition
 
         (Called in response to 'other + self'.)
         """
-        return generate_expression(_radd,self,other)
+        return generate_sum_expression(_radd,self,other)
 
     def __rsub__(self,other):
         """ Binary subtraction
 
         (Called in response to 'other - self'.)
         """
-        return generate_expression(_rsub,self,other)
+        return generate_sum_expression(_rsub,self,other)
 
     def __rmul__(self,other):
         """ Binary multiplication
 
         (Called in response to 'other * self' when other is not a NumericValue.)
         """
-        return generate_expression(_rmul,self,other)
+        return generate_mul_expression(_rmul,self,other)
 
     def __rdiv__(self,other):
         """ Binary division
 
         (Called in response to 'other / self'.)
         """
-        return generate_expression(_rdiv,self,other)
+        return generate_mul_expression(_rdiv,self,other)
 
     def __rtruediv__(self,other):
         """ Binary division
 
         (Called in response to 'other / self' with __future__.division.)
         """
-        return generate_expression(_rdiv,self,other)
+        return generate_mul_expression(_rdiv,self,other)
 
     def __rpow__(self,other):
         """ Binary power
 
         (Called in response to 'other ** self'.)
         """
-        return generate_expression(_rpow,self,other)
+        return generate_other_expression(_rpow,self,other)
 
     def __iadd__(self,other):
         """Binary addition
 
         (Called in response to 'self += other'.)
         """
-        return generate_expression(_iadd,self,other)
+        return generate_sum_expression(_iadd,self,other)
 
     def __isub__(self,other):
         """ Binary subtraction
 
         (Called in response to 'self -= other'.)
         """
-        return generate_expression(_isub,self,other)
+        return generate_sum_expression(_isub,self,other)
 
     def __imul__(self,other):
         """ Binary multiplication
 
         (Called in response to 'self *= other'.)
         """
-        return generate_expression(_imul,self,other)
+        return generate_mul_expression(_imul,self,other)
 
     def __idiv__(self,other):
         """ Binary division
 
         (Called in response to 'self /= other'.)
         """
-        return generate_expression(_idiv,self,other)
+        return generate_mul_expression(_idiv,self,other)
 
     def __itruediv__(self,other):
         """ Binary division
 
         (Called in response to 'self /= other' with __future__.division.)
         """
-        return generate_expression(_idiv,self,other)
+        return generate_mul_expression(_idiv,self,other)
 
     def __ipow__(self,other):
         """ Binary power
 
         (Called in response to 'self **= other'.)
         """
-        return generate_expression(_ipow,self,other)
+        return generate_other_expression(_ipow,self,other)
 
     def __neg__(self):
         """ Negation
@@ -608,7 +614,7 @@ functions.""" % (self.name,))
 
         (Called in response to 'abs(self)'.)
         """
-        return generate_expression(_abs,self, None)
+        return generate_other_expression(_abs,self, None)
 
     def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         """

@@ -85,13 +85,43 @@ from pyomo.core.expr.expr_common import \
      _unary, _radd, _rsub, _rmul,
      _rdiv, _rpow, _iadd, _isub,
      _imul, _idiv, _ipow, _lt, _le,
-     _eq, 
-     chainedInequalityErrorMessage as cIEM)
+     _eq) 
 from pyomo.core.expr import expr_common as common
+
+def cIEM(gre, msg=None):
+    if msg is None:
+        msg = "Relational expression used in an unexpected Boolean context."
+    buf = StringIO()
+    gre.chainedInequality.to_string(buf)
+    # We are about to raise an exception, so it's OK to reset chainedInequality
+    info = gre.call_info
+    gre.chainedInequality = None
+    gre.call_info =  None
+
+    args = ( str(msg).strip(), buf.getvalue().strip(), info[0], info[1],
+             ':\n    %s' % info[3] if info[3] is not None else '.' )
+    return """%s
+
+The inequality expression:
+    %s
+contains non-constant terms (variables) that were evaluated in an
+unexpected Boolean context at
+  File '%s', line %s%s
+
+Evaluating Pyomo variables in a Boolean context, e.g.
+    if expression <= 5:
+is generally invalid.  If you want to obtain the Boolean value of the
+expression based on the current variable values, explicitly evaluate the
+expression using the value() function:
+    if value(expression) <= 5:
+or
+    if value(expression <= 5):
+""" % args
 
 # Wrap the common chainedInequalityErrorMessage to pass the local context
 chainedInequalityErrorMessage \
     = lambda *x: cIEM(generate_relational_expression, *x)
+
 
 
 _ParamData = None
@@ -2370,6 +2400,351 @@ def _process_arg(obj):
                 % (obj.name, ) )
 
     return obj
+
+
+#@profile
+def generate_sum_expression(etype, _self, _other):
+
+    if etype > _inplace:
+        etype -= _inplace
+
+    if _self.__class__ is _LinearExpression:
+        if etype >= _unary:
+            return _self._combine_expr(etype, None)
+        if _other.__class__ is not _LinearExpression:
+            if not (_other.__class__ in native_types or _other.is_expression()):
+                _other = _process_arg(_other)
+        return _self._combine_expr(etype, _other)
+    elif _other.__class__ is _LinearExpression:
+        if not (_self.__class__ in native_types or _self.is_expression()):
+            _self = _process_arg(_self)
+        return _other._combine_expr(-etype, _self)
+
+    #
+    # A mutable sum is used as a context manager, so we don't
+    # need to process it to see if it's entangled.
+    #
+    if not (_self.__class__ in native_types or _self.is_expression()):
+        _self = _process_arg(_self)
+
+    if not (_other.__class__ in native_types or _other.is_expression()):
+        _other = _process_arg(_other)
+
+    if etype < 0:
+        #
+        # This may seem obvious, but if we are performing an
+        # "R"-operation (i.e. reverse operation), then simply reverse
+        # self and other.  This is legitimate as we are generating a
+        # completely new expression here.
+        #
+        etype *= -1
+        _self, _other = _other, _self
+
+    if etype == _add:
+        #
+        # x + y
+        #
+        if (_self.__class__ is _ViewSumExpression and not _self._is_owned) or \
+           _self.__class__ is _MutableViewSumExpression:
+           #(_self.__class__ is _LinearViewSumExpression and not _self._is_owned) or
+            return _self.add(_other)
+        elif (_other.__class__ is _ViewSumExpression and not _other._is_owned) or \
+            _other.__class__ is _MutableViewSumExpression:
+            #_other.__class__ is _LinearViewSumExpression and not _other._is_owned or
+            return _other.add(_self)
+        elif _other.__class__ in native_numeric_types:
+            if _self.__class__ in native_numeric_types:
+                return _self + _other
+            elif _other == 0:   #isclose(_other, 0):
+                return _self
+            if _self.is_constant():
+                return _Constant_SumExpression((_self, _other))
+            elif _self._potentially_variable():
+                #return _LinearViewSumExpression((_other, _self))
+                return _ViewSumExpression([_other, _self])
+            return _NPV_SumExpression((_self, _other))
+        elif _self.__class__ in native_numeric_types:
+            if _self == 0:      #isclose(_self, 0):
+                return _other
+            if _other.is_constant():
+                return _Constant_SumExpression((_self, _other))
+            elif _other._potentially_variable():
+                #return _LinearViewSumExpression((_self, _other))
+                return _ViewSumExpression([_self, _other])
+            return _NPV_SumExpression((_self, _other))
+        elif _other._potentially_variable():
+            #return _LinearViewSumExpression((_self, _other))
+            return _ViewSumExpression([_self, _other])
+        elif _self._potentially_variable():
+            #return _LinearViewSumExpression((_other, _self))
+            return _ViewSumExpression([_other, _self])
+        elif not _other.is_constant():
+            return _NPV_SumExpression((_self, _other))
+        elif not _self.is_constant():
+            return _NPV_SumExpression((_self, _other))
+        return _Constant_SumExpression((_self, _other))
+
+    elif etype == _sub:
+        #
+        # x - y
+        #
+        # TODO: _MultiViewSum logic here
+        #
+        if (_self.__class__ is _ViewSumExpression and not _self._is_owned) or \
+           _self.__class__ is _MutableViewSumExpression:
+           #(_self.__class__ is _LinearViewSumExpression and not _self._is_owned) or
+            return _self.add(-_other)
+        elif _other.__class__ in native_numeric_types:
+            if _self.__class__ in native_numeric_types:
+                return _self - _other
+            elif isclose(_other, 0):
+                return _self
+            if _self.is_constant():
+                return _Constant_SumExpression((-_other, _self))
+            elif _self._potentially_variable():
+                #return _LinearViewSumExpression((_self, -_other))
+                return _ViewSumExpression([_self, -_other])
+            return _NPV_SumExpression((-_other, _self))
+        elif _self.__class__ in native_numeric_types:
+            if isclose(_self, 0):
+                if _other.is_constant():
+                    return _Constant_NegationExpression((_other,))
+                elif _other._potentially_variable():
+                    return _NegationExpression((_other,))
+                return _NPV_NegationExpression((_other,))
+            if _other.is_constant():    
+                return _Constant_SumExpression((_self, _Constant_NegationExpression((_other,))))
+            elif _other._potentially_variable():    
+                #return _LinearViewSumExpression((_self, _NegationExpression((_other,))))
+                return _ViewSumExpression([_self, _NegationExpression((_other,))])
+            return _NPV_SumExpression((_self, _NPV_NegationExpression((_other,))))
+        elif _other._potentially_variable():    
+            #return _LinearViewSumExpression((_self, _NegationExpression((_other,))))
+            return _ViewSumExpression([_self, _NegationExpression((_other,))])
+        elif _self._potentially_variable():
+            #return _LinearViewSumExpression((_self, _NPV_NegationExpression((_other,))))
+            return _ViewSumExpression([_self, _NPV_NegationExpression((_other,))])
+        elif not _other.is_constant():    
+            return _NPV_SumExpression((_self, _NPV_NegationExpression((_other,))))
+        elif not _self.is_constant():    
+            return _NPV_SumExpression((_self, _Constant_NegationExpression((_other,))))
+        else:
+            return _Constant_SumExpression((_self, _Constant_NegationExpression((_other,))))
+
+    raise RuntimeError("Unknown expression type '%s'" % etype)
+        
+
+#@profile
+def generate_mul_expression(etype, _self, _other):
+
+    if etype > _inplace:
+        etype -= _inplace
+
+    if _self.__class__ is _LinearExpression:
+        if etype >= _unary:
+            return _self._combine_expr(etype, None)
+        if _other.__class__ is not _LinearExpression:
+            if not (_other.__class__ in native_types or _other.is_expression()):
+                _other = _process_arg(_other)
+        return _self._combine_expr(etype, _other)
+    elif _other.__class__ is _LinearExpression:
+        if not (_self.__class__ in native_types or _self.is_expression()):
+            _self = _process_arg(_self)
+        return _other._combine_expr(-etype, _self)
+
+    #
+    # A mutable sum is used as a context manager, so we don't
+    # need to process it to see if it's entangled.
+    #
+    if not (_self.__class__ in native_types or _self.is_expression()):
+        _self = _process_arg(_self)
+
+    if not (_other.__class__ in native_types or _other.is_expression()):
+        _other = _process_arg(_other)
+
+    if etype < 0:
+        #
+        # This may seem obvious, but if we are performing an
+        # "R"-operation (i.e. reverse operation), then simply reverse
+        # self and other.  This is legitimate as we are generating a
+        # completely new expression here.
+        #
+        etype *= -1
+        _self, _other = _other, _self
+
+    if etype == _mul:
+        #
+        # x * y
+        #
+        if _other.__class__ in native_numeric_types:
+            if _self.__class__ in native_numeric_types:
+                return _self * _other
+            elif _other == 0:   # isclose(_other, 0)
+                return 0
+            elif _other == 1:
+                return _self
+            if _self.is_constant():
+                return _Constant_ProductExpression((_self, _other))
+            elif _self._potentially_variable():
+                return _ProductExpression((_other, _self))
+            return _NPV_ProductExpression((_self, _other))
+        elif _self.__class__ in native_numeric_types:
+            if _self == 0:  # isclose(_self, 0)
+                return 0
+            elif _self == 1:
+                return _other
+            if _other.is_constant():
+                return _Constant_ProductExpression((_self, _other))
+            elif _other._potentially_variable():
+                return _ProductExpression((_self, _other))
+            return _NPV_ProductExpression((_self, _other))
+        elif _other._potentially_variable():
+            return _ProductExpression((_self, _other))
+        elif _self._potentially_variable():
+            return _ProductExpression((_other, _self))
+        elif not _other.is_constant():
+            return _NPV_ProductExpression((_self, _other))
+        elif not _self.is_constant():
+            return _NPV_ProductExpression((_self, _other))
+        return _Constant_ProductExpression((_self, _other))
+
+    elif etype == _div:
+        #
+        # x / y
+        #
+        if _other.__class__ in native_numeric_types:
+            if _other == 1:
+                return _self
+            elif not _other:
+                raise ZeroDivisionError()
+            elif _self.__class__ in native_numeric_types:
+                return _self / _other
+            elif _self.is_constant():
+                return _Constant_ProductExpression((1/_other, _self))
+            elif _self._potentially_variable():
+                return _ProductExpression((1/_other, _self))
+            return _NPV_ProductExpression((1/_other, _self))
+        elif _self.__class__ in native_numeric_types:
+            if isclose(_self, 0):
+                return 0
+            elif _self == 1:
+                if _other.is_constant():
+                    return _Constant_ReciprocalExpression((_other,))
+                elif _other._potentially_variable():
+                    return _ReciprocalExpression((_other,))
+                return _NPV_ReciprocalExpression((_other,))
+            elif _other.is_constant():
+                return _Constant_ProductExpression((_self, _Constant_ReciprocalExpression((_other,))))
+            if _other._potentially_variable():
+                return _ProductExpression((_self, _ReciprocalExpression((_other,))))
+            return _NPV_ProductExpression((_self, _ReciprocalExpression((_other,))))
+        elif _other._potentially_variable():
+            return _ProductExpression((_self, _ReciprocalExpression((_other,))))
+        elif _self._potentially_variable():
+            return _ProductExpression((_NPV_ReciprocalExpression((_other,)), _self))
+        elif not _other.is_constant():
+            return _NPV_ProductExpression((_self, _NPV_ReciprocalExpression((_other,))))
+        elif not _self.is_constant():
+            return _NPV_ProductExpression((_self, _Constant_ReciprocalExpression((_other,))))
+        return _Constant_ProductExpression((_self, _Constant_ReciprocalExpression((_other,))))
+
+    raise RuntimeError("Unknown expression type '%s'" % etype)
+
+
+#@profile
+def generate_other_expression(etype, _self, _other):
+
+    if etype > _inplace:
+        etype -= _inplace
+
+    if _self.__class__ is _LinearExpression:
+        if etype >= _unary:
+            return _self._combine_expr(etype, None)
+        if _other.__class__ is not _LinearExpression:
+            if not (_other.__class__ in native_types or _other.is_expression()):
+                _other = _process_arg(_other)
+        return _self._combine_expr(etype, _other)
+    elif _other.__class__ is _LinearExpression:
+        if not (_self.__class__ in native_types or _self.is_expression()):
+            _self = _process_arg(_self)
+        return _other._combine_expr(-etype, _self)
+
+    #
+    # A mutable sum is used as a context manager, so we don't
+    # need to process it to see if it's entangled.
+    #
+    if not (_self.__class__ in native_types or _self.is_expression()):
+        _self = _process_arg(_self)
+
+    if etype >= _unary:
+        #
+        # - x
+        #
+        if etype == _neg:
+            if _self.__class__ in native_numeric_types:
+                return - _self
+            elif _self.is_constant():
+                return _Constant_NegationExpression((_self,))
+            elif _self._potentially_variable():
+                return _NegationExpression((_self,))
+            else:
+                return _NPV_NegationExpression((_self,))
+        #
+        # abs(x)
+        #
+        elif etype == _abs:
+            if _self.__class__ in native_numeric_types:
+                return abs(_self)
+            elif _self.is_constant():
+                return _Constant_AbsExpression(_self)
+            elif _self._potentially_variable():
+                return _AbsExpression(_self)
+            else:
+                return _NPV_AbsExpression(_self)
+
+        else: #pragma:nocover
+            raise DeveloperError(
+                "Unexpected unary operator id (%s)" % ( etype, ))
+
+    if not (_other.__class__ in native_types or _other.is_expression()):
+        _other = _process_arg(_other)
+
+    if etype < 0:
+        #
+        # This may seem obvious, but if we are performing an
+        # "R"-operation (i.e. reverse operation), then simply reverse
+        # self and other.  This is legitimate as we are generating a
+        # completely new expression here.
+        #
+        etype *= -1
+        _self, _other = _other, _self
+
+    if etype == _pow:
+        if _other.__class__ in native_numeric_types:
+            if _other == 1:
+                return _self
+            elif not _other:
+                return 1
+            elif _self.__class__ in native_numeric_types:
+                return _self ** _other
+            elif _self.is_constant():
+                return _Constant_PowExpression((_self, _other))
+            elif _self._potentially_variable():
+                return _PowExpression((_self, _other))
+            return _NPV_PowExpression((_self, _other))
+        elif _self.__class__ in native_numeric_types:
+            if _other.is_constant():
+                return _Constant_PowExpression((_self, _other))
+            elif _other._potentially_variable():
+                return _PowExpression((_self, _other))
+            return _NPV_PowExpression((_self, _other))
+        elif _self._potentially_variable() or _other._potentially_variable():
+            return _PowExpression((_self, _other))
+        elif not _self.is_constant() or not _other.is_constant():
+            return _NPV_PowExpression((_self, _other))
+        return _Constant_PowExpression((_self, _other))
+
+    raise RuntimeError("Unknown expression type '%s'" % etype)
 
 
 #@profile
