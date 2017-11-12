@@ -33,7 +33,7 @@ from pyomo.opt import ProblemFormat
 from pyomo.opt.base import *
 from pyomo.core.base import *
 from pyomo.core.base import expr, SymbolMap, Block
-import pyomo.core.base.expr_common
+import pyomo.core.expr.current as EXPR
 from pyomo.core.base.var import Var
 from pyomo.core.base import _ExpressionData, Expression, SortComponents
 from pyomo.core.base.numvalue import (NumericConstant,
@@ -52,8 +52,8 @@ from pyomo.core.kernel.component_variable import IVariable
 from six import itervalues, iteritems
 from six.moves import xrange, zip
 
-_using_pyomo4_trees = pyomo.core.base.expr_common.mode == pyomo.core.base.expr_common.Mode.pyomo4_trees
-_using_pyomo5_trees = pyomo.core.base.expr_common.mode == pyomo.core.base.expr_common.Mode.pyomo5_trees
+_using_pyomo4_trees = EXPR.mode == EXPR.Mode.pyomo4_trees
+_using_pyomo5_trees = EXPR.mode == EXPR.Mode.pyomo5_trees
 
 logger = logging.getLogger('pyomo.core')
 
