@@ -36,8 +36,8 @@ except ImportError:                         #pragma:nocover
 from pyomo.util import pyomo_command
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
-                       PersistentSolver,
                        undefined)
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.core import (value, minimize, Set,
                         Objective, SOSConstraint,
                         Constraint, Var, RangeSet,
