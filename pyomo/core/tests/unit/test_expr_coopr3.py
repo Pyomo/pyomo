@@ -22,13 +22,12 @@ import pyutilib.th as unittest
 from pyutilib.th import nottest
 
 from pyomo.environ import *
-from pyomo.core.base import expr_common, expr as EXPR
+import pyomo.core.expr.current as EXPR
+from pyomo.core.expr.numvalue import potentially_variable
 from pyomo.core.base.var import SimpleVar
-from pyomo.core.base.numvalue import potentially_variable
-from pyomo.core.base import expr_common
 
 
-if expr_common.mode is expr_common.Mode.coopr3_trees:
+if EXPR.mode is EXPR.Mode.coopr3_trees:
     TestCase = unittest.TestCase
     from pyomo.core.base.expr_coopr3 import UNREFERENCED_EXPR_COUNT, \
          UNREFERENCED_RELATIONAL_EXPR_COUNT, UNREFERENCED_INTRINSIC_EXPR_COUNT, \
@@ -38,18 +37,14 @@ else:
     _getrefcount_available=False
 
 
+@unittest.skipIf(EXPR.mode != EXPR.Mode.coopr3_trees, "Only test for Coopr3 expressions")
 class TestExpression_EvaluateNumericConstant(TestCase):
 
     def setUp(self):
-        # This class tests the Coopr 3.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
         # Do we expect arithmetic operations to return expressions?
         self.expectExpression = False
         # Do we expect relational tests to return constant expressions?
         self.expectConstExpression = True
-
-    def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def create(self,val,domain):
         return NumericConstant(val)

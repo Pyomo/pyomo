@@ -20,10 +20,10 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 from pyomo.environ import *
-from pyomo.core.expr import expr_common
+import pyomo.core.expr.current as EXPR
 
 
-_using_pyomo5_trees = expr_common.mode == expr_common.Mode.pyomo5_trees
+_using_pyomo5_trees = EXPR.mode == EXPR.Mode.pyomo5_trees
 
 
 def obj_rule(model):

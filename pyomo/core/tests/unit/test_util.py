@@ -15,7 +15,7 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-from pyomo.core.expr import expr_common
+import pyomo.core.expr.current as EXPR
 import pyutilib.th as unittest
 
 from pyomo.environ import *
@@ -25,7 +25,7 @@ def obj_rule(model):
 def constr_rule(model,a):
     return model.x[a] >= model.y[a]
 
-_using_pyomo5_trees = expr_common.mode == expr_common.Mode.pyomo5_trees
+_using_pyomo5_trees = EXPR.mode == EXPR.Mode.pyomo5_trees
 
 class Test(unittest.TestCase):
 
