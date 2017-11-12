@@ -3654,192 +3654,232 @@ class TestCloneExpression(unittest.TestCase):
         self.m = None
 
     def test_SumExpression(self):
-        expr1 = self.m.a + self.m.b
-        expr2 = expr1.clone()
-        self.assertEqual( expr1(), 15 )
-        self.assertEqual( expr2(), 15 )
-        self.assertNotEqual( id(expr1),       id(expr2) )
-        self.assertNotEqual( id(expr1._args), id(expr2._args) )
-        self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
-        self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
-        expr1 += self.m.b
-        self.assertEqual( expr1(), 25 )
-        self.assertEqual( expr2(), 15 )
-        self.assertNotEqual( id(expr1),       id(expr2) )
-        self.assertNotEqual( id(expr1._args), id(expr2._args) )
-        self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
-        self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
-
+        with EXPR.clone_counter:
+            start = EXPR.clone_counter.count
+            expr1 = self.m.a + self.m.b
+            expr2 = expr1.clone()
+            self.assertEqual( expr1(), 15 )
+            self.assertEqual( expr2(), 15 )
+            self.assertNotEqual( id(expr1),       id(expr2) )
+            self.assertNotEqual( id(expr1._args), id(expr2._args) )
+            self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
+            self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
+            expr1 += self.m.b
+            self.assertEqual( expr1(), 25 )
+            self.assertEqual( expr2(), 15 )
+            self.assertNotEqual( id(expr1),       id(expr2) )
+            self.assertNotEqual( id(expr1._args), id(expr2._args) )
+            self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
+            self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
+            #
+            total = EXPR.clone_counter.count - start
+            self.assertEqual(total, 1)
+            
     def test_ProductExpression_mult(self):
-        expr1 = self.m.a * self.m.b
-        expr2 = expr1.clone()
-        self.assertEqual( expr1(), 50 )
-        self.assertEqual( expr2(), 50 )
-        self.assertNotEqual( id(expr1),      id(expr2) )
-        self.assertNotEqual( id(expr1._args),    id(expr2._args) )
-        self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
-        self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
+        with EXPR.clone_counter:
+            start = EXPR.clone_counter.count
+            #
+            expr1 = self.m.a * self.m.b
+            expr2 = expr1.clone()
+            self.assertEqual( expr1(), 50 )
+            self.assertEqual( expr2(), 50 )
+            self.assertNotEqual( id(expr1),      id(expr2) )
+            self.assertNotEqual( id(expr1._args),    id(expr2._args) )
+            self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
+            self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
 
-        expr1 *= self.m.b
-        self.assertEqual( expr1(), 500 )
-        self.assertEqual( expr2(), 50 )
-        self.assertNotEqual( id(expr1),                 id(expr2) )
-        self.assertNotEqual( id(expr1._args),           id(expr2._args) )
-        self.assertNotEqual( id(expr1._args[0]._args),     id(expr2._args) )
-        self.assertEqual( id(expr1._args[1]),           id(expr2._args[1]) )
-        self.assertEqual( id(expr1._args[0]._args[0]),  id(expr2._args[0]) )
-        self.assertEqual( id(expr1._args[0]._args[1]),  id(expr2._args[1]) )
+            expr1 *= self.m.b
+            self.assertEqual( expr1(), 500 )
+            self.assertEqual( expr2(), 50 )
+            self.assertNotEqual( id(expr1),                 id(expr2) )
+            self.assertNotEqual( id(expr1._args),           id(expr2._args) )
+            self.assertNotEqual( id(expr1._args[0]._args),     id(expr2._args) )
+            self.assertEqual( id(expr1._args[1]),           id(expr2._args[1]) )
+            self.assertEqual( id(expr1._args[0]._args[0]),  id(expr2._args[0]) )
+            self.assertEqual( id(expr1._args[0]._args[1]),  id(expr2._args[1]) )
 
-        expr1 = self.m.a * (self.m.b + self.m.a)
-        expr2 = expr1.clone()
-        self.assertEqual( expr1(), 75 )
-        self.assertEqual( expr2(), 75 )
-        # Note that since one of the args is a sum expression, the _args
-        # in the sum is a *list*, which will be duplicated by deepcopy.
-        # This will cause the two args in the Product to be different.
-        self.assertNotEqual( id(expr1),      id(expr2) )
-        self.assertNotEqual( id(expr1._args), id(expr2._args) )
-        self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
-        self.assertNotEqual( id(expr1._args[1]), id(expr2._args[1]) )
-
+            expr1 = self.m.a * (self.m.b + self.m.a)
+            expr2 = expr1.clone()
+            self.assertEqual( expr1(), 75 )
+            self.assertEqual( expr2(), 75 )
+            # Note that since one of the args is a sum expression, the _args
+            # in the sum is a *list*, which will be duplicated by deepcopy.
+            # This will cause the two args in the Product to be different.
+            self.assertNotEqual( id(expr1),      id(expr2) )
+            self.assertNotEqual( id(expr1._args), id(expr2._args) )
+            self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
+            self.assertNotEqual( id(expr1._args[1]), id(expr2._args[1]) )
+            #
+            total = EXPR.clone_counter.count - start
+            self.assertEqual(total, 2)
 
     def test_ProductExpression_div(self):
-        expr1 = self.m.a / self.m.b
-        expr2 = expr1.clone()
-        self.assertEqual( expr1(), 0.5 )
-        self.assertEqual( expr2(), 0.5 )
-        self.assertNotEqual( id(expr1),       id(expr2) )
-        self.assertNotEqual( id(expr1._args),    id(expr2._args) )
-        self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
-        self.assertEqual( id(expr1._args[1]._args[0]), id(expr2._args[1]._args[0]) )
+        with EXPR.clone_counter:
+            start = EXPR.clone_counter.count
+            #
+            expr1 = self.m.a / self.m.b
+            expr2 = expr1.clone()
+            self.assertEqual( expr1(), 0.5 )
+            self.assertEqual( expr2(), 0.5 )
+            self.assertNotEqual( id(expr1),       id(expr2) )
+            self.assertNotEqual( id(expr1._args),    id(expr2._args) )
+            self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
+            self.assertEqual( id(expr1._args[1]._args[0]), id(expr2._args[1]._args[0]) )
 
-        expr1 /= self.m.b
-        self.assertEqual( expr1(), 0.05 )
-        self.assertEqual( expr2(), 0.5 )
-        self.assertNotEqual( id(expr1),                 id(expr2) )
-        self.assertNotEqual( id(expr1._args),           id(expr2._args) )
-        self.assertNotEqual( id(expr1._args[0]._args),  id(expr2._args) )
-        self.assertEqual( id(expr1._args[1]._args[0]),  id(expr2._args[1]._args[0]) )
-        self.assertEqual( id(expr1._args[0]._args[0]),  id(expr2._args[0]) )
-        self.assertEqual( id(expr1._args[0]._args[1]._args[0]),  id(expr2._args[1]._args[0]) )
+            expr1 /= self.m.b
+            self.assertEqual( expr1(), 0.05 )
+            self.assertEqual( expr2(), 0.5 )
+            self.assertNotEqual( id(expr1),                 id(expr2) )
+            self.assertNotEqual( id(expr1._args),           id(expr2._args) )
+            self.assertNotEqual( id(expr1._args[0]._args),  id(expr2._args) )
+            self.assertEqual( id(expr1._args[1]._args[0]),  id(expr2._args[1]._args[0]) )
+            self.assertEqual( id(expr1._args[0]._args[0]),  id(expr2._args[0]) )
+            self.assertEqual( id(expr1._args[0]._args[1]._args[0]),  id(expr2._args[1]._args[0]) )
 
-        expr1 = self.m.a / (self.m.b + self.m.a)
-        expr2 = expr1.clone()
-        self.assertEqual( expr1(), 1/3. )
-        self.assertEqual( expr2(), 1/3. )
-        # Note that since one of the args is a sum expression, the _args
-        # in the sum is a *list*, which will be duplicated by deepcopy.
-        # This will cause the two args in the Product to be different.
-        self.assertNotEqual( id(expr1),      id(expr2) )
-        self.assertNotEqual( id(expr1._args), id(expr2._args) )
-        self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
-        self.assertNotEqual( id(expr1._args[1]), id(expr2._args[1]) )
+            expr1 = self.m.a / (self.m.b + self.m.a)
+            expr2 = expr1.clone()
+            self.assertEqual( expr1(), 1/3. )
+            self.assertEqual( expr2(), 1/3. )
+            # Note that since one of the args is a sum expression, the _args
+            # in the sum is a *list*, which will be duplicated by deepcopy.
+            # This will cause the two args in the Product to be different.
+            self.assertNotEqual( id(expr1),      id(expr2) )
+            self.assertNotEqual( id(expr1._args), id(expr2._args) )
+            self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
+            self.assertNotEqual( id(expr1._args[1]), id(expr2._args[1]) )
+            #
+            total = EXPR.clone_counter.count - start
+            self.assertEqual(total, 2)
 
     def test_sumOfExpressions(self):
-        expr1 = self.m.a * self.m.b + self.m.a * self.m.a
-        expr2 = expr1.clone()
-        self.assertEqual(expr1(), 75)
-        self.assertEqual(expr2(), 75)
-        self.assertNotEqual(id(expr1), id(expr2))
-        self.assertNotEqual(id(expr1._args), id(expr2._args))
-        self.assertEqual(expr1._args[0](), expr2._args[0]())
-        self.assertEqual(expr1._args[1](), expr2._args[1]())
-        self.assertNotEqual(id(expr1._args[0]), id(expr2._args[0]))
-        self.assertNotEqual(id(expr1._args[1]), id(expr2._args[1]))
-        expr1 += self.m.b
-        self.assertEqual(expr1(), 85)
-        self.assertEqual(expr2(), 75)
-        self.assertNotEqual(id(expr1), id(expr2))
-        self.assertNotEqual(id(expr1._args), id(expr2._args))
-        self.assertEqual(expr1.nargs(), 3)
-        self.assertEqual(expr2.nargs(), 2)
-        self.assertEqual(expr1._args[0](), 50)
-        self.assertEqual(expr1._args[1](), 25)
-        self.assertNotEqual(id(expr1._args[0]), id(expr2._args[0]))
-        self.assertNotEqual(id(expr1._args[1]), id(expr2._args[1]))
+        with EXPR.clone_counter:
+            start = EXPR.clone_counter.count
+            #
+            expr1 = self.m.a * self.m.b + self.m.a * self.m.a
+            expr2 = expr1.clone()
+            self.assertEqual(expr1(), 75)
+            self.assertEqual(expr2(), 75)
+            self.assertNotEqual(id(expr1), id(expr2))
+            self.assertNotEqual(id(expr1._args), id(expr2._args))
+            self.assertEqual(expr1._args[0](), expr2._args[0]())
+            self.assertEqual(expr1._args[1](), expr2._args[1]())
+            self.assertNotEqual(id(expr1._args[0]), id(expr2._args[0]))
+            self.assertNotEqual(id(expr1._args[1]), id(expr2._args[1]))
+            expr1 += self.m.b
+            self.assertEqual(expr1(), 85)
+            self.assertEqual(expr2(), 75)
+            self.assertNotEqual(id(expr1), id(expr2))
+            self.assertNotEqual(id(expr1._args), id(expr2._args))
+            self.assertEqual(expr1.nargs(), 3)
+            self.assertEqual(expr2.nargs(), 2)
+            self.assertEqual(expr1._args[0](), 50)
+            self.assertEqual(expr1._args[1](), 25)
+            self.assertNotEqual(id(expr1._args[0]), id(expr2._args[0]))
+            self.assertNotEqual(id(expr1._args[1]), id(expr2._args[1]))
+            #
+            total = EXPR.clone_counter.count - start
+            self.assertEqual(total, 1)
 
     def test_productOfExpressions(self):
-        expr1 = (self.m.a + self.m.b) * (self.m.a + self.m.a)
-        expr2 = expr1.clone()
-        self.assertEqual(expr1(), 150)
-        self.assertEqual(expr2(), 150)
-        self.assertNotEqual(id(expr1), id(expr2))
-        self.assertNotEqual(id(expr1._args), id(expr2._args))
-        self.assertNotEqual(id(expr1._args[0]), id(expr2._args[0]))
-        self.assertNotEqual(id(expr1._args[1]), id(expr2._args[1]))
-        self.assertEqual(expr1._args[0](), expr2._args[0]())
-        self.assertEqual(expr1._args[1](), expr2._args[1]())
+        with EXPR.clone_counter:
+            start = EXPR.clone_counter.count
+            #
+            expr1 = (self.m.a + self.m.b) * (self.m.a + self.m.a)
+            expr2 = expr1.clone()
+            self.assertEqual(expr1(), 150)
+            self.assertEqual(expr2(), 150)
+            self.assertNotEqual(id(expr1), id(expr2))
+            self.assertNotEqual(id(expr1._args), id(expr2._args))
+            self.assertNotEqual(id(expr1._args[0]), id(expr2._args[0]))
+            self.assertNotEqual(id(expr1._args[1]), id(expr2._args[1]))
+            self.assertEqual(expr1._args[0](), expr2._args[0]())
+            self.assertEqual(expr1._args[1](), expr2._args[1]())
 
-        self.assertEqual(len(expr1._args[0]._args), 2)
-        self.assertEqual(len(expr2._args[0]._args), 2)
-        self.assertEqual(len(expr1._args[1]._args), 2)
-        self.assertEqual(len(expr2._args[1]._args), 2)
+            self.assertEqual(len(expr1._args[0]._args), 2)
+            self.assertEqual(len(expr2._args[0]._args), 2)
+            self.assertEqual(len(expr1._args[1]._args), 2)
+            self.assertEqual(len(expr2._args[1]._args), 2)
 
-        self.assertIs( expr1._args[0]._args[0],
-                       expr2._args[0]._args[0] )
-        self.assertIs( expr1._args[0]._args[1],
-                       expr2._args[0]._args[1] )
-        self.assertIs( expr1._args[1]._args[0],
-                       expr2._args[1]._args[0] )
+            self.assertIs( expr1._args[0]._args[0],
+                           expr2._args[0]._args[0] )
+            self.assertIs( expr1._args[0]._args[1],
+                           expr2._args[0]._args[1] )
+            self.assertIs( expr1._args[1]._args[0],
+                           expr2._args[1]._args[0] )
 
-        expr1 *= self.m.b
-        self.assertEqual(expr1(), 1500)
-        self.assertEqual(expr2(), 150)
-        self.assertNotEqual(id(expr1), id(expr2))
-        self.assertNotEqual(id(expr1._args[0]), id(expr2._args[0]))
-        self.assertNotEqual(id(expr1._args[1]), id(expr2._args[1]))
+            expr1 *= self.m.b
+            self.assertEqual(expr1(), 1500)
+            self.assertEqual(expr2(), 150)
+            self.assertNotEqual(id(expr1), id(expr2))
+            self.assertNotEqual(id(expr1._args[0]), id(expr2._args[0]))
+            self.assertNotEqual(id(expr1._args[1]), id(expr2._args[1]))
 
-        self.assertIs(type(expr1._args[0]), type(expr2))
-        self.assertEqual(expr1._args[0](), expr2())
+            self.assertIs(type(expr1._args[0]), type(expr2))
+            self.assertEqual(expr1._args[0](), expr2())
 
-        self.assertEqual(len(expr1._args), 2)
-        self.assertEqual(len(expr2._args), 2)
+            self.assertEqual(len(expr1._args), 2)
+            self.assertEqual(len(expr2._args), 2)
+            #
+            total = EXPR.clone_counter.count - start
+            self.assertEqual(total, 1)
 
     def test_productOfExpressions_div(self):
-        expr1 = (self.m.a + self.m.b) / (self.m.a + self.m.a)
-        expr2 = expr1.clone()
+        with EXPR.clone_counter:
+            start = EXPR.clone_counter.count
+            #
+            expr1 = (self.m.a + self.m.b) / (self.m.a + self.m.a)
+            expr2 = expr1.clone()
 
-        self.assertNotEqual(id(expr1), id(expr2))
-        self.assertNotEqual(id(expr1._args), id(expr2._args))
-        self.assertNotEqual(id(expr1._args[0]), id(expr2._args[0]))
-        self.assertNotEqual(id(expr1._args[1]), id(expr2._args[1]))
-        self.assertEqual(expr1._args[0](), expr2._args[0]())
-        self.assertEqual(expr1._args[1](), expr2._args[1]())
+            self.assertNotEqual(id(expr1), id(expr2))
+            self.assertNotEqual(id(expr1._args), id(expr2._args))
+            self.assertNotEqual(id(expr1._args[0]), id(expr2._args[0]))
+            self.assertNotEqual(id(expr1._args[1]), id(expr2._args[1]))
+            self.assertEqual(expr1._args[0](), expr2._args[0]())
+            self.assertEqual(expr1._args[1](), expr2._args[1]())
 
-        self.assertEqual(len(expr1._args[0]._args), 2)
-        self.assertEqual(len(expr2._args[0]._args), 2)
-        self.assertEqual(len(expr1._args[1]._args), 1)
-        self.assertEqual(len(expr2._args[1]._args), 1)
+            self.assertEqual(len(expr1._args[0]._args), 2)
+            self.assertEqual(len(expr2._args[0]._args), 2)
+            self.assertEqual(len(expr1._args[1]._args), 1)
+            self.assertEqual(len(expr2._args[1]._args), 1)
 
-        self.assertIs( expr1._args[0]._args[0], expr2._args[0]._args[0] )
-        self.assertIs( expr1._args[0]._args[1], expr2._args[0]._args[1] )
-        self.assertIs( expr1._args[1]._args[0]._args[0], expr2._args[1]._args[0]._args[0] )
-        self.assertIs( expr1._args[1]._args[0]._args[1], expr2._args[1]._args[0]._args[1] )
+            self.assertIs( expr1._args[0]._args[0], expr2._args[0]._args[0] )
+            self.assertIs( expr1._args[0]._args[1], expr2._args[0]._args[1] )
+            self.assertIs( expr1._args[1]._args[0]._args[0], expr2._args[1]._args[0]._args[0] )
+            self.assertIs( expr1._args[1]._args[0]._args[1], expr2._args[1]._args[0]._args[1] )
 
-        expr1 /= self.m.b
-        self.assertAlmostEqual(expr1(), .15)
-        self.assertAlmostEqual(expr2(), 1.5)
-        self.assertNotEqual(id(expr1._args[0]), id(expr2._args[0]))
-        self.assertNotEqual(id(expr1._args[1]), id(expr2._args[1]))
+            expr1 /= self.m.b
+            self.assertAlmostEqual(expr1(), .15)
+            self.assertAlmostEqual(expr2(), 1.5)
+            self.assertNotEqual(id(expr1._args[0]), id(expr2._args[0]))
+            self.assertNotEqual(id(expr1._args[1]), id(expr2._args[1]))
 
-        self.assertIs(type(expr1._args[0]), type(expr2))
-        self.assertAlmostEqual(expr1._args[0](), expr2())
+            self.assertIs(type(expr1._args[0]), type(expr2))
+            self.assertAlmostEqual(expr1._args[0](), expr2())
 
-        self.assertEqual(len(expr1._args), 2)
-        self.assertEqual(len(expr2._args), 2)
+            self.assertEqual(len(expr1._args), 2)
+            self.assertEqual(len(expr2._args), 2)
+            #
+            total = EXPR.clone_counter.count - start
+            self.assertEqual(total, 1)
 
     def test_Expr_if(self):
-        expr1 = EXPR.Expr_if(IF=self.m.a + self.m.b < 20, THEN=self.m.a, ELSE=self.m.b)
-        expr2 = expr1.clone()
-        self.assertNotEqual(id(expr1), id(expr2))
-        self.assertEqual(expr1(), value(self.m.a))
-        self.assertEqual(expr2(), value(self.m.a))
-        self.assertNotEqual(id(expr1._if), id(expr2._if))
-        self.assertEqual(id(expr1._then), id(expr2._then))
-        self.assertEqual(id(expr1._else), id(expr2._else))
-        self.assertEqual(expr1._if(), expr2._if())
-        self.assertEqual(expr1._then(), expr2._then())
-        self.assertEqual(expr1._else(), expr2._else())
+        with EXPR.clone_counter:
+            start = EXPR.clone_counter.count
+            #
+            expr1 = EXPR.Expr_if(IF=self.m.a + self.m.b < 20, THEN=self.m.a, ELSE=self.m.b)
+            expr2 = expr1.clone()
+            self.assertNotEqual(id(expr1), id(expr2))
+            self.assertEqual(expr1(), value(self.m.a))
+            self.assertEqual(expr2(), value(self.m.a))
+            self.assertNotEqual(id(expr1._if), id(expr2._if))
+            self.assertEqual(id(expr1._then), id(expr2._then))
+            self.assertEqual(id(expr1._else), id(expr2._else))
+            self.assertEqual(expr1._if(), expr2._if())
+            self.assertEqual(expr1._then(), expr2._then())
+            self.assertEqual(expr1._else(), expr2._else())
+            #
+            total = EXPR.clone_counter.count - start
+            self.assertEqual(total, 1)
 
 
 #
