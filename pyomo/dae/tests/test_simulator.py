@@ -72,9 +72,8 @@ class TestSimulator(unittest.TestCase):
 
     # Verifying that the correct exception is raised when simulator
     # functions are used on pyomo 4 expressions which are not supported
+    @unittest.skipIf(EXPR.mode != EXPR.Mode.pyomo4_trees, "Only test for Pyomo4 expressions")
     def test_unsupported_pyomo4_expressions(self):
-
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
         m = self.m 
         t = IndexTemplate(m.t)
@@ -84,8 +83,6 @@ class TestSimulator(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             _check_productexpression(e, 0)
-
-        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     # Testing invalid simulator arguments
     def test_invalid_argument_values(self):

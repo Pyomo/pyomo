@@ -31,16 +31,14 @@ from pyomo.core.base.numvalue import potentially_variable, native_types
 class TestExpression_EvaluateNumericConstant(unittest.TestCase):
 
     def setUp(self):
-        # Set the type of expression trees used in Pyomo to be Pyomo4 
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
         # Do we expect arithmetic operations to return expressions?
         self.expectExpression = False
         # Do we expect relational tests to return constant expressions?
         self.expectConstExpression = True
 
-    def tearDown(self):
+    #def tearDown(self):
         # Reset the type of expression trees used in Pyomo
-        EXPR.set_expression_tree_format(expr_common._default_mode)
+        #EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def create(self, val, domain):
         # Create the type of expression term that we are testing
@@ -298,12 +296,12 @@ class TestExpression_EvaluateMutableParam(TestExpression_EvaluateNumericConstant
 
 class TestNumericValue(unittest.TestCase):
 
-    def setUp(self):
+    #def setUp(self):
         # This class tests the Pyomo 5.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
+        #EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
 
-    def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
+    #def tearDown(self):
+        #EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_asnum(self):
         try:
@@ -357,13 +355,6 @@ class TestNumericValue(unittest.TestCase):
 
 
 class TestGenerate_SumExpression(unittest.TestCase):
-
-    def setUp(self):
-        # This class tests the Pyomo 5.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
-
-    def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_simpleSum(self):
         # a + b
@@ -937,13 +928,6 @@ class TestGenerate_SumExpression(unittest.TestCase):
 
 
 class TestGenerate_ProductExpression(unittest.TestCase):
-
-    def setUp(self):
-        # This class tests the Pyomo 5.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
-
-    def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_simpleProduct(self):
         #
@@ -1529,9 +1513,6 @@ class TestGenerate_ProductExpression(unittest.TestCase):
 class TestGenerate_RelationalExpression(unittest.TestCase):
 
     def setUp(self):
-        # This class tests the Pyomo 5.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
-
         m = AbstractModel()
         m.I = Set()
         m.a = Var()
@@ -1541,7 +1522,6 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.m = m
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
         self.m = None
 
     def test_simpleEquality(self):
@@ -2015,12 +1995,10 @@ class TestPrettyPrinter_oldStyle(object):
 
     def setUp(self):
         # This class tests the Pyomo 5.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
         TestPrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = True
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = TestPrettyPrinter_oldStyle._save
 
     def test_sum(self):
@@ -2149,12 +2127,10 @@ class TestPrettyPrinter_newStyle(object):
 
     def setUp(self):
         # This class tests the Pyomo 5.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
         TestPrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = False
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = TestPrettyPrinter_oldStyle._save
 
     def test_sum(self):
@@ -2402,7 +2378,6 @@ class TestInplaceExpressionGeneration(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Pyomo 5.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
 
         m = AbstractModel()
         m.a = Var()
@@ -2410,7 +2385,6 @@ class TestInplaceExpressionGeneration(unittest.TestCase):
         self.m = m
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
         self.m = None
 
     def test_iadd(self):
@@ -2521,13 +2495,6 @@ class TestInplaceExpressionGeneration(unittest.TestCase):
 
 class TestGeneralExpressionGeneration(unittest.TestCase):
 
-    def setUp(self):
-        # This class tests the Pyomo 5.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
-
-    def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
-
     def test_invalidIndexing(self):
         #
         # Check for errors when generating expressions with invalid indices
@@ -2609,12 +2576,8 @@ class TestGeneralExpressionGeneration(unittest.TestCase):
 
 class TestExprConditionalContext(unittest.TestCase):
 
-    def setUp(self):
-        # This class tests the Pyomo 5.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
         # Make sure errors here don't bleed over to other tests
         EXPR.generate_relational_expression.chainedInequality = None
 
@@ -2997,7 +2960,6 @@ class TestPolynomialDegree(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Pyomo 5.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
         def d_fn(model):
             return model.c+model.c
         self.model = AbstractModel()
@@ -3008,7 +2970,6 @@ class TestPolynomialDegree(unittest.TestCase):
         self.instance = self.model.create_instance()
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
         self.model = None
         self.instance = None
 
@@ -3275,13 +3236,6 @@ class TestPolynomialDegree(unittest.TestCase):
 #
 class EntangledExpressionErrors(unittest.TestCase):
 
-    def setUp(self):
-        # This class tests the Coopr 3.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
-
-    def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
-
     def test_sumexpr_add_entangled(self):
         x = Var()
         e = x*2 + 1
@@ -3322,7 +3276,6 @@ class TestSummationExpression(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Pyomo 5.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
 
         self.m = ConcreteModel()
         self.m.I = RangeSet(5)
@@ -3332,7 +3285,6 @@ class TestSummationExpression(unittest.TestCase):
         self.m.q = Param(self.m.I, initialize=3, mutable=False)
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
         self.m = None
 
     def test_summation1(self):
@@ -3403,7 +3355,6 @@ class TestSumExpression(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Pyomo 5.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
 
         self.m = ConcreteModel()
         self.m.I = RangeSet(5)
@@ -3413,7 +3364,6 @@ class TestSumExpression(unittest.TestCase):
         self.m.q = Param(self.m.I, initialize=3, mutable=False)
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
         self.m = None
 
     def test_summation1(self):
@@ -3494,7 +3444,6 @@ class TestCloneExpression(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Pyomo 5.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
 
         self.m = ConcreteModel()
         self.m.a = Var(initialize=5)
@@ -3502,7 +3451,6 @@ class TestCloneExpression(unittest.TestCase):
         self.m.p = Param(initialize=1, mutable=True)
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
         self.m = None
 
     def test_SumExpression(self):
@@ -3703,7 +3651,6 @@ class TestIsFixedIsConstant(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Pyomo 5.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
 
         def d_fn(model):
             return model.c+model.c
@@ -3716,7 +3663,6 @@ class TestIsFixedIsConstant(unittest.TestCase):
         self.instance = self.model.create_instance()
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
         self.model = None
         self.instance = None
 
@@ -4103,13 +4049,6 @@ class TestIsFixedIsConstant(unittest.TestCase):
 
 class TestExpressionUtilities(unittest.TestCase):
 
-    def setUp(self):
-        # This class tests the Pyomo 5.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
-
-    def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
-
     def test_identify_vars_numeric(self):
         #
         # There are no variables in a constant expression
@@ -4176,13 +4115,6 @@ class TestExpressionUtilities(unittest.TestCase):
 
 
 class TestMultiArgumentExpressions(unittest.TestCase):
-
-    def setUp(self):
-        # This class tests the Pyomo 4 expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
-
-    def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_double_sided_ineq(self):
         m = ConcreteModel()

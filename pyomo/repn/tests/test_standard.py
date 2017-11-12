@@ -18,8 +18,8 @@ currdir = dirname(abspath(__file__))+os.sep
 import pyutilib.th as unittest
 import pyutilib.services
 
-from pyomo.core.base.expr import Expr_if
-from pyomo.core.base import expr_common, expr as EXPR
+from pyomo.core.expr.current import Expr_if
+from pyomo.core.expr import expr_common, current as EXPR
 from pyomo.repn import *
 from pyomo.environ import *
 from pyomo.core.base.numvalue import native_numeric_types
@@ -52,14 +52,8 @@ def repn_to_dict(repn):
     return result
 
 
+@unittest.skipIf(EXPR.mode != EXPR.Mode.pyomo5_trees, "Only test for Pyomo5 expressions")
 class TestSimple(unittest.TestCase):
-
-    def setUp(self):
-        # This class tests the Pyomo 5.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
-
-    def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_number(self):
         # 1.0

@@ -12,140 +12,43 @@ from __future__ import division
 import math
 import builtins
 
-__all__ = ('fabs', 'log', 'log10', 'sin', 'cos', 'tan', 'cosh', 'sinh', 'tanh',
+__all__ = ['fabs', 'log', 'log10', 'sin', 'cos', 'tan', 'cosh', 'sinh', 'tanh',
            'asin', 'acos', 'atan', 'exp', 'sqrt', 'asinh', 'acosh',
-           'atanh', 'ceil', 'floor', 'sum', 'linear_expression', 'nonlinear_expression')
+           'atanh', 'ceil', 'floor']
 
-from pyomo.core.expr import expr_common as common
+#
+# Provide a global value that indicates which expression system is being used
+#
+class Mode(object):
+    coopr3_trees = (1,)
+    pyomo4_trees = (2,)
+    pyomo5_trees = (3,)
+mode = Mode.pyomo5_trees
 
-def generate_expression(etype, _self,_other):
-    raise RuntimeError("incomplete import of Pyomo expression system")
-def generate_relational_expression(etype, lhs, rhs):
-    raise RuntimeError("incomplete import of Pyomo expression system")
-def generate_intrinsic_function_expression(arg, name, fcn):
-    raise RuntimeError("incomplete import of Pyomo expression system")
-def compress_expression(expr, verbose=False, dive=False, multiprod=False):
-    return expr
-sum = builtins.sum
+#
+# Pull symbols from the appropriate expression system
+#
+# Pyomo5
+if mode == Mode.pyomo5_trees:
+    from pyomo.core.expr import expr_pyomo5 as curr
+    __all__.extend(curr.__public__)
+    for obj in curr.__all__:
+        globals()[obj] = getattr(curr, obj)
+else:
+    raise ValueError("WEH - Other expression systems aren't working right now.")
 
+
+
+# Initialize numvalue functions
 from pyomo.core.expr import numvalue
+numvalue.generate_expression = generate_expression
+numvalue.generate_relational_expression = generate_relational_expression
 
-# Import global methods that are common to all expression systems
-_common_module_members = [
-    'clone_expression',
-    'identify_variables',
-    'generate_expression',
-    'generate_intrinsic_function_expression',
-    'generate_relational_expression',
-    'chainedInequalityErrorMessage',
-    '_ExpressionBase',
-    '_EqualityExpression',
-    '_InequalityExpression',
-    '_ProductExpression',
-    '_SumExpression',
-    '_AbsExpression',
-    '_PowExpression',
-    '_ExternalFunctionExpression',
-    '_GetItemExpression',
-    'clone_counter',
-    'Expr_if',
-]
-_coopr3_module_members = [
-    '_IntrinsicFunctionExpression',
-    'ignore_entangled_expressions',
-]
-_pyomo4_module_members = [
-    'ignore_entangled_expressions',
-    '_LinearExpression',
-    '_DivisionExpression',
-    '_NegationExpression',
-    'EntangledExpressionError',
-    '_IntrinsicFunctionExpression',
-]
-_pyomo5_module_members = [
-    '_LinearExpression',
-    '_StaticLinearExpression',
-    'clone_counter',
-    'linear_expression',
-    'nonlinear_expression',
-    'evaluate_expression',
-    '_ReciprocalExpression',
-    '_NegationExpression',
-    '_ViewSumExpression',
-    '_UnaryFunctionExpression',
-    '_NPV_NegationExpression',
-    '_NPV_ExternalFunctionExpression',
-    '_NPV_PowExpression',
-    '_NPV_ProductExpression',
-    '_NPV_ReciprocalExpression',
-    '_NPV_SumExpression',
-    '_NPV_UnaryFunctionExpression',
-    '_NPV_AbsExpression',
-    '_Constant_NegationExpression',
-    '_Constant_ExternalFunctionExpression',
-    '_Constant_PowExpression',
-    '_Constant_ProductExpression',
-    '_Constant_ReciprocalExpression',
-    '_Constant_SumExpression',
-    '_Constant_UnaryFunctionExpression',
-    '_Constant_AbsExpression',
-]
 
-def set_expression_tree_format(mode):
-    if mode is common.Mode.coopr3_trees:
-        from pyomo.core.expr import expr_coopr3 as expr3
-        for obj in _common_module_members:
-            globals()[obj] = getattr(expr3, obj)
-        for obj in _pyomo4_module_members:
-            if obj in globals():
-                del globals()[obj]
-        for obj in _pyomo5_module_members:
-            if obj in globals():
-                del globals()[obj]
-        for obj in _coopr3_module_members:
-            globals()[obj] = getattr(expr3, obj)
-
-    elif mode is common.Mode.pyomo4_trees:
-        from pyomo.core.expr import expr_pyomo4 as expr4
-        for obj in _common_module_members:
-            globals()[obj] = getattr(expr4, obj)
-        for obj in _coopr3_module_members:
-            if obj in globals():
-                del globals()[obj]
-        for obj in _pyomo5_module_members:
-            if obj in globals():
-                del globals()[obj]
-        for obj in _pyomo4_module_members:
-            globals()[obj] = getattr(expr4, obj)
-
-    elif mode is common.Mode.pyomo5_trees:
-        from pyomo.core.expr import expr_pyomo5 as expr5
-        for obj in _common_module_members:
-            globals()[obj] = getattr(expr5, obj)
-        for obj in _coopr3_module_members:
-            if obj in globals():
-                del globals()[obj]
-        for obj in _pyomo4_module_members:
-            if obj in globals():
-                del globals()[obj]
-        for obj in _pyomo5_module_members:
-            globals()[obj] = getattr(expr5, obj)
-
-    else:
-        raise RuntimeError("Unrecognized expression tree mode: %s\n"
-                           "Must be one of [%s, %s]"
-                           % (mode,
-                              common.Mode.coopr3_trees,
-                              common.Mode.pyomo4_trees,
-                              common.Mode.pyomo5_trees))
-    #
-    # Propagate the generate_expression functions to the numvalue namespace
-    numvalue.generate_expression = generate_expression
-    numvalue.generate_relational_expression = generate_relational_expression
-    #
-    common.mode = mode
-
-set_expression_tree_format(common.mode)
+#
+# Common intrinsic functions
+#
+from pyomo.core.expr import expr_common as common
 
 def fabs(arg):
     # FIXME: We need to switch this over from generate_expression to

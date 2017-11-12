@@ -10,6 +10,44 @@
 
 from __future__ import division
 
+__public__ = ['linear_expression', 'nonlinear_expression']
+__all__ = (
+'linear_expression',
+'nonlinear_expression',
+'clone_expression',
+'identify_variables',
+'generate_expression',
+'generate_intrinsic_function_expression',
+'generate_relational_expression',
+'chainedInequalityErrorMessage',
+'_ExpressionBase',
+'_EqualityExpression',
+'_InequalityExpression',
+'_ProductExpression',
+'_SumExpression',
+'_AbsExpression',
+'_PowExpression',
+'_ExternalFunctionExpression',
+'_GetItemExpression',
+'Expr_if',
+'_LinearExpression',
+'_StaticLinearExpression',
+'evaluate_expression',
+'_ReciprocalExpression',
+'_NegationExpression',
+'_ViewSumExpression',
+'_UnaryFunctionExpression',
+'compress_expression',
+'_NPV_NegationExpression',
+'_NPV_ExternalFunctionExpression',
+'_NPV_PowExpression',
+'_NPV_ProductExpression',
+'_NPV_ReciprocalExpression',
+'_NPV_SumExpression',
+'_NPV_UnaryFunctionExpression',
+'_NPV_AbsExpression',
+)
+
 import math
 import logging
 import sys
@@ -72,6 +110,10 @@ def initialize_expression_data():
         global TemplateExpressionError
         from pyomo.core.base.param import _ParamData, SimpleParam
         from pyomo.core.base.template_expr import TemplateExpressionError
+
+
+def compress_expression(expr):
+    return expr
 
 
 class clone_counter_context(object):
