@@ -24,41 +24,21 @@ from pyomo.core.expr.expr_common import \
 logger = logging.getLogger('pyomo.core')
 
 def generate_expression(etype, _self, _other):
-    raise RuntimeError("incomplete import of Pyomo expression system")
+    raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
 def generate_sum_expression(etype, _self, _other):
-    raise RuntimeError("incomplete import of Pyomo expression system")
+    raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
 def generate_mul_expression(etype, _self, _other):
-    raise RuntimeError("incomplete import of Pyomo expression system")
+    raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
 def generate_other_expression(etype, _self, _other):
-    raise RuntimeError("incomplete import of Pyomo expression system")
+    raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
 def generate_relational_expression(etype, lhs, rhs):
-    raise RuntimeError("incomplete import of Pyomo expression system")
+    raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
 
 ##------------------------------------------------------------------------
 ##
 ## Standard types of expressions
 ##
 ##------------------------------------------------------------------------
-
-def _old_value(obj):
-    """
-    A utility function that returns the value of a Pyomo object or expression.
-
-    If the argument is None, a numeric value or a string, then this
-    function simply returns the argument.  Otherwise, if the argument is
-    a NumericValue then the __call__ method is executed.
-    """
-    if obj is None:
-        return None
-    if type(obj) in (bool,int,long,float,str):
-        return obj
-    if not isinstance(obj, NumericValue):
-        raise ValueError("Object %s is not a NumericValue object" % (obj,))
-    tmp = obj()
-    if tmp is None:
-        raise ValueError("No value for uninitialized NumericValue object %s"
-                         % (obj.name,))
-    return tmp
 
 # It is *significantly* faster to build the list of types we want to
 # test against as a "static" set, and not to regenerate it locally for
