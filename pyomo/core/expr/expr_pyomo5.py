@@ -62,11 +62,6 @@ from itertools import islice
 from six import StringIO, next, string_types, itervalues
 from six.moves import xrange, builtins
 from weakref import ref
-try:
-    from sys import getrefcount
-    _getrefcount_available = False
-except ImportError:                     #pragma: no cover
-    _getrefcount_available = False
 
 logger = logging.getLogger('pyomo.core')
 
@@ -129,6 +124,7 @@ chainedInequalityErrorMessage \
 _ParamData = None
 SimpleParam = None
 TemplateExpressionError = None
+generate_relational_expression_chainedInequality = None
 def initialize_expression_data():
     global pyomo5_variable_types
     if pyomo5_variable_types is None:
@@ -142,6 +138,12 @@ def initialize_expression_data():
         global TemplateExpressionError
         from pyomo.core.base.param import _ParamData, SimpleParam
         from pyomo.core.base.template_expr import TemplateExpressionError
+    # [functionality] chainedInequality allows us to generate symbolic
+    # expressions of the type "a < b < c".  This provides a buffer to hold
+    # the first inequality so the second inequality can access it later.
+    global generate_relational_expression_chainedInequality
+    generate_relational_expression_chainedInequality = None
+
 
 
 def compress_expression(expr):
@@ -747,13 +749,10 @@ class _ExpressionBase(NumericValue):
 
     def __init__(self, args):
         self._args = args
-        if _getrefcount_available:
-            self._is_owned = UNREFERENCED_EXPR_COUNT
-        else:
-            self._is_owned = False
-            for arg in args:
-                if arg.__class__ in pyomo5_expression_types:
-                    arg._is_owned = True
+        self._is_owned = False
+        for arg in args:
+            if arg.__class__ in pyomo5_expression_types:
+                arg._is_owned = True
 
     def arg(self, index):
         if index < 0 or index >= self.nargs():
@@ -1000,13 +999,10 @@ class _ExternalFunctionExpression(_ExpressionBase):
         """Construct a call to an external function"""
         self._args = args
         self._fcn = fcn
-        if _getrefcount_available:
-            self._is_owned = UNREFERENCED_EXPR_COUNT
-        else:
-            self._is_owned = False
-            for arg in args:
-                if arg.__class__ in pyomo5_expression_types:
-                    arg._is_owned = True
+        self._is_owned = False
+        for arg in args:
+            if arg.__class__ in pyomo5_expression_types:
+                arg._is_owned = True
 
     def nargs(self):
         return len(self._args)
@@ -1146,12 +1142,13 @@ class _InequalityExpression(_LinearOperatorExpression):
         return result
 
     def __nonzero__(self):
-        if generate_relational_expression.chainedInequality is not None:
+        global generate_relational_expression_chainedInequality
+        if generate_relational_expression_chainedInequality is not None:
             raise TypeError(chainedInequalityErrorMessage())
         if not self.is_constant() and len(self._args) == 2:
             generate_relational_expression.call_info \
                 = traceback.extract_stack(limit=2)[-2]
-            generate_relational_expression.chainedInequality = self
+            generate_relational_expression_chainedInequality = self
             #return bool(self())                - This is needed to apply simple evaluation of inequalities
             return True
 
@@ -1201,7 +1198,7 @@ class _EqualityExpression(_LinearOperatorExpression):
         return len(self._args)
 
     def __nonzero__(self):
-        if generate_relational_expression.chainedInequality is not None:
+        if generate_relational_expression_chainedInequality is not None:
             raise TypeError(chainedInequalityErrorMessage())
         return bool(self())
 
@@ -1440,13 +1437,10 @@ class _GetItemExpression(_ExpressionBase):
         """Construct an expression with an operation and a set of arguments"""
         self._args = args
         self._base = base
-        if _getrefcount_available:
-            self._is_owned = UNREFERENCED_EXPR_COUNT
-        else:
-            self._is_owned = False
-            for arg in args:
-                if arg.__class__ in pyomo5_expression_types:
-                    arg._is_owned = True
+        self._is_owned = False
+        for arg in args:
+            if arg.__class__ in pyomo5_expression_types:
+                arg._is_owned = True
 
     def nargs(self):
         return len(self._args)
@@ -1510,26 +1504,24 @@ class Expr_if(_ExpressionBase):
     #           on a number of occasions. It is important that
     #           one uses __call__ for value() and NOT bool().
 
-    def __init__(self, IF=None, THEN=None, ELSE=None):
+    def __init__(self, IF_=None, THEN_=None, ELSE_=None):
         """Constructor"""
-        if type(IF) is tuple and THEN==None and ELSE==None:
-            IF, THEN, ELSE = IF
-        self._args = (IF, THEN, ELSE)
-        self._if = IF
-        self._then = THEN
-        self._else = ELSE
+        
+        if type(IF_) is tuple and THEN_==None and ELSE_==None:
+            IF_, THEN_, ELSE_ = IF_
+        self._args = (IF_, THEN_, ELSE_)
+        self._if = IF_
+        self._then = THEN_
+        self._else = ELSE_
         if self._if.__class__ in native_types:
             self._if = as_numeric(self._if)
-        if _getrefcount_available:
-            self._is_owned = UNREFERENCED_EXPR_IF_COUNT
-        else:
-            self._is_owned = False
-            if IF.__class__ in pyomo5_expression_types:
-                IF._is_owned = True
-            if THEN.__class__ in pyomo5_expression_types:
-                THEN._is_owned = True
-            if ELSE.__class__ in pyomo5_expression_types:
-                ELSE._is_owned = True
+        self._is_owned = False
+        if IF_.__class__ in pyomo5_expression_types:
+            IF_._is_owned = True
+        if THEN_.__class__ in pyomo5_expression_types:
+            THEN_._is_owned = True
+        if ELSE_.__class__ in pyomo5_expression_types:
+            ELSE_._is_owned = True
 
     def nargs(self):
         return 3
@@ -1607,12 +1599,9 @@ class _UnaryFunctionExpression(_ExpressionBase):
         self._args = args
         self._name = name
         self._fcn = fcn
-        if _getrefcount_available:
-            self._is_owned = UNREFERENCED_INTRINSIC_EXPR_COUNT
-        else:
-            self._is_owned = False
-            if args[0].__class__ in pyomo5_expression_types:
-                args[0]._is_owned = True
+        self._is_owned = False
+        if args[0].__class__ in pyomo5_expression_types:
+            args[0]._is_owned = True
 
     def nargs(self):
         return 1
@@ -1682,10 +1671,7 @@ class _LinearExpression(_ExpressionBase):
         self.linear_coefs = []
         self.linear_vars = []
         self._args = tuple()
-        if _getrefcount_available:
-            self._is_owned = UNREFERENCED_EXPR_COUNT
-        else:
-            self._is_owned = False
+        self._is_owned = False
 
     def nargs(self):
         return 0
@@ -1762,7 +1748,7 @@ class _LinearExpression(_ExpressionBase):
                 if not v is None:
                     raise ValueError("Expected a single linear term (2)")
                 return C*C_,C*c_,v_
-            return C_C*C,C_*c,v
+            return C_*C,C_*c,v
         #
         # A potentially variable _SumExpression class has been supplanted by
         # _ViewSumExpression
@@ -1894,7 +1880,7 @@ class _LinearExpression(_ExpressionBase):
         elif etype == _div:
             if _other.__class__ in native_numeric_types:
                 divisor = _other
-            elif _self._potentially_variable():
+            elif self._potentially_variable():
                 raise ValueError("Unallowed operation on linear expression: division with a variable RHS")
             else:
                 divisor = _other
@@ -1903,7 +1889,7 @@ class _LinearExpression(_ExpressionBase):
                 self.linear_coefs[i] = c/divisor
 
         elif etype == -_div:
-            if _self._potentially_variable():
+            if self._potentially_variable():
                 raise ValueError("Unallowed operation on linear expression: division with a variable RHS")
             C,c,v = _LinearExpression._decompose_term(_other)
             self.constant = C/self.constant
@@ -1973,7 +1959,7 @@ def _decompose_terms(expr, multiplier=1):
         if expr.constant.__class__ in native_numeric_types and not isclose(expr.constant,0):
             yield multiplier*expr.constant
         if len(expr.linear_coefs) > 0:
-            for c,v in izip(expr.linear_coefs, expr.linear_vars):
+            for c,v in zip(expr.linear_coefs, expr.linear_vars):
                 yield (multiplier*c,v)
     else:
         raise ValueError("Unexpected nonlinear term")
@@ -2278,7 +2264,7 @@ def generate_other_expression(etype, _self, _other):
                 return _NPV_AbsExpression(_self)
 
         else: #pragma:nocover
-            raise DeveloperError(
+            raise RuntimeError(
                 "Unexpected unary operator id (%s)" % ( etype, ))
 
     if not (_other.__class__ in native_types or _other.is_expression()):
@@ -2368,7 +2354,7 @@ def generate_expression(etype, _self, _other):  #pragma: no cover
                 return _NPV_AbsExpression(_self)
 
         else: #pragma:nocover
-            raise DeveloperError(
+            raise RuntimeError(
                 "Unexpected unary operator id (%s)" % ( etype, ))
 
     if not (_other.__class__ in native_types or _other.is_expression()):
@@ -2578,8 +2564,9 @@ def generate_relational_expression(etype, lhs, rhs):
     elif rhs.is_relational():
         rhs_is_relational = True
 
-    if generate_relational_expression.chainedInequality is not None:
-        prevExpr = generate_relational_expression.chainedInequality
+    global generate_relational_expression_chainedInequality
+    if generate_relational_expression_chainedInequality is not None:
+        prevExpr = generate_relational_expression_chainedInequality
         match = []
         # This is tricky because the expression could have been posed
         # with >= operators, so we must figure out which arguments
@@ -2610,7 +2597,7 @@ def generate_relational_expression(etype, lhs, rhs):
         elif len(match) == 2:
             # Special case: implicit equality constraint posed as a <= b <= a
             if prevExpr._strict[0] or etype == _lt:
-                generate_relational_expression.chainedInequality = None
+                generate_relational_expression_chainedInequality = None
                 buf = StringIO()
                 prevExpr.to_string(buf)
                 raise TypeError("Cannot create a compound inequality with "
@@ -2626,7 +2613,7 @@ def generate_relational_expression(etype, lhs, rhs):
             etype = _eq
         else:
             raise TypeError(chainedInequalityErrorMessage())
-        generate_relational_expression.chainedInequality = None
+        generate_relational_expression_chainedInequality = None
 
     if etype == _eq:
         if lhs_is_relational or rhs_is_relational:
@@ -2685,11 +2672,6 @@ def generate_relational_expression(etype, lhs, rhs):
         else:
             ans = _InequalityExpression((lhs, rhs), strict, cloned_from)
             return ans
-
-# [functionality] chainedInequality allows us to generate symbolic
-# expressions of the type "a < b < c".  This provides a buffer to hold
-# the first inequality so the second inequality can access it later.
-generate_relational_expression.chainedInequality = None
 
 
 def generate_intrinsic_function_expression(arg, name, fcn):
