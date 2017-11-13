@@ -42,9 +42,9 @@ else:
 # Initialize numvalue functions
 from pyomo.core.expr import numvalue
 numvalue.generate_expression = generate_expression
-numvalue.generate_sum_expression = generate_expression
-numvalue.generate_mul_expression = generate_expression
-numvalue.generate_other_expression = generate_expression
+numvalue.generate_sum_expression = generate_sum_expression
+numvalue.generate_mul_expression = generate_mul_expression
+numvalue.generate_other_expression = generate_other_expression
 numvalue.generate_relational_expression = generate_relational_expression
 
 
