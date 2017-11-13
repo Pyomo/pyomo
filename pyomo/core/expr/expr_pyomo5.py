@@ -986,16 +986,6 @@ class _NegationExpression(_ExpressionBase):
         return -result[0]
 
 
-class _Constant_NegationExpression(_NegationExpression):
-    __slots__ = ()
-
-    def is_constant(self):
-        return True
-
-    def _potentially_variable(self):
-        return False
-
-
 class _NPV_NegationExpression(_NegationExpression):
     __slots__ = ()
 
@@ -1045,16 +1035,6 @@ class _ExternalFunctionExpression(_ExpressionBase):
 
     def _inline_operator(self):
         return ', '
-
-
-class _Constant_ExternalFunctionExpression(_ExternalFunctionExpression):
-    __slots__ = ()
-
-    def is_constant(self):
-        return True
-
-    def _potentially_variable(self):
-        return False
 
 
 class _NPV_ExternalFunctionExpression(_ExternalFunctionExpression):
@@ -1112,16 +1092,6 @@ class _PowExpression(_ExpressionBase):
 
     def _inline_operator(self):
         return '**'
-
-
-class _Constant_PowExpression(_PowExpression):
-    __slots__ = ()
-
-    def is_constant(self):
-        return True
-
-    def _potentially_variable(self):
-        return False
 
 
 class _NPV_PowExpression(_PowExpression):
@@ -1290,16 +1260,6 @@ class _ProductExpression(_ExpressionBase):
         return _l * _r
 
 
-class _Constant_ProductExpression(_ProductExpression):
-    __slots__ = ()
-
-    def is_constant(self):
-        return True
-
-    def _potentially_variable(self):
-        return False
-
-
 class _NPV_ProductExpression(_ProductExpression):
     __slots__ = ()
 
@@ -1337,16 +1297,6 @@ class _ReciprocalExpression(_ExpressionBase):
         return 1 / result[0]
 
 
-class _Constant_ReciprocalExpression(_ReciprocalExpression):
-    __slots__ = ()
-
-    def is_constant(self):
-        return True
-
-    def _potentially_variable(self):
-        return False
-
-
 class _NPV_ReciprocalExpression(_ReciprocalExpression):
     __slots__ = ()
 
@@ -1379,16 +1329,6 @@ class _SumExpression(_LinearOperatorExpression):
 
     def getname(self, *args, **kwds):
         return 'sum'
-
-
-class _Constant_SumExpression(_SumExpression):
-    __slots__ = ()
-
-    def is_constant(self):
-        return True
-
-    def _potentially_variable(self):
-        return False
 
 
 class _NPV_SumExpression(_SumExpression):
@@ -1702,16 +1642,6 @@ class _UnaryFunctionExpression(_ExpressionBase):
         return self._fcn(result[0])
 
 
-class _Constant_UnaryFunctionExpression(_UnaryFunctionExpression):
-    __slots__ = ()
-
-    def is_constant(self):
-        return True
-
-    def _potentially_variable(self):
-        return False
-
-
 class _NPV_UnaryFunctionExpression(_UnaryFunctionExpression):
     __slots__ = ()
 
@@ -1731,16 +1661,6 @@ class _AbsExpression(_UnaryFunctionExpression):
 
     def _clone(self, args, memo):
         return self.__class__(args)
-
-
-class _Constant_AbsExpression(_AbsExpression):
-    __slots__ = ()
-
-    def is_constant(self):
-        return True
-
-    def _potentially_variable(self):
-        return False
 
 
 class _NPV_AbsExpression(_AbsExpression):
@@ -2149,18 +2069,14 @@ def generate_sum_expression(etype, _self, _other):
                 return _self + _other
             elif _other == 0:   #isclose(_other, 0):
                 return _self
-            if _self.is_constant():
-                return _Constant_SumExpression((_self, _other))
-            elif _self._potentially_variable():
+            if _self._potentially_variable():
                 #return _LinearViewSumExpression((_other, _self))
                 return _ViewSumExpression([_other, _self])
             return _NPV_SumExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
             if _self == 0:      #isclose(_self, 0):
                 return _other
-            if _other.is_constant():
-                return _Constant_SumExpression((_self, _other))
-            elif _other._potentially_variable():
+            if _other._potentially_variable():
                 #return _LinearViewSumExpression((_self, _other))
                 return _ViewSumExpression([_self, _other])
             return _NPV_SumExpression((_self, _other))
@@ -2170,11 +2086,8 @@ def generate_sum_expression(etype, _self, _other):
         elif _self._potentially_variable():
             #return _LinearViewSumExpression((_other, _self))
             return _ViewSumExpression([_other, _self])
-        elif not _other.is_constant():
+        else:
             return _NPV_SumExpression((_self, _other))
-        elif not _self.is_constant():
-            return _NPV_SumExpression((_self, _other))
-        return _Constant_SumExpression((_self, _other))
 
     elif etype == _sub:
         #
@@ -2191,22 +2104,16 @@ def generate_sum_expression(etype, _self, _other):
                 return _self - _other
             elif isclose(_other, 0):
                 return _self
-            if _self.is_constant():
-                return _Constant_SumExpression((-_other, _self))
-            elif _self._potentially_variable():
+            if _self._potentially_variable():
                 #return _LinearViewSumExpression((_self, -_other))
                 return _ViewSumExpression([_self, -_other])
             return _NPV_SumExpression((-_other, _self))
         elif _self.__class__ in native_numeric_types:
             if isclose(_self, 0):
-                if _other.is_constant():
-                    return _Constant_NegationExpression((_other,))
-                elif _other._potentially_variable():
+                if _other._potentially_variable():
                     return _NegationExpression((_other,))
                 return _NPV_NegationExpression((_other,))
-            if _other.is_constant():    
-                return _Constant_SumExpression((_self, _Constant_NegationExpression((_other,))))
-            elif _other._potentially_variable():    
+            if _other._potentially_variable():    
                 #return _LinearViewSumExpression((_self, _NegationExpression((_other,))))
                 return _ViewSumExpression([_self, _NegationExpression((_other,))])
             return _NPV_SumExpression((_self, _NPV_NegationExpression((_other,))))
@@ -2216,12 +2123,8 @@ def generate_sum_expression(etype, _self, _other):
         elif _self._potentially_variable():
             #return _LinearViewSumExpression((_self, _NPV_NegationExpression((_other,))))
             return _ViewSumExpression([_self, _NPV_NegationExpression((_other,))])
-        elif not _other.is_constant():    
-            return _NPV_SumExpression((_self, _NPV_NegationExpression((_other,))))
-        elif not _self.is_constant():    
-            return _NPV_SumExpression((_self, _Constant_NegationExpression((_other,))))
         else:
-            return _Constant_SumExpression((_self, _Constant_NegationExpression((_other,))))
+            return _NPV_SumExpression((_self, _NPV_NegationExpression((_other,))))
 
     raise RuntimeError("Unknown expression type '%s'" % etype)
         
@@ -2275,9 +2178,7 @@ def generate_mul_expression(etype, _self, _other):
                 return 0
             elif _other == 1:
                 return _self
-            if _self.is_constant():
-                return _Constant_ProductExpression((_self, _other))
-            elif _self._potentially_variable():
+            if _self._potentially_variable():
                 return _ProductExpression((_other, _self))
             return _NPV_ProductExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
@@ -2285,20 +2186,15 @@ def generate_mul_expression(etype, _self, _other):
                 return 0
             elif _self == 1:
                 return _other
-            if _other.is_constant():
-                return _Constant_ProductExpression((_self, _other))
-            elif _other._potentially_variable():
+            if _other._potentially_variable():
                 return _ProductExpression((_self, _other))
             return _NPV_ProductExpression((_self, _other))
         elif _other._potentially_variable():
             return _ProductExpression((_self, _other))
         elif _self._potentially_variable():
             return _ProductExpression((_other, _self))
-        elif not _other.is_constant():
+        else:
             return _NPV_ProductExpression((_self, _other))
-        elif not _self.is_constant():
-            return _NPV_ProductExpression((_self, _other))
-        return _Constant_ProductExpression((_self, _other))
 
     elif etype == _div:
         #
@@ -2311,34 +2207,25 @@ def generate_mul_expression(etype, _self, _other):
                 raise ZeroDivisionError()
             elif _self.__class__ in native_numeric_types:
                 return _self / _other
-            elif _self.is_constant():
-                return _Constant_ProductExpression((1/_other, _self))
-            elif _self._potentially_variable():
+            if _self._potentially_variable():
                 return _ProductExpression((1/_other, _self))
             return _NPV_ProductExpression((1/_other, _self))
         elif _self.__class__ in native_numeric_types:
             if isclose(_self, 0):
                 return 0
             elif _self == 1:
-                if _other.is_constant():
-                    return _Constant_ReciprocalExpression((_other,))
-                elif _other._potentially_variable():
+                if _other._potentially_variable():
                     return _ReciprocalExpression((_other,))
                 return _NPV_ReciprocalExpression((_other,))
-            elif _other.is_constant():
-                return _Constant_ProductExpression((_self, _Constant_ReciprocalExpression((_other,))))
-            if _other._potentially_variable():
+            elif _other._potentially_variable():
                 return _ProductExpression((_self, _ReciprocalExpression((_other,))))
             return _NPV_ProductExpression((_self, _ReciprocalExpression((_other,))))
         elif _other._potentially_variable():
             return _ProductExpression((_self, _ReciprocalExpression((_other,))))
         elif _self._potentially_variable():
             return _ProductExpression((_NPV_ReciprocalExpression((_other,)), _self))
-        elif not _other.is_constant():
+        else:
             return _NPV_ProductExpression((_self, _NPV_ReciprocalExpression((_other,))))
-        elif not _self.is_constant():
-            return _NPV_ProductExpression((_self, _Constant_ReciprocalExpression((_other,))))
-        return _Constant_ProductExpression((_self, _Constant_ReciprocalExpression((_other,))))
 
     raise RuntimeError("Unknown expression type '%s'" % etype)
 
@@ -2375,8 +2262,6 @@ def generate_other_expression(etype, _self, _other):
         if etype == _neg:
             if _self.__class__ in native_numeric_types:
                 return - _self
-            elif _self.is_constant():
-                return _Constant_NegationExpression((_self,))
             elif _self._potentially_variable():
                 return _NegationExpression((_self,))
             else:
@@ -2387,8 +2272,6 @@ def generate_other_expression(etype, _self, _other):
         elif etype == _abs:
             if _self.__class__ in native_numeric_types:
                 return abs(_self)
-            elif _self.is_constant():
-                return _Constant_AbsExpression(_self)
             elif _self._potentially_variable():
                 return _AbsExpression(_self)
             else:
@@ -2419,28 +2302,26 @@ def generate_other_expression(etype, _self, _other):
                 return 1
             elif _self.__class__ in native_numeric_types:
                 return _self ** _other
-            elif _self.is_constant():
-                return _Constant_PowExpression((_self, _other))
             elif _self._potentially_variable():
                 return _PowExpression((_self, _other))
             return _NPV_PowExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
-            if _other.is_constant():
-                return _Constant_PowExpression((_self, _other))
-            elif _other._potentially_variable():
+            if _other._potentially_variable():
                 return _PowExpression((_self, _other))
             return _NPV_PowExpression((_self, _other))
         elif _self._potentially_variable() or _other._potentially_variable():
             return _PowExpression((_self, _other))
-        elif not _self.is_constant() or not _other.is_constant():
+        else:
             return _NPV_PowExpression((_self, _other))
-        return _Constant_PowExpression((_self, _other))
 
     raise RuntimeError("Unknown expression type '%s'" % etype)
 
 
 #@profile
-def generate_expression(etype, _self, _other):
+#
+# NOTE: This function is not currently used
+#
+def generate_expression(etype, _self, _other):  #pragma: no cover
 
     if etype > _inplace:
         etype -= _inplace
@@ -2471,8 +2352,6 @@ def generate_expression(etype, _self, _other):
         if etype == _neg:
             if _self.__class__ in native_numeric_types:
                 return - _self
-            elif _self.is_constant():
-                return _Constant_NegationExpression((_self,))
             elif _self._potentially_variable():
                 return _NegationExpression((_self,))
             else:
@@ -2483,8 +2362,6 @@ def generate_expression(etype, _self, _other):
         elif etype == _abs:
             if _self.__class__ in native_numeric_types:
                 return abs(_self)
-            elif _self.is_constant():
-                return _Constant_AbsExpression(_self)
             elif _self._potentially_variable():
                 return _AbsExpression(_self)
             else:
@@ -2518,8 +2395,6 @@ def generate_expression(etype, _self, _other):
                 return 0
             elif _other == 1:
                 return _self
-            if _self.is_constant():
-                return _Constant_ProductExpression((_self, _other))
             elif _self._potentially_variable():
                 return _ProductExpression((_other, _self))
             return _NPV_ProductExpression((_self, _other))
@@ -2528,8 +2403,6 @@ def generate_expression(etype, _self, _other):
                 return 0
             elif _self == 1:
                 return _other
-            if _other.is_constant():
-                return _Constant_ProductExpression((_self, _other))
             elif _other._potentially_variable():
                 return _ProductExpression((_self, _other))
             return _NPV_ProductExpression((_self, _other))
@@ -2537,11 +2410,8 @@ def generate_expression(etype, _self, _other):
             return _ProductExpression((_self, _other))
         elif _self._potentially_variable():
             return _ProductExpression((_other, _self))
-        elif not _other.is_constant():
+        else:
             return _NPV_ProductExpression((_self, _other))
-        elif not _self.is_constant():
-            return _NPV_ProductExpression((_self, _other))
-        return _Constant_ProductExpression((_self, _other))
 
     elif etype == _add:
         #
@@ -2560,8 +2430,6 @@ def generate_expression(etype, _self, _other):
                 return _self + _other
             elif _other == 0:   #isclose(_other, 0):
                 return _self
-            if _self.is_constant():
-                return _Constant_SumExpression((_self, _other))
             elif _self._potentially_variable():
                 #return _LinearViewSumExpression((_other, _self))
                 return _ViewSumExpression([_other, _self])
@@ -2569,8 +2437,6 @@ def generate_expression(etype, _self, _other):
         elif _self.__class__ in native_numeric_types:
             if _self == 0:      #isclose(_self, 0):
                 return _other
-            if _other.is_constant():
-                return _Constant_SumExpression((_self, _other))
             elif _other._potentially_variable():
                 #return _LinearViewSumExpression((_self, _other))
                 return _ViewSumExpression([_self, _other])
@@ -2581,11 +2447,8 @@ def generate_expression(etype, _self, _other):
         elif _self._potentially_variable():
             #return _LinearViewSumExpression((_other, _self))
             return _ViewSumExpression([_other, _self])
-        elif not _other.is_constant():
+        else:
             return _NPV_SumExpression((_self, _other))
-        elif not _self.is_constant():
-            return _NPV_SumExpression((_self, _other))
-        return _Constant_SumExpression((_self, _other))
 
     elif etype == _sub:
         #
@@ -2602,21 +2465,15 @@ def generate_expression(etype, _self, _other):
                 return _self - _other
             elif isclose(_other, 0):
                 return _self
-            if _self.is_constant():
-                return _Constant_SumExpression((-_other, _self))
             elif _self._potentially_variable():
                 #return _LinearViewSumExpression((_self, -_other))
                 return _ViewSumExpression([_self, -_other])
             return _NPV_SumExpression((-_other, _self))
         elif _self.__class__ in native_numeric_types:
             if isclose(_self, 0):
-                if _other.is_constant():
-                    return _Constant_NegationExpression((_other,))
-                elif _other._potentially_variable():
+                if _other._potentially_variable():
                     return _NegationExpression((_other,))
                 return _NPV_NegationExpression((_other,))
-            if _other.is_constant():    
-                return _Constant_SumExpression((_self, _Constant_NegationExpression((_other,))))
             elif _other._potentially_variable():    
                 #return _LinearViewSumExpression((_self, _NegationExpression((_other,))))
                 return _ViewSumExpression([_self, _NegationExpression((_other,))])
@@ -2627,12 +2484,8 @@ def generate_expression(etype, _self, _other):
         elif _self._potentially_variable():
             #return _LinearViewSumExpression((_self, _NPV_NegationExpression((_other,))))
             return _ViewSumExpression([_self, _NPV_NegationExpression((_other,))])
-        elif not _other.is_constant():    
-            return _NPV_SumExpression((_self, _NPV_NegationExpression((_other,))))
-        elif not _self.is_constant():    
-            return _NPV_SumExpression((_self, _Constant_NegationExpression((_other,))))
         else:
-            return _Constant_SumExpression((_self, _Constant_NegationExpression((_other,))))
+            return _NPV_SumExpression((_self, _NPV_NegationExpression((_other,))))
         
     elif etype == _div:
         #
@@ -2645,8 +2498,6 @@ def generate_expression(etype, _self, _other):
                 raise ZeroDivisionError()
             elif _self.__class__ in native_numeric_types:
                 return _self / _other
-            elif _self.is_constant():
-                return _Constant_ProductExpression((1/_other, _self))
             elif _self._potentially_variable():
                 return _ProductExpression((1/_other, _self))
             return _NPV_ProductExpression((1/_other, _self))
@@ -2654,25 +2505,18 @@ def generate_expression(etype, _self, _other):
             if isclose(_self, 0):
                 return 0
             elif _self == 1:
-                if _other.is_constant():
-                    return _Constant_ReciprocalExpression((_other,))
-                elif _other._potentially_variable():
+                if _other._potentially_variable():
                     return _ReciprocalExpression((_other,))
                 return _NPV_ReciprocalExpression((_other,))
-            elif _other.is_constant():
-                return _Constant_ProductExpression((_self, _Constant_ReciprocalExpression((_other,))))
-            if _other._potentially_variable():
+            elif _other._potentially_variable():
                 return _ProductExpression((_self, _ReciprocalExpression((_other,))))
             return _NPV_ProductExpression((_self, _ReciprocalExpression((_other,))))
         elif _other._potentially_variable():
             return _ProductExpression((_self, _ReciprocalExpression((_other,))))
         elif _self._potentially_variable():
             return _ProductExpression((_NPV_ReciprocalExpression((_other,)), _self))
-        elif not _other.is_constant():
+        else:
             return _NPV_ProductExpression((_self, _NPV_ReciprocalExpression((_other,))))
-        elif not _self.is_constant():
-            return _NPV_ProductExpression((_self, _Constant_ReciprocalExpression((_other,))))
-        return _Constant_ProductExpression((_self, _Constant_ReciprocalExpression((_other,))))
 
     elif etype == _pow:
         if _other.__class__ in native_numeric_types:
@@ -2682,22 +2526,17 @@ def generate_expression(etype, _self, _other):
                 return 1
             elif _self.__class__ in native_numeric_types:
                 return _self ** _other
-            elif _self.is_constant():
-                return _Constant_PowExpression((_self, _other))
             elif _self._potentially_variable():
                 return _PowExpression((_self, _other))
             return _NPV_PowExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
-            if _other.is_constant():
-                return _Constant_PowExpression((_self, _other))
-            elif _other._potentially_variable():
+            if _other._potentially_variable():
                 return _PowExpression((_self, _other))
             return _NPV_PowExpression((_self, _other))
         elif _self._potentially_variable() or _other._potentially_variable():
             return _PowExpression((_self, _other))
-        elif not _self.is_constant() or not _other.is_constant():
+        else:
             return _NPV_PowExpression((_self, _other))
-        return _Constant_PowExpression((_self, _other))
 
     raise RuntimeError("Unknown expression type '%s'" % etype)
 
@@ -2854,59 +2693,50 @@ generate_relational_expression.chainedInequality = None
 
 
 def generate_intrinsic_function_expression(arg, name, fcn):
+    if not (arg.__class__ in native_types or arg.is_expression()):
+        arg = _process_arg(arg)
+
     if arg.__class__ in native_types:
         return fcn(arg)
-
-    if not (arg.__class__ in native_types or arg.is_expression()):
-        _process_arg(arg)
-    if arg._potentially_variable():
+    elif arg._potentially_variable():
         return _UnaryFunctionExpression(arg, name, fcn)
-    return _NPV_UnaryFunctionExpression(arg, name, fcn)
+    else:
+        return _NPV_UnaryFunctionExpression(arg, name, fcn)
 
 
 pyomo5_expression_types = set([
         _ExpressionBase,
         _NegationExpression,
-        _Constant_NegationExpression,
         _NPV_NegationExpression,
         _ExternalFunctionExpression,
-        _Constant_ExternalFunctionExpression,
         _NPV_ExternalFunctionExpression,
         _PowExpression,
-        _Constant_PowExpression,
         _NPV_PowExpression,
         _LinearOperatorExpression,
         _InequalityExpression,
         _EqualityExpression,
         _ProductExpression,
-        _Constant_ProductExpression,
         _NPV_ProductExpression,
         _ReciprocalExpression,
-        _Constant_ReciprocalExpression,
         _NPV_ReciprocalExpression,
         _SumExpression,
-        _Constant_SumExpression,
         _NPV_SumExpression,
         _ViewSumExpression,
         _GetItemExpression,
         Expr_if,
         _UnaryFunctionExpression,
-        _Constant_UnaryFunctionExpression,
         _NPV_UnaryFunctionExpression,
         _AbsExpression,
-        _Constant_AbsExpression,
         _NPV_AbsExpression,
         _LinearExpression,
         _StaticLinearExpression
         ])
 pyomo5_product_types = set([
         _ProductExpression,
-        _Constant_ProductExpression,
         _NPV_ProductExpression
         ])
 pyomo5_reciprocal_types = set([
         _ReciprocalExpression,
-        _Constant_ReciprocalExpression,
         _NPV_ReciprocalExpression
         ])
 pyomo5_variable_types = None
