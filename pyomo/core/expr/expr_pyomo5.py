@@ -19,6 +19,9 @@ __all__ = (
 'evaluate_expression',
 'identify_variables',
 'generate_expression',
+'generate_sum_expression',
+'generate_mul_expression',
+'generate_other_expression',
 'generate_intrinsic_function_expression',
 'generate_relational_expression',
 'chainedInequalityErrorMessage',
@@ -247,6 +250,9 @@ class SimpleExpressionVisitor(SimpleVisitor):
 
 class ValueExpressionVisitor(ValueVisitor):
 
+    #
+    # NOTE: This is not currently being used
+    #
     def dfs_postorder_deque(self, node):
         """
         Depth-first search - postorder
