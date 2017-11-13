@@ -47,7 +47,8 @@ class ZeroSumPropagator(IsomorphicTransformation):
             repn = generate_canonical_repn(constr.body)
             if (constr.has_ub() and (
                 (repn.constant is None and value(constr.upper) == 0) or
-                    repn.constant == value(constr.upper))):
+                repn.constant == value(constr.upper)
+                    )):
                 # term1 + term2 + term3 + ... <= 0
                 # all var terms need to be non-negative
                 if all(
@@ -66,8 +67,9 @@ class ZeroSumPropagator(IsomorphicTransformation):
                             repn.variables[i].fix(0)
                     continue
             if (constr.has_lb() and (
-                (repn.constant is None and value(constr.lower) == 0)) or
-                    (repn.constant == value(constr.lower))):
+                (repn.constant is None and value(constr.lower) == 0) or
+                repn.constant == value(constr.lower)
+                    )):
                 # term1 + term2 + term3 + ... >= 0
                 # all var terms need to be non-positive
                 if all(
