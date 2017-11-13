@@ -196,7 +196,7 @@ def perform_tests(package, coverage=False, omit=None, cat='nightly'):
     #
     if not coverage:
         return
-    os.chdir(os.path.join( os.environ['WORKSPACE'],'src' ))
+    os.chdir(os.path.join( os.environ['WORKSPACE'],'src','pyomo' ))
     libdir = os.path.join( os.environ['WORKSPACE'],'python','lib','*' )
     libdir = libdir + "," + os.path.join( libdir,'site-packages','*' )
     if omit is not None:

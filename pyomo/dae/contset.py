@@ -11,6 +11,7 @@
 
 
 import logging
+from pyomo.util.timing import ConstructionTimer
 from pyomo.core import *
 from pyomo.core.base.sets import OrderedSimpleSet
 from pyomo.core.base.numvalue import native_numeric_types
@@ -210,6 +211,7 @@ class ContinuousSet(OrderedSimpleSet):
         """ Constructs a :py:class:`ContinuousSet` component
 
         """
+        timer = ConstructionTimer(self)
         OrderedSimpleSet.construct(self, values)
 
         for val in self.value:
@@ -252,6 +254,7 @@ class ContinuousSet(OrderedSimpleSet):
                              " indicating the range over which a differential "
                              "equation is to be discretized" % (self.name))
         self._fe = sorted(self)
+        timer.report()
 
 register_component(ContinuousSet,
                    "A bounded continuous numerical range optionally containing"
