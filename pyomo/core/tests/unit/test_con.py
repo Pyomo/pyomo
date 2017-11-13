@@ -26,44 +26,6 @@ from pyomo.environ import *
 
 from six import StringIO
 
-class LogBuffer(object):
-
-    def __init__(self, logger, logLevel=None):
-        if isinstance(logger, logging.Logger):
-            self.logger = logger
-        else:
-            self.logger = logging.getLogger(logger)
-        self.buffer = StringIO()
-        if logLevel is None:
-            self.old_level = None
-        else:
-            self.old_level = self.logger.getEffectiveLevel()
-            self.logger.setLevel(logLevel)
-
-        self.logHandler = logging.StreamHandler(self.buffer)
-        self.logger.addHandler(self.logHandler)
-
-    def __del__(self):
-        self.close()
-
-    def close(self):
-        if self.logger is None:
-            return
-        if self.old_level is not None:
-            self.logger.setLevel(self.old_level)
-
-        self.logger.removeHandler(self.logHandler)
-        self.logHandler.flush()
-        self.buffer.flush()
-        self.logHandler = None
-        self.logger = None
-
-    def value(self):
-        if self.logHandler is not None:
-            self.logHandler.flush();
-        self.buffer.flush()
-        return self.buffer.getvalue()
-
 
 class TestConstraintCreation(unittest.TestCase):
 
@@ -767,26 +729,6 @@ class TestArrayCon(unittest.TestCase):
         self.assertEqual(model.c[2](), 16)
         self.assertEqual(len(model.c), 4)
 
-    def test_old_rule_option1(self):
-        """Test rule option"""
-        model = self.create_model()
-        buffer = LogBuffer('pyomo.core', logging.WARNING)
-        model.B = RangeSet(1,4)
-        def f(model, i):
-            ans=0
-            for j in model.B:
-                ans = ans + model.x[j]
-            ans *= i
-            ans = ans <= 0
-            ans = ans >= 0
-            return ans
-        model.x = Var(model.B, initialize=2)
-        model.c = Constraint(model.A,rule=f)
-
-        self.assertEqual(model.c[1](), 8)
-        self.assertEqual(model.c[2](), 16)
-        self.assertEqual(len(model.c), 4)
-
     def test_rule_option2(self):
         """Test rule option"""
         model = self.create_model()
@@ -1071,25 +1013,6 @@ class Test2DArrayCon(unittest.TestCase):
     def test_rule_option(self):
         """Test rule option"""
         model = self.create_model()
-        model.B = RangeSet(1,4)
-        def f(model, i, j):
-            ans=0
-            for j in model.B:
-                ans = ans + model.x[j]
-            ans *= i
-            ans = ans <= 0
-            ans = ans >= 0
-            return ans
-        model.x = Var(model.B, initialize=2)
-        model.c = Constraint(model.A,model.A,rule=f)
-
-        self.assertEqual(model.c[1,1](), 8)
-        self.assertEqual(model.c[2,1](), 16)
-
-    def test_old_rule_option(self):
-        """Test rule option"""
-        model = self.create_model()
-        buffer = LogBuffer('pyomo.core', logging.WARNING)
         model.B = RangeSet(1,4)
         def f(model, i, j):
             ans=0

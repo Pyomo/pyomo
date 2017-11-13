@@ -40,6 +40,9 @@ def clone_expression(exp, substitute=None):
         memo.update(substitute)
     return deepcopy(exp, memo)
 
+# This is the global counter for clone operations
+clone_counter = 0
+
 def _clear_expression_pool():
     from pyomo.core.base.expr_coopr3 import _clear_expression_pool as \
         _clear_expression_pool_coopr3
