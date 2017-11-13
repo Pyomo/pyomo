@@ -50,6 +50,21 @@ if sys.version_info < (2, 7):
     requires.append('ordereddict')
 
 from setuptools import setup
+try:
+    import platform
+    if not platform.python_implementation() == "CPython":
+        raise RuntimeError()
+    #
+    # Note: The Cython developers recommend that you destribute C source
+    # files to users.  But this is fine for evaluating the utility of Cython
+    #
+    import shutil
+    shutil.copyfile("pyomo/core/expr/expr_pyomo5.py","pyomo/core/expr/expr_pyomo5.pyx")
+    from Cython.Build import cythonize
+    ext_modules = cythonize("pyomo/core/expr/expr_pyomo5.pyx")
+except:
+    ext_modules = []
+
 packages = _find_packages('pyomo')
 
 setup(name='Pyomo',
@@ -96,6 +111,7 @@ setup(name='Pyomo',
       keywords=['optimization'],
       namespace_packages=['pyomo'],
       install_requires=requires,
+      ext_modules = ext_modules,
       entry_points="""
         [console_scripts]
         runbenders=pyomo.pysp.benders:Benders_main
