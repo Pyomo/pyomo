@@ -37,7 +37,8 @@ from pyomo.core.base.expr import identify_variables
 from pyomo.core.base.expr_common import clone_expression
 from pyomo.core.base.numvalue import NumericConstant
 from pyomo.core.base.symbolic import differentiate
-from pyomo.core.kernel import ComponentSet, NonNegativeReals, Reals, ComponentMap
+from pyomo.core.kernel import (ComponentMap, ComponentSet, NonNegativeReals,
+                               Reals)
 from pyomo.gdp import Disjunct
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory, SolverStatus
@@ -1495,7 +1496,8 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
             else:
                 oa_cuts = parent_block.component('DAGPy_OA_cuts_for_GBD')
                 if oa_cuts is None:
-                    oa_cuts = parent_block.DAGPy_OA_cuts_for_GBD = ConstraintList()
+                    oa_cuts = parent_block.DAGPy_OA_cuts_for_GBD = \
+                        ConstraintList()
                 oa_cuts.deactivate()
             # m.dual.display()
             # slack_var = DAGPy.slack_vars[self.nlp_iter, self.nl_map[constr]]
@@ -1514,8 +1516,8 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
 
         sign_adjust = 1 if DAGPy.objective.sense == minimize else -1
 
-        nonlinear_variables, nonlinear_variable_IDs = self._detect_nonlinear_vars(
-            m)
+        nonlinear_variables, nonlinear_variable_IDs = \
+            self._detect_nonlinear_vars(m)
         nonlinear_constraints = (
             c for c in m.component_data_objects(
                 ctype=Constraint, active=True, descend_into=(Block, Disjunct))
