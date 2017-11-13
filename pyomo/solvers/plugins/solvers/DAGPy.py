@@ -37,7 +37,7 @@ from pyomo.core.base.expr import identify_variables
 from pyomo.core.base.expr_common import clone_expression
 from pyomo.core.base.numvalue import NumericConstant
 from pyomo.core.base.symbolic import differentiate
-from pyomo.core.kernel import ComponentSet, NonNegativeReals, Reals
+from pyomo.core.kernel import ComponentSet, NonNegativeReals, Reals, ComponentMap
 from pyomo.gdp import Disjunct
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory, SolverStatus
@@ -170,10 +170,12 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
         if self.modify_in_place:
             self.working_model = m = model
         else:
+            print('Clone for working model')
             self.working_model = m = model.clone()
 
         # Store the initial model state as the best solution found. If we find
         # no better solution, then we will restore from this copy.
+        print('Initial clone for best_solution_found')
         self.best_solution_found = model.clone()
 
         # Save model initial values. These are used later to initialize NLP
@@ -247,24 +249,25 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
         self.mip_subiter = 0
 
         # Set of NLP iterations for which cuts were generated
-        DAGPy.nlp_iters = Set(dimen=1)
+        # DAGPy.nlp_iters = Set(dimen=1)
+        DAGPy.nlp_iters = RangeSet(50)
 
         # Create an integer index set over the nonlinear constraints
         DAGPy.nl_constraint_set = RangeSet(len(self.nonlinear_constraints))
         # Mapping Constraint -> integer index
-        self.nl_map = {}
+        self.nl_map = ComponentMap()
         # Mapping integer index -> Constraint
-        self.nl_inverse_map = {}
+        # self.nl_inverse_map = {}
         # Generate the two maps. These maps may be helpful for later
         # interpreting indices on the slack variables or generated cuts.
         for c, n in zip(self.nonlinear_constraints, DAGPy.nl_constraint_set):
             self.nl_map[c] = n
-            self.nl_inverse_map[n] = c
+            # self.nl_inverse_map[n] = c
 
         # Create slack variables
-        DAGPy.slack_vars = Var(DAGPy.nlp_iters, DAGPy.nl_constraint_set,
-                               domain=NonNegativeReals,
-                               bounds=(0, self.max_slack), initialize=0)
+        # DAGPy.slack_vars = Var(DAGPy.nlp_iters, DAGPy.nl_constraint_set,
+        #                        domain=NonNegativeReals,
+        #                        bounds=(0, self.max_slack), initialize=0)
 
         # set up bounds
         self.LB = float('-inf')
@@ -520,6 +523,7 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
         Intended to consolidate some MIP solution code.
 
         """
+        print('Clone working model for init MIP')
         m = self.working_model.clone()
         DAGPy = m.DAGPy_utils
 
@@ -607,6 +611,7 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
 
         """
         self.mip_subiter += 1
+        print('Clone working model for init max binaries')
         m = self.working_model.clone()
         logger.info("MIP {}.{}: maximize value of binaries".format(
             self.mip_iter, self.mip_subiter))
@@ -694,6 +699,7 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
         return True
 
     def _solve_set_cover_MIP(self, covered_disjuncts, not_covered_disjuncts):
+        print('Clone working model for set cover MIP')
         m = self.working_model.clone()
         DAGPy = m.DAGPy_utils
 
@@ -900,24 +906,30 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
 
     def _solve_OA_master(self):
         self.mip_iter += 1
+        print('Clone working model for OA master')
+        # for c, _ in self.working_model.purge.inlet.no_flow._decl_order:
+        #     print(c)
+        # print(id(self.working_model.purge.inlet.no_flow.indicator_var))
+        # print(id(self.working_model.purge.inlet.no_flow.stream_no_flow))
+        # self.working_model.purge.inlet.no_flow.pprint()
         m = self.working_model.clone()
         DAGPy = m.DAGPy_utils
         logger.info('MIP {}: Solve master problem.'.format(self.mip_iter))
 
         # Deactivate nonlinear constraints
-        nonlinear_constraints = (
-            c for c in m.component_data_objects(
-                ctype=Constraint, active=True, descend_into=(Block, Disjunct))
-            if c.body.polynomial_degree() not in (0, 1))
-        for c in nonlinear_constraints:
-            c.deactivate()
+        for c in m.component_data_objects(
+                ctype=Constraint, active=True, descend_into=(Block, Disjunct)):
+            if c.body.polynomial_degree() not in (0, 1):
+                c.deactivate()
 
         # Set up augmented Lagrangean penalty objective
         DAGPy.objective.deactivate()
         sign_adjust = 1 if DAGPy.objective.sense == minimize else -1
         DAGPy.OA_penalty_expr = Expression(
-            expr=sign_adjust * self.OA_penalty_factor * sum(
-                v for v in DAGPy.slack_vars[...]))
+            expr=sign_adjust * self.OA_penalty_factor *
+            sum(v for v in m.component_data_objects(
+                ctype=Var, descend_into=(Block, Disjunct))
+                if v.parent_component().local_name == 'DAGPy_OA_slack'))
         DAGPy.oa_obj = Objective(
             expr=DAGPy.objective.expr + DAGPy.OA_penalty_expr,
             sense=DAGPy.objective.sense)
@@ -1035,6 +1047,7 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
         self.master_postsolve(m, self)
 
     def _solve_PSC_master(self):
+        raise NotImplementedError()
         self.mip_iter += 1
         m = self.working_model.clone()
         DAGPy = m.DAGPy_utils
@@ -1204,6 +1217,7 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
         self.master_postsolve(m, self)
 
     def _solve_NLP_subproblem(self):
+        print('Clone working model for NLP')
         m = self.working_model.clone()
         DAGPy = m.DAGPy_utils
         self.nlp_iter += 1
@@ -1308,6 +1322,7 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
                         .format(self.nlp_iter, value(DAGPy.objective.expr),
                                 self.LB, self.UB))
             if self.solution_improved:
+                print('Clone model for best_solution_found')
                 self.best_solution_found = m.clone()
 
             # Add the linear cut
@@ -1410,12 +1425,12 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
         return True
 
     def _calc_jacobians(self):
-        self.jacs = {}
-        for c in self.nonlinear_constraints:
-            constraint_vars = list(EXPR.identify_variables(c.body))
-            jac_list = differentiate(c.body, wrt_list=constraint_vars)
-            self.jacs[c] = {id(var): jac
-                            for var, jac in zip(constraint_vars, jac_list)}
+        pass
+        # self.jacs = ComponentMap()
+        # for c in self.nonlinear_constraints:
+        #     constraint_vars = list(EXPR.identify_variables(c.body))
+        #     jac_list = differentiate(c.body, wrt_list=constraint_vars)
+        #     self.jacs[c] = ComponentMap(zip(constraint_vars, jac_list))
 
     def _add_oa_cut(self, for_GBD=False):
         """Add outer approximation cuts to working model.
@@ -1424,11 +1439,11 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
         DAGPy_OA_cuts_for_GBD and deactivate them by default.
         """
         m, DAGPy = self.working_model, self.working_model.DAGPy_utils
-        DAGPy.nlp_iters.add(self.nlp_iter)
+        # DAGPy.nlp_iters.add(self.nlp_iter)
         sign_adjust = -1 if DAGPy.objective.sense == minimize else 1
 
         # deactivate inactive disjuncts
-        deactivated_disj = set()
+        deactivated_disj = ComponentSet()
         for disj in m.component_data_objects(ctype=Disjunct, active=True,
                                              descend_into=(Block, Disjunct)):
             if fabs(value(disj.indicator_var)) <= self.integer_tolerance:
@@ -1455,23 +1470,40 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
                 continue
             parent_block = constr.parent_block()
 
+            constr_vars = list(EXPR.identify_variables(constr.body))
+            jac_list = differentiate(constr.body, wrt_list=constr_vars)
+            jacobians = ComponentMap(zip(constr_vars, jac_list))
+
             if not for_GBD:
-                oa_cuts = parent_block.component('DAGPy_OA_cuts')
-                if oa_cuts is None:
-                    oa_cuts = parent_block.DAGPy_OA_cuts = ConstraintList()
+                # oa_cuts = parent_block.component('DAGPy_OA_cuts')
+                # if oa_cuts is None:
+                #     oa_cuts = parent_block.DAGPy_OA_cuts = ConstraintList()
+                oa_utils = parent_block.component('DAGPy_OA')
+                if oa_utils is None:
+                    oa_utils = parent_block.DAGPy_OA = Block()
+                    oa_utils.DAGPy_OA_cuts = ConstraintList()
+                    oa_utils.next_idx = 1
+                    oa_utils.DAGPy_OA_slacks = Set(dimen=1)
+                    oa_utils.DAGPy_OA_slack = Var(
+                        oa_utils.DAGPy_OA_slacks, bounds=(0, self.max_slack),
+                        domain=NonNegativeReals, initialize=0)
+
+                oa_cuts = oa_utils.DAGPy_OA_cuts
+                oa_utils.DAGPy_OA_slacks.add(oa_utils.next_idx)
+                slack_var = oa_utils.DAGPy_OA_slack[oa_utils.next_idx]
+                oa_utils.next_idx += 1
             else:
                 oa_cuts = parent_block.component('DAGPy_OA_cuts_for_GBD')
                 if oa_cuts is None:
-                    oa_cuts = parent_block.DAGPy_OA_cuts_for_GBD = \
-                        ConstraintList()
+                    oa_cuts = parent_block.DAGPy_OA_cuts_for_GBD = ConstraintList()
                 oa_cuts.deactivate()
             # m.dual.display()
-            c = oa_cuts.add(
+            # slack_var = DAGPy.slack_vars[self.nlp_iter, self.nl_map[constr]]
+            oa_cuts.add(
                 expr=copysign(1, sign_adjust * m.dual[constr]) * sum(
-                    value(self.jacs[constr][id(var)]) * (var - value(var))
-                    for var in list(EXPR.identify_variables(constr.body))) +
-                DAGPy.slack_vars[self.nlp_iter, self.nl_map[constr]] <= 0)
-            DAGPy.OA_constr_map[constr, self.nlp_iter] = c
+                    value(jacobians[var]) * (var - value(var))
+                    for var in constr_vars) + slack_var <= 0)
+            # DAGPy.OA_constr_map[constr, self.nlp_iter] = c
 
         # Restore deactivated constraints
         for disj in deactivated_disj:
@@ -1482,8 +1514,8 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
 
         sign_adjust = 1 if DAGPy.objective.sense == minimize else -1
 
-        nonlinear_variables, nonlinear_variable_IDs = \
-            self._detect_nonlinear_vars(m)
+        nonlinear_variables, nonlinear_variable_IDs = self._detect_nonlinear_vars(
+            m)
         nonlinear_constraints = (
             c for c in m.component_data_objects(
                 ctype=Constraint, active=True, descend_into=(Block, Disjunct))
@@ -1576,8 +1608,8 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
                            for i in self.nlp_iters]
         var_to_val = {id(var): NumericConstant(value(var))
                       for var in m.component_data_objects(
-                          ctype=Var, descend_into=(Block, Constraint))
-                      if not var.is_binary() and not var.is_integer()}
+            ctype=Var, descend_into=(Block, Constraint))
+            if not var.is_binary() and not var.is_integer()}
 
         DAGPy.gbd_cuts.add(
             expr=DAGPy.objective.expr * sign_adjust >= sign_adjust * (
@@ -1599,6 +1631,7 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
             ))
 
     def _solve_LP_subproblem_for_GBD(self):
+        raise NotImplementedError()
         m = self.working_model.clone()
         DAGPy = m.DAGPy_utils
 
