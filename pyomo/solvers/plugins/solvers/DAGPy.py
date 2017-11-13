@@ -249,27 +249,6 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
         self.mip_iter = 0
         self.mip_subiter = 0
 
-        # Set of NLP iterations for which cuts were generated
-        # DAGPy.nlp_iters = Set(dimen=1)
-        DAGPy.nlp_iters = RangeSet(50)
-
-        # Create an integer index set over the nonlinear constraints
-        DAGPy.nl_constraint_set = RangeSet(len(self.nonlinear_constraints))
-        # Mapping Constraint -> integer index
-        self.nl_map = ComponentMap()
-        # Mapping integer index -> Constraint
-        # self.nl_inverse_map = {}
-        # Generate the two maps. These maps may be helpful for later
-        # interpreting indices on the slack variables or generated cuts.
-        for c, n in zip(self.nonlinear_constraints, DAGPy.nl_constraint_set):
-            self.nl_map[c] = n
-            # self.nl_inverse_map[n] = c
-
-        # Create slack variables
-        # DAGPy.slack_vars = Var(DAGPy.nlp_iters, DAGPy.nl_constraint_set,
-        #                        domain=NonNegativeReals,
-        #                        bounds=(0, self.max_slack), initialize=0)
-
         # set up bounds
         self.LB = float('-inf')
         self.UB = float('inf')
@@ -1440,7 +1419,6 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
         DAGPy_OA_cuts_for_GBD and deactivate them by default.
         """
         m, DAGPy = self.working_model, self.working_model.DAGPy_utils
-        # DAGPy.nlp_iters.add(self.nlp_iter)
         sign_adjust = -1 if DAGPy.objective.sense == minimize else 1
 
         # deactivate inactive disjuncts
@@ -1500,7 +1478,6 @@ class DAGPySolver(pyomo.util.plugin.Plugin):
                         ConstraintList()
                 oa_cuts.deactivate()
             # m.dual.display()
-            # slack_var = DAGPy.slack_vars[self.nlp_iter, self.nl_map[constr]]
             oa_cuts.add(
                 expr=copysign(1, sign_adjust * m.dual[constr]) * sum(
                     value(jacobians[var]) * (var - value(var))
