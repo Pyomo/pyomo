@@ -1,5 +1,5 @@
 from pyomo.environ import *
-import pyomo.core.kernel.expr as EXPR
+import pyomo.core.expr.current as EXPR
 import timeit
 import signal
 
@@ -144,7 +144,7 @@ if pyomo4:
         print((i,timeit.timeit('linear(%d)' % i, "from __main__ import linear", number=1)))
 
 if not (coopr3 or pyomo4):
-    import pyomo.core.kernel.expr_pyomo5 as PYOMO5
+    import pyomo.core.expr.expr_pyomo5 as PYOMO5
     print("REFCOUNT: "+str(PYOMO5._getrefcount_available))
     #import cProfile
     #cProfile.run("linear(7)", "stats.7")
