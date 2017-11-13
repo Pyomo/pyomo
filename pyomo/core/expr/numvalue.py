@@ -580,7 +580,7 @@ functions.""" % (self.name,))
 
         (Called in response to '- self'.)
         """
-        return generate_expression(_neg, self, None)
+        return generate_other_expression(_neg, self, None)
 
     def __pos__(self):
         """ Positive expression
