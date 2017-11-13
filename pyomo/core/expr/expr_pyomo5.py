@@ -85,15 +85,15 @@ from pyomo.core.expr.expr_common import \
 from pyomo.core.expr import expr_common as common
 
 
-def cIEM(gre, msg=None):
+def chainedInequalityErrorMessage(msg=None):
     if msg is None:
         msg = "Relational expression used in an unexpected Boolean context."
     buf = StringIO()
-    gre.chainedInequality.to_string(buf)
+    _InequalityExpression.chainedInequality.to_string(buf)
     # We are about to raise an exception, so it's OK to reset chainedInequality
-    info = gre.call_info
-    gre.chainedInequality = None
-    gre.call_info =  None
+    info = _InequalityExpression.call_info
+    _InequalityExpression.chainedInequality = None
+    _InequalityExpression.call_info = None
 
     args = ( str(msg).strip(), buf.getvalue().strip(), info[0], info[1],
              ':\n    %s' % info[3] if info[3] is not None else '.' )
@@ -115,16 +115,10 @@ or
     if value(expression <= 5):
 """ % args
 
-# Wrap the common chainedInequalityErrorMessage to pass the local context
-chainedInequalityErrorMessage \
-    = lambda *x: cIEM(generate_relational_expression, *x)
-
-
 
 _ParamData = None
 SimpleParam = None
 TemplateExpressionError = None
-generate_relational_expression_chainedInequality = None
 def initialize_expression_data():
     global pyomo5_variable_types
     if pyomo5_variable_types is None:
@@ -141,8 +135,8 @@ def initialize_expression_data():
     # [functionality] chainedInequality allows us to generate symbolic
     # expressions of the type "a < b < c".  This provides a buffer to hold
     # the first inequality so the second inequality can access it later.
-    global generate_relational_expression_chainedInequality
-    generate_relational_expression_chainedInequality = None
+    _InequalityExpression.chainedInequality = None
+    _InequalityExpression.call_info = None
 
 
 
@@ -1123,6 +1117,10 @@ class _InequalityExpression(_LinearOperatorExpression):
     __slots__ = ('_strict', '_cloned_from')
     PRECEDENCE = 9
 
+    # Used to process chained inequalities
+    chainedInequality = None
+    call_info = None
+
     def __init__(self, args, strict, cloned_from):
         """Constructor"""
         super(_InequalityExpression,self).__init__(args)
@@ -1142,13 +1140,11 @@ class _InequalityExpression(_LinearOperatorExpression):
         return result
 
     def __nonzero__(self):
-        global generate_relational_expression_chainedInequality
-        if generate_relational_expression_chainedInequality is not None:
+        if _InequalityExpression.chainedInequality is not None:
             raise TypeError(chainedInequalityErrorMessage())
         if not self.is_constant() and len(self._args) == 2:
-            generate_relational_expression.call_info \
-                = traceback.extract_stack(limit=2)[-2]
-            generate_relational_expression_chainedInequality = self
+            _InequalityExpression.call_info = traceback.extract_stack(limit=2)[-2]
+            _InequalityExpression.chainedInequality = self
             #return bool(self())                - This is needed to apply simple evaluation of inequalities
             return True
 
@@ -1198,7 +1194,7 @@ class _EqualityExpression(_LinearOperatorExpression):
         return len(self._args)
 
     def __nonzero__(self):
-        if generate_relational_expression_chainedInequality is not None:
+        if _InequalityExpression.chainedInequality is not None:
             raise TypeError(chainedInequalityErrorMessage())
         return bool(self())
 
@@ -2564,9 +2560,8 @@ def generate_relational_expression(etype, lhs, rhs):
     elif rhs.is_relational():
         rhs_is_relational = True
 
-    global generate_relational_expression_chainedInequality
-    if generate_relational_expression_chainedInequality is not None:
-        prevExpr = generate_relational_expression_chainedInequality
+    if _InequalityExpression.chainedInequality is not None:
+        prevExpr = _InequalityExpression.chainedInequality
         match = []
         # This is tricky because the expression could have been posed
         # with >= operators, so we must figure out which arguments
@@ -2597,7 +2592,7 @@ def generate_relational_expression(etype, lhs, rhs):
         elif len(match) == 2:
             # Special case: implicit equality constraint posed as a <= b <= a
             if prevExpr._strict[0] or etype == _lt:
-                generate_relational_expression_chainedInequality = None
+                _InequalityExpression.chainedInequality = None
                 buf = StringIO()
                 prevExpr.to_string(buf)
                 raise TypeError("Cannot create a compound inequality with "
@@ -2613,7 +2608,7 @@ def generate_relational_expression(etype, lhs, rhs):
             etype = _eq
         else:
             raise TypeError(chainedInequalityErrorMessage())
-        generate_relational_expression_chainedInequality = None
+        _InequalityExpression.chainedInequality = None
 
     if etype == _eq:
         if lhs_is_relational or rhs_is_relational:

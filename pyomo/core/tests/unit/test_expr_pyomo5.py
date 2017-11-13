@@ -93,7 +93,7 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
                 #
                 # The 'chainedInequality' value is None
                 #
-                self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+                self.assertIsNone(EXPR._InequalityExpression.chainedInequality)
             else:
                 #
                 # The relational expression may not be constant
@@ -104,14 +104,14 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
                 #
                 # Check that the 'chainedInequality' value is the current expression
                 #
-                self.assertIs(exp,EXPR.generate_relational_expression.chainedInequality)
+                self.assertIs(exp,EXPR._InequalityExpression.chainedInequality)
         finally:
             #
             # TODO: Why would we get here?  Because the expression isn't constant?
             #
             # Check that the 'chainedInequality' value is None
             #
-            EXPR.generate_relational_expression.chainedInequality = None
+           EXPR._InequalityExpression.chainedInequality = None
 
     def test_lt(self):
         #
@@ -1993,18 +1993,18 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         m.x = Var(initialize=0)
 
         self.assertTrue( 0 <= m.x <= 0 )
-        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertIsNone(EXPR._InequalityExpression.chainedInequality)
         self.assertFalse( 1 <= m.x <= 1 )
-        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertIsNone(EXPR._InequalityExpression.chainedInequality)
         self.assertFalse( -1 <= m.x <= -1 )
-        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertIsNone(EXPR._InequalityExpression.chainedInequality)
 
         self.assertTrue( 0 <= m.x <= 1 )
-        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertIsNone(EXPR._InequalityExpression.chainedInequality)
         self.assertFalse( 1 <= m.x <= 2 )
-        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertIsNone(EXPR._InequalityExpression.chainedInequality)
         self.assertTrue( -1 <= m.x <= 0 )
-        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertIsNone(EXPR._InequalityExpression.chainedInequality)
 
     def test_compoundInequality_errors(self):
         #
@@ -2058,7 +2058,7 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #
         # Confirm error when 
         self.assertTrue(m.x <= 0)
-        self.assertIsNotNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertIsNotNone(EXPR._InequalityExpression.chainedInequality)
         try:
             m.x == 5
             self.fail("expected construction of relational expression to "
@@ -2069,7 +2069,7 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
                 str(e) )
 
         self.assertTrue(m.x <= 0)
-        self.assertIsNotNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertIsNotNone(EXPR._InequalityExpression.chainedInequality)
         try:
             m.x*2 <= 5
             self.fail("expected construction of relational expression to "
@@ -2083,7 +2083,7 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         # Error because expression is being detected in an unusual context
         #
         self.assertTrue(m.x <= 0)
-        self.assertIsNotNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertIsNotNone(EXPR._InequalityExpression.chainedInequality)
         try:
             m.x <= 0
             self.fail("expected construction of relational expression to "
@@ -2779,7 +2779,7 @@ class TestExprConditionalContext(unittest.TestCase):
 
     def tearDown(self):
         # Make sure errors here don't bleed over to other tests
-        EXPR.generate_relational_expression.chainedInequality = None
+        EXPR._InequalityExpression.chainedInequality = None
 
     def checkCondition(self, expr, expectedValue):
         try:
@@ -2797,7 +2797,7 @@ class TestExprConditionalContext(unittest.TestCase):
             if expectedValue is not None:
                 raise
         finally:
-            EXPR.generate_relational_expression.chainedInequality = None
+            EXPR._InequalityExpression.chainedInequality = None
 
     def test_immutable_paramConditional(self):
         model = AbstractModel()
@@ -3866,7 +3866,7 @@ class TestCloneExpression(unittest.TestCase):
         with EXPR.clone_counter:
             start = EXPR.clone_counter.count
             #
-            expr1 = EXPR.Expr_if(IF=self.m.a + self.m.b < 20, THEN=self.m.a, ELSE=self.m.b)
+            expr1 = EXPR.Expr_if(IF_=self.m.a + self.m.b < 20, THEN_=self.m.a, ELSE_=self.m.b)
             expr2 = expr1.clone()
             self.assertNotEqual(id(expr1), id(expr2))
             self.assertEqual(expr1(), value(self.m.a))

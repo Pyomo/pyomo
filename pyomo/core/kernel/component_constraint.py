@@ -529,7 +529,7 @@ class constraint(_MutableBoundsConstraintMixin,
         # user did ( var < 1 > 0 ) (which also results in a non-None
         # chainedInequality value)
         #
-        if EXPR.generate_relational_expression.chainedInequality is not None:
+        if EXPR._InequalityExpression.chainedInequality is not None:
             raise TypeError(EXPR.chainedInequalityErrorMessage())
         #
         # Process relational expressions

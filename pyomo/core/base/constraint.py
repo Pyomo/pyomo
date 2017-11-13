@@ -494,7 +494,7 @@ class _GeneralConstraintData(_ConstraintData):
         # user did ( var < 1 > 0 ) (which also results in a non-None
         # chainedInequality value)
         #
-        if EXPR.generate_relational_expression.chainedInequality is not None:
+        if EXPR._InequalityExpression.chainedInequality is not None:
             raise TypeError(EXPR.chainedInequalityErrorMessage())
         #
         # Process relational expressions
@@ -886,18 +886,15 @@ class Constraint(ActiveIndexedComponent):
             # non-None, but the expression will be a bool.  For
             # example, model.a < 1 > 0.
             #
-            if EXPR.generate_relational_expression.\
-                    chainedInequality is not None:
+            if EXPR._InequalityExpression.chainedInequality is not None:
 
                 buf = StringIO()
-                EXPR.generate_relational_expression.\
-                    chainedInequality.pprint(buf)
+                EXPR._InequalityExpression.chainedInequality.pprint(buf)
                 #
                 # We are about to raise an exception, so it's OK to
                 # reset chainedInequality
                 #
-                EXPR.generate_relational_expression.\
-                    chainedInequality = None
+                EXPR._InequalityExpression.chainedInequality = None
                 raise ValueError(
                     "Invalid chained (2-sided) inequality detected. "
                     "The expression is resolving to %s instead of a "
