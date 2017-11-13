@@ -8,18 +8,21 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
 import sys
 from six import iteritems
 from weakref import ref as weakref_ref
 
 #from pyomo.core import *
 from pyomo.util.modeling import unique_component_name
+from pyomo.util.timing import ConstructionTimer
 from pyomo.core import register_component, Binary, Block, Var, Constraint, Any
 from pyomo.core.base.component import ( ActiveComponentData, )
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
 
+logger = logging.getLogger('pyomo.gdp')
 
 _rule_returned_none_error = """Disjunction '%s': rule returned None.
 
@@ -183,6 +186,7 @@ class Disjunction(ActiveIndexedComponent):
         #                  % (self.name))
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed=True
 
         _self_parent = self.parent_block()
@@ -194,6 +198,7 @@ class Disjunction(ActiveIndexedComponent):
             if expr is None:
                 raise ValueError( _rule_returned_none_error % (self.name,) )
             if expr is Disjunction.Skip:
+                timer.report()
                 return
             self._data[None] = self
             self._set_value_impl( expr, None )
@@ -226,6 +231,7 @@ class Disjunction(ActiveIndexedComponent):
                 if expr is Disjunction.Skip:
                     continue
                 self[ndx]._set_value_impl(expr, ndx)
+        timer.report()
 
     #
     # This method must be defined on subclasses of IndexedComponent

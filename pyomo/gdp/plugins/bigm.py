@@ -28,7 +28,7 @@ from pyomo.util.modeling import unique_component_name
 from pyomo.util.plugin import alias
 from six import iterkeys, iteritems
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.gdp')
 
 
 class BigM_Transformation(Transformation):
@@ -484,19 +484,14 @@ class BigM_Transformation(Transformation):
 
             # Handle indices for both SimpleConstraint and IndexedConstraint
             if i.__class__ is tuple:
-                pass
+                i_lb = i + ('lb',)
+                i_ub = i + ('ub',)
             elif obj.is_indexed():
-                i = (i,)
+                i_lb = (i, 'lb',)
+                i_ub = (i, 'ub',)
             else:
-                i = ()
-            # Append 'lb' or 'ub' to the index for the constraints
-            i_lb = i + ('lb',)
-            i_ub = i + ('ub',)
-            try:  # unpack singleton tuples
-                (i_lb,) = i_lb
-                (i_ub,) = i_ub
-            except ValueError:
-                pass
+                i_lb = 'lb'
+                i_ub = 'ub'
 
             if c.lower is not None:
                 if M[0] is None:
