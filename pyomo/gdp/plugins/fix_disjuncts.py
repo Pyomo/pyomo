@@ -19,6 +19,7 @@ from pyomo.core.kernel.numvalue import value
 from pyomo.gdp import GDP_Error
 from pyomo.gdp.disjunct import Disjunct, _DisjunctData, Disjunction
 from pyomo.util.plugin import alias
+from pyomo.core.base.constraint import Constraint
 from six import itervalues
 
 __author__ = "Qi Chen <https://github.com/qtothec>"
@@ -67,7 +68,9 @@ class GDP_Disjunct_Fixer(Transformation):
         elif fabs(value(obj.indicator_var)) <= self.integer_tolerance:
             obj.parent_block().reclassify_component_type(obj, Block)
             obj.indicator_var.fix(0)
-            obj.deactivate()
+            for constr in obj.component_objects(
+                    ctype=Constraint, active=True, descend_into=True):
+                constr.deactivate()
             return
         else:
             raise ValueError(
