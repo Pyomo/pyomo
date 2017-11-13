@@ -76,13 +76,7 @@ def test_solver_cases(*args):
     A function for accessing _test_solver_casess as global state
     """
     if len(_test_solver_cases) == 0:
-        logger_solvers = logging.getLogger('pyomo.solvers')
-        _level_solvers = logger_solvers.getEffectiveLevel()
-        logger_solvers.setLevel( logging.ERROR )
-
-        logger_opt = logging.getLogger('pyomo.opt')
-        _level_opt = logger_opt.getEffectiveLevel()
-        logger_opt.setLevel( logging.ERROR )
+        logging.disable(logging.WARNING)
 
         #
         # CPLEX
@@ -128,6 +122,27 @@ def test_solver_cases(*args):
             io='python',
             capabilities=_cplex_capabilities,
             import_suffixes=['slack','dual','rc'])
+
+        #
+        # GAMS
+        #
+
+        _gams_capabilities= set(['linear',
+                                 'integer',
+                                 'quadratic_objective',
+                                 'quadratic_constraint'])
+
+        _test_solver_cases['gams', 'gms'] = initialize(
+            name='gams',
+            io='gms',
+            capabilities=_gams_capabilities,
+            import_suffixes=['dual','rc'])
+
+        _test_solver_cases['gams', 'python'] = initialize(
+            name='gams',
+            io='python',
+            capabilities=_gams_capabilities,
+            import_suffixes=['dual','rc'])
 
         #
         # GUROBI
@@ -342,8 +357,7 @@ def test_solver_cases(*args):
             import_suffixes=['dual'])
 
 
-        logger_opt.setLevel( _level_opt )
-        logger_solvers.setLevel( _level_solvers )
+        logging.disable(logging.NOTSET)
 
         #
         # Error Checks

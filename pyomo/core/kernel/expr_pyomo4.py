@@ -76,6 +76,23 @@ def _sum_with_iadd(iterable):
 
 sum = builtins.sum if _getrefcount_available else _sum_with_iadd
 
+class clone_counter_context(object):
+    _count = 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    @property
+    def count(self):
+        return clone_counter_context._count
+
+clone_counter = clone_counter_context()
+
+
+
 def identify_variables(expr,
                        include_fixed=True,
                        allow_duplicates=False,
@@ -152,7 +169,7 @@ def _generate_expression__clone_if_needed__getrefcount(target, inplace, *objs):
         if test == target:
             ans = ans + (obj,)
         elif test > target:
-            generate_expression.clone_counter += 1
+            common.clone_counter += 1
             ans = ans + (obj.clone(),)
         else: #pragma:nocover
             raise RuntimeError(
@@ -496,7 +513,7 @@ class _ExpressionBase(NumericValue):
             "implement _polynomial_degree()" % ( str(self.__class__), ))
 
 
-    def to_string(self, ostream=None, verbose=None, precedence=None):
+    def to_string(self, ostream=None, verbose=None, precedence=None, labeler=None):
         _name_buffer = {}
         if ostream is None:
             ostream = sys.stdout
@@ -1648,10 +1665,6 @@ def generate_expression(etype, _self, _other, targetRefs=0):
         if _other_expr and ans is not _other:
             _other._parent_expr = bypass_backreference or ref(ans)
     return ans
-
-# [debugging] clone_counter is a count of the number of calls to
-# expr.clone() made during expression generation.
-generate_expression.clone_counter = 0
 
 
 def generate_relational_expression(etype, lhs, rhs):

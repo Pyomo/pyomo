@@ -38,7 +38,7 @@ _noarg = object()
 class suffix(ComponentMap,
              IComponent,
              _ActiveComponentMixin):
-    """A container for storing extranious model data that
+    """A container for storing extraneous model data that
     can be imported to or exported from a solver."""
     # To avoid a circular import, for the time being, this
     # property will be set externally

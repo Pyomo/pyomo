@@ -43,7 +43,14 @@ class MILP_unbounded(_BaseTestModel):
         model.y.value = None
 
     def post_solve_test_validation(self, tester, results):
-        assert results['Solver'][0]['termination condition'] == TerminationCondition.unbounded
+        if tester is None:
+            assert results['Solver'][0]['termination condition'] in \
+                (TerminationCondition.unbounded,
+                 TerminationCondition.infeasibleOrUnbounded)
+        else:
+            tester.assertIn(results['Solver'][0]['termination condition'],
+                            (TerminationCondition.unbounded,
+                             TerminationCondition.infeasibleOrUnbounded))
 
 @register_model
 class MILP_unbounded_kernel(MILP_unbounded):

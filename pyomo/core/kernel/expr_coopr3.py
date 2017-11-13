@@ -31,7 +31,6 @@ from pyomo.core.kernel.numvalue import *
 from pyomo.core.kernel.numvalue import (native_numeric_types,
                                         native_types)
 
-import pyomo.core.kernel.expr_common
 from pyomo.core.kernel.expr_common import \
     (_add, _sub, _mul, _div, _pow,
      _neg, _abs, _inplace, _unary,
@@ -40,11 +39,28 @@ from pyomo.core.kernel.expr_common import \
      _lt, _le, _eq, clone_expression,
      chainedInequalityErrorMessage as cIEM,
      _getrefcount_available, getrefcount)
+from pyomo.core.kernel import expr_common as common
 
 # Wrap the common chainedInequalityErrorMessage to pass the
 # local context
 chainedInequalityErrorMessage \
     = lambda *x: cIEM(generate_relational_expression, *x)
+
+class clone_counter_context(object):
+    _count = 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    @property
+    def count(self):
+        return clone_counter_context._count
+
+clone_counter = clone_counter_context()
+
 
 sum = builtins.sum
 
@@ -109,11 +125,11 @@ class _ExpressionBase(NumericValue):
             result[i] = getattr(self, i)
         return result
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         """Print this expression"""
         if ostream is None:
             ostream = sys.stdout
-        _verbose = pyomo.core.kernel.expr_common.TO_STRING_VERBOSE \
+        _verbose = common.TO_STRING_VERBOSE \
                    if verbose is None else verbose
         ostream.write(self.getname() + "( ")
         first = True
@@ -126,7 +142,7 @@ class _ExpressionBase(NumericValue):
                 ostream.write(", ")
             try:
                 arg.to_string( ostream=ostream, precedence=self._precedence(),
-                               verbose=verbose )
+                               verbose=verbose, labeler=labeler )
             except AttributeError:
                 ostream.write("(%s)" % (arg,))
         ostream.write(" )")
@@ -364,15 +380,15 @@ class _PowExpression(_IntrinsicFunctionExpression):
     def _precedence(self):
         return _PowExpression.PRECEDENCE
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         """Print this expression"""
         # For verbose mode, rely on the underlying base expression
         # (prefix) expression printer
-        _verbose = pyomo.core.kernel.expr_common.TO_STRING_VERBOSE \
+        _verbose = common.TO_STRING_VERBOSE \
                    if verbose is None else verbose
         if _verbose:
             return super(_PowExpression, self).to_string(
-                ostream, verbose, precedence)
+                ostream, verbose, precedence, labeler)
 
         if ostream is None:
             ostream = sys.stdout
@@ -387,7 +403,7 @@ class _PowExpression(_IntrinsicFunctionExpression):
                 ostream.write("**")
             try:
                 arg.to_string( ostream=ostream, verbose=verbose,
-                               precedence=self._precedence() )
+                               precedence=self._precedence(), labeler=labeler )
             except AttributeError:
                 ostream.write("(%s)" % (arg,))
         if precedence and _my_precedence > precedence:
@@ -470,7 +486,7 @@ class _InequalityExpression(_LinearExpression):
             arg1 = arg2
         return True
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         """Print this expression"""
         if ostream is None:
             ostream = sys.stdout
@@ -481,7 +497,7 @@ class _InequalityExpression(_LinearExpression):
             arg = self._args[i]
             try:
                 arg.to_string( ostream=ostream, verbose=verbose,
-                               precedence=_my_precedence )
+                               precedence=_my_precedence, labeler=labeler )
             except AttributeError:
                 ostream.write("(%s)" % (arg,))
             if strict:
@@ -491,7 +507,7 @@ class _InequalityExpression(_LinearExpression):
         arg = self._args[-1]
         try:
             arg.to_string( ostream=ostream, verbose=verbose,
-                           precedence=_my_precedence )
+                           precedence=_my_precedence, labeler=labeler )
         except AttributeError:
             ostream.write("(%s)" % (arg,))
         if precedence and _my_precedence > precedence:
@@ -528,7 +544,7 @@ class _EqualityExpression(_LinearExpression):
         """Method that defines the equal-to operation"""
         return next(values) == next(values)
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         """Print this expression"""
         if ostream is None:
             ostream = sys.stdout
@@ -543,7 +559,7 @@ class _EqualityExpression(_LinearExpression):
                 ostream.write("  ==  ")
             try:
                 arg.to_string( ostream=ostream, verbose=verbose,
-                               precedence=_my_precedence)
+                               precedence=_my_precedence, labeler=labeler)
             except AttributeError:
                 ostream.write("(%s)" % (arg,))
         if precedence and _my_precedence > precedence:
@@ -625,11 +641,12 @@ class _ProductExpression(_ExpressionBase):
         self._numerator = tmp
         self._coef = 1.0/self._coef
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None,
+                  bind_neg_coef=False):
         """Print this expression"""
         if ostream is None:
             ostream = sys.stdout
-        _verbose = pyomo.core.kernel.expr_common.TO_STRING_VERBOSE \
+        _verbose = common.TO_STRING_VERBOSE \
                    if verbose is None else verbose
         _my_precedence = self._precedence()
         if _verbose:
@@ -638,7 +655,10 @@ class _ProductExpression(_ExpressionBase):
             ostream.write("( ")
         first = True
         if self._coef != 1:
-            ostream.write(str(self._coef))
+            if bind_neg_coef and self._coef < 0:
+                ostream.write("(%s)" % str(self._coef))
+            else:
+                ostream.write(str(self._coef))
             first = False
         for arg in self._numerator:
             if first:
@@ -649,7 +669,7 @@ class _ProductExpression(_ExpressionBase):
                 ostream.write(" * ")
             try:
                 arg.to_string( ostream=ostream, verbose=verbose,
-                               precedence=_my_precedence )
+                               precedence=_my_precedence, labeler=labeler )
             except AttributeError:
                 ostream.write("(%s)" % (arg,))
         if first:
@@ -671,7 +691,7 @@ class _ProductExpression(_ExpressionBase):
                     ostream.write(" * ")
                 try:
                     arg.to_string( ostream=ostream, verbose=verbose,
-                                   precedence=_my_precedence )
+                                   precedence=_my_precedence, labeler=labeler )
                 except AttributeError:
                     ostream.write("(%s)" % (arg,))
             if len(self._denominator) > 1 and not _verbose:
@@ -737,11 +757,11 @@ class _SumExpression(_LinearExpression):
     def negate(self):
         self.scale(-1)
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         """Print this expression"""
         if ostream is None:
             ostream = sys.stdout
-        _verbose = pyomo.core.kernel.expr_common.TO_STRING_VERBOSE \
+        _verbose = common.TO_STRING_VERBOSE \
                    if verbose is None else verbose
         _my_precedence = self._precedence()
         if _verbose:
@@ -754,7 +774,6 @@ class _SumExpression(_LinearExpression):
             first = False
         for i, arg in enumerate(self._args):
             if first:
-                first = False
                 if self._coef[i] < 0:
                     ostream.write(" - ")
             elif _verbose:
@@ -774,8 +793,14 @@ class _SumExpression(_LinearExpression):
                 ostream.write(str(abs(self._coef[i]))+"*")
                 _sub_precedence = _ProductExpression.PRECEDENCE
             try:
-                arg.to_string( ostream=ostream, verbose=verbose,
-                               precedence=_sub_precedence )
+                if not first and isinstance(arg, _ProductExpression):
+                    # Use bind_neg_coef flag to prevent double operators
+                    arg.to_string( ostream=ostream, verbose=verbose,
+                                   precedence=_sub_precedence, labeler=labeler,
+                                   bind_neg_coef=True )
+                else:
+                    arg.to_string( ostream=ostream, verbose=verbose,
+                                   precedence=_sub_precedence, labeler=labeler )
             except AttributeError:
                 ostream.write("(%s)" % arg)
             first=False
@@ -877,20 +902,20 @@ class Expr_if(_ExpressionBase):
         else:
             return None
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         """Print this expression"""
         if ostream is None:
             ostream = sys.stdout
         _my_precedence = self._precedence()
         ostream.write("Expr_if( if=( ")
         self._if.to_string( ostream=ostream, verbose=verbose,
-                            precedence=self._precedence() )
+                            precedence=self._precedence(), labeler=labeler )
         ostream.write(" ), then=( ")
         self._then.to_string( ostream=ostream, verbose=verbose,
-                              precedence=self._precedence() )
+                              precedence=self._precedence(), labeler=labeler )
         ostream.write(" ), else=( ")
         self._else.to_string( ostream=ostream, verbose=verbose,
-                              precedence=self._precedence())
+                              precedence=self._precedence(), labeler=labeler )
         ostream.write(" ) )")
 
     def __call__(self, exception=True):
@@ -905,7 +930,7 @@ def _generate_expression__clone_if_needed(obj, target):
     if getrefcount(obj) - UNREFERENCED_EXPR_COUNT == target:
         return obj
     elif getrefcount(obj) - UNREFERENCED_EXPR_COUNT > target:
-        generate_expression.clone_counter += 1
+        common.clone_counter += 1
         return obj.clone()
     else: #pragma:nocover
         raise RuntimeError("Expression entered generate_expression() " \
@@ -1347,10 +1372,6 @@ def generate_expression(etype, _self, other, targetRefs=None):
 ## "static" variables within the generate_expression function
 ##
 
-# [debugging] clone_counter is a count of the number of calls to
-# expr.clone() made during expression generation.
-generate_expression.clone_counter = 0
-
 # [configuration] UNREFERENCED_EXPR_COUNT is a "magic number" that
 # indicates the stack depth between "normal" modeling and
 # _clone_if_needed().  If an expression enters _clone_if_needed() with
@@ -1371,7 +1392,7 @@ def _generate_relational_expression__clone_if_needed(obj):
     if count == 0:
         return obj
     elif count > 0:
-        generate_expression.clone_counter += 1
+        common.clone_counter += 1
         return obj.clone()
     else:
         raise RuntimeError("Expression entered " \
@@ -1589,7 +1610,7 @@ def _generate_intrinsic_function_expression__clone_if_needed(obj):
     if getrefcount(obj) - UNREFERENCED_INTRINSIC_EXPR_COUNT == 0:
         return obj
     elif getrefcount(obj) - UNREFERENCED_INTRINSIC_EXPR_COUNT > 0:
-        generate_expression.clone_counter += 1
+        common.clone_counter += 1
         return obj.clone()
     else:
         raise RuntimeError("Expression entered " \

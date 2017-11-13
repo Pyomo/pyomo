@@ -93,7 +93,7 @@ class IndexTemplate(NumericValue):
     def getname(self, fully_qualified=False, name_buffer=None):
         return "{"+self._set.getname(fully_qualified, name_buffer)+"}"
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         if ostream is None:
             ostream = sys.stdout
         ostream.write( self.name )
@@ -185,7 +185,6 @@ class _GetItemIndexer(object):
         _hash = [ id(self._base) ]
         for x in expr._args:
             try:
-                active_level = logging.root.manager.disable
                 logging.disable(logging.CRITICAL)
                 val = value(x)
                 self._args.append(val)
@@ -200,7 +199,7 @@ class _GetItemIndexer(object):
                 self._args.append(e.template)
                 _hash.append(id(e.template._set))
             finally:
-                logging.disable(active_level)
+                logging.disable(logging.NOTSET)
 
         self._hash = tuple(_hash)
 
@@ -212,6 +211,10 @@ class _GetItemIndexer(object):
             return self._hash == other._hash
         else:
             return False
+
+    def __str__(self):
+        return "%s[%s]" % (
+            self._base.name, ','.join(str(x) for x in self._args) )
 
 def substitute_getitem_with_param(expr, _map):
     """A simple substituter to replace _GetItem nodes with mutable Params.

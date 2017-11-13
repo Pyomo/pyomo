@@ -201,7 +201,7 @@ class Test(unittest.TestCase):
         for v in x:
             v.construct()
         expr = x[1]*(x[1]+x[2]) + x[2]*(x[1]+3.0*x[3]*x[3])
-        x[1].value = 5
+        x[1].set_value(5)
         x[1].fixed = True
         rep = generate_canonical_repn(expr)
         # rep should only have [-1,0,1,3]
@@ -375,7 +375,7 @@ class Test(unittest.TestCase):
         for v in x:
             v.construct()
         expr = x[1] + 5*cos(x[2])
-        x[2].value = 0
+        x[2].set_value(0)
         x[2].fixed = True
 
         rep = generate_canonical_repn(expr)
@@ -427,7 +427,7 @@ class Test(unittest.TestCase):
         m.e = Expression(initialize=1.0)
 
         # polynomial degree 0
-        m.e.value = 0.0
+        m.e.set_value(0.0)
         rep = generate_canonical_repn(m.e, {})
         rep1 = generate_canonical_repn(as_numeric(0.0), {})
         self.assertEqual(linear_repn_to_dict(rep1), linear_repn_to_dict(rep))
@@ -436,13 +436,13 @@ class Test(unittest.TestCase):
         rep1 = generate_canonical_repn(0.0+m.p, {})
         self.assertEqual(linear_repn_to_dict(rep1), linear_repn_to_dict(rep))
 
-        m.e.value = 0.0+m.p
+        m.e.set_value(0.0+m.p)
         rep = generate_canonical_repn(m.e+m.p**2, {})
         rep1 = generate_canonical_repn(0.0+m.p+m.p**2, {})
         self.assertEqual(linear_repn_to_dict(rep1), linear_repn_to_dict(rep))
 
         # polynomial degree 1
-        m.e.value = m.x
+        m.e.set_value(m.x)
         rep = generate_canonical_repn(m.e, {})
         rep1 = generate_canonical_repn(m.x, {})
         self.assertEqual(linear_repn_to_dict(rep1), linear_repn_to_dict(rep))
@@ -451,18 +451,18 @@ class Test(unittest.TestCase):
         rep1 = generate_canonical_repn(m.x+m.y, {})
         self.assertEqual(linear_repn_to_dict(rep1), linear_repn_to_dict(rep))
 
-        m.e.value = 0.0
+        m.e.set_value(0.0)
         rep = generate_canonical_repn(m.x+m.e, {})
         rep1 = generate_canonical_repn(m.x+0.0, {})
         self.assertEqual(linear_repn_to_dict(rep1), linear_repn_to_dict(rep))
 
-        m.e.value = 1.0
+        m.e.set_value(1.0)
         rep = generate_canonical_repn(m.x*m.e, {})
         rep1 = generate_canonical_repn(m.x*1.0, {})
         self.assertEqual(linear_repn_to_dict(rep1), linear_repn_to_dict(rep))
 
         # polynomial degree > 1
-        m.e.value = m.x**2
+        m.e.set_value(m.x**2)
         rep = generate_canonical_repn(m.e, {})
         rep1 = generate_canonical_repn(m.x**2, {})
         self.assertEqual(rep1, rep)
@@ -483,7 +483,7 @@ class Test(unittest.TestCase):
         m.e = Expression([1],initialize=1.0)
 
         # polynomial degree 0
-        m.e[1].value = 0.0
+        m.e[1].set_value(0.0)
         rep = generate_canonical_repn(m.e[1], {})
         rep1 = generate_canonical_repn(as_numeric(0.0), {})
         self.assertEqual(linear_repn_to_dict(rep1), linear_repn_to_dict(rep))
@@ -492,13 +492,13 @@ class Test(unittest.TestCase):
         rep1 = generate_canonical_repn(0.0+m.p, {})
         self.assertEqual(linear_repn_to_dict(rep1), linear_repn_to_dict(rep))
 
-        m.e[1].value = 0.0+m.p
+        m.e[1].set_value(0.0+m.p)
         rep = generate_canonical_repn(m.e[1]+m.p**2, {})
         rep1 = generate_canonical_repn(0.0+m.p+m.p**2, {})
         self.assertEqual(linear_repn_to_dict(rep1), linear_repn_to_dict(rep))
 
         # polynomial degree 1
-        m.e[1].value = m.x
+        m.e[1].set_value(m.x)
         rep = generate_canonical_repn(m.e[1], {})
         rep1 = generate_canonical_repn(m.x, {})
         self.assertEqual(linear_repn_to_dict(rep1), linear_repn_to_dict(rep))
@@ -507,18 +507,18 @@ class Test(unittest.TestCase):
         rep1 = generate_canonical_repn(m.x+m.y, {})
         self.assertEqual(linear_repn_to_dict(rep1), linear_repn_to_dict(rep))
 
-        m.e[1].value = 0.0
+        m.e[1].set_value(0.0)
         rep = generate_canonical_repn(m.x+m.e[1], {})
         rep1 = generate_canonical_repn(m.x+0.0, {})
         self.assertEqual(linear_repn_to_dict(rep1), linear_repn_to_dict(rep))
 
-        m.e[1].value = 1.0
+        m.e[1].set_value(1.0)
         rep = generate_canonical_repn(m.x*m.e[1], {})
         rep1 = generate_canonical_repn(m.x*1.0, {})
         self.assertEqual(linear_repn_to_dict(rep1), linear_repn_to_dict(rep))
 
         # polynomial degree > 1
-        m.e[1].value = m.x**2
+        m.e[1].set_value(m.x**2)
         rep = generate_canonical_repn(m.e[1], {})
         rep1 = generate_canonical_repn(m.x**2, {})
         self.assertEqual(rep1, rep)

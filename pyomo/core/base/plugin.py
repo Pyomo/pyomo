@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -34,15 +34,20 @@ __all__ = ['pyomo_callback',
         'UnknownDataManager'
         ]
 
-import pyutilib.misc
 import logging
+import pyutilib.misc
+from pyomo.util.deprecation import deprecated
+from pyomo.util.plugin import (
+    alias, implements, Interface, Plugin, PluginFactory, CreatePluginFactory,
+    PluginError, ExtensionPoint )
+from pyomo.util.timing import TransformationTimer
 
 logger = logging.getLogger('pyomo.core')
 registered_callback = {}
 
 def pyomo_callback( name ):
-    """This is a decorator that declares a function to be 
-    a callback function.  The callback functions are 
+    """This is a decorator that declares a function to be
+    a callback function.  The callback functions are
     added to the solver when run from the pyomo script.
 
     Example:
@@ -55,9 +60,6 @@ def pyomo_callback( name ):
         registered_callback[name] = f
         return f
     return fn
-
-
-from pyomo.util.plugin import *
 
 
 class IPyomoScriptPreprocess(Interface):
@@ -310,12 +312,12 @@ class Transformation(Plugin):
         kwds["name"] = kwds.get("name", "transformation")
         super(Transformation, self).__init__(**kwds)
 
+    @deprecated(
+        "Transformation.apply() has been deprecated.  Please use either "
+        "Transformation.apply_to() for in-place transformations or "
+        "Transformation.create_using() for transformations that create a "
+        "new, independent transformed model instance.")
     def apply(self, model, **kwds):
-        logger.warning(
-"""DEPRECATION WARNING: Transformation.apply() has been deprecated.
-Please use either Transformation.apply_to() for in-place transformations
-or Transformation.create_using() for transformations that create a new,
-independent transformed model instance.""")
         inplace = kwds.pop('inplace', True)
         if inplace:
             self.apply_to(model, **kwds)
@@ -326,20 +328,26 @@ independent transformed model instance.""")
         """
         Apply the transformation to the given model.
         """
+        timer = TransformationTimer(self, 'in-place')
         if not hasattr(model, '_transformation_data'):
             model._transformation_data = TransformationData()
         self._apply_to(model, **kwds)
+        timer.report()
 
     def create_using(self, model, **kwds):
         """
         Create a new model with this transformation
         """
+        timer = TransformationTimer(self, 'out-of-place')
         if not hasattr(model, '_transformation_data'):
             model._transformation_data = TransformationData()
-        return self._create_using(model, **kwds)
+        new_model = self._create_using(model, **kwds)
+        timer.report()
+        return new_model
 
     def _apply_to(self, model, **kwds):
-        raise RuntimeError("The Transformation.apply_to method is not implemented.")
+        raise RuntimeError(
+            "The Transformation.apply_to method is not implemented.")
 
     def _create_using(self, model, **kwds):
         instance = model.clone()
@@ -349,9 +357,8 @@ independent transformed model instance.""")
 
 TransformationFactory = CreatePluginFactory(IModelTransformation)
 
-
-def Xapply_transformation(*args, **kwds):
-    """This function is deprecated"""
+@deprecated()
+def apply_transformation(*args, **kwds):
     if len(args) is 0:
         return TransformationFactory.services()
     xfrm = TransformationFactory(args[0])
@@ -359,5 +366,3 @@ def Xapply_transformation(*args, **kwds):
         return xfrm
     tmp=(args[1],)
     return xfrm.apply(*tmp, **kwds)
-
-

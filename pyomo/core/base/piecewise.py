@@ -47,6 +47,7 @@ import types
 from pyutilib.enum import Enum
 from pyutilib.misc import flatten_tuple
 
+from pyomo.util.timing import ConstructionTimer
 from pyomo.core.base.component import register_component
 from pyomo.core.base.block import Block, _BlockData
 from pyomo.core.base.constraint import Constraint, ConstraintList
@@ -1058,6 +1059,13 @@ class Piecewise(Block):
         # translate the user input to the enum type
         pw_rep = kwds.pop('pw_repn','SOS2')
         pw_rep = translate_repn.get(pw_rep,pw_rep)
+        if (pw_rep == PWRepn.BIGM_BIN) or \
+           (pw_rep == PWRepn.BIGM_SOS1):
+            logger.warning(
+                "DEPRECATED: The 'BIGM_BIN' and 'BIGM_SOS1' "
+                "piecewise representations will be removed in "
+                "a future version of Pyomo. They produce incorrect "
+                "results in certain cases")
         # translate the user input to the enum type
         bound_type = kwds.pop('pw_constr_type',None)
         bound_type = translate_bound.get(bound_type,bound_type)
@@ -1161,8 +1169,12 @@ class Piecewise(Block):
         """
         A quick hack to call add after data has been loaded.
         """
-        generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
+        generate_debug_messages \
+            = __debug__ and logger.isEnabledFor(logging.DEBUG)
 
+        if self._constructed:
+            return
+        timer = ConstructionTimer(self)
         # We need to be able to add and construct new model
         # components on the fly so we make this Block behave concretely
         self._constructed=True
@@ -1180,6 +1192,7 @@ class Piecewise(Block):
                 if generate_debug_messages:
                     logger.debug("  Constructing Piecewise index "+str(index))
                 self.add(index, _is_indexed=is_indexed)
+        timer.report()
 
     def _default(self, idx):
         return self._data.setdefault(idx, _PiecewiseData(self))

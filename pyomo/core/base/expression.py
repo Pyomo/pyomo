@@ -14,6 +14,7 @@ import sys
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.util.timing import ConstructionTimer
 from pyomo.core.base.component import (ComponentData,
                                        register_component)
 from pyomo.core.base.indexed_component import (
@@ -104,7 +105,7 @@ class _ExpressionData(NumericValue):
     def _polynomial_degree(self, result):
         return result.pop()
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         if ostream is None:
             ostream = sys.stdout
         _verbose = pyomo.core.base.expr_common.TO_STRING_VERBOSE if \
@@ -116,7 +117,7 @@ class _ExpressionData(NumericValue):
             ostream.write("Undefined")
         else:
             self.expr.to_string( ostream=ostream, verbose=verbose,
-                                   precedence=precedence )
+                                   precedence=precedence, labeler=labeler )
         if _verbose:
             ostream.write("}")
 
@@ -394,6 +395,7 @@ class Expression(IndexedComponent):
 
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed = True
 
         _init_expr = self._init_expr
@@ -433,6 +435,7 @@ class Expression(IndexedComponent):
             else:
                 for key in self._index:
                     self.add(key, _init_expr)
+        timer.report()
 
 class SimpleExpression(_GeneralExpressionData, Expression):
 
