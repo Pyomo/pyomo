@@ -10,7 +10,6 @@
 
 from __future__ import division
 import math
-import builtins
 
 __all__ = ['fabs', 'log', 'log10', 'sin', 'cos', 'tan', 'cosh', 'sinh', 'tanh',
            'asin', 'acos', 'atan', 'exp', 'sqrt', 'asinh', 'acosh',
