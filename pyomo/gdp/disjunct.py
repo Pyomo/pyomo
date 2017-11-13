@@ -177,9 +177,10 @@ class Disjunction(ActiveIndexedComponent):
                 % ( self.name, ))
 
     def construct(self, data=None):
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
-            logger.debug("Constructing disjunction %s"
-                         % (self.name))
+        # TODO John did something weird with logging
+        # if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        #     logger.debug("Constructing disjunction %s"
+        #                  % (self.name))
         if self._constructed:
             return
         self._constructed=True
