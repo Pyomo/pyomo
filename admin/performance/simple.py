@@ -145,7 +145,7 @@ if pyomo4:
 
 if not (coopr3 or pyomo4):
     import pyomo.core.expr.expr_pyomo5 as PYOMO5
-    print("REFCOUNT: "+str(PYOMO5._getrefcount_available))
+    #print("REFCOUNT: "+str(PYOMO5._getrefcount_available))
     #import cProfile
     #cProfile.run("linear(7)", "stats.7")
     for i in (0,10,20,2,12,22,3,13,4,14,5,15,6,16,26,7,17,27,8,18,9,19,-9):
