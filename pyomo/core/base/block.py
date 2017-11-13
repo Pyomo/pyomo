@@ -21,6 +21,7 @@ from operator import itemgetter, attrgetter
 from six import iteritems, itervalues, StringIO, string_types, \
     advance_iterator, PY3
 
+from pyomo.util.timing import ConstructionTimer
 from pyomo.core.base.plugin import *  # register_component, ModelComponentFactory
 from pyomo.core.base.component import Component, ActiveComponentData, \
     ComponentUID, register_component
@@ -83,7 +84,6 @@ class _generic_component_decorator(object):
                (*excluding* the block argument)
         **kwds: keyword arguments to the Component constructor
     """
-
     def __init__(self, component, block, *args, **kwds):
         self._component = component
         self._block = block
@@ -108,7 +108,6 @@ class _component_decorator(object):
         block: the block onto which to add the new component
 
     """
-
     def __init__(self, block, component):
         self._block = block
         self._component = component
@@ -1333,6 +1332,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                            sort=False,
                            descend_into=True,
                            descent_order=None):
+
         """
         This method returns a generator that iterates
         through the current block and recursively all
@@ -1720,6 +1720,7 @@ class Block(ActiveIndexedComponent):
                          self.__class__.__name__, self.name, str(data))
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed = True
 
         # We must check that any pre-existing components are
@@ -1737,10 +1738,11 @@ class Block(ActiveIndexedComponent):
                     obj.construct(_data)
 
         if self._rule is None:
-            # Ensure the _data dirctionary is populated for singleton
+            # Ensure the _data dictionary is populated for singleton
             # blocks
             if not self.is_indexed():
                 self[None]
+            timer.report()
             return
         # If we have a rule, fire the rule for all indices.
         # Notes:
@@ -1775,6 +1777,7 @@ class Block(ActiveIndexedComponent):
             # TBD: Should we allow skipping Blocks???
             # if obj is Block.Skip and idx is not None:
             #   del self._data[idx]
+        timer.report()
 
     def pprint(self, filename=None, ostream=None, verbose=False, prefix=""):
         """

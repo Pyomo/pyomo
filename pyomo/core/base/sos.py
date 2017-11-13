@@ -15,6 +15,7 @@ import logging
 import six
 from six.moves import zip, xrange
 
+from pyomo.util.timing import ConstructionTimer
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.component import ActiveComponentData, register_component
 from pyomo.core.base.indexed_component import ActiveIndexedComponent, UnindexedComponent_set
@@ -216,13 +217,14 @@ class SOSConstraint(ActiveIndexedComponent):
         Construct this component
         """
         assert data is None # because I don't know why it's an argument
-        generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
+        generate_debug_messages \
+            = __debug__ and logger.isEnabledFor(logging.DEBUG)
+        if self._constructed is True:   #pragma:nocover
+            return
 
         if generate_debug_messages:     #pragma:nocover
             logger.debug("Constructing SOSConstraint %s",self.name)
-
-        if self._constructed is True:   #pragma:nocover
-            return
+        timer = ConstructionTimer(self)
         self._constructed = True
 
         if self._rule is None:
@@ -289,6 +291,7 @@ class SOSConstraint(ActiveIndexedComponent):
                 else:
                     # tmp is a list of variables
                     self.add(index, tmp)
+        timer.report()
 
     def add(self, index, variables, weights=None):
         """
