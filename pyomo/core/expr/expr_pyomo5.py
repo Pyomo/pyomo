@@ -1454,7 +1454,7 @@ class _GetItemExpression(_ExpressionBase):
         return self._base.getname(*args, **kwds)
 
     def _potentially_variable(self):
-        if any(evaluate_expression(arg, exception=False) for arg in self._args):
+        if any(arg._potentially_variable() for arg in self._args if not arg.__class__ in native_types):
             for x in itervalues(self._base):
                 if not x.__class__ in native_types and x._potentially_variable():
                     return True
@@ -2245,8 +2245,12 @@ def generate_other_expression(etype, _self, _other):
             if _self.__class__ in native_numeric_types:
                 return - _self
             elif _self._potentially_variable():
+                if _self.__class__ is _NegationExpression:
+                    return _self._args[0]
                 return _NegationExpression((_self,))
             else:
+                if _self.__class__ is _NPV_NegationExpression:
+                    return _self._args[0]
                 return _NPV_NegationExpression((_self,))
         #
         # abs(x)
