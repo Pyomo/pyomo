@@ -18,7 +18,6 @@ __all__ = (
 'clone_expression',
 'evaluate_expression',
 'identify_variables',
-'generate_expression',
 'generate_sum_expression',
 'generate_mul_expression',
 'generate_other_expression',
@@ -1899,7 +1898,7 @@ class _LinearExpression(_ExpressionBase):
                 self.linear_coefs[i] = - c
 
         else:
-            raise ValueError("Unallowed operation on linear expression: %d" % etype)
+            raise ValueError("Unallowed operation on mutable linear expression: %d" % etype)
 
         return self
 
@@ -2020,6 +2019,18 @@ def generate_sum_expression(etype, _self, _other):
     #
     if not (_self.__class__ in native_types or _self.is_expression()):
         _self = _process_arg(_self)
+
+    if etype == _neg:
+        if _self.__class__ in native_numeric_types:
+            return - _self
+        elif _self._potentially_variable():
+            if _self.__class__ is _NegationExpression:
+                return _self._args[0]
+            return _NegationExpression((_self,))
+        else:
+            if _self.__class__ is _NPV_NegationExpression:
+                return _self._args[0]
+            return _NPV_NegationExpression((_self,))
 
     if not (_other.__class__ in native_types or _other.is_expression()):
         _other = _process_arg(_other)
@@ -2220,18 +2231,6 @@ def generate_other_expression(etype, _self, _other):
     if etype > _inplace:
         etype -= _inplace
 
-    if _self.__class__ is _LinearExpression:
-        if etype >= _unary:
-            return _self._combine_expr(etype, None)
-        if _other.__class__ is not _LinearExpression:
-            if not (_other.__class__ in native_types or _other.is_expression()):
-                _other = _process_arg(_other)
-        return _self._combine_expr(etype, _other)
-    elif _other.__class__ is _LinearExpression:
-        if not (_self.__class__ in native_types or _self.is_expression()):
-            _self = _process_arg(_self)
-        return _other._combine_expr(-etype, _self)
-
     #
     # A mutable sum is used as a context manager, so we don't
     # need to process it to see if it's entangled.
@@ -2239,35 +2238,16 @@ def generate_other_expression(etype, _self, _other):
     if not (_self.__class__ in native_types or _self.is_expression()):
         _self = _process_arg(_self)
 
-    if etype >= _unary:
-        #
-        # - x
-        #
-        if etype == _neg:
-            if _self.__class__ in native_numeric_types:
-                return - _self
-            elif _self._potentially_variable():
-                if _self.__class__ is _NegationExpression:
-                    return _self._args[0]
-                return _NegationExpression((_self,))
-            else:
-                if _self.__class__ is _NPV_NegationExpression:
-                    return _self._args[0]
-                return _NPV_NegationExpression((_self,))
-        #
-        # abs(x)
-        #
-        elif etype == _abs:
-            if _self.__class__ in native_numeric_types:
-                return abs(_self)
-            elif _self._potentially_variable():
-                return _AbsExpression(_self)
-            else:
-                return _NPV_AbsExpression(_self)
-
-        else: #pragma:nocover
-            raise RuntimeError(
-                "Unexpected unary operator id (%s)" % ( etype, ))
+    #
+    # abs(x)
+    #
+    if etype == _abs:
+        if _self.__class__ in native_numeric_types:
+            return abs(_self)
+        elif _self._potentially_variable():
+            return _AbsExpression(_self)
+        else:
+            return _NPV_AbsExpression(_self)
 
     if not (_other.__class__ in native_types or _other.is_expression()):
         _other = _process_arg(_other)
@@ -2303,233 +2283,6 @@ def generate_other_expression(etype, _self, _other):
             return _NPV_PowExpression((_self, _other))
 
     raise RuntimeError("Unknown expression type '%s'" % etype)      #pragma: no cover
-
-
-#@profile
-#
-# NOTE: This function is not currently used
-#
-def generate_expression(etype, _self, _other):  #pragma: no cover
-
-    if etype > _inplace:
-        etype -= _inplace
-
-    if _self.__class__ is _LinearExpression:
-        if etype >= _unary:
-            return _self._combine_expr(etype, None)
-        if _other.__class__ is not _LinearExpression:
-            if not (_other.__class__ in native_types or _other.is_expression()):
-                _other = _process_arg(_other)
-        return _self._combine_expr(etype, _other)
-    elif _other.__class__ is _LinearExpression:
-        if not (_self.__class__ in native_types or _self.is_expression()):
-            _self = _process_arg(_self)
-        return _other._combine_expr(-etype, _self)
-
-    #
-    # A mutable sum is used as a context manager, so we don't
-    # need to process it to see if it's entangled.
-    #
-    if not (_self.__class__ in native_types or _self.is_expression()):
-        _self = _process_arg(_self)
-
-    if etype >= _unary:
-        #
-        # - x
-        #
-        if etype == _neg:
-            if _self.__class__ in native_numeric_types:
-                return - _self
-            elif _self._potentially_variable():
-                return _NegationExpression((_self,))
-            else:
-                return _NPV_NegationExpression((_self,))
-        #
-        # abs(x)
-        #
-        elif etype == _abs:
-            if _self.__class__ in native_numeric_types:
-                return abs(_self)
-            elif _self._potentially_variable():
-                return _AbsExpression(_self)
-            else:
-                return _NPV_AbsExpression(_self)
-
-        else: #pragma:nocover
-            raise RuntimeError(
-                "Unexpected unary operator id (%s)" % ( etype, ))
-
-    if not (_other.__class__ in native_types or _other.is_expression()):
-        _other = _process_arg(_other)
-
-    if etype < 0:
-        #
-        # This may seem obvious, but if we are performing an
-        # "R"-operation (i.e. reverse operation), then simply reverse
-        # self and other.  This is legitimate as we are generating a
-        # completely new expression here.
-        #
-        etype *= -1
-        _self, _other = _other, _self
-
-    if etype == _mul:
-        #
-        # x * y
-        #
-        if _other.__class__ in native_numeric_types:
-            if _self.__class__ in native_numeric_types:
-                return _self * _other
-            elif _other == 0:   # isclose(_other, 0)
-                return 0
-            elif _other == 1:
-                return _self
-            elif _self._potentially_variable():
-                return _ProductExpression((_other, _self))
-            return _NPV_ProductExpression((_self, _other))
-        elif _self.__class__ in native_numeric_types:
-            if _self == 0:  # isclose(_self, 0)
-                return 0
-            elif _self == 1:
-                return _other
-            elif _other._potentially_variable():
-                return _ProductExpression((_self, _other))
-            return _NPV_ProductExpression((_self, _other))
-        elif _other._potentially_variable():
-            return _ProductExpression((_self, _other))
-        elif _self._potentially_variable():
-            return _ProductExpression((_other, _self))
-        else:
-            return _NPV_ProductExpression((_self, _other))
-
-    elif etype == _add:
-        #
-        # x + y
-        #
-        if (_self.__class__ is _ViewSumExpression and not _self._is_owned) or \
-           _self.__class__ is _MutableViewSumExpression:
-           #(_self.__class__ is _LinearViewSumExpression and not _self._is_owned) or
-            return _self.add(_other)
-        elif (_other.__class__ is _ViewSumExpression and not _other._is_owned) or \
-            _other.__class__ is _MutableViewSumExpression:
-            #_other.__class__ is _LinearViewSumExpression and not _other._is_owned or
-            return _other.add(_self)
-        elif _other.__class__ in native_numeric_types:
-            if _self.__class__ in native_numeric_types:
-                return _self + _other
-            elif _other == 0:   #isclose(_other, 0):
-                return _self
-            elif _self._potentially_variable():
-                #return _LinearViewSumExpression((_other, _self))
-                #return _ViewSumExpression([_other, _self])
-                return _ViewSumExpression([_self, _other])
-            return _NPV_SumExpression((_self, _other))
-        elif _self.__class__ in native_numeric_types:
-            if _self == 0:      #isclose(_self, 0):
-                return _other
-            elif _other._potentially_variable():
-                #return _LinearViewSumExpression((_self, _other))
-                return _ViewSumExpression([_self, _other])
-            return _NPV_SumExpression((_self, _other))
-        elif _other._potentially_variable():
-            #return _LinearViewSumExpression((_self, _other))
-            return _ViewSumExpression([_self, _other])
-        elif _self._potentially_variable():
-            #return _LinearViewSumExpression((_other, _self))
-            #return _ViewSumExpression([_other, _self])
-            return _ViewSumExpression([_self, _other])
-        else:
-            return _NPV_SumExpression((_self, _other))
-
-    elif etype == _sub:
-        #
-        # x - y
-        #
-        # TODO: _MultiViewSum logic here
-        #
-        if (_self.__class__ is _ViewSumExpression and not _self._is_owned) or \
-           _self.__class__ is _MutableViewSumExpression:
-           #(_self.__class__ is _LinearViewSumExpression and not _self._is_owned) or
-            return _self.add(-_other)
-        elif _other.__class__ in native_numeric_types:
-            if _self.__class__ in native_numeric_types:
-                return _self - _other
-            elif isclose(_other, 0):
-                return _self
-            elif _self._potentially_variable():
-                #return _LinearViewSumExpression((_self, -_other))
-                return _ViewSumExpression([_self, -_other])
-            return _NPV_SumExpression((_self, -_other))
-        elif _self.__class__ in native_numeric_types:
-            if isclose(_self, 0):
-                if _other._potentially_variable():
-                    return _NegationExpression((_other,))
-                return _NPV_NegationExpression((_other,))
-            elif _other._potentially_variable():    
-                #return _LinearViewSumExpression((_self, _NegationExpression((_other,))))
-                return _ViewSumExpression([_self, _NegationExpression((_other,))])
-            return _NPV_SumExpression((_self, _NPV_NegationExpression((_other,))))
-        elif _other._potentially_variable():    
-            #return _LinearViewSumExpression((_self, _NegationExpression((_other,))))
-            return _ViewSumExpression([_self, _NegationExpression((_other,))])
-        elif _self._potentially_variable():
-            #return _LinearViewSumExpression((_self, _NPV_NegationExpression((_other,))))
-            return _ViewSumExpression([_self, _NPV_NegationExpression((_other,))])
-        else:
-            return _NPV_SumExpression((_self, _NPV_NegationExpression((_other,))))
-        
-    elif etype == _div:
-        #
-        # x / y
-        #
-        if _other.__class__ in native_numeric_types:
-            if _other == 1:
-                return _self
-            elif not _other:
-                raise ZeroDivisionError()
-            elif _self.__class__ in native_numeric_types:
-                return _self / _other
-            elif _self._potentially_variable():
-                return _ProductExpression((1/_other, _self))
-            return _NPV_ProductExpression((1/_other, _self))
-        elif _self.__class__ in native_numeric_types:
-            if isclose(_self, 0):
-                return 0
-            elif _self == 1:
-                if _other._potentially_variable():
-                    return _ReciprocalExpression((_other,))
-                return _NPV_ReciprocalExpression((_other,))
-            elif _other._potentially_variable():
-                return _ProductExpression((_self, _ReciprocalExpression((_other,))))
-            return _NPV_ProductExpression((_self, _ReciprocalExpression((_other,))))
-        elif _other._potentially_variable():
-            return _ProductExpression((_self, _ReciprocalExpression((_other,))))
-        elif _self._potentially_variable():
-            return _ProductExpression((_NPV_ReciprocalExpression((_other,)), _self))
-        else:
-            return _NPV_ProductExpression((_self, _NPV_ReciprocalExpression((_other,))))
-
-    elif etype == _pow:
-        if _other.__class__ in native_numeric_types:
-            if _other == 1:
-                return _self
-            elif not _other:
-                return 1
-            elif _self.__class__ in native_numeric_types:
-                return _self ** _other
-            elif _self._potentially_variable():
-                return _PowExpression((_self, _other))
-            return _NPV_PowExpression((_self, _other))
-        elif _self.__class__ in native_numeric_types:
-            if _other._potentially_variable():
-                return _PowExpression((_self, _other))
-            return _NPV_PowExpression((_self, _other))
-        elif _self._potentially_variable() or _other._potentially_variable():
-            return _PowExpression((_self, _other))
-        else:
-            return _NPV_PowExpression((_self, _other))
-
-    raise RuntimeError("Unknown expression type '%s'" % etype)
-
 
 
 def generate_relational_expression(etype, lhs, rhs):
