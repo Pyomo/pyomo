@@ -12,6 +12,7 @@ from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 
 import pyomo.core.expr.current as EXPR
+from pyomo.core.expr.numvalue import NumericValue, native_numeric_types, as_numeric
 from pyomo.core.base.component import register_component
 from pyomo.core.base.template_expr import (
     IndexTemplate,
@@ -20,6 +21,7 @@ from pyomo.core.base.template_expr import (
     substitute_getitem_with_param,
     substitute_template_with_value,
 )
+from pyomo.core import Sum
 
 from six import iterkeys, itervalues
 
@@ -52,13 +54,13 @@ except ImportError:
 def _check_getitemexpression(expr, i):
     """
     Accepts an equality expression and an index value. Checks the
-    GetItemExpression at expr._args[i] to see if it is a
+    GetItemExpression at expr.arg(i) to see if it is a
     :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>`. If so, return the
     GetItemExpression for the :py:class:`DerivativeVar<DerivativeVar>` and
     the RHS. If not, return None.
     """
-    if type(expr._args[i]._base) is DerivativeVar:
-        return [expr._args[i], expr._args[i - 1]]
+    if type(expr.arg(i)._base) is DerivativeVar:
+        return [expr.arg(i), expr.arg(1-i)]
     else:
         return None
 
@@ -66,55 +68,73 @@ def _check_getitemexpression(expr, i):
 def _check_productexpression(expr, i):
     """
     Accepts an equality expression and an index value. Checks the
-    ProductExpression at expr._args[i] to see if it contains a
+    ProductExpression at expr.arg(i) to see if it contains a
     :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>`. If so, return the
     GetItemExpression for the
     :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>` and the RHS. If not,
     return None.
     """
-    if EXPR.mode is EXPR.Mode.coopr3_trees:
-        num = expr._args[i]._numerator
-        denom = expr._args[i]._denominator
-        coef = expr._args[i]._coef
-
-        dv = None
-        # Check if there is a DerivativeVar in the numerator
-        for idx, obj in enumerate(num):
-            if type(obj) is EXPR._GetItemExpression and \
-               type(obj._base) is DerivativeVar:
-                dv = obj
-                num = num[0:idx] + num[idx + 1:]
-                break
-        if dv is not None:
-            RHS = expr._args[i - 1] / coef
-            for obj in num:
-                RHS *= (1 / obj)
-            for obj in denom:
-                RHS = RHS * obj
-            return [dv, RHS]
+    expr_ = expr.arg(i)
+    stack = [(expr_,1)]
+    pterms = []
+    dv = None
+    
+    while stack:
+        curr,e_ = stack.pop()
+        if curr.__class__ is EXPR._ProductExpression:
+            stack.append((curr._args[0],e_))
+            stack.append((curr._args[1],e_))
+        elif curr.__class__ is EXPR._ReciprocalExpression:
+            stack.append((curr._args[0],- e_))
+        elif type(curr) is EXPR._GetItemExpression and type(curr._base) is DerivativeVar:
+            dv = (curr,e_)
         else:
-            # Check if there is a DerivativeVar in the denominator
-            for idx, obj in enumerate(denom):
-                if type(obj) is EXPR._GetItemExpression and \
-                   type(obj._base) is DerivativeVar:
-                    dv = obj
-                    denom = denom[0:idx] + denom[idx + 1:]
-                    break
-            if dv is not None:
-                tempnum = coef
-                for obj in num:
-                    tempnum *= obj
+            pterms.append((curr,e_))
 
-                tempdenom = expr._args[i - 1]
-                for obj in denom:
-                    tempdenom *= obj
+    if dv is None:
+        return None
 
-                RHS = tempnum / tempdenom
-                return [dv, RHS]                
+    numer = 1
+    denom = 1
+    for term,e_ in pterms:
+        if e_ == 1:
+            denom *= term 
+        else:
+            numer *= term 
+    curr,e_ = dv
+    if e_ == 1:
+        return [curr, expr.arg(1-i)*numer/denom]
     else:
-        raise TypeError(
-            "Simulator is unable to handle pyomo5 expression trees.")
+        return [curr, denom/(expr.arg(1-i)*numer)]
+
+
+def _check_negationexpression(expr, i):
+    """
+    Accepts an equality expression and an index value. Checks the
+    NegationExpression at expr.arg(i) to see if it contains a
+    :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>`. If so, return the
+    GetItemExpression for the
+    :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>` and the RHS. If not,
+    return None.
+    """
+    arg = expr.arg(i).arg(0)
+
+    if type(arg) is EXPR._GetItemExpression and type(arg._base) is DerivativeVar:
+        return [arg, - expr.arg(1-i)]
+
+    if type(arg) is _ProductExpression:
+        lhs = arg.arg(0)
+        rhs = arg.arg(1)
+
+        if not (type(lhs) in native_numeric_types or not lhs._potentially_variable()):
+            return None
+        if not (type(rhs) is EXPR._GetItemExpression and type(rhs._base) is DerivativeVar):
+            return None
+
+        return [rhs, - expr.arg(1-i)/lhs]
+
     return None
+
 
 
 def _check_sumexpression(expr, i):
@@ -145,6 +165,46 @@ def _check_sumexpression(expr, i):
         RHS = expr._args[i - 1]
         for idx, item in enumerate(items):
             RHS -= coefs[idx] * item
+        RHS = RHS / dvcoef
+        return [dv, RHS]
+
+    return None
+
+
+def _check_viewsumexpression(expr, i):
+    """
+    Accepts an equality expression and an index value. Checks the
+    SumExpression at expr._args[i] to see if it contains a
+    :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>`. If so, return the
+    GetItemExpression for the
+    :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>` and the RHS. If not,
+    return None.
+    """
+    sumexp = expr.arg(i)       # Get the side of the equality expression with the derivative variable
+    items = []
+    dv = None
+    dvcoef = 1
+
+    for idx, item in enumerate(sumexp.args):
+        if dv is not None:
+            items.append( item )
+        elif type(item) is EXPR._GetItemExpression and \
+           type(item._base) is DerivativeVar:
+            dv = item
+        elif type(item) is EXPR._ProductExpression:
+            lhs = item.arg(0)       # This will contain the constant coefficient if there is one
+            rhs = item.arg(1)       # This is a potentially variable expression
+            if (type(lhs) in native_numeric_types or not lhs._potentially_variable()) and \
+               (type(rhs) is EXPR._GetItemExpression and type(rhs._base) is DerivativeVar):
+                dv = rhs
+                dvcoef = lhs
+        else:
+            items.append(item)
+
+    if dv is not None:
+        RHS = expr.arg(1-i)         # Form the "other" side of the equality expression
+        for item in items:
+            RHS -= item
         RHS = RHS / dvcoef
         return [dv, RHS]
 
@@ -204,14 +264,6 @@ def substitute_intrinsic_function(expr, substituter, *args):
     TODO: We need a generalized expression tree walker to avoid
     copying code like this
     """
-
-    # Again, due to circular imports, we cannot import expr at the
-    # module scope because this module gets imported by expr
-    #from pyomo.core.base import expr as EXPR
-    #from pyomo.core.base import expr_common as common
-    from pyomo.core.base.numvalue import (
-        NumericValue, native_numeric_types, as_numeric)
-
     if type(expr) is casadi.SX:
         return expr
 
@@ -406,29 +458,53 @@ class Simulator:
 
                 # Case 3: m.p*m.dxdt[t] = RHS
                 if args is None:
-                    if type(tempexp._args[0]) is EXPR._ProductExpression:
+                    if type(tempexp._args[0]) is EXPR._ProductExpression or \
+                       type(tempexp._args[0]) is EXPR._ReciprocalExpression:
                         args = _check_productexpression(tempexp, 0)
 
                 # Case 4: RHS =  m.p*m.dxdt[t]
                 if args is None:
-                    if type(tempexp._args[1]) is EXPR._ProductExpression:
+                    if type(tempexp._args[1]) is EXPR._ProductExpression or \
+                       type(tempexp._args[1]) is EXPR._ReciprocalExpression:
                         args = _check_productexpression(tempexp, 1)
 
-                # Case 5: m.dxdt[t] + CONSTANT = RHS 
+                # Case 5a: m.dxdt[t] + CONSTANT = RHS 
+                # or CONSTANT + m.dxdt[t] = RHS
+                #if args is None:
+                #    if type(tempexp._args[0]) is EXPR._SumExpression:
+                #        args = _check_sumexpression(tempexp, 0)
+
+                # Case 6a: RHS = m.dxdt[t] + CONSTANT
+                #if args is None:
+                #    if type(tempexp._args[1]) is EXPR._SumExpression:
+                #        args = _check_sumexpression(tempexp, 1)
+
+                # Case 5: m.dxdt[t] + sum(ELSE) = RHS
                 # or CONSTANT + m.dxdt[t] = RHS
                 if args is None:
-                    if type(tempexp._args[0]) is EXPR._SumExpression:
-                        args = _check_sumexpression(tempexp, 0)
+                    if type(tempexp._args[0]) is EXPR._ViewSumExpression:
+                        args = _check_viewsumexpression(tempexp, 0)
 
-                # Case 6: RHS = m.dxdt[t] + CONSTANT
+                # Case 6: RHS = m.dxdt[t] + sum(ELSE)
                 if args is None:
-                    if type(tempexp._args[1]) is EXPR._SumExpression:
-                        args = _check_sumexpression(tempexp, 1)
+                    if type(tempexp._args[1]) is EXPR._ViewSumExpression:
+                        args = _check_viewsumexpression(tempexp, 1)
 
                 # Case 7: RHS = m.p*m.dxdt[t] + CONSTANT
                 # This case will be caught by Case 6 if p is immutable. If
                 # p is mutable then this case will not be detected as a
                 # separable differential equation
+
+                # Case 8: - dxdt[t] = RHS
+                if args is None:
+                    if type(tempexp._args[0]) is EXPR._NegationExpression:
+                        args = _check_negationexpression(tempexp, 0)
+
+                # Case 9: RHS = - dxdt[t]
+                if args is None:
+                    if type(tempexp._args[0]) is EXPR._NegationExpression:
+                        args = _check_negationexpression(tempexp, 1)
+
 
                 # At this point if args is not None then args[0] contains
                 # the _GetItemExpression for the DerivativeVar and args[1]
