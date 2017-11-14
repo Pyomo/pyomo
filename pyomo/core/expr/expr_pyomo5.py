@@ -2110,7 +2110,7 @@ def generate_sum_expression(etype, _self, _other):
         else:
             return _NPV_SumExpression((_self, _NPV_NegationExpression((_other,))))
 
-    raise RuntimeError("Unknown expression type '%s'" % etype)
+    raise RuntimeError("Unknown expression type '%s'" % etype)      #pragma: no cover
         
 
 #@profile
@@ -2211,7 +2211,7 @@ def generate_mul_expression(etype, _self, _other):
         else:
             return _NPV_ProductExpression((_self, _NPV_ReciprocalExpression((_other,))))
 
-    raise RuntimeError("Unknown expression type '%s'" % etype)
+    raise RuntimeError("Unknown expression type '%s'" % etype)      #pragma: no cover
 
 
 #@profile
@@ -2302,7 +2302,7 @@ def generate_other_expression(etype, _self, _other):
         else:
             return _NPV_PowExpression((_self, _other))
 
-    raise RuntimeError("Unknown expression type '%s'" % etype)
+    raise RuntimeError("Unknown expression type '%s'" % etype)      #pragma: no cover
 
 
 #@profile
