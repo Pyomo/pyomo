@@ -123,7 +123,7 @@ class ExpressionObjectTester(object):
         self.assertEqual( str(E), "x( {I} + P( 1 + {I} ) ) + P[1]" )
 
         E = m.x[t+m.P[1+t]**2.]**2. + m.P[1]
-        self.assertEqual( str(E), "x( {I} + P( 1 + {I} )**2.0 )**2.0 + P[1]" )
+        self.assertEqual( str(E), "P[1] + x( {I} + P( 1 + {I} )**2.0 )**2.0" )
 
 
     def test_template_in_expression(self):

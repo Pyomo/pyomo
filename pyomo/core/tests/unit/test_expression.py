@@ -631,14 +631,14 @@ class TestExpression(unittest.TestCase):
 
         output = \
 """\
-viewsum( prod( e{viewsum( 2 , x )} , pow( x , 2 ) ) , E[1]{viewsum( 1 , pow( x , 2 ) )} )
+viewsum( prod( e{viewsum( x , 2 )} , pow( x , 2 ) ) , E[1]{viewsum( pow( x , 2 ) , 1 )} )
 e : Size=1, Index=None
     Key  : Expression
-    None : viewsum( 2 , x )
+    None : viewsum( x , 2 )
 E : Size=2, Index=E_index
     Key : Expression
-      1 : viewsum( 1 , pow( x , 2 ) )
-      2 : viewsum( 1 , pow( x , 2 ) )
+      1 : viewsum( pow( x , 2 ) , 1 )
+      2 : viewsum( pow( x , 2 ) , 1 )
 """
         out = StringIO()
         out.write(str(expr)+"\n")
@@ -658,7 +658,7 @@ e : Size=1, Index=None
 E : Size=2, Index=E_index
     Key : Expression
       1 : 2.0
-      2 : viewsum( 1 , pow( x , 2 ) )
+      2 : viewsum( pow( x , 2 ) , 1 )
 """
         out = StringIO()
         out.write(str(expr)+"\n")
@@ -679,7 +679,7 @@ e : Size=1, Index=None
 E : Size=2, Index=E_index
     Key : Expression
       1 : Undefined
-      2 : viewsum( 1 , pow( x , 2 ) )
+      2 : viewsum( pow( x , 2 ) , 1 )
 """
         out = StringIO()
         out.write(str(expr)+"\n")
@@ -700,7 +700,7 @@ E : Size=2, Index=E_index
 
         output = \
 """\
-( 2 + x )*x**2 + x**2 + 1
+( x + 2 )*x**2 + x**2 + 1
 e : Size=1, Index=None
     Key  : Expression
     None : 2 + x

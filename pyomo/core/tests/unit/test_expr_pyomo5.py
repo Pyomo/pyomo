@@ -584,8 +584,8 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #
         self.assertIs(type(e), EXPR._ViewSumExpression)
         self.assertEqual(len(e._args), 2)
-        self.assertIs(e._args[0], 5)
-        self.assertIs(e._args[1], m.a)
+        self.assertIs(e._args[0], m.a)
+        self.assertIs(e._args[1], 5)
         self.assertEqual(e.size(), 3)
         #
         #_e = EXPR.compress_expression(e)
