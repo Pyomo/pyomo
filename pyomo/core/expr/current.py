@@ -40,7 +40,6 @@ else:
 
 # Initialize numvalue functions
 from pyomo.core.expr import numvalue
-numvalue.generate_expression = generate_expression
 numvalue.generate_sum_expression = generate_sum_expression
 numvalue.generate_mul_expression = generate_mul_expression
 numvalue.generate_other_expression = generate_other_expression
@@ -57,7 +56,7 @@ def fabs(arg):
     # just use generate_intrinsic_function_expression
     #
     #return generate_intrinsic_function_expression(arg, 'fabs', math.fabs)
-    return generate_expression(common._abs, arg, None)
+    return generate_other_expression(common._abs, arg, None)
 
 def ceil(arg):
     return generate_intrinsic_function_expression(arg, 'ceil', math.ceil)
