@@ -20,7 +20,7 @@ from pyomo.dae.simulator import (
     Simulator, 
     _check_getitemexpression, 
     _check_productexpression,
-    _check_sumexpression, 
+    _check_viewsumexpression, 
     substitute_getitem_with_casadi_sym,
     substitute_intrinsic_function_with_casadi,
     substitute_intrinsic_function)
@@ -467,10 +467,10 @@ class TestSimulator(unittest.TestCase):
             isinstance(mysim._rhsdict[_GetItemIndexer(m.dw2[3, t])], Param))
         self.assertTrue(
             isinstance(mysim._rhsdict[_GetItemIndexer(m.dw3[0, t, 1])],
-                       EXPR._SumExpression))
+                       EXPR._ViewSumExpression))
         self.assertTrue(
             isinstance(mysim._rhsdict[_GetItemIndexer(m.dw3[1, t, 3])],
-                       EXPR._SumExpression))
+                       EXPR._ViewSumExpression))
         self.assertEqual(
             mysim._rhsdict[_GetItemIndexer(m.dw1[t, 1])].name, 'w1[{t},1]')
         self.assertEqual(
@@ -560,10 +560,10 @@ class TestSimulator(unittest.TestCase):
             mysim._rhsdict[_GetItemIndexer(m.dw2[2, 2, t])], Param))
         self.assertTrue(isinstance(
             mysim._rhsdict[_GetItemIndexer(m.dw3[0, t, 1, 1])],
-            EXPR._SumExpression))
+            EXPR._ViewSumExpression))
         self.assertTrue(isinstance(
             mysim._rhsdict[_GetItemIndexer(m.dw3[1, t, 2, 2])],
-            EXPR._SumExpression))
+            EXPR._ViewSumExpression))
         self.assertEqual(mysim._rhsdict[_GetItemIndexer(m.dw1[t, 1, 1])].name,
                          'w1[{t},1,1]')
         self.assertEqual(mysim._rhsdict[_GetItemIndexer(m.dw1[t, 2, 2])].name,
@@ -828,45 +828,45 @@ class TestExpressionCheckers(unittest.TestCase):
         temp = _check_productexpression(e, 0)
         self.assertIs(m.dv, temp[0]._base)
         self.assertIs(type(temp[1]), EXPR._ProductExpression)
-        self.assertIs(m.mp, temp[1]._denominator[0])
+        self.assertIs(m.mp, temp[1]._args[0]._args[0])      # Reciprocal
+        self.assertIs(e._args[1], temp[1]._args[1])
 
         e = m.v[t] == m.mp * m.dv[t]
         temp = _check_productexpression(e, 1)
         self.assertIs(m.dv, temp[0]._base)
         self.assertIs(type(temp[1]), EXPR._ProductExpression)
-        self.assertIs(m.mp, temp[1]._denominator[0])
+        self.assertIs(m.mp, temp[1]._args[0]._args[0])      # Reciprocal
+        self.assertIs(e._args[0], temp[1]._args[1])
 
         # Check multiplication by var
         e = m.y * m.dv[t] / m.z == m.v[t]
         temp = _check_productexpression(e, 0)
         self.assertIs(m.dv, temp[0]._base)
         self.assertIs(type(temp[1]), EXPR._ProductExpression)
-        self.assertIs(m.y, temp[1]._denominator[0])
-        self.assertIs(m.z, temp[1]._numerator[1])
+        self.assertIs(e._args[1], temp[1]._args[0]._args[0])
+        self.assertIs(m.z,        temp[1]._args[0]._args[1])
 
         e = m.v[t] == m.y * m.dv[t] / m.z
         temp = _check_productexpression(e, 1)
         self.assertIs(m.dv, temp[0]._base)
         self.assertIs(type(temp[1]), EXPR._ProductExpression)
-        self.assertIs(m.y, temp[1]._denominator[0])
-        self.assertIs(m.z, temp[1]._numerator[1])
+        self.assertIs(e._args[0], temp[1]._args[0]._args[0])
+        self.assertIs(m.z,        temp[1]._args[0]._args[1])
 
         # Check having the DerivativeVar in the denominator
         e = m.y / (m.dv[t] * m.z) == m.mp
         temp = _check_productexpression(e, 0)
         self.assertIs(m.dv, temp[0]._base)
         self.assertIs(type(temp[1]), EXPR._ProductExpression)
-        self.assertIs(m.mp, temp[1]._denominator[0])
-        self.assertIs(m.y, temp[1]._numerator[0])
-        self.assertIs(m.z, temp[1]._denominator[1])
+        self.assertIs(m.y,        temp[1]._args[0])
+        self.assertIs(e._args[1], temp[1]._args[1]._args[0]._args[0])
 
         e = m.mp == m.y / (m.dv[t] * m.z)
         temp = _check_productexpression(e, 1)
         self.assertIs(m.dv, temp[0]._base)
         self.assertIs(type(temp[1]), EXPR._ProductExpression)
-        self.assertIs(m.mp, temp[1]._denominator[0])
-        self.assertIs(m.y, temp[1]._numerator[0])
-        self.assertIs(m.z, temp[1]._denominator[1])
+        self.assertIs(m.y,        temp[1]._args[0])
+        self.assertIs(e._args[0], temp[1]._args[1]._args[0]._args[0])
         
         # Check expression with no DerivativeVar
         e = m.v[t] * m.y / m.z == m.v[t] * m.y / m.z
@@ -875,8 +875,8 @@ class TestExpressionCheckers(unittest.TestCase):
         temp = _check_productexpression(e, 1)
         self.assertIsNone(temp)
 
-    # Testing the checker for SumExpressions
-    def test_check_sumexpression(self):
+    # Testing the checker for ViewSumExpressions
+    def test_check_viewsumexpression(self):
 
         m = self.m 
         m.p = Param(initialize=5)
@@ -886,35 +886,32 @@ class TestExpressionCheckers(unittest.TestCase):
         t = IndexTemplate(m.t)
 
         e = m.dv[t] + m.y + m.z == m.v[t]
-        temp = _check_sumexpression(e, 0)
+        temp = _check_viewsumexpression(e, 0)
         self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(type(temp[1]), EXPR._SumExpression)
-        self.assertIs(m.y, temp[1]._args[1])
-        self.assertEqual(temp[1]._coef[1], -1)
-        self.assertIs(m.z, temp[1]._args[2])
-        self.assertEqual(temp[1]._coef[2], -1)
+        self.assertIs(type(temp[1]), EXPR._ViewSumExpression)
+        self.assertIs(type(temp[1]._args[0]), EXPR._GetItemExpression)
+        self.assertIs(m.y, temp[1]._args[1]._args[0])
+        self.assertIs(m.z, temp[1]._args[2]._args[0])
 
         e = m.v[t] == m.y + m.dv[t] + m.z
-        temp = _check_sumexpression(e, 1)
+        temp = _check_viewsumexpression(e, 1)
         self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(type(temp[1]), EXPR._SumExpression)
-        self.assertIs(m.y, temp[1]._args[1])
-        self.assertEqual(temp[1]._coef[1], -1)
-        self.assertIs(m.z, temp[1]._args[2])
-        self.assertEqual(temp[1]._coef[2], -1)
+        self.assertIs(type(temp[1]), EXPR._ViewSumExpression)
+        self.assertIs(type(temp[1]._args[0]), EXPR._GetItemExpression)
+        self.assertIs(m.y, temp[1]._args[1]._args[0])
+        self.assertIs(m.z, temp[1]._args[2]._args[0])
 
         e = 5 * m.dv[t] + 5 * m.y - m.z == m.v[t]
-        temp = _check_sumexpression(e, 0)
+        temp = _check_viewsumexpression(e, 0)
         self.assertIs(m.dv, temp[0]._base)
         self.assertIs(type(temp[1]), EXPR._ProductExpression)
-        self.assertEqual(temp[1]._coef, 0.2)
-        self.assertIs(m.y, temp[1]._numerator[0]._args[1])
-        self.assertEqual(temp[1]._numerator[0]._coef[1], -5)
-        self.assertIs(m.z, temp[1]._numerator[0]._args[2])
-        self.assertEqual(temp[1]._numerator[0]._coef[2], 1)
+
+        self.assertIs(type(temp[1]._args[1]._args[0]), EXPR._GetItemExpression)
+        self.assertIs(m.y, temp[1]._args[1]._args[1]._args[0]._args[1])
+        self.assertIs(m.z, temp[1]._args[1]._args[2])
 
         e = 2 + 5 * m.y - m.z == m.v[t]
-        temp = _check_sumexpression(e, 0)
+        temp = _check_viewsumexpression(e, 0)
         self.assertIs(temp, None)
 
 @unittest.skipIf(not casadi_available, "Casadi is not available")
