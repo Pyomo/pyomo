@@ -2053,7 +2053,8 @@ def generate_sum_expression(etype, _self, _other):
                 return _self
             if _self._potentially_variable():
                 #return _LinearViewSumExpression((_other, _self))
-                return _ViewSumExpression([_other, _self])
+                #return _ViewSumExpression([_other, _self])
+                return _ViewSumExpression([_self, _other])
             return _NPV_SumExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
             if _self == 0:      #isclose(_self, 0):
@@ -2067,7 +2068,8 @@ def generate_sum_expression(etype, _self, _other):
             return _ViewSumExpression([_self, _other])
         elif _self._potentially_variable():
             #return _LinearViewSumExpression((_other, _self))
-            return _ViewSumExpression([_other, _self])
+            #return _ViewSumExpression([_other, _self])
+            return _ViewSumExpression([_self, _other])
         else:
             return _NPV_SumExpression((_self, _other))
 
@@ -2089,7 +2091,7 @@ def generate_sum_expression(etype, _self, _other):
             if _self._potentially_variable():
                 #return _LinearViewSumExpression((_self, -_other))
                 return _ViewSumExpression([_self, -_other])
-            return _NPV_SumExpression((-_other, _self))
+            return _NPV_SumExpression((_self, -_other))
         elif _self.__class__ in native_numeric_types:
             if isclose(_self, 0):
                 if _other._potentially_variable():
@@ -2418,7 +2420,8 @@ def generate_expression(etype, _self, _other):  #pragma: no cover
                 return _self
             elif _self._potentially_variable():
                 #return _LinearViewSumExpression((_other, _self))
-                return _ViewSumExpression([_other, _self])
+                #return _ViewSumExpression([_other, _self])
+                return _ViewSumExpression([_self, _other])
             return _NPV_SumExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
             if _self == 0:      #isclose(_self, 0):
@@ -2432,7 +2435,8 @@ def generate_expression(etype, _self, _other):  #pragma: no cover
             return _ViewSumExpression([_self, _other])
         elif _self._potentially_variable():
             #return _LinearViewSumExpression((_other, _self))
-            return _ViewSumExpression([_other, _self])
+            #return _ViewSumExpression([_other, _self])
+            return _ViewSumExpression([_self, _other])
         else:
             return _NPV_SumExpression((_self, _other))
 
@@ -2454,7 +2458,7 @@ def generate_expression(etype, _self, _other):  #pragma: no cover
             elif _self._potentially_variable():
                 #return _LinearViewSumExpression((_self, -_other))
                 return _ViewSumExpression([_self, -_other])
-            return _NPV_SumExpression((-_other, _self))
+            return _NPV_SumExpression((_self, -_other))
         elif _self.__class__ in native_numeric_types:
             if isclose(_self, 0):
                 if _other._potentially_variable():
