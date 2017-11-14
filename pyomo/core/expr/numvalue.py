@@ -23,8 +23,6 @@ from pyomo.core.expr.expr_common import \
 
 logger = logging.getLogger('pyomo.core')
 
-def generate_expression(etype, _self, _other):
-    raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
 def generate_sum_expression(etype, _self, _other):
     raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
 def generate_mul_expression(etype, _self, _other):
@@ -580,7 +578,7 @@ functions.""" % (self.name,))
 
         (Called in response to '- self'.)
         """
-        return generate_other_expression(_neg, self, None)
+        return generate_sum_expression(_neg, self, None)
 
     def __pos__(self):
         """ Positive expression
