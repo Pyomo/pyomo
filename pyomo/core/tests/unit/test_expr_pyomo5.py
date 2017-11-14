@@ -297,6 +297,32 @@ class TestExpression_EvaluateMutableParam(TestExpression_EvaluateNumericConstant
 
 class TestExpression_Intrinsic(unittest.TestCase):
 
+    def test_ceil_numval(self):
+        e = ceil(1.5)
+        self.assertAlmostEqual(value(e), 2.0)
+        e = ceil(-1.5)
+        self.assertAlmostEqual(value(e), -1.0)
+
+    def test_ceil_param(self):
+        m = ConcreteModel()
+        m.p = Param(initialize=0)
+        m.p.value = 1.5
+        e = ceil(m.p)
+        self.assertAlmostEqual(value(e), 2.0)
+        m.p.value = -1.5
+        e = ceil(m.p)
+        self.assertAlmostEqual(value(e), -1.0)
+
+    def test_ceil_mutableparam(self):
+        m = ConcreteModel()
+        m.p = Param(initialize=0, mutable=True)
+        m.p.value = 1.5
+        e = ceil(m.p)
+        self.assertAlmostEqual(value(e), 2.0)
+        m.p.value = -1.5
+        e = ceil(m.p)
+        self.assertAlmostEqual(value(e), -1.0)
+
     def test_fabs(self):
         m = ConcreteModel()
         m.v = Var()
