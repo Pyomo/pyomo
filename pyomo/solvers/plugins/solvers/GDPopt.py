@@ -26,6 +26,8 @@ import sys
 from copy import deepcopy
 from math import copysign, fabs
 
+from six import iteritems
+
 import pyomo.util.plugin
 from pyomo.core.base import expr as EXPR
 from pyomo.core.base import (Block, Constraint, ConstraintList, Expression,
@@ -45,7 +47,6 @@ from pyomo.opt import SolutionStatus, SolverFactory, SolverStatus
 from pyomo.opt.base import IOptSolver
 from pyomo.opt.results import ProblemSense, SolverResults
 from pyomo.repn.canonical_repn import generate_canonical_repn
-from six import iteritems
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -1307,7 +1308,7 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
 
             # Add the linear cut
             if self._decomposition_strategy == 'LOA':
-                self._add_oa_cut()
+                self._add_oa_cut(m)
             elif self._decomposition_strategy == 'PSC':
                 self._add_psc_cut()
             elif self._decomposition_strategy == 'LGBD':
@@ -1412,7 +1413,7 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
         #     jac_list = differentiate(c.body, wrt_list=constraint_vars)
         #     self.jacs[c] = ComponentMap(zip(constraint_vars, jac_list))
 
-    def _add_oa_cut(self, for_GBD=False):
+    def _add_oa_cut(self, nlp_solution, for_GBD=False):
         """Add outer approximation cuts to working model.
 
         If for_GBD flag is True, then place the cuts in a component called
@@ -1421,25 +1422,20 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
         m, GDPopt = self.working_model, self.working_model.GDPopt_utils
         sign_adjust = -1 if GDPopt.objective.sense == minimize else 1
 
-        # deactivate inactive disjuncts
-        deactivated_disj = ComponentSet()
-        for disj in m.component_data_objects(ctype=Disjunct, active=True,
-                                             descend_into=(Block, Disjunct)):
-            if fabs(value(disj.indicator_var)) <= self.integer_tolerance:
-                disj.deactivate()
-                deactivated_disj.add(disj)
-            elif fabs(value(disj.indicator_var) - 1) <= self.integer_tolerance:
-                pass  # This is fine, keep going.
-            else:
-                raise ValueError("Disjunct {} has an indicator variable "
-                                 "value that falls outside of integer "
-                                 "tolerance from 0 or 1: {}"
-                                 .format(disj.name, disj.indicator_var.value))
-
-        nonlinear_constraints = (
-            c for c in m.component_data_objects(
-                ctype=Constraint, active=True, descend_into=(Block, Disjunct))
+        # From the NLP solution, we need to figure out for which nonlinear
+        # constraints to generate cuts
+        nlp_nonlinear_constr = (c for c in nlp_solution.component_data_objects(
+            ctype=Constraint, active=True, descend_into=(Block, Disjunct))
             if c.body.polynomial_degree() not in (0, 1))
+        nlp_constr_to_cuid = generate_cuid_names(
+            nlp_solution, ctype=(Constraint, Disjunct),
+            descend_into=(Block, Disjunct))
+        model_cuid_to_obj = {cuid: obj for obj, cuid in iteritems(
+            generate_cuid_names(
+                self.working_model, ctype=(Constraint, Disjunct),
+                descend_into=(Block, Disjunct)))}
+        nonlinear_constraints = (model_cuid_to_obj[nlp_constr_to_cuid[c]]
+                                 for c in nlp_nonlinear_constr)
 
         # generate new constraints
         # TODO some kind of special handling if the dual is phenomenally small?
@@ -1448,6 +1444,8 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
             if not m.dual.get(constr, None):
                 continue
             parent_block = constr.parent_block()
+            logger.debug("Adding OA cut for %s with dual value %s"
+                         % (constr.name, m.dual.get(constr)))
 
             constr_vars = list(EXPR.identify_variables(constr.body))
             jac_list = differentiate(constr.body, wrt_list=constr_vars)
@@ -1485,8 +1483,8 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
             # GDPopt.OA_constr_map[constr, self.nlp_iter] = c
 
         # Restore deactivated constraints
-        for disj in deactivated_disj:
-            disj.activate()
+        # for disj in deactivated_disj:
+        #     disj.activate()
 
     def _add_psc_cut(self, nlp_feasible=True):
         m, GDPopt = self.working_model, self.working_model.GDPopt_utils
@@ -1703,7 +1701,6 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
             # Add the integer cut
             logger.info('Adding integer cut')
             GDPopt.integer_cuts.add(expr=int_cut)
-            # GDPopt.integer_cuts.pprint()
         else:
             logger.info('Adding feasible integer cut')
             GDPopt.feasible_integer_cuts.add(expr=int_cut)
