@@ -1,4 +1,4 @@
-"""Tests for the DAGPy solver plugin."""
+"""Tests for the GDPopt solver plugin."""
 import pyutilib.th as unittest
 from pyomo.environ import SolverFactory, value
 from pyomo.solvers.tests.gdp.eight_process_problem import EightProcessFlowsheet
@@ -11,15 +11,15 @@ else:
     subsolvers_available = False
 
 
-class TestDAGPy(unittest.TestCase):
-    """Tests for the DAGPy solver plugin."""
+class TestGDPopt(unittest.TestCase):
+    """Tests for the GDPopt solver plugin."""
 
     @unittest.skipIf(not subsolvers_available,
                      "Required subsolvers {} are not available"
                      .format(required_solvers))
     def test_LOA(self):
         """Test logic-based outer approximation."""
-        with SolverFactory('dagpy') as opt:
+        with SolverFactory('gdpopt') as opt:
             model = EightProcessFlowsheet()
             opt.solve(model, strategy='LOA')
 
