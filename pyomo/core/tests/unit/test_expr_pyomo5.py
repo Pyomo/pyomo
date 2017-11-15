@@ -297,6 +297,32 @@ class TestExpression_EvaluateMutableParam(TestExpression_EvaluateNumericConstant
 
 class TestExpression_Intrinsic(unittest.TestCase):
 
+    def test_abs_numval(self):
+        e = abs(1.5)
+        self.assertAlmostEqual(value(e), 1.5)
+        e = abs(-1.5)
+        self.assertAlmostEqual(value(e), 1.5)
+
+    def test_abs_param(self):
+        m = ConcreteModel()
+        m.p = Param(initialize=0)
+        m.p.value = 1.5
+        e = abs(m.p)
+        self.assertAlmostEqual(value(e), 1.5)
+        m.p.value = -1.5
+        e = abs(m.p)
+        self.assertAlmostEqual(value(e), 1.5)
+
+    def test_abs_mutableparam(self):
+        m = ConcreteModel()
+        m.p = Param(initialize=0, mutable=True)
+        m.p.value = 1.5
+        e = abs(m.p)
+        self.assertAlmostEqual(value(e), 1.5)
+        m.p.value = -1.5
+        e = abs(m.p)
+        self.assertAlmostEqual(value(e), 1.5)
+
     def test_ceil_numval(self):
         e = ceil(1.5)
         self.assertAlmostEqual(value(e), 2.0)
@@ -993,6 +1019,59 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e._args[1]._args[0], m.a)
         self.assertEqual(e.size(), 4)
 
+    def test_paramDiff(self):
+        #
+        # Check the structure of a simple difference with a constant
+        #
+        m = AbstractModel()
+        m.a = Var()
+        m.p = Param()
+
+        #    -
+        #   / \
+        #  a   p
+        e = m.a - m.p
+        self.assertIs(type(e), EXPR._ViewSumExpression)
+        self.assertEqual(len(e._args), 2)
+        self.assertIs(e._args[0], m.a)
+        self.assertIs(type(e._args[1]), EXPR._NPV_NegationExpression)
+        self.assertIs(e._args[1]._args[0], m.p)
+        self.assertEqual(e.size(), 4)
+
+        #      -
+        #     / \
+        #  m.p   a
+        e = m.p - m.a
+        self.assertIs(type(e), EXPR._ViewSumExpression)
+        self.assertEqual(len(e._args), 2)
+        self.assertIs(e._args[0], m.p)
+        self.assertIs(type(e._args[1]), EXPR._NegationExpression)
+        self.assertIs(e._args[1]._args[0], m.a)
+        self.assertEqual(e.size(), 4)
+
+    def test_constparamDiff(self):
+        #
+        # Check the structure of a simple difference with a constant
+        #
+        m = ConcreteModel()
+        m.a = Var()
+        m.p = Param(initialize=0)
+
+        #    -
+        #   / \
+        #  a   p
+        e = m.a - m.p
+        self.assertIs(type(e), type(m.a))
+        self.assertIs(e, m.a)
+
+        #      -
+        #     / \
+        #  m.p   a
+        e = m.p - m.a
+        self.assertIs(type(e), EXPR._NegationExpression)
+        self.assertEqual(len(e._args), 1)
+        self.assertIs(e._args[0], m.a)
+
     def test_nestedDiff(self):
         #
         # Check the structure of nested differences
@@ -1072,12 +1151,48 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e._args[2]._args[0], e2)
         self.assertEqual(e.size(), 9)
 
+    def test_negation_param(self):
+        #
+        # Check logic for negations with uninitialize params
+        #
+        m = AbstractModel()
+        m.p = Param()
+        e = - m.p
+        self.assertIs(type(e), EXPR._NPV_NegationExpression)
+        e = - e
+        self.assertTrue(isinstance(e, Param))
+
+    def test_negation_mutableparam(self):
+        #
+        # Check logic for negations with mutable params
+        #
+        m = AbstractModel()
+        m.p = Param(mutable=True, initialize=1.0)
+        e = - m.p
+        self.assertIs(type(e), EXPR._NPV_NegationExpression)
+        e = - e
+        self.assertTrue(isinstance(e, Param))
+
+    def test_negation_var(self):
+        #
+        # Check logic for negations with var
+        #
+        m = AbstractModel()
+        m.p = Var()
+        e = - m.p
+        self.assertIs(type(e), EXPR._NegationExpression)
+        e = - e
+        self.assertTrue(isinstance(e, Var))
+
     def test_trivialDiff(self):
         #
         # Check that subtracting zero doesn't change the expression
         #
-        m = AbstractModel()
+        m = ConcreteModel()
         m.a = Var()
+        m.p = Param()
+
+        # a - 0
         e = m.a - 0
         self.assertIs(type(e), type(m.a))
         self.assertIs(e, m.a)
@@ -1087,6 +1202,17 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(type(e), EXPR._NegationExpression)
         self.assertEqual(len(e._args), 1)
         self.assertIs(e._args[0], m.a)
+
+        # p - 0
+        e = m.p - 0
+        self.assertIs(type(e), type(m.p))
+        self.assertIs(e, m.p)
+
+        # 0 - p
+        e = 0 - m.p
+        self.assertIs(type(e), EXPR._NPV_NegationExpression)
+        self.assertEqual(len(e._args), 1)
+        self.assertIs(e._args[0], m.p)
 
     def test_sumOf_nestedTrivialProduct2(self):
         #
@@ -1704,6 +1830,9 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         #
         m = AbstractModel()
         m.a = Var()
+        m.p = Param()
+        m.q = Param(initialize=2)
+        m.r = Param(mutable=True)
         self.assertRaises(ZeroDivisionError, m.a.__div__, 0)
 
         #
@@ -1727,6 +1856,30 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(e), EXPR._ReciprocalExpression)
         self.assertEqual(len(e._args), 1)
         self.assertIs(e._args[0], m.a)
+
+        #
+        # Check the structure dividing 1 by an expression
+        #
+        e = 1 / m.p
+        self.assertIs(type(e), EXPR._NPV_ReciprocalExpression)
+        self.assertEqual(len(e._args), 1)
+        self.assertIs(e._args[0], m.p)
+
+        #
+        # Check the structure dividing 1 by an expression
+        #
+        e = 1 / m.q
+        self.assertIs(type(e), EXPR._NPV_ReciprocalExpression)
+        self.assertEqual(len(e._args), 1)
+        self.assertIs(e._args[0], m.q)
+
+        #
+        # Check the structure dividing 1 by an expression
+        #
+        e = 1 / m.r
+        self.assertIs(type(e), EXPR._NPV_ReciprocalExpression)
+        self.assertEqual(len(e._args), 1)
+        self.assertIs(e._args[0], m.r)
 
         #
         # Check that dividing two non-zero constants gives a constant
@@ -4417,6 +4570,58 @@ con : Size=5
         self.assertEqual(OUT.getvalue(), reference)
 
 
+class TestLinearExpression(unittest.TestCase):
+
+    def test_sum_other(self):
+        m = ConcreteModel()
+        m.v = Var(range(5))
+
+        with linear_expression as e:
+            e = 2 + e
+            self.assertIs(e.__class__, EXPR._LinearExpression)
+            e = m.v[0] + e
+            self.assertIs(e.__class__, EXPR._LinearExpression)
+
+    def test_mul_other(self):
+        m = ConcreteModel()
+        m.v = Var(range(5))
+
+        with linear_expression as e:
+            e = 2 * e
+            self.assertIs(e.__class__, EXPR._LinearExpression)
+            e = m.v[0] * e
+            self.assertIs(e.__class__, EXPR._LinearExpression)
+        with linear_expression as e:
+            e = e*2
+            self.assertIs(e.__class__, EXPR._LinearExpression)
+            e = e*m.v[0]
+            self.assertIs(e.__class__, EXPR._LinearExpression)
+
+    def test_negation_other(self):
+        m = ConcreteModel()
+        m.v = Var(range(5))
+
+        with linear_expression as e:
+            e = 2 - e
+            self.assertIs(e.__class__, EXPR._LinearExpression)
+            e = - e
+            self.assertIs(e.__class__, EXPR._LinearExpression)
+
+    def test_pow_other(self):
+        m = ConcreteModel()
+        m.v = Var(range(5))
+
+        with linear_expression as e:
+            e = 2**e
+            self.assertIs(e.__class__, EXPR._NPV_PowExpression)
+            e = m.v[0] + m.v[1]
+            e = m.v[0]**e
+            self.assertIs(e.__class__, EXPR._PowExpression)
+
+
+#
+# Test the logic of _LinearExpression._decompose_term
+#
 class TestLinearDecomp(unittest.TestCase):
 
     def setUp(self):
@@ -4493,6 +4698,95 @@ class TestLinearDecomp(unittest.TestCase):
         self.assertEqual(EXPR._LinearExpression._decompose_term(e), (4,1,M.v))
         e = EXPR._ViewSumExpression([2,M.q+M.v,M.w])
         self.assertRaises(ValueError, EXPR._LinearExpression._decompose_term, e)
+        
+
+#
+# Test the logic of decompose_term()
+#
+class Test_decompose_term(unittest.TestCase):
+
+    def test_numeric(self):
+        self.assertEqual(EXPR.decompose_term(2.0), (True,[(2.0,None)]))
+
+    def test_NPV(self):
+        M = ConcreteModel()
+        M.q = Param(initialize=2)
+        self.assertEqual(EXPR.decompose_term(M.q), (True, [(M.q,None)]))
+
+    def test_var(self):
+        M = ConcreteModel()
+        M.v = Var()
+        self.assertEqual(EXPR.decompose_term(M.v), (True, [(1,M.v)]))
+
+    def test_simple(self):
+        M = ConcreteModel()
+        M.v = Var()
+        self.assertEqual(EXPR.decompose_term(2*M.v), (True, [(2,M.v)]))
+
+    def test_sum(self):
+        M = ConcreteModel()
+        M.v = Var()
+        M.w = Var()
+        M.q = Param(initialize=2)
+        self.assertEqual(EXPR.decompose_term(2+M.v),   (True, [(2,None), (1,M.v)]))
+        self.assertEqual(EXPR.decompose_term(M.q+M.v), (True, [(2,None), (1,M.v)]))
+        self.assertEqual(EXPR.decompose_term(M.v+M.q), (True, [(1,M.v), (2,None)]))
+        self.assertEqual(EXPR.decompose_term(M.v+M.w), (True, [(1,M.v), (1,M.w)]))
+
+    def test_prod(self):
+        M = ConcreteModel()
+        M.v = Var()
+        M.w = Var()
+        M.q = Param(initialize=2)
+        self.assertEqual(EXPR.decompose_term(2*M.v),   (True, [(2,M.v)]))
+        self.assertEqual(EXPR.decompose_term(M.q*M.v), (True, [(2,M.v)]))
+        self.assertEqual(EXPR.decompose_term(M.v*M.q), (True, [(2,M.v)]))
+        self.assertEqual(EXPR.decompose_term(M.w*M.v), (False, None))
+
+    def test_negation(self):
+        M = ConcreteModel()
+        M.v = Var()
+        self.assertEqual(EXPR.decompose_term(-M.v),     (True, [(-1,M.v)]))
+        self.assertEqual(EXPR.decompose_term(-(2+M.v)), (True, [(-2,None), (-1,M.v)]))
+
+    def test_reciprocal(self):
+        M = ConcreteModel()
+        M.v = Var()
+        M.q = Param(initialize=2)
+        M.p = Param(initialize=2, mutable=True)
+        self.assertEqual(EXPR.decompose_term(1/M.v), (False, None))
+        self.assertEqual(EXPR.decompose_term(1/M.q), (True, [(0.5,None)]))
+        e = 1/M.p
+        self.assertEqual(EXPR.decompose_term(e), (True, [(e,None)]))
+        
+    def test_multisum(self):
+        M = ConcreteModel()
+        M.v = Var()
+        M.w = Var()
+        M.q = Param(initialize=3)
+        e = EXPR._ViewSumExpression([2])
+        self.assertEqual(EXPR.decompose_term(e), (True, [(2,None)]))
+        e = EXPR._ViewSumExpression([2,M.v])
+        self.assertEqual(EXPR.decompose_term(e), (True, [(2,None), (1,M.v)]))
+        e = EXPR._ViewSumExpression([2,M.q+M.v])
+        self.assertEqual(EXPR.decompose_term(e), (True, [(2,None), (3,None), (1,M.v)]))
+        e = EXPR._ViewSumExpression([2,M.q+M.v,M.w])
+        self.assertEqual(EXPR.decompose_term(e), (True, [(2,None), (3,None), (1,M.v), (1,M.w)]))
+
+    def test_linear(self):
+        M = ConcreteModel()
+        M.v = Var()
+        M.w = Var()
+        with linear_expression as e:
+            e += 2
+            #
+            # When the linear expression is constant, then it will be
+            # identified as not potentially variable, and the expression returned
+            # will be itself.
+            #
+            self.assertEqual(EXPR.decompose_term(e), (True, [(e,None)]))
+            e += M.v
+            self.assertEqual(EXPR.decompose_term(-e), (True, [(-2,None), (-1,M.v)]))
         
 if __name__ == "__main__":
     unittest.main()
