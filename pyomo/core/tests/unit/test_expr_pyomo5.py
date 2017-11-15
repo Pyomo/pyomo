@@ -349,16 +349,6 @@ class TestExpression_Intrinsic(unittest.TestCase):
         e = ceil(m.p)
         self.assertAlmostEqual(value(e), -1.0)
 
-    def test_fabs(self):
-        m = ConcreteModel()
-        m.v = Var()
-        e = fabs(m.v)
-        self.assertEqual(e.__class__, EXPR._AbsExpression)
-        m.v.value = 1
-        self.assertAlmostEqual(value(e), 1.0)
-        m.v.value = -1
-        self.assertAlmostEqual(value(e), 1.0)
-
     def test_ceil(self):
         m = ConcreteModel()
         m.v = Var()
