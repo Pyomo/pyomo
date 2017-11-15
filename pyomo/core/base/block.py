@@ -1873,9 +1873,10 @@ def generate_cuid_names(block,
             any parent containers (such as blocks) that
             prefix the components requested even though the
             parent ctype may not match the input ctype.
-        descend_into (bool or iterable): Indicates whether or not the
-            function should descend into subblocks. Default
-            is True.
+        descend_into (bool or iterable of component types):
+            Indicates whether or not the function should descend
+            into subblocks. Default is True.
+            Example usage: descend_into=(Block, Disjunct)
         cuid_names_: Used internally by the function.
 
     Returns:
