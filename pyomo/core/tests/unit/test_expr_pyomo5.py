@@ -322,6 +322,7 @@ class TestExpression_Intrinsic(unittest.TestCase):
         m.p.value = -1.5
         e = abs(m.p)
         self.assertAlmostEqual(value(e), 1.5)
+        self.assertIs(e._potentially_variable(), False)
 
     def test_ceil_numval(self):
         e = ceil(1.5)
@@ -348,6 +349,7 @@ class TestExpression_Intrinsic(unittest.TestCase):
         m.p.value = -1.5
         e = ceil(m.p)
         self.assertAlmostEqual(value(e), -1.0)
+        self.assertIs(e._potentially_variable(), False)
 
     def test_ceil(self):
         m = ConcreteModel()
@@ -358,6 +360,7 @@ class TestExpression_Intrinsic(unittest.TestCase):
         self.assertAlmostEqual(value(e), 2.0)
         m.v.value = -1.5
         self.assertAlmostEqual(value(e), -1.0)
+        self.assertIs(e._potentially_variable(), True)
 
     def test_floor(self):
         m = ConcreteModel()
@@ -2489,8 +2492,8 @@ class TestPrettyPrinter_oldStyle(object):
             str(expr) )
 
 
-#class TestPrettyPrinter_newStyle(unittest.TestCase):
-class TestPrettyPrinter_newStyle(object):
+class TestPrettyPrinter_newStyle(unittest.TestCase):
+#class TestPrettyPrinter_newStyle(object):
 
     _save = None
 
@@ -2511,11 +2514,11 @@ class TestPrettyPrinter_newStyle(object):
 
         expr = 5 + model.a + model.a
         self.assertIs(type(expr), EXPR._ViewSumExpression)
-        self.assertEqual("5 + a + a", str(expr))
+        self.assertEqual("5 + 2*a", str(expr))
 
         expr += 5
         self.assertIs(type(expr), EXPR._ViewSumExpression)
-        self.assertEqual("5 + a + a + 5", str(expr))
+        self.assertEqual("10 + 2*a", str(expr))
 
     def test_prod(self):
         #
@@ -2525,7 +2528,7 @@ class TestPrettyPrinter_newStyle(object):
         model.a = Var()
 
         expr = 5 * model.a * model.a
-        self.assertEqual("5*a * a", str(expr))
+        self.assertEqual("5*a*a", str(expr))
 
         # This returns an integer, which has no pprint().
         #expr = expr*0
@@ -2534,19 +2537,19 @@ class TestPrettyPrinter_newStyle(object):
         #self.assertEqual("0.0", buf.getvalue())
 
         expr = 5 * model.a / model.a
-        self.assertEqual( "( 5*a ) / a",
+        self.assertEqual( "5*a*(1/a)",
                           str(expr) )
 
         expr = expr / model.a
-        self.assertEqual( "( 5*a ) / a / a",
+        self.assertEqual( "5*a*(1/a)*(1/a)",
                           str(expr) )
 
         expr = 5 * model.a / (model.a * model.a)
-        self.assertEqual( "( 5*a ) / ( a * a )",
+        self.assertEqual( "5*a*(1/( a*a ))",
                           str(expr) )
 
         expr = 5 * model.a / model.a / 2
-        self.assertEqual( "( 5*a ) / a / 2",
+        self.assertEqual( "0.5*5*a*(1/a)",
                           str(expr) )
 
     def test_inequality(self):
@@ -2599,6 +2602,8 @@ class TestPrettyPrinter_newStyle(object):
         expr = model.a + 5 == 5
         self.assertEqual( "5 + a  ==  5.0", str(expr) )
 
+    # TODO - resolve this test failure
+    @unittest.expectedFailure
     def test_linear(self):
         #
         # Print linear
@@ -2645,7 +2650,7 @@ class TestPrettyPrinter_newStyle(object):
         expr = + expr
         expr = abs(expr)
         self.assertEqual(
-            "abs( - ( 2**( 2 / ( 2 * ( 1 - ( ( a * a ) / a )**b + 1 ) ) ) ) )",
+            "abs( - 2**( 2*(1/( 2*( 1 - ( ( a + 1 + -1 )*a*(1/a) )**b + 1 ) )) ) )",
             str(expr) )
 
     def test_large_expression(self):
@@ -4046,6 +4051,20 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1._if(), expr2._if())
             self.assertEqual(expr1._then(), expr2._then())
             self.assertEqual(expr1._else(), expr2._else())
+            #
+            total = EXPR.clone_counter.count - start
+            self.assertEqual(total, 1)
+
+    def test_abs(self):
+        with EXPR.clone_counter:
+            start = EXPR.clone_counter.count
+            #
+            expr1 = abs(self.m.a)
+            expr2 = expr1.clone()
+            self.assertNotEqual(id(expr1), id(expr2))
+            self.assertEqual(expr1(), value(self.m.a))
+            self.assertEqual(expr2(), value(self.m.a))
+            self.assertEqual(id(expr1._args[0]), id(expr2._args[0]))
             #
             total = EXPR.clone_counter.count - start
             self.assertEqual(total, 1)
