@@ -14,6 +14,7 @@ __public__ = ['linear_expression', 'nonlinear_expression']
 __all__ = (
 'linear_expression',
 'nonlinear_expression',
+'decompose_term',
 'clone_counter',
 'clone_expression',
 'evaluate_expression',
@@ -1914,8 +1915,7 @@ class _StaticLinearExpression(_LinearExpression):
 #-------------------------------------------------------
 
 def decompose_term(term):
-    if term.__class__ in native_numeric_types or \
-        not term._potentially_variable():
+    if term.__class__ in native_numeric_types or not term._potentially_variable():
         return True, [(term,None)]
     elif term.__class__ in pyomo5_variable_types:
         return True, [(1,term)]
@@ -1925,6 +1925,7 @@ def decompose_term(term):
             return True, terms
         except ValueError:
             return False, None
+
 
 def _decompose_terms(expr, multiplier=1):
     if expr.__class__ in native_numeric_types or not expr._potentially_variable():
@@ -1938,26 +1939,26 @@ def _decompose_terms(expr, multiplier=1):
         else:
             raise ValueError("Quadratic terms exist in a product expression.")
     elif expr.__class__ is _ReciprocalExpression:
-        if expr._args[0]._potentially_variable():
-            raise ValueError("Unexpected nonlinear term")
-        yield (multiplier*expr, None)
-    #elif expr.__class__ is _LinearViewSumExpression:
-    #    for arg in expr.args:
-    #        yield (multiplier*arg[0], arg[1])
+        # The argument is potentially variable, so this represents a nonlinear term
+        #
+        # NOTE: We're ignoring possible simplifications 
+        raise ValueError("Unexpected nonlinear term")
     elif expr.__class__ is _ViewSumExpression or expr.__class__ is _MutableViewSumExpression:
         for arg in expr.args:
             for term in _decompose_terms(arg, multiplier):
                 yield term
     elif expr.__class__ is _NegationExpression:
-        yield (-multiplier,expr._args[0])
-    elif expr.__class__ is _LinearExpression:
+        for term in  _decompose_terms(expr._args[0], -multiplier):
+            yield term
+    elif expr.__class__ is _StaticLinearExpression or expr.__class__ is _LinearExpression:
         if expr.constant.__class__ in native_numeric_types and not isclose(expr.constant,0):
-            yield multiplier*expr.constant
+            yield (multiplier*expr.constant,None)
         if len(expr.linear_coefs) > 0:
             for c,v in zip(expr.linear_coefs, expr.linear_vars):
                 yield (multiplier*c,v)
     else:
-        raise ValueError("Unexpected nonlinear term")
+        raise ValueError("Unexpected nonlinear term")   #pragma: no cover
+
 
 def _process_arg(obj):
     #if False and obj.__class__ is _ViewSumExpression or obj.__class__ is _MutableViewSumExpression:
@@ -2131,8 +2132,6 @@ def generate_mul_expression(etype, _self, _other):
         etype -= _inplace
 
     if _self.__class__ is _LinearExpression:
-        if etype >= _unary:
-            return _self._combine_expr(etype, None)
         if _other.__class__ is not _LinearExpression:
             if not (_other.__class__ in native_types or _other.is_expression()):
                 _other = _process_arg(_other)
