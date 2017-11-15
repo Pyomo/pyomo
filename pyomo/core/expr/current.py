@@ -11,7 +11,7 @@
 from __future__ import division
 import math
 
-__all__ = ['fabs', 'log', 'log10', 'sin', 'cos', 'tan', 'cosh', 'sinh', 'tanh',
+__all__ = ['log', 'log10', 'sin', 'cos', 'tan', 'cosh', 'sinh', 'tanh',
            'asin', 'acos', 'atan', 'exp', 'sqrt', 'asinh', 'acosh',
            'atanh', 'ceil', 'floor']
 
@@ -51,13 +51,10 @@ numvalue.generate_relational_expression = generate_relational_expression
 #
 from pyomo.core.expr import expr_common as common
 
-def fabs(arg):
-    # FIXME: We need to switch this over from generate_expression to
-    # just use generate_intrinsic_function_expression
-    #
-    #return generate_intrinsic_function_expression(arg, 'fabs', math.fabs)
-    return generate_other_expression(common._abs, arg, None)
-
+#
+# NOTE: abs() and pow() are not defined here, because they are
+# Python operators.
+#
 def ceil(arg):
     return generate_intrinsic_function_expression(arg, 'ceil', math.ceil)
 
@@ -73,9 +70,6 @@ def log(arg):
 
 def log10(arg):
     return generate_intrinsic_function_expression(arg, 'log10', math.log10)
-
-#def pow(*args):
-#    return generate_expression(common._pow, *args)
 
 # FIXME: this is nominally the same as x ** 0.5, but follows a different
 # path and produces a different NL file!
