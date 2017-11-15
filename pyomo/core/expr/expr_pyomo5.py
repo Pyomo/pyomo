@@ -1634,9 +1634,8 @@ class _NPV_UnaryFunctionExpression(_UnaryFunctionExpression):
         return False
 
 
-
-# TODO: Should this actually be a special class, or just an instance of
-#       _UnaryFunctionExpression (like sin, cos, etc)?
+# NOTE: This should be a special class, since the expression generation relies
+# on the Python __abs__ method.
 class _AbsExpression(_UnaryFunctionExpression):
 
     __slots__ = ()
