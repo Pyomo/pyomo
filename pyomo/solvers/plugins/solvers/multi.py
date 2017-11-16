@@ -56,11 +56,8 @@ class Multistart(Solver):
             return (abs(bound - val) * random.random()) + min(bound, val)
 
         def rand_distributed(val, lb, ub, divisions=9):
-            linspace=[]
-            spacing = (ub - lb) / divisions
-            for i in range(divisions - 1):
-                linspace.append(spacing * (i + 1) + lb)
-            return random.choice(linspace)
+            linspace=np.linspace(lb,ub,divisions)
+            return np.random.choice(linspace)
 
         # iterate thorugh all units in flowsheet
         for o in itervalues(self.units):
