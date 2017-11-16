@@ -1899,6 +1899,10 @@ def generate_cuid_names(block,
         descend_ctype = tuple(descend_into)
     elif descend_into:
         descend_ctype = descend_into
+    else:
+        # If descend_into is False or None, we do not set descend_ctype because
+        # it is unused in the following code.
+        pass
 
     if type(ctype) in (tuple, list, set):
         ctypes = tuple(ctype)
