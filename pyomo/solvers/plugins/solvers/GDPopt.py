@@ -35,13 +35,12 @@ from pyomo.core.base import (Block, Constraint, ConstraintList, Expression,
                              TransformationFactory, Var, maximize, minimize,
                              value)
 from pyomo.core.base.block import generate_cuid_names
-from pyomo.core.base.expr import identify_variables
 from pyomo.core.base.expr_common import clone_expression
 from pyomo.core.base.numvalue import NumericConstant
 from pyomo.core.base.symbolic import differentiate
 from pyomo.core.kernel import (ComponentMap, ComponentSet, NonNegativeReals,
                                Reals)
-from pyomo.gdp import Disjunct
+from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory, SolverStatus
 from pyomo.opt.base import IOptSolver
@@ -226,13 +225,14 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
         # explored via an NLP subproblem. Depending on model characteristics,
         # the user may wish to revisit NLP subproblems (with a different
         # initialization, for example). Therefore, these cuts are not enabled
-        # by default.
+        # by default, unless the initial model has no discrete decisions.
         #
         # Note: these cuts will only exclude integer realizations that are not
         # already in the primary GDPopt_integer_cuts ConstraintList.
         GDPopt.feasible_integer_cuts = ConstraintList(
             doc='explored integer cuts')
-        GDPopt.feasible_integer_cuts.deactivate()
+        if not self._no_discrete_decisions:
+            GDPopt.feasible_integer_cuts.deactivate()
 
         # # Build a list of binary variables
         # self.binary_vars = [v for v in m.component_data_objects(
@@ -366,7 +366,7 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
         for constr in m.component_data_objects(ctype=Constraint, active=True,
                                                descend_into=(Disjunct, Block)):
             self.results.problem.number_of_constraints += 1
-            for v in identify_variables(constr.body):
+            for v in EXPR.identify_variables(constr.body, include_fixed=False):
                 var_set.add(v)
                 if v.is_binary():
                     binary_var_set.add(v)
@@ -378,6 +378,12 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
                     raise TypeError('Variable {0} has unknown domain of {1}'.
                                     format(v.name, v.domain))
 
+        active_disjunctions = ComponentSet(
+            disj for disj in m.component_data_objects(
+                ctype=Disjunction, active=True,
+                descend_into=(Disjunct, Block)))
+        self.results.problem.number_of_disjunctions = len(active_disjunctions)
+
         self.results.problem.number_of_variables = len(var_set)
         self.results.problem.number_of_binary_variables = len(binary_var_set)
         self.results.problem.number_of_integer_variables = len(integer_var_set)
@@ -386,13 +392,19 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
 
         # Check for any integer variables
         if any(True for v in m.component_data_objects(
-                ctype=Var, descend_into=True)
+                ctype=Var, active=True, descend_into=(Block, Disjunct))
                 if v.is_integer() and not v.fixed):
             raise ValueError('Model contains unfixed integer variables. '
                              'GDPopt does not currently support solution of '
                              'such problems.')
             # TODO add in the reformulation using base 2
-            # TODO need to look inside of disjuncts for integer variables too
+
+        # Handle LP/NLP being passed to the solver
+        if len(binary_var_set) == 0 and len(active_disjunctions) == 0:
+            logger.info('Problem has no discrete decisions.')
+            self._no_discrete_decisions = True
+        else:
+            self._no_discrete_decisions = False
 
         # Handle missing or multiple objectives
         objs = list(m.component_data_objects(
@@ -1441,8 +1453,6 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
                 continue
 
             logger.debug("Adding OA cut for %s with dual value %s"
-                         % (constr.name, m.dual.get(constr)))
-            print("Adding OA cut for %s with dual value %s"
                          % (constr.name, m.dual.get(constr)))
 
             constr_vars = list(EXPR.identify_variables(constr.body))
