@@ -33,6 +33,7 @@ __all__ = (
 '_AbsExpression',
 '_PowExpression',
 '_ExternalFunctionExpression',
+'_NPV_ExternalFunctionExpression',
 '_GetItemExpression',
 'Expr_if',
 '_LinearExpression',
@@ -40,6 +41,7 @@ __all__ = (
 '_ReciprocalExpression',
 '_NegationExpression',
 '_ViewSumExpression',
+'_MutableViewSumExpression',
 '_UnaryFunctionExpression',
 'compress_expression',
 '_NPV_NegationExpression',
@@ -247,9 +249,9 @@ class SimpleExpressionVisitor(SimpleVisitor):
 class ValueExpressionVisitor(ValueVisitor):
 
     #
-    # NOTE: This is not currently being used
+    # NOTE: This is not currently being used, so coverage testing is disabled
     #
-    def dfs_postorder_deque(self, node):
+    def dfs_postorder_deque(self, node):            #pragma: no cover
         """
         Depth-first search - postorder
 
@@ -403,19 +405,19 @@ class SizeVisitor(SimpleExpressionVisitor):
     def visit(self, node):
         self.counter += 1
 
-    def children(self, node):
-        return node._args
+    #def children(self, node):
+    #    return node._args
 
-    def is_leaf(self, node):
-        return node.__class__ in native_numeric_types or not node.is_expression() or node.nargs() == 0
+    #def is_leaf(self, node):
+    #    return node.__class__ in native_numeric_types or not node.is_expression() or node.nargs() == 0
 
     def finalize(self):
         return self.counter
 
 
 def sizeof_expression(expr, verbose=False):
-    if expr.__class__ in native_numeric_types or not expr.is_expression():
-        return 1
+    #if expr.__class__ in native_numeric_types or not expr.is_expression():
+    #    return 1
     visitor = SizeVisitor()
     return visitor.xbfs(expr)
     
@@ -464,6 +466,10 @@ class EvaluationVisitor(ValueExpressionVisitor):
 
 
 def evaluate_expression(exp, exception=True, only_fixed_vars=False):
+    #
+    # only_fixed_vars - evaluate with fixed variables
+    #   TODO - This doesn't appear to be used, so remove it
+    #
     try:
         if exp.__class__ in pyomo5_variable_types:
             if not only_fixed_vars or exp.fixed:
@@ -521,6 +527,17 @@ def identify_variables(expr,
                        include_fixed=True,
                        allow_duplicates=False,
                        include_potentially_variable=False):
+    # OPTIONS:
+    # include_fixed - list includes fixed variables
+    # allow_duplicates - list of each variable encountered, even if it's a duplicate of one earlier
+    # include_potentially_variable - list expression and other PV components, but not their variables
+    #
+    # WEH - it's not clear why this function shouldn't list all variables in the
+    # contained expressions.  The include_potentially_variable option is confusing.
+    #
+    #
+    # TODO: The allow_duplicates option isn't used anywhere, so we should remove it.
+    #
     visitor = VariableVisitor(include_fixed, allow_duplicates, include_potentially_variable)
     for v in visitor.xbfs_yield_leaves(expr):
         yield v
@@ -542,7 +559,7 @@ class PolyDegreeVisitor(ValueExpressionVisitor):
 
         Return True if the node is not expanded.
         """
-        if node.__class__ in native_numeric_types or not node._potentially_variable():
+        if node.__class__ in native_types or not node._potentially_variable():
             _values.append( 0 )
             return True
         elif not node.is_expression():
@@ -766,7 +783,7 @@ class _ExpressionBase(NumericValue):
            state[i] = getattr(self,i)
         return state
 
-    def __nonzero__(self):
+    def __nonzero__(self):      #pragma: no cover
         return bool(self())
 
     __bool__ = __nonzero__
@@ -838,7 +855,7 @@ class _ExpressionBase(NumericValue):
     def _clone(self, args, memo):
         return self.__class__(args)
 
-    def getname(self, *args, **kwds):
+    def getname(self, *args, **kwds):                       #pragma: no cover
         """The text name of this Expression function"""
         raise NotImplementedError("Derived expression (%s) failed to "\
             "implement getname()" % ( str(self.__class__), ))
@@ -900,7 +917,7 @@ class _ExpressionBase(NumericValue):
     def polynomial_degree(self):
         return polynomial_degree(self)
 
-    def _polynomial_degree(self, ans):
+    def _polynomial_degree(self, ans):                          #pragma: no cover
         raise NotImplementedError("Derived expression (%s) failed to "\
             "implement _polynomial_degree()" % ( str(self.__class__), ))
 
@@ -969,9 +986,6 @@ class _NegationExpression(_ExpressionBase):
     def _to_string_prefix(self, ostream, verbose):
         if verbose:
             ostream.write(self.getname())
-        elif not self._args[0].is_expression \
-             and _NegationExpression.PRECEDENCE <= self._args[0]._precedence():
-            ostream.write("-")
         else:
             ostream.write("- ")
 
@@ -1010,7 +1024,7 @@ class _ExternalFunctionExpression(_ExpressionBase):
             result[i] = getattr(self, i)
         return result
 
-    def getname(self, *args, **kwds):
+    def getname(self, *args, **kwds):           #pragma: no cover
         return self._fcn.getname(*args, **kwds)
 
     def _polynomial_degree(self, result):
@@ -1021,10 +1035,13 @@ class _ExternalFunctionExpression(_ExpressionBase):
 
     def _apply_operation(self, result):
         """Evaluate the expression"""
-        return self._fcn.evaluate( result )
+        return self._fcn.evaluate( result )     #pragma: no cover
 
-    def _inline_operator(self):
-        return ', '
+    def _to_string_prefix(self, ostream, verbose):
+        return self._fcn.getname()
+
+    def _inline_operator(self):                 #pragma: no cover
+        return ", "
 
 
 class _NPV_ExternalFunctionExpression(_ExternalFunctionExpression):
@@ -1140,7 +1157,7 @@ class _InequalityExpression(_LinearOperatorExpression):
         return result
 
     def __nonzero__(self):
-        if _InequalityExpression.chainedInequality is not None:
+        if _InequalityExpression.chainedInequality is not None:     #pragma: no cover
             raise TypeError(chainedInequalityErrorMessage())
         if not self.is_constant() and len(self._args) == 2:
             _InequalityExpression.call_info = traceback.extract_stack(limit=2)[-2]
@@ -1194,7 +1211,7 @@ class _EqualityExpression(_LinearOperatorExpression):
         return len(self._args)
 
     def __nonzero__(self):
-        if _InequalityExpression.chainedInequality is not None:
+        if _InequalityExpression.chainedInequality is not None:         #pragma: no cover
             raise TypeError(chainedInequalityErrorMessage())
         return bool(self())
 
@@ -1281,7 +1298,10 @@ class _ReciprocalExpression(_ExpressionBase):
         return 'recip'
 
     def _to_string_prefix(self, ostream, verbose):
-        ostream.write("(1/")
+        if verbose:
+            ostream.write(self.getname())
+        else:
+            ostream.write("(1/")
 
     def _to_string_suffix(self, ostream, verbose):
         ostream.write(")")
@@ -1320,9 +1340,6 @@ class _SumExpression(_LinearOperatorExpression):
         l_, r_ = result
         return l_ + r_
 
-    def getname(self, *args, **kwds):
-        return 'sum'
-
 
 class _NPV_SumExpression(_SumExpression):
     __slots__ = ()
@@ -1354,7 +1371,7 @@ class _ViewSumExpression(_SumExpression):
         elif not new_arg is None:
             self._args.append(new_arg)
         self._nargs = len(self._args)
-        if not new_arg is None and new_arg.__class__ in pyomo5_expression_types:
+        if new_arg.__class__ in pyomo5_expression_types:
             new_arg._is_owned = True
         return self
 
@@ -1380,10 +1397,17 @@ class _ViewSumExpression(_SumExpression):
         return 'viewsum'
 
     def is_constant(self):
-        for v in islice(self._args, self._nargs):
-            if not (v.__class__ in native_numeric_types or v.is_constant()):
-                return False
-        return True
+        return False
+        #
+        # In most normal contexts, a _ViewSumExpression is non-constant.  When
+        # Forming expressions, constant parameters are turned into numbers, which
+        # are simply added.  Mutable parameters, variables and expressions are 
+        # not constant.
+        #
+        #for v in islice(self._args, self._nargs):
+        #    if not (v.__class__ in native_numeric_types or v.is_constant()):
+        #        return False
+        #return True
 
     def _potentially_variable(self):
         for v in islice(self._args, self._nargs):
@@ -1415,7 +1439,7 @@ class _MutableViewSumExpression(_ViewSumExpression):
         elif not new_arg is None:
             self._args.append(new_arg)
         self._nargs = len(self._args)
-        if not new_arg is None and new_arg.__class__ in pyomo5_expression_types:
+        if new_arg.__class__ in pyomo5_expression_types:
             new_arg._is_owned = True
         return self
 
@@ -1558,7 +1582,7 @@ class Expr_if(_ExpressionBase):
         if _if == 0:
             try:
                 return _then if self._if() else _else
-            except:
+            except ValueError:
                 pass
         return None
 
