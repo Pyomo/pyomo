@@ -15,7 +15,7 @@ diff_tol = 1e-4
 __author__ = "Qi Chen <https://github.com/qtothec>"
 
 
-class TestMINDT(unittest.TestCase):
+class TestMindtPy(unittest.TestCase):
     """Tests for the MINDT solver plugin."""
 
     @unittest.skipIf(not subsolvers_available,
@@ -23,7 +23,7 @@ class TestMINDT(unittest.TestCase):
                      .format(required_solvers))
     def test_OA(self):
         """Test the outer approximation decomposition algorithm."""
-        with SolverFactory('mindt') as opt:
+        with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
             opt.solve(model, strategy='OA')
 
@@ -36,7 +36,7 @@ class TestMINDT(unittest.TestCase):
                      .format(required_solvers))
     def test_PSC(self):
         """Test the partial surrogate cuts decomposition algorithm."""
-        with SolverFactory('mindt') as opt:
+        with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
             opt.solve(model, strategy='PSC')
 

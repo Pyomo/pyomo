@@ -23,9 +23,8 @@ from __future__ import division
 
 from six import iteritems
 
-from pyomo.environ import (Binary, ConcreteModel, Constraint,
-                           NonNegativeReals, Objective, Param,
-                           RangeSet, Var, exp, minimize)
+from pyomo.environ import (Binary, ConcreteModel, Constraint, NonNegativeReals,
+                           Objective, Param, RangeSet, Var, exp, minimize)
 
 
 class EightProcessFlowsheet(ConcreteModel):
@@ -137,8 +136,8 @@ class EightProcessFlowsheet(ConcreteModel):
 
         """Cost (objective) function definition"""
         m.cost = Objective(expr=sum(Y[j] * CF[j] for j in J) +
-                             sum(X[i] * CV[i] for i in I) + CONSTANT,
-                             sense=minimize)
+                           sum(X[i] * CV[i] for i in I) + CONSTANT,
+                           sense=minimize)
 
         """Bound definitions"""
         # x (flow) upper bounds
