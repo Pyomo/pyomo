@@ -428,9 +428,6 @@ def sizeof_expression(expr, verbose=False):
 
 class EvaluationVisitor(ValueExpressionVisitor):
 
-    def __init__(self, only_fixed_vars=False):
-        self.only_fixed_vars = only_fixed_vars
-
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
         return node._apply_operation(values)
@@ -446,13 +443,7 @@ class EvaluationVisitor(ValueExpressionVisitor):
             return True
 
         elif node.__class__ in pyomo5_variable_types:
-            if self.only_fixed_vars:
-                if node.fixed:
-                    _values.append( node.value )
-                else:
-                    raise ValueError("Cannot evaluate an unfixed variable with only_fixed_vars=True")
-            else:
-                _values.append( value(node) )
+            _values.append( value(node) )
             return True
 
         elif not node.is_expression():
@@ -465,22 +456,15 @@ class EvaluationVisitor(ValueExpressionVisitor):
         return ans
 
 
-def evaluate_expression(exp, exception=True, only_fixed_vars=False):
-    #
-    # only_fixed_vars - evaluate with fixed variables
-    #   TODO - This doesn't appear to be used, so remove it
-    #
+def evaluate_expression(exp, exception=True):
     try:
         if exp.__class__ in pyomo5_variable_types:
-            if not only_fixed_vars or exp.fixed:
-                return exp.value
-            else:
-                raise ValueError("Cannot evaluate an unfixed variable with only_fixed_vars=True")
+            return exp.value
         elif exp.__class__ in native_numeric_types:
             return exp
         elif not exp.is_expression():
             return exp()
-        visitor = EvaluationVisitor(only_fixed_vars=only_fixed_vars)
+        visitor = EvaluationVisitor()
         return visitor.dfs_postorder_stack(exp)
 
     except TemplateExpressionError:
