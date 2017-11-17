@@ -21,21 +21,15 @@ c_u_Feas(C)_:
 +1 t(C)
 <= -6
 
-c_e__gdp_chull_relaxation_disj_disaggregation(A_B_3_t(A))_:
--1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(0)_t(A)
--1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(1)_t(A)
-+1 t(A)
-= 0
-
 c_e__gdp_chull_relaxation_disj_disaggregation(A_B_3_t(B))_:
 -1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(0)_t(B)
 -1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(1)_t(B)
 +1 t(B)
 = 0
 
-c_e__gdp_chull_relaxation_disj_disaggregation(A_C_1_t(A))_:
--1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(2)_t(A)
--1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(3)_t(A)
+c_e__gdp_chull_relaxation_disj_disaggregation(A_B_3_t(B)_t(A))_:
+-1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(0)_t(A)
+-1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(1)_t(A)
 +1 t(A)
 = 0
 
@@ -45,16 +39,22 @@ c_e__gdp_chull_relaxation_disj_disaggregation(A_C_1_t(C))_:
 +1 t(C)
 = 0
 
-c_e__gdp_chull_relaxation_disj_disaggregation(B_C_2_t(B))_:
--1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(4)_t(B)
--1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(5)_t(B)
-+1 t(B)
+c_e__gdp_chull_relaxation_disj_disaggregation(A_C_1_t(C)_t(A))_:
+-1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(2)_t(A)
+-1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(3)_t(A)
++1 t(A)
 = 0
 
 c_e__gdp_chull_relaxation_disj_disaggregation(B_C_2_t(C))_:
 -1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(4)_t(C)
 -1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(5)_t(C)
 +1 t(C)
+= 0
+
+c_e__gdp_chull_relaxation_disj_disaggregation(B_C_2_t(C)_t(B))_:
+-1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(4)_t(B)
+-1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(5)_t(B)
++1 t(B)
 = 0
 
 c_e__gdp_chull_relaxation_disj_xor(A_B_3)_:

@@ -232,7 +232,7 @@ class ConvexHull_Transformation(Transformation):
         orC = Constraint(disjunction.index_set()) if \
               disjunction.is_indexed() else Constraint()
         xor = disjunction.xor
-        # Convex hull doesn't work if this is an or constriant. So if
+        # Convex hull doesn't work if this is an or constraint. So if
         # xor is false, give up
         if not xor:
             raise GDP_Error("Cannot do convex hull transformation for "
@@ -280,9 +280,8 @@ class ConvexHull_Transformation(Transformation):
             type(parent_block._gdp_transformation_info) is dict):
                 infodict = parent_block._gdp_transformation_info
                 if parent_component.name in infodict:
-                    # if the orConstraint and disaggregation
-                    # constraints have already been declared, we fetch
-                    # them.
+                    # if the orConstraint and disaggregation constraints have
+                    # already been declared, we fetch them.
                     orConstraint = infodict['disjunction_or_constraint'][
                         parent_component.local_name]
                     disaggregationConstraint = infodict[
@@ -308,7 +307,7 @@ class ConvexHull_Transformation(Transformation):
                 # variables. This means there is trouble if they are
                 # unfixed later...  
                 for var in identify_variables(cons.body, include_fixed=False):
-                    # Note the use of a dict so that we will eventually
+                    # Note the use of a list so that we will eventually
                     # disaggregate the vars in a deterministic order
                     # (the order that we found them)
                     if var not in varSet_tmp:
@@ -329,8 +328,20 @@ class ConvexHull_Transformation(Transformation):
                 disaggregatedVar = disjunct._gdp_transformation_info[
                     'disaggregatedVars'][var]
                 disaggregatedExpr += disaggregatedVar
+            # TODO: The name below is a problem. We could potentially have
+            # variables of the same name because these variables could live on
+            # different blocks. So we really need the name to be unique with
+            # respect to all of the other variables that will be disaggregated
+            # in this disjunction. which is not what the line below does.
             consName = unique_component_name(disjunct, var.name)
-            consIdx = index + (consName,) if index is not None else consName
+            # TODO: This is one idea for how to add an index, Qi has another. We
+            # should probably choose one.
+            if type(index) is tuple: 
+                index = consIdx = index + (consName,)
+            else:               
+                consIdx = (index,) + (consName,) if index is not None \
+                          else consName
+
             disaggregationConstraint.add(
                 consIdx,
                 var == disaggregatedExpr)

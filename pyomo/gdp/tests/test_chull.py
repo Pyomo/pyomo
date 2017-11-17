@@ -471,10 +471,89 @@ class TwoTermDisj(unittest.TestCase):
 
 class IndexedDisjunction(unittest.TestCase):
     @staticmethod
-    def makeModel(self):
-        pass
+    def makeModel():
+        m = ConcreteModel()
+        m.A = Set(initialize=[1,2,3])
+        m.B = Set(initialize=['a','b'])
+        m.x = Var(m.A, bounds=(-10, 10))
+        def disjunct_rule(d, i, k):
+            m = d.model()
+            if k == 'a':
+                d.cons_a = Constraint(expr=m.x[i] >= 5)
+            if k == 'b':
+                d.cons_b = Constraint(expr=m.x[i] <= 0)
+        m.disjunct = Disjunct(m.A, m.B, rule=disjunct_rule)
+        def disj_rule(m, i):
+            return [m.disjunct[i, k] for k in m.B]
+        m.disjunction = Disjunction(m.A, rule=disj_rule)
+        return m
 
+    def test_disaggregation_constraints(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.chull').apply_to(m)
 
+        disaggregationCons = m._gdp_chull_relaxation_disjunction_disaggregation
+        relaxedDisjuncts = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
+        self.assertIsInstance(disaggregationCons, Constraint)
+        self.assertEqual(len(disaggregationCons), 3)
+
+        disaggregatedVars = {
+            (1, 'x[1]'): [relaxedDisjuncts[0].component('x[1]'), 
+                          relaxedDisjuncts[1].component('x[1]')], 
+            (2, 'x[2]'): [relaxedDisjuncts[2].component('x[2]'), 
+                          relaxedDisjuncts[3].component('x[2]')], 
+            (3, 'x[3]'): [relaxedDisjuncts[4].component('x[3]'), 
+                          relaxedDisjuncts[5].component('x[3]')],
+        }
+
+        for i, disVars in iteritems(disaggregatedVars):
+            cons = disaggregationCons[i]
+            self.assertEqual(cons.lower, 0)
+            self.assertEqual(cons.upper, 0)
+            self.assertEqual(len(cons.body._args), 3)
+            self.assertEqual(len(cons.body._coef), 3)
+            self.assertEqual(cons.body._coef[0], 1)
+            self.assertEqual(cons.body._coef[1], -1)
+            self.assertEqual(cons.body._coef[2], -1)
+            self.assertIs(cons.body._args[0], m.x[i[0]])
+            self.assertIs(cons.body._args[1], disVars[0])
+            self.assertIs(cons.body._args[2], disVars[1])
+
+    # TODO: also test disaggregation constraints for when we have a disjunction
+    # where the indices are tuples. (This is to test that when we combine the
+    # indices and the constraint name we get what we expect in both cases.)
+
+class DisaggregatedVarNamingConflict(unittest.TestCase):
+    @staticmethod
+    def makeModel():
+        m = ConcreteModel()
+        m.b = Block()
+        m.b.x = Var(bounds=(0, 10))
+        m.add_component("b.x", Var(bounds=(-9, 9)))
+        def disjunct_rule(d, i):
+            m = d.model()
+            if i:
+                d.cons_block = Constraint(expr=m.b.x >= 5)
+                d.cons_model = Constraint(expr=m.component("b.x")==0)
+            else:
+                d.cons_model = Constraint(expr=m.component("b.x") <= -5)
+        m.disjunct = Disjunct([0,1], rule=disjunct_rule)
+        m.disjunction = Disjunction(expr=[m.disjunct[0], m.disjunct[1]])
+
+        return m
+    
+    def test_disaggregation_constraints(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.chull').apply_to(m)
+
+        disCons = m._gdp_chull_relaxation_disjunction_disaggregation
+        self.assertIsInstance(disCons, Constraint)
+        self.assertEqual(len(disCons), 2)
+        # TODO: the above thing fails because the index gets overwritten. I
+        # don't know how to keep them unique at the moment. When I do, I also
+        # need to test that the indices are actually what we expect.
+
+# TODO
 # class NestedDisjunction(unittest.TestCase):
 #     @staticmethod
 #     def makeModel():
