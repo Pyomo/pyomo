@@ -386,13 +386,12 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
 
         # Check for any integer variables
         if any(True for v in m.component_data_objects(
-                ctype=Var, descend_into=True)
+                ctype=Var, active=True, descend_into=(Block, Disjunct))
                 if v.is_integer() and not v.fixed):
             raise ValueError('Model contains unfixed integer variables. '
                              'GDPopt does not currently support solution of '
                              'such problems.')
             # TODO add in the reformulation using base 2
-            # TODO need to look inside of disjuncts for integer variables too
 
         # Handle missing or multiple objectives
         objs = list(m.component_data_objects(
