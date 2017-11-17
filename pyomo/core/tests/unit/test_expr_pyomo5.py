@@ -876,7 +876,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #
         e = m.a + m.a
         f = e + 0
-        self.assertIs(id(e), id(f))
+        self.assertEqual(id(e), id(f))
 
     def test_sumOf_nestedTrivialProduct(self):
         #
