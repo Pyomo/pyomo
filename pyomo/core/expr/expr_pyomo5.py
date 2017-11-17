@@ -483,10 +483,9 @@ def evaluate_expression(exp, exception=True):
 
 class VariableVisitor(SimpleExpressionVisitor):
 
-    def __init__(self, include_fixed=True, allow_duplicates=False, include_potentially_variable=False):
+    def __init__(self, include_fixed=True, include_potentially_variable=False):
         self.seen = set()
         self.include_fixed = include_fixed
-        self.allow_duplicates = allow_duplicates
         self.include_potentially_variable = include_potentially_variable
         
     def visit(self, node):
@@ -494,35 +493,28 @@ class VariableVisitor(SimpleExpressionVisitor):
             if ( self.include_fixed
                  or not node.is_fixed()
                  or self.include_potentially_variable ):
-                if not self.allow_duplicates:
-                    if id(node) in self.seen:
-                        return
-                    self.seen.add(id(node))
-                return node
-        elif self.include_potentially_variable and node.__class__ not in native_numeric_types and node._potentially_variable():
-            if not self.allow_duplicates:
                 if id(node) in self.seen:
                     return
                 self.seen.add(id(node))
+                return node
+        elif self.include_potentially_variable and node.__class__ not in native_numeric_types and node._potentially_variable():
+            if id(node) in self.seen:
+                return
+            self.seen.add(id(node))
             return node
 
 
 def identify_variables(expr,
                        include_fixed=True,
-                       allow_duplicates=False,
                        include_potentially_variable=False):
     # OPTIONS:
     # include_fixed - list includes fixed variables
-    # allow_duplicates - list of each variable encountered, even if it's a duplicate of one earlier
     # include_potentially_variable - list expression and other PV components, but not their variables
     #
     # WEH - it's not clear why this function shouldn't list all variables in the
     # contained expressions.  The include_potentially_variable option is confusing.
     #
-    #
-    # TODO: The allow_duplicates option isn't used anywhere, so we should remove it.
-    #
-    visitor = VariableVisitor(include_fixed, allow_duplicates, include_potentially_variable)
+    visitor = VariableVisitor(include_fixed, include_potentially_variable)
     for v in visitor.xbfs_yield_leaves(expr):
         yield v
 
