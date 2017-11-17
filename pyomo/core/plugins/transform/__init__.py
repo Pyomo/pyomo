@@ -27,3 +27,4 @@ import pyomo.core.plugins.transform.detect_fixed_vars
 import pyomo.core.plugins.transform.init_vars
 import pyomo.core.plugins.transform.remove_zero_terms
 import pyomo.core.plugins.transform.add_slack_vars
+import pyomo.core.plugins.transform.strip_bounds
