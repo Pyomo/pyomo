@@ -407,7 +407,7 @@ class CPLEXDirect(OptSolver):
 
         self._referenced_variable_ids.clear()
 
-        for var in pyomo_instance.component_data_objects(Var, active=True):
+        for var in pyomo_instance.component_data_objects(Var):
 
             if var.fixed and not self._output_fixed_variable_bounds:
                 # if a variable is fixed, and we're preprocessing

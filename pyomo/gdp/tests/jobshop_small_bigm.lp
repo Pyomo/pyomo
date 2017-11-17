@@ -21,53 +21,53 @@ c_u_Feas(C)_:
 +1 t(C)
 <= -6
 
-c_e__gdp_relax_bigm_disj(A_B_3)_:
-+1 _gdp_relax_bigm_NoClash(A_B_3_0)_indicator_var
-+1 _gdp_relax_bigm_NoClash(A_B_3_1)_indicator_var
+c_e__gdp_bigm_relaxation_disj_xor(A_B_3)_:
++1 NoClash(A_B_3_0)_indicator_var
++1 NoClash(A_B_3_1)_indicator_var
 = 1
 
-c_e__gdp_relax_bigm_disj(A_C_1)_:
-+1 _gdp_relax_bigm_NoClash(A_C_1_0)_indicator_var
-+1 _gdp_relax_bigm_NoClash(A_C_1_1)_indicator_var
+c_e__gdp_bigm_relaxation_disj_xor(A_C_1)_:
++1 NoClash(A_C_1_0)_indicator_var
++1 NoClash(A_C_1_1)_indicator_var
 = 1
 
-c_e__gdp_relax_bigm_disj(B_C_2)_:
-+1 _gdp_relax_bigm_NoClash(B_C_2_0)_indicator_var
-+1 _gdp_relax_bigm_NoClash(B_C_2_1)_indicator_var
+c_e__gdp_bigm_relaxation_disj_xor(B_C_2)_:
++1 NoClash(B_C_2_0)_indicator_var
++1 NoClash(B_C_2_1)_indicator_var
 = 1
 
-c_u__gdp_relax_bigm_NoClash(A_B_3_0)_c_eq_:
-+19 _gdp_relax_bigm_NoClash(A_B_3_0)_indicator_var
+c_u__pyomo_gdp_bigm_relaxation_relaxedDisjuncts(0)_NoClash(A_B_3_0)_c(ub)_:
++19 NoClash(A_B_3_0)_indicator_var
 -1 t(A)
 +1 t(B)
 <= 19
 
-c_u__gdp_relax_bigm_NoClash(A_B_3_1)_c_eq_:
-+24 _gdp_relax_bigm_NoClash(A_B_3_1)_indicator_var
+c_u__pyomo_gdp_bigm_relaxation_relaxedDisjuncts(1)_NoClash(A_B_3_1)_c(ub)_:
++24 NoClash(A_B_3_1)_indicator_var
 +1 t(A)
 -1 t(B)
 <= 19
 
-c_u__gdp_relax_bigm_NoClash(A_C_1_0)_c_eq_:
-+21 _gdp_relax_bigm_NoClash(A_C_1_0)_indicator_var
+c_u__pyomo_gdp_bigm_relaxation_relaxedDisjuncts(2)_NoClash(A_C_1_0)_c(ub)_:
++21 NoClash(A_C_1_0)_indicator_var
 -1 t(A)
 +1 t(C)
 <= 19
 
-c_u__gdp_relax_bigm_NoClash(A_C_1_1)_c_eq_:
-+24 _gdp_relax_bigm_NoClash(A_C_1_1)_indicator_var
+c_u__pyomo_gdp_bigm_relaxation_relaxedDisjuncts(3)_NoClash(A_C_1_1)_c(ub)_:
++24 NoClash(A_C_1_1)_indicator_var
 +1 t(A)
 -1 t(C)
 <= 19
 
-c_u__gdp_relax_bigm_NoClash(B_C_2_0)_c_eq_:
-+25 _gdp_relax_bigm_NoClash(B_C_2_0)_indicator_var
+c_u__pyomo_gdp_bigm_relaxation_relaxedDisjuncts(4)_NoClash(B_C_2_0)_c(ub)_:
++25 NoClash(B_C_2_0)_indicator_var
 -1 t(B)
 +1 t(C)
 <= 19
 
-c_u__gdp_relax_bigm_NoClash(B_C_2_1)_c_eq_:
-+20 _gdp_relax_bigm_NoClash(B_C_2_1)_indicator_var
+c_u__pyomo_gdp_bigm_relaxation_relaxedDisjuncts(5)_NoClash(B_C_2_1)_c(ub)_:
++20 NoClash(B_C_2_1)_indicator_var
 +1 t(B)
 -1 t(C)
 <= 19
@@ -80,17 +80,17 @@ bounds
    0 <= t(A) <= 19
    0 <= t(B) <= 19
    0 <= t(C) <= 19
-   0 <= _gdp_relax_bigm_NoClash(A_B_3_0)_indicator_var <= 1
-   0 <= _gdp_relax_bigm_NoClash(A_B_3_1)_indicator_var <= 1
-   0 <= _gdp_relax_bigm_NoClash(A_C_1_0)_indicator_var <= 1
-   0 <= _gdp_relax_bigm_NoClash(A_C_1_1)_indicator_var <= 1
-   0 <= _gdp_relax_bigm_NoClash(B_C_2_0)_indicator_var <= 1
-   0 <= _gdp_relax_bigm_NoClash(B_C_2_1)_indicator_var <= 1
+   0 <= NoClash(A_B_3_0)_indicator_var <= 1
+   0 <= NoClash(A_B_3_1)_indicator_var <= 1
+   0 <= NoClash(A_C_1_0)_indicator_var <= 1
+   0 <= NoClash(A_C_1_1)_indicator_var <= 1
+   0 <= NoClash(B_C_2_0)_indicator_var <= 1
+   0 <= NoClash(B_C_2_1)_indicator_var <= 1
 binary
-  _gdp_relax_bigm_NoClash(A_B_3_0)_indicator_var
-  _gdp_relax_bigm_NoClash(A_B_3_1)_indicator_var
-  _gdp_relax_bigm_NoClash(A_C_1_0)_indicator_var
-  _gdp_relax_bigm_NoClash(A_C_1_1)_indicator_var
-  _gdp_relax_bigm_NoClash(B_C_2_0)_indicator_var
-  _gdp_relax_bigm_NoClash(B_C_2_1)_indicator_var
+  NoClash(A_B_3_0)_indicator_var
+  NoClash(A_B_3_1)_indicator_var
+  NoClash(A_C_1_0)_indicator_var
+  NoClash(A_C_1_1)_indicator_var
+  NoClash(B_C_2_0)_indicator_var
+  NoClash(B_C_2_1)_indicator_var
 end

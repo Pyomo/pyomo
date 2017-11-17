@@ -1,6 +1,6 @@
 cc : Size=1, Index=None, Active=True
-    Key  : Arg0 : Arg1                                                                       : Active
-    None : None : cc.expr1.indicator_var + cc.expr2.indicator_var  <=  -1 + x1 + 2*x2 + 3*x3 :   True
+    Key  : Arg0           : Arg1                    : Active
+    None : -1 * x1  <=  y : 1 - 3*x3  <=  x1 + 2*x2 :   True
     2 Disjunct Declarations
         expr1 : Size=1, Index=None, Active=True
             1 Var Declarations
@@ -34,8 +34,8 @@ cc : Size=1, Index=None, Active=True
             3 Declarations: indicator_var c0 c1
 
     1 Disjunction Declarations
-        complements : Size=1, Index=None, Active=True
-            Key  : Lower : Body                                            : Upper : Active
-            None :   1.0 : cc.expr1.indicator_var + cc.expr2.indicator_var :   1.0 :   True
+        complements : Size=1, Index=None, XOR=True, Active=True
+            Key  : Disjuncts                : Active
+            None : ['cc.expr1', 'cc.expr2'] :   True
 
     3 Declarations: expr1 expr2 complements

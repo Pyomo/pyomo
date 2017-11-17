@@ -37,7 +37,7 @@ try:
 except ImportError:
     yaml_available=False
 
-solvers = pyomo.opt.check_available_solvers('cplex', 'glpk')
+solvers = pyomo.opt.check_available_solvers('cplex', 'glpk','gurobi')
 
 
 if False:
@@ -58,7 +58,8 @@ if False:
                         original = getattr(base, key, None)
                         if original is not None:
                             copy = copyfunc(original)
-                            copy.__doc__ = attrs[key].__doc__ + " (%s)" % copy.__name__
+                            copy.__doc__ = attrs[key].__doc__ + \
+                                           " (%s)" % copy.__name__
                             attrs[key] = copy
                             break
             for base in bases:
@@ -90,8 +91,16 @@ class CommonTests:
             pp = kwds['preprocess']
             if pp == 'bigm':
                 args.append('--transform=gdp.bigm')
+                # ESJ: HACK for now: also apply the reclassify
+                # transformation in this case
+                args.append('--transform=gdp.reclassify')
             elif pp == 'chull':
                 args.append('--transform=gdp.chull')
+                # ESJ: HACK for now: also apply the reclassify
+                # transformation in this case
+                args.append('--transform=gdp.reclassify')
+            elif pp == 'cuttingplane':
+                args.append('--transform=gdp.cuttingplane')
         args.append('-c')
         args.append('--symbolic-solver-labels')
         os.chdir(currdir)
@@ -135,6 +144,9 @@ class CommonTests:
         # Run the small jobshop example using the BigM transformation
         self.pyomo( join(exdir,'jobshop.py'), join(exdir,'jobshop-small.dat'),
                     preprocess='bigm' )
+        # ESJ: TODO: Right now the indicator variables have names they won't
+        # have when they don't have to be reclassified. So I think this LP file will
+        # need to change again.
         self.check( 'jobshop_small', 'bigm' )
 
     def test_bigm_jobshop_large(self):
@@ -142,6 +154,8 @@ class CommonTests:
         # Run the large jobshop example using the BigM transformation
         self.pyomo( join(exdir,'jobshop.py'), join(exdir,'jobshop.dat'),
                     preprocess='bigm')
+        # ESJ: TODO: this LP file also will need to change with the
+        # indicator variable change.
         self.check( 'jobshop_large', 'bigm' )
 
     def test_chull_jobshop_small(self):
@@ -157,6 +171,20 @@ class CommonTests:
         self.pyomo( join(exdir,'jobshop.py'), join(exdir,'jobshop.dat'),
                     preprocess='chull')
         self.check( 'jobshop_large', 'chull' )
+
+    @unittest.skipIf('gurobi' not in solvers, 'Gurobi solver not available')
+    def test_cuttingplane_jobshop_small(self):
+        self.problem='test_cuttingplane_jobshop_small'
+        self.pyomo( join(exdir,'jobshop.py'), join(exdir,'jobshop-small.dat'),
+                    preprocess='cuttingplane')
+        self.check( 'jobshop_small', 'cuttingplane' )
+
+    @unittest.skipIf('gurobi' not in solvers, 'Gurobi solver not available')
+    def test_cuttingplane_jobshop_large(self):
+        self.problem='test_cuttingplane_jobshop_large'
+        self.pyomo( join(exdir,'jobshop.py'), join(exdir,'jobshop.dat'),
+                    preprocess='cuttingplane')
+        self.check( 'jobshop_large', 'cuttingplane' )
 
 
 class Reformulate(unittest.TestCase, CommonTests):
@@ -193,7 +221,11 @@ class Solver(unittest.TestCase):
         for i in range(len(refObj)):
             self.assertEqual(len(refObj[i]), len(ansObj[i]))
             for key,val in iteritems(refObj[i]):
-                self.assertEqual(val, ansObj[i].get(key,None))
+                self.assertAlmostEqual(
+                    val.get('Value', None),
+                    ansObj[i].get(key,{}).get('Value', None),
+                    6
+                )
 
 
 @unittest.skipIf(not yaml_available, "YAML is not available")
@@ -206,7 +238,8 @@ class Solve_GLPK(Solver, CommonTests):
 
 
 @unittest.skipIf(not yaml_available, "YAML is not available")
-@unittest.skipIf(not 'cplex' in solvers, "The 'cplex' executable is not available")
+@unittest.skipIf(not 'cplex' in solvers, 
+                 "The 'cplex' executable is not available")
 class Solve_CPLEX(Solver, CommonTests):
 
     def pyomo(self,  *args, **kwds):
