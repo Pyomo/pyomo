@@ -440,9 +440,6 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
             if not hasattr(m, 'dual'):  # Set up dual value reporting
                 m.dual = Suffix(direction=Suffix.IMPORT)
             m.dual.activate()
-            # Map Constraint, nlp_iter -> generated OA Constraint
-            GDPopt.OA_constr_map = {}
-            self._calc_jacobians()  # preload jacobians
         if self._decomposition_strategy == 'PSC':
             if not hasattr(m, 'dual'):  # Set up dual value reporting
                 m.dual = Suffix(direction=Suffix.IMPORT)
@@ -1405,14 +1402,6 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
                     return False
         return True
 
-    def _calc_jacobians(self):
-        pass
-        # self.jacs = ComponentMap()
-        # for c in self.nonlinear_constraints:
-        #     constraint_vars = list(EXPR.identify_variables(c.body))
-        #     jac_list = differentiate(c.body, wrt_list=constraint_vars)
-        #     self.jacs[c] = ComponentMap(zip(constraint_vars, jac_list))
-
     def _add_oa_cut(self, nlp_solution, for_GBD=False):
         """Add outer approximation cuts to working model.
 
@@ -1444,7 +1433,16 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
             if not m.dual.get(constr, None):
                 continue
             parent_block = constr.parent_block()
+            ignore_set = parent_block.component('GDPopt_ignore_OA')
+            if (ignore_set and (constr in ignore_set or
+                                constr.parent_component() in ignore_set)):
+                logger.debug('OA cut addition for %s skipped because it is in '
+                             'the ignore set.' % constr.name)
+                continue
+
             logger.debug("Adding OA cut for %s with dual value %s"
+                         % (constr.name, m.dual.get(constr)))
+            print("Adding OA cut for %s with dual value %s"
                          % (constr.name, m.dual.get(constr)))
 
             constr_vars = list(EXPR.identify_variables(constr.body))
@@ -1452,9 +1450,6 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
             jacobians = ComponentMap(zip(constr_vars, jac_list))
 
             if not for_GBD:
-                # oa_cuts = parent_block.component('GDPopt_OA_cuts')
-                # if oa_cuts is None:
-                #     oa_cuts = parent_block.GDPopt_OA_cuts = ConstraintList()
                 oa_utils = parent_block.component('GDPopt_OA')
                 if oa_utils is None:
                     oa_utils = parent_block.GDPopt_OA = Block()
@@ -1475,16 +1470,10 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
                     oa_cuts = parent_block.GDPopt_OA_cuts_for_GBD = \
                         ConstraintList()
                 oa_cuts.deactivate()
-            # m.dual.display()
             oa_cuts.add(
                 expr=copysign(1, sign_adjust * m.dual[constr]) * sum(
                     value(jacobians[var]) * (var - value(var))
                     for var in constr_vars) + slack_var <= 0)
-            # GDPopt.OA_constr_map[constr, self.nlp_iter] = c
-
-        # Restore deactivated constraints
-        # for disj in deactivated_disj:
-        #     disj.activate()
 
     def _add_psc_cut(self, nlp_feasible=True):
         m, GDPopt = self.working_model, self.working_model.GDPopt_utils
@@ -1581,8 +1570,8 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
 
         # Generate Benders cuts based on dual values.
         # Objective constraints
-        obj_constr_list = [self.OA_constr_map[GDPopt.objective_expr, i]
-                           for i in self.nlp_iters]
+        # obj_constr_list = [self.OA_constr_map[GDPopt.objective_expr, i]
+        #                    for i in self.nlp_iters]
         var_to_val = {id(var): NumericConstant(value(var))
                       for var in m.component_data_objects(
             ctype=Var, descend_into=(Block, Constraint))
