@@ -107,9 +107,17 @@ class DirectOrPersistentSolver(OptSolver):
         self._keepfiles = False
         """A bool. If True, then the solver log will be saved."""
 
+        self._save_results = True
+        """A bool. This is used for backwards compatability. If True, the solution will be loaded into the Solution
+        object that gets placed on the SolverResults object. This way, users can do model.solutions.load_from(results)
+        to load solutions into thier model. However, it is more efficient to bypass the Solution object and load
+        the results directly from the solver object. If False, the solution will not be loaded into the Solution
+        object."""
+
     def _presolve(self, *args, **kwds):
         warmstart_flag = kwds.pop('warmstart', False)
         self._keepfiles = kwds.pop('keepfiles', False)
+        self._save_results = kwds.pop('save_results', True)
 
         # create a context in the temporary file manager for
         # this plugin - is "pop"ed in the _postsolve method.
@@ -219,6 +227,16 @@ class DirectOrPersistentSolver(OptSolver):
     """ This method should be implemented by subclasses."""
     def _load_vars(self, vars_to_load):
         raise NotImplementedError('This method should be implemented by subclasses')
+
+    def load_vars(self, vars_to_load=None):
+        """
+        Load the values from the solver's variables into the corresponding pyomo variables.
+
+        Parameters
+        ----------
+        vars_to_load: list of Var
+        """
+        self._load_vars(vars_to_load)
 
     """ This method should be implemented by subclasses."""
     def warm_start_capable(self):

@@ -523,7 +523,45 @@ class GurobiDirect(DirectSolver):
         # if a solve was stopped by a limit, we still need to check to
         # see if there is a solution available - this may not always
         # be the case, both in LP and MIP contexts.
-        if self._load_solutions:
+        if self._save_results:
+            """
+            This code in this if statement is only needed for backwards compatability. It is more efficient to set
+            _save_results to False and use load_vars, load_duals, etc.
+            """
+            if gprob.SolCount > 0:
+                soln_variables = soln.variable
+                soln_constraints = soln.constraint
+
+                for pyomo_var, solver_var in self._pyomo_var_to_solver_var_map.items():
+                    if self._referenced_variables[pyomo_var] > 0:
+                        soln_variables[solver_var.VarName] = {"Value":solver_var.X}
+
+                if extract_reduced_costs:
+                    for pyomo_var, solver_var in self._pyomo_var_to_solver_var_map.items():
+                        if self._referenced_variables[pyomo_var] > 0:
+                            soln_variables[solver_var.VarName]["Rc"] = solver_var.Rc
+
+                if extract_duals or extract_slacks:
+                    for con in self._solver_model.getConstrs():
+                        soln_constraints[con.ConstrName] = {}
+                    if self._version_major >= 5:
+                        for con in self._solver_model.getQConstrs():
+                            soln_constraints[con.QCName] = {}
+
+                if extract_duals:
+                    for con in self._solver_model.getConstrs():
+                        soln_constraints[con.ConstrName]["Dual"] = con.Pi
+                    if self._version_major >= 5:
+                        for con in self._solver_model.getQConstrs():
+                            soln_constraints[con.QCName]["Dual"] = con.QCPi
+
+                if extract_slacks:
+                    for con in self._solver_model.getConstrs():
+                        soln_constraints[con.ConstrName]["Slack"] = con.Slack
+                    if self._version_major >= 5:
+                        for con in self._solver_model.getQConstrs():
+                            soln_constraints[con.QCName]["Slack"] = con.QCSlack
+        elif self._load_solutions:
             if gprob.SolCount > 0:
 
                 self._load_vars()
@@ -622,3 +660,34 @@ class GurobiDirect(DirectSolver):
                 pyomo_con = reverse_con_map[gurobi_con]
                 if pyomo_con in cons_to_load:
                     slack[pyomo_con] = gurobi_con.QCSlack
+
+    def load_duals(self, cons_to_load=None):
+        """
+        Load the duals into the 'dual' suffix. The 'dual' suffix must live on the parent model.
+
+        Parameters
+        ----------
+        cons_to_load: list of Constraint
+        """
+        self._load_duals(cons_to_load)
+
+    def load_rc(self, vars_to_load):
+        """
+        Load the reduced costs into the 'rc' suffix. The 'rc' suffix must live on the parent model.
+
+        Parameters
+        ----------
+        vars_to_load: list of Var
+        """
+        self._load_rc(vars_to_load)
+
+    def load_slacks(self, cons_to_load=None):
+        """
+        Load the values of the slack variables into the 'slack' suffix. The 'slack' suffix must live on the parent
+        model.
+
+        Parameters
+        ----------
+        cons_to_load: list of Constraint
+        """
+        self._load_slacks(cons_to_load)

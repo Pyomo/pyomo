@@ -566,7 +566,57 @@ class CPLEXDirect(DirectSolver):
         self.results.problem.number_of_objectives = 1
 
         # only try to get objective and variable values if a solution exists
-        if self._load_solutions:
+        if self._save_results:
+            """
+            This code in this if statement is only needed for backwards compatability. It is more efficient to set
+            _save_results to False and use load_vars, load_duals, etc.
+            """
+            if gprob.solution.get_solution_type() > 0:
+                soln_variables = soln.variable
+                soln_constraints = soln.constraint
+
+                var_names = self._solver_model.variables.get_names()
+                var_vals = self._solver_model.variables.get_values()
+                for i, name in enumerate(var_names):
+                    pyomo_var = self._solver_var_to_pyomo_var_map[name]
+                    if self._referenced_variables[pyomo_var] > 0:
+                        soln_variables[name] = {"Value":var_vals[i]}
+
+                reduced_costs = self._solver_model.solution.get_reduced_costs()
+                if extract_reduced_costs:
+                    for i, name in enumerate(var_names):
+                        pyomo_var = self._solver_var_to_pyomo_var_map[name]
+                        if self._referenced_variables[pyomo_var] > 0:
+                            soln_variables[var_name]["Rc"] = self._solver_model.solution.get_reduced_costs(name)
+
+                if extract_duals and extract_slacks:
+                    for con_name in self._solver_model.linear_constraints.get_names():
+                        soln_constraints[con_name] = {}
+                    for con_name in self._solver_model.quadratic_constraints.get_names():
+                        soln_constraints[con_name] = {}
+                elif extract_duals:
+                    # CPLEX PYTHON API DOES NOT SUPPORT QUADRATIC DUAL COLLECTION
+                    for con_name in self._solver_model.linear_constraints.get_names():
+                        soln_constraints[con_name] = {}
+                elif extract_slacks:
+                    for con_name in self._solver_model.linear_constraints.get_names():
+                        soln_constraints[con_name] = {}
+                    for con_name in self._solver_model.quadratic_constraints.get_names():
+                        soln_constraints[con_name] = {}
+
+                if extract_duals:
+                    dual_values = self._solver_model.linear_constraints.get_dual_values()
+                    for i, con_name in enumerate(self._solver_model.linear_constraints.get_names()):
+                        soln_constraints[con_name]["Dual"] = dual_values[i]
+
+                if extract_slacks:
+                    linear_slacks = self._solver_model.solution.get_linear_slacks()
+                    qudratic_slacks = self._solver_model.solution.get_quadratic_slacks()
+                    for i, con_name in enumerate(self._solver_model.linear_constraints.get_names()):
+                        soln_constraints[con_name]["Slack"] = linear_slacks[i]
+                    for i, con_name in enumerate(self._solver_model.quadratic_constraints.get_names()):
+                        soln_constraints[con_name]["Slack"] = qudratic_slacks[i]
+        elif self._load_solutions:
             if gprob.solution.get_solution_type() > 0:
                 self._load_vars()
 
@@ -668,3 +718,34 @@ class CPLEXDirect(DirectSolver):
             pyomo_con = reverse_con_map[cplex_con]
             if pyomo_con in cons_to_load:
                 slack[pyomo_con] = self._solver_model.solution.get_quadratic_slacks(cplex_con)
+
+    def load_duals(self, cons_to_load=None):
+        """
+        Load the duals into the 'dual' suffix. The 'dual' suffix must live on the parent model.
+
+        Parameters
+        ----------
+        cons_to_load: list of Constraint
+        """
+        self._load_duals(cons_to_load)
+
+    def load_rc(self, vars_to_load):
+        """
+        Load the reduced costs into the 'rc' suffix. The 'rc' suffix must live on the parent model.
+
+        Parameters
+        ----------
+        vars_to_load: list of Var
+        """
+        self._load_rc(vars_to_load)
+
+    def load_slacks(self, cons_to_load=None):
+        """
+        Load the values of the slack variables into the 'slack' suffix. The 'slack' suffix must live on the parent
+        model.
+
+        Parameters
+        ----------
+        cons_to_load: list of Constraint
+        """
+        self._load_slacks(cons_to_load)
