@@ -124,3 +124,37 @@ be modified and then updated with with solver:
 >>> opt.set_instance(m)  # doctest: +SKIP
 >>> m.x.setlb(1.0)  # doctest: +SKIP
 >>> opt.update_var(m.x)  # doctest: +SKIP
+
+Persistent Solver Performance
+-----------------------------
+In order to get the best performance out of the persistent solvers, use the
+"save_results" flag:
+
+>>> import pyomo.environ as pe
+>>> m = pe.ConcreteModel()
+>>> m.x = pe.Var()
+>>> m.y = pe.Var()
+>>> m.obj = pe.Objective(expr=m.x**2 + m.y**2)
+>>> m.c = pe.Constraint(expr=m.y >= -2*m.x + 5)
+>>> opt = pe.SolverFactory('gurobi_persistent')  # doctest: +SKIP
+>>> opt.set_instance(m)  # doctest: +SKIP
+>>> results = opt.solve(save_results=False)  # doctest: +SKIP
+
+Note that if the "save_results" flag is set to False, then the following
+is not supported.
+
+>>> results = opt.solve(save_results=False, load_solutions=False)  # doctest: +SKIP
+>>> if results.solver.termination_condition == TerminationCondition.optimal:
+...     m.solutions.load_from(results)  # doctest: +SKIP
+
+However, the following will work:
+
+>>> results = opt.solve(save_results=False, load_solutions=False)  # doctest: +SKIP
+>>> if results.solver.termination_condition == TerminationCondition.optimal:
+...     opt.load_vars()  # doctest: +SKIP
+
+Additionally, a subset of variable values may be loaded back into the model:
+
+>>> results = opt.solve(save_results=False, load_solutions=False)  # doctest: +SKIP
+>>> if results.solver.termination_condition == TerminationCondition.optimal:
+...     opt.load_vars(m.x)  # doctest: +SKIP
