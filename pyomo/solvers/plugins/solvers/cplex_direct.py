@@ -576,7 +576,7 @@ class CPLEXDirect(DirectSolver):
                 soln_constraints = soln.constraint
 
                 var_names = self._solver_model.variables.get_names()
-                var_vals = self._solver_model.variables.get_values()
+                var_vals = self._solver_model.solution.get_values()
                 for i, name in enumerate(var_names):
                     pyomo_var = self._solver_var_to_pyomo_var_map[name]
                     if self._referenced_variables[pyomo_var] > 0:
@@ -587,7 +587,7 @@ class CPLEXDirect(DirectSolver):
                     for i, name in enumerate(var_names):
                         pyomo_var = self._solver_var_to_pyomo_var_map[name]
                         if self._referenced_variables[pyomo_var] > 0:
-                            soln_variables[var_name]["Rc"] = self._solver_model.solution.get_reduced_costs(name)
+                            soln_variables[name]["Rc"] = self._solver_model.solution.get_reduced_costs(name)
 
                 if extract_duals and extract_slacks:
                     for con_name in self._solver_model.linear_constraints.get_names():
@@ -605,7 +605,7 @@ class CPLEXDirect(DirectSolver):
                         soln_constraints[con_name] = {}
 
                 if extract_duals:
-                    dual_values = self._solver_model.linear_constraints.get_dual_values()
+                    dual_values = self._solver_model.solution.get_dual_values()
                     for i, con_name in enumerate(self._solver_model.linear_constraints.get_names()):
                         soln_constraints[con_name]["Dual"] = dual_values[i]
 

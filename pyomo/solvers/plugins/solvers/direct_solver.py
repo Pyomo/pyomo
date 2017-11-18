@@ -147,6 +147,42 @@ class DirectSolver(DirectOrPersistentSolver):
                 print("      %6.2f seconds required for solver" % (solve_completion_time - presolve_completion_time))
 
             result = self._postsolve()
+            # ***********************************************************
+            # The following code is only needed for backwards compatability of load_solutions=False.
+            # If we ever only want to support the load_vars, load_duals, etc. methods, then this can be deleted.
+            if self._save_results:
+                result._smap_id = self._smap_id
+                result._smap = None
+                if _model:
+                    if isinstance(_model, IBlockStorage):
+                        if len(result.solution) == 1:
+                            result.solution(0).symbol_map = \
+                                getattr(_model, "._symbol_maps")[result._smap_id]
+                            result.solution(0).default_variable_value = \
+                                self._default_variable_value
+                            if self._load_solutions:
+                                _model.load_solution(result.solution(0))
+                                result.solution.clear()
+                        else:
+                            assert len(result.solution) == 0
+                        # see the hack in the write method
+                        # we don't want this to stick around on the model
+                        # after the solve
+                        assert len(getattr(_model, "._symbol_maps")) == 1
+                        delattr(_model, "._symbol_maps")
+                        del result._smap_id
+                    else:
+                        if self._load_solutions:
+                            _model.solutions.load_from(
+                                result,
+                                select=self._select_index,
+                                default_variable_value=self._default_variable_value)
+                            result._smap_id = None
+                            result.solution.clear()
+                        else:
+                            result._smap = _model.solutions.symbol_map[self._smap_id]
+                            _model.solutions.delete_symbol_map(self._smap_id)
+            # ********************************************************
             postsolve_completion_time = time.time()
 
             if self._report_timing:

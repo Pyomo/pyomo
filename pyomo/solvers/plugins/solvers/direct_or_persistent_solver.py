@@ -117,7 +117,6 @@ class DirectOrPersistentSolver(OptSolver):
     def _presolve(self, *args, **kwds):
         warmstart_flag = kwds.pop('warmstart', False)
         self._keepfiles = kwds.pop('keepfiles', False)
-        self._save_results = kwds.pop('save_results', True)
 
         # create a context in the temporary file manager for
         # this plugin - is "pop"ed in the _postsolve method.
@@ -163,6 +162,7 @@ class DirectOrPersistentSolver(OptSolver):
         self._skip_trivial_constraints = kwds.pop('skip_trivial_constraints', self._skip_trivial_constraints)
         self._output_fixed_variable_bounds = kwds.pop('output_fixed_variable_bounds',
                                                       self._output_fixed_variable_bounds)
+        self._save_results = kwds.pop('save_results', True)
         self._pyomo_var_to_solver_var_map = ComponentMap()
         self._pyomo_con_to_solver_con_map = ComponentMap()
         self._vars_referenced_by_con = ComponentMap()
@@ -172,6 +172,20 @@ class DirectOrPersistentSolver(OptSolver):
         self._objective = None
 
         self._symbol_map = SymbolMap()
+        # ***********************************************************
+        # The following code is only needed for backwards compatability of load_solutions=False.
+        # If we ever only want to support the load_vars, load_duals, etc. methods, then this can be deleted.
+        if self._save_results:
+            self._smap_id = id(self._symbol_map)
+            if isinstance(self._pyomo_model, IBlockStorage):
+                # BIG HACK (see pyomo.core.kernel write function)
+                if not hasattr(self._pyomo_model, "._symbol_maps"):
+                    setattr(self._pyomo_model, "._symbol_maps", {})
+                getattr(self._pyomo_model,
+                        "._symbol_maps")[self._smap_id] = self._symbol_map
+            else:
+                self._pyomo_model.solutions.add_symbol_map(self._symbol_map)
+        # ***********************************************************
 
         if self._symbolic_solver_labels:
             self._labeler = TextLabeler()
