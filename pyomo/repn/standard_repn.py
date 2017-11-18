@@ -792,7 +792,7 @@ def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False
     if not isclose_const(ans.nonl,0):
         repn.nonlinear_expr = ans.nonl
         repn.nonlinear_vars = []
-        for v_ in EXPR.identify_variables(repn.nonlinear_expr, include_fixed=False, include_potentially_variable=False):
+        for v_ in EXPR.identify_variables(repn.nonlinear_expr, include_fixed=False):
             repn.nonlinear_vars.append(v_)
             #
             # Update idMap in case we skipped nonlinear sub-expressions

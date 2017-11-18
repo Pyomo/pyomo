@@ -631,7 +631,7 @@ class TestExpression(unittest.TestCase):
 
         output = \
 """\
-viewsum( prod( e{viewsum( x , 2 )} , pow( x , 2 ) ) , E[1]{viewsum( pow( x , 2 ) , 1 )} )
+viewsum( prod( e( viewsum( x , 2 ) ) , pow( x , 2 ) ) , E[1]( viewsum( pow( x , 2 ) , 1 ) ) )
 e : Size=1, Index=None
     Key  : Expression
     None : viewsum( x , 2 )
@@ -651,7 +651,7 @@ E : Size=2, Index=E_index
         model.E[1].set_value(2.0)
         output = \
 """\
-viewsum( prod( e{1.0} , pow( x , 2 ) ) , E[1]{2.0} )
+viewsum( prod( e( 1.0 ) , pow( x , 2 ) ) , E[1]( 2.0 ) )
 e : Size=1, Index=None
     Key  : Expression
     None :        1.0
@@ -672,7 +672,7 @@ E : Size=2, Index=E_index
         model.E[1].set_value(None)
         output = \
 """\
-viewsum( prod( e{Undefined} , pow( x , 2 ) ) , E[1]{Undefined} )
+viewsum( prod( e( None ) , pow( x , 2 ) ) , E[1]( None ) )
 e : Size=1, Index=None
     Key  : Expression
     None :  Undefined
@@ -700,7 +700,7 @@ E : Size=2, Index=E_index
 
         output = \
 """\
-( x + 2 )*x**2 + x**2 + 1
+e( ( x + 2 ) )*x**2 + x**2 + 1
 e : Size=1, Index=None
     Key  : Expression
     None : 2 + x
@@ -746,7 +746,7 @@ E : Size=2, Index=E_index
         model.E[1].set_value(None)
         output = \
 """\
-Undefined*x**2 + Undefined
+e( None )*x**2 + E[1]( None )
 e : Size=1, Index=None
     Key  : Expression
     None :  Undefined

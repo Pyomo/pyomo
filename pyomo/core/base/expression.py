@@ -37,7 +37,7 @@ logger = logging.getLogger('pyomo.core')
 
 class _ExpressionData(NumericValue):
     """
-    An object that defines an expression that is never cloned
+    An object that defines a named expression.
 
     Public Class Attributes
         expr       The expression owned by this data.
@@ -63,18 +63,21 @@ class _ExpressionData(NumericValue):
         """A boolean indicating whether this in an expression."""
         return True
 
+    def arg(self, index):
+        if index < 0 or index >= 1:
+            raise KeyError("Invalid index for expression argument: %d" % index)
+        return self.expr
+
     @property
     def _args(self):
-        """A tuple of subexpressions involved in this expressions operation."""
         return (self.expr,)
+
+    @property
+    def args(self):
+        yield self.expr
 
     def nargs(self):
-        """The value len(self._args)"""
         return 1
-
-    def _arguments(self):
-        """A tuple of subexpressions involved in this expressions operation."""
-        return (self.expr,)
 
     def _precedence(self):
         return 0
@@ -84,6 +87,7 @@ class _ExpressionData(NumericValue):
 
     def clone(self):
         """Return a clone of this expression (no-op)."""
+        print("FOO")
         return self
 
     def _apply_operation(self, result):
@@ -91,23 +95,18 @@ class _ExpressionData(NumericValue):
         # result
         return result[0]
 
-    def _is_constant_combiner(self):
-        # We cannot allow elimination/simplification of Expression objects
-        return lambda x: False
-
-    def _is_fixed_combiner(self):
-        return lambda x: x[0]
-
-    def _potentially_variable_combiner(self):
-        # Expression objects are potentially variable by definition
-        return lambda x: True
-
     def polynomial_degree(self):
         """A tuple of subexpressions involved in this expressions operation."""
         return self.expr.polynomial_degree()
 
     def _polynomial_degree(self, result):
         return result.pop()
+
+    def _to_string_skip(self, _idx):
+        return False
+
+    def _to_string_suffix(self, ostream, verbose):
+        pass
 
     def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         if ostream is None:
@@ -124,13 +123,6 @@ class _ExpressionData(NumericValue):
                                    precedence=precedence, labeler=labeler )
         if _verbose:
             ostream.write("}")
-
-    @property
-    def _parent_expr(self):
-        return None
-    @_parent_expr.setter
-    def _parent_expr(self, value):
-        raise NotImplementedError
 
     #
     # Abstract Interface
@@ -170,7 +162,7 @@ class _GeneralExpressionDataImpl(_ExpressionData):
         expr       The expression owned by this data.
     """
 
-    __pickle_slots__ = ('_expr', '_owned')
+    __pickle_slots__ = ('_expr', '_is_owned')
 
     # any derived classes need to declare these as their slots,
     # but ignore them in their __getstate__ implementation
@@ -180,7 +172,7 @@ class _GeneralExpressionDataImpl(_ExpressionData):
 
     def __init__(self, expr):
         self._expr = EXPR.compress_expression(as_numeric(expr)) if (expr is not None) else None
-        self._owned = True
+        self._is_owned = True
 
     def __getstate__(self):
         state = super(_GeneralExpressionDataImpl, self).__getstate__()

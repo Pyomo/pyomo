@@ -18,6 +18,7 @@ __all__ = (
 'clone_counter',
 'clone_expression',
 'evaluate_expression',
+'identify_components',
 'identify_variables',
 'generate_sum_expression',
 'generate_mul_expression',
@@ -134,9 +135,17 @@ def initialize_expression_data():
         global TemplateExpressionError
         from pyomo.core.base.param import _ParamData, SimpleParam
         from pyomo.core.base.template_expr import TemplateExpressionError
+    #
+    global pyomo5_named_expression_types
+    from pyomo.core.base.expression import _GeneralExpressionData, SimpleExpression
+    from pyomo.core.base.objective import _GeneralObjectiveData, SimpleObjective
+    pyomo5_expression_types.update([_GeneralExpressionData, SimpleExpression, _GeneralObjectiveData, SimpleObjective])
+    pyomo5_named_expression_types = set([_GeneralExpressionData, SimpleExpression, _GeneralObjectiveData, SimpleObjective])
+    #
     # [functionality] chainedInequality allows us to generate symbolic
     # expressions of the type "a < b < c".  This provides a buffer to hold
     # the first inequality so the second inequality can access it later.
+    #
     _InequalityExpression.chainedInequality = None
     _InequalityExpression.call_info = None
 
@@ -373,6 +382,15 @@ class CloneVisitor(ValueExpressionVisitor):
             else:
                 _values.append( node )
             return True
+        elif node.__class__ in pyomo5_named_expression_types:
+            #
+            # Do not clone named expressions unless we are cloning leaves
+            #
+            if self.clone_leaves:
+                _values.append( deepcopy(node, self.memo) )
+            else:
+                _values.append( node )
+            return True
         return False
 
     def finalize(self, ans):
@@ -404,12 +422,6 @@ class SizeVisitor(SimpleExpressionVisitor):
 
     def visit(self, node):
         self.counter += 1
-
-    #def children(self, node):
-    #    return node._args
-
-    #def is_leaf(self, node):
-    #    return node.__class__ in native_numeric_types or not node.is_expression() or node.nargs() == 0
 
     def finalize(self):
         return self.counter
@@ -483,40 +495,45 @@ def evaluate_expression(exp, exception=True):
 
 class VariableVisitor(SimpleExpressionVisitor):
 
-    def __init__(self, include_fixed=True, include_potentially_variable=False):
+    def __init__(self, types):
         self.seen = set()
-        self.include_fixed = include_fixed
-        self.include_potentially_variable = include_potentially_variable
+        if types.__class__ is set:
+            self.types = types
+        else:
+            self.types = set(types)
         
     def visit(self, node):
-        if node.__class__ in pyomo5_variable_types:
-            if ( self.include_fixed
-                 or not node.is_fixed()
-                 or self.include_potentially_variable ):
-                if id(node) in self.seen:
-                    return
-                self.seen.add(id(node))
-                return node
-        elif self.include_potentially_variable and node.__class__ not in native_numeric_types and node._potentially_variable():
+        if node.__class__ in self.types:
             if id(node) in self.seen:
                 return
             self.seen.add(id(node))
             return node
 
 
-def identify_variables(expr,
-                       include_fixed=True,
-                       include_potentially_variable=False):
+def identify_components(expr, component_types):
+    #
     # OPTIONS:
-    # include_fixed - list includes fixed variables
-    # include_potentially_variable - list expression and other PV components, but not their variables
+    # component_types - set (or list) if class types to find
+    # in the expression.
     #
-    # WEH - it's not clear why this function shouldn't list all variables in the
-    # contained expressions.  The include_potentially_variable option is confusing.
-    #
-    visitor = VariableVisitor(include_fixed, include_potentially_variable)
+    visitor = VariableVisitor(component_types)
     for v in visitor.xbfs_yield_leaves(expr):
         yield v
+
+
+def identify_variables(expr, include_fixed=True):
+    #
+    # OPTIONS:
+    # include_fixed - list includes fixed variables
+    #
+    visitor = VariableVisitor(pyomo5_variable_types)
+    if include_fixed:
+        for v in visitor.xbfs_yield_leaves(expr):
+            yield v
+    else:
+        for v in visitor.xbfs_yield_leaves(expr):
+            if not v.is_fixed():
+                yield v
 
 
 # =====================================================
@@ -826,7 +843,7 @@ class _ExpressionBase(NumericValue):
         return sizeof_expression(self, verbose=verbose)
 
     def __deepcopy__(self, memo):
-        return clone_expression(self, memo=memo)
+        return clone_expression(self, memo=memo, clone_leaves=True)
 
     def _clone(self, args, memo):
         return self.__class__(args)
@@ -836,7 +853,6 @@ class _ExpressionBase(NumericValue):
         raise NotImplementedError("Derived expression (%s) failed to "\
             "implement getname()" % ( str(self.__class__), ))
 
-    # TODO: what if test was a lambda function?  Would that be faster?
     def is_constant(self):
         """Return True if this expression is an atomic constant
 
@@ -2088,8 +2104,6 @@ def generate_sum_expression(etype, _self, _other):
         #
         # x - y
         #
-        # TODO: _MultiViewSum logic here
-        #
         if (_self.__class__ is _ViewSumExpression and not _self._is_owned) or \
            _self.__class__ is _MutableViewSumExpression:
            #(_self.__class__ is _LinearViewSumExpression and not _self._is_owned) or
@@ -2476,4 +2490,5 @@ pyomo5_reciprocal_types = set([
         _NPV_ReciprocalExpression
         ])
 pyomo5_variable_types = None
+pyomo5_named_expression_types = None
 
