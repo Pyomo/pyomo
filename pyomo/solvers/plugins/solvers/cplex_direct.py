@@ -331,7 +331,7 @@ class CPLEXDirect(DirectSolver):
                                                          quad_expr=[cplex_expr.q_variables1,
                                                                     cplex_expr.q_variables2,
                                                                     cplex_expr.q_coefficients],
-                                                         sense=my_sense, rhs=my_rhs, name=conname)
+                                                         sense=my_sense, rhs=my_rhs[0], name=conname)
 
         for var in referenced_vars:
             self._referenced_variables[var] += 1
