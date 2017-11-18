@@ -9,10 +9,12 @@
 #  ___________________________________________________________________________
 
 import copy
-from pyomo.core.base.numvalue import (
+from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.numvalue import (
     NumericValue, native_numeric_types, as_numeric, value )
 import pyomo.core.base
 import logging
+
 
 class TemplateExpressionError(ValueError):
     def __init__(self, template, *args, **kwds):
@@ -126,10 +128,6 @@ def substitute_template_expression(expr, substituter, *args):
     Returns:
         a new expression tree with all substitutions done
     """
-    # Again, due to circular imports, we cannot import expr at the
-    # module scope because this module gets imported by expr
-    import pyomo.core.expr.current as EXPR
-
     _stack = [ [[expr.clone()], 0, 1, None] ]
     _stack_idx = 0
     while _stack_idx >= 0:

@@ -13,7 +13,7 @@ logger = logging.getLogger('pyomo.core')
 
 from six import next, iteritems, iterkeys, itervalues
 
-from pyomo.core.expr import current as expr
+from pyomo.core.expr import current as EXPR
 from pyomo.core.base.plugin import alias
 from pyomo.core.base import Transformation, Connector, Constraint, \
     ConstraintList, Var, VarList, TraversalStrategy
@@ -47,7 +47,7 @@ class ExpandConnectors(Transformation):
         matched_connectors = {}
         found = dict()
         for constraint in instance.component_data_objects(Constraint):
-            for c in expr.identify_components(constraint.body, connector_types):
+            for c in EXPR.identify_components(constraint.body, connector_types):
                 if c.__class__ in connector_types:
                     found[id(c)] = c
             if not found:
@@ -113,7 +113,7 @@ class ExpandConnectors(Transformation):
                         substitution[id(c)] = new_v
                     cList.add((
                         constraint.lower,
-                        expr.clone_expression( constraint.body, substitution ),
+                        EXPR.clone_expression( constraint.body, substitution ),
                         constraint.upper ))
             constraint.deactivate()
 

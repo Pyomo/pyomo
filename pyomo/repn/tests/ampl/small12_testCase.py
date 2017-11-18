@@ -17,7 +17,8 @@
 #
 
 from pyomo.environ import *
-from pyomo.core.base.expr import Expr_if
+from pyomo.core.expr.current import Expr_if
+
 
 model = ConcreteModel()
 

@@ -46,7 +46,6 @@ from pyomo.core.kernel.component_sos import sos
 from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
-import pyomo.core.base.expr
 from pyomo.opt.results import Solution
 
 def _path_to_object_exists(obj, descendent):

@@ -27,8 +27,8 @@ from pyutilib.th import nottest
 from pyomo.environ import *
 from pyomo.core.expr import expr_common
 from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.numvalue import potentially_variable, native_types
 from pyomo.core.base.var import SimpleVar
-from pyomo.core.base.numvalue import potentially_variable, native_types
 
 
 class TestExpression_EvaluateNumericConstant(unittest.TestCase):
@@ -2383,11 +2383,11 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Pyomo 5.x expression trees
-        TestPrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
-        pyomo.core.base.expr_common.TO_STRING_VERBOSE = True
+        TestPrettyPrinter_oldStyle._save = expr_common.TO_STRING_VERBOSE
+        expr_common.TO_STRING_VERBOSE = True
 
     def tearDown(self):
-        pyomo.core.base.expr_common.TO_STRING_VERBOSE = TestPrettyPrinter_oldStyle._save
+        expr_common.TO_STRING_VERBOSE = TestPrettyPrinter_oldStyle._save
 
     def test_sum(self):
         #
@@ -2524,11 +2524,11 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Pyomo 5.x expression trees
-        TestPrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
-        pyomo.core.base.expr_common.TO_STRING_VERBOSE = False
+        TestPrettyPrinter_oldStyle._save = expr_common.TO_STRING_VERBOSE
+        expr_common.TO_STRING_VERBOSE = False
 
     def tearDown(self):
-        pyomo.core.base.expr_common.TO_STRING_VERBOSE = TestPrettyPrinter_oldStyle._save
+        expr_common.TO_STRING_VERBOSE = TestPrettyPrinter_oldStyle._save
 
     def test_sum(self):
         #

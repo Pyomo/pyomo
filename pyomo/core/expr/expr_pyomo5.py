@@ -10,7 +10,7 @@
 
 from __future__ import division
 
-__public__ = ['linear_expression', 'nonlinear_expression']
+__public__ = ['linear_expression', 'nonlinear_expression', 'identify_variables']
 __all__ = (
 'linear_expression',
 'nonlinear_expression',

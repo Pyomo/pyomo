@@ -26,9 +26,9 @@ import pyomo.util
 from pyutilib.misc import Bunch
 from pyutilib.math.util import isclose as isclose_default
 
+from pyomo.core.expr import current as EXPR
 from pyomo.core.base.objective import (_GeneralObjectiveData,
                                        SimpleObjective)
-from pyomo.core.base import expr as EXPR
 from pyomo.core.base import _ExpressionData, Expression
 from pyomo.core.base.expression import SimpleExpression, _GeneralExpressionData
 from pyomo.core.base.var import (SimpleVar,

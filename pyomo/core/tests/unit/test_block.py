@@ -28,7 +28,7 @@ import pyutilib.services
 from pyomo.environ import *
 from pyomo.util.log import LoggingIntercept
 from pyomo.core.base.block import SimpleBlock
-from pyomo.core.base.expr import identify_variables
+from pyomo.core.expr import identify_variables
 from pyomo.opt import *
 
 from pyomo.gdp import Disjunct

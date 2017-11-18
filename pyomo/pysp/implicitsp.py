@@ -12,9 +12,9 @@ __all__ = ("ImplicitSP,")
 
 import itertools
 
-import pyomo.core.base.expr
+from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.numvalue import is_fixed, is_constant
 import pyomo.core.base.param
-from pyomo.core.base.numvalue import is_fixed, is_constant
 from pyomo.core.base.block import (Block,
                                    SortComponents)
 from pyomo.core.base.var import Var, _VarData
@@ -49,7 +49,7 @@ class ImplicitSP(object):
             return {}
         if exp.is_expression():
             ans = {}
-            if exp.__class__ is pyomo.core.base.expr._ProductExpression:
+            if exp.__class__ is EXPR._ProductExpression:
                 for subexp in exp._numerator:
                     ans.update(ImplicitSP.\
                                _collect_mutable_parameters(subexp))
@@ -74,7 +74,7 @@ class ImplicitSP(object):
             return {}
         elif exp.is_expression():
             ans = {}
-            if exp.__class__ is pyomo.core.base.expr._ProductExpression:
+            if exp.__class__ is EXPR._ProductExpression:
                 for subexp in exp._numerator:
                     ans.update(ImplicitSP.\
                                _collect_unfixed_variables(subexp))

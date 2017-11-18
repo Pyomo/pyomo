@@ -15,6 +15,9 @@ import logging
 from weakref import ref as weakref_ref
 
 from pyomo.util.timing import ConstructionTimer
+
+import pyomo.core.expr.expr_common
+from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import (ComponentData,
                                        register_component)
 from pyomo.core.base.indexed_component import (
@@ -25,9 +28,6 @@ from pyomo.core.base.misc import (apply_indexed_rule,
                                   tabular_writer)
 from pyomo.core.base.numvalue import (NumericValue,
                                       as_numeric)
-
-import pyomo.core.base.expr_common
-from pyomo.core.base import expr as EXPR
 from pyomo.core.base.util import is_functor
 
 from six import iteritems
@@ -111,7 +111,7 @@ class _ExpressionData(NumericValue):
     def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         if ostream is None:
             ostream = sys.stdout
-        _verbose = pyomo.core.base.expr_common.TO_STRING_VERBOSE if \
+        _verbose = pyomo.core.expr.expr_common.TO_STRING_VERBOSE if \
             verbose is None else verbose
         if _verbose:
             ostream.write(str(self))
