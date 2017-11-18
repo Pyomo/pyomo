@@ -53,6 +53,9 @@ __all__ = (
 '_NPV_SumExpression',
 '_NPV_UnaryFunctionExpression',
 '_NPV_AbsExpression',
+'SimpleExpressionVisitor',
+'ExpressionValueVisitor',
+'ExpressionReplacementVisitor',
 )
 
 import math
@@ -255,7 +258,7 @@ class SimpleExpressionVisitor(SimpleVisitor):
                         yield ans
 
 
-class ValueExpressionVisitor(ValueVisitor):
+class ExpressionValueVisitor(ValueVisitor):
 
     #
     # NOTE: This is not currently being used, so coverage testing is disabled
@@ -276,7 +279,10 @@ class ValueExpressionVisitor(ValueVisitor):
                 dq.pop()
                 values = _values.pop()
                 _values[-1].append( self.visit(current, values) )
-            elif self.visiting_potential_leaf(current, _values[-1]):
+                continue
+            flag, value = self.visiting_potential_leaf(current)
+            if flag:
+                _values[-1].append(value)
                 dq.pop()
             else:
                 #for c in reversed(self.children(current)):
@@ -316,7 +322,10 @@ class ValueExpressionVisitor(ValueVisitor):
             while _idx < _len:
                 _sub = _argList[_idx]
                 _idx += 1
-                if not self.visiting_potential_leaf(_sub, _result):
+                flag, value = self.visiting_potential_leaf(_sub)
+                if flag:
+                    _result.append( value )
+                else:
                     #
                     # Push an expression onto the stack
                     #
@@ -340,6 +349,81 @@ class ValueExpressionVisitor(ValueVisitor):
                 return self.finalize(ans)
 
 
+class ExpressionReplacementVisitor(ValueVisitor):
+
+    def __init__(self, memo=None):
+        self.memo = memo
+
+    def visit(self, node, values):
+        """ Visit nodes that have been expanded """
+        return node._clone( tuple(values), self.memo )
+
+    def dfs_postorder_stack(self, node):
+        """
+        Depth-first search - postorder
+
+        This function is a slight variant of the 
+        ValueVisitor.dfs_postorder_stack.  The first value in 
+        the _result vector indicates whether the sub-expression has
+        changed.
+        """
+        #_stack = [ (node, self.children(node), 0, len(self.children(node)), [])]
+        _stack = [ (node, node._args, 0, node.nargs(), [False])]
+        #
+        # Iterate until the stack is empty
+        #
+        # Note: 1 is faster than True for Python 2.x
+        #
+        while 1:
+            #
+            # Get the top of the stack
+            #   _obj        Current expression object
+            #   _argList    The arguments for this expression objet
+            #   _idx        The current argument being considered
+            #   _len        The number of arguments
+            #   _result     The 'dirty' flag followed by return values
+            #
+            _obj, _argList, _idx, _len, _result = _stack.pop()
+            #
+            # Iterate through the arguments
+            #
+            while _idx < _len:
+                _sub = _argList[_idx]
+                _idx += 1
+                flag, value = self.visiting_potential_leaf(_sub)
+                if flag:
+                    if id(value) != id(_sub):
+                        _result[0] = True
+                    _result.append( value )
+                else:
+                    #
+                    # Push an expression onto the stack
+                    #
+                    _stack.append( (_obj, _argList, _idx, _len, _result) )
+                    _obj                    = _sub
+                    #_argList                = self.children(_sub)
+                    _argList                = _sub._args
+                    _idx                    = 0
+                    _len                    = _sub.nargs()
+                    _result                 = [False]
+            #
+            # Process the current node
+            #
+            if _result[0]:
+                ans = self.visit(_obj, _result[1:])
+            else:
+                ans = _obj
+            if _stack:
+                if _result[0]:
+                    _stack[-1][-1][0] = True
+                #
+                # "return" the recursion by putting the return value on the end of the results stack
+                #
+                _stack[-1][-1].append( ans )
+            else:
+                return self.finalize(ans)
+
+
 
 #-------------------------------------------------------
 #
@@ -351,7 +435,7 @@ class ValueExpressionVisitor(ValueVisitor):
 #  clone_expression
 # =====================================================
 
-class CloneVisitor(ValueExpressionVisitor):
+class CloneVisitor(ExpressionValueVisitor):
 
     def __init__(self, clone_leaves=False, memo=None):
         self.clone_leaves = clone_leaves
@@ -361,7 +445,7 @@ class CloneVisitor(ValueExpressionVisitor):
         """ Visit nodes that have been expanded """
         return node._clone( tuple(values), self.memo )
 
-    def visiting_potential_leaf(self, node, _values):
+    def visiting_potential_leaf(self, node):
         """ 
         Visiting a potential leaf.
 
@@ -371,27 +455,27 @@ class CloneVisitor(ValueExpressionVisitor):
             #
             # Store a native or numeric object
             #
-            _values.append( deepcopy(node, self.memo) )
-            return True
-        elif node.__class__ not in pyomo5_expression_types:
+            return True, deepcopy(node, self.memo)
+
+        if node.__class__ not in pyomo5_expression_types:
             #
             # Store a kernel object that is cloned
             #
             if self.clone_leaves:
-                _values.append( deepcopy(node, self.memo) )
+                return True, deepcopy(node, self.memo)
             else:
-                _values.append( node )
-            return True
-        elif node.__class__ in pyomo5_named_expression_types:
+                return True, node
+
+        if node.__class__ in pyomo5_named_expression_types:
             #
             # Do not clone named expressions unless we are cloning leaves
             #
             if self.clone_leaves:
-                _values.append( deepcopy(node, self.memo) )
+                return True, deepcopy(node, self.memo)
             else:
-                _values.append( node )
-            return True
-        return False
+                return True, node
+
+        return False, None
 
     def finalize(self, ans):
         return ans
@@ -438,31 +522,28 @@ def sizeof_expression(expr, verbose=False):
 #  evaluate_expression
 # =====================================================
 
-class EvaluationVisitor(ValueExpressionVisitor):
+class EvaluationVisitor(ExpressionValueVisitor):
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
         return node._apply_operation(values)
 
-    def visiting_potential_leaf(self, node, _values):
+    def visiting_potential_leaf(self, node):
         """ 
         Visiting a potential leaf.
 
         Return True if the node is not expanded.
         """
         if node.__class__ in native_numeric_types:
-            _values.append( node )
-            return True
+            return True, node
 
-        elif node.__class__ in pyomo5_variable_types:
-            _values.append( value(node) )
-            return True
+        if node.__class__ in pyomo5_variable_types:
+            return True, value(node)
 
-        elif not node.is_expression():
-            _values.append( value(node) )
-            return True
+        if not node.is_expression():
+            return True, value(node)
 
-        return False
+        return False, None
 
     def finalize(self, ans):
         return ans
@@ -540,25 +621,25 @@ def identify_variables(expr, include_fixed=True):
 #  polynomial_degree
 # =====================================================
 
-class PolyDegreeVisitor(ValueExpressionVisitor):
+class PolyDegreeVisitor(ExpressionValueVisitor):
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
         return node._polynomial_degree(values)
 
-    def visiting_potential_leaf(self, node, _values):
+    def visiting_potential_leaf(self, node):
         """ 
         Visiting a potential leaf.
 
         Return True if the node is not expanded.
         """
         if node.__class__ in native_types or not node._potentially_variable():
-            _values.append( 0 )
-            return True
-        elif not node.is_expression():
-            _values.append( 0 if node.is_fixed() else 1 )
-            return True
-        return False
+            return True, 0
+
+        if not node.is_expression():
+            return True, 0 if node.is_fixed() else 1
+
+        return False, None
 
     def finalize(self, ans):
         return ans
@@ -573,7 +654,7 @@ def polynomial_degree(node):
 #  expression_is_fixed
 # =====================================================
 
-class IsFixedVisitor(ValueExpressionVisitor):
+class IsFixedVisitor(ExpressionValueVisitor):
     """
     NOTE: This doesn't check if combiner logic is 
     all or any and short-circuit the test.  It's
@@ -584,21 +665,19 @@ class IsFixedVisitor(ValueExpressionVisitor):
         """ Visit nodes that have been expanded """
         return node._is_fixed(values)
 
-    def visiting_potential_leaf(self, node, _values):
+    def visiting_potential_leaf(self, node):
         """ 
         Visiting a potential leaf.
 
         Return True if the node is not expanded.
         """
         if node.__class__ in native_numeric_types or not node._potentially_variable():
-            _values.append( True )
-            return True
+            return True, True
 
         elif not node.__class__ in pyomo5_expression_types:
-            _values.append( node.is_fixed() ) 
-            return True
+            return True, node.is_fixed()
 
-        return False
+        return False, None
 
     def finalize(self, ans):
         return ans
