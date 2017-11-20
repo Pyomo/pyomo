@@ -127,17 +127,16 @@ SimpleParam = None
 TemplateExpressionError = None
 def initialize_expression_data():
     global pyomo5_variable_types
-    if pyomo5_variable_types is None:
-        from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
-        from pyomo.core.kernel.component_variable import IVariable, variable
-        pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
-        _LinearExpression.vtypes = pyomo5_variable_types
-        #
-        global _ParamData
-        global SimpleParam
-        global TemplateExpressionError
-        from pyomo.core.base.param import _ParamData, SimpleParam
-        from pyomo.core.base.template_expr import TemplateExpressionError
+    from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
+    from pyomo.core.kernel.component_variable import IVariable, variable
+    pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
+    _LinearExpression.vtypes = pyomo5_variable_types
+    #
+    global _ParamData
+    global SimpleParam
+    global TemplateExpressionError
+    from pyomo.core.base.param import _ParamData, SimpleParam
+    from pyomo.core.base.template_expr import TemplateExpressionError
     #
     global pyomo5_named_expression_types
     from pyomo.core.base.expression import _GeneralExpressionData, SimpleExpression
@@ -357,6 +356,9 @@ class ExpressionReplacementVisitor(ValueVisitor):
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
         return node._clone( tuple(values), self.memo )
+
+    def finalize(self, ans):
+        return ans
 
     def dfs_postorder_stack(self, node):
         """
@@ -2568,6 +2570,6 @@ pyomo5_reciprocal_types = set([
         _ReciprocalExpression,
         _NPV_ReciprocalExpression
         ])
-pyomo5_variable_types = None
-pyomo5_named_expression_types = None
+pyomo5_variable_types = set()
+pyomo5_named_expression_types = set()
 
