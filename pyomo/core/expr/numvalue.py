@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ('value', 'is_constant', 'is_fixed', 'potentially_variable', 'update_KnownConstants', 'as_numeric', 'NumericValue', 'NumericConstant', 'ZeroConstant')
+__all__ = ('value', 'is_constant', 'is_fixed', 'potentially_variable', 'update_KnownConstants', 'as_numeric', 'NumericValue', 'NumericConstant', 'ZeroConstant', 'native_numeric_types', 'native_types')
 
 import sys
 import logging
