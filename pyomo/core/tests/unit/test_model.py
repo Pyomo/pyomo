@@ -24,7 +24,7 @@ import pyomo.opt
 from pyomo.opt import SolutionStatus
 from pyomo.opt.parallel.local import SolverManager_Serial
 from pyomo.environ import *
-from pyomo.core.base.expr import identify_variables
+from pyomo.core.expr import identify_variables
 
 solvers = pyomo.opt.check_available_solvers('glpk')
 

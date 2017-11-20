@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.expr.numvalue import value
+from pyomo.core.expr import *
 import pyomo.core.kernel.register_numpy_types
 import pyomo.core.kernel.component_interface
 

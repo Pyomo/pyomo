@@ -22,7 +22,8 @@ from weakref import ref as weakref_ref
 import inspect
 
 from pyomo.util.timing import ConstructionTimer
-from pyomo.core.base.numvalue import as_numeric, value
+from pyomo.core.expr.numvalue import as_numeric, value
+from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import (ActiveComponentData,
                                        register_component)
 from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
@@ -32,7 +33,6 @@ from pyomo.core.base.expression import (_ExpressionData,
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.sets import Set
 from pyomo.core.base import minimize, maximize
-from pyomo.core.base import expr as EXPR
 
 from six import iteritems
 

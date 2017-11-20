@@ -14,11 +14,11 @@ from six import iteritems
 from collections import namedtuple
 
 from pyomo.util.timing import ConstructionTimer
+from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.numvalue import ZeroConstant, _sub
 from pyomo.core import *
-from pyomo.core.base.numvalue import ZeroConstant, _sub
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.block import _BlockData
-import pyomo.core.base.expr as EXPR
 
 import logging
 logger = logging.getLogger('pyomo.core')

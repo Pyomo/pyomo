@@ -9,8 +9,8 @@
 #  ___________________________________________________________________________
 
 from pyomo.util.plugin import alias
+from pyomo.core.expr.current import _ExpressionBase
 from pyomo.core import Constraint, Objective, NumericConstant
-from pyomo.core.base.expr import _ExpressionBase
 from pyomo.core.base.var import Var, _VarData
 from pyomo.core.base.util import sequence
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation

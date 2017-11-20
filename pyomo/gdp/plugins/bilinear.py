@@ -12,15 +12,15 @@ import logging
 from six import iteritems
 
 from pyomo.util.plugin import alias
+from pyomo.core.expr.current import _ProductExpression
 from pyomo.core import *
-from pyomo.core.base import expr, Transformation
-from pyomo.core.base.expr import _ProductExpression
 from pyomo.core.base.set_types import BooleanSet
 from pyomo.core.base.var import _VarData
 from pyomo.gdp import *
 from pyomo.repn import generate_standard_repn
 
 logger = logging.getLogger('pyomo.core')
+
 
 class Bilinear_Transformation(Transformation):
 

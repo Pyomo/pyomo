@@ -9,15 +9,16 @@
 #  ___________________________________________________________________________
 
 from pyomo.util.plugin import alias
+from pyomo.core.expr.current import _ProductExpression, _PowExpression
 from pyomo.core import Binary, value, as_numeric
 from pyomo.core.base import Transformation, Var, Constraint, ConstraintList, Block, RangeSet
-from pyomo.core.base.expr import _ProductExpression, _PowExpression
 from pyomo.core.base.var import _VarData
 
 from six import iteritems
 
 import logging
 logger = logging.getLogger(__name__)
+
 
 class RadixLinearization(Transformation):
     """

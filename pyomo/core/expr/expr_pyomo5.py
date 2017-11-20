@@ -10,7 +10,7 @@
 
 from __future__ import division
 
-__public__ = ['linear_expression', 'nonlinear_expression']
+__public__ = ['linear_expression', 'nonlinear_expression', 'identify_variables']
 __all__ = (
 'linear_expression',
 'nonlinear_expression',
@@ -18,6 +18,7 @@ __all__ = (
 'clone_counter',
 'clone_expression',
 'evaluate_expression',
+'identify_components',
 'identify_variables',
 'generate_sum_expression',
 'generate_mul_expression',
@@ -52,6 +53,9 @@ __all__ = (
 '_NPV_SumExpression',
 '_NPV_UnaryFunctionExpression',
 '_NPV_AbsExpression',
+'SimpleExpressionVisitor',
+'ExpressionValueVisitor',
+'ExpressionReplacementVisitor',
 )
 
 import math
@@ -123,20 +127,27 @@ SimpleParam = None
 TemplateExpressionError = None
 def initialize_expression_data():
     global pyomo5_variable_types
-    if pyomo5_variable_types is None:
-        from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
-        from pyomo.core.kernel.component_variable import IVariable, variable
-        pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
-        _LinearExpression.vtypes = pyomo5_variable_types
-        #
-        global _ParamData
-        global SimpleParam
-        global TemplateExpressionError
-        from pyomo.core.base.param import _ParamData, SimpleParam
-        from pyomo.core.base.template_expr import TemplateExpressionError
+    from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
+    from pyomo.core.kernel.component_variable import IVariable, variable
+    pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
+    _LinearExpression.vtypes = pyomo5_variable_types
+    #
+    global _ParamData
+    global SimpleParam
+    global TemplateExpressionError
+    from pyomo.core.base.param import _ParamData, SimpleParam
+    from pyomo.core.base.template_expr import TemplateExpressionError
+    #
+    global pyomo5_named_expression_types
+    from pyomo.core.base.expression import _GeneralExpressionData, SimpleExpression
+    from pyomo.core.base.objective import _GeneralObjectiveData, SimpleObjective
+    pyomo5_expression_types.update([_GeneralExpressionData, SimpleExpression, _GeneralObjectiveData, SimpleObjective])
+    pyomo5_named_expression_types = set([_GeneralExpressionData, SimpleExpression, _GeneralObjectiveData, SimpleObjective])
+    #
     # [functionality] chainedInequality allows us to generate symbolic
     # expressions of the type "a < b < c".  This provides a buffer to hold
     # the first inequality so the second inequality can access it later.
+    #
     _InequalityExpression.chainedInequality = None
     _InequalityExpression.call_info = None
 
@@ -246,7 +257,7 @@ class SimpleExpressionVisitor(SimpleVisitor):
                         yield ans
 
 
-class ValueExpressionVisitor(ValueVisitor):
+class ExpressionValueVisitor(ValueVisitor):
 
     #
     # NOTE: This is not currently being used, so coverage testing is disabled
@@ -258,6 +269,9 @@ class ValueExpressionVisitor(ValueVisitor):
         This function is slightly optimized from 
         ValueVisitor.dfs_postorder_deque
         """
+        flag, value = self.visiting_potential_leaf(node)
+        if flag:
+            return value
         _values = [[]]
         expanded = set()
         dq = deque([node])
@@ -267,7 +281,10 @@ class ValueExpressionVisitor(ValueVisitor):
                 dq.pop()
                 values = _values.pop()
                 _values[-1].append( self.visit(current, values) )
-            elif self.visiting_potential_leaf(current, _values[-1]):
+                continue
+            flag, value = self.visiting_potential_leaf(current)
+            if flag:
+                _values[-1].append(value)
                 dq.pop()
             else:
                 #for c in reversed(self.children(current)):
@@ -284,6 +301,9 @@ class ValueExpressionVisitor(ValueVisitor):
         This function is slightly optimized from 
         ValueVisitor.dfs_postorder_stack
         """
+        flag, value = self.visiting_potential_leaf(node)
+        if flag:
+            return value
         #_stack = [ (node, self.children(node), 0, len(self.children(node)), [])]
         _stack = [ (node, node._args, 0, node.nargs(), [])]
         #
@@ -307,7 +327,10 @@ class ValueExpressionVisitor(ValueVisitor):
             while _idx < _len:
                 _sub = _argList[_idx]
                 _idx += 1
-                if not self.visiting_potential_leaf(_sub, _result):
+                flag, value = self.visiting_potential_leaf(_sub)
+                if flag:
+                    _result.append( value )
+                else:
                     #
                     # Push an expression onto the stack
                     #
@@ -331,6 +354,90 @@ class ValueExpressionVisitor(ValueVisitor):
                 return self.finalize(ans)
 
 
+class ExpressionReplacementVisitor(ValueVisitor):
+
+    def __init__(self, memo=None):
+        if memo is None:
+            self.memo = {'__block_scope__': { id(None): False }}
+        else:
+            self.memo = memo
+
+    def visit(self, node, values):
+        """ Visit nodes that have been expanded """
+        return node._clone( tuple(values), self.memo )
+
+    def finalize(self, ans):
+        return ans
+
+    def dfs_postorder_stack(self, node):
+        """
+        Depth-first search - postorder
+
+        This function is a slight variant of the 
+        ValueVisitor.dfs_postorder_stack.  The first value in 
+        the _result vector indicates whether the sub-expression has
+        changed.
+        """
+        flag, value = self.visiting_potential_leaf(node)
+        if flag:
+            return value
+        #_stack = [ (node, self.children(node), 0, len(self.children(node)), [])]
+        _stack = [ (node, node._args, 0, node.nargs(), [False])]
+        #
+        # Iterate until the stack is empty
+        #
+        # Note: 1 is faster than True for Python 2.x
+        #
+        while 1:
+            #
+            # Get the top of the stack
+            #   _obj        Current expression object
+            #   _argList    The arguments for this expression objet
+            #   _idx        The current argument being considered
+            #   _len        The number of arguments
+            #   _result     The 'dirty' flag followed by return values
+            #
+            _obj, _argList, _idx, _len, _result = _stack.pop()
+            #
+            # Iterate through the arguments
+            #
+            while _idx < _len:
+                _sub = _argList[_idx]
+                _idx += 1
+                flag, value = self.visiting_potential_leaf(_sub)
+                if flag:
+                    if id(value) != id(_sub):
+                        _result[0] = True
+                    _result.append( value )
+                else:
+                    #
+                    # Push an expression onto the stack
+                    #
+                    _stack.append( (_obj, _argList, _idx, _len, _result) )
+                    _obj                    = _sub
+                    #_argList                = self.children(_sub)
+                    _argList                = _sub._args
+                    _idx                    = 0
+                    _len                    = _sub.nargs()
+                    _result                 = [False]
+            #
+            # Process the current node
+            #
+            if _result[0]:
+                ans = self.visit(_obj, _result[1:])
+            else:
+                ans = _obj
+            if _stack:
+                if _result[0]:
+                    _stack[-1][-1][0] = True
+                #
+                # "return" the recursion by putting the return value on the end of the results stack
+                #
+                _stack[-1][-1].append( ans )
+            else:
+                return self.finalize(ans)
+
+
 
 #-------------------------------------------------------
 #
@@ -342,7 +449,7 @@ class ValueExpressionVisitor(ValueVisitor):
 #  clone_expression
 # =====================================================
 
-class CloneVisitor(ValueExpressionVisitor):
+class CloneVisitor(ExpressionValueVisitor):
 
     def __init__(self, clone_leaves=False, memo=None):
         self.clone_leaves = clone_leaves
@@ -352,7 +459,7 @@ class CloneVisitor(ValueExpressionVisitor):
         """ Visit nodes that have been expanded """
         return node._clone( tuple(values), self.memo )
 
-    def visiting_potential_leaf(self, node, _values):
+    def visiting_potential_leaf(self, node):
         """ 
         Visiting a potential leaf.
 
@@ -362,18 +469,27 @@ class CloneVisitor(ValueExpressionVisitor):
             #
             # Store a native or numeric object
             #
-            _values.append( deepcopy(node, self.memo) )
-            return True
-        elif node.__class__ not in pyomo5_expression_types:
+            return True, deepcopy(node, self.memo)
+
+        if node.__class__ not in pyomo5_expression_types:
             #
             # Store a kernel object that is cloned
             #
             if self.clone_leaves:
-                _values.append( deepcopy(node, self.memo) )
+                return True, deepcopy(node, self.memo)
             else:
-                _values.append( node )
-            return True
-        return False
+                return True, node
+
+        if node.__class__ in pyomo5_named_expression_types:
+            #
+            # Do not clone named expressions unless we are cloning leaves
+            #
+            if self.clone_leaves:
+                return True, deepcopy(node, self.memo)
+            else:
+                return True, node
+
+        return False, None
 
     def finalize(self, ans):
         return ans
@@ -383,11 +499,6 @@ def clone_expression(expr, memo=None, verbose=False, clone_leaves=True):
     clone_counter_context._count += 1
     if not memo:
         memo = {'__block_scope__': { id(None): False }}
-    #
-    if expr.__class__ in native_numeric_types:
-        return expr
-    if not expr.is_expression():
-        return deepcopy(expr, memo)
     #
     visitor = CloneVisitor(clone_leaves=clone_leaves, memo=memo)
     return visitor.dfs_postorder_stack(expr)
@@ -405,19 +516,11 @@ class SizeVisitor(SimpleExpressionVisitor):
     def visit(self, node):
         self.counter += 1
 
-    #def children(self, node):
-    #    return node._args
-
-    #def is_leaf(self, node):
-    #    return node.__class__ in native_numeric_types or not node.is_expression() or node.nargs() == 0
-
     def finalize(self):
         return self.counter
 
 
 def sizeof_expression(expr, verbose=False):
-    #if expr.__class__ in native_numeric_types or not expr.is_expression():
-    #    return 1
     visitor = SizeVisitor()
     return visitor.xbfs(expr)
     
@@ -426,61 +529,36 @@ def sizeof_expression(expr, verbose=False):
 #  evaluate_expression
 # =====================================================
 
-class EvaluationVisitor(ValueExpressionVisitor):
-
-    def __init__(self, only_fixed_vars=False):
-        self.only_fixed_vars = only_fixed_vars
+class EvaluationVisitor(ExpressionValueVisitor):
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
         return node._apply_operation(values)
 
-    def visiting_potential_leaf(self, node, _values):
+    def visiting_potential_leaf(self, node):
         """ 
         Visiting a potential leaf.
 
         Return True if the node is not expanded.
         """
         if node.__class__ in native_numeric_types:
-            _values.append( node )
-            return True
+            return True, node
 
-        elif node.__class__ in pyomo5_variable_types:
-            if self.only_fixed_vars:
-                if node.fixed:
-                    _values.append( node.value )
-                else:
-                    raise ValueError("Cannot evaluate an unfixed variable with only_fixed_vars=True")
-            else:
-                _values.append( value(node) )
-            return True
+        if node.__class__ in pyomo5_variable_types:
+            return True, value(node)
 
-        elif not node.is_expression():
-            _values.append( value(node) )
-            return True
+        if not node.is_expression():
+            return True, value(node)
 
-        return False
+        return False, None
 
     def finalize(self, ans):
         return ans
 
 
-def evaluate_expression(exp, exception=True, only_fixed_vars=False):
-    #
-    # only_fixed_vars - evaluate with fixed variables
-    #   TODO - This doesn't appear to be used, so remove it
-    #
+def evaluate_expression(exp, exception=True):
     try:
-        if exp.__class__ in pyomo5_variable_types:
-            if not only_fixed_vars or exp.fixed:
-                return exp.value
-            else:
-                raise ValueError("Cannot evaluate an unfixed variable with only_fixed_vars=True")
-        elif exp.__class__ in native_numeric_types:
-            return exp
-        elif not exp.is_expression():
-            return exp()
-        visitor = EvaluationVisitor(only_fixed_vars=only_fixed_vars)
+        visitor = EvaluationVisitor()
         return visitor.dfs_postorder_stack(exp)
 
     except TemplateExpressionError:
@@ -499,73 +577,70 @@ def evaluate_expression(exp, exception=True, only_fixed_vars=False):
 
 class VariableVisitor(SimpleExpressionVisitor):
 
-    def __init__(self, include_fixed=True, allow_duplicates=False, include_potentially_variable=False):
+    def __init__(self, types):
         self.seen = set()
-        self.include_fixed = include_fixed
-        self.allow_duplicates = allow_duplicates
-        self.include_potentially_variable = include_potentially_variable
+        if types.__class__ is set:
+            self.types = types
+        else:
+            self.types = set(types)
         
     def visit(self, node):
-        if node.__class__ in pyomo5_variable_types:
-            if ( self.include_fixed
-                 or not node.is_fixed()
-                 or self.include_potentially_variable ):
-                if not self.allow_duplicates:
-                    if id(node) in self.seen:
-                        return
-                    self.seen.add(id(node))
-                return node
-        elif self.include_potentially_variable and node.__class__ not in native_numeric_types and node._potentially_variable():
-            if not self.allow_duplicates:
-                if id(node) in self.seen:
-                    return
-                self.seen.add(id(node))
+        if node.__class__ in self.types:
+            if id(node) in self.seen:
+                return
+            self.seen.add(id(node))
             return node
 
 
-def identify_variables(expr,
-                       include_fixed=True,
-                       allow_duplicates=False,
-                       include_potentially_variable=False):
+def identify_components(expr, component_types):
+    #
     # OPTIONS:
-    # include_fixed - list includes fixed variables
-    # allow_duplicates - list of each variable encountered, even if it's a duplicate of one earlier
-    # include_potentially_variable - list expression and other PV components, but not their variables
+    # component_types - set (or list) if class types to find
+    # in the expression.
     #
-    # WEH - it's not clear why this function shouldn't list all variables in the
-    # contained expressions.  The include_potentially_variable option is confusing.
-    #
-    #
-    # TODO: The allow_duplicates option isn't used anywhere, so we should remove it.
-    #
-    visitor = VariableVisitor(include_fixed, allow_duplicates, include_potentially_variable)
+    visitor = VariableVisitor(component_types)
     for v in visitor.xbfs_yield_leaves(expr):
         yield v
+
+
+def identify_variables(expr, include_fixed=True):
+    #
+    # OPTIONS:
+    # include_fixed - list includes fixed variables
+    #
+    visitor = VariableVisitor(pyomo5_variable_types)
+    if include_fixed:
+        for v in visitor.xbfs_yield_leaves(expr):
+            yield v
+    else:
+        for v in visitor.xbfs_yield_leaves(expr):
+            if not v.is_fixed():
+                yield v
 
 
 # =====================================================
 #  polynomial_degree
 # =====================================================
 
-class PolyDegreeVisitor(ValueExpressionVisitor):
+class PolyDegreeVisitor(ExpressionValueVisitor):
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
         return node._polynomial_degree(values)
 
-    def visiting_potential_leaf(self, node, _values):
+    def visiting_potential_leaf(self, node):
         """ 
         Visiting a potential leaf.
 
         Return True if the node is not expanded.
         """
         if node.__class__ in native_types or not node._potentially_variable():
-            _values.append( 0 )
-            return True
-        elif not node.is_expression():
-            _values.append( 0 if node.is_fixed() else 1 )
-            return True
-        return False
+            return True, 0
+
+        if not node.is_expression():
+            return True, 0 if node.is_fixed() else 1
+
+        return False, None
 
     def finalize(self, ans):
         return ans
@@ -580,7 +655,7 @@ def polynomial_degree(node):
 #  expression_is_fixed
 # =====================================================
 
-class IsFixedVisitor(ValueExpressionVisitor):
+class IsFixedVisitor(ExpressionValueVisitor):
     """
     NOTE: This doesn't check if combiner logic is 
     all or any and short-circuit the test.  It's
@@ -591,29 +666,25 @@ class IsFixedVisitor(ValueExpressionVisitor):
         """ Visit nodes that have been expanded """
         return node._is_fixed(values)
 
-    def visiting_potential_leaf(self, node, _values):
+    def visiting_potential_leaf(self, node):
         """ 
         Visiting a potential leaf.
 
         Return True if the node is not expanded.
         """
         if node.__class__ in native_numeric_types or not node._potentially_variable():
-            _values.append( True )
-            return True
+            return True, True
 
         elif not node.__class__ in pyomo5_expression_types:
-            _values.append( node.is_fixed() ) 
-            return True
+            return True, node.is_fixed()
 
-        return False
+        return False, None
 
     def finalize(self, ans):
         return ans
 
 
 def expression_is_fixed(node):
-    if not node._potentially_variable():
-        return True
     visitor = IsFixedVisitor()
     return visitor.dfs_postorder_stack(node)
 
@@ -850,7 +921,7 @@ class _ExpressionBase(NumericValue):
         return sizeof_expression(self, verbose=verbose)
 
     def __deepcopy__(self, memo):
-        return clone_expression(self, memo=memo)
+        return clone_expression(self, memo=memo, clone_leaves=True)
 
     def _clone(self, args, memo):
         return self.__class__(args)
@@ -860,7 +931,6 @@ class _ExpressionBase(NumericValue):
         raise NotImplementedError("Derived expression (%s) failed to "\
             "implement getname()" % ( str(self.__class__), ))
 
-    # TODO: what if test was a lambda function?  Would that be faster?
     def is_constant(self):
         """Return True if this expression is an atomic constant
 
@@ -1575,7 +1645,7 @@ class Expr_if(_ExpressionBase):
             return (self._then.__class__ in native_numeric_types or self._then.is_constant()) and (self._else.__class__ in native_numeric_types or self._else.is_constant())
 
     def _potentially_variable(self):
-        return (not self._if.__class__ in native_numeric_types and self._if._potentially_variable()) or (not self._then.__class__ in native_numeric_types and self._then._potentially_variable()) or (not self._if.__class__ in native_numeric_types and self._else._potentially_variable())
+        return (not self._if.__class__ in native_numeric_types and self._if._potentially_variable()) or (not self._then.__class__ in native_numeric_types and self._then._potentially_variable()) or (not self._else.__class__ in native_numeric_types and self._else._potentially_variable())
 
     def _polynomial_degree(self, result):
         _if, _then, _else = result
@@ -2112,8 +2182,6 @@ def generate_sum_expression(etype, _self, _other):
         #
         # x - y
         #
-        # TODO: _MultiViewSum logic here
-        #
         if (_self.__class__ is _ViewSumExpression and not _self._is_owned) or \
            _self.__class__ is _MutableViewSumExpression:
            #(_self.__class__ is _LinearViewSumExpression and not _self._is_owned) or
@@ -2499,5 +2567,6 @@ pyomo5_reciprocal_types = set([
         _ReciprocalExpression,
         _NPV_ReciprocalExpression
         ])
-pyomo5_variable_types = None
+pyomo5_variable_types = set()
+pyomo5_named_expression_types = set()
 

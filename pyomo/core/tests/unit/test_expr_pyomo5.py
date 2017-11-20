@@ -27,8 +27,8 @@ from pyutilib.th import nottest
 from pyomo.environ import *
 from pyomo.core.expr import expr_common
 from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.numvalue import potentially_variable, native_types
 from pyomo.core.base.var import SimpleVar
-from pyomo.core.base.numvalue import potentially_variable, native_types
 
 
 class TestExpression_EvaluateNumericConstant(unittest.TestCase):
@@ -2383,11 +2383,11 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Pyomo 5.x expression trees
-        TestPrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
-        pyomo.core.base.expr_common.TO_STRING_VERBOSE = True
+        TestPrettyPrinter_oldStyle._save = expr_common.TO_STRING_VERBOSE
+        expr_common.TO_STRING_VERBOSE = True
 
     def tearDown(self):
-        pyomo.core.base.expr_common.TO_STRING_VERBOSE = TestPrettyPrinter_oldStyle._save
+        expr_common.TO_STRING_VERBOSE = TestPrettyPrinter_oldStyle._save
 
     def test_sum(self):
         #
@@ -2524,11 +2524,11 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Pyomo 5.x expression trees
-        TestPrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
-        pyomo.core.base.expr_common.TO_STRING_VERBOSE = False
+        TestPrettyPrinter_oldStyle._save = expr_common.TO_STRING_VERBOSE
+        expr_common.TO_STRING_VERBOSE = False
 
     def tearDown(self):
-        pyomo.core.base.expr_common.TO_STRING_VERBOSE = TestPrettyPrinter_oldStyle._save
+        expr_common.TO_STRING_VERBOSE = TestPrettyPrinter_oldStyle._save
 
     def test_sum(self):
         #
@@ -3652,7 +3652,7 @@ class TestPolynomialDegree(unittest.TestCase):
         # When IF conditional is uninitialized
         #
         expr = EXPR.Expr_if(m.e,1,0)
-        self.assertEqual(expr.polynomial_degree(), None)
+        self.assertEqual(expr.polynomial_degree(), 0)
 
 
 #
@@ -3882,6 +3882,54 @@ class TestCloneExpression(unittest.TestCase):
             e = EXPR.clone_expression(self.m.p)
             self.assertEqual(id(e), id(self.m.p))
         
+    def test_Expression(self):
+        #
+        # Identify variables when there are duplicates
+        #
+        m = ConcreteModel()
+        m.a = Var(initialize=1)
+        m.b = Var(initialize=2)
+        m.e = Expression(expr=3*m.a)
+        m.E = Expression([0,1], initialize={0:3*m.a, 1:4*m.b})
+
+        with EXPR.clone_counter:
+            start = EXPR.clone_counter.count
+            expr1 = m.e + m.E[1] 
+            expr2 = expr1.clone()
+            self.assertEqual( expr1(), 11 )
+            self.assertEqual( expr2(), 11 )
+            self.assertNotEqual( id(expr1),       id(expr2) )
+            self.assertNotEqual( id(expr1._args), id(expr2._args) )
+            self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
+            self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
+            #
+            total = EXPR.clone_counter.count - start
+            self.assertEqual(total, 1)
+
+    def test_ExpressionX(self):
+        #
+        # Identify variables when there are duplicates
+        #
+        m = ConcreteModel()
+        m.a = Var(initialize=1)
+        m.b = Var(initialize=2)
+        m.e = Expression(expr=3*m.a)
+        m.E = Expression([0,1], initialize={0:3*m.a, 1:4*m.b})
+
+        with EXPR.clone_counter:
+            start = EXPR.clone_counter.count
+            expr1 = m.e + m.E[1] 
+            expr2 = copy.deepcopy(expr1)
+            self.assertEqual( expr1(), 11 )
+            self.assertEqual( expr2(), 11 )
+            self.assertNotEqual( id(expr1),       id(expr2) )
+            self.assertNotEqual( id(expr1._args), id(expr2._args) )
+            self.assertNotEqual( id(expr1._args[0]), id(expr2._args[0]) )
+            self.assertNotEqual( id(expr1._args[1]), id(expr2._args[1]) )
+            #
+            total = EXPR.clone_counter.count - start
+            self.assertEqual(total, 3)
+
     def test_SumExpression(self):
         with EXPR.clone_counter:
             start = EXPR.clone_counter.count
@@ -4648,12 +4696,12 @@ class TestExpressionUtilities(unittest.TestCase):
         m = ConcreteModel()
         m.a = Var(initialize=1)
 
-        self.assertEqual( list(EXPR.identify_variables(2*m.a+2*m.a, allow_duplicates=True)),
-                          [ m.a, m.a ] )
+        #self.assertEqual( list(EXPR.identify_variables(2*m.a+2*m.a, allow_duplicates=True)),
+        #                  [ m.a, m.a ] )
         self.assertEqual( list(EXPR.identify_variables(2*m.a+2*m.a)),
                           [ m.a ] )
 
-    def test_identify_vars_pv(self):
+    def test_identify_vars_expr(self):
         #
         # Identify variables when there are duplicates
         #
@@ -4661,11 +4709,11 @@ class TestExpressionUtilities(unittest.TestCase):
         m.a = Var(initialize=1)
         m.b = Var(initialize=2)
         m.e = Expression(expr=3*m.a)
+        m.E = Expression([0,1], initialize={0:3*m.a, 1:4*m.b})
 
-        self.assertEqual( list(EXPR.identify_variables(m.b+m.e)),
-                          [ m.b ] )
-        self.assertEqual( list(EXPR.identify_variables(m.b+m.e+m.e, include_potentially_variable=True)),
-                          [ m.b, m.e ] )
+        self.assertEqual( list(EXPR.identify_variables(m.b+m.e)), [ m.b, m.a ] )
+        self.assertEqual( list(EXPR.identify_variables(m.E[0])), [ m.a ] )
+        self.assertEqual( list(EXPR.identify_variables(m.E[1])), [ m.b ] )
 
     def test_identify_vars_vars(self):
         m = ConcreteModel()
@@ -4709,8 +4757,8 @@ class TestExpressionUtilities(unittest.TestCase):
         #
         self.assertEqual( list(EXPR.identify_variables(m.a**m.a + m.a)),
                           [ m.a ] )
-        self.assertEqual( list(EXPR.identify_variables(m.a**m.a + m.a, allow_duplicates=True)),
-                          [ m.a, m.a, m.a,  ] )
+        #self.assertEqual( list(EXPR.identify_variables(m.a**m.a + m.a, allow_duplicates=True)),
+        #                  [ m.a, m.a, m.a,  ] )
 
 
 class TestMultiArgumentExpressions(unittest.TestCase):

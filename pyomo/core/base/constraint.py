@@ -18,8 +18,8 @@ from weakref import ref as weakref_ref
 
 import pyutilib.math
 from pyomo.util.timing import ConstructionTimer
-from pyomo.core.base import expr as EXPR
-from pyomo.core.base.numvalue import (ZeroConstant,
+from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.numvalue import (ZeroConstant,
                                       value,
                                       as_numeric,
                                       is_constant,

@@ -11,6 +11,7 @@
 from __future__ import print_function
 import pyutilib.th as unittest
 
+from pyomo.core.expr import current as EXPR
 from pyomo.environ import (
     ConcreteModel, RangeSet, Param, Var, Set, value, Constraint, 
     sin, log, sqrt, TransformationFactory)
@@ -24,8 +25,6 @@ from pyomo.dae.simulator import (
     substitute_getitem_with_casadi_sym,
     substitute_intrinsic_function_with_casadi,
     substitute_intrinsic_function)
-from pyomo.core.base import expr as EXPR
-from pyomo.core.base import expr_common
 from pyomo.core.base.template_expr import (
     IndexTemplate, 
     _GetItemIndexer,

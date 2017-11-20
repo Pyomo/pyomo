@@ -31,14 +31,14 @@ from pyutilib.misc import PauseGC
 import pyomo.util.plugin
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import *
-from pyomo.core.base import *
-from pyomo.core.base import expr, SymbolMap, Block
-import pyomo.core.expr.current as EXPR
-from pyomo.core.base.var import Var
-from pyomo.core.base import _ExpressionData, Expression, SortComponents
-from pyomo.core.base.numvalue import (NumericConstant,
+from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.numvalue import (NumericConstant,
                                       native_numeric_types,
                                       value)
+from pyomo.core.base import *
+from pyomo.core.base import SymbolMap, Block
+from pyomo.core.base.var import Var
+from pyomo.core.base import _ExpressionData, Expression, SortComponents
 from pyomo.core.base import var
 from pyomo.core.base import param
 import pyomo.core.base.suffix
@@ -87,46 +87,46 @@ def _build_op_template():
     div_template = "o3{C}\n"
     div_comment = "\t#/"
     if _using_pyomo5_trees:
-        _op_template[expr._ProductExpression] = prod_template
-        _op_comment[expr._ProductExpression] = prod_comment
-        _op_template[expr._ReciprocalExpression] = div_template
-        _op_comment[expr._ReciprocalExpression] = div_comment
+        _op_template[EXPR._ProductExpression] = prod_template
+        _op_comment[EXPR._ProductExpression] = prod_comment
+        _op_template[EXPR._ReciprocalExpression] = div_template
+        _op_comment[EXPR._ReciprocalExpression] = div_comment
     elif _using_pyomo4_trees:
-        _op_template[expr._ProductExpression] = prod_template
-        _op_comment[expr._ProductExpression] = prod_comment
-        _op_template[expr._DivisionExpression] = div_template
-        _op_comment[expr._DivisionExpression] = div_comment
+        _op_template[EXPR._ProductExpression] = prod_template
+        _op_comment[EXPR._ProductExpression] = prod_comment
+        _op_template[EXPR._DivisionExpression] = div_template
+        _op_comment[EXPR._DivisionExpression] = div_comment
     else:
-        _op_template[expr._ProductExpression] = (prod_template,
+        _op_template[EXPR._ProductExpression] = (prod_template,
                                                  div_template)
-        _op_comment[expr._ProductExpression] = (prod_comment,
+        _op_comment[EXPR._ProductExpression] = (prod_comment,
                                                 div_comment)
     del prod_template
     del prod_comment
     del div_template
     del div_comment
 
-    _op_template[expr._ExternalFunctionExpression] = ("f%d %d{C}\n", #function
+    _op_template[EXPR._ExternalFunctionExpression] = ("f%d %d{C}\n", #function
                                                       "h%d:%s{C}\n") #string arg
-    _op_comment[expr._ExternalFunctionExpression] = ("\t#%s", #function
+    _op_comment[EXPR._ExternalFunctionExpression] = ("\t#%s", #function
                                                      "")      #string arg
 
     for opname in _intrinsic_function_operators:
         _op_template[opname] = _intrinsic_function_operators[opname]+"{C}\n"
         _op_comment[opname] = "\t#"+opname
 
-    _op_template[expr.Expr_if] = "o35{C}\n"
-    _op_comment[expr.Expr_if] = "\t#if"
+    _op_template[EXPR.Expr_if] = "o35{C}\n"
+    _op_comment[EXPR.Expr_if] = "\t#if"
 
-    _op_template[expr._InequalityExpression] = ("o21{C}\n", # and
+    _op_template[EXPR._InequalityExpression] = ("o21{C}\n", # and
                                                 "o22{C}\n", # <
                                                 "o23{C}\n") # <=
-    _op_comment[expr._InequalityExpression] = ("\t#and", # and
+    _op_comment[EXPR._InequalityExpression] = ("\t#and", # and
                                                "\t#lt",  # <
                                                "\t#le")  # <=
 
-    _op_template[expr._EqualityExpression] = "o24{C}\n"
-    _op_comment[expr._EqualityExpression] = "\t#eq"
+    _op_template[EXPR._EqualityExpression] = "o24{C}\n"
+    _op_comment[EXPR._EqualityExpression] = "\t#eq"
 
     _op_template[var._VarData] = "v%d{C}\n"
     _op_comment[var._VarData] = "\t#%s"
@@ -137,22 +137,22 @@ def _build_op_template():
     _op_template[NumericConstant] = "n%r{C}\n"
     _op_comment[NumericConstant] = ""
 
-    _op_template[expr._SumExpression] = (
+    _op_template[EXPR._SumExpression] = (
         "o54{C}\n%d\n", # nary +
         "o0{C}\n",      # +
         "o2\n" + _op_template[NumericConstant] ) # * coef
-    _op_comment[expr._SumExpression] = ("\t#sumlist", # nary +
+    _op_comment[EXPR._SumExpression] = ("\t#sumlist", # nary +
                                         "\t#+",       # +
                                         _op_comment[NumericConstant]) # * coef
     if _using_pyomo5_trees:
-        _op_template[expr._NegationExpression] = "o16{C}\n"
-        _op_comment[expr._NegationExpression] = "\t#-"
+        _op_template[EXPR._NegationExpression] = "o16{C}\n"
+        _op_comment[EXPR._NegationExpression] = "\t#-"
     elif _using_pyomo4_trees:
-        _op_template[expr._LinearExpression] = _op_template[expr._SumExpression]
-        _op_comment[expr._LinearExpression] = _op_comment[expr._SumExpression]
+        _op_template[EXPR._LinearExpression] = _op_template[EXPR._SumExpression]
+        _op_comment[EXPR._LinearExpression] = _op_comment[EXPR._SumExpression]
 
-        _op_template[expr._NegationExpression] = "o16{C}\n"
-        _op_comment[expr._NegationExpression] = "\t#-"
+        _op_template[EXPR._NegationExpression] = "o16{C}\n"
+        _op_comment[EXPR._NegationExpression] = "\t#-"
 
     return _op_template, _op_comment
 
@@ -416,7 +416,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             # be a list of tuples where [0] is the coeff and [1] is
             # the expr to write
             nary_sum_str, binary_sum_str, coef_term_str = \
-                self._op_string[expr._SumExpression]
+                self._op_string[EXPR._SumExpression]
             n = len(exp)
             if n > 2:
                 OUTPUT.write(nary_sum_str % (n))
@@ -454,9 +454,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 # We are assuming that _Constant_* expression objects
                 # have been preprocessed to form constant values.
                 #
-                if exp.__class__ is expr._ViewSumExpression:
+                if exp.__class__ is EXPR._ViewSumExpression:
                     nary_sum_str, binary_sum_str, coef_term_str = \
-                        self._op_string[expr._SumExpression]
+                        self._op_string[EXPR._SumExpression]
                     n = exp.nargs()
                     const = 0
                     vargs = []
@@ -477,38 +477,38 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         for child_exp in vargs:
                             self._print_nonlinear_terms_NL(child_exp)
                     
-                elif exp_type is expr._SumExpression or \
-                     exp_type is expr._NPV_SumExpression:
-                    nary_sum_str, binary_sum_str, coef_term_str = self._op_string[expr._SumExpression]
+                elif exp_type is EXPR._SumExpression or \
+                     exp_type is EXPR._NPV_SumExpression:
+                    nary_sum_str, binary_sum_str, coef_term_str = self._op_string[EXPR._SumExpression]
                     OUTPUT.write(binary_sum_str)
                     self._print_nonlinear_terms_NL(exp._args[0])
                     self._print_nonlinear_terms_NL(exp._args[1])
 
-                elif exp_type is expr._ProductExpression or \
-                     exp_type is expr._NPV_ProductExpression:
-                    prod_str = self._op_string[expr._ProductExpression]
+                elif exp_type is EXPR._ProductExpression or \
+                     exp_type is EXPR._NPV_ProductExpression:
+                    prod_str = self._op_string[EXPR._ProductExpression]
                     OUTPUT.write(prod_str)
                     self._print_nonlinear_terms_NL(exp._args[0])
                     self._print_nonlinear_terms_NL(exp._args[1])
 
-                elif exp_type is expr._ReciprocalExpression or \
-                     exp_type is expr._NPV_ReciprocalExpression:
+                elif exp_type is EXPR._ReciprocalExpression or \
+                     exp_type is EXPR._NPV_ReciprocalExpression:
                     assert exp.nargs() == 1
-                    div_str = self._op_string[expr._ReciprocalExpression]
+                    div_str = self._op_string[EXPR._ReciprocalExpression]
                     OUTPUT.write(div_str)
                     self._print_nonlinear_terms_NL(1.0)
                     self._print_nonlinear_terms_NL(exp._args[0])
 
-                elif exp_type is expr._NegationExpression or \
-                     exp_type is expr._NPV_NegationExpression:
+                elif exp_type is EXPR._NegationExpression or \
+                     exp_type is EXPR._NPV_NegationExpression:
                     assert exp.nargs() == 1
-                    OUTPUT.write(self._op_string[expr._NegationExpression])
+                    OUTPUT.write(self._op_string[EXPR._NegationExpression])
                     self._print_nonlinear_terms_NL(exp._args[0])
 
-                elif exp_type is expr._ExternalFunctionExpression or \
-                     exp_type is expr._NPV_ExternalFunctionExpression:
+                elif exp_type is EXPR._ExternalFunctionExpression or \
+                     exp_type is EXPR._NPV_ExternalFunctionExpression:
                     fun_str, string_arg_str = \
-                        self._op_string[expr._ExternalFunctionExpression]
+                        self._op_string[EXPR._ExternalFunctionExpression]
                     if not self._symbolic_solver_labels:
                         OUTPUT.write(fun_str
                                      % (self.external_byFcn[exp._fcn._function][1],
@@ -525,14 +525,14 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         else:
                             self._print_nonlinear_terms_NL(arg)
 
-                elif exp_type is expr._PowExpression or \
-                     exp_type is expr._NPV_PowExpression:
+                elif exp_type is EXPR._PowExpression or \
+                     exp_type is EXPR._NPV_PowExpression:
                     intr_expr_str = self._op_string.get(exp.name)
                     OUTPUT.write(intr_expr_str)
                     self._print_nonlinear_terms_NL(exp._args[0])
                     self._print_nonlinear_terms_NL(exp._args[1])
 
-                elif isinstance(exp, expr._UnaryFunctionExpression):
+                elif isinstance(exp, EXPR._UnaryFunctionExpression):
                     assert exp.nargs() == 1
                     intr_expr_str = self._op_string.get(exp.name)
                     if intr_expr_str is not None:
@@ -543,15 +543,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                         % (exp.name))
                     self._print_nonlinear_terms_NL(exp._args[0])
 
-                elif exp_type is expr.Expr_if:
-                    OUTPUT.write(self._op_string[expr.Expr_if])
+                elif exp_type is EXPR.Expr_if:
+                    OUTPUT.write(self._op_string[EXPR.Expr_if])
                     self._print_nonlinear_terms_NL(exp._if)
                     self._print_nonlinear_terms_NL(exp._then)
                     self._print_nonlinear_terms_NL(exp._else)
 
-                elif exp_type is expr._InequalityExpression:
+                elif exp_type is EXPR._InequalityExpression:
                     and_str, lt_str, le_str = \
-                        self._op_string[expr._InequalityExpression]
+                        self._op_string[EXPR._InequalityExpression]
                     len_args = exp.nargs()
                     assert len_args in [2,3]
                     left = exp._args[0]
@@ -574,8 +574,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         self._print_nonlinear_terms_NL(middle)
                         self._print_nonlinear_terms_NL(right)
 
-                elif exp_type is expr._EqualityExpression:
-                    OUTPUT.write(self._op_string[expr._EqualityExpression])
+                elif exp_type is EXPR._EqualityExpression:
+                    OUTPUT.write(self._op_string[EXPR._EqualityExpression])
                     self._print_nonlinear_terms_NL(exp._args[0])
                     self._print_nonlinear_terms_NL(exp._args[1])
 
@@ -590,9 +590,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
             #
             # Pyomo4 and Coopr3
             #
-            elif _using_pyomo4_trees and (exp_type is expr._LinearExpression):
+            elif _using_pyomo4_trees and (exp_type is EXPR._LinearExpression):
                 nary_sum_str, binary_sum_str, coef_term_str = \
-                    self._op_string[expr._LinearExpression]
+                    self._op_string[EXPR._LinearExpression]
                 n = len(exp._args)
                 if n > 2:
                     OUTPUT.write(nary_sum_str % (n))
@@ -624,9 +624,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         OUTPUT.write(coef_term_str % (value(child_coef)))
                     self._print_nonlinear_terms_NL(child_exp)
 
-            elif _using_pyomo4_trees and (exp_type is expr._SumExpression):
+            elif _using_pyomo4_trees and (exp_type is EXPR._SumExpression):
                 nary_sum_str, binary_sum_str, coef_term_str = \
-                    self._op_string[expr._SumExpression]
+                    self._op_string[EXPR._SumExpression]
                 n = len(exp._args)
                 if n > 2:
                     OUTPUT.write(nary_sum_str % (n))
@@ -638,10 +638,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         self._print_nonlinear_terms_NL(exp._args[i])
                     self._print_nonlinear_terms_NL(exp._args[n-1])
 
-            elif exp_type is expr._SumExpression:
+            elif exp_type is EXPR._SumExpression:
                 assert not _using_pyomo4_trees
                 nary_sum_str, binary_sum_str, coef_term_str = \
-                    self._op_string[expr._SumExpression]
+                    self._op_string[EXPR._SumExpression]
                 n = len(exp._args)
                 if n > 2:
                     OUTPUT.write(nary_sum_str % (n))
@@ -668,9 +668,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     self._print_nonlinear_terms_NL(exp._args[n-1])
 
             elif (not _using_pyomo4_trees) and \
-                 (exp_type is expr._ProductExpression):
+                 (exp_type is EXPR._ProductExpression):
                 denom_exists = False
-                prod_str, div_str = self._op_string[expr._ProductExpression]
+                prod_str, div_str = self._op_string[EXPR._ProductExpression]
                 if len(exp._denominator) == 0:
                     pass
                 else:
@@ -700,8 +700,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         self._print_nonlinear_terms_NL(child_exp)
                         child_counter += 1
 
-            elif _using_pyomo4_trees and (exp_type is expr._ProductExpression):
-                prod_str = self._op_string[expr._ProductExpression]
+            elif _using_pyomo4_trees and (exp_type is EXPR._ProductExpression):
+                prod_str = self._op_string[EXPR._ProductExpression]
                 child_counter = 0
                 max_count = len(exp._args)-1
                 for child_exp in exp._args:
@@ -710,8 +710,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     self._print_nonlinear_terms_NL(child_exp)
                     child_counter += 1
 
-            elif _using_pyomo4_trees and (exp_type is expr._DivisionExpression):
-                div_str = self._op_string[expr._DivisionExpression]
+            elif _using_pyomo4_trees and (exp_type is EXPR._DivisionExpression):
+                div_str = self._op_string[EXPR._DivisionExpression]
                 child_counter = 0
                 max_count = len(exp._args)-1
                 for child_exp in exp._args:
@@ -720,14 +720,14 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     self._print_nonlinear_terms_NL(child_exp)
                     child_counter += 1
 
-            elif _using_pyomo4_trees and (exp_type is expr._NegationExpression):
+            elif _using_pyomo4_trees and (exp_type is EXPR._NegationExpression):
                 assert len(exp._args) == 1
-                OUTPUT.write(self._op_string[expr._NegationExpression])
+                OUTPUT.write(self._op_string[EXPR._NegationExpression])
                 self._print_nonlinear_terms_NL(exp._args[0])
 
-            elif exp_type is expr._ExternalFunctionExpression:
+            elif exp_type is EXPR._ExternalFunctionExpression:
                 fun_str, string_arg_str = \
-                    self._op_string[expr._ExternalFunctionExpression]
+                    self._op_string[EXPR._ExternalFunctionExpression]
                 if not self._symbolic_solver_labels:
                     OUTPUT.write(fun_str
                                  % (self.external_byFcn[exp._fcn._function][1],
@@ -744,8 +744,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     else:
                         self._print_nonlinear_terms_NL(arg)
 
-            elif (exp_type is expr._PowExpression) or \
-                 isinstance(exp, expr._IntrinsicFunctionExpression):
+            elif (exp_type is EXPR._PowExpression) or \
+                 isinstance(exp, EXPR._IntrinsicFunctionExpression):
                 intr_expr_str = self._op_string.get(exp.name)
                 if intr_expr_str is not None:
                     OUTPUT.write(intr_expr_str)
@@ -758,15 +758,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 for child_exp in exp._args:
                     self._print_nonlinear_terms_NL(child_exp)
 
-            elif exp_type is expr.Expr_if:
-                OUTPUT.write(self._op_string[expr.Expr_if])
+            elif exp_type is EXPR.Expr_if:
+                OUTPUT.write(self._op_string[EXPR.Expr_if])
                 self._print_nonlinear_terms_NL(exp._if)
                 self._print_nonlinear_terms_NL(exp._then)
                 self._print_nonlinear_terms_NL(exp._else)
 
-            elif exp_type is expr._InequalityExpression:
+            elif exp_type is EXPR._InequalityExpression:
                 and_str, lt_str, le_str = \
-                    self._op_string[expr._InequalityExpression]
+                    self._op_string[EXPR._InequalityExpression]
                 len_args = len(exp._args)
                 assert len_args in [2,3]
                 left = exp._args[0]
@@ -789,8 +789,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     self._print_nonlinear_terms_NL(middle)
                     self._print_nonlinear_terms_NL(right)
 
-            elif exp_type is expr._EqualityExpression:
-                OUTPUT.write(self._op_string[expr._EqualityExpression])
+            elif exp_type is EXPR._EqualityExpression:
+                OUTPUT.write(self._op_string[EXPR._EqualityExpression])
                 self._print_nonlinear_terms_NL(exp._args[0])
                 self._print_nonlinear_terms_NL(exp._args[1])
 
@@ -1735,7 +1735,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                              % (wrapped_repn.repn.constant))
             else:
                 if wrapped_repn.repn.constant != 0:
-                    _, binary_sum_str, _ = self._op_string[expr._SumExpression]
+                    _, binary_sum_str, _ = self._op_string[EXPR._SumExpression]
                     OUTPUT.write(binary_sum_str)
                     OUTPUT.write(self._op_string[NumericConstant]
                                  % (wrapped_repn.repn.constant))

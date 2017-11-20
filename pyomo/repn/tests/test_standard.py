@@ -1159,7 +1159,7 @@ class TestSimple(unittest.TestCase):
         baseline1 = { }
         self.assertEqual(baseline1, repn_to_dict(rep))
         baseline2 = set([ id(m.a), id(m.b) ])
-        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr,include_potentially_variable=True)))
+        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr)))
 
         #       *
         #      / \
@@ -1193,7 +1193,7 @@ class TestSimple(unittest.TestCase):
         baseline1 = { }
         self.assertEqual(baseline1, repn_to_dict(rep))
         baseline2 = set([ id(m.a), id(m.b) ])
-        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr,                 include_potentially_variable=True)))
+        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr)))
 
         #       *
         #     /   \
@@ -1245,7 +1245,7 @@ class TestSimple(unittest.TestCase):
         baseline1 = { }
         self.assertEqual(baseline1, repn_to_dict(rep))
         baseline2 = set([ id(m.a), id(m.b), id(m.c) ])
-        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr,                 include_potentially_variable=True)))
+        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr)))
 
         #       *
         #     /   \
@@ -1278,7 +1278,7 @@ class TestSimple(unittest.TestCase):
         baseline1 = { }
         self.assertEqual(baseline1, repn_to_dict(rep))
         baseline2 = set([ id(m.a), id(m.b), id(m.c) ])
-        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr,                 include_potentially_variable=True)))
+        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr)))
 
         #       *
         #     /   \
@@ -1310,7 +1310,7 @@ class TestSimple(unittest.TestCase):
         baseline1 = { }
         self.assertEqual(baseline1, repn_to_dict(rep))
         baseline2 = set([ id(m.a), id(m.b), id(m.c) ])
-        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr,                 include_potentially_variable=True)))
+        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr)))
 
         #       *
         #     /   \
@@ -1342,7 +1342,7 @@ class TestSimple(unittest.TestCase):
         baseline1 = { }
         self.assertEqual(baseline1, repn_to_dict(rep))
         baseline2 = set([ id(m.a), id(m.b), id(m.c) ])
-        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr,                 include_potentially_variable=True)))
+        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr)))
 
     def test_pow(self):
         #       ^
@@ -1430,7 +1430,7 @@ class TestSimple(unittest.TestCase):
         self.assertFalse(rep.nonlinear_expr is None)
         self.assertTrue(len(rep.nonlinear_vars) == 1)
         baseline = set([ id(m.a) ])
-        self.assertEqual(baseline, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr,include_potentially_variable=True)))
+        self.assertEqual(baseline, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr)))
 
         #       ^
         #      / \
@@ -1446,23 +1446,7 @@ class TestSimple(unittest.TestCase):
         self.assertFalse(rep.nonlinear_expr is None)
         self.assertTrue(len(rep.nonlinear_vars) == 1)
         baseline = set([ id(m.a) ])
-        self.assertEqual(baseline, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr,include_potentially_variable=True)))
-
-        #       ^
-        #      / \
-        #     a   p
-        #e = m.a ** m.p
-        #
-        #rep = generate_standard_repn(e)
-        #
-        #self.assertTrue(len(rep.linear_vars) == 0)
-        #self.assertTrue(len(rep.linear_coefs) == 0)
-        #self.assertTrue(len(rep.quadratic_vars) == 0)
-        #self.assertTrue(len(rep.quadratic_coefs) == 0)
-        #self.assertFalse(rep.nonlinear_expr is None)
-        #self.assertTrue(len(rep.nonlinear_vars) == 1)
-        #baseline = set([ id(m.a) ])
-        #self.assertEqual(baseline, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr,include_potentially_variable=True)))
+        self.assertEqual(baseline, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr)))
 
         #       ^
         #      / \
@@ -1499,7 +1483,7 @@ class TestSimple(unittest.TestCase):
         self.assertFalse(rep.nonlinear_expr is None)
         self.assertTrue(len(rep.nonlinear_vars) == 1)
         baseline = set([ id(m.a) ])
-        self.assertEqual(baseline, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr,include_potentially_variable=True)))
+        self.assertEqual(baseline, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr)))
 
         #      abs
         #      / 
@@ -1554,7 +1538,7 @@ class TestSimple(unittest.TestCase):
         self.assertFalse(rep.nonlinear_expr is None)
         self.assertTrue(len(rep.nonlinear_vars) == 1)
         baseline = set([ id(m.a) ])
-        self.assertEqual(baseline, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr,include_potentially_variable=True)))
+        self.assertEqual(baseline, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr)))
 
         #      cos
         #      / 
@@ -1643,7 +1627,7 @@ class TestSimple(unittest.TestCase):
         self.assertFalse(rep.nonlinear_expr is None)
         self.assertTrue(len(rep.nonlinear_vars) == 3)
         baseline = set([ id(m.a), id(m.b), id(m.c) ])
-        self.assertEqual(baseline, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr,include_potentially_variable=True)))
+        self.assertEqual(baseline, set(id(v_) for v_ in EXPR.identify_variables(rep.nonlinear_expr)))
 
         m = ConcreteModel()
         m.a = Var()

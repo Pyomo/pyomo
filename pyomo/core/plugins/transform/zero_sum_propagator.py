@@ -1,8 +1,8 @@
 """Transformation to propagate a zero value to terms of a sum."""
 import textwrap
 
-from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.numvalue import value
+from pyomo.core.base.constraint import Constraint
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.util.plugin import alias

@@ -267,13 +267,13 @@ class TestExpressionData(unittest.TestCase):
 class TestExpression(unittest.TestCase):
 
     def setUp(self):
-        TestExpression._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
+        TestExpression._save = expr_common.TO_STRING_VERBOSE
         # Tests can choose what they want - this just makes sure that
         #things are restored after the tests run.
-        #pyomo.core.base.expr_common.TO_STRING_VERBOSE = True
+        #expr_common.TO_STRING_VERBOSE = True
 
     def tearDown(self):
-        pyomo.core.base.expr_common.TO_STRING_VERBOSE = TestExpression._save
+        expr_common.TO_STRING_VERBOSE = TestExpression._save
 
     def test_unconstructed_singleton(self):
         a = Expression()
@@ -621,7 +621,7 @@ class TestExpression(unittest.TestCase):
         self.assertEqual(id(inst.obj.expr._args[1]),id(inst.ec))
 
     def test_pprint_oldStyle(self):
-        pyomo.core.base.expr_common.TO_STRING_VERBOSE = True
+        expr_common.TO_STRING_VERBOSE = True
 
         model = ConcreteModel()
         model.x = Var()
@@ -631,7 +631,7 @@ class TestExpression(unittest.TestCase):
 
         output = \
 """\
-viewsum( prod( e{viewsum( x , 2 )} , pow( x , 2 ) ) , E[1]{viewsum( pow( x , 2 ) , 1 )} )
+viewsum( prod( e( viewsum( x , 2 ) ) , pow( x , 2 ) ) , E[1]( viewsum( pow( x , 2 ) , 1 ) ) )
 e : Size=1, Index=None
     Key  : Expression
     None : viewsum( x , 2 )
@@ -651,7 +651,7 @@ E : Size=2, Index=E_index
         model.E[1].set_value(2.0)
         output = \
 """\
-viewsum( prod( e{1.0} , pow( x , 2 ) ) , E[1]{2.0} )
+viewsum( prod( e( 1.0 ) , pow( x , 2 ) ) , E[1]( 2.0 ) )
 e : Size=1, Index=None
     Key  : Expression
     None :        1.0
@@ -672,7 +672,7 @@ E : Size=2, Index=E_index
         model.E[1].set_value(None)
         output = \
 """\
-viewsum( prod( e{Undefined} , pow( x , 2 ) ) , E[1]{Undefined} )
+viewsum( prod( e( None ) , pow( x , 2 ) ) , E[1]( None ) )
 e : Size=1, Index=None
     Key  : Expression
     None :  Undefined
@@ -690,7 +690,7 @@ E : Size=2, Index=E_index
 
 
     def test_pprint_newStyle(self):
-        pyomo.core.base.expr_common.TO_STRING_VERBOSE = False
+        expr_common.TO_STRING_VERBOSE = False
 
         model = ConcreteModel()
         model.x = Var()
@@ -700,7 +700,7 @@ E : Size=2, Index=E_index
 
         output = \
 """\
-( x + 2 )*x**2 + x**2 + 1
+e( ( x + 2 ) )*x**2 + x**2 + 1
 e : Size=1, Index=None
     Key  : Expression
     None : 2 + x
@@ -746,7 +746,7 @@ E : Size=2, Index=E_index
         model.E[1].set_value(None)
         output = \
 """\
-Undefined*x**2 + Undefined
+e( None )*x**2 + E[1]( None )
 e : Size=1, Index=None
     Key  : Expression
     None :  Undefined

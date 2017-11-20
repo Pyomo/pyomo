@@ -604,7 +604,7 @@ You can silence this warning by one of three ways:
                     # due to circular imports (expr imports _VarData
                     # imports indexed_component, but we need expr
                     # here
-                    from pyomo.core.base import expr as EXPR
+                    from pyomo.core.expr import current as EXPR
                     return EXPR._GetItemExpression(tuple(ndx), self)
                 except:
                     # There are other ways we could get an exception

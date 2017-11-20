@@ -26,9 +26,9 @@ import pyomo.util
 from pyutilib.misc import Bunch
 from pyutilib.math.util import isclose as isclose_default
 
+from pyomo.core.expr import current as EXPR
 from pyomo.core.base.objective import (_GeneralObjectiveData,
                                        SimpleObjective)
-from pyomo.core.base import expr as EXPR
 from pyomo.core.base import _ExpressionData, Expression
 from pyomo.core.base.expression import SimpleExpression, _GeneralExpressionData
 from pyomo.core.base.var import (SimpleVar,
@@ -792,7 +792,7 @@ def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False
     if not isclose_const(ans.nonl,0):
         repn.nonlinear_expr = ans.nonl
         repn.nonlinear_vars = []
-        for v_ in EXPR.identify_variables(repn.nonlinear_expr, include_fixed=False, include_potentially_variable=False):
+        for v_ in EXPR.identify_variables(repn.nonlinear_expr, include_fixed=False):
             repn.nonlinear_vars.append(v_)
             #
             # Update idMap in case we skipped nonlinear sub-expressions
