@@ -716,8 +716,8 @@ def preprocess_scenario_instance(scenario_instance,
         if solver.has_instance():
             variables_to_change = \
                 instance_variables_fixed + instance_variables_freed
-            for var in variables_to_change:
-                solver.update_var(var)
+            for var_name, var_index in variables_to_change:
+                solver.update_var(scenario_instance.find_component(var_name)[var_index])
 
     if instance_user_constraints_modified:
         if solver.problem_format() == ProblemFormat.nl:
