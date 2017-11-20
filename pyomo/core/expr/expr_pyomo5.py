@@ -269,6 +269,9 @@ class ExpressionValueVisitor(ValueVisitor):
         This function is slightly optimized from 
         ValueVisitor.dfs_postorder_deque
         """
+        flag, value = self.visiting_potential_leaf(node)
+        if flag:
+            return value
         _values = [[]]
         expanded = set()
         dq = deque([node])
@@ -298,6 +301,9 @@ class ExpressionValueVisitor(ValueVisitor):
         This function is slightly optimized from 
         ValueVisitor.dfs_postorder_stack
         """
+        flag, value = self.visiting_potential_leaf(node)
+        if flag:
+            return value
         #_stack = [ (node, self.children(node), 0, len(self.children(node)), [])]
         _stack = [ (node, node._args, 0, node.nargs(), [])]
         #
@@ -494,11 +500,6 @@ def clone_expression(expr, memo=None, verbose=False, clone_leaves=True):
     if not memo:
         memo = {'__block_scope__': { id(None): False }}
     #
-    if expr.__class__ in native_numeric_types:
-        return expr
-    if not expr.is_expression():
-        return deepcopy(expr, memo)
-    #
     visitor = CloneVisitor(clone_leaves=clone_leaves, memo=memo)
     return visitor.dfs_postorder_stack(expr)
 
@@ -520,8 +521,6 @@ class SizeVisitor(SimpleExpressionVisitor):
 
 
 def sizeof_expression(expr, verbose=False):
-    #if expr.__class__ in native_numeric_types or not expr.is_expression():
-    #    return 1
     visitor = SizeVisitor()
     return visitor.xbfs(expr)
     
@@ -559,12 +558,6 @@ class EvaluationVisitor(ExpressionValueVisitor):
 
 def evaluate_expression(exp, exception=True):
     try:
-        if exp.__class__ in pyomo5_variable_types:
-            return exp.value
-        elif exp.__class__ in native_numeric_types:
-            return exp
-        elif not exp.is_expression():
-            return exp()
         visitor = EvaluationVisitor()
         return visitor.dfs_postorder_stack(exp)
 
@@ -692,8 +685,6 @@ class IsFixedVisitor(ExpressionValueVisitor):
 
 
 def expression_is_fixed(node):
-    if not node._potentially_variable():
-        return True
     visitor = IsFixedVisitor()
     return visitor.dfs_postorder_stack(node)
 
@@ -1654,7 +1645,7 @@ class Expr_if(_ExpressionBase):
             return (self._then.__class__ in native_numeric_types or self._then.is_constant()) and (self._else.__class__ in native_numeric_types or self._else.is_constant())
 
     def _potentially_variable(self):
-        return (not self._if.__class__ in native_numeric_types and self._if._potentially_variable()) or (not self._then.__class__ in native_numeric_types and self._then._potentially_variable()) or (not self._if.__class__ in native_numeric_types and self._else._potentially_variable())
+        return (not self._if.__class__ in native_numeric_types and self._if._potentially_variable()) or (not self._then.__class__ in native_numeric_types and self._then._potentially_variable()) or (not self._else.__class__ in native_numeric_types and self._else._potentially_variable())
 
     def _polynomial_degree(self, result):
         _if, _then, _else = result
