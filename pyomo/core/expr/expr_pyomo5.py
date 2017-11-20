@@ -351,7 +351,10 @@ class ExpressionValueVisitor(ValueVisitor):
 class ExpressionReplacementVisitor(ValueVisitor):
 
     def __init__(self, memo=None):
-        self.memo = memo
+        if memo is None:
+            self.memo = {'__block_scope__': { id(None): False }}
+        else:
+            self.memo = memo
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
@@ -369,6 +372,9 @@ class ExpressionReplacementVisitor(ValueVisitor):
         the _result vector indicates whether the sub-expression has
         changed.
         """
+        flag, value = self.visiting_potential_leaf(node)
+        if flag:
+            return value
         #_stack = [ (node, self.children(node), 0, len(self.children(node)), [])]
         _stack = [ (node, node._args, 0, node.nargs(), [False])]
         #
