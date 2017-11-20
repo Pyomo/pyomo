@@ -3652,7 +3652,7 @@ class TestPolynomialDegree(unittest.TestCase):
         # When IF conditional is uninitialized
         #
         expr = EXPR.Expr_if(m.e,1,0)
-        self.assertEqual(expr.polynomial_degree(), None)
+        self.assertEqual(expr.polynomial_degree(), 0)
 
 
 #
