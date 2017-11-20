@@ -110,6 +110,23 @@ class IndexTemplate(NumericValue):
         self._value = value
 
 
+class ReplaceTemplateExpression(EXPR.ExpressionReplacementVisitor):
+
+    def __init__(self, substituter, *args):
+        super(ReplaceTemplateExpression,self).__init__(self)
+        self.substituter = substituter
+        self.substituter_args = args
+
+    def visiting_potential_leaf(self, node):
+        if type(node) is EXPR._GetItemExpression or type(node) is IndexTemplate:
+            return True, self.substituter(node, *self.substituter_args)
+
+        if type(node) in native_numeric_types or not node.is_expression():
+            return True, node
+
+        return False, None
+
+
 def substitute_template_expression(expr, substituter, *args):
     """Substitute IndexTemplates in an expression tree.
 
@@ -128,52 +145,8 @@ def substitute_template_expression(expr, substituter, *args):
     Returns:
         a new expression tree with all substitutions done
     """
-    _stack = [ [[expr.clone()], 0, 1, None] ]
-    _stack_idx = 0
-    while _stack_idx >= 0:
-        _ptr = _stack[_stack_idx]
-        while _ptr[1] < _ptr[2]:
-            _obj = _ptr[0][_ptr[1]]
-            _ptr[1] += 1            
-            _subType = type(_obj)
-            if _subType is EXPR._GetItemExpression or _subType is IndexTemplate:
-                if type(_ptr[0]) is tuple:
-                    _list = list(_ptr[0])
-                    _list[_ptr[1]-1] = substituter(_obj, *args)
-                    _ptr[0] = tuple(_list)
-                    _ptr[3]._args = _list
-                else:
-                    _ptr[0][_ptr[1]-1] = substituter(_obj, *args)
-            elif _subType in native_numeric_types or not _obj.is_expression():
-                continue
-            elif not EXPR.mode is EXPR.Mode.pyomo5_trees and _subType is EXPR._ProductExpression:
-                # _ProductExpression is fundamentally different in
-                # Coopr3 / Pyomo4 expression systems and must be handled
-                # specially.
-                if EXPR.mode is EXPR.Mode.coopr3_trees:
-                    _lists = (_obj._numerator, _obj._denominator)
-                else:
-                    _lists = (_obj._args,)
-                for _list in _lists:
-                    if not _list:
-                        continue
-                    _stack_idx += 1
-                    _ptr = [_list, 0, len(_list), _obj]
-                    if _stack_idx < len(_stack):
-                        _stack[_stack_idx] = _ptr
-                    else:
-                        _stack.append( _ptr )
-            else:
-                if not _obj._args:
-                    continue
-                _stack_idx += 1
-                _ptr = [_obj._args, 0, _obj.nargs(), _obj]
-                if _stack_idx < len(_stack):
-                    _stack[_stack_idx] = _ptr
-                else:
-                    _stack.append( _ptr )
-        _stack_idx -= 1
-    return _stack[0][0][0]
+    visitor = ReplaceTemplateExpression(substituter, *args)
+    return visitor.dfs_postorder_stack(expr)
 
 
 class _GetItemIndexer(object):
@@ -216,6 +189,7 @@ class _GetItemIndexer(object):
         return "%s[%s]" % (
             self._base.name, ','.join(str(x) for x in self._args) )
 
+
 def substitute_getitem_with_param(expr, _map):
     """A simple substituter to replace _GetItem nodes with mutable Params.
 
@@ -223,7 +197,6 @@ def substitute_getitem_with_param(expr, _map):
     new Param.  For example, this method will create expressions
     suitable for passing to DAE integrators
     """
-
     if type(expr) is IndexTemplate:
         return expr
 
