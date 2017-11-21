@@ -86,8 +86,8 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
                                            sort=SortComponents.alphaOrder):
             if obj.type() in valid_ctypes:
                 if obj.name == 'TOC':
-                    raise ValueError("Cannot have component named TOC. This fact "
-                                     "is subject to change.")
+                    raise ValueError("Cannot have component named TOC. This "
+                                     "fact is subject to change.")
                 objects.append(obj)
             if obj.type().__name__ in scalars and obj.dim() == 0:
                 scalars[obj.type().__name__].append(obj)
@@ -209,8 +209,8 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
 
                 obj_frames.append(indx_blk)
 
-            elif (obj.type() in (Var, Constraint, Param, Objective, Expression) and
-                obj.dim() > 0):
+            elif (obj.type() in (Var, Constraint, Param, Objective, Expression)
+                  and obj.dim() > 0):
                 if obj.dim() == 1:
                     indices = [obj.index_set().name]
                 else:
@@ -379,7 +379,7 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
 
         # Table of Contents
         # One name is the block name, the other is a name safe for sheet naming
-        # Different so that link titles show real name with brackets to look nicer
+        # Different so that links show real name with brackets to look nicer
         toc_name = 'TOC' if parent is None else block
         toc_sheet_name = sheet_namer(toc_name)
         TOC.to_excel(writer, sheet_name=toc_sheet_name, merge_cells=False,
@@ -394,8 +394,8 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
         for df in scalar_frames:
             if df.empty:
                 continue
-            df.to_excel(writer, sheet_name=scalar_name, startrow=scalar_startrow,
-                        merge_cells=False)
+            df.to_excel(writer, sheet_name=scalar_name,
+                        startrow=scalar_startrow, merge_cells=False)
             if not has_scalar:
                 has_scalar = True
                 scalar_sheet = writer.sheets[scalar_name]
@@ -404,12 +404,14 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
                                                             'align' : 'left'})
             if writer.engine == 'xlsxwriter':
                 for i in xrange(len(df.index)):
-                    scalar_sheet.write_string(row=scalar_startrow + i + 1, col=0,
+                    scalar_sheet.write_string(row=scalar_startrow + i + 1,
+                                              col=0,
                                               string=df.index[i],
                                               cell_format=scalar_format)
             elif writer.engine[:8] == 'openpyxl':
                 for i in xrange(len(df.index)):
-                    cell = scalar_sheet.cell(row=scalar_startrow + i + 2, column=1)
+                    cell = scalar_sheet.cell(row=scalar_startrow + i + 2,
+                                             column=1)
                     cell.alignment = cell.alignment.copy(horizontal='left')
             scalar_startrow += len(df.index) + 2
 
@@ -422,10 +424,10 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
 
         if writer.engine == 'xlsxwriter':
             # Create link for each TOC entry to their respective sheet
-            link_format = writer.book.add_format({'color'     : 'blue',
-                                                  'underline' : 1,
-                                                  'bold'      : 1,
-                                                  'align'     : 'left'})
+            url_format = writer.book.add_format({'bold': True,
+                                                 'underline': 1,
+                                                 'theme': 10,
+                                                 'hyperlink': True})
             for i in xrange(len(TOC.index)):
                 if TOC['Type'][i] in scalar_types and TOC['Dim'][i] == 0:
                     sheet = scalar_name
@@ -437,7 +439,7 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
                 # If there is a parent TOC, move the row down 1 for each entry
                 i += int(bool(parent))
                 toc.write_url(row=i + 1, col=0, url="internal:'%s'!A1" % sheet,
-                              cell_format=link_format, string=name)
+                              cell_format=url_format, string=name)
 
             toc.autofilter(int(bool(parent)), 0, int(bool(parent)), 4)
 
@@ -538,8 +540,9 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
                 obj_sheet_name = sheet_namer(obj.name)
 
                 if obj_sheet_name in writer.sheets:
-                    raise ValueError("Pyomo excel writer requires all components "
-                                     "have unique names. Found component: %s twice."
+                    raise ValueError("Pyomo excel writer requires all "
+                                     "components have unique names. Found "
+                                     "component: %s twice."
                                      % obj.name)
 
                 df.to_excel(writer, sheet_name=obj_sheet_name, startrow=2,
@@ -576,8 +579,9 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
                 obj_sheet_name = objectMap.setdefault(obj, sheet_namer(obj.name))
 
                 if obj_sheet_name in writer.sheets:
-                    raise ValueError("Pyomo excel writer requires all components "
-                                     "have unique names. Found component: %s twice."
+                    raise ValueError("Pyomo excel writer requires all "
+                                     "components have unique names. Found "
+                                     "component: %s twice."
                                      % obj.name)
 
                 # When cells are merged, things like the autofilter do not
@@ -639,4 +643,5 @@ def try_val(expr):
 TODO:
 Indexed Sets, RangeSets
 active column
+Specify components to write
 """
