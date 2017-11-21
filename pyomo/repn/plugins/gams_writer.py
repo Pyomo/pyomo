@@ -77,7 +77,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 Skip writing constraints whose body section is fixed
             file_determinism=1:
                 How much effort do we want to put into ensuring the
-                LP file is written deterministically for a Pyomo model:
+                GAMS file is written deterministically for a Pyomo model:
                    0 : None
                    1 : sort keys of indexed components (default)
                    2 : sort keys AND sort names (over declaration order)
@@ -113,7 +113,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             io_options.pop("skip_trivial_constraints", False)
 
         # How much effort do we want to put into ensuring the
-        # LP file is written deterministically for a Pyomo model:
+        # GAMS file is written deterministically for a Pyomo model:
         #    0 : None
         #    1 : sort keys of indexed components (default)
         #    2 : sort keys AND sort names (over declaration order)
