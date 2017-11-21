@@ -132,10 +132,7 @@ def substitute_template_expression(expr, substituter, *args):
 
     This is a general utility function for walking the expression tree
     and subtituting all occurances of IndexTemplate and
-    _GetItemExpression nodes.  The routine is a general expression
-    walker for both Coopr3 / Pyomo4 expressions.  This borrows from
-    pseudo-visitor pattern to defer the actual substitution to the
-    substituter function / arguments passed to this method.
+    _GetItemExpression nodes.
 
     Args:
         substituter: method taking (expression, *args) and returning 
