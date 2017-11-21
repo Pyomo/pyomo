@@ -1633,6 +1633,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             format = ProblemFormat.cpxlp
         if (filename is not None) and (format is None):
             format = guess_format(filename)
+            if format is None:
+                raise ValueError(
+                    "guess_format could not find a valid format from "
+                    "filename '%s'" % filename)
         problem_writer = WriterFactory(format)
         if problem_writer is None:
             raise ValueError(
