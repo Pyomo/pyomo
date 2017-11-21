@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -139,7 +139,8 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         tee=False:
             Output GAMS log to stdout.
         load_solutions=True:
-            Does not support load_solutions=False.
+            Optionally skip loading solution into model, in which case
+            the results object will contain the solution data.
         keepfiles=False:
             Keep temporary files. Equivalent of DebugLevel.KeepFiles.
             Summary of temp files can be found in _gams_py_gjo0.pf
@@ -170,7 +171,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                 Skip writing constraints whose body section is fixed
             file_determinism=1:
                 How much effort do we want to put into ensuring the
-                LP file is written deterministically for a Pyomo model:
+                GAMS file is written deterministically for a Pyomo model:
                    0 : None
                    1 : sort keys of indexed components (default)
                    2 : sort keys AND sort names (over declaration order)
@@ -570,7 +571,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                 raise NameError(
                     "No 'gams' command found on system PATH - GAMS shell "
                     "solver functionality is not available.")
- 
+
     def _default_executable(self):
         executable = pyutilib.services.registered_executable("gams")
         if executable is None:
@@ -619,7 +620,8 @@ class GAMSShell(pyomo.util.plugin.Plugin):
         tee=False:
             Output GAMS log to stdout.
         load_solutions=True:
-            Does not support load_solutions=False.
+            Optionally skip loading solution into model, in which case
+            the results object will contain the solution data.
         keepfiles=False:
             Keep temporary files.
         tmpdir=None:
@@ -649,7 +651,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                 Skip writing constraints whose body section is fixed
             file_determinism=1:
                 How much effort do we want to put into ensuring the
-                LP file is written deterministically for a Pyomo model:
+                GAMS file is written deterministically for a Pyomo model:
                    0 : None
                    1 : sort keys of indexed components (default)
                    2 : sort keys AND sort names (over declaration order)
