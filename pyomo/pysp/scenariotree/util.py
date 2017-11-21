@@ -1,6 +1,8 @@
 import hashlib
 import uuid
 
+import six
+
 pysp_namespace_hash = hashlib.md5('pysp'.encode())
 def _compute_namespace(node_name):
     node_namespace_hash = pysp_namespace_hash.copy()
@@ -16,19 +18,23 @@ _max_uint32 = 2**32 - 1
 
 def _convert_range_zero_to_max_int32(x):
     assert x >= 0
-    return x % (_max_int32+1)
+    # use int for py2 to eliminate long
+    # types when possible
+    return int(x % (_max_int32+1))
 def _convert_range_one_to_max_int32(x):
     v = _convert_range_zero_to_max_int32(x)
-    # the collision happens for 0 and 1
+    # a collision happens for 0 and 1
     if v == 0:
         v += 1
     return v
 def _convert_range_zero_to_max_uint32(x):
     assert x >= 0
-    return x % (_max_uint32+1)
+    # use int for py2 to eliminate long
+    # types when possible
+    return int(x % (_max_uint32+1))
 def _convert_range_one_to_max_uint32(x):
     v = _convert_range_zero_to_max_uint32(x)
-    # the collision happens for 0 and 1
+    # a collision happens for 0 and 1
     if v == 0:
         v += 1
     return v
@@ -94,19 +100,23 @@ _max_uint64 = 2**64 - 1
 
 def _convert_range_zero_to_max_int64(x):
     assert x >= 0
-    return x % (_max_int64+1)
+    # use int for py2 to eliminate long
+    # types when possible
+    return int(x % (_max_int64+1))
 def _convert_range_one_to_max_int64(x):
     v = _convert_range_zero_to_max_int64(x)
-    # the collision happens for 0 and 1
+    # a collision happens for 0 and 1
     if v == 0:
         v += 1
     return v
 def _convert_range_zero_to_max_uint64(x):
     assert x >= 0
-    return x % (_max_uint64+1)
+    # use int for py2 to eliminate long
+    # types when possible
+    return int(x % (_max_uint64+1))
 def _convert_range_one_to_max_uint64(x):
     v = _convert_range_zero_to_max_uint64(x)
-    # the collision happens for 0 and 1
+    # a collision happens for 0 and 1
     if v == 0:
         v += 1
     return v
