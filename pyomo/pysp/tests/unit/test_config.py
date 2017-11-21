@@ -13,7 +13,7 @@ import pyutilib.th as unittest
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
                                     safe_register_common_option)
-
+import six
 from six import StringIO
 
 class TestPySPConfigValue(unittest.TestCase):
@@ -57,10 +57,10 @@ class TestPySPConfigBlock(unittest.TestCase):
         self.assertEqual(b.check_usage(error=False), True)
         verbose_about = \
 """PySPConfigValue: verbose
-  -    type: <class 'bool'>
+  -    type: <%s 'bool'>
   - default: False
   -    doc: Generate verbose output for both initialization and
-            execution."""
+            execution.""" % ('class' if six.PY3 else 'type')
         self.assertEqual(b.about("verbose"),
                          verbose_about)
 
