@@ -92,6 +92,9 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
             if obj.type().__name__ in scalars and obj.dim() == 0:
                 scalars[obj.type().__name__].append(obj)
 
+        if len(objects) == 0:
+            raise ValueError("Cannot export empty model to Excel.")
+
 
         # Table of Contents
         toc_data = {'Name'  : [obj.name for obj in objects],
@@ -193,9 +196,10 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
 
                 data['Block'] = []
 
-                for ind, dobj in sorted(obj.iteritems(), key=lambda item: item[0]):
+                for ind, dobj in sorted(obj.iteritems(), key=lambda i: i[0]):
                     for i in xrange(len(indices)):
-                        data[indices[i]].append(ind if obj.dim() == 1 else ind[i])
+                        data[indices[i]].append(ind if obj.dim() == 1 else
+                                                ind[i])
                     data['Block'].append(dobj.name)
 
                 # Indexed blocks are stored as a list containing all of their
@@ -204,7 +208,7 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
                 df = pd.DataFrame(data).set_index(indices)
                 indx_blk = [obj, df]
 
-                for dobj in sorted(obj.itervalues(), key=lambda val: val.index()):
+                for dobj in sorted(obj.itervalues(), key=lambda v: v.index()):
                     indx_blk.append(self.write_dataframes(dobj))
 
                 obj_frames.append(indx_blk)
@@ -347,14 +351,18 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
                 sheets.append(sheet_name)
 
         sheetmap_df = pd.DataFrame({'Name': names, 'Sheet': sheets})
-        sheetmap_df.to_excel(writer, sheet_name=sheetmap_name)
-        sheetmap_sheet = writer.sheets[sheetmap_name]
 
-        if writer.engine == 'xlsxwriter':
-            sheetmap_sheet.hide()
+        if not df.empty:
+            # Only write if there is something to write (avoid pandas error)
+            # Otherwise, there will simply be no SheetMap sheet
+            sheetmap_df.to_excel(writer, sheet_name=sheetmap_name)
+            sheetmap_sheet = writer.sheets[sheetmap_name]
 
-        elif writer.engine[:8] == 'openpyxl':
-            sheetmap_sheet.sheet_state = 'hidden'
+            if writer.engine == 'xlsxwriter':
+                sheetmap_sheet.hide()
+
+            elif writer.engine[:8] == 'openpyxl':
+                sheetmap_sheet.sheet_state = 'hidden'
 
         writer.save()
 
@@ -445,7 +453,8 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
 
             # Place 'TOC' link on the Scalar sheet
             if has_scalar:
-                scalar_sheet.write_url('A1', "internal:'%s'!A1" % toc_sheet_name,
+                scalar_sheet.write_url('A1', "internal:'%s'!A1"
+                                             % toc_sheet_name,
                                        string=toc_name)
 
                 scalar_sheet.set_column('A:A', 25)
@@ -454,7 +463,8 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
             # Place TOC link on child TOC page
             if parent is not None:
                 toc.write_url('A1', string=parent,
-                              url="internal:'%s'!A%s" % (parent_sheet, parent_row))
+                              url="internal:'%s'!A%s" % (parent_sheet,
+                                                         parent_row))
 
             # Set TOC column widths
             toc.set_column('A:A', 25)
@@ -524,7 +534,8 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
                 child_toc = item[0]
                 # Pass row of this block's entry in this TOC so that the child
                 # block's TOC can link back to its row in the parent TOC
-                toc_row = TOC.index.get_loc(child_toc.name) + 2 + int(bool(parent))
+                toc_row = (TOC.index.get_loc(child_toc.name) + 2 +
+                           int(bool(parent)))
                 self._write_excel(item, writer=writer, parent_row=toc_row,
                                   parent=toc_name, objectMap=objectMap,
                                   sheet_namer=sheet_namer)
@@ -537,6 +548,11 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
                 # List items are: object, dataframe listing all subblocks,
                 # and then each subblock in the form of a list.
                 obj, df = item[0], item[1]
+
+                if df.empty:
+                    # Skip empty indexed blocks
+                    continue
+
                 obj_sheet_name = sheet_namer(obj.name)
 
                 if obj_sheet_name in writer.sheets:
@@ -576,7 +592,13 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
             else:
                 # type is tuple -> regular object and dataframe
                 obj, df = item
-                obj_sheet_name = objectMap.setdefault(obj, sheet_namer(obj.name))
+
+                if df.empty:
+                    # Skip empty indexed components
+                    continue
+
+                obj_sheet_name = objectMap.setdefault(obj,
+                                                      sheet_namer(obj.name))
 
                 if obj_sheet_name in writer.sheets:
                     raise ValueError("Pyomo excel writer requires all "
@@ -585,8 +607,8 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
                                      % obj.name)
 
                 # When cells are merged, things like the autofilter do not
-                # work. For example the autofilter only recognizes the first row
-                # of the merged block when filtering.
+                # work. For example the autofilter only recognizes the first
+                # row of the merged block when filtering.
                 df.to_excel(writer, sheet_name=obj_sheet_name, startrow=2,
                             merge_cells=False,
                             freeze_panes=(3, 0))
@@ -597,8 +619,8 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
             if writer.engine == 'xlsxwriter':
                 ws = writer.sheets[obj_sheet_name]
 
-                ws.write_url('A1', "internal:'%s'!A%s" % (toc_sheet_name, toc_row),
-                             string=toc_name)
+                ws.write_url('A1', "internal:'%s'!A%s" % (toc_sheet_name,
+                             toc_row), string=toc_name)
                 ws.write('A2', obj.name)
                 ws.write('B2', obj.type().__name__)
                 ws.write('C2', obj.doc)
@@ -631,8 +653,8 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
 
 def try_val(expr):
     """
-    A ValueError is thrown when an expression contains uninitialized components.
-    Return None instead so the Excel entry is blank.
+    A ValueError is thrown when an expression contains uninitialized
+    components. Return None instead so the Excel entry is blank.
     """
     return value(expr, exception=False)
 
