@@ -344,7 +344,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             if '**' in line:
                 # Investigate power functions for an integer exponent, in which
                 # case replace with power(x, int) function to improve domain
-                # issues. Skip first term since it's always "con_name.."
+                # issues.
                 line = replace_power(line) + ';'
             if len(line) > 80000:
                 line = split_long_line(line)
@@ -564,6 +564,7 @@ def split_terms(line):
                     terms.append(line[begin:i])
                 terms.append(line[i])
                 begin = i + 1
+    assert inparens == 0, "Missing close parenthesis in line '%s'" % line
     if begin < len(line) - 1:
         terms.append(line[begin:len(line)])
     if terms[-1][-1] == ';':
@@ -589,6 +590,7 @@ def split_args(term):
             assert i > begin, "Invalid syntax around '**' operator"
             args.append(term[begin:i])
             begin = i + 2
+    assert inparens == 0, "Missing close parenthesis in term '%s'" % term
     args.append(term[begin:len(term)])
     return args
 
@@ -600,10 +602,13 @@ def replace_power(line):
             args = split_args(term)
             for i in xrange(len(args)):
                 if '**' in args[i]:
-                    assert args[i][0] == '(' and args[i][-1] == ')',\
-                        "Assume arg is a parenthesis-bound expression"
-                    arg = args[i][1:-1]
-                    args[i] = '( %s)' % replace_power(arg)
+                    first_paren = args[i].find('(')
+                    assert ((first_paren != -1) and (args[i][-1] == ')')), (
+                        "Assumed arg '%s' was a parenthesis-bound expression "
+                        "or function" % args[i])
+                    arg = args[i][first_paren + 1:-1]
+                    args[i] = '%s( %s)' % (args[i][:first_paren],
+                                            replace_power(arg))
             try:
                 if float(args[-1]) == int(float(args[-1])):
                     term = ''
