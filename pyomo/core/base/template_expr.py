@@ -9,21 +9,22 @@
 #  ___________________________________________________________________________
 
 import copy
+import logging
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import (
     NumericValue, native_numeric_types, as_numeric, value )
 import pyomo.core.base
-import logging
 
 
 class TemplateExpressionError(ValueError):
+
     def __init__(self, template, *args, **kwds):
         self.template = template
         super(TemplateExpressionError, self).__init__(*args, **kwds)
 
 
 class IndexTemplate(NumericValue):
-    """This class can be used to greate "template expressions"
+    """This class can be used to create "template expressions"
 
     Constructor Arguments:
     """
