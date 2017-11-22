@@ -495,7 +495,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
                     repn_func(constraint_data.body, idMap=idMap)
 
         if persistent_solver_in_use and \
-           (not solver.has_instance())
+           (not solver.has_instance()):
              solver.set_instance(
                  scenario_instance,
                  symbolic_solver_labels=self.get_option("symbolic_solver_labels"),
