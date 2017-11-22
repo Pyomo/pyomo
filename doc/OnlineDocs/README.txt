@@ -17,6 +17,11 @@ or
 
   make latexpdf
 
+NOTE:  If the local python is not on your path, then you may need to 
+invoke 'make' differently.  For example, using the PyUtilib 'lbin' command:
+
+  lbin make html
+
 3.  Admire your work
 
   cd _build/html
