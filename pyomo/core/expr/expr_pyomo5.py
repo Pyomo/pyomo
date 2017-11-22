@@ -56,6 +56,7 @@ __all__ = (
 'SimpleExpressionVisitor',
 'ExpressionValueVisitor',
 'ExpressionReplacementVisitor',
+'pyomo5_variable_types',
 )
 
 import math
@@ -259,6 +260,9 @@ class SimpleExpressionVisitor(SimpleVisitor):
 
 class ExpressionValueVisitor(ValueVisitor):
 
+    def finalize(self, ans):
+        return ans
+
     #
     # NOTE: This is not currently being used, so coverage testing is disabled
     #
@@ -423,10 +427,14 @@ class ExpressionReplacementVisitor(ValueVisitor):
             #
             # Process the current node
             #
-            if _result[0]:
-                ans = self.visit(_obj, _result[1:])
-            else:
-                ans = _obj
+            # If the user has defined a visit() function in a
+            # subclass, then call that function.  But if the user
+            # hasn't created a new class and we need to, then
+            # call the ExpressionReplacementVisitor.visit() function.
+            #
+            ans = self.visit(_obj, _result[1:])
+            if _result[0] and id(ans) == id(_obj):
+                ans = ExpressionReplacementVisitor.visit(self, _obj, _result[1:])
             if _stack:
                 if _result[0]:
                     _stack[-1][-1][0] = True
@@ -1584,6 +1592,8 @@ class _GetItemExpression(_ExpressionBase):
     def resolve_template(self):
         return self._base.__getitem__(tuple(value(i) for i in self._args))
 
+    def _inline_operator(self):                 #pragma: no cover
+        return " "
 
 class Expr_if(_ExpressionBase):
     """An object that defines a dynamic if-then-else expression"""
