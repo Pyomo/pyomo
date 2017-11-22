@@ -499,9 +499,6 @@ class CloneVisitor(ExpressionValueVisitor):
 
         return False, None
 
-    def finalize(self, ans):
-        return ans
-
 
 def clone_expression(expr, memo=None, verbose=False, clone_leaves=True):
     clone_counter_context._count += 1
@@ -559,9 +556,6 @@ class EvaluationVisitor(ExpressionValueVisitor):
             return True, value(node)
 
         return False, None
-
-    def finalize(self, ans):
-        return ans
 
 
 def evaluate_expression(exp, exception=True):
@@ -650,9 +644,6 @@ class PolyDegreeVisitor(ExpressionValueVisitor):
 
         return False, None
 
-    def finalize(self, ans):
-        return ans
-
 
 def polynomial_degree(node):
     visitor = PolyDegreeVisitor()
@@ -687,9 +678,6 @@ class IsFixedVisitor(ExpressionValueVisitor):
             return True, node.is_fixed()
 
         return False, None
-
-    def finalize(self, ans):
-        return ans
 
 
 def expression_is_fixed(node):
