@@ -22,15 +22,17 @@ from pyomo.dae.simulator import (
     _check_getitemexpression, 
     _check_productexpression,
     _check_viewsumexpression, 
-    substitute_getitem_with_casadi_sym,
-    substitute_intrinsic_function_with_casadi,
-    substitute_intrinsic_function)
+    substitute_pyomo2casadi,
+    #substitute_getitem_with_casadi_sym,
+    #substitute_intrinsic_function_with_casadi,
+    #substitute_intrinsic_function)
+)
 from pyomo.core.base.template_expr import (
     IndexTemplate, 
     _GetItemIndexer,
-    substitute_template_expression, 
-    substitute_getitem_with_param,
-    substitute_template_with_value,
+    #substitute_template_expression, 
+    #substitute_getitem_with_param,
+    #substitute_template_with_value,
 )
 
 import os
@@ -68,20 +70,6 @@ class TestSimulator(unittest.TestCase):
         m.v = Var(m.t)
         m.dv = DerivativeVar(m.v)
         m.s = Set(initialize=[1, 2, 3], ordered=True)
-
-    # Verifying that the correct exception is raised when simulator
-    # functions are used on pyomo 4 expressions which are not supported
-    @unittest.skipIf(EXPR.mode != EXPR.Mode.pyomo4_trees, "Only test for Pyomo4 expressions")
-    def test_unsupported_pyomo4_expressions(self):
-
-        m = self.m 
-        t = IndexTemplate(m.t)
-
-        # Check multiplication by constant
-        e = 5 * m.dv[t] == m.v[t]
-
-        with self.assertRaises(TypeError):
-            _check_productexpression(e, 0)
 
     # Testing invalid simulator arguments
     def test_invalid_argument_values(self):
@@ -939,13 +927,14 @@ class TestCasadiSubstituters(unittest.TestCase):
 
         e = m.dv[t] + m.v[t] + m.y + t
         templatemap = {}
-        e2 = substitute_template_expression(
-            e, substitute_getitem_with_casadi_sym, templatemap)
+        e2 = substitute_pyomo2casadi(e, templatemap)
+        #e2 = substitute_template_expression(
+        #    e, substitute_getitem_with_casadi_sym, templatemap)
         self.assertEqual(len(templatemap), 2)
-        self.assertIs(type(e2._args[0]), casadi.SX)
-        self.assertIs(type(e2._args[1]), casadi.SX)
-        self.assertIsNot(type(e2._args[2]), casadi.SX)
-        self.assertIs(type(e2._args[3]), IndexTemplate)
+        self.assertIs(type(e2.arg(0)), casadi.SX)
+        self.assertIs(type(e2.arg(1)), casadi.SX)
+        self.assertIsNot(type(e2.arg(2)), casadi.SX)
+        self.assertIs(type(e2.arg(3)), IndexTemplate)
 
         m.del_component('y')
 
@@ -959,10 +948,11 @@ class TestCasadiSubstituters(unittest.TestCase):
 
         e = m.v[t] 
         templatemap = {}
-        e2 = substitute_template_expression(
-            e, substitute_getitem_with_casadi_sym, templatemap)
-        e3 = substitute_intrinsic_function(
-            e2, substitute_intrinsic_function_with_casadi)
+        #e2 = substitute_template_expression(
+        #    e, substitute_getitem_with_casadi_sym, templatemap)
+        #e3 = substitute_intrinsic_function(
+        #    e2, substitute_intrinsic_function_with_casadi)
+        e3 = substitute_pyomo2casadi(e, templatemap)
         self.assertIs(type(e3), casadi.SX)
         
         m.del_component('y')
@@ -977,13 +967,14 @@ class TestCasadiSubstituters(unittest.TestCase):
 
         e = sin(m.dv[t]) + log(m.v[t]) + sqrt(m.y) + m.v[t] + t
         templatemap = {}
-        e2 = substitute_template_expression(
-            e, substitute_getitem_with_casadi_sym, templatemap)
-        e3 = substitute_intrinsic_function(
-            e2, substitute_intrinsic_function_with_casadi)
-        self.assertIs(e3._args[0]._operator, casadi.sin)
-        self.assertIs(e3._args[1]._operator, casadi.log)
-        self.assertIs(e3._args[2]._operator, casadi.sqrt)
+        #e2 = substitute_template_expression(
+        #    e, substitute_getitem_with_casadi_sym, templatemap)
+        #e3 = substitute_intrinsic_function(
+        #    e2, substitute_intrinsic_function_with_casadi)
+        e3 = substitute_pyomo2casadi(e, templatemap)
+        self.assertIs(e3.arg(0)._fcn, casadi.sin)
+        self.assertIs(e3.arg(1)._fcn, casadi.log)
+        self.assertIs(e3.arg(2)._fcn, casadi.sqrt)
 
         m.del_component('y')
 
@@ -997,12 +988,13 @@ class TestCasadiSubstituters(unittest.TestCase):
 
         e = sin(m.dv[t] + m.v[t]) + log(m.v[t] * m.y + m.dv[t]**2)
         templatemap = {}
-        e2 = substitute_template_expression(
-            e, substitute_getitem_with_casadi_sym, templatemap)
-        e3 = substitute_intrinsic_function(
-            e2, substitute_intrinsic_function_with_casadi)
-        self.assertIs(e3._args[0]._operator, casadi.sin)
-        self.assertIs(e3._args[1]._operator, casadi.log)
+        #e2 = substitute_template_expression(
+        #    e, substitute_getitem_with_casadi_sym, templatemap)
+        #e3 = substitute_intrinsic_function(
+        #    e2, substitute_intrinsic_function_with_casadi)
+        e3 = substitute_pyomo2casadi(e, templatemap)
+        self.assertIs(e3.arg(0)._fcn, casadi.sin)
+        self.assertIs(e3.arg(1)._fcn, casadi.log)
 
         m.del_component('y')
 
@@ -1016,13 +1008,14 @@ class TestCasadiSubstituters(unittest.TestCase):
 
         e = m.v[t] * sin(m.dv[t] + m.v[t]) * t
         templatemap = {}
-        e2 = substitute_template_expression(
-            e, substitute_getitem_with_casadi_sym, templatemap)
-        e3 = substitute_intrinsic_function(
-            e2, substitute_intrinsic_function_with_casadi)
-        self.assertIs(type(e3._numerator[0]), casadi.SX)
-        self.assertIs(e3._numerator[1]._operator, casadi.sin)
-        self.assertIs(type(e3._numerator[2]), IndexTemplate)
+        #e2 = substitute_template_expression(
+        #    e, substitute_getitem_with_casadi_sym, templatemap)
+        #e3 = substitute_intrinsic_function(
+        #    e2, substitute_intrinsic_function_with_casadi)
+        e3 = substitute_pyomo2casadi(e, templatemap)
+        self.assertIs(type(e3.arg(0).arg(0)), casadi.SX)
+        self.assertIs(e3.arg(0).arg(1)._fcn, casadi.sin)
+        self.assertIs(type(e3.arg(1)), IndexTemplate)
 
         m.del_component('y')
 

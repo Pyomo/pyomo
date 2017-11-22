@@ -11,16 +11,10 @@ from pyomo.core.base import Constraint, Param, value, Suffix, Block
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 
-import pyomo.core.expr.current as EXPR
+from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import NumericValue, native_numeric_types, as_numeric
 from pyomo.core.base.component import register_component
-from pyomo.core.base.template_expr import (
-    IndexTemplate,
-    _GetItemIndexer,
-    substitute_template_expression,
-    substitute_getitem_with_param,
-    substitute_template_with_value,
-)
+from pyomo.core.base.template_expr import IndexTemplate, _GetItemIndexer
 from pyomo.core import Sum
 
 from six import iterkeys, itervalues
@@ -47,6 +41,25 @@ except ImportError:
 casadi_available = True
 try:
     import casadi
+    casadi_intrinsic = {\
+            'log': casadi.log,
+            'log10': casadi.log10,
+            'sin': casadi.sin,
+            'cos': casadi.cos,
+            'tan': casadi.tan,
+            'cosh': casadi.cosh,
+            'sinh': casadi.sinh,
+            'tanh': casadi.tanh,
+            'asin': casadi.asin,
+            'acos': casadi.acos,
+            'atan': casadi.atan,
+            'exp': casadi.exp,
+            'sqrt': casadi.sqrt,
+            'asinh': casadi.asinh,
+            'acosh': casadi.acosh,
+            'atanh': casadi.atanh,
+            'ceil': casadi.ceil,
+            'floor': casadi.floor}
 except ImportError:
     casadi_available = False
 
@@ -211,109 +224,177 @@ def _check_viewsumexpression(expr, i):
     return None
 
 
-def substitute_getitem_with_casadi_sym(expr, _map):
-    """
-    Replaces _GetItemExpression objects with casadi sym objects
-    """
-    if type(expr) is IndexTemplate:
-        return expr
+if scipy_available:
+    class Pyomo2Scipy_Visitor(EXPR.ExpressionReplacementVisitor):
+        """
+        Expression walker that replaces _GetItemExpression
+        instances with mutable parameters.
+        """
 
-    _id = _GetItemIndexer(expr)
-    if _id not in _map:
-        name = "%s[%s]" % (
-            expr._base.name, ','.join(str(x) for x in _id._args))
-        _map[_id] = casadi.SX.sym(name)
-    return _map[_id]
+        def __init__(self, templatemap):
+            super(Pyomo2Scipy_Visitor,self).__init__(self)
+            self.templatemap = templatemap
 
+        def visiting_potential_leaf(self, node):
+            if type(node) in native_numeric_types or \
+                not node.is_expression() or\
+                type(node) is IndexTemplate:
+                return True, node
 
-def substitute_intrinsic_function_with_casadi(expr):
-    """
-    Replaces intrinsic functions in Pyomo expressions with casadi
-    versions of those functions.
-    """
-    functionmap = {'log': casadi.log,
-                   'log10': casadi.log10,
-                   'sin': casadi.sin,
-                   'cos': casadi.cos,
-                   'tan': casadi.tan,
-                   'cosh': casadi.cosh,
-                   'sinh': casadi.sinh,
-                   'tanh': casadi.tanh,
-                   'asin': casadi.asin,
-                   'acos': casadi.acos,
-                   'atan': casadi.atan,
-                   'exp': casadi.exp,
-                   'sqrt': casadi.sqrt,
-                   'asinh': casadi.asinh,
-                   'acosh': casadi.acosh,
-                   'atanh': casadi.atanh,
-                   'ceil': casadi.ceil,
-                   'floor': casadi.floor}
-    expr._operator = functionmap[expr.name]
-    return expr
+            if type(node) is EXPR._GetItemExpression:
+                _id = _GetItemIndexer(node)
+                if _id not in self.templatemap:
+                    self.templatemap[_id] = Param(mutable=True)
+                    self.templatemap[_id].construct()
+                    _args = []
+                    self.templatemap[_id]._name = "%s[%s]" % (
+                        node._base.name, ','.join(str(x) for x in _id._args) )
+                return True, self.templatemap[_id]
+
+            return False, None
 
 
-def substitute_intrinsic_function(expr, substituter, *args):
+def convert_pyomo2scipy(expr, templatemap):
+    """Substitute _GetItem nodes in an expression tree.
+
+    This substition function is used to replace Pyomo _GetItem
+    nodes with mutable Params.
+
+    Args:
+        templatemap: dictionary mapping _GetItemIndexer objects to
+            mutable params
+
+    Returns:
+        a new expression tree with all substitutions done
     """
+    if not casadi_available:
+        raise DAE_Error("SciPy is not installed.  Cannot substitute SciPy intrinsic functions.")
+    visitor = Pyomo2Scipy_Visitor(templatemap)
+    return visitor.dfs_postorder_stack(expr)
+
+
+if casadi_available:
+    class Substitute_Pyomo2Casadi_Visitor(EXPR.ExpressionReplacementVisitor):
+        """
+        Expression walker that replaces 
+
+	       * _UnaryFunctionExpression instances with unary
+		     functions that point to casadi intrinsic
+		     functions.
+
+           * _GetItemExpressions with _GetItemIndexer objects
+             that references CasADi variables.
+	    """
+
+        def __init__(self, templatemap):
+            super(Substitute_Pyomo2Casadi_Visitor,self).__init__(self)
+            self.templatemap = templatemap
+
+        def visit(self, node, values):
+            """Replace a node if it's a unary function."""
+            if type(node) is EXPR._UnaryFunctionExpression:
+                return EXPR._UnaryFunctionExpression(
+                                values[0], 
+                                node._name, 
+                                casadi_intrinsic[node._name])
+            return node
+
+        def visiting_potential_leaf(self, node):
+            """Replace a node if it's a _GetItemExpression."""
+            if type(node) is EXPR._GetItemExpression:
+                _id = _GetItemIndexer(node)
+                if _id not in self.templatemap:
+                    name = "%s[%s]" % (
+                        node._base.name, ','.join(str(x) for x in _id._args))
+                    self.templatemap[_id] = casadi.SX.sym(name)
+                return True, self.templatemap[_id]
+
+            if type(node) in native_numeric_types or \
+                not node.is_expression() or\
+                type(node) is IndexTemplate:
+                return True, node
+
+            return False, None
+
+
+    class Convert_Pyomo2Casadi_Visitor(EXPR.ExpressionValueVisitor):
+        """
+        Expression walker that evaluates an expression 
+        generated by the Substitute_Pyomo2Casadi_Visitor walker.
+
+        In Coopr3 this walker was not necessary because the
+        expression could be simply evaluated.  But in Pyomo5,
+        the evaluation logic was changed to be non-recursive, which
+        involves checks on the types of leaves in the expression tree.
+        Hence, the evaluation logic fails if leaves in the tree
+        are not standard Pyomo5 variable types.
+	    """
+
+        def visit(self, node, values):
+            """ Visit nodes that have been expanded """
+            return node._apply_operation(values)
+
+        def visiting_potential_leaf(self, node):
+            """ 
+            Visiting a potential leaf.
+
+            Return True if the node is not expanded.
+            """
+            if node.__class__ in native_numeric_types:
+                return True, node
+
+            if node.__class__ in EXPR.pyomo5_variable_types:
+                return True, value(node)
+
+            if node.__class__ is casadi.SX:
+                return True, node
+
+            if not node.is_expression():
+                return True, value(node)
+
+            return False, None
+
+
+def substitute_pyomo2casadi(expr, templatemap):
+    """Substitute IndexTemplates in an expression tree.
+
     This substition function is used to replace Pyomo intrinsic
-    functions with CasADi functions before sending expressions to a
-    CasADi integrator
+    functions with CasADi functions.
 
-    This substituter is copied from template_expr.py with some minor
-    modifications to make it compatible with CasADi expressions. 
-    TODO: We need a generalized expression tree walker to avoid
-    copying code like this
+    Args:
+        expr: a Pyomo expression
+        templatemap: dictionary mapping _GetItemIndexer objects to
+            mutable params
+
+    Returns:
+        a new expression tree with all substitutions done
     """
-    if type(expr) is casadi.SX:
-        return expr
+    if not casadi_available:
+        raise DAE_Error("CASADI is not installed.  Cannot substitute CasADi variables and intrinsic functions.")
+    visitor = Substitute_Pyomo2Casadi_Visitor(templatemap)
+    return visitor.dfs_postorder_stack(expr)
 
-    _stack = [[[expr.clone()], 0, 1, None]]
-    _stack_idx = 0
-    while _stack_idx >= 0:
-        _ptr = _stack[_stack_idx]
-        while _ptr[1] < _ptr[2]:
-            _obj = _ptr[0][_ptr[1]]
-            _ptr[1] += 1            
-            _subType = type(_obj)
-            if _subType is EXPR._IntrinsicFunctionExpression:
-                if type(_ptr[0]) is tuple:
-                    _list = list(_ptr[0])
-                    _list[_ptr[1] - 1] = substituter(_obj, *args)
-                    _ptr[0] = tuple(_list)
-                    _ptr[3]._args = _list
-                else:
-                    _ptr[0][_ptr[1] - 1] = substituter(_obj, *args)
-            elif _subType in native_numeric_types or \
-                    type(_obj) is casadi.SX or not _obj.is_expression():
-                continue
-            elif _subType is EXPR._ProductExpression:
-                # _ProductExpression is fundamentally different in
-                # Coopr3 / Pyomo4 expression systems and must be handled
-                # specially.
-                if EXPR.mode is EXPR.Mode.coopr3_trees:
-                    _lists = (_obj._numerator, _obj._denominator)
-                else:
-                    _lists = (_obj._args,)
-                for _list in _lists:
-                    if not _list:
-                        continue
-                    _stack_idx += 1
-                    _ptr = [_list, 0, len(_list), _obj]
-                    if _stack_idx < len(_stack):
-                        _stack[_stack_idx] = _ptr
-                    else:
-                        _stack.append(_ptr)
-            else:
-                if not _obj._args:
-                    continue
-                _stack_idx += 1
-                _ptr = [_obj._args, 0, len(_obj._args), _obj]
-                if _stack_idx < len(_stack):
-                    _stack[_stack_idx] = _ptr
-                else:
-                    _stack.append(_ptr)
-        _stack_idx -= 1
-    return _stack[0][0][0]
+
+def convert_pyomo2casadi(expr):
+    """Convert a Pyomo expression tree to Casadi.
+
+    This function replaces a Pyomo expression with a CasADi expression.
+    This assumes that the `substitute_pyomo2casadi` function has
+    been called, so the Pyomo expression contains CasADi variables
+    and intrinsic functions.  The resulting expression can be used
+    with the CasADi integrator.
+
+    Args:
+        expr: a Pyomo expression with CasADi variables and intrinsic
+            functions
+
+    Returns:
+        a CasADi expression tree.
+    """
+    if not casadi_available:
+        raise DAE_Error("CASADI is not installed.  Cannot convert a Pyomo expression to a Casadi expression.")
+    visitor = Convert_Pyomo2Casadi_Visitor()
+    return visitor.dfs_postorder_stack(expr)
 
 
 class Simulator:
@@ -346,7 +427,6 @@ class Simulator:
                 logger.warning("The scipy module is not available. You may "
                                "build the Simulator object but you will not "
                                "be able to run the simulation.")
-            substituter = substitute_getitem_with_param
         else:
             if not casadi_available:
                 # Initializing the simulator for use with casadi requires
@@ -354,7 +434,6 @@ class Simulator:
                 # here instead of a warning. 
                 raise ValueError("The casadi module is not available. "
                                   "Cannot simulate model.")
-            substituter = substitute_getitem_with_casadi_sym
 
         # Check for active Blocks and throw error if any are found
         if len(list(m.component_data_objects(Block, active=True,
@@ -522,11 +601,7 @@ class Simulator:
                             "CasADi as the integration package."
                             % str(con.name))
                     tempexp = tempexp._args[0] - tempexp._args[1]
-                    algexp = substitute_template_expression(tempexp,
-                                                            substituter,
-                                                            templatemap)
-                    algexp = substitute_intrinsic_function(
-                        algexp, substitute_intrinsic_function_with_casadi)
+                    algexp = substitute_pyomo2casadi(tempexp, templatemap)
                     alglist.append(algexp)
                     continue
             
@@ -540,15 +615,10 @@ class Simulator:
                         "DerivativeVar %s" % str(dvkey))
             
                 derivlist.append(dvkey)
-                tempexp = substitute_template_expression(
-                    RHS, substituter, templatemap)
                 if self._intpackage is 'casadi':
-                    # After substituting GetItemExpression objects
-                    # replace intrinsic Pyomo functions with casadi
-                    # functions 
-                    tempexp = substitute_intrinsic_function(
-                        tempexp, substitute_intrinsic_function_with_casadi)
-                rhsdict[dvkey] = tempexp
+                    rhsdict[dvkey] = substitute_pyomo2casadi(RHS, templatemap)
+                else:
+                    rhsdict[dvkey] = convert_pyomo2scipy(RHS, templatemap)
         # Check to see if we found a RHS for every DerivativeVar in
         # the model
         # FIXME: Not sure how to rework this for multi-index case
@@ -886,7 +956,7 @@ class Simulator:
         xalltemp = [self._templatemap[i] for i in self._diffvars]
         xall = casadi.vertcat(*xalltemp)
 
-        odealltemp = [value(self._rhsdict[i]) for i in self._derivlist]
+        odealltemp = [convert_pyomo2casadi(self._rhsdict[i]) for i in self._derivlist]
         odeall = casadi.vertcat(*odealltemp)
         dae = {'x': xall, 'ode': odeall}
 
@@ -894,7 +964,7 @@ class Simulator:
             zalltemp = [self._templatemap[i] for i in self._simalgvars]
             zall = casadi.vertcat(*zalltemp)
 
-            algalltemp = [value(i) for i in self._alglist]
+            algalltemp = [convert_pyomo2casadi(i) for i in self._alglist]
             algall = casadi.vertcat(*algalltemp)
             dae['z'] = zall
             dae['alg'] = algall
@@ -919,7 +989,7 @@ class Simulator:
 
         time = casadi.SX.sym('time')
 
-        odealltemp = [time * value(self._rhsdict[i])
+        odealltemp = [time * convert_pyomo2casadi(self._rhsdict[i])
                       for i in self._derivlist]
         odeall = casadi.vertcat(*odealltemp)
 
@@ -934,7 +1004,7 @@ class Simulator:
             zalltemp = [self._templatemap[i] for i in self._simalgvars]
             zall = casadi.vertcat(*zalltemp)
             # Need to do anything special with time scaling??
-            algalltemp = [value(i) for i in self._alglist]
+            algalltemp = [convert_pyomo2casadi(i) for i in self._alglist]
             algall = casadi.vertcat(*algalltemp)
             dae['z'] = zall
             dae['alg'] = algall
