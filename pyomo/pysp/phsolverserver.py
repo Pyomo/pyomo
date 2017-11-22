@@ -28,9 +28,9 @@ from pyomo.opt import UndefinedData
 from pyomo.util import pyomo_command
 from pyomo.util.plugin import ExtensionPoint
 from pyomo.opt import (SolverFactory,
-                       PersistentSolver,
                        TerminationCondition,
                        SolutionStatus)
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.pysp.phextension import IPHSolverServerExtension
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
@@ -526,7 +526,7 @@ class _PHSolverServer(_PHBase):
                     raise RuntimeError("***We presently can't handle bundles in "
                                        "persistent solver plugins")
                 else:
-                    self._solver.compile_instance(
+                    self._solver.set_instance(
                         self._scenario_tree.get_arbitrary_scenario()._instance,
                         symbolic_solver_labels=self._symbolic_solver_labels,
                         output_fixed_variable_bounds=self._write_fixed_variables)
@@ -550,13 +550,20 @@ class _PHSolverServer(_PHBase):
                 # clear stage cost variables, to ensure feasible warm starts.
                 reset_stage_cost_variables(self._scenario_tree, self._instances)
 
-        common_solve_kwds = {
-            'load_solutions':False,
-            'tee':self._tee,
-            'keepfiles':keepfiles,
-            'symbolic_solver_labels':self._symbolic_solver_labels,
-            'output_fixed_variable_bounds':self._write_fixed_variables,
-            'suffixes':self._solver_suffixes}
+        if isinstance(self._solver, PersistentSolver):
+            common_solve_kwds = {
+                'load_solutions':False,
+                'tee':self._tee,
+                'keepfiles':keepfiles,
+                'suffixes':self._solver_suffixes}
+        else:
+            common_solve_kwds = {
+                'load_solutions':False,
+                'tee':self._tee,
+                'keepfiles':keepfiles,
+                'symbolic_solver_labels':self._symbolic_solver_labels,
+                'output_fixed_variable_bounds':self._write_fixed_variables,
+                'suffixes':self._solver_suffixes}
 
         stages_to_load = None
         if not TransmitType.TransmitAllStages(variable_transmission):
@@ -580,12 +587,19 @@ class _PHSolverServer(_PHBase):
             solve_start_time = time.time()
 
             if  self._warmstart and self._solver.warm_start_capable():
-                results = self._solver.solve(bundle_ef_instance,
-                                             warmstart=True,
-                                             **common_solve_kwds)
+                if isinstance(self._solver, PersistentSolver):
+                    results = self._solver.solve(warmstart=True,
+                                                 **common_solve_kwds)
+                else:
+                    results = self._solver.solve(bundle_ef_instance,
+                                                 warmstart=True,
+                                                 **common_solve_kwds)
             else:
-                results = self._solver.solve(bundle_ef_instance,
-                                             **common_solve_kwds)
+                if isinstance(self._solver, PersistentSolver):
+                    results = self._solver.solve(**common_solve_kwds)
+                else:
+                    results = self._solver.solve(bundle_ef_instance,
+                                                 **common_solve_kwds)
 
             pyomo_solve_time = time.time() - solve_start_time
 
@@ -669,12 +683,19 @@ class _PHSolverServer(_PHBase):
             solve_start_time = time.time()
 
             if self._warmstart and self._solver.warm_start_capable():
-                results = self._solver.solve(scenario_instance,
+                if isinstance(self._solver, PersistentSolver):
+                    results = self._solver.solve(warmstart=True,
+                                                 **common_solve_kwds)
+                else:
+                    results = self._solver.solve(scenario_instance,
                                              warmstart=True,
                                              **common_solve_kwds)
             else:
-                results = self._solver.solve(scenario_instance,
-                                             **common_solve_kwds)
+                if isinstance(self._solver, PersistentSolver):
+                    results = self._solver.solve(**common_solve_kwds)                    
+                else:
+                    results = self._solver.solve(scenario_instance,
+                                                 **common_solve_kwds)
 
             pyomo_solve_time = time.time() - solve_start_time
 

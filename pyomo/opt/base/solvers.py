@@ -10,7 +10,6 @@
 
 __all__ = ('IOptSolver',
            'OptSolver',
-           'PersistentSolver',
            'SolverFactory',
            'UnknownSolver',
            'check_available_solvers')
@@ -223,13 +222,7 @@ def check_available_solvers(*args):
     from pyomo.solvers.plugins.solvers.GUROBI import GUROBISHELL
     from pyomo.solvers.plugins.solvers.BARON import BARONSHELL
 
-    logger_solvers = logging.getLogger('pyomo.solvers')
-    _level_solvers = logger_solvers.getEffectiveLevel()
-    logger_solvers.setLevel( logging.ERROR )
-
-    logger_opt = logging.getLogger('pyomo.opt')
-    _level_opt = logger_opt.getEffectiveLevel()
-    logger_opt.setLevel( logging.ERROR )
+    logging.disable(logging.WARNING)
 
     ans = []
     for arg in args:
@@ -255,8 +248,7 @@ def check_available_solvers(*args):
         if available:
             ans.append(name)
 
-    logger_opt.setLevel( _level_opt )
-    logger_solvers.setLevel( _level_solvers )
+    logging.disable(logging.NOTSET)
 
     return ans
 
@@ -503,10 +495,21 @@ class OptSolver(Plugin):
         of an option. Expects a string.
 
         Example:
-        print solver.sos1 # prints True if solver supports sos1 constraints,
-                          # and False otherwise
-        print solver.feature # prints True is solver supports 'feature', and
-                             # False otherwise
+        # prints True if solver supports sos1 constraints, and False otherwise
+        print(solver.has_capability('sos1')
+
+        # prints True is solver supports 'feature', and False otherwise
+        print(solver.has_capability('feature')
+
+        Parameters
+        ----------
+        cap: str
+            The feature
+
+        Returns
+        -------
+        val: bool
+            Whether or not the solver has the specified capability.
         """
         if not isinstance(cap, str):
             raise TypeError("Expected argument to be of type '%s', not " + \
@@ -818,15 +821,6 @@ class OptSolver(Plugin):
     def config_block(self, init=False):
         config, blocks = default_config_block(self, init=init)
         return config
-
-
-class PersistentSolver(OptSolver):
-
-    def __init__(self, **kwds):
-        """ Constructor """
-
-        OptSolver.__init__(self,**kwds)
-
 
 
 def default_config_block(solver, init=False):

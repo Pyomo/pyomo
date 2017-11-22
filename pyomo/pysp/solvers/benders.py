@@ -35,7 +35,6 @@ except ImportError:                         #pragma:nocover
 
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
-                       PersistentSolver,
                        undefined)
 from pyomo.core import (value, minimize, Set,
                         Objective, SOSConstraint,
@@ -596,6 +595,11 @@ class BendersAlgorithm(PySPConfiguredObject):
         self._master_solver = None
 
     def __init__(self, manager, *args, **kwds):
+        # TODO: Does this import need to be delayed because
+        #       it is in a plugins subdirectory
+        from pyomo.solvers.plugins.solvers.persistent_solver import \
+            PersistentSolver
+
         self._manager = None
         self._manager_solver = None
         self._master_solver = None

@@ -41,9 +41,9 @@ if using_pyro4:
 
 from pyomo.util import pyomo_command
 from pyomo.opt import (SolverFactory,
-                       PersistentSolver,
                        TerminationCondition,
                        SolutionStatus)
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt.parallel.manager import ActionManagerError
 from pyomo.pysp.util.misc import (parse_command_line,
                                   launch_command,
