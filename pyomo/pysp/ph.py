@@ -35,7 +35,6 @@ from pyomo.opt import (UndefinedData,
                        TerminationCondition,
                        SolutionStatus,
                        SolverStatus)
-from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
 import pyomo.pysp.convergence
 from pyomo.pysp.phboundbase import (_PHBoundBase,
@@ -2176,6 +2175,10 @@ class ProgressiveHedging(_PHBase):
 
         import pyomo.environ
         import pyomo.solvers.plugins.smanager.phpyro
+        # TODO: Does this import need to be delayed because
+        #       it is in a plugins subdirectory
+        from pyomo.solvers.plugins.solvers.persistent_solver import \
+            PersistentSolver
 
         self._init_start_time = time.time()
 

@@ -26,7 +26,6 @@ import pyomo.solvers
 from pyomo.core.base import ComponentUID
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
-                       PersistentSolver,
                        UndefinedData,
                        ProblemFormat,
                        UnknownSolver,
@@ -338,6 +337,10 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
               symbolic_solver_labels=False,
               keep_solver_files=False,
               io_options=None):
+        # TODO: Does this import need to be delayed because
+        #       it is in a plugins subdirectory
+        from pyomo.solvers.plugins.solvers.persistent_solver import \
+            PersistentSolver
 
         if self.instance is None:
             raise RuntimeError(

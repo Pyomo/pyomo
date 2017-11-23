@@ -21,7 +21,6 @@ import time
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.var import Var
 from pyomo.opt import ProblemFormat
-from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.repn.canonical_repn import LinearCanonicalRepn
 from pyomo.repn.compute_canonical_repn import preprocess_block_objectives \
     as canonical_preprocess_block_objectives
@@ -356,6 +355,10 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
                   % (end_time - start_time))
 
     def _preprocess_scenario(self, scenario_name, solver):
+        # TODO: Does this import need to be delayed because
+        #       it is in a plugins subdirectory
+        from pyomo.solvers.plugins.solvers.persistent_solver import \
+            PersistentSolver
 
         assert scenario_name in self._scenario_instance
         scenario_objective_active = self._scenario_objective[scenario_name].active

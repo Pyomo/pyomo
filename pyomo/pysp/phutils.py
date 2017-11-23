@@ -12,7 +12,6 @@ import sys
 
 from pyomo.core import *
 from pyomo.opt import ProblemFormat
-from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
 # these are the only two preprocessors currently invoked by the
 # simple_preprocessor, which in turn is invoked by the preprocess()
@@ -664,6 +663,10 @@ def preprocess_scenario_instance(scenario_instance,
                                  instance_objective_modified,
                                  preprocess_fixed_variables,
                                  solver):
+    # TODO: Does this import need to be delayed because
+    #       it is in a plugins subdirectory
+    from pyomo.solvers.plugins.solvers.persistent_solver import \
+        PersistentSolver
 
     persistent_solver_in_use = isinstance(solver, PersistentSolver)
     if (not instance_objective_modified) and \

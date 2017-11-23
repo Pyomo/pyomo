@@ -30,7 +30,6 @@ from pyomo.util.plugin import ExtensionPoint
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
                        SolutionStatus)
-from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.pysp.phextension import IPHSolverServerExtension
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
@@ -459,6 +458,10 @@ class _PHSolverServer(_PHBase):
               solver_suffixes,
               warmstart,
               variable_transmission):
+        # TODO: Does this import need to be delayed because
+        #       it is in a plugins subdirectory
+        from pyomo.solvers.plugins.solvers.persistent_solver import \
+            PersistentSolver
 
         if self._verbose:
             if self._scenario_tree.contains_bundles() is True:
@@ -692,7 +695,7 @@ class _PHSolverServer(_PHBase):
                                              **common_solve_kwds)
             else:
                 if isinstance(self._solver, PersistentSolver):
-                    results = self._solver.solve(**common_solve_kwds)                    
+                    results = self._solver.solve(**common_solve_kwds)
                 else:
                     results = self._solver.solve(scenario_instance,
                                                  **common_solve_kwds)
