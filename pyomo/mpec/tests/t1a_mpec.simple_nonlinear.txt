@@ -12,7 +12,7 @@ cc : Size=1, Index=None, Active=True
             None :   1.0 : x1 + 2*x2 + 3*x3 :  +Inf :   True
         ccon : Size=1, Index=None, Active=True
             Key  : Lower : Body                             : Upper      : Active
-            None :  -Inf : ( x1 + 2*x2 + 3*x3 + -1.0 )*cc.v : mpec_bound :   True
+            None :  -Inf : (x1 + 2*x2 + 3*x3 - 1.0)*cc.v : mpec_bound :   True
         ve : Size=1, Index=None, Active=True
             Key  : Lower : Body          : Upper : Active
             None :   0.0 : cc.v - y - x1 :   0.0 :   True

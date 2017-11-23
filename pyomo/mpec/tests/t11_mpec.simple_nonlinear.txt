@@ -12,10 +12,10 @@ cc : Size=1, Index=None, Active=True
             None :  -Inf :   x1 :  +Inf :   True
         ccon_l : Size=1, Index=None, Active=True
             Key  : Lower : Body               : Upper      : Active
-            None :  -Inf : ( cc.v + -2.0 )*x1 : mpec_bound :   True
+            None :  -Inf : (cc.v - 2.0)*x1 : mpec_bound :   True
         ccon_u : Size=1, Index=None, Active=True
             Key  : Lower : Body               : Upper      : Active
-            None :  -Inf : ( cc.v + -3.0 )*x1 : mpec_bound :   True
+            None :  -Inf : (cc.v - 3.0)*x1 : mpec_bound :   True
         ve : Size=1, Index=None, Active=True
             Key  : Lower : Body          : Upper : Active
             None :   0.0 : cc.v - y - x1 :   0.0 :   True
