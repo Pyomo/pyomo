@@ -2397,10 +2397,10 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         model.a = Var()
 
         expr = 5 + model.a + model.a
-        self.assertEqual("viewsum( 5 , a , a )", str(expr))
+        self.assertEqual("viewsum(5, a, a)", str(expr))
 
         expr += 5
-        self.assertEqual("viewsum( 5 , a , a , 5 )", str(expr))
+        self.assertEqual("viewsum(5, a, a, 5)", str(expr))
 
     def test_expr(self):
         #
@@ -2410,7 +2410,7 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         model.a = Var()
 
         expr = 5 * model.a * model.a
-        self.assertEqual("prod( prod( 5 , a ) , a )", str(expr))
+        self.assertEqual("prod(prod(5, a), a)", str(expr))
 
         # This returns an integer, which has no pprint().
         #expr = expr*0
@@ -2419,15 +2419,15 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         #self.assertEqual("0.0", buf.getvalue())
 
         expr = 5 * model.a / model.a
-        self.assertEqual( "prod( prod( 5 , a ) , recip( a) ) )",
+        self.assertEqual( "prod(prod(5, a), recip(a))",
                           str(expr) )
 
         expr = expr / model.a
-        self.assertEqual( "prod( prod( prod( 5 , a ) , recip( a) ) ) , recip( a) ) )",
+        self.assertEqual( "prod(prod(prod(5, a), recip(a)), recip(a))",
                           str(expr) )
 
         expr = 5 * model.a / model.a / 2
-        self.assertEqual( "prod( 0.5 , prod( prod( 5 , a ) , recip( a) ) ) )",
+        self.assertEqual( "prod(0.5, prod(prod(5, a), recip(a)))",
                           str(expr) )
 
     def test_other(self):
@@ -2439,7 +2439,7 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         model.x = ExternalFunction(library='foo.so', function='bar')
 
         expr = model.x(model.a, 1, "foo")
-        self.assertEqual("( a , 1 , foo )", str(expr))
+        self.assertEqual("x(a, 1, 'foo')", str(expr))
 
     def test_inequality(self):
         #
@@ -2449,19 +2449,19 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         model.a = Var()
 
         expr = 5 < model.a
-        self.assertEqual( "( 5.0  <  a )", str(expr) )
+        self.assertEqual( "5.0  <  a", str(expr) )
 
         expr = model.a >= 5
-        self.assertEqual( "( 5.0  <=  a )", str(expr) )
+        self.assertEqual( "5.0  <=  a", str(expr) )
 
         expr = expr < 10
-        self.assertEqual( "( 5.0  <=  a  <  10.0 )", str(expr) )
+        self.assertEqual( "5.0  <=  a  <  10.0", str(expr) )
 
         expr = 5 <= model.a + 5
-        self.assertEqual( "( 5.0  <=  viewsum( a , 5 ) )", str(expr) )
+        self.assertEqual( "5.0  <=  viewsum(a, 5)", str(expr) )
 
         expr = expr < 10
-        self.assertEqual( "( 5.0  <=  viewsum( a , 5 )  <  10.0 )", str(expr) )
+        self.assertEqual( "5.0  <=  viewsum(a, 5)  <  10.0", str(expr) )
 
     def test_equality(self):
         #
@@ -2472,24 +2472,24 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         model.b = Param(initialize=5, mutable=True)
 
         expr = model.a == model.b
-        self.assertEqual( "( a  ==  b )", str(expr) )
+        self.assertEqual( "a  ==  b", str(expr) )
 
         expr = model.b == model.a
-        self.assertEqual( "( b  ==  a )", str(expr) )
+        self.assertEqual( "b  ==  a", str(expr) )
 
         # NB: since there is no "reverse equality" operator, explicit
         # constants will always show up second.
         expr = 5 == model.a
-        self.assertEqual( "( a  ==  5.0 )", str(expr) )
+        self.assertEqual( "a  ==  5.0", str(expr) )
 
         expr = model.a == 10
-        self.assertEqual( "( a  ==  10.0 )", str(expr) )
+        self.assertEqual( "a  ==  10.0", str(expr) )
 
         expr = 5 == model.a + 5
-        self.assertEqual( "( viewsum( a , 5 )  ==  5.0 )", str(expr) )
+        self.assertEqual( "viewsum(a, 5)  ==  5.0", str(expr) )
 
         expr = model.a + 5 == 5
-        self.assertEqual( "( viewsum( a , 5 )  ==  5.0 )", str(expr) )
+        self.assertEqual( "viewsum(a, 5)  ==  5.0", str(expr) )
 
     def test_small_expression(self):
         #
@@ -2513,7 +2513,7 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         expr = + expr
         expr = abs(expr)
         self.assertEqual(
-            "abs( neg( pow( 2 , prod( 2 , recip( prod( 2 , viewsum( 1 , neg( pow( prod( prod( viewsum( a , 1 , -1 ) , a ) , recip( a) ) ) , b ) ) , 1 ) )) ) ) ) ) )",
+            "abs(neg(pow(2, prod(2, recip(prod(2, viewsum(1, neg(pow(prod(prod(viewsum(a, 1, -1), a), recip(a)), b)), 1)))))))",
             str(expr) )
 
 
@@ -2570,7 +2570,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
                           str(expr) )
 
         expr = 5 * model.a / (model.a * model.a)
-        self.assertEqual( "5*a*(1/( a*a ))",
+        self.assertEqual( "5*a*(1/(a*a))",
                           str(expr) )
 
         expr = 5 * model.a / model.a / 2
@@ -2685,7 +2685,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         expr = + expr
         expr = abs(expr)
         self.assertEqual(
-            "abs( - 2**( 2*(1/( 2*( 1 - ( ( a + 1 + -1 )*a*(1/a) )**b + 1 ) )) ) )",
+            "abs(- 2**(2*(1/(2*(1 - ((a + 1 - 1)*a*(1/a))**b + 1)))))",
             str(expr) )
 
     # TODO - resolve this test failure

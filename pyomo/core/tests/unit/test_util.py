@@ -25,7 +25,6 @@ def obj_rule(model):
 def constr_rule(model,a):
     return model.x[a] >= model.y[a]
 
-_using_pyomo5_trees = EXPR.mode == EXPR.Mode.pyomo5_trees
 
 class Test(unittest.TestCase):
 
@@ -38,10 +37,7 @@ class Test(unittest.TestCase):
         model.y = Var(model.A)
         instance=model.create_instance()
         expr = dot_product(instance.B,instance.y)
-        if _using_pyomo5_trees:
-            baseline = "B[1]*y[1] + B[2]*y[2] + B[3]*y[3]"
-        else:
-            baseline = "B[1] * y[1] + B[2] * y[2] + B[3] * y[3]"
+        baseline = "B[1]*y[1] + B[2]*y[2] + B[3]*y[3]"
         self.assertEqual( str(expr), baseline )
         expr = dot_product(instance.C,instance.y)
         self.assertEqual( str(expr), "100*y[1] + 200*y[2] + 300*y[3]" )
@@ -55,10 +51,7 @@ class Test(unittest.TestCase):
         model.y = Var(model.A)
         instance=model.create_instance()
         expr = dot_product(instance.x,instance.B,instance.y)
-        if _using_pyomo5_trees:
-            baseline = "B[1]*x[1]*y[1] + B[2]*x[2]*y[2] + B[3]*x[3]*y[3]"
-        else:
-            baseline = "x[1] * B[1] * y[1] + x[2] * B[2] * y[2] + x[3] * B[3] * y[3]"
+        baseline = "B[1]*x[1]*y[1] + B[2]*x[2]*y[2] + B[3]*x[3]*y[3]"
         self.assertEqual( str(expr), baseline )
         expr = dot_product(instance.x,instance.C,instance.y)
         self.assertEqual( str(expr), "100*x[1]*y[1] + 200*x[2]*y[2] + 300*x[3]*y[3]" )
@@ -72,10 +65,7 @@ class Test(unittest.TestCase):
         model.y = Var(model.A)
         instance=model.create_instance()
         expr = dot_product(instance.x,instance.B,instance.y, index=[1,3])
-        if _using_pyomo5_trees:
-            baseline = "B[1]*x[1]*y[1] + B[3]*x[3]*y[3]"
-        else:
-            baseline = "x[1] * B[1] * y[1] + x[3] * B[3] * y[3]"
+        baseline = "B[1]*x[1]*y[1] + B[3]*x[3]*y[3]"
         self.assertEqual( str(expr), baseline )
         expr = dot_product(instance.x,instance.C,instance.y, index=[1,3])
         self.assertEqual( str(expr), "100*x[1]*y[1] + 300*x[3]*y[3]" )
@@ -89,10 +79,7 @@ class Test(unittest.TestCase):
         model.y = Var(model.A)
         instance=model.create_instance()
         expr = dot_product(instance.x,instance.B,denom=instance.y, index=[1,3])
-        if _using_pyomo5_trees:
-            baseline = "B[1]*x[1]*(1/y[1]) + B[3]*x[3]*(1/y[3])"
-        else:
-            baseline = "x[1] * B[1] / y[1] + x[3] * B[3] / y[3]"
+        baseline = "B[1]*x[1]*(1/y[1]) + B[3]*x[3]*(1/y[3])"
         self.assertEqual( str(expr), baseline )
         expr = dot_product(instance.x,instance.C,denom=instance.y, index=[1,3])
         self.assertEqual( str(expr), "100*x[1]*(1/y[1]) + 300*x[3]*(1/y[3])" )
@@ -105,10 +92,7 @@ class Test(unittest.TestCase):
         model.y = Var(model.A)
         instance=model.create_instance()
         expr = dot_product(denom=[instance.y,instance.x])
-        if _using_pyomo5_trees:
-            baseline = "(1/( y[1]*x[1] )) + (1/( y[2]*x[2] )) + (1/( y[3]*x[3] ))"
-        else:
-            baseline = "1 / ( y[1] * x[1] ) + 1 / ( y[2] * x[2] ) + 1 / ( y[3] * x[3] )"
+        baseline = "(1/(y[1]*x[1])) + (1/(y[2]*x[2])) + (1/(y[3]*x[3]))"
         self.assertEqual( str(expr), baseline )
 
     def test_expr5(self):
