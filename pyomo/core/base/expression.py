@@ -82,12 +82,16 @@ class _ExpressionData(NumericValue):
     def _precedence(self):
         return 0
 
-    def _to_string_prefix(self, ostream, verbose):
-        ostream.write(self.name)
+    def _to_string(self, values):
+        if self.expr is None:
+            return "%s{None}" % str(self)
+        return values[0]
+
+    def _to_string_verbose(self, values):
+        return "%s{%s}" % (str(self), values[0])
 
     def clone(self):
         """Return a clone of this expression (no-op)."""
-        print("FOO")
         return self
 
     def _apply_operation(self, result):
@@ -101,28 +105,6 @@ class _ExpressionData(NumericValue):
 
     def _polynomial_degree(self, result):
         return result.pop()
-
-    def _to_string_skip(self, _idx):
-        return False
-
-    def _to_string_suffix(self, ostream, verbose):
-        pass
-
-    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
-        if ostream is None:
-            ostream = sys.stdout
-        _verbose = pyomo.core.expr.expr_common.TO_STRING_VERBOSE if \
-            verbose is None else verbose
-        if _verbose:
-            ostream.write(str(self))
-            ostream.write("{")
-        if self.expr is None:
-            ostream.write("Undefined")
-        else:
-            self.expr.to_string( ostream=ostream, verbose=verbose,
-                                   precedence=precedence, labeler=labeler )
-        if _verbose:
-            ostream.write("}")
 
     #
     # Abstract Interface
