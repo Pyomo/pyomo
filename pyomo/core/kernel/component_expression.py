@@ -11,6 +11,7 @@
 import sys
 
 import pyomo.core.expr.expr_common
+from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.component_interface import \
     (IComponent,
      _abstract_readwrite_property,
@@ -108,28 +109,30 @@ class IIdentityExpression(NumericValue):
             ostream = sys.stdout
         _verbose = pyomo.core.expr.expr_common.TO_STRING_VERBOSE if \
             verbose is None else verbose
-        if _verbose:
-            ostream.write(self._to_string_label())
-            ostream.write("{")
+        ostream.write( EXPR.expression_to_string(self, verbose=verbose) )
+
+    def _precedence(self):
+        return 0
+
+    def _to_string(self, values):
         if self._expr is None:
-            ostream.write("Undefined")
-        elif isinstance(self._expr, NumericValue):
-            self._expr.to_string(ostream=ostream,
-                                 verbose=verbose,
-                                 precedence=precedence,
-                                 labeler=labeler)
+            return "%s{Undefined}" % str(self)
+        return values[0]
+
+    def _to_string_verbose(self, values):
+        """
+        This function is a hack to get tests passing.  I'm not sure what
+        the 'right' output is.
+        """
+        name = self.getname()
+        if name == None:
+            return "<%s>{%s}" % (self.__class__.__name__, values[0])
         else:
-            as_numeric(self._expr).to_string(ostream=ostream,
-                                             verbose=verbose,
-                                             precedence=precedence,
-                                             labeler=labeler)
-        if _verbose:
-            ostream.write("}")
+            if name[0] == '<':
+                name = ""
+            return "%s{%s}" % (name, values[0])
 
     def clone(self):
-        raise NotImplementedError     #pragma:nocover
-
-    def _to_string_label(self):
         raise NotImplementedError     #pragma:nocover
 
     def _apply_operation(self, result):
@@ -166,9 +169,7 @@ class noclone(IIdentityExpression):
         self._expr = state[0]
 
     def __str__(self):
-        out = six.StringIO()
-        self.to_string(ostream=out, verbose=False)
-        return "{"+out.getvalue()+"}"
+        return "{%s}" % EXPR.expression_to_string(self)
 
     #
     # Ducktyping _ExpressionBase functionality
@@ -177,9 +178,6 @@ class noclone(IIdentityExpression):
     def clone(self):
         """Return a clone of this expression (no-op)."""
         return self
-
-    def _to_string_label(self):
-        return ""
 
 class IExpression(IComponent, IIdentityExpression):
     """
@@ -217,9 +215,6 @@ class IExpression(IComponent, IIdentityExpression):
     def clone(self):
         """Return a clone of this expression (no-op)."""
         return self
-
-    def _to_string_label(self):
-        return self.__str__()
 
 class expression(IExpression):
     """A named, mutable expression."""
