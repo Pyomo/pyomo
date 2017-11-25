@@ -868,7 +868,7 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
 
             # Max number of iterations in which upper (feasible) bound does not
             # improve before turning on no-backtracking
-            no_backtrack_after = 5
+            no_backtrack_after = 2
             if (len(feas_prog_log) > no_backtrack_after and
                 (sign_adjust * feas_prog_log[-1] <= sign_adjust * (
                     feas_prog_log[-1 - no_backtrack_after]
