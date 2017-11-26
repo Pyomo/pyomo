@@ -584,48 +584,36 @@ class Var(IndexedComponent):
     # This method must be defined on subclasses of
     # IndexedComponent that support implicit definition
     #
-    def _getitem_when_not_present(self, idx):
+    def _getitem_when_not_present(self, index):
         """Returns the default component data value."""
-        vardata = self._data[idx] = self._ComponentDataClass(
-            self._domain_init_value, component=self)
-        self._initialize_members((idx,))
-        return vardata
+        if index is None and not self.is_indexed():
+            obj = self._data[index] = self
+        else:
+            obj = self._data[index] = self._ComponentDataClass(
+                self._domain_init_value, component=self)
+        self._initialize_members((index,))
+        return obj
 
-    def _setitem_impl(self, idx, val, new=False):
+    def _setitem_when_not_present(self, index, value):
         """Perform the fundamental component item creation and storage.
 
-        Components that want to implement a nonstandard storage mechanism
-        should override this method.
+        Var overrides the default implementation from IndexedComponent
+        to enforce the call to _initialize_members.
 
-        Implementations may assume that the index has already been validated
-        and is a legitimate entry in the _data dict. """
-        #
-        # If we are a scalar, then idx will be None (_validate_index ensures
-        # this)
-        if new or idx not in self._data:
-            new = True
-            if idx is not None or self.is_indexed():
-                obj = self._data[idx] = self._ComponentDataClass(
-                    self._domain_init_value, component=self)
-            else:
-                obj = self._data[None] = self
-            self._initialize_members((idx,))
-        else:
-            obj = self[idx]
+        """
+        obj = self._getitem_when_not_present(index)
         try:
-            obj.set_value(val)
+            return obj.set_value(value)
         except:
-            if new:
-                del self._data[idx]
+            del self._data[index]
             raise
-        return obj
 
     def _initialize_members(self, init_set):
         """Initialize variable data for all indices in a set."""
         # TODO: determine if there is any advantage to supporting init_set.
         # Preliminary tests indicate that there isn't a significant speed
         # difference to using the set form (used in dense vector
-        # construction).  Getting rid of it could simplify the _setitem and
+        # construction).  Getting rid of it could simplify _setitem and
         # this method.
         #
         # Initialize domains
@@ -750,7 +738,7 @@ class SimpleVar(_GeneralVarData, Var):
 
     def __init__(self, *args, **kwd):
         _GeneralVarData.__init__(self,
-                                 domain=Reals,
+                                 domain=None,
                                  component=self)
         Var.__init__(self, *args, **kwd)
 

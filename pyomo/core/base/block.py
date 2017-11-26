@@ -1714,7 +1714,7 @@ class Block(ActiveIndexedComponent):
             self.construct()
 
     def _getitem_when_not_present(self, idx):
-        return self._setitem_impl(idx, None, new=True)
+        return self._setitem_when_not_present(idx, None)
 
     def find_component(self, label_or_component):
         """

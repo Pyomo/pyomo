@@ -707,14 +707,29 @@ class Constraint(ActiveIndexedComponent):
         kwargs.setdefault('ctype', Constraint)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
-    def _setitem_impl(self, idx, val, new=False):
-        if self._check_skip_add(idx, val) is None:
-            if not new and idx in self._data:
-                del self[idx]
+    #
+    # TODO: Ideally we would not override these methods and instead add
+    # the contents of _check_skip_add to the set_value() metthod.
+    # Unfortunately, until IndexedComponentData objects know their own
+    # index, determining the index is a *very* expensive operation.  If
+    # we refactor things so that the Data objects have their own index,
+    # then we can remove these overloads.
+    #
+
+    def _setitem_impl(self, index, obj, value):
+        if self._check_skip_add(index, value) is None:
+            del self[index]
             return None
         else:
-            return super(Constraint, self)._setitem_impl(
-                idx=idx, val=val, new=new)
+            obj.set_value(value)
+            return obj
+
+    def _setitem_when_not_present(self, index, value):
+        if self._check_skip_add(index, value) is None:
+            return None
+        else:
+            return super(Constraint, self)._setitem_when_not_present(
+                index=index, value=value)
 
     def construct(self, data=None):
         """
@@ -761,7 +776,7 @@ class Constraint(ActiveIndexedComponent):
                            type(err).__name__,
                            err))
                     raise
-            self._setitem_impl(None, tmp, True)
+            self._setitem_when_not_present(None, tmp)
 
         else:
             if _init_expr is not None:
@@ -786,7 +801,7 @@ class Constraint(ActiveIndexedComponent):
                            type(err).__name__,
                            err))
                     raise
-                self._setitem_impl(ndx, tmp, True)
+                self._setitem_when_not_present(ndx, tmp)
         timer.report()
 
     def _pprint(self):

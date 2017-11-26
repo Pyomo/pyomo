@@ -362,7 +362,11 @@ class Expression(IndexedComponent):
             self._data[index].set_value(new_value)
 
     def _getitem_when_not_present(self, index):
-        return self._setitem_impl(index, None)
+        # TBD: Is this desired behavior?  I can see implicitly setting
+        # an Expression if it was not ooriginally defined, but I am less
+        # convinced that implicitly creating an Expression (like what
+        # works with a Var) makes sense.  [JDS 25 Nov 17]
+        return self._setitem_when_not_present(index, None)
 
     def construct(self, data=None):
         """ Apply the rule to construct values in this set """

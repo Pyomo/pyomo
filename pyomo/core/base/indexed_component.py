@@ -207,7 +207,7 @@ class _IndexedComponent_slicer(object):
         max_fixed = 0 if not fixed else max(fixed)
 
         for index in component.__iter__():
-            # We want a tuple of indices, so convert scalard to tuples
+            # We want a tuple of indices, so convert scalars to tuples
             _idx = index if type(index) is tuple else (index,)
 
             # Veryfy the number of indices: if there is a wildcard
@@ -226,7 +226,10 @@ class _IndexedComponent_slicer(object):
                     flag = False
                     break
             if flag:
-                yield component._data[index]
+                # Note: it is important to use __getitem__, as the
+                # derived class may implement a non-standard storage
+                # mechanism (e.g., Param)
+                yield component[index]
 
     def __getattr__(self, name):
         """Override the "." operator to defer resolution until iteration.
@@ -505,6 +508,8 @@ You can silence this warning by one of three ways:
         except TypeError:
             obj = None
             index = self._processUnhashableIndex(index)
+            if index.__class__ is _IndexedComponent_slicer:
+                return index
 
         if obj is None:
             # Not good: we have to defer this import to now
@@ -512,11 +517,12 @@ You can silence this warning by one of three ways:
             # imports indexed_component, but we need expr
             # here
             from pyomo.core.base import expr as EXPR
-            if index.__class__ is EXPR._GetItemExpression or \
-                    index.__class__ is _IndexedComponent_slicer:
+            if index.__class__ is EXPR._GetItemExpression:
                 return index
             index = self._validate_index(index)
-            # _validate could have found an Ellipsis and returned a slicer
+            # _processUnhashableIndex could have found a slice, or
+            # _validate could have found an Ellipsis and returned a
+            # slicer
             if index.__class__ is _IndexedComponent_slicer:
                 return index
             obj = self._data.get(index, None)
@@ -531,8 +537,10 @@ You can silence this warning by one of three ways:
 
     def __setitem__(self, index, val):
         #
-        # Set the value: This relies on _setitem_impl() to
-        # insert the correct ComponentData into the dictionary
+        # Set the value: This relies on _setitem_when_not_present() to
+        # insert the correct ComponentData into the _data dictionary
+        # when it is not present and _setitem_impl to update an existing
+        # entry.
         #
         # Note: it is important that we check _constructed is False and not
         # just evaluates to false: when constructing immutable Params,
@@ -548,10 +556,12 @@ You can silence this warning by one of three ways:
             obj = None
             index = self._processUnhashableIndex(index)
 
-        # If we didn't find the index in the data, then we need to validate
-        # it against the underlying set (as long as _processUnhashableIndex
-        # didn't return a slicer)
-        if obj is None and index.__class__ is not _IndexedComponent_slicer:
+        if obj is not None:
+            return self._setitem_impl(index, obj, val)
+        else:
+            # If we didn't find the index in the data, then we need to
+            # validate it against the underlying set (as long as
+            # _processUnhashableIndex didn't return a slicer)
             index = self._validate_index(index)
         #
         # Call the _setitem_impl helper to populate the _data
@@ -562,13 +572,24 @@ You can silence this warning by one of three ways:
         # an Ellipsis (which is hashable) and returned a slicer
         #
         if index.__class__ is _IndexedComponent_slicer:
-            # this supports "m.x[:,1] = 5" through a simple recursive call
-            for idx in index:
-                self._setitem_impl(idx.index(), val, new=False)
+            # support "m.x[:,1] = 5" through a simple recursive call.
+            #
+            # Note that the slicer will only slice over *existing*
+            # entries, but they may not be in the data dictionary.  Make
+            # a copy of the slicer items *before* we start iterating
+            # over it in case the setter changes the _data dictionary.
+            for idx in list(index):
+                obj = self._data.get(idx, None)
+                if obj is None:
+                    self._setitem_when_not_present(idx, val)
+                else:
+                    self._setitem_impl(idx, obj, val)
         else:
-            if obj is None :
-                index = self._validate_index(index)
-            return self._setitem_impl(index, val, new=False)
+            obj = self._data.get(index, None)
+            if obj is None:
+                return self._setitem_when_not_present(index, val)
+            else:
+                return self._setitem_impl(index, obj, val)
 
     def __delitem__(self, index):
         if self._constructed is False:
@@ -579,14 +600,15 @@ You can silence this warning by one of three ways:
             obj = None
             index = self._processUnhashableIndex(index)
 
-        if obj is None and index.__class__ is not _IndexedComponent_slicer:
+        if obj is None:
             index = self._validate_index(index)
-            obj = self._data.get(index, None)
 
         # this supports "del m.x[:,1]" through a simple recursive call
         if type(index) is _IndexedComponent_slicer:
+            # Make a copy of the slicer items *before* we start
+            # iterating over it (since we will be removing items!).
             for idx in list(index):
-                del self[idx.index()]
+                del self[idx]
         else:
             # Handle the normal deletion operation
             if self.is_indexed():
@@ -611,12 +633,16 @@ You can silence this warning by one of three ways:
             # Return whatever index was provided if the global flag dictates
             # that we should bypass all index checking and domain validation
             return idx
-        # This is only called through __{get,set,del}item__, whichnhas
+
+        # This is only called through __{get,set,del}item__, which has
         # already trapped unhashable objects.
         if idx in self._index:
             # If the index is in the underlying index set, then return it
             #  Note: This check is potentially expensive (e.g., when the
             # indexing set is a complex set operation)!
+            return idx
+
+        if idx is _IndexedComponent_slicer:
             return idx
 
         if normalize_index.flatten:
@@ -791,7 +817,21 @@ the value() function.""" % ( self.name, i ))
         """
         raise KeyError(index)
 
-    def _setitem_impl(self, idx, val, new=False):
+    def _setitem_impl(self, index, obj, value):
+        """Perform the fundamental object value storage
+
+        Components that want to implement a nonstandard storage mechanism
+        should override this method.
+
+        Implementations may assume that the index has already been
+        validated and is a legitimate pre-existing entry in the _data
+        dict.
+
+        """
+        obj.set_value(value)
+        return obj
+
+    def _setitem_when_not_present(self, index, value):
         """Perform the fundamental component item creation and storage.
 
         Components that want to implement a nonstandard storage mechanism
@@ -799,26 +839,20 @@ the value() function.""" % ( self.name, i ))
 
         Implementations may assume that the index has already been
         validated and is a legitimate entry in the _data dict.
-
         """
         #
         # If we are a scalar, then idx will be None (_validate_index ensures
         # this)
-        if new or idx not in self._data:
-            new = True
-            if idx is not None or self.is_indexed():
-                obj = self._data[idx] = self._ComponentDataClass(component=self)
-            else:
-                obj = self._data[None] = self
+        if index is None and not self.is_indexed():
+            obj = self._data[index] = self
         else:
-            obj = self[idx]
+            obj = self._data[index] = self._ComponentDataClass(component=self)
         try:
-            obj.set_value(val)
+            obj.set_value(value)
+            return obj
         except:
-            if new:
-                del self._data[idx]
+            del self._data[index]
             raise
-        return obj
 
     def set_value(self, value):
         """Set the value of a scalar component."""
