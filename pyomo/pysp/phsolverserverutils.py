@@ -952,7 +952,7 @@ def cache_scenario_solutions(ph, cache_id):
 
     ph._solver_manager.begin_bulk()
 
-    for subproblems in ph._scenario_tree.subproblems:
+    for subproblem in ph._scenario_tree.subproblems:
         action_handles.append( ph._solver_manager.queue(
             action="cache_scenario_solutions",
             queue_name=ph._phpyro_job_worker_map[subproblem.name],
