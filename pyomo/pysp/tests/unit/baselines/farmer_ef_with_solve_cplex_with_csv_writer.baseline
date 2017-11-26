@@ -1,7 +1,4 @@
-Module=pyomo.pysp.plugins.csvsolutionwriter is already imported - skipping
 Importing model and scenario tree files
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmer/models/ReferenceModel.py
-Module successfully loaded
 Time to import model and scenario tree structure files=0.01 seconds
 Scenario Tree Detail
 ----------------------------------------------------
@@ -109,17 +106,17 @@ Initializing ScenarioTreeManagerClientSerial with options:
  - output_instance_construction_time: False
  -        compile_scenario_instances: False
  -                      output_times: False
- *                    model_location: /home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmer/models
- -                   model_directory: None
- *            scenario_tree_location: /home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmer/scenariodata
- -                instance_directory: None
+ *                    model_location: /home/jwatson/sp/pyomo/pyomo/examples/pysp/farmer/models
+ -                   model_directory: None (DEPRECATED)
+ *            scenario_tree_location: /home/jwatson/sp/pyomo/pyomo/examples/pysp/farmer/scenariodata
+ -                instance_directory: None (DEPRECATED)
  -       objective_sense_stage_based: None
  -        postinit_callback_location: ()
- -                    bounds_cfgfile: None
+ -                    bounds_cfgfile: None (DEPRECATED)
  - aggregategetter_callback_location: ()
- -                 aggregate_cfgfile: None
+ -                 aggregate_cfgfile: None (DEPRECATED)
  -         scenario_tree_random_seed: None
- -                scenario_tree_seed: None
+ -                scenario_tree_seed: None (DEPRECATED)
  - scenario_tree_downsample_fraction: 1.0
  -     scenario_bundle_specification: None
  -             create_random_bundles: 0
@@ -138,28 +135,28 @@ Initializing ScenarioTreeManagerClientSerial with options:
  -                         pyro_host: None
  -                         pyro_port: None
  -                     pyro_shutdown: False
- -             pyro_shutdown_workers: False
+ -                     shutdown_pyro: None (DEPRECATED)
+ -             output_solver_results: False
  -            symbolic_solver_labels: False
  -                 output_solver_log: False
  -                 keep_solver_files: False
- -             output_solver_results: False
- -                     shutdown_pyro: None
- -             shutdown_pyro_workers: None
+ -             pyro_shutdown_workers: False
+ -             shutdown_pyro_workers: None (DEPRECATED)
  -    activate_jsonio_solution_saver: None
 
 Constructing scenario tree instances
 Scenario-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
-Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmer/scenariodata/BelowAverageScenario.dat
+Data for scenario=BelowAverageScenario loads from file=/home/jwatson/sp/pyomo/pyomo/examples/pysp/farmer/scenariodata/BelowAverageScenario.dat
 Creating instance for scenario=AverageScenario
-Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmer/scenariodata/AverageScenario.dat
+Data for scenario=AverageScenario loads from file=/home/jwatson/sp/pyomo/pyomo/examples/pysp/farmer/scenariodata/AverageScenario.dat
 Creating instance for scenario=AboveAverageScenario
-Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmer/scenariodata/AboveAverageScenario.dat
+Data for scenario=AboveAverageScenario loads from file=/home/jwatson/sp/pyomo/pyomo/examples/pysp/farmer/scenariodata/AboveAverageScenario.dat
 Time to construct scenario instances=0.02 seconds
 Linking instances into scenario tree
 Time link scenario tree with instances=0.00 seconds
 ScenarioTreeManagerClientSerial is successfully initialized
-Overall initialization time=0.02 seconds
+Overall initialization time=0.03 seconds
 
 Initializing extensive form algorithm for stochastic programming problems.
 Creating extensive form instance
@@ -169,7 +166,7 @@ Queuing extensive form solve
 Waiting for extensive form solve
 Done with extensive form solve - loading results
 Storing solution in scenario tree
-Time to solve and load results for the extensive form=0.04 seconds
+Time to solve and load results for the extensive form=0.03 seconds
 EF solve completed and solution status is optimal
 EF solve termination condition is optimal
 EF objective: -108390.00001

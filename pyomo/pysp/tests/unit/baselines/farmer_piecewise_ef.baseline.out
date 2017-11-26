@@ -101,23 +101,23 @@ Initializing ScenarioTreeManagerClientSerial with options:
  -          solution_saver_extension: ()
  -         solution_loader_extension: ()
  -                   solution_writer: ()
- *                       output_file: /home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/pyomo/pysp/tests/unit/test_farmer_piecewise_ef.lp
+ *                       output_file: /home/jwatson/sp/pyomo/pyomo/pyomo/pysp/tests/unit/test_farmer_piecewise_ef.lp
  -                             solve: False
  -             output_scenario_costs: None
  - output_instance_construction_time: False
  -        compile_scenario_instances: False
  -                      output_times: False
- *                    model_location: /home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmerWpiecewise/models
- -                   model_directory: None
- *            scenario_tree_location: /home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmerWpiecewise/nodedata
- -                instance_directory: None
+ *                    model_location: /home/jwatson/sp/pyomo/pyomo/examples/pysp/farmerWpiecewise/models
+ -                   model_directory: None (DEPRECATED)
+ *            scenario_tree_location: /home/jwatson/sp/pyomo/pyomo/examples/pysp/farmerWpiecewise/nodedata
+ -                instance_directory: None (DEPRECATED)
  -       objective_sense_stage_based: None
  -        postinit_callback_location: ()
- -                    bounds_cfgfile: None
+ -                    bounds_cfgfile: None (DEPRECATED)
  - aggregategetter_callback_location: ()
- -                 aggregate_cfgfile: None
+ -                 aggregate_cfgfile: None (DEPRECATED)
  -         scenario_tree_random_seed: None
- -                scenario_tree_seed: None
+ -                scenario_tree_seed: None (DEPRECATED)
  - scenario_tree_downsample_fraction: 1.0
  -     scenario_bundle_specification: None
  -             create_random_bundles: 0
@@ -136,29 +136,29 @@ Initializing ScenarioTreeManagerClientSerial with options:
  -                         pyro_host: None
  -                         pyro_port: None
  -                     pyro_shutdown: False
- -             pyro_shutdown_workers: False
+ -                     shutdown_pyro: None (DEPRECATED)
+ -             output_solver_results: False
  *            symbolic_solver_labels: True
  -                 output_solver_log: False
  -                 keep_solver_files: False
- -             output_solver_results: False
- -                     shutdown_pyro: None
- -             shutdown_pyro_workers: None
+ -             pyro_shutdown_workers: False
+ -             shutdown_pyro_workers: None (DEPRECATED)
  -    activate_jsonio_solution_saver: None
 
 Constructing scenario tree instances
 Node-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
-Node data for scenario=BelowAverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
-Node data for scenario=BelowAverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/BelowAverageNode.dat
+Node data for scenario=BelowAverageScenario partially loading from file=/home/jwatson/sp/pyomo/pyomo/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
+Node data for scenario=BelowAverageScenario partially loading from file=/home/jwatson/sp/pyomo/pyomo/examples/pysp/farmerWpiecewise/nodedata/BelowAverageNode.dat
 Creating instance for scenario=AverageScenario
-Node data for scenario=AverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
-Node data for scenario=AverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/AverageNode.dat
+Node data for scenario=AverageScenario partially loading from file=/home/jwatson/sp/pyomo/pyomo/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
+Node data for scenario=AverageScenario partially loading from file=/home/jwatson/sp/pyomo/pyomo/examples/pysp/farmerWpiecewise/nodedata/AverageNode.dat
 Creating instance for scenario=AboveAverageScenario
-Node data for scenario=AboveAverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
-Node data for scenario=AboveAverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/AboveAverageNode.dat
-Time to construct scenario instances=0.04 seconds
+Node data for scenario=AboveAverageScenario partially loading from file=/home/jwatson/sp/pyomo/pyomo/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
+Node data for scenario=AboveAverageScenario partially loading from file=/home/jwatson/sp/pyomo/pyomo/examples/pysp/farmerWpiecewise/nodedata/AboveAverageNode.dat
+Time to construct scenario instances=0.03 seconds
 Linking instances into scenario tree
-Time link scenario tree with instances=0.00 seconds
+Time link scenario tree with instances=0.01 seconds
 ScenarioTreeManagerClientSerial is successfully initialized
 Overall initialization time=0.04 seconds
 
@@ -167,7 +167,7 @@ Creating extensive form instance
 Creating variables for master binding instance
 Time to construct extensive form instance=0.00 seconds
 Starting to write extensive form
-Extensive form written to file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/pyomo/pysp/tests/unit/test_farmer_piecewise_ef.lp
+Extensive form written to file=/home/jwatson/sp/pyomo/pyomo/pyomo/pysp/tests/unit/test_farmer_piecewise_ef.lp
 Time to write output file=0.01 seconds
 Closing ScenarioTreeManagerClientSerial
 
