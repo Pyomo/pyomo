@@ -27,12 +27,12 @@ import pyomo.solvers
 from pyomo.util import pyomo_command
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
-                       PersistentSolver,
                        undefined,
                        UndefinedData,
                        ProblemFormat,
                        UnknownSolver,
                        SolutionStatus)
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt.parallel import SolverManagerFactory
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigValue,
@@ -509,9 +509,8 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
         self.solver_results = undefined
 
         if isinstance(self._solver, PersistentSolver):
-            self._solver.compile_instance(
-                self.instance,
-                symbolic_solver_labels=self.get_option("symbolic_solver_labels"))
+            self._solver.set_instance(self.instance,
+                                      symbolic_solver_labels=self.get_option("symbolic_solver_labels"))
 
         solve_kwds = {}
         solve_kwds['load_solutions'] = False

@@ -10,7 +10,6 @@
 
 __all__ = ('IOptSolver',
            'OptSolver',
-           'PersistentSolver',
            'SolverFactory',
            'UnknownSolver',
            'check_available_solvers')
@@ -496,10 +495,21 @@ class OptSolver(Plugin):
         of an option. Expects a string.
 
         Example:
-        print solver.sos1 # prints True if solver supports sos1 constraints,
-                          # and False otherwise
-        print solver.feature # prints True is solver supports 'feature', and
-                             # False otherwise
+        # prints True if solver supports sos1 constraints, and False otherwise
+        print(solver.has_capability('sos1')
+
+        # prints True is solver supports 'feature', and False otherwise
+        print(solver.has_capability('feature')
+
+        Parameters
+        ----------
+        cap: str
+            The feature
+
+        Returns
+        -------
+        val: bool
+            Whether or not the solver has the specified capability.
         """
         if not isinstance(cap, str):
             raise TypeError("Expected argument to be of type '%s', not " + \
@@ -811,15 +821,6 @@ class OptSolver(Plugin):
     def config_block(self, init=False):
         config, blocks = default_config_block(self, init=init)
         return config
-
-
-class PersistentSolver(OptSolver):
-
-    def __init__(self, **kwds):
-        """ Constructor """
-
-        OptSolver.__init__(self,**kwds)
-
 
 
 def default_config_block(solver, init=False):

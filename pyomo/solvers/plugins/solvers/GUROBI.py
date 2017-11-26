@@ -55,8 +55,14 @@ class GUROBI(OptSolver):
             opt = SolverFactory('_gurobi_shell', **kwds)
             opt.set_problem_format(ProblemFormat.mps)
             return opt
-        if mode == 'python':
-            opt = SolverFactory('_gurobi_direct', **kwds)
+        if mode in ['python', 'direct']:
+            opt = SolverFactory('gurobi_direct', **kwds)
+            if opt is None:
+                logger.error('Python API for GUROBI is not installed')
+                return
+            return opt
+        if mode == 'persistent':
+            opt = SolverFactory('gurobi_persistent', **kwds)
             if opt is None:
                 logger.error('Python API for GUROBI is not installed')
                 return
