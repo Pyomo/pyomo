@@ -72,12 +72,12 @@ def collect_full_results(ph, var_config):
 
     ph._solver_manager.begin_bulk()
 
-    for subproblem_to_solve in ph._scenario_tree.subproblems():
+    for subproblem_to_solve in ph._scenario_tree.subproblems:
 
         new_action_handle =  ph._solver_manager.queue(
             action="collect_results",
             queue_name=ph._phpyro_job_worker_map[subproblem_to_solve.name],
-            name=object_to_solve.name,
+            name=subproblem_to_solve.name,
             var_config=var_config)
 
         subproblem_action_handle_map[subproblem_to_solve.name] = new_action_handle
@@ -90,7 +90,7 @@ def collect_full_results(ph, var_config):
 
     num_results_so_far = 0
     
-    while (num_results_so_far < len(ph._scenario_tree.subproblems())):
+    while (num_results_so_far < len(ph._scenario_tree.subproblems)):
 
         action_handle = ph._solver_manager.wait_any()
         try:
@@ -114,12 +114,12 @@ def collect_full_results(ph, var_config):
         subproblem_result = ph._solver_manager.get_results(action_handle)
 
         if ph._scenario_tree.is_bundle(subproblem_name):
-            for scenario_name, scenario_results in iteritems(subproblem_results):
+            for scenario_name, scenario_results in iteritems(subproblem_result):
                 scenario = ph._scenario_tree._scenario_map[scenario_name]
                 scenario.set_solution(scenario_results)
         else:
             scenario = ph._scenario_tree._scenario_map[scenario_name]
-            scenario.set_solution(subproblem_results)
+            scenario.set_solution(subproblem_result)
 
         if ph._verbose:
             print("Successfully loaded solution for subproblem="+subproblem_name)
@@ -672,7 +672,7 @@ def deactivate_ph_objective_proximal_terms(ph):
 
     ph._solver_manager.begin_bulk()
 
-    for subproblem in ph._scenario_tree.subproblems():
+    for subproblem in ph._scenario_tree.subproblems:
         action_handles.append( ph._solver_manager.queue(
             action="deactivate_ph_objective_proximal_terms",
             queue_name=ph._phpyro_job_worker_map[subproblem.name],
