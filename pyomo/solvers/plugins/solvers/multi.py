@@ -1,3 +1,4 @@
+from __future__ import division
 import pyomo.util.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
@@ -5,45 +6,77 @@ from pyomo.opt.results import *
 from pyomo.opt.solver import *
 import logging
 import numpy as np
-import pyomo.environ as pe
+import random
 import pyomo.util.plugin
 import textwrap
-
+import copy
+from pyomo.core.base.var import Var
+from pyomo.core.kernel.numvalue import value
+from pyomo.core.base.objective import maximize
+from pyomo.environ import *
+import math
 logger = logging.getLogger('pyomo.solver')
 
+stopping_mass = .5
+stopping_delta = .5
 
-
-class Multistart(Solver):
-    '''NLP Solver wrapper that can check multiple starting points
+class Multistart(OptSolver):
+    '''Solver wrapper that can check multiple starting points
     '''
-    alias('multistart',doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
-#TODO: CHange to keywords
+    pyomo.util.plugin.alias('multistart',doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
+
+    def __init__(self):
+        pass
     def solve (self,model,**kwds):
-        strategy = kwds.pop('strategy','rand_distributed')
+        strategy = kwds.pop('strategy','rand')
         solver = kwds.pop('solver','ipopt')
-        iterations = kwds.pop('iterations',5)
+        iterations = kwds.pop('iterations',-1)
         solver = SolverFactory(solver)
         objectives = []
         models = []
-        for i in xrange(iterations):
-            m = deepcopy(model)
-            result = solver.solve(model)
-            if result.solver.status is SolverStatus.ok and result.solver.termination_condition is  TerminationCondition.optimal:
-                val = pe.value(m.obj.expr)
-                objectives.append(val)
-                models.append(m)
-            reinitialize_all(model,strategy = strategy)
+        m = copy.deepcopy(model)
+        result = solver.solve(m)
+        if result.solver.status is SolverStatus.ok and result.solver.termination_condition is  TerminationCondition.optimal:
+            val = value(m.obj.expr)
+            objectives.append(val)
+            models.append(m)
+        if iterations == -1:
+            while not self.should_stop(objectives):
+                m = copy.deepcopy(model)
+                self.reinitialize_all(m,strategy)
+                result = solver.solve(m)
+                if result.solver.status is SolverStatus.ok and result.solver.termination_condition is  TerminationCondition.optimal:
+                    val = value(m.obj.expr)
+                    objectives.append(val)
+                    models.append(m)
+
+        else:
+            for i in xrange(iterations):
+                m = copy.deepcopy(model)
+                self.reinitialize_all(m,strategy)
+                result = solver.solve(m)
+                if result.solver.status is SolverStatus.ok and result.solver.termination_condition is  TerminationCondition.optimal:
+                    val = value(m.obj.expr)
+                    objectives.append(val)
+                    models.append(m)
 
         if model.obj.sense == maximize:
-            model = models[np.argmax(objectives)]
+            newmodel = models[np.argmax(objectives)]
         else:
-            model = models[np.argmin(objectives)]
+            newmodel = models[np.argmin(objectives)]
+
+        oldvars = list(model.component_data_objects(ctype=Var, descend_into=True))
+        newvars = list(newmodel.component_data_objects(ctype=Var, descend_into=True))
+        for i in xrange(len(oldvars)):
+            var = oldvars[i]
+            newvar = newvars[i]
+            if not var.is_fixed() and not var.is_binary() and not var.is_integer() \
+                    and not (var is None or var.lb is None or var.ub is None or strategy is None):
+                var.value = value(newvar)
 
 
-    def reinitialize_all(model,strategy):
-        def midpoint(val, lb, ub):
-            return (lb + ub) // 2
 
+    def reinitialize_all(self,model,strategy):
         def rand(val, lb, ub):
             return (ub - lb) * random.random() + lb
 
@@ -59,20 +92,33 @@ class Multistart(Solver):
             linspace=np.linspace(lb,ub,divisions)
             return np.random.choice(linspace)
 
-        # iterate thorugh all units in flowsheet
-        for o in itervalues(self.units):
-            # iterate through all variables in that unit
-            for var in self.component_data_objects(ctype=pe.Var, descend_into=True):
-                if not var.is_fixed() and not var.is_binary() and not var.is_integer() \
-                        and not (var is None or var.lb is None or var.ub is None or strategy is None):
-                    val = pe.value(var)
-                    lb = var.lb
-                    ub = var.ub
-                    # apply strategy to bounds/variable
-                    strategies = {"midpoint": midpoint,
-                                  "rand": rand,
-                                  "midpoint_guess_and_bound": midpoint_guess_and_bound,
-                                  "rand_guess_and_bound": rand_guess_and_bound,
-                                  "rand_distributed": rand_distributed
-                                  }
-                    var.value = strategies[strategy](val, lb, ub)
+        for var in model.component_data_objects(ctype=Var, descend_into=True):
+            if not var.is_fixed() and not var.is_binary() and not var.is_integer() \
+                    and not (var is None or var.lb is None or var.ub is None or strategy is None):
+                val = value(var)
+                lb = var.lb
+                ub = var.ub
+                # apply strategy to bounds/variable
+                strategies = {"rand": rand,
+                              "midpoint_guess_and_bound": midpoint_guess_and_bound,
+                              "rand_guess_and_bound": rand_guess_and_bound,
+                              "rand_distributed": rand_distributed
+                              }
+                var.value = strategies[strategy](val, lb, ub)
+    def num_one_occurrences(self,lst):
+        dist = {}
+        for x in lst:
+            if x in dist:
+                dist[x] += 1
+            else:
+                dist[x] = 1
+        one_offs = [x for x in dist if dist[x] == 1]
+        return len(one_offs)
+
+    def should_stop(self,solutions):
+        f = self.num_one_occurrences(solutions)
+        n = len(solutions)
+        d = stopping_delta
+        c = stopping_mass
+        confidence = f/n + (2*math.sqrt(2) + math.sqrt(3))* math.sqrt(math.log(3/d)/n)
+        return confidence<c
