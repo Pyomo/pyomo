@@ -5,40 +5,8 @@
 An Overview of Pyomo Expressions
 ================================
 
-.. note::
-
-    This following discussion of expressions in Pyomo is primarily 
-    intended for Pyomo developers.  End-users will not likely need to 
-    know details related to how abstract expressions are generated and
-    managed in Pyomo.
-
-Pyomo supports the declaration of abstract expressions that represent
-objectives, constraints and other optimization modeling components.
-Pyomo expressions are represented in an expression tree, where the
-leaves are operands, such as constants or variables, and the internal
-nodes contain operators.  Pyomo relies on so-called magic methods to automate the construction of abstract
-expressions.  For example, consider an expression ``e`` declared as follows:
-
-.. doctest::
-
-   >>> from pyomo.environ import *
-
-   >>> M = ConcreteModel()
-   >>> M.v = Var()
-
-   >>> e = M.v*2
-
-Python determines that the magic method ``__mul__`` is called on the ``M.v`` object, with the argument ``2``.  This method returns a Pyomo expression object ``_ProductExpression`` that has arguments ``M.v`` and ``2``.  This represents the following expression tree:
-
-.. graphviz::
-
-    digraph foo {
-        "*" -> "v";
-        "*" -> "2";
-    }
-
-Pyomo5 Expressions
-------------------
+Introduction
+------------
 
 This document describes the "Pyomo5" expressions, which will be
 introduced in a Pyomo 5.x release.  The main differences between

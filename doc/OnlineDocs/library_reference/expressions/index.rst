@@ -58,5 +58,5 @@ tree:
    performance.rst
    overview.rst 
    coreclasses.rst
-   visitors.rst
+   managing.rst
 
