@@ -26,6 +26,12 @@ import pyomo.core.base.var
 def prod(factors):
     """
     A utility function to compute the product of a list of factors.
+
+    Args:
+        factors (list): A list of terms that are multiplied together.
+
+    Returns:
+        The value of the product, which may be a Pyomo expression object.
     """
     return reduce(operator.mul, factors, 1)
 
@@ -34,8 +40,29 @@ Prod = prod
 
 def Sum(args, start=0, linear=None):
     """
-    A utility function to compute a sum of Pyomo expressions.  The behavior is similar to the
-    builtin 'sum' function, but this generates a compact expression.
+    A utility function to compute a sum of Pyomo expressions.
+
+    The behavior of :func:`Sum` is similar to the builtin :func:`sum`
+    function, but this function generates a more compact Pyomo
+    expression.
+
+    Args:
+        args: A generator for terms in the sum.
+        start: A value that is initializes the sum.  This value may be
+            any Python object, which allow the user to define the type
+            that contains the sum that is generated. Defaults to zero.
+        linear: If :attr:`start` is zero, then this value indicates whether 
+            the terms in the sum
+            are linear.  Otherwise, this option is ignored.
+    
+            If the value is :const:`False`, then the terms are treated
+            as nonlinears, and if :const:`True`, then the terms
+            are treated as linear.  Default is :const:`None`, which 
+            indicates that the first term in the :attr:`args` is used
+            to determine this value.
+
+    Returns:
+        The value of the sum, which may be a Pyomo expression object.
     """
     #
     # If we're starting with a numeric value, then 
@@ -98,23 +125,26 @@ def Sum(args, start=0, linear=None):
 
 def summation(*args, **kwds):
     """
-    A utility function to compute a generalized dot product.  The following examples illustrate
-    the use of this function:
+    A utility function to compute a generalized dot product.  
 
-    summation(x)
-    Sum the elements of x
+    This function accepts one or more components that provide terms
+    that are multiplied together.  These products are added together
+    to form a sum.
 
-    summation(x,y)
-    Sum the product of elements in x and y
+    Args:
+        *args: Variable length argument list of generators that
+            create terms in the summation.
+        **kwds: Arbitrary keyword arguments.
 
-    summation(x,y, index=z)
-    Sum the product of elements in x and y, over the index set z
+    Keyword Args:
+        index: A set that is used to index the components used to
+            create the terms
+        denom: A component or tuple of components that are used to
+            create the denominator of the terms
+        start: The initial value used in the sum
 
-    summation(x, denom=a)
-    Sum the product of x_i/a_i
-
-    summation(denom=(a,b))
-    Sum the product of 1/(a_i*b_i)
+    Returns:
+        The value of the sum.
     """
     denom = kwds.pop('denom', tuple() )
     if type(denom) not in (list, tuple):
@@ -174,6 +204,7 @@ def summation(*args, **kwds):
         return Sum((prod(args[j][i] for j in num_index)/prod(denom[j][i] for j in denom_index) for i in index), start)
 
 
+#: An alias for :func:`summation <pyomo.core.expr.util>`
 dot_product = summation
 
 

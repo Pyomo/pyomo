@@ -13,9 +13,12 @@ from __future__ import division
 __public__ = ['linear_expression', 'nonlinear_expression', 'identify_variables']
 __all__ = (
 'linear_expression',
+'mutable_sum_context',
+'mutable_linear_context',
 'nonlinear_expression',
 'decompose_term',
 'clone_counter',
+'clone_counter_context',
 'clone_expression',
 'evaluate_expression',
 'expression_to_string',
@@ -128,6 +131,12 @@ _ParamData = None
 SimpleParam = None
 TemplateExpressionError = None
 def initialize_expression_data():
+    """
+    A function used to initialize expression global data.
+
+    This function is necessary to avoid global imports.  It is executed
+    when ``pyomo.environ`` is imported.
+    """
     global pyomo5_variable_types
     from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
     from pyomo.core.kernel.component_variable import IVariable, variable
@@ -156,10 +165,21 @@ def initialize_expression_data():
 
 
 def compress_expression(expr):
+    """
+    Deprecated function that was used to compress deep Pyomo5
+    expression trees.
+    """
     return expr
 
 
 class clone_counter_context(object):
+    """ Context manager for counting cloning events.
+
+    This context manager counts the number of times that the
+    :func:`clone_expression <pyomo.core.expr.current.clone_expression>`
+    function is executed.
+    """
+
     _count = 0
 
     def __enter__(self):
@@ -170,12 +190,22 @@ class clone_counter_context(object):
 
     @property
     def count(self):
+        """A property that returns the clone count value.
+        """
         return clone_counter_context._count
 
+#: A clone counter context manager object that simplifies the
+#: use of this context manager.  Specifically, different 
+#: instances of this context manger are not necessary.
 clone_counter = clone_counter_context()
 
 
 class mutable_sum_context(object):
+    """ Context manager for mutable sums.
+
+    This context manager is used to compute a sum while
+    treating the summation as a mutable object.
+    """
 
     def __enter__(self):
         self.e = _MutableViewSumExpression([])
@@ -186,19 +216,41 @@ class mutable_sum_context(object):
         if self.e.__class__ == _MutableViewSumExpression:
             self.e.__class__ = _ViewSumExpression
 
+#: A context manager object for nonlinear expressions.
+#: This is an instance of the :class:`mutable_sum_contex <pyomo.core.expr.current.mutable_sum_context>` context manager.
+#: Different instances of this context manger are not necessary.
 nonlinear_expression = mutable_sum_context()
 
 
 class mutable_linear_context(object):
+    """ Context manager for mutable linear sums.
+
+    This context manager is used to compute a linear sum while
+    treating the summation as a mutable object.
+    """
 
     def __enter__(self):
+        """
+        The :class:`_LinearExpression <pyomo.core.expr.current._LinearExpression>`
+        class is the context that is used to to
+        hold the mutable linear sum.
+        """
         self.e = _LinearExpression()
         return self.e
 
     def __exit__(self, *args):
+        """
+        The context is changed to the 
+        :class:`_StaticLinearExpression <pyomo.core.expr.current._StaticLinearExpression>`
+        class to transform the context into a nonmutable
+        form.
+        """
         if self.e.__class__ == _LinearExpression:
             self.e.__class__ = _StaticLinearExpression
 
+#: A context manager object for linear expressions.
+#: This is an instance of the :class:`mutable_linear_contex <pyomo.core.expr.current.mutable_lienar_context>` context manager.
+#: Different instances of this context manger are not necessary.
 linear_expression = mutable_linear_context()
 
 
@@ -209,11 +261,30 @@ linear_expression = mutable_linear_context()
 #-------------------------------------------------------
 
 class SimpleExpressionVisitor(SimpleVisitor):
+    """
+    Note:
+        This class is a customization of the PyUtilib :class:`SimpleVisitor <pyutilib.misc.visitor.SimpleVisitor>` class
+        that is tailored to efficiently
+        walk Pyomo expression trees.
+    """
 
     def xbfs(self, node):
         """
-        Breadth-first search, except that 
-        leaf nodes are immediately visited.
+        Breadth-first search of an expression tree, 
+        except that leaf nodes are immediately visited.
+
+        Note:
+            This method has the same functionality as the 
+            PyUtilib :class:`SimpleVisitor.xbfs <pyutilib.misc.visitor.SimpleVisitor.xbfs>`
+            method.  The difference is that this method
+            is tailored to efficiently walk Pyomo expression trees.
+
+        Args:
+            node: The root node of the expression tree that is searched.
+
+        Returns:
+            The return value is determined by the :func:`finalize` function,
+            which may be defined by the user.  Defaults to :const:`None`.
         """
         dq = deque([node])
         while dq:
@@ -230,8 +301,22 @@ class SimpleExpressionVisitor(SimpleVisitor):
 
     def xbfs_yield_leaves(self, node):
         """
-        Breadth-first search, except that 
+        Breadth-first search of an expression tree, except that 
         leaf nodes are immediately visited.
+
+        Note:
+            This method has the same functionality as the 
+            PyUtilib :class:`SimpleVisitor.xbfs_yield_leaves <pyutilib.misc.visitor.SimpleVisitor.xbfs_yield_leaves>`
+            method.  The difference is that this method
+            is tailored to efficiently walk Pyomo expression trees.
+
+        Args:
+            node: The root node of the expression tree
+                that is searched.
+
+        Returns:
+            The return value is determined by the :func:`finalize` function,
+            which may be defined by the user.  Defaults to :const:`None`.
         """
         #
         # If we start with a leaf, then yield it and stop iteration
@@ -260,51 +345,44 @@ class SimpleExpressionVisitor(SimpleVisitor):
 
 
 class ExpressionValueVisitor(ValueVisitor):
+    """
+    Note:
+        This class is a customization of the PyUtilib :class:`ValueVisitor
+        <pyutilib.misc.visitor.ValueVisitor>` class that is tailored to efficiently
+        walk Pyomo expression trees.
+    """
 
     def finalize(self, ans):
+        """
+        This method defines the return value for the search methods
+        in this class.
+
+        Args:
+            ans: The final value computed by the search method.
+
+        Returns:
+            Defaults to simply returning :attr:`ans`.
+        """
         return ans
-
-    #
-    # NOTE: This is not currently being used, so coverage testing is disabled
-    #
-    def dfs_postorder_deque(self, node):            #pragma: no cover
-        """
-        Depth-first search - postorder
-
-        This function is slightly optimized from 
-        ValueVisitor.dfs_postorder_deque
-        """
-        flag, value = self.visiting_potential_leaf(node)
-        if flag:
-            return value
-        _values = [[]]
-        expanded = set()
-        dq = deque([node])
-        while dq:
-            current = dq[-1]
-            if id(current) in expanded:
-                dq.pop()
-                values = _values.pop()
-                _values[-1].append( self.visit(current, values) )
-                continue
-            flag, value = self.visiting_potential_leaf(current)
-            if flag:
-                _values[-1].append(value)
-                dq.pop()
-            else:
-                #for c in reversed(self.children(current)):
-                for c in reversed(current.args):
-                    dq.append(c)
-                expanded.add(id(current))
-                _values.append( [] )
-        return self.finalize(_values[-1][0])
 
     def dfs_postorder_stack(self, node):
         """
-        Depth-first search - postorder
+        Perform a depth-first search in postorder using a stack
+        implementation.
 
-        This function is slightly optimized from 
-        ValueVisitor.dfs_postorder_stack
+        Note:
+            This method has the same functionality as the 
+            PyUtilib :class:`ValueVisitor.dfs_postorder_stack <pyutilib.misc.visitor.ValueVisitor.dfs_postorder_stack>`
+            method.  The difference is that this method
+            is tailored to efficiently walk Pyomo expression trees.
+
+        Args:
+            node: The root node of the expression tree
+                that is searched.
+
+        Returns:
+            The return value is determined by the :func:`finalize` function,
+            which may be defined by the user.
         """
         flag, value = self.visiting_potential_leaf(node)
         if flag:
@@ -360,28 +438,84 @@ class ExpressionValueVisitor(ValueVisitor):
 
 
 class ExpressionReplacementVisitor(ValueVisitor):
+    """
+    This class is a customization of the PyUtilib :class:`ValueVisitor
+    <pyutilib.misc.visitor.ValueVisitor>` class that is tailored to support the
+    replacement of sub-trees in a Pyomo expression tree.
+    """
 
     def __init__(self, memo=None):
+        """
+        Contruct a visitor that is tailored to support the
+        replacement of sub-trees in a pyomo expression tree.
+
+        Args:
+            memo (dict): A dictionary mapping object ids to 
+                objects.  This dictionary has the same semantics as
+                the memo object used with ``copy.deepcopy``.  Defaults
+                to None, which indicates that no user-defined
+                dictionary is used.
+        """
         if memo is None:
             self.memo = {'__block_scope__': { id(None): False }}
         else:
             self.memo = memo
 
     def visit(self, node, values):
-        """ Visit nodes that have been expanded """
+        """
+        Visit and clone nodes that have been expanded.
+
+        Note:
+            This method normally does not need to be re-defined
+            by a user.
+
+        Args:
+            node: The node that will be cloned.
+            values (list): The list of child nodes that have been
+                cloned.  These values are used to define the 
+                cloned node.
+
+        Returns:
+            The cloned node.
+        """
         return node._clone( tuple(values), self.memo )
 
     def finalize(self, ans):
+        """
+        This method defines the return value for the search methods
+        in this class.
+
+        Args:
+            ans: The final value computed by the search method.
+
+        Returns:
+            Defaults to simply returning :attr:`ans`.
+        """
         return ans
 
     def dfs_postorder_stack(self, node):
         """
-        Depth-first search - postorder
+        Perform a depth-first search in postorder using a stack
+        implementation.
 
-        This function is a slight variant of the 
-        ValueVisitor.dfs_postorder_stack.  The first value in 
-        the _result vector indicates whether the sub-expression has
-        changed.
+        This method replaces subtrees.  This method detects if the
+        :func:`visit` method returns a different object.  If so, then
+        the node has been replaced and search process is adapted
+        to replace all subsequent parent nodes in the tree.
+
+        Note:
+            This method has the same functionality as the 
+            PyUtilib :class:`ValueVisitor.dfs_postorder_stack <pyutilib.misc.visitor.ValueVisitor.dfs_postorder_stack>`
+            method that is tailored to support the
+            replacement of sub-trees in a Pyomo expression tree.
+
+        Args:
+            node: The root node of the expression tree
+                that is searched.
+
+        Returns:
+            The return value is determined by the :func:`finalize` function,
+            which may be defined by the user.
         """
         flag, value = self.visiting_potential_leaf(node)
         if flag:
@@ -501,7 +635,30 @@ class CloneVisitor(ExpressionValueVisitor):
         return False, None
 
 
-def clone_expression(expr, memo=None, verbose=False, clone_leaves=True):
+def clone_expression(expr, memo=None, clone_leaves=True):
+    """Function used to clone an expression.
+
+    Cloning is roughly equivalent to calling ``copy.deepcopy``.
+    However, the :attr:`clone_leaves` argument can be used to 
+    clone only interior (i.e. non-leaf) nodes in the expresion
+    tree.  Additionally, this function uses a non-recursive 
+    logic, which makes it more scalable than the logic in 
+    ``copy.deepcopy``.
+
+    Args:
+        expr: The expression that will be cloned.
+        memo (dict): A dictionary mapping object ids to 
+            objects.  This dictionary has the same semantics as
+            the memo object used with ``copy.deepcopy``.  Defaults
+            to None, which indicates that no user-defined
+            dictionary is used.
+        clone_leaves (bool): If True, then leaves are
+            cloned along with the rest of the expression. 
+            Defaults to :const:`True`.
+   
+    Returns: 
+        The cloned expression.
+    """
     clone_counter_context._count += 1
     if not memo:
         memo = {'__block_scope__': { id(None): False }}
@@ -941,7 +1098,7 @@ class _ExpressionBase(NumericValue):
         return evaluate_expression(self, exception)
 
     def clone(self, substitute=None, verbose=False):
-        return clone_expression(self, memo=substitute, verbose=verbose, clone_leaves=False)
+        return clone_expression(self, memo=substitute, clone_leaves=False)
 
     def size(self, verbose=False):
         return sizeof_expression(self, verbose=verbose)
@@ -1903,7 +2060,7 @@ class _LinearExpression(_ExpressionBase):
                 return expr.constant, expr.linear_coefs[0], expr.linear_vars[0]
             else:
                 raise ValueError("Expected a single linear term (5)")
-        elif expr.__class__ is _ViewSumExpression or expr.__class__ in _MutableViewSumExpression:
+        elif expr.__class__ is _ViewSumExpression or expr.__class__ is _MutableViewSumExpression:
             C = 0
             c = None
             v = None

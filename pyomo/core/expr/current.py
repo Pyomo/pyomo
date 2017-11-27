@@ -10,10 +10,19 @@
 
 from __future__ import division
 import math
+import copy
 
-__all__ = ['log', 'log10', 'sin', 'cos', 'tan', 'cosh', 'sinh', 'tanh',
+#
+# Data and methods that are exposed when importing pyomo.core.expr
+#
+__public__ = ['log', 'log10', 'sin', 'cos', 'tan', 'cosh', 'sinh', 'tanh',
            'asin', 'acos', 'atan', 'exp', 'sqrt', 'asinh', 'acosh',
            'atanh', 'ceil', 'floor']
+
+#
+# Data and methods that are exposed when importing pyomo.core.expr.current
+#
+__all__ = copy.copy(__public__)
 
 #
 # Provide a global value that indicates which expression system is being used
@@ -30,7 +39,7 @@ mode = Mode.pyomo5_trees
 # Pyomo5
 if mode == Mode.pyomo5_trees:
     from pyomo.core.expr import expr_pyomo5 as curr
-    __all__.extend(curr.__public__)
+    __public__.extend(curr.__public__)
     for obj in curr.__all__:
         globals()[obj] = getattr(curr, obj)
 else:
