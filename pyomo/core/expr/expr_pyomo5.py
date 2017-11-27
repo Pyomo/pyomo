@@ -1206,8 +1206,8 @@ class _ExpressionBase(NumericValue):
     def clone(self, substitute=None, verbose=False):
         return clone_expression(self, memo=substitute, clone_leaves=False)
 
-    def size(self, verbose=False):
-        return _sizeof_expression(self, verbose=verbose)
+    def size(self):
+        return _sizeof_expression(self)
 
     def __deepcopy__(self, memo):
         return clone_expression(self, memo=memo, clone_leaves=True)

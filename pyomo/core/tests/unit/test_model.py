@@ -24,7 +24,7 @@ import pyomo.opt
 from pyomo.opt import SolutionStatus
 from pyomo.opt.parallel.local import SolverManager_Serial
 from pyomo.environ import *
-from pyomo.core.expr import identify_variables
+from pyomo.core.expr import current as EXPR
 
 solvers = pyomo.opt.check_available_solvers('glpk')
 
@@ -753,7 +753,7 @@ class Test(unittest.TestCase):
         model = ConcreteModel(rule=make)
         self.assertEqual( [x.local_name for x in model.component_objects()],
                           ['I','x','c'] )
-        self.assertEqual( len(list(identify_variables(model.c.body))), 3 )
+        self.assertEqual( len(list(EXPR.identify_variables(model.c.body))), 3 )
 
 
     def test_create_abstract_from_rule(self):
@@ -778,14 +778,14 @@ class Test(unittest.TestCase):
                           [] )
         self.assertEqual( [x.local_name for x in instance.component_objects()],
                           ['I','x','c'] )
-        self.assertEqual( len(list(identify_variables(instance.c.body))), 3 )
+        self.assertEqual( len(list(EXPR.identify_variables(instance.c.body))), 3 )
 
         model = AbstractModel(rule=make)
         model.y = Var()
         instance = model.create_instance()
         self.assertEqual( [x.local_name for x in instance.component_objects()],
                           ['y','I','x','c'] )
-        self.assertEqual( len(list(identify_variables(instance.c.body))), 3 )
+        self.assertEqual( len(list(EXPR.identify_variables(instance.c.body))), 3 )
 
     def test_error1(self):
         model = ConcreteModel()
