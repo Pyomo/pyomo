@@ -3881,6 +3881,9 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(id(e), id(e_))
             e = EXPR.clone_expression(self.m.p)
             self.assertEqual(id(e), id(self.m.p))
+            #
+            total = EXPR.clone_counter.count - start
+            self.assertEqual(total, 2)
         
     def test_Expression(self):
         #
@@ -4183,6 +4186,8 @@ class TestCloneExpression(unittest.TestCase):
     def test_other(self):
         # Testing cloning of the abs() function
         with EXPR.clone_counter:
+            start = EXPR.clone_counter.count
+            #
             model = ConcreteModel()
             model.a = Var()
             model.x = ExternalFunction(library='foo.so', function='bar')
@@ -4192,6 +4197,9 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(type(e_._args[0]), type(e._args[0]))
             self.assertEqual(type(e_._args[1]), type(e._args[1]))
             self.assertEqual(type(e_._args[2]), type(e._args[2]))
+            #
+            total = EXPR.clone_counter.count - start
+            self.assertEqual(total, 1)
 
     def test_abs(self):
         # Testing cloning of the abs() function
