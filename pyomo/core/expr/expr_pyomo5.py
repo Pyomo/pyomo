@@ -10,12 +10,18 @@
 
 from __future__ import division
 
-__public__ = ['linear_expression', 'nonlinear_expression', 'identify_variables']
+#
+# These symbols are part of pyomo.core.expr
+#
+__public__ = ['linear_expression', 'nonlinear_expression']
+#
+# These symbols are part of pyomo.core.expr.current
+#
 __all__ = (
 'linear_expression',
+'nonlinear_expression',
 'mutable_sum_context',
 'mutable_linear_context',
-'nonlinear_expression',
 'decompose_term',
 'clone_counter',
 'clone_counter_context',
@@ -260,13 +266,44 @@ linear_expression = mutable_linear_context()
 #
 #-------------------------------------------------------
 
-class SimpleExpressionVisitor(SimpleVisitor):
+class SimpleExpressionVisitor(object):
     """
     Note:
-        This class is a customization of the PyUtilib :class:`SimpleVisitor <pyutilib.misc.visitor.SimpleVisitor>` class
-        that is tailored to efficiently
-        walk Pyomo expression trees.
+        This class is a customization of the PyUtilib :class:`SimpleVisitor
+        <pyutilib.misc.visitor.SimpleVisitor>` class that is tailored
+        to efficiently walk Pyomo expression trees.  However, this class
+        is not a subclass of the PyUtilib :class:`SimpleVisitor
+        <pyutilib.misc.visitor.SimpleVisitor>` class because all key methods
+        are reimplemented.
     """
+
+    def visit(self, node):  #pragma: no cover
+        """
+        Visit a node in an expression tree and perform some operation on
+        it.
+
+        This method should be over-written by a user
+        that is creating a sub-class.
+
+        Args:
+            node: a node in an expression tree
+
+        Returns:
+            nothing
+        """
+        pass
+
+    def finalize(self):     #pragma: no cover
+        """
+        Return the "final value" of the search.
+
+        The default implementation returns :const:`None`, because
+        the traditional visitor pattern does not return a value.
+
+        Returns:
+            The final value after the search.  Default is :const:`None`.
+        """
+        pass
 
     def xbfs(self, node):
         """
@@ -344,24 +381,68 @@ class SimpleExpressionVisitor(SimpleVisitor):
                         yield ans
 
 
-class ExpressionValueVisitor(ValueVisitor):
+class ExpressionValueVisitor(object):
     """
     Note:
         This class is a customization of the PyUtilib :class:`ValueVisitor
-        <pyutilib.misc.visitor.ValueVisitor>` class that is tailored to efficiently
-        walk Pyomo expression trees.
+        <pyutilib.misc.visitor.ValueVisitor>` class that is tailored
+        to efficiently walk Pyomo expression trees.  However, this class
+        is not a subclass of the PyUtilib :class:`ValueVisitor
+        <pyutilib.misc.visitor.ValueVisitor>` class because all key methods
+        are reimplemented.
     """
 
-    def finalize(self, ans):
+    def visit(self, node, values):  #pragma: no cover
+        """
+        Visit a node in a tree and compute its value using
+        the values of its children.
+
+        This method should be over-written by a user
+        that is creating a sub-class.
+
+        Args:
+            node: a node in a tree
+            values: a list of values of this node's children
+
+        Returns:
+            The *value* for this node, which is computed using :attr:`values`
+        """
+        pass
+
+    def visiting_potential_leaf(self, node):
+        """ 
+        Visit a node and return its value if it is a leaf.
+
+        Note:
+            This method needs to be over-written for a specific
+            visitor application.
+
+        Args:
+            node: a node in a tree
+
+        Returns:
+            A tuple: ``(flag, value)``.   If ``flag`` is False,
+            then the node is not a leaf and ``value`` is :const:`None`.  
+            Otherwise, ``value`` is the computed value for this node.
+        """
+        raise RuntimeError("The visiting_potential_leaf method needs to be defined.")
+
+    def finalize(self, ans):    #pragma: no cover
         """
         This method defines the return value for the search methods
         in this class.
+
+        The default implementation returns the value of the
+        initial node (aka the root node), because
+        this visitor pattern computes and returns value for each
+        node to enable the computation of this value.
 
         Args:
             ans: The final value computed by the search method.
 
         Returns:
-            Defaults to simply returning :attr:`ans`.
+	        The final value after the search. Defaults to simply
+	        returning :attr:`ans`.
         """
         return ans
 
@@ -437,11 +518,15 @@ class ExpressionValueVisitor(ValueVisitor):
                 return self.finalize(ans)
 
 
-class ExpressionReplacementVisitor(ValueVisitor):
+class ExpressionReplacementVisitor(object):
     """
-    This class is a customization of the PyUtilib :class:`ValueVisitor
-    <pyutilib.misc.visitor.ValueVisitor>` class that is tailored to support the
-    replacement of sub-trees in a Pyomo expression tree.
+    Note:
+        This class is a customization of the PyUtilib :class:`ValueVisitor
+        <pyutilib.misc.visitor.ValueVisitor>` class that is tailored
+        to support replacement of sub-trees in a Pyomo expression
+        tree.  However, this class is not a subclass of the PyUtilib
+        :class:`ValueVisitor <pyutilib.misc.visitor.ValueVisitor>`
+        class because all key methods are reimplemented.
     """
 
     def __init__(self, memo=None):
@@ -480,16 +565,40 @@ class ExpressionReplacementVisitor(ValueVisitor):
         """
         return node._clone( tuple(values), self.memo )
 
+    def visiting_potential_leaf(self, node):
+        """ 
+        Visit a node and return a cloned node if it is a leaf.
+
+        Note:
+            This method needs to be over-written for a specific
+            visitor application.
+
+        Args:
+            node: a node in a tree
+
+        Returns:
+            A tuple: ``(flag, value)``.   If ``flag`` is False,
+            then the node is not a leaf and ``value`` is :const:`None`.  
+            Otherwise, ``value`` is a cloned node.
+        """
+        raise RuntimeError("The visiting_potential_leaf method needs to be defined.")
+
     def finalize(self, ans):
         """
         This method defines the return value for the search methods
         in this class.
 
+        The default implementation returns the value of the
+        initial node (aka the root node), because
+        this visitor pattern computes and returns value for each
+        node to enable the computation of this value.
+
         Args:
             ans: The final value computed by the search method.
 
         Returns:
-            Defaults to simply returning :attr:`ans`.
+	        The final value after the search. Defaults to simply
+	        returning :attr:`ans`.
         """
         return ans
 
@@ -592,7 +701,7 @@ class ExpressionReplacementVisitor(ValueVisitor):
 #  clone_expression
 # =====================================================
 
-class CloneVisitor(ExpressionValueVisitor):
+class _CloneVisitor(ExpressionValueVisitor):
 
     def __init__(self, clone_leaves=False, memo=None):
         self.clone_leaves = clone_leaves
@@ -663,15 +772,15 @@ def clone_expression(expr, memo=None, clone_leaves=True):
     if not memo:
         memo = {'__block_scope__': { id(None): False }}
     #
-    visitor = CloneVisitor(clone_leaves=clone_leaves, memo=memo)
+    visitor = _CloneVisitor(clone_leaves=clone_leaves, memo=memo)
     return visitor.dfs_postorder_stack(expr)
 
 
 # =====================================================
-#  sizeof_expression
+#  _sizeof_expression
 # =====================================================
 
-class SizeVisitor(SimpleExpressionVisitor):
+class _SizeVisitor(SimpleExpressionVisitor):
 
     def __init__(self):
         self.counter = 0
@@ -683,8 +792,18 @@ class SizeVisitor(SimpleExpressionVisitor):
         return self.counter
 
 
-def sizeof_expression(expr, verbose=False):
-    visitor = SizeVisitor()
+def _sizeof_expression(expr):
+    """
+    Return the number of nodes in the expression tree.
+
+    Args:
+        expr: The root node of an expression tree.
+
+    Returns:
+        A non-negative integer that is the number of 
+        interior and leaf nodes in the expression tree.
+    """
+    visitor = _SizeVisitor()
     return visitor.xbfs(expr)
     
  
@@ -692,7 +811,7 @@ def sizeof_expression(expr, verbose=False):
 #  evaluate_expression
 # =====================================================
 
-class EvaluationVisitor(ExpressionValueVisitor):
+class _EvaluationVisitor(ExpressionValueVisitor):
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
@@ -717,8 +836,25 @@ class EvaluationVisitor(ExpressionValueVisitor):
 
 
 def evaluate_expression(exp, exception=True):
+    """
+    Evaluate the value of the expression.
+
+    Args:
+        expr: The root node of an expression tree.
+        exception (bool): A flag that indicates whether 
+            exceptions are raised.  If this flag is
+            :const:`False`, then an exception that
+            occurs while evaluating the expression 
+            is caught and the return value is :const:`None`.
+            Default is :const:`True`.
+
+    Returns:
+        A floating point value if the expression evaluates
+        normally, or :const:`None` if an exception occurs
+        and is caught.
+    """
     try:
-        visitor = EvaluationVisitor()
+        visitor = _EvaluationVisitor()
         return visitor.dfs_postorder_stack(exp)
 
     except TemplateExpressionError:
@@ -735,7 +871,7 @@ def evaluate_expression(exp, exception=True):
 #  identify_variables
 # =====================================================
 
-class VariableVisitor(SimpleExpressionVisitor):
+class _VariableVisitor(SimpleExpressionVisitor):
 
     def __init__(self, types):
         self.seen = set()
@@ -753,22 +889,47 @@ class VariableVisitor(SimpleExpressionVisitor):
 
 
 def identify_components(expr, component_types):
+    """
+    A generator that yields a sequence of nodes
+    in an expression tree that belong to a specified set.
+
+    Args:
+        expr: The root node of an expression tree.
+        component_types (set or list): A set of class 
+            types that will be matched during the search.
+
+    Yields:
+        Each node that is found.
+    """
     #
     # OPTIONS:
     # component_types - set (or list) if class types to find
     # in the expression.
     #
-    visitor = VariableVisitor(component_types)
+    visitor = _VariableVisitor(component_types)
     for v in visitor.xbfs_yield_leaves(expr):
         yield v
 
 
 def identify_variables(expr, include_fixed=True):
+    """
+    A generator that yields a sequence of variables 
+    in an expression tree.
+
+    Args:
+        expr: The root node of an expression tree.
+        include_fixed (bool): If :const:`True`, then
+        this generator will yield variables whose
+        value is fixed.  Defaults to :const:`True`.
+
+    Yields:
+        Each variable that is found.
+    """
     #
     # OPTIONS:
     # include_fixed - list includes fixed variables
     #
-    visitor = VariableVisitor(pyomo5_variable_types)
+    visitor = _VariableVisitor(pyomo5_variable_types)
     if include_fixed:
         for v in visitor.xbfs_yield_leaves(expr):
             yield v
@@ -779,10 +940,10 @@ def identify_variables(expr, include_fixed=True):
 
 
 # =====================================================
-#  polynomial_degree
+#  _polynomial_degree
 # =====================================================
 
-class PolyDegreeVisitor(ExpressionValueVisitor):
+class _PolyDegreeVisitor(ExpressionValueVisitor):
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
@@ -803,16 +964,26 @@ class PolyDegreeVisitor(ExpressionValueVisitor):
         return False, None
 
 
-def polynomial_degree(node):
-    visitor = PolyDegreeVisitor()
+def _polynomial_degree(node):
+    """
+    Return the polynomial degree of the expression.
+
+    Args:
+        node: The root node of an expression tree.
+
+    Returns:
+        A non-negative integer that is the polynomial
+        degree if the expression is polynomial, or :const:`None` otherwise.
+    """
+    visitor = _PolyDegreeVisitor()
     return visitor.dfs_postorder_stack(node)
 
 
 # =====================================================
-#  expression_is_fixed
+#  _expression_is_fixed
 # =====================================================
 
-class IsFixedVisitor(ExpressionValueVisitor):
+class _IsFixedVisitor(ExpressionValueVisitor):
     """
     NOTE: This doesn't check if combiner logic is 
     all or any and short-circuit the test.  It's
@@ -838,8 +1009,18 @@ class IsFixedVisitor(ExpressionValueVisitor):
         return False, None
 
 
-def expression_is_fixed(node):
-    visitor = IsFixedVisitor()
+def _expression_is_fixed(node):
+    """
+    Return the polynomial degree of the expression.
+
+    Args:
+        node: The root node of an expression tree.
+
+    Returns:
+        A non-negative integer that is the polynomial
+        degree if the expression is polynomial, or :const:`None` otherwise.
+    """
+    visitor = _IsFixedVisitor()
     return visitor.dfs_postorder_stack(node)
 
 
@@ -847,10 +1028,10 @@ def expression_is_fixed(node):
 #  expression_to_string
 # =====================================================
 
-class ToStringVisitor(ExpressionValueVisitor):
+class _ToStringVisitor(ExpressionValueVisitor):
 
     def __init__(self, verbose):
-        super(ToStringVisitor, self).__init__()
+        super(_ToStringVisitor, self).__init__()
         self.verbose = verbose
 
     def visit(self, node, values):
@@ -895,94 +1076,19 @@ class ToStringVisitor(ExpressionValueVisitor):
 
 
 def expression_to_string(expr, verbose=None):
+    """
+    Return the polynomial degree of the expression.
+
+    Args:
+        node: The root node of an expression tree.
+
+    Returns:
+        A non-negative integer that is the polynomial
+        degree if the expression is polynomial, or :const:`None` otherwise.
+    """
     verbose = common.TO_STRING_VERBOSE if verbose is None else verbose
-    visitor = ToStringVisitor(verbose)
+    visitor = _ToStringVisitor(verbose)
     return visitor.dfs_postorder_stack(expr)
-
-"""
-class StringVisitor(SimpleExpressionVisitor):
-
-    def __init__(self, verbose=None, precedence=None):
-        self.buf = StringIO()
-        self.verbose = None
-        self.precedence = None
-        self._infix = False
-        self._bypass_prefix = False
-
-    def visit(self, node):
-        self.counter += 1
-
-    def children(self, node):
-        return node._args
-
-    def is_leaf(self, node):
-        return node.__class__ in native_numeric_types or not node.is_expression() or node.nargs() == 0
-
-    def finalize(self):
-        ans = self.buf.getvalue()
-        buf.close()
-        return ans
-
-
-def OLD_expression_to_string(expr, ostream=None, verbose=None, precedence=None):
-    _name_buffer = {}
-    if ostream is None:
-        ostream = sys.stdout
-    if expr.__class__ in native_numeric_types:
-        ostream.write(str(expr))
-        return
-    elif expr.__class__ in pyomo5_variable_types:
-        ostream.write(str(expr))
-        return
-    verbose = common.TO_STRING_VERBOSE if verbose is None else verbose
-
-    _infix = False
-    _bypass_prefix = False
-    argList = expr._args
-    _stack = [ [ expr, argList, 0, expr.nargs(), precedence if precedence is not None else expr._precedence() ] ]
-    while _stack:
-        _parent, _args, _idx, _len, _prec = _stack[-1]
-        _my_precedence = _parent._precedence()
-        if _idx < _len:
-            _sub = _args[_idx]
-            _stack[-1][2] += 1
-            if _parent._to_string_skip(_idx):
-                continue
-            if _infix:
-                _bypass_prefix = _parent._to_string_infix(ostream, _idx, verbose)
-            else:
-                if not _bypass_prefix:
-                    _parent._to_string_prefix(ostream, verbose)
-                else:
-                    _bypass_prefix = False
-                if ((_len-_parent._to_string_skip(0) > 1) and _my_precedence > _prec) or not _my_precedence or verbose:
-                    ostream.write("( ")
-                    #ostream.write("%s %s %s %s %s %s( " % (str(_len), str(_idx), str(_my_precedence), str(_prec), str(verbose), str(type(_parent))))
-                    #if _len == 2 and skip == 0:
-                    #    ostream.write(" % ")
-                    #    ostream.write(" %s " % str(_parent._to_string_skip(0)))
-                    #    ostream.write(" % ")
-                    #    ostream.write(str(_args[0]))
-                    #    ostream.write(str(type(_args[0])))
-                    #    ostream.write(" % ")
-                    #    ostream.write(str(_args[1]))
-                    #    ostream.write(str(type(_args[1])))
-                    #    ostream.write(" % ")
-                _infix = True
-            if _sub.__class__ in pyomo5_expression_types:
-                argList = _sub._args
-                _stack.append([ _sub, argList, 0, _sub.nargs(), _my_precedence ])
-                _infix = False
-            elif hasattr(_parent, '_to_string_term'):
-                _parent._to_string_term(ostream, _idx, _sub, _name_buffer, verbose)
-            else:
-                expr._to_string_term(ostream, _idx, _sub, _name_buffer, verbose)
-        else:
-            _parent._to_string_suffix(ostream, verbose)
-            _stack.pop()
-            if ((_len-_parent._to_string_skip(0) > 1) and _my_precedence > _prec) or not _my_precedence or verbose:
-                ostream.write(" )")
-"""
 
 
 #-------------------------------------------------------
@@ -1101,7 +1207,7 @@ class _ExpressionBase(NumericValue):
         return clone_expression(self, memo=substitute, clone_leaves=False)
 
     def size(self, verbose=False):
-        return sizeof_expression(self, verbose=verbose)
+        return _sizeof_expression(self, verbose=verbose)
 
     def __deepcopy__(self, memo):
         return clone_expression(self, memo=memo, clone_leaves=True)
@@ -1137,7 +1243,7 @@ class _ExpressionBase(NumericValue):
         are "fixed". hence, the name.
 
         """
-        return expression_is_fixed(self)
+        return _expression_is_fixed(self)
 
     def _is_fixed(self, values):
         """Private method to be overridden by derived classes requiring special
@@ -1168,7 +1274,7 @@ class _ExpressionBase(NumericValue):
         return True
 
     def polynomial_degree(self):
-        return polynomial_degree(self)
+        return _polynomial_degree(self)
 
     def _polynomial_degree(self, ans):                          #pragma: no cover
         raise NotImplementedError("Derived expression (%s) failed to "\

@@ -13,6 +13,8 @@ import copy
 import pyutilib.th as unittest
 from pyomo.environ import *
 from six import StringIO
+from pyomo.core.expr import expr_common
+
 
 class TestExpressionData(unittest.TestCase):
 
