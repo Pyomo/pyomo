@@ -2,7 +2,7 @@
 
 import pyutilib.th as unittest
 from pyomo.environ import SolverFactory, value
-from pyomo.solvers.tests.models.eight_process_prob import EightProcessFlowsheet
+from pyomo.solvers.tests.models.eight_process_problem import EightProcessFlowsheet
 
 required_solvers = ('ipopt', 'gurobi')
 if all(SolverFactory(s).available() for s in required_solvers):
@@ -39,6 +39,19 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
             opt.solve(model, strategy='PSC')
+
+            # self.assertIs(results.solver.termination_condition,
+            #               TerminationCondition.optimal)
+            self.assertTrue(abs(value(model.cost.expr) - 68) <= 1E-2)
+
+    @unittest.skipIf(not subsolvers_available,
+                     "Required subsolvers {} are not available"
+                     .format(required_solvers))
+    def test_GBD(self):
+        """Test the generalized Benders Decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet()
+            opt.solve(model, strategy='GBD')
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
