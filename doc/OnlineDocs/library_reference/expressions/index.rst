@@ -13,6 +13,12 @@ Pyomo Expressions
     finalized.  Please submit a ticket to suggest a change in the
     API or to request clarification in the design below.
 
+.. warning::
+
+    The examples in this draft documentation are not well-tested.
+    The examples look fine to the author, but I have not confirmed that these 
+    examples are tested with Pymo.
+
 Pyomo supports the declaration of abstract expressions that represent
 objectives, constraints and other optimization modeling components.
 Pyomo expressions are represented in an expression tree, where the
@@ -57,6 +63,7 @@ tree:
 
    performance.rst
    overview.rst 
-   coreclasses.rst
+   design.rst
    managing.rst
+   reference.rst
 
