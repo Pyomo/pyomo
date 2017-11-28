@@ -13,7 +13,7 @@ import pyomo.opt
 from pyomo.core.base import expr, Var, Constraint, Objective
 from pyomo.core.base.var import _VarData
 from pyomo.core.base.param import _ParamData
-from pyomo.core.base.expr import *
+from pyomo.core.expr import current as EXPR
 from pyomo.core.base.numvalue import *
 from pyomo.core.base import _ExpressionData
 
@@ -55,7 +55,7 @@ class ProblemWriterUtils(pyomo.opt.AbstractProblemWriter):
         #
         # Expression
         #
-        if isinstance(exp,expr._ExpressionBase):
+        if isinstance(exp,EXPR.ExpressionBase):
             #
             # SumExpression
             #
@@ -122,7 +122,7 @@ class ProblemWriterUtils(pyomo.opt.AbstractProblemWriter):
         #
         # Expression
         #
-        if isinstance(exp,expr._ExpressionBase):
+        if isinstance(exp,EXPR.ExpressionBase):
                 #
                 # Sum
                 #

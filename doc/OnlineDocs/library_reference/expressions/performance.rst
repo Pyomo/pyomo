@@ -213,15 +213,6 @@ of expressions..
 
 Finally, note that the :func:`dot_product <pyomo.core.util.dot_product>` function is an aliase for func:`summation <pyomo.core.util.summation>`.
 
-Reference Documentation
-~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autofunction:: pyomo.core.util.prod
-.. autofunction:: pyomo.core.util.Sum
-.. autofunction:: pyomo.core.util.summation
-.. autodata::     pyomo.core.util.dot_product
-
-
 Context Managers
 ----------------
 
@@ -290,14 +281,4 @@ in ``e``.
     generation, and there are few cases where the direct use of
     these context managers would provide additional utility to users
     and developers.
-
-Reference Documentation
-~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autodata:: pyomo.core.expr.current.nonlinear_expression
-.. autodata:: pyomo.core.expr.current.linear_expression
-.. autoclass:: pyomo.core.expr.current.mutable_sum_context
-    :members:
-.. autoclass:: pyomo.core.expr.current.mutable_linear_context
-    :members:
 

@@ -163,8 +163,6 @@ class TestSimple(unittest.TestCase):
         #
         # Check the structure of nested sums
         #
-        expectedType = EXPR._SumExpression
-
         m = AbstractModel()
         m.a = Var()
         m.b = Var()

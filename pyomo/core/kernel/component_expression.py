@@ -71,13 +71,13 @@ class IIdentityExpression(NumericValue):
         """A boolean indicating whether this expression is fixed."""
         return is_fixed(self._expr)
 
-    def _potentially_variable(self):
+    def is_potentially_variable(self):
         """A boolean indicating whether this expression can
         reference variables."""
         return potentially_variable(self._expr)
 
     #
-    # Ducktyping _ExpressionBase functionality
+    # Ducktyping ExpressionBase functionality
     #
 
     def is_expression(self):
@@ -172,7 +172,7 @@ class noclone(IIdentityExpression):
         return "{%s}" % EXPR.expression_to_string(self)
 
     #
-    # Ducktyping _ExpressionBase functionality
+    # Ducktyping ExpressionBase functionality
     #
 
     def clone(self):
@@ -203,13 +203,13 @@ class IExpression(IComponent, IIdentityExpression):
         """A boolean indicating whether this expression is constant."""
         return False
 
-    def _potentially_variable(self):
+    def is_potentially_variable(self):
         """A boolean indicating whether this expression can
         reference variables."""
         return True
 
     #
-    # Ducktyping _ExpressionBase functionality
+    # Ducktyping ExpressionBase functionality
     #
 
     def clone(self):
@@ -253,7 +253,7 @@ class data_expression(expression):
     # Overload a few methods
     #
 
-    def _potentially_variable(self):
+    def is_potentially_variable(self):
         """A boolean indicating whether this expression can
         reference variables."""
         return False

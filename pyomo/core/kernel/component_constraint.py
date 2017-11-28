@@ -188,7 +188,7 @@ class _MutableBoundsConstraintMixin(object):
                 "when the equality property is True.")
         if lb is not None:
             tmp = as_numeric(lb)
-            if tmp._potentially_variable():
+            if tmp.is_potentially_variable():
                 raise ValueError(
                     "Constraint lower bounds must be "
                     "expressions restricted to data.")
@@ -206,7 +206,7 @@ class _MutableBoundsConstraintMixin(object):
                 "when the equality property is True.")
         if ub is not None:
             tmp = as_numeric(ub)
-            if tmp._potentially_variable():
+            if tmp.is_potentially_variable():
                 raise ValueError(
                     "Constraint lower bounds must be "
                     "expressions restricted to data.")
@@ -231,7 +231,7 @@ class _MutableBoundsConstraintMixin(object):
                 "be assigned a value of None.")
         else:
             tmp = as_numeric(rhs)
-            if tmp._potentially_variable():
+            if tmp.is_potentially_variable():
                 raise ValueError(
                     "Constraint right-hand side must be "
                     "expressions restricted to data.")
@@ -438,10 +438,10 @@ class constraint(_MutableBoundsConstraintMixin,
 
                 # assigning to the rhs property
                 # will set the equality flag to True
-                if arg1 is None or (not arg1._potentially_variable()):
+                if arg1 is None or (not arg1.is_potentially_variable()):
                     self.rhs = arg1
                     self.body = arg0
-                elif arg0 is None or (not arg0._potentially_variable()):
+                elif arg0 is None or (not arg0.is_potentially_variable()):
                     self.rhs = arg0
                     self.body = arg1
                 else:
@@ -456,7 +456,7 @@ class constraint(_MutableBoundsConstraintMixin,
                 arg0 = expr[0]
                 if arg0 is not None:
                     arg0 = as_numeric(arg0)
-                    if arg0._potentially_variable():
+                    if arg0.is_potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the lower "
@@ -471,7 +471,7 @@ class constraint(_MutableBoundsConstraintMixin,
                 arg2 = expr[2]
                 if arg2 is not None:
                     arg2 = as_numeric(arg2)
-                    if arg2._potentially_variable():
+                    if arg2.is_potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the upper "
@@ -529,14 +529,14 @@ class constraint(_MutableBoundsConstraintMixin,
         # user did ( var < 1 > 0 ) (which also results in a non-None
         # chainedInequality value)
         #
-        if EXPR._InequalityExpression.chainedInequality is not None:
+        if EXPR.InequalityExpression.chainedInequality is not None:
             raise TypeError(EXPR.chainedInequalityErrorMessage())
         #
         # Process relational expressions
         # (i.e. explicit '==', '<', and '<=')
         #
         if relational_expr:
-            if _expr_type is EXPR._EqualityExpression:
+            if _expr_type is EXPR.EqualityExpression:
                 # Equality expression: only 2 arguments!
                 _args = expr._args
                 # Explicitly dereference the original arglist (otherwise
@@ -544,10 +544,10 @@ class constraint(_MutableBoundsConstraintMixin,
                 expr._args = []
                 # assigning to the rhs property
                 # will set the equality flag to True
-                if not _args[1]._potentially_variable():
+                if not _args[1].is_potentially_variable():
                     self.rhs = _args[1]
                     self.body = _args[0]
-                elif not _args[0]._potentially_variable():
+                elif not _args[0].is_potentially_variable():
                     self.rhs = _args[0]
                     self.body = _args[1]
                 else:
@@ -585,7 +585,7 @@ class constraint(_MutableBoundsConstraintMixin,
                 expr._args = []
                 if len(_args) == 3:
 
-                    if _args[0]._potentially_variable():
+                    if _args[0].is_potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a double-sided "
                             "inequality expression (lower <= "
@@ -593,7 +593,7 @@ class constraint(_MutableBoundsConstraintMixin,
                             "bound was not data or an expression "
                             "restricted to storage of data."
                             % (self.name))
-                    if _args[2]._potentially_variable():
+                    if _args[2].is_potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a double-sided "\
                             "inequality expression (lower <= "
@@ -608,11 +608,11 @@ class constraint(_MutableBoundsConstraintMixin,
 
                 else:
 
-                    if not _args[1]._potentially_variable():
+                    if not _args[1].is_potentially_variable():
                         self.lb = None
                         self.body  = _args[0]
                         self.ub = _args[1]
-                    elif not _args[0]._potentially_variable():
+                    elif not _args[0].is_potentially_variable():
                         self.lb = _args[0]
                         self.body  = _args[1]
                         self.ub = None

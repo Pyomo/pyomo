@@ -56,7 +56,7 @@ class _ExpressionData(NumericValue):
         return self.expr(exception=exception)
 
     #
-    # Ducktyping _ExpressionBase functionality
+    # Ducktyping ExpressionBase functionality
     #
 
     def is_expression(self):
@@ -129,7 +129,7 @@ class _ExpressionData(NumericValue):
 
     # _ExpressionData should never return False because
     # they can store subexpressions that contain variables
-    def _potentially_variable(self):
+    def is_potentially_variable(self):
         return True
 
 class _GeneralExpressionDataImpl(_ExpressionData):

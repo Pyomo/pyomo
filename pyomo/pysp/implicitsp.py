@@ -49,7 +49,7 @@ class ImplicitSP(object):
             return {}
         if exp.is_expression():
             ans = {}
-            if exp.__class__ is EXPR._ProductExpression:
+            if exp.__class__ is EXPR.ProductExpression:
                 for subexp in exp._numerator:
                     ans.update(ImplicitSP.\
                                _collect_mutable_parameters(subexp))
@@ -74,7 +74,7 @@ class ImplicitSP(object):
             return {}
         elif exp.is_expression():
             ans = {}
-            if exp.__class__ is EXPR._ProductExpression:
+            if exp.__class__ is EXPR.ProductExpression:
                 for subexp in exp._numerator:
                     ans.update(ImplicitSP.\
                                _collect_unfixed_variables(subexp))

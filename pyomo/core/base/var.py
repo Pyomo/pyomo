@@ -134,7 +134,7 @@ class _VarData(ComponentData, NumericValue):
         """Returns False because this is not a constant in an expression."""
         return False
 
-    def _potentially_variable(self):
+    def is_potentially_variable(self):
         """Returns True because this is a variable."""
         return True
 

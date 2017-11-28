@@ -89,7 +89,7 @@ class IndexTemplate(NumericValue):
         """
         return False
 
-    def _potentially_variable(self):
+    def is_potentially_variable(self):
         """Returns True because this is a variable."""
         return True
 
@@ -119,7 +119,7 @@ class ReplaceTemplateExpression(EXPR.ExpressionReplacementVisitor):
         self.substituter_args = args
 
     def visiting_potential_leaf(self, node):
-        if type(node) is EXPR._GetItemExpression or type(node) is IndexTemplate:
+        if type(node) is EXPR.GetItemExpression or type(node) is IndexTemplate:
             return True, self.substituter(node, *self.substituter_args)
 
         if type(node) in native_numeric_types or not node.is_expression():

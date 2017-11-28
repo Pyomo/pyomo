@@ -172,7 +172,7 @@ class SympifyVisitor(EXPR.ExpressionValueVisitor):
         self.pyomo2sympy = pyomo2sympy
 
     def visit(self, node, values):
-        if node.__class__ is EXPR._UnaryFunctionExpression:
+        if node.__class__ is EXPR.UnaryFunctionExpression:
             return _functionMap[node._name](values[0])
         else:
             return node._apply_operation(values)
@@ -191,7 +191,7 @@ class SympifyVisitor(EXPR.ExpressionValueVisitor):
         #
         # Replace constants
         #
-        if not node._potentially_variable():
+        if not node.is_potentially_variable():
             return True, value(node)
         #
         # Don't replace anything else

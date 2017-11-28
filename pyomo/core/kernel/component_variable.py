@@ -203,7 +203,7 @@ class IVariable(IComponent, NumericValue):
         constant in an expression."""
         return False
 
-    def _potentially_variable(self):
+    def is_potentially_variable(self):
         """Returns :const:`True` because this is a
         variable."""
         return True

@@ -404,10 +404,10 @@ class _GeneralConstraintData(_ConstraintData):
                     arg1 = as_numeric(arg1)
 
                 self._equality = True
-                if arg1 is None or (not arg1._potentially_variable()):
+                if arg1 is None or (not arg1.is_potentially_variable()):
                     self._lower = self._upper = arg1
                     self._body = arg0
-                elif arg0 is None or (not arg0._potentially_variable()):
+                elif arg0 is None or (not arg0.is_potentially_variable()):
                     self._lower = self._upper = arg0
                     self._body = arg1
                 else:
@@ -421,7 +421,7 @@ class _GeneralConstraintData(_ConstraintData):
                 arg0 = expr[0]
                 if arg0 is not None:
                     arg0 = as_numeric(arg0)
-                    if arg0._potentially_variable():
+                    if arg0.is_potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the lower "
@@ -436,7 +436,7 @@ class _GeneralConstraintData(_ConstraintData):
                 arg2 = expr[2]
                 if arg2 is not None:
                     arg2 = as_numeric(arg2)
-                    if arg2._potentially_variable():
+                    if arg2.is_potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the upper "
@@ -494,14 +494,14 @@ class _GeneralConstraintData(_ConstraintData):
         # user did ( var < 1 > 0 ) (which also results in a non-None
         # chainedInequality value)
         #
-        if EXPR._InequalityExpression.chainedInequality is not None:
+        if EXPR.InequalityExpression.chainedInequality is not None:
             raise TypeError(EXPR.chainedInequalityErrorMessage())
         #
         # Process relational expressions
         # (i.e. explicit '==', '<', and '<=')
         #
         if relational_expr:
-            if _expr_type is EXPR._EqualityExpression:
+            if _expr_type is EXPR.EqualityExpression:
                 # Equality expression: only 2 arguments!
                 self._equality = True
                 _args = expr._args
@@ -509,10 +509,10 @@ class _GeneralConstraintData(_ConstraintData):
                 # this runs afoul of the getrefcount logic)
                 expr._args = []
 
-                if not _args[1]._potentially_variable():
+                if not _args[1].is_potentially_variable():
                     self._lower = self._upper = _args[1]
                     self._body = _args[0]
-                elif not _args[0]._potentially_variable():
+                elif not _args[0].is_potentially_variable():
                     self._lower = self._upper = _args[0]
                     self._body = _args[1]
                 else:
@@ -551,7 +551,7 @@ class _GeneralConstraintData(_ConstraintData):
 
                 if len(_args) == 3:
 
-                    if _args[0]._potentially_variable():
+                    if _args[0].is_potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a double-sided "
                             "inequality expression (lower <= "
@@ -559,7 +559,7 @@ class _GeneralConstraintData(_ConstraintData):
                             "bound was not data or an expression "
                             "restricted to storage of data."
                             % (self.name))
-                    if _args[2]._potentially_variable():
+                    if _args[2].is_potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a double-sided "\
                             "inequality expression (lower <= "
@@ -573,11 +573,11 @@ class _GeneralConstraintData(_ConstraintData):
                     self._upper = _args[2]
 
                 else:
-                    if not _args[1]._potentially_variable():
+                    if not _args[1].is_potentially_variable():
                         self._lower = None
                         self._body  = _args[0]
                         self._upper = _args[1]
-                    elif not _args[0]._potentially_variable():
+                    elif not _args[0].is_potentially_variable():
                         self._lower = _args[0]
                         self._body  = _args[1]
                         self._upper = None
@@ -886,15 +886,15 @@ class Constraint(ActiveIndexedComponent):
             # non-None, but the expression will be a bool.  For
             # example, model.a < 1 > 0.
             #
-            if EXPR._InequalityExpression.chainedInequality is not None:
+            if EXPR.InequalityExpression.chainedInequality is not None:
 
                 buf = StringIO()
-                EXPR._InequalityExpression.chainedInequality.pprint(buf)
+                EXPR.InequalityExpression.chainedInequality.pprint(buf)
                 #
                 # We are about to raise an exception, so it's OK to
                 # reset chainedInequality
                 #
-                EXPR._InequalityExpression.chainedInequality = None
+                EXPR.InequalityExpression.chainedInequality = None
                 raise ValueError(
                     "Invalid chained (2-sided) inequality detected. "
                     "The expression is resolving to %s instead of a "

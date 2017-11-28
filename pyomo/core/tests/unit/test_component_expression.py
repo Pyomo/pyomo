@@ -164,18 +164,18 @@ class Test_noclone(unittest.TestCase):
         self.assertEqual(e.is_fixed(), True)
         self.assertEqual(is_fixed(e), True)
 
-    def test_potentially_variable(self):
+    def testis_potentially_variable(self):
         e = noclone(variable())
-        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(e.is_potentially_variable(), True)
         self.assertEqual(potentially_variable(e), True)
         e = noclone(parameter())
-        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(e.is_potentially_variable(), False)
         self.assertEqual(potentially_variable(e), False)
         e = noclone(expression())
-        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(e.is_potentially_variable(), True)
         self.assertEqual(potentially_variable(e), True)
         e = noclone(data_expression())
-        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(e.is_potentially_variable(), False)
         self.assertEqual(potentially_variable(e), False)
 
     def test_polynomial_degree(self):
@@ -512,21 +512,21 @@ class Test_expression(_Test_expression_base,
         self.assertEqual(is_fixed(e), True)
         self.assertEqual(e(), 3)
 
-    def test_potentially_variable(self):
+    def testis_potentially_variable(self):
         e = self._ctype_factory()
-        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(e.is_potentially_variable(), True)
         self.assertEqual(potentially_variable(e), True)
         e.expr = 1
-        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(e.is_potentially_variable(), True)
         self.assertEqual(potentially_variable(e), True)
         v = variable()
         v.value = 2
         e.expr = v + 1
-        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(e.is_potentially_variable(), True)
         self.assertEqual(potentially_variable(e), True)
         v.fix()
         e.expr = v + 1
-        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(e.is_potentially_variable(), True)
         self.assertEqual(potentially_variable(e), True)
         self.assertEqual(e(), 3)
 
@@ -599,24 +599,24 @@ class Test_data_expression(_Test_expression_base,
         with self.assertRaises(ValueError):
             e.expr = v + 1
 
-    def test_potentially_variable(self):
+    def testis_potentially_variable(self):
         e = self._ctype_factory()
-        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(e.is_potentially_variable(), False)
         self.assertEqual(potentially_variable(e), False)
         e.expr = 1
-        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(e.is_potentially_variable(), False)
         self.assertEqual(potentially_variable(e), False)
         p = parameter()
         e.expr = p**2
-        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(e.is_potentially_variable(), False)
         self.assertEqual(potentially_variable(e), False)
         a = self._ctype_factory()
         e.expr = (a*p)**2/(p + 5)
-        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(e.is_potentially_variable(), False)
         self.assertEqual(potentially_variable(e), False)
         a.expr = 2.0
         p.value = 5.0
-        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(e.is_potentially_variable(), False)
         self.assertEqual(potentially_variable(e), False)
         self.assertEqual(e(), 10.0)
 
