@@ -298,10 +298,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         for block in all_blocks_list:
 
             for var_data in active_components_data_var[id(block)]:
-                variable_stream = StringIO()
-                var_data.to_string(ostream=variable_stream, verbose=False)
-                variable_string = variable_stream.getvalue()
-                variable_string = ' '+variable_string+' '
+                variable_string = ' '+var_data.to_string()+' '
                 vstring_to_var_dict[variable_string] = var_data
                 if output_fixed_variable_bounds or (not var_data.fixed):
                     vstring_to_bar_dict[variable_string] = \
@@ -312,11 +309,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                         (' %.17r ' % (var_data.value))
 
             for param_data in mutable_param_gen(block):
-                param_stream = StringIO()
-                param_data.to_string(ostream=param_stream, verbose=False)
-                param_string = param_stream.getvalue()
-
-                param_string = ' '+param_string+' '
+                param_string = ' '+param_data.to_string()+' '
                 pstring_to_bar_dict[param_string] = \
                     (' %.17r ' % (param_data()))
 
@@ -338,12 +331,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
             #     bar file.
 
             # Fill in the body of the equation
-            body_string_buffer = StringIO()
-
-            as_numeric(constraint_data.body).to_string(
-                ostream=body_string_buffer,
-                verbose=False)
-            eqn_body = body_string_buffer.getvalue()
+            eqn_body = as_numeric(constraint_data.body).to_string()
 
             # First, pad the equation so that if there is a
             # variable name at the start or end of the equation,
@@ -469,10 +457,9 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 # Similar to the constraints section above, the
                 # objective is generated from the expr.to_string
                 # function.
-                obj_stream = StringIO()
-                objective_data.expr.to_string(ostream=obj_stream, verbose=False)
+                str_ = objective_data.expr.to_string(verbose=False)
 
-                obj_string = ' '+obj_stream.getvalue()+' '
+                obj_string = ' '+str_+' '
                 obj_string = obj_string.replace('**',' ^ ')
                 obj_string = obj_string.replace('*', ' * ')
 

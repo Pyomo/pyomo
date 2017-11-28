@@ -176,7 +176,7 @@ class StandardRepn(object):
         else:
             output.write("nonlinear expr:\n")
             try:
-                self.nonlinear_expr.to_string(ostream=output)
+                output.write(self.nonlinear_expr.to_string())
                 output.write("\n")
             except AttributeError:
                 output.write(str(self.nonlinear_expr))
