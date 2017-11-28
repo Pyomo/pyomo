@@ -1121,15 +1121,11 @@ class ExpressionBase(NumericValue):
     fixed                   T       T       F       T
     """
 
-    __slots__ =  ('_args','_is_owned')
+    __slots__ =  ('_args',)
     PRECEDENCE = 0
 
     def __init__(self, args):
         self._args = args
-        self._is_owned = False
-        for arg in args:
-            if arg.__class__ in pyomo5_expression_types:
-                arg._is_owned = True
 
     def nargs(self):
         """
@@ -1512,10 +1508,6 @@ class ExternalFunctionExpression(ExpressionBase):
         """Construct a call to an external function"""
         self._args = args
         self._fcn = fcn
-        self._is_owned = False
-        for arg in args:
-            if arg.__class__ in pyomo5_expression_types:
-                arg._is_owned = True
 
     def nargs(self):
         return len(self._args)
@@ -1861,19 +1853,19 @@ class NPV_SumExpression(_SumExpression):
 class ViewSumExpression(_SumExpression):
     """An object that defines a summation with 1 or more terms using a shared list."""
 
-    __slots__ = ('_nargs',)
+    __slots__ = ('_nargs','_shared_args')
     PRECEDENCE = 6
 
     def __init__(self, args):
         self._args = args
-        self._is_owned = False
+        self._shared_args = False
         self._nargs = len(self._args)
 
     def add(self, new_arg):
         if new_arg.__class__ in native_numeric_types and isclose(new_arg,0):
             return self
         # Clone 'self', because ViewSumExpression are immutable
-        self._is_owned = True
+        self._shared_args = True
         self = self.__class__(self._args)
         #
         if new_arg.__class__ is ViewSumExpression or new_arg.__class__ is _MutableViewSumExpression:
@@ -1881,8 +1873,6 @@ class ViewSumExpression(_SumExpression):
         elif not new_arg is None:
             self._args.append(new_arg)
         self._nargs = len(self._args)
-        if new_arg.__class__ in pyomo5_expression_types:
-            new_arg._is_owned = True
         return self
 
     def nargs(self):
@@ -1957,7 +1947,7 @@ class _MutableViewSumExpression(ViewSumExpression):
         if new_arg.__class__ in native_numeric_types and isclose(new_arg,0):
             return self
         # Do not clone 'self', because _MutableViewSumExpression are mutable
-        #self._is_owned = True
+        #self._shared_args = True
         #self = self.__class__(list(self.args))
         #
         if new_arg.__class__ is ViewSumExpression or new_arg.__class__ is _MutableViewSumExpression:
@@ -1965,8 +1955,6 @@ class _MutableViewSumExpression(ViewSumExpression):
         elif not new_arg is None:
             self._args.append(new_arg)
         self._nargs = len(self._args)
-        if new_arg.__class__ in pyomo5_expression_types:
-            new_arg._is_owned = True
         return self
 
 
@@ -1983,10 +1971,6 @@ class GetItemExpression(ExpressionBase):
         """Construct an expression with an operation and a set of arguments"""
         self._args = args
         self._base = base
-        self._is_owned = False
-        for arg in args:
-            if arg.__class__ in pyomo5_expression_types:
-                arg._is_owned = True
 
     def nargs(self):
         return len(self._args)
@@ -2064,13 +2048,6 @@ class Expr_if(ExpressionBase):
         self._else = ELSE_
         if self._if.__class__ in native_types:
             self._if = as_numeric(self._if)
-        self._is_owned = False
-        if IF_.__class__ in pyomo5_expression_types:
-            IF_._is_owned = True
-        if THEN_.__class__ in pyomo5_expression_types:
-            THEN_._is_owned = True
-        if ELSE_.__class__ in pyomo5_expression_types:
-            ELSE_._is_owned = True
 
     def nargs(self):
         return 3
@@ -2140,9 +2117,6 @@ class UnaryFunctionExpression(ExpressionBase):
         self._args = args
         self._name = name
         self._fcn = fcn
-        self._is_owned = False
-        if args[0].__class__ in pyomo5_expression_types:
-            args[0]._is_owned = True
 
     def nargs(self):
         return 1
@@ -2214,7 +2188,6 @@ class _MutableLinearExpression(ExpressionBase):
         self.linear_coefs = []
         self.linear_vars = []
         self._args = tuple()
-        self._is_owned = False
 
     def nargs(self):
         return 0
@@ -2600,13 +2573,11 @@ def generate_sum_expression(etype, _self, _other):
         #
         # x + y
         #
-        if (_self.__class__ is ViewSumExpression and not _self._is_owned) or \
+        if (_self.__class__ is ViewSumExpression and not _self._shared_args) or \
            _self.__class__ is _MutableViewSumExpression:
-           #(_self.__class__ is _LinearViewSumExpression and not _self._is_owned) or
             return _self.add(_other)
-        elif (_other.__class__ is ViewSumExpression and not _other._is_owned) or \
+        elif (_other.__class__ is ViewSumExpression and not _other._shared_args) or \
             _other.__class__ is _MutableViewSumExpression:
-            #_other.__class__ is _LinearViewSumExpression and not _other._is_owned or
             return _other.add(_self)
         elif _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
@@ -2614,8 +2585,6 @@ def generate_sum_expression(etype, _self, _other):
             elif _other == 0:   #isclose(_other, 0):
                 return _self
             if _self.is_potentially_variable():
-                #return _LinearViewSumExpression((_other, _self))
-                #return ViewSumExpression([_other, _self])
                 return ViewSumExpression([_self, _other])
             return NPV_SumExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
@@ -2639,9 +2608,8 @@ def generate_sum_expression(etype, _self, _other):
         #
         # x - y
         #
-        if (_self.__class__ is ViewSumExpression and not _self._is_owned) or \
+        if (_self.__class__ is ViewSumExpression and not _self._shared_args) or \
            _self.__class__ is _MutableViewSumExpression:
-           #(_self.__class__ is _LinearViewSumExpression and not _self._is_owned) or
             return _self.add(-_other)
         elif _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
