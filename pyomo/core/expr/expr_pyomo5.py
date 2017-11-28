@@ -27,7 +27,6 @@ __all__ = (
 'clone_counter_context',
 'clone_expression',
 'evaluate_expression',
-'expression_to_string',
 'identify_components',
 'identify_variables',
 'generate_sum_expression',
@@ -1025,14 +1024,15 @@ def _expression_is_fixed(node):
 
 
 # =====================================================
-#  expression_to_string
+#  _expression_to_string
 # =====================================================
 
 class _ToStringVisitor(ExpressionValueVisitor):
 
-    def __init__(self, verbose):
+    def __init__(self, verbose, labeler):
         super(_ToStringVisitor, self).__init__()
         self.verbose = verbose
+        self.labeler = labeler
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
@@ -1049,10 +1049,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
                 tmp.append("({0})".format(val))
             else:
                 tmp.append(val)
-        if self.verbose:
-            return node._to_string_verbose(tmp)
-        else:
-            return node._to_string(tmp)
+        return node._to_string(tmp, verbose=self.verbose)
 
     def visiting_potential_leaf(self, node):
         """ 
@@ -1067,15 +1064,15 @@ class _ToStringVisitor(ExpressionValueVisitor):
             return True, str(node)
 
         if node.__class__ in pyomo5_variable_types:
-            return True, str(node)
+            return True, node.to_string(verbose=self.verbose, labeler=self.labeler)
 
         if not node.is_expression():
-            return True, str(node)
+            return True, node.to_string(verbose=self.verbose, labeler=self.labeler)
 
         return False, None
 
 
-def expression_to_string(expr, verbose=None):
+def _expression_to_string(expr, verbose=None, labeler=None):
     """
     Return the polynomial degree of the expression.
 
@@ -1087,7 +1084,7 @@ def expression_to_string(expr, verbose=None):
         degree if the expression is polynomial, or :const:`None` otherwise.
     """
     verbose = common.TO_STRING_VERBOSE if verbose is None else verbose
-    visitor = _ToStringVisitor(verbose)
+    visitor = _ToStringVisitor(verbose, labeler)
     return visitor.dfs_postorder_stack(expr)
 
 
@@ -1194,11 +1191,12 @@ class _ExpressionBase(NumericValue):
         #
         # Output the string
         #
-        buf = StringIO()
-        buf.write(expression_to_string(expr))
-        ans = buf.getvalue()
-        buf.close()
-        return ans
+        return _expression_to_string(expr)
+        #buf = StringIO()
+        #buf.write(expression_to_string(expr))
+        #ans = buf.getvalue()
+        #buf.close()
+        #return ans
 
     def __call__(self, exception=True):
         return evaluate_expression(self, exception)
@@ -1280,11 +1278,8 @@ class _ExpressionBase(NumericValue):
         raise NotImplementedError("Derived expression (%s) failed to "\
             "implement _polynomial_degree()" % ( str(self.__class__), ))
 
-    def _to_string_verbose(self, values):
-        return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
-
-    def to_string(self, verbose=None):
-        return expression_to_string(self, verbose)
+    def to_string(self, verbose=False, labeler=None):
+        return _expression_to_string(self, verbose=verbose, labeler=labeler)
 
     def _precedence(self):
         return _ExpressionBase.PRECEDENCE
@@ -1307,7 +1302,9 @@ class _NegationExpression(_ExpressionBase):
     def _precedence(self):
         return _NegationExpression.PRECEDENCE
 
-    def _to_string(self, values):
+    def _to_string(self, values, verbose=False):
+        if verbose:
+            return "{0}({1})".format(self.getname(), values[0])
         tmp = values[0]
         if tmp[0] == '-':
             i = 1
@@ -1315,9 +1312,6 @@ class _NegationExpression(_ExpressionBase):
                 i += 1
             return tmp[i:]
         return "- "+tmp
-
-    def _to_string_verbose(self, values):
-        return "{0}({1})".format(self.getname(), values[0])
 
     def _apply_operation(self, result):
         return -result[0]
@@ -1367,7 +1361,9 @@ class _ExternalFunctionExpression(_ExpressionBase):
         """Evaluate the expression"""
         return self._fcn.evaluate( result )     #pragma: no cover
 
-    def _to_string(self, values):
+    def _to_string(self, values, verbose=False):
+        if verbose:
+            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
         tmp = [self._fcn.getname(), '(']
         if len(values) > 0:
             if isinstance(self._args[0], basestring):
@@ -1382,9 +1378,6 @@ class _ExternalFunctionExpression(_ExpressionBase):
                 tmp.append(values[i])
         tmp.append(')')
         return "".join(tmp)
-
-    def _to_string_verbose(self, values):
-        return self._to_string(values)
 
 
 class _NPV_ExternalFunctionExpression(_ExternalFunctionExpression):
@@ -1440,7 +1433,9 @@ class _PowExpression(_ExpressionBase):
     def getname(self, *args, **kwds):
         return 'pow'
 
-    def _to_string(self, values):
+    def _to_string(self, values, verbose=False):
+        if verbose:
+            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
         return "{0}**{1}".format(values[0], values[1])
 
 
@@ -1531,13 +1526,12 @@ class _InequalityExpression(_LinearOperatorExpression):
             _l = a
         return True
 
-    def _to_string(self, values):
+    def _to_string(self, values, verbose=False):
+        if verbose:
+            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
         if len(values) == 2:
             return "{0}  {1}  {2}".format(values[0], '<' if self._strict[0] else '<=', values[1])
         return "{0}  {1}  {2}  {3}  {4}".format(values[0], '<' if self._strict[0] else '<=', values[1], '<' if self._strict[1] else '<=', values[2])
-        
-    def _to_string_verbose(self, values):
-        return self._to_string(values)
         
     def is_constant(self):
         return self._args[0].is_constant() and self._args[1].is_constant()
@@ -1572,11 +1566,10 @@ class _EqualityExpression(_LinearOperatorExpression):
         _l, _r = result
         return _l == _r
 
-    def _to_string(self, values):
+    def _to_string(self, values, verbose=False):
+        if verbose:
+            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
         return "{0}  ==  {1}".format(values[0], values[1])
-
-    def _to_string_verbose(self, values):
-        return self._to_string(values)
         
     def is_constant(self):
         return self._args[0].is_constant() and self._args[1].is_constant()
@@ -1614,7 +1607,9 @@ class _ProductExpression(_ExpressionBase):
         _l, _r = result
         return _l * _r
 
-    def _to_string(self, values):
+    def _to_string(self, values, verbose=False):
+        if verbose:
+            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
         return "{0}*{1}".format(values[0],values[1])
 
 
@@ -1645,11 +1640,10 @@ class _ReciprocalExpression(_ExpressionBase):
     def getname(self, *args, **kwds):
         return 'recip'
 
-    def _to_string(self, values):
+    def _to_string(self, values, verbose=False):
+        if verbose:
+            return "{0}({1})".format(self.getname(), values[0])
         return "(1/{0})".format(values[0])
-
-    def _to_string_verbose(self, values):
-        return "{0}({1})".format(self.getname(), values[0])
 
     def _apply_operation(self, result):
         return 1 / result[0]
@@ -1752,7 +1746,14 @@ class _ViewSumExpression(_SumExpression):
                 return True
         return False
 
-    def _to_string(self, values):
+    def _to_string(self, values, verbose=False):
+        if verbose:
+            tmp = [values[0]]
+            for i in range(1,len(values)):
+                tmp.append(", ")
+                tmp.append(values[i])
+            return "{0}({1})".format(self.getname(), "".join(tmp))
+
         tmp = [values[0]]
         for i in range(1,len(values)):
             if values[i][0] == '-':
@@ -1765,13 +1766,6 @@ class _ViewSumExpression(_SumExpression):
                 tmp.append(' + ')
                 tmp.append(values[i])
         return ''.join(tmp)
-
-    def _to_string_verbose(self, values):
-        tmp = [values[0]]
-        for i in range(1,len(values)):
-            tmp.append(", ")
-            tmp.append(values[i])
-        return "{0}({1})".format(self.getname(), "".join(tmp))
 
 
 class _MutableViewSumExpression(_ViewSumExpression):
@@ -1859,11 +1853,10 @@ class _GetItemExpression(_ExpressionBase):
     def _apply_operation(self, result):
         return value(self._base.__getitem__( tuple(result) ))
 
-    def _to_string(self, values):
+    def _to_string(self, values, verbose=False):
+        if verbose:
+            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
         return "%s%s" % (self.getname(), values[0])
-
-    def _to_string_vebose(self, values):
-        return self._to_string(values)
 
     def resolve_template(self):
         return self._base.__getitem__(tuple(value(i) for i in self._args))
@@ -1940,11 +1933,8 @@ class Expr_if(_ExpressionBase):
                 pass
         return None
 
-    def _to_string(self, values):
+    def _to_string(self, values, verbose=False):
         return 'Expr_if( ( {0} ), then=( {1} ), else=( {2} ) )'.format(self._if, self._then, self._else)
-
-    def _to_string_vebose(self, values):
-        return self._to_string(values)
 
     def _apply_operation(self, result):
         _if, _then, _else = result
@@ -1984,11 +1974,10 @@ class _UnaryFunctionExpression(_ExpressionBase):
     def getname(self, *args, **kwds):
         return self._name
 
-    def _to_string(self, values):
+    def _to_string(self, values, verbose=False):
+        if verbose:
+            return "{0}({1})".format(self.getname(), values[0])
         return '{0}{1}'.format(self._name, values[0])
-
-    def _to_string_verbose(self, values):
-        return "{0}({1})".format(self.getname(), values[0])
 
     def _polynomial_degree(self, result):
         if result[0] is 0:
@@ -2077,7 +2066,7 @@ class _LinearExpression(_ExpressionBase):
                 return True
         return False
 
-    def _to_string(self, values):
+    def _to_string(self, values, verbose=False):
         tmp = [str(self.constant)]
         for c,v in zip(self.linear_coefs, self.linear_vars):
             if c.__class__ in native_numeric_types and isclose(value(c),1):
