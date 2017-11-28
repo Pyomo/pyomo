@@ -605,7 +605,7 @@ You can silence this warning by one of three ways:
                     # imports indexed_component, but we need expr
                     # here
                     from pyomo.core.expr import current as EXPR
-                    return EXPR._GetItemExpression(tuple(ndx), self)
+                    return EXPR.GetItemExpression(tuple(ndx), self)
                 except:
                     # There are other ways we could get an exception
                     # that is not TemplateExpressionError; most notably,

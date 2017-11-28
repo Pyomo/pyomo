@@ -355,15 +355,15 @@ class ConvexHull_Transformation(Transformation):
         # WEH - This probably needs to be updated to support all pyomo5 expression terms.
         #       I edited this to work for pyomo5, but it's not backwards compatible.
         #
-        if isinstance(expr,EXPR._ExpressionBase):
-            if isinstance(expr,EXPR._ProductExpression):
+        if isinstance(expr,EXPR.ExpressionBase):
+            if isinstance(expr,EXPR.ProductExpression):
                 expr._numerator = [self._var_subst(NL, e, y, varMap) for e in expr._numerator]
                 expr._denominator = [self._var_subst(NL, e, y, varMap) for e in expr._denominator]
             elif isinstance(expr, _ExpressionData) or \
                      isinstance(expr,EXPR._SumExpression) or \
-                     isinstance(expr,EXPR._AbsExpression) or \
-                     isinstance(expr,EXPR._NegationExpression) or \
-                     isinstance(expr,EXPR._PowExpression):
+                     isinstance(expr,EXPR.AbsExpression) or \
+                     isinstance(expr,EXPR.NegationExpression) or \
+                     isinstance(expr,EXPR.PowExpression):
                 expr._args = [self._var_subst(NL, e, y, varMap) for e in expr._args]
             else:
                 raise ValueError("Unsupported expression type: "+str(type(expr)))
@@ -415,6 +415,9 @@ class ConvexHull_Transformation(Transformation):
 
 
     def _eval_at_origin(self, NL, expr, y, varMap):
+        #
+        # TODO - create a new expression here
+        #
         # Recursively traverse the S-expression and substitute all free
         # model variables with 0.  This is a "poor-man's" approach to
         # evaluating the expression at the origin.
@@ -428,17 +431,17 @@ class ConvexHull_Transformation(Transformation):
         #
         # Expression
         #
-        if isinstance(expr,EXPR._ExpressionBase):
-            if isinstance(expr,EXPR._ProductExpression):
+        if isinstance(expr,EXPR.ExpressionBase):
+            if isinstance(expr,EXPR.ProductExpression):
                 expr._numerator = [ self._eval_at_origin(NL, e, y, varMap)
                                    for e in expr._numerator ]
                 expr._denominator = [ self._eval_at_origin(NL, e, y, varMap)
                                      for e in expr._denominator ]
             elif isinstance(expr, _ExpressionData) or \
                      isinstance(expr,EXPR._SumExpression) or \
-                     isinstance(expr,EXPR._AbsExpression) or \
-                     isinstance(expr,EXPR._IntrinsicFunctionExpression) or \
-                     isinstance(expr,EXPR._PowExpression):
+                     isinstance(expr,EXPR.AbsExpression) or \
+                     isinstance(expr,EXPR.IntrinsicFunctionExpression) or \
+                     isinstance(expr,EXPR.PowExpression):
                 expr._args = [ self._eval_at_origin(NL, e, y, varMap)
                               for e in expr._args ]
             else:

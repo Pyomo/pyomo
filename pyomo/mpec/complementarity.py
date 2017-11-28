@@ -39,7 +39,7 @@ class _ComplementarityData(_BlockData):
 
     def _canonical_expression(self, e):
         e_ = None
-        if e.__class__ is EXPR._EqualityExpression:
+        if e.__class__ is EXPR.EqualityExpression:
             if e._args[1].is_fixed():
                 _e = (e._args[1], e._args[0])
             #
@@ -49,7 +49,7 @@ class _ComplementarityData(_BlockData):
             #    _e = (e._args[0], e._args[1])
             else:
                 _e = ( ZeroConstant, e._args[0] - e._args[1])
-        elif e.__class__ is EXPR._InequalityExpression:
+        elif e.__class__ is EXPR.InequalityExpression:
             if len(e._args) == 3:
                 _e = (e._args[0], e._args[1], e._args[2])
             else:

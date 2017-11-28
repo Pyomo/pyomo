@@ -51,7 +51,7 @@ class IParameter(IComponent, NumericValue):
         """A boolean indicating that this parameter is fixed."""
         return True
 
-    def _potentially_variable(self):
+    def is_potentially_variable(self):
         """Returns :const:`False` because this object can
         never reference variables."""
         return False

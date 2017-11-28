@@ -10,9 +10,9 @@
 
 from pyomo.util.plugin import alias
 from pyomo.core.expr.current import (_SumExpression,
-                                  _ProductExpression,
-                                  _AbsExpression,
-                                  _PowExpression)
+                                  ProductExpression,
+                                  AbsExpression,
+                                  PowExpression)
 from pyomo.core import *
 from pyomo.core.base.expression import _ExpressionData
 from pyomo.core.base.var import SimpleVar, _VarData
@@ -385,12 +385,12 @@ class NonNegativeTransformation(IsomorphicTransformation):
 
         # Iterate through the terms in a sum, absolute value term, or power
         # term
-        if isinstance(expr, (_SumExpression, _AbsExpression, _PowExpression,
-                             _ExpressionData)):
+        if isinstance(expr, (_SumExpression, AbsExpression, PowExpression,
+                             ExpressionData)):
             i = 0
-            while i < len(expr._args):
+            while i < expr.nargs():
                 expr._args[i] = NonNegativeTransformation._walk_expr(
-                    expr._args[i],
+                    expr.arg(i),
                     varMap)
                 i += 1
 

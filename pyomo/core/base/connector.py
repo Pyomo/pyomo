@@ -73,7 +73,7 @@ class _ConnectorData(ComponentData, NumericValue):
         """
         return False
 
-    def _potentially_variable(self):
+    def is_potentially_variable(self):
         """Return True as connectors may (should!) contain variables"""
         return True
 

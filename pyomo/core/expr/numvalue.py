@@ -209,10 +209,10 @@ def potentially_variable(obj):
     if obj.__class__ in native_types:
         return False
     try:
-        return obj._potentially_variable()
+        return obj.is_potentially_variable()
     except AttributeError:
         pass
-    return as_numeric(obj)._potentially_variable()
+    return as_numeric(obj).is_potentially_variable()
 
 # It is very common to have only a few constants in a model, but those
 # constants get repeated many times.  KnownConstants lets us re-use /
@@ -286,7 +286,7 @@ class NumericValue(object):
     """This is the base class for numeric values used in Pyomo.
 
     For efficiency purposes, some derived classes do not call the base
-    class __init__() (e.g. see the "_ExpressionBase" class defined in
+    class __init__() (e.g. see the "ExpressionBase" class defined in
     "expr.py").
     """
 
@@ -369,7 +369,7 @@ class NumericValue(object):
         """Return True if this is a non-constant value that has been fixed"""
         return False
 
-    def _potentially_variable(self):
+    def is_potentially_variable(self):
         """Return True if variables can appear in this expression"""
         return True
 
@@ -636,7 +636,7 @@ class NumericConstant(NumericValue):
     def is_fixed(self):
         return True
 
-    def _potentially_variable(self):
+    def is_potentially_variable(self):
         return False
 
     def _polynomial_degree(self, result):

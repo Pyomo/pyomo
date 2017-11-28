@@ -62,12 +62,12 @@ class ExternalFunction(Component):
                 args = args[:i] + tuple(args[i]) + args[i+1:]
         pv = False
         for arg in args:
-            if not arg.__class__ in native_types and arg._potentially_variable():
+            if not arg.__class__ in native_types and arg.is_potentially_variable():
                 pv = True
                 break
         if pv:
-            return EXPR._ExternalFunctionExpression(args, self)
-        return EXPR._NPV_ExternalFunctionExpression(args, self)
+            return EXPR.ExternalFunctionExpression(args, self)
+        return EXPR.NPV_ExternalFunctionExpression(args, self)
 
     def evaluate(self, args):
         raise NotImplementedError(

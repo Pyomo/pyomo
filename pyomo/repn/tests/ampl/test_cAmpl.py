@@ -47,7 +47,7 @@ class CAmplBasicTest(unittest.TestCase):
         self.assertIsInstance(var_ar._linear_terms_var[testname], pyomo.core.base.var._VarData)
 
     def testExpressionBase(self):
-        exp = pyomo.core.base.expr._ExpressionBase('name', 0, [])
+        exp = pyomo.core.base.expr.ExpressionBase('name', 0, [])
         with self.assertRaises(ValueError) as cm:
             exp_ar = pyomo.repn.generate_ampl_repn(exp)
 

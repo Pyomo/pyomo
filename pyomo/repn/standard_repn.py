@@ -275,7 +275,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         # The expression is a number or a non-variable constant
         # expression.
         #
-        if expr.__class__ in native_numeric_types or not expr._potentially_variable():
+        if expr.__class__ in native_numeric_types or not expr.is_potentially_variable():
             if compute_values:
                 repn.constant = EXPR.evaluate_expression(expr)
             else:
@@ -297,7 +297,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         #
         # The expression is linear
         #
-        elif expr.__class__ is EXPR._StaticLinearExpression:
+        elif expr.__class__ is EXPR.LinearExpression:
             if compute_values:
                 C_ = EXPR.evaluate_expression(expr.constant)
             else:
@@ -402,12 +402,12 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
                     ans.linear[key] = multiplier
         elif e_.__class__ in native_numeric_types:
             ans.const += multiplier*e_
-        elif not e_._potentially_variable():
+        elif not e_.is_potentially_variable():
             if compute_values:
                 ans.const += multiplier * value(e_)
             else:
                 ans.const += multiplier * e_
-        elif e_.__class__ is EXPR._ProductExpression and  e_._args[1].__class__ in pyomo5_variable_types and (e_._args[0].__class__ in native_numeric_types or not e_._args[0]._potentially_variable()):
+        elif e_.__class__ is EXPR.ProductExpression and  e_._args[1].__class__ in pyomo5_variable_types and (e_._args[0].__class__ in native_numeric_types or not e_._args[0].is_potentially_variable()):
             if compute_values:
                 lhs = value(e_._args[0])
             else:
@@ -458,7 +458,7 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     # LHS is a non-variable expression
     #
-    elif not exp._args[0]._potentially_variable():
+    elif not exp._args[0].is_potentially_variable():
         if compute_values:
             val = value(exp._args[0])
             if isclose_default(val,0):
@@ -488,7 +488,7 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
 
     if exp._args[1].__class__ in native_numeric_types:
         rhs = Results(const=exp._args[1])
-    elif not exp._args[1]._potentially_variable():
+    elif not exp._args[1].is_potentially_variable():
         if compute_values:
             rhs = Results(const=value(exp._args[1]))
         else:
@@ -573,7 +573,7 @@ def _collect_var(exp, multiplier, idMap, compute_values, verbose, quadratic):
 def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if exp._args[1].__class__ in native_numeric_types:
             exponent = exp._args[1]
-    elif not exp._args[1]._potentially_variable():
+    elif not exp._args[1].is_potentially_variable():
         if compute_values:
             exponent = value(exp._args[1])
         else:
@@ -607,7 +607,7 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
     return Results(nonl=multiplier*exp)
 
 def _collect_reciprocal(exp, multiplier, idMap, compute_values, verbose, quadratic):
-    if exp._args[0].__class__ in native_numeric_types or not exp._args[0]._potentially_variable():
+    if exp._args[0].__class__ in native_numeric_types or not exp._args[0].is_potentially_variable():
         if compute_values:
             denom = 1.0 * value(exp._args[0])
         else:
@@ -625,7 +625,7 @@ def _collect_reciprocal(exp, multiplier, idMap, compute_values, verbose, quadrat
 def _collect_branching_expr(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if exp._if.__class__ in native_numeric_types:
         if_val = exp._if
-    elif not exp._if._potentially_variable():
+    elif not exp._if.is_potentially_variable():
         if compute_values:
             if_val = value(exp._if)
         else:
@@ -653,7 +653,7 @@ def _collect_negation(exp, multiplier, idMap, compute_values, verbose, quadratic
 def _collect_identity(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if exp._args[0].__class__ in native_numeric_types:
         return Results(const=exp._args[0])
-    if not exp._args[0]._potentially_variable():
+    if not exp._args[0].is_potentially_variable():
         if compute_values:
             return Results(const=value(exp._args[0]))
         else:
@@ -713,7 +713,7 @@ def _collect_linear_sum(exp, multiplier, idMap, compute_values, verbose, quadrat
                     ans.linear[key] = multiplier*c
         elif c.__class__ in native_numeric_types:
             ans.const += multiplier*c
-        else:       # not c._potentially_variable()
+        else:       # not c.is_potentially_variable()
             if compute_values:
                 ans.const += multiplier * value(c)
             else:
@@ -727,18 +727,18 @@ def _collect_linear_sum(exp, multiplier, idMap, compute_values, verbose, quadrat
 
 
 _repn_collectors = {
-    EXPR._ViewSumExpression                     : _collect_sum,
-    EXPR._ProductExpression                     : _collect_prod,
-    EXPR._PowExpression                         : _collect_pow,
-    EXPR._ReciprocalExpression                  : _collect_reciprocal,
+    EXPR.ViewSumExpression                      : _collect_sum,
+    EXPR.ProductExpression                      : _collect_prod,
+    EXPR.PowExpression                          : _collect_pow,
+    EXPR.ReciprocalExpression                   : _collect_reciprocal,
     EXPR.Expr_if                                : _collect_branching_expr,
-    EXPR._UnaryFunctionExpression               : _collect_nonl,
-    EXPR._AbsExpression                         : _collect_nonl,
-    EXPR._NegationExpression                    : _collect_negation,
-    EXPR._StaticLinearExpression                : _collect_linear,
-    EXPR._InequalityExpression                  : _collect_comparison,
-    EXPR._EqualityExpression                    : _collect_comparison,
-    #EXPR._LinearViewSumExpression               : _collect_linear_sum,
+    EXPR.UnaryFunctionExpression                : _collect_nonl,
+    EXPR.AbsExpression                          : _collect_nonl,
+    EXPR.NegationExpression                     : _collect_negation,
+    EXPR.LinearExpression                       : _collect_linear,
+    EXPR.InequalityExpression                   : _collect_comparison,
+    EXPR.EqualityExpression                     : _collect_comparison,
+    #EXPR.LinearViewSumExpression               : _collect_linear_sum,
     #_ConnectorData          : _collect_linear_connector,
     #SimpleConnector         : _collect_linear_connector,
     #param._ParamData        : _collect_linear_const,
@@ -765,7 +765,7 @@ _repn_collectors = {
 def _collect_standard_repn(exp, multiplier, idMap, 
                                       compute_values, verbose, quadratic):
     # We should be checking that an expression is constant *before* calling this function
-    #assert(exp._potentially_variable())
+    #assert(exp.is_potentially_variable())
     try:
         return _repn_collectors[exp.__class__](exp, multiplier, idMap, 
                                           compute_values, verbose, quadratic)

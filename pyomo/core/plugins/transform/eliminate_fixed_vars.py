@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.util.plugin import alias
-from pyomo.core.expr.current import _ExpressionBase
+from pyomo.core.expr.current import ExpressionBase
 from pyomo.core import Constraint, Objective, NumericConstant
 from pyomo.core.base.var import Var, _VarData
 from pyomo.core.base.util import sequence
@@ -67,11 +67,12 @@ class EliminateFixedVars(IsomorphicTransformation):
 
     def _fix_vars(self, expr, model):
         """ Walk through the S-expression, fixing variables. """
+        # TODO - Change this to use a visitor pattern!
         if expr._args is None:
             return expr
         _args = []
         for i in range(len(expr._args)):
-            if isinstance(expr._args[i],_ExpressionBase):
+            if isinstance(expr._args[i],ExpressionBase):
                 _args.append( self._fix_vars(expr._args[i], model) )
             elif (isinstance(expr._args[i],Var) or isinstance(expr._args[i],_VarData)) and expr._args[i].fixed:
                 if expr._args[i].value != 0.0:

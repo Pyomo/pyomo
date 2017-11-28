@@ -37,7 +37,7 @@ class ExpressionObjectTester(object):
         m = self.m
         t = IndexTemplate(m.I)
         e = m.x[t]
-        self.assertIs(type(e), EXPR._GetItemExpression)
+        self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIs(e._base, m.x)
         self.assertEqual(e._args, (t,))
         self.assertFalse(e.is_constant())
@@ -49,7 +49,7 @@ class ExpressionObjectTester(object):
         t.set_value(None)
 
         e = m.p[t,10]
-        self.assertIs(type(e), EXPR._GetItemExpression)
+        self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIs(e._base, m.p)
         self.assertEqual(e._args, (t,10))
         self.assertFalse(e.is_constant())
@@ -61,7 +61,7 @@ class ExpressionObjectTester(object):
         t.set_value(None)
 
         e = m.p[5,t]
-        self.assertIs(type(e), EXPR._GetItemExpression)
+        self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIs(e._base, m.p)
         self.assertEqual(e._args, (5,t))
         self.assertFalse(e.is_constant())
@@ -78,7 +78,7 @@ class ExpressionObjectTester(object):
         m = self.m
         t = IndexTemplate(m.I)
         e = m.s[t]
-        self.assertIs(type(e), EXPR._GetItemExpression)
+        self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIs(e._base, m.s)
         self.assertEqual(e._args, (t,))
         self.assertFalse(e.is_constant())
@@ -93,7 +93,7 @@ class ExpressionObjectTester(object):
         m = self.m
         t = IndexTemplate(m.I)
         e = m.x[t+m.P[5]]
-        self.assertIs(type(e), EXPR._GetItemExpression)
+        self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIs(e._base, m.x)
         self.assertEqual(len(e._args), 1)
         self.assertTrue(isinstance(e._args[0], EXPR._SumExpression))
@@ -105,12 +105,12 @@ class ExpressionObjectTester(object):
         m = self.m
         t = IndexTemplate(m.I)
         e = m.x[t+m.P[t+1]]
-        self.assertIs(type(e), EXPR._GetItemExpression)
+        self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIs(e._base, m.x)
         self.assertEqual(len(e._args), 1)
         self.assertTrue(isinstance(e._args[0], EXPR._SumExpression))
         self.assertIs(e._args[0]._args[0], t)
-        self.assertIs(type(e._args[0]._args[1]), EXPR._GetItemExpression)
+        self.assertIs(type(e._args[0]._args[1]), EXPR.GetItemExpression)
         self.assertTrue(isinstance(e._args[0]._args[1]._args[0], EXPR._SumExpression))
         self.assertIs(e._args[0]._args[1]._args[0]._args[0], t)
 
@@ -133,36 +133,36 @@ class ExpressionObjectTester(object):
         E = m.x[t+m.P[t+1]] + m.P[1]
         self.assertTrue(isinstance(E, EXPR._SumExpression))
         e = E._args[0]
-        self.assertIs(type(e), EXPR._GetItemExpression)
+        self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIs(e._base, m.x)
         self.assertEqual(len(e._args), 1)
         self.assertTrue(isinstance(e._args[0], EXPR._SumExpression))
         self.assertIs(e._args[0]._args[0], t)
-        self.assertIs(type(e._args[0]._args[1]), EXPR._GetItemExpression)
+        self.assertIs(type(e._args[0]._args[1]), EXPR.GetItemExpression)
         self.assertTrue(isinstance(e._args[0]._args[1]._args[0], EXPR._SumExpression))
         self.assertIs(e._args[0]._args[1]._args[0]._args[0], t)
 
         E = m.P[1] + m.x[t+m.P[t+1]]
         self.assertTrue(isinstance(E, EXPR._SumExpression))
         e = E._args[1]
-        self.assertIs(type(e), EXPR._GetItemExpression)
+        self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIs(e._base, m.x)
         self.assertEqual(len(e._args), 1)
         self.assertTrue(isinstance(e._args[0], EXPR._SumExpression))
         self.assertIs(e._args[0]._args[0], t)
-        self.assertIs(type(e._args[0]._args[1]), EXPR._GetItemExpression)
+        self.assertIs(type(e._args[0]._args[1]), EXPR.GetItemExpression)
         self.assertTrue(isinstance(e._args[0]._args[1]._args[0], EXPR._SumExpression))
         self.assertIs(e._args[0]._args[1]._args[0]._args[0], t)
 
         E = m.x[t+m.P[t+1]] + 1
         self.assertTrue(isinstance(E, EXPR._SumExpression))
         e = E._args[0]
-        self.assertIs(type(e), EXPR._GetItemExpression)
+        self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIs(e._base, m.x)
         self.assertEqual(len(e._args), 1)
         self.assertTrue(isinstance(e._args[0], EXPR._SumExpression))
         self.assertIs(e._args[0]._args[0], t)
-        self.assertIs(type(e._args[0]._args[1]), EXPR._GetItemExpression)
+        self.assertIs(type(e._args[0]._args[1]), EXPR.GetItemExpression)
         self.assertTrue(isinstance(e._args[0]._args[1]._args[0], EXPR._SumExpression))
         self.assertIs(e._args[0]._args[1]._args[0]._args[0], t)
 
@@ -172,12 +172,12 @@ class ExpressionObjectTester(object):
         # len(_args) is 1), whereas in pyomo4 the constant is a proper
         # argument.  The -1 index works for both modes.
         e = E._args[-1]
-        self.assertIs(type(e), EXPR._GetItemExpression)
+        self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIs(e._base, m.x)
         self.assertEqual(len(e._args), 1)
         self.assertTrue(isinstance(e._args[0], EXPR._SumExpression))
         self.assertIs(e._args[0]._args[0], t)
-        self.assertIs(type(e._args[0]._args[1]), EXPR._GetItemExpression)
+        self.assertIs(type(e._args[0]._args[1]), EXPR.GetItemExpression)
         self.assertTrue(isinstance(e._args[0]._args[1]._args[0], EXPR._SumExpression))
         self.assertIs(e._args[0]._args[1]._args[0]._args[0], t)
 
@@ -190,13 +190,13 @@ class ExpressionObjectTester(object):
         E = E_base.clone()
         self.assertTrue(isinstance(E, EXPR._SumExpression))
         e = E._args[0]
-        self.assertIs(type(e), EXPR._GetItemExpression)
+        self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIsNot(e, E_base._args[0])
         self.assertIs(e._base, m.x)
         self.assertEqual(len(e._args), 1)
         self.assertTrue(isinstance(e._args[0], EXPR._SumExpression))
         self.assertIs(e._args[0]._args[0], t)
-        self.assertIs(type(e._args[0]._args[1]), EXPR._GetItemExpression)
+        self.assertIs(type(e._args[0]._args[1]), EXPR.GetItemExpression)
         self.assertIs(type(e._args[0]._args[1]),
                       type(E_base._args[0]._args[0]._args[1]))
         self.assertIsNot(e._args[0]._args[1],
@@ -208,13 +208,13 @@ class ExpressionObjectTester(object):
         E = E_base.clone()
         self.assertTrue(isinstance(E, EXPR._SumExpression))
         e = E._args[1]
-        self.assertIs(type(e), EXPR._GetItemExpression)
+        self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIsNot(e, E_base._args[0])
         self.assertIs(e._base, m.x)
         self.assertEqual(len(e._args), 1)
         self.assertTrue(isinstance(e._args[0], EXPR._SumExpression))
         self.assertIs(e._args[0]._args[0], t)
-        self.assertIs(type(e._args[0]._args[1]), EXPR._GetItemExpression)
+        self.assertIs(type(e._args[0]._args[1]), EXPR.GetItemExpression)
         self.assertIs(type(e._args[0]._args[1]),
                       type(E_base._args[1]._args[0]._args[1]))
         self.assertIsNot(e._args[0]._args[1],
@@ -226,13 +226,13 @@ class ExpressionObjectTester(object):
         E = E_base.clone()
         self.assertTrue(isinstance(E, EXPR._SumExpression))
         e = E._args[0]
-        self.assertIs(type(e), EXPR._GetItemExpression)
+        self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIsNot(e, E_base._args[0])
         self.assertIs(e._base, m.x)
         self.assertEqual(len(e._args), 1)
         self.assertTrue(isinstance(e._args[0], EXPR._SumExpression))
         self.assertIs(e._args[0]._args[0], t)
-        self.assertIs(type(e._args[0]._args[1]), EXPR._GetItemExpression)
+        self.assertIs(type(e._args[0]._args[1]), EXPR.GetItemExpression)
         self.assertIs(type(e._args[0]._args[1]),
                       type(E_base._args[0]._args[0]._args[1]))
         self.assertIsNot(e._args[0]._args[1],
@@ -247,13 +247,13 @@ class ExpressionObjectTester(object):
         # len(_args) is 1), whereas in pyomo4 the constant is a proper
         # argument.  The -1 index works for both modes.
         e = E._args[-1]
-        self.assertIs(type(e), EXPR._GetItemExpression)
+        self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIsNot(e, E_base._args[0])
         self.assertIs(e._base, m.x)
         self.assertEqual(len(e._args), 1)
         self.assertTrue(isinstance(e._args[0], EXPR._SumExpression))
         self.assertIs(e._args[0]._args[0], t)
-        self.assertIs(type(e._args[0]._args[1]), EXPR._GetItemExpression)
+        self.assertIs(type(e._args[0]._args[1]), EXPR.GetItemExpression)
         self.assertIs(type(e._args[0]._args[1]),
                       type(E_base._args[-1]._args[0]._args[1]))
         self.assertIsNot(e._args[0]._args[1],
@@ -321,7 +321,7 @@ class TestTemplateSubstitution(unittest.TestCase):
         t = IndexTemplate(m.TIME)
         e = diffeq(m, t, 2)
 
-        self.assertTrue( isinstance(e, EXPR._ExpressionBase) )
+        self.assertTrue( isinstance(e, EXPR.ExpressionBase) )
 
         _map = {}
         E = substitute_template_expression(
@@ -384,7 +384,7 @@ class TestTemplateSubstitution(unittest.TestCase):
         e = diffeq(m,t, 2)
         t.set_value(5)
 
-        self.assertTrue( isinstance(e, EXPR._ExpressionBase) )
+        self.assertTrue( isinstance(e, EXPR.ExpressionBase) )
         self.assertEqual((e._args[0](), e._args[1]()), (10,126))
 
         E = substitute_template_expression(e, substitute_template_with_value)

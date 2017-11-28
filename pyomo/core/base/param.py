@@ -92,7 +92,7 @@ class _ParamData(ComponentData, NumericValue):
         """
         return False
 
-    def _potentially_variable(self):
+    def is_potentially_variable(self):
         """
         Returns False because this object can never reference variables.
         """

@@ -101,10 +101,10 @@ class Test_parameter(unittest.TestCase):
 
     def test_potentially_variable(self):
         p = parameter()
-        self.assertEqual(p._potentially_variable(), False)
+        self.assertEqual(p.is_potentially_variable(), False)
         self.assertEqual(potentially_variable(p), False)
         p.value = 1.0
-        self.assertEqual(p._potentially_variable(), False)
+        self.assertEqual(p.is_potentially_variable(), False)
         self.assertEqual(potentially_variable(p), False)
 
     def test_polynomial_degree(self):
