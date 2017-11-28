@@ -103,34 +103,25 @@ class IIdentityExpression(NumericValue):
             return 0
         return self._expr.polynomial_degree()
 
-    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
+    def to_string(self, verbose=None, labeler=None):
         """Convert this expression into a string."""
-        if ostream is None:
-            ostream = sys.stdout
-        _verbose = pyomo.core.expr.expr_common.TO_STRING_VERBOSE if \
-            verbose is None else verbose
-        ostream.write( EXPR.expression_to_string(self, verbose=verbose) )
+        return EXPR.expression_to_string(self, verbose=verbose, labeler=labeler)
 
-    def _precedence(self):
-        return 0
-
-    def _to_string(self, values):
+    def _to_string(self, values, verbose=None):
+        if verbose:
+            name = self.getname()
+            if name == None:
+                return "<%s>{%s}" % (self.__class__.__name__, values[0])
+            else:
+                if name[0] == '<':
+                    name = ""
+                return "%s{%s}" % (name, values[0])
         if self._expr is None:
             return "%s{Undefined}" % str(self)
         return values[0]
 
-    def _to_string_verbose(self, values):
-        """
-        This function is a hack to get tests passing.  I'm not sure what
-        the 'right' output is.
-        """
-        name = self.getname()
-        if name == None:
-            return "<%s>{%s}" % (self.__class__.__name__, values[0])
-        else:
-            if name[0] == '<':
-                name = ""
-            return "%s{%s}" % (name, values[0])
+    def _precedence(self):
+        return 0
 
     def clone(self):
         raise NotImplementedError     #pragma:nocover

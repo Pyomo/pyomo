@@ -599,17 +599,15 @@ functions.""" % (self.name,))
         """
         return generate_other_expression(_abs,self, None)
 
-    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
+    def to_string(self, verbose=None, labeler=None):
         """
         Write the object name to a buffer, applying the labeler if passed one.
         """
-        if ostream is None:
-            ostream = sys.stdout
         if (labeler is not None) and (not self.is_constant()):
             # Do not label constant objects, direct them to their own __str__
-            ostream.write(labeler(self))
+            return labeler(self)
         else:
-            ostream.write(self.__str__())
+            return self.__str__()
 
 
 class NumericConstant(NumericValue):

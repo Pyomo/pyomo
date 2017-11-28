@@ -29,6 +29,7 @@ __all__ = (
 'evaluate_expression',
 'identify_components',
 'identify_variables',
+'expression_to_string',
 'generate_sum_expression',
 'generate_mul_expression',
 'generate_other_expression',
@@ -75,7 +76,7 @@ import traceback
 from copy import deepcopy
 from collections import deque
 from itertools import islice
-from six import StringIO, next, string_types, itervalues
+from six import next, string_types, itervalues
 from six.moves import xrange, builtins
 from weakref import ref
 
@@ -104,14 +105,13 @@ from pyomo.core.expr import expr_common as common
 def chainedInequalityErrorMessage(msg=None):
     if msg is None:
         msg = "Relational expression used in an unexpected Boolean context."
-    buf = StringIO()
-    InequalityExpression.chainedInequality.to_string(buf)
+    val = InequalityExpression.chainedInequality.to_string()
     # We are about to raise an exception, so it's OK to reset chainedInequality
     info = InequalityExpression.call_info
     InequalityExpression.chainedInequality = None
     InequalityExpression.call_info = None
 
-    args = ( str(msg).strip(), buf.getvalue().strip(), info[0], info[1],
+    args = ( str(msg).strip(), val.strip(), info[0], info[1],
              ':\n    %s' % info[3] if info[3] is not None else '.' )
     return """%s
 
@@ -1030,7 +1030,7 @@ def _expression_is_fixed(node):
 
 
 # =====================================================
-#  _expression_to_string
+#  expression_to_string
 # =====================================================
 
 class _ToStringVisitor(ExpressionValueVisitor):
@@ -1042,15 +1042,27 @@ class _ToStringVisitor(ExpressionValueVisitor):
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
+        #print("HERE y")
+        #print(type(node))
+        #print("values")
+        #print(values)
+
         tmp = []
         for i,val in enumerate(values):
             arg = node._args[i]
-            if arg.__class__ in native_numeric_types:
+            #print("HERE z")
+            #print(type(arg))
+            #print(type(arg) in native_types)
+            #print(type(arg) in native_numeric_types)
+
+            if arg is None:
+                tmp.append('Undefined')
+            elif arg.__class__ in native_numeric_types:
                 tmp.append(val)
+            elif arg.__class__ in native_types:
+                tmp.append("'{0}'".format(val))
             elif arg.__class__ in pyomo5_variable_types:
                 tmp.append(val)
-            elif arg is None:
-                tmp.append('Undefined')
             elif not self.verbose and arg.is_expression() and node._precedence() < arg._precedence():
                 tmp.append("({0})".format(val))
             else:
@@ -1063,8 +1075,12 @@ class _ToStringVisitor(ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
+        #print("HERE x")
+        #print(type(node))
+        #print(type(node) in native_types)
+
         if node is None:
-            return True, 'Undefined'
+            return True, None
 
         if node.__class__ in native_types:
             return True, str(node)
@@ -1078,7 +1094,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
         return False, None
 
 
-def _expression_to_string(expr, verbose=None, labeler=None):
+def expression_to_string(expr, verbose=None, labeler=None):
     """
     Return the polynomial degree of the expression.
 
@@ -1265,12 +1281,7 @@ class ExpressionBase(NumericValue):
         #
         # Output the string
         #
-        return _expression_to_string(expr)
-        #buf = StringIO()
-        #buf.write(expression_to_string(expr))
-        #ans = buf.getvalue()
-        #buf.close()
-        #return ans
+        return expression_to_string(expr)
 
     def clone(self, substitute=None):
         """
@@ -1450,7 +1461,7 @@ class ExpressionBase(NumericValue):
         return None
 
     def to_string(self, verbose=False, labeler=None):
-        return _expression_to_string(self, verbose=verbose, labeler=labeler)
+        return expression_to_string(self, verbose=verbose, labeler=labeler)
 
     def _precedence(self):
         return ExpressionBase.PRECEDENCE
@@ -1529,22 +1540,7 @@ class ExternalFunctionExpression(ExpressionBase):
         return self._fcn.evaluate( result )     #pragma: no cover
 
     def _to_string(self, values, verbose=False):
-        if verbose:
-            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
-        tmp = [self._fcn.getname(), '(']
-        if len(values) > 0:
-            if type(self._args[0]) in string_types:
-                tmp.append("'{0}'".format(values[0]))
-            else:
-                tmp.append(values[0])
-        for i in range(1, len(values)):
-            tmp.append(', ')
-            if type(self._args[i]) in string_types:
-                tmp.append("'{0}'".format(values[i]))
-            else:
-                tmp.append(values[i])
-        tmp.append(')')
-        return "".join(tmp)
+        return "{0}({1})".format(self.getname(), ", ".join(values))
 
 
 class NPV_ExternalFunctionExpression(ExternalFunctionExpression):
@@ -1694,8 +1690,8 @@ class InequalityExpression(_LinearOperatorExpression):
         return True
 
     def _to_string(self, values, verbose=False):
-        if verbose:
-            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
+        #if verbose:
+        #    return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
         if len(values) == 2:
             return "{0}  {1}  {2}".format(values[0], '<' if self._strict[0] else '<=', values[1])
         return "{0}  {1}  {2}  {3}  {4}".format(values[0], '<' if self._strict[0] else '<=', values[1], '<' if self._strict[1] else '<=', values[2])
@@ -1734,8 +1730,8 @@ class EqualityExpression(_LinearOperatorExpression):
         return _l == _r
 
     def _to_string(self, values, verbose=False):
-        if verbose:
-            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
+        #if verbose:
+        #    return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
         return "{0}  ==  {1}".format(values[0], values[1])
         
     def is_constant(self):
@@ -1888,7 +1884,7 @@ class ViewSumExpression(_SumExpression):
         return result
 
     def getname(self, *args, **kwds):
-        return 'viewsum'
+        return 'sum'
 
     def is_constant(self):
         return False
@@ -2858,12 +2854,10 @@ def generate_relational_expression(etype, lhs, rhs):
             # Special case: implicit equality constraint posed as a <= b <= a
             if prevExpr._strict[0] or etype == _lt:
                 InequalityExpression.chainedInequality = None
-                buf = StringIO()
-                prevExpr.to_string(buf)
                 raise TypeError("Cannot create a compound inequality with "
                       "identical upper and lower\n\tbounds using strict "
                       "inequalities: constraint infeasible:\n\t%s and "
-                      "%s < %s" % ( buf.getvalue().strip(), lhs, rhs ))
+                      "%s < %s" % ( prevExpr.to_string(), lhs, rhs ))
             if match[0] == (0,0):
                 # This is a particularly weird case where someone
                 # evaluates the *same* inequality twice in a row.  This
@@ -2877,14 +2871,13 @@ def generate_relational_expression(etype, lhs, rhs):
 
     if etype == _eq:
         if lhs_is_relational or rhs_is_relational:
-            buf = StringIO()
             if lhs_is_relational:
-                lhs.to_string(buf)
+                val = lhs.to_string()
             else:
-                rhs.to_string(buf)
+                val = rhs.to_string()
             raise TypeError("Cannot create an EqualityExpression where "\
                   "one of the sub-expressions is a relational expression:\n"\
-                  "    " + buf.getvalue().strip())
+                  "    " + val)
         ans = EqualityExpression((lhs,rhs))
         return ans
     else:
@@ -2909,11 +2902,9 @@ def generate_relational_expression(etype, lhs, rhs):
                 lhs._cloned_from = cloned_from
                 return lhs
             else:
-                buf = StringIO()
-                lhs.to_string(buf)
                 raise TypeError("Cannot create an InequalityExpression "\
                       "where one of the sub-expressions is an equality "\
-                      "expression:\n    " + buf.getvalue().strip())
+                      "expression:\n    " + lhs.to_string())
         elif rhs_is_relational:
             if rhs.__class__ is InequalityExpression:
                 if len(rhs._args) > 2:
@@ -2924,11 +2915,9 @@ def generate_relational_expression(etype, lhs, rhs):
                 rhs._cloned_from = cloned_from
                 return rhs
             else:
-                buf = StringIO()
-                rhs.to_string(buf)
                 raise TypeError("Cannot create an InequalityExpression "\
                       "where one of the sub-expressions is an equality "\
-                      "expression:\n    " + buf.getvalue().strip())
+                      "expression:\n    " + rhs.to_string())
         else:
             ans = InequalityExpression((lhs, rhs), strict, cloned_from)
             return ans

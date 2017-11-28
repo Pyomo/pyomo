@@ -2397,10 +2397,10 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         model.a = Var()
 
         expr = 5 + model.a + model.a
-        self.assertEqual("viewsum(5, a, a)", str(expr))
+        self.assertEqual("sum(5, a, a)", str(expr))
 
         expr += 5
-        self.assertEqual("viewsum(5, a, a, 5)", str(expr))
+        self.assertEqual("sum(5, a, a, 5)", str(expr))
 
     def test_expr(self):
         #
@@ -2458,10 +2458,10 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         self.assertEqual( "5.0  <=  a  <  10.0", str(expr) )
 
         expr = 5 <= model.a + 5
-        self.assertEqual( "5.0  <=  viewsum(a, 5)", str(expr) )
+        self.assertEqual( "5.0  <=  sum(a, 5)", str(expr) )
 
         expr = expr < 10
-        self.assertEqual( "5.0  <=  viewsum(a, 5)  <  10.0", str(expr) )
+        self.assertEqual( "5.0  <=  sum(a, 5)  <  10.0", str(expr) )
 
     def test_equality(self):
         #
@@ -2486,10 +2486,10 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         self.assertEqual( "a  ==  10.0", str(expr) )
 
         expr = 5 == model.a + 5
-        self.assertEqual( "viewsum(a, 5)  ==  5.0", str(expr) )
+        self.assertEqual( "sum(a, 5)  ==  5.0", str(expr) )
 
         expr = model.a + 5 == 5
-        self.assertEqual( "viewsum(a, 5)  ==  5.0", str(expr) )
+        self.assertEqual( "sum(a, 5)  ==  5.0", str(expr) )
 
     def test_small_expression(self):
         #
@@ -2513,7 +2513,7 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         expr = + expr
         expr = abs(expr)
         self.assertEqual(
-            "abs(neg(pow(2, prod(2, recip(prod(2, viewsum(1, neg(pow(prod(prod(viewsum(a, 1, -1), a), recip(a)), b)), 1)))))))",
+            "abs(neg(pow(2, prod(2, recip(prod(2, sum(1, neg(pow(prod(prod(sum(a, 1, -1), a), recip(a)), b)), 1)))))))",
             str(expr) )
 
 

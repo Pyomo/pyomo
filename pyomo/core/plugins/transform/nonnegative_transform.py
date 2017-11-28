@@ -368,7 +368,7 @@ class NonNegativeTransformation(IsomorphicTransformation):
                 return expr
 
         # Iterate through the numerator and denominator of a product term
-        if isinstance(expr, _ProductExpression):
+        if isinstance(expr, ProductExpression):
             i = 0
             while i < len(expr._numerator):
                 expr._numerator[i] = NonNegativeTransformation._walk_expr(

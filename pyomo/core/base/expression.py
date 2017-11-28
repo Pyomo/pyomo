@@ -82,13 +82,12 @@ class _ExpressionData(NumericValue):
     def _precedence(self):
         return 0
 
-    def _to_string(self, values):
+    def _to_string(self, values, verbose=False):
+        if verbose:
+            return "%s{%s}" % (str(self), values[0])
         if self.expr is None:
             return "%s{None}" % str(self)
         return values[0]
-
-    def _to_string_verbose(self, values):
-        return "%s{%s}" % (str(self), values[0])
 
     def clone(self):
         """Return a clone of this expression (no-op)."""

@@ -633,14 +633,14 @@ class TestExpression(unittest.TestCase):
 
         output = \
 """\
-viewsum(prod(e{viewsum(x, 2)}, pow(x, 2)), E[1]{viewsum(pow(x, 2), 1)})
+sum(prod(e{sum(x, 2)}, pow(x, 2)), E[1]{sum(pow(x, 2), 1)})
 e : Size=1, Index=None
     Key  : Expression
-    None : viewsum(x, 2)
+    None : sum(x, 2)
 E : Size=2, Index=E_index
     Key : Expression
-      1 : viewsum(pow(x, 2), 1)
-      2 : viewsum(pow(x, 2), 1)
+      1 : sum(pow(x, 2), 1)
+      2 : sum(pow(x, 2), 1)
 """
         out = StringIO()
         out.write(str(expr)+"\n")
@@ -653,14 +653,14 @@ E : Size=2, Index=E_index
         model.E[1].set_value(2.0)
         output = \
 """\
-viewsum(prod(e{1.0}, pow(x, 2)), E[1]{2.0})
+sum(prod(e{1.0}, pow(x, 2)), E[1]{2.0})
 e : Size=1, Index=None
     Key  : Expression
     None :        1.0
 E : Size=2, Index=E_index
     Key : Expression
       1 : 2.0
-      2 : viewsum(pow(x, 2), 1)
+      2 : sum(pow(x, 2), 1)
 """
         out = StringIO()
         out.write(str(expr)+"\n")
@@ -674,14 +674,14 @@ E : Size=2, Index=E_index
         model.E[1].set_value(None)
         output = \
 """\
-viewsum(prod(e{Undefined}, pow(x, 2)), E[1]{Undefined})
+sum(prod(e{Undefined}, pow(x, 2)), E[1]{Undefined})
 e : Size=1, Index=None
     Key  : Expression
     None :  Undefined
 E : Size=2, Index=E_index
     Key : Expression
       1 : Undefined
-      2 : viewsum(pow(x, 2), 1)
+      2 : sum(pow(x, 2), 1)
 """
         out = StringIO()
         out.write(str(expr)+"\n")

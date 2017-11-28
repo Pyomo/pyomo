@@ -99,10 +99,8 @@ class IndexTemplate(NumericValue):
     def getname(self, fully_qualified=False, name_buffer=None):
         return "{"+self._set.getname(fully_qualified, name_buffer)+"}"
 
-    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
-        if ostream is None:
-            ostream = sys.stdout
-        ostream.write( self.name )
+    def to_string(self, verbose=None, labeler=None):
+        return self.name
 
     def set_value(self, value):
         # It might be nice to check if the value is valid for the base

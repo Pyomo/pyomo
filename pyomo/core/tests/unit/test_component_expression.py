@@ -242,28 +242,14 @@ class Test_noclone(unittest.TestCase):
         e = noclone(p**2)
         self.assertEqual(str(e.expr), "<parameter>**2")
         self.assertEqual(str(e), "{(<parameter>**2)}")
-        #e.to_string()
-        out = StringIO()
-        e.to_string(ostream=out)
-        self.assertEqual(out.getvalue(), "(<parameter>**2)")
-        #e.to_string(verbose=False)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=False)
-        self.assertEqual(out.getvalue(), "(<parameter>**2)")
-        #e.to_string(verbose=True)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=True)
-        self.assertEqual(out.getvalue(), "{pow(<parameter>, 2)}")
+        self.assertEqual(e.to_string(), "(<parameter>**2)")
+        self.assertEqual(e.to_string(verbose=False), "(<parameter>**2)")
+        self.assertEqual(e.to_string(verbose=True), "{pow(<parameter>, 2)}")
         b.e = e
         b.p = p
         self.assertNotEqual(p.name, None)
-        #e.to_string(verbose=True)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=True)
-        self.assertEqual(out.getvalue(),
-                         "{pow("+p.name+", 2)}")
-        self.assertEqual(out.getvalue(),
-                         "{pow(p, 2)}")
+        self.assertEqual(e.to_string(verbose=True), "{pow("+p.name+", 2)}")
+        self.assertEqual(e.to_string(verbose=True), "{pow(p, 2)}")
         del b.e
         del b.p
 
@@ -408,48 +394,24 @@ class _Test_expression_base(object):
 
         self.assertEqual(str(e.expr), "None")
         self.assertEqual(str(e), label)
-        #e.to_string()
-        out = StringIO()
-        e.to_string(ostream=out)
-        self.assertEqual(out.getvalue(), label+"{Undefined}")
-        #e.to_string(verbose=False)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=False)
-        self.assertEqual(out.getvalue(), label+"{Undefined}")
-        #e.to_string(verbose=True)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=True)
-        self.assertEqual(out.getvalue(), label+"{Undefined}")
+        self.assertEqual(e.to_string(), label+"{Undefined}")
+        self.assertEqual(e.to_string(verbose=False), label+"{Undefined}")
+        self.assertEqual(e.to_string(verbose=True), label+"{Undefined}")
         b.e = e
         self.assertNotEqual(e.name, None)
-        #e.to_string(verbose=True)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=True)
-        self.assertEqual(out.getvalue(), "e{Undefined}")
+        self.assertEqual(e.to_string(verbose=True), "e{Undefined}")
         del b.e
         self.assertEqual(e.name, None)
 
         e.expr = 1
         self.assertEqual(str(e.expr), "1")
         self.assertEqual(str(e), label)
-        #e.to_string()
-        out = StringIO()
-        e.to_string(ostream=out)
-        self.assertEqual(out.getvalue(), "1")
-        #e.to_string(verbose=False)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=False)
-        self.assertEqual(out.getvalue(), "1")
-        #e.to_string(verbose=True)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=True)
-        self.assertEqual(out.getvalue(), label+"{1}")
+        self.assertEqual(e.to_string(), "1")
+        self.assertEqual(e.to_string(verbose=False), "1")
+        self.assertEqual(e.to_string(verbose=True), label+"{1}")
         b.e = e
         self.assertNotEqual(e.name, None)
-        #e.to_string(verbose=True)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=True)
-        self.assertEqual(out.getvalue(), "e{1}")
+        self.assertEqual(e.to_string(verbose=True), "e{1}")
         del b.e
         self.assertEqual(e.name, None)
 
@@ -458,30 +420,15 @@ class _Test_expression_base(object):
         e.expr = p**2
         self.assertEqual(str(e.expr), "<parameter>**2")
         self.assertEqual(str(e), label)
-        #e.to_string()
-        out = StringIO()
-        e.to_string(ostream=out)
-        self.assertEqual(out.getvalue(), "(<parameter>**2)")
-        #e.to_string(verbose=False)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=False)
-        self.assertEqual(out.getvalue(), "(<parameter>**2)")
-        #e.to_string(verbose=True)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=True)
-        self.assertEqual(out.getvalue(),
-                         label+"{pow(<parameter>, 2)}")
+        self.assertEqual(e.to_string(), "(<parameter>**2)")
+        self.assertEqual(e.to_string(verbose=False), "(<parameter>**2)")
+        self.assertEqual(e.to_string(verbose=True), label+"{pow(<parameter>, 2)}")
         b.e = e
         b.p = p
         self.assertNotEqual(e.name, None)
         self.assertNotEqual(p.name, None)
-        #e.to_string(verbose=True)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=True)
-        self.assertEqual(out.getvalue(),
-                         e.name+"{pow("+p.name+", 2)}")
-        self.assertEqual(out.getvalue(),
-                         "e{pow(p, 2)}")
+        self.assertEqual(e.to_string(verbose=True), e.name+"{pow("+p.name+", 2)}")
+        self.assertEqual(e.to_string(verbose=True), "e{pow(p, 2)}")
         del b.e
         del b.p
 
