@@ -1,0 +1,23 @@
+OPTIONS {
+Summary: 0;
+}
+
+POSITIVE_VARIABLES ONE_VAR_CONST__;
+
+VARIABLES a;
+
+EQUATIONS c_e_FIX_ONE_VAR_CONST__, con1, con2, con3, con4_1_, con4_2_;
+
+c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;
+con1:  a  >= 0;
+con2:  a  <= 1;
+con3: 0 <=  a  <= 1;
+con4_1_:  a  == 1;
+con4_2_:  a  == 2;
+
+OBJ: minimize  a ;
+
+STARTING_POINT{
+ONE_VAR_CONST__: 1;
+}
+
