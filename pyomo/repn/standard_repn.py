@@ -220,8 +220,10 @@ class StandardRepn(object):
         #
         expr = self.constant
         for i,v in enumerate(self.linear_vars):
-            val = value(self.linear_coefs[i])
-            if isclose_const(val, 1.0):
+            val = value(self.linear_coefs[i], exception=False)
+            if val is None:
+                expr += self.linear_coefs[i]*self.linear_vars[i]
+            elif isclose_const(val, 1.0):
                 expr += self.linear_vars[i]
             elif isclose_const(val, -1.0):
                 expr -= self.linear_vars[i]
