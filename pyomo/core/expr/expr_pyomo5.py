@@ -925,8 +925,8 @@ def identify_variables(expr, include_fixed=True):
     Args:
         expr: The root node of an expression tree.
         include_fixed (bool): If :const:`True`, then
-        this generator will yield variables whose
-        value is fixed.  Defaults to :const:`True`.
+            this generator will yield variables whose
+            value is fixed.  Defaults to :const:`True`.
 
     Yields:
         Each variable that is found.
@@ -1376,13 +1376,13 @@ class _ExternalFunctionExpression(_ExpressionBase):
     def _to_string(self, values):
         tmp = [self._fcn.getname(), '(']
         if len(values) > 0:
-            if isinstance(self._args[0], basestring):
+            if type(self._args[0]) in string_types:
                 tmp.append("'{0}'".format(values[0]))
             else:
                 tmp.append(values[0])
         for i in range(1, len(values)):
             tmp.append(', ')
-            if isinstance(self._args[i], basestring):
+            if type(self._args[i]) in string_types:
                 tmp.append("'{0}'".format(values[i]))
             else:
                 tmp.append(values[i])
