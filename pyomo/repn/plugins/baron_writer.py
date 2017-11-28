@@ -14,10 +14,14 @@
 
 import logging
 import itertools
+from six import iteritems, StringIO, iterkeys
+from six.moves import xrange
 
 import pyomo.util.plugin
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
+from pyomo.core.expr.numvalue import is_fixed, value, as_numeric
+from pyomo.core.expr import current as EXPR
 from pyomo.core.base import (SortComponents,
                              SymbolMap,
                              AlphaNumericTextLabeler,
@@ -25,17 +29,12 @@ from pyomo.core.base import (SortComponents,
                              BooleanSet, Constraint,
                              IntegerSet, Objective,
                              Var, Param)
-from pyomo.core.base.numvalue import is_fixed, value, as_numeric
 from pyomo.core.base.set_types import *
 #CLH: EXPORT suffixes "constraint_types" and "branching_priorities"
 #     pass their respective information to the .bar file
 import pyomo.core.base.suffix
 import pyomo.core.kernel.component_suffix
 from pyomo.core.kernel.component_block import IBlockStorage
-
-
-from six import iteritems, StringIO, iterkeys
-from six.moves import xrange
 
 logger = logging.getLogger('pyomo.core')
 
@@ -355,6 +354,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
             #        the model each time we write a constraint expression.
             #
             ################################################
+            for var_data in EXPR.identify_variables(constraint_data.body, include_fixed=output_fixed_variable_bounds):
+                referenced_variable_ids.add(id(var_data))
             vnames = [(variable_string, bar_string)
                       for variable_string, bar_string in iteritems(vstring_to_bar_dict)
                       if variable_string in eqn_body]
@@ -469,6 +470,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 #        the model each time we write an expression.
                 #
                 ################################################
+                for var_data in EXPR.identify_variables(objective_data.expr, include_fixed=output_fixed_variable_bounds):
+                    referenced_variable_ids.add(id(var_data))
                 vnames = [(variable_string, bar_string)
                           for variable_string, bar_string in iteritems(vstring_to_bar_dict)
                           if variable_string in obj_string]
@@ -796,6 +799,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
         # Clean up the symbol map to only contain variables referenced
         # in the active constraints
+        if not symbol_map_variable_ids.issuperset(referenced_variable_ids):
+            raise KeyError("Encountered variables in expressions that are not contained in the model.")
         vars_to_delete = symbol_map_variable_ids - referenced_variable_ids
         sm_byObject = symbol_map.byObject
         for varid in vars_to_delete:
