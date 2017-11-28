@@ -146,7 +146,7 @@ def initialize_expression_data():
     global pyomo5_variable_types
     from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
     from pyomo.core.kernel.component_variable import IVariable, variable
-    pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
+    pyomo5_variable_types.update([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
     _LinearExpression.vtypes = pyomo5_variable_types
     #
     global _ParamData
@@ -159,7 +159,7 @@ def initialize_expression_data():
     from pyomo.core.base.expression import _GeneralExpressionData, SimpleExpression
     from pyomo.core.base.objective import _GeneralObjectiveData, SimpleObjective
     pyomo5_expression_types.update([_GeneralExpressionData, SimpleExpression, _GeneralObjectiveData, SimpleObjective])
-    pyomo5_named_expression_types = set([_GeneralExpressionData, SimpleExpression, _GeneralObjectiveData, SimpleObjective])
+    pyomo5_named_expression_types.update([_GeneralExpressionData, SimpleExpression, _GeneralObjectiveData, SimpleObjective])
     #
     # [functionality] chainedInequality allows us to generate symbolic
     # expressions of the type "a < b < c".  This provides a buffer to hold
@@ -561,9 +561,9 @@ class ExpressionReplacementVisitor(object):
                 cloned node.
 
         Returns:
-            The cloned node.
+            The cloned node.  Default is to simply return the node.
         """
-        return node._clone( tuple(values), self.memo )
+        return node
 
     def visiting_potential_leaf(self, node):
         """ 
@@ -601,6 +601,12 @@ class ExpressionReplacementVisitor(object):
 	        returning :attr:`ans`.
         """
         return ans
+
+    def _clone(self, node, values):
+        """
+        Call the expression _clone() method.
+        """
+        return node._clone( tuple(values), self.memo )
 
     def dfs_postorder_stack(self, node):
         """
@@ -678,7 +684,7 @@ class ExpressionReplacementVisitor(object):
             #
             ans = self.visit(_obj, _result[1:])
             if _result[0] and id(ans) == id(_obj):
-                ans = ExpressionReplacementVisitor.visit(self, _obj, _result[1:])
+                ans = self._clone(_obj, _result[1:])
             if _stack:
                 if _result[0]:
                     _stack[-1][-1][0] = True
