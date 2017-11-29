@@ -272,14 +272,12 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 if con_body.polynomial_degree() not in linear_degree:
                     linear = False
 
-            body = StringIO()
-            con_body.to_string(body, labeler=var_label)
             cName = symbolMap.getSymbol(con, con_labeler)
             if con.equality:
                 constraint_names.append('%s' % cName)
                 ConstraintIO.write('%s.. %s =e= %s ;\n' % (
                     constraint_names[-1],
-                    body.getvalue(),
+                    con_body.to_string(labeler=var_label),
                     _get_bound(con.upper)
                 ))
             else:
@@ -288,13 +286,13 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     ConstraintIO.write('%s.. %s =l= %s ;\n' % (
                         constraint_names[-1],
                         _get_bound(con.lower),
-                        body.getvalue()
+                        con_body.to_string(labeler=var_label)
                     ))
                 if con.has_ub():
                     constraint_names.append('%s_hi' % cName)
                     ConstraintIO.write('%s.. %s =l= %s ;\n' % (
                         constraint_names[-1],
-                        body.getvalue(),
+                        con_body.to_string(labeler=var_label),
                         _get_bound(con.upper)
                     ))
 
@@ -310,12 +308,10 @@ class ProblemWriter_gams(AbstractProblemWriter):
             if obj.expr.polynomial_degree() not in linear_degree:
                 linear = False
         oName = symbolMap.getSymbol(obj, con_labeler)
-        body = StringIO()
-        obj.expr.to_string(body, labeler=var_label)
         constraint_names.append(oName)
         ConstraintIO.write('%s.. GAMS_OBJECTIVE =e= %s ;\n' % (
             oName,
-            body.getvalue()
+            obj.expr.to_string(labeler=var_label)
         ))
 
         # Categorize the variables that we found

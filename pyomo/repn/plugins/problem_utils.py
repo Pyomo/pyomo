@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+# TODO: Remove this file.  This doesn't seem be used anywhere.
 
 import pyomo.opt
 from pyomo.core.base import expr, Var, Constraint, Objective
