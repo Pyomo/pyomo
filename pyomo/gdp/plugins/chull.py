@@ -352,8 +352,9 @@ class ConvexHull_Transformation(Transformation):
         #
         # Expression
         #
-        # WEH - This probably needs to be updated to support all pyomo5 expression terms.
+        # WEH - This needs to be updated to support all pyomo5 expression terms.
         #       I edited this to work for pyomo5, but it's not backwards compatible.
+        # WEH - We should treat variable substitution as an immutable operation.
         #
         if isinstance(expr,EXPR.ExpressionBase):
             if isinstance(expr,EXPR.ProductExpression):
@@ -364,7 +365,7 @@ class ConvexHull_Transformation(Transformation):
                      isinstance(expr,EXPR.AbsExpression) or \
                      isinstance(expr,EXPR.NegationExpression) or \
                      isinstance(expr,EXPR.PowExpression):
-                expr._args = [self._var_subst(NL, e, y, varMap) for e in expr._args]
+                expr._args_ = [self._var_subst(NL, e, y, varMap) for e in expr.args]
             else:
                 raise ValueError("Unsupported expression type: "+str(type(expr)))
         #
@@ -442,8 +443,8 @@ class ConvexHull_Transformation(Transformation):
                      isinstance(expr,EXPR.AbsExpression) or \
                      isinstance(expr,EXPR.IntrinsicFunctionExpression) or \
                      isinstance(expr,EXPR.PowExpression):
-                expr._args = [ self._eval_at_origin(NL, e, y, varMap)
-                              for e in expr._args ]
+                expr._args_ = [ self._eval_at_origin(NL, e, y, varMap)
+                              for e in expr.args ]
             else:
                 raise ValueError("Unsupported expression type: "+str(expr))
         #
