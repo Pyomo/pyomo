@@ -59,7 +59,7 @@ class ImplicitSP(object):
             else:
                 # This is fragile: we assume that all other expression
                 # objects "play nice" and just use the _args member.
-                for subexp in exp._args:
+                for subexp in exp.args:
                     ans.update(ImplicitSP.\
                                _collect_mutable_parameters(subexp))
             return ans
@@ -84,7 +84,7 @@ class ImplicitSP(object):
             else:
                 # This is fragile: we assume that all other expression
                 # objects "play nice" and just use the _args member.
-                for subexp in exp._args:
+                for subexp in exp.args:
                     ans.update(ImplicitSP.\
                                _collect_unfixed_variables(subexp))
             return ans
