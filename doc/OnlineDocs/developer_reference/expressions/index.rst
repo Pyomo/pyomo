@@ -16,8 +16,16 @@ Pyomo Expressions
 .. warning::
 
     The examples in this draft documentation are not well-tested.
-    The examples look fine to the author, but I have not confirmed that these 
-    examples are tested with Pymo.
+    The examples look fine to the author, but I have not confirmed
+    that these examples are tested with Pymo.
+
+.. warning::
+
+    This documentation does not explicitly reference objects in
+    pyomo.core.kernel.  While the Pyomo5 expression system works
+    with pyomo.core.kernel objects, the documentation of these
+    documents wasn't sufficient to appropriately descibe the use
+    of kernel objects in expressions.
 
 Pyomo supports the declaration of abstract expressions that represent
 objectives, constraints and other optimization modeling components.
