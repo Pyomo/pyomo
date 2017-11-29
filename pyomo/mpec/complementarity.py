@@ -40,25 +40,23 @@ class _ComplementarityData(_BlockData):
     def _canonical_expression(self, e):
         e_ = None
         if e.__class__ is EXPR.EqualityExpression:
-            if e._args[1].is_fixed():
-                _e = (e._args[1], e._args[0])
+            if e.arg(1).is_fixed():
+                _e = (e.arg(1), e.arg(0))
             #
             # The first argument of an equality is never fixed
             #
-            #elif e._args[0].is_fixed():
-            #    _e = (e._args[0], e._args[1])
             else:
-                _e = ( ZeroConstant, e._args[0] - e._args[1])
+                _e = ( ZeroConstant, e.arg(0) - e.arg(1))
         elif e.__class__ is EXPR.InequalityExpression:
-            if len(e._args) == 3:
-                _e = (e._args[0], e._args[1], e._args[2])
+            if e.nargs() == 3:
+                _e = (e.arg(0), e.arg(1), e.arg(2))
             else:
-                if e._args[1].is_fixed():
-                    _e = (None, e._args[0], e._args[1])
-                elif e._args[0].is_fixed():
-                    _e = (e._args[0], e._args[1], None)
+                if e.arg(1).is_fixed():
+                    _e = (None, e.arg(0), e.arg(1))
+                elif e.arg(0).is_fixed():
+                    _e = (e.arg(0), e.arg(1), None)
                 else:
-                    _e = ( ZeroConstant, e._args[1] - e._args[0], None )
+                    _e = ( ZeroConstant, e.arg(1) - e.arg(0), None )
         else:
             _e = (None, e, None)
         return _e
