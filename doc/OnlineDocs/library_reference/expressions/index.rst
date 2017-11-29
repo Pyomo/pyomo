@@ -8,5 +8,6 @@ Expression Reference
    building.rst
    managing.rst 
    context_managers.rst
+   classes.rst
    visitors.rst
 
