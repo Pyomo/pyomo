@@ -468,7 +468,7 @@ class ExpressionValueVisitor(object):
         if flag:
             return value
         #_stack = [ (node, self.children(node), 0, len(self.children(node)), [])]
-        _stack = [ (node, node._args, 0, node.nargs(), [])]
+        _stack = [ (node, node._args_, 0, node.nargs(), [])]
         #
         # Iterate until the stack is empty
         #
@@ -500,7 +500,7 @@ class ExpressionValueVisitor(object):
                     _stack.append( (_obj, _argList, _idx, _len, _result) )
                     _obj                    = _sub
                     #_argList                = self.children(_sub)
-                    _argList                = _sub._args
+                    _argList                = _sub._args_
                     _idx                    = 0
                     _len                    = _sub.nargs()
                     _result                 = []
@@ -635,7 +635,7 @@ class ExpressionReplacementVisitor(object):
         if flag:
             return value
         #_stack = [ (node, self.children(node), 0, len(self.children(node)), [])]
-        _stack = [ (node, node._args, 0, node.nargs(), [False])]
+        _stack = [ (node, node._args_, 0, node.nargs(), [False])]
         #
         # Iterate until the stack is empty
         #
@@ -669,7 +669,7 @@ class ExpressionReplacementVisitor(object):
                     _stack.append( (_obj, _argList, _idx, _len, _result) )
                     _obj                    = _sub
                     #_argList                = self.children(_sub)
-                    _argList                = _sub._args
+                    _argList                = _sub._args_
                     _idx                    = 0
                     _len                    = _sub.nargs()
                     _result                 = [False]
@@ -1049,11 +1049,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
 
         tmp = []
         for i,val in enumerate(values):
-            arg = node._args[i]
-            #print("HERE z")
-            #print(type(arg))
-            #print(type(arg) in native_types)
-            #print(type(arg) in native_numeric_types)
+            arg = node._args_[i]
 
             if arg is None:
                 tmp.append('Undefined')
@@ -1128,11 +1124,11 @@ class ExpressionBase(NumericValue):
         args (list or tuple): Children of this node.
     """
 
-    __slots__ =  ('_args',)
+    __slots__ =  ('_args_',)
     PRECEDENCE = 0
 
     def __init__(self, args):
-        self._args = args
+        self._args_ = args
 
     def nargs(self):
         """
@@ -1143,8 +1139,8 @@ class ExpressionBase(NumericValue):
     
         Note:
             This function does not simply compute the length of
-            :attr:`_args` because some expression classes use
-            a subset of the :attr:`_args` array.  Thus, it
+            :attr:`_args_` because some expression classes use
+            a subset of the :attr:`_args_` array.  Thus, it
             is imperative that developers use this method!
 
         Returns:
@@ -1162,9 +1158,11 @@ class ExpressionBase(NumericValue):
         Returns:
             The i-th child node.
         """
-        if i < 0 or i >= self.nargs():
+        if i >= self.nargs():
             raise KeyError("Invalid index for expression argument: %d" % i)
-        return self._args[i]
+        if i < 0:
+            return self._args_[self.nargs()+i]    
+        return self._args_[i]
 
     @property
     def args(self):
@@ -1174,7 +1172,7 @@ class ExpressionBase(NumericValue):
         Yields:
             Each child node in order.
         """
-        return islice(self._args, self.nargs())
+        return islice(self._args_, self.nargs())
 
     def __getstate__(self):
         """
@@ -1241,25 +1239,25 @@ class ExpressionBase(NumericValue):
             elif self.__class__ is InequalityExpression:
                 expr = self
                 # TODO: chained inequalities
-                #if self._args[0].__class__ is InequalityExpression:
-                #    repn0a = generate_standard_repn(self._args[0]._args[0], compress=False, quadratic=False, compute_values=False)
-                #    repn0b = generate_standard_repn(self._args[0]._args[1], compress=False, quadratic=False, compute_values=False)
-                #    lhs = InequalityExpression( (repn0a.to_expression(), repn0b.to_expression()), self._args[0]._strict, self._args[0]._cloned_from)
-                #    repn1 = generate_standard_repn(self._args[1], compress=False, quadratic=False, compute_values=False)
+                #if self._args_[0].__class__ is InequalityExpression:
+                #    repn0a = generate_standard_repn(self._args_[0]._args_[0], compress=False, quadratic=False, compute_values=False)
+                #    repn0b = generate_standard_repn(self._args_[0]._args_[1], compress=False, quadratic=False, compute_values=False)
+                #    lhs = InequalityExpression( (repn0a.to_expression(), repn0b.to_expression()), self._args_[0]._strict, self._args_[0]._cloned_from)
+                #    repn1 = generate_standard_repn(self._args_[1], compress=False, quadratic=False, compute_values=False)
                 #    expr = InequalityExpression( (lhs, repn1.to_expression()), self._strict, self._cloned_from)
-                #elif self._args[0].__class__ is InequalityExpression:
-                #    repn0 = generate_standard_repn(self._args[0], compress=False, quadratic=False, compute_values=False)
-                #    repn1a = generate_standard_repn(self._args[1]._args[0], compress=False, quadratic=False, compute_values=False)
-                #    repn1b = generate_standard_repn(self._args[1]._args[1], compress=False, quadratic=False, compute_values=False)
-                #    rhs = InequalityExpression( (repn1a.to_expression(), repn1b.to_expression()), self._args[1]._strict, self._args[1]._cloned_from)
+                #elif self._args_[0].__class__ is InequalityExpression:
+                #    repn0 = generate_standard_repn(self._args_[0], compress=False, quadratic=False, compute_values=False)
+                #    repn1a = generate_standard_repn(self._args_[1]._args_[0], compress=False, quadratic=False, compute_values=False)
+                #    repn1b = generate_standard_repn(self._args_[1]._args_[1], compress=False, quadratic=False, compute_values=False)
+                #    rhs = InequalityExpression( (repn1a.to_expression(), repn1b.to_expression()), self._args_[1]._strict, self._args_[1]._cloned_from)
                 #    expr = InequalityExpression( (repn0.to_expression(), rhs), self._strict, self._cloned_from)
                 #else:
-                #    repn0 = generate_standard_repn(self._args[0], compress=False, quadratic=False, compute_values=False)
-                #    repn1 = generate_standard_repn(self._args[1], compress=False, quadratic=False, compute_values=False)
+                #    repn0 = generate_standard_repn(self._args_[0], compress=False, quadratic=False, compute_values=False)
+                #    repn1 = generate_standard_repn(self._args_[1], compress=False, quadratic=False, compute_values=False)
                 #    expr = InequalityExpression( (repn0.to_expression(), repn1.to_expression()), self._strict, self._cloned_from)
             elif self.__class__ is EqualityExpression:
-                repn0 = generate_standard_repn(self._args[0], quadratic=False, compute_values=False)
-                repn1 = generate_standard_repn(self._args[1], quadratic=False, compute_values=False)
+                repn0 = generate_standard_repn(self._args_[0], quadratic=False, compute_values=False)
+                repn1 = generate_standard_repn(self._args_[1], quadratic=False, compute_values=False)
                 expr = EqualityExpression( (repn0.to_expression(), repn1.to_expression()) )
             else:
                 repn = generate_standard_repn(self, quadratic=False, compute_values=False)
@@ -1589,11 +1587,11 @@ class ExternalFunctionExpression(ExpressionBase):
     __slots__ = ('_fcn',)
 
     def __init__(self, args, fcn=None):
-        self._args = args
+        self._args_ = args
         self._fcn = fcn
 
     def nargs(self):
-        return len(self._args)
+        return len(self._args_)
 
     def construct_node(self, args, memo):
         return self.__class__(args, self._fcn)
@@ -1652,7 +1650,7 @@ class PowExpression(ExpressionBase):
                 # NOTE: use value before int() so that we don't
                 #       run into the disabled __int__ method on
                 #       NumericValue
-                exp = value(self._args[1])
+                exp = value(self._args_[1])
                 if exp == int(exp):
                     if l is not None and exp > 0:
                         return l * exp
@@ -1666,7 +1664,7 @@ class PowExpression(ExpressionBase):
         assert(len(args) == 2)
         if not args[1]:
             return False
-        return args[0] or isclose(value(self._args[1]), 0)
+        return args[0] or isclose(value(self._args_[1]), 0)
 
     def _precedence(self):
         return PowExpression.PRECEDENCE
@@ -1820,7 +1818,7 @@ class InequalityExpression(_LinearOperatorExpression):
         self._cloned_from = cloned_from
 
     def nargs(self):
-        return len(self._args)
+        return len(self._args_)
 
     def construct_node(self, args, memo):
         return self.__class__(args, self._strict, self._cloned_from)
@@ -1834,7 +1832,7 @@ class InequalityExpression(_LinearOperatorExpression):
     def __nonzero__(self):
         if InequalityExpression.chainedInequality is not None:     #pragma: no cover
             raise TypeError(chainedInequalityErrorMessage())
-        if not self.is_constant() and len(self._args) == 2:
+        if not self.is_constant() and len(self._args_) == 2:
             InequalityExpression.call_info = traceback.extract_stack(limit=2)[-2]
             InequalityExpression.chainedInequality = self
             #return bool(self())                - This is needed to apply simple evaluation of inequalities
@@ -1869,10 +1867,10 @@ class InequalityExpression(_LinearOperatorExpression):
         return "{0}  {1}  {2}  {3}  {4}".format(values[0], '<' if self._strict[0] else '<=', values[1], '<' if self._strict[1] else '<=', values[2])
         
     def is_constant(self):
-        return self._args[0].is_constant() and self._args[1].is_constant()
+        return self._args_[0].is_constant() and self._args_[1].is_constant()
 
     def is_potentially_variable(self):
-        return self._args[0].is_potentially_variable() or self._args[1].is_potentially_variable()
+        return self._args_[0].is_potentially_variable() or self._args_[1].is_potentially_variable()
 
 
 class EqualityExpression(_LinearOperatorExpression):
@@ -1886,7 +1884,7 @@ class EqualityExpression(_LinearOperatorExpression):
     PRECEDENCE = 9
 
     def nargs(self):
-        return len(self._args)
+        return len(self._args_)
 
     def __nonzero__(self):
         if InequalityExpression.chainedInequality is not None:         #pragma: no cover
@@ -1909,10 +1907,10 @@ class EqualityExpression(_LinearOperatorExpression):
         return "{0}  ==  {1}".format(values[0], values[1])
         
     def is_constant(self):
-        return self._args[0].is_constant() and self._args[1].is_constant()
+        return self._args_[0].is_constant() and self._args_[1].is_constant()
 
     def is_potentially_variable(self):
-        return self._args[0].is_potentially_variable() or self._args[1].is_potentially_variable()
+        return self._args_[0].is_potentially_variable() or self._args_[1].is_potentially_variable()
 
 
 class _SumExpression(_LinearOperatorExpression):
@@ -1951,22 +1949,22 @@ class ViewSumExpression(_SumExpression):
     PRECEDENCE = 6
 
     def __init__(self, args):
-        self._args = args
+        self._args_ = args
         self._shared_args = False
-        self._nargs = len(self._args)
+        self._nargs = len(self._args_)
 
     def add(self, new_arg):
         if new_arg.__class__ in native_numeric_types and isclose(new_arg,0):
             return self
         # Clone 'self', because ViewSumExpression are immutable
         self._shared_args = True
-        self = self.__class__(self._args)
+        self = self.__class__(self._args_)
         #
         if new_arg.__class__ is ViewSumExpression or new_arg.__class__ is _MutableViewSumExpression:
-            self._args.extend( islice(new_arg._args, new_arg._nargs) )
+            self._args_.extend( islice(new_arg._args_, new_arg._nargs) )
         elif not new_arg is None:
-            self._args.append(new_arg)
-        self._nargs = len(self._args)
+            self._args_.append(new_arg)
+        self._nargs = len(self._args_)
         return self
 
     def nargs(self):
@@ -2000,7 +1998,7 @@ class ViewSumExpression(_SumExpression):
         return False
 
     def is_potentially_variable(self):
-        for v in islice(self._args, self._nargs):
+        for v in islice(self._args_, self._nargs):
             if v.__class__ in pyomo5_variable_types:
                 return True
             if not v.__class__ in native_numeric_types and v.is_potentially_variable():
@@ -2035,7 +2033,7 @@ class _MutableViewSumExpression(ViewSumExpression):
 
     The :func:`add` method is slightly different in that it 
     does not create a new sum expression, but modifies the
-    :attr:`_args` data in place.
+    :attr:`_args_` data in place.
     """
 
     __slots__ = ()
@@ -2048,10 +2046,10 @@ class _MutableViewSumExpression(ViewSumExpression):
         #self = self.__class__(list(self.args))
         #
         if new_arg.__class__ is ViewSumExpression or new_arg.__class__ is _MutableViewSumExpression:
-            self._args.extend( islice(new_arg._args, new_arg._nargs) )
+            self._args_.extend( islice(new_arg._args_, new_arg._nargs) )
         elif not new_arg is None:
-            self._args.append(new_arg)
-        self._nargs = len(self._args)
+            self._args_.append(new_arg)
+        self._nargs = len(self._args_)
         return self
 
 
@@ -2067,11 +2065,11 @@ class GetItemExpression(ExpressionBase):
 
     def __init__(self, args, base=None):
         """Construct an expression with an operation and a set of arguments"""
-        self._args = args
+        self._args_ = args
         self._base = base
 
     def nargs(self):
-        return len(self._args)
+        return len(self._args_)
 
     def construct_node(self, args, memo):
         return self.__class__(args, self._base)
@@ -2086,14 +2084,14 @@ class GetItemExpression(ExpressionBase):
         return self._base.getname(*args, **kwds)
 
     def is_potentially_variable(self):
-        if any(arg.is_potentially_variable() for arg in self._args if not arg.__class__ in native_types):
+        if any(arg.is_potentially_variable() for arg in self._args_ if not arg.__class__ in native_types):
             for x in itervalues(self._base):
                 if not x.__class__ in native_types and x.is_potentially_variable():
                     return True
         return False
         
     def is_fixed(self):
-        if any(self._args):
+        if any(self._args_):
             for x in itervalues(self._base):
                 if not x.__class__ in native_types and not x.is_fixed():
                     return False
@@ -2122,7 +2120,7 @@ class GetItemExpression(ExpressionBase):
         return "%s%s" % (self.getname(), values[0])
 
     def resolve_template(self):
-        return self._base.__getitem__(tuple(value(i) for i in self._args))
+        return self._base.__getitem__(tuple(value(i) for i in self._args_))
 
 
 class Expr_if(ExpressionBase):
@@ -2145,7 +2143,7 @@ class Expr_if(ExpressionBase):
     def __init__(self, IF_=None, THEN_=None, ELSE_=None):
         if type(IF_) is tuple and THEN_==None and ELSE_==None:
             IF_, THEN_, ELSE_ = IF_
-        self._args = (IF_, THEN_, ELSE_)
+        self._args_ = (IF_, THEN_, ELSE_)
         self._if = IF_
         self._then = THEN_
         self._else = ELSE_
@@ -2219,7 +2217,7 @@ class UnaryFunctionExpression(ExpressionBase):
     def __init__(self, args, name=None, fcn=None):
         if not type(args) is tuple:
             args = (args,)
-        self._args = args
+        self._args_ = args
         self._name = name
         self._fcn = fcn
 
@@ -2305,7 +2303,7 @@ class LinearExpression(ExpressionBase):
         self.constant = 0
         self.linear_coefs = []
         self.linear_vars = []
-        self._args = tuple()
+        self._args_ = tuple()
 
     def nargs(self):
         return 0
@@ -2370,17 +2368,17 @@ class LinearExpression(ExpressionBase):
         elif not expr.is_potentially_variable():
             return expr,None,None
         elif expr.__class__ is ProductExpression:
-            if expr._args[0].__class__ in native_numeric_types or not expr._args[0].is_potentially_variable():
-                C,c,v = expr._args[0],None,None
+            if expr._args_[0].__class__ in native_numeric_types or not expr._args_[0].is_potentially_variable():
+                C,c,v = expr._args_[0],None,None
             else:
-                C,c,v = _MutableLinearExpression._decompose_term(expr._args[0])
-            if expr._args[1].__class__ in _MutableLinearExpression.vtypes:
-                v_ = expr._args[1]
+                C,c,v = _MutableLinearExpression._decompose_term(expr._args_[0])
+            if expr._args_[1].__class__ in _MutableLinearExpression.vtypes:
+                v_ = expr._args_[1]
                 if not v is None:
                     raise ValueError("Expected a single linear term (1)")
                 return 0,C,v_
             else:
-                C_,c_,v_ = _MutableLinearExpression._decompose_term(expr._args[1])
+                C_,c_,v_ = _MutableLinearExpression._decompose_term(expr._args_[1])
             if not v_ is None:
                 if not v is None:
                     raise ValueError("Expected a single linear term (2)")
@@ -2391,8 +2389,8 @@ class LinearExpression(ExpressionBase):
         # ViewSumExpression
         #
         #elif expr.__class__ is _SumExpression:
-        #    C,c,v = _MutableLinearExpression._decompose_term(expr._args[0])
-        #    C_,c_,v_ = _MutableLinearExpression._decompose_term(expr._args[1])
+        #    C,c,v = _MutableLinearExpression._decompose_term(expr._args_[0])
+        #    C_,c_,v_ = _MutableLinearExpression._decompose_term(expr._args_[1])
         #    if not v_ is None:
         #        if not v is None:
         #            if id(v) == id(v_):
@@ -2418,7 +2416,7 @@ class LinearExpression(ExpressionBase):
         #            v=arg[1]
         #    return C,c,v
         elif expr.__class__ is NegationExpression:
-            C,c,v = _MutableLinearExpression._decompose_term(expr._args[0])
+            C,c,v = _MutableLinearExpression._decompose_term(expr._args_[0])
             return -C,-c,v
         elif expr.__class__ is ReciprocalExpression:
             if expr.is_potentially_variable():
@@ -2436,7 +2434,7 @@ class LinearExpression(ExpressionBase):
             C = 0
             c = None
             v = None
-            for e in expr._args:
+            for e in expr._args_:
                 C_,c_,v_ = _MutableLinearExpression._decompose_term(e)
                 C += C_
                 if not v_ is None:
@@ -2474,7 +2472,7 @@ class LinearExpression(ExpressionBase):
                     self.linear_coefs.append(omult*c)
                     self.linear_vars.append(v)
             elif _other.__class__ is ViewSumExpression or _other.__class__ is _MutableViewSumExpression:
-                for e in _other._args:
+                for e in _other._args_:
                     C,c,v = _MutableLinearExpression._decompose_term(e)
                     self.constant = self.constant + omult * C
                     if not v is None:
@@ -2590,8 +2588,8 @@ def _decompose_terms(expr, multiplier=1):
     elif expr.__class__ in pyomo5_variable_types:
         yield (multiplier,expr)
     elif expr.__class__ is ProductExpression:
-        if expr._args[0].__class__ in native_numeric_types or not expr._args[0].is_potentially_variable():
-            for term in _decompose_terms(expr._args[1], multiplier*expr._args[0]):
+        if expr._args_[0].__class__ in native_numeric_types or not expr._args_[0].is_potentially_variable():
+            for term in _decompose_terms(expr._args_[1], multiplier*expr._args_[0]):
                 yield term
         else:
             raise ValueError("Quadratic terms exist in a product expression.")
@@ -2605,7 +2603,7 @@ def _decompose_terms(expr, multiplier=1):
             for term in _decompose_terms(arg, multiplier):
                 yield term
     elif expr.__class__ is NegationExpression:
-        for term in  _decompose_terms(expr._args[0], -multiplier):
+        for term in  _decompose_terms(expr._args_[0], -multiplier):
             yield term
     elif expr.__class__ is LinearExpression or expr.__class__ is _MutableLinearExpression:
         if expr.constant.__class__ in native_numeric_types and not isclose(expr.constant,0):
@@ -2683,11 +2681,11 @@ def _generate_sum_expression(etype, _self, _other):
             return - _self
         elif _self.is_potentially_variable():
             if _self.__class__ is NegationExpression:
-                return _self._args[0]
+                return _self._args_[0]
             return NegationExpression((_self,))
         else:
             if _self.__class__ is NPV_NegationExpression:
-                return _self._args[0]
+                return _self._args_[0]
             return NPV_NegationExpression((_self,))
 
     if not (_other.__class__ in native_types or _other.is_expression()):
@@ -2952,7 +2950,7 @@ def _generate_relational_expression(etype, lhs, rhs):
     # not carry around the overhead of the NumericConstants). For
     # consistency, we will not do that yet, as many things downstream
     # would break; in particular within Constraint.add.  This way, all
-    # arguments in the relational Expression's _args will be guaranteed
+    # arguments in the relational Expression's _args_ will be guaranteed
     # to be NumericValues (just as they are for all other Expressions).
     #
     if not (lhs.__class__ in native_types or lhs.is_expression()):
@@ -3043,10 +3041,10 @@ def _generate_relational_expression(etype, lhs, rhs):
                           "where both sub-expressions are also relational "\
                           "expressions (we support no more than 3 terms "\
                           "in an inequality expression).")
-                if len(lhs._args) > 2:
+                if len(lhs._args_) > 2:
                     raise ValueError("Cannot create an InequalityExpression "\
                           "with more than 3 terms.")
-                lhs._args = lhs._args + (rhs,)
+                lhs._args_ = lhs._args_ + (rhs,)
                 lhs._strict = lhs._strict + strict
                 lhs._cloned_from = cloned_from
                 return lhs
@@ -3056,10 +3054,10 @@ def _generate_relational_expression(etype, lhs, rhs):
                       "expression:\n    " + lhs.to_string())
         elif rhs_is_relational:
             if rhs.__class__ is InequalityExpression:
-                if len(rhs._args) > 2:
+                if len(rhs._args_) > 2:
                     raise ValueError("Cannot create an InequalityExpression "\
                           "with more than 3 terms.")
-                rhs._args = (lhs,) + rhs._args
+                rhs._args_ = (lhs,) + rhs._args_
                 rhs._strict = strict + rhs._strict
                 rhs._cloned_from = cloned_from
                 return rhs

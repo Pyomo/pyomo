@@ -69,7 +69,7 @@ class _ExpressionData(NumericValue):
         return self.expr
 
     @property
-    def _args(self):
+    def _args_(self):
         return (self.expr,)
 
     @property

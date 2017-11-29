@@ -537,23 +537,18 @@ class constraint(_MutableBoundsConstraintMixin,
         #
         if relational_expr:
             if _expr_type is EXPR.EqualityExpression:
-                # Equality expression: only 2 arguments!
-                _args = expr._args
-                # Explicitly dereference the original arglist (otherwise
-                # this runs afoul of the getrefcount logic)
-                expr._args = []
                 # assigning to the rhs property
                 # will set the equality flag to True
-                if not _args[1].is_potentially_variable():
-                    self.rhs = _args[1]
-                    self.body = _args[0]
-                elif not _args[0].is_potentially_variable():
-                    self.rhs = _args[0]
-                    self.body = _args[1]
+                if not expr.arg(1).is_potentially_variable():
+                    self.rhs = expr.arg(1)
+                    self.body = expr.arg(0)
+                elif not expr.arg(0).is_potentially_variable():
+                    self.rhs = expr.arg(0)
+                    self.body = expr.arg(1)
                 else:
                     self.rhs = ZeroConstant
-                    self.body = _args[0]
-                    self.body -= _args[1]
+                    self.body = expr.arg(0)
+                    self.body -= expr.arg(1)
             else:
                 # Inequality expression: 2 or 3 arguments
                 if expr._strict:
@@ -579,13 +574,9 @@ class constraint(_MutableBoundsConstraintMixin,
                             "using '<=', '>=', or '=='."
                             % (self.name))
 
-                _args = expr._args
-                # Explicitly dereference the original arglist (otherwise
-                # this runs afoul of the getrefcount logic)
-                expr._args = []
-                if len(_args) == 3:
+                if expr.nargs() == 3:
 
-                    if _args[0].is_potentially_variable():
+                    if expr.arg(0).is_potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a double-sided "
                             "inequality expression (lower <= "
@@ -593,7 +584,7 @@ class constraint(_MutableBoundsConstraintMixin,
                             "bound was not data or an expression "
                             "restricted to storage of data."
                             % (self.name))
-                    if _args[2].is_potentially_variable():
+                    if expr.arg(2).is_potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a double-sided "\
                             "inequality expression (lower <= "
@@ -602,24 +593,24 @@ class constraint(_MutableBoundsConstraintMixin,
                             "restricted to storage of data."
                             % (self.name))
 
-                    self.lb = _args[0]
-                    self.body  = _args[1]
-                    self.ub = _args[2]
+                    self.lb = expr.arg(0)
+                    self.body  = expr.arg(1)
+                    self.ub = expr.arg(2)
 
                 else:
 
-                    if not _args[1].is_potentially_variable():
+                    if not expr.arg(1).is_potentially_variable():
                         self.lb = None
-                        self.body  = _args[0]
-                        self.ub = _args[1]
-                    elif not _args[0].is_potentially_variable():
-                        self.lb = _args[0]
-                        self.body  = _args[1]
+                        self.body  = expr.arg(0)
+                        self.ub = expr.arg(1)
+                    elif not expr.arg(0).is_potentially_variable():
+                        self.lb = expr.arg(0)
+                        self.body  = expr.arg(1)
                         self.ub = None
                     else:
                         self.lb = None
-                        self.body  = _args[0]
-                        self.body -= _args[1]
+                        self.body  = expr.arg(0)
+                        self.body -= expr.arg(1)
                         self.ub = ZeroConstant
 
         #

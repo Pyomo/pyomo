@@ -109,10 +109,10 @@ def Sum(args, start=0, linear=None):
                 e += start
                 for arg in args:
                     e += arg
-            if len(e._args) == 0:
+            if e.nargs() == 0:
                 return 0
-            elif len(e._args) == 1:
-                return e._args[0]
+            elif e.nargs() == 1:
+                return e.arg(0)
             return e
     #
     # Otherwise, use the context that is provided and return it.

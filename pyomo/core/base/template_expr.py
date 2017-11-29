@@ -148,11 +148,12 @@ def substitute_template_expression(expr, substituter, *args):
 class _GetItemIndexer(object):
     # Note that this class makes the assumption that only one template
     # ever appears in an expression for a single index
+
     def __init__(self, expr):
         self._base = expr._base
         self._args = []
         _hash = [ id(self._base) ]
-        for x in expr._args:
+        for x in expr.args:
             try:
                 logging.disable(logging.CRITICAL)
                 val = value(x)
@@ -171,6 +172,12 @@ class _GetItemIndexer(object):
                 logging.disable(logging.NOTSET)
 
         self._hash = tuple(_hash)
+
+    def nargs(self):
+        return len(self._args)
+
+    def arg(self, i):
+        return self._args[i]
 
     def __hash__(self):
         return hash(self._hash)

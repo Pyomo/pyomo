@@ -504,21 +504,17 @@ class _GeneralConstraintData(_ConstraintData):
             if _expr_type is EXPR.EqualityExpression:
                 # Equality expression: only 2 arguments!
                 self._equality = True
-                _args = expr._args
-                # Explicitly dereference the original arglist (otherwise
-                # this runs afoul of the getrefcount logic)
-                expr._args = []
 
-                if not _args[1].is_potentially_variable():
-                    self._lower = self._upper = _args[1]
-                    self._body = _args[0]
-                elif not _args[0].is_potentially_variable():
-                    self._lower = self._upper = _args[0]
-                    self._body = _args[1]
+                if not expr.arg(1).is_potentially_variable():
+                    self._lower = self._upper = expr.arg(1)
+                    self._body = expr.arg(0)
+                elif not expr.arg(0).is_potentially_variable():
+                    self._lower = self._upper = expr.arg(0)
+                    self._body = expr.arg(1)
                 else:
                     self._lower = self._upper = ZeroConstant
-                    self._body = _args[0]
-                    self._body -= _args[1]
+                    self._body = expr.arg(0)
+                    self._body -= expr.arg(1)
             else:
                 # Inequality expression: 2 or 3 arguments
                 if expr._strict:
@@ -544,14 +540,9 @@ class _GeneralConstraintData(_ConstraintData):
                             "using '<=', '>=', or '=='."
                             % (self.name))
 
-                _args = expr._args
-                # Explicitly dereference the original arglist (otherwise
-                # this runs afoul of the getrefcount logic)
-                expr._args = []
+                if expr.nargs() == 3:
 
-                if len(_args) == 3:
-
-                    if _args[0].is_potentially_variable():
+                    if expr.arg(0).is_potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a double-sided "
                             "inequality expression (lower <= "
@@ -559,7 +550,7 @@ class _GeneralConstraintData(_ConstraintData):
                             "bound was not data or an expression "
                             "restricted to storage of data."
                             % (self.name))
-                    if _args[2].is_potentially_variable():
+                    if expr.arg(2).is_potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a double-sided "\
                             "inequality expression (lower <= "
@@ -568,23 +559,23 @@ class _GeneralConstraintData(_ConstraintData):
                             "restricted to storage of data."
                             % (self.name))
 
-                    self._lower = _args[0]
-                    self._body  = _args[1]
-                    self._upper = _args[2]
+                    self._lower = expr.arg(0)
+                    self._body  = expr.arg(1)
+                    self._upper = expr.arg(2)
 
                 else:
-                    if not _args[1].is_potentially_variable():
+                    if not expr.arg(1).is_potentially_variable():
                         self._lower = None
-                        self._body  = _args[0]
-                        self._upper = _args[1]
-                    elif not _args[0].is_potentially_variable():
-                        self._lower = _args[0]
-                        self._body  = _args[1]
+                        self._body  = expr.arg(0)
+                        self._upper = expr.arg(1)
+                    elif not expr.arg(0).is_potentially_variable():
+                        self._lower = expr.arg(0)
+                        self._body  = expr.arg(1)
                         self._upper = None
                     else:
                         self._lower = None
-                        self._body = _args[0]
-                        self._body -= _args[1]
+                        self._body = expr.arg(0)
+                        self._body -= expr.arg(1)
                         self._upper = ZeroConstant
 
         #
