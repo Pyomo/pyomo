@@ -1,0 +1,19 @@
+OPTIONS {
+Summary: 0;
+}
+
+POSITIVE_VARIABLES ONE_VAR_CONST__;
+
+VARIABLES a, b, c;
+
+EQUATIONS c_e_FIX_ONE_VAR_CONST__, con;
+
+c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;
+con:  a + b + c + a * a + b * b + c * c + a * b + a * c + b * c  <= 1;
+
+OBJ: minimize  a + b + c + a * a + b * b + c * c + a * b + a * c + b * c ;
+
+STARTING_POINT{
+ONE_VAR_CONST__: 1;
+}
+
