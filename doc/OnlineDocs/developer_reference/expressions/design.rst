@@ -2,8 +2,8 @@
 
    <p />
 
-Expression Classes
-==================
+Design Details
+==============
 
 Expressions inherit from ExpressionBase
 

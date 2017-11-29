@@ -2,8 +2,8 @@
 
    <p />
 
-An Overview of Pyomo Expressions
-================================
+Expressions Overview
+====================
 
 Introduction
 ------------

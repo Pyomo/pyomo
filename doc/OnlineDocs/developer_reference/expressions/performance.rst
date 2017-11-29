@@ -132,12 +132,9 @@ the function. (See the example using a context manager below.)
 If :attr:`start` is a numeric value, then the :attr:`linear` argument
 determines how the sum is processed:
 
-* If :attr:`linear` is :const:`False`, then the terms in :attr:`args`
-are assumed to be nonlinear.
-* If :attr:`linear` is :const:`False`, then the terms in :attr:`args`
-are assumed to be linear.
-* If :attr:`linear` is :const:`None`, the first term in :attr:`args`
-is analyze to determine whether the terms are linear or nonlinear.
+* If :attr:`linear` is :const:`False`, then the terms in :attr:`args` are assumed to be nonlinear.
+* If :attr:`linear` is :const:`False`, then the terms in :attr:`args` are assumed to be linear.
+* If :attr:`linear` is :const:`None`, the first term in :attr:`args` is analyze to determine whether the terms are linear or nonlinear.
 
 This allows the :func:`Sum <pyomo.core.util.Sum>` function to
 customize the expression representation used, and specifically a
@@ -211,7 +208,7 @@ is linear, quadratic or nonlinear.  Consequently, this function is
 typically faster than simple loops, and it generates compact representations
 of expressions..
 
-Finally, note that the :func:`dot_product <pyomo.core.util.dot_product>` function is an aliase for func:`summation <pyomo.core.util.summation>`.
+Finally, note that the :func:`dot_product <pyomo.core.util.dot_product>` function is an alias for :func:`summation <pyomo.core.util.summation>`.
 
 Context Managers
 ----------------
