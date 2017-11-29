@@ -23,13 +23,13 @@ from pyomo.core.expr.expr_common import \
 
 logger = logging.getLogger('pyomo.core')
 
-def generate_sum_expression(etype, _self, _other):
+def _generate_sum_expression(etype, _self, _other):
     raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
-def generate_mul_expression(etype, _self, _other):
+def _generate_mul_expression(etype, _self, _other):
     raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
-def generate_other_expression(etype, _self, _other):
+def _generate_other_expression(etype, _self, _other):
     raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
-def generate_relational_expression(etype, lhs, rhs):
+def _generate_relational_expression(etype, lhs, rhs):
     raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
 
 ##------------------------------------------------------------------------
@@ -283,11 +283,8 @@ def as_numeric(obj):
 
 
 class NumericValue(object):
-    """This is the base class for numeric values used in Pyomo.
-
-    For efficiency purposes, some derived classes do not call the base
-    class __init__() (e.g. see the "ExpressionBase" class defined in
-    "expr.py").
+    """
+    This is the base class for numeric values used in Pyomo.
     """
 
     __slots__ = ()
@@ -296,9 +293,10 @@ class NumericValue(object):
     __hash__ = None
 
     def __getstate__(self):
-        """Prepare a picklable state of this instance for pickling.
+        """
+        Prepare a picklable state of this instance for pickling.
 
-        Nominally, __getstate__() should return:
+        Nominally, __getstate__() should execute the following::
 
             state = super(Class, self).__getstate__()
             for i in Class.__slots__:
@@ -306,15 +304,16 @@ class NumericValue(object):
             return state
 
         However, in this case, the (nominal) parent class is 'object',
-        and object does not implement __getstate__.  So, we will check
-        to make sure that there is a base __getstate__() to call...
-        You might think that there is nothing to check, but multiple
-        inheritance could mean that another class got stuck between
-        this class and "object" in the MRO.
+        and object does not implement __getstate__.  So, we will
+        check to make sure that there is a base __getstate__() to
+        call.  You might think that there is nothing to check, but
+        multiple inheritance could mean that another class got stuck
+        between this class and "object" in the MRO.
 
         Further, since there are actually no slots defined here, the
         real question is to either return an empty dict or the
-        parent's dict."""
+        parent's dict.
+        """
         _base = super(NumericValue, self)
         if hasattr(_base, '__getstate__'):
             return _base.__getstate__()
@@ -322,13 +321,15 @@ class NumericValue(object):
             return {}
 
     def __setstate__(self, state):
-        """Restore a pickled state into this instance
+        """
+        Restore a pickled state into this instance
 
-        Note: our model for setstate is for derived classes to modify
+        Our model for setstate is for derived classes to modify
         the state dictionary as control passes up the inheritance
         hierarchy (using super() calls).  All assignment of state ->
-        object attributes is handled at the last class before 'object'
-        (which may -- or may not (thanks to MRO) -- be here."""
+        object attributes is handled at the last class before 'object',
+        which may -- or may not (thanks to MRO) -- be here.
+        """
         _base = super(NumericValue, self)
         if hasattr(_base, '__setstate__'):
             return _base.__setstate__(state)
@@ -340,8 +341,10 @@ class NumericValue(object):
                 object.__setattr__(self, key, val)
 
     def getname(self, fully_qualified=False, name_buffer=None):
-        """If this is a component, return the component's name on the owning
-        block; otherwise return the value converted to a string"""
+        """
+        If this is a component, return the component's name on the owning
+        block; otherwise return the value converted to a string
+        """
         _base = super(NumericValue, self)
         if hasattr(_base,'getname'):
             return _base.getname(fully_qualified, name_buffer)
@@ -391,16 +394,35 @@ class NumericValue(object):
         return self
 
     def polynomial_degree(self):
-        """Return the polynomial degree of this expression"""
-        return self._polynomial_degree(None)
+        """
+        Return the polynomial degree of the expression.
 
-    def _polynomial_degree(self, result):
-        """Private method that computes the polynomial degree of this
-        expression"""
+        Returns:
+            :const:`None`
+        """
+        return self._compute_polynomial_degree(None)
+
+    def _compute_polynomial_degree(self, values):
+        """
+        Compute the polynomial degree of this expression given
+        the degree values of its children.
+
+        Args:
+            values (list): A list of values that indicate the degree
+                of the children expression.
+
+        Returns:
+            :const:`None`
+        """
         return None
 
     def __float__(self):
-        """Coerce the value to a floating point"""
+        """
+        Coerce the value to a floating point
+
+        Raises:
+            TypeError
+        """
         raise TypeError(
 """Implicit conversion of Pyomo NumericValue type `%s' to a float is
 disabled. This error is often the result of using Pyomo components as
@@ -409,7 +431,12 @@ defining expressions. Avoid this error by using Pyomo-provided math
 functions.""" % (self.name,))
 
     def __int__(self):
-        """Coerce the value to an integer"""
+        """
+        Coerce the value to an integer
+
+        Raises:
+            TypeError
+        """
         raise TypeError(
 """Implicit conversion of Pyomo NumericValue type `%s' to an integer is
 disabled. This error is often the result of using Pyomo components as
@@ -418,190 +445,283 @@ defining expressions. Avoid this error by using Pyomo-provided math
 functions.""" % (self.name,))
 
     def __lt__(self,other):
-        """Less than operator
-
-        (Called in response to 'self < other' or 'other > self'.)
         """
-        return generate_relational_expression(_lt, self, other)
+        Less than operator
+
+        This method is called when Python processes statements of the form::
+        
+            self < other
+            other > self
+        """
+        return _generate_relational_expression(_lt, self, other)
 
     def __gt__(self,other):
-        """Greater than operator
-
-        (Called in response to 'self > other' or 'other < self'.)
         """
-        return generate_relational_expression(_lt, other, self)
+        Greater than operator
+
+        This method is called when Python processes statements of the form::
+        
+            self > other
+            other < self
+        """
+        return _generate_relational_expression(_lt, other, self)
 
     def __le__(self,other):
-        """Less than or equal operator
-
-        (Called in response to 'self <= other' or 'other >= self'.)
         """
-        return generate_relational_expression(_le, self, other)
+        Less than or equal operator
+
+        This method is called when Python processes statements of the form::
+        
+            self <= other
+            other >= self
+        """
+        return _generate_relational_expression(_le, self, other)
 
     def __ge__(self,other):
-        """Greater than or equal operator
-
-        (Called in response to 'self >= other' or 'other <= self'.)
         """
-        return generate_relational_expression(_le, other, self)
+        Greater than or equal operator
+
+        This method is called when Python processes statements of the form::
+        
+            self >= other
+            other <= self
+        """
+        return _generate_relational_expression(_le, other, self)
 
     def __eq__(self,other):
-        """Equal to operator
-
-        (Called in response to 'self = other'.)
         """
-        return generate_relational_expression(_eq, self, other)
+        Equal to operator
+
+        This method is called when Python processes the statement::
+        
+            self == other
+        """
+        return _generate_relational_expression(_eq, self, other)
 
     def __add__(self,other):
-        """Binary addition
-
-        (Called in response to 'self + other'.)
         """
-        return generate_sum_expression(_add,self,other)
+        Binary addition
+
+        This method is called when Python processes the statement::
+        
+            self + other
+        """
+        return _generate_sum_expression(_add,self,other)
 
     def __sub__(self,other):
-        """ Binary subtraction
-
-        (Called in response to 'self - other'.)
         """
-        return generate_sum_expression(_sub,self,other)
+        Binary subtraction
+
+        This method is called when Python processes the statement::
+        
+            self - other
+        """
+        return _generate_sum_expression(_sub,self,other)
 
     def __mul__(self,other):
-        """ Binary multiplication
-
-        (Called in response to 'self * other'.)
         """
-        return generate_mul_expression(_mul,self,other)
+        Binary multiplication
+
+        This method is called when Python processes the statement::
+        
+            self * other
+        """
+        return _generate_mul_expression(_mul,self,other)
 
     def __div__(self,other):
-        """ Binary division
-
-        (Called in response to 'self / other'.)
         """
-        return generate_mul_expression(_div,self,other)
+        Binary division
+
+        This method is called when Python processes the statement::
+        
+            self / other
+        """
+        return _generate_mul_expression(_div,self,other)
 
     def __truediv__(self,other):
-        """ Binary division
-
-        (Called in response to 'self / other' with __future__.division.)
         """
-        return generate_mul_expression(_div,self,other)
+        Binary division (when __future__.division is in effect)
+
+        This method is called when Python processes the statement::
+        
+            self / other
+        """
+        return _generate_mul_expression(_div,self,other)
 
     def __pow__(self,other):
-        """ Binary power
-
-        (Called in response to 'self ** other'.)
         """
-        return generate_other_expression(_pow,self,other)
+        Binary power
+
+        This method is called when Python processes the statement::
+        
+            self ** other
+        """
+        return _generate_other_expression(_pow,self,other)
 
     def __radd__(self,other):
-        """Binary addition
-
-        (Called in response to 'other + self'.)
         """
-        return generate_sum_expression(_radd,self,other)
+        Binary addition
+
+        This method is called when Python processes the statement::
+        
+            other + self
+        """
+        return _generate_sum_expression(_radd,self,other)
 
     def __rsub__(self,other):
-        """ Binary subtraction
-
-        (Called in response to 'other - self'.)
         """
-        return generate_sum_expression(_rsub,self,other)
+        Binary subtraction
+
+        This method is called when Python processes the statement::
+        
+            other - self
+        """
+        return _generate_sum_expression(_rsub,self,other)
 
     def __rmul__(self,other):
-        """ Binary multiplication
-
-        (Called in response to 'other * self' when other is not a NumericValue.)
         """
-        return generate_mul_expression(_rmul,self,other)
+        Binary multiplication
+
+        This method is called when Python processes the statement::
+        
+            other * self
+
+        when other is not a :class:`NumericValue <pyomo.core.expr.numvalue.NumericValue>` object.
+        """
+        return _generate_mul_expression(_rmul,self,other)
 
     def __rdiv__(self,other):
-        """ Binary division
+        """Binary division
 
-        (Called in response to 'other / self'.)
+        This method is called when Python processes the statement::
+        
+            other / self
         """
-        return generate_mul_expression(_rdiv,self,other)
+        return _generate_mul_expression(_rdiv,self,other)
 
     def __rtruediv__(self,other):
-        """ Binary division
-
-        (Called in response to 'other / self' with __future__.division.)
         """
-        return generate_mul_expression(_rdiv,self,other)
+        Binary division (when __future__.division is in effect)
+
+        This method is called when Python processes the statement::
+        
+            other / self
+        """
+        return _generate_mul_expression(_rdiv,self,other)
 
     def __rpow__(self,other):
-        """ Binary power
-
-        (Called in response to 'other ** self'.)
         """
-        return generate_other_expression(_rpow,self,other)
+        Binary power
+
+        This method is called when Python processes the statement::
+        
+            other ** self
+        """
+        return _generate_other_expression(_rpow,self,other)
 
     def __iadd__(self,other):
-        """Binary addition
-
-        (Called in response to 'self += other'.)
         """
-        return generate_sum_expression(_iadd,self,other)
+        Binary addition
+
+        This method is called when Python processes the statement::
+        
+            self += other
+        """
+        return _generate_sum_expression(_iadd,self,other)
 
     def __isub__(self,other):
-        """ Binary subtraction
-
-        (Called in response to 'self -= other'.)
         """
-        return generate_sum_expression(_isub,self,other)
+        Binary subtraction
+
+        This method is called when Python processes the statement::
+
+            self -= other
+        """
+        return _generate_sum_expression(_isub,self,other)
 
     def __imul__(self,other):
-        """ Binary multiplication
-
-        (Called in response to 'self *= other'.)
         """
-        return generate_mul_expression(_imul,self,other)
+        Binary multiplication
+
+        This method is called when Python processes the statement::
+
+            self *= other
+        """
+        return _generate_mul_expression(_imul,self,other)
 
     def __idiv__(self,other):
-        """ Binary division
-
-        (Called in response to 'self /= other'.)
         """
-        return generate_mul_expression(_idiv,self,other)
+        Binary division
+
+        This method is called when Python processes the statement::
+        
+            self /= other
+        """
+        return _generate_mul_expression(_idiv,self,other)
 
     def __itruediv__(self,other):
-        """ Binary division
-
-        (Called in response to 'self /= other' with __future__.division.)
         """
-        return generate_mul_expression(_idiv,self,other)
+        Binary division (when __future__.division is in effect)
+
+        This method is called when Python processes the statement::
+        
+            self /= other
+        """
+        return _generate_mul_expression(_idiv,self,other)
 
     def __ipow__(self,other):
-        """ Binary power
-
-        (Called in response to 'self **= other'.)
         """
-        return generate_other_expression(_ipow,self,other)
+        Binary power
+
+        This method is called when Python processes the statement::
+        
+            self **= other
+        """
+        return _generate_other_expression(_ipow,self,other)
 
     def __neg__(self):
-        """ Negation
-
-        (Called in response to '- self'.)
         """
-        return generate_sum_expression(_neg, self, None)
+        Negation
+
+        This method is called when Python processes the statement::
+        
+            - self
+        """
+        return _generate_sum_expression(_neg, self, None)
 
     def __pos__(self):
-        """ Positive expression
+        """
+        Positive expression
 
-        (Called in response to '+ self'.)
+        This method is called when Python processes the statement::
+        
+            + self
         """
         return self
 
     def __abs__(self):
         """ Absolute value
 
-        (Called in response to 'abs(self)'.)
+        This method is called when Python processes the statement::
+        
+            abs(self)
         """
-        return generate_other_expression(_abs,self, None)
+        return _generate_other_expression(_abs,self, None)
 
     def to_string(self, verbose=None, labeler=None):
         """
-        Write the object name to a buffer, applying the labeler if passed one.
+        Return a string representation of the expression tree.
+
+        Args:
+            verbose (bool): If :const:`True`, then the the string 
+                representation consists of nested functions.  Otherwise,
+                the string representation is an algebraic equation.
+                Defaults to :const:`False`.
+            labeler: An object that generates string labels for 
+                variables in the expression tree.  Defaults to :const:`None`.
+
+        Returns:
+            A string representation for the expression tree.
         """
         if (labeler is not None) and (not self.is_constant()):
             # Do not label constant objects, direct them to their own __str__
@@ -637,7 +757,7 @@ class NumericConstant(NumericValue):
     def is_potentially_variable(self):
         return False
 
-    def _polynomial_degree(self, result):
+    def _compute_polynomial_degree(self, result):
         return 0
 
     def __str__(self):

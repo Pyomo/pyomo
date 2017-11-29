@@ -102,7 +102,7 @@ class _ExpressionData(NumericValue):
         """A tuple of subexpressions involved in this expressions operation."""
         return self.expr.polynomial_degree()
 
-    def _polynomial_degree(self, result):
+    def _compute_polynomial_degree(self, result):
         return result.pop()
 
     #

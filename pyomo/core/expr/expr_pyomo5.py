@@ -30,11 +30,6 @@ __all__ = (
 'identify_components',
 'identify_variables',
 'expression_to_string',
-'generate_sum_expression',
-'generate_mul_expression',
-'generate_other_expression',
-'generate_intrinsic_function_expression',
-'generate_relational_expression',
 'chainedInequalityErrorMessage',
 'ExpressionBase',
 'EqualityExpression',
@@ -67,6 +62,11 @@ __all__ = (
 '_SumExpression',               # This should not be referenced, except perhaps while testing code
 '_MutableViewSumExpression',    # This should not be referenced, except perhaps while testing code
 '_MutableLinearExpression',     # This should not be referenced, except perhaps while testing code
+'_generate_sum_expression',                 # Only used within pyomo.core.expr
+'_generate_mul_expression',                 # Only used within pyomo.core.expr
+'_generate_other_expression',               # Only used within pyomo.core.expr
+'_generate_intrinsic_function_expression',  # Only used within pyomo.core.expr
+'_generate_relational_expression',          # Only used within pyomo.core.expr
 )
 
 import math
@@ -440,8 +440,8 @@ class ExpressionValueVisitor(object):
             ans: The final value computed by the search method.
 
         Returns:
-	        The final value after the search. Defaults to simply
-	        returning :attr:`ans`.
+            The final value after the search. Defaults to simply
+            returning :attr:`ans`.
         """
         return ans
 
@@ -596,8 +596,8 @@ class ExpressionReplacementVisitor(object):
             ans: The final value computed by the search method.
 
         Returns:
-	        The final value after the search. Defaults to simply
-	        returning :attr:`ans`.
+            The final value after the search. Defaults to simply
+            returning :attr:`ans`.
         """
         return ans
 
@@ -754,7 +754,7 @@ def clone_expression(expr, memo=None, clone_leaves=True):
 
     Cloning is roughly equivalent to calling ``copy.deepcopy``.
     However, the :attr:`clone_leaves` argument can be used to 
-    clone only interior (i.e. non-leaf) nodes in the expresion
+    clone only interior (i.e. non-leaf) nodes in the expression
     tree.  Additionally, this function uses a non-recursive 
     logic, which makes it more scalable than the logic in 
     ``copy.deepcopy``.
@@ -952,7 +952,7 @@ class _PolyDegreeVisitor(ExpressionValueVisitor):
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
-        return node._polynomial_degree(values)
+        return node._compute_polynomial_degree(values)
 
     def visiting_potential_leaf(self, node):
         """ 
@@ -1119,19 +1119,13 @@ def expression_to_string(expr, verbose=None, labeler=None):
 
 class ExpressionBase(NumericValue):
     """
-    An object that defines a mathematical expression that can be evaluated
+    The base class for Pyomo expressions.
 
-    m.p = Param(default=10, mutable=False)
-    m.q = Param(default=10, mutable=True)
-    m.x = var()
-    m.y = var(initialize=1)
-    m.y.fixed = True
+    This class is used to define nodes in an expression
+    tree.
 
-                            m.p     m.q     m.x     m.y
-    constant                T       F       F       F
-    potentially_variable    F       F       T       T
-    npv                     T       T       F       F
-    fixed                   T       T       F       T
+    Args:
+        args (list or tuple): Children of this node.
     """
 
     __slots__ =  ('_args',)
@@ -1283,6 +1277,64 @@ class ExpressionBase(NumericValue):
         #
         return expression_to_string(expr)
 
+    def to_string(self, verbose=False, labeler=None):
+        """
+        Return a string representation of the expression tree.
+
+        Args:
+            verbose (bool): If :const:`True`, then the the string 
+                representation consists of nested functions.  Otherwise,
+                the string representation is an algebraic equation.
+                Defaults to :const:`False`.
+            labeler: An object that generates string labels for 
+                variables in the expression tree.  Defaults to :const:`None`.
+
+        Returns:
+            A string representation for the expression tree.
+        """
+        return expression_to_string(self, verbose=verbose, labeler=labeler)
+
+    def _precedence(self):
+        return ExpressionBase.PRECEDENCE
+
+    def _to_string(self, values, verbose=False):            #pragma: no cover
+        """
+        Construct a string representation for this node, using the string
+        representations of its children.
+
+        This method is called by the :class:`_ToStringVisitor
+        <pyomo.core.expr.current._ToStringVisitor>` class.  It must
+        must be defined in subclasses.
+
+        Args:
+            values (list): The string representations of the children of this
+                node.
+            verbose (bool): If :const:`True`, then the the string 
+                representation consists of nested functions.  Otherwise,
+                the string representation is an algebraic equation.
+                Defaults to :const:`False`.
+
+        Returns:
+            A string representation for this node.
+        """
+        pass
+
+    def getname(self, *args, **kwds):                       #pragma: no cover
+        """
+        Return the text name of a function associated with this expression object.
+
+        In general, no arguments are passed to this function.
+
+        Args:
+            *arg: a variable length list of arguments
+            **kwds: keyword arguments
+
+        Returns:
+            A string name for the function.
+        """
+        raise NotImplementedError("Derived expression (%s) failed to "\
+            "implement getname()" % ( str(self.__class__), ))
+
     def clone(self, substitute=None):
         """
         Return a clone of the expression tree.
@@ -1343,11 +1395,6 @@ class ExpressionBase(NumericValue):
             class.
         """
         return self.__class__(args)
-
-    def getname(self, *args, **kwds):                       #pragma: no cover
-        """The text name of this Expression function"""
-        raise NotImplementedError("Derived expression (%s) failed to "\
-            "implement getname()" % ( str(self.__class__), ))
 
     def is_constant(self):
         """Return True if this expression is an atomic constant
@@ -1440,7 +1487,7 @@ class ExpressionBase(NumericValue):
         """
         return _polynomial_degree(self)
 
-    def _polynomial_degree(self, values):                          #pragma: no cover
+    def _compute_polynomial_degree(self, values):                          #pragma: no cover
         """
         Compute the polynomial degree of this expression given
         the degree values of its children.
@@ -1460,14 +1507,32 @@ class ExpressionBase(NumericValue):
         """
         return None
 
-    def to_string(self, verbose=False, labeler=None):
-        return expression_to_string(self, verbose=verbose, labeler=labeler)
+    def _apply_operation(self, result):
+        """
+        Compute the values of this node given the values of its children.
 
-    def _precedence(self):
-        return ExpressionBase.PRECEDENCE
+        This method is called by the :class:`_EvaluationVisitor
+        <pyomo.core.expr.current._EvaluationVisitor>` class.  It must
+        be over-written by expression classes to customize this
+        logic.
+
+        Args:
+            values (list): A list of values that indicate the value
+                of the children expressions.
+
+        Returns:
+            A floating point value for this expression.
+        """
+        pass
 
 
 class NegationExpression(ExpressionBase):
+    """
+    Negation expressions::
+
+        - x
+    """
+
     __slots__ = ()
 
     PRECEDENCE = 4
@@ -1478,7 +1543,7 @@ class NegationExpression(ExpressionBase):
     def getname(self, *args, **kwds):
         return 'neg'
 
-    def _polynomial_degree(self, result):
+    def _compute_polynomial_degree(self, result):
         return result[0]
 
     def _precedence(self):
@@ -1507,10 +1572,23 @@ class NPV_NegationExpression(NegationExpression):
 
 
 class ExternalFunctionExpression(ExpressionBase):
+    """
+    External function expressions
+
+    Example::
+
+        model = ConcreteModel()
+        model.a = Var()
+        model.f = ExternalFunction(library='foo.so', function='bar')
+        expr = model.f(model.a)
+
+    Args: 
+        args (tuple): children of this node
+        fcn: a class that defines this external function
+    """
     __slots__ = ('_fcn',)
 
     def __init__(self, args, fcn=None):
-        """Construct a call to an external function"""
         self._args = args
         self._fcn = fcn
 
@@ -1529,14 +1607,13 @@ class ExternalFunctionExpression(ExpressionBase):
     def getname(self, *args, **kwds):           #pragma: no cover
         return self._fcn.getname(*args, **kwds)
 
-    def _polynomial_degree(self, result):
+    def _compute_polynomial_degree(self, result):
         if result[0] is 0:
             return 0
         else:
             return None
 
     def _apply_operation(self, result):
-        """Evaluate the expression"""
         return self._fcn.evaluate( result )     #pragma: no cover
 
     def _to_string(self, values, verbose=False):
@@ -1551,11 +1628,16 @@ class NPV_ExternalFunctionExpression(ExternalFunctionExpression):
 
 
 class PowExpression(ExpressionBase):
+    """
+    Power expressions::
+
+        x**y
+    """
 
     __slots__ = ()
     PRECEDENCE = 2
 
-    def _polynomial_degree(self, result):
+    def _compute_polynomial_degree(self, result):
         # PowExpression is a tricky thing.  In general, a**b is
         # nonpolynomial, however, if b == 0, it is a constant
         # expression, and if a is polynomial and b is a positive
@@ -1609,14 +1691,97 @@ class NPV_PowExpression(PowExpression):
         return False
 
 
+class ProductExpression(ExpressionBase):
+    """
+    Product expressions::
+
+        x*y
+    """
+
+    __slots__ = ()
+    PRECEDENCE = 4
+
+    def _precedence(self):
+        return ProductExpression.PRECEDENCE
+
+    def _compute_polynomial_degree(self, result):
+        # NB: We can't use sum() here because None (non-polynomial)
+        # overrides a numeric value (and sum() just ignores it - or
+        # errors in py3k)
+        a, b = result
+        if a is None or b is None:
+            return None
+        else:
+            return a + b
+
+    def getname(self, *args, **kwds):
+        return 'prod'
+
+    def _apply_operation(self, result):
+        _l, _r = result
+        return _l * _r
+
+    def _to_string(self, values, verbose=False):
+        if verbose:
+            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
+        return "{0}*{1}".format(values[0],values[1])
+
+
+class NPV_ProductExpression(ProductExpression):
+    __slots__ = ()
+
+    def is_potentially_variable(self):
+        return False
+
+
+class ReciprocalExpression(ExpressionBase):
+    """
+    Reciprocal expressions::
+
+        1/x
+    """
+    __slots__ = ()
+    PRECEDENCE = 3.5
+
+    def nargs(self):
+        return 1
+
+    def _precedence(self):
+        return ReciprocalExpression.PRECEDENCE
+
+    def _compute_polynomial_degree(self, result):
+        if result[0] is 0:
+            return 0
+        return None
+
+    def getname(self, *args, **kwds):
+        return 'recip'
+
+    def _to_string(self, values, verbose=False):
+        if verbose:
+            return "{0}({1})".format(self.getname(), values[0])
+        return "(1/{0})".format(values[0])
+
+    def _apply_operation(self, result):
+        return 1 / result[0]
+
+
+class NPV_ReciprocalExpression(ReciprocalExpression):
+    __slots__ = ()
+
+    def is_potentially_variable(self):
+        return False
+
+
 class _LinearOperatorExpression(ExpressionBase):
-    """An 'abstract' class that defines the polynomial degree for a simple
+    """
+    An 'abstract' class that defines the polynomial degree for a simple
     linear operator
     """
 
     __slots__ = ()
 
-    def _polynomial_degree(self, result):
+    def _compute_polynomial_degree(self, result):
         # NB: We can't use max() here because None (non-polynomial)
         # overrides a numeric value (and max() just ignores it)
         ans = 0
@@ -1629,8 +1794,18 @@ class _LinearOperatorExpression(ExpressionBase):
 
 
 class InequalityExpression(_LinearOperatorExpression):
-    """An object that defines a series of less-than or
-    less-than-or-equal expressions"""
+    """
+    Inequality expressions, which define less-than or
+    less-than-or-equal relations::
+
+        x < y
+        x <= y
+
+    Args:
+        args (tuple): child nodes
+        strict (bool): a flag that indicates whether the inequality is strict
+        clone_from (int): id of an expression
+    """
 
     __slots__ = ('_strict', '_cloned_from')
     PRECEDENCE = 9
@@ -1640,7 +1815,6 @@ class InequalityExpression(_LinearOperatorExpression):
     call_info = None
 
     def __init__(self, args, strict, cloned_from):
-        """Constructor"""
         super(InequalityExpression,self).__init__(args)
         self._strict = strict
         self._cloned_from = cloned_from
@@ -1690,8 +1864,6 @@ class InequalityExpression(_LinearOperatorExpression):
         return True
 
     def _to_string(self, values, verbose=False):
-        #if verbose:
-        #    return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
         if len(values) == 2:
             return "{0}  {1}  {2}".format(values[0], '<' if self._strict[0] else '<=', values[1])
         return "{0}  {1}  {2}  {3}  {4}".format(values[0], '<' if self._strict[0] else '<=', values[1], '<' if self._strict[1] else '<=', values[2])
@@ -1704,7 +1876,11 @@ class InequalityExpression(_LinearOperatorExpression):
 
 
 class EqualityExpression(_LinearOperatorExpression):
-    """An object that defines a equal-to expression"""
+    """
+    Equality expression::
+
+        x == y
+    """
 
     __slots__ = ()
     PRECEDENCE = 9
@@ -1730,8 +1906,6 @@ class EqualityExpression(_LinearOperatorExpression):
         return _l == _r
 
     def _to_string(self, values, verbose=False):
-        #if verbose:
-        #    return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
         return "{0}  ==  {1}".format(values[0], values[1])
         
     def is_constant(self):
@@ -1741,86 +1915,10 @@ class EqualityExpression(_LinearOperatorExpression):
         return self._args[0].is_potentially_variable() or self._args[1].is_potentially_variable()
 
 
-class ProductExpression(ExpressionBase):
-    """An object that defines a product expression"""
-
-    __slots__ = ()
-    PRECEDENCE = 4
-
-    def _precedence(self):
-        return ProductExpression.PRECEDENCE
-
-    def _polynomial_degree(self, result):
-        # NB: We can't use sum() here because None (non-polynomial)
-        # overrides a numeric value (and sum() just ignores it - or
-        # errors in py3k)
-        a, b = result
-        if a is None or b is None:
-            return None
-        else:
-            return a + b
-
-    def getname(self, *args, **kwds):
-        return 'prod'
-
-    def _inline_operator(self):
-        return '*'
-
-    def _apply_operation(self, result):
-        _l, _r = result
-        return _l * _r
-
-    def _to_string(self, values, verbose=False):
-        if verbose:
-            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
-        return "{0}*{1}".format(values[0],values[1])
-
-
-class NPV_ProductExpression(ProductExpression):
-    __slots__ = ()
-
-    def is_potentially_variable(self):
-        return False
-
-
-class ReciprocalExpression(ExpressionBase):
-    """An object that defines a division expression"""
-
-    __slots__ = ()
-    PRECEDENCE = 3.5
-
-    def nargs(self):
-        return 1
-
-    def _precedence(self):
-        return ReciprocalExpression.PRECEDENCE
-
-    def _polynomial_degree(self, result):
-        if result[0] is 0:
-            return 0
-        return None
-
-    def getname(self, *args, **kwds):
-        return 'recip'
-
-    def _to_string(self, values, verbose=False):
-        if verbose:
-            return "{0}({1})".format(self.getname(), values[0])
-        return "(1/{0})".format(values[0])
-
-    def _apply_operation(self, result):
-        return 1 / result[0]
-
-
-class NPV_ReciprocalExpression(ReciprocalExpression):
-    __slots__ = ()
-
-    def is_potentially_variable(self):
-        return False
-
-
 class _SumExpression(_LinearOperatorExpression):
-    """An object that defines a simple summation of expressions"""
+    """
+    An object that defines a simple summation of expressions
+    """
 
     __slots__ = ()
     PRECEDENCE = 6
@@ -1841,8 +1939,14 @@ class NPV_SumExpression(_SumExpression):
 
 
 class ViewSumExpression(_SumExpression):
-    """An object that defines a summation with 1 or more terms using a shared list."""
+    """
+    Sum expression::
 
+        x + y
+
+    Args:
+        args (list): Children nodes
+    """
     __slots__ = ('_nargs','_shared_args')
     PRECEDENCE = 6
 
@@ -1887,17 +1991,13 @@ class ViewSumExpression(_SumExpression):
         return 'sum'
 
     def is_constant(self):
-        return False
         #
         # In most normal contexts, a ViewSumExpression is non-constant.  When
         # Forming expressions, constant parameters are turned into numbers, which
         # are simply added.  Mutable parameters, variables and expressions are 
         # not constant.
         #
-        #for v in islice(self._args, self._nargs):
-        #    if not (v.__class__ in native_numeric_types or v.is_constant()):
-        #        return False
-        #return True
+        return False
 
     def is_potentially_variable(self):
         for v in islice(self._args, self._nargs):
@@ -1930,6 +2030,13 @@ class ViewSumExpression(_SumExpression):
 
 
 class _MutableViewSumExpression(ViewSumExpression):
+    """
+    A mutable ViewSumExpression
+
+    The :func:`add` method is slightly different in that it 
+    does not create a new sum expression, but modifies the
+    :attr:`_args` data in place.
+    """
 
     __slots__ = ()
 
@@ -1949,8 +2056,9 @@ class _MutableViewSumExpression(ViewSumExpression):
 
 
 class GetItemExpression(ExpressionBase):
-    """Expression to call "__getitem__" on the base"""
-
+    """
+    Expression to call :func:`__getitem__` on the base object.
+    """
     __slots__ = ('_base',)
     PRECEDENCE = 1
 
@@ -1991,7 +2099,7 @@ class GetItemExpression(ExpressionBase):
                     return False
         return True
         
-    def _polynomial_degree(self, result):
+    def _compute_polynomial_degree(self, result):
         if any(x != 0 for x in result):
             return None
         ans = 0
@@ -2018,8 +2126,16 @@ class GetItemExpression(ExpressionBase):
 
 
 class Expr_if(ExpressionBase):
-    """An object that defines a dynamic if-then-else expression"""
+    """
+    A logical if-then-else expression::
 
+        Expr_if(IF_=x, THEN_=y, ELSE_=z)
+
+    Args:
+        IF_ (expression): A relational expression
+        THEN_ (expression): An expression that is used if :attr:`IF_` is true.
+        ELSE_ (expression): An expression that is used if :attr:`IF_` is false.
+    """
     __slots__ = ('_if','_then','_else')
 
     # **NOTE**: This class evaluates the branching "_if" expression
@@ -2027,8 +2143,6 @@ class Expr_if(ExpressionBase):
     #           one uses __call__ for value() and NOT bool().
 
     def __init__(self, IF_=None, THEN_=None, ELSE_=None):
-        """Constructor"""
-        
         if type(IF_) is tuple and THEN_==None and ELSE_==None:
             IF_, THEN_, ELSE_ = IF_
         self._args = (IF_, THEN_, ELSE_)
@@ -2072,7 +2186,7 @@ class Expr_if(ExpressionBase):
     def is_potentially_variable(self):
         return (not self._if.__class__ in native_numeric_types and self._if.is_potentially_variable()) or (not self._then.__class__ in native_numeric_types and self._then.is_potentially_variable()) or (not self._else.__class__ in native_numeric_types and self._else.is_potentially_variable())
 
-    def _polynomial_degree(self, result):
+    def _compute_polynomial_degree(self, result):
         _if, _then, _else = result
         if _if == 0:
             try:
@@ -2089,15 +2203,20 @@ class Expr_if(ExpressionBase):
         return _then if _if else _else
 
 
+# TODO: Unary functions should define their own subclasses so as to
+# eliminate the need for the fcn and name slots
 class UnaryFunctionExpression(ExpressionBase):
-    """An object that defines a mathematical expression that can be evaluated"""
+    """
+    An expression object used to define intrinsic functions (e.g. sin, cos, tan).
 
-    # TODO: Unary functions should define their own subclasses so as to
-    # eliminate the need for the fcn and name slots
+    Args:
+        args (tuple): Children nodes
+        name (string): The function name
+        fcn: The function that is used to evaluate this expression
+    """
     __slots__ = ('_fcn', '_name')
 
     def __init__(self, args, name=None, fcn=None):
-        """Construct an expression with an operation and a set of arguments"""
         if not type(args) is tuple:
             args = (args,)
         self._args = args
@@ -2122,9 +2241,12 @@ class UnaryFunctionExpression(ExpressionBase):
     def _to_string(self, values, verbose=False):
         if verbose:
             return "{0}({1})".format(self.getname(), values[0])
-        return '{0}{1}'.format(self._name, values[0])
+        if values[0][0] == '(':
+            return '{0}{1}'.format(self._name, values[0])
+        else:
+            return '{0}({1})'.format(self._name, values[0])
 
-    def _polynomial_degree(self, result):
+    def _compute_polynomial_degree(self, result):
         if result[0] is 0:
             return 0
         else:
@@ -2144,7 +2266,12 @@ class NPV_UnaryFunctionExpression(UnaryFunctionExpression):
 # NOTE: This should be a special class, since the expression generation relies
 # on the Python __abs__ method.
 class AbsExpression(UnaryFunctionExpression):
+    """
+    An expression object for the :func:`abs` function.
 
+    Args:
+        args (tuple): Children nodes
+    """
     __slots__ = ()
 
     def __init__(self, arg):
@@ -2161,7 +2288,13 @@ class NPV_AbsExpression(AbsExpression):
         return False
 
 
-class _MutableLinearExpression(ExpressionBase):
+class LinearExpression(ExpressionBase):
+    """
+    An expression object linear polynomials.
+
+    Args:
+        args (tuple): Children nodes
+    """
     __slots__ = ('constant',          # The constant term
                  'linear_coefs',      # Linear coefficients
                  'linear_vars')       # Linear variables
@@ -2178,8 +2311,8 @@ class _MutableLinearExpression(ExpressionBase):
         return 0
 
     def __getstate__(self):
-        state = super(_MutableLinearExpression, self).__getstate__()
-        for i in _MutableLinearExpression.__slots__:
+        state = super(LinearExpression, self).__getstate__()
+        for i in LinearExpression.__slots__:
            state[i] = getattr(self,i)
         return state
 
@@ -2196,7 +2329,7 @@ class _MutableLinearExpression(ExpressionBase):
     def getname(self, *args, **kwds):
         return 'sum'
 
-    def _polynomial_degree(self, result):
+    def _compute_polynomial_degree(self, result):
         return 1 if len(self.linear_vars) > 0 else 0
 
     def is_constant(self):
@@ -2412,7 +2545,7 @@ class _MutableLinearExpression(ExpressionBase):
         return self
 
 
-class LinearExpression(_MutableLinearExpression):
+class _MutableLinearExpression(LinearExpression):
     __slots__ = ()
 
 
@@ -2422,14 +2555,30 @@ class LinearExpression(_MutableLinearExpression):
 #
 #-------------------------------------------------------
 
-def decompose_term(term):
-    if term.__class__ in native_numeric_types or not term.is_potentially_variable():
-        return True, [(term,None)]
-    elif term.__class__ in pyomo5_variable_types:
-        return True, [(1,term)]
+def decompose_term(expr):
+    """
+    A generator function that yields tuples the linear terms
+    in an expression.
+
+    Args:
+        expr (expression): The root node of an expression tree
+
+    Returns:
+        A tuple: ``(flag, list)``.  If :attr:`flag` is :const:`False`, then
+            a nonlinear term has been found, and :const:`list` is :const:`None`.
+            Otherwise, :const:`list` is a list of tuples: ``(coef, value)``.
+            If :attr:`value` is :const:`None`, then this
+            represents a constant term with value :attr:`coef`.  Otherwise,
+            :attr:`value` is a variable object, and :attr:`coef` is the
+            numeric coefficient.
+    """
+    if expr.__class__ in native_numeric_types or not expr.is_potentially_variable():
+        return True, [(expr,None)]
+    elif expr.__class__ in pyomo5_variable_types:
+        return True, [(1,expr)]
     else:
         try:
-            terms = [t_ for t_ in _decompose_terms(term)]
+            terms = [t_ for t_ in _decompose_terms(expr)]
             return True, terms
         except ValueError:
             return False, None
@@ -2505,7 +2654,7 @@ def _process_arg(obj):
 
 
 #@profile
-def generate_sum_expression(etype, _self, _other):
+def _generate_sum_expression(etype, _self, _other):
 
     if etype > _inplace:
         etype -= _inplace
@@ -2627,7 +2776,7 @@ def generate_sum_expression(etype, _self, _other):
         
 
 #@profile
-def generate_mul_expression(etype, _self, _other):
+def _generate_mul_expression(etype, _self, _other):
 
     if etype > _inplace:
         etype -= _inplace
@@ -2726,7 +2875,7 @@ def generate_mul_expression(etype, _self, _other):
 
 
 #@profile
-def generate_other_expression(etype, _self, _other):
+def _generate_other_expression(etype, _self, _other):
 
     if etype > _inplace:
         etype -= _inplace
@@ -2785,7 +2934,7 @@ def generate_other_expression(etype, _self, _other):
     raise RuntimeError("Unknown expression type '%s'" % etype)      #pragma: no cover
 
 
-def generate_relational_expression(etype, lhs, rhs):
+def _generate_relational_expression(etype, lhs, rhs):
     # We cannot trust Python not to recycle ID's for temporary POD data
     # (e.g., floats).  So, if it is a "native" type, we will record the
     # value, otherwise we will record the ID.  The tuple for native
@@ -2923,7 +3072,7 @@ def generate_relational_expression(etype, lhs, rhs):
             return ans
 
 
-def generate_intrinsic_function_expression(arg, name, fcn):
+def _generate_intrinsic_function_expression(arg, name, fcn):
     if not (arg.__class__ in native_types or arg.is_expression()):
         arg = _process_arg(arg)
 
@@ -2970,6 +3119,7 @@ pyomo5_reciprocal_types = set([
         ReciprocalExpression,
         NPV_ReciprocalExpression
         ])
+#: A set of class types that are possible variables
 pyomo5_variable_types = set()
 pyomo5_named_expression_types = set()
 

@@ -98,7 +98,7 @@ class _ParamData(ComponentData, NumericValue):
         """
         return False
 
-    def _polynomial_degree(self, result):
+    def _compute_polynomial_degree(self, result):
         """
         Returns 0 because this object can never reference variables.
         """

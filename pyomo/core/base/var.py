@@ -138,7 +138,7 @@ class _VarData(ComponentData, NumericValue):
         """Returns True because this is a variable."""
         return True
 
-    def _polynomial_degree(self, result):
+    def _compute_polynomial_degree(self, result):
         """
         If the variable is fixed, it represents a constant
         is a polynomial with degree 0. Otherwise, it has
