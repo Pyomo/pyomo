@@ -17,6 +17,7 @@ with a diverse set of optimization capabilities.
    core_components/index.rst
    scripting/index.rst
    modeling_extensions/index.rst
+   developer_reference/index.rst
    library_reference/index.rst
    problem_reference/index.rst
 
