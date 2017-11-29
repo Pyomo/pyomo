@@ -95,10 +95,10 @@ def _check_productexpression(expr, i):
     while stack:
         curr,e_ = stack.pop()
         if curr.__class__ is EXPR.ProductExpression:
-            stack.append((curr._args[0],e_))
-            stack.append((curr._args[1],e_))
+            stack.append((curr.arg(0),e_))
+            stack.append((curr.arg(1),e_))
         elif curr.__class__ is EXPR.ReciprocalExpression:
-            stack.append((curr._args[0],- e_))
+            stack.append((curr.arg(0),- e_))
         elif type(curr) is EXPR.GetItemExpression and type(curr._base) is DerivativeVar:
             dv = (curr,e_)
         else:
@@ -153,14 +153,14 @@ def _check_negationexpression(expr, i):
 def _check_sumexpression(expr, i):
     """
     Accepts an equality expression and an index value. Checks the
-    SumExpression at expr._args[i] to see if it contains a
+    SumExpression at expr.arg(i) to see if it contains a
     :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>`. If so, return the
     GetItemExpression for the
     :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>` and the RHS. If not,
     return None.
     """
-    sumexp = expr._args[i]
-    items = sumexp._args
+    sumexp = expr.arg(i)
+    items = list(sumexp.args)
     coefs = sumexp._coef
     dv = None
     dvcoef = 1
@@ -175,7 +175,7 @@ def _check_sumexpression(expr, i):
             break
 
     if dv is not None:
-        RHS = expr._args[i - 1]
+        RHS = expr.arg(i - 1)
         for idx, item in enumerate(items):
             RHS -= coefs[idx] * item
         RHS = RHS / dvcoef
@@ -187,7 +187,7 @@ def _check_sumexpression(expr, i):
 def _check_viewsumexpression(expr, i):
     """
     Accepts an equality expression and an index value. Checks the
-    SumExpression at expr._args[i] to see if it contains a
+    SumExpression at expr.arg(i) to see if it contains a
     :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>`. If so, return the
     GetItemExpression for the
     :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>` and the RHS. If not,
@@ -527,46 +527,35 @@ class Simulator:
                 # separable RHS
                 args = None
                 # Case 1: m.dxdt[t] = RHS 
-                if type(tempexp._args[0]) is EXPR.GetItemExpression:
+                if type(tempexp.arg(0)) is EXPR.GetItemExpression:
                     args = _check_getitemexpression(tempexp, 0)
             
                 # Case 2: RHS = m.dxdt[t]
                 if args is None:
-                    if type(tempexp._args[1]) is EXPR.GetItemExpression:
+                    if type(tempexp.arg(1)) is EXPR.GetItemExpression:
                         args = _check_getitemexpression(tempexp, 1)
 
                 # Case 3: m.p*m.dxdt[t] = RHS
                 if args is None:
-                    if type(tempexp._args[0]) is EXPR.ProductExpression or \
-                       type(tempexp._args[0]) is EXPR.ReciprocalExpression:
+                    if type(tempexp.arg(0)) is EXPR.ProductExpression or \
+                       type(tempexp.arg(0)) is EXPR.ReciprocalExpression:
                         args = _check_productexpression(tempexp, 0)
 
                 # Case 4: RHS =  m.p*m.dxdt[t]
                 if args is None:
-                    if type(tempexp._args[1]) is EXPR.ProductExpression or \
-                       type(tempexp._args[1]) is EXPR.ReciprocalExpression:
+                    if type(tempexp.arg(1)) is EXPR.ProductExpression or \
+                       type(tempexp.arg(1)) is EXPR.ReciprocalExpression:
                         args = _check_productexpression(tempexp, 1)
-
-                # Case 5a: m.dxdt[t] + CONSTANT = RHS 
-                # or CONSTANT + m.dxdt[t] = RHS
-                #if args is None:
-                #    if type(tempexp._args[0]) is EXPR.SumExpression:
-                #        args = _check_sumexpression(tempexp, 0)
-
-                # Case 6a: RHS = m.dxdt[t] + CONSTANT
-                #if args is None:
-                #    if type(tempexp._args[1]) is EXPR.SumExpression:
-                #        args = _check_sumexpression(tempexp, 1)
 
                 # Case 5: m.dxdt[t] + sum(ELSE) = RHS
                 # or CONSTANT + m.dxdt[t] = RHS
                 if args is None:
-                    if type(tempexp._args[0]) is EXPR.ViewSumExpression:
+                    if type(tempexp.arg(0)) is EXPR.ViewSumExpression:
                         args = _check_viewsumexpression(tempexp, 0)
 
                 # Case 6: RHS = m.dxdt[t] + sum(ELSE)
                 if args is None:
-                    if type(tempexp._args[1]) is EXPR.ViewSumExpression:
+                    if type(tempexp.arg(1)) is EXPR.ViewSumExpression:
                         args = _check_viewsumexpression(tempexp, 1)
 
                 # Case 7: RHS = m.p*m.dxdt[t] + CONSTANT
@@ -576,12 +565,12 @@ class Simulator:
 
                 # Case 8: - dxdt[t] = RHS
                 if args is None:
-                    if type(tempexp._args[0]) is EXPR.NegationExpression:
+                    if type(tempexp.arg(0)) is EXPR.NegationExpression:
                         args = _check_negationexpression(tempexp, 0)
 
                 # Case 9: RHS = - dxdt[t]
                 if args is None:
-                    if type(tempexp._args[0]) is EXPR.NegationExpression:
+                    if type(tempexp.arg(0)) is EXPR.NegationExpression:
                         args = _check_negationexpression(tempexp, 1)
 
 
@@ -600,7 +589,7 @@ class Simulator:
                             "trying to simulate a DAE model you must use "
                             "CasADi as the integration package."
                             % str(con.name))
-                    tempexp = tempexp._args[0] - tempexp._args[1]
+                    tempexp = tempexp.arg(0) - tempexp.arg(1)
                     algexp = substitute_pyomo2casadi(tempexp, templatemap)
                     alglist.append(algexp)
                     continue
