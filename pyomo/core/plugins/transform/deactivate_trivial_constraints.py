@@ -23,7 +23,7 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
         super(TrivialConstraintDeactivator, self).__init__()
         self.tolerance = 1E-13
 
-    def _apply_to(self, instance, tmp=False):
+    def _apply_to(self, instance, tmp=False, ignore_infeasible=False):
         """Apply the transformation."""
         if tmp and not hasattr(instance, '_tmp_trivial_deactivated_constrs'):
             instance._tmp_trivial_deactivated_constrs = ComponentSet()
@@ -40,6 +40,9 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
                     if (fabs(value(constr.body)) <= self.tolerance and
                             fabs(value(constr.lower)) <= self.tolerance):
                         pass
+                    elif ignore_infeasible:
+                        # do nothing, move on to next constraint
+                        pass
                     else:
                         raise ValueError(
                             'Trivial constraint {} violates {} ≤ {}.'
@@ -50,6 +53,9 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
                         value(constr.body) > value(constr.upper)):
                     if (fabs(value(constr.body)) <= self.tolerance and
                             fabs(value(constr.upper)) <= self.tolerance):
+                        pass
+                    elif ignore_infeasible:
+                        # do nothing, move on to next constraint
                         pass
                     else:
                         raise ValueError(
