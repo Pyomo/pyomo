@@ -42,7 +42,7 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
                         pass
                     elif ignore_infeasible:
                         # do nothing, move on to next constraint
-                        pass
+                        continue
                     else:
                         raise ValueError(
                             'Trivial constraint {} violates {} ≤ {}.'
@@ -56,7 +56,7 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
                         pass
                     elif ignore_infeasible:
                         # do nothing, move on to next constraint
-                        pass
+                        continue
                     else:
                         raise ValueError(
                             'Trivial constraint {} violates {} ≤ {}.'
