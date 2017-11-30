@@ -1,0 +1,49 @@
+OPTIONS {
+Summary: 0;
+}
+
+POSITIVE_VARIABLES ONE_VAR_CONST__;
+
+VARIABLES x1, x2, x3, x4, x5, x6, x7;
+
+EQUATIONS c_e_FIX_ONE_VAR_CONST__, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31;
+
+c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;
+x8: Expr_if( ( 0.0 ), then=( vTrue ), else=( vFalse ) ) == -1;
+x9: Expr_if( ( 1.0 ), then=( vTrue ), else=( vFalse ) ) == 1;
+x10: Expr_if( ( vN1  <=  0.0 ), then=( vTrue ), else=( vFalse ) ) == 1;
+x11: Expr_if( ( v0  <=  0.0 ), then=( vTrue ), else=( vFalse ) ) == 1;
+x12: Expr_if( ( vP1  <=  0.0 ), then=( vTrue ), else=( vFalse ) ) == -1;
+x13: Expr_if( ( vN1  <  0.0 ), then=( vTrue ), else=( vFalse ) ) == 1;
+x14: Expr_if( ( v0  <  0.0 ), then=( vTrue ), else=( vFalse ) ) == -1;
+x15: Expr_if( ( vP1  <  0.0 ), then=( vTrue ), else=( vFalse ) ) == -1;
+x16: Expr_if( ( 0.0  <=  10.0*vN1 ), then=( vTrue ), else=( vFalse ) ) == -1;
+x17: Expr_if( ( 0.0  <=  10.0*v0 ), then=( vTrue ), else=( vFalse ) ) == 1;
+x18: Expr_if( ( 0.0  <=  10.0*vP1 ), then=( vTrue ), else=( vFalse ) ) == 1;
+x19: Expr_if( ( 0.0  <  10.0*vN1 ), then=( vTrue ), else=( vFalse ) ) == -1;
+x20: Expr_if( ( 0.0  <  10.0*v0 ), then=( vTrue ), else=( vFalse ) ) == -1;
+x21: Expr_if( ( 0.0  <  10.0*vP1 ), then=( vTrue ), else=( vFalse ) ) == 1;
+x22: Expr_if( ( -1.0  <=  vN2  <=  1.0 ), then=( vTrue ), else=( vFalse ) ) == -1;
+x23: Expr_if( ( -1*vP1  <=  vN1  <=  1.0 ), then=( vTrue ), else=( vFalse ) ) == 1;
+x24: Expr_if( ( -1*vP1**2  <=  v0  <=  1.0 ), then=( vTrue ), else=( vFalse ) ) == 1;
+x25: Expr_if( ( vN1  <=  vP1  <=  1.0 ), then=( vTrue ), else=( vFalse ) ) == 1;
+x26: Expr_if( ( -1.0  <=  vP2  <=  1.0 ), then=( vTrue ), else=( vFalse ) ) == -1;
+x27: Expr_if( ( -1.0  <  vN2  <  1.0 ), then=( vTrue ), else=( vFalse ) ) == -1;
+x28: Expr_if( ( -1.0  <  vN1  <  vP1 ), then=( vTrue ), else=( vFalse ) ) == -1;
+x29: Expr_if( ( -1.0  <  v0  <  vP1**2 ), then=( vTrue ), else=( vFalse ) ) == 1;
+x30: Expr_if( ( -1.0  <  vP1  <  vP1 ), then=( vTrue ), else=( vFalse ) ) == -1;
+x31: Expr_if( ( -1.0  <  vP2  <  1.0 ), then=( vTrue ), else=( vFalse ) ) == -1;
+
+OBJ: minimize 10.0 * Expr_if( ( v0 ), then=( vTrue ), else=( vFalse ) );
+
+STARTING_POINT{
+ONE_VAR_CONST__: 1;
+x1: 1;
+x2: -1;
+x3: -1;
+x4: 1;
+x5: 0;
+x6: -2;
+x7: 2;
+}
+
