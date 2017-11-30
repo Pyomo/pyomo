@@ -2,13 +2,13 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/km08tbkv05ik14n9/branch/master?svg=true)](https://ci.appveyor.com/project/WilliamHart/pyomo/branch/master)
 [![codecov](https://codecov.io/gh/Pyomo/pyomo/branch/master/graph/badge.svg)](https://codecov.io/gh/Pyomo/pyomo)
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/Pyomo/pyomo/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/Pyomo/pyomo/?branch=master)
-[![Research software impact](http://depsy.org/api/package/pypi/Pyomo/badge.svg)](http://depsy.org/package/python/Pyomo)
-[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](http://www.repostatus.org/badges/latest/active.svg)](http://www.repostatus.org/#active)
 [![Documentation Status](https://readthedocs.org/projects/pyomo/badge/?version=latest)](http://pyomo.readthedocs.org/en/latest/)
 
 [![GitHub contributors](https://img.shields.io/github/contributors/pyomo/pyomo.svg)](https://github.com/pyomo/pyomo/graphs/contributors)
 [![Merged PRs](https://img.shields.io/github/issues-pr-closed-raw/pyomo/pyomo.svg?label=merged+PRs)](https://github.com/pyomo/pyomo/pulls?q=is:pr+is:merged)
 [![Issue stats](http://isitmaintained.com/badge/resolution/pyomo/pyomo.svg)](http://isitmaintained.com/project/pyomo/pyomo)
+[![Research software impact](http://depsy.org/api/package/pypi/Pyomo/badge.svg)](http://depsy.org/package/python/Pyomo)
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](http://www.repostatus.org/badges/latest/active.svg)](http://www.repostatus.org/#active)
 
 ## Pyomo Overview
 
