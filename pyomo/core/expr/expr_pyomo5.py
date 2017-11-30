@@ -1042,11 +1042,6 @@ class _ToStringVisitor(ExpressionValueVisitor):
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
-        #print("HERE y")
-        #print(type(node))
-        #print("values")
-        #print(values)
-
         tmp = []
         for i,val in enumerate(values):
             arg = node._args_[i]
@@ -1071,10 +1066,6 @@ class _ToStringVisitor(ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
-        #print("HERE x")
-        #print(type(node))
-        #print(type(node) in native_types)
-
         if node is None:
             return True, None
 
