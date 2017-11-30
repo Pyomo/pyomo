@@ -20,7 +20,7 @@ from six.moves import xrange
 import pyomo.util.plugin
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
-from pyomo.core.expr.numvalue import is_fixed, value, as_numeric
+from pyomo.core.expr.numvalue import is_fixed, value, as_numeric, native_numeric_types, native_types
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base import (SortComponents,
                              SymbolMap,
@@ -37,6 +37,77 @@ import pyomo.core.kernel.component_suffix
 from pyomo.core.kernel.component_block import IBlockStorage
 
 logger = logging.getLogger('pyomo.core')
+
+
+#
+# A visitor pattern that creates a string for an expression
+# that is compatible with the BARON syntax.
+#
+class ToBaronVisitor(EXPR.ExpressionValueVisitor):
+
+    def __init__(self, labeler, variables, memo):
+        super(ToBaronVisitor, self).__init__()
+        self.labeler = labeler
+        self.variables = variables
+        self.memo = memo
+
+    def visit(self, node, values):
+        """ Visit nodes that have been expanded """
+        tmp = []
+        for i,val in enumerate(values):
+            arg = node._args_[i]
+
+            if arg is None:
+                tmp.append('Undefined')
+            elif arg.__class__ in native_numeric_types:
+                tmp.append(val)
+            elif arg.__class__ in native_types:
+                tmp.append("'{0}'".format(val))
+            elif arg.__class__ in EXPR.pyomo5_variable_types:
+                tmp.append(val)
+            elif arg.is_expression() and node._precedence() < arg._precedence():
+                tmp.append("({0})".format(val))
+            else:
+                tmp.append(val)
+
+        if node.__class__ is EXPR.ProductExpression:
+            return "{0} * {1}".format(tmp[0], tmp[1])
+        elif node.__class__ is EXPR.PowExpression:
+            return "{0} ^ {1}".format(tmp[0], tmp[1])
+        else:
+            return node._to_string(tmp)
+
+    def visiting_potential_leaf(self, node):
+        """ 
+        Visiting a potential leaf.
+
+        Return True if the node is not expanded.
+        """
+        if node is None:
+            return True, None
+
+        if node.__class__ in native_types:
+            return True, str(node)
+
+        if node.__class__ in EXPR.pyomo5_variable_types:
+            if id(node) not in self.memo:
+                raise KeyError("Found a variable that is not in the model")
+            if node.fixed:
+                return True, str(value(node))
+            self.variables.add( id(node) )
+            return True, self.memo[id(node)]
+
+        if not node.is_expression():
+            return True, str(value(node))
+
+        return False, None
+
+
+def expression_to_string(expr, labeler, variables, memo):
+    visitor = ToBaronVisitor(labeler, variables, memo)
+    return visitor.dfs_postorder_stack(expr)
+
+
 
 # TODO: The to_string function is handy, but the fact that
 #       it calls .name under the hood for all components
@@ -291,6 +362,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                     for param_data in param_data_iter:
                         yield param_data
 
+        """
         vstring_to_var_dict = {}
         vstring_to_bar_dict = {}
         pstring_to_bar_dict = {}
@@ -311,6 +383,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 param_string = ' '+param_data.to_string()+' '
                 pstring_to_bar_dict[param_string] = \
                     (' %.17r ' % (param_data()))
+        """
 
         # Equation Definition
         string_template = '%'+self._precision_string
@@ -320,6 +393,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                                                c_eqns,
                                                l_eqns):
 
+            """
             #########################
             #CLH: The section below is kind of a hack-y way to use
             #     the expr.to_string function to print
@@ -367,10 +441,15 @@ class ProblemWriter_bar(AbstractProblemWriter):
             for param_string, bar_string in iteritems(pstring_to_bar_dict):
                 eqn_body = eqn_body.replace(param_string, bar_string)
             ################################################
+            """
 
-            if len(vnames) == 0:
+            variables = set()
+            eqn_body = expression_to_string(constraint_data.body, labeler, variables, symbol_map.byObject)
+            referenced_variable_ids.update(variables)
+
+            if len(variables) == 0:
                 assert not skip_trivial_constraints
-                eqn_body += "+ 0 * ONE_VAR_CONST__ "
+                eqn_body += " + 0 * ONE_VAR_CONST__ "
 
             # 7/29/14 CLH:
             #FIXME: Baron doesn't handle many of the
@@ -452,6 +531,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 else:
                     output_file.write("maximize ")
 
+                """
                 #FIXME 7/18/14 See above, constraint writing
                 #              section. Will cause problems if there
                 #              are spaces in variables
@@ -483,6 +563,11 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 for param_string, bar_string in iteritems(pstring_to_bar_dict):
                     obj_string = obj_string.replace(param_string, bar_string)
                 ################################################
+                """
+
+                variables = set()
+                obj_string = expression_to_string(objective_data.expr, labeler, variables, symbol_map.byObject)
+                referenced_variable_ids.update(variables)
 
         output_file.write(obj_string+";\n\n")
 
