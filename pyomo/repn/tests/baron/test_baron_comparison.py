@@ -28,9 +28,7 @@ class Tests(unittest.TestCase):
 
     def pyomo(self, cmd):
         os.chdir(currdir)
-        print(cmd)
         output = main.main(['convert', '--logging=quiet', '-c']+cmd)
-        print(output)
         return output
 
 class BaselineTests(Tests):
