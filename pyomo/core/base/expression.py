@@ -82,7 +82,7 @@ class _ExpressionData(NumericValue):
     def _precedence(self):
         return 0
 
-    def _to_string(self, values, verbose=False):
+    def _to_string(self, values, verbose, smap):
         if verbose:
             return "%s{%s}" % (str(self), values[0])
         if self.expr is None:

@@ -99,7 +99,7 @@ class IndexTemplate(NumericValue):
     def getname(self, fully_qualified=False, name_buffer=None):
         return "{"+self._set.getname(fully_qualified, name_buffer)+"}"
 
-    def to_string(self, verbose=None, labeler=None):
+    def to_string(self, verbose=None, labeler=None, smap=None):
         return self.name
 
     def set_value(self, value):

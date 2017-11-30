@@ -42,13 +42,13 @@ from pyomo.util._task import pyomo_api
 from pyomo.util.deprecation import deprecation_warning
 
 from pyomo.core.expr import expr_common
+from pyomo.core.expr.symbol_map import SymbolMap
 
 from pyomo.core.base.var import _VarData, Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.set_types import *
 from pyomo.core.base.suffix import active_import_suffix_generator
-from pyomo.core.base.symbol_map import SymbolMap
 from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.DataPortal import *
 from pyomo.core.base.plugin import *

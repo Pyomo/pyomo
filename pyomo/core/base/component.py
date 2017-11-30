@@ -389,7 +389,7 @@ class Component(_ComponentBase):
         """Return the component name"""
         return self.name
 
-    def to_string(self, verbose=None, labeler=None):
+    def to_string(self, verbose=None, labeler=None, smap=None):
         """Return the component name"""
         return self.name
 
@@ -683,11 +683,13 @@ class ComponentData(_ComponentBase):
         """Return a string with the component name and index"""
         return self.name
 
-    def to_string(self, verbose=None, labeler=None):
+    def to_string(self, verbose=None, labeler=None, smap=None):
         """
         Return a string representation of this component,
         applying the labeler if passed one.
         """
+        if smap:
+            return smap.getSymbol(self, labeler)
         if labeler is not None:
             return labeler(self)
         else:

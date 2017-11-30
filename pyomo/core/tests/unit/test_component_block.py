@@ -4,6 +4,7 @@ import pickle
 
 import pyutilib.th as unittest
 from pyomo.core.expr.numvalue import native_numeric_types
+from pyomo.core.expr.symbol_map import SymbolMap
 import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
@@ -17,7 +18,6 @@ from pyomo.core.kernel.component_interface import (ICategorizedObject,
                                                  IComponentContainer,
                                                  _ActiveComponentContainerMixin)
 from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.symbol_map import SymbolMap
 from pyomo.core.kernel.component_suffix import suffix
 from pyomo.core.kernel.component_constraint import (constraint,
                                                     constraint_dict,

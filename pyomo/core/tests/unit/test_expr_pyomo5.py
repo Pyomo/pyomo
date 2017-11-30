@@ -29,6 +29,7 @@ from pyomo.core.expr import expr_common
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import potentially_variable, native_types
 from pyomo.core.base.var import SimpleVar
+from pyomo.core.base.label import *
 
 
 class TestExpression_EvaluateNumericConstant(unittest.TestCase):
@@ -2264,7 +2265,6 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
 
 
 class TestPrettyPrinter_oldStyle(unittest.TestCase):
-#class TestPrettyPrinter_oldStyle(object):
 
     _save = None
 
@@ -2405,7 +2405,6 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
 
 
 class TestPrettyPrinter_newStyle(unittest.TestCase):
-#class TestPrettyPrinter_newStyle(object):
 
     _save = None
 
@@ -2668,6 +2667,23 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         self.assertFileEqualsBaseline( currdir+"varpprint.out",
                                        currdir+"varpprint.txt" )
 
+    def test_labeler(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.y = Var()
+        M.z = Var()
+        M.a = Var(range(3))
+        M.p = Param(range(3), initialize=2)
+        M.q = Param(range(3), initialize=3, mutable=True)
+
+        e = M.x*M.y + summation(M.p, M.a) + Sum(M.q[i]*M.a[i] for i in M.a) / M.x
+        self.assertEqual(str(e), "2*a[0] + 2*a[1] + 2*a[2] + x*y + (q[0]*a[0] + q[1]*a[1] + q[2]*a[2])*(1/x)")
+
+        from pyomo.core.expr.symbol_map import SymbolMap
+        labeler = NumericLabeler('x')
+        smap = SymbolMap(labeler)
+        e = EXPR.expression_to_string(e, smap=smap)
+        self.assertEqual(str(e), "x1*x2 + 2*x3 + 2*x4 + 2*x5 + (q[0]*x3 + q[1]*x4 + q[2]*x5)*(1/x1)")
 
 #
 # TODO:What is this checking?

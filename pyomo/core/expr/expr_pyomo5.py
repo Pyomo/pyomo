@@ -1035,10 +1035,10 @@ def _expression_is_fixed(node):
 
 class _ToStringVisitor(ExpressionValueVisitor):
 
-    def __init__(self, verbose, labeler):
+    def __init__(self, verbose, smap):
         super(_ToStringVisitor, self).__init__()
         self.verbose = verbose
-        self.labeler = labeler
+        self.smap = smap
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
@@ -1058,7 +1058,8 @@ class _ToStringVisitor(ExpressionValueVisitor):
                 tmp.append("({0})".format(val))
             else:
                 tmp.append(val)
-        return node._to_string(tmp, verbose=self.verbose)
+
+        return node._to_string(tmp, self.verbose, self.smap)
 
     def visiting_potential_leaf(self, node):
         """ 
@@ -1073,27 +1074,38 @@ class _ToStringVisitor(ExpressionValueVisitor):
             return True, str(node)
 
         if node.__class__ in pyomo5_variable_types:
-            return True, node.to_string(verbose=self.verbose, labeler=self.labeler)
+            return True, node.to_string(verbose=self.verbose, smap=self.smap)
 
         if not node.is_expression():
-            return True, node.to_string(verbose=self.verbose, labeler=self.labeler)
+            return True, node.to_string(verbose=self.verbose, smap=self.smap)
 
         return False, None
 
 
-def expression_to_string(expr, verbose=None, labeler=None):
+def expression_to_string(expr, verbose=None, labeler=None, smap=None):
     """
     Return the polynomial degree of the expression.
 
     Args:
-        node: The root node of an expression tree.
+        expr: The root node of an expression tree.
+        verbose (bool): If :const:`True`, then the output is
+            a nested functional form.  Otherwise, the output
+            is an algebraic expression.  Default is :const:`False`.
+        labeler:  If specified, this labeler is used to label
+            variables in the expression.
+        smap:  If specified, this :class:`SymbolMap <pyomo.core.expr.symbol_map.SymbolMap>` is
+            used to cache labels.
 
     Returns:
         A non-negative integer that is the polynomial
         degree if the expression is polynomial, or :const:`None` otherwise.
     """
     verbose = common.TO_STRING_VERBOSE if verbose is None else verbose
-    visitor = _ToStringVisitor(verbose, labeler)
+    if labeler is not None:
+        if smap is None:
+            smap = SymbolMap()
+        smap.default_labeler = labeler
+    visitor = _ToStringVisitor(verbose, smap)
     return visitor.dfs_postorder_stack(expr)
 
 
@@ -1266,7 +1278,7 @@ class ExpressionBase(NumericValue):
         #
         return expression_to_string(expr)
 
-    def to_string(self, verbose=False, labeler=None):
+    def to_string(self, verbose=False, labeler=None, smap=None):
         """
         Return a string representation of the expression tree.
 
@@ -1277,16 +1289,18 @@ class ExpressionBase(NumericValue):
                 Defaults to :const:`False`.
             labeler: An object that generates string labels for 
                 variables in the expression tree.  Defaults to :const:`None`.
+            smap:  If specified, this :class:`SymbolMap <pyomo.core.expr.symbol_map.SymbolMap>` is
+                used to cache labels for variables.
 
         Returns:
             A string representation for the expression tree.
         """
-        return expression_to_string(self, verbose=verbose, labeler=labeler)
+        return expression_to_string(self, verbose=verbose, labeler=labeler, smap=None)
 
     def _precedence(self):
         return ExpressionBase.PRECEDENCE
 
-    def _to_string(self, values, verbose=False):            #pragma: no cover
+    def _to_string(self, values, verbose, smap):            #pragma: no cover
         """
         Construct a string representation for this node, using the string
         representations of its children.
@@ -1302,6 +1316,9 @@ class ExpressionBase(NumericValue):
                 representation consists of nested functions.  Otherwise,
                 the string representation is an algebraic equation.
                 Defaults to :const:`False`.
+            smap:  If specified, this :class:`SymbolMap
+                <pyomo.core.expr.symbol_map.SymbolMap>` is
+                used to cache labels for variables.
 
         Returns:
             A string representation for this node.
@@ -1502,8 +1519,20 @@ class ExpressionBase(NumericValue):
 
         This method is called by the :class:`_EvaluationVisitor
         <pyomo.core.expr.current._EvaluationVisitor>` class.  It must
-        be over-written by expression classes to customize this
-        logic.
+        be over-written by expression classes to customize this logic.
+
+        Note:
+            This method applies the logical operation of the
+            operator to the arguments.  It does *not* evaluate
+            the arguments in the process, but assumes that they
+            have been previously evaluated.  But noted that if
+            this class contains auxilliary data (e.g. like the
+            numeric coefficients in the :class:`LinearExpression
+            <pyomo.core.expr.current.LinearExpression>` class, then
+            those values *must* be evaluated as part of this
+            function call.  An uninitialized parameter value
+            encountered during the execution of this method is
+            considered an error.
 
         Args:
             values (list): A list of values that indicate the value
@@ -1538,7 +1567,7 @@ class NegationExpression(ExpressionBase):
     def _precedence(self):
         return NegationExpression.PRECEDENCE
 
-    def _to_string(self, values, verbose=False):
+    def _to_string(self, values, verbose, smap):
         if verbose:
             return "{0}({1})".format(self.getname(), values[0])
         tmp = values[0]
@@ -1605,7 +1634,7 @@ class ExternalFunctionExpression(ExpressionBase):
     def _apply_operation(self, result):
         return self._fcn.evaluate( result )     #pragma: no cover
 
-    def _to_string(self, values, verbose=False):
+    def _to_string(self, values, verbose, smap):
         return "{0}({1})".format(self.getname(), ", ".join(values))
 
 
@@ -1667,7 +1696,7 @@ class PowExpression(ExpressionBase):
     def getname(self, *args, **kwds):
         return 'pow'
 
-    def _to_string(self, values, verbose=False):
+    def _to_string(self, values, verbose, smap):
         if verbose:
             return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
         return "{0}**{1}".format(values[0], values[1])
@@ -1710,7 +1739,7 @@ class ProductExpression(ExpressionBase):
         _l, _r = result
         return _l * _r
 
-    def _to_string(self, values, verbose=False):
+    def _to_string(self, values, verbose, smap):
         if verbose:
             return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
         return "{0}*{1}".format(values[0],values[1])
@@ -1746,7 +1775,7 @@ class ReciprocalExpression(ExpressionBase):
     def getname(self, *args, **kwds):
         return 'recip'
 
-    def _to_string(self, values, verbose=False):
+    def _to_string(self, values, verbose, smap):
         if verbose:
             return "{0}({1})".format(self.getname(), values[0])
         return "(1/{0})".format(values[0])
@@ -1852,7 +1881,7 @@ class InequalityExpression(_LinearOperatorExpression):
             _l = a
         return True
 
-    def _to_string(self, values, verbose=False):
+    def _to_string(self, values, verbose, smap):
         if len(values) == 2:
             return "{0}  {1}  {2}".format(values[0], '<' if self._strict[0] else '<=', values[1])
         return "{0}  {1}  {2}  {3}  {4}".format(values[0], '<' if self._strict[0] else '<=', values[1], '<' if self._strict[1] else '<=', values[2])
@@ -1894,7 +1923,7 @@ class EqualityExpression(_LinearOperatorExpression):
         _l, _r = result
         return _l == _r
 
-    def _to_string(self, values, verbose=False):
+    def _to_string(self, values, verbose, smap):
         return "{0}  ==  {1}".format(values[0], values[1])
         
     def is_constant(self):
@@ -1918,6 +1947,13 @@ class _SumExpression(_LinearOperatorExpression):
     def _apply_operation(self, result):
         l_, r_ = result
         return l_ + r_
+
+    def _to_string(self, values, verbose, smap):
+        if verbose:
+            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
+        if values[1][0] == '-':
+            return "{0} {1}".format(values[0],values[1])
+        return "{0} + {1}".format(values[0],values[1])
 
 
 class NPV_SumExpression(_SumExpression):
@@ -1996,7 +2032,7 @@ class ViewSumExpression(_SumExpression):
                 return True
         return False
 
-    def _to_string(self, values, verbose=False):
+    def _to_string(self, values, verbose, smap):
         if verbose:
             tmp = [values[0]]
             for i in range(1,len(values)):
@@ -2105,7 +2141,7 @@ class GetItemExpression(ExpressionBase):
     def _apply_operation(self, result):
         return value(self._base.__getitem__( tuple(result) ))
 
-    def _to_string(self, values, verbose=False):
+    def _to_string(self, values, verbose, smap):
         if verbose:
             return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
         return "%s%s" % (self.getname(), values[0])
@@ -2184,7 +2220,7 @@ class Expr_if(ExpressionBase):
                 pass
         return None
 
-    def _to_string(self, values, verbose=False):
+    def _to_string(self, values, verbose, smap):
         return 'Expr_if( ( {0} ), then=( {1} ), else=( {2} ) )'.format(self._if, self._then, self._else)
 
     def _apply_operation(self, result):
@@ -2227,7 +2263,7 @@ class UnaryFunctionExpression(ExpressionBase):
     def getname(self, *args, **kwds):
         return self._name
 
-    def _to_string(self, values, verbose=False):
+    def _to_string(self, values, verbose, smap):
         if verbose:
             return "{0}({1})".format(self.getname(), values[0])
         if values[0][0] == '(':
@@ -2299,6 +2335,9 @@ class LinearExpression(ExpressionBase):
     def nargs(self):
         return 0
 
+    def _precedence(self):
+        return LinearExpression.PRECEDENCE
+
     def __getstate__(self):
         state = super(LinearExpression, self).__getstate__()
         for i in LinearExpression.__slots__:
@@ -2332,22 +2371,44 @@ class LinearExpression(ExpressionBase):
                 return True
         return False
 
-    def _to_string(self, values, verbose=False):
-        tmp = [str(self.constant)]
+    def _to_string(self, values, verbose, smap):
+        const_ = value(self.constant)
+        if not isclose(const_,0):
+            tmp = [str(self.constant)]
+        else:
+            tmp = []
         for c,v in zip(self.linear_coefs, self.linear_vars):
-            if c.__class__ in native_numeric_types and isclose(value(c),1):
-               tmp.append(str(v))
-            elif c < 0:
-               tmp.append("- %f*%s" % (str(math.fabs(c)),str(v)))
+            if smap:
+                v_ = smap.getSymbol(v)
             else:
-               tmp.append("+ %f*%s" % (str(c),str(v)))
-        return "".join(tmp)
+                v_ = str(v)
+            if c.__class__ in native_numeric_types:
+                if isclose(value(c),1):
+                   tmp.append(" + %s" % v_)
+                elif isclose(value(c),0):
+                    continue
+                elif isclose(value(c),-1):
+                   tmp.append(" - %s" % v_)
+                elif c < 0:
+                   tmp.append(" - %s*%s" % (str(math.fabs(c)), v_))
+                else:
+                   tmp.append(" + %s*%s" % (str(c), v_))
+            else:
+                tmp.append(" + %s*%s" % (str(c), v_))
+        s = "".join(tmp)
+        if len(s) == 0:
+            return s
+        if s[0] == " ":
+            if s[1] == "+":
+                return s[3:]
+            return s[1:]
+        return s
 
     def is_potentially_variable(self):
         return len(self.linear_vars) > 0
 
     def _apply_operation(self, result):
-        return self.constant + sum(c*v.value for c,v in zip(self.linear_coefs, self.linear_vars))
+        return value(self.constant) + sum(value(c)*v.value for c,v in zip(self.linear_coefs, self.linear_vars))
 
     #@profile
     @staticmethod

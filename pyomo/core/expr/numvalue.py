@@ -708,7 +708,7 @@ functions.""" % (self.name,))
         """
         return _generate_other_expression(_abs,self, None)
 
-    def to_string(self, verbose=None, labeler=None):
+    def to_string(self, verbose=None, labeler=None, smap=None):
         """
         Return a string representation of the expression tree.
 
@@ -723,11 +723,12 @@ functions.""" % (self.name,))
         Returns:
             A string representation for the expression tree.
         """
-        if (labeler is not None) and (not self.is_constant()):
-            # Do not label constant objects, direct them to their own __str__
-            return labeler(self)
-        else:
-            return self.__str__()
+        if not self.is_constant():
+            if smap:
+                return smap.getSymbol(self, labeler)
+            elif labeler is not None:
+                return labeler(self)
+        return self.__str__()
 
 
 class NumericConstant(NumericValue):

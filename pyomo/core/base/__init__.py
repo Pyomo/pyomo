@@ -18,7 +18,6 @@ from pyomo.core.base.expression import *
 from pyomo.core.base.label import *
 from pyomo.core.base.plugin import *
 from pyomo.core.base.DataPortal import *
-from pyomo.core.base.symbol_map import *
 
 #
 # Components
@@ -36,6 +35,7 @@ from pyomo.core.base.sos import *
 from pyomo.core.base.piecewise import *
 from pyomo.core.base.suffix import *
 from pyomo.core.base.external import *
+from pyomo.core.base.symbol_map import *
 #
 from pyomo.core.base.set_types import *
 from pyomo.core.base.misc import *
