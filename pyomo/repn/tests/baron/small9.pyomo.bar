@@ -1,0 +1,23 @@
+OPTIONS {
+Summary: 0;
+}
+
+POSITIVE_VARIABLES ONE_VAR_CONST__;
+
+VARIABLES x1, x3;
+
+EQUATIONS c_e_FIX_ONE_VAR_CONST__, x4, x5, x6, x7, x8;
+
+c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;
+x4:  x1 * 0.0 * x3 + x1  == 1;
+x5:  0.0 * x1 * x3 + x1  == 1;
+x6:  x1  == 1;
+x7:  x1 * 0.0 * x3  == 1;
+x8:  0.0 * x1 * x3  == 1;
+
+OBJ: minimize  x1 ;
+
+STARTING_POINT{
+ONE_VAR_CONST__: 1;
+}
+
