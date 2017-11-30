@@ -24,20 +24,18 @@ class TestMindtPy(unittest.TestCase):
     def test_OA(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            #model = instance.m
             print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA', init_strategy = 'rNLP')
+            opt.solve(model, strategy='PSC', init_strategy = 'rNLP')
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
-
+    #
     # @unittest.skipIf(not subsolvers_available,
     #                  "Required subsolvers {} are not available"
     #                  .format(required_solvers))
     # def test_PSC(self):
     #     """Test the partial surrogate cuts decomposition algorithm."""
     #     with SolverFactory('mindtpy') as opt:
-    #         model = SimpleMINLP()
     #         print('\n Solving problem with Partial Surrogate Cuts')
     #         opt.solve(model, strategy='PSC', init_strategy = 'rNLP')
     #
@@ -51,7 +49,6 @@ class TestMindtPy(unittest.TestCase):
     # def test_GBD(self):
     #     """Test the generalized Benders Decomposition algorithm."""
     #     with SolverFactory('mindtpy') as opt:
-    #         model = SimpleMINLP()
     #         print('\n Solving problem with Generalized Benders Decomposition')
     #         opt.solve(model, strategy='GBD', init_strategy = 'rNLP')
     #
@@ -65,7 +62,6 @@ class TestMindtPy(unittest.TestCase):
     # def test_ECP(self):
     #     """Test the Extended Cutting Planes algorithm."""
     #     with SolverFactory('mindtpy') as opt:
-    #         model = SimpleMINLP()
     #         print('\n Solving problem with Extended Cutting Planes')
     #         opt.solve(model, strategy='ECP', init_strategy = 'rNLP')
     #

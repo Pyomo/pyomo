@@ -60,19 +60,19 @@ class TestMindtPy(unittest.TestCase):
             #               TerminationCondition.optimal)
             self.assertTrue(abs(value(model.cost.expr) - 68) <= 1E-2)
 
-    # @unittest.skipIf(not subsolvers_available,
-    #                  "Required subsolvers {} are not available"
-    #                  .format(required_solvers))
-    # def test_ECP(self):
-    #     """Test the Extended Cutting Planes algorithm."""
-    #     with SolverFactory('mindtpy') as opt:
-    #         model = EightProcessFlowsheet()
-    #         print('\n Solving problem with Extended Cutting Planes')
-    #         opt.solve(model, strategy='ECP', init_strategy = 'max_binary')
-    #
-    #         # self.assertIs(results.solver.termination_condition,
-    #         #               TerminationCondition.optimal)
-    #         self.assertTrue(abs(value(model.cost.expr) - 68) <= 1E-2)
+    @unittest.skipIf(not subsolvers_available,
+                     "Required subsolvers {} are not available"
+                     .format(required_solvers))
+    def test_ECP(self):
+        """Test the Extended Cutting Planes algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet()
+            print('\n Solving problem with Extended Cutting Planes')
+            opt.solve(model, strategy='ECP', init_strategy = 'max_binary')
+
+            # self.assertIs(results.solver.termination_condition,
+            #               TerminationCondition.optimal)
+            self.assertTrue(abs(value(model.cost.expr) - 68) <= 1E-2)
 
 
 if __name__ == "__main__":
