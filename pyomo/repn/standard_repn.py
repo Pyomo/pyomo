@@ -259,8 +259,7 @@ to a solver and then be deleted.
 #@profile
 def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None):
     #
-    # Disable implicit cloning while creating a standard representation.
-    # We allow the representation to be entangled with the original expression.
+    # Use a custom isclose function
     #
     with isclose_context(compute_values):
         #
@@ -662,7 +661,10 @@ def _collect_identity(exp, multiplier, idMap, compute_values, verbose, quadratic
 
 def _collect_linear(exp, multiplier, idMap, compute_values, verbose, quadratic):
     ans = Results()
-    ans.const = multiplier*exp.constant
+    if compute_values:
+        ans.const = multiplier*value(exp.constant)
+    else:
+        ans.const = multiplier*exp.constant
 
     for c,v in zip(exp.linear_coefs, exp.linear_vars):
         if v.fixed:
@@ -678,10 +680,16 @@ def _collect_linear(exp, multiplier, idMap, compute_values, verbose, quadratic):
                 key = len(idMap) - 1
                 idMap[None][id_] = key
                 idMap[key] = v
-            if key in ans.linear:
-                ans.linear[key] += multiplier*c
+            if compute_values:
+                if key in ans.linear:
+                    ans.linear[key] += multiplier*value(c)
+                else:
+                    ans.linear[key] = multiplier*value(c)
             else:
-                ans.linear[key] = multiplier*c
+                if key in ans.linear:
+                    ans.linear[key] += multiplier*c
+                else:
+                    ans.linear[key] = multiplier*c
     return ans
 
 def _collect_comparison(exp, multiplier, idMap, compute_values, verbose, quadratic):
@@ -782,7 +790,16 @@ def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False
     #
     repn.constant = ans.const
 
-    keys = list(key for key in ans.linear if not isclose(ans.linear[key],0))
+    #
+    # Create a list (tuple) of the variables and coefficients
+    #
+    # If we compute the values of constants, then we can skip terms with zero
+    # coefficients
+    #
+    if compute_values:
+        keys = list(key for key in ans.linear if not isclose(ans.linear[key],0))
+    else:
+        keys = list(ans.linear.keys())
     repn.linear_vars = tuple(idMap[key] for key in keys)
     repn.linear_coefs = tuple(ans.linear[key] for key in keys)
 
