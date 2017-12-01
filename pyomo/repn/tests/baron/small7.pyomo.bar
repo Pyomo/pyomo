@@ -7,15 +7,15 @@ POSITIVE_VARIABLES ONE_VAR_CONST__;
 VARIABLES x1, x2, x3;
 
 LOWER_BOUNDS{
-x3: -1;
-x2: -1;
 x1: -1;
+x2: -1;
+x3: -1;
 }
 
 UPPER_BOUNDS{
-x3: 1;
-x2: 1;
 x1: 1;
+x2: 1;
+x3: 1;
 }
 
 EQUATIONS c_e_FIX_ONE_VAR_CONST__, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, c20, c21, c22, c23, c24;
@@ -50,8 +50,8 @@ OBJ: minimize x2;
 
 STARTING_POINT{
 ONE_VAR_CONST__: 1;
-x3: 2;
-x2: 1;
 x1: 3;
+x2: 1;
+x3: 2;
 }
 

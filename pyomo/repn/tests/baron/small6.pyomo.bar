@@ -7,14 +7,14 @@ POSITIVE_VARIABLES ONE_VAR_CONST__;
 VARIABLES x1, x2, x3;
 
 LOWER_BOUNDS{
-x2: -1;
 x1: -1;
+x2: -1;
 x3: -1;
 }
 
 UPPER_BOUNDS{
-x2: 1;
 x1: 1;
+x2: 1;
 x3: 1;
 }
 
@@ -32,8 +32,8 @@ OBJ: minimize x2;
 
 STARTING_POINT{
 ONE_VAR_CONST__: 1;
-x2: 1;
 x1: 3;
+x2: 1;
 x3: 2;
 }
 
