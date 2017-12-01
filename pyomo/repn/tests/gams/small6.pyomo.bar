@@ -1,0 +1,39 @@
+OPTIONS {
+Summary: 0;
+}
+
+POSITIVE_VARIABLES ONE_VAR_CONST__;
+
+VARIABLES x1, x2, x3;
+
+LOWER_BOUNDS{
+x1: -1;
+x2: -1;
+x3: -1;
+}
+
+UPPER_BOUNDS{
+x1: 1;
+x2: 1;
+x3: 1;
+}
+
+EQUATIONS c_e_FIX_ONE_VAR_CONST__, x5, x6, x7, x8, x9, x10;
+
+c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;
+x5: (1/2.0) * x3 * (x1 - x2) == 2;
+x6: x3 * (1/2.0) * (x1 - x2) == 2;
+x7: x3 * (x1 - x2) * (1/2.0) == 2;
+x8: x3 * (x1 * (1/2.0) - x2 * (1/2.0)) == 2;
+x9: x3 * (x1 - x2) * (1/2.0) == 2;
+x10: x3 * (x1 - x2) - 2.0 * 2.0 == 0;
+
+OBJ: minimize x1;
+
+STARTING_POINT{
+ONE_VAR_CONST__: 1;
+x1: 1;
+x2: 2;
+x3: 3;
+}
+
