@@ -41,18 +41,18 @@ BaselineTests = unittest.category('smoke', 'nightly','expensive')(BaselineTests)
 #and checks that it matches the current pyomo baseline nl file
 #
 @unittest.nottest
-def barwriter_baseline_test(self, name):
+def gams_writer_baseline_test(self, name):
     if os.path.exists(datadir+name+'.dat'):
-        self.pyomo(['--output='+currdir+name+'.test.bar',
+        self.pyomo(['--output='+currdir+name+'.test.gms',
                     datadir+name+'_testCase.py',
                     datadir+name+'.dat'])
     else:
-        self.pyomo(['--output='+currdir+name+'.test.bar',
+        self.pyomo(['--output='+currdir+name+'.test.gms',
                     datadir+name+'_testCase.py'])
 
     # Check that the pyomo nl file matches its own baseline
     self.assertFileEqualsBaseline(
-        currdir+name+'.test.bar', currdir+name+'.pyomo.bar',
+        currdir+name+'.test.gms', currdir+name+'.pyomo.gms',
         tolerance=(1e-7, False))
 
 
@@ -66,7 +66,7 @@ ASLTests = unittest.category('smoke','nightly','expensive')(ASLTests)
 # add test methods to classes
 for f in glob.glob(datadir+'*_testCase.py'):
     name = re.split('[._]',os.path.basename(f))[0]
-    BaselineTests.add_fn_test(fn=barwriter_baseline_test, name=name)
+    BaselineTests.add_fn_test(fn=gams_writer_baseline_test, name=name)
     #ASLTests.add_fn_test(fn=nlwriter_asl_test, name=name)
 
 if __name__ == "__main__":

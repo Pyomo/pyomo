@@ -21,7 +21,7 @@ import pyomo.opt
 thisdir = os.path.dirname(os.path.abspath(__file__))
 
 
-class TestGams_Ordering(unittest.TestCase):
+class Test(unittest.TestCase):
 
     def _cleanup(self, fname):
         try:
@@ -101,8 +101,44 @@ class TestGams_Ordering(unittest.TestCase):
 
         self._check_baseline(model, file_determinism=2)
 
+    def test_var_on_other_model(self):
+        other = ConcreteModel()
+        other.a = Var()
 
-class TestGams_writer(unittest.TestCase):
+        model = ConcreteModel()
+        model.x = Var()
+        model.c = Constraint(expr=other.a + 2*model.x <= 0)
+        model.obj = Objective(expr=model.x)
+        self._check_baseline(model)
+
+    def test_var_on_deactivated_block(self):
+        model = ConcreteModel()
+        model.x = Var()
+        model.other = Block()
+        model.other.a = Var()
+        model.other.deactivate()
+        model.c = Constraint(expr=model.other.a + 2*model.x <= 0)
+        model.obj = Objective(expr=model.x)
+        self._check_baseline(model)
+
+    def test_var_on_nonblock(self):
+        class Foo(Block().__class__):
+            def __init__(self, *args, **kwds):
+                kwds.setdefault('ctype',Foo)
+                super(Foo,self).__init__(*args, **kwds)
+
+        model = ConcreteModel()
+        model.x = Var()
+        model.other = Foo()
+        model.other.a = Var()
+        model.c = Constraint(expr=model.other.a + 2*model.x <= 0)
+        model.obj = Objective(expr=model.x)
+        self._check_baseline(model)
+
+
+
+#class TestGams_writer(unittest.TestCase):
+class TestGams_writer(object):
 
     def _cleanup(self, fname):
         try:
