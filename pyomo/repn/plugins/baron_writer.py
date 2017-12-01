@@ -78,7 +78,7 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
         elif node.__class__ is EXPR.PowExpression:
             return "{0} ^ {1}".format(tmp[0], tmp[1])
         else:
-            return node._to_string(tmp, None, self.smap)
+            return node._to_string(tmp, None, self.smap, True)
 
     def visiting_potential_leaf(self, node):
         """ 
@@ -633,7 +633,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # LOWER_BOUNDS
         #
 
-        LowerBoundHeader = False
+        lbounds = {}
         for vid in referenced_variable_ids:
             name = symbol_map.byObject[vid]
             var_data = symbol_map.bySymbol[name]()
@@ -649,22 +649,21 @@ class ProblemWriter_bar(AbstractProblemWriter):
                     var_data_lb = self._get_bound(var_data.lb)
 
             if var_data_lb is not None:
-                if LowerBoundHeader is False:
-                    output_file.write("LOWER_BOUNDS{\n")
-                    LowerBoundHeader = True
                 name_to_output = symbol_map.getSymbol(var_data)
                 lb_string_template = '%s: %'+self._precision_string+';\n'
-                output_file.write(lb_string_template
-                                  % (name_to_output, var_data_lb))
+                lbounds[name_to_output] = lb_string_template % (name_to_output, var_data_lb)
 
-        if LowerBoundHeader:
+        if len(lbounds) > 0:
+            output_file.write("LOWER_BOUNDS{\n")
+            output_file.write("".join( lbounds[key] for key in sorted(lbounds.keys()) ) )
             output_file.write("}\n\n")
+        del lbounds
 
         #
         # UPPER_BOUNDS
         #
 
-        UpperBoundHeader = False
+        ubounds = {}
         for vid in referenced_variable_ids:
             name = symbol_map.byObject[vid]
             var_data = symbol_map.bySymbol[name]()
@@ -680,22 +679,21 @@ class ProblemWriter_bar(AbstractProblemWriter):
                     var_data_ub = self._get_bound(var_data.ub)
 
             if var_data_ub is not None:
-                if UpperBoundHeader is False:
-                    output_file.write("UPPER_BOUNDS{\n")
-                    UpperBoundHeader = True
                 name_to_output = symbol_map.getSymbol(var_data)
                 ub_string_template = '%s: %'+self._precision_string+';\n'
-                output_file.write(ub_string_template
-                                  % (name_to_output, var_data_ub))
+                ubounds[name_to_output] = ub_string_template % (name_to_output, var_data_ub)
 
-        if UpperBoundHeader:
+        if len(ubounds) > 0:
+            output_file.write("UPPER_BOUNDS{\n")
+            output_file.write("".join( ubounds[key] for key in sorted(ubounds.keys()) ) )
             output_file.write("}\n\n")
+        del ubounds
 
         #
         # BRANCHING_PRIORITIES
         #
 
-        # Specifyig priorities requires that the pyomo model has established an
+        # Specifying priorities requires that the pyomo model has established an
         # EXTERNAL, float suffix called 'branching_priorities' on the model
         # object, indexed by the relevant variable
         BranchingPriorityHeader = False
@@ -722,6 +720,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # STARTING_POINT
         #
         output_file.write('STARTING_POINT{\nONE_VAR_CONST__: 1;\n')
+        tmp = {}
         string_template = '%s: %'+self._precision_string+';\n'
         for vid in referenced_variable_ids:
             name = symbol_map.byObject[vid]
@@ -730,8 +729,9 @@ class ProblemWriter_bar(AbstractProblemWriter):
             starting_point = var_data.value
             if starting_point is not None:
                 var_name = symbol_map.getSymbol(var_data)
-                output_file.write(string_template % (var_name, starting_point))
+                tmp[var_name] = string_template % (var_name, starting_point)
 
+        output_file.write("".join( tmp[key] for key in sorted(tmp.keys()) ))
         output_file.write('}\n\n')
 
         output_file.close()
