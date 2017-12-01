@@ -23,6 +23,9 @@ class SymbolMap(object):
         typically constructed by solvers and writers, and it may be 
         owned by models.
 
+    Note:
+        We should change the API to not use camelcase.
+
     Attributes:
         byObject (dict):  maps (object id) to (string label)
         bySymbol (dict):  maps (string label) to (object weakref)
