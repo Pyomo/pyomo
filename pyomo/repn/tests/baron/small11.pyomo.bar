@@ -4,16 +4,16 @@ Summary: 0;
 
 POSITIVE_VARIABLES ONE_VAR_CONST__;
 
-VARIABLES x2, x3, x6;
+VARIABLES x1, x2, x3;
 
-EQUATIONS c_e_FIX_ONE_VAR_CONST__, x7, x8, x9;
+EQUATIONS c_e_FIX_ONE_VAR_CONST__, c1, c2, c3;
 
 c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;
-x7: -1 <= 1.0 + 0 * ONE_VAR_CONST__  <= 1;
-x8: -1 <= x2 <= 1;
-x9: -1 <= x3 <= 1;
+c1: -1 <= 1.0 + 0 * ONE_VAR_CONST__  <= 1;
+c2: -1 <= x1 <= 1;
+c3: -1 <= x2 <= 1;
 
-OBJ: minimize x6;
+OBJ: minimize x3;
 
 STARTING_POINT{
 ONE_VAR_CONST__: 1;

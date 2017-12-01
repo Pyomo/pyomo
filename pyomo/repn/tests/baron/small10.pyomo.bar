@@ -4,27 +4,27 @@ Summary: 0;
 
 POSITIVE_VARIABLES ONE_VAR_CONST__;
 
-VARIABLES x2;
+VARIABLES x1;
 
-EQUATIONS c_e_FIX_ONE_VAR_CONST__, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17;
+EQUATIONS c_e_FIX_ONE_VAR_CONST__, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14;
 
 c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;
-x4: 1.0 * x2 == 0;
-x5: 0.0 * x2 + x2 == 0;
-x6: x2 == 0;
-x7: x2 == 0;
-x8: 0.0 * x2 ^ 2 + x2 == 0;
-x9: 0.0 * x2 * 1.0 + x2 == 0;
-x10: 0.0 * x2 ^ 2 + x2 == 0;
-x11: 0.0 * x2 * 1.0 + x2 == 0;
-x12: 0.0 * x2 == 0;
-x13: 0.0 * x2 ^ 2 == 0;
-x14: 0.0 * x2 * 1.0 == 0;
-x15: 0.0 * x2 ^ 2 == 0;
-x16: 0.0 * x2 * 1.0 == 0;
-x17: 0.0 * x2 == 0;
+c1: 1.0 * x1 == 0;
+c2: 0.0 * x1 + x1 == 0;
+c3: x1 == 0;
+c4: x1 == 0;
+c5: 0.0 * x1 ^ 2 + x1 == 0;
+c6: 0.0 * x1 * 1.0 + x1 == 0;
+c7: 0.0 * x1 ^ 2 + x1 == 0;
+c8: 0.0 * x1 * 1.0 + x1 == 0;
+c9: 0.0 * x1 == 0;
+c10: 0.0 * x1 ^ 2 == 0;
+c11: 0.0 * x1 * 1.0 == 0;
+c12: 0.0 * x1 ^ 2 == 0;
+c13: 0.0 * x1 * 1.0 == 0;
+c14: 0.0 * x1 == 0;
 
-OBJ: minimize 1.0 * x2 + 0.0 * x2 + 0.0 * x2 + 0.0 * x2 * x2 + x2 * x2 * 0.0 + 0.0 * x2 ^ 2;
+OBJ: minimize 1.0 * x1 + 0.0 * x1 + 0.0 * x1 + 0.0 * x1 * x1 + x1 * x1 * 0.0 + 0.0 * x1 ^ 2;
 
 STARTING_POINT{
 ONE_VAR_CONST__: 1;

@@ -45,11 +45,10 @@ logger = logging.getLogger('pyomo.core')
 #
 class ToBaronVisitor(EXPR.ExpressionValueVisitor):
 
-    def __init__(self, labeler, variables, memo):
+    def __init__(self, variables, smap):
         super(ToBaronVisitor, self).__init__()
-        self.labeler = labeler
         self.variables = variables
-        self.memo = memo
+        self.smap = smap
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
@@ -70,12 +69,16 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
             else:
                 tmp.append(val)
 
+        if node.__class__ is EXPR.LinearExpression:
+            for v in node.linear_vars:
+                self.variables.add(id(v))
+
         if node.__class__ is EXPR.ProductExpression:
             return "{0} * {1}".format(tmp[0], tmp[1])
         elif node.__class__ is EXPR.PowExpression:
             return "{0} ^ {1}".format(tmp[0], tmp[1])
         else:
-            return node._to_string(tmp)
+            return node._to_string(tmp, None, self.smap)
 
     def visiting_potential_leaf(self, node):
         """ 
@@ -83,6 +86,8 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
+        #print("ISLEAF")
+        #print(node.__class__)
         if node is None:
             return True, None
 
@@ -90,12 +95,11 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
             return True, str(node)
 
         if node.__class__ in EXPR.pyomo5_variable_types:
-            if id(node) not in self.memo:
-                raise KeyError("Found a variable that is not in the model")
             if node.fixed:
                 return True, str(value(node))
-            self.variables.add( id(node) )
-            return True, self.memo[id(node)]
+            self.variables.add(id(node))
+            label = self.smap.getSymbol(node)
+            return True, label
 
         if not node.is_expression():
             return True, str(value(node))
@@ -103,8 +107,12 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
         return False, None
 
 
-def expression_to_string(expr, labeler, variables, memo):
-    visitor = ToBaronVisitor(labeler, variables, memo)
+def expression_to_string(expr, variables, labeler=None, smap=None):
+    if labeler is not None:
+        if smap is None:
+            smap = SymbolMap()
+        smap.default_labeler = labeler
+    visitor = ToBaronVisitor(variables, smap)
     return visitor.dfs_postorder_stack(expr)
 
 
@@ -160,11 +168,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                                  all_blocks_list,
                                  active_components_data_var,
                                  symbol_map,
-                                 labeler,
-                                 create_symbol_func,
-                                 create_symbols_func,
-                                 alias_symbol_func,
-                                 object_symbol_dictionary,
+                                 c_labeler,
                                  output_fixed_variable_bounds,
                                  skip_trivial_constraints,
                                  sorter):
@@ -224,20 +228,6 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
         non_standard_eqns = r_o_eqns + c_eqns + l_eqns
 
-        # GAH 1/5/15: Substituting all non-alphanumeric characters for underscore
-        #             in labeler so this manual update should no longer be needed
-        #
-        # If the text labeler is used, correct the labels to be
-        # baron-allowed variable names
-        # Change '(' and ')' to '__'
-        # This way, for simple variable names like 'x(1_2)' --> 'x__1_2__'
-        # FIXME: 7/21/14 This may break if users give variable names
-        #        with two or more underscores together
-        #if symbolic_solver_labels:
-        #    for key,label in iteritems(object_symbol_dictionary):
-        #        label = label.replace('(','___')
-        #        object_symbol_dictionary[key] = label.replace(')','__')
-
         #
         # EQUATIONS
         #
@@ -266,7 +256,6 @@ class ProblemWriter_bar(AbstractProblemWriter):
                                                                 sort=sorter,
                                                                 descend_into=False):
 
-
                 if (not constraint_data.has_lb()) and \
                    (not constraint_data.has_ub()):
                     assert not constraint_data.equality
@@ -277,13 +266,11 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
                     eqns.append(constraint_data)
 
-                    con_symbol = \
-                        create_symbol_func(symbol_map, constraint_data, labeler)
+                    con_symbol = symbol_map.createSymbol(constraint_data, c_labeler)
                     assert not con_symbol.startswith('.')
                     assert con_symbol != "c_e_FIX_ONE_VAR_CONST__"
 
-                    alias_symbol_func(symbol_map,
-                                      constraint_data,
+                    symbol_map.alias(constraint_data,
                                       alias_template % order_counter)
                     output_file.write(", "+str(con_symbol))
                     order_counter += 1
@@ -293,11 +280,10 @@ class ProblemWriter_bar(AbstractProblemWriter):
         if n_roeqns > 0:
             output_file.write('RELAXATION_ONLY_EQUATIONS ')
             for i, constraint_data in enumerate(r_o_eqns):
-                con_symbol = create_symbol_func(symbol_map, constraint_data, labeler)
+                con_symbol = symbol_map.createSymbol(constraint_data, c_labeler)
                 assert not con_symbol.startswith('.')
                 assert con_symbol != "c_e_FIX_ONE_VAR_CONST__"
-                alias_symbol_func(symbol_map,
-                                  constraint_data,
+                symbol_map.alias(constraint_data,
                                   alias_template % order_counter)
                 if i == n_roeqns-1:
                     output_file.write(str(con_symbol)+';\n\n')
@@ -308,11 +294,10 @@ class ProblemWriter_bar(AbstractProblemWriter):
         if n_ceqns > 0:
             output_file.write('CONVEX_EQUATIONS ')
             for i, constraint_data in enumerate(c_eqns):
-                con_symbol = create_symbol_func(symbol_map, constraint_data, labeler)
+                con_symbol = symbol_map.createSymbol(constraint_data, c_labeler)
                 assert not con_symbol.startswith('.')
                 assert con_symbol != "c_e_FIX_ONE_VAR_CONST__"
-                alias_symbol_func(symbol_map,
-                                  constraint_data,
+                symbol_map.alias(constraint_data,
                                   alias_template % order_counter)
                 if i == n_ceqns-1:
                     output_file.write(str(con_symbol)+';\n\n')
@@ -323,11 +308,10 @@ class ProblemWriter_bar(AbstractProblemWriter):
         if n_leqns > 0:
             output_file.write('LOCAL_EQUATIONS ')
             for i, constraint_data in enumerate(l_eqns):
-                con_symbol = create_symbol_func(symbol_map, constraint_data, labeler)
+                con_symbol = symbol_map.createSymbol(constraint_data, c_labeler)
                 assert not con_symbol.startswith('.')
                 assert con_symbol != "c_e_FIX_ONE_VAR_CONST__"
-                alias_symbol_func(symbol_map,
-                                  constraint_data,
+                symbol_map.alias(constraint_data,
                                   alias_template % order_counter)
                 if i == n_leqns-1:
                     output_file.write(str(con_symbol)+';\n\n')
@@ -362,29 +346,6 @@ class ProblemWriter_bar(AbstractProblemWriter):
                     for param_data in param_data_iter:
                         yield param_data
 
-        """
-        vstring_to_var_dict = {}
-        vstring_to_bar_dict = {}
-        pstring_to_bar_dict = {}
-        for block in all_blocks_list:
-
-            for var_data in active_components_data_var[id(block)]:
-                variable_string = ' '+var_data.to_string()+' '
-                vstring_to_var_dict[variable_string] = var_data
-                if output_fixed_variable_bounds or (not var_data.fixed):
-                    vstring_to_bar_dict[variable_string] = \
-                        ' '+object_symbol_dictionary[id(var_data)]+' '
-                else:
-                    assert var_data.value is not None
-                    vstring_to_bar_dict[variable_string] = \
-                        (' %.17r ' % (var_data.value))
-
-            for param_data in mutable_param_gen(block):
-                param_string = ' '+param_data.to_string()+' '
-                pstring_to_bar_dict[param_string] = \
-                    (' %.17r ' % (param_data()))
-        """
-
         # Equation Definition
         string_template = '%'+self._precision_string
         output_file.write('c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;\n');
@@ -393,58 +354,10 @@ class ProblemWriter_bar(AbstractProblemWriter):
                                                c_eqns,
                                                l_eqns):
 
-            """
-            #########################
-            #CLH: The section below is kind of a hack-y way to use
-            #     the expr.to_string function to print
-            #     expressions. A stream is created, writen to, and
-            #     then the string is recovered and stored in
-            #     eqn_body. Then the variable names are converted
-            #     to match the variable names that are used in the
-            #     bar file.
-
-            # Fill in the body of the equation
-            eqn_body = as_numeric(constraint_data.body).to_string()
-
-            # First, pad the equation so that if there is a
-            # variable name at the start or end of the equation,
-            # it can still be identified as padded with spaces.
-
-            # Second, change pyomo's ** to baron's ^, also with
-            # padding so that variable can always be found with
-            # space around them
-
-            # Third, add more padding around multiplication. Pyomo
-            # already has spaces between variable on variable
-            # multiplication, but not for constants on variables
-            eqn_body = ' '+eqn_body+' '
-            eqn_body = eqn_body.replace('**',' ^ ')
-            eqn_body = eqn_body.replace('*', ' * ')
-
-
-            #
-            # FIXME: The following block of code is extremely inefficient.
-            #        We are looping through every parameter and variable in
-            #        the model each time we write a constraint expression.
-            #
-            ################################################
-            for var_data in EXPR.identify_variables(constraint_data.body, include_fixed=output_fixed_variable_bounds):
-                referenced_variable_ids.add(id(var_data))
-            vnames = [(variable_string, bar_string)
-                      for variable_string, bar_string in iteritems(vstring_to_bar_dict)
-                      if variable_string in eqn_body]
-            for variable_string, bar_string in vnames:
-                var_data = vstring_to_var_dict[variable_string]
-                if output_fixed_variable_bounds or (not var_data.fixed):
-                    referenced_variable_ids.add(id(var_data))
-                eqn_body = eqn_body.replace(variable_string, bar_string)
-            for param_string, bar_string in iteritems(pstring_to_bar_dict):
-                eqn_body = eqn_body.replace(param_string, bar_string)
-            ################################################
-            """
-
             variables = set()
-            eqn_body = expression_to_string(constraint_data.body, labeler, variables, symbol_map.byObject)
+            #print(symbol_map.byObject.keys())
+            eqn_body = expression_to_string(constraint_data.body, variables, smap=symbol_map)
+            #print(symbol_map.byObject.keys())
             referenced_variable_ids.update(variables)
 
             if len(variables) == 0:
@@ -461,7 +374,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
             #       useful.
             ##########################
 
-            con_symbol = object_symbol_dictionary[id(constraint_data)]
+            con_symbol = symbol_map.byObject[id(constraint_data)]
             output_file.write(str(con_symbol) + ': ')
 
             # Fill in the left and right hand side (constants) of
@@ -523,53 +436,23 @@ class ProblemWriter_bar(AbstractProblemWriter):
                                      % (model.name))
 
                 # create symbol
-                create_symbol_func(symbol_map, objective_data, labeler)
-                alias_symbol_func(symbol_map, objective_data, "__default_objective__")
+                symbol_map.createSymbol(objective_data, c_labeler)
+                symbol_map.alias(objective_data, "__default_objective__")
 
                 if objective_data.is_minimizing():
                     output_file.write("minimize ")
                 else:
                     output_file.write("maximize ")
 
-                """
-                #FIXME 7/18/14 See above, constraint writing
-                #              section. Will cause problems if there
-                #              are spaces in variables
-                # Similar to the constraints section above, the
-                # objective is generated from the expr.to_string
-                # function.
-                str_ = objective_data.expr.to_string(verbose=False)
-
-                obj_string = ' '+str_+' '
-                obj_string = obj_string.replace('**',' ^ ')
-                obj_string = obj_string.replace('*', ' * ')
-
-                #
-                # FIXME: The following block of code is extremely inefficient.
-                #        We are looping through every parameter and variable in
-                #        the model each time we write an expression.
-                #
-                ################################################
-                for var_data in EXPR.identify_variables(objective_data.expr, include_fixed=output_fixed_variable_bounds):
-                    referenced_variable_ids.add(id(var_data))
-                vnames = [(variable_string, bar_string)
-                          for variable_string, bar_string in iteritems(vstring_to_bar_dict)
-                          if variable_string in obj_string]
-                for variable_string, bar_string in vnames:
-                    var_data = var_data = vstring_to_var_dict[variable_string]
-                    if output_fixed_variable_bounds or (not var_data.fixed):
-                        referenced_variable_ids.add(id(var_data))
-                    obj_string = obj_string.replace(variable_string, bar_string)
-                for param_string, bar_string in iteritems(pstring_to_bar_dict):
-                    obj_string = obj_string.replace(param_string, bar_string)
-                ################################################
-                """
-
                 variables = set()
-                obj_string = expression_to_string(objective_data.expr, labeler, variables, symbol_map.byObject)
+                #print(symbol_map.byObject.keys())
+                obj_string = expression_to_string(objective_data.expr, variables, smap=symbol_map)
+                #print(symbol_map.byObject.keys())
                 referenced_variable_ids.update(variables)
 
+
         output_file.write(obj_string+";\n\n")
+        #referenced_variable_ids.update(symbol_map.byObject.keys())
 
         return referenced_variable_ids, branching_priorities_suffixes
 
@@ -651,17 +534,15 @@ class ProblemWriter_bar(AbstractProblemWriter):
         output_file.write("}\n\n")
 
         if symbolic_solver_labels:
-            labeler = AlphaNumericTextLabeler()
+            v_labeler = AlphaNumericTextLabeler()
+            c_labeler = AlphaNumericTextLabeler()
         elif labeler is None:
-            labeler = NumericLabeler('x')
+            v_labeler = NumericLabeler('x')
+            c_labeler = NumericLabeler('c')
 
         symbol_map = SymbolMap()
-        sm_bySymbol = symbol_map.bySymbol
-
-        #cache frequently called functions
-        create_symbol_func = SymbolMap.createSymbol
-        create_symbols_func = SymbolMap.createSymbols
-        alias_symbol_func = SymbolMap.alias
+        symbol_map.default_labeler = v_labeler
+        #sm_bySymbol = symbol_map.bySymbol
 
         # Cache the list of model blocks so we don't have to call
         # model.block_data_objects() many many times, which is slow
@@ -670,23 +551,15 @@ class ProblemWriter_bar(AbstractProblemWriter):
                                                         sort=sorter,
                                                         descend_into=True))
         active_components_data_var = {}
-        for block in all_blocks_list:
-            tmp = active_components_data_var[id(block)] = \
-                  list(obj for obj in block.component_data_objects(Var,
-                                                                   active=True,
-                                                                   sort=sorter,
-                                                                   descend_into=False))
-            create_symbols_func(symbol_map, tmp, labeler)
+        #for block in all_blocks_list:
+        #    tmp = active_components_data_var[id(block)] = \
+        #          list(obj for obj in block.component_data_objects(Var,
+        #                                                           active=True,
+        #                                                           sort=sorter,
+        #                                                           descend_into=False))
+            #create_symbols_func(symbol_map, tmp, labeler)
 
-            # GAH: Not sure this is necessary, and also it would break for
-            #      non-mutable indexed params so I am commenting out for now.
-            #for param_data in active_components_data(block, Param, sort=sorter):
-                #instead of checking if param_data._mutable:
-                #if not param_data.is_constant():
-                #    create_symbol_func(symbol_map, param_data, labeler)
-
-        symbol_map_variable_ids = set(symbol_map.byObject.keys())
-        object_symbol_dictionary = symbol_map.byObject
+        #symbol_map_variable_ids = set(symbol_map.byObject.keys())
 
         #
         # Go through the objectives and constraints and generate
@@ -701,11 +574,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 all_blocks_list,
                 active_components_data_var,
                 symbol_map,
-                labeler,
-                create_symbol_func,
-                create_symbols_func,
-                alias_symbol_func,
-                object_symbol_dictionary,
+                c_labeler,
                 output_fixed_variable_bounds,
                 skip_trivial_constraints,
                 sorter)
@@ -718,86 +587,75 @@ class ProblemWriter_bar(AbstractProblemWriter):
         IntVars = []
         PosVars = []
         Vars = []
-        for block in all_blocks_list:
-            for var_data in active_components_data_var[id(block)]:
+        for vid in referenced_variable_ids:
+            name = symbol_map.byObject[vid]
+            var_data = symbol_map.bySymbol[name]()
 
-                if id(var_data) not in referenced_variable_ids:
-                    continue
-
-                if var_data.is_continuous():
-                    if var_data.has_lb() and \
-                       (self._get_bound(var_data.lb) >= 0):
-                        TypeList = PosVars
-                    else:
-                        TypeList = Vars
-                elif var_data.is_binary():
-                    TypeList = BinVars
-                elif var_data.is_integer():
-                    TypeList = IntVars
+            if var_data.is_continuous():
+                if var_data.has_lb() and \
+                   (self._get_bound(var_data.lb) >= 0):
+                    TypeList = PosVars
                 else:
-                    assert False
-
-                var_name = object_symbol_dictionary[id(var_data)]
-                #if len(var_name) > 15:
-                #    logger.warning(
-                #        "Variable symbol '%s' for variable %s exceeds maximum "
-                #        "character limit for BARON. Solver may fail"
-                #        % (var_name, var_data.name))
-
-                TypeList.append(var_name)
+                    TypeList = Vars
+            elif var_data.is_binary():
+                TypeList = BinVars
+            elif var_data.is_integer():
+                TypeList = IntVars
+            else:
+                assert False
+            TypeList.append(name)
 
         if len(BinVars) > 0:
+            BinVars.sort()
             output_file.write('BINARY_VARIABLES ')
-            for var_name in BinVars[:-1]:
-                output_file.write(str(var_name)+', ')
-            output_file.write(str(BinVars[-1])+';\n\n')
-        if len(IntVars) > 0:
-            output_file.write('INTEGER_VARIABLES ')
-            for var_name in IntVars[:-1]:
-                output_file.write(str(var_name)+', ')
-            output_file.write(str(IntVars[-1])+';\n\n')
+            output_file.write(", ".join(BinVars))
+            output_file.write(';\n\n')
 
+        if len(IntVars) > 0:
+            IntVars.sort()
+            output_file.write('INTEGER_VARIABLES ')
+            output_file.write(", ".join(IntVars))
+            output_file.write(';\n\n')
+
+        PosVars.append('ONE_VAR_CONST__')
+        PosVars.sort()
         output_file.write('POSITIVE_VARIABLES ')
-        output_file.write('ONE_VAR_CONST__')
-        for var_name in PosVars:
-            output_file.write(', '+str(var_name))
+        output_file.write(", ".join(PosVars))
         output_file.write(';\n\n')
 
         if len(Vars) > 0:
+            Vars.sort()
             output_file.write('VARIABLES ')
-            for var_name in Vars[:-1]:
-                output_file.write(str(var_name)+', ')
-            output_file.write(str(Vars[-1])+';\n\n')
+            output_file.write(", ".join(Vars))
+            output_file.write(';\n\n')
 
         #
         # LOWER_BOUNDS
         #
 
         LowerBoundHeader = False
-        for block in all_blocks_list:
-            for var_data in active_components_data_var[id(block)]:
+        for vid in referenced_variable_ids:
+            name = symbol_map.byObject[vid]
+            var_data = symbol_map.bySymbol[name]()
 
-                if id(var_data) not in referenced_variable_ids:
-                    continue
-
-                if var_data.fixed:
-                    if output_fixed_variable_bounds:
-                        var_data_lb = var_data.value
-                    else:
-                        var_data_lb = None
+            if var_data.fixed:
+                if output_fixed_variable_bounds:
+                    var_data_lb = var_data.value
                 else:
                     var_data_lb = None
-                    if var_data.has_lb():
-                        var_data_lb = self._get_bound(var_data.lb)
+            else:
+                var_data_lb = None
+                if var_data.has_lb():
+                    var_data_lb = self._get_bound(var_data.lb)
 
-                if var_data_lb is not None:
-                    if LowerBoundHeader is False:
-                        output_file.write("LOWER_BOUNDS{\n")
-                        LowerBoundHeader = True
-                    name_to_output = object_symbol_dictionary[id(var_data)]
-                    lb_string_template = '%s: %'+self._precision_string+';\n'
-                    output_file.write(lb_string_template
-                                      % (name_to_output, var_data_lb))
+            if var_data_lb is not None:
+                if LowerBoundHeader is False:
+                    output_file.write("LOWER_BOUNDS{\n")
+                    LowerBoundHeader = True
+                name_to_output = symbol_map.getSymbol(var_data)
+                lb_string_template = '%s: %'+self._precision_string+';\n'
+                output_file.write(lb_string_template
+                                  % (name_to_output, var_data_lb))
 
         if LowerBoundHeader:
             output_file.write("}\n\n")
@@ -807,30 +665,28 @@ class ProblemWriter_bar(AbstractProblemWriter):
         #
 
         UpperBoundHeader = False
-        for block in all_blocks_list:
-            for var_data in active_components_data_var[id(block)]:
+        for vid in referenced_variable_ids:
+            name = symbol_map.byObject[vid]
+            var_data = symbol_map.bySymbol[name]()
 
-                if id(var_data) not in referenced_variable_ids:
-                    continue
-
-                if var_data.fixed:
-                    if output_fixed_variable_bounds:
-                        var_data_ub = var_data.value
-                    else:
-                        var_data_ub = None
+            if var_data.fixed:
+                if output_fixed_variable_bounds:
+                    var_data_ub = var_data.value
                 else:
                     var_data_ub = None
-                    if var_data.has_ub():
-                        var_data_ub = self._get_bound(var_data.ub)
+            else:
+                var_data_ub = None
+                if var_data.has_ub():
+                    var_data_ub = self._get_bound(var_data.ub)
 
-                if var_data_ub is not None:
-                    if UpperBoundHeader is False:
-                        output_file.write("UPPER_BOUNDS{\n")
-                        UpperBoundHeader = True
-                    name_to_output = object_symbol_dictionary[id(var_data)]
-                    ub_string_template = '%s: %'+self._precision_string+';\n'
-                    output_file.write(ub_string_template
-                                      % (name_to_output, var_data_ub))
+            if var_data_ub is not None:
+                if UpperBoundHeader is False:
+                    output_file.write("UPPER_BOUNDS{\n")
+                    UpperBoundHeader = True
+                name_to_output = symbol_map.getSymbol(var_data)
+                ub_string_template = '%s: %'+self._precision_string+';\n'
+                output_file.write(ub_string_template
+                                  % (name_to_output, var_data_ub))
 
         if UpperBoundHeader:
             output_file.write("}\n\n")
@@ -851,7 +707,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                     if not BranchingPriorityHeader:
                         output_file.write('BRANCHING_PRIORITIES{\n')
                         BranchingPriorityHeader = True
-                    name_to_output = object_symbol_dictionary[id(var_data)]
+                    name_to_output = symbol_map.getSymbol(var_data)
                     output_file.write(name_to_output+': '+str(priority)+';\n')
 
         if BranchingPriorityHeader:
@@ -867,34 +723,18 @@ class ProblemWriter_bar(AbstractProblemWriter):
         #
         output_file.write('STARTING_POINT{\nONE_VAR_CONST__: 1;\n')
         string_template = '%s: %'+self._precision_string+';\n'
-        for block in all_blocks_list:
-            for var_data in active_components_data_var[id(block)]:
+        for vid in referenced_variable_ids:
+            name = symbol_map.byObject[vid]
+            var_data = symbol_map.bySymbol[name]()
 
-                if id(var_data) not in referenced_variable_ids:
-                    continue
-
-                starting_point = var_data.value
-                if starting_point is not None:
-                    var_name = object_symbol_dictionary[id(var_data)]
-                    output_file.write(string_template % (var_name, starting_point))
+            starting_point = var_data.value
+            if starting_point is not None:
+                var_name = symbol_map.getSymbol(var_data)
+                output_file.write(string_template % (var_name, starting_point))
 
         output_file.write('}\n\n')
 
         output_file.close()
-
-        # Clean up the symbol map to only contain variables referenced
-        # in the active constraints
-        if not symbol_map_variable_ids.issuperset(referenced_variable_ids):
-            raise KeyError("Encountered variables in expressions that are not contained in the model.")
-        vars_to_delete = symbol_map_variable_ids - referenced_variable_ids
-        sm_byObject = symbol_map.byObject
-        for varid in vars_to_delete:
-            symbol = sm_byObject[varid]
-            del sm_byObject[varid]
-            del sm_bySymbol[symbol]
-
-        del symbol_map_variable_ids
-        del referenced_variable_ids
 
         return output_filename, symbol_map
 

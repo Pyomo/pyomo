@@ -4,18 +4,16 @@ Summary: 0;
 
 POSITIVE_VARIABLES ONE_VAR_CONST__;
 
-VARIABLES x1, x2;
+VARIABLES a, x;
 
-EQUATIONS c_e_FIX_ONE_VAR_CONST__, c1;
+EQUATIONS c_e_FIX_ONE_VAR_CONST__, c;
 
 c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;
-c1: x1 ^ 2 == 4;
+c: a + 2 * x <= 0;
 
-OBJ: minimize x2;
+OBJ: minimize x;
 
 STARTING_POINT{
 ONE_VAR_CONST__: 1;
-x1: 1;
-x2: 1;
 }
 
