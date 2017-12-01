@@ -579,7 +579,7 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
             exponent = exp._args_[1]
     else:
         res = _collect_standard_repn(exp._args_[1], 1, idMap, compute_values, verbose, quadratic)
-        if not isclose_const(lhs.nonl,0) or len(lhs.linear) > 0 or len(lhs.quadratic) > 0:
+        if not isclose_const(res.nonl,0) or len(res.linear) > 0 or len(res.quadratic) > 0:
             # The exponent is variable, so this is a nonlinear expression
             return Results(nonl=multiplier*exp)
         exponent = res.const
@@ -695,6 +695,9 @@ def _collect_linear(exp, multiplier, idMap, compute_values, verbose, quadratic):
 def _collect_comparison(exp, multiplier, idMap, compute_values, verbose, quadratic):
     return Results(nonl=multiplier*exp)
     
+def _collect_external_fn(exp, multiplier, idMap, compute_values, verbose, quadratic):
+    return Results(nonl=multiplier*exp)
+    
 def _collect_linear_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
     ans = Results()
     varkeys = idMap[None]
@@ -746,6 +749,7 @@ _repn_collectors = {
     EXPR.LinearExpression                       : _collect_linear,
     EXPR.InequalityExpression                   : _collect_comparison,
     EXPR.EqualityExpression                     : _collect_comparison,
+    EXPR.ExternalFunctionExpression             : _collect_external_fn,
     #EXPR.LinearViewSumExpression               : _collect_linear_sum,
     #_ConnectorData          : _collect_linear_connector,
     #SimpleConnector         : _collect_linear_connector,
@@ -778,7 +782,7 @@ def _collect_standard_repn(exp, multiplier, idMap,
         return _repn_collectors[exp.__class__](exp, multiplier, idMap, 
                                           compute_values, verbose, quadratic)
     except KeyError:
-        raise ValueError( "Unexpected expression (type %s): %s" % (type(exp).__name__, str(exp)) )
+        raise ValueError( "Unexpected expression (type %s)" % type(exp).__name__)
 
 def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None):
     #
