@@ -708,7 +708,7 @@ functions.""" % (self.name,))
         """
         return _generate_other_expression(_abs,self, None)
 
-    def to_string(self, verbose=None, labeler=None, smap=None):
+    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         """
         Return a string representation of the expression tree.
 
@@ -723,6 +723,11 @@ functions.""" % (self.name,))
         Returns:
             A string representation for the expression tree.
         """
+        if compute_values:
+            try:
+                return str(self())
+            except:
+                pass        
         if not self.is_constant():
             if smap:
                 return smap.getSymbol(self, labeler)

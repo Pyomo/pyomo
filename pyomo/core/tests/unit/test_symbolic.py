@@ -169,7 +169,7 @@ class SymbolicDerivatives(unittest.TestCase):
 
         e = differentiate(tanh(m.x), wrt=m.x)
         self.assertTrue(e.is_expression())
-        self.assertEqual(s(e), s(1.0-1.0*tanh(m.x)**2.0))
+        self.assertEqual(s(e), s(1.0-tanh(m.x)**2.0))
 
 
         e = differentiate(asin(m.x), wrt=m.x)

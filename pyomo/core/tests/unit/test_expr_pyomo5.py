@@ -2514,8 +2514,6 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         self.assertEqual( "5 + a  ==  5.0", str(expr) )
 
 
-    # TODO - resolve this test failure
-    @unittest.expectedFailure
     def test_linear(self):
         #
         # Print linear
@@ -2530,15 +2528,15 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
 
         expr = m.x - m.p*m.y + 5
         self.assertIs(type(expr), EXPR.ViewSumExpression)
-        self.assertEqual( "x - p*y + 5", str(expr) )
+        self.assertEqual( "5 + x - p*y", str(expr) )
 
         expr = m.x - m.p*m.y - 5
         self.assertIs(type(expr), EXPR.ViewSumExpression)
-        self.assertEqual( "x - p*y + -5", str(expr) )
+        self.assertEqual( "-5 + x - p*y", str(expr) )
 
         expr = m.x - m.p*m.y - 5 + m.p
         self.assertIs(type(expr), EXPR.ViewSumExpression)
-        self.assertEqual( "x - p*y + -5 + p", str(expr) )
+        self.assertEqual( "-5 + p + x - p*y", str(expr) )
 
     def test_expr_if(self):
         m = ConcreteModel()
@@ -2575,7 +2573,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
             str(expr) )
 
     # TODO - resolve this test failure
-    @unittest.expectedFailure
+    #@unittest.expectedFailure
     def test_large_expression(self):
         #
         # Diff against a large model
@@ -2608,7 +2606,9 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         def c11_rule(model):
             return model.c == model.A+model.B
         def c15a_rule(model):
-            return model.A <= model.A*model.d
+            e = model.A <= model.A*model.d
+            print(e)
+            return e
         def c16a_rule(model):
             return model.A*model.d <= model.B
 
@@ -2661,6 +2661,9 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         model.cl = ConstraintList(rule=cl_rule)
 
         instance=model.create_instance()
+        print(instance.c15a.body)
+        print(instance.c15a.lower)
+        print(instance.c15a.upper)
         OUTPUT=open(currdir+"varpprint.out","w")
         instance.pprint(ostream=OUTPUT)
         OUTPUT.close()
@@ -2678,12 +2681,14 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
 
         e = M.x*M.y + summation(M.p, M.a) + Sum(M.q[i]*M.a[i] for i in M.a) / M.x
         self.assertEqual(str(e), "2*a[0] + 2*a[1] + 2*a[2] + x*y + (q[0]*a[0] + q[1]*a[1] + q[2]*a[2])*(1/x)")
+        self.assertEqual(e.to_string(), "x*y + 2*a[0] + 2*a[1] + 2*a[2] + (q[0]*a[0] + q[1]*a[1] + q[2]*a[2])*(1/x)")
+        self.assertEqual(e.to_string(compute_values=True), "x*y + 2*a[0] + 2*a[1] + 2*a[2] + (3*a[0] + 3*a[1] + 3*a[2])*(1/x)")
 
         from pyomo.core.expr.symbol_map import SymbolMap
         labeler = NumericLabeler('x')
         smap = SymbolMap(labeler)
-        e = EXPR.expression_to_string(e, smap=smap)
-        self.assertEqual(str(e), "x1*x2 + 2*x3 + 2*x4 + 2*x5 + (q[0]*x3 + q[1]*x4 + q[2]*x5)*(1/x1)")
+        self.assertEqual(EXPR.expression_to_string(e, smap=smap), "x1*x2 + 2*x3 + 2*x4 + 2*x5 + (q[0]*x3 + q[1]*x4 + q[2]*x5)*(1/x1)")
+        self.assertEqual(EXPR.expression_to_string(e, smap=smap, compute_values=True), "x1*x2 + 2*x3 + 2*x4 + 2*x5 + (3*x3 + 3*x4 + 3*x5)*(1/x1)")
 
 #
 # TODO:What is this checking?
