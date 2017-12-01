@@ -220,23 +220,27 @@ class StandardRepn(object):
         #
         expr = self.constant
         for i,v in enumerate(self.linear_vars):
-            val = value(self.linear_coefs[i], exception=False)
-            if val is None:
-                expr += self.linear_coefs[i]*self.linear_vars[i]
-            elif isclose_const(val, 1.0):
-                expr += self.linear_vars[i]
-            elif isclose_const(val, -1.0):
-                expr -= self.linear_vars[i]
-            elif val < 0.0:
-                expr -= - self.linear_coefs[i]*self.linear_vars[i]
+            if self.linear_coefs[i].__class__ in native_numeric_types:
+                val = self.linear_coefs[i]
+                if isclose_const(val, 1.0):
+                    expr += self.linear_vars[i]
+                elif isclose_const(val, -1.0):
+                    expr -= self.linear_vars[i]
+                elif val < 0.0:
+                    expr -= - self.linear_coefs[i]*self.linear_vars[i]
+                else:
+                    expr += self.linear_coefs[i]*self.linear_vars[i]
             else:
                 expr += self.linear_coefs[i]*self.linear_vars[i]
         for i,v in enumerate(self.quadratic_vars):
-            val = value(self.quadratic_coefs[i])
-            if isclose_const(val, 1.0):
-                expr += self.quadratic_vars[i][0]*self.quadratic_vars[i][0]
-            elif isclose_const(val, -1.0):
-                expr -= self.quadratic_vars[i][0]*self.quadratic_vars[i][0]
+            if self.quadratic_coefs[i].__class__ in native_numeric_types:
+                val = self.quadratic_coefs[i]
+                if isclose_const(val, 1.0):
+                    expr += self.quadratic_vars[i][0]*self.quadratic_vars[i][0]
+                elif isclose_const(val, -1.0):
+                    expr -= - self.quadratic_vars[i][0]*self.quadratic_vars[i][0]
+                else:
+                    expr += self.quadratic_coefs[i]*self.quadratic_vars[i][0]*self.quadratic_vars[i][0]
             else:
                 expr += self.quadratic_coefs[i]*self.quadratic_vars[i][0]*self.quadratic_vars[i][0]
         if not self.nonlinear_expr is None:
