@@ -267,7 +267,7 @@ def convert_pyomo2scipy(expr, templatemap):
     Returns:
         a new expression tree with all substitutions done
     """
-    if not casadi_available:
+    if not scipy_available:
         raise DAE_Error("SciPy is not installed.  Cannot substitute SciPy intrinsic functions.")
     visitor = Pyomo2Scipy_Visitor(templatemap)
     return visitor.dfs_postorder_stack(expr)
