@@ -17,6 +17,8 @@ from six.moves import xrange
 
 from pyutilib.misc import PauseGC
 
+from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.numvalue import is_fixed, value, as_numeric, native_types, native_numeric_types
 from pyomo.core.base import (
     SymbolMap, AlphaNumericTextLabeler, NumericLabeler,
     Block, Constraint, Expression, Objective, Var, Set, RangeSet, Param,
@@ -27,7 +29,6 @@ from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
 import pyomo.util.plugin
 
-from pyomo.core.expr.numvalue import is_fixed, value, as_numeric
 from pyomo.core.kernel.component_block import IBlockStorage
 from pyomo.core.kernel.component_interface import ICategorizedObject
 
@@ -35,12 +36,80 @@ import logging
 
 logger = logging.getLogger('pyomo.core')
 
+#
+# A visitor pattern that creates a string for an expression
+# that is compatible with the GAMS syntax.
+#
+class ToGamsVisitor(EXPR.ExpressionValueVisitor):
+
+    def __init__(self, smap):
+        super(ToGamsVisitor, self).__init__()
+        self.smap = smap
+
+    def visit(self, node, values):
+        """ Visit nodes that have been expanded """
+        tmp = []
+        for i,val in enumerate(values):
+            arg = node._args_[i]
+
+            if arg is None:
+                tmp.append('Undefined')
+            elif arg.__class__ in native_numeric_types:
+                tmp.append(val)
+            elif arg.__class__ in native_types:
+                tmp.append("'{0}'".format(val))
+            elif arg.__class__ in EXPR.pyomo5_variable_types:
+                tmp.append(val)
+            elif arg.is_expression() and node._precedence() < arg._precedence():
+                tmp.append("({0})".format(val))
+            else:
+                tmp.append(val)
+
+        if node.__class__ is EXPR.PowExpression:
+            return "power({0}, {1})".format(tmp[0], tmp[1])
+        else:
+            return node._to_string(tmp, None, self.smap, True)
+
+    def visiting_potential_leaf(self, node):
+        """ 
+        Visiting a potential leaf.
+
+        Return True if the node is not expanded.
+        """
+        if node is None:
+            return True, None
+
+        if node.__class__ in native_types:
+            return True, str(node)
+
+        if node.__class__ in EXPR.pyomo5_variable_types:
+            if node.fixed:
+                return True, str(value(node))
+            label = self.smap.getSymbol(node)
+            return True, label
+
+        if not node.is_expression():
+            return True, str(value(node))
+
+        return False, None
+
+
+def expression_to_string(expr, labeler=None, smap=None):
+    if labeler is not None:
+        if smap is None:
+            smap = SymbolMap()
+        smap.default_labeler = labeler
+    visitor = ToGamsVisitor(smap)
+    return visitor.dfs_postorder_stack(expr)
+
+
 def _get_bound(exp):
     if exp is None:
         return None
     if is_fixed(exp):
         return value(exp)
     raise ValueError("non-fixed bound or weight: " + str(exp))
+
 
 class ProblemWriter_gams(AbstractProblemWriter):
     pyomo.util.plugin.alias('gams', 'Generate the corresponding GAMS file')
@@ -58,7 +127,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             Name of file to write GAMS model to. Optionally pass a file-like
             stream and the model will be written to that instead.
         io_options:
-            warmstart=False:
+            warmstart=True:
                 Warmstart by initializing model's variables to their values.
             symbolic_solver_labels=False:
                 Use full Pyomo component names rather than
@@ -124,7 +193,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         sort = sorter_map[file_determinism]
 
         # Warmstart by initializing model's variables to their values.
-        warmstart = io_options.pop("warmstart", False)
+        warmstart = io_options.pop("warmstart", True)
 
         # Filename for optionally writing solution values and marginals
         # Set to True by GAMSSolver
@@ -171,17 +240,19 @@ class ProblemWriter_gams(AbstractProblemWriter):
             var_labeler = con_labeler = labeler
 
         var_list = []
-        symbolMap = SymbolMap()
 
         def var_recorder(obj):
             ans = var_labeler(obj)
-            var_list.append(ans)
+            if obj.__class__ in EXPR.pyomo5_variable_types:
+                var_list.append(ans)
             return ans
 
         def var_label(obj):
-            if obj.is_fixed():
-                return str(value(obj))
+            #if obj.is_fixed():
+            #    return str(value(obj))
             return symbolMap.getSymbol(obj, var_recorder)
+
+        symbolMap = SymbolMap(var_label)
 
         # when sorting, there are a non-trivial number of
         # temporary objects created. these all yield
@@ -239,18 +310,24 @@ class ProblemWriter_gams(AbstractProblemWriter):
         linear = True
         linear_degree = set([0,1])
 
-        # Sanity check: all active components better be things we know
-        # how to deal with, plus Suffix if solving
-        valid_ctypes = set([
-            Block, Constraint, Expression, Objective, Param,
-            Set, RangeSet, Var, Suffix ])
-        model_ctypes = model.collect_ctypes(active=True)
-        if not model_ctypes.issubset(valid_ctypes):
-            invalids = [t.__name__ for t in (model_ctypes - valid_ctypes)]
-            raise RuntimeError(
-                "Unallowable component(s) %s.\nThe GAMS writer cannot "
-                "export models with this component type" %
-                ", ".join(invalids))
+        if False:
+            #
+            # WEH - Disabling this check.  For now, we're allowing
+            # variables defined on non-block objects.
+            #
+            # Sanity check: all active components better be things we know
+            # how to deal with, plus Suffix if solving
+            valid_ctypes = set([
+                Block, Constraint, Expression, Objective, Param,
+                Set, RangeSet, Var, Suffix ])
+            model_ctypes = model.collect_ctypes(active=True)
+            print(model_ctypes)
+            if not model_ctypes.issubset(valid_ctypes):
+                invalids = [t.__name__ for t in (model_ctypes - valid_ctypes)]
+                raise RuntimeError(
+                    "Unallowable component(s) %s.\nThe GAMS writer cannot "
+                    "export models with this component type" %
+                    ", ".join(invalids))
 
         # Walk through the model and generate the constraint definition
         # for all active constraints.  Any Vars / Expressions that are
@@ -277,7 +354,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 constraint_names.append('%s' % cName)
                 ConstraintIO.write('%s.. %s =e= %s ;\n' % (
                     constraint_names[-1],
-                    con_body.to_string(labeler=var_label),
+                    expression_to_string(con_body, smap=symbolMap),
                     _get_bound(con.upper)
                 ))
             else:
@@ -286,13 +363,13 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     ConstraintIO.write('%s.. %s =l= %s ;\n' % (
                         constraint_names[-1],
                         _get_bound(con.lower),
-                        con_body.to_string(labeler=var_label)
+                        expression_to_string(con_body, smap=symbolMap)
                     ))
                 if con.has_ub():
                     constraint_names.append('%s_hi' % cName)
                     ConstraintIO.write('%s.. %s =l= %s ;\n' % (
                         constraint_names[-1],
-                        con_body.to_string(labeler=var_label),
+                        expression_to_string(con_body, smap=symbolMap),
                         _get_bound(con.upper)
                     ))
 
@@ -311,7 +388,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         constraint_names.append(oName)
         ConstraintIO.write('%s.. GAMS_OBJECTIVE =e= %s ;\n' % (
             oName,
-            obj.expr.to_string(labeler=var_label)
+            expression_to_string(obj.expr, smap=symbolMap)
         ))
 
         # Categorize the variables that we found
@@ -337,11 +414,11 @@ class ProblemWriter_gams(AbstractProblemWriter):
         output_file.write(";\n\n")
 
         for line in ConstraintIO.getvalue().splitlines():
-            if '**' in line:
-                # Investigate power functions for an integer exponent, in which
-                # case replace with power(x, int) function to improve domain
-                # issues. Skip first term since it's always "con_name.."
-                line = replace_power(line) + ';'
+            #if '**' in line:
+            #    # Investigate power functions for an integer exponent, in which
+            #    # case replace with power(x, int) function to improve domain
+            #    # issues. Skip first term since it's always "con_name.."
+            #    line = replace_power(line) + ';'
             if len(line) > 80000:
                 line = split_long_line(line)
             output_file.write(line + "\n")
@@ -596,6 +673,8 @@ def replace_power(line):
             args = split_args(term)
             for i in xrange(len(args)):
                 if '**' in args[i]:
+                    print(line)
+                    print(args)
                     assert args[i][0] == '(' and args[i][-1] == ')',\
                         "Assume arg is a parenthesis-bound expression"
                     arg = args[i][1:-1]
