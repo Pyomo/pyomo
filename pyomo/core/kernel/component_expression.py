@@ -108,6 +108,9 @@ class IIdentityExpression(NumericValue):
             return 0
         return self._expr.polynomial_degree()
 
+    def _compute_polynomial_degree(self, values):
+        return values[0]
+
     def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         """Convert this expression into a string."""
         return EXPR.expression_to_string(self, verbose=verbose, labeler=labeler, smap=smap, compute_values=compute_values)

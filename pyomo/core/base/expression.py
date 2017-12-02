@@ -103,7 +103,10 @@ class _ExpressionData(NumericValue):
         return self.expr.polynomial_degree()
 
     def _compute_polynomial_degree(self, result):
-        return result.pop()
+        return result[0]
+
+    def _is_fixed(self, values):
+        return values[0]
 
     #
     # Abstract Interface
