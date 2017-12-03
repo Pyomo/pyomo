@@ -68,7 +68,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
             print('\n Solving problem with Extended Cutting Planes')
-            opt.solve(model, strategy='ECP', init_strategy = 'max_binary')
+            opt.solve(model, strategy='ECP', init_strategy = 'rNLP')
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
