@@ -2606,9 +2606,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         def c11_rule(model):
             return model.c == model.A+model.B
         def c15a_rule(model):
-            e = model.A <= model.A*model.d
-            print(e)
-            return e
+            return model.A <= model.A*model.d
         def c16a_rule(model):
             return model.A*model.d <= model.B
 
@@ -2661,9 +2659,6 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         model.cl = ConstraintList(rule=cl_rule)
 
         instance=model.create_instance()
-        print(instance.c15a.body)
-        print(instance.c15a.lower)
-        print(instance.c15a.upper)
         OUTPUT=open(currdir+"varpprint.out","w")
         instance.pprint(ostream=OUTPUT)
         OUTPUT.close()
@@ -3839,7 +3834,7 @@ class TestCloneExpression(unittest.TestCase):
             self.assertNotEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             #
             total = EXPR.clone_counter.count - start
-            self.assertEqual(total, 3)
+            self.assertEqual(total, 1)
 
     def test_SumExpression(self):
         with EXPR.clone_counter:

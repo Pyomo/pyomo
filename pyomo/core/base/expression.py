@@ -158,6 +158,21 @@ class _GeneralExpressionDataImpl(_ExpressionData):
         self._expr = EXPR.compress_expression(as_numeric(expr)) if (expr is not None) else None
         self._is_owned = True
 
+    def construct_node(self, values, memo=None):
+        """
+        Construct a simple expression after constructing the 
+        contained expression.
+   
+        This class provides a consistent interface for constructing a
+        node, which is used in tree visitor scripts.
+        """
+        if id(self) in memo:
+            return memo[id(self)]
+        obj = SimpleExpression()
+        obj.construct()
+        obj.expr = values[0]
+        return obj
+
     def __getstate__(self):
         state = super(_GeneralExpressionDataImpl, self).__getstate__()
         for i in _GeneralExpressionDataImpl.__expression_slots__:

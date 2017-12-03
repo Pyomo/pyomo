@@ -738,14 +738,13 @@ class _CloneVisitor(ExpressionValueVisitor):
             else:
                 return True, node
 
-        if node.__class__ in pyomo5_named_expression_types:
+        if not self.clone_leaves and node.__class__ in pyomo5_named_expression_types:
             #
-            # Do not clone named expressions unless we are cloning leaves
+            # If we are not cloning leaves, then 
+            # we don't copy the expression tree for a
+            # named expression.
             #
-            if self.clone_leaves:
-                return True, deepcopy(node, self.memo)
-            else:
-                return True, node
+            return True, node
 
         return False, None
 
@@ -756,7 +755,11 @@ def clone_expression(expr, memo=None, clone_leaves=True):
     Cloning is roughly equivalent to calling ``copy.deepcopy``.
     However, the :attr:`clone_leaves` argument can be used to 
     clone only interior (i.e. non-leaf) nodes in the expression
-    tree.  Additionally, this function uses a non-recursive 
+    tree.   Note that named expression objects are treated as
+    leaves when :attr:`clone_leaves` is :const:`True`, and hence
+    those subexpressions are not cloned.
+
+    This function uses a non-recursive 
     logic, which makes it more scalable than the logic in 
     ``copy.deepcopy``.
 
@@ -1353,7 +1356,8 @@ class ExpressionBase(NumericValue):
             This method does not clone the leaves of the tree,
             which are numeric constants and variables.  It only 
             clones the interior nodes, and expression leaf nodes
-            like :class:`_MutableLinearExpression <pyomo.core.expr.current._MutableLinearExpression>`.
+            like :class:`_MutableLinearExpression <pyomo.core.expr.current._MutableLinearExpression>`.  However, named expressions are treated 
+            like leaves, and they are not cloned.
             
         Args:
             substitute (dict): a dictionary that maps object ids to clone
@@ -1399,6 +1403,9 @@ class ExpressionBase(NumericValue):
                 object
             memo (dict): A dictionary that maps object ids to clone
                 objects generated earlier during a cloning process.
+                This argument is needed to clone objects that are
+                owned by a model, and it can be safely ignored for
+                most expression classes.
 
         Returns:
             A new expression object with the same type as the current
