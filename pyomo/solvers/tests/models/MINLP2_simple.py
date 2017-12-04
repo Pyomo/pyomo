@@ -26,7 +26,8 @@ from __future__ import division
 from six import iteritems
 
 from pyomo.environ import (Binary, ConcreteModel, Constraint, NonNegativeReals,
-                           Objective, Param, RangeSet, Var, exp, minimize, log)
+                           Objective, Param, RangeSet, Var, exp, minimize,
+                           maximize, log)
 
 
 class SimpleMINLP(ConcreteModel):
@@ -67,7 +68,7 @@ class SimpleMINLP(ConcreteModel):
         m.const7 = Constraint(expr=Y[1] + Y[2] <= 1)
 
         """Cost (objective) function definition"""
-        m.cost = Objective(expr=5*Y[1] + 6*Y[2] + 8*Y[3] + X[4], sense=minimize)
+        m.cost = Objective(expr=-5*Y[1] - 6*Y[2] - 8*Y[3] - X[4], sense=maximize)
 
         """Bound definitions"""
         # x (continuous) upper bounds

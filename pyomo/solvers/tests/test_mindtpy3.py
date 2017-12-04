@@ -2,7 +2,7 @@
 
 import pyutilib.th as unittest
 from pyomo.environ import SolverFactory, value
-from pyomo.solvers.tests.models.batchdes import *
+from pyomo.solvers.tests.models.rsyn0805h import *
 
 required_solvers = ('ipopt', 'gurobi')
 if all(SolverFactory(s).available() for s in required_solvers):

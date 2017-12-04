@@ -2,7 +2,7 @@
 
 import pyutilib.th as unittest
 from pyomo.environ import SolverFactory, value
-from pyomo.solvers.tests.models.MINLP3_simple import SimpleMINLP
+from pyomo.solvers.tests.models.MINLP_simple import SimpleMINLP
 
 required_solvers = ('ipopt', 'gurobi')
 if all(SolverFactory(s).available() for s in required_solvers):
@@ -17,48 +17,48 @@ __author__ = "David Bernal <https://github.com/bernalde>"
 
 class TestMindtPy(unittest.TestCase):
     """Tests for the MINDT solver plugin."""
-
-    @unittest.skipIf(not subsolvers_available,
-                     "Required subsolvers {} are not available"
-                     .format(required_solvers))
-    def test_OA(self):
-        """Test the outer approximation decomposition algorithm."""
-        with SolverFactory('mindtpy') as opt:
-            model = SimpleMINLP()
-            print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA', init_strategy = 'initial_binary')
-
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
-            self.assertTrue(abs(value(model.cost.expr) - 3.5) <= 1E-2)
-
-    @unittest.skipIf(not subsolvers_available,
-                     "Required subsolvers {} are not available"
-                     .format(required_solvers))
-    def test_PSC(self):
-        """Test the partial surrogate cuts decomposition algorithm."""
-        with SolverFactory('mindtpy') as opt:
-            model = SimpleMINLP()
-            print('\n Solving problem with Partial Surrogate Cuts')
-            opt.solve(model, strategy='PSC', init_strategy = 'initial_binary')
-
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
-            self.assertTrue(abs(value(model.cost.expr) - 3.5) <= 1E-2)
-
-    @unittest.skipIf(not subsolvers_available,
-                     "Required subsolvers {} are not available"
-                     .format(required_solvers))
-    def test_GBD(self):
-        """Test the generalized Benders Decomposition algorithm."""
-        with SolverFactory('mindtpy') as opt:
-            model = SimpleMINLP()
-            print('\n Solving problem with Generalized Benders Decomposition')
-            opt.solve(model, strategy='GBD', init_strategy = 'initial_binary')
-
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
-            self.assertTrue(abs(value(model.cost.expr) - 3.5) <= 1E-2)
+    #
+    # @unittest.skipIf(not subsolvers_available,
+    #                  "Required subsolvers {} are not available"
+    #                  .format(required_solvers))
+    # def test_OA(self):
+    #     """Test the outer approximation decomposition algorithm."""
+    #     with SolverFactory('mindtpy') as opt:
+    #         model = SimpleMINLP()
+    #         print('\n Solving problem with Outer Approximation')
+    #         opt.solve(model, strategy='OA', init_strategy = 'initial_binary')
+    #
+    #         # self.assertIs(results.solver.termination_condition,
+    #         #               TerminationCondition.optimal)
+    #         self.assertTrue(abs(value(model.cost.expr) - 3.5) <= 1E-2)
+    #
+    # @unittest.skipIf(not subsolvers_available,
+    #                  "Required subsolvers {} are not available"
+    #                  .format(required_solvers))
+    # def test_PSC(self):
+    #     """Test the partial surrogate cuts decomposition algorithm."""
+    #     with SolverFactory('mindtpy') as opt:
+    #         model = SimpleMINLP()
+    #         print('\n Solving problem with Partial Surrogate Cuts')
+    #         opt.solve(model, strategy='PSC', init_strategy = 'initial_binary')
+    #
+    #         # self.assertIs(results.solver.termination_condition,
+    #         #               TerminationCondition.optimal)
+    #         self.assertTrue(abs(value(model.cost.expr) - 3.5) <= 1E-2)
+    #
+    # @unittest.skipIf(not subsolvers_available,
+    #                  "Required subsolvers {} are not available"
+    #                  .format(required_solvers))
+    # def test_GBD(self):
+    #     """Test the generalized Benders Decomposition algorithm."""
+    #     with SolverFactory('mindtpy') as opt:
+    #         model = SimpleMINLP()
+    #         print('\n Solving problem with Generalized Benders Decomposition')
+    #         opt.solve(model, strategy='GBD', init_strategy = 'initial_binary')
+    #
+    #         # self.assertIs(results.solver.termination_condition,
+    #         #               TerminationCondition.optimal)
+    #         self.assertTrue(abs(value(model.cost.expr) - 3.5) <= 1E-2)
 
     @unittest.skipIf(not subsolvers_available,
                      "Required subsolvers {} are not available"
