@@ -284,9 +284,9 @@ class Test(unittest.TestCase):
 
         self.model.obj = Objective(rule=objRule)
 
-        transform = NonNegativeTransformation()
+        transform = TransformationFactory('core.nonnegative_vars')
         instance=self.model.create_instance()
-        transformed = transform(instance)
+        transformed = transform.create_using(instance)
 
         opt = SolverFactory("glpk")
 
