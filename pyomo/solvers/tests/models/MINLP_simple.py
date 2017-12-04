@@ -32,7 +32,7 @@ class SimpleMINLP(ConcreteModel):
         """Set declarations"""
         I = m.I = RangeSet(1, 2, doc="continuous variables")
         J = m.J = RangeSet(1, 3, doc="discrete variables")
-        
+
         # initial point information for discrete variables
         initY = {
             'sub1': {1: 1, 2: 1, 3: 1},
@@ -48,7 +48,7 @@ class SimpleMINLP(ConcreteModel):
         Y = m.Y = Var(J, domain=Binary, initialize=initY['sub1'])
         # CONTINUOUS VARIABLES
         X = m.X = Var(I, domain=NonNegativeReals, initialize=initX)
-  
+
         """Constraint definitions"""
         # CONSTRAINTS
         m.const1 = Constraint(expr=(m.X[1] - 2)**2 - m.X[2] <= 0)
