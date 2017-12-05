@@ -135,6 +135,38 @@ class Test(unittest.TestCase):
         model.obj = Objective(expr=model.x)
         self._check_baseline(model)
 
+    def test_expr_xfrm(self):
+        from pyomo.repn.plugins.gams_writer import expression_to_string
+        from pyomo.core.expr.symbol_map import SymbolMap
+        M = ConcreteModel()
+        M.abc = Var()
+
+        smap = SymbolMap()
+
+        expr = M.abc**2.0
+        self.assertEqual(str(expr), "abc**2.0")
+        self.assertEqual(expression_to_string(expr, smap=smap), "power(abc, 2.0)")
+
+        expr = log( M.abc**2.0 )
+        self.assertEqual(str(expr), "log(abc**2.0)")
+        self.assertEqual(expression_to_string(expr, smap=smap), "log(power(abc, 2.0))")
+
+        expr = log( M.abc**2.0 ) + 5
+        self.assertEqual(str(expr), "5 + log(abc**2.0)")
+        self.assertEqual(expression_to_string(expr, smap=smap), "log(power(abc, 2.0)) + 5")
+
+        expr = exp( M.abc**2.0 ) + 5
+        self.assertEqual(str(expr), "5 + exp(abc**2.0)")
+        self.assertEqual(expression_to_string(expr, smap=smap), "exp(power(abc, 2.0)) + 5")
+
+        expr = log( M.abc**2.0 )**4
+        self.assertEqual(str(expr), "log(abc**2.0)**4")
+        self.assertEqual(expression_to_string(expr, smap=smap), "power(log(power(abc, 2.0)), 4)")
+
+        expr = log( M.abc**2.0 )**4.5
+        self.assertEqual(str(expr), "log(abc**2.0)**4.5")
+        self.assertEqual(expression_to_string(expr, smap=smap), "power(log(power(abc, 2.0)), 4.5)")
+
 
 
 #class TestGams_writer(unittest.TestCase):
@@ -202,7 +234,6 @@ class TestGams_writer(object):
             RuntimeError,
             model.write, test_fname, format='gams')
         self._cleanup(test_fname)
-
 
 if __name__ == "__main__":
     unittest.main()
