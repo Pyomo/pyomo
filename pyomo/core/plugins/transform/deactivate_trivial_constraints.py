@@ -20,7 +20,6 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
     def __init__(self):
         """Initialize the transformation."""
         super(TrivialConstraintDeactivator, self).__init__()
-        self.tolerance = 1E-13
 
     def _apply_to(self, instance, **kwargs):
         """Apply the transformation.
