@@ -22,7 +22,7 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
         super(TrivialConstraintDeactivator, self).__init__()
         self.tolerance = 1E-13
 
-    def _apply_to(self, instance, tmp=False, ignore_infeasible=False, **kwds):
+    def _apply_to(self, instance, **kwds):
         """Apply the transformation.
 
         Kwds:
