@@ -31,6 +31,7 @@ from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.suffix import ComponentMap
 from pyomo.core.base.indexed_component import IndexedComponent, \
     ActiveIndexedComponent, UnindexedComponent_set
+import collections
 
 from pyomo.opt.base import ProblemFormat, guess_format
 from pyomo.opt import WriterFactory
@@ -1873,7 +1874,7 @@ def generate_cuid_names(block,
             any parent containers (such as blocks) that
             prefix the components requested even though the
             parent ctype may not match the input ctype.
-        descend_into (bool or iterable of component types):
+        descend_into (bool, component type, or iterable of component types):
             Indicates whether or not the function should descend
             into subblocks. Default is True.
             Example usage: descend_into=(Block, Disjunct)
@@ -1895,14 +1896,19 @@ def generate_cuid_names(block,
     # subblocks
     if descend_into is True:
         descend_ctype = (Block,)
-    elif type(descend_into) in (tuple, list, set):
+    elif descend_into is False:
+        descend_ctype = False
+    elif type(descend_into) == type:
+        descend_ctype = (descend_into,)
+    elif isinstance(descend_into, collections.Iterable):
+        for i in descend_into:
+            assert type(i) == type
         descend_ctype = tuple(descend_into)
-    elif descend_into:
-        descend_ctype = descend_into
     else:
-        # If descend_into is False or None, we do not set descend_ctype because
-        # it is unused in the following code.
-        pass
+        raise ValueError('Unrecognized value passed to descend_into: %s. '
+                         'We support True, False, types, or '
+                         'iterables of types.'
+                         % descend_into)
 
     if type(ctype) in (tuple, list, set):
         ctypes = tuple(ctype)
