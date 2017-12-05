@@ -657,7 +657,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
             output_file.write("LOWER_BOUNDS{\n")
             output_file.write("".join( lbounds[key] for key in sorted(lbounds.keys()) ) )
             output_file.write("}\n\n")
-        del lbounds
+        lbounds = None
 
         #
         # UPPER_BOUNDS
@@ -687,7 +687,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
             output_file.write("UPPER_BOUNDS{\n")
             output_file.write("".join( ubounds[key] for key in sorted(ubounds.keys()) ) )
             output_file.write("}\n\n")
-        del ubounds
+        ubounds = None
 
         #
         # BRANCHING_PRIORITIES
