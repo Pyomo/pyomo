@@ -57,8 +57,14 @@ class CPLEX(OptSolver):
             opt = SolverFactory('_cplex_shell', **kwds)
             opt.set_problem_format(ProblemFormat.mps)
             return opt
-        if mode == 'python':
-            opt = SolverFactory('_cplex_direct', **kwds)
+        if mode in ['python', 'direct']:
+            opt = SolverFactory('cplex_direct', **kwds)
+            if opt is None:
+                logging.getLogger('pyomo.solvers').error('Python API for CPLEX is not installed')
+                return
+            return opt
+        if mode == 'persistent':
+            opt = SolverFactory('cplex_persistent', **kwds)
             if opt is None:
                 logging.getLogger('pyomo.solvers').error('Python API for CPLEX is not installed')
                 return
