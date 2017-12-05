@@ -1,6 +1,7 @@
 # IDE configuration files
 .idea
 .spyder*
+.ropeproject
 
 # Python generates numerous files when byte compiling / installing packages
 *.pyc
