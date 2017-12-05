@@ -100,6 +100,8 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
                 and solution values are copied over afterwards.
             master_postsolve (func): callback hook after a solution of the
                 master problem
+            subprob_presolve (func): callback hook before calling the
+                subproblem solver
             subprob_postsolve (func): callback hook after a solution of the
                 nonlinear subproblem
             subprob_postfeas (func): callback hook after feasible solution of
@@ -119,9 +121,11 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
         self.mip_solver_kwargs = kwds.pop('mip_kwargs', {})
         self.modify_in_place = kwds.pop('solve_in_place', True)
         self.master_postsolve = kwds.pop('master_postsolve', _DoNothing())
+        self.subproblem_presolve = kwds.pop('subprob_presolve', _DoNothing())
         self.subproblem_postsolve = kwds.pop('subprob_postsolve', _DoNothing())
         self.subproblem_postfeasible = kwds.pop('subprob_postfeas',
                                                 _DoNothing())
+        self.algorithm_stall_after = kwds.pop('algorithm_stall_after', 8)
         self.tee = kwds.pop('tee', False)
 
         if self.tee:
@@ -882,16 +886,15 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
 
             # Maximum number of iterations in which feasible bound does not
             # improve before terminating algorithm
-            algorithm_stall_after = 8
-            if (len(feas_prog_log) > algorithm_stall_after and
+            if (len(feas_prog_log) > self.algorithm_stall_after and
                 (sign_adjust * feas_prog_log[-1] <= sign_adjust * (
-                    feas_prog_log[-1 - algorithm_stall_after]
+                    feas_prog_log[-1 - self.algorithm_stall_after]
                     + required_feas_prog))):
                 logger.info('Feasible solutions not making enough progress '
                             'for {} iterations. Algorithm stalled. Exiting.\n'
                             'To continue, increase value of parameter '
                             'algorithm_stall_after.'
-                            .format(algorithm_stall_after))
+                            .format(self.algorithm_stall_after))
                 break
 
     def _solve_OA_master(self):
@@ -1251,6 +1254,9 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
                     'Non-binary value of disjunct indicator variable '
                     'for {}: {}'.format(disj.name, value(disj.indicator_var)))
 
+        for d in m.component_data_objects(Disjunction, active=True):
+            d.deactivate()
+
         # Propagate variable bounds
         TransformationFactory('core.propagate_eq_var_bounds').apply_to(m)
         # Detect fixed variables
@@ -1290,9 +1296,12 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
                 except KeyError:
                     continue
 
+        self.subproblem_presolve(m, self)
+
         # Solve the NLP
         results = self.nlp_solver.solve(m, load_solutions=False,
                                         **self.nlp_solver_kwargs)
+        self.solve_results = results
 
         solnFeasible = False
 
@@ -1481,9 +1490,10 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
                         ConstraintList()
                 oa_cuts.deactivate()
             oa_cuts.add(
-                expr=copysign(1, sign_adjust * m.dual[constr]) * sum(
-                    value(jacobians[var]) * (var - value(var))
-                    for var in constr_vars) + slack_var <= 0)
+                expr=copysign(1, sign_adjust * m.dual[constr]) * (
+                    value(constr.body) + sum(
+                        value(jacobians[var]) * (var - value(var))
+                        for var in constr_vars)) + slack_var <= 0)
 
     def _add_psc_cut(self, nlp_feasible=True):
         m, GDPopt = self.working_model, self.working_model.GDPopt_utils
