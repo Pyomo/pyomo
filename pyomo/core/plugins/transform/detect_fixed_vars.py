@@ -7,8 +7,6 @@ from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.util.plugin import alias
 from six import iteritems
 
-__author__ = "Qi Chen <https://github.com/qtothec>"
-
 
 class FixedVarDetector(IsomorphicTransformation):
     """Detects variables that are de-facto fixed but not considered fixed.
@@ -18,8 +16,9 @@ class FixedVarDetector(IsomorphicTransformation):
 
     """
 
-    alias('core.detect_fixed_vars',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
+    alias(
+        'core.detect_fixed_vars',
+        doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self):
         """Initialize the transformation."""
