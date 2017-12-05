@@ -22,20 +22,22 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
         super(TrivialConstraintDeactivator, self).__init__()
         self.tolerance = 1E-13
 
-    def _apply_to(self, instance, **kwds):
+    def _apply_to(self, instance, **kwargs):
         """Apply the transformation.
 
-        Kwds:
+        Args:
             instance: Pyomo model object to transform.
+
+        Kwargs:
             tmp: True to store a set of transformed constraints for future
                 reversion of the transformation
             ignore_infeasible: True to skip over trivial constraints that are
                 infeasible instead of raising a ValueError.
             tol: tolerance on constraint violations
         """
-        tmp = kwds.pop('tmp', False)
-        ignore_infeasible = kwds.pop('ignore_infeasible', False)
-        tol = kwds.pop('tolerance', 1E-13)
+        tmp = kwargs.pop('tmp', False)
+        ignore_infeasible = kwargs.pop('ignore_infeasible', False)
+        tol = kwargs.pop('tolerance', 1E-13)
         if tmp and not hasattr(instance, '_tmp_trivial_deactivated_constrs'):
             instance._tmp_trivial_deactivated_constrs = ComponentSet()
 

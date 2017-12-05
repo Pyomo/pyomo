@@ -1,11 +1,14 @@
 """Transformation to detect variables fixed by bounds and fix them."""
 import textwrap
+from math import fabs
+
+from six import iteritems
+
 from pyomo.core.base.block import generate_cuid_names
 from pyomo.core.base.var import Var
 from pyomo.core.kernel.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.util.plugin import alias
-from six import iteritems
 
 
 class FixedVarDetector(IsomorphicTransformation):
@@ -26,8 +29,20 @@ class FixedVarDetector(IsomorphicTransformation):
         self._old_var_values = {}
         self._transformed_instance = None
 
-    def _apply_to(self, instance, tmp=False):
-        """Apply the transformation."""
+    def _apply_to(self, instance, **kwargs):
+        """Apply the transformation.
+
+        Args:
+            instance: Pyomo model object to transform.
+
+        Kwargs:
+            tmp: True to store a set of transformed constraints for future
+                reversion of the transformation
+            tol: tolerance on bound equality (LB == UB)
+        """
+        tmp = kwargs.pop('tmp', False)
+        tol = kwargs.pop('tolerance', 1E-13)
+
         if tmp:
             self._transformed_instance = instance
 
@@ -42,7 +57,7 @@ class FixedVarDetector(IsomorphicTransformation):
                 ctype=Var, descend_into=True):
             if var.fixed or var.lb is None or var.ub is None:
                 continue
-            if value(var.lb) == value(var.ub):
+            if fabs(value(var.lb - var.ub)) <= tol:
                 self._old_var_values[var_to_id[var]] = var.value
                 var.fix(var.lb)
 
