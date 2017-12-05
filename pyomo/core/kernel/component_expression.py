@@ -10,7 +10,7 @@
 
 import sys
 
-import pyomo.core.expr.expr_common
+from pyomo.core.expr import expr_common
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.component_interface import \
     (IComponent,
@@ -79,6 +79,72 @@ class IIdentityExpression(NumericValue):
     #
     # Ducktyping ExpressionBase functionality
     #
+
+    def __iadd__(self,other):
+        """
+        Binary addition
+
+        This method is called when Python processes the statement::
+        
+            self += other
+        """
+        self.expr += other
+        return self
+
+    def __isub__(self,other):
+        """
+        Binary subtraction
+
+        This method is called when Python processes the statement::
+
+            self -= other
+        """
+        self.expr -= other
+        return self
+
+    def __imul__(self,other):
+        """
+        Binary multiplication
+
+        This method is called when Python processes the statement::
+
+            self *= other
+        """
+        self.expr *= other
+        return self
+
+    def __idiv__(self,other):
+        """
+        Binary division
+
+        This method is called when Python processes the statement::
+        
+            self /= other
+        """
+        self.expr /= other
+        return self
+
+    def __itruediv__(self,other):
+        """
+        Binary division (when __future__.division is in effect)
+
+        This method is called when Python processes the statement::
+        
+            self /= other
+        """
+        self.expr /= other
+        return self
+
+    def __ipow__(self,other):
+        """
+        Binary power
+
+        This method is called when Python processes the statement::
+        
+            self **= other
+        """
+        self.expr **= other
+        return self
 
     def is_expression(self):
         """A boolean indicating whether this in an expression."""

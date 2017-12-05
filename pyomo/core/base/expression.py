@@ -16,7 +16,6 @@ from weakref import ref as weakref_ref
 
 from pyomo.util.timing import ConstructionTimer
 
-import pyomo.core.expr.expr_common
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import (ComponentData,
                                        register_component)
@@ -58,6 +57,72 @@ class _ExpressionData(NumericValue):
     #
     # Ducktyping ExpressionBase functionality
     #
+
+    def __iadd__(self,other):
+        """
+        Binary addition
+
+        This method is called when Python processes the statement::
+        
+            self += other
+        """
+        self.expr += other
+        return self.expr
+
+    def __isub__(self,other):
+        """
+        Binary subtraction
+
+        This method is called when Python processes the statement::
+
+            self -= other
+        """
+        self.expr -= other
+        return self.expr
+
+    def __imul__(self,other):
+        """
+        Binary multiplication
+
+        This method is called when Python processes the statement::
+
+            self *= other
+        """
+        self.expr *= other
+        return self.expr
+
+    def __idiv__(self,other):
+        """
+        Binary division
+
+        This method is called when Python processes the statement::
+        
+            self /= other
+        """
+        self.expr /= other
+        return self.expr
+
+    def __itruediv__(self,other):
+        """
+        Binary division (when __future__.division is in effect)
+
+        This method is called when Python processes the statement::
+        
+            self /= other
+        """
+        self.expr /= other
+        return self.expr
+
+    def __ipow__(self,other):
+        """
+        Binary power
+
+        This method is called when Python processes the statement::
+        
+            self **= other
+        """
+        self.expr **= other
+        return self.expr
 
     def is_expression(self):
         """A boolean indicating whether this in an expression."""
@@ -133,6 +198,7 @@ class _ExpressionData(NumericValue):
     # they can store subexpressions that contain variables
     def is_potentially_variable(self):
         return True
+
 
 class _GeneralExpressionDataImpl(_ExpressionData):
     """

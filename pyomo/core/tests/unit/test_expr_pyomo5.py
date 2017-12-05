@@ -27,6 +27,7 @@ from pyutilib.th import nottest
 from pyomo.environ import *
 from pyomo.core.expr import expr_common
 from pyomo.core.expr import current as EXPR
+from pyomo.core.kernel import expression, expression_dict
 from pyomo.core.expr.numvalue import potentially_variable, native_types
 from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.label import *
@@ -5107,7 +5108,7 @@ class Test_pickle(unittest.TestCase):
         self.assertEqual(type(e_.arg(2)), type(e.arg(2)))
 
 
-class TestExpressionSpecialMethods(unittest.TestCase):
+class TestExpressionSpecialMethods1(unittest.TestCase):
 
     def test_iadd(self):
         M = ConcreteModel()
@@ -5212,6 +5213,71 @@ class TestExpressionSpecialMethods(unittest.TestCase):
         self.assertEqual(type(M.E[0].arg(0)), EXPR.PowExpression)
         self.assertTrue(type(M.E[0].arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(type(M.E[0].arg(0).arg(1)) in EXPR.pyomo5_variable_types)
+
+
+class TestExpressionSpecialMethods2(unittest.TestCase):
+
+    def test_iadd(self):
+        M = ConcreteModel()
+        M.v = Var()
+        e = expression()
+
+        e.expr = 3
+        e += M.v
+        self.assertEqual(e.nargs(), 1)
+        self.assertEqual(type(e.arg(0)), EXPR.ViewSumExpression)
+        self.assertTrue(type(e.arg(0).arg(0)) in native_numeric_types)
+        self.assertTrue(type(e.arg(0).arg(1)) in EXPR.pyomo5_variable_types)
+
+    def test_isub(self):
+        M = ConcreteModel()
+        M.v = Var()
+        e = expression()
+
+        e.expr = 3
+        e -= M.v
+        self.assertEqual(e.nargs(), 1)
+        self.assertEqual(type(e.arg(0)), EXPR.ViewSumExpression)
+        self.assertTrue(type(e.arg(0).arg(0)) in native_numeric_types)
+        self.assertTrue(type(e.arg(0).arg(1)) is EXPR.NegationExpression)
+        self.assertTrue(type(e.arg(0).arg(1).arg(0)) in EXPR.pyomo5_variable_types)
+
+    def test_imul(self):
+        M = ConcreteModel()
+        M.v = Var()
+        e = expression()
+
+        e.expr = 3
+        e *= M.v
+        self.assertEqual(e.nargs(), 1)
+        self.assertEqual(type(e.arg(0)), EXPR.ProductExpression)
+        self.assertTrue(type(e.arg(0).arg(0)) in native_numeric_types)
+        self.assertTrue(type(e.arg(0).arg(1)) in EXPR.pyomo5_variable_types)
+
+    def test_idiv(self):
+        M = ConcreteModel()
+        M.v = Var()
+        e = expression()
+
+        e.expr = 3
+        e /= M.v
+        self.assertEqual(e.nargs(), 1)
+        self.assertEqual(type(e.arg(0)), EXPR.ProductExpression)
+        self.assertTrue(type(e.arg(0).arg(0)) in native_numeric_types)
+        self.assertTrue(type(e.arg(0).arg(1)) is EXPR.ReciprocalExpression)
+        self.assertTrue(type(e.arg(0).arg(1).arg(0)) in EXPR.pyomo5_variable_types)
+
+    def test_ipow(self):
+        M = ConcreteModel()
+        M.v = Var()
+        e = expression()
+
+        e.expr = 3
+        e **= M.v
+        self.assertEqual(e.nargs(), 1)
+        self.assertEqual(type(e.arg(0)), EXPR.PowExpression)
+        self.assertTrue(type(e.arg(0).arg(0)) in native_numeric_types)
+        self.assertTrue(type(e.arg(0).arg(1)) in EXPR.pyomo5_variable_types)
 
 
 if __name__ == "__main__":

@@ -2723,8 +2723,6 @@ def _process_arg(obj):
 def _generate_sum_expression(etype, _self, _other):
 
     if etype > _inplace:
-        if _self.__class__ in pyomo5_named_expression_types:
-            _self = _self.expr
         etype -= _inplace
 
     if _self.__class__ is _MutableLinearExpression:
@@ -2847,8 +2845,6 @@ def _generate_sum_expression(etype, _self, _other):
 def _generate_mul_expression(etype, _self, _other):
 
     if etype > _inplace:
-        if _self.__class__ in pyomo5_named_expression_types:
-            _self = _self.expr
         etype -= _inplace
 
     if _self.__class__ is _MutableLinearExpression:
@@ -2948,8 +2944,6 @@ def _generate_mul_expression(etype, _self, _other):
 def _generate_other_expression(etype, _self, _other):
 
     if etype > _inplace:
-        if _self.__class__ in pyomo5_named_expression_types:
-            _self = _self.expr
         etype -= _inplace
 
     #
