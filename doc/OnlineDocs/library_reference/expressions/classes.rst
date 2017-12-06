@@ -18,7 +18,7 @@ Sets with Expression Types
 The following sets can be used to develop visitor patterns for 
 Pyomo expressions.
 
-.. autodata:: pyomo.core.expr.current.pyomo5_variable_types
+.. autodata:: pyomo.core.expr.numvalue.valid_leaf_types
 
 NumericValue and ExpressionBase
 -------------------------------
