@@ -58,7 +58,6 @@ __all__ = (
 'SimpleExpressionVisitor',
 'ExpressionValueVisitor',
 'ExpressionReplacementVisitor',
-'pyomo5_variable_types',
 '_SumExpression',               # This should not be referenced, except perhaps while testing code
 '_MutableViewSumExpression',    # This should not be referenced, except perhaps while testing code
 '_MutableLinearExpression',     # This should not be referenced, except perhaps while testing code
@@ -90,6 +89,7 @@ from pyomo.core.expr.numvalue import \
     (NumericValue,
      NumericConstant,
      native_types,
+     valid_leaf_types,
      native_numeric_types,
      as_numeric,
      value)
@@ -101,7 +101,6 @@ from pyomo.core.expr.expr_common import \
      _imul, _idiv, _ipow, _lt, _le,
      _eq) 
 from pyomo.core.expr import expr_common as common
-
 
 def chainedInequalityErrorMessage(msg=None):
     if msg is None:
@@ -143,23 +142,11 @@ def initialize_expression_data():
     This function is necessary to avoid global imports.  It is executed
     when ``pyomo.environ`` is imported.
     """
-    global pyomo5_variable_types
-    from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
-    from pyomo.core.kernel.component_variable import IVariable, variable
-    pyomo5_variable_types.update([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
-    _MutableLinearExpression.vtypes = pyomo5_variable_types
-    #
     global _ParamData
     global SimpleParam
     global TemplateExpressionError
     from pyomo.core.base.param import _ParamData, SimpleParam
     from pyomo.core.base.template_expr import TemplateExpressionError
-    #
-    global pyomo5_named_expression_types
-    from pyomo.core.base.expression import _GeneralExpressionData, SimpleExpression
-    from pyomo.core.base.objective import _GeneralObjectiveData, SimpleObjective
-    pyomo5_expression_types.update([_GeneralExpressionData, SimpleExpression, _GeneralObjectiveData, SimpleObjective])
-    pyomo5_named_expression_types.update([_GeneralExpressionData, SimpleExpression, _GeneralObjectiveData, SimpleObjective])
     #
     # [functionality] chainedInequality allows us to generate symbolic
     # expressions of the type "a < b < c".  This provides a buffer to hold
@@ -330,7 +317,7 @@ class SimpleExpressionVisitor(object):
             #for c in self.children(current):
             for c in current.args:
                 #if self.is_leaf(c):
-                if c.__class__ in native_numeric_types or not c.is_expression() or c.nargs() == 0:
+                if c.__class__ in valid_leaf_types or not c.is_expression() or c.nargs() == 0:
                     self.visit(c)
                 else:
                     dq.append(c)
@@ -358,7 +345,7 @@ class SimpleExpressionVisitor(object):
         #
         # If we start with a leaf, then yield it and stop iteration
         #
-        if not node.__class__ in pyomo5_expression_types or node.nargs() == 0:
+        if node.__class__ in valid_leaf_types or not node.is_expression() or node.nargs() == 0:
             ans = self.visit(node)
             if not ans is None:
                 yield ans
@@ -373,12 +360,12 @@ class SimpleExpressionVisitor(object):
             #for c in self.children(current):
             for c in current.args:
                 #if self.is_leaf(c):
-                if c.__class__ in pyomo5_expression_types and c.nargs() > 0:
-                    dq.append(c)
-                else:
+                if c.__class__ in valid_leaf_types or not c.is_expression() or c.nargs() == 0:
                     ans = self.visit(c)
                     if not ans is None:
                         yield ans
+                else:
+                    dq.append(c)
 
 
 class ExpressionValueVisitor(object):
@@ -723,22 +710,22 @@ class _CloneVisitor(ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
-        if node.__class__ in native_numeric_types:
+        if node.__class__ in valid_leaf_types:
             #
             # Store a native or numeric object
             #
             return True, deepcopy(node, self.memo)
 
-        if node.__class__ not in pyomo5_expression_types:
+        if not node.is_expression():
             #
-            # Store a kernel object that is cloned
+            # Store a leave object that is cloned
             #
             if self.clone_leaves:
                 return True, deepcopy(node, self.memo)
             else:
                 return True, node
 
-        if not self.clone_leaves and node.__class__ in pyomo5_named_expression_types:
+        if not self.clone_leaves and node.is_named_expression():
             #
             # If we are not cloning leaves, then 
             # we don't copy the expression tree for a
@@ -832,10 +819,10 @@ class _EvaluationVisitor(ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
-        if node.__class__ in native_numeric_types:
+        if node.__class__ in valid_leaf_types:
             return True, node
 
-        if node.__class__ in pyomo5_variable_types:
+        if node.is_variable():
             return True, value(node)
 
         if not node.is_expression():
@@ -877,10 +864,10 @@ def evaluate_expression(exp, exception=True):
 
 
 # =====================================================
-#  identify_variables
+#  identify_components
 # =====================================================
 
-class _VariableVisitor(SimpleExpressionVisitor):
+class _ComponentVisitor(SimpleExpressionVisitor):
 
     def __init__(self, types):
         self.seen = set()
@@ -915,9 +902,29 @@ def identify_components(expr, component_types):
     # component_types - set (or list) if class types to find
     # in the expression.
     #
-    visitor = _VariableVisitor(component_types)
+    visitor = _ComponentVisitor(component_types)
     for v in visitor.xbfs_yield_leaves(expr):
         yield v
+
+
+# =====================================================
+#  identify_variables
+# =====================================================
+
+class _VariableVisitor(SimpleExpressionVisitor):
+
+    def __init__(self):
+        self.seen = set()
+        
+    def visit(self, node):
+        if node.__class__ in valid_leaf_types:
+            return
+
+        if node.is_variable():
+            if id(node) in self.seen:
+                return
+            self.seen.add(id(node))
+            return node
 
 
 def identify_variables(expr, include_fixed=True):
@@ -934,11 +941,7 @@ def identify_variables(expr, include_fixed=True):
     Yields:
         Each variable that is found.
     """
-    #
-    # OPTIONS:
-    # include_fixed - list includes fixed variables
-    #
-    visitor = _VariableVisitor(pyomo5_variable_types)
+    visitor = _VariableVisitor()
     if include_fixed:
         for v in visitor.xbfs_yield_leaves(expr):
             yield v
@@ -964,7 +967,7 @@ class _PolyDegreeVisitor(ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
-        if node.__class__ in native_types or not node.is_potentially_variable():
+        if node.__class__ in valid_leaf_types or not node.is_potentially_variable():
             return True, 0
 
         if not node.is_expression():
@@ -1009,10 +1012,10 @@ class _IsFixedVisitor(ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
-        if node.__class__ in native_numeric_types or not node.is_potentially_variable():
+        if node.__class__ in valid_leaf_types or not node.is_potentially_variable():
             return True, True
 
-        elif not node.__class__ in pyomo5_expression_types:
+        elif not node.is_expression():
             return True, node.is_fixed()
 
         return False, None
@@ -1055,9 +1058,9 @@ class _ToStringVisitor(ExpressionValueVisitor):
                 tmp.append('Undefined')
             elif arg.__class__ in native_numeric_types:
                 tmp.append(val)
-            elif arg.__class__ in native_types:
+            elif arg.__class__ in valid_leaf_types:
                 tmp.append("'{0}'".format(val))
-            elif arg.__class__ in pyomo5_variable_types:
+            elif arg.is_variable():
                 tmp.append(val)
             elif not self.verbose and arg.is_expression() and node._precedence() < arg._precedence():
                 tmp.append("({0})".format(val))
@@ -1075,10 +1078,10 @@ class _ToStringVisitor(ExpressionValueVisitor):
         if node is None:
             return True, None
 
-        if node.__class__ in native_types:
+        if node.__class__ in valid_leaf_types:
             return True, str(node)
 
-        if node.__class__ in pyomo5_variable_types:
+        if node.is_variable():
             if not node.fixed:
                 return True, node.to_string(verbose=self.verbose, smap=self.smap, compute_values=False)
             return True, node.to_string(verbose=self.verbose, smap=self.smap, compute_values=self.compute_values)
@@ -1466,6 +1469,20 @@ class ExpressionBase(NumericValue):
 
         Returns:
             A boolean.  Defaults to :const:`True` for expressions.
+        """
+        return True
+
+    def is_name_expression(self):
+        """
+        Return :const:`True` if this object is a named expression.
+
+        This method obviously returns :const:`True` for this class, but it
+        is included in other classes within Pyomo that are not named
+        expressions, which allows for a check for named expressions 
+        without evaluating the class type.
+
+        Returns:
+            A boolean.
         """
         return True
 
@@ -2041,9 +2058,9 @@ class ViewSumExpression(_SumExpression):
 
     def is_potentially_variable(self):
         for v in islice(self._args_, self._nargs):
-            if v.__class__ in pyomo5_variable_types:
-                return True
-            if not v.__class__ in native_numeric_types and v.is_potentially_variable():
+            if v.__class__ in valid_leaf_types:
+                continue
+            if v.is_variable() or v.is_potentially_variable():
                 return True
         return False
 
@@ -2126,16 +2143,16 @@ class GetItemExpression(ExpressionBase):
         return self._base.getname(*args, **kwds)
 
     def is_potentially_variable(self):
-        if any(arg.is_potentially_variable() for arg in self._args_ if not arg.__class__ in native_types):
+        if any(arg.is_potentially_variable() for arg in self._args_ if not arg.__class__ in valid_leaf_types):
             for x in itervalues(self._base):
-                if not x.__class__ in native_types and x.is_potentially_variable():
+                if not x.__class__ in valid_leaf_types and x.is_potentially_variable():
                     return True
         return False
         
     def is_fixed(self):
         if any(self._args_):
             for x in itervalues(self._base):
-                if not x.__class__ in native_types and not x.is_fixed():
+                if not x.__class__ in valid_leaf_types and not x.is_fixed():
                     return False
         return True
         
@@ -2144,7 +2161,7 @@ class GetItemExpression(ExpressionBase):
             return None
         ans = 0
         for x in itervalues(self._base):
-            if x.__class__ in native_types:
+            if x.__class__ in valid_leaf_types:
                 continue
             tmp = x.polynomial_degree()
             if tmp is None:
@@ -2189,7 +2206,7 @@ class Expr_if(ExpressionBase):
         self._if = IF_
         self._then = THEN_
         self._else = ELSE_
-        if self._if.__class__ in native_types:
+        if self._if.__class__ in native_numeric_types:
             self._if = as_numeric(self._if)
 
     def nargs(self):
@@ -2431,7 +2448,7 @@ class LinearExpression(ExpressionBase):
     def _decompose_term(expr):
         if expr.__class__ in native_numeric_types:
             return expr,None,None
-        elif expr.__class__ in _MutableLinearExpression.vtypes:
+        elif expr.is_variable():
             return 0,1,expr
         elif not expr.is_potentially_variable():
             return expr,None,None
@@ -2440,7 +2457,7 @@ class LinearExpression(ExpressionBase):
                 C,c,v = expr._args_[0],None,None
             else:
                 C,c,v = _MutableLinearExpression._decompose_term(expr._args_[0])
-            if expr._args_[1].__class__ in _MutableLinearExpression.vtypes:
+            if expr._args_[1].is_variable():
                 v_ = expr._args_[1]
                 if not v is None:
                     raise ValueError("Expected a single linear term (1)")
@@ -2638,9 +2655,9 @@ def decompose_term(expr):
             :attr:`value` is a variable object, and :attr:`coef` is the
             numeric coefficient.
     """
-    if expr.__class__ in native_numeric_types or not expr.is_potentially_variable():
+    if expr.__class__ in valid_leaf_types or not expr.is_potentially_variable():
         return True, [(expr,None)]
-    elif expr.__class__ in pyomo5_variable_types:
+    elif expr.is_variable():
         return True, [(1,expr)]
     else:
         try:
@@ -2653,7 +2670,7 @@ def decompose_term(expr):
 def _decompose_terms(expr, multiplier=1):
     if expr.__class__ in native_numeric_types or not expr.is_potentially_variable():
         yield (multiplier*expr,None)
-    elif expr.__class__ in pyomo5_variable_types:
+    elif expr.is_variable():
         yield (multiplier,expr)
     elif expr.__class__ is ProductExpression:
         if expr._args_[0].__class__ in native_numeric_types or not expr._args_[0].is_potentially_variable():
@@ -3148,44 +3165,4 @@ def _generate_intrinsic_function_expression(arg, name, fcn):
         return UnaryFunctionExpression(arg, name, fcn)
     else:
         return NPV_UnaryFunctionExpression(arg, name, fcn)
-
-
-pyomo5_expression_types = set([
-        ExpressionBase,
-        NegationExpression,
-        NPV_NegationExpression,
-        ExternalFunctionExpression,
-        NPV_ExternalFunctionExpression,
-        PowExpression,
-        NPV_PowExpression,
-        _LinearOperatorExpression,
-        InequalityExpression,
-        EqualityExpression,
-        ProductExpression,
-        NPV_ProductExpression,
-        ReciprocalExpression,
-        NPV_ReciprocalExpression,
-        _SumExpression,
-        NPV_SumExpression,
-        ViewSumExpression,
-        GetItemExpression,
-        Expr_if,
-        UnaryFunctionExpression,
-        NPV_UnaryFunctionExpression,
-        AbsExpression,
-        NPV_AbsExpression,
-        _MutableLinearExpression,
-        LinearExpression
-        ])
-pyomo5_product_types = set([
-        ProductExpression,
-        NPV_ProductExpression
-        ])
-pyomo5_reciprocal_types = set([
-        ReciprocalExpression,
-        NPV_ReciprocalExpression
-        ])
-#: A set of class types that are possible variables
-pyomo5_variable_types = set()
-pyomo5_named_expression_types = set()
 

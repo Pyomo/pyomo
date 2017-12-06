@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ('value', 'is_constant', 'is_fixed', 'potentially_variable', 'update_KnownConstants', 'as_numeric', 'NumericValue', 'NumericConstant', 'ZeroConstant', 'native_numeric_types', 'native_types')
+__all__ = ('value', 'is_constant', 'is_fixed', 'is_variable', 'potentially_variable', 'update_KnownConstants', 'as_numeric', 'NumericValue', 'NumericConstant', 'ZeroConstant', 'native_numeric_types', 'native_types')
 
 import sys
 import logging
@@ -37,6 +37,24 @@ def _generate_relational_expression(etype, lhs, rhs):
 ## Standard types of expressions
 ##
 ##------------------------------------------------------------------------
+
+class NonNumericValue(object):
+    """An object that contains a non-numeric value
+
+    Constructor Arguments:
+        value           The initial value.
+    """
+    __slots__ = ('value',)
+
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return str(self.value)
+
+
+valid_leaf_types = set([NonNumericValue])
+
 
 # It is *significantly* faster to build the list of types we want to
 # test against as a "static" set, and not to regenerate it locally for
@@ -70,6 +88,7 @@ else:
 native_types.update( native_numeric_types )
 native_types.update( native_integer_types )
 native_types.update( native_boolean_types )
+valid_leaf_types.update( native_types )
 
 def RegisterNumericType(new_type):
     """
@@ -82,6 +101,7 @@ def RegisterNumericType(new_type):
     global native_types
     native_numeric_types.add(new_type)
     native_types.add(new_type)
+    valid_leaf_types.add(new_type)
 
 def RegisterIntegerType(new_type):
     """
@@ -97,6 +117,7 @@ def RegisterIntegerType(new_type):
     native_numeric_types.add(new_type)
     native_integer_types.add(new_type)
     native_types.add(new_type)
+    valid_leaf_types.add(new_type)
 
 def RegisterBooleanType(new_type):
     """
@@ -110,6 +131,7 @@ def RegisterBooleanType(new_type):
     global native_types
     native_boolean_types.add(new_type)
     native_types.add(new_type)
+    valid_leaf_types.add(new_type)
 
 def value(obj, exception=True):
     """
@@ -200,6 +222,19 @@ def is_fixed(obj):
     except AttributeError:
         pass
     return as_numeric(obj).is_fixed()
+
+def is_variable(obj):
+    """
+    A utility function that returns a boolean indicating
+    whether the input object is a variable.
+    """
+    if obj.__class__ in native_types:
+        return False
+    try:
+        return obj.is_variable()
+    except AttributeError:
+        pass
+    return as_numeric(obj).is_variable()
 
 def potentially_variable(obj):
     """
@@ -372,9 +407,17 @@ class NumericValue(object):
         """Return True if this is a non-constant value that has been fixed"""
         return False
 
+    def is_variable(self):
+        """Return False unless this class is a variable object"""
+        return False
+
     def is_potentially_variable(self):
         """Return True if variables can appear in this expression"""
         return True
+
+    def is_named_expression(self):
+        """Return True if this numeric value is a named expression"""
+        return False
 
     def is_expression(self):
         """Return True if this numeric value is an expression"""
@@ -787,6 +830,7 @@ class NumericConstant(NumericValue):
         if ostream is None:         #pragma:nocover
             ostream = sys.stdout
         ostream.write(str(self))
+
 
 # We use as_numeric() so that the constant is also in the cache
 ZeroConstant = as_numeric(0)

@@ -2326,8 +2326,8 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         model.a = Var()
         model.x = ExternalFunction(library='foo.so', function='bar')
 
-        expr = model.x(model.a, 1, "foo")
-        self.assertEqual("x(a, 1, 'foo')", str(expr))
+        expr = model.x(model.a, 1, "foo", [])
+        self.assertEqual("x(a, 1, 'foo', '[]')", str(expr))
 
     def test_inequality(self):
         #
@@ -4095,12 +4095,13 @@ class TestCloneExpression(unittest.TestCase):
             model = ConcreteModel()
             model.a = Var()
             model.x = ExternalFunction(library='foo.so', function='bar')
-            e = model.x(2*model.a, 1, "foo")
+            e = model.x(2*model.a, 1, "foo", [])
             e_ = e.clone()
             self.assertEqual(type(e_), type(e))
             self.assertEqual(type(e_.arg(0)), type(e.arg(0)))
             self.assertEqual(type(e_.arg(1)), type(e.arg(1)))
             self.assertEqual(type(e_.arg(2)), type(e.arg(2)))
+            self.assertEqual(type(e_.arg(3)), type(e.arg(3)))
             #
             total = EXPR.clone_counter.count - start
             self.assertEqual(total, 1)
@@ -4336,10 +4337,10 @@ class TestIsFixedIsConstant(unittest.TestCase):
         model.p = Param(initialize=1, mutable=True)
         model.x = ExternalFunction(library='foo.so', function='bar')
 
-        expr = model.x(2*model.a, 1, "foo")
+        expr = model.x(2*model.a, 1, "foo", [])
         self.assertEqual(expr.polynomial_degree(), None)
 
-        expr = model.x(2*model.p, 1, "foo")
+        expr = model.x(2*model.p, 1, "foo", [])
         self.assertEqual(expr.polynomial_degree(), 0)
 
     def test_nonpolynomial_abs(self):
@@ -4570,9 +4571,9 @@ class TestIsFixedIsConstant(unittest.TestCase):
         m.p = Param(initialize=1, mutable=True)
         m.x = ExternalFunction(library='foo.so', function='bar')
 
-        e = m.x(m.a, 1, "foo bar")
+        e = m.x(m.a, 1, "foo bar", [])
         self.assertEqual(e.is_potentially_variable(), True)
-        e = m.x(m.p, 1, "foo bar")
+        e = m.x(m.p, 1, "foo bar", [])
         self.assertEqual(e.is_potentially_variable(), False)
 
 
@@ -4655,10 +4656,10 @@ class TestExpressionUtilities(unittest.TestCase):
         # Identify variables in the arguments to functions
         #
         self.assertEqual( list(EXPR.identify_variables(
-            m.x(m.a, 'string_param', 1)*m.b[1] )),
+            m.x(m.a, 'string_param', 1, [])*m.b[1] )),
                           [ m.a, m.b[1] ] )
         self.assertEqual( list(EXPR.identify_variables(
-            m.x(m.p, 'string_param', 1)*m.b[1] )),
+            m.x(m.p, 'string_param', 1, [])*m.b[1] )),
                           [ m.b[1] ] )
         self.assertEqual( list(EXPR.identify_variables(
             tanh(m.a)*m.b[1] )), [ m.a, m.b[1] ] )
@@ -5099,7 +5100,7 @@ class Test_pickle(unittest.TestCase):
         model = ConcreteModel()
         model.a = Var()
         model.x = ExternalFunction(library='foo.so', function='bar')
-        e = model.x(model.a, 1, "foo")
+        e = model.x(model.a, 1, "foo", [])
         s = pickle.dumps(e)
         e_ = pickle.loads(s)
         self.assertEqual(type(e_), type(e))
@@ -5121,14 +5122,14 @@ class TestExpressionSpecialMethods1(unittest.TestCase):
         self.assertEqual(M.e.nargs(), 1)
         self.assertEqual(type(M.e.arg(0)), EXPR.ViewSumExpression)
         self.assertTrue(type(M.e.arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(type(M.e.arg(0).arg(1)) in EXPR.pyomo5_variable_types)
+        self.assertTrue(M.e.arg(0).arg(1).is_variable())
 
         M.E[0].expr = 3
         M.E[0] += M.v
         self.assertEqual(M.E[0].nargs(), 1)
         self.assertEqual(type(M.E[0].arg(0)), EXPR.ViewSumExpression)
         self.assertTrue(type(M.E[0].arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(type(M.E[0].arg(0).arg(1)) in EXPR.pyomo5_variable_types)
+        self.assertTrue(M.E[0].arg(0).arg(1).is_variable())
 
     def test_isub(self):
         M = ConcreteModel()
@@ -5142,7 +5143,7 @@ class TestExpressionSpecialMethods1(unittest.TestCase):
         self.assertEqual(type(M.e.arg(0)), EXPR.ViewSumExpression)
         self.assertTrue(type(M.e.arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(type(M.e.arg(0).arg(1)) is EXPR.NegationExpression)
-        self.assertTrue(type(M.e.arg(0).arg(1).arg(0)) in EXPR.pyomo5_variable_types)
+        self.assertTrue(M.e.arg(0).arg(1).arg(0).is_variable())
 
         M.E[0].expr = 3
         M.E[0] -= M.v
@@ -5150,7 +5151,7 @@ class TestExpressionSpecialMethods1(unittest.TestCase):
         self.assertEqual(type(M.E[0].arg(0)), EXPR.ViewSumExpression)
         self.assertTrue(type(M.E[0].arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(type(M.E[0].arg(0).arg(1)) is EXPR.NegationExpression)
-        self.assertTrue(type(M.E[0].arg(0).arg(1).arg(0)) in EXPR.pyomo5_variable_types)
+        self.assertTrue(M.E[0].arg(0).arg(1).arg(0).is_variable())
 
     def test_imul(self):
         M = ConcreteModel()
@@ -5163,14 +5164,14 @@ class TestExpressionSpecialMethods1(unittest.TestCase):
         self.assertEqual(M.e.nargs(), 1)
         self.assertEqual(type(M.e.arg(0)), EXPR.ProductExpression)
         self.assertTrue(type(M.e.arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(type(M.e.arg(0).arg(1)) in EXPR.pyomo5_variable_types)
+        self.assertTrue(M.e.arg(0).arg(1).is_variable())
 
         M.E[0].expr = 3
         M.E[0] *= M.v
         self.assertEqual(M.E[0].nargs(), 1)
         self.assertEqual(type(M.E[0].arg(0)), EXPR.ProductExpression)
         self.assertTrue(type(M.E[0].arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(type(M.E[0].arg(0).arg(1)) in EXPR.pyomo5_variable_types)
+        self.assertTrue(M.E[0].arg(0).arg(1).is_variable())
 
     def test_idiv(self):
         M = ConcreteModel()
@@ -5184,7 +5185,7 @@ class TestExpressionSpecialMethods1(unittest.TestCase):
         self.assertEqual(type(M.e.arg(0)), EXPR.ProductExpression)
         self.assertTrue(type(M.e.arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(type(M.e.arg(0).arg(1)) is EXPR.ReciprocalExpression)
-        self.assertTrue(type(M.e.arg(0).arg(1).arg(0)) in EXPR.pyomo5_variable_types)
+        self.assertTrue(M.e.arg(0).arg(1).arg(0).is_variable())
 
         M.E[0].expr = 3
         M.E[0] /= M.v
@@ -5192,7 +5193,7 @@ class TestExpressionSpecialMethods1(unittest.TestCase):
         self.assertEqual(type(M.E[0].arg(0)), EXPR.ProductExpression)
         self.assertTrue(type(M.E[0].arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(type(M.E[0].arg(0).arg(1)) is EXPR.ReciprocalExpression)
-        self.assertTrue(type(M.E[0].arg(0).arg(1).arg(0)) in EXPR.pyomo5_variable_types)
+        self.assertTrue(M.E[0].arg(0).arg(1).arg(0).is_variable())
 
     def test_ipow(self):
         M = ConcreteModel()
@@ -5205,14 +5206,14 @@ class TestExpressionSpecialMethods1(unittest.TestCase):
         self.assertEqual(M.e.nargs(), 1)
         self.assertEqual(type(M.e.arg(0)), EXPR.PowExpression)
         self.assertTrue(type(M.e.arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(type(M.e.arg(0).arg(1)) in EXPR.pyomo5_variable_types)
+        self.assertTrue(M.e.arg(0).arg(1).is_variable())
 
         M.E[0].expr = 3
         M.E[0] **= M.v
         self.assertEqual(M.E[0].nargs(), 1)
         self.assertEqual(type(M.E[0].arg(0)), EXPR.PowExpression)
         self.assertTrue(type(M.E[0].arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(type(M.E[0].arg(0).arg(1)) in EXPR.pyomo5_variable_types)
+        self.assertTrue(M.E[0].arg(0).arg(1).is_variable())
 
 
 class TestExpressionSpecialMethods2(unittest.TestCase):
@@ -5227,7 +5228,7 @@ class TestExpressionSpecialMethods2(unittest.TestCase):
         self.assertEqual(e.nargs(), 1)
         self.assertEqual(type(e.arg(0)), EXPR.ViewSumExpression)
         self.assertTrue(type(e.arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(type(e.arg(0).arg(1)) in EXPR.pyomo5_variable_types)
+        self.assertTrue(e.arg(0).arg(1).is_variable())
 
     def test_isub(self):
         M = ConcreteModel()
@@ -5240,7 +5241,7 @@ class TestExpressionSpecialMethods2(unittest.TestCase):
         self.assertEqual(type(e.arg(0)), EXPR.ViewSumExpression)
         self.assertTrue(type(e.arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(type(e.arg(0).arg(1)) is EXPR.NegationExpression)
-        self.assertTrue(type(e.arg(0).arg(1).arg(0)) in EXPR.pyomo5_variable_types)
+        self.assertTrue(e.arg(0).arg(1).arg(0).is_variable())
 
     def test_imul(self):
         M = ConcreteModel()
@@ -5252,7 +5253,7 @@ class TestExpressionSpecialMethods2(unittest.TestCase):
         self.assertEqual(e.nargs(), 1)
         self.assertEqual(type(e.arg(0)), EXPR.ProductExpression)
         self.assertTrue(type(e.arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(type(e.arg(0).arg(1)) in EXPR.pyomo5_variable_types)
+        self.assertTrue(e.arg(0).arg(1).is_variable())
 
     def test_idiv(self):
         M = ConcreteModel()
@@ -5265,7 +5266,7 @@ class TestExpressionSpecialMethods2(unittest.TestCase):
         self.assertEqual(type(e.arg(0)), EXPR.ProductExpression)
         self.assertTrue(type(e.arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(type(e.arg(0).arg(1)) is EXPR.ReciprocalExpression)
-        self.assertTrue(type(e.arg(0).arg(1).arg(0)) in EXPR.pyomo5_variable_types)
+        self.assertTrue(e.arg(0).arg(1).arg(0).is_variable())
 
     def test_ipow(self):
         M = ConcreteModel()
@@ -5277,7 +5278,7 @@ class TestExpressionSpecialMethods2(unittest.TestCase):
         self.assertEqual(e.nargs(), 1)
         self.assertEqual(type(e.arg(0)), EXPR.PowExpression)
         self.assertTrue(type(e.arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(type(e.arg(0).arg(1)) in EXPR.pyomo5_variable_types)
+        self.assertTrue(e.arg(0).arg(1).is_variable())
 
 
 if __name__ == "__main__":

@@ -58,7 +58,7 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
                 tmp.append(val)
             elif arg.__class__ in native_types:
                 tmp.append("'{0}'".format(val))
-            elif arg.__class__ in EXPR.pyomo5_variable_types:
+            elif arg.is_variable():
                 tmp.append(val)
             elif arg.is_expression() and node._precedence() < arg._precedence():
                 tmp.append("({0})".format(val))
@@ -82,7 +82,7 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
         if node.__class__ in native_types:
             return True, str(node)
 
-        if node.__class__ in EXPR.pyomo5_variable_types:
+        if node.is_variable():
             if node.fixed:
                 return True, str(value(node))
             label = self.smap.getSymbol(node)
@@ -243,8 +243,11 @@ class ProblemWriter_gams(AbstractProblemWriter):
 
         def var_recorder(obj):
             ans = var_labeler(obj)
-            if obj.__class__ in EXPR.pyomo5_variable_types:
-                var_list.append(ans)
+            try:
+                if obj.is_variable():
+                    var_list.append(ans)
+            except:
+                pass
             return ans
 
         def var_label(obj):

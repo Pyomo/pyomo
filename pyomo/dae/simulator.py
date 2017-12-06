@@ -343,11 +343,11 @@ if casadi_available:
             if node.__class__ in native_numeric_types:
                 return True, node
 
-            if node.__class__ in EXPR.pyomo5_variable_types:
-                return True, value(node)
-
             if node.__class__ is casadi.SX:
                 return True, node
+
+            if node.is_variable():
+                return True, value(node)
 
             if not node.is_expression():
                 return True, value(node)

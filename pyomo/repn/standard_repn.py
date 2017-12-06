@@ -60,7 +60,6 @@ using_py3 = six.PY3
 
 from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
 from pyomo.core.kernel.component_variable import IVariable, variable
-pyomo5_variable_types = set([_VarData, _GeneralVarData, IVariable, variable, SimpleVar])
 
 
 #
@@ -287,7 +286,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         #
         # The expression is a variable
         #
-        elif expr.__class__ in pyomo5_variable_types:
+        elif expr.is_variable():
             if expr.fixed:
                 if compute_values:
                     repn.constant = value(expr)
@@ -385,7 +384,9 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
     varkeys = idMap[None]
 
     for e_ in itertools.islice(exp._args_, exp.nargs()):
-        if e_.__class__ in pyomo5_variable_types:
+        if e_.__class__ in native_numeric_types:
+            ans.const += multiplier*e_
+        elif e_.is_variable():
             if e_.fixed:
                 if compute_values:
                     ans.const += multiplier*e_.value
@@ -403,14 +404,12 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
                     ans.linear[key] += multiplier
                 else:
                     ans.linear[key] = multiplier
-        elif e_.__class__ in native_numeric_types:
-            ans.const += multiplier*e_
         elif not e_.is_potentially_variable():
             if compute_values:
                 ans.const += multiplier * value(e_)
             else:
                 ans.const += multiplier * e_
-        elif e_.__class__ is EXPR.ProductExpression and  e_._args_[1].__class__ in pyomo5_variable_types and (e_._args_[0].__class__ in native_numeric_types or not e_._args_[0].is_potentially_variable()):
+        elif e_.__class__ is EXPR.ProductExpression and e_._args_[1].is_variable() and (e_._args_[0].__class__ in native_numeric_types or not e_._args_[0].is_potentially_variable()):
             if compute_values:
                 lhs = value(e_._args_[0])
             else:

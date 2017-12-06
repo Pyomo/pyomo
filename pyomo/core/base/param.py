@@ -92,6 +92,12 @@ class _ParamData(ComponentData, NumericValue):
         """
         return False
 
+    def is_variable(self):
+        """
+        Returns False because this is not a variable object.
+        """
+        return False
+
     def is_potentially_variable(self):
         """
         Returns False because this object can never reference variables.

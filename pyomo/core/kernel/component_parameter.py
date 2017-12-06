@@ -47,6 +47,10 @@ class IParameter(IComponent, NumericValue):
         """A boolean indicating that this parameter is constant."""
         return False
 
+    def is_variable(self):
+        """A boolean indicating that this is a variable object."""
+        return False
+
     def is_fixed(self):
         """A boolean indicating that this parameter is fixed."""
         return True

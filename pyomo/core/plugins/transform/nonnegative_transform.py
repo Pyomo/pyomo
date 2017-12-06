@@ -34,7 +34,7 @@ class VarmapVisitor(EXPR.ExpressionReplacementVisitor):
         #
         # Clone leaf nodes in the expression tree
         #
-        if node.__class__ in EXPR.pyomo5_variable_types:
+        if node.is_variable():
             if node.local_name in self.varmap:
                 return True, self.varmap[node.local_name]
             else: 

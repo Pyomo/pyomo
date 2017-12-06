@@ -23,6 +23,7 @@ from pyomo.core.kernel.component_list import ComponentList
 from pyomo.core.expr.numvalue import (NumericValue,
                                         is_fixed,
                                         is_constant,
+                                        is_variable,
                                         potentially_variable,
                                         value,
                                         as_numeric)
@@ -66,6 +67,10 @@ class IIdentityExpression(NumericValue):
     def is_constant(self):
         """A boolean indicating whether this expression is constant."""
         return is_constant(self._expr)
+
+    def is_variable(self):
+        """A boolean indicating whether this expression is a variable object."""
+        return is_variable(self._expr)
 
     def is_fixed(self):
         """A boolean indicating whether this expression is fixed."""
@@ -146,6 +151,10 @@ class IIdentityExpression(NumericValue):
         self.expr **= other
         return self
 
+    def is_named_expression(self):
+        """A boolean indicating whether this in a named expression."""
+        return True
+
     def is_expression(self):
         """A boolean indicating whether this in an expression."""
         return True
@@ -202,6 +211,18 @@ class IIdentityExpression(NumericValue):
 
     def _apply_operation(self, result):
         return result[0]
+
+    def construct_node(self, values, memo=None):
+        """
+        Construct an expression after constructing the 
+        contained expression.
+   
+        This class provides a consistent interface for constructing a
+        node, which is used in tree visitor scripts.
+        """
+        if id(self) in memo:
+            return memo[id(self)]
+        return self.__class__(expr=values[0])
 
 class noclone(IIdentityExpression):
     """
@@ -266,6 +287,10 @@ class IExpression(IComponent, IIdentityExpression):
 
     def is_constant(self):
         """A boolean indicating whether this expression is constant."""
+        return False
+
+    def is_variable(self):
+        """A boolean indicating whether this expression is a variable object."""
         return False
 
     def is_potentially_variable(self):
