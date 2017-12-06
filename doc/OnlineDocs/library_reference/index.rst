@@ -9,3 +9,4 @@ scripts.  This section describes library APIs for key elements of Pyomo.
 
    kernel/index.rst
    aml/index.rst
+   solvers/index.rst
