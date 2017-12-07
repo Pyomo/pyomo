@@ -53,6 +53,9 @@ class NonNumericValue(object):
         return str(self.value)
 
 
+#: Python set used to identify numeric constants, boolean values, strings
+#: and instances of :class:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>`.  This class is commonly used in code that walks
+#: Pyomo expression trees.
 valid_leaf_types = set([NonNumericValue])
 
 
