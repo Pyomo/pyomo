@@ -11,7 +11,12 @@ from pyomo.util.plugin import alias
 
 
 class TrivialConstraintDeactivator(IsomorphicTransformation):
-    """Deactivates trivial constraints of form constant = constant."""
+    """Deactivates trivial constraints.
+
+    These are constraints of form constant = constant or constant <= constant.
+    These constraints typically arise when variables are fixed.
+
+    """
 
     alias(
         'core.deactivate_trivial_constraints',
@@ -83,7 +88,12 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
             constr.deactivate()
 
     def revert(self, instance):
-        """Revert constraints deactivated by the transformation."""
+        """Revert constraints deactivated by the transformation.
+
+        Args:
+            instance: the model instance on which trivial constraints were
+                earlier deactivated.
+        """
         for constr in instance._tmp_trivial_deactivated_constrs:
             constr.activate()
         del instance._tmp_trivial_deactivated_constrs
