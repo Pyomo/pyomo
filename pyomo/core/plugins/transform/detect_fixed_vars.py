@@ -52,7 +52,9 @@ class FixedVarDetector(IsomorphicTransformation):
                 # bound, we skip it.
                 continue
             if fabs(value(var.lb - var.ub)) <= tol:
-                instance._xfrm_detect_fixed_vars_old_values[var] = var.value
+                if tmp:
+                    instance._xfrm_detect_fixed_vars_old_values[var] = \
+                        var.value
                 var.fix(var.lb)
 
     def revert(self, instance):

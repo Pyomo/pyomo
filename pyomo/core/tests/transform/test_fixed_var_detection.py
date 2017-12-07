@@ -1,7 +1,6 @@
 """Tests detection of fixed variables."""
 import pyutilib.th as unittest
-from pyomo.environ import (ConcreteModel, TransformationFactory,
-                           value, Var)
+from pyomo.environ import (ConcreteModel, TransformationFactory, value, Var)
 
 __author__ = "Qi Chen <https://github.com/qtothec>"
 
@@ -33,7 +32,7 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
         xfrm.apply_to(m, tmp=True)
         self.assertTrue(m.v1.fixed)
         self.assertFalse(m.v2.fixed)
-        xfrm.revert()
+        xfrm.revert(m)
         self.assertFalse(m.v1.fixed)
         self.assertEquals(value(m.v1), 1)
 
