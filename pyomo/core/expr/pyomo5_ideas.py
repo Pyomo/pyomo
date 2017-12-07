@@ -79,7 +79,7 @@ def _orig_clone_expression(expr, memo=None, verbose=False, clone_leaves=True):
     #
     if expr.__class__ in native_numeric_types:
         return expr
-    if not expr.is_expression():
+    if not expr.is_expression_type():
         return deepcopy(expr, memo)
     #
     # The stack starts with the current expression
@@ -170,7 +170,7 @@ def _orig_sizeof_expression(expr, verbose=False):
     # Note: This does not try to optimize the compression to recognize
     #   subgraphs.
     #
-    if expr.__class__ in native_numeric_types or not expr.is_expression():
+    if expr.__class__ in native_numeric_types or not expr.is_expression_type():
         return 1
     #
     # The stack starts with the current expression
@@ -207,7 +207,7 @@ def _orig_sizeof_expression(expr, verbose=False):
 
             _sub = _argList[_idx]
             _idx += 1
-            if _sub.__class__ in native_numeric_types or not _sub.is_expression():
+            if _sub.__class__ in native_numeric_types or not _sub.is_expression_type():
                 #
                 # Store a native or numeric object
                 #
@@ -254,7 +254,7 @@ def _orig_evaluate_expression(exp, exception=True, only_fixed_vars=False):
                 raise ValueError("Cannot evaluate an unfixed variable with only_fixed_vars=True")
         elif exp.__class__ in native_numeric_types:
             return exp
-        elif not exp.is_expression():
+        elif not exp.is_expression_type():
             return exp()
 
         _stack = [ (exp, exp._args, 0, exp.nargs(), []) ]
@@ -265,7 +265,7 @@ def _orig_evaluate_expression(exp, exception=True, only_fixed_vars=False):
                 _idx += 1
                 if _sub.__class__ in native_numeric_types:
                     _result.append( _sub )
-                elif _sub.is_expression():
+                elif _sub.is_expression_type():
                     _stack.append( (_obj, _argList, _idx, _len, _result) )
                     _obj     = _sub
                     _argList = _sub._args
@@ -311,7 +311,7 @@ def _orig_identify_variables(expr,
             _idx += 1
             if _sub.__class__ in native_types:
                 pass
-            elif _sub.is_expression():
+            elif _sub.is_expression_type():
                 _stack.append(( _argList, _idx, _len ))
                 _argList = _sub._args
                 _idx = 0
@@ -345,7 +345,7 @@ def _orig_polynomial_degree(node):
             _idx += 1
             if _sub.__class__ in native_numeric_types or not _sub._potentially_variable():
                 _result.append( 0 )
-            elif _sub.is_expression():
+            elif _sub.is_expression_type():
                 _stack.append( (_obj, _argList, _idx, _len, _result) )
                 _obj     = _sub
                 _argList = _sub._args
@@ -483,7 +483,7 @@ def NEW_compress_expression(expr, verbose=False, dive=False, multiprod=False):
     #   parent should be cloned (because a child has been replaced), and the
     #   tuple represents the current context during the tree search.
     #
-    if expr.__class__ in native_numeric_types or not expr.is_expression() or not expr._potentially_variable():
+    if expr.__class__ in native_numeric_types or not expr.is_expression_type() or not expr._potentially_variable():
         return expr
     if expr.__class__ is _MutableMultiSumExpression:
         expr.__class__ = _CompressedSumExpression
@@ -518,7 +518,7 @@ def Xcompress_expression(expr, verbose=False, dive=False, multiprod=False):
     #   parent should be cloned (because a child has been replaced), and the
     #   tuple represents the current context during the tree search.
     #
-    if expr.__class__ in native_numeric_types or not expr.is_expression() or not expr._potentially_variable():
+    if expr.__class__ in native_numeric_types or not expr.is_expression_type() or not expr._potentially_variable():
         return expr
     #if expr.__class__ is _MutableMultiSumExpression:
     #    expr.__class__ = _CompressedSumExpression

@@ -5122,14 +5122,14 @@ class TestExpressionSpecialMethods1(unittest.TestCase):
         self.assertEqual(M.e.nargs(), 1)
         self.assertEqual(type(M.e.arg(0)), EXPR.ViewSumExpression)
         self.assertTrue(type(M.e.arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(M.e.arg(0).arg(1).is_variable())
+        self.assertTrue(M.e.arg(0).arg(1).is_variable_type())
 
         M.E[0].expr = 3
         M.E[0] += M.v
         self.assertEqual(M.E[0].nargs(), 1)
         self.assertEqual(type(M.E[0].arg(0)), EXPR.ViewSumExpression)
         self.assertTrue(type(M.E[0].arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(M.E[0].arg(0).arg(1).is_variable())
+        self.assertTrue(M.E[0].arg(0).arg(1).is_variable_type())
 
     def test_isub(self):
         M = ConcreteModel()
@@ -5143,7 +5143,7 @@ class TestExpressionSpecialMethods1(unittest.TestCase):
         self.assertEqual(type(M.e.arg(0)), EXPR.ViewSumExpression)
         self.assertTrue(type(M.e.arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(type(M.e.arg(0).arg(1)) is EXPR.NegationExpression)
-        self.assertTrue(M.e.arg(0).arg(1).arg(0).is_variable())
+        self.assertTrue(M.e.arg(0).arg(1).arg(0).is_variable_type())
 
         M.E[0].expr = 3
         M.E[0] -= M.v
@@ -5151,7 +5151,7 @@ class TestExpressionSpecialMethods1(unittest.TestCase):
         self.assertEqual(type(M.E[0].arg(0)), EXPR.ViewSumExpression)
         self.assertTrue(type(M.E[0].arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(type(M.E[0].arg(0).arg(1)) is EXPR.NegationExpression)
-        self.assertTrue(M.E[0].arg(0).arg(1).arg(0).is_variable())
+        self.assertTrue(M.E[0].arg(0).arg(1).arg(0).is_variable_type())
 
     def test_imul(self):
         M = ConcreteModel()
@@ -5164,14 +5164,14 @@ class TestExpressionSpecialMethods1(unittest.TestCase):
         self.assertEqual(M.e.nargs(), 1)
         self.assertEqual(type(M.e.arg(0)), EXPR.ProductExpression)
         self.assertTrue(type(M.e.arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(M.e.arg(0).arg(1).is_variable())
+        self.assertTrue(M.e.arg(0).arg(1).is_variable_type())
 
         M.E[0].expr = 3
         M.E[0] *= M.v
         self.assertEqual(M.E[0].nargs(), 1)
         self.assertEqual(type(M.E[0].arg(0)), EXPR.ProductExpression)
         self.assertTrue(type(M.E[0].arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(M.E[0].arg(0).arg(1).is_variable())
+        self.assertTrue(M.E[0].arg(0).arg(1).is_variable_type())
 
     def test_idiv(self):
         M = ConcreteModel()
@@ -5185,7 +5185,7 @@ class TestExpressionSpecialMethods1(unittest.TestCase):
         self.assertEqual(type(M.e.arg(0)), EXPR.ProductExpression)
         self.assertTrue(type(M.e.arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(type(M.e.arg(0).arg(1)) is EXPR.ReciprocalExpression)
-        self.assertTrue(M.e.arg(0).arg(1).arg(0).is_variable())
+        self.assertTrue(M.e.arg(0).arg(1).arg(0).is_variable_type())
 
         M.E[0].expr = 3
         M.E[0] /= M.v
@@ -5193,7 +5193,7 @@ class TestExpressionSpecialMethods1(unittest.TestCase):
         self.assertEqual(type(M.E[0].arg(0)), EXPR.ProductExpression)
         self.assertTrue(type(M.E[0].arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(type(M.E[0].arg(0).arg(1)) is EXPR.ReciprocalExpression)
-        self.assertTrue(M.E[0].arg(0).arg(1).arg(0).is_variable())
+        self.assertTrue(M.E[0].arg(0).arg(1).arg(0).is_variable_type())
 
     def test_ipow(self):
         M = ConcreteModel()
@@ -5206,14 +5206,14 @@ class TestExpressionSpecialMethods1(unittest.TestCase):
         self.assertEqual(M.e.nargs(), 1)
         self.assertEqual(type(M.e.arg(0)), EXPR.PowExpression)
         self.assertTrue(type(M.e.arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(M.e.arg(0).arg(1).is_variable())
+        self.assertTrue(M.e.arg(0).arg(1).is_variable_type())
 
         M.E[0].expr = 3
         M.E[0] **= M.v
         self.assertEqual(M.E[0].nargs(), 1)
         self.assertEqual(type(M.E[0].arg(0)), EXPR.PowExpression)
         self.assertTrue(type(M.E[0].arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(M.E[0].arg(0).arg(1).is_variable())
+        self.assertTrue(M.E[0].arg(0).arg(1).is_variable_type())
 
 
 class TestExpressionSpecialMethods2(unittest.TestCase):
@@ -5228,7 +5228,7 @@ class TestExpressionSpecialMethods2(unittest.TestCase):
         self.assertEqual(e.nargs(), 1)
         self.assertEqual(type(e.arg(0)), EXPR.ViewSumExpression)
         self.assertTrue(type(e.arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(e.arg(0).arg(1).is_variable())
+        self.assertTrue(e.arg(0).arg(1).is_variable_type())
 
     def test_isub(self):
         M = ConcreteModel()
@@ -5241,7 +5241,7 @@ class TestExpressionSpecialMethods2(unittest.TestCase):
         self.assertEqual(type(e.arg(0)), EXPR.ViewSumExpression)
         self.assertTrue(type(e.arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(type(e.arg(0).arg(1)) is EXPR.NegationExpression)
-        self.assertTrue(e.arg(0).arg(1).arg(0).is_variable())
+        self.assertTrue(e.arg(0).arg(1).arg(0).is_variable_type())
 
     def test_imul(self):
         M = ConcreteModel()
@@ -5253,7 +5253,7 @@ class TestExpressionSpecialMethods2(unittest.TestCase):
         self.assertEqual(e.nargs(), 1)
         self.assertEqual(type(e.arg(0)), EXPR.ProductExpression)
         self.assertTrue(type(e.arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(e.arg(0).arg(1).is_variable())
+        self.assertTrue(e.arg(0).arg(1).is_variable_type())
 
     def test_idiv(self):
         M = ConcreteModel()
@@ -5266,7 +5266,7 @@ class TestExpressionSpecialMethods2(unittest.TestCase):
         self.assertEqual(type(e.arg(0)), EXPR.ProductExpression)
         self.assertTrue(type(e.arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(type(e.arg(0).arg(1)) is EXPR.ReciprocalExpression)
-        self.assertTrue(e.arg(0).arg(1).arg(0).is_variable())
+        self.assertTrue(e.arg(0).arg(1).arg(0).is_variable_type())
 
     def test_ipow(self):
         M = ConcreteModel()
@@ -5278,7 +5278,7 @@ class TestExpressionSpecialMethods2(unittest.TestCase):
         self.assertEqual(e.nargs(), 1)
         self.assertEqual(type(e.arg(0)), EXPR.PowExpression)
         self.assertTrue(type(e.arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(e.arg(0).arg(1).is_variable())
+        self.assertTrue(e.arg(0).arg(1).is_variable_type())
 
 
 if __name__ == "__main__":

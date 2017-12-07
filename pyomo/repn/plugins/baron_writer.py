@@ -62,9 +62,9 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
                 tmp.append(val)
             elif arg.__class__ in native_types:
                 tmp.append("'{0}'".format(val))
-            elif arg.is_variable():
+            elif arg.is_variable_type():
                 tmp.append(val)
-            elif arg.is_expression() and node._precedence() < arg._precedence():
+            elif arg.is_expression_type() and node._precedence() < arg._precedence():
                 tmp.append("({0})".format(val))
             else:
                 tmp.append(val)
@@ -94,14 +94,14 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
         if node.__class__ in native_types:
             return True, str(node)
 
-        if node.is_variable():
+        if node.is_variable_type():
             if node.fixed:
                 return True, str(value(node))
             self.variables.add(id(node))
             label = self.smap.getSymbol(node)
             return True, label
 
-        if not node.is_expression():
+        if not node.is_expression_type():
             return True, str(value(node))
 
         return False, None

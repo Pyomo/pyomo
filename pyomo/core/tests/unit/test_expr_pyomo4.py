@@ -3122,7 +3122,7 @@ def TrapRefCount_fcn(target, inplace, *objs):
         _inplace += 1
         if obj.__class__ in native_types:
             continue
-        if not obj.is_expression():
+        if not obj.is_expression_type():
             continue
         TrapRefCount.inst.fcn(sys.getrefcount(obj),target,_inplace,obj)
     return TrapRefCount.inst.saved_fcn(target, inplace, *objs)

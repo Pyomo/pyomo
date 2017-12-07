@@ -47,7 +47,7 @@ class IParameter(IComponent, NumericValue):
         """A boolean indicating that this parameter is constant."""
         return False
 
-    def is_variable(self):
+    def is_variable_type(self):
         """A boolean indicating that this is a variable object."""
         return False
 

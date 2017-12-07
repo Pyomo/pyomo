@@ -1024,7 +1024,7 @@ class Scenario(object):
                 scenario_stale.clear()
                 for variable_id in tree_node._variable_ids:
                     vardata = scenariotree_sm_bySymbol[variable_id]
-                    if vardata.is_expression():
+                    if vardata.is_expression_type():
                         continue
                     if vardata.fixed:
                         scenario_fixed.add(variable_id)
@@ -1047,16 +1047,16 @@ class Scenario(object):
             stage_cost_component = \
                 self._instance.find_component(cost_variable_name)[cost_variable_index]
             # Some of these might be Expression objects so we check
-            # for is_expression before changing.value
-            if not stage_cost_component.is_expression():
+            # for is_expression_type before changing.value
+            if not stage_cost_component.is_expression_type():
                 stage_cost_component.value = self._stage_costs[stage_name]
 
         for tree_node in self._node_list:
             # Some of these might be Expression objects so we check
-            # for is_expression before changing.value
+            # for is_expression_type before changing.value
             for variable_id, var_value in iteritems(self._x[tree_node._name]):
                 compdata = scenariotree_sm_bySymbol[variable_id]
-                if not compdata.is_expression():
+                if not compdata.is_expression_type():
                     compdata.value = var_value
 
             for variable_id in self._fixed[tree_node._name]:

@@ -120,7 +120,7 @@ class ReplaceTemplateExpression(EXPR.ExpressionReplacementVisitor):
         if type(node) is EXPR.GetItemExpression or type(node) is IndexTemplate:
             return True, self.substituter(node, *self.substituter_args)
 
-        if type(node) in native_numeric_types or not node.is_expression():
+        if type(node) in native_numeric_types or not node.is_expression_type():
             return True, node
 
         return False, None

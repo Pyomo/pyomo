@@ -98,7 +98,7 @@ def identify_variables(expr,
             _idx += 1
             if type(_sub) in native_types:
                 pass
-            elif _sub.is_expression():
+            elif _sub.is_expression_type():
                 _stack.append(( _argList, _idx, _len ))
                 if type(_sub) is _ProductExpression:
                     if _sub._denominator:
@@ -204,7 +204,7 @@ WARNING: _ExpressionBase.simplify() has been deprecated and removed from
                 return True
         return False
 
-    def is_expression(self):
+    def is_expression_type(self):
         return True
 
     def polynomial_degree(self, ):
@@ -1016,13 +1016,13 @@ def generate_expression(etype, _self, other, targetRefs=None):
     if etype > _inplace: #and etype < 2*_inplace:#etype[0] == 'i':
         #etype = etype[1:]
         etype -= _inplace
-        if _self.is_expression():
+        if _self.is_expression_type():
             _self = _generate_expression__clone_if_needed(_self, 1)
         elif _self.is_constant():
             _self = _self()
             self_type = None
     else:
-        if _self.is_expression():
+        if _self.is_expression_type():
             _self = _generate_expression__clone_if_needed(_self, 0)
         elif _self.is_constant():
             _self = _self()
@@ -1070,7 +1070,7 @@ def generate_expression(etype, _self, other, targetRefs=None):
                 pass
             other = as_numeric(other)
         other_type = other.__class__
-        if other.is_expression():
+        if other.is_expression_type():
             other = _generate_expression__clone_if_needed(other, 0)
         elif other.is_constant():
             other = other()
@@ -1460,7 +1460,7 @@ def generate_relational_expression(etype, lhs, rhs):
             pass
         raise e
 
-    if lhs.is_expression():
+    if lhs.is_expression_type():
         lhs = _generate_relational_expression__clone_if_needed(lhs)
         if lhs.is_relational():
             lhs_is_relational = True
@@ -1479,7 +1479,7 @@ def generate_relational_expression(etype, lhs, rhs):
         except AttributeError:
             pass
         raise e
-    if rhs.is_expression():
+    if rhs.is_expression_type():
         rhs = _generate_relational_expression__clone_if_needed(rhs)
         if rhs.is_relational():
             rhs_is_relational = True
@@ -1668,7 +1668,7 @@ def generate_intrinsic_function_expression(arg, name, fcn):
             pass
         raise e
 
-    if arg.is_expression():
+    if arg.is_expression_type():
         arg = _generate_intrinsic_function_expression__clone_if_needed(arg)
     return _IntrinsicFunctionExpression(name, 1, (arg,), fcn)
 

@@ -196,10 +196,10 @@ class Test_noclone(unittest.TestCase):
         v.free()
         self.assertEqual(e.polynomial_degree(), None)
 
-    def test_is_expression(self):
+    def test_is_expression_type(self):
         for obj in (variable(), parameter(), objective(),
                     expression(), data_expression()):
-            self.assertEqual(noclone(obj).is_expression(), True)
+            self.assertEqual(noclone(obj).is_expression_type(), True)
 
     def test_args(self):
         e = noclone(parameter() + 1)
@@ -340,9 +340,9 @@ class _Test_expression_base(object):
         self.assertEqual(e.is_constant(), False)
         self.assertEqual(is_constant(e), False)
 
-    def test_is_expression(self):
+    def test_is_expression_type(self):
         e = self._ctype_factory()
-        self.assertEqual(e.is_expression(), True)
+        self.assertEqual(e.is_expression_type(), True)
 
     def test_args(self):
         e = self._ctype_factory()

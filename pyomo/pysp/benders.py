@@ -274,7 +274,7 @@ def EXTERNAL_initialize_for_benders(manager,
     for variable_id in rootnode._variable_ids:
         vardata = scenario_bySymbol[variable_id]
         # derived variables might be Expression objects
-        if not vardata.is_expression():
+        if not vardata.is_expression_type():
             tight_bounds = vardata.bounds
             domain = vardata.domain
             vardata.domain = Reals

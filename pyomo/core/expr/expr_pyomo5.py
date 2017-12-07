@@ -317,7 +317,7 @@ class SimpleExpressionVisitor(object):
             #for c in self.children(current):
             for c in current.args:
                 #if self.is_leaf(c):
-                if c.__class__ in valid_leaf_types or not c.is_expression() or c.nargs() == 0:
+                if c.__class__ in valid_leaf_types or not c.is_expression_type() or c.nargs() == 0:
                     self.visit(c)
                 else:
                     dq.append(c)
@@ -345,7 +345,7 @@ class SimpleExpressionVisitor(object):
         #
         # If we start with a leaf, then yield it and stop iteration
         #
-        if node.__class__ in valid_leaf_types or not node.is_expression() or node.nargs() == 0:
+        if node.__class__ in valid_leaf_types or not node.is_expression_type() or node.nargs() == 0:
             ans = self.visit(node)
             if not ans is None:
                 yield ans
@@ -360,7 +360,7 @@ class SimpleExpressionVisitor(object):
             #for c in self.children(current):
             for c in current.args:
                 #if self.is_leaf(c):
-                if c.__class__ in valid_leaf_types or not c.is_expression() or c.nargs() == 0:
+                if c.__class__ in valid_leaf_types or not c.is_expression_type() or c.nargs() == 0:
                     ans = self.visit(c)
                     if not ans is None:
                         yield ans
@@ -716,7 +716,7 @@ class _CloneVisitor(ExpressionValueVisitor):
             #
             return True, deepcopy(node, self.memo)
 
-        if not node.is_expression():
+        if not node.is_expression_type():
             #
             # Store a leave object that is cloned
             #
@@ -725,7 +725,7 @@ class _CloneVisitor(ExpressionValueVisitor):
             else:
                 return True, node
 
-        if not self.clone_leaves and node.is_named_expression():
+        if not self.clone_leaves and node.is_named_expression_type():
             #
             # If we are not cloning leaves, then 
             # we don't copy the expression tree for a
@@ -822,10 +822,10 @@ class _EvaluationVisitor(ExpressionValueVisitor):
         if node.__class__ in valid_leaf_types:
             return True, node
 
-        if node.is_variable():
+        if node.is_variable_type():
             return True, value(node)
 
-        if not node.is_expression():
+        if not node.is_expression_type():
             return True, value(node)
 
         return False, None
@@ -920,7 +920,7 @@ class _VariableVisitor(SimpleExpressionVisitor):
         if node.__class__ in valid_leaf_types:
             return
 
-        if node.is_variable():
+        if node.is_variable_type():
             if id(node) in self.seen:
                 return
             self.seen.add(id(node))
@@ -970,7 +970,7 @@ class _PolyDegreeVisitor(ExpressionValueVisitor):
         if node.__class__ in valid_leaf_types or not node.is_potentially_variable():
             return True, 0
 
-        if not node.is_expression():
+        if not node.is_expression_type():
             return True, 0 if node.is_fixed() else 1
 
         return False, None
@@ -1015,7 +1015,7 @@ class _IsFixedVisitor(ExpressionValueVisitor):
         if node.__class__ in valid_leaf_types or not node.is_potentially_variable():
             return True, True
 
-        elif not node.is_expression():
+        elif not node.is_expression_type():
             return True, node.is_fixed()
 
         return False, None
@@ -1060,9 +1060,9 @@ class _ToStringVisitor(ExpressionValueVisitor):
                 tmp.append(val)
             elif arg.__class__ in valid_leaf_types:
                 tmp.append("'{0}'".format(val))
-            elif arg.is_variable():
+            elif arg.is_variable_type():
                 tmp.append(val)
-            elif not self.verbose and arg.is_expression() and node._precedence() < arg._precedence():
+            elif not self.verbose and arg.is_expression_type() and node._precedence() < arg._precedence():
                 tmp.append("({0})".format(val))
             else:
                 tmp.append(val)
@@ -1081,12 +1081,12 @@ class _ToStringVisitor(ExpressionValueVisitor):
         if node.__class__ in valid_leaf_types:
             return True, str(node)
 
-        if node.is_variable():
+        if node.is_variable_type():
             if not node.fixed:
                 return True, node.to_string(verbose=self.verbose, smap=self.smap, compute_values=False)
             return True, node.to_string(verbose=self.verbose, smap=self.smap, compute_values=self.compute_values)
 
-        if not node.is_expression():
+        if not node.is_expression_type():
             return True, node.to_string(verbose=self.verbose, smap=self.smap, compute_values=self.compute_values)
 
         return False, None
@@ -1486,7 +1486,7 @@ class ExpressionBase(NumericValue):
         """
         return True
 
-    def is_expression(self):
+    def is_expression_type(self):
         """
         Return :const:`True` if this object is an expression.
 
@@ -2060,7 +2060,7 @@ class ViewSumExpression(_SumExpression):
         for v in islice(self._args_, self._nargs):
             if v.__class__ in valid_leaf_types:
                 continue
-            if v.is_variable() or v.is_potentially_variable():
+            if v.is_variable_type() or v.is_potentially_variable():
                 return True
         return False
 
@@ -2448,7 +2448,7 @@ class LinearExpression(ExpressionBase):
     def _decompose_term(expr):
         if expr.__class__ in native_numeric_types:
             return expr,None,None
-        elif expr.is_variable():
+        elif expr.is_variable_type():
             return 0,1,expr
         elif not expr.is_potentially_variable():
             return expr,None,None
@@ -2457,7 +2457,7 @@ class LinearExpression(ExpressionBase):
                 C,c,v = expr._args_[0],None,None
             else:
                 C,c,v = _MutableLinearExpression._decompose_term(expr._args_[0])
-            if expr._args_[1].is_variable():
+            if expr._args_[1].is_variable_type():
                 v_ = expr._args_[1]
                 if not v is None:
                     raise ValueError("Expected a single linear term (1)")
@@ -2657,7 +2657,7 @@ def decompose_term(expr):
     """
     if expr.__class__ in valid_leaf_types or not expr.is_potentially_variable():
         return True, [(expr,None)]
-    elif expr.is_variable():
+    elif expr.is_variable_type():
         return True, [(1,expr)]
     else:
         try:
@@ -2670,7 +2670,7 @@ def decompose_term(expr):
 def _decompose_terms(expr, multiplier=1):
     if expr.__class__ in native_numeric_types or not expr.is_potentially_variable():
         yield (multiplier*expr,None)
-    elif expr.is_variable():
+    elif expr.is_variable_type():
         yield (multiplier,expr)
     elif expr.__class__ is ProductExpression:
         if expr._args_[0].__class__ in native_numeric_types or not expr._args_[0].is_potentially_variable():
@@ -2713,7 +2713,7 @@ def _process_arg(obj):
     #        return clone_expression( obj, clone_leaves=False )
     #    return obj
 
-    #if obj.is_expression():
+    #if obj.is_expression_type():
     #    return obj
 
     if obj.__class__ is NumericConstant:
@@ -2746,11 +2746,11 @@ def _generate_sum_expression(etype, _self, _other):
         if etype >= _unary:
             return _self._combine_expr(etype, None)
         if _other.__class__ is not _MutableLinearExpression:
-            if not (_other.__class__ in native_types or _other.is_expression()):
+            if not (_other.__class__ in native_types or _other.is_expression_type()):
                 _other = _process_arg(_other)
         return _self._combine_expr(etype, _other)
     elif _other.__class__ is _MutableLinearExpression:
-        if not (_self.__class__ in native_types or _self.is_expression()):
+        if not (_self.__class__ in native_types or _self.is_expression_type()):
             _self = _process_arg(_self)
         return _other._combine_expr(-etype, _self)
 
@@ -2758,7 +2758,7 @@ def _generate_sum_expression(etype, _self, _other):
     # A mutable sum is used as a context manager, so we don't
     # need to process it to see if it's entangled.
     #
-    if not (_self.__class__ in native_types or _self.is_expression()):
+    if not (_self.__class__ in native_types or _self.is_expression_type()):
         _self = _process_arg(_self)
 
     if etype == _neg:
@@ -2773,7 +2773,7 @@ def _generate_sum_expression(etype, _self, _other):
                 return _self._args_[0]
             return NPV_NegationExpression((_self,))
 
-    if not (_other.__class__ in native_types or _other.is_expression()):
+    if not (_other.__class__ in native_types or _other.is_expression_type()):
         _other = _process_arg(_other)
 
     if etype < 0:
@@ -2866,11 +2866,11 @@ def _generate_mul_expression(etype, _self, _other):
 
     if _self.__class__ is _MutableLinearExpression:
         if _other.__class__ is not _MutableLinearExpression:
-            if not (_other.__class__ in native_types or _other.is_expression()):
+            if not (_other.__class__ in native_types or _other.is_expression_type()):
                 _other = _process_arg(_other)
         return _self._combine_expr(etype, _other)
     elif _other.__class__ is _MutableLinearExpression:
-        if not (_self.__class__ in native_types or _self.is_expression()):
+        if not (_self.__class__ in native_types or _self.is_expression_type()):
             _self = _process_arg(_self)
         return _other._combine_expr(-etype, _self)
 
@@ -2878,10 +2878,10 @@ def _generate_mul_expression(etype, _self, _other):
     # A mutable sum is used as a context manager, so we don't
     # need to process it to see if it's entangled.
     #
-    if not (_self.__class__ in native_types or _self.is_expression()):
+    if not (_self.__class__ in native_types or _self.is_expression_type()):
         _self = _process_arg(_self)
 
-    if not (_other.__class__ in native_types or _other.is_expression()):
+    if not (_other.__class__ in native_types or _other.is_expression_type()):
         _other = _process_arg(_other)
 
     if etype < 0:
@@ -2967,7 +2967,7 @@ def _generate_other_expression(etype, _self, _other):
     # A mutable sum is used as a context manager, so we don't
     # need to process it to see if it's entangled.
     #
-    if not (_self.__class__ in native_types or _self.is_expression()):
+    if not (_self.__class__ in native_types or _self.is_expression_type()):
         _self = _process_arg(_self)
 
     #
@@ -2981,7 +2981,7 @@ def _generate_other_expression(etype, _self, _other):
         else:
             return NPV_AbsExpression(_self)
 
-    if not (_other.__class__ in native_types or _other.is_expression()):
+    if not (_other.__class__ in native_types or _other.is_expression_type()):
         _other = _process_arg(_other)
 
     if etype < 0:
@@ -3038,9 +3038,9 @@ def _generate_relational_expression(etype, lhs, rhs):
     # arguments in the relational Expression's _args_ will be guaranteed
     # to be NumericValues (just as they are for all other Expressions).
     #
-    if not (lhs.__class__ in native_types or lhs.is_expression()):
+    if not (lhs.__class__ in native_types or lhs.is_expression_type()):
         lhs = _process_arg(lhs)
-    if not (rhs.__class__ in native_types or rhs.is_expression()):
+    if not (rhs.__class__ in native_types or rhs.is_expression_type()):
         rhs = _process_arg(rhs)
 
     if lhs.__class__ in native_numeric_types:
@@ -3156,7 +3156,7 @@ def _generate_relational_expression(etype, lhs, rhs):
 
 
 def _generate_intrinsic_function_expression(arg, name, fcn):
-    if not (arg.__class__ in native_types or arg.is_expression()):
+    if not (arg.__class__ in native_types or arg.is_expression_type()):
         arg = _process_arg(arg)
 
     if arg.__class__ in native_types:

@@ -814,7 +814,7 @@ class linear_constraint(_MutableBoundsConstraintMixin,
         coefficients = []
         constant = 0
         for v, c in self.terms:
-            if v.is_expression():
+            if v.is_expression_type():
                 v = v.expr
             if not v.fixed:
                 variables.append(v)

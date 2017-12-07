@@ -220,7 +220,7 @@ def map_variable_stages(scenario, scenario_tree, symbol_map):
     for scenario_tree_id, vardata in \
           iteritems(reference_model.\
           _ScenarioTreeSymbolMap.bySymbol):
-        if vardata.is_expression():
+        if vardata.is_expression_type():
             continue
         try:
             symbol = byObject[id(vardata)]

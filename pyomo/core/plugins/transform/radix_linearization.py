@@ -240,7 +240,7 @@ class RadixLinearization(Transformation):
         return _w
 
     def _collect_bilinear(self, expr, bilin, quad):
-        if not expr.is_expression():
+        if not expr.is_expression_type():
             return
         if type(expr) is ProductExpression:
             if len(expr._numerator) != 2:

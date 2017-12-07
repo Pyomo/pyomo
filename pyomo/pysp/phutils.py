@@ -216,7 +216,7 @@ def reset_stage_cost_variables(scenario_tree, scenario_instances):
     for stage in scenario_tree._stages:
         for tree_node in stage._tree_nodes:
             for cost_var_data, scenario_probability in tree_node._cost_variable_datas:
-                if cost_var_data.is_expression() is False:
+                if cost_var_data.is_expression_type() is False:
                     cost_var_data.value = None
                     cost_var_data.stale = True
 

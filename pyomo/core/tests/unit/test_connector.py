@@ -72,14 +72,14 @@ class TestConnector(unittest.TestCase):
         pipe.OUT.add(pipe.pOut, "pressure")
         self.assertEqual(len(pipe.OUT), 1)
         self.assertEqual(len(pipe.OUT.vars), 2)
-        self.assertFalse(pipe.OUT.vars['flow'].is_expression())
+        self.assertFalse(pipe.OUT.vars['flow'].is_expression_type())
 
         pipe.IN = Connector()
         pipe.IN.add(-pipe.flow, "flow")
         pipe.IN.add(pipe.pIn, "pressure")
         self.assertEqual(len(pipe.IN), 1)
         self.assertEqual(len(pipe.IN.vars), 2)
-        self.assertTrue(pipe.IN.vars['flow'].is_expression())
+        self.assertTrue(pipe.IN.vars['flow'].is_expression_type())
         
     def test_add_indexed_vars(self):
         pipe = ConcreteModel()

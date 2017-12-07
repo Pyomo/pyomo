@@ -47,7 +47,7 @@ class ImplicitSP(object):
         """
         if is_constant(exp) or isinstance(exp, _VarData):
             return {}
-        if exp.is_expression():
+        if exp.is_expression_type():
             ans = {}
             if exp.__class__ is EXPR.ProductExpression:
                 for subexp in exp._numerator:
@@ -72,7 +72,7 @@ class ImplicitSP(object):
     def _collect_unfixed_variables(exp):
         if is_fixed(exp):
             return {}
-        elif exp.is_expression():
+        elif exp.is_expression_type():
             ans = {}
             if exp.__class__ is EXPR.ProductExpression:
                 for subexp in exp._numerator:

@@ -589,7 +589,7 @@ class DDSIP_Input(object):
         for scenario_tree_id, vardata in \
               iteritems(self._reference_scenario_instance.\
               _ScenarioTreeSymbolMap.bySymbol):
-            if vardata.is_expression():
+            if vardata.is_expression_type():
                 continue
             try:
                 LP_name = LP_byObject[id(vardata)]

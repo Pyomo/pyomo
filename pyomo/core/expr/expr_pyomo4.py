@@ -124,7 +124,7 @@ def identify_variables(expr,
             _idx += 1
             if _sub.__class__ in native_types:
                 pass
-            elif _sub.is_expression():
+            elif _sub.is_expression_type():
                 _stack.append(( _argList, _idx, _len ))
                 _argList = _sub._args
                 _idx = 0
@@ -159,7 +159,7 @@ def _generate_expression__clone_if_needed__getrefcount(target, inplace, *objs):
             continue
 
         try:
-            obj_expr = obj.is_expression()
+            obj_expr = obj.is_expression_type()
         except AttributeError:
             try:
                 if obj.is_indexed():
@@ -171,7 +171,7 @@ def _generate_expression__clone_if_needed__getrefcount(target, inplace, *objs):
             except AttributeError:
                 pass
             obj = as_numeric(obj)
-            obj_expr = obj.is_expression()
+            obj_expr = obj.is_expression_type()
 
         if not obj_expr:
             if obj.is_constant():
@@ -203,7 +203,7 @@ def _generate_expression__clone_if_needed__parent_expr(target, inplace, *objs):
             continue
 
         try:
-            obj_expr = obj.is_expression()
+            obj_expr = obj.is_expression_type()
         except AttributeError:
             try:
                 if obj.is_indexed():
@@ -215,7 +215,7 @@ def _generate_expression__clone_if_needed__parent_expr(target, inplace, *objs):
             except AttributeError:
                 pass
             obj = as_numeric(obj)
-            obj_expr = obj.is_expression()
+            obj_expr = obj.is_expression_type()
 
         if obj_expr:
             if obj._parent_expr:
@@ -348,7 +348,7 @@ class _ExpressionBase(NumericValue):
                 _idx += 1
                 if _sub.__class__ in native_numeric_types:
                     _result.append( _sub )
-                elif _sub.is_expression():
+                elif _sub.is_expression_type():
                     _stack.append( (_obj, _argList, _idx, _len, _result) )
                     _obj     = _sub
                     _argList = _sub._args
@@ -391,7 +391,7 @@ class _ExpressionBase(NumericValue):
                     _result.append( native_result )
                     continue
                 try:
-                    _isExpr = _sub.is_expression()
+                    _isExpr = _sub.is_expression_type()
                 except AttributeError:
                     _result.append( native_result )
                     continue
@@ -494,7 +494,7 @@ class _ExpressionBase(NumericValue):
         """
         return any
 
-    def is_expression(self):
+    def is_expression_type(self):
         return True
 
 
@@ -507,7 +507,7 @@ class _ExpressionBase(NumericValue):
                 _idx += 1
                 if _sub.__class__ in native_numeric_types:
                     _result.append( 0 )
-                elif _sub.is_expression():
+                elif _sub.is_expression_type():
                     if _sub is _LinearExpression:
                         _result.append( _sub.polynomial_degree() )
                     else:
@@ -613,7 +613,7 @@ class _NegationExpression(_ExpressionBase):
     def _to_string_prefix(self, ostream, verbose):
         if verbose:
             ostream.write(self.getname())
-        elif not self._args[0].is_expression \
+        elif not self._args[0].is_expression_type \
              and _NegationExpression.PRECEDENCE <= self._args[0]._precedence():
             ostream.write("-")
         else:
@@ -675,7 +675,7 @@ class _ExternalFunctionExpression(_ExpressionBase):
         if not _getrefcount_available:
             self._parent_expr = None
             for a in self._args:
-                if a.__class__ not in native_types and a.is_expression():
+                if a.__class__ not in native_types and a.is_expression_type():
                     a._parent_expr = bypass_backreference or ref(self)
         self._fcn = fcn
 
@@ -985,13 +985,13 @@ class _SumExpression(_LinearOperatorExpression):
                 self._args.append(other)
             return self
 
-        if other.is_expression():
+        if other.is_expression_type():
             if other.__class__ is _SumExpression:
                 self._args.extend(other._args)
                 if not _getrefcount_available and not bypass_backreference:
                     for arg in other._args:
                         if arg.__class__ not in native_types \
-                           and arg.is_expression():
+                           and arg.is_expression_type():
                             arg._parent_expr = self
                 return self
             elif other.__class__ is _LinearExpression and \
@@ -1071,7 +1071,7 @@ class _GetItemExpression(_ExpressionBase):
         if not _getrefcount_available:
             self._parent_expr = None
             for a in self._args:
-                if a.__class__ not in native_types and a.is_expression():
+                if a.__class__ not in native_types and a.is_expression_type():
                     a._parent_expr = bypass_backreference or ref(self)
         self._base = base
 
@@ -1153,7 +1153,7 @@ class Expr_if(_ExpressionBase):
         if not _getrefcount_available:
             self._parent_expr = None
             for a in self._args:
-                if a.__class__ not in native_types and a.is_expression():
+                if a.__class__ not in native_types and a.is_expression_type():
                     a._parent_expr = bypass_backreference or ref(self)
         self._if, self._then, self._else = self._args
         if self._if.__class__ in native_types:
@@ -1296,7 +1296,7 @@ class _LinearExpression(_ExpressionBase):
                 ostream.write(_sub.getname(True, _name_buffer))
                 return
             ostream.write(str(coef))
-        elif coef.is_expression():
+        elif coef.is_expression_type():
             coef.to_string( ostream=ostream, verbose=verbose,
                             precedence=_ProductExpression.PRECEDENCE )
         else:
@@ -1341,7 +1341,7 @@ class _LinearExpression(_ExpressionBase):
             self._const += other
             return self
 
-        if other.is_expression():
+        if other.is_expression_type():
             if other.__class__ is _LinearExpression:
                 with bypass_clone_check():
                     self._const += other._const
@@ -1380,7 +1380,7 @@ class _LinearExpression(_ExpressionBase):
             self._const -= other
             return self
 
-        if other.is_expression():
+        if other.is_expression_type():
             if other.__class__ is _LinearExpression:
                 with bypass_clone_check():
                     self._const -= other._const
@@ -1532,7 +1532,7 @@ def generate_expression(etype, _self, _other, targetRefs=0):
         _self_expr = False
         _self_var = False
     else:
-        _self_expr = _self.is_expression()
+        _self_expr = _self.is_expression_type()
         _self_var = _self._potentially_variable()
 
     if etype > _inplace:
@@ -1563,7 +1563,7 @@ def generate_expression(etype, _self, _other, targetRefs=0):
         _other_var = False
     else:
         _other_var = _other._potentially_variable()
-        _other_expr = _other.is_expression()
+        _other_expr = _other.is_expression_type()
 
     if etype < 0:
         #
@@ -1780,9 +1780,9 @@ def generate_relational_expression(etype, lhs, rhs):
                   "    " + buf.getvalue().strip())
         ans = _EqualityExpression((lhs,rhs))
         if not _getrefcount_available:
-            if lhs.is_expression():
+            if lhs.is_expression_type():
                 lhs._parent_expr = ans
-            if rhs.is_expression():
+            if rhs.is_expression_type():
                 rhs._parent_expr = ans
         return ans
     else:
@@ -1805,7 +1805,7 @@ def generate_relational_expression(etype, lhs, rhs):
                 lhs._args = lhs._args + (rhs,)
                 lhs._strict = lhs._strict + strict
                 lhs._cloned_from = cloned_from
-                if not _getrefcount_available and rhs.is_expression():
+                if not _getrefcount_available and rhs.is_expression_type():
                     rhs._parent_expr = lhs
                 return lhs
             else:
@@ -1822,7 +1822,7 @@ def generate_relational_expression(etype, lhs, rhs):
                 rhs._args = (lhs,) + rhs._args
                 rhs._strict = strict + rhs._strict
                 rhs._cloned_from = cloned_from
-                if not _getrefcount_available and lhs.is_expression():
+                if not _getrefcount_available and lhs.is_expression_type():
                     lhs._parent_expr = rhs
                 return rhs
             else:
@@ -1834,9 +1834,9 @@ def generate_relational_expression(etype, lhs, rhs):
         else:
             ans = _InequalityExpression((lhs, rhs), strict, cloned_from)
             if not _getrefcount_available:
-                if lhs.is_expression():
+                if lhs.is_expression_type():
                     lhs._parent_expr = ans
-                if rhs.is_expression():
+                if rhs.is_expression_type():
                     rhs._parent_expr = ans
             return ans
 

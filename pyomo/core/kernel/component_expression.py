@@ -23,7 +23,7 @@ from pyomo.core.kernel.component_list import ComponentList
 from pyomo.core.expr.numvalue import (NumericValue,
                                         is_fixed,
                                         is_constant,
-                                        is_variable,
+                                        is_variable_type,
                                         potentially_variable,
                                         value,
                                         as_numeric)
@@ -68,9 +68,9 @@ class IIdentityExpression(NumericValue):
         """A boolean indicating whether this expression is constant."""
         return is_constant(self._expr)
 
-    def is_variable(self):
+    def is_variable_type(self):
         """A boolean indicating whether this expression is a variable object."""
-        return is_variable(self._expr)
+        return is_variable_type(self._expr)
 
     def is_fixed(self):
         """A boolean indicating whether this expression is fixed."""
@@ -151,11 +151,11 @@ class IIdentityExpression(NumericValue):
         self.expr **= other
         return self
 
-    def is_named_expression(self):
+    def is_named_expression_type(self):
         """A boolean indicating whether this in a named expression."""
         return True
 
-    def is_expression(self):
+    def is_expression_type(self):
         """A boolean indicating whether this in an expression."""
         return True
 
@@ -289,7 +289,7 @@ class IExpression(IComponent, IIdentityExpression):
         """A boolean indicating whether this expression is constant."""
         return False
 
-    def is_variable(self):
+    def is_variable_type(self):
         """A boolean indicating whether this expression is a variable object."""
         return False
 

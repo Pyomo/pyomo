@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ('value', 'is_constant', 'is_fixed', 'is_variable', 'potentially_variable', 'update_KnownConstants', 'as_numeric', 'NumericValue', 'NumericConstant', 'ZeroConstant', 'native_numeric_types', 'native_types')
+__all__ = ('value', 'is_constant', 'is_fixed', 'is_variable_type', 'potentially_variable', 'update_KnownConstants', 'as_numeric', 'NumericValue', 'NumericConstant', 'ZeroConstant', 'native_numeric_types', 'native_types')
 
 import sys
 import logging
@@ -226,7 +226,7 @@ def is_fixed(obj):
         pass
     return as_numeric(obj).is_fixed()
 
-def is_variable(obj):
+def is_variable_type(obj):
     """
     A utility function that returns a boolean indicating
     whether the input object is a variable.
@@ -234,10 +234,10 @@ def is_variable(obj):
     if obj.__class__ in native_types:
         return False
     try:
-        return obj.is_variable()
+        return obj.is_variable_type()
     except AttributeError:
         pass
-    return as_numeric(obj).is_variable()
+    return as_numeric(obj).is_variable_type()
 
 def potentially_variable(obj):
     """
@@ -410,7 +410,7 @@ class NumericValue(object):
         """Return True if this is a non-constant value that has been fixed"""
         return False
 
-    def is_variable(self):
+    def is_variable_type(self):
         """Return False unless this class is a variable object"""
         return False
 
@@ -418,11 +418,11 @@ class NumericValue(object):
         """Return True if variables can appear in this expression"""
         return True
 
-    def is_named_expression(self):
+    def is_named_expression_type(self):
         """Return True if this numeric value is a named expression"""
         return False
 
-    def is_expression(self):
+    def is_expression_type(self):
         """Return True if this numeric value is an expression"""
         return False
 

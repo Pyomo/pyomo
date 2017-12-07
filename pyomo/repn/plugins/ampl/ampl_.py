@@ -442,7 +442,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             OUTPUT.write(self._op_string[NumericConstant]
                          % (exp))
 
-        elif exp.is_expression():
+        elif exp.is_expression_type():
             #
             # We are assuming that _Constant_* expression objects
             # have been preprocessed to form constant values.

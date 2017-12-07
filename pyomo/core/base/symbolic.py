@@ -207,7 +207,7 @@ def sympify_expression(expr, sympySymbols, pyomo2sympy):
     #
     if expr.__class__ in native_types:
         return expr
-    if not expr.is_expression():
+    if not expr.is_expression_type():
         if id(expr) in pyomo2sympy:
             return pyomo2sympy[id(expr)]
         return expr

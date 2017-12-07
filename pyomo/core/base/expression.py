@@ -124,11 +124,11 @@ class _ExpressionData(NumericValue):
         self.expr **= other
         return self.expr
 
-    def is_named_expression(self):
+    def is_named_expression_type(self):
         """A boolean indicating whether this in a named expression."""
         return True
 
-    def is_expression(self):
+    def is_expression_type(self):
         """A boolean indicating whether this in an expression."""
         return True
 

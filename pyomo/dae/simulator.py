@@ -237,7 +237,7 @@ if scipy_available:
 
         def visiting_potential_leaf(self, node):
             if type(node) in native_numeric_types or \
-                not node.is_expression() or\
+                not node.is_expression_type() or\
                 type(node) is IndexTemplate:
                 return True, node
 
@@ -310,7 +310,7 @@ if casadi_available:
                 return True, self.templatemap[_id]
 
             if type(node) in native_numeric_types or \
-                not node.is_expression() or\
+                not node.is_expression_type() or\
                 type(node) is IndexTemplate:
                 return True, node
 
@@ -346,10 +346,10 @@ if casadi_available:
             if node.__class__ is casadi.SX:
                 return True, node
 
-            if node.is_variable():
+            if node.is_variable_type():
                 return True, value(node)
 
-            if not node.is_expression():
+            if not node.is_expression_type():
                 return True, value(node)
 
             return False, None

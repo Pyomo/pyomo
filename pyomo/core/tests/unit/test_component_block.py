@@ -77,7 +77,7 @@ def _collect_expr_components(exp):
         ans[id(exp)] = exp
     if exp.__class__ in native_numeric_types:
         return ans
-    if exp.is_expression():
+    if exp.is_expression_type():
         for subexp in exp.args:
             ans.update(_collect_expr_components(subexp))
     return ans

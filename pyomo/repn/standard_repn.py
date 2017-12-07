@@ -286,7 +286,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         #
         # The expression is a variable
         #
-        elif expr.is_variable():
+        elif expr.is_variable_type():
             if expr.fixed:
                 if compute_values:
                     repn.constant = value(expr)
@@ -311,14 +311,14 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                     if v.fixed:
                         if c.__class__ in native_numeric_types:
                             C_ += c*v.value
-                        elif c.is_expression():
+                        elif c.is_expression_type():
                             C_ += EXPR.evaluate_expression(c)*v.value
                         else:
                             C_ += value(c)*v.value
                     else:
                         if c.__class__ in native_numeric_types:
                             c_.append( c )
-                        elif c.is_expression():
+                        elif c.is_expression_type():
                             c_.append( EXPR.evaluate_expression(c) )
                         else:
                             c_.append( value(c) )
@@ -349,7 +349,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         #
         # Unknown expression object
         #
-        elif not expr.is_expression():
+        elif not expr.is_expression_type():
             raise ValueError("Unexpected expression type: "+str(expr))
 
         return _generate_standard_repn(expr, 
@@ -386,7 +386,7 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
     for e_ in itertools.islice(exp._args_, exp.nargs()):
         if e_.__class__ in native_numeric_types:
             ans.const += multiplier*e_
-        elif e_.is_variable():
+        elif e_.is_variable_type():
             if e_.fixed:
                 if compute_values:
                     ans.const += multiplier*e_.value
@@ -409,7 +409,7 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
                 ans.const += multiplier * value(e_)
             else:
                 ans.const += multiplier * e_
-        elif e_.__class__ is EXPR.ProductExpression and e_._args_[1].is_variable() and (e_._args_[0].__class__ in native_numeric_types or not e_._args_[0].is_potentially_variable()):
+        elif e_.__class__ is EXPR.ProductExpression and e_._args_[1].is_variable_type() and (e_._args_[0].__class__ in native_numeric_types or not e_._args_[0].is_potentially_variable()):
             if compute_values:
                 lhs = value(e_._args_[0])
             else:

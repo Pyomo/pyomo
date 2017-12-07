@@ -203,7 +203,7 @@ class IVariable(IComponent, NumericValue):
         constant in an expression."""
         return False
 
-    def is_variable(self):
+    def is_variable_type(self):
         """Returns :const:`FTruealse` because this is a
         variable object."""
         return True

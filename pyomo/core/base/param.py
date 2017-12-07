@@ -92,7 +92,7 @@ class _ParamData(ComponentData, NumericValue):
         """
         return False
 
-    def is_variable(self):
+    def is_variable_type(self):
         """
         Returns False because this is not a variable object.
         """
