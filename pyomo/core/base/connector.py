@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -19,8 +19,8 @@ from weakref import ref as weakref_ref
 from pyomo.util.timing import ConstructionTimer
 from pyomo.util.plugin import Plugin, implements
 
-from pyomo.core.base.component import ComponentData, register_component
-from pyomo.core.base.indexed_component import IndexedComponent
+from pyomo.core.base.component import ActiveComponentData, register_component
+from pyomo.core.base.indexed_component import ActiveIndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.numvalue import NumericValue, value
 from pyomo.core.base.plugin import IPyomoScriptModifyInstance, TransformationFactory
@@ -28,7 +28,7 @@ from pyomo.core.base.plugin import IPyomoScriptModifyInstance, TransformationFac
 logger = logging.getLogger('pyomo.core')
 
 
-class _ConnectorData(ComponentData, NumericValue):
+class _ConnectorData(ActiveComponentData, NumericValue):
     """Holds the actual connector information"""
 
     __slots__ = ('vars','aggregators')
@@ -45,7 +45,7 @@ class _ConnectorData(ComponentData, NumericValue):
 
         self.vars = {}
         self.aggregators = {}
-    
+
 
     def __getstate__(self):
         state = super(_ConnectorData, self).__getstate__()
@@ -117,7 +117,7 @@ class _ConnectorData(ComponentData, NumericValue):
 
 
 
-class Connector(IndexedComponent):
+class Connector(ActiveIndexedComponent):
     """A collection of variables, which may be defined over a index
 
     The idea behind a Connector is to create a bundle of variables that
@@ -154,7 +154,7 @@ class Connector(IndexedComponent):
         self._initialize = kwd.pop('initialize', {})
         self._implicit = kwd.pop('implicit', {})
         self._extends = kwd.pop('extends', None)
-        IndexedComponent.__init__(self, *args, **kwd)
+        super(Connector, self).__init__(*args, **kwd)
         self._conval = {}
 
     #
