@@ -1,5 +1,5 @@
 # Provide some test for daps.
-# Author: David L. Woodruff (1.0 circa March 2017)
+# Author: David L. Woodruff (circa March 2017)
 
 import unittest
 import pkg_resources
@@ -7,14 +7,37 @@ import tempfile
 import sys
 import os
 import shutil
-import basicclasses as bc
-import stoch_solver as st
-import distr2pysp as dp
-import pyomo.pysp.daps #*#
+import pyomo.pysp.daps.basicclasses as bc
+import pyomo.pysp.daps.stoch_solver as st
+import pyomo.pysp.daps.distr2pysp as dp
+from pyomo.pysp.daps.distributions import UnivariateDiscrete
+from collections import OrderedDict
+#*#import pyomo.pysp.daps
 
 __author__ = 'David L. Woodruff <DLWoodruff@UCDavis.edu>'
 __date__ = 'August 14, 2017'
-__version__ = 1.1
+__version__ = 1.2
+
+class UnivariteDiscreteDistributionTester(unittest.TestCase):
+    def setUp(self):
+        bpoints = OrderedDict([(0, 0.1), (1, 0.8), (2, 0.1)]) 
+        self.distribution = UnivariateDiscrete(bpoints)
+
+    def test_mean(self):
+        self.assertEqual(self.distribution.mean, 1)
+                              
+    def test_at_point(self):
+        self.assertEqual(self.distribution.cdf(0), 0.1)
+        self.assertEqual(self.distribution.cdf(1), 0.9)
+        self.assertEqual(self.distribution.cdf(1.5), 0.9)
+
+    def test_sampling(self):
+        N = 100
+        totsofar = 0.0
+        for i in range(N):
+            totsofar += self.distribution.sample_one()
+        meanfromsample = totsofar / N
+        self.assertAlmostEqual(meanfromsample, self.distribution.mean, delta=0.1)
 
 class TestDAPS(unittest.TestCase):
     """ Test the daps code."""
@@ -34,8 +57,8 @@ class TestDAPS(unittest.TestCase):
 
         self.seed = 7734  # random number seed
 
-        p = str(pyomo.pysp.daps.__path__)
-        #*#p = "_NamespacePath(['/home/woodruff/software/Pyomo/pyomo/pyomo/pysp/daps'])"
+        #*#p = str(pyomo.pysp.daps.__path__)
+        p = "_NamespacePath(['/home/woodruff/software/Pyomo/pyomo/pyomo/pysp/daps'])"
         l = p.find("'")
         r = p.find("'", l+1)
         dapspath = p[l+1:r]
@@ -70,8 +93,12 @@ class TestDAPS(unittest.TestCase):
         tree_model = bc.Tree_2Stage_json_dir(self.tdir, \
                                              self.farmer_json_tree_file)
         assert(tree_model is not None)
+        phopts = {}
+        phopts['--output-solver-log'] = None
+        phopts['--max-iterations'] = '3'
         solver = st.StochSolver(self.farmer_concrete_model, \
-                                tree_model)
+                                tree_model = tree_model,
+                                phopts=phopts)
         assert(solver is not None)
 
     def test_2stage_AMPL(self):

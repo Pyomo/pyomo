@@ -5,15 +5,15 @@
 import os
 import json
 import pyomo.pysp.plugins.csvsolutionwriter as csvw
-import basicclasses as bc
-import distr2pysp as dp
-import stoch_solver as st
+import pyomo.pysp.daps.basicclasses as bc
+import pyomo.pysp.daps.distr2pysp as dp
+import pyomo.pysp.daps.stoch_solver as st
 
 # concrete as needed by IDAES (serial):
 print ("\n*** 2Stage_json")
 tree_model = bc.Tree_2Stage_json_dir('concrete_farmer', 'TreeTemplateFile.json')
 
-stsolver = st.StochSolver('cref.py', tree_model)
+stsolver = st.StochSolver('cref.py', tree_model = tree_model)
 stsolver.solve_ef('cplex')
 # the stsolver.scenario_tree has the solution
 csvw.write_csv_soln(stsolver.scenario_tree, "testcref")
@@ -24,14 +24,16 @@ sopts['threads'] = 2
 phopts = {}
 phopts['--output-solver-log'] = None
 phopts['--max-iterations'] = '3'
-stsolver = st.StochSolver('cref.py', tree_model, phopts)
+stsolver = st.StochSolver('cref.py',
+                          tree_model = tree_model,
+                          phopts = phopts)
 stsolver.solve_ph(subsolver = 'cplex', default_rho = 1, phopts=phopts, sopts=sopts)
 csvw.write_csv_soln(stsolver.scenario_tree, "testph")
 
 # do it one more time with ph parms from json file
 with open('phopts.json') as infile:
     phopts = json.load(infile)
-stsolverII = st.StochSolver('cref.py', tree_model, phopts)
+stsolverII = st.StochSolver('cref.py', tree_model = tree_model, phopts=phopts)
 stsolverII.solve_ph(subsolver = 'cplex', default_rho = 1, phopts=phopts, sopts=sopts)
 csvw.write_csv_soln(stsolverII.scenario_tree, "testphjson")
 

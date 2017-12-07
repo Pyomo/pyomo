@@ -55,6 +55,14 @@ class ScipyDistr(Distribution):
     def __init__(self, scipyclassname, **kwargs):
         self.scipydistr = getattr(sp, scipyclassname)(**kwargs)
         self.dimension = 1 # generalize this... (dec 2016)
+        try:
+            self.loc = kwargs["loc"]
+        except:
+            self.loc = None
+        try:
+            self.scale = kwargs["scale"]
+        except:
+            self.scale = None
 
     def pdf(self, x):
         return self.scipydistr.pdf(x)
@@ -66,7 +74,8 @@ class ScipyDistr(Distribution):
         return self.scipydistr.cdf(x)
 
     def cdf_inverse(self, y):
-        return self.scipydistr.ppf(y)
+        # dlw oct 2017: can't make this work in general... yet...
+        return self.scipydistr.ppf(y, loc=self.loc, scale=self.scale)
 
     def region_expectation(self, a, b):
         return self.scipydistr.expect(lb=a, ub=b)
