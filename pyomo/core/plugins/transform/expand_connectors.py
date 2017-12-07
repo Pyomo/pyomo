@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -20,7 +20,7 @@ from pyomo.core.base.connector import _ConnectorData, SimpleConnector
 from pyomo.core.base import expr
 
 class ExpandConnectors(Transformation):
-    alias('core.expand_connectors', 
+    alias('core.expand_connectors',
           doc="Expand all connectors in the model to simple constraints")
 
     def _apply_to(self, instance, **kwds):
@@ -125,6 +125,10 @@ class ExpandConnectors(Transformation):
                 c = Constraint(expr=aggregator(block, conn.vars[var]))
                 block.add_component(
                     '%s.%s.aggregate' % (conn.local_name, var), c )
+
+        # Deactivate transformed connectors
+        for conn in connector_list:
+            conn.deactivate()
 
 
     def _validate_and_expand_connector_set(self, connectors):
