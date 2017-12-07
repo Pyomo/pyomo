@@ -26,7 +26,7 @@ def _kwfromphopts(phopts):
     """
     kwargs = {}
     def dointpair(pho, fo):
-        if pho in phopts:
+        if pho in phopts and phopts[pho] is not None:
             kwargs[fo] = int(phopts[pho])
         else:
             kwargs[fo] = None
@@ -58,22 +58,24 @@ class StochSolver:
              solve_ef: a function that solves the ef problem for the tree
              solve_ph: solves the problem in the tree using PH
     """
-    def __init__(self, fsfile, tree_model = None, phopts = None):
+    def __init__(self, fsfile,
+                 fsfct = "pysp_instance_creation_callback",
+                 tree_model = None,
+                 phopts = None):
         """
         inputs: 
           fsfile: is a file that contains the the scenario callback.
-            We require a hard-wired function name in the file, which is
+          fsfct: function name in the file, which defaults to
             "pysp_instance_creation_callback"
           tree_model: gives the tree as a concrete model
             if it is None, then look for a function in fsfile called
             "pysp_scenario_tree_model_callback" that will return it.
           phopts: dictionary of ph options; needed if there is bundling.
-        
+        note: modified Nov 2017 to add fsct, which will break things.
         """
         fsfile = fsfile.replace('.py','')  # import does not like .py
 
-        scen_function = getattr(__import__(fsfile), \
-                                "pysp_instance_creation_callback")
+        scen_function = getattr(__import__(fsfile), fsfct)
 
         if tree_model is None:
             tree_maker = getattr(__import__(fsfile), \
