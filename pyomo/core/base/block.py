@@ -555,6 +555,8 @@ class _BlockData(ActiveComponentData):
                 # The value is a component, so we replace the component in the
                 # block.
                 #
+                if self._decl_order[self._decl[name]][0] is val:
+                    return
                 logger.warning(
                     "Implicitly replacing the Component attribute "
                     "%s (type=%s) on block %s with a new Component (type=%s)."
