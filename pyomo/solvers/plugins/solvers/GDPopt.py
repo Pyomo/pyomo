@@ -125,18 +125,12 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
         self.subproblem_postsolve = kwds.pop('subprob_postsolve', _DoNothing())
         self.subproblem_postfeasible = kwds.pop('subprob_postfeas',
                                                 _DoNothing())
-        self.algorithm_stall_after = kwds.pop('algorithm_stall_after', 8)
+        self.algorithm_stall_after = kwds.pop('algorithm_stall_after', 2)
         self.tee = kwds.pop('tee', False)
 
         if self.tee:
-            ch = logging.StreamHandler(stream=sys.stdout)
-            ch.setFormatter(logging.Formatter('%(message)s'))
-            existing_handlers = list(logger.handlers)
             old_logger_level = logger.getEffectiveLevel()
             logger.setLevel(logging.INFO)
-            logger.addHandler(ch)
-            for handle in existing_handlers:
-                logger.removeHandler(handle)
 
         if kwds:
             logger.warn("Unrecognized arguments passed to GDPopt solver: {}"
@@ -282,10 +276,7 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
         self.results.problem.upper_bound = self.UB
 
         if self.tee:
-            logger.removeHandler(ch)
             logger.setLevel(old_logger_level)
-            for handle in existing_handlers:
-                logger.addHandler(handle)
 
     def _copy_values(self, from_model, to_model, from_map=None, to_map=None):
         """Copy variable values from one model to another.
@@ -872,11 +863,10 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
 
             # Max number of iterations in which upper (feasible) bound does not
             # improve before turning on no-backtracking
-            no_backtrack_after = 2
+            no_backtrack_after = 1
             if (len(feas_prog_log) > no_backtrack_after and
-                (sign_adjust * feas_prog_log[-1] <= sign_adjust * (
-                    feas_prog_log[-1 - no_backtrack_after]
-                    + required_feas_prog))):
+                (sign_adjust * (feas_prog_log[-1] + required_feas_prog)
+                 >= sign_adjust * feas_prog_log[-1 - no_backtrack_after])):
                 if not GDPopt.feasible_integer_cuts.active:
                     logger.info('Feasible solutions not making enough '
                                 'progress for {} iterations. '
@@ -887,9 +877,9 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
             # Maximum number of iterations in which feasible bound does not
             # improve before terminating algorithm
             if (len(feas_prog_log) > self.algorithm_stall_after and
-                (sign_adjust * feas_prog_log[-1] <= sign_adjust * (
-                    feas_prog_log[-1 - self.algorithm_stall_after]
-                    + required_feas_prog))):
+                (sign_adjust * (feas_prog_log[-1] + required_feas_prog)
+                 >= sign_adjust *
+                 feas_prog_log[-1 - self.algorithm_stall_after])):
                 logger.info('Feasible solutions not making enough progress '
                             'for {} iterations. Algorithm stalled. Exiting.\n'
                             'To continue, increase value of parameter '
@@ -1028,8 +1018,10 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
             # set optimistic bound to infinity
             if GDPopt.objective.sense == minimize:
                 self.LB = float('inf')
+                self.LB_progress.append(self.UB)
             else:
                 self.UB = float('-inf')
+                self.UB_progress.append(self.UB)
         else:
             raise ValueError(
                 'GDPopt unable to handle MILP master termination condition '
@@ -1312,11 +1304,9 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
             if GDPopt.objective.sense == minimize:
                 self.UB = min(value(GDPopt.objective.expr), self.UB)
                 self.solution_improved = self.UB < self.UB_progress[-1]
-                self.UB_progress.append(self.UB)
             else:
                 self.LB = max(value(GDPopt.objective.expr), self.LB)
                 self.solution_improved = self.LB > self.LB_progress[-1]
-                self.LB_progress.append(self.LB)
             logger.info('NLP {}: OBJ: {}  LB: {}  UB: {}'
                         .format(self.nlp_iter, value(GDPopt.objective.expr),
                                 self.LB, self.UB))
@@ -1384,6 +1374,11 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
                 'GDPopt unable to handle NLP subproblem termination '
                 'condition of {}. Results: {}'.format(
                     subprob_terminate_cond, results))
+
+        if GDPopt.objective.sense == minimize:
+            self.UB_progress.append(self.UB)
+        else:
+            self.LB_progress.append(self.LB)
 
         # Call the NLP post-solve callback
         self.subproblem_postsolve(m, self)
