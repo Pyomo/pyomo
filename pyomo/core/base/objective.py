@@ -280,7 +280,7 @@ class Objective(ActiveIndexedComponent):
 
     #
     # TODO: Ideally we would not override these methods and instead add
-    # the contents of _check_skip_add to the set_value() metthod.
+    # the contents of _check_skip_add to the set_value() method.
     # Unfortunately, until IndexedComponentData objects know their own
     # index, determining the index is a *very* expensive operation.  If
     # we refactor things so that the Data objects have their own index,

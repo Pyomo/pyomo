@@ -363,7 +363,7 @@ class Expression(IndexedComponent):
 
     def _getitem_when_not_present(self, index):
         # TBD: Is this desired behavior?  I can see implicitly setting
-        # an Expression if it was not ooriginally defined, but I am less
+        # an Expression if it was not originally defined, but I am less
         # convinced that implicitly creating an Expression (like what
         # works with a Var) makes sense.  [JDS 25 Nov 17]
         return self._setitem_when_not_present(index, None)
