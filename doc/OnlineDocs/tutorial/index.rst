@@ -30,13 +30,16 @@ Concrete vs Abstract Models
 Modeling Components
 -------------------
 The primary modeling components defined by Pyomo are
-:class:`Set<pyomo.core.base.sets.Set>`, :class:`Var<pyomo.core.base.var.Var>`,
+:class:`Param<pyomo.core.base.param.Param>`,
+:class:`Var<pyomo.core.base.var.Var>`,
 :class:`Constraint<pyomo.core.base.constraint.Constraint>`,
-:class:`Objective<pyomo.core.base.objective.Objective>`, and
+:class:`Objective<pyomo.core.base.objective.Objective>`,
+:class:`Set<pyomo.core.base.sets.Set>`,
+and
 :class:`Block<pyomo.core.base.block.Block>`. Each of these may be indexed.
 
 .. doctest::
-   
+
    >>> import pyomo.environ as pe
    >>> m = pe.ConcreteModel()
    >>> m.a = pe.Set(initialize=[1, 2, 3])
@@ -52,21 +55,42 @@ The primary modeling components defined by Pyomo are
 	 2 :  -Inf : y[2] - x[2] :   0.0 :   True
 	 3 :  -Inf : y[3] - x[3] :   0.0 :   True
 
-By default, the index set is fixed. New indices may not be added:
+The index specifies the set of *allowable members* of the component.  In
+the case of :class:`Var<pyomo.core.base.var.Var>`, the constructor will
+automatically create variables for each member of the index.  Other
+components (like
+:class:`Constraint<pyomo.core.base.constraint.Constraint`>) leverage a
+*rule*, which is called by the constructor for every member of the
+index, the return value of which dictates whether or not to create
+the corresponding modeling object.  Beyond facilitating the construction
+of large structured models, discrete indexing sets provide error
+checking, ensuring that requested modeling objects are allowed by the
+index:
 
 .. doctest::
-   
+
    >>> m.z = pe.Var()
    >>> m.c[4] = m.x[1] == 5 * m.z
    Traceback (most recent call last):
      ...
    KeyError: "Index '4' is not valid for indexed component 'c'"
 
-This helps prevent many common mistakes. However, IndexedComponent can behave
-more like a dictionary if Any is used as the index.
+This helps prevent many common mistakes.  To add new objects to a
+component, the new index must first be added to the underlying index
+set:
 
 .. doctest::
-   
+
+   >>> m.a.add(4)
+   >>> m.c[4] = m.x[1] == 5 * m.z
+
+However, it is sometimes useful to allow a more flexible form of
+indexing using non-iterable sets.  For example, an indexed component may
+be made to behave like a dictionary by indexing it using the `Any` set.
+This set admits any hashable object as a member.
+
+.. doctest::
+
    >>> m.c2 = pe.Constraint(pe.Any)
    >>> m.c2[1] = m.x[1] == 5 * m.z
    >>> m.c2[8] = m.x[2] == m.z * m.y[2]
@@ -75,13 +99,17 @@ more like a dictionary if Any is used as the index.
        Key : Lower : Body            : Upper : Active
          1 :   0.0 :      x[1] - 5*z :   0.0 :   True
 	 8 :   0.0 : x[2] - z * y[2] :   0.0 :   True
-   
+
 .. note::
-   
-   In order to use Any with an IndexedVar, set dense=False.
+
+   It it important that the component construction not iterate over the
+   non-iterable set.  For most components, simply omitting the `rule=`
+   argument is sufficient.  :class:`Var<pyomo.core.base.var.Var>`
+   requires the `dense=False` argument so that the constructor does not
+   iterate over the non-iterable set.
 
 .. doctest::
-   
+
    >>> m.v = pe.Var(pe.Any, dense=False)
    >>> m.c2[2] = m.v[1] + m.v[2] == 0
    >>> m.v.pprint()
