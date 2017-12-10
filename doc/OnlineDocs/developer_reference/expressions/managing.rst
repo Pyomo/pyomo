@@ -5,6 +5,123 @@
 Managing Expressions
 ====================
 
+Creating a String Representation of an Expression
+-------------------------------------------------
+
+There are several ways that string representations can be created
+from an expression, but the :func:`expression_to_string
+<pyomo.core.expr.current.expression_to_string>` function provides
+the most flexible mechanism for generating a string representation.
+The options to this function control distinct aspects of the string
+representation.
+
+Algebraic vs. Nested Functional Form
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The default string representation is an algebraic form, which closely
+mimics the Python operations used to construct an expression.  The
+:data:`verbose` flag can be set to :const:`True` to generate a
+string representation that is a nested functional form.  For example:
+
+.. doctest::
+
+    >>>from pyomo.environ import *
+    >>>from pyomo.core.expr import current as EXPR
+
+    >>>M = ConcreteModel()
+    >>>M.x = Var()
+
+    >>>e = sin(M.x) + 2*M.x
+    >>>print(EXPR.expression_to_string(e))
+    sin(x) + 2*x
+    >>>print(EXPR.expression_to_string(e, verbose=True))
+    sum(sin(x), prod(2, x))
+    
+Labeler and Symbol Map
+~~~~~~~~~~~~~~~~~~~~~~
+
+The string representation used for variables in expression can be customized to
+define different label formats.  If the :data:`labeler` option is specified, then this
+function (or class functor) is used to generate a string label used to represent the variable.  Pyomo
+defines a variety of labelers in the `pyomo.core.base.label` module.  For example, the
+:class:`NumericLabeler` defines a functor that can be used to sequentially generate
+simple labels with a prefix followed by the variable count:
+
+.. doctest::
+
+    >>>from pyomo.environ import *
+    >>>from pyomo.core.expr import current as EXPR
+
+    >>>M = ConcreteModel()
+    >>>M.x = Var()
+    >>>M.y = Var()
+
+    >>>e = sin(M.x) + 2*M.y
+    >>>print(EXPR.expression_to_string(e, labeler=NumericLabeler('x'))
+    sin(x1) + 2*x2
+
+The :data:`smap` option is used to specify a symbol map object
+(:class:`SymbolMap <pyomo.core.expr.symbol_map.SymbolMap>`), which
+caches the variable label data.  This option is normally specified
+in contexts where the string representations for many expressions
+are being generated.  In that context, a symbol map ensures that
+variables in different expressions have a consistent label in their
+associated string representations.
+
+
+Standardized String Representations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The :data:`standardize` option can be used to re-order the string 
+representation to print polynomial terms before nonlinear terms.  By
+default, :data:`standardize` is :const:`False`, and the string
+representation reflects the order in which terms were combined to
+form the expression.  Pyomo does not guarantee that the string 
+representation exactly matches the Python expression order, since
+some simplification and re-ordering of terms is done automatically to
+improve the efficiency of expression generation.  But in most cases
+the string representation will closely correspond to the 
+Python expression order.
+
+If :data:`standardize` is :const:`True`, then the pyomo expression
+is processed to identify polynomial terms, and the string representation
+consists of the constant and linear terms followed by
+an expression that contains other nonlinear terms.  For example:
+
+.. doctest::
+
+    >>>from pyomo.environ import *
+    >>>from pyomo.core.expr import current as EXPR
+
+    >>>M = ConcreteModel()
+    >>>M.x = Var()
+    >>>M.y = Var()
+
+    >>>e = sin(M.x) + 2*M.y + M.x*M.y - 3
+    >>>print(EXPR.expression_to_string(e, standardize=True)
+    -3 + 2*y + sin(x) + x*y
+
+
+
+Other Ways to Generate String Representations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+There are two other standard ways to generate string representations:
+
+* Call the :func:`__str__` magic method (e.g. using the Python :func:`str()` function.  This 
+  calls :func:`expression_to_string <pyomo.core.expr.current.expression_to_string>` with
+  the option :data:`standardize` equal to :const:`True` (see below).
+
+* Call the :func:`to_string` method on the :class:`ExpressionBase <pyomo.core.expr.current.ExpressionBase>` class.
+  This defaults to calling :func:`expression_to_string <pyomo.core.expr.current.expression_to_string>` with
+  the option :data:`standardize` equal to :const:`False` (see below).
+
+In practice, we expect at the :func:`__str__` magic method will be
+used by most users, and the standardization of the output provides
+a consistent ordering of terms that should make it easier to interpret
+expressions.
+
+
 Cloning Expressions
 -------------------
 

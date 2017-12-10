@@ -47,7 +47,7 @@ intrinsic function   ``sin(x)``                             :class:`UnaryFunctio
 absolute function    ``abs(x)``                             :class:`AbsExpression <pyomo.core.expr.current.AbsExpression>`
 ==================== ====================================   ========================================================================================
 
-Expressions objects are immutable.  Specifically, the list of
+Expression objects are immutable.  Specifically, the list of
 arguments to an expression object (a.k.a. the list of child nodes
 in the tree) cannot be changed after an expression class is
 constructed.  To enforce this property, expression objects have a
@@ -59,8 +59,9 @@ standard API for accessing expression arguments:
 
 .. warning::
 
-    Developers should never use the :attr:`_args_` property directly!  The semantics for
-    the use of this data has changed.  For example, in some expression classes the
+    Developers should never use the :attr:`_args_` property directly!
+    The semantics for the use of this data has changed since earlier
+    versions of Pyomo.  For example, in some expression classes the
     the value :func:`nargs()` may not equal :const:`len(_args_)`!
 
 Expression trees can be categorized in four different ways:
@@ -94,8 +95,8 @@ fixed                    True  True  False True
 
 Expressions classes contain methods to test whether an expression
 tree is in each of these categories.  Additionally, Pyomo includes
-custom expression classes for expression trees that are not potentially
-variable.  These custom classes will not normally be used by
+custom expression classes for expression trees that are *not potentially
+variable*.  These custom classes will not normally be used by
 developers, but they provide an optimization of the checks for
 potentially variability.
 
@@ -109,7 +110,7 @@ Named Expressions
 
 Pyomo includes several classes that *named expressions*, which allow for flexible changes to 
 an expression after it has been constructed.  For example, consider the expression ``f`` defined
-with the :class:`Expression <pyomo.core.base.Expression>` compoennt::
+with the :class:`Expression <pyomo.core.base.Expression>` component::
 
     M = ConcreteModel()
     M.v = Var()
@@ -128,7 +129,7 @@ the named expression.
 
 .. note::
 
-    The named expression classes are not currently implemented as
+    The named expression classes are not implemented as
     sub-classes of :class:`ExpressionBase
     <pyomo.core.expr.current.ExpressionBase>`.  This reflects design
     constraints related to the fact that these are modeling components
@@ -156,7 +157,7 @@ transformation).
 ViewSum Expressions
 ~~~~~~~~~~~~~~~~~~~
 
-Pyomo does not have a *normal* binary sum expression class.  Instead,
+Pyomo does not have a binary sum expression class.  Instead,
 it has an ``n``-ary summation class, :class:`ViewSumExpression
 <pyomo.core.expr.current.ViewSumExpression>`.  This expression class
 treats sums as ``n``-ary sums for efficiency reasons;  many large
@@ -174,7 +175,7 @@ list could have unexpected results.
 Mutable Expressions
 ~~~~~~~~~~~~~~~~~~~
 
-Finally, Pyomo includes several **mutable** experession classes
+Finally, Pyomo includes several **mutable** expression classes
 that are private.  These are not intended to be used by users, but
 they might be useful for developers in contexts where the developer
 can appropriately control how the classes are used.  Specifically,
@@ -195,38 +196,34 @@ are available in Pyomo:
 
 
 
-Expression Leaves
------------------
+Expression Semantics
+--------------------
 
-Unfortunately, Pyomo has weak semantics regarding what is considered
-a valid leaf node.  As noted earlier, the following data and classes
-are commonly included as leaf nodes in Pyomo expressions:
+Pyomo clear semantics regarding what is considered a valid leaf and
+interior node.
 
-:data:`native_numeric_types <pyomo.core.expr.numvalue>`
-    Standard numeric data types like :const:`int`, :const:`float`
-    and :const:`long` are included in this class, as well as numeric
-    data types defined by `numpy` and other commonly used packages.
+The following classes are valid interior nodes:
 
-parameter objects:
-    Parameter component classes like :class:`SimpleParam
-    <pyomo.core.base.param.SimpleParam>` and :class:`_ParamData
-    <pyomo.core.base.param._ParamData>` may arise in expression
-    trees, especially when the parameters are declared as mutable.
-    (Immutable parameters are identified when generating expressions,
-    and they are replaced with their associated numeric value.)
+* Subclasses of :class:`ExpressionBase <pyomo.core.expr.current.ExpressionBase>`
 
-variable objects:
-    Variable component classes like :class:`SimpleVar
-    <pyomo.core.base.var.SimpleVar>` and :class:`_GeneralVarData
-    <pyomo.core.base.var._GeneralVarData>` often arise in expression
-    trees.  Pyomo defines a variety of variable types, which are
-    included in the set :data:`pyomo5_variable_types
-    <pyomo.core.expr.current.pyomo5_variable_types>`.
+* Classes that that are *duck typed* to match the API of the :class:`ExpressionBase <pyomo.core.expr.current.ExpressionBase>` class.  For example, the named expression class :class:`Expression <pyomo.core.expr.current.Expression>`.
 
-**However**, there are context where additional leaf node types can
-arise.  Specifically, the :class:`ExternalFunctionExpression
-<pyomo.core.expr.current.current.ExternalFunctionExpression>` class
-can be defined with arbitrary function arguments.  Specifically,
-constant arguments like tuples and strings may be natural, depending
-on the nature of the external function.
+The following classes are valid leaf nodes:
+
+* Members of :data:`nonpyomo_leaf_types <pyomo.core.expr.numvalue.nonpyomo_leaf_types>`, which includes standard numeric data types like :const:`int`, :const:`float` and :const:`long`, as well as numeric data types defined by `numpy` and other commonly used packages.  This set also includes :class:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>`, which is used to wrap non-numeric arguments to the :class:`ExternalFunctionExpression <pyomo.core.expr.current.current.ExternalFunctionExpression>` class.
+
+* Parameter component classes like :class:`SimpleParam <pyomo.core.base.param.SimpleParam>` and :class:`_ParamData <pyomo.core.base.param._ParamData>`, which arise in expression trees when the parameters are declared as mutable.  (Immutable parameters are identified when generating expressions, and they are replaced with their associated numeric value.)
+
+* Variable component classes like :class:`SimpleVar <pyomo.core.base.var.SimpleVar>` and :class:`_GeneralVarData <pyomo.core.base.var._GeneralVarData>`, which often arise in expression trees.  <pyomo.core.expr.current.pyomo5_variable_types>`.
+
+.. note::
+
+    In some contexts the :class:`LinearExpression
+    <pyomo.core.expr.current.LinearExpression>` class can be treated
+    as an interior node, and sometimes it can be treated as a leaf.
+    This expression object does not have any child arguments, so
+    ``nargs()`` is zero.  But this expression references variables
+    and parameters in a linear expression, so in that sense it does
+    not represent a leaf node in the tree.
+
 
