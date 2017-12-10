@@ -54,9 +54,11 @@ class NonNumericValue(object):
 
 
 #: Python set used to identify numeric constants, boolean values, strings
-#: and instances of :class:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>`.  This class is commonly used in code that walks
+#: and instances of :class:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>`, which is commonly used in code that walks
 #: Pyomo expression trees.
-valid_leaf_types = set([NonNumericValue])
+#:
+#: :data:`nonpyomo_leaf_types` = :data:`native_types <pyomo.core.expr.numvalue.native_types> + { :data:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>` }
+nonpyomo_leaf_types = set([NonNumericValue])
 
 
 # It is *significantly* faster to build the list of types we want to
@@ -71,6 +73,10 @@ valid_leaf_types = set([NonNumericValue])
 #       because not all boolean types exhibit numeric properties
 #       (e.g., numpy.bool_)
 #
+
+#: Python set used to identify numeric constants.  This set includes
+#: native Python types as well as numeric types from Python packages
+#: like numpy, which may be registered by users.
 native_numeric_types = set([ int, float, bool ])
 native_integer_types = set([ int, bool ])
 native_boolean_types = set([ int, bool, str ])
@@ -81,6 +87,12 @@ try:
 except:
     pass
 
+#: Python set used to identify numeric constants and related native
+#: types.  This set includes
+#: native Python types as well as numeric types from Python packages
+#: like numpy.
+#:
+#: :data:`native_types` = :data:`native_numeric_types <pyomo.core.expr.numvalue.native_numeric_types> + { str }
 native_types = set([ bool, str, type(None) ])
 if PY3:
     native_types.add(bytes)
@@ -91,7 +103,7 @@ else:
 native_types.update( native_numeric_types )
 native_types.update( native_integer_types )
 native_types.update( native_boolean_types )
-valid_leaf_types.update( native_types )
+nonpyomo_leaf_types.update( native_types )
 
 def RegisterNumericType(new_type):
     """
@@ -104,7 +116,7 @@ def RegisterNumericType(new_type):
     global native_types
     native_numeric_types.add(new_type)
     native_types.add(new_type)
-    valid_leaf_types.add(new_type)
+    nonpyomo_leaf_types.add(new_type)
 
 def RegisterIntegerType(new_type):
     """
@@ -120,7 +132,7 @@ def RegisterIntegerType(new_type):
     native_numeric_types.add(new_type)
     native_integer_types.add(new_type)
     native_types.add(new_type)
-    valid_leaf_types.add(new_type)
+    nonpyomo_leaf_types.add(new_type)
 
 def RegisterBooleanType(new_type):
     """
@@ -134,7 +146,7 @@ def RegisterBooleanType(new_type):
     global native_types
     native_boolean_types.add(new_type)
     native_types.add(new_type)
-    valid_leaf_types.add(new_type)
+    nonpyomo_leaf_types.add(new_type)
 
 def value(obj, exception=True):
     """
