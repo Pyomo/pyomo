@@ -207,7 +207,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 #
                 # Order columns by dictionary names
                 #
-                tmp = [var for var in x.linear_vars]
                 names = [variable_symbol_dictionary[id(var)] for var in x.linear_vars]
                 for i, name in sorted(enumerate(names), key=lambda x: x[1]):
                     output_file.write(linear_coef_string_template % (x.linear_coefs[i], name))
