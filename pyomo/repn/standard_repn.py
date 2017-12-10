@@ -326,7 +326,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                             c_.append( EXPR.evaluate_expression(c) )
                         else:
                             c_.append( value(c) )
-                    v_.append( v )
+                        v_.append( v )
                 repn.linear_coefs = tuple(c_)
                 repn.linear_vars = tuple(v_)
             else:
