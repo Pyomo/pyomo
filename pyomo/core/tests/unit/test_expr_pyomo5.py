@@ -5281,11 +5281,31 @@ class TestExpressionSpecialMethods2(unittest.TestCase):
         self.assertTrue(e.arg(0).arg(1).is_variable_type())
 
 
-class TestExpressionDuckTyping(unittest.TestCase):
+#
+# Every class that is duck typed to be a named expression
+# should be tested here.
+#
+class TestNamedExpressionDuckTyping(unittest.TestCase):
 
     def check_api(self, obj):
-        self.assertTrue(hasattr(obj, 'args'))
+        self.assertTrue(hasattr(obj, 'nargs'))
         self.assertTrue(hasattr(obj, 'arg'))
+        self.assertTrue(hasattr(obj, 'args'))
+        self.assertTrue(hasattr(obj, '__call__'))
+        self.assertTrue(hasattr(obj, 'to_string'))
+        self.assertTrue(hasattr(obj, '_precedence'))
+        self.assertTrue(hasattr(obj, '_to_string'))
+        self.assertTrue(hasattr(obj, 'clone'))
+        self.assertTrue(hasattr(obj, 'construct_node'))
+        self.assertTrue(hasattr(obj, 'is_constant'))
+        self.assertTrue(hasattr(obj, 'is_fixed'))
+        self.assertTrue(hasattr(obj, '_is_fixed'))
+        self.assertTrue(hasattr(obj, 'is_potentially_variable'))
+        self.assertTrue(hasattr(obj, 'is_named_expression_type'))
+        self.assertTrue(hasattr(obj, 'is_expression_type'))
+        self.assertTrue(hasattr(obj, 'polynomial_degree'))
+        self.assertTrue(hasattr(obj, '_compute_polynomial_degree'))
+        self.assertTrue(hasattr(obj, '_apply_operation'))
 
     def test_Objective(self):
         M = ConcreteModel()
@@ -5317,6 +5337,34 @@ class TestExpressionDuckTyping(unittest.TestCase):
         e = objective()
         e.expr = x
         self.check_api(e)
+
+
+class TestNumValueDuckTyping(unittest.TestCase):
+
+    def check_api(self, obj):
+        self.assertTrue(hasattr(obj, 'is_fixed'))
+        self.assertTrue(hasattr(obj, 'is_constant'))
+        self.assertTrue(hasattr(obj, 'is_potentially_variable'))
+        self.assertTrue(hasattr(obj, 'is_variable_type'))
+        self.assertTrue(hasattr(obj, 'is_named_expression_type'))
+        self.assertTrue(hasattr(obj, 'is_expression_type'))
+        self.assertTrue(hasattr(obj, '_compute_polynomial_degree'))
+        self.assertTrue(hasattr(obj, '__call__'))
+        self.assertTrue(hasattr(obj, 'to_string'))
+
+    def test_Var(self):
+        M = ConcreteModel()
+        M.x = Var()
+        self.check_api(M.x)
+
+    def test_VarIndex(self):
+        M = ConcreteModel()
+        M.x = Var([0])
+        self.check_api(M.x[0])
+
+    def test_variable(self):
+        x = variable()
+        self.check_api(x)
 
 
 
