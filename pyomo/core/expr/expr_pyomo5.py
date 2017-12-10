@@ -1472,7 +1472,7 @@ class ExpressionBase(NumericValue):
         """
         return True
 
-    def is_name_expression(self):
+    def is_named_expression_type(self):
         """
         Return :const:`True` if this object is a named expression.
 
@@ -1484,7 +1484,7 @@ class ExpressionBase(NumericValue):
         Returns:
             A boolean.
         """
-        return True
+        return False
 
     def is_expression_type(self):
         """
