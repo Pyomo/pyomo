@@ -27,7 +27,7 @@ from pyutilib.th import nottest
 from pyomo.environ import *
 from pyomo.core.expr import expr_common
 from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel import expression, expression_dict
+from pyomo.core.kernel import expression, expression_dict, variable, expression, objective
 from pyomo.core.expr.numvalue import potentially_variable, native_types
 from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.label import *
@@ -5279,6 +5279,45 @@ class TestExpressionSpecialMethods2(unittest.TestCase):
         self.assertEqual(type(e.arg(0)), EXPR.PowExpression)
         self.assertTrue(type(e.arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(e.arg(0).arg(1).is_variable_type())
+
+
+class TestExpressionDuckTyping(unittest.TestCase):
+
+    def check_api(self, obj):
+        self.assertTrue(hasattr(obj, 'args'))
+        self.assertTrue(hasattr(obj, 'arg'))
+
+    def test_Objective(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.e = Objective(expr=M.x)
+        self.check_api(M.e)
+
+    def test_Expression(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.e = Expression(expr=M.x)
+        self.check_api(M.e)
+
+    def test_ExpressionIndex(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.e = Expression([0])
+        M.e[0] = M.x
+        self.check_api(M.e[0])
+
+    def test_expression(self):
+        x = variable()
+        e = expression()
+        e.expr = x
+        self.check_api(e)
+
+    def test_objective(self):
+        x = variable()
+        e = objective()
+        e.expr = x
+        self.check_api(e)
+
 
 
 if __name__ == "__main__":

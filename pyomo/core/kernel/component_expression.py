@@ -164,6 +164,11 @@ class IIdentityExpression(NumericValue):
         """A tuple of subexpressions involved in this expressions operation."""
         return (self._expr,)
 
+    @property
+    def args(self):
+        """A tuple of subexpressions involved in this expressions operation."""
+        yield self._expr
+
     def nargs(self):
         """Length of self._nargs()"""
         return 1
@@ -172,10 +177,6 @@ class IIdentityExpression(NumericValue):
         if i != 0:
             raise KeyError("Unexpected argument id")
         return self._expr
-
-    def _arguments(self):
-        """A generator of subexpressions involved in this expressions operation."""
-        yield self._expr
 
     def polynomial_degree(self):
         """The polynomial degree of the stored expression."""
