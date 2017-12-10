@@ -29,7 +29,7 @@ class VarmapVisitor(EXPR.ExpressionReplacementVisitor):
         self.varmap = varmap
 
     def visiting_potential_leaf(self, node):
-        if node.__class__ in native_types:
+        if node.__class__ in nonpyomo_leaf_types:
             return True, node
         #
         # Clone leaf nodes in the expression tree
