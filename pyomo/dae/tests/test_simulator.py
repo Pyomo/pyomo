@@ -94,6 +94,7 @@ class TestSimulator(unittest.TestCase):
         m.del_component('y')
 
     # Testing the simulator's handling of inequality constraints
+    @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_inequality_constraints(self):
 
         m = self.m
@@ -110,6 +111,7 @@ class TestSimulator(unittest.TestCase):
 
     # Testing various cases of separable differential equations to ensure
     # the simulator generates the correct RHS expression
+    @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_separable_diffeq_case2(self):
 
         m = self.m
@@ -145,6 +147,7 @@ class TestSimulator(unittest.TestCase):
 
     # Testing various cases of separable differential equations to ensure
     # the simulator generates the correct RHS expression
+    @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_separable_diffeq_case3(self):
 
         m = self.m
@@ -211,6 +214,7 @@ class TestSimulator(unittest.TestCase):
 
     # Testing various cases of separable differential equations to ensure
     # the simulator generates the correct RHS expression
+    @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_separable_diffeq_case4(self):
 
         m = self.m
@@ -277,6 +281,7 @@ class TestSimulator(unittest.TestCase):
 
     # Testing various cases of separable differential equations to ensure
     # the simulator generates the correct RHS expression
+    @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_separable_diffeq_case6(self):
 
         m = self.m
@@ -343,6 +348,7 @@ class TestSimulator(unittest.TestCase):
 
     # Testing Simulator construction on differential variables with a
     # single index
+    @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_sim_initialization_single_index(self):
 
         m = self.m
@@ -390,6 +396,7 @@ class TestSimulator(unittest.TestCase):
 
     # Testing Simulator construction on differential variables with
     # two indexing sets
+    @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_sim_initialization_multi_index(self):
 
         m = self.m
@@ -480,6 +487,7 @@ class TestSimulator(unittest.TestCase):
 
     # Testing Simulator construction on differential variables with
     # multi-dimensional and multiple indexing sets
+    @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_sim_initialization_multi_index2(self):
 
         m = self.m
@@ -618,6 +626,7 @@ class TestSimulator(unittest.TestCase):
 
     # Testing the Simulator construction on un-supported models and
     # components with multiple indexing sets
+    @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_non_supported_multi_index(self):
 
         m = self.m
@@ -684,6 +693,7 @@ class TestSimulator(unittest.TestCase):
 
     # Testing Simulator construction on models with time-indexed algebraic
     # variables
+    @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_time_indexed_algebraic(self):
 
         m = self.m
@@ -703,6 +713,7 @@ class TestSimulator(unittest.TestCase):
 
     # Testing Simulator construction on models with algebraic variables
     # indexed by time and other indexing sets
+    @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_time_multi_indexed_algebraic(self):
 
         m = self.m
