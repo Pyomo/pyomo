@@ -89,7 +89,7 @@ from pyomo.core.expr.numvalue import \
     (NumericValue,
      NumericConstant,
      native_types,
-     valid_leaf_types,
+     nonpyomo_leaf_types,
      native_numeric_types,
      as_numeric,
      value)
@@ -317,7 +317,7 @@ class SimpleExpressionVisitor(object):
             #for c in self.children(current):
             for c in current.args:
                 #if self.is_leaf(c):
-                if c.__class__ in valid_leaf_types or not c.is_expression_type() or c.nargs() == 0:
+                if c.__class__ in nonpyomo_leaf_types or not c.is_expression_type() or c.nargs() == 0:
                     self.visit(c)
                 else:
                     dq.append(c)
@@ -345,7 +345,7 @@ class SimpleExpressionVisitor(object):
         #
         # If we start with a leaf, then yield it and stop iteration
         #
-        if node.__class__ in valid_leaf_types or not node.is_expression_type() or node.nargs() == 0:
+        if node.__class__ in nonpyomo_leaf_types or not node.is_expression_type() or node.nargs() == 0:
             ans = self.visit(node)
             if not ans is None:
                 yield ans
@@ -360,7 +360,7 @@ class SimpleExpressionVisitor(object):
             #for c in self.children(current):
             for c in current.args:
                 #if self.is_leaf(c):
-                if c.__class__ in valid_leaf_types or not c.is_expression_type() or c.nargs() == 0:
+                if c.__class__ in nonpyomo_leaf_types or not c.is_expression_type() or c.nargs() == 0:
                     ans = self.visit(c)
                     if not ans is None:
                         yield ans
@@ -710,7 +710,7 @@ class _CloneVisitor(ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
-        if node.__class__ in valid_leaf_types:
+        if node.__class__ in nonpyomo_leaf_types:
             #
             # Store a native or numeric object
             #
@@ -819,7 +819,7 @@ class _EvaluationVisitor(ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
-        if node.__class__ in valid_leaf_types:
+        if node.__class__ in nonpyomo_leaf_types:
             return True, node
 
         if node.is_variable_type():
@@ -917,7 +917,7 @@ class _VariableVisitor(SimpleExpressionVisitor):
         self.seen = set()
         
     def visit(self, node):
-        if node.__class__ in valid_leaf_types:
+        if node.__class__ in nonpyomo_leaf_types:
             return
 
         if node.is_variable_type():
@@ -967,7 +967,7 @@ class _PolyDegreeVisitor(ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
-        if node.__class__ in valid_leaf_types or not node.is_potentially_variable():
+        if node.__class__ in nonpyomo_leaf_types or not node.is_potentially_variable():
             return True, 0
 
         if not node.is_expression_type():
@@ -1012,7 +1012,7 @@ class _IsFixedVisitor(ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
-        if node.__class__ in valid_leaf_types or not node.is_potentially_variable():
+        if node.__class__ in nonpyomo_leaf_types or not node.is_potentially_variable():
             return True, True
 
         elif not node.is_expression_type():
@@ -1058,7 +1058,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
                 tmp.append('Undefined')
             elif arg.__class__ in native_numeric_types:
                 tmp.append(val)
-            elif arg.__class__ in valid_leaf_types:
+            elif arg.__class__ in nonpyomo_leaf_types:
                 tmp.append("'{0}'".format(val))
             elif arg.is_variable_type():
                 tmp.append(val)
@@ -1078,7 +1078,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
         if node is None:
             return True, None
 
-        if node.__class__ in valid_leaf_types:
+        if node.__class__ in nonpyomo_leaf_types:
             return True, str(node)
 
         if node.is_variable_type():
@@ -1133,7 +1133,7 @@ def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_va
                 repn1 = generate_standard_repn(expr._args_[1], quadratic=False, compute_values=compute_values)
                 expr = EqualityExpression( (repn0.to_expression(), repn1.to_expression()) )
             else:
-                repn = generate_standard_repn(expr, quadratic=False, compute_values=compute_values)
+                repn = generate_standard_repn(expr, quadratic=True, compute_values=compute_values)
                 expr = repn.to_expression()
         except:
             #
@@ -2058,7 +2058,7 @@ class ViewSumExpression(_SumExpression):
 
     def is_potentially_variable(self):
         for v in islice(self._args_, self._nargs):
-            if v.__class__ in valid_leaf_types:
+            if v.__class__ in nonpyomo_leaf_types:
                 continue
             if v.is_variable_type() or v.is_potentially_variable():
                 return True
@@ -2143,16 +2143,16 @@ class GetItemExpression(ExpressionBase):
         return self._base.getname(*args, **kwds)
 
     def is_potentially_variable(self):
-        if any(arg.is_potentially_variable() for arg in self._args_ if not arg.__class__ in valid_leaf_types):
+        if any(arg.is_potentially_variable() for arg in self._args_ if not arg.__class__ in nonpyomo_leaf_types):
             for x in itervalues(self._base):
-                if not x.__class__ in valid_leaf_types and x.is_potentially_variable():
+                if not x.__class__ in nonpyomo_leaf_types and x.is_potentially_variable():
                     return True
         return False
         
     def is_fixed(self):
         if any(self._args_):
             for x in itervalues(self._base):
-                if not x.__class__ in valid_leaf_types and not x.is_fixed():
+                if not x.__class__ in nonpyomo_leaf_types and not x.is_fixed():
                     return False
         return True
         
@@ -2161,7 +2161,7 @@ class GetItemExpression(ExpressionBase):
             return None
         ans = 0
         for x in itervalues(self._base):
-            if x.__class__ in valid_leaf_types:
+            if x.__class__ in nonpyomo_leaf_types:
                 continue
             tmp = x.polynomial_degree()
             if tmp is None:
@@ -2655,7 +2655,7 @@ def decompose_term(expr):
             :attr:`value` is a variable object, and :attr:`coef` is the
             numeric coefficient.
     """
-    if expr.__class__ in valid_leaf_types or not expr.is_potentially_variable():
+    if expr.__class__ in nonpyomo_leaf_types or not expr.is_potentially_variable():
         return True, [(expr,None)]
     elif expr.is_variable_type():
         return True, [(1,expr)]

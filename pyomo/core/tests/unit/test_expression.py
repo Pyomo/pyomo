@@ -702,7 +702,7 @@ E : Size=2, Index=E_index
 
         output = \
 """\
-(x + 2)*x**2 + x**2 + 1
+1 + 3*x**2 + x*x*x
 e : Size=1, Index=None
     Key  : Expression
     None : 2 + x

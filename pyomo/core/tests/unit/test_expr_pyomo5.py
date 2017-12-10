@@ -2440,7 +2440,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         model.a = Var()
 
         expr = 5 * model.a * model.a
-        self.assertEqual("5*a*a", str(expr))
+        self.assertEqual("5*a**2", str(expr))
 
         # This returns an integer, which has no pprint().
         #expr = expr*0

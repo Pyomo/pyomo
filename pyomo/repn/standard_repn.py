@@ -232,16 +232,20 @@ class StandardRepn(object):
             else:
                 expr += self.linear_coefs[i]*self.linear_vars[i]
         for i,v in enumerate(self.quadratic_vars):
+            if id(self.quadratic_vars[i][0]) == id(self.quadratic_vars[i][1]):
+                term = self.quadratic_vars[i][0]**2
+            else:
+                term = self.quadratic_vars[i][0]*self.quadratic_vars[i][1]
             if self.quadratic_coefs[i].__class__ in native_numeric_types:
                 val = self.quadratic_coefs[i]
                 if isclose_const(val, 1.0):
-                    expr += self.quadratic_vars[i][0]*self.quadratic_vars[i][0]
+                    expr += term
                 elif isclose_const(val, -1.0):
-                    expr -= - self.quadratic_vars[i][0]*self.quadratic_vars[i][0]
+                    expr -= - term
                 else:
-                    expr += self.quadratic_coefs[i]*self.quadratic_vars[i][0]*self.quadratic_vars[i][0]
+                    expr += self.quadratic_coefs[i]*term
             else:
-                expr += self.quadratic_coefs[i]*self.quadratic_vars[i][0]*self.quadratic_vars[i][0]
+                expr += self.quadratic_coefs[i]*term
         if not self.nonlinear_expr is None:
             expr += self.nonlinear_expr
         return expr
@@ -779,12 +783,17 @@ _repn_collectors = {
 
 def _collect_standard_repn(exp, multiplier, idMap, 
                                       compute_values, verbose, quadratic):
-    # We should be checking that an expression is constant *before* calling this function
-    #assert(exp.is_potentially_variable())
     try:
         return _repn_collectors[exp.__class__](exp, multiplier, idMap, 
                                           compute_values, verbose, quadratic)
     except KeyError:
+        #
+        # These are types that might be extended using duck typing.
+        #
+        if exp.is_variable_type():
+            return _collect_var(exp, multipier, idMap, compute_values, verbose, quadratic)
+        if exp.is_named_expression():
+            return _collect_identity(exp, multipier, idMap, compute_values, verbose, quadratic)
         raise ValueError( "Unexpected expression (type %s)" % type(exp).__name__)
 
 def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None):

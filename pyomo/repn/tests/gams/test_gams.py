@@ -144,7 +144,7 @@ class Test(unittest.TestCase):
         smap = SymbolMap()
 
         expr = M.abc**2.0
-        self.assertEqual(str(expr), "abc**2.0")
+        self.assertEqual(str(expr), "abc**2")
         self.assertEqual(expression_to_string(expr, smap=smap), "power(abc, 2.0)")
 
         expr = log( M.abc**2.0 )
