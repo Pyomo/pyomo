@@ -31,6 +31,8 @@ from pyomo.core.kernel import expression, expression_dict, variable, expression,
 from pyomo.core.expr.numvalue import potentially_variable, native_types, nonpyomo_leaf_types
 from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.label import *
+from pyomo.core.base.template_expr import IndexTemplate
+
 
 
 class TestExpression_EvaluateNumericConstant(unittest.TestCase):
@@ -2382,6 +2384,16 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         expr = model.a + 5 == 5
         self.assertEqual( "sum(a, 5)  ==  5.0", str(expr) )
 
+    def test_getitem(self):
+        m = ConcreteModel()
+        m.I = RangeSet(1,9)
+        m.x = Var(m.I, initialize=lambda m,i: i+1)
+        m.P = Param(m.I, initialize=lambda m,i: 10-i, mutable=True)
+        t = IndexTemplate(m.I)
+
+        e = m.x[t+m.P[t+1]] + 3
+        self.assertEqual("sum(x(sum({I}, P(sum({I}, 1)))), 3)", str(e))
+
     def test_small_expression(self):
         #
         # Print complex
@@ -2576,6 +2588,16 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         self.assertEqual("Expr_if( ( a + b  <  20.0 ), then=( a ), else=( b ) )", str(expr))
         expr = EXPR.Expr_if(IF_=m.a + m.b < 20, THEN_=1, ELSE_=m.b)
         self.assertEqual("Expr_if( ( a + b  <  20.0 ), then=( 1 ), else=( b ) )", str(expr))
+
+    def test_getitem(self):
+        m = ConcreteModel()
+        m.I = RangeSet(1,9)
+        m.x = Var(m.I, initialize=lambda m,i: i+1)
+        m.P = Param(m.I, initialize=lambda m,i: 10-i, mutable=True)
+        t = IndexTemplate(m.I)
+
+        e = m.x[t+m.P[t+1]] + 3
+        self.assertEqual("x({I} + P({I} + 1)) + 3", str(e))
 
     def test_small_expression(self):
         #
@@ -4127,6 +4149,24 @@ class TestCloneExpression(unittest.TestCase):
             total = EXPR.clone_counter.count - start
             self.assertEqual(total, 1)
 
+    def test_getitem(self):
+        # Testing cloning of the abs() function
+        with EXPR.clone_counter:
+            start = EXPR.clone_counter.count
+            #
+            m = ConcreteModel()
+            m.I = RangeSet(1,9)
+            m.x = Var(m.I, initialize=lambda m,i: i+1)
+            m.P = Param(m.I, initialize=lambda m,i: 10-i, mutable=True)
+            t = IndexTemplate(m.I)
+
+            e = m.x[t+m.P[t+1]] + 3
+            e_ = e.clone()
+            self.assertEqual("x({I} + P({I} + 1)) + 3", str(e_))
+            #
+            total = EXPR.clone_counter.count - start
+            self.assertEqual(total, 1)
+
     def test_other(self):
         # Testing cloning of the abs() function
         with EXPR.clone_counter:
@@ -4382,6 +4422,41 @@ class TestIsFixedIsConstant(unittest.TestCase):
 
         expr = model.x(2*model.p, 1, "foo", [])
         self.assertEqual(expr.polynomial_degree(), 0)
+
+    def test_getitem(self):
+        m = ConcreteModel()
+        m.I = RangeSet(1,9)
+        m.x = Var(m.I, initialize=lambda m,i: i+1)
+        m.P = Param(m.I, initialize=lambda m,i: 10-i, mutable=True)
+        t = IndexTemplate(m.I)
+
+        e = m.x[t]
+        self.assertEqual(e.is_constant(), False)
+        self.assertEqual(e.is_potentially_variable(), True)
+        self.assertEqual(e.is_fixed(), False)
+
+        e = m.x[t+m.P[t+1]] + 3
+        self.assertEqual(e.is_constant(), False)
+        self.assertEqual(e.is_potentially_variable(), True)
+        self.assertEqual(e.is_fixed(), False)
+
+        for i in m.I:
+            m.x[i].fixed = True
+        e = m.x[t]
+        self.assertEqual(e.is_constant(), False)
+        self.assertEqual(e.is_potentially_variable(), True)
+        self.assertEqual(e.is_fixed(), True)
+
+        e = m.x[t+m.P[t+1]] + 3
+        self.assertEqual(e.is_constant(), False)
+        self.assertEqual(e.is_potentially_variable(), True)
+        self.assertEqual(e.is_fixed(), True)
+
+
+        e = m.P[t+1] + 3
+        self.assertEqual(e.is_constant(), False)
+        self.assertEqual(e.is_potentially_variable(), False)
+        self.assertEqual(e.is_fixed(), True)
 
     def test_nonpolynomial_abs(self):
         #
@@ -4983,6 +5058,11 @@ class Test_decompose_term(unittest.TestCase):
             e += M.v
             self.assertEqual(EXPR.decompose_term(-e), (True, [(-2,None), (-1,M.v)]))
         
+def x_(m,i):
+    return i+1
+def P_(m,i):
+    return 10-i
+
 #
 # Test pickle logic
 #
@@ -5103,6 +5183,18 @@ class Test_pickle(unittest.TestCase):
         self.assertEqual(type(e.arg(0)), type(e_.arg(0)))
         self.assertEqual(e.arg(1), e_.arg(1))
         self.assertEqual(e.arg(2), e_.arg(2))
+
+    def test_getitem(self):
+        m = ConcreteModel()
+        m.I = RangeSet(1,9)
+        m.x = Var(m.I, initialize=x_)
+        m.P = Param(m.I, initialize=P_, mutable=True)
+        t = IndexTemplate(m.I)
+
+        e = m.x[t+m.P[t+1]] + 3
+        s = pickle.dumps(e)
+        e_ = pickle.loads(s)
+        self.assertEqual("x({I} + P({I} + 1)) + 3", str(e))
 
     def test_ineq(self):
         M = ConcreteModel()

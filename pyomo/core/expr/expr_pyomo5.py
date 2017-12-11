@@ -2113,9 +2113,6 @@ class _MutableViewSumExpression(ViewSumExpression):
         return self
 
 
-#
-# TODO: Add tests for this class in test_expr_pyomo5.py
-#
 class GetItemExpression(ExpressionBase):
     """
     Expression to call :func:`__getitem__` on the base object.
@@ -2160,6 +2157,15 @@ class GetItemExpression(ExpressionBase):
                     return False
         return True
         
+    def _is_fixed(self, values):
+        from pyomo.core.base import Var # TODO
+        from pyomo.core.kernel.component_variable import IVariable # TODO
+        if isinstance(self._base, (Var, IVariable)):
+            for x in itervalues(self._base):
+                if not x.__class__ in nonpyomo_leaf_types and not x.is_fixed():
+                    return False
+        return True
+
     def _compute_polynomial_degree(self, result):
         if any(x != 0 for x in result):
             return None
@@ -2179,7 +2185,7 @@ class GetItemExpression(ExpressionBase):
 
     def _to_string(self, values, verbose, smap, compute_values):
         if verbose:
-            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
+            return "{0}({1})".format(self.getname(), values[0])
         return "%s%s" % (self.getname(), values[0])
 
     def resolve_template(self):
