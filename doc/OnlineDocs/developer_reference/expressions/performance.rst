@@ -13,12 +13,12 @@ in Python.  For example, a sum can be created in a simple loop:
 
 .. doctest::
 
-    >>>M = ConcreteModel()
-    >>>M.x = Var(range(5))
+    M = ConcreteModel()
+    M.x = Var(range(5))
 
-    >>>s = 0
-    >>>for i in range(5):
-    >>>     s = s + M.x[i]
+    s = 0
+    for i in range(5):
+        s = s + M.x[i]
 
 Additionally, Pyomo expressions can be constructed using functions
 that iteratively apply Python binary operators.  For example, the
@@ -27,7 +27,7 @@ loop:
 
 .. doctest::
 
-    >>>s = sum(M.x[i] for i in range(5))
+    s = sum(M.x[i] for i in range(5))
 
 The :func:`sum` function is both more compact and more efficient.
 Using :func:`sum` avoids the creation of temporary variables, and
@@ -59,7 +59,7 @@ For example, consider the following quadratic polynomial:
 
 .. doctest::
 
-    >>>s = sum(M.x[i] for i in range(5))**2
+    s = sum(M.x[i] for i in range(5))**2
 
 This quadratic polynomial is treated as a nonlinear expression
 unless the expression is explicilty processed to identify quadratic
@@ -99,18 +99,18 @@ together.  For example:
 
 .. doctest::
 
-    >>>M = ConcreteModel()
-    >>>M.x = Var(range(5))
-    >>>M.y = Var()
+    M = ConcreteModel()
+    M.x = Var(range(5))
+    M.y = Var()
 
-    The product M.x[0] * M.x[1] * ... * M.x[4]
-    >>>prod(M.x)
+    # The product M.x[0] * M.x[1] * ... * M.x[4]
+    prod(M.x)
 
-    The product M.x[0]*M.z
-    >>>prod(M.x[0], M.z)
+    # The product M.x[0]*M.z
+    prod(M.x[0], M.z)
 
-    The product M.z*(M.x[0] + ... + M.x[4])
-    >>>prod(sum(M.x), M.z)
+    # The product M.z*(M.x[0] + ... + M.x[4])
+    prod(sum(M.x), M.z)
 
 Sum
 ~~~
@@ -154,10 +154,10 @@ compact representation for linear polynomials.
 
     .. doctest::
 
-        >>>M = ConcreteModel()
-        >>>M.x = Var(range(5))
+        M = ConcreteModel()
+        M.x = Var(range(5))
 
-        >>>Sum(M.x[i]**2 if i > 0 else M.x[i] for i in range(5))
+        Sum(M.x[i]**2 if i > 0 else M.x[i] for i in range(5))
 
     The first term created by the generator is linear, but the
     subsequent terms are nonlinear.  Pyomo does not gracefully
@@ -178,30 +178,30 @@ together.  For example:
 
 .. doctest::
 
-    >>>M = ConcreteModel()
-    >>>M.z = RangeSet(5)
-    >>>M.x = Var(range(10))
-    >>>M.y = Var(range(10))
+    M = ConcreteModel()
+    M.z = RangeSet(5)
+    M.x = Var(range(10))
+    M.y = Var(range(10))
 
-    Sum the elements of x
-    >>>summation(M.x)
+    # Sum the elements of x
+    summation(M.x)
 
-    Sum the product of elements in x and y
-    >>>summation(M.x, M.y)
+    # Sum the product of elements in x and y
+    summation(M.x, M.y)
 
-    Sum the product of elements in x and y, over the index set z
-    >>>summation(M.x, M.y, index=M.z)
+    # Sum the product of elements in x and y, over the index set z
+    summation(M.x, M.y, index=M.z)
 
 The :attr:`denom` argument specifies generators whose terms are in 
 the denominator.  For example:
 
 .. doctest::
 
-    Sum the product of x_i/y_i
-    >>>summation(M.x, denom=M.y)
+    #Sum the product of x_i/y_i
+    summation(M.x, denom=M.y)
 
-    Sum the product of 1/(x_i*y_i)
-    >>>summation(denom=(M.x, M.y))
+    # Sum the product of 1/(x_i*y_i)
+    summation(denom=(M.x, M.y))
 
 The terms summed by this function are explicitly specified, so :func:`summation <pyomo.core.util.summation>` can identify whether the resulting expression
 is linear, quadratic or nonlinear.  Consequently, this function is
@@ -223,16 +223,16 @@ example, consider the following two loops:
 
 .. doctest::
 
-    >>>M = ConcreteModel()
-    >>>M.x = Var(range(5))
+    M = ConcreteModel()
+    M.x = Var(range(5))
 
-    >>>s = 0
-    >>>for i in range(5):
-    >>>     s += M.x[i]
+    s = 0
+    for i in range(5):
+        s += M.x[i]
 
-    >>>with linear_expression as e:
-    >>>     for i in range(5):
-    >>>         e += M.x[i]
+    with linear_expression as e:
+        for i in range(5):
+            e += M.x[i]
 
 The first apparent difference in these loops is that the value of
 ``s`` is explicitly initialized while ``e`` is initialized when the
@@ -257,13 +257,13 @@ method for the :func:`Sum <pyomo.core.util.Sum>` function.  For example:
 
 .. doctest::
 
-    >>>M = ConcreteModel()
-    >>>M.x = Var(range(5))
-    >>>M.y = Var(range(5))
+    M = ConcreteModel()
+    M.x = Var(range(5))
+    M.y = Var(range(5))
 
-    >>>with linear_expression as e:
-    >>>     Sum(M.x, start=e)
-    >>>     Sum(M.y, start=e)
+    with linear_expression as e:
+        Sum(M.x, start=e)
+        Sum(M.y, start=e)
 
 This sum contains terms for ``M.x[i]`` and ``M.y[i]``.  The syntax
 in this example is not intuitive because the sum is being stored

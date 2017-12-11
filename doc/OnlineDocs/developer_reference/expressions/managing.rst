@@ -25,18 +25,23 @@ string representation that is a nested functional form.  For example:
 
 .. doctest::
 
-    >>>from pyomo.environ import *
-    >>>from pyomo.core.expr import current as EXPR
+    from pyomo.environ import *
+    from pyomo.core.expr import current as EXPR
 
-    >>>M = ConcreteModel()
-    >>>M.x = Var()
+    M = ConcreteModel()
+    M.x = Var()
 
-    >>>e = sin(M.x) + 2*M.x
-    >>>print(EXPR.expression_to_string(e))
-    sin(x) + 2*x
-    >>>print(EXPR.expression_to_string(e, verbose=True))
-    sum(sin(x), prod(2, x))
+    e = sin(M.x) + 2*M.x
+    print(EXPR.expression_to_string(e))
+    #sin(x) + 2*x
+    print(EXPR.expression_to_string(e, verbose=True))
+    #sum(sin(x), prod(2, x))
     
+.. testoutput::
+
+    sin(x) + 2*x
+    sum(sin(x), prod(2, x))
+
 Labeler and Symbol Map
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -49,15 +54,19 @@ simple labels with a prefix followed by the variable count:
 
 .. doctest::
 
-    >>>from pyomo.environ import *
-    >>>from pyomo.core.expr import current as EXPR
+    from pyomo.environ import *
+    from pyomo.core.expr import current as EXPR
 
-    >>>M = ConcreteModel()
-    >>>M.x = Var()
-    >>>M.y = Var()
+    M = ConcreteModel()
+    M.x = Var()
+    M.y = Var()
 
-    >>>e = sin(M.x) + 2*M.y
-    >>>print(EXPR.expression_to_string(e, labeler=NumericLabeler('x'))
+    e = sin(M.x) + 2*M.y
+    print(EXPR.expression_to_string(e, labeler=NumericLabeler('x'))
+    # sin(x1) + 2*x2
+
+.. testoutput::
+
     sin(x1) + 2*x2
 
 The :data:`smap` option is used to specify a symbol map object
@@ -90,18 +99,20 @@ an expression that contains other nonlinear terms.  For example:
 
 .. doctest::
 
-    >>>from pyomo.environ import *
-    >>>from pyomo.core.expr import current as EXPR
+    from pyomo.environ import *
+    from pyomo.core.expr import current as EXPR
 
-    >>>M = ConcreteModel()
-    >>>M.x = Var()
-    >>>M.y = Var()
+    M = ConcreteModel()
+    M.x = Var()
+    M.y = Var()
 
-    >>>e = sin(M.x) + 2*M.y + M.x*M.y - 3
-    >>>print(EXPR.expression_to_string(e, standardize=True)
+    e = sin(M.x) + 2*M.y + M.x*M.y - 3
+    print(EXPR.expression_to_string(e, standardize=True)
+    # -3 + 2*y + sin(x) + x*y
+
+.. testoutput::
+
     -3 + 2*y + sin(x) + x*y
-
-
 
 Other Ways to Generate String Representations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -136,18 +147,18 @@ For example:
 
 .. doctest::
 
-    >>>from pyomo.environ import *
-    >>>from pyomo.core.expr import current as EXPR
+    from pyomo.environ import *
+    from pyomo.core.expr import current as EXPR
 
-    >>>M = ConcreteModel()
-    >>>M.x = Var()
+    M = ConcreteModel()
+    M.x = Var()
 
-    >>> with EXPR.current.clone_counter:
-    >>>     start = pyomo.core.expr.current.clone_counter.count
-    >>>     e1 = sin(M.x)
-    >>>     e2 = e1.clone()
-    >>>     total = pyomo.core.expr.current.clone_counter.count - start
-    >>>     assert(total == 1)
+    with EXPR.current.clone_counter:
+        start = pyomo.core.expr.current.clone_counter.count
+        e1 = sin(M.x)
+        e2 = e1.clone()
+        total = pyomo.core.expr.current.clone_counter.count - start
+        assert(total == 1)
 
 Evaluating Expressions
 ----------------------
@@ -159,35 +170,35 @@ value of an expression.  For example:
 
 .. doctest::
 
-    >>>from pyomo.environ import *
-    >>>import math
+    from pyomo.environ import *
+    import math
 
-    >>>M = ConcreteModel()
-    >>>M.x = Var()
-    >>>M.x.value = math.pi/2.0
-    >>>val = value(M.x)
-    >>>assert(math.isclose(val,0.0))
+    M = ConcreteModel()
+    M.x = Var()
+    M.x.value = math.pi/2.0
+    val = value(M.x)
+    assert(math.isclose(val,0.0))
 
 Additionally, expressions define the :func:`__call__` method, so the
 following is another way to compute the value of an expression:
 
 .. doctest::
 
-    >>>val = M.x()
-    >>>assert(math.isclose(val,0.0))
+    val = M.x()
+    assert(math.isclose(val,0.0))
 
 If a parameter or variable is undefined, then the :func:`value <pyomo.core.expr.value>` function and :func:`__call__` method will raise an exception.  This 
 exception can be suppressed using the :attr:`exception` option.  For example:
 
 .. doctest::
 
-    >>>from pyomo.environ import *
-    >>>import math
+    from pyomo.environ import *
+    import math
 
-    >>>M = ConcreteModel()
-    >>>M.x = Var()
-    >>>val = value(M.x, exception=False)
-    >>>assert(val is None)
+    M = ConcreteModel()
+    M.x = Var()
+    val = value(M.x, exception=False)
+    assert(val is None)
 
 This option is useful in contexts where adding a try block is inconvenient 
 in your modeling script.
@@ -213,16 +224,16 @@ nodes whose type is in a specified set of node types.  For example:
 
 .. doctest::
 
-    >>>from pyomo.environ import *
-    >>>from pyomo.core.expr import current as EXPR
+    from pyomo.environ import *
+    from pyomo.core.expr import current as EXPR
 
-    >>>M = ConcreteModel()
-    >>>M.x = Var()
-    >>>M.p = Param(mutable=True)
+    M = ConcreteModel()
+    M.x = Var()
+    M.p = Param(mutable=True)
 
-    >>>e = M.p+M.x
-    >>>s = set([type(M.p)])
-    >>>assert(list(EXPR.identify_components(e, s)), [M.p])
+    e = M.p+M.x
+    s = set([type(M.p)])
+    assert(list(EXPR.identify_components(e, s)), [M.p])
 
 The :func:`identify_variables <pyomo.core.expr.current.identify_variables>`
 function is a generator function that yields all nodes that are
@@ -233,19 +244,19 @@ variables.  For example:
 
 .. doctest::
 
-    >>>from pyomo.environ import *
-    >>>from pyomo.core.expr import current as EXPR
+    from pyomo.environ import *
+    from pyomo.core.expr import current as EXPR
 
-    >>>M = ConcreteModel()
-    >>>M.x = Var()
-    >>>M.y = Var()
+    M = ConcreteModel()
+    M.x = Var()
+    M.y = Var()
 
-    >>>e = M.x+M.y
-    >>>M.y.value = 1
-    >>>M.y.fixed = True
+    e = M.x+M.y
+    M.y.value = 1
+    M.y.fixed = True
 
-    >>>assert(set(EXPR.identify_variables(e)), set([M.x, M.y]))
-    >>>assert(set(EXPR.identify_variables(e, include_fixed=False)), set([M.x]))
+    assert(set(EXPR.identify_variables(e)), set([M.x, M.y]))
+    assert(set(EXPR.identify_variables(e, include_fixed=False)), set([M.x]))
 
 Walking an Expression Tree with a Visitor Class
 -----------------------------------------------
@@ -485,3 +496,6 @@ a dictionary, :attr:`scale`, that maps variable ID to model parameter.  For exam
     print(f)
     # p[0]*x[0] + p[1]*x[1] + p[2]*x[2] + p[3]*x[3] + p[4]*x[4]
 
+.. testoutput::
+
+    p[0]*x[0] + p[1]*x[1] + p[2]*x[2] + p[3]*x[3] + p[4]*x[4]
