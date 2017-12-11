@@ -74,7 +74,7 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
         self._solver_model.variables.delete(solver_var)
 
     def _warm_start(self):
-        GurobiDirect._warm_start(self)
+        CPLEXDirect._warm_start(self)
 
     def update_var(self, var):
         """
