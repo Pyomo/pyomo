@@ -66,6 +66,7 @@ class CPLEXDirect(DirectSolver):
             while len(self._version) < 4:
                 self._version += (0,)
             self._version = self._version[:4]
+            self._version = tuple([int(i) for i in self._version])
             self._version_major = self._version[0]
         except ImportError:
             self._python_api_exists = False
@@ -356,7 +357,11 @@ class CPLEXDirect(DirectSolver):
 
         self._vars_referenced_by_con[con] = ComponentSet()
 
-        for v, w in con.get_items():
+        if hasattr(con, 'get_items'):
+            sos_items = con.get_items()
+        else:
+            sos_items = con.items()
+        for v, w in sos_items:
             self._vars_referenced_by_con[con].add(v)
             cplex_vars.append(self._pyomo_var_to_solver_var_map[v])
             self._referenced_variables[v] += 1
@@ -409,7 +414,8 @@ class CPLEXDirect(DirectSolver):
             self._referenced_variables[var] += 1
 
         self._solver_model.objective.set_sense(sense)
-        self._solver_model.objective.set_offset(cplex_expr.offset)
+        if hasattr(self._solver_model.objective, 'set_offset'):
+            self._solver_model.objective.set_offset(cplex_expr.offset)
         if len(cplex_expr.coefficients) != 0:
             self._solver_model.objective.set_linear(list(zip(cplex_expr.variables, cplex_expr.coefficients)))
         if len(cplex_expr.q_coefficients) != 0:
@@ -441,7 +447,8 @@ class CPLEXDirect(DirectSolver):
                                'slack information, please split up the following constraints:\n')
                     for con in self._range_constraints:
                         err_msg += '{0}\n'.format(con)
-                    raise ValueError(err_msg)
+                    logger.warning(err_msg)
+                    extract_slacks = False
             if re.match(suffix, "rc"):
                 extract_reduced_costs = True
                 flag = True
@@ -469,25 +476,25 @@ class CPLEXDirect(DirectSolver):
             self.results.solver.status = SolverStatus.ok
             self.results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
-        elif soln_status in [2, 118]:
+        elif status in [2, 118]:
             self.results.solver.status = SolverStatus.warning
             self.results.solver.termination_condition = TerminationCondition.unbounded
             soln.status = SolutionStatus.unbounded
-        elif soln_status in [4, 119]:
-            # Note: soln_status of 4 means infeasible or unbounded
+        elif status in [4, 119]:
+            # Note: status of 4 means infeasible or unbounded
             #       and 119 means MIP infeasible or unbounded
             self.results.solver.status = SolverStatus.warning
             self.results.solver.termination_condition = TerminationCondition.infeasibleOrUnbounded
             soln.status = SolutionStatus.unsure
-        elif soln_status in [3, 103]:
+        elif status in [3, 103]:
             self.results.solver.status = SolverStatus.warning
             self.results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
-        elif soln_status in [10]:
+        elif status in [10]:
             self.results.solver.status = SolverStatus.aborted
             self.results.solver.termination_condition = TerminationCondition.maxIterations
             soln.status = SolutionStatus.stoppedByLimit
-        elif soln_status in [11, 25]:
+        elif status in [11, 25]:
             self.results.solver.status = SolverStatus.aborted
             self.results.solver.termination_condition = TerminationCondition.maxTimeLimit
             soln.status = SolutionStatus.stoppedByLimit
@@ -582,7 +589,6 @@ class CPLEXDirect(DirectSolver):
                     if self._referenced_variables[pyomo_var] > 0:
                         soln_variables[name] = {"Value":var_vals[i]}
 
-                reduced_costs = self._solver_model.solution.get_reduced_costs()
                 if extract_reduced_costs:
                     for i, name in enumerate(var_names):
                         pyomo_var = self._solver_var_to_pyomo_var_map[name]

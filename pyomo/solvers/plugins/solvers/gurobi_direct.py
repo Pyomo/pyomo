@@ -200,8 +200,12 @@ class GurobiDirect(DirectSolver):
     def _set_instance(self, model, kwds={}):
         self._range_constraints = set()
         DirectOrPersistentSolver._set_instance(self, model, kwds)
+        if model.name is None:
+            model_name = 'Unknown'
+        else:
+            model_name = model.name
         try:
-            self._solver_model = self._gurobipy.Model(model.name)
+            self._solver_model = self._gurobipy.Model(model_name)
         except Exception:
             e = sys.exc_info()[1]
             msg = ('Unable to create Gurobi model. Have you ihnstalled the Python bindings for Gurboi?\n\n\t' +
@@ -288,7 +292,11 @@ class GurobiDirect(DirectSolver):
 
         self._vars_referenced_by_con[con] = ComponentSet()
 
-        for v, w in con.get_items():
+        if hasattr(con, 'get_items'):
+            sos_items = con.get_items()
+        else:
+            sos_items = con.items()
+        for v, w in sos_items:
             self._vars_referenced_by_con[con].add(v)
             gurobi_vars.append(self._pyomo_var_to_solver_var_map[v])
             self._referenced_variables[v] += 1
@@ -361,7 +369,8 @@ class GurobiDirect(DirectSolver):
                                'slack information, please split up the following constraints:\n')
                     for con in self._range_constraints:
                         err_msg += '{0}\n'.format(con)
-                    raise ValueError(err_msg)
+                    logger.warning(err_msg)
+                    extract_slacks = False
             if re.match(suffix, "rc"):
                 extract_reduced_costs = True
                 flag = True
