@@ -28,7 +28,7 @@ from pyomo.environ import *
 from pyomo.core.expr import expr_common
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel import expression, expression_dict, variable, expression, objective
-from pyomo.core.expr.numvalue import potentially_variable, native_types
+from pyomo.core.expr.numvalue import potentially_variable, native_types, nonpyomo_leaf_types
 from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.label import *
 
@@ -557,16 +557,6 @@ class TestNumericValue(unittest.TestCase):
 
     def test_vals(self):
         #
-        # If the user specifies a constant, we're assuming it is correct.  Thus,
-        # we do not apply the following test.
-        #
-        ##try:
-        ##    NumericConstant(None,None,value='a')
-        ##    self.fail("Cannot initialize a constant with a non-numeric value")
-        ##except ValueError:
-        ##    pass
-
-        #
         # Check that we can get the value from a numeric constant
         #
         a = NumericConstant(1.1)
@@ -598,6 +588,12 @@ class TestNumericValue(unittest.TestCase):
         #
         self.assertEqual(str(c), "-2.2")
 
+    def test_var(self):
+        M = ConcreteModel()
+        M.x = Var()
+        e = M.x + 2
+        self.assertRaises(ValueError, value, M.x)
+        self.assertEqual(e(exception=False), None)
 
 class TestGenerate_SumExpression(unittest.TestCase):
 
@@ -613,6 +609,9 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e.arg(0), m.a)
         self.assertIs(e.arg(1), m.b)
         self.assertEqual(e.size(), 3)
+
+        self.assertRaises(KeyError, e.arg, 3)
+        self.assertIs(e.arg(-1), m.b)
 
     def test_simpleSum_API(self):
         m = ConcreteModel()
@@ -2283,12 +2282,16 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         #
         model = ConcreteModel()
         model.a = Var()
+        model.p = Param(mutable=True)
 
         expr = 5 + model.a + model.a
         self.assertEqual("sum(5, a, a)", str(expr))
 
         expr += 5
         self.assertEqual("sum(5, a, a, 5)", str(expr))
+
+        expr = 2 + model.p
+        self.assertEqual("sum(2, p)", str(expr))
 
     def test_expr(self):
         #
@@ -2423,6 +2426,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         #
         model = ConcreteModel()
         model.a = Var()
+        model.p = Param(mutable=True)
 
         expr = 5 + model.a + model.a
         self.assertIs(type(expr), EXPR.ViewSumExpression)
@@ -2432,12 +2436,32 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         self.assertIs(type(expr), EXPR.ViewSumExpression)
         self.assertEqual("10 + 2*a", str(expr))
 
+        expr = 2 + model.p
+        self.assertEqual("2 + p", str(expr))
+
+        expr = 2 - model.p
+        self.assertEqual("2 - p", str(expr))
+
+    def test_negation(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.y = Var()
+
+        e = M.x*(1 + M.y)
+        e = - e
+        self.assertEqual("- x*(1 + y)", EXPR.expression_to_string(e))
+
+        M.x = -1
+        M.x.fixed = True
+        self.assertEqual("(1 + y)", EXPR.expression_to_string(e, compute_values=True))
+
     def test_prod(self):
         #
         # Print expressions
         #
         model = ConcreteModel()
         model.a = Var()
+        model.b = Var()
 
         expr = 5 * model.a * model.a
         self.assertEqual("5*a**2", str(expr))
@@ -2463,6 +2487,11 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         expr = 5 * model.a / model.a / 2
         self.assertEqual( "0.5*5*a*(1/a)",
                           str(expr) )
+
+        expr = model.a * model.b
+        model.a = 1
+        model.a.fixed = True
+        self.assertEqual( "b", EXPR.expression_to_string(expr, compute_values=True))
 
     def test_inequality(self):
         #
@@ -2679,6 +2708,9 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         self.assertEqual(str(e), "2*a[0] + 2*a[1] + 2*a[2] + x*y + (q[0]*a[0] + q[1]*a[1] + q[2]*a[2])*(1/x)")
         self.assertEqual(e.to_string(), "x*y + 2*a[0] + 2*a[1] + 2*a[2] + (q[0]*a[0] + q[1]*a[1] + q[2]*a[2])*(1/x)")
         self.assertEqual(e.to_string(compute_values=True), "x*y + 2*a[0] + 2*a[1] + 2*a[2] + (3*a[0] + 3*a[1] + 3*a[2])*(1/x)")
+
+        labeler = NumericLabeler('x')
+        self.assertEqual(EXPR.expression_to_string(e, labeler=labeler), "x1*x2 + 2*x3 + 2*x4 + 2*x5 + (q[0]*x3 + q[1]*x4 + q[2]*x5)*(1/x1)")
 
         from pyomo.core.expr.symbol_map import SymbolMap
         labeler = NumericLabeler('x')
@@ -3555,8 +3587,16 @@ class TestPolynomialDegree(unittest.TestCase):
         #
         # When IF conditional is uninitialized
         #
+        # A constant expression has degree 0
+        #
         expr = EXPR.Expr_if(m.e,1,0)
         self.assertEqual(expr.polynomial_degree(), 0)
+        #
+        # A nonconstant expression has degree None because
+        # m.e is an uninitialized parameter
+        #
+        expr = EXPR.Expr_if(m.e,m.a,0)
+        self.assertEqual(expr.polynomial_degree(), None)
 
 
 #
@@ -5367,6 +5407,87 @@ class TestNumValueDuckTyping(unittest.TestCase):
         self.check_api(x)
 
 
+#
+# Replace all variables with new variables from a varlist
+#
+class ReplacementWalkerTest(EXPR.ExpressionReplacementVisitor):
+
+    def __init__(self, model):
+        EXPR.ExpressionReplacementVisitor.__init__(self)
+        self.model = model
+
+    def visiting_potential_leaf(self, node):
+        if node.__class__ in nonpyomo_leaf_types or\
+           not node.is_potentially_variable():
+            return True, node
+        if node.is_variable_type():
+            if id(node) in self.memo:
+                return True, self.memo[id(node)]
+            self.memo[id(node)] = self.model.w.add()
+            return True, self.memo[id(node)]
+        return False, None
+
+class WalkerTests(unittest.TestCase):
+
+    def test_replacement_walker1(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.y = Var()
+        M.w = VarList()
+
+        e = sin(M.x) + M.x*M.y + 3
+        walker = ReplacementWalkerTest(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("3 + x*y + sin(x)", str(e))
+        self.assertEqual("3 + w[1]*w[2] + sin(w[1])", str(f))
+
+    def test_replacement_walker2(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.w = VarList()
+
+        e = M.x
+        walker = ReplacementWalkerTest(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("x", str(e))
+        self.assertEqual("w[1]", str(f))
+
+    def test_identify_components(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.y = Var()
+        M.w = Var()
+
+        e = sin(M.x) + M.x*M.w + 3
+        v = list(str(v) for v in EXPR.identify_components(e, set([M.x.__class__])))
+        self.assertEqual(v, ['x', 'w'])
+        v = list(str(v) for v in EXPR.identify_components(e, [M.x.__class__]))
+        self.assertEqual(v, ['x', 'w'])
+
+    def test_identify_variables(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.y = Var()
+        M.w = Var()
+        M.w = 2
+        M.w.fixed = True
+
+        e = sin(M.x) + M.x*M.w + 3
+        v = list(str(v) for v in EXPR.identify_variables(e))
+        self.assertEqual(v, ['x', 'w'])
+        v = list(str(v) for v in EXPR.identify_variables(e, include_fixed=False))
+        self.assertEqual(v, ['x'])
+
+    def test_expression_to_string(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.w = Var()
+
+        e = sin(M.x) + M.x*M.w + 3
+        self.assertEqual("sin(x) + x*w + 3", EXPR.expression_to_string(e))
+        M.w = 2
+        M.w.fixed = True
+        self.assertEqual("sin(x) + x*2 + 3", EXPR.expression_to_string(e, compute_values=True))
 
 if __name__ == "__main__":
     unittest.main()

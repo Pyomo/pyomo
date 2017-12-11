@@ -396,7 +396,7 @@ class ExpressionValueVisitor(object):
         """
         pass
 
-    def visiting_potential_leaf(self, node):
+    def visiting_potential_leaf(self, node):    #pragma: no cover
         """ 
         Visit a node and return its value if it is a leaf.
 
@@ -531,7 +531,7 @@ class ExpressionReplacementVisitor(object):
         if memo is None:
             self.memo = {'__block_scope__': { id(None): False }}
         else:
-            self.memo = memo
+            self.memo = memo        #pragma: no cover
 
     def visit(self, node, values):
         """
@@ -552,7 +552,7 @@ class ExpressionReplacementVisitor(object):
         """
         return node
 
-    def visiting_potential_leaf(self, node):
+    def visiting_potential_leaf(self, node):    #pragma: no cover
         """ 
         Visit a node and return a cloned node if it is a leaf.
 
@@ -853,7 +853,7 @@ def evaluate_expression(exp, exception=True):
         visitor = _EvaluationVisitor()
         return visitor.dfs_postorder_stack(exp)
 
-    except TemplateExpressionError:
+    except TemplateExpressionError:     #pragma: no cover
         if exception:
             raise
         return None
@@ -1135,7 +1135,7 @@ def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_va
             else:
                 repn = generate_standard_repn(expr, quadratic=True, compute_values=compute_values)
                 expr = repn.to_expression()
-        except:
+        except:     #pragma: no cover
             #
             # Generation of the standard repn will fail if the 
             # expression is uninitialized.  Hence, we default to 
@@ -1541,7 +1541,7 @@ class ExpressionBase(NumericValue):
         """
         return None
 
-    def _apply_operation(self, result):
+    def _apply_operation(self, result):     #pragma: no cover
         """
         Compute the values of this node given the values of its children.
 
@@ -1569,7 +1569,8 @@ class ExpressionBase(NumericValue):
         Returns:
             A floating point value for this expression.
         """
-        pass
+        raise NotImplementedError("Derived expression (%s) failed to "\
+            "implement _apply_operation()" % ( str(self.__class__), ))
 
 
 class NegationExpression(ExpressionBase):
@@ -1654,10 +1655,10 @@ class ExternalFunctionExpression(ExpressionBase):
         return self._fcn.getname(*args, **kwds)
 
     def _compute_polynomial_degree(self, result):
-        if result[0] is 0:
-            return 0
-        else:
-            return None
+        # If the expression is constant, then 
+        # this is detected earlier.  Hence, we can safely
+        # return None.
+        return None
 
     def _apply_operation(self, result):
         return self._fcn.evaluate( result )     #pragma: no cover
@@ -1987,6 +1988,9 @@ class _SumExpression(_LinearOperatorExpression):
             return "{0} {1}".format(values[0],values[1])
         return "{0} + {1}".format(values[0],values[1])
 
+    def getname(self, *args, **kwds):
+        return 'sum'
+
 
 class NPV_SumExpression(_SumExpression):
     __slots__ = ()
@@ -2043,9 +2047,6 @@ class ViewSumExpression(_SumExpression):
         for i in ViewSumExpression.__slots__:
             result[i] = getattr(self, i)
         return result
-
-    def getname(self, *args, **kwds):
-        return 'sum'
 
     def is_constant(self):
         #
@@ -2112,6 +2113,9 @@ class _MutableViewSumExpression(ViewSumExpression):
         return self
 
 
+#
+# TODO: Add tests for this class in test_expr_pyomo5.py
+#
 class GetItemExpression(ExpressionBase):
     """
     Expression to call :func:`__getitem__` on the base object.
@@ -2119,7 +2123,7 @@ class GetItemExpression(ExpressionBase):
     __slots__ = ('_base',)
     PRECEDENCE = 1
 
-    def _precedence(self):
+    def _precedence(self):  #pragma: no cover
         return GetItemExpression.PRECEDENCE
 
     def __init__(self, args, base=None):
@@ -2253,7 +2257,7 @@ class Expr_if(ExpressionBase):
         return None
 
     def _to_string(self, values, verbose, smap, compute_values):
-        return 'Expr_if( ( {0} ), then=( {1} ), else=( {2} ) )'.format(self._if, self._then, self._else)
+        return '{0}( ( {1} ), then=( {2} ), else=( {3} ) )'.format(self.getname(), self._if, self._then, self._else)
 
     def _apply_operation(self, result):
         _if, _then, _else = result
