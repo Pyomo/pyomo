@@ -269,6 +269,7 @@ class variable(IVariable):
             :meth:`fix` method. Default is :const:`False`.
 
     Examples:
+        >>> import pyomo.kernel as pmo
         >>> # A continuous variable with infinite bounds
         >>> x = pmo.variable()
         >>> # A binary variable
