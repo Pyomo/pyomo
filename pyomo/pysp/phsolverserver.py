@@ -301,8 +301,8 @@ class _PHSolverServer(_PHBase):
         #      should point to the unarchived directories.
         assert os.path.exists(model_location)
         assert (data_location is None) or os.path.exists(data_location)
-        scenario_instance_factory = ScenarioTreeInstanceFactory(model_location,
-                                                                data_location)
+        self._scenario_instance_factory = scenario_instance_factory = ScenarioTreeInstanceFactory(model_location,
+                                                                                                  data_location)
         self._scenario_tree = scenario_instance_factory.generate_scenario_tree(
             downsample_fraction=None,
             bundles=scenario_bundle_specification,

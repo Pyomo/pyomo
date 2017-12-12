@@ -280,6 +280,10 @@ class _PHBase(object):
         # maps scenario name to the corresponding model instance
         self._instances = {}
 
+        # the scenario instance factory, which was used to construct 
+        # the above instances.
+        self._scenario_instance_factory = None
+
         # for various reasons (mainly hacks at this point), it's good
         # to know whether we're minimizing or maximizing.
         self._objective_sense = None
@@ -2196,7 +2200,7 @@ class ProgressiveHedging(_PHBase):
         # if other callbacks are in the same location. Doing so might
         # have serious consequences.
         #
-        scenario_instance_factory = scenario_tree._scenario_instance_factory
+        self._scenario_instance_factory = scenario_instance_factory = scenario_tree._scenario_instance_factory
         if scenario_instance_factory._model_module is not None:
             self._modules_imported[scenario_instance_factory.\
                                    _model_filename] = \
