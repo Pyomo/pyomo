@@ -810,6 +810,8 @@ from solvers are immediately loaded into the original model instance.""")
             return None
         if setobj.dimen == 1:
             return data
+        if len(list(data.keys())) == 1 and list(data.keys())[0] is None and len(data[None]) == 0: # dlw december 2017
+            return None
         ans = {}
         for key in data:
             if type(data[key][0]) is tuple:
