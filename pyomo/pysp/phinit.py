@@ -404,9 +404,12 @@ def construct_ph_options_parser(usage_string):
       dest="shutdown_pyro_workers",
       default=False)
 
-    # the following does *not* work, in that the initialize_argparse fails - options conflict. 
+    # the following does *not* work, in that the initialize_argparse fails - options conflict.
     ef_options = ExtensiveFormAlgorithm.register_options(options_prefix="ef_")
-#    ef_options.initialize_argparse(parser)
+    # the automated registration of the deprecated version of this option
+    # has a bad interaction of the PH registered version
+    del ef_options.ef_shutdown_pyro
+    ef_options.initialize_argparse(parser)
     # temporary hack
     parser._ef_options = ef_options
     postprocessOpts.add_argument('--ef-output-file',
