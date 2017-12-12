@@ -58,23 +58,25 @@ class PySPConfiguredObject(object):
             self.set_options(options)
 
     def get_option(self, name):
-        """Get the value for the option with the input name. The
-        options prefix currently set will automatically be prepended to the
-        name."""
+        """Get the value for the option with the input
+        name. The options prefix currently set will
+        automatically be prepended to the name."""
         assert self._options is not None
         configval = self._options.get(self._options_prefix + name)
         return configval.value()
 
     def get_full_option_name(self, name):
-        """Return the full option name obtained by prepending the
-        current options prefix to the input name."""
+        """Return the full option name obtained by
+        prepending the current options prefix to the input
+        name."""
         assert self._options is not None
         configval = self._options.get(self._options_prefix + name)
         return self._options_prefix + name
 
     def set_options_prefix(self, options_prefix):
-        """Set the options prefix used to read options from the current
-        options object assigned to this class."""
+        """Set the options prefix used to read options from
+        the current options object assigned to this
+        class."""
         if not isinstance(options_prefix, six.string_types):
             raise TypeError(
             "Options prefix must be a built-in "
@@ -82,9 +84,9 @@ class PySPConfiguredObject(object):
         self._options_prefix = options_prefix
 
     def set_options(self, options):
-        """Assign an options block to this class instance after
-        validating that all registered options for this class exist
-        on the block."""
+        """Assign an options block to this class instance
+        after validating that all registered options for
+        this class exist on the block."""
         self.validate_options(options, options_prefix=self._options_prefix)
         self._options = options
 
@@ -93,9 +95,16 @@ class PySPConfiguredObject(object):
                         registered_only=False):
         """Display the options on the options block currently
         assigned to this class instance. Options that have been
-        explicitly set will be marked with a '*' symbol. The optional
-        argument 'registered_only' can be set to indicate that only
-        options registered to this class should be displayed."""
+        explicitly set will be marked with a '*' symbol.
+
+        Args:
+            ostream: A file-like object that can be written
+                to. The default is :const:`None`, indicating that
+                output will be printed to the screen.
+            registered_only (bool): Indicates whether or not options
+                not necessarily registered for this class should be
+                filtered from the output. Default is :const:`True`.
+        """
         if (self._options is None) or \
            (len(self._options) == 0):
             # Note: writing to directly to stdout rather
@@ -130,13 +139,21 @@ class PySPConfiguredObject(object):
 
     @classmethod
     def register_options(cls, *args, **kwds):
-        """Cls.register_options([options]) -> options. Fills an
-        options block will all registered options for this
-        class. The optional argument 'options' can be a previously
-        existing options block, which would be both updated and
-        returned by this function. The optional flag 'options_prefix' can be
-        set to indicate that all class options should be registered
-        with the given prefix prepended to their original name."""
+        """
+        Updates and/or returns an options block with options
+        registered for this class.
+
+        Args:
+            *args: A single argument can be provided which
+                should be an existing PySPConfigBlock to add
+                options to.
+            options_prefix (str): A string to prefix the
+                name of all options added by this class.
+
+        Returns:
+            a PySPConfigBlock with the registered options \
+            for this class
+        """
 
         options_prefix = kwds.pop('options_prefix',"")
         assert isinstance(options_prefix, six.string_types)
@@ -220,18 +237,30 @@ class PySPConfiguredObject(object):
                         options_prefix="",
                         source_options_prefix="",
                         error_if_missing=True):
-        """Copy the set of registered options for this class from an
-        existing options block and return a new options block with
-        only those values. This method will preserve the _userSet
-        status of all options. The optional flag 'options_prefix' can be set
-        to indicate that all registered class options in the
-        returned options object will have a name prepended with the
-        given prefix. The optional flag 'source_options_prefix' can be set to
-        indicate that all registered class options on the input
-        options object have a named prepended with the given
-        prefix. The optional flag 'error_if_missing' controls
-        whether or not an exception is raised when registered
-        options are missing from the input options object."""
+        """Copy the set of registered options for this class
+        from an existing options block and return a new
+        options block with only those values.
+
+        This method will preserve the _userSet status of all
+        options.
+
+        Args:
+            options: The options block to extract options from.
+            options_prefix (str): A string to prefix the
+                name of all options added by this class.
+            source_options_prefix (str): A string prefix to
+                use when looking for this class's options on
+                the :attr:`options` argument.
+            error_if_missing (bool): Controls whether or not
+                an exception is raised when registered
+                options are missing from the input options
+                object. Default is :const:`True`.
+
+        Returns:
+            a PySPConfigBlock with values copied from the \
+            source options block but with only the options \
+            associated with this class
+        """
 
         assert isinstance(options_prefix, six.string_types)
         bare_options = cls.register_options(options_prefix="")
@@ -265,20 +294,33 @@ class PySPConfiguredObject(object):
                                      source_options_prefix="",
                                      error_if_missing=True,
                                      sparse=False):
-        """Copy the set of registered options for this class from an
-        existing options block and return a dictionary of options
-        (name -> value) with those values. This method will preserve
-        the _userSet status of all options. The optional flag
-        'options_prefix' can be set to indicate that all registered class
-        options will have a name prepended with the given prefix in
-        the output dictionary. The optional flag 'source_options_prefix' can be
-        set to indicate that all registered class options on the
-        input options object have a named prepended with the given
-        prefix. The optional flag 'error_if_missing' controls
-        whether or not an exception is raised when registered
-        options are missing from the input options object. The
-        optional flag 'sparse' controls whether non user-set values
-        should be included in the returned dictionary."""
+        """Copy the set of registered options for this class
+        from an existing options block and return a
+        dictionary of options (name -> value) with those
+        values.
+
+        This method will preserve the _userSet status of all
+        options.
+
+        Args:
+            options: The options block to extract options from.
+            options_prefix (str): A string to prefix the
+                name of all options added by this class.
+            source_options_prefix (str): A string prefix to
+                use when looking for this class's options on
+                the :attr:`options` argument.
+            error_if_missing (bool): Controls whether or not
+                an exception is raised when registered
+                options are missing from the input options
+                object. Default is :const:`True`.
+            sparse (bool): Controls whether non user-set
+                values should be included in the returned
+                dictionary. Default is :const:`False`.
+
+        Returns:
+            a dictionary mapping option names to values \
+            extracted from the source options block
+        """
 
         assert isinstance(options_prefix, six.string_types)
         bare_options = \
@@ -299,24 +341,39 @@ class PySPConfiguredObject(object):
                                      ap_data,
                                      options_prefix="",
                                      source_options_prefix="",
-                                     skip_userset=False,
-                                     error_if_missing=True):
-        """Update the input options object by extracting all registered
-        options for this class from an argparse Namespace object. This
-        method cannot determine if the values on the argparse Namespace
-        object were set explicitly or are defaults. Therefore, the
-        _userSet status will be updated on all options that are found.
-        The method only compares the names against the attributes found
-        on the argparse Namespace object. No other form of validation
-        is performed. The optional flag 'options_prefix' can be set to indicate
-        that all registered class options will have a name prepended
-        with the given prefix on the updated options object. The
-        optional flag 'source_options_prefix' can be set to indicate that
-        registered class option names should be prepended with the
-        the given prefix when searching for items on the argparse
-        Namespace object. The optional flag 'error_if_missing' controls
-        whether or not an exception is raised when registered option
-        names are missing from the argparse Namespace object."""
+                                     error_if_missing=True,
+                                     skip_userset=False):
+        """Update the input options object by extracting all
+        registered options for this class from an argparse
+        Namespace object.
+
+        This method cannot determine if the values on the
+        argparse Namespace object were set explicitly or are
+        defaults. Therefore, the _userSet status will be
+        updated on all options that are found.  The method
+        only compares the names against the attributes found
+        on the argparse Namespace object. No other form of
+        validation is performed.
+
+        Args:
+            options: The options block to update options on.
+            ap_data: An argparse Namespace object to extract
+                option values from.
+            options_prefix (str): A string to prefix the
+                name of all options added by this class.
+            source_options_prefix (str): A string prefix to
+                use when looking for this class's options on
+                the :attr:`ap_data` argument.
+            error_if_missing (bool): Controls whether or not
+                an exception is raised when registered
+                options are missing from the input Namespace
+                object. Default is :const:`True`.
+            skip_userset (bool): If set to :const:`True`,
+                options that have been explicity set on the
+                :attr:`options` argument will not be
+                modified by the value stored in the argparse
+                Namespace.
+        """
 
         assert isinstance(options_prefix, six.string_types)
         assert isinstance(source_options_prefix, six.string_types)
@@ -340,13 +397,19 @@ class PySPConfiguredObject(object):
                          options,
                          options_prefix="",
                          error_if_missing=True):
-        """Validate that all registered options can be found in the
-        options block and that their option definitions are the
-        same. The optional flag 'options_prefix' can be set to indicate that
-        all registered class options will have a name prepended with
-        the given prefix. The optional flag 'error_if_missing' can
-        be used to control whether or not an exception is raised
-        when registered options are missing."""
+        """Validate that all registered options can be found
+        in the options block and that their option
+        definitions are the same.
+
+        Args:
+            options: The options block to validate.
+            options_prefix (str): A string to prefix the
+                name of all options registered for class.
+            error_if_missing (bool): Controls whether or not
+                an exception is raised when registered
+                options are missing from the input Namespace
+                object. Default is :const:`True`.
+        """
 
         assert isinstance(options_prefix, six.string_types)
         bases = inspect.getmro(cls)
@@ -444,14 +507,21 @@ class PySPConfiguredExtension(PySPConfiguredObject):
 
     @classmethod
     def register_options(cls, *args, **kwds):
-        """Cls.register_options([options]) -> options. Fills an
-        options block will all registered options for this
-        class. The optional argument 'options' can be a previously
-        existing options block, which would be both updated and
-        returned by this function. The optional flag 'options_prefix' can be
-        set to indicate that all class options should be registered
-        with the given prefix prepended to their original name."""
+        """
+        Updates and/or returns an options block with options
+        registered for this class.
 
+        Args:
+            *args: A single argument can be provided which
+                should be an existing PySPConfigBlock to add
+                options to.
+            options_prefix (str): A string to prefix the
+                name of all options added by this class.
+
+        Returns:
+            a PySPConfigBlock with the registered options \
+            for this class
+        """
         if 'options_prefix' not in kwds:
             kwds['options_prefix'] = cls.extension_options_prefix()
         return super(PySPConfiguredExtension, cls).\
@@ -463,18 +533,30 @@ class PySPConfiguredExtension(PySPConfiguredObject):
                         options_prefix=None,
                         source_options_prefix=None,
                         error_if_missing=True):
-        """Copy the set of registered options for this class from an
-        existing options block and return a new options block with
-        only those values. This method will preserve the _userSet
-        status of all options. The optional flag 'options_prefix' can be set
-        to indicate that all registered class options in the
-        returned options object will have a name prepended with the
-        given prefix. The optional flag 'source_options_prefix' can be set to
-        indicate that all registered class options on the input
-        options object have a named prepended with the given
-        prefix. The optional flag 'error_if_missing' controls
-        whether or not an exception is raised when registered
-        options are missing from the input options object."""
+        """Copy the set of registered options for this class
+        from an existing options block and return a new
+        options block with only those values.
+
+        This method will preserve the _userSet status of all
+        options.
+
+        Args:
+            options: The options block to extract options from.
+            options_prefix (str): A string to prefix the
+                name of all options added by this class.
+            source_options_prefix (str): A string prefix to
+                use when looking for this class's options on
+                the :attr:`options` argument.
+            error_if_missing (bool): Controls whether or not
+                an exception is raised when registered
+                options are missing from the input options
+                object.
+
+        Returns:
+            a PySPConfigBlock with values copied from the \
+            source options block but with only the options \
+            associated with this class
+        """
 
         if options_prefix is None:
             options_prefix = cls.extension_options_prefix()
@@ -493,20 +575,33 @@ class PySPConfiguredExtension(PySPConfiguredObject):
                                      source_options_prefix=None,
                                      error_if_missing=True,
                                      sparse=False):
-        """Copy the set of registered options for this class from an
-        existing options block and return a dictionary of options
-        (name -> value) with those values. This method will preserve
-        the _userSet status of all options. The optional flag
-        'options_prefix' can be set to indicate that all registered class
-        options will have a name prepended with the given prefix in
-        the output dictionary. The optional flag 'source_options_prefix' can be
-        set to indicate that all registered class options on the
-        input options object have a named prepended with the given
-        prefix. The optional flag 'error_if_missing' controls
-        whether or not an exception is raised when registered
-        options are missing from the input options object. The
-        optional flag 'sparse' controls whether non user-set values
-        should be included in the returned dictionary."""
+        """Copy the set of registered options for this class
+        from an existing options block and return a
+        dictionary of options (name -> value) with those
+        values.
+
+        This method will preserve the _userSet status of all
+        options.
+
+        Args:
+            options: The options block to extract options from.
+            options_prefix (str): A string to prefix the
+                name of all options added by this class.
+            source_options_prefix (str): A string prefix to
+                use when looking for this class's options on
+                the :attr:`options` argument.
+            error_if_missing (bool): Controls whether or not
+                an exception is raised when registered
+                options are missing from the input options
+                object. Default is :const:`True`.
+            sparse (bool): Controls whether non user-set
+                values should be included in the returned
+                dictionary. Default is :const:`False`.
+
+        Returns:
+            a dictionary mapping option names to values \
+            extracted from the source options block
+        """
 
         if options_prefix is None:
             options_prefix = cls.extension_options_prefix()
@@ -526,29 +621,39 @@ class PySPConfiguredExtension(PySPConfiguredObject):
                                      ap_data,
                                      options_prefix=None,
                                      source_options_prefix=None,
-                                     skip_userset=False,
-                                     error_if_missing=True):
+                                     error_if_missing=True,
+                                     skip_userset=False):
         """Update the input options object by extracting all
-        registered options for this class from an argparse Namespace
-        object. This method cannot determine if the values on the
+        registered options for this class from an argparse
+        Namespace object.
+
+        This method cannot determine if the values on the
         argparse Namespace object were set explicitly or are
-        defaults. Therefore, the _userSet status will be updated on
-        all options that are found.  The method only compares the
-        names against the attributes found on the argparse Namespace
-        object. No other form of validation is performed. The
-        optional flag 'options_prefix' can be set to indicate that all
-        registered class options will have a name prepended with the
-        given prefix on the updated options object. The optional
-        flag 'source_options_prefix' can be set to indicate that registered
-        class option names should be prepended with the the given
-        prefix when searching for items on the argparse Namespace
-        object. The optional flag 'skip_userset' can be set to
-        indicate that options with the _userSet flag already set to
-        True (on the options object being updated) should be skipped
-        when loading options from the argparse Namespace object. The
-        optional flag 'error_if_missing' controls whether or not an
-        exception is raised when registered option names are missing
-        from the argparse Namespace object."""
+        defaults. Therefore, the _userSet status will be
+        updated on all options that are found.  The method
+        only compares the names against the attributes found
+        on the argparse Namespace object. No other form of
+        validation is performed.
+
+        Args:
+            options: The options block to update options on.
+            ap_data: An argparse Namespace object to extract
+                option values from.
+            options_prefix (str): A string to prefix the
+                name of all options added by this class.
+            source_options_prefix (str): A string prefix to
+                use when looking for this class's options on
+                the :attr:`ap_data` argument.
+            error_if_missing (bool): Controls whether or not
+                an exception is raised when registered
+                options are missing from the input Namespace
+                object. Default is :const:`True`.
+            skip_userset (bool): If set to :const:`True`,
+                options that have been explicity set on the
+                :attr:`options` argument will not be
+                modified by the value stored in the argparse
+                Namespace.
+        """
 
         if options_prefix is None:
             options_prefix = cls.extension_options_prefix()
@@ -568,13 +673,19 @@ class PySPConfiguredExtension(PySPConfiguredObject):
                          options,
                          options_prefix=None,
                          error_if_missing=True):
-        """Validate that all registered options can be found in the
-        options block and that their option definitions are the
-        same. The optional flag 'options_prefix' can be set to indicate that
-        all registered class options will have a name prepended with
-        the given prefix. The optional flag 'error_if_missing' can
-        be used to control whether or not an exception is raised
-        when registered options are missing."""
+        """Validate that all registered options can be found
+        in the options block and that their option
+        definitions are the same.
+
+        Args:
+            options: The options block to validate.
+            options_prefix (str): A string to prefix the
+                name of all options registered for class.
+            error_if_missing (bool): Controls whether or not
+                an exception is raised when registered
+                options are missing from the input Namespace
+                object. Default is :const:`True`.
+        """
 
         if options_prefix is None:
             options_prefix = cls.extension_options_prefix()
