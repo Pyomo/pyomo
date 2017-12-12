@@ -118,7 +118,7 @@ def collect_full_results(ph, var_config):
                 scenario = ph._scenario_tree._scenario_map[scenario_name]
                 scenario.set_solution(scenario_results)
         else:
-            scenario = ph._scenario_tree._scenario_map[scenario_name]
+            scenario = ph._scenario_tree._scenario_map[subproblem_name]
             scenario.set_solution(subproblem_result)
 
         if ph._verbose:

@@ -393,21 +393,20 @@ def construct_ph_options_parser(usage_string):
       action="store_true",
       dest="disable_warmstarts",
       default=False)
-    """
     solverOpts.add_argument('--shutdown-pyro',
       help="Shut down all Pyro-related components associated with the Pyro and PH Pyro solver managers (if specified), including the dispatch server, name server, and any solver servers. Default is False.",
       action="store_true",
       dest="shutdown_pyro",
       default=False)
-    """
     solverOpts.add_argument('--shutdown-pyro-workers',
       help="Shut down PH solver servers on exit, leaving dispatcher and nameserver running. Default is False.",
       action="store_true",
       dest="shutdown_pyro_workers",
       default=False)
 
+    # the following does *not* work, in that the initialize_argparse fails - options conflict. 
     ef_options = ExtensiveFormAlgorithm.register_options(options_prefix="ef_")
-    ef_options.initialize_argparse(parser)
+#    ef_options.initialize_argparse(parser)
     # temporary hack
     parser._ef_options = ef_options
     postprocessOpts.add_argument('--ef-output-file',
