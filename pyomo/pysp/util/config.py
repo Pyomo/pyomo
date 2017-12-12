@@ -154,6 +154,19 @@ class PySPConfigBlock(ConfigBlock):
             ConfigBlock.__setitem__(self, name, value)
 
     #
+    # Allow deletion of entries to get around issues with
+    # clashing options registration
+    #
+    def __delattr__(self, name):
+        if name not in self._data:
+            _name = name.replace('_', ' ')
+            if _name not in self._data:
+                raise AttributeError("Unknown attribute '%s'" % name)
+            name = _name
+        del self._data[name]
+        self._decl_order.remove(name)
+
+    #
     # Change more strange default behavior for ConfigBlock
     # when _implicit_declaration are allowed. If the userSet
     # flag gets set to True on ConfigBlock (happens when new
