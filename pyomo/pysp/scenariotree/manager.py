@@ -2490,7 +2490,7 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
         if not isinstance(function, six.string_types):
             if not dill_available:
                 raise ValueError(
-                    "This dill module must be available "
+                    "The dill module must be available "
                     "when transmitting function objects")
             if module_name is not None:
                 raise ValueError(
