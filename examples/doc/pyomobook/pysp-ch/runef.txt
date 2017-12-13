@@ -3,8 +3,6 @@ Module successfully loaded
 
 Initializing extensive form algorithm for stochastic programming problems.
 EF solve completed and solution status is feasible
-EF solve termination condition is optimal
-EF objective: -108390.00001
 EF gap:            0.00000
 EF bound:     -108390.00001
 
