@@ -8,10 +8,10 @@ g3 1 1 0	# problem Scenario3
  45 3 	# nonzeros in Jacobian, obj. gradient
  36 30	# max name lengths: constraints, variables
  0 0 0 0 0	# common exprs: b,c,o,c1,o1
-S0 1 schurip_variable_id
-0 368493142
 S7 1 schurip_objective_weight
 0 0.3333333333333333
+S0 1 schurip_variable_id
+0 368493142
 C0	#c_first_stage
 n0
 C1	#c_second_stage

@@ -8,12 +8,12 @@ g3 1 1 0	# problem BelowAverageScenario
  27 10 	# nonzeros in Jacobian, obj. gradient
  41 35	# max name lengths: constraints, variables
  0 0 0 0 0	# common exprs: b,c,o,c1,o1
+S7 1 schurip_objective_weight
+0 0.33333333
 S0 3 schurip_variable_id
 0 2021786751
 1 1561833761
 2 1002958202
-S7 1 schurip_objective_weight
-0 0.33333333
 C0	#ConstrainTotalAcreage
 n0
 C1	#EnforceCattleFeedRequirement[CORN]
