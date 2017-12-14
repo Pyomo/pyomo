@@ -889,12 +889,6 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
 
     def _solve_OA_master(self):
         self.mip_iter += 1
-        # print('Clone working model for OA master')
-        # for c, _ in self.working_model.purge.inlet.no_flow._decl_order:
-        #     print(c)
-        # print(id(self.working_model.purge.inlet.no_flow.indicator_var))
-        # print(id(self.working_model.purge.inlet.no_flow.stream_no_flow))
-        # self.working_model.purge.inlet.no_flow.pprint()
         m = self.working_model.clone()
         GDPopt = m.GDPopt_utils
         logger.info('MIP {}: Solve master problem.'.format(self.mip_iter))
@@ -949,9 +943,9 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
                                         **self.mip_solver_kwargs)
         master_terminate_cond = results.solver.termination_condition
         if master_terminate_cond is tc.infeasibleOrUnbounded:
-            # Linear solvers will sometimes tell me that it's infeasible or
-            # unbounded during presolve, but fails to distinguish. We need to
-            # resolve with a solver option flag on.
+            # Linear solvers will sometimes tell me that the problem is
+            # infeasible or unbounded during presolve, but fails to
+            # distinguish. We need to resolve with a solver option flag on.
             old_options = deepcopy(self.mip_solver.options)
             # This solver option is specific to Gurobi.
             self.mip_solver.options['DualReductions'] = 0
@@ -996,6 +990,8 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
                 results.solution.status is SolutionStatus.feasible):
             # load the solution and suppress the warning message by setting
             # solver status to ok.
+            logger.info('MILP solver reported feasible solution, '
+                        'but not guaranteed to be optimal.')
             results.solver.status = SolverStatus.ok
             m.solutions.load_from(results)
             self._copy_values(m, self.working_model)
@@ -1445,11 +1441,13 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
         # generate new constraints
         # TODO some kind of special handling if the dual is phenomenally small?
         logger.info('Adding OA cuts.')
+        counter = 0
         for constr in nonlinear_constraints:
             if not m.dual.get(constr, None):
                 continue
             parent_block = constr.parent_block()
-            ignore_set = parent_block.component('GDPopt_ignore_OA')
+            ignore_set = getattr(parent_block, 'GDPopt_ignore_OA', None)
+            logger.debug('Ignore_set %s' % ignore_set)
             if (ignore_set and (constr in ignore_set or
                                 constr.parent_component() in ignore_set)):
                 logger.debug('OA cut addition for %s skipped because it is in '
@@ -1489,6 +1487,9 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
                     value(constr.body) + sum(
                         value(jacobians[var]) * (var - value(var))
                         for var in constr_vars)) + slack_var <= 0)
+            counter += 1
+
+        logger.info('Added %s OA cuts' % counter)
 
     def _add_psc_cut(self, nlp_feasible=True):
         m, GDPopt = self.working_model, self.working_model.GDPopt_utils
