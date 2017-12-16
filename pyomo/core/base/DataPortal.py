@@ -61,6 +61,12 @@ class DataPortal(object):
             self.connect(filename=filename, **kwds)
             self.load()
             self.disconnect()
+        # Or load data from a file object (e.g. StringIO)
+        if 'file_object' in kwds:
+            file_object = kwds.pop('file_object')
+            self.connect(file_object=file_object, **kwds)
+            self.load()
+            self.disconnect()
         # Or load data from a dictionary
         elif 'data_dict' in kwds:
             data = kwds.pop('data_dict')
@@ -87,6 +93,8 @@ class DataPortal(object):
             data = kwds.get('filename',None)
         if data is None:
             data = kwds.get('server',None)
+        if data is None:
+            data = 'file_object'
         if '.' in data:
             tmp = data.split(".")[-1]
         else:

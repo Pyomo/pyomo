@@ -785,6 +785,8 @@ arguments (which have been ignored):"""
             dp = arg
         elif type(arg) is dict:
             dp = DataPortal(data_dict=arg, model=self)
+        elif hasattr(arg, 'read'):
+            dp = DataPortal(file_object=arg, model=self)
         elif isinstance(arg, SolverResults):
             if len(arg.solution):
                 logger.warning(

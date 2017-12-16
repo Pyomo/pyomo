@@ -586,7 +586,10 @@ def _process_include(cmd, _model, _data, _default, options=None):
     Lineno = 0
 
     try:
-        scenarios = parse_data_commands(filename=cmd[1])
+        if 'file_object' in cmd:
+            scenarios = parse_data_commands(data=options['file_object'].read())
+        else:
+            scenarios = parse_data_commands(filename=cmd[1])
     except IOError:
         raise
         err = sys.exc_info()[1]
