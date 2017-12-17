@@ -2659,7 +2659,7 @@ class ScenarioTree(object):
                 print("\tConditional probability=%4.4f"
                       % tree_node._conditional_probability)
             else:
-                print("\tConditional probability=" + "***Undefined***")
+                print("\tConditional probability=" + "Not Rprted.")
             print("\tChildren:")
             if len(tree_node._children) > 0:
                 for child_node in sorted(tree_node._children, key=lambda x: x._name):
@@ -2672,8 +2672,12 @@ class ScenarioTree(object):
             else:
                 for scenario in sorted(tree_node._scenarios, key=lambda x: x._name):
                     print("\t\t%s" % (scenario._name))
-            print("\tExpected cost of (sub)tree rooted at node=%10.4f"
-                  % tree_node.computeExpectedNodeCost())
+            expected_node_cost = tree_node.computeExpectedNodeCost()
+            if expected_node_cost != None:
+                print("\tExpected cost of (sub)tree rooted at node=%10.4f"
+                      % expected_node_cost)
+            else:
+                print("\tExpected cost of (sub)tree rooted at node=Not Rprted.")
             print("")
 
         print("----------------------------------------------------")
