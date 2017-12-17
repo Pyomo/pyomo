@@ -707,6 +707,9 @@ class ScenarioTreeNode(object):
         stage_name = self._stage._name
         if any(scenario._stage_costs[stage_name] is None \
                for scenario in self._scenarios):
+            for scenario in self._scenarios:
+                if scenario._stage_costs[stage_name] is None:
+                    logger.warning("Cost for stage %s in scenario %s is undefined - " % (stage_name, scenario._name))
             return None
 
         my_cost = self._scenarios[0]._stage_costs[stage_name]
