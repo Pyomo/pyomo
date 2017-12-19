@@ -42,6 +42,8 @@ from pyomo.util.plugin import (ExtensionPoint,
 from pyomo.pysp.util.config import PySPConfigBlock
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 
+import six
+
 logger = logging.getLogger('pyomo.pysp')
 
 def _generate_unique_module_name():
@@ -429,13 +431,23 @@ def _kill(proc):
             proc.terminate()
         except:
             pass
-        proc.wait(timeout=1)
-        if proc.returncode is None:
-            try:
-                proc.kill()
-            except:
-                pass
-        proc.wait(timeout=1)
+        if six.PY3:
+            proc.wait(timeout=1)
+            if proc.returncode is None:
+                try:
+                    proc.kill()
+                except:
+                    pass
+            proc.wait(timeout=1)
+        else:
+            proc.poll()
+            if proc.returncode is None:
+                time.sleep(0.5)
+                try:
+                    proc.kill()
+                except:
+                    pass
+            proc.poll()
 
 def _get_test_nameserver(ns_host="127.0.0.1", num_tries=20):
     if not (using_pyro3 or using_pyro4):
