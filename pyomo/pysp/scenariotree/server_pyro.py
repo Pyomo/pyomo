@@ -178,7 +178,7 @@ class ScenarioTreeServerPyro(TaskWorker):
             if model_input is None:
                 model_input = data.options.pop('model_callback')
                 assert dill_available
-                modle_input = dill.loads(model_input)
+                model_input = dill.loads(model_input)
 
             scenario_tree_input = data.options.pop('scenario_tree')
             data_input = data.options.pop('data')
