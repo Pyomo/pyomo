@@ -1,9 +1,21 @@
 Getting Started
 ===============
 
-Installation, pyomo command, a simple example, etc
 
-.. doctest::
+.. toctree::
+   :maxdepth: 1
 
-    >>> print('Hello World')
-    Hello World
+   overview.rst
+   Sets.rst
+   Parameters.rst
+   Variables.rst
+   Objectives.rst
+   Constraints.rst
+   Disjunctions.rst
+   Expressions.rst
+   DataInput.rst
+   BuildAction.rst
+   PyomoCommand.rst
+   
+   
+   
