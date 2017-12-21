@@ -75,7 +75,10 @@ _intrinsic_function_operators = {
     'acosh':  'o52',
     'atanh':  'o47',
     'pow':    'o5',
-    'abs':    'o15'}
+    'abs':    'o15',
+    'ceil':   'o13',
+    'floor':  'o14'
+}
 
 # build string templates
 def _build_op_template():
@@ -531,7 +534,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 if intr_expr_str is not None:
                     OUTPUT.write(intr_expr_str)
                 else:
-                    logger.error("Unsupported unary function ({0})", exp.name)
+                    logger.error("Unsupported unary function ({0})".format(exp.name))
                     raise TypeError("ASL writer does not support '%s' expressions"
                                     % (exp.name))
                 self._print_nonlinear_terms_NL(exp.arg(0))
