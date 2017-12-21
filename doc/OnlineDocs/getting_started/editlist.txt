@@ -1,0 +1,5 @@
+These files are "done" and available for others to look at, comment on, and
+edit:
+
+overview.rst
+Parameters.rst
