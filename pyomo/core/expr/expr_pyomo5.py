@@ -3128,7 +3128,7 @@ def _generate_relational_expression(etype, lhs, rhs):
         elif etype == _lt:
             strict = (True,)
         else:
-            raise ValueError("Unknown relational expression type '%s'" % etype)
+            raise ValueError("Unknown relational expression type '%s'" % etype) #pragma: no cover
         if lhs_is_relational:
             if lhs.__class__ is InequalityExpression:
                 if rhs_is_relational:
