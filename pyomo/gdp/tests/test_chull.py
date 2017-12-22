@@ -553,9 +553,64 @@ class DisaggregatedVarNamingConflict(unittest.TestCase):
         # don't know how to keep them unique at the moment. When I do, I also
         # need to test that the indices are actually what we expect.
 
-# TODO
-# class NestedDisjunction(unittest.TestCase):
-#     @staticmethod
-#     def makeModel():
-        
+class NestedDisjunction(unittest.TestCase):
+    @staticmethod
+    def makeNestedModel():
+        m = ConcreteModel()
+        m.x = Var(bounds=(0,2))
+        m.d1 = Disjunct()
+        m.d1.c = Constraint(expr=m.x >= 1)
+        m.d2 = Disjunct()
+        m.d2.c = Constraint(expr=m.x >= 1.1)
+        m.d3 = Disjunct()
+        m.d3.c = Constraint(expr=m.x >= 1.2)
+        m.d4 = Disjunct()
+        m.d4.c = Constraint(expr=m.x >= 1.3)
+        m.disj = Disjunction(expr=[m.d1, m.d2])
+        m.d1.disj = Disjunction(expr=[m.d3, m.d4])
+        return m
 
+    @staticmethod
+    def makeDisjunctAsContainerModel():
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 2))
+        m.d1 = Disjunct()
+        m.d1.c = Constraint(expr=m.x >= 1)
+        m.d2 = Disjunct()
+        m.d2.c = Constraint(expr=m.x >= 1.1)
+        m.d1.d3 = Disjunct()
+        m.d1.d3.c = Constraint(expr=m.x >= 1.2)
+        m.d1.d4 = Disjunct()
+        m.d1.d4.c = Constraint(expr=m.x >= 1.3)
+        m.disj = Disjunction(expr=[m.d1, m.d2])
+        m.disj2 = Disjunction(expr=[m.d1.d3, m.d1.d4])
+        return m
+
+    def test_deactivated_disjunct_relaxes_nested_disjunction(self):
+        m = self.makeNestedModel()
+        m.d1.deactivate()
+        set_trace()
+
+        TransformationFactory('gdp.chull').apply_to(m)
+
+        set_trace()
+
+        self.assertFalse(m.d1.active)
+        self.assertTrue(m.d1.indicator_var.fixed)
+        self.assertFalse(m.d1.indicator_var.value)
+
+    def test_deactivation_container_still_active(self):
+        m = self.makeDisjunctAsContainerModel()
+        m.d1.deactivate()
+        TransformationFactory('gdp.chull').apply_to(m)
+
+        self.assertFalse(m.d1.indicator_var.value)
+        
+        self.assertFalse(m.d1.d3.indicator_var.fixed)
+        self.assertFalse(m.d1.d4.indicator_var.fixed)
+
+# TODO (based on coverage):
+
+# test targets of all flavors
+# test container deactivation
+# test something with multiple indices

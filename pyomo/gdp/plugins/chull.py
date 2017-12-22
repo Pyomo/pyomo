@@ -298,6 +298,7 @@ class ConvexHull_Transformation(Transformation):
         varSet_tmp = ComponentSet()
         varSet = []
         for disjunct in obj.disjuncts:
+            # TODO: Should this include deactivated disjuncts??
             for cons in disjunct.component_objects(
                     Constraint,
                     active = True,
