@@ -49,8 +49,8 @@ cc : Size=1, Index=None, Active=True
             3 Declarations: indicator_var c0 c1
 
     1 Disjunction Declarations
-        complements : Size=1, Index=None, Active=True
-            Key  : Lower : Body                                                                     : Upper : Active
-            None :   1.0 : cc.expr1.indicator_var + cc.expr2.indicator_var + cc.expr3.indicator_var :   1.0 :   True
+        complements : Size=1, Index=None, XOR=True, Active=True
+            Key  : Disjuncts                            : Active
+            None : ['cc.expr1', 'cc.expr2', 'cc.expr3'] :   True
 
     4 Declarations: expr1 expr2 expr3 complements

@@ -1044,7 +1044,7 @@ def check_expr_evaluation(model, symbolMap, solver_io):
         # Temporarily initialize uninitialized variables in order to call
         # value() on each expression to check domain violations
         uninit_vars = list()
-        for var in model.component_data_objects(Var, active=True):
+        for var in model.component_data_objects(Var):
             if var.value is None:
                 uninit_vars.append(var)
                 var.value = 0
