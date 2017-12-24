@@ -830,7 +830,6 @@ This has resulted in the conversion of the source to dense form.
         if data is not None:
             try:
                 for key, val in iteritems(data):
-                    #self[key] = val
                     self._setitem_when_not_present(
                         self._validate_index(key), val)
             except Exception:
