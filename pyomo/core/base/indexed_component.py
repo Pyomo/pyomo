@@ -48,6 +48,17 @@ normalize_index.flatten = True
 # object.
 #
 def _get_indexed_component_data_name(component, index):
+    """Returns the fully-qualified component name for an unconstructed index.
+
+    The ComponentData.name property assumes that the ComponentData has
+    already been assigned to the owning Component.  This is a problem
+    during the process of constructing a ComponentData instance, as we
+    may need to throw an exception before the ComponentData is added to
+    the owning component.  In those cases, we can use this function to
+    generate the fully-qualified name without (permanently) adding the
+    object to the Component.
+
+    """
     if not component.is_indexed():
         return component.name
     elif index in component._data:
