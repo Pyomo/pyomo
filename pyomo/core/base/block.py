@@ -1635,8 +1635,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             format = guess_format(filename)
             if format is None:
                 raise ValueError(
-                    "guess_format could not find a valid format from "
-                    "filename '%s'" % filename)
+                    "Could not infer file format from file name '%s'.\n"
+                    "Either pprovide a name with a recognized extension "
+                    "or specify the format using the 'format' argument."
+                    % filename)
         problem_writer = WriterFactory(format)
         if problem_writer is None:
             raise ValueError(
