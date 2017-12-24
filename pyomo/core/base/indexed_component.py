@@ -267,13 +267,20 @@ class _IndexedComponent_slicer(object):
         return self
 
     def __call__(self, *idx, **kwds):
-        """Override the "()" operator to defer resolution until iteration.
+        """Special handling of the "()" operator for component slices.
 
-        Creating a slice of a component returns a
-        _IndexedComponent_slicer object.  Subsequent attempts to call
-        items hit this method.  When combined with the __getattr__
-        method, this allows us to defer general method calls (like
-        "component()") until iteration time.
+        Creating a slice of a component returns a _IndexedComponent_slicer
+        object.  Subsequent attempts to call items hit this method.  We
+        handle the __call__ method separately based on the item ( identifier
+        immediately before the "()") being called:
+
+        - if the item was 'component', then we defer resolution of this call
+        until we are actually iterating over the slicer.  This allows users
+        to do operations like `m.b[:].component('foo').bar[:]`
+
+        - if the item is anything else, then we will immediately iterate over
+        the slicer and call the item.  THis allows "vector-like" operations
+        like: `m.x[:,1].fix(0)`.
         """
         self._iter_stack.append(None)
         self._call_stack.append( (
@@ -300,7 +307,7 @@ class IndexedComponent(Component):
     change the access and iteration methods.
 
     IndexedComponent may be given a set over which indexing is restricted.
-    Alternatively, IndexedComponent may be indexed over Any 
+    Alternatively, IndexedComponent may be indexed over Any
     (pyomo.core.base.set_types.Any), in which case the IndexedComponent
     behaves like a dictionary - any hashable object can be used as a key
     and keys can be added on the fly.
@@ -688,7 +695,7 @@ You can silence this warning by one of three ways:
         """Process a call to __getitem__ with unhashable elements
 
         There are three basic ways to get here:
-          1) the index constains one or more slices or ellipsis
+          1) the index contains one or more slices or ellipsis
           2) the index contains an unhashable type (e.g., a Pyomo
              (Simple)Component
           3) the index contains an IndexTemplate
@@ -814,7 +821,7 @@ the value() function.""" % ( self.name, i ))
                 "index for component %s" % (self.name,) )
 
     def _getitem_when_not_present(self, index):
-        """Returns the default component data value for this Component.
+        """Returns/initializes a value when the index is not in the _data dict.
 
         Override this method if the component allows implicit member
         construction.  For classes that do not support a 'default' (at
