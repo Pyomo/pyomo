@@ -1636,7 +1636,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             if format is None:
                 raise ValueError(
                     "Could not infer file format from file name '%s'.\n"
-                    "Either pprovide a name with a recognized extension "
+                    "Either provide a name with a recognized extension "
                     "or specify the format using the 'format' argument."
                     % filename)
         problem_writer = WriterFactory(format)
