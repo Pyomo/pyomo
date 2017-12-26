@@ -1637,6 +1637,12 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             format = ProblemFormat.cpxlp
         if (filename is not None) and (format is None):
             format = guess_format(filename)
+            if format is None:
+                raise ValueError(
+                    "Could not infer file format from file name '%s'.\n"
+                    "Either provide a name with a recognized extension "
+                    "or specify the format using the 'format' argument."
+                    % filename)
         problem_writer = WriterFactory(format)
         if problem_writer is None:
             raise ValueError(
