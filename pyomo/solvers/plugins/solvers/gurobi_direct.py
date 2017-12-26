@@ -14,11 +14,11 @@ import sys
 import pyutilib.services
 from pyutilib.misc import Bunch
 from pyomo.util.plugin import alias
-from pyomo.core.kernel.numvalue import is_fixed
-from pyomo.repn import generate_canonical_repn, LinearCanonicalRepn, canonical_degree
+from pyomo.core.expr.numvalue import is_fixed
+from pyomo.core.expr.numvalue import value
+from pyomo.repn import generate_standard_repn
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
-from pyomo.core.kernel.numvalue import value
 import pyomo.core.kernel
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt.results.results_ import SolverResults
@@ -131,7 +131,7 @@ class GurobiDirect(DirectSolver):
     def _get_expr_from_pyomo_repn(self, repn, max_degree=2):
         referenced_vars = ComponentSet()
 
-        degree = canonical_degree(repn)
+        degree = repn.polynomial_degree()
         if (degree is None) or (degree > max_degree):
             raise DegreeError('GurobiDirect does not support expressions of degree {0}.'.format(degree))
 
