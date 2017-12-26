@@ -2,36 +2,37 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = [ 'Connector' ]
+__all__ = ['Connector']
 
 import logging
 import sys
-from six import iteritems, itervalues, iterkeys
-from six.moves import xrange
 from weakref import ref as weakref_ref
 
-from pyomo.util.timing import ConstructionTimer
-from pyomo.util.plugin import Plugin, implements
+from six import iteritems, iterkeys, itervalues
 
-from pyomo.core.base.component import ComponentData, register_component
-from pyomo.core.base.indexed_component import IndexedComponent
+from pyomo.core.base.component import ActiveComponentData, register_component
+from pyomo.core.base.indexed_component import ActiveIndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.numvalue import NumericValue, value
-from pyomo.core.base.plugin import IPyomoScriptModifyInstance, TransformationFactory
+from pyomo.core.base.plugin import (IPyomoScriptModifyInstance,
+                                    TransformationFactory)
+from pyomo.util.plugin import Plugin, implements
+from pyomo.util.timing import ConstructionTimer
+from six.moves import xrange
 
 logger = logging.getLogger('pyomo.core')
 
 
-class _ConnectorData(ComponentData, NumericValue):
+class _ConnectorData(ActiveComponentData, NumericValue):
     """Holds the actual connector information"""
 
-    __slots__ = ('vars','aggregators')
+    __slots__ = ('vars', 'aggregators')
 
     def __init__(self, component=None):
         """Constructor"""
@@ -41,11 +42,10 @@ class _ConnectorData(ComponentData, NumericValue):
         #   - ComponentData
         #   - NumericValue
         self._component = weakref_ref(component) if (component is not None) \
-                          else None
+            else None
 
         self.vars = {}
         self.aggregators = {}
-    
 
     def __getstate__(self):
         state = super(_ConnectorData, self).__getstate__()
@@ -95,7 +95,6 @@ class _ConnectorData(ComponentData, NumericValue):
     def is_continuous(self):
         return len(self) and all(v.is_continuous() for v in self._iter_vars())
 
-
     def add(self, var, name=None, aggregate=None):
         if name is None:
             name = var.local_name
@@ -106,7 +105,6 @@ class _ConnectorData(ComponentData, NumericValue):
         if aggregate is not None:
             self.aggregators[name] = aggregate
 
-
     def _iter_vars(self):
         for var in itervalues(self.vars):
             if not hasattr(var, 'is_indexed') or not var.is_indexed():
@@ -116,8 +114,7 @@ class _ConnectorData(ComponentData, NumericValue):
                     yield v
 
 
-
-class Connector(IndexedComponent):
+class Connector(ActiveIndexedComponent):
     """A collection of variables, which may be defined over a index
 
     The idea behind a Connector is to create a bundle of variables that
@@ -146,7 +143,6 @@ class Connector(IndexedComponent):
         else:
             return IndexedConnector.__new__(IndexedConnector)
 
-
     # TODO: default keyword is  not used?  Need to talk to Bill ...?
     def __init__(self, *args, **kwd):
         kwd.setdefault('ctype', Connector)
@@ -154,7 +150,7 @@ class Connector(IndexedComponent):
         self._initialize = kwd.pop('initialize', {})
         self._implicit = kwd.pop('implicit', {})
         self._extends = kwd.pop('extends', None)
-        IndexedComponent.__init__(self, *args, **kwd)
+        super(Connector, self).__init__(*args, **kwd)
         self._conval = {}
 
     #
@@ -165,15 +161,14 @@ class Connector(IndexedComponent):
         _conval = self._data[idx] = _ConnectorData(component=self)
         return _conval
 
-
     def construct(self, data=None):
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):  #pragma:nocover
-            logger.debug( "Constructing Connector, name=%s, from data=%s"
-                          % (self.name, data) )
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):  # pragma:nocover
+            logger.debug("Constructing Connector, name=%s, from data=%s"
+                         % (self.name, data))
         if self._constructed:
             return
         timer = ConstructionTimer(self)
-        self._constructed=True
+        self._constructed = True
         #
         # Construct _ConnectorData objects for all index values
         #
@@ -188,40 +183,38 @@ class Connector(IndexedComponent):
         for idx in initSet:
             tmp = self[idx]
             for key in self._implicit:
-                tmp.add(None,key)
+                tmp.add(None, key)
             if self._extends:
                 for key, val in iteritems(self._extends.vars):
-                    tmp.add(val,key)
+                    tmp.add(val, key)
             for key, val in iteritems(self._initialize):
-                tmp.add(val,key)
+                tmp.add(val, key)
             if self._rule:
                 items = apply_indexed_rule(
                     self, self._rule, self._parent(), idx)
                 for key, val in iteritems(items):
-                    tmp.add(val,key)
-
+                    tmp.add(val, key)
 
     def _pprint(self, ostream=None, verbose=False):
         """Print component information."""
-        def _line_generator(k,v):
+        def _line_generator(k, v):
             for _k, _v in sorted(iteritems(v.vars)):
                 if _v is None:
                     _len = '-'
                 elif _k in v.aggregators:
                     _len = '*'
-                elif hasattr(_v,'__len__'):
+                elif hasattr(_v, '__len__'):
                     _len = len(_v)
                 else:
                     _len = 1
                 yield _k, _len, str(_v)
-        return ( [("Size", len(self)),
-                  ("Index", self._index if self.is_indexed() else None),
-                  ],
-                 iteritems(self._data),
-                 ( "Name","Size", "Variable", ),
-                 _line_generator
-             )
-
+        return ([("Size", len(self)),
+                 ("Index", self._index if self.is_indexed() else None),
+                 ],
+                iteritems(self._data),
+                ("Name", "Size", "Variable", ),
+                _line_generator
+                )
 
     def display(self, prefix="", ostream=None):
         """
@@ -233,24 +226,25 @@ class Connector(IndexedComponent):
             return
         if ostream is None:
             ostream = sys.stdout
-        tab="    "
-        ostream.write(prefix+self.local_name+" : ")
-        ostream.write("Size="+str(len(self)))
+        tab = "    "
+        ostream.write(prefix + self.local_name + " : ")
+        ostream.write("Size=" + str(len(self)))
 
         ostream.write("\n")
-        def _line_generator(k,v):
+
+        def _line_generator(k, v):
             for _k, _v in sorted(iteritems(v.vars)):
                 if _v is None:
                     _val = '-'
                 elif not hasattr(_v, 'is_indexed') or not _v.is_indexed():
-                    _val = str(value( _v ))
+                    _val = str(value(_v))
                 else:
                     _val = "{%s}" % (', '.join('%r: %r' % (
-                        x, value(_v[x])) for x in sorted(_v._data) ),)
+                        x, value(_v[x])) for x in sorted(_v._data)),)
                 yield _k, _val
-        tabular_writer( ostream, prefix+tab,
-                        ((k,v) for k,v in iteritems(self._data)),
-                        ( "Name","Value" ), _line_generator )
+        tabular_writer(ostream, prefix + tab,
+                       ((k, v) for k, v in iteritems(self._data)),
+                       ("Name", "Value"), _line_generator)
 
 
 class SimpleConnector(Connector, _ConnectorData):
@@ -286,5 +280,6 @@ class ConnectorExpander(Plugin):
         xform = TransformationFactory('core.expand_connectors')
         xform.apply_to(instance, **kwds)
         return instance
+
 
 transform = ConnectorExpander()
