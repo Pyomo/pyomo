@@ -18,6 +18,7 @@ with a diverse set of optimization capabilities.
    scripting/index.rst
    modeling_extensions/index.rst
    developer_reference/index.rst
+   solvers/persistent_solvers.rst
    library_reference/index.rst
    problem_reference/index.rst
 

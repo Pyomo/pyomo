@@ -353,7 +353,6 @@ def create_model(data):
         instance = model
         if data.options.runtime.report_timing is True and not data.local.time_initial_import is None:
             print("      %6.2f seconds required to construct instance" % (data.local.time_initial_import))
-
     else:
         tick = time.time()
         if len(data.options.data.files) > 1:
