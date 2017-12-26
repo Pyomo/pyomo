@@ -300,7 +300,7 @@ class SystemCallSolver(OptSolver):
             [rc, log] = run(
                 command.cmd,
                 stdin = _input,
-                timelimit = self._timelimit + max(1, 0.01*self._timelimit),
+                timelimit = self._timelimit if self._timelimit is None else self._timelimit + max(1, 0.01*self._timelimit),
                 env   = command.env,
                 tee   = self._tee
              )
