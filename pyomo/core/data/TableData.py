@@ -127,6 +127,16 @@ class TableData(Plugin):
             self.options.model = self.options.index.model()
             self.options.index = self.options.index.local_name
 
+        elif type(self.options.index) in [tuple, list]:
+            tmp = []
+            for val in self.options.index:
+                if isinstance(val, Set):
+                    tmp.append(val.local_name)
+                    self.options.model = val.model()
+                else:
+                    tmp.append(val)
+            self.options.index = tuple(tmp)
+
         if self.options.format is None:
             if not self.options.set is None:
                 self.options.format = 'set'
