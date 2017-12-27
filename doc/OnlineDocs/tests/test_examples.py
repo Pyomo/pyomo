@@ -36,16 +36,13 @@ solver_dependencies =   {
     },
 }
 package_dependencies =  {
-    'Test_data_abstract_ch': {
-        'test_data_abstract_ch_ABCD9': ['pyodbc',],
-        'test_data_abstract_ch_ABCD8': ['pyodbc',],
-        'test_data_abstract_ch_ABCD7': ['win32com',],
+    'Test_data': {
+        'test_data_ABCD9': ['pyodbc',],
+        'test_data_ABCD8': ['pyodbc',],
+        'test_data_ABCD7': ['win32com',],
     },
-    'Test_overview_ch': {
-        'test_overview_ch_pyomo_wl_excel': ['numpy','pandas','xlrd',],
-    },
-    'Test_scripts_ch': {
-        'test_scripts_ch_warehouse_function_cuts': ['numpy','matplotlib',],
+    'Test_dataportal': {
+        'test_dataportal_dataportal_tab': ['xlrd',],
     },
 }
 solver_available = {}

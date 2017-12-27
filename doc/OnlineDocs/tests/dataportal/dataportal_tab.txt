@@ -235,9 +235,9 @@ HERE
 2 Declarations: A p
 3 Set Declarations
     A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        [u'A1', u'A2', u'A3']
+        ['A1', 'A2', 'A3']
     B : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
-        [(1, u'B1'), (2, u'B2'), (3, u'B3')]
+        [(1, 'B1'), (2, 'B2'), (3, 'B3')]
     C : Dim=1, Dimen=1, Size=6, Domain=None, ArraySize=2, Ordered=False, Bounds=None
         Key : Members
          A1 : [1, 2, 3]
@@ -254,9 +254,9 @@ HERE
          A3 :   3.5
     r : Size=3, Index=B, Domain=Any, Default=None, Mutable=False
         Key        : Value
-        (1, u'B1') :   3.3
-        (2, u'B2') :   3.4
-        (3, u'B3') :   3.5
+        (1, 'B1') :   3.3
+        (2, 'B2') :   3.4
+        (3, 'B3') :   3.5
 
 6 Declarations: A B C p q r
 3 Set Declarations
