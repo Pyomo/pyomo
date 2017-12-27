@@ -3,169 +3,137 @@
 Data Portals
 ============
 
-
-\section{Using Native Python Data Types}
-
-Chapter~\ref{chap:overview} illustrates how Pyomo models can be
-constructed without \code{Set} and \code{Param} data components.
-Native Python data types class can be simply used to define constant
-values in Pyomo expressions.  Consequently, Python sets, lists and
-dictionaries can be used to construct Pyomo models, as well as a
-wide range of other Python classes.
-
-Pyomo models can also use \code{Set} and \code{Param} components
-that are initialized by native Python data.  This enables some
-modeling efficiencies when manipulating sets (e.g. when re-using
-sets for indices), and it supports validation of set and parameter
-data values.
-The \code{Set} and \code{Param} components are initialized with 
-Python data using the \code{initialize} option.  
-
-\subsection{Initializing \code{Set} Components}
-
-In general, \code{Set} components can be initialized with iterable data.
-For example, simple sets can be initialized with:
-\begin{itemize}
-\item list, set and tuple data:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/set_initialization.py}{decl2}{8}{10}
-\item generators:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/set_initialization.py}{decl3}{15}{16}
-\item numpy arrays:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/set_initialization.py}{decl4}{21}{22}
-\end{itemize}
-Sets can also be indirectly initialized with functions that return native Python data:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/set_initialization.py}{decl5}{27}{29}
-Indexed sets can be initialized with dictionary data where the dictionary values are iterable data:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/set_initialization.py}{decl6}{34}{38}
-
-\subsection{Initializing \code{Param} Components}
-
-When a parameter is a single value, then a \code{Param} component can 
-be simply initialized with a value:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/param_initialization.py}{decl1}{7}{7}
-More generally, \code{Param} components can be initialized with dictionary data where the dictionary values are single values:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/param_initialization.py}{decl2}{12}{12}
-Parameters can also be indirectly initialized with functions that return native Python data:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/param_initialization.py}{decl3}{17}{19}
-
-
-\section{Using DataPortal Objects}
-\index{DataPortal}
-\label{sec:dataportal:UsingDataPortalObjects}
-
-Pyomo's \code{DataPortal} object standardizes the process of
+Pyomo's :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>` class
+standardizes the process of
 constructing model instances by managing the process of loading
 data from different data sources in a uniform manner.
-Pyomo's \code{DataPortal}
-class can load data from the following data sources:
-\begin{itemize}
+A :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>` object
+can load data from the following data sources:
 
-\item \textbf{TAB File}: A text file format that uses whitespace to separate
-columns of values in each row of a table.\index{tab file@\code{.tab}
-file}\index{filename extension! tab@\code{.tab} ASCII}
+* **TAB File**: A text file format that uses whitespace to separate columns of values in each row of a table.
 
-\item \textbf{CSV File}: A text file format that uses comma or other delimiters
-to separate columns of values in each row of a table.\index{csv file@\code{.csv} file}\index{filename extension!
-csv@\code{.csv} ASCII}
+* **CSV File**: A text file format that uses comma or other delimiters to separate columns of values in each row of a table.
 
-\item \textbf{JSON File}: A popular lightweight data-interchange
-format that is easily parsed.\cite{JSON}\index{json file@\code{.json}
-file}\index{filename extension! json@\code{.json} ASCII}
+* **JSON File**: A popular lightweight data-interchange format that is easily parsed.
 
-\item \textbf{YAML File}: A human friendly data serialization
-standard.\cite{YAML}\index{yaml file@\code{.yaml} file}\index{filename
-extension! yaml@\code{.yaml} ASCII}
+* **YAML File**:  A human friendly data serialization standard.
 
-\item \textbf{XML File}: An extensible markup language for documents and data structures.  XML files can represent tabular data.\index{xml file@\code{.xml} file}\index{filename extension! xml@\code{.xml} ASCII}
+* **XML File**: An extensible markup language for documents and data structures.  XML files can represent tabular data.
 
-\item \textbf{Excel File}: A spreadsheet data format that is primarily
-used by the Microsoft Excel application.\index{spreadsheet}
+* **Excel File**: A spreadsheet data format that is primarily used by the Microsoft Excel application.
 
-\item \textbf{Database}: A relational database.\index{database}
+* **Database**: A relational database.
 
-\item \textbf{DAT File}: A Pyomo data command file.\index{dat file@ \code{.dat} file}\index{filename extension! dat@\code{.dat} ASCII}
-\end{itemize}
-Note that most of these data formats can express tabular data;
-Section~\ref{sec:dataportal:LoadingTabularData} provides examples
-of the use of \code{DataPortal} objects to load tabular data, and
-Section~\ref{sec:dataportal:LoadingOtherData} provides examples of
-loading data from serialized data formats.
+* **DAT File**: A Pyomo data command file.
 
-\begin{Xnotebox}
-The \code{DataPortal} class requires the installation of Python packages to
-support some of these data formats:
-\begin{itemize}
-\item{YAML File}: \code{pyyaml}\index{python packages! pyyaml}
+Note that most of these data formats can express tabular data.
 
-\item{Excel File}: \code{win32com}, \code{openpyxl} or \code{xlrd}\\
-These packages support different data Excel data formats:  the \code{win32com} package supports \code{.xls}, \code{.xlsm} and \code{.xlsx}, the \code{openpyxl} package supports \code{.xlsx} and the \code{xlrd} package supports \code{.xls}.)
-\index{python packages! win32com}\index{python packages!openpyxl}\index{python packages! xlrd}
+.. warning::
 
-\item{Database}: \code{pyodbc}, \code{pypyodbc}, \code{sqlite3} or \code{pymysql}\\
-These packages support different database interface APIs: the \code{pyodbc} and \code{pypyodbc} packages support the ODBC database API, the \code{sqlite3} package uses the SQLite C library to directly interface with databases using the DB-API 2.0 specification, and \code{pymysql} is a pure-Python MySQL client.\index{python packages! pyodbc}\index{python packages! pypyodbc}\index{python packages! sqlite3}\index{python packages! pymysql}
-\end{itemize}
-\end{Xnotebox}
+    The :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>`
+    class requires the installation of Python packages to support some
+    of these data formats:
 
-\code{DataPortal} objects can be used to initialize both concrete and abstract Pyomo models.
-Consider the file \code{A.tab},
-which defines a simple set with a tabular format:
-\datalisting{pyomo/examples/doc/pyomobook/ref-dataportal/A.tab}{}{1}{4} 
-The \code{load} method is used to load data into a
-\code{DataPortal} object.  
+    * **YAML File**: ``pyyaml``
+
+    * **Excel File**: ``win32com``, ``openpyxl`` or ``xlrd``
+
+        These packages support different data Excel data formats:
+        the ``win32com`` package supports ``.xls``, ``.xlsm``
+        and ``.xlsx``, the ``openpyxl`` package supports
+        ``.xlsx`` and the ``xlrd`` package supports ``.xls``.
+
+
+    * **Database**: ``pyodbc``, ``pypyodbc``, ``sqlite3`` or ``pymysql``
+
+        These packages support different database interface APIs:
+        the ``pyodbc`` and ``pypyodbc`` packages support the ODBC
+        database API, the ``sqlite3`` package uses the SQLite C
+        library to directly interface with databases using the
+        DB-API 2.0 specification, and ``pymysql`` is a pure-Python
+        MySQL client.
+
+:class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>`
+objects can be used to initialize both concrete and abstract Pyomo
+models.  Consider the file ``A.tab``, which defines a simple set
+with a tabular format:
+
+.. literalinclude:: ../tests/dataportal/A.tab
+    :language: none
+
+The ``load`` method is used to load data into a
+:class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>` object.  
 Components in a concrete model can be explicitly initialized 
-with data loaded by a \code{DataPortal} object:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{concrete1}{157}{161}
-All data needed to initialize an abstract model \textit{must} be provided by a \code{DataPortal} object,
-and the use of the \code{DataPortal} object to initialize components is automated for the
-user:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{load}{5}{9}
-Note the difference in the execution of the \code{load} method in
+with data loaded by a :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>` object:
+
+.. literalinclude:: ../tests/dataportal/dataportal_tab_concrete1.spy
+    :language: python
+
+All data needed to initialize an abstract model *must* be provided
+by a :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>`
+object, and the use of the :class:`DataPortal <ref
+pyomo.core.base.dataportal.DataPortal>` object to initialize
+components is automated for the user:
+
+.. literalinclude:: ../tests/dataportal/dataportal_tab_load.spy
+    :language: python
+
+Note the difference in the execution of the ``load`` method in
 these two examples: for concrete models data is loaded by name and
 the format must be specified, and for abstract models the data is
 loaded by component, from which the data format can often be inferred.
 
-The \code{load} method opens the data file, processes it, and loads
+The ``load`` method opens the data file, processes it, and loads
 the data in a format that can be used to construct a model instance.
-The \code{load} method can be called multiple times to load data
-for different sets or parameters, or to override data processed
-earlier. The \code{load} method takes a variety of arguments that 
-define how data is loaded:
-\begin{itemize}
-\item \code{filename}: This option specifies the source data file.
-\item \code{format}: This option specifies the how to interpret data within a table.  Valid formats are: \code{set}, \code{set\_array}, \code{param}, \code{table}, \code{array}, and \code{transposed\_array}.
-\item \code{set}: This option is either a string or model compent that defines a set that will be initialized with this data.
-\item \code{param}: This option is either a string or model compent that defines a parameter that will be initialized with this data.  A list or tuple of strings or model components can be used to define 
-multiple parameters that are initialized.
-\item \code{index}: This option is either a string or model compent that defines an index set that will be initialized with this data.
-\item \code{using}: This option specifies the Python package used to load this data source.  This option is used when loading data from databases.
-\item \code{select}: This option defines the columns that are selected from the data source.  The column order may be changed from the data source, which allows the \code{DataPortal} object to define
-\item \code{namespace}: This option defines the data namespace that will contain this data.  (See Section~\ref{sec:dataportal:Namespaces}.)
-\end{itemize}
-The use of these options is illustrated throught the rest of this chapter.
+The ``load`` method can be called multiple times to load data for
+different sets or parameters, or to override data processed earlier.
+The ``load`` method takes a variety of arguments that define how
+data is loaded:
 
-The \code{DataPortal} class also provides a simple API for accessing
-set and parameter data that are loaded from different data sources.
-The \code{[]} operator is used to access set and parameter values.
-Consider the following example, which loads data and prints the
-value of the \code{[]} operator:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{getitem}{177}{186}
+* ``filename``: This option specifies the source data file.
 
-The \code{DataPortal} class also has several methods for iterating over
-the data that has been loaded:
-\begin{itemize}
+* ``format``: This option specifies the how to interpret data within a table.  Valid formats are: ``set``, ``set_array``, ``param``, ``table``, ``array``, and ``transposed_array``.
 
-\item \code{keys()}: Returns an iterator of the data keys.
-\item \code{values()}: Returns an iterator of the data values.
-\item \code{items()}: Returns an iterator of (name, value) tuples from the data.
+* ``set``: This option is either a string or model compent that defines a set that will be initialized with this data.
 
-\end{itemize}
-Finally, the \code{data()} method provides a generic mechanism for
-accessing the underlying data representation used by \code{DataPortal} objects.
+* ``param``: This option is either a string or model compent that defines a parameter that will be initialized with this data.  A list or tuple of strings or model components can be used to define multiple parameters that are initialized.
+
+* ``index``: This option is either a string or model compent that defines an index set that will be initialized with this data.
+
+* ``using``: This option specifies the Python package used to load this data source.  This option is used when loading data from databases.
+
+* ``select``: This option defines the columns that are selected from the data source.  The column order may be changed from the data source, which allows the :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>` object to define
+
+* ``namespace``: This option defines the data namespace that will contain this data.  
+
+The use of these options is illustrated below.
+
+The :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>`
+class also provides a simple API for accessing set and parameter
+data that are loaded from different data sources.  The ``[]``
+operator is used to access set and parameter values.  Consider the
+following example, which loads data and prints the value of the
+``[]`` operator:
+
+.. literalinclude:: ../tests/dataportal/dataportal_tab_getitem.spy
+    :language: python
+
+The :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>`
+class also has several methods for iterating over the data that has
+been loaded:
+
+* ``keys()``: Returns an iterator of the data keys.
+* ``values()``: Returns an iterator of the data values.
+* ``items()``: Returns an iterator of (name, value) tuples from the data.
+
+Finally, the ``data()`` method provides a generic mechanism for
+accessing the underlying data representation used by :class:`DataPortal
+<ref pyomo.core.base.dataportal.DataPortal>` objects.
 
 
 
-\section{Loading Tabular Data}
-\label{sec:dataportal:LoadingTabularData}
+Loading Tabular Data
+--------------------
 
 Many data sources supported by Pyomo are tabular data formats.
 Tabular data is numerical or textual data that is organized into
@@ -175,322 +143,416 @@ and quoted strings.  All rows have the same length, all columns
 have the same length, and the first row typically represents labels
 for the column data.
 
-The next section describes the tabular data sources supported by
+The following section describes the tabular data sources supported by
 Pyomo, and the subsequent sections illustrate ways that data can
-be loaded from tabular data using TAB files.  The last section
-describes options for loading data from Excel spreadsheets and
+be loaded from tabular data using TAB files.  Subsequent sections 
+describe options for loading data from Excel spreadsheets and
 relational databases.
 
-\subsection{Tabular Data}
+Tabular Data
+^^^^^^^^^^^^
 
-TAB files represent tabular data in an ascii file using whitespace as a delimiter.
-A TAB file consists of rows of
-values, where each row has the same length.  For example, the file
-\code{PP.tab} has the format:
-\datalisting{pyomo/examples/doc/pyomobook/ref-dataportal/PP.tab}{}{1}{4}.
+TAB files represent tabular data in an ascii file using whitespace
+as a delimiter.  A TAB file consists of rows of values, where each
+row has the same length.  For example, the file ``PP.tab`` has the
+format:
+
+.. literalinclude:: ../tests/dataportal/PP.tab
+    :language: none
 
 CSV files represent tabular data in a format that is very similar
 to TAB files.  Pyomo assumes that a CSV file consists of rows of
 values, where each row has the same length.  For example, the file
-\code{PP.csv} has the format:
-\datalisting{pyomo/examples/doc/pyomobook/ref-dataportal/PP.csv}{}{1}{4}.
+``PP.csv`` has the format:
 
-Excel spreadsheets can express complex data relationships.  A
-\textit{range} is a contiguous, rectangular block of cells in an
-Excel spreadsheet.  Thus, a range in a spreadsheet has the same tabular 
-structure as is a TAB file or a CSV file.  For example, 
-consider the file \code{excel.xls} that has the range \code{PPtable}:
-\begin{center}
-\includegraphics[width=2.5in]{figures/PP.png}
-\end{center}
+.. literalinclude:: ../tests/dataportal/PP.csv
+    :language: none
+
+Excel spreadsheets can express complex data relationships.  A *range*
+is a contiguous, rectangular block of cells in an Excel spreadsheet.
+Thus, a range in a spreadsheet has the same tabular structure as
+is a TAB file or a CSV file.  For example, consider the file
+``excel.xls`` that has the range ``PPtable``:
+
+.. image:: PP.png
+    :width: 2.5in
 
 A relational database is an application that organizes data into
-one or more tables (or \textit{relations}) with a unique key in
-each row.  Tables both reflect the data in a database as well as
-the result of queries within a database.
+one or more tables (or *relations*) with a unique key in each row.
+Tables both reflect the data in a database as well as the result
+of queries within a database.
 
-XML files represent tabular using \code{table} and \code{row} elements.
-Each sub-element of a \code{row} element represents a different column, where each row has the same length.  For example, the file
-\code{PP.xml} has the format:
-\datalisting{pyomo/examples/doc/pyomobook/ref-dataportal/PP.xml}{}{1}{11}.
+XML files represent tabular using ``table`` and ``row`` elements.
+Each sub-element of a ``row`` element represents a different column,
+where each row has the same length.  For example, the file ``PP.xml``
+has the format:
+
+.. literalinclude:: ../tests/dataportal/PP.xml
+    :language: none
 
 
+Loading Set Data
+^^^^^^^^^^^^^^^^
 
+The ``set`` option is used specify a ``Set`` component that is
+loaded with data.
 
-\subsection{Loading Set Data}
+Loading a Simple Set
+""""""""""""""""""""
 
-The \code{set} option is used specify a \code{Set} component that
-is loaded with data.  
+Consider the file ``A.tab``, which defines a simple set:
 
-\subsubsection{Loading a Simple Set}
-\label{sec:dataportal:LoadSimpleSet}
+.. literalinclude:: ../tests/dataportal/A.tab
+    :language: none
 
-Consider the file \code{A.tab}, which defines a simple set:
-\datalisting{pyomo/examples/doc/pyomobook/ref-dataportal/A.tab}{}{1}{4} 
-In the following example, a \code{DataPortal} object loads
-data for a simple set \code{A}:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{set1}{14}{18}
+In the following example, a :class:`DataPortal <ref
+pyomo.core.base.dataportal.DataPortal>` object loads data for a
+simple set ``A``:
 
-\subsubsection{Loading a Set of Tuples}
+.. literalinclude:: ../tests/dataportal/dataportal_tab_set1.spy
+    :language: python
 
-Consider the file \code{C.tab}:
-\datalisting{pyomo/examples/doc/pyomobook/ref-dataportal/C.tab}{}{1}{10}
-In the following example, a \code{DataPortal} object loads
-data for a two-dimensional set \code{C}:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{set2}{23}{27}
-In this example, the column titles do not directly
-impact the process of loading data.  Column titles can be used 
-to select a subset of columns from a table that is loaded
-(see below).
+Loading a Set of Tuples
+"""""""""""""""""""""""
 
-\subsubsection{Loading a Set Array}
+Consider the file ``C.tab``:
 
-Consider the file \code{D.tab}, which defines an array representation
+.. literalinclude:: ../tests/dataportal/C.tab
+    :language: none
+
+In the following example, a :class:`DataPortal <ref
+pyomo.core.base.dataportal.DataPortal>` object loads data for a
+two-dimensional set ``C``:
+
+.. literalinclude:: ../tests/dataportal/dataportal_tab_set2.spy
+    :language: python
+
+In this example, the column titles do not directly impact the process
+of loading data.  Column titles can be used to select a subset of
+columns from a table that is loaded (see below).
+
+Loading a Set Array
+"""""""""""""""""""
+
+Consider the file ``D.tab``, which defines an array representation
 of a two-dimensional set:
-\datalisting{pyomo/examples/doc/pyomobook/ref-dataportal/D.tab}{}{1}{4}
-In the following example, a \code{DataPortal} object loads
-data for a two-dimensional set \code{D}:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{set3}{32}{36}
-The \code{format} option indicates that the set data is declared
-in a array format.
 
-\subsection{Loading Parameter Data}
+.. literalinclude:: ../tests/dataportal/D.tab
+    :language: none
 
-The \code{param} option is used specify a \code{Param} component
-that is loaded with data.  
+In the following example, a :class:`DataPortal <ref
+pyomo.core.base.dataportal.DataPortal>` object loads data for a
+two-dimensional set ``D``:
 
-\subsubsection{Loading a Simple Parameter}
-\label{sec:dataportal:LoadSimpleParam}
+.. literalinclude:: ../tests/dataportal/dataportal_tab_set3.spy
+    :language: python
 
-The simplest parameter is simply a singleton value.
-Consider the file \code{Z.tab}:
-\datalisting{pyomo/examples/doc/pyomobook/ref-dataportal/Z.tab}{}{1}{1}
-In the following example, a \code{DataPortal} object loads
-data for a simple parameter \code{z}:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{param1}{42}{46}
+The ``format`` option indicates that the set data is declared in a
+array format.
 
-\subsubsection{Loading an Indexed Parameter}
-\label{sec:dataportal:LoadIndexedParam}
 
-An indexed parameter can be defined by a single column in a table.  For example,
-consider the file \code{Y.tab}:
-\datalisting{pyomo/examples/doc/pyomobook/ref-dataportal/Y.tab}{}{1}{4}
-In the following example, a \code{DataPortal} object loads
-data for an indexed parameter \code{y}:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{param2}{51}{56}
+Loading Parameter Data
+^^^^^^^^^^^^^^^^^^^^^^
+
+The ``param`` option is used specify a ``Param`` component that is
+loaded with data.
+
+Loading a Simple Parameter
+""""""""""""""""""""""""""
+
+The simplest parameter is simply a singleton value.  Consider the
+file ``Z.tab``:
+
+.. literalinclude:: ../tests/dataportal/Z.tab
+    :language: none
+
+In the following example, a :class:`DataPortal <ref
+pyomo.core.base.dataportal.DataPortal>` object loads data for a
+simple parameter ``z``:
+
+.. literalinclude:: ../tests/dataportal/dataportal_tab_param1.spy
+    :language: python
+
+Loading an Indexed Parameter
+""""""""""""""""""""""""""""
+
+An indexed parameter can be defined by a single column in a table.
+For example, consider the file ``Y.tab``:
+
+.. literalinclude:: ../tests/dataportal/Y.tab
+    :language: none
+
+In the following example, a :class:`DataPortal <ref
+pyomo.core.base.dataportal.DataPortal>` object loads data for an
+indexed parameter ``y``:
+
+.. literalinclude:: ../tests/dataportal/dataportal_tab_param2.spy
+    :language: python
+
 When column names are not used to specify the index and parameter
-data, then the \code{DataPortal} object assumes that the rightmost
-column defines parameter values.  In this file, the \code{A} column
-contains the index values, and the \code{Y} column contains the
+data, then the :class:`DataPortal <ref
+pyomo.core.base.dataportal.DataPortal>` object assumes that the
+rightmost column defines parameter values.  In this file, the ``A``
+column contains the index values, and the ``Y`` column contains the
 parameter values.
 
-\subsubsection{Loading Set and Parameter Values}
-\label{sec:dataportal:LoadSetParamValues}
+Loading Set and Parameter Values
+""""""""""""""""""""""""""""""""
 
-Note that the data for set \code{A} is predefined in the previous example.
-The index set can be loaded with the parameter data using the
-\code{index} option.  In the following example, a \code{DataPortal}
-object loads data for set \code{A} and the indexed parameter \code{y}
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{param3}{72}{77}
+Note that the data for set ``A`` is predefined in the previous
+example.  The index set can be loaded with the parameter data using
+the ``index`` option.  In the following example, a :class:`DataPortal
+<ref pyomo.core.base.dataportal.DataPortal>` object loads data for
+set ``A`` and the indexed parameter ``y``
+
+.. literalinclude:: ../tests/dataportal/dataportal_tab_param3.spy
+    :language: python
 
 An index set with multiple dimensions can also be loaded with an
-indexed parameter.  Consider the file \code{PP.tab}:
-\datalisting{pyomo/examples/doc/pyomobook/ref-dataportal/PP.tab}{}{1}{4}
-In the following example, a \code{DataPortal} object loads data 
-for a tuple set and an indexed parameter:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{param10}{137}{142}
+indexed parameter.  Consider the file ``PP.tab``:
 
-\if 0
-The \code{index} option can also define a list of index sets that
-are loaded:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{param11}{147}{153}
-\fi
+.. literalinclude:: ../tests/dataportal/PP.tab
+    :language: none
+
+In the following example, a :class:`DataPortal <ref
+pyomo.core.base.dataportal.DataPortal>` object loads data for a
+tuple set and an indexed parameter:
+
+.. literalinclude:: ../tests/dataportal/dataportal_tab_param10.spy
+    :language: python
 
 
-\subsubsection{Loading a Parameter with Missing Values}
+Loading a Parameter with Missing Values
+"""""""""""""""""""""""""""""""""""""""
 
 Missing parameter data can be expressed in two ways.  First, parameter
 data can be defined with indices that are a subset of valid indices
-in the model.  The following example loads the indexed
-parameter \code{y}:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{param9}{127}{132}
-The model defines an index set with four values, but
-only three parameter values are declared in the data file \code{Y.tab}.
+in the model.  The following example loads the indexed parameter
+``y``:
 
-Parameter data can also be declared with missing values using the \code{"."} value.  For example, consider the file \code{S.tab}:
-\datalisting{pyomo/examples/doc/pyomobook/ref-dataportal/S.tab}{}{1}{4}
-In the following example, a \code{DataPortal} object loads data for the
-index set \code{A} and indexed parameter \code{y}:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{param8}{117}{122}
-The \code{"."} value indicates a missing parameter value, but the 
-index set \code{A} contains the index value for the missing parameter.
+.. literalinclude:: ../tests/dataportal/dataportal_tab_param9.spy
+    :language: python
 
-\subsubsection{Loading Multiple Parameters}
+The model defines an index set with four values, but only three
+parameter values are declared in the data file ``Y.tab``.
 
-Multiple parameters can be initialized at once by
-specifying a list (or tuple) of component parameters.
-Consider the file \code{XW.tab}:
-\datalisting{pyomo/examples/doc/pyomobook/ref-dataportal/XW.tab}{}{1}{4}
-In the following example, a \code{DataPortal} object loads
-data for parameters \code{x} and \code{w}:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{param4}{61}{67}
+Parameter data can also be declared with missing values using the
+period (``.``) symbol.  For example, consider the file ``S.tab``:
 
-\subsubsection{Selecting Parameter Columns}
+.. literalinclude:: ../tests/dataportal/PP.tab
+    :language: none
+
+In the following example, a :class:`DataPortal <ref
+pyomo.core.base.dataportal.DataPortal>` object loads data for the
+index set ``A`` and indexed parameter ``y``:
+
+.. literalinclude:: ../tests/dataportal/dataportal_tab_param8.spy
+    :language: python
+
+The period (``.``) symbol indicates a missing parameter value, but the 
+index set ``A`` contains the index value for the missing parameter.
+
+Loading Multiple Parameters
+"""""""""""""""""""""""""""
+
+Multiple parameters can be initialized at once by specifying a list
+(or tuple) of component parameters.  Consider the file ``XW.tab``:
+
+.. literalinclude:: ../tests/dataportal/XW.tab
+    :language: none
+
+In the following example, a :class:`DataPortal <ref
+pyomo.core.base.dataportal.DataPortal>` object loads data for
+parameters ``x`` and ``w``:
+
+.. literalinclude:: ../tests/dataportal/dataportal_tab_param4.spy
+    :language: python
+
+Selecting Parameter Columns
+"""""""""""""""""""""""""""
 
 We have previously noted that the column names do not need to be
-specified to load set and parameter data.  However, the \code{select}
+specified to load set and parameter data.  However, the ``select``
 option can be to identify the columns in the table that are used
 to load parameter data.  This option specifies a list (or tuple)
 of column names that are used, in that order, to form the table
 that defines the component data.
 
 For example, consider the following load declaration:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{param5}{82}{88}
-The columns \code{A} and \code{W} are selected from the file
-\code{XW.tab}, and a single parameter is defined.
 
-\subsubsection{Loading a Parameter Array}
+.. literalinclude:: ../tests/dataportal/dataportal_tab_param5.spy
+    :language: python
 
-Consider the file \code{U.tab}, which defines an array representation
+The columns ``A`` and ``W`` are selected from the file ``XW.tab``,
+and a single parameter is defined.
+
+Loading a Parameter Array
+"""""""""""""""""""""""""
+
+Consider the file ``U.tab``, which defines an array representation
 of a multiply-indexed parameter:
-\datalisting{pyomo/examples/doc/pyomobook/ref-dataportal/U.tab}{}{1}{5}
-In the following example, a \code{DataPortal} object loads
-data for a two-dimensional parameter \code{u}:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{param6}{93}{100}
-The \code{format} option indicates that the parameter data is declared
-in a array format.  The \code{format} option can also indicate that the
-parameter data should be transposed.
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{param7}{105}{112}
+
+.. literalinclude:: ../tests/dataportal/U.tab
+    :language: none
+
+In the following example, a :class:`DataPortal <ref
+pyomo.core.base.dataportal.DataPortal>` object loads data for a
+two-dimensional parameter ``u``:
+
+.. literalinclude:: ../tests/dataportal/dataportal_tab_param6.spy
+    :language: python
+
+The ``format`` option indicates that the parameter data is declared
+in a array format.  The ``format`` option can also indicate that
+the parameter data should be transposed.
+
+.. literalinclude:: ../tests/dataportal/dataportal_tab_param7.spy
+    :language: python
+
 Note that the transposed parameter data changes the index set for
 the parameter.
 
 
-\subsection{Loading from Spreadsheets and Databases}
+Loading from Spreadsheets and Databases
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Tabular data can be loaded from spreadsheets and databases using 
 auxilliary Python packages that provide an interface to these data formats.
-Data can be loaded from Excel spreadsheets using the \code{win32com},
-\code{xlrd} and \code{openpyxl} packages.  For example, consider the following
-range of cells, which is named \code{PPtable}:
-\begin{center}
-\includegraphics[width=2.5in]{figures/PP.png}
-\end{center}
-In the following example, a \code{DataPortal} object loads the named range \code{PPtable} from the 
-file \code{excel.xls}:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{excel1}{190}{196}
-Note that the \code{range} option is required to specify the table
-of cell data that is loaded from the spreadsheet.
+Data can be loaded from Excel spreadsheets using the ``win32com``,
+``xlrd`` and ``openpyxl`` packages.  For example, consider the following
+range of cells, which is named ``PPtable``:
 
-%
-% TODO: provide an example of loading an explicit range of cells
-%
-%Similarly, a range may specify an explicit range of cells:
-%\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{excel2}{201}{207}
+.. image:: PP.png
+    :width: 2.5in
 
-There are a variety of ways that data can be loaded from a relational database.
-In the simplest case, a table can be specified within a database:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{db1}{212}{219}
-In this example, the interface \code{sqlite3} is used to load data from an SQLite database in the file
-\code{PP.sqlite}.\index{sqlite file@\code{.sqlite} file}\index{filename extension!sqlite@\code{.sqlite} SQLite} More generally, an SQL query can be specified to dynamicly generate a table.\index{SQL query}  For example:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{db2}{224}{231}
+In the following example, a :class:`DataPortal <ref
+pyomo.core.base.dataportal.DataPortal>` object loads the named range
+``PPtable`` from the file ``excel.xls``:
+
+.. literalinclude:: ../tests/dataportal/dataportal_tab_excel1.spy
+    :language: python
+
+Note that the ``range`` option is required to specify the table of
+cell data that is loaded from the spreadsheet.
+
+There are a variety of ways that data can be loaded from a relational
+database.  In the simplest case, a table can be specified within a
+database:
+
+.. literalinclude:: ../tests/dataportal/dataportal_tab_db1.spy
+    :language: python
+
+In this example, the interface ``sqlite3`` is used to load data
+from an SQLite database in the file ``PP.sqlite``.  More generally,
+an SQL query can be specified to dynamicly generate a table.  For
+example:
+
+.. literalinclude:: ../tests/dataportal/dataportal_tab_db2.spy
+    :language: python
 
 
-%The following reworks the example from Section~\ref{sec:dataportal:LoadSetParamValues} to load
-%data from a relational database:
-%\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{db1}{212}{219}
 
-
-
-\section{Serialized Data Formats}
-\label{sec:dataportal:LoadingOtherData}
+Serialized Data Formats
+-----------------------
 
 JSON and YAML files are structured data formats that are well-suited
-for data serialization.  These data formats do not represent data in tabular format,
-but instead they
-directly represent set and parameter values with lists and dictionaries:
-\begin{itemize}
-\item \textbf{Simple Set}: a list of string or numeric value
-\item \textbf{Indexed Set}: a dictionary that maps an index to a list of string or numeric value
-\item \textbf{Simple Parameter}: a string or numeric value
-\item \textbf{Indexed Parameter}: a dictionary that maps an index to a numeric value
-\end{itemize}
+for data serialization.  These data formats do not represent data
+in tabular format, but instead they directly represent set and
+parameter values with lists and dictionaries:
+
+* **Simple Set**: a list of string or numeric value
+
+* **Indexed Set**: a dictionary that maps an index to a list of string or numeric value
+
+* **Simple Parameter**: a string or numeric value
+
+* **Indexed Parameter**: a dictionary that maps an index to a numeric value
 
 For example, consider the following JSON file:
-\datalisting{pyomo/examples/doc/pyomobook/ref-dataportal/T.json}{}{1}{8} 
+
+.. literalinclude:: ../tests/dataportal/T.json
+    :language: none
+
 The data in this file can be used to load the following model:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{json1}{251}{259}
-Note that no \code{set} or \code{param} option needs to be specified when loading a 
-\code{JSON} or \code{YAML} file.  All of the set and parameter data in the file are loaded
-by the \code{DataPortal} object, and only the data needed for model construction is
-used.
+
+.. literalinclude:: ../tests/dataportal/dataportal_tab_json1.spy
+    :language: python
+
+Note that no ``set`` or ``param`` option needs to be specified when
+loading a ``JSON`` or ``YAML`` file.  All of the set and parameter
+data in the file are loaded by the :class:`DataPortal <ref
+pyomo.core.base.dataportal.DataPortal>` object, and only the data
+needed for model construction is used.
 
 The following YAML file has a similar structure:
-\datalisting{pyomo/examples/doc/pyomobook/ref-dataportal/T.yaml}{}{1}{17} 
-The data in this file can be used to load a Pyomo model with the same syntax as a JSON file:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{yaml1}{265}{273}
+
+.. literalinclude:: ../tests/dataportal/T.yaml
+    :language: none
+
+The data in this file can be used to load a Pyomo model with the
+same syntax as a JSON file:
+
+.. literalinclude:: ../tests/dataportal/dataportal_tab_yaml1.spy
+    :language: python
 
 
-\section{Data Namespaces}
-\label{sec:dataportal:Namespaces}
+Data Namespaces
+---------------
 
-The \code{DataPortal} class supports the concept of a \textit{namespace}
-to organize data into named groups that can be enabled or disabled
-during model construction.  
-Various \code{DataPortal} methods have an optional
-\code{namespace} argument that defaults to \code{None}:
-\begin{itemize}
+The :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>`
+class supports the concept of a *namespace* to organize data
+into named groups that can be enabled or disabled during model
+construction.  Various :class:`DataPortal <ref
+pyomo.core.base.dataportal.DataPortal>` methods have an optional
+``namespace`` argument that defaults to ``None``:
 
-\item \code{data(name=None, namespace=None)}: Returns the data
-associated with data in the specified namespace
+* ``data(name=None, namespace=None)``: Returns the data associated with data in the specified namespace
 
-\item \code{[]}: For a \code{DataPortal} object \code{data}, the
-function \code{data['A']} returns data corresponding to \code{A}
-in the default namespace, and \code{data['ns1','A']} returns data
-corresponding to \code{A} in namespace \code{ns1}.
+* ``[]``: For a :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>` object ``data``, the function ``data['A']`` returns data corresponding to ``A`` in the default namespace, and ``data['ns1','A']`` returns data corresponding to ``A`` in namespace ``ns1``.
 
-\item \code{namespaces()}: Returns an iteratore for the data
-namespaces.
+* ``namespaces()``: Returns an iteratore for the data namespaces.
 
-\item \code{keys(namespace=None)}: Returns an iterator of the data
-keys in the specified namespace.
+* ``keys(namespace=None)``: Returns an iterator of the data keys in the specified namespace.
 
-\item \code{values(namespace=None)}: Returns and iterator of the
-data values in the specified namespace.
+* ``values(namespace=None)``: Returns and iterator of the data values in the specified namespace.
 
-\item \code{items(namespace=None)}: Returns an iterator of (name,
-value) tuples in the specified namespace.
+* ``items(namespace=None)``: Returns an iterator of (name, value) tuples in the specified namespace.
 
-\end{itemize}
 By default, data within a namespace are ignored during model
 construction.  However, concrete models can be initialized with
 data from a specific namespace.  Further, abstract models can be
-initialized with a list of namespaces that define the data used to initialized model
-components.
-For example, the following script generates two model instances from
-an abstract model using data loaded into different namespaces:
-\listing{pyomo/examples/doc/pyomobook/ref-dataportal/dataportal_tab.py}{namespaces1}{280}{287}
+initialized with a list of namespaces that define the data used to
+initialized model components.  For example, the following script
+generates two model instances from an abstract model using data
+loaded into different namespaces:
+
+.. literalinclude:: ../tests/dataportal/dataportal_tab_namespaces1.spy
+    :language: python
 
 
+Discussion
+----------
 
+:class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>` is
+a fundamental data management class in Pyomo that works both with
+abstract and concrete models.  When constructing an abstract model,
+*all* abstract data must be loaded with a :class:`DataPortal
+<ref pyomo.core.base.dataportal.DataPortal>`.  Of course, other
+data can be used in an abstract model, including native Python data,
+but that will not be abstract data.  Further, using native Python
+data may limit potential uses of the abstract model (e.g. pickling
+may not always work).
 
-\section{Discussion}
+When constructing a concrete model, a :class:`DataPortal <ref
+pyomo.core.base.dataportal.DataPortal>` object is not necessary.
+Native Python data can be used to construct the model.  However,
+:class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>` s
+make it easy to switch between data sources, and they are a simple
+mechanism for loading data from Pyomo data command files.
 
-\code{DataPortal} is a fundamental data management class
-in Pyomo that works both with abstract and concrete models.  When
-constructing an abstract model, \textit{all} abstract data must be
-loaded with a \code{DataPortal}.  Of course, other data can be used
-in an abstract model, including native Python data, but that will
-not be abstract data.  Further, using native Python data may limit potential 
-uses of the abstract model (e.g. pickling may not always work).
+Finally, we note that the :class:`DataPortal <ref
+pyomo.core.base.dataportal.DataPortal>` class includes a ``store``
+method for storing data into various data formats.  This capability
+is well-developed for the serialized data formats: JSON and YAML.
+But it is not robustly supported for tabular data formats.
 
-When constructing a concrete model, a \code{DataPortal} object is
-not necessary.  Native Python data can be used to construct the
-model.  However, \code{DataPortal}s make it easy to switch between
-data sources, and they are a simple mechanism for loading data from Pyomo
-data command files (which are described in the next chapter).
-
-Finally, we note that the \code{DataPortal} class includes a
-\code{store} method for storing data into various data formats.
-This capability is well-developed for the serialized data formats:
-JSON and YAML.  But it is not robustly supported 
-for tabular data formats.

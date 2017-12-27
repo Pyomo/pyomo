@@ -12,7 +12,7 @@ expressions.  Consequently, Python sets, lists and dictionaries can
 be used to construct Pyomo models, as well as a wide range of other
 Python classes.
 
-TODO - HERE
+TODO - More examples here:  set, list, dict, numpy, pandas.
 
 
 Initializing Set and Parameter Components
@@ -36,27 +36,27 @@ can be initialized with:
 
 * list, set and tuple data:
 
-    .. literalinclude:: ../tests/dataportal/set_initialization_decl2.py
+    .. literalinclude:: ../tests/dataportal/set_initialization_decl2.spy
         :language: python
 
 * generators:
 
-    .. literalinclude:: ../tests/dataportal/set_initialization_decl3.py
+    .. literalinclude:: ../tests/dataportal/set_initialization_decl3.spy
         :language: python
 
 * numpy arrays:
 
-    .. literalinclude:: ../tests/dataportal/set_initialization_decl4.py
+    .. literalinclude:: ../tests/dataportal/set_initialization_decl4.spy
         :language: python
 
 Sets can also be indirectly initialized with functions that return native Python data:
 
-.. literalinclude:: ../tests/dataportal/set_initialization_decl5.py
+.. literalinclude:: ../tests/dataportal/set_initialization_decl5.spy
     :language: python
 
 Indexed sets can be initialized with dictionary data where the dictionary values are iterable data:
 
-.. literalinclude:: ../tests/dataportal/set_initialization_decl6.py
+.. literalinclude:: ../tests/dataportal/set_initialization_decl6.spy
     :language: python
 
 
@@ -66,17 +66,17 @@ Parameter Components
 When a parameter is a single value, then a :class:`Param <ref pyomo.core.base.param.Param>` component can 
 be simply initialized with a value:
 
-.. literalinclude:: ../tests/dataportal/param_initialization_decl1.py
+.. literalinclude:: ../tests/dataportal/param_initialization_decl1.spy
     :language: python
 
 More generally, :class:`Param <ref pyomo.core.base.param.Param>` components can be initialized with dictionary data where the dictionary values are single values:
 
-.. literalinclude:: ../tests/dataportal/param_initialization_decl2.py
+.. literalinclude:: ../tests/dataportal/param_initialization_decl2.spy
     :language: python
 
 Parameters can also be indirectly initialized with functions that
 return native Python data:
 
-.. literalinclude:: ../tests/dataportal/param_initialization_decl3.py
+.. literalinclude:: ../tests/dataportal/param_initialization_decl3.spy
     :language: python
 

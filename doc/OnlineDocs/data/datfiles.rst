@@ -768,9 +768,7 @@ cells defines the column names for the table.
 Suppose that file ``ABCD.xls`` contains the range ``ABCD`` that is
 shown in the following figure:
 
-    figure::
-
-    ABCD.png
+.. image:: ABCD.png
 
 The following command loads this data to initialize parameter ``D``
 and index ``Z``:
