@@ -35,7 +35,7 @@ The data in this file can be used to load the following model:
 Note that no ``set`` or ``param`` option needs to be specified when
 loading a ``JSON`` or ``YAML`` file.  All of the set and parameter
 data in the file are loaded by the :class:`DataPortal <ref
-pyomo.core.base.dataportal.DataPortal>` object, and only the data
+pyomo.core.base.DataPortal.DataPortal>` object, and only the data
 needed for model construction is used.
 
 The following YAML file has a similar structure:
