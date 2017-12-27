@@ -1,0 +1,7 @@
+data = DataPortal()
+data.load(filename='Z.tab', param="z", format="param")
+data.load(filename='Y.tab', param="y", format="table")
+
+model = ConcreteModel()
+model.z = Param(initialize=data['z'])
+model.y = Param(['A1','A2','A3'], initialize=data['y'])
