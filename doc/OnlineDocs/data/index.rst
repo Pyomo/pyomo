@@ -1,6 +1,12 @@
 Managing Data in Pyomo Models
 =============================
 
+There are roughly three ways of using data to construct a Pyomo
+model: (1) use native Python data, (2) initialize a model with data
+loaded with a :code:`DataPortal <ref
+pyomo.core.base.dataportal.DataPortal>` object, and (3) load model
+data from a Pyomo data command file.
+
 The :class:`Set <ref pyomo.core.base.set.Set>` and :class:`Param <ref pyomo.core.base.param.Param>` components of a Pyomo model are
 used to define data values used to construct constraints and
 objectives.  Previous chapters have illustrated that these components
@@ -19,6 +25,6 @@ abstract data declarations.
 .. toctree::
    :maxdepth: 1
 
+   native.rst
    datfiles.rst
    dataportals.rst
-   other.rst

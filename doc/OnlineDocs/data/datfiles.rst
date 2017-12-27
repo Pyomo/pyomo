@@ -123,8 +123,8 @@ minus (``-``) to denote invalid tuples:
 .. literalinclude:: ../tests/data/set4.dat
     :language: none
 
-This data command declares the following five 2-tuples: ``('A1',1),
-('A1',2), ('A2',3), ('A3',2), ('A4',1)``.
+This data command declares the following five 2-tuples: ``('A1',1)``,
+``('A1',2)``, ``('A2',3)``, ``('A3',2)``, and ``('A4',1)``.
 
 Finally, a set of tuple data can be concisely represented with tuple
 *templates* that represent a *slice* of tuple data.  For example,
