@@ -2,9 +2,9 @@ from pyomo.environ import *
 
 model = AbstractModel()
 
-# @decl:
+# @decl
 model.z = Param()
-# @:decl
+# @decl
 
 instance = model.create_instance('ex.dat')
 

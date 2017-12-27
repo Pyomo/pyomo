@@ -2,10 +2,10 @@ from pyomo.environ import *
 
 model = AbstractModel()
 
-# @decl:
+# @decl
 model.A = Set()
 model.B = Set(model.A)
-# @:decl
+# @decl
 #model.C = Set(model.A,model.A)
 
 instance = model.create_instance('set3.dat')

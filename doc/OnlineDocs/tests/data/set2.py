@@ -2,9 +2,9 @@ from pyomo.environ import *
 
 model = AbstractModel()
 
-# @decl:
+# @decl
 model.A = Set(dimen=3)
-# @:decl
+# @decl
 
 instance = model.create_instance('set2.dat')
 

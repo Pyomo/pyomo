@@ -2,13 +2,13 @@ from pyomo.environ import *
 
 model = AbstractModel()
 
-# @decl:
+# @decl
 model.A = Param()
 model.B = Param()
 model.C = Param()
 model.D = Param()
 model.E = Param()
-# @:decl
+# @decl
 
 instance = model.create_instance('param1.dat')
 
