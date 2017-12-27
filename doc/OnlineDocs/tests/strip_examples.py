@@ -10,9 +10,19 @@ def f(root, file):
     #print([root, file, prefix])
     OUTPUT = open(root+'/'+prefix+'.spy','w')
     INPUT = open(root+'/'+file,'r')
+    flag = False
     for line in INPUT:
-        if line[0] == '#' and '@' in line:
+        if line.startswith("# @"):
+            line = line.strip()
+            if line.endswith(":"):
+                OUTPUT_ = open(root+'/'+prefix+'_%s.spy' % line[3:-1],'w')
+                flag = True
+            else:
+                OUTPUT_.close()
+                flag = False
             continue
+        elif flag:
+            OUTPUT_.write(line)
         OUTPUT.write(line)
     INPUT.close()
     OUTPUT.close()
