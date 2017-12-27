@@ -2136,6 +2136,17 @@ class TestBlock(unittest.TestCase):
         m.b.foo = 7
         self.assertIs(m.b.foo, 7)
 
+    def test_write_exceptions(self):
+        m = Block()
+        with self.assertRaisesRegexp(
+                ValueError, ".*Could not infer file format from file name"):
+            m.write(filename="foo.bogus")
+
+        with self.assertRaisesRegexp(
+                ValueError, ".*Cannot write model in format"):
+            m.write(format="bogus")
+
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1939,6 +1939,7 @@ class TestPHParallel(unittest.TestCase):
             baseline_dir+"farmer_linearized_gurobi_with_phpyro.baseline",
             filter=filter_pyro)
 
+    @unittest.category('fragile')
     def test_farmer_quadratic_ipopt_with_pyro(self):
         if not solver['ipopt','nl']:
             self.skipTest("The 'ipopt' executable is not available")
@@ -1957,6 +1958,7 @@ class TestPHParallel(unittest.TestCase):
             filter=filter_pyro,
             tolerance=_diff_tolerance_relaxed)
 
+    @unittest.category('fragile')
     def test_farmer_quadratic_ipopt_with_phpyro(self):
         if not solver['ipopt','nl']:
             self.skipTest("The 'ipopt' executable is not available")
@@ -1994,6 +1996,7 @@ class TestPHParallel(unittest.TestCase):
             filter=filter_pyro,
             tolerance=_diff_tolerance_relaxed)
 
+    @unittest.category('fragile')
     def test_farmer_quadratic_trivial_bundling_ipopt_with_phpyro(self):
         if not solver['ipopt','nl']:
             self.skipTest("The 'ipopt' executable is not available")
@@ -2011,6 +2014,7 @@ class TestPHParallel(unittest.TestCase):
             baseline_dir+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.baseline",
             filter=filter_pyro)
 
+    @unittest.category('fragile')
     def test_farmer_quadratic_bundling_ipopt_with_phpyro(self):
         if not solver['ipopt','nl']:
             self.skipTest("The 'ipopt' executable is not available")

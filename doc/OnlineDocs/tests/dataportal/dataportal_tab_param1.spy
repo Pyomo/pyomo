@@ -1,0 +1,5 @@
+model = AbstractModel()
+data = DataPortal()
+model.z = Param()
+data.load(filename='Z.tab', param=model.z)
+instance = model.create_instance(data)

@@ -1,0 +1,8 @@
+model = AbstractModel()
+model.C = Set(dimen=2)
+data = DataPortal()
+data.load(filename='C.tab', set=model.C, namespace='ns1')
+data.load(filename='D.tab', set=model.C, namespace='ns2', 
+                            format='set_array')
+instance1 = model.create_instance(data, namespaces=['ns1'])
+instance2 = model.create_instance(data, namespaces=['ns2'])

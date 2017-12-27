@@ -1,0 +1,8 @@
+model = AbstractModel()
+data = DataPortal()
+model.A = Set(initialize=['A1','A2','A3'])
+model.I = Set(initialize=['I1','I2','I3','I4'])
+model.u = Param(model.I, model.A)
+data.load(filename='U.tab', param=model.u, 
+                                    format='array')
+instance = model.create_instance(data)
