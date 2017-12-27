@@ -451,51 +451,6 @@ example:
     :language: python
 
 
-
-Serialized Data Formats
------------------------
-
-JSON and YAML files are structured data formats that are well-suited
-for data serialization.  These data formats do not represent data
-in tabular format, but instead they directly represent set and
-parameter values with lists and dictionaries:
-
-* **Simple Set**: a list of string or numeric value
-
-* **Indexed Set**: a dictionary that maps an index to a list of string or numeric value
-
-* **Simple Parameter**: a string or numeric value
-
-* **Indexed Parameter**: a dictionary that maps an index to a numeric value
-
-For example, consider the following JSON file:
-
-.. literalinclude:: ../tests/dataportal/T.json
-    :language: none
-
-The data in this file can be used to load the following model:
-
-.. literalinclude:: ../tests/dataportal/dataportal_tab_json1.spy
-    :language: python
-
-Note that no ``set`` or ``param`` option needs to be specified when
-loading a ``JSON`` or ``YAML`` file.  All of the set and parameter
-data in the file are loaded by the :class:`DataPortal <ref
-pyomo.core.base.dataportal.DataPortal>` object, and only the data
-needed for model construction is used.
-
-The following YAML file has a similar structure:
-
-.. literalinclude:: ../tests/dataportal/T.yaml
-    :language: none
-
-The data in this file can be used to load a Pyomo model with the
-same syntax as a JSON file:
-
-.. literalinclude:: ../tests/dataportal/dataportal_tab_yaml1.spy
-    :language: python
-
-
 Data Namespaces
 ---------------
 
@@ -529,30 +484,4 @@ loaded into different namespaces:
 .. literalinclude:: ../tests/dataportal/dataportal_tab_namespaces1.spy
     :language: python
 
-
-Discussion
-----------
-
-:class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>` is
-a fundamental data management class in Pyomo that works both with
-abstract and concrete models.  When constructing an abstract model,
-*all* abstract data must be loaded with a :class:`DataPortal
-<ref pyomo.core.base.dataportal.DataPortal>`.  Of course, other
-data can be used in an abstract model, including native Python data,
-but that will not be abstract data.  Further, using native Python
-data may limit potential uses of the abstract model (e.g. pickling
-may not always work).
-
-When constructing a concrete model, a :class:`DataPortal <ref
-pyomo.core.base.dataportal.DataPortal>` object is not necessary.
-Native Python data can be used to construct the model.  However,
-:class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>` s
-make it easy to switch between data sources, and they are a simple
-mechanism for loading data from Pyomo data command files.
-
-Finally, we note that the :class:`DataPortal <ref
-pyomo.core.base.dataportal.DataPortal>` class includes a ``store``
-method for storing data into various data formats.  This capability
-is well-developed for the serialized data formats: JSON and YAML.
-But it is not robustly supported for tabular data formats.
 

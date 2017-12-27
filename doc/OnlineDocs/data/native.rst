@@ -12,7 +12,9 @@ expressions.  Consequently, Python sets, lists and dictionaries can
 be used to construct Pyomo models, as well as a wide range of other
 Python classes.
 
-TODO - More examples here:  set, list, dict, numpy, pandas.
+.. admonition:: TODO 
+
+    More examples here:  set, list, dict, numpy, pandas.
 
 
 Initializing Set and Parameter Components
