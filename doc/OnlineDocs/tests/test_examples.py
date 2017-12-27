@@ -160,11 +160,6 @@ for tdir in testdirs:
   for testdir in glob.glob(os.path.join(tdir,'*')):
     if not os.path.isdir(testdir):
         continue
-    # Only test files in directories ending in -ch. These directories
-    # contain the updated python and scripting files corresponding to
-    # each chapter in the book.
-    if '-ch' not in testdir:
-        continue
 
     # print("Testing ",testdir)
 
