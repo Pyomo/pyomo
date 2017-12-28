@@ -42,7 +42,9 @@ package_dependencies =  {
         'test_data_ABCD7': ['win32com',],
     },
     'Test_dataportal': {
-        'test_dataportal_dataportal_tab': ['xlrd',],
+        'test_dataportal_dataportal_tab': ['xlrd'],
+        'test_dataportal_set_initialization': ['numpy'],
+        'test_dataportal_param_initialization': ['numpy'],
     },
 }
 solver_available = {}

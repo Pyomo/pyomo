@@ -218,6 +218,11 @@ data.load(filename='PP.sqlite', using='sqlite3',
                    param=model.p, index=model.A)
 instance = model.create_instance(data)
 # @db1
+data = DataPortal()
+data.load(filename='PP.sqlite', using='sqlite3',
+                   table='PPtable',
+                   param=model.p, index=model.A, text_factory=str)
+instance = model.create_instance(data)
 instance.pprint()
 # --------------------------------------------------
 # @db2
@@ -230,6 +235,11 @@ data.load(filename='PP.sqlite', using='sqlite3',
                    param=model.p, index=model.A)
 instance = model.create_instance(data)
 # @db2
+data = DataPortal()
+data.load(filename='PP.sqlite', using='sqlite3',
+                   query="SELECT A,PP FROM PPtable",
+                   param=model.p, index=model.A, text_factory=str)
+instance = model.create_instance(data)
 print("HERE")
 instance.pprint()
 # --------------------------------------------------
@@ -245,6 +255,12 @@ if False:
             param=model.p, index=model.A)
     instance = model.create_instance(data)
     # @db3
+    data = DataPortal()
+    data.load(filename="Driver={MySQL ODBC 5.2 UNICODE Driver}; Database=Pyomo; Server=localhost; User=pyomo;",
+            using='pypyodbc',
+            query="SELECT A,PP FROM PPtable",
+            param=model.p, index=model.A, text_factory=str)
+    instance = model.create_instance(data)
     instance.pprint()
 # --------------------------------------------------
 # @json1
@@ -258,6 +274,8 @@ model.q = Param(model.A)
 model.r = Param(model.B)
 data.load(filename='T.json')
 # @json1
+data = DataPortal()
+data.load(filename='T.json', convert_unicode=True)
 instance = model.create_instance(data)
 instance.pprint()
 # --------------------------------------------------
