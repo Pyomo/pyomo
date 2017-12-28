@@ -128,7 +128,20 @@ class JSONDictionary(Plugin):
         if not os.path.exists(self.filename):
             raise IOError("Cannot find file '%s'" % self.filename)
         INPUT = open(self.filename, 'r')
-        jdata = json.load(INPUT)
+        if self.options.convert_unicode:
+            def _byteify(data, ignore_dicts=False):
+                if isinstance(data, unicode):
+                    return data.encode('utf-8') 
+                if isinstance(data, list):
+                    return [ _byteify(item, True) for item in data ]
+                if isinstance(data, dict) and not ignore_dicts:
+                    return {
+                    _byteify(key, True): _byteify(value, True)
+                        for key, value in data.iteritems() }
+                return data
+            jdata = json.load(INPUT, object_hook=_byteify)
+        else:
+            jdata = json.load(INPUT)
         INPUT.close()
         if jdata is None or len(jdata) == 0:
             raise IOError("Empty JSON data file")
