@@ -129,7 +129,7 @@ class JSONDictionary(Plugin):
         if not os.path.exists(self.filename):
             raise IOError("Cannot find file '%s'" % self.filename)
         INPUT = open(self.filename, 'r')
-        if six.py2 and self.options.convert_unicode:
+        if six.PY2 and self.options.convert_unicode:
             def _byteify(data, ignore_dicts=False):
                 if isinstance(data, six.text_type):
                     return data.encode('utf-8') 
