@@ -136,9 +136,7 @@ class JSONDictionary(Plugin):
                 if isinstance(data, list):
                     return [ _byteify(item, True) for item in data ]
                 if isinstance(data, dict) and not ignore_dicts:
-                    return {
-                    _byteify(key, True): _byteify(value, True)
-                        for key, value in data.iteritems() }
+                    return {_byteify(key, True): _byteify(value, True) for (key, value) in data.iteritems() }
                 return data
             jdata = json.load(INPUT, object_hook=_byteify)
         else:
