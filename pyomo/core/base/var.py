@@ -519,6 +519,8 @@ class Var(IndexedComponent):
                             for idx, vardata in iteritems(self._data)
                                                 if not vardata.fixed)
 
+    extract_values = get_values
+
     def set_values(self, new_values, valid=False):
         """
         Set the values of a dictionary.
