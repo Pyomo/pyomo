@@ -1,3 +1,15 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+
+
 from __future__ import division
 import pyomo.util.plugin
 from pyomo.opt.base import *
@@ -17,6 +29,12 @@ from pyomo.environ import *
 import math
 logger = logging.getLogger('pyomo.solver')
 
+
+#parameters to govern the High Confidence stopping rule
+#The stopping mass is the maximum allowable estimated missing mass of optima
+#The stopping delta = 1-the confidence level required for the stopping rule
+#For both parameters, the lower the parameter the more stricter the rule.
+#both are bounded 0<x<=1
 stopping_mass = .5
 stopping_delta = .5
 
@@ -27,6 +45,8 @@ class Multistart(OptSolver):
 
     def __init__(self):
         pass
+
+
     def solve (self,model,**kwds):
         strategy = kwds.pop('strategy','rand')
         solver = kwds.pop('solver','ipopt')
@@ -40,8 +60,10 @@ class Multistart(OptSolver):
             val = value(m.obj.expr)
             objectives.append(val)
             models.append(m)
+        num_iter = 0
         if iterations == -1:
             while not self.should_stop(objectives):
+                num_iter +=1
                 m = copy.deepcopy(model)
                 self.reinitialize_all(m,strategy)
                 result = solver.solve(m)
@@ -49,7 +71,6 @@ class Multistart(OptSolver):
                     val = value(m.obj.expr)
                     objectives.append(val)
                     models.append(m)
-
         else:
             for i in xrange(iterations):
                 m = copy.deepcopy(model)
@@ -59,7 +80,6 @@ class Multistart(OptSolver):
                     val = value(m.obj.expr)
                     objectives.append(val)
                     models.append(m)
-
         if model.obj.sense == maximize:
             newmodel = models[np.argmax(objectives)]
         else:
@@ -105,6 +125,9 @@ class Multistart(OptSolver):
                               "rand_distributed": rand_distributed
                               }
                 var.value = strategies[strategy](val, lb, ub)
+
+    #determines the number of optima that have only been observed once.
+    #needed to estimate missing mass of optima
     def num_one_occurrences(self,lst):
         dist = {}
         for x in lst:
@@ -115,6 +138,8 @@ class Multistart(OptSolver):
         one_offs = [x for x in dist if dist[x] == 1]
         return len(one_offs)
 
+    #determines if the missing mass of unseen local optima is acceptable
+    #based on the High Confidence stopping rule.
     def should_stop(self,solutions):
         f = self.num_one_occurrences(solutions)
         n = len(solutions)
