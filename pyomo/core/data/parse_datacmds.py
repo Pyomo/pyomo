@@ -112,7 +112,7 @@ def t_WORD(t):
     return t
 
 def t_STRING(t):
-    r'[a-zA-Z0-9_\.+\-]+'
+    r'[a-zA-Z0-9_\.+\-\\\/]+'
     if t.value in reserved:
         t.type = reserved[t.value]    # Check for reserved words
     return t
