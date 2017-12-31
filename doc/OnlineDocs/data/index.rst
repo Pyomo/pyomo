@@ -6,7 +6,7 @@ model:
 
 1. use standard Python data objects, 
 
-2. initialize a model with data loaded with a :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>` object, and
+2. initialize a model with data loaded with a :class:`DataPortal <ref pyomo.core.base.DataPortal.DataPortal>` object, and
 
 3. load model data from a Pyomo data command file.
 
@@ -23,19 +23,19 @@ Python data objects.  (An import exception is that components indexed
 by :class:`Set <ref pyomo.core.base.set.Set>` objects use less
 memory than components indexed by native Python data.)
 
-The :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>`
+The :class:`DataPortal <ref pyomo.core.base.DataPortal.DataPortal>`
 class provides a generic facility for loading data from disparate
-sources.  A :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>`
+sources.  A :class:`DataPortal <ref pyomo.core.base.DataPortal.DataPortal>`
 object can load data in a consistent manner, and this data can be
 used to simply initialize all :class:`Set <ref pyomo.core.base.set.Set>`
 and :class:`Param <ref pyomo.core.base.param.Param>` components in
-a model.  :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>`
+a model.  :class:`DataPortal <ref pyomo.core.base.DataPortal.DataPortal>`
 objects can be used to initialize both concrete and abstract models
 in a uniform manner, which is important in some scripting applications.
 But in practice, this capability is only necessary for abstract
 models, whose data components are initialized after being constructed.  (In fact,
 all abstract data components in an abstract model are loaded from 
-:class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>` objects.)
+:class:`DataPortal <ref pyomo.core.base.DataPortal.DataPortal>` objects.)
 
 Finally, Pyomo data command files provide a convenient mechanism
 for initializing :class:`Set <ref pyomo.core.base.set.Set>` and
@@ -43,7 +43,7 @@ for initializing :class:`Set <ref pyomo.core.base.set.Set>` and
 high-level data specification.  Data command files can be used with
 both concrete and abstract models, though in a different manner.
 Data command files are parsed using a :class:`DataPortal <ref
-pyomo.core.base.dataportal.DataPortal>` object, which must be done
+pyomo.core.base.DataPortal.DataPortal>` object, which must be done
 explicitly for a concrete model.  However, abstract models can load
 data from a data command file directly, after the model is constructed.
 Again, this capability is only necessary for abstract models, whose

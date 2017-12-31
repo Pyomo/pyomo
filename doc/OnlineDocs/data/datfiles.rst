@@ -460,7 +460,7 @@ there are some important differences between these data commands:
 This last point provides a key motivation for the ``table`` command.
 Specifically, the ``table`` command can be used to reliably initialize
 concrete models using Pyomo's :class:`DataPortal <ref
-pyomo.core.base.dataportal.DataPortal>` class.  By contrast, the
+pyomo.core.base.DataPortal.DataPortal>` class.  By contrast, the
 ``param`` command can only be used to initialize concrete models
 with parameters that are indexed by a single column (i.e., a simple
 set).

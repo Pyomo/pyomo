@@ -3,11 +3,11 @@
 Data Portals
 ============
 
-Pyomo's :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>` class
+Pyomo's :class:`DataPortal <ref pyomo.core.base.DataPortal.DataPortal>` class
 standardizes the process of
 constructing model instances by managing the process of loading
 data from different data sources in a uniform manner.
-A :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>` object
+A :class:`DataPortal <ref pyomo.core.base.DataPortal.DataPortal>` object
 can load data from the following data sources:
 
 * **TAB File**: A text file format that uses whitespace to separate columns of values in each row of a table.
@@ -30,7 +30,7 @@ Note that most of these data formats can express tabular data.
 
 .. warning::
 
-    The :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>`
+    The :class:`DataPortal <ref pyomo.core.base.DataPortal.DataPortal>`
     class requires the installation of Python packages to support some
     of these data formats:
 
@@ -53,7 +53,7 @@ Note that most of these data formats can express tabular data.
         DB-API 2.0 specification, and ``pymysql`` is a pure-Python
         MySQL client.
 
-:class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>`
+:class:`DataPortal <ref pyomo.core.base.DataPortal.DataPortal>`
 objects can be used to initialize both concrete and abstract Pyomo
 models.  Consider the file ``A.tab``, which defines a simple set
 with a tabular format:
@@ -62,17 +62,17 @@ with a tabular format:
     :language: none
 
 The ``load`` method is used to load data into a
-:class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>` object.  
+:class:`DataPortal <ref pyomo.core.base.DataPortal.DataPortal>` object.  
 Components in a concrete model can be explicitly initialized 
-with data loaded by a :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>` object:
+with data loaded by a :class:`DataPortal <ref pyomo.core.base.DataPortal.DataPortal>` object:
 
 .. literalinclude:: ../tests/dataportal/dataportal_tab_concrete1.spy
     :language: python
 
 All data needed to initialize an abstract model *must* be provided
-by a :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>`
+by a :class:`DataPortal <ref pyomo.core.base.DataPortal.DataPortal>`
 object, and the use of the :class:`DataPortal <ref
-pyomo.core.base.dataportal.DataPortal>` object to initialize
+pyomo.core.base.DataPortal.DataPortal>` object to initialize
 components is automated for the user:
 
 .. literalinclude:: ../tests/dataportal/dataportal_tab_load.spy
@@ -102,13 +102,13 @@ data is loaded:
 
 * ``using``: This option specifies the Python package used to load this data source.  This option is used when loading data from databases.
 
-* ``select``: This option defines the columns that are selected from the data source.  The column order may be changed from the data source, which allows the :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>` object to define
+* ``select``: This option defines the columns that are selected from the data source.  The column order may be changed from the data source, which allows the :class:`DataPortal <ref pyomo.core.base.DataPortal.DataPortal>` object to define
 
 * ``namespace``: This option defines the data namespace that will contain this data.  
 
 The use of these options is illustrated below.
 
-The :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>`
+The :class:`DataPortal <ref pyomo.core.base.DataPortal.DataPortal>`
 class also provides a simple API for accessing set and parameter
 data that are loaded from different data sources.  The ``[]``
 operator is used to access set and parameter values.  Consider the
@@ -118,7 +118,7 @@ following example, which loads data and prints the value of the
 .. literalinclude:: ../tests/dataportal/dataportal_tab_getitem.spy
     :language: python
 
-The :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>`
+The :class:`DataPortal <ref pyomo.core.base.DataPortal.DataPortal>`
 class also has several methods for iterating over the data that has
 been loaded:
 
@@ -128,7 +128,7 @@ been loaded:
 
 Finally, the ``data()`` method provides a generic mechanism for
 accessing the underlying data representation used by :class:`DataPortal
-<ref pyomo.core.base.dataportal.DataPortal>` objects.
+<ref pyomo.core.base.DataPortal.DataPortal>` objects.
 
 
 
@@ -206,7 +206,7 @@ Consider the file ``A.tab``, which defines a simple set:
     :language: none
 
 In the following example, a :class:`DataPortal <ref
-pyomo.core.base.dataportal.DataPortal>` object loads data for a
+pyomo.core.base.DataPortal.DataPortal>` object loads data for a
 simple set ``A``:
 
 .. literalinclude:: ../tests/dataportal/dataportal_tab_set1.spy
@@ -221,7 +221,7 @@ Consider the file ``C.tab``:
     :language: none
 
 In the following example, a :class:`DataPortal <ref
-pyomo.core.base.dataportal.DataPortal>` object loads data for a
+pyomo.core.base.DataPortal.DataPortal>` object loads data for a
 two-dimensional set ``C``:
 
 .. literalinclude:: ../tests/dataportal/dataportal_tab_set2.spy
@@ -241,7 +241,7 @@ of a two-dimensional set:
     :language: none
 
 In the following example, a :class:`DataPortal <ref
-pyomo.core.base.dataportal.DataPortal>` object loads data for a
+pyomo.core.base.DataPortal.DataPortal>` object loads data for a
 two-dimensional set ``D``:
 
 .. literalinclude:: ../tests/dataportal/dataportal_tab_set3.spy
@@ -267,7 +267,7 @@ file ``Z.tab``:
     :language: none
 
 In the following example, a :class:`DataPortal <ref
-pyomo.core.base.dataportal.DataPortal>` object loads data for a
+pyomo.core.base.DataPortal.DataPortal>` object loads data for a
 simple parameter ``z``:
 
 .. literalinclude:: ../tests/dataportal/dataportal_tab_param1.spy
@@ -283,7 +283,7 @@ For example, consider the file ``Y.tab``:
     :language: none
 
 In the following example, a :class:`DataPortal <ref
-pyomo.core.base.dataportal.DataPortal>` object loads data for an
+pyomo.core.base.DataPortal.DataPortal>` object loads data for an
 indexed parameter ``y``:
 
 .. literalinclude:: ../tests/dataportal/dataportal_tab_param2.spy
@@ -291,7 +291,7 @@ indexed parameter ``y``:
 
 When column names are not used to specify the index and parameter
 data, then the :class:`DataPortal <ref
-pyomo.core.base.dataportal.DataPortal>` object assumes that the
+pyomo.core.base.DataPortal.DataPortal>` object assumes that the
 rightmost column defines parameter values.  In this file, the ``A``
 column contains the index values, and the ``Y`` column contains the
 parameter values.
@@ -302,7 +302,7 @@ Loading Set and Parameter Values
 Note that the data for set ``A`` is predefined in the previous
 example.  The index set can be loaded with the parameter data using
 the ``index`` option.  In the following example, a :class:`DataPortal
-<ref pyomo.core.base.dataportal.DataPortal>` object loads data for
+<ref pyomo.core.base.DataPortal.DataPortal>` object loads data for
 set ``A`` and the indexed parameter ``y``
 
 .. literalinclude:: ../tests/dataportal/dataportal_tab_param3.spy
@@ -315,7 +315,7 @@ indexed parameter.  Consider the file ``PP.tab``:
     :language: none
 
 In the following example, a :class:`DataPortal <ref
-pyomo.core.base.dataportal.DataPortal>` object loads data for a
+pyomo.core.base.DataPortal.DataPortal>` object loads data for a
 tuple set and an indexed parameter:
 
 .. literalinclude:: ../tests/dataportal/dataportal_tab_param10.spy
@@ -343,7 +343,7 @@ period (``.``) symbol.  For example, consider the file ``S.tab``:
     :language: none
 
 In the following example, a :class:`DataPortal <ref
-pyomo.core.base.dataportal.DataPortal>` object loads data for the
+pyomo.core.base.DataPortal.DataPortal>` object loads data for the
 index set ``A`` and indexed parameter ``y``:
 
 .. literalinclude:: ../tests/dataportal/dataportal_tab_param8.spy
@@ -362,7 +362,7 @@ Multiple parameters can be initialized at once by specifying a list
     :language: none
 
 In the following example, a :class:`DataPortal <ref
-pyomo.core.base.dataportal.DataPortal>` object loads data for
+pyomo.core.base.DataPortal.DataPortal>` object loads data for
 parameters ``x`` and ``w``:
 
 .. literalinclude:: ../tests/dataportal/dataportal_tab_param4.spy
@@ -396,7 +396,7 @@ of a multiply-indexed parameter:
     :language: none
 
 In the following example, a :class:`DataPortal <ref
-pyomo.core.base.dataportal.DataPortal>` object loads data for a
+pyomo.core.base.DataPortal.DataPortal>` object loads data for a
 two-dimensional parameter ``u``:
 
 .. literalinclude:: ../tests/dataportal/dataportal_tab_param6.spy
@@ -426,7 +426,7 @@ range of cells, which is named ``PPtable``:
     :width: 2.5in
 
 In the following example, a :class:`DataPortal <ref
-pyomo.core.base.dataportal.DataPortal>` object loads the named range
+pyomo.core.base.DataPortal.DataPortal>` object loads the named range
 ``PPtable`` from the file ``excel.xls``:
 
 .. literalinclude:: ../tests/dataportal/dataportal_tab_excel1.spy
@@ -454,16 +454,16 @@ example:
 Data Namespaces
 ---------------
 
-The :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>`
+The :class:`DataPortal <ref pyomo.core.base.DataPortal.DataPortal>`
 class supports the concept of a *namespace* to organize data
 into named groups that can be enabled or disabled during model
 construction.  Various :class:`DataPortal <ref
-pyomo.core.base.dataportal.DataPortal>` methods have an optional
+pyomo.core.base.DataPortal.DataPortal>` methods have an optional
 ``namespace`` argument that defaults to ``None``:
 
 * ``data(name=None, namespace=None)``: Returns the data associated with data in the specified namespace
 
-* ``[]``: For a :class:`DataPortal <ref pyomo.core.base.dataportal.DataPortal>` object ``data``, the function ``data['A']`` returns data corresponding to ``A`` in the default namespace, and ``data['ns1','A']`` returns data corresponding to ``A`` in namespace ``ns1``.
+* ``[]``: For a :class:`DataPortal <ref pyomo.core.base.DataPortal.DataPortal>` object ``data``, the function ``data['A']`` returns data corresponding to ``A`` in the default namespace, and ``data['ns1','A']`` returns data corresponding to ``A`` in namespace ``ns1``.
 
 * ``namespaces()``: Returns an iteratore for the data namespaces.
 
