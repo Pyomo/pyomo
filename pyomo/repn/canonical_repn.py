@@ -802,6 +802,8 @@ def collect_linear_canonical_repn(exp, idMap, compute_values=True):
 #########################################################################
 
 def coopr3_generate_canonical_repn(exp, idMap=None, compute_values=True):
+    if exp is None:
+        return CompiledLinearCanonicalRepn()
     degree = exp.polynomial_degree()
 
     if idMap is None:
@@ -857,6 +859,8 @@ _identity_collectors = set([
 
 
 def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
+    if exp is None:
+        return CompiledLinearCanonicalRepn()
     if exp.__class__ in native_numeric_types:
         ans = CompiledLinearCanonicalRepn()
         ans.constant = value(exp)

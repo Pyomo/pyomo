@@ -10,7 +10,7 @@
 
 import weakref
 from pyomo.core.base.var import Var, _VarData
-from pyomo.core.base.component import register_component
+from pyomo.core.base.plugin import register_component
 from pyomo.dae.contset import ContinuousSet
 from six import iterkeys
 
