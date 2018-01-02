@@ -19,7 +19,7 @@ class TestIntervalTightener(unittest.TestCase):
         m.v4 = Var(initialize=1, bounds=(1,1))
         m.c1 = Constraint(expr=m.v1 >= m.v2 + m.v3 + m.v4)
 
-        TransformationFactory('core.interval_tightener').apply_to(m)
+        TransformationFactory('core.tighten_constraint_from_vars').apply_to(m)
         self.assertTrue(m.c1._upper == 0)
         self.assertTrue(m.c1._lower == -1)
         del m
@@ -31,7 +31,7 @@ class TestIntervalTightener(unittest.TestCase):
         m.v4 = Var(initialize=1, bounds=(1,1))
         m.c1 = Constraint(expr=m.v1 <= m.v2 + m.v3 + m.v4)
 
-        TransformationFactory('core.interval_tightener').apply_to(m)
+        TransformationFactory('core.tighten_constraint_from_vars').apply_to(m)
         self.assertTrue(m.c1._upper == 0)
         self.assertTrue(m.c1._lower == -8)
         del m
@@ -44,7 +44,7 @@ class TestIntervalTightener(unittest.TestCase):
         m.v4 = Var(initialize=1, bounds=(1,1))
         m.c1 = Constraint(expr=m.v1 <= 2 *  m.v2 + m.v3 + m.v4)
 
-        TransformationFactory('core.interval_tightener').apply_to(m)
+        TransformationFactory('core.tighten_constraint_from_vars').apply_to(m)
         self.assertTrue(m.c1._upper == -1)
         self.assertTrue(m.c1._lower == -13)
         del m
@@ -57,7 +57,7 @@ class TestIntervalTightener(unittest.TestCase):
         m.v4 = Var(initialize=1, bounds=(1,1))
         m.c1 = Constraint(expr=m.v1 <= 2 *  m.v2 + m.v3 + m.v4)
 
-        TransformationFactory('core.interval_tightener').apply_to(m)
+        TransformationFactory('core.tighten_constraint_from_vars').apply_to(m)
         self.assertTrue(m.c1._upper == 0)
         self.assertTrue(not m.c1.has_lb())
         del m
@@ -70,7 +70,7 @@ class TestIntervalTightener(unittest.TestCase):
         m.v4 = Var(initialize=1, bounds=(1,1))
         m.c1 = Constraint(expr=m.v1 <= 2 *  m.v2 + m.v3 + m.v4)
 
-        TransformationFactory('core.interval_tightener').apply_to(m)
+        TransformationFactory('core.tighten_constraint_from_vars').apply_to(m)
         self.assertTrue(m.c1._upper == -1)
         self.assertTrue(not m.c1.has_lb())
         del m
