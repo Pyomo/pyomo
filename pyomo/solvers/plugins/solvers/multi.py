@@ -45,12 +45,19 @@ class Multistart(OptSolver):
 
     def __init__(self):
         pass
-
-
+    #Keywords:
+    # 'strategy': specify the restart strategy, defaults to random
+    #             "rand"
+    #             "midpoint_guess_and_bound"
+    #             "rand_guess_and_bound"
+    #             "rand_distributed"
+    # 'solver' : specify any solver within the SolverFactory, defaults to ipopt
+    # 'iterations' : specify the number of iterations, defaults to 10.
+    #                 if -1 is specified, the high confidence stopping rule will be used
     def solve (self,model,**kwds):
         strategy = kwds.pop('strategy','rand')
         solver = kwds.pop('solver','ipopt')
-        iterations = kwds.pop('iterations',-1)
+        iterations = kwds.pop('iterations',10)
         solver = SolverFactory(solver)
         objectives = []
         models = []
