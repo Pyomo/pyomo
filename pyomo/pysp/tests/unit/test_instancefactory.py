@@ -496,6 +496,48 @@ class Test(unittest.TestCase):
         self.assertTrue("reference_test_model" in sys.modules)
         self.assertTrue("ScenarioStructure" in sys.modules)
 
+    @unittest.skipIf(not has_networkx, "Requires networkx module")
+    def test_init17(self):
+        self.assertTrue("reference_test_model" not in sys.modules)
+        self.assertTrue("ScenarioStructure" not in sys.modules)
+        nx_tree = load_external_module(os.path.join(testdatadir,
+                                                    "ScenarioStructure.py"))[0].G
+        with ScenarioTreeInstanceFactory(
+                model=join(testdatadir,
+                           "reference_test_model.py"),
+                scenario_tree=nx_tree) as factory:
+            self.assertEqual(len(factory._archives), 0)
+            self.assertTrue(factory.model_directory() is not None)
+            self.assertTrue(factory.scenario_tree_directory() is None)
+            self._check_factory(factory)
+
+            scenario_tree = factory.generate_scenario_tree()
+            self.assertEqual(scenario_tree.contains_bundles(), False)
+            # check that we can modify the networkx tree to redefine
+            # bundles
+            nx_tree.node["s1"]["bundle"] = 0
+            nx_tree.node["s2"]["bundle"] = 0
+            nx_tree.node["s3"]["bundle"] = 0
+            scenario_tree = factory.generate_scenario_tree()
+            self.assertEqual(scenario_tree.contains_bundles(), True)
+            self.assertEqual(len(scenario_tree.bundles), 1)
+            nx_tree.node["s1"]["bundle"] = 0
+            nx_tree.node["s2"]["bundle"] = 1
+            nx_tree.node["s3"]["bundle"] = 2
+            scenario_tree = factory.generate_scenario_tree()
+            self.assertEqual(scenario_tree.contains_bundles(), True)
+            self.assertEqual(len(scenario_tree.bundles), 3)
+            nx_tree.node["s1"]["bundle"] = None
+            nx_tree.node["s2"]["bundle"] = None
+            nx_tree.node["s3"]["bundle"] = None
+            scenario_tree = factory.generate_scenario_tree()
+            self.assertEqual(scenario_tree.contains_bundles(), False)
+
+        self.assertTrue("reference_test_model" in sys.modules)
+        self.assertTrue("ScenarioStructure" in sys.modules)
+
+
+
 Test = unittest.category('smoke','nightly','expensive')(Test)
 
 if __name__ == "__main__":

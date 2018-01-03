@@ -349,9 +349,8 @@ class ScenarioTreeInstanceFactory(object):
                 del scenario_tree._scenario_instance_factory
             self._scenario_tree = scenario_tree
         elif has_networkx and \
-             isinstance(scenario_tree, networkx.Graph):
-            self._scenario_tree_model = \
-                ScenarioTreeModelFromNetworkX(scenario_tree)
+             isinstance(scenario_tree, networkx.DiGraph):
+            self._scenario_tree_model = scenario_tree
         elif isinstance(scenario_tree, six.string_types):
             logger.debug("scenario tree input is a string, attempting "
                          "to load file specification: %s"
@@ -413,9 +412,8 @@ class ScenarioTreeInstanceFactory(object):
                             self._scenario_tree = obj
                             break
                         elif has_networkx and \
-                             isinstance(obj, networkx.Graph):
-                            self._scenario_tree_model = \
-                                ScenarioTreeModelFromNetworkX(obj)
+                             isinstance(obj, networkx.DiGraph):
+                            self._scenario_tree_model = obj
                             break
                 if (self._scenario_tree is None) and \
                    (self._scenario_tree_model is None):
@@ -443,9 +441,8 @@ class ScenarioTreeInstanceFactory(object):
                             self._scenario_tree = obj
                             break
                         elif has_networkx and \
-                             isinstance(obj, networkx.Graph):
-                            self._scenario_tree_model = \
-                                ScenarioTreeModelFromNetworkX(obj)
+                             isinstance(obj, networkx.DiGraph):
+                            self._scenario_tree_model = obj
                             break
                 if (self._scenario_tree_model is None) and \
                    (self._scenario_tree is None):
@@ -463,14 +460,16 @@ class ScenarioTreeInstanceFactory(object):
             self._scenario_tree_model = scenario_tree
 
         if self._scenario_tree is None:
-            if not isinstance(self._scenario_tree_model, (_BlockData, Block)):
+            if (not isinstance(self._scenario_tree_model, (_BlockData, Block))) and \
+               (has_networkx and (not isinstance(self._scenario_tree_model, networkx.DiGraph))):
                 raise TypeError(
                     "scenario tree model object has incorrect type: %s. "
-                    "Must be a string type or a Pyomo model."
-                    % (type(scenario_tree)))
-            if not self._scenario_tree_model.is_constructed():
-                raise ValueError(
-                    "scenario tree model must be a concrete Pyomo model.")
+                    "Must be a string type,  Pyomo model, or a "
+                    "networkx.DiGraph object." % (type(scenario_tree)))
+            if isinstance(self._scenario_tree_model, (_BlockData, Block)):
+                if not self._scenario_tree_model.is_constructed():
+                    raise ValueError(
+                        "scenario tree model is not constructed")
 
         self._data_directory = None
         if data is None:
@@ -750,6 +749,15 @@ class ScenarioTreeInstanceFactory(object):
                                verbose=True):
 
         scenario_tree_model = self._scenario_tree_model
+        if scenario_tree_model is not None:
+            if has_networkx and \
+               isinstance(scenario_tree_model, networkx.DiGraph):
+                scenario_tree_model = \
+                    ScenarioTreeModelFromNetworkX(scenario_tree_model)
+            else:
+                assert isinstance(scenario_tree_model, (_BlockData, Block)), \
+                    str(scenario_tree_model)+" "+str(type(scenario_tree_model))
+
         if bundles is not None:
             if isinstance(bundles, six.string_types):
                 if scenario_tree_model is None:
