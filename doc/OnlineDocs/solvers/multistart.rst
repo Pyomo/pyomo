@@ -25,7 +25,7 @@ Instantiate the multistart solver through the SolverFactory
 This returns an instance of :py:class:`Multistart`. To solve our Model
 we use the solve command
 
->>> #Keywords:
+>>> # Keywords:
 >>> # 'strategy': specify the restart strategy, defaults to random
 >>> #             "rand"
 >>> #             "midpoint_guess_and_bound"
@@ -34,4 +34,11 @@ we use the solve command
 >>> # 'solver' : specify any solver within the SolverFactory, defaults to ipopt
 >>> # 'iterations' : specify the number of iterations, defaults to 10.
 >>> #                 if -1 is specified, the high confidence stopping rule will be used
+>>> # 'HCS_param' : specify the tuple (m,d)
+>>> #               defaults to (m,d) = (.5,.5)
+>>> #               only use with random strategy
+>>> #               The stopping mass m is the maximum allowable estimated missing mass of optima
+>>> #               The stopping delta d = 1-the confidence level required for the stopping rule
+>>> #               For both parameters, the lower the parameter the more stricter the rule.
+>>> #               both are bounded 0<x<=1
 >>> optsolver.solve(m2,iterations = 10);
