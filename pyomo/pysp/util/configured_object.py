@@ -350,7 +350,7 @@ class PySPConfiguredObject(object):
         This method cannot determine if the values on the
         argparse Namespace object were set explicitly or are
         defaults. Therefore, the _userSet status will be
-        updated on all options that are found.  The method
+        updated on all options that are found. The method
         only compares the names against the attributes found
         on the argparse Namespace object. No other form of
         validation is performed.
@@ -630,7 +630,7 @@ class PySPConfiguredExtension(PySPConfiguredObject):
         This method cannot determine if the values on the
         argparse Namespace object were set explicitly or are
         defaults. Therefore, the _userSet status will be
-        updated on all options that are found.  The method
+        updated on all options that are found. The method
         only compares the names against the attributes found
         on the argparse Namespace object. No other form of
         validation is performed.
