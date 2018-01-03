@@ -546,7 +546,8 @@ class EFSolver(SPSolver, PySPConfiguredObject):
                     keep_solver_files=False,
                     symbolic_solver_labels=False):
         """
-        Solve a stochastic program by building the extensive form.
+        Solve a stochastic program by building the extensive
+        form and calling and a Pyomo solver.
 
         See the 'solve' method on the base class for
         additional keyword documentation.

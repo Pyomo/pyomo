@@ -349,6 +349,25 @@ class SchurIpoptSolver(SPSolverShellCommand, PySPConfiguredObject):
                     verbose=False,
                     logfile=None,
                     **kwds):
+        """
+        Solve a stochastic program with the SchurIpopt solver.
+
+        See the 'solve' method on the base class for
+        additional keyword documentation.
+
+        Args:
+            sp: The stochastic program to solve.
+            output_solver_log (bool): Stream the solver
+                output during the solve.
+            logfile: The name of the logfile to save the
+                solver output into.
+            verbose: Report verbose status information to
+                aid debugging.
+            **kwds: Passed to the DDSIP file writer as I/O
+              options (e.g., symbolic_solver_labels=True).
+
+        Returns: A results object with information about the solution.
+        """
 
         #
         # Setup the SchurIpopt working directory
@@ -475,7 +494,11 @@ def runschuripopt_register_options(options=None):
     safe_register_common_option(options,
                                "output_scenario_tree_solution")
     safe_register_common_option(options,
+                                "output_solver_log")
+    safe_register_common_option(options,
                                 "keep_solver_files")
+    safe_register_common_option(options,
+                                "symbolic_solver_labels")
     ScenarioTreeManagerFactory.register_options(options)
     SchurIpoptSolver.register_options(options)
     # used to populate the implicit SchurIpopt options
@@ -524,8 +547,9 @@ def runschuripopt(options):
                     schuripopt.options[key] = val
         results = schuripopt.solve(
             manager,
+            output_solver_log=options.output_solver_log,
             keep_solver_files=options.keep_solver_files,
-            output_solver_log=True)
+            symbolic_solver_labels=options.symbolic_solver_labels)
         print(results)
 
         if options.output_scenario_tree_solution:

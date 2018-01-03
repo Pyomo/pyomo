@@ -139,6 +139,8 @@ class SPSolver(object):
             options: Ephemeral solver options that will
                 temporarily overwrite any matching options
                 currently set for the solver.
+            output_solver_log (bool): Stream the solver
+                output during the solve.
             *args: Passed to the derived solver class
                 (see the _solve_impl method).
             **kwds: Passed to the derived solver class
@@ -199,6 +201,9 @@ class SPSolver(object):
                 print("-"*20)
                 print("Total number of scenarios.................: %10s"
                       % (num_scenarios))
+                if scenario_tree.contains_bundles():
+                    print("Total number of scenario bundles..........: %10s"
+                          % (len(scenario_tree.bundles)))
                 print("Total number of time stages...............: %10s"
                       % (num_stages))
                 print("Total number of non-anticipative variables: %10s\n"
