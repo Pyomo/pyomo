@@ -1395,7 +1395,9 @@ class ScenarioTree(object):
                     new_stage._derived_variable_templates[variable_name].append(match_template)
 
             # de-reference is required to access the parameter value
-            cost_variable_string = stage_cost_variable_names[stage_name].value
+
+            # FIXME: #300 on GitHub
+            cost_variable_string = stage_cost_variable_names[stage_name]._value
             if cost_variable_string is not None:
                 if isVariableNameIndexed(cost_variable_string):
                     cost_variable_name, cost_variable_index = \
@@ -1476,9 +1478,10 @@ class ScenarioTree(object):
             else:
                 stage_cost_variable_ids = scenariotreeinstance.StageCostVariable
 
-        if any(stage_cost_variable_ids[i].value is not None
+        # FIXME: #300 on GitHub
+        if any(stage_cost_variable_ids[i]._value is not None
                for i in stage_cost_variable_ids) and \
-           any(node_cost_variable_ids[i].value is not None
+           any(node_cost_variable_ids[i]._value is not None
                for i in node_cost_variable_ids):
             raise ValueError(
                 "The 'StageCost' and 'NodeCost' parameters "
@@ -1558,7 +1561,8 @@ class ScenarioTree(object):
                     new_tree_node._variable_templates[variable_name] = []
                 new_tree_node._variable_templates[variable_name].append(match_template)
 
-            cost_variable_string = node_cost_variable_ids[tree_node_name].value
+            # FIXME: #300 on GitHub
+            cost_variable_string = node_cost_variable_ids[tree_node_name]._value
             if cost_variable_string is not None:
                 assert node_stage._cost_variable is None
                 if isVariableNameIndexed(cost_variable_string):
