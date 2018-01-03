@@ -37,7 +37,6 @@ __all__ = (
 'ProductExpression',
 'PowExpression',
 'ExternalFunctionExpression',
-'NPV_ExternalFunctionExpression',
 'GetItemExpression',
 'Expr_if',
 'LinearExpression',

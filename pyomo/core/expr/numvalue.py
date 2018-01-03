@@ -52,6 +52,14 @@ class NonNumericValue(object):
     def __str__(self):
         return str(self.value)
 
+    def __getstate__(self):
+        state = {}
+        state['value'] = getattr(self,'value')
+        return state
+
+    def __setstate__(self, state):
+        setattr(self, 'value', state['value'])
+
 
 #: Python set used to identify numeric constants, boolean values, strings
 #: and instances of :class:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>`, which is commonly used in code that walks

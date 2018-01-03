@@ -175,3 +175,7 @@ class SymbolMap(object):
             return self.aliases[symbol]()
         else:
             return SymbolMap.UnknownSymbol
+
+    def removeSymbol(self, obj):
+        symb = self.byObject.pop(id(obj))
+        self.bySymbol.pop(symb)

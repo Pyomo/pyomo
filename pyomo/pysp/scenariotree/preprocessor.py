@@ -18,7 +18,10 @@ import time
 # these are the only two preprocessors currently invoked by the
 # simple_preprocessor, which in turn is invoked by the preprocess()
 # method of PyomoModel.
-from pyomo.opt import ProblemFormat, PersistentSolver
+from pyomo.core.base.objective import Objective
+from pyomo.core.base.var import Var
+from pyomo.opt import ProblemFormat
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.repn.standard_repn import preprocess_block_objectives \
     as preprocess_block_objectives
 from pyomo.repn.standard_repn import preprocess_block_constraints \
@@ -33,6 +36,7 @@ from pyomo.repn.standard_repn import preprocess_constraint \
     as preprocess_constraint
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.repn import generate_standard_repn
+
 import pyomo.util
 from pyomo.pysp.util.config import (PySPConfigBlock,
                                     safe_declare_common_option)
@@ -373,7 +377,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
            (not instance_all_constraints_updated) and \
            (len(instance_constraints_updated_list) == 0):
             if persistent_solver_in_use:
-                assert solver.instance_compiled()
+                assert solver.has_instance()
 
             # instances are already preproccessed, nothing
             # needs to be done
@@ -406,9 +410,13 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
             # if only the objective changed, there is minimal work to do.
             preprocess_block_objectives(scenario_instance)
 
-            if persistent_solver_in_use and \
-               solver.instance_compiled():
-                solver.compile_objective(scenario_instance)
+            if persistent_solver_in_use and solver.has_instance():
+                obj_count = 0
+                for obj in scenario_instance.component_data_objects(ctype=Objective, descend_into=True, active=True):
+                    obj_count += 1
+                    if obj_count > 1:
+                        raise RuntimeError('Persistent solver interface only supports a single active objective.')
+                    solver.set_objective(obj)
 
         if (instance_fixed_variables or instance_freed_variables) and \
            (persistent_solver_in_use):
@@ -421,12 +429,11 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
             # instance compiled, depending on what state the solver plugin
             # is in relative to the instance.  if this is the case, just
             # don't compile the variable bounds.
-            if solver.instance_compiled():
+            if solver.has_instance():
                 variables_to_change = \
                     instance_fixed_variables + instance_freed_variables
-                solver.compile_variable_bounds(
-                    scenario_instance,
-                    vars_to_update=variables_to_change)
+                for var in variables_to_change:
+                    solver.update_var(var)
 
         if instance_all_constraints_updated:
 
@@ -464,8 +471,8 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
             repn_func = generate_repn
 
             for constraint_data in instance_constraints_updated_list:
-                if isinstance(constraint_data, LinearCanonicalRepn):
-                    continue
+                #if isinstance(constraint_data, LinearCanonicalRepn):
+                #    continue
                 block = constraint_data.parent_block()
                 # Get/Create the ComponentMap for the repn storage
                 if not hasattr(block, repn_name):
@@ -473,12 +480,10 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
                 getattr(block, repn_name)[constraint_data] = \
                     repn_func(constraint_data.body, idMap=idMap)
 
-        if persistent_solver_in_use and \
-           (not solver.instance_compiled()):
-             solver.compile_instance(
-                 scenario_instance,
-                 symbolic_solver_labels=self._options.symbolic_solver_labels,
-                 output_fixed_variable_bounds=not self._options.preprocess_fixed_variables)
+        if persistent_solver_in_use and (not solver.has_instance()):
+            solver.set_instance(scenario_instance,
+                                symbolic_solver_labels=self._options.symbolic_solver_labels,
+                                output_fixed_variable_bounds=not self._options.preprocess_fixed_variables)
 
         _cleanup()
 

@@ -17,12 +17,14 @@ import os
 import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
+import platform
 
 import pyutilib.th as unittest
 from pyomo.environ import *
 import pyomo.core.expr.current as EXPR
 
 
+using_pypy = platform.python_implementation() == "PyPy"
 _using_pyomo5_trees = EXPR.mode == EXPR.Mode.pyomo5_trees
 
 
@@ -311,6 +313,9 @@ class Test(unittest.TestCase):
         instance = model.create_instance()
         if (not six.PY3) and ('dill' in sys.modules):
             pickle.dumps(instance)
+        elif using_pypy:
+            str_ = pickle.dumps(instance)
+            tmp_ = pickle.loads(str_)
         else:
             with self.assertRaises((pickle.PicklingError,
                                     TypeError,

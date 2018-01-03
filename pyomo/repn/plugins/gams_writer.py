@@ -614,8 +614,7 @@ class Categorizer(object):
 def split_terms(line):
     """
     Take line from GAMS model file and return list of terms split by space
-    but grouping together parentheses-bound expressions. Assumes lines end
-    with space followed by semicolon.
+    but grouping together parentheses-bound expressions.
     """
     terms = []
     begin = 0
@@ -640,10 +639,9 @@ def split_terms(line):
                     terms.append(line[begin:i])
                 terms.append(line[i])
                 begin = i + 1
-    if begin < len(line) - 1:
+    assert inparens == 0, "Missing close parenthesis in line '%s'" % line
+    if begin < len(line):
         terms.append(line[begin:len(line)])
-    if terms[-1][-1] == ';':
-        terms[-1] = terms[-1][:-1]
     return terms
 
 
@@ -665,6 +663,7 @@ def split_args(term):
             assert i > begin, "Invalid syntax around '**' operator"
             args.append(term[begin:i])
             begin = i + 2
+    assert inparens == 0, "Missing close parenthesis in term '%s'" % term
     args.append(term[begin:len(term)])
     return args
 
@@ -676,12 +675,13 @@ def replace_power(line):
             args = split_args(term)
             for i in xrange(len(args)):
                 if '**' in args[i]:
-                    print(line)
-                    print(args)
-                    assert args[i][0] == '(' and args[i][-1] == ')',\
-                        "Assume arg is a parenthesis-bound expression"
-                    arg = args[i][1:-1]
-                    args[i] = '( %s)' % replace_power(arg)
+                    first_paren = args[i].find('(')
+                    assert ((first_paren != -1) and (args[i][-1] == ')')), (
+                        "Assumed arg '%s' was a parenthesis-bound expression "
+                        "or function" % args[i])
+                    arg = args[i][first_paren + 1:-1]
+                    args[i] = '%s( %s )' % (args[i][:first_paren],
+                                            replace_power(arg))
             try:
                 if float(args[-1]) == int(float(args[-1])):
                     term = ''
@@ -694,7 +694,8 @@ def replace_power(line):
                     term += arg + '**'
                 term += args[-1]
         new_line += term + ' '
-    return new_line
+    # Remove trailing space
+    return new_line[:-1]
 
 
 def split_long_line(line):

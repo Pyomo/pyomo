@@ -31,11 +31,11 @@ from pyomo.opt import (UndefinedData,
                        ProblemFormat,
                        undefined,
                        SolverFactory,
-                       PersistentSolver,
                        SolverStatus,
                        TerminationCondition,
                        SolutionStatus,
                        SolverStatus)
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
 import pyomo.pysp.convergence
 from pyomo.pysp.phboundbase import (_PHBoundBase,
