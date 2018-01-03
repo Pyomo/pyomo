@@ -8,10 +8,10 @@ g3 1 1 0	# problem B2
  47 3 	# nonzeros in Jacobian, obj. gradient
  46 40	# max name lengths: constraints, variables
  0 0 0 0 0	# common exprs: b,c,o,c1,o1
-S0 1 schurip_variable_id
-0 368493142
 S7 1 schurip_objective_weight
 0 0.3333333333333333
+S0 1 schurip_variable_id
+0 368493142
 C0	#MASTER_BLEND_CONSTRAINT_RootNode[1]
 n0
 C1	#Scenario3.c_first_stage
