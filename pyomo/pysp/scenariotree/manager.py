@@ -1958,16 +1958,17 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
 
             bundle_objective_value = 0.0
             bundle_cost_value = 0.0
-            for scenario_name in bundle._scenario_names:
-                scenario = self.scenario_tree.get_scenario(scenario_name)
+            for bundle_scenario in bundle._scenario_tree._scenarios:
+                scenario = self.scenario_tree.\
+                           get_scenario(bundle_scenario.name)
                 scenario.update_solution_from_instance()
                 # And we need to make sure to use the
                 # probabilities assigned to scenarios in the
                 # compressed bundle scenario tree
                 bundle_objective_value += scenario._objective * \
-                                          scenario._probability
+                                          bundle_scenario.probability
                 bundle_cost_value += scenario._cost * \
-                                     scenario._probability
+                                     bundle_scenario.probability
 
             manager_results.objective[bundle_name] = bundle_objective_value
             manager_results.cost[bundle_name] = bundle_cost_value
