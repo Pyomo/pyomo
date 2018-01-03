@@ -60,6 +60,7 @@ __all__ = (
 '_SumExpression',               # This should not be referenced, except perhaps while testing code
 '_MutableViewSumExpression',    # This should not be referenced, except perhaps while testing code
 '_MutableLinearExpression',     # This should not be referenced, except perhaps while testing code
+'_decompose_terms',             # This should not be referenced, except perhaps while testing code
 '_generate_sum_expression',                 # Only used within pyomo.core.expr
 '_generate_mul_expression',                 # Only used within pyomo.core.expr
 '_generate_other_expression',               # Only used within pyomo.core.expr
@@ -2451,96 +2452,6 @@ class LinearExpression(ExpressionBase):
 
     def _apply_operation(self, result):
         return value(self.constant) + sum(value(c)*v.value for c,v in zip(self.linear_coefs, self.linear_vars))
-
-    #@profile
-    @staticmethod
-    def _decompose_term(expr):
-        if expr.__class__ in native_numeric_types:
-            return expr,None,None
-        elif expr.is_variable_type():
-            return 0,1,expr
-        elif not expr.is_potentially_variable():
-            return expr,None,None
-        elif expr.__class__ is ProductExpression:
-            if expr._args_[0].__class__ in native_numeric_types or not expr._args_[0].is_potentially_variable():
-                C,c,v = expr._args_[0],None,None
-            else:
-                C,c,v = _MutableLinearExpression._decompose_term(expr._args_[0])
-            if expr._args_[1].is_variable_type():
-                v_ = expr._args_[1]
-                if not v is None:
-                    raise ValueError("Expected a single linear term (1)")
-                return 0,C,v_
-            else:
-                C_,c_,v_ = _MutableLinearExpression._decompose_term(expr._args_[1])
-            if not v_ is None:
-                if not v is None:
-                    raise ValueError("Expected a single linear term (2)")
-                return C*C_,C*c_,v_
-            return C_*C,C_*c,v
-        #
-        # A potentially variable _SumExpression class has been supplanted by
-        # ViewSumExpression
-        #
-        #elif expr.__class__ is _SumExpression:
-        #    C,c,v = _MutableLinearExpression._decompose_term(expr._args_[0])
-        #    C_,c_,v_ = _MutableLinearExpression._decompose_term(expr._args_[1])
-        #    if not v_ is None:
-        #        if not v is None:
-        #            if id(v) == id(v_):
-        #                return C+C_,c+c_,v
-        #            else:
-        #                raise ValueError("Expected a single linear term (3)")
-        #        return C+C_,c_,v_
-        #    return C+C_,c,v
-        #
-        # The _LinearViewSumExpression class is not used now
-        #
-        #elif expr.__class__ is _LinearViewSumExpression:
-        #    C=0
-        #    c=1
-        #    v=None
-        #    for arg in expr.args:
-        #        if arg[1] is None:
-        #            C += arg[0]
-        #        elif not v is None:
-        #            raise ValueError("Expected a single linear term (3a)")
-        #        else:
-        #            c=arg[0]
-        #            v=arg[1]
-        #    return C,c,v
-        elif expr.__class__ is NegationExpression:
-            C,c,v = _MutableLinearExpression._decompose_term(expr._args_[0])
-            return -C,-c,v
-        elif expr.__class__ is ReciprocalExpression:
-            if expr.is_potentially_variable():
-                raise ValueError("Unexpected nonlinear term (4)")
-            return 1/expr,None,None
-        elif expr.__class__ is _MutableLinearExpression:
-            l = len(expr.linear_vars)
-            if l == 0:
-                return expr.constant, None, None
-            elif l == 1:
-                return expr.constant, expr.linear_coefs[0], expr.linear_vars[0]
-            else:
-                raise ValueError("Expected a single linear term (5)")
-        elif expr.__class__ is ViewSumExpression or expr.__class__ is _MutableViewSumExpression:
-            C = 0
-            c = None
-            v = None
-            for e in expr._args_:
-                C_,c_,v_ = _MutableLinearExpression._decompose_term(e)
-                C += C_
-                if not v_ is None:
-                    if not v is None:
-                        raise ValueError("Expected a single linear term (6)")
-                    c=c_
-                    v=v_
-            return C,c,v
-        #
-        # TODO: ExprIf, POW, Abs?
-        #
-        raise ValueError("Unexpected nonlinear term (7)")
 
     #@profile
     def _combine_expr(self, etype, _other):

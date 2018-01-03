@@ -4890,7 +4890,7 @@ class TestNonlinearExpression(unittest.TestCase):
 
 
 #
-# Test the logic of _LinearExpression._decompose_term
+# Test the logic of EXPR._decompose_terms
 #
 class TestLinearDecomp(unittest.TestCase):
 
@@ -4898,62 +4898,63 @@ class TestLinearDecomp(unittest.TestCase):
         #
         # A hack to setup the _LinearExpression.vtypes data
         #
-        try:
-            l = EXPR.LinearExpression()
-            l._combine_expr(None,None)
-        except:
-            pass
+        #try:
+        #    l = EXPR.LinearExpression()
+        #    l._combine_expr(None,None)
+        #except:
+        #    pass
+        pass
 
     def test_numeric(self):
-        self.assertEqual(EXPR.LinearExpression._decompose_term(2.0), (2.0,None,None))
+        self.assertEqual(list(EXPR._decompose_terms(2.0)), [(2.0,None)])
 
     def test_NPV(self):
         M = ConcreteModel()
         M.q = Param(initialize=2)
-        self.assertEqual(EXPR.LinearExpression._decompose_term(M.q), (M.q,None,None))
+        self.assertEqual(list(EXPR._decompose_terms(M.q)), [(M.q,None)])
 
     def test_var(self):
         M = ConcreteModel()
         M.v = Var()
-        self.assertEqual(EXPR.LinearExpression._decompose_term(M.v), (0,1,M.v))
+        self.assertEqual(list(EXPR._decompose_terms(M.v)), [(1,M.v)])
 
     def test_simple(self):
         M = ConcreteModel()
         M.v = Var()
-        self.assertEqual(EXPR.LinearExpression._decompose_term(2*M.v), (0,2,M.v))
+        self.assertEqual(list(EXPR._decompose_terms(2*M.v)), [(2,M.v)])
 
     def test_sum(self):
         M = ConcreteModel()
         M.v = Var()
         M.w = Var()
         M.q = Param(initialize=2)
-        self.assertEqual(EXPR.LinearExpression._decompose_term(2+M.v), (2,1,M.v))
-        self.assertEqual(EXPR.LinearExpression._decompose_term(M.q+M.v), (2,1,M.v))
-        self.assertEqual(EXPR.LinearExpression._decompose_term(M.v+M.q), (2,1,M.v))
-        self.assertRaises(ValueError, EXPR.LinearExpression._decompose_term, M.w+M.v)
+        self.assertEqual(list(EXPR._decompose_terms(2+M.v)), [(2,None), (1,M.v)])
+        self.assertEqual(list(EXPR._decompose_terms(M.q+M.v)), [(2,None), (1,M.v)])
+        self.assertEqual(list(EXPR._decompose_terms(M.v+M.q)), [(1,M.v), (2,None)])
+        self.assertEqual(list(EXPR._decompose_terms(M.w+M.v)), [(1,M.w), (1,M.v)])
 
     def test_prod(self):
         M = ConcreteModel()
         M.v = Var()
         M.w = Var()
         M.q = Param(initialize=2)
-        self.assertEqual(EXPR.LinearExpression._decompose_term(2*M.v), (0,2,M.v))
-        self.assertEqual(EXPR.LinearExpression._decompose_term(M.q*M.v), (0,2,M.v))
-        self.assertEqual(EXPR.LinearExpression._decompose_term(M.v*M.q), (0,2,M.v))
-        self.assertRaises(ValueError, EXPR.LinearExpression._decompose_term, M.w*M.v)
+        self.assertEqual(list(EXPR._decompose_terms(2*M.v)), [(2,M.v)])
+        self.assertEqual(list(EXPR._decompose_terms(M.q*M.v)), [(2,M.v)])
+        self.assertEqual(list(EXPR._decompose_terms(M.v*M.q)), [(2,M.v)])
+        self.assertRaises(ValueError, list, EXPR._decompose_terms(M.w*M.v))
 
     def test_negation(self):
         M = ConcreteModel()
         M.v = Var()
-        self.assertEqual(EXPR.LinearExpression._decompose_term(-M.v), (0,-1,M.v))
-        self.assertEqual(EXPR.LinearExpression._decompose_term(-(2+M.v)), (-2,-1,M.v))
+        self.assertEqual(list(EXPR._decompose_terms(-M.v)), [(-1,M.v)])
+        self.assertEqual(list(EXPR._decompose_terms(-(2+M.v))), [(-2,None), (-1,M.v)])
 
     def test_reciprocal(self):
         M = ConcreteModel()
         M.v = Var()
         M.q = Param(initialize=2)
-        self.assertRaises(ValueError, EXPR.LinearExpression._decompose_term, 1/M.v)
-        self.assertEqual(EXPR.LinearExpression._decompose_term(1/M.q), (0.5,None,None))
+        self.assertRaises(ValueError, list, EXPR._decompose_terms(1/M.v))
+        self.assertEqual(list(EXPR._decompose_terms(1/M.q)), [(0.5,None)])
         
     def test_multisum(self):
         M = ConcreteModel()
@@ -4961,19 +4962,19 @@ class TestLinearDecomp(unittest.TestCase):
         M.w = Var()
         M.q = Param(initialize=2)
         e = EXPR.ViewSumExpression([2])
-        self.assertEqual(EXPR.LinearExpression._decompose_term(e), (2,None,None))
+        self.assertEqual(list(EXPR._decompose_terms(e)), [(2,None)])
         e = EXPR.ViewSumExpression([2,M.v])
-        self.assertEqual(EXPR.LinearExpression._decompose_term(e), (2,1,M.v))
+        self.assertEqual(list(EXPR._decompose_terms(e)), [(2,None), (1,M.v)])
         e = EXPR.ViewSumExpression([2,M.q+M.v])
-        self.assertEqual(EXPR.LinearExpression._decompose_term(e), (4,1,M.v))
+        self.assertEqual(list(EXPR._decompose_terms(e)), [(2,None), (2,None), (1,M.v)])
         e = EXPR.ViewSumExpression([2,M.q+M.v,M.w])
-        self.assertRaises(ValueError, EXPR.LinearExpression._decompose_term, e)
+        self.assertEqual(list(EXPR._decompose_terms(e)), [(2,None), (2,None), (1,M.v), (1,M.w)])
         
 
 #
 # Test the logic of decompose_term()
 #
-class Test_decompose_term(unittest.TestCase):
+class Test_decompose_terms(unittest.TestCase):
 
     def test_numeric(self):
         self.assertEqual(EXPR.decompose_term(2.0), (True,[(2.0,None)]))
