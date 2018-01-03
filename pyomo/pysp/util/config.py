@@ -163,6 +163,7 @@ class PySPConfigBlock(ConfigBlock):
             if _name not in self._data:
                 raise AttributeError("Unknown attribute '%s'" % name)
             name = _name
+        self._data[name]._parent = None
         del self._data[name]
         self._decl_order.remove(name)
 
