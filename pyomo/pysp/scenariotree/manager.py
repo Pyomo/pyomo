@@ -713,6 +713,7 @@ class ScenarioTreeManager(PySPConfiguredObject):
     #
     class Async(object):
         def complete(self):
+            """Wait for the job request to complete and return the result."""
             raise NotImplementedError                  #pragma:nocover
 
     class AsyncResult(Async):
@@ -741,7 +742,7 @@ class ScenarioTreeManager(PySPConfiguredObject):
             self._map_result = map_result
 
         def complete(self):
-
+            """Wait for the job request to complete and return the result."""
             if self._result is not None:
                 if isinstance(self._result,
                               ScenarioTreeManager.Async):
@@ -786,6 +787,7 @@ class ScenarioTreeManager(PySPConfiguredObject):
             self._return_index = return_index
 
         def complete(self):
+            """Wait for the job request to complete and return the result."""
             for i in xrange(len(self._results)):
                 assert isinstance(self._results[i],
                                   ScenarioTreeManager.Async)
@@ -805,6 +807,7 @@ class ScenarioTreeManager(PySPConfiguredObject):
             self._done = False
 
         def complete(self):
+            """Wait for the job request to complete and return the result."""
             if not self._done:
                 self._result = self._result()
                 self._done = True
@@ -3698,22 +3701,44 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
         if manager_results is None:
             manager_results = ScenarioTreeSolveResults('bundles')
 
+        assert len(results) == 2
+        object_results, scenario_tree_results = results
+
         # update the manager_results object
-        for key in results:
-            getattr(manager_results, key)[bundle_name] = results[key]
+        for key in object_results:
+            getattr(manager_results, key)[bundle_name] = \
+                object_results[key]
 
         # Convert status strings back to enums. These are
         # transmitted as strings to avoid difficult behavior
         # related to certain Pyro serializer settings
-        manager_results.solver_status[bundle_name] = \
-            getattr(SolverStatus,
-                    str(manager_results.solver_status[bundle_name]))
-        manager_results.termination_condition[bundle_name] = \
-            getattr(TerminationCondition,
-                    str(manager_results.termination_condition[bundle_name]))
-        manager_results.solution_status[bundle_name] = \
-            getattr(SolutionStatus,
-                    str(manager_results.solution_status[bundle_name]))
+        if manager_results.solver_status[bundle_name] is not None:
+            manager_results.solver_status[bundle_name] = \
+                getattr(SolverStatus,
+                        str(manager_results.solver_status[bundle_name]))
+        else:
+            manager_results.solver_status[bundle_name] = undefined
+        if manager_results.termination_condition[bundle_name] is not None:
+            manager_results.termination_condition[bundle_name] = \
+                getattr(TerminationCondition,
+                        str(manager_results.termination_condition[bundle_name]))
+        else:
+            manager_results.termination_condition[bundle_name] = undefined
+        if manager_results.solution_status[bundle_name] is not None:
+            manager_results.solution_status[bundle_name] = \
+                getattr(SolutionStatus,
+                        str(manager_results.solution_status[bundle_name]))
+        else:
+            manager_results.solution_status[bundle_name] = undefined
+
+        # update the scenario tree solution
+        if scenario_tree_results is not None:
+            bundle_scenarios = self.scenario_tree.\
+                get_bundle(bundle_name).scenario_names
+            assert len(bundle_scenarios) == len(scenario_tree_results)
+            for scenario_name in bundle_scenarios:
+                self.scenario_tree.get_scenario(scenario_name).\
+                    set_solution(scenario_tree_results[scenario_name])
 
         return manager_results
 
@@ -3725,22 +3750,40 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
         if manager_results is None:
             manager_results = ScenarioTreeSolveResults('scenarios')
 
+        assert len(results) == 2
+        object_results, scenario_tree_results = results
+
         # update the manager_results object
-        for key in results:
-            getattr(manager_results, key)[scenario_name] = results[key]
+        for key in object_results:
+            getattr(manager_results, key)[scenario_name] = \
+                object_results[key]
 
         # Convert status strings back to enums. These are
         # transmitted as strings to avoid difficult behavior
         # related to certain Pyro serializer settings
-        manager_results.solver_status[scenario_name] = \
-            getattr(SolverStatus,
-                    str(manager_results.solver_status[scenario_name]))
-        manager_results.termination_condition[scenario_name] = \
-            getattr(TerminationCondition,
-                    str(manager_results.termination_condition[scenario_name]))
-        manager_results.solution_status[scenario_name] = \
-            getattr(SolutionStatus,
-                    str(manager_results.solution_status[scenario_name]))
+        if manager_results.solver_status[scenario_name] is not None:
+            manager_results.solver_status[scenario_name] = \
+                getattr(SolverStatus,
+                        str(manager_results.solver_status[scenario_name]))
+        else:
+            manager_results.solver_status[scenario_name] = undefined
+        if manager_results.termination_condition[scenario_name] is not None:
+            manager_results.termination_condition[scenario_name] = \
+                getattr(TerminationCondition,
+                        str(manager_results.termination_condition[scenario_name]))
+        else:
+            manager_results.termination_condition[scenario_name] = undefined
+        if manager_results.solution_status[scenario_name] is not None:
+            manager_results.solution_status[scenario_name] = \
+                getattr(SolutionStatus,
+                        str(manager_results.solution_status[scenario_name]))
+        else:
+            manager_results.solution_status[scenario_name] = undefined
+
+        # update the scenario tree solution
+        if scenario_tree_results is not None:
+            self.scenario_tree.get_scenario(scenario_name).\
+                set_solution(scenario_tree_results)
 
         return manager_results
 

@@ -12,7 +12,8 @@ __all__ = ("ScenarioTreeManagerSolverWorkerPyro",)
 
 import time
 
-from pyomo.opt import SolverFactory
+from pyomo.opt import (SolverFactory,
+                       undefined)
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigBlock,
                                     safe_declare_common_option)
@@ -106,15 +107,41 @@ class ScenarioTreeManagerSolverWorkerPyro(_ScenarioTreeManagerSolverWorker,
 
             manager_object_results = \
                 manager_results.results_for(object_name)
+
+            scenario_tree_results = None
+            if manager_object_results['solution_status'] != undefined:
+                if object_type == 'bundles':
+                    scenario_tree_results = {}
+                    for scenario_name in self.manager.scenario_tree.\
+                            get_bundle(object_name).scenario_names:
+                        scenario_tree_results[scenario_name] = \
+                            self.manager.scenario_tree.\
+                                get_scenario(scenario_name).copy_solution()
+                else:
+                    assert object_type == 'scenarios'
+                    scenario_tree_results = \
+                        self.manager.scenario_tree.\
+                            get_scenario(object_name).copy_solution()
+
             # Convert enums to strings to avoid difficult
             # behavior related to certain Pyro serializer
             # settings
-            manager_object_results['solver_status'] = \
-                str(manager_object_results['solver_status'])
-            manager_object_results['termination_condition'] = \
-                str(manager_object_results['termination_condition'])
-            manager_object_results['solution_status'] = \
-                str(manager_object_results['solution_status'])
+            if manager_object_results['solver_status'] != undefined:
+                manager_object_results['solver_status'] = \
+                    str(manager_object_results['solver_status'])
+            else:
+                manager_object_results['solver_status'] = None
+            if manager_object_results['termination_condition'] != undefined:
+                manager_object_results['termination_condition'] = \
+                    str(manager_object_results['termination_condition'])
+            else:
+                manager_object_results['termination_condition'] = None
+            if manager_object_results['solution_status'] != undefined:
+                manager_object_results['solution_status'] = \
+                    str(manager_object_results['solution_status'])
+            else:
+                manager_object_results['solution_status'] = None
+
             results[object_name] = (manager_object_results, scenario_tree_results)
 
         return results
