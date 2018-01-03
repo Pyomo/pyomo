@@ -144,7 +144,13 @@ def ScenarioTreeModelFromNetworkX(
     height of the tree must be at least 1 (meaning at least
     2 stages).
 
-    Node attributes:
+    Required node attributes:
+        - cost (str): A string identifying a component on
+              the model whose value indicates the cost at
+              the time stage of the node for any scenario
+              traveling through it.
+
+    Optional node attributes:
         - variables (list): A list of variable identifiers
               that will be tracked by the node. If the node
               is not a leaf node, these indicate variables
@@ -153,65 +159,73 @@ def ScenarioTreeModelFromNetworkX(
               expression identifiers that will be tracked by
               the node (but will never have
               non-anticipativity constraints enforced).
-        - cost (str): A string identifying a component on
-              the model whose value indicates the cost at
-              the time stage of the node for any scenario
-              traveling through it.
-              **Always required**
+        - bundle: A bundle identifier for the scenario
+              defined by a leaf-stage node. This attribute
+              is ignored on non-terminal tree nodes. This
+              attribute appears on at least one leaf-stage
+              node (and is not set to :const:`None`), then
+              it must be set on all leaf-stage nodes (to
+              something other than :const:`None`);
+              otherwise, an exception will be raised.
 
-    Edge attributes:
-        - probability (float): The conditional probablity of
-              moving from the parent node to the child node
-              in the directed edge. If not present, it will
-              be assumed that all edges leaving the parent
-              node have equal probability (normalized to sum
-              to one).
+    Optional edge attributes:
+        - weight (float): Indicates the conditional
+              probability of moving from the parent node to
+              the child node in the directed edge. If not
+              present, it will be assumed that all edges
+              leaving the parent node have equal probability
+              (normalized to sum to one).
 
     Args:
+        stage_names: Can define a list of stage names to use
+           (assumed in time order). The length of this list
+           much match the number of stages in the tree. The
+           default value of :const:`None` indicates that
+           stage names should be automatically generated in
+           with the form ['Stage1','Stage2',...].
         node_name_attribute: By default, node names are the
            same as the node hash in the networkx tree. This
            keyword can be set to the name of some property
            of nodes in the graph that will be used for their
            name in the PySP scenario tree.
-        edge_probability_attribute: Can be set to the name
-           of some property of edges in the graph that
-           defines the conditional probability of that
-           branch (default: 'probability'). If this keyword
-           is set to None, then all branches leaving a node
-           are assigned equal conditional probabilities.
-        stage_names: Can define a list of stage names to use
-           (assumed in time order). The length of this list
-           much match the number of stages in the tree.
         scenario_name_attribute: By default, scenario names
            are the same as the leaf-node hash in the
            networkx tree. This keyword can be set to the
            name of some property of leaf-nodes in the graph
            that will be used for their corresponding
-           scenario in the PySP scenario tree.
+           scenario name in the PySP scenario tree.
+        edge_probability_attribute: Can be set to the name
+           of some property of edges in the graph that
+           defines the conditional probability of that
+           branch (default: 'weight'). If this keyword is
+           set to :const:`None`, then all branches leaving a
+           node are assigned equal conditional
+           probabilities.
 
     Examples:
 
-      - A 2-stage scenario tree with 10 scenarios:
-           G = networkx.DiGraph()
-           G.add_node("root",
-                      variables=["x"])
-           N = 10
-           for i in range(N):
-               node_name = "s"+str(i)
-               G.add_node(node_name)
-               G.add_edge("root", node_name, probability=1.0/N)
-           model = ScenarioTreeModelFromNetworkX(G)
+        A 2-stage scenario tree with 10 scenarios grouped
+        into 2 bundles:
 
-       - A 4-stage scenario tree with 125 scenarios:
-           branching_factor = 5
-           height = 3
-           G = networkx.balanced_tree(
-                   branching_factory,
+        >>> G = networkx.DiGraph()
+        >>> G.add_node("root", variables=["x"])
+        >>> N = 10
+        >>> for i in range(N):
+        >>>     node_name = "s"+str(i)
+        >>>     bundle_name = "b"+str(i%2)
+        >>>     G.add_node(node_name, bundle=bundle)
+        >>>     G.add_edge("root", node_name, weight=1.0/N)
+        >>> model = ScenarioTreeModelFromNetworkX(G)
+
+        A 4-stage scenario tree with 125 scenarios:
+
+        >>> branching_factor = 5
+        >>> height = 3
+        >>> G = networkx.balanced_tree(
+                   branching_factor,
                    height,
                    networkx.DiGraph())
-           model = ScenarioTreeModelFromNetworkX(
-                       G,
-                       edge_probability_attribute=None)
+        >>> model = ScenarioTreeModelFromNetworkX(G)
     """
 
     if not has_networkx:
@@ -263,6 +277,7 @@ def ScenarioTreeModelFromNetworkX(
             m.Stages.add('Stage'+str(i+1))
     node_to_name = {}
     node_to_scenario = {}
+    scenario_bundle = {}
     def _setup(u, succ):
         if node_name_attribute is not None:
             if node_name_attribute not in tree.node[u]:
@@ -289,7 +304,8 @@ def ScenarioTreeModelFromNetworkX(
                 scenario_name = u
             node_to_scenario[u] = scenario_name
             m.Scenarios.add(scenario_name)
-
+            scenario_bundle[scenario_name] = \
+                tree.node[u].get('bundle', None)
     _setup(root,
            networkx.dfs_successors(tree, root))
     m = m.create_instance()
@@ -364,5 +380,22 @@ def ScenarioTreeModelFromNetworkX(
               1,
               networkx.dfs_successors(tree, root),
               networkx.dfs_predecessors(tree, root))
+
+    if any(_b is not None for _b in scenario_bundle.values()):
+        if any(_b is None for _b in scenario_bundle.values()):
+            raise ValueError("Incomplete bundle specification. "
+                             "All scenarios require a bundle "
+                             "identifier.")
+        m.Bundling.value = True
+        bundle_scenarios = {}
+        for bundle_name in sorted(set(scenario_bundle.values())):
+            m.Bundles.add(bundle_name)
+            bundle_scenarios[bundle_name] = []
+        for scenario_name in m.Scenarios:
+            bundle_scenarios[scenario_bundle[scenario_name]].\
+                append(scenario_name)
+        for bundle_name in m.Bundles:
+            for scenario_name in sorted(bundle_scenarios[bundle_name]):
+                m.BundleScenarios[bundle_name].add(scenario_name)
 
     return m
