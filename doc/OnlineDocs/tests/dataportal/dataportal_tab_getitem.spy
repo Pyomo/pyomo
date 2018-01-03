@@ -1,0 +1,10 @@
+data = DataPortal()
+data.load(filename='A.tab', set="A", format="set")
+print(data['A'])    #['A1', 'A2', 'A3']
+
+data.load(filename='Z.tab', param="z", format="param")
+print(data['z'])    #1.1
+
+data.load(filename='Y.tab', param="y", format="table")
+for key in sorted(data['y']):
+    print("%s %s" % (key, data['y'][key]))

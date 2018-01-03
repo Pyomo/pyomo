@@ -1,0 +1,7 @@
+model = AbstractModel()
+data = DataPortal()
+model.A = Set()
+model.B = Set()
+model.q = Param(model.A, model.B)
+data.load(filename='PP.tab', param=model.q, index=(model.A,model.B))
+#instance = model.create_instance(data)
