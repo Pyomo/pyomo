@@ -136,7 +136,7 @@ def CreateConcreteTwoStageScenarioTreeModel(num_scenarios):
 def ScenarioTreeModelFromNetworkX(
         tree,
         node_name_attribute=None,
-        edge_probability_attribute='probability',
+        edge_probability_attribute='weight',
         stage_names=None,
         scenario_name_attribute=None):
     """

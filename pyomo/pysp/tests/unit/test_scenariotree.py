@@ -394,13 +394,13 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         G = networkx.DiGraph()
         G.add_node("R", name="Root")
         G.add_node("C")
-        G.add_edge("R", "C", probability=1)
+        G.add_edge("R", "C", weight=1)
         with self.assertRaises(KeyError):
             ScenarioTreeModelFromNetworkX(
                 G,
                 node_name_attribute="name")
 
-    def test_missing_probability(self):
+    def test_missing_weight(self):
         G = networkx.DiGraph()
         G.add_node("R", name="Root")
         G.add_node("C", name="Child")
@@ -408,21 +408,21 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         with self.assertRaises(KeyError):
             ScenarioTreeModelFromNetworkX(G)
 
-    def test_bad_probability1(self):
+    def test_bad_weight1(self):
         G = networkx.DiGraph()
         G.add_node("R",)
         G.add_node("C",)
-        G.add_edge("R", "C",probability=0.8)
+        G.add_edge("R", "C",weight=0.8)
         with self.assertRaises(ValueError):
             ScenarioTreeModelFromNetworkX(G)
 
-    def test_bad_probability2(self):
+    def test_bad_weight2(self):
         G = networkx.DiGraph()
         G.add_node("R")
         G.add_node("C1")
-        G.add_edge("R", "C1", probability=0.8)
+        G.add_edge("R", "C1", weight=0.8)
         G.add_node("C2")
-        G.add_edge("R", "C2", probability=0.1)
+        G.add_edge("R", "C2", weight=0.1)
         with self.assertRaises(ValueError):
             ScenarioTreeModelFromNetworkX(G)
 
@@ -430,7 +430,7 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         G = networkx.DiGraph()
         G.add_node("R",)
         G.add_node("C1")
-        G.add_edge("R", "C1", probability=1.0)
+        G.add_edge("R", "C1", weight=1.0)
         with self.assertRaises(ValueError):
             ScenarioTreeModelFromNetworkX(
                 G, stage_names=["Stage1"])
@@ -439,7 +439,7 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         G = networkx.DiGraph()
         G.add_node("R")
         G.add_node("C1")
-        G.add_edge("R", "C1", probability=1.0)
+        G.add_edge("R", "C1", weight=1.0)
         with self.assertRaises(ValueError):
             ScenarioTreeModelFromNetworkX(
                 G, stage_names=["Stage1","Stage1"])
@@ -448,9 +448,9 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         G = networkx.DiGraph()
         G.add_node("Root")
         G.add_node("Child1")
-        G.add_edge("Root", "Child1", probability=0.8)
+        G.add_edge("Root", "Child1", weight=0.8)
         G.add_node("Child2")
-        G.add_edge("Root", "Child2", probability=0.2)
+        G.add_edge("Root", "Child2", weight=0.2)
         model = ScenarioTreeModelFromNetworkX(G)
         self.assertEqual(
             sorted(list(model.Stages)),
@@ -488,12 +488,12 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
                    cost="c2",
                    variables=["q"],
                    derived_variables=["z"])
-        G.add_edge("Root", "Child1", probability=0.8)
+        G.add_edge("Root", "Child1", weight=0.8)
         G.add_node("Child2",
                    cost="c2",
                    variables=["q"],
                    derived_variables=["z"])
-        G.add_edge("Root", "Child2", probability=0.2)
+        G.add_edge("Root", "Child2", weight=0.2)
         model = ScenarioTreeModelFromNetworkX(G)
         self.assertEqual(
             sorted(list(model.Stages)),
@@ -543,12 +543,12 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         G = networkx.DiGraph()
         G.add_node("R", label="Root")
         G.add_node("C1", label="Child1", scenario="S1")
-        G.add_edge("R", "C1", weight=0.8)
+        G.add_edge("R", "C1", probability=0.8)
         G.add_node("C2", label="Child2", scenario="S2")
-        G.add_edge("R", "C2", weight=0.2)
+        G.add_edge("R", "C2", probability=0.2)
         model = ScenarioTreeModelFromNetworkX(
             G,
-            edge_probability_attribute="weight",
+            edge_probability_attribute="probability",
             node_name_attribute="label",
             stage_names=["T1","T2"],
             scenario_name_attribute="scenario")

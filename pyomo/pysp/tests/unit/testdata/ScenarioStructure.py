@@ -9,16 +9,16 @@ G.add_node("s1",
            cost="cost[2]")
 G.add_edge("root",
            "s1",
-           probability=0.33333333)
+           weight=0.33333333)
 
 G.add_node("s2",
            cost="cost[2]")
 G.add_edge("root",
            "s2",
-           probability=0.33333334)
+           weight=0.33333334)
 
 G.add_node("s3",
            cost="cost[2]")
 G.add_edge("root",
            "s3",
-           probability=0.33333333)
+           weight=0.33333333)
