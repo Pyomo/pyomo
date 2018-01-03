@@ -155,7 +155,68 @@ class ScenarioTreeManagerSolver(PySPConfiguredObject):
     def solve_subproblems(self,
                           subproblems=None,
                           **kwds):
-        """Solve scenarios or bundles (if they exist)."""
+        """Solve scenarios or bundles (if they exist).
+
+        Args:
+            subproblems (list): The list of subproblem names
+                to solve. The default value of :const:`None`
+                indicates that all subproblems should be
+                solved. Note that if the scenario tree
+                contains bundles, this should be a list of
+                bundles names; otherwise it should be a list
+                of scenario names.
+            ephemeral_solver_options (dict): A dictionary of
+                solver options to override any persistent
+                solver options for this set of solves only.
+            disable_warmstart (bool): Disable any warmstart
+                functionality available for the selected
+                subproblem solvers. Default is
+                :const:`False`.
+            check_status (bool): Verify that all subproblem
+                solves successfully completed (optimal or
+                feasible solutions are loaded). Default is
+                :const:`True`. This option is meant to help
+                users catch errors early on and should be
+                set to :const:`False` in situations where
+                more advanced status handling is necessary.
+            async (bool): When set to :const:`True`, an
+                async results object is returned that allows
+                the solves to be completed
+                asynchronously. Default is
+                :const:`False`. Note that completing an
+                asynchronous solve results in modification
+                of the scenario tree state on this manager
+                (i.e., solutions are loaded into the
+                scenarios).
+
+        Returns:
+            A :class:`ScenarioTreeSolveResults` object storing \
+            basic status information for each subproblem. If \
+            the :attr:`async` keyword is set to :const:`True` \
+            then an :class:`AsyncResult` object is returned.
+
+        Examples:
+            The following lines solve all subproblems
+            (automatically validating all solutions are
+            optimal or feasible) and then prints a summary
+            of the results.
+
+            >>> results = sp.solve_subproblems()
+            >>> results.pprint()
+
+            The following lines do the same by first
+            initiating an asynchronous solve request.
+
+            >>> job = sp.solve_subproblems(async=True)
+            >>> # ... do other things ... #
+            >>> results = job.complete()
+            >>> results.pprint()
+
+        Raises:
+            :class:`PySPFailedSolveStatus` if the \
+            :attr:`check_status` keyword is :const:`True` \
+            and any solves fail.
+        """
         ret = None
         if self.manager.scenario_tree.contains_bundles():
             ret = self.solve_bundles(bundles=subproblems,
@@ -171,7 +232,65 @@ class ScenarioTreeManagerSolver(PySPConfiguredObject):
                         disable_warmstart=False,
                         check_status=True,
                         async=False):
-        """Solve scenarios (ignoring bundles even if they exists)."""
+        """Solve scenarios (ignoring bundles even if they exists).
+
+        Args:
+            scenarios (list): The list of scenario names to
+                solve. The default value of :const:`None`
+                indicates that all scenarios should be
+                solved.
+            ephemeral_solver_options (dict): A dictionary of
+                solver options to override any persistent
+                solver options for this set of solves only.
+            disable_warmstart (bool): Disable any warmstart
+                functionality available for the selected
+                subproblem solvers. Default is
+                :const:`False`.
+            check_status (bool): Verify that all subproblem
+                solves successfully completed (optimal or
+                feasible solutions are loaded). Default is
+                :const:`True`. This option is meant to help
+                users catch errors early on and should be
+                set to :const:`False` in situations where
+                more advanced status handling is necessary.
+            async (bool): When set to :const:`True`, an
+                async results object is returned that allows
+                the solves to be completed
+                asynchronously. Default is
+                :const:`False`. Note that completing an
+                asynchronous solve results in modification
+                of the scenario tree state on this manager
+                (i.e., solutions are loaded into the
+                scenarios).
+
+        Returns:
+            A :class:`ScenarioTreeSolveResults` object storing \
+            basic status information for each subproblem. If \
+            the :attr:`async` keyword is set to :const:`True` \
+            then an :class:`AsyncResult` object is returned.
+
+        Examples:
+            The following lines solve all scenarios
+            (automatically validating all solutions are
+            optimal or feasible) and then prints a summary
+            of the results.
+
+            >>> results = sp.solve_scenarios()
+            >>> results.pprint()
+
+            The following lines do the same by first
+            initiating an asynchronous solve request.
+
+            >>> job = sp.solve_scenarios(async=True)
+            >>> # ... do other things ... #
+            >>> results = job.complete()
+            >>> results.pprint()
+
+        Raises:
+            :class:`PySPFailedSolveStatus` if the \
+            :attr:`check_status` keyword is :const:`True` \
+            and any solves fail.
+        """
         return self._solve_objects('scenarios',
                                    scenarios,
                                    ephemeral_solver_options,
@@ -185,7 +304,67 @@ class ScenarioTreeManagerSolver(PySPConfiguredObject):
                       disable_warmstart=False,
                       check_status=True,
                       async=False):
-        """Solve the bundles (they must exists)."""
+        """Solve bundles (they must exists).
+
+        Args:
+            bundles (list): The list of bundle names to
+                solve. The default value of :const:`None`
+                indicates that all bundles should be
+                solved.
+            ephemeral_solver_options (dict): A dictionary of
+                solver options to override any persistent
+                solver options for this set of solves only.
+            disable_warmstart (bool): Disable any warmstart
+                functionality available for the selected
+                subproblem solvers. Default is
+                :const:`False`.
+            check_status (bool): Verify that all subproblem
+                solves successfully completed (optimal or
+                feasible solutions are loaded). Default is
+                :const:`True`. This option is meant to help
+                users catch errors early on and should be
+                set to :const:`False` in situations where
+                more advanced status handling is necessary.
+            async (bool): When set to :const:`True`, an
+                async results object is returned that allows
+                the solves to be completed
+                asynchronously. Default is
+                :const:`False`. Note that completing an
+                asynchronous solve results in modification
+                of the scenario tree state on this manager
+                (i.e., solutions are loaded into the
+                scenarios).
+
+        Returns:
+            A :class:`ScenarioTreeSolveResults` object storing \
+            basic status information for each subproblem. If \
+            the :attr:`async` keyword is set to :const:`True` \
+            then an :class:`AsyncResult` object is returned.
+
+        Examples:
+            The following lines solve all bundles
+            (automatically validating all solutions are
+            optimal or feasible) and then prints a summary
+            of the results.
+
+            >>> results = sp.solve_bundles()
+            >>> results.pprint()
+
+            The following lines do the same by first
+            initiating an asynchronous solve request.
+
+            >>> job = sp.solve_bundles(async=True)
+            >>> # ... do other things ... #
+            >>> results = job.complete()
+            >>> results.pprint()
+
+        Raises:
+            :class:`PySPFailedSolveStatus` if the \
+            :attr:`check_status` keyword is :const:`True` \
+            and any solves fail, or :class:`RuntimeError` if
+            the scenario tree was not created with bundles.
+        """
+
         if not self.manager.scenario_tree.contains_bundles():
             raise RuntimeError(
                 "Unable to solve bundles. No bundles exist")
@@ -723,21 +902,56 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerSolver,
                              for result in itervalues(ah_to_result)
                              for key in result)))
 
-def ScenarioTreeManagerSolverFactory(sp, options, *args, **kwds):
+def ScenarioTreeManagerSolverFactory(sp, *args, **kwds):
+    """Return a scenario tree manager solver appropriate for
+    the provided argument.
+
+    Args:
+        sp: a serial or pyro client scenario tree manager
+        *args: A single additional argument can be provided
+            that is a block of registered options used to
+            initialize the returned manager solver. The
+            block of options can be created by calling
+            :attr:`ScenarioTreeManagerSolverFactory.register_options`.
+        **kwds: Additional keywords are passed to the
+            manager solver that is created.
+
+    Returns: A :class:`ScenarioTreeManagerSolver` object.
+
+    Example:
+        The preferred way to use a ScenarioTreeManagerSolver
+        object is through a :const:`with` block as it
+        modifies the state of the underlying scenario tree
+        manager. If used outside a :const:`with` block, the
+        manager solver should be shutdown by calling the
+        :attr:`close` method.
+
+        >>> with ScenarioTreeManagerSolverFactory(sp) as manager:
+        >>>    results = manager.solve_subproblems()
+        >>> results.pprint()
+
+        Note that asynchronous solves should be completed before the manager solver is closed; otherwise the results are undefined.
+
+        >>> with ScenarioTreeManagerSolverFactory(sp) as manager:
+        >>>    job = manager.solve_subproblems(async=True)
+        >>>    reuslts = job.complete()
+        >>> results.pprint()
+    """
     if isinstance(sp, ScenarioTreeManagerClientSerial):
-        manager = ScenarioTreeManagerSolverClientSerial(sp,
-                                                        options,
-                                                        *args,
-                                                        **kwds)
+        manager_class = ScenarioTreeManagerSolverClientSerial
     elif isinstance(sp, ScenarioTreeManagerClientPyro):
-        manager = ScenarioTreeManagerSolverClientPyro(sp,
-                                                      options,
-                                                      *args,
-                                                      **kwds)
+        manager_class = ScenarioTreeManagerSolverClientPyro
     else:
         raise ValueError("Unrecognized type for first argument: %s "
                          % (type(sp)))
-    return manager
+    if len(args) == 0:
+        options = manager_class.register_options()
+    elif len(args) == 1:
+        options = args[0]
+    else:
+        raise ValueError("At most 2 arguments allowed "
+                         "for function call")
+    return manager_class(sp, options, **kwds)
 
 def _register_scenario_tree_manager_solver_options(*args, **kwds):
     if len(args) == 0:
