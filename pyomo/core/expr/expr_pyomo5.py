@@ -2568,17 +2568,21 @@ class LinearExpression(ExpressionBase):
                     self.linear_vars.append(v)
             elif _other.__class__ is ViewSumExpression or _other.__class__ is _MutableViewSumExpression:
                 for e in _other._args_:
-                    C,c,v = _MutableLinearExpression._decompose_term(e)
-                    self.constant = self.constant + omult * C
-                    if not v is None:
-                        self.linear_coefs.append(omult*c)
-                        self.linear_vars.append(v)
+                    #C,c,v = _MutableLinearExpression._decompose_term(e)
+                    for c,v in _decompose_terms(e, multiplier=omult):
+                        if v is None:
+                            self.constant += c
+                        else:
+                            self.linear_coefs.append(c)
+                            self.linear_vars.append(v)
             else:
-                C,c,v = _MutableLinearExpression._decompose_term(_other)
-                self.constant = self.constant + omult * C
-                if not v is None:
-                    self.linear_coefs.append(omult*c)
-                    self.linear_vars.append(v)
+                #C,c,v = _MutableLinearExpression._decompose_term(_other)
+                for c,v in _decompose_terms(_other, multiplier=omult):
+                    if v is None:
+                        self.constant += c
+                    else:
+                        self.linear_coefs.append(c)
+                        self.linear_vars.append(v)
 
         elif etype == _mul or etype == -_mul:
             if _other.__class__ in native_numeric_types:
@@ -2590,10 +2594,13 @@ class LinearExpression(ExpressionBase):
                 # The linear expression is a constant, so re-initialize it with
                 # a single term that multiplies the expression by the constant value.
                 #
-                C,c,v = _MutableLinearExpression._decompose_term(_other)
-                self.constant = C*self.constant
-                self.linear_vars.append(v)
-                self.linear_coefs.append(c*self.constant)
+                #C,c,v = _MutableLinearExpression._decompose_term(_other)
+                for c,v in _decompose_terms(_other):
+                    if v is None:
+                        self.constant = c*self.constant
+                    else:
+                        self.linear_vars.append(v)
+                        self.linear_coefs.append(c*self.constant)
                 return self
             else:
                 multiplier = _other
@@ -2621,11 +2628,17 @@ class LinearExpression(ExpressionBase):
         elif etype == -_div:
             if self.is_potentially_variable():
                 raise ValueError("Unallowed operation on linear expression: division with a variable RHS")
-            C,c,v = _MutableLinearExpression._decompose_term(_other)
-            self.constant = C/self.constant
-            if not v is None:
-                self.linear_var = [v]
-                self.linear_coef = [c/self.constant]
+            #C,c,v = _MutableLinearExpression._decompose_term(_other)
+            first = True
+            for c,v in _decompose_terms(_other):
+                if not first:
+                    raise ValueError("Expected a single linear term.")
+                first = False
+                if v is None:
+                    self.constant = C/self.constant
+                else:
+                    self.linear_var = [v]
+                    self.linear_coef = [c/self.constant]
             
         elif etype == _neg:
             self.constant *= -1
@@ -2753,16 +2766,22 @@ def _generate_sum_expression(etype, _self, _other):
         etype -= _inplace
 
     if _self.__class__ is _MutableLinearExpression:
-        if etype >= _unary:
-            return _self._combine_expr(etype, None)
-        if _other.__class__ is not _MutableLinearExpression:
-            if not (_other.__class__ in native_types or _other.is_expression_type()):
-                _other = _process_arg(_other)
-        return _self._combine_expr(etype, _other)
+        try:
+            if etype >= _unary:
+                return _self._combine_expr(etype, None)
+            if _other.__class__ is not _MutableLinearExpression:
+                if not (_other.__class__ in native_types or _other.is_expression_type()):
+                    _other = _process_arg(_other)
+            return _self._combine_expr(etype, _other)
+        except:
+            pass
     elif _other.__class__ is _MutableLinearExpression:
-        if not (_self.__class__ in native_types or _self.is_expression_type()):
-            _self = _process_arg(_self)
-        return _other._combine_expr(-etype, _self)
+        try:
+            if not (_self.__class__ in native_types or _self.is_expression_type()):
+                _self = _process_arg(_self)
+            return _other._combine_expr(-etype, _self)
+        except:
+            pass
 
     #
     # A mutable sum is used as a context manager, so we don't
@@ -2875,14 +2894,20 @@ def _generate_mul_expression(etype, _self, _other):
         etype -= _inplace
 
     if _self.__class__ is _MutableLinearExpression:
-        if _other.__class__ is not _MutableLinearExpression:
-            if not (_other.__class__ in native_types or _other.is_expression_type()):
-                _other = _process_arg(_other)
-        return _self._combine_expr(etype, _other)
+        try:
+            if _other.__class__ is not _MutableLinearExpression:
+                if not (_other.__class__ in native_types or _other.is_expression_type()):
+                    _other = _process_arg(_other)
+            return _self._combine_expr(etype, _other)
+        except:
+            pass
     elif _other.__class__ is _MutableLinearExpression:
-        if not (_self.__class__ in native_types or _self.is_expression_type()):
-            _self = _process_arg(_self)
-        return _other._combine_expr(-etype, _self)
+        try:
+            if not (_self.__class__ in native_types or _self.is_expression_type()):
+                _self = _process_arg(_self)
+            return _other._combine_expr(-etype, _self)
+        except:
+            pass
 
     #
     # A mutable sum is used as a context manager, so we don't
