@@ -422,8 +422,6 @@ def construct_ph_options_parser(usage_string):
     del ef_options.ef_shutdown_pyro
     ef_options.initialize_argparse(parser)
     # disables a warning
-    tmp._orig_domain = tmp._domain
-    tmp._domain = bool
     ef_options.declare("ef_shutdown_pyro", tmp)
     ###################
 
@@ -1143,7 +1141,15 @@ def run_ph(options, ph):
         finally:
             ph._solver_manager = ph_solver_manager
 
+
         ef_options = options._ef_options
+
+        ### can remove these lines when the hack added to
+        ### options registration is removed for this
+        ### particular option
+        _orig_domain = ef_options.get("ef_shutdown_pyro")._domain
+        ef_options.get("ef_shutdown_pyro")._domain = bool
+
         # Have any matching ef options that are not explicitly
         # set by the user inherit from the "PH" values on the
         # argparse object. The user has the option of overriding
@@ -1156,11 +1162,11 @@ def run_ph(options, ph):
             source_options_prefix="",
             skip_userset=True,
             error_if_missing=False)
+
         ### can remove this line when the hack added to
         ### options registration is removed for this
         ### particular option
-        ef_options.get("ef_shutdown_pyro")._domain = \
-            ef_options.get("ef_shutdown_pyro")._orig_domain
+        ef_options.get("ef_shutdown_pyro")._domain = _orig_domain
 
 
         if _OLD_OUTPUT:
