@@ -406,10 +406,27 @@ def construct_ph_options_parser(usage_string):
 
     # the following does *not* work, in that the initialize_argparse fails - options conflict.
     ef_options = ExtensiveFormAlgorithm.register_options(options_prefix="ef_")
-    # the automated registration of the deprecated version of this option
-    # has a bad interaction of the PH registered version
+
+
+    #### Note: besides the line
+    #### 'ef_options.initialize_argparse(parser)',
+    #### all of the hacks below can be removed
+    #### by having PH do its options registration
+    #### with the PySPConfigBlock functionality.
+    #### This is tedious, and I will find time to do it
+    #### in the future
+    # the automated registration of the deprecated version
+    # of this option has a bad interaction with the PH
+    # registered version
+    tmp = ef_options.get("ef_shutdown_pyro")
     del ef_options.ef_shutdown_pyro
     ef_options.initialize_argparse(parser)
+    # disables a warning
+    tmp._orig_domain = tmp._domain
+    tmp._domain = bool
+    ef_options.declare("ef_shutdown_pyro", tmp)
+    ###################
+
     # temporary hack
     parser._ef_options = ef_options
     postprocessOpts.add_argument('--ef-output-file',
@@ -1139,6 +1156,12 @@ def run_ph(options, ph):
             source_options_prefix="",
             skip_userset=True,
             error_if_missing=False)
+        ### can remove this line when the hack added to
+        ### options registration is removed for this
+        ### particular option
+        ef_options.get("ef_shutdown_pyro")._domain = \
+            ef_options.get("ef_shutdown_pyro")._orig_domain
+
 
         if _OLD_OUTPUT:
             print("Creating extensive form for remainder problem")
