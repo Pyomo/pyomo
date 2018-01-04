@@ -827,14 +827,16 @@ def _process_load(cmd, _model, _data, _default, options=None):
     if options.using is None:
         tmp = options.filename.split(".")[-1]
         data = DataManagerFactory(tmp)
-        if data is None or data is UnknownDataManager:
+        if (data is None) or \
+           isinstance(data, UnknownDataManager):
             raise pyutilib.common.ApplicationError("Data manager '%s' is not available." % tmp)
     else:
         try:
             data = DataManagerFactory(options.using)
         except:
             data = None
-        if data is None or data is UnknownDataManager:
+        if (data is None) or \
+           isinstance(data, UnknownDataManager):
             raise pyutilib.common.ApplicationError("Data manager '%s' is not available." % options.using)
     set_name=None
     param_name=None
