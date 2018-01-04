@@ -191,44 +191,73 @@ def _extract_pathspec(
 
     return filename, archives
 
-def _import_model_or_callback(src, callback_name):
-    """ Try to import a Pyomo model or callback.
-
-    Args:
-        src: The python file, module name, or module to
-            search. When the argument is a file or module
-            name, it will force the import whether or not
-            this overwrites an existing imported module.
-        callback_name: The name of a callback to search for
-            before looking for a model object.
-
-    Returns:
-        A tuple consisting of a reference to the imported
-        module, the model object possibly found in this
-        module, and the callback possibly found in this
-        module. If the callback is found, the model object
-        will be None. Otherwise, the callback will be None.
-        If neither is found, they will both be None.
-    """
-
+def _find_reference_model_or_callback(src):
+    """Tries to find a single reference model or callback for
+    generating scenario models."""
     module, _ = load_external_module(src, clear_cache=True)
-    model = None
+    reference_model = None
     callback = None
     dir_module = dir(module)
-    if callback_name in dir_module:
-        callback = getattr(module, callback_name)
+    if "pysp_instance_creation_callback" in dir_module:
+        callback = getattr(module, "pysp_instance_creation_callback")
         if not hasattr(callback,"__call__"):
-            raise TypeError(
-                "'%s' object found in src '%s' is not callable"
-                % (callback_name, src))
-    elif "model" in dir_module:
-        model = module.model
-        if not isinstance(model, (_BlockData, Block)):
-            raise TypeError(
-                "'model' object found in src '%s' has "
-                "incorrect type:" % (src))
+            raise TypeError("'pysp_instance_creation_callback' "
+                            "object found in source '%s' is not "
+                            "callable" % (src))
+    else:
+        matching_names = []
+        for attr_name in dir_module:
+            obj = getattr(module, attr_name)
+            if isinstance(obj, (_BlockData, Block)):
+                reference_model = obj
+                matching_names.append(attr_name)
+        if len(matching_names) > 1:
+            raise ValueError("Multiple objects found in source '%s' "
+                             "that could be a reference model. Make "
+                             "sure there is only one Pyomo model in "
+                             "the source file. Object names: %s"
+                             % (str(matching_names)))
 
-    return module, model, callback
+    return module, reference_model, callback
+
+def _find_scenariotree_or_callback(src):
+    """Tries to find a single reference model or callback for
+    generating scenario models."""
+    module, _ = load_external_module(src, clear_cache=True)
+    scenario_tree_object = None
+    scenario_tree_model = None
+    callback = None
+    dir_module = dir(module)
+    if "pysp_scenario_tree_model_callback" in dir_module:
+        callback = getattr(module, "pysp_scenario_tree_model_callback")
+        if not hasattr(callback,"__call__"):
+            raise TypeError("'pysp_scenario_tree_model_callback' "
+                            "object found in source '%s' is not "
+                            "callable" % (src))
+    else:
+        matching_names = []
+        for attr_name in dir_module:
+            obj = getattr(module, attr_name)
+            if isinstance(obj, ScenarioTree):
+                scenario_tree_object = obj
+                matching_names.append(attr_name)
+            elif isinstance(obj, (_BlockData, Block)):
+                scenario_tree_model = obj
+                matching_names.append(attr_name)
+            elif has_networkx and \
+                 isinstance(obj, networkx.DiGraph):
+                scenario_tree_model = obj
+                matching_names.append(attr_name)
+        if len(matching_names) > 1:
+            raise ValueError("Multiple objects found in source '%s' "
+                             "that could act as a scenario tree "
+                             "specification. Make sure there is only "
+                             "one Pyomo model, ScenarioTree, or "
+                             "networkx.DiGraph object in the source "
+                             "file. Object names: %s"
+                             % (str(matching_names)))
+
+    return module, scenario_tree_object, scenario_tree_model, callback
 
 class ScenarioTreeInstanceFactory(object):
 
@@ -315,14 +344,15 @@ class ScenarioTreeInstanceFactory(object):
                               % (self._model_filename))
             assert self._model_filename is not None
             assert self._model_filename.endswith(".py")
-            self._model_module, self._model_object, self._model_callback = \
-                _import_model_or_callback(
-                    self._model_filename,
-                    "pysp_instance_creation_callback")
+            (self._model_module,
+             self._model_object,
+             self._model_callback) = \
+                _find_reference_model_or_callback(self._model_filename)
             if (self._model_object is None) and \
                (self._model_callback is None):
                 raise AttributeError(
-                    "No 'model' object or 'pysp_instance_creation_callback' "
+                    "No reference Pyomo model or "
+                    "'pysp_instance_creation_callback' "
                     "function object found in src: %s"
                     % (self._model_filename))
         elif hasattr(model, "__call__"):
@@ -384,41 +414,37 @@ class ScenarioTreeInstanceFactory(object):
                 if self._scenario_tree_filename == self._model_filename:
                     # try not to clobber the model import
                     (self._scenario_tree_module,
+                     scenario_tree_object,
                      scenario_tree_model,
                      scenario_tree_callback) = \
-                        _import_model_or_callback(
-                            self._model_module,
-                            "pysp_scenario_tree_model_callback")
+                        _find_scenariotree_or_callback(
+                            self._model_module)
                 else:
                     (self._scenario_tree_module,
+                     scenario_tree_object,
                      scenario_tree_model,
                      scenario_tree_callback) = \
-                        _import_model_or_callback(
-                            self._scenario_tree_filename,
-                            "pysp_scenario_tree_model_callback")
+                        _find_scenariotree_or_callback(
+                            self._scenario_tree_filename)
                 if scenario_tree_callback is not None:
+                    assert scenario_tree_object is None
+                    assert scenario_tree_model is None
                     obj = scenario_tree_callback()
                     if isinstance(obj, ScenarioTree):
                         self._scenario_tree = obj
                     else:
                         self._scenario_tree_model = obj
                 elif scenario_tree_model is not None:
+                    assert scenario_tree_object is None
+                    assert scenario_tree_callback is None
                     self._scenario_tree_model = scenario_tree_model
+                elif scenario_tree_object is not None:
+                    assert scenario_tree_model is None
+                    assert scenario_tree_callback is None
+                    self._scenario_tree = scenario_tree_object
                 else:
-                    for attr_name in dir(self._scenario_tree_module):
-                        obj = getattr(self._scenario_tree_module,
-                                      attr_name)
-                        if isinstance(obj, ScenarioTree):
-                            self._scenario_tree = obj
-                            break
-                        elif has_networkx and \
-                             isinstance(obj, networkx.DiGraph):
-                            self._scenario_tree_model = obj
-                            break
-                if (self._scenario_tree is None) and \
-                   (self._scenario_tree_model is None):
                     raise AttributeError(
-                        "No scenario tree object or "
+                        "No scenario tree or "
                         "'pysp_scenario_tree_model_callback' "
                         "function found in src: %s"
                         % (self._scenario_tree_filename))
