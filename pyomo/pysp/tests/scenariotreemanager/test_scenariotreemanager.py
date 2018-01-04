@@ -1501,7 +1501,6 @@ class TestScenarioTreeManagerClientPyro_HandshakeAtStartup(
     def _setup(self, options, servers=None):
         _ScenarioTreeManagerClientPyroTesterBase._setup(self, options, servers=servers)
         options.pyro_handshake_at_startup = True
-        options.pyro_multiple_scenariotreeserver_workers = False
 
 if __name__ == "__main__":
     unittest.main()
