@@ -391,7 +391,7 @@ for solver_name, solver_io in [('ipopt','nl')]:
 
     networkx_examples_dir = join(pysp_examples_dir, "networkx_scenariotree")
     networkx_model_dir = join(networkx_examples_dir, "ReferenceModel.py")
-    networkx_data_dir = None
+    networkx_data_dir = join(networkx_examples_dir, "ScenarioTree.py")
     class_names = create_test_classes('networkx',
                                       networkx_model_dir,
                                       networkx_data_dir,
