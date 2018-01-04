@@ -95,15 +95,6 @@ class TestExamples(unittest.TestCase):
         self._run_cmd(cmd)
         self._cleanup()
 
-    @unittest.skipIf(not 'cplex' in solvers,
-                     'cplex not available')
-    def test_admm(self):
-        cmd = ['python', join(examples_dir, 'apps', 'admm.py')]
-        cmd.extend(["-m", join(pysp_examples_dir, "farmer", "models")])
-        cmd.extend(["-s", join(pysp_examples_dir, "farmer", "scenariodata")])
-        self._run_cmd(cmd)
-        self._cleanup()
-
     @unittest.skipIf(not have_networkx,
                      "networkx module not installed")
     def test_compile_scenario_tree(self):
@@ -269,16 +260,6 @@ class TestParallelExamples(unittest.TestCase):
                     os.remove(os.path.join(thisdir,'Pyro_NS_URI'))
                 except OSError:
                     pass
-        self._cleanup()
-
-    @unittest.skipIf(not 'cplex' in solvers,
-                     'cplex not available')
-    def test_admm(self):
-        cmd = ['python',
-               join(examples_dir, 'apps', 'admm.py'),
-               '-m', join(pysp_examples_dir, "farmer", "models"),
-               '-s', join(pysp_examples_dir, "farmer", "scenariodata")]
-        self._run_cmd_with_pyro(cmd, 3)
         self._cleanup()
 
     @unittest.skipIf(not have_networkx,
