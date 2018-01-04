@@ -40,6 +40,10 @@ def _raise_modifying_immutable_error(obj, index):
         "declare the parameter as mutable [i.e., Param(mutable=True)]"
         % (name,))
 
+class _NoArgument(object):
+    pass
+class _NotValid(object):
+    pass
 
 class _ParamData(ComponentData, NumericValue):
     """
@@ -65,7 +69,7 @@ class _ParamData(ComponentData, NumericValue):
         # The following is equivalent to calling the
         # base NumericValue constructor.
         #
-        self._value = None
+        self._value = _NotValid
 
     def __getstate__(self):
         """
@@ -81,11 +85,11 @@ class _ParamData(ComponentData, NumericValue):
 
     def clear(self):
         """Clear the data in this component"""
-        self._value = None
+        self._value = _NotValid
 
-    def set_value(self, value, idx=None):
+    def set_value(self, value, idx=_NoArgument):
         self._value = value
-        if idx is None:
+        if idx is _NoArgument:
             idx = self.index()
         self.parent_component()._validate_value(idx, value)
 
@@ -93,10 +97,10 @@ class _ParamData(ComponentData, NumericValue):
         """
         Return the value of this object.
         """
-        if self._value is None:
+        if self._value is _NotValid:
             raise ValueError(
                 "Error evaluating Param value (%s):\n\tThe Param value is "
-                "undefined and no default value is specified"
+                "currently set to an invalid value"
                 % ( self.name, ))
         return self._value
 
@@ -136,14 +140,7 @@ class _ParamData(ComponentData, NumericValue):
 
     def __nonzero__(self):
         """Return True if the value is defined and non-zero."""
-        if self._value:
-            return True
-        if self._value is None:
-            raise ValueError(
-                "Error evaluating Param value (%s):\n\tThe Param value is "
-                "undefined and no default value is specified"
-                % ( self.name, ))
-        return False
+        return bool(self())
 
     __bool__ = __nonzero__
 
@@ -179,13 +176,13 @@ class Param(IndexedComponent):
             return IndexedParam.__new__(IndexedParam)
 
     def __init__(self, *args, **kwd):
-        self._rule          = kwd.pop('rule', None )
+        self._rule          = kwd.pop('rule', _NotValid )
         self._rule          = kwd.pop('initialize', self._rule )
         self._validate      = kwd.pop('validate', None )
         self.domain         = kwd.pop('domain', Any )
         self.domain         = kwd.pop('within', self.domain )
         self._mutable       = kwd.pop('mutable', Param.DefaultMutable )
-        self._default_val   = kwd.pop('default', None )
+        self._default_val   = kwd.pop('default', _NotValid )
         self._dense_initialize = kwd.pop('initialize_as_dense', False)
         #
         if 'repn' in kwd:
@@ -204,7 +201,7 @@ class Param(IndexedComponent):
         component.  If a default value is specified, then the
         length equals the number of items in the component index.
         """
-        if self._default_val is None:
+        if self._default_val is _NotValid:
             return len(self._data)
         return len(self._index)
 
@@ -213,7 +210,7 @@ class Param(IndexedComponent):
         Return true if the index is in the dictionary.  If the default value
         is specified, then all members of the component index are valid.
         """
-        if self._default_val is None:
+        if self._default_val is _NotValid:
             return idx in self._data
         return idx in self._index
 
@@ -222,7 +219,7 @@ class Param(IndexedComponent):
         Iterate over the keys in the dictionary.  If the default value is
         specified, then iterate over all keys in the component index.
         """
-        if self._default_val is None:
+        if self._default_val is _NotValid:
             return self._data.__iter__()
         return self._index.__iter__()
 
@@ -272,14 +269,14 @@ class Param(IndexedComponent):
             #
             ans = {}
             for key, param_value in self.iteritems():
-                ans[key] = param_value._value
+                ans[key] = param_value()
             return ans
         elif not self.is_indexed():
             #
             # The parameter is a scalar, so we need to create a temporary
             # dictionary using the value for this parameter.
             #
-            return { None: self._value }
+            return { None: self() }
         else:
             #
             # The parameter is not mutable, so iteritems() can be
@@ -304,14 +301,14 @@ class Param(IndexedComponent):
             #
             ans = {}
             for key, param_value in self.sparse_iteritems():
-                ans[key] = param_value._value
+                ans[key] = param_value()
             return ans
         elif not self.is_indexed():
             #
             # The parameter is a scalar, so we need to create a temporary
             # dictionary using the value for this parameter.
             #
-            return { None: self._value }
+            return { None: self() }
         else:
             #
             # The parameter is not mutable, so sparse_iteritems() can be
@@ -393,7 +390,7 @@ class Param(IndexedComponent):
         NOTE: this test will not validate the value of function return values.
         """
         if self._constructed \
-                and val is not None \
+                and val is not _NotValid \
                 and type(val) in native_types \
                 and val not in self.domain:
             raise ValueError(
@@ -422,24 +419,19 @@ class Param(IndexedComponent):
         # Local values
         #
         val = self._default_val
+        if val is _NotValid:
+            if self.is_indexed():
+                idx_str = '%s[%s]' % (self.name, index,)
+            else:
+                idx_str = '%s' % (self.name,)
+            raise ValueError(
+                "Error retrieving Param value (%s):\n\tThe Param value is "
+                "undefined and no default value is specified"
+                % ( idx_str,) )
+
         _default_type = type(val)
         _check_value_domain = True
-        #
-        if val is None:
-            # If the Param is mutable, then it is OK to create a Param
-            # implicitly ... the error will be tossed later when someone
-            # attempts to evaluate the value of the Param
-            if not self._mutable:
-                if self.is_indexed():
-                    idx_str = '%s[%s]' % (self.name, index,)
-                else:
-                    idx_str = '%s' % (self.name,)
-                raise ValueError(
-                    "Error retrieving Param value (%s):\n\tThe Param value is "
-                    "undefined and no default value is specified"
-                    % ( idx_str,) )
-            _check_value_domain = False
-        elif _default_type in native_types:
+        if _default_type in native_types:
             #
             # The set_default() method validates the domain of native types, so
             # we can skip the check on the value domain.
@@ -808,7 +800,7 @@ This has resulted in the conversion of the source to dense form.
         # the domain.
         #
         val = self._default_val
-        if val is not None \
+        if val is not _NotValid \
                 and type(val) in native_types \
                 and val not in self.domain:
             raise ValueError(
@@ -821,7 +813,7 @@ This has resulted in the conversion of the source to dense form.
         #
         # Step #1: initialize data from rule value
         #
-        if self._rule is not None:
+        if self._rule is not _NotValid:
             self._initialize_from(self._rule)
         #
         # Step #2: allow any user-specified (external) data to override
@@ -878,11 +870,16 @@ This has resulted in the conversion of the source to dense form.
         """
         Return data that will be printed for this component.
         """
+        if self._default_val is _NotValid:
+            default = "None" # for backwards compatibility in reporting
+        elif type(self._default_val) is types.FunctionType:
+            default = "(function)"
+        else:
+            default = str(self._default_val)
         return ( [("Size", len(self)),
                   ("Index", self._index if self.is_indexed() else None),
                   ("Domain", self.domain.name),
-                  ("Default", "(function)" if type(self._default_val) \
-                       is types.FunctionType else self._default_val),
+                  ("Default", default),
                   ("Mutable", self._mutable),
                   ],
                  self.sparse_iteritems(),
