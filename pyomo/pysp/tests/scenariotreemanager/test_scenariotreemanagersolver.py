@@ -767,6 +767,7 @@ class TestScenarioTreeManagerSolverPyro(
         options = ScenarioTreeManagerClientPyro.register_options()
         options.pyro_port = _pyomo_ns_port
         options.pyro_required_scenariotreeservers = 3
+        options.pyro_handshake_at_startup = True
         sp = ScenarioTreeManagerClientPyro(
             options,
             factory=factory)
