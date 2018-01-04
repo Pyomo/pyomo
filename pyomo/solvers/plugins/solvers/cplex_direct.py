@@ -479,25 +479,25 @@ class CPLEXDirect(DirectSolver):
             self.results.solver.status = SolverStatus.ok
             self.results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
-        elif soln_status in [2, 118]:
+        elif status in [2, 118]:
             self.results.solver.status = SolverStatus.warning
             self.results.solver.termination_condition = TerminationCondition.unbounded
             soln.status = SolutionStatus.unbounded
-        elif soln_status in [4, 119]:
-            # Note: soln_status of 4 means infeasible or unbounded
+        elif status in [4, 119]:
+            # Note: status of 4 means infeasible or unbounded
             #       and 119 means MIP infeasible or unbounded
             self.results.solver.status = SolverStatus.warning
             self.results.solver.termination_condition = TerminationCondition.infeasibleOrUnbounded
             soln.status = SolutionStatus.unsure
-        elif soln_status in [3, 103]:
+        elif status in [3, 103]:
             self.results.solver.status = SolverStatus.warning
             self.results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
-        elif soln_status in [10]:
+        elif status in [10]:
             self.results.solver.status = SolverStatus.aborted
             self.results.solver.termination_condition = TerminationCondition.maxIterations
             soln.status = SolutionStatus.stoppedByLimit
-        elif soln_status in [11, 25]:
+        elif status in [11, 25]:
             self.results.solver.status = SolverStatus.aborted
             self.results.solver.termination_condition = TerminationCondition.maxTimeLimit
             soln.status = SolutionStatus.stoppedByLimit
