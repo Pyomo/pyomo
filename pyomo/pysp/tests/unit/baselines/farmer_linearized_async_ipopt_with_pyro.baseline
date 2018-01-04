@@ -1,5 +1,3 @@
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python3.4_snotra_expensive/src/pyomo/examples/pysp/farmer/models/ReferenceModel.py
-Module successfully loaded
 Client attempting to find Pyro dispatcher object...
 Dispatcher Object URI: PYRO::PyUtilibServer.dispatcher.cf9047d9-2b8e-486c-92cb-d72c474bec4b@localhost:44210
 Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 22696@snotra.sandia.gov
