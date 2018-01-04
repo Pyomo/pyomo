@@ -203,10 +203,13 @@ class GurobiDirect(DirectSolver):
         self._range_constraints = set()
         DirectOrPersistentSolver._set_instance(self, model, kwds)
         try:
-            self._solver_model = self._gurobipy.Model(model.name)
+            if model.name is not None:
+                self._solver_model = self._gurobipy.Model(model.name)
+            else:
+                self._solver_model = self._gurobipy.Model()
         except Exception:
             e = sys.exc_info()[1]
-            msg = ('Unable to create Gurobi model. Have you ihnstalled the Python bindings for Gurboi?\n\n\t' +
+            msg = ('Unable to create Gurobi model. Have you installed the Python bindings for Gurboi?\n\n\t' +
                    'Error message: {0}'.format(e))
             raise Exception(msg)
 
