@@ -181,11 +181,13 @@ class GurobiDirect(DirectSolver):
     def _add_var(self, var):
         varname = self._symbol_map.getSymbol(var, self._labeler)
         vtype = self._gurobi_vtype_from_var(var)
-        lb = value(var.lb)
-        ub = value(var.ub)
-        if lb is None:
+        if var.has_lb():
+            lb = value(var.lb)
+        else:
             lb = -self._gurobipy.GRB.INFINITY
-        if ub is None:
+        if var.has_ub():
+            ub = value(var.ub)
+        else:
             ub = self._gurobipy.GRB.INFINITY
 
         gurobipy_var = self._solver_model.addVar(lb=lb, ub=ub, vtype=vtype, name=varname)

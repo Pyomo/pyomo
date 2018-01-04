@@ -226,11 +226,13 @@ class CPLEXDirect(DirectSolver):
     def _add_var(self, var):
         varname = self._symbol_map.getSymbol(var, self._labeler)
         vtype = self._cplex_vtype_from_var(var)
-        lb = value(var.lb)
-        ub = value(var.ub)
-        if lb is None:
+        if var.has_lb():
+            lb = value(var.lb)
+        else:
             lb = -self._cplex.infinity
-        if ub is None:
+        if var.has_ub():
+            ub = value(var.ub)
+        else:
             ub = self._cplex.infinity
 
         self._solver_model.variables.add(lb=[lb], ub=[ub], types=[vtype], names=[varname])
