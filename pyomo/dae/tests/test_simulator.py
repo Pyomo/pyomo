@@ -1041,7 +1041,7 @@ class TestSimulationInterface():
 
     def _print(self, model, profiles):
         import numpy as np
-        np.set_printoptions(formatter={'float':'{: 0.4f}'.format})
+        np.set_printoptions(formatter={'float': '{: 0.4f}'.format})
         model.pprint()
         print(profiles)
 
@@ -1102,16 +1102,13 @@ class TestCasadiSimulation(unittest.TestCase, TestSimulationInterface):
         tname = 'simulator_ode_example'
         self._test(tname)
 
-
     def test_ode_multindex_example(self):
         tname = 'simulator_ode_multindex_example'
         self._test(tname)
 
-
     def test_dae_example(self):
         tname = 'simulator_dae_example'
         self._test(tname)
-
 
     def test_dae_multindex_example(self):
         tname = 'simulator_dae_multindex_example'
