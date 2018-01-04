@@ -572,9 +572,10 @@ class BendersAlgorithm(PySPConfiguredObject):
                 visibility=0),
             ap_group=_benders_group_label)
 
-        ScenarioTreeManagerSolverFactory.register_options(options,
-                                                          options_prefix="subproblem_",
-                                                          setup_argparse=False)
+        ScenarioTreeManagerSolverFactory.register_options(
+            options,
+            options_prefix="subproblem_",
+            setup_argparse=False)
 
         return options
 
@@ -585,7 +586,8 @@ class BendersAlgorithm(PySPConfiguredObject):
         self.close()
 
     def close(self):
-        self.cleanup_subproblems()
+        if self._manager is not None:
+            self.cleanup_subproblems()
         if self._manager_solver is not None:
             self._manager_solver.close()
         if self._master_solver is not None:
@@ -645,9 +647,10 @@ class BendersAlgorithm(PySPConfiguredObject):
             raise ValueError("BendersAlgorithm requires a two-stage scenario tree")
 
         self._manager = manager
-        self._manager_solver = ScenarioTreeManagerSolverFactory(self._manager,
-                                                                self._options,
-                                                                options_prefix="subproblem_")
+        self._manager_solver = ScenarioTreeManagerSolverFactory(
+            self._manager,
+            self._options,
+            options_prefix="subproblem_")
 
         self._master_solver = None
         # setup the master solver
@@ -1388,11 +1391,13 @@ def runbenders(options):
               "stochastic programming problems "
               "(i.e., the L-shaped method).")
         benders = BendersSolver()
-        benders_options = benders.extract_user_options_to_dict(options,
-                                                               sparse=True)
-        results = benders.solve(sp,
-                                options=benders_options,
-                                output_solver_log=options.output_solver_log)
+        benders_options = benders.extract_user_options_to_dict(
+            options,
+            sparse=True)
+        results = benders.solve(
+            sp,
+            options=benders_options,
+            output_solver_log=options.output_solver_log)
         xhat = results.xhat
         del results.xhat
         print("")

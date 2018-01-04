@@ -36,10 +36,12 @@ from pyomo.pysp.util.config import (PySPConfigValue,
                                     _domain_must_be_str)
 from pyomo.pysp.util.misc import (parse_command_line,
                                   launch_command)
-from pyomo.pysp.scenariotree.manager import InvocationType
-from pyomo.pysp.scenariotree.manager_solver import \
-    (ScenarioTreeManagerSolver,
+from pyomo.pysp.scenariotree.manager import \
+    (InvocationType,
+     ScenarioTreeManager,
      ScenarioTreeManagerFactory)
+from pyomo.pysp.scenariotree.manager_solver import \
+    ScenarioTreeManagerSolverFactory
 from pyomo.pysp.phutils import indexToString
 from pyomo.pysp.solvers.spsolver import (SPSolver,
                                          SPSolverResults,
@@ -84,9 +86,7 @@ class AdaptiveRhoStrategy(RhoStrategy, PySPConfiguredObject):
     def _declare_options(cls, options=None):
         if options is None:
             options = PySPConfigBlock()
-        safe_declare_common_option(options,
-                                   "verbose",
-                                   ap_group=_rho_group_label)
+        safe_declare_common_option(options, "verbose")
         return options
     def __init__(self, *args, **kwds):
         super(AdaptiveRhoStrategy, self).__init__(*args, **kwds)
@@ -258,14 +258,20 @@ def EXTERNAL_initialize_for_admm(manager,
         node_block = Block(concrete=True)
         admm_block.add_component(tree_node.name,
                                  node_block)
-        node_block.index = Set(
+        node_block.node_index_set = Set(
             ordered=True,
             initialize=sorted(tree_node._standard_variable_ids))
-        node_block.z = Param(node_block.index, initialize=0.0, mutable=True)
-        node_block.y = Param(node_block.index, initialize=0.0, mutable=True)
-        node_block.rho = Param(node_block.index, initialize=0.0, mutable=True)
+        node_block.z = Param(node_block.node_index_set,
+                             initialize=0.0,
+                             mutable=True)
+        node_block.y = Param(node_block.node_index_set,
+                             initialize=0.0,
+                             mutable=True)
+        node_block.rho = Param(node_block.node_index_set,
+                               initialize=0.0,
+                               mutable=True)
 
-        for id_ in node_block.index:
+        for id_ in node_block.node_index_set:
             varname, index = tree_node._variable_ids[id_]
             var = scenario._instance.find_component(varname)[index]
             admm_block.lagrangian_expression.expr += \
@@ -413,6 +419,10 @@ class ADMMAlgorithm(PySPConfiguredObject):
         safe_declare_common_option(options,
                                    "verbose",
                                    ap_group=_admm_group_label)
+        ScenarioTreeManagerSolverFactory.register_options(
+            options,
+            options_prefix="subproblem_",
+            setup_argparse=False)
         return options
 
     def __enter__(self):
@@ -424,12 +434,15 @@ class ADMMAlgorithm(PySPConfiguredObject):
     def close(self):
         if self._manager is not None:
             self.cleanup_subproblems()
-            self._manager = None
+        if self._manager_solver is not None:
+            self._manager_solver.close()
+        self._manager_solver = None
+        self._manager = None
 
     def __init__(self, manager, *args, **kwds):
         super(ADMMAlgorithm, self).__init__(*args, **kwds)
 
-        if not isinstance(manager, ScenarioTreeManagerSolver):
+        if not isinstance(manager, ScenarioTreeManager):
             raise TypeError("%s requires an instance of the "
                             "ScenarioTreeManagerSolver interface as the "
                             "second argument" % (self.__class__.__name__))
@@ -439,6 +452,11 @@ class ADMMAlgorithm(PySPConfiguredObject):
                              % (self.__class__.__name__))
 
         self._manager = manager
+        self._manager_solver = ScenarioTreeManagerSolverFactory(
+            self._manager,
+            self._options,
+            options_prefix="subproblem_")
+
         self.initialize_subproblems()
 
     def initialize_subproblems(self):
@@ -522,7 +540,8 @@ class ADMMAlgorithm(PySPConfiguredObject):
             function_args=(z,),
             oneway=True)
 
-        self._manager.solve_scenarios()
+        self._manager_solver.solve_scenarios()
+
         objective = 0.0
         for scenario in self._manager.scenario_tree.scenarios:
             x_scenario = x[scenario.name]
@@ -707,13 +726,9 @@ class ADMMSolver(SPSolver, PySPConfiguredObject):
             ap_group=_admm_group_label)
         return options
 
-    def __init__(self, *args, **kwds):
-        super(ADMMSolver, self).__init__(*args, **kwds)
-        self._name = "admm"
-        ADMMAlgorithm.validate_options(self._options)
-        for rstype in RhoStrategyFactory.registered_types.values():
-            rstype.validate_options(self._options)
-
+    def __init__(self):
+        super(ADMMSolver, self).__init__(self.register_options())
+        self.set_options_to_default()
         # The following attributes will be modified by the
         # solve() method. For users that are scripting, these
         # can be accessed after the solve() method returns.
@@ -725,21 +740,32 @@ class ADMMSolver(SPSolver, PySPConfiguredObject):
         self.iterations = None
         ############################################
 
+    def set_options_to_default(self):
+        self._options = self.register_options()
+
+    @property
+    def options(self):
+        return self._options
+
+    @property
+    def name(self):
+        return "admm"
+
     def _solve_impl(self,
-                    manager,
+                    sp,
                     rho=1.0,
                     y_init=0.0,
                     z_init=0.0,
                     output_solver_log=False):
 
-        if len(manager.scenario_tree.stages) > 2:
+        if len(sp.scenario_tree.stages) > 2:
             raise ValueError(
                 "ADMM solver does not yet handle more "
                 "than 2 time-stages")
 
         start_time = time.time()
 
-        scenario_tree = manager.scenario_tree
+        scenario_tree = sp.scenario_tree
         num_scenarios = len(scenario_tree.scenarios)
         num_stages = len(scenario_tree.stages)
         num_na_nodes = 0
@@ -747,7 +773,7 @@ class ADMMSolver(SPSolver, PySPConfiguredObject):
         num_na_continuous_variables = 0
         num_na_binary_variables = 0
         num_na_integer_variables = 0
-        for stage in manager.scenario_tree.stages[:-1]:
+        for stage in sp.scenario_tree.stages[:-1]:
             for tree_node in stage.nodes:
                 num_na_nodes += 1
                 num_na_variables += len(tree_node._standard_variable_ids)
@@ -792,14 +818,14 @@ class ADMMSolver(SPSolver, PySPConfiguredObject):
             print("")
         label_cols = ("{0:^4} {1:>16} {2:>8} {3:>8} {4:>12}".format(
             "iter","objective","pr_res","du_res","lg(||rho||)"))
-        with ADMMAlgorithm(manager, self._options) as admm:
+        with ADMMAlgorithm(sp, self._options) as admm:
             rho, x, y, z = admm.initialize_algorithm_data(rho_init=rho,
                                                           y_init=y_init,
                                                           z_init=z_init)
             rho_strategy = RhoStrategyFactory(
                 self.get_option("rho_strategy"),
                 self._options)
-            rho_strategy.initialize(manager, x, y, z, rho)
+            rho_strategy.initialize(sp, x, y, z, rho)
             for i in xrange(max_iterations):
 
                 objective = \
@@ -849,7 +875,7 @@ class ADMMSolver(SPSolver, PySPConfiguredObject):
                               % (self.iterations))
                     break
                 else:
-                    rho_strategy.update_rho(manager, x, y, z, rho)
+                    rho_strategy.update_rho(sp, x, y, z, rho)
 
             else:
                 if output_solver_log:
@@ -880,6 +906,8 @@ class ADMMSolver(SPSolver, PySPConfiguredObject):
 def runadmm_register_options(options=None):
     if options is None:
         options = PySPConfigBlock()
+    ADMMSolver.register_options(options)
+    ScenarioTreeManagerFactory.register_options(options)
     safe_register_common_option(options,
                                "verbose")
     safe_register_common_option(options,
@@ -889,9 +917,9 @@ def runadmm_register_options(options=None):
     safe_register_common_option(options,
                                "traceback")
     safe_register_common_option(options,
+                                "output_solver_log")
+    safe_register_common_option(options,
                                "output_scenario_tree_solution")
-    ScenarioTreeManagerFactory.register_options(options)
-    ADMMSolver.register_options(options)
     safe_register_unique_option(
         options,
         "default_rho",
@@ -915,21 +943,31 @@ def runadmm(options):
     with the ADMM solver.
     """
     start_time = time.time()
-    with ScenarioTreeManagerFactory(options) as manager:
-        manager.initialize()
+    with ScenarioTreeManagerFactory(options) as sp:
+        sp.initialize()
+
         print("")
         print("Running ADMM solver for stochastic "
               "programming problems")
-        admm = ADMMSolver(options)
-        results = admm.solve(manager,
-                             rho=options.default_rho,
-                             output_solver_log=True)
+        admm = ADMMSolver()
+        admm_options = admm.extract_user_options_to_dict(
+            options,
+            sparse=True)
+        results = admm.solve(
+            sp,
+            options=admm_options,
+            rho=options.default_rho,
+            output_solver_log=options.output_solver_log)
+        xhat = results.xhat
+        del results.xhat
+        print("")
         print(results)
 
         if options.output_scenario_tree_solution:
             print("Final solution (scenario tree format):")
             manager.scenario_tree.snapshotSolutionFromScenarios()
             manager.scenario_tree.pprintSolution()
+            sp.scenario_tree.pprintCosts()
 
     print("")
     print("Total execution time=%.2f seconds"
