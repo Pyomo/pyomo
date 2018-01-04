@@ -772,6 +772,25 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerSolver,
         self._pyro_worker_map = {}
         self._pyro_base_worker_map = {}
 
+        worker_class = ScenarioTreeServerPyro.\
+                       get_registered_worker_type(
+                           self.default_registered_worker_name)
+        try:
+            worker_options = worker_class.\
+                             extract_user_options_to_dict(
+                                 self._options,
+                                 source_options_prefix=self._options_prefix,
+                                 sparse=True)
+        except KeyError:
+            raise KeyError(
+                "Unable to serialize options for registered worker "
+                "name %s (class=%s). The worker options did not "
+                "seem to match the registered options on the worker "
+                "class. Did you forget to register them? Message: %s"
+                % (worker_registered_name,
+                   worker_class.__name__,
+                   str(sys.exc_info()[1])))
+
         assert not self.manager._transmission_paused
         if not self.manager.get_option("pyro_handshake_at_startup"):
             self.manager.pause_transmit()
@@ -786,25 +805,6 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerSolver,
                       "scenario tree server %s"
                       % (worker_name, server_name))
 
-            worker_class = ScenarioTreeServerPyro.\
-                           get_registered_worker_type(
-                               self.default_registered_worker_name)
-            try:
-                worker_options = worker_class.\
-                                 extract_user_options_to_dict(
-                                     self._options,
-                                     source_options_prefix=self._options_prefix,
-                                     sparse=True)
-            except KeyError:
-                raise KeyError(
-                    "Unable to serialize options for registered worker "
-                    "name %s (class=%s). The worker options did not "
-                    "seem to match the registered options on the worker "
-                    "class. Did you forget to register them? Message: %s"
-                    % (worker_registered_name,
-                       worker_class.__name__,
-                       str(sys.exc_info()[1])))
-
             action_handle = self.manager._action_manager.queue(
                 queue_name=server_name,
                 action="ScenarioTreeServerPyro_initialize",
@@ -813,7 +813,14 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerSolver,
                 init_args=(base_worker_name,),
                 init_kwds=worker_options,
                 generate_response=True)
-            action_handle_data[action_handle] = worker_name
+
+            if self.manager.get_option("pyro_handshake_at_startup"):
+                action_handle_data[worker_name] =  \
+                    self.manager.AsyncResult(
+                        self.manager._action_manager,
+                        action_handle_data=action_handle).complete()
+            else:
+                action_handle_data[action_handle] = worker_name
 
             self._pyro_worker_map[base_worker_name] = worker_name
             self._pyro_base_worker_map[worker_name] = base_worker_name

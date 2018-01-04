@@ -3184,7 +3184,6 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
                 #
                 # One worker per server
                 #
-
                 init_type = worker_initializations[server_name][0].type_
                 assert all(init_type == _worker_init.type_ for _worker_init
                            in worker_initializations[server_name])
