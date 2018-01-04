@@ -1920,6 +1920,12 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
             # plugins.
             manager_results.solve_time[bundle_name] = \
                 float(results.solver.user_time)
+        elif hasattr(results.solver,"wallclock_time") and \
+             (not isinstance(results.solver.wallclock_time,
+                             UndefinedData))and \
+             (results.solver.wallclock_time is not None):
+            manager_results.solve_time[bundle_name] = \
+                float(results.solver.wallclock_time)
         elif hasattr(results.solver,"time"):
             solve_time = results.solver.time
             manager_results.solve_time[bundle_name] = \
@@ -2009,6 +2015,12 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
             # plugins.
             manager_results.solve_time[scenario_name] = \
                 float(results.solver.user_time)
+        elif hasattr(results.solver,"wallclock_time") and \
+             (not isinstance(results.solver.wallclock_time,
+                             UndefinedData))and \
+             (results.solver.wallclock_time is not None):
+            manager_results.solve_time[scenario_name] = \
+                float(results.solver.wallclock_time)
         elif hasattr(results.solver,"time"):
             manager_results.solve_time[scenario_name] = \
                 float(results.solver.time)
