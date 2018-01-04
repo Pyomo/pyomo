@@ -62,7 +62,8 @@ class CPLEXDirect(DirectSolver):
             import cplex
             self._cplex = cplex
             self._python_api_exists = True
-            self._version = tuple(self._cplex.Cplex().get_version().split('.'))
+            self._version = tuple(
+                int(k) for k in self._cplex.Cplex().get_version().split('.'))
             while len(self._version) < 4:
                 self._version += (0,)
             self._version = self._version[:4]
