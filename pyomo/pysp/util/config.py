@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -88,16 +88,20 @@ class PySPConfigBlock(ConfigBlock):
         """Return a summary string for an option
         registered on this block."""
         configval = self.get(name)
-        outstr = ("PySPConfigValue: %s\n"
-                  % (configval._name))
+        outstr = ("%s: %s\n"
+                  % (configval.__class__.__name__,
+                     configval._name))
         outstr += ("  -    type: %s\n"
                    "  - default: %s\n"
                    % ((configval._domain.doc if \
                        hasattr(configval._domain, 'doc') else \
                        configval._domain),
                       configval._default))
-        lines = textwrap.wrap(configval._description,
-                              width=58)
+        if configval._description is None:
+            lines = ["None"]
+        else:
+            lines = textwrap.wrap(configval._description,
+                                  width=58)
         while lines[-1].strip() == "":
             lines.pop()
         for i, line in enumerate(lines):
@@ -112,10 +116,12 @@ class PySPConfigBlock(ConfigBlock):
 
         return outstr
 
+    #
     # Overriding the behavior of ConfigBlock.display
     # so that it prints by default. I think it is
     # confusing that a method on that class named
     # 'display' returns a string
+    #
     def display(self, ostream=None, **kwds):
         """Displays the list of options registered to this
         block. The optional keyword 'ostream' can be a file
@@ -131,6 +137,89 @@ class PySPConfigBlock(ConfigBlock):
                 print(outstr)
             else:
                 ostream.write(outstr)
+
+    #
+    # Change the default behavior of ConfigBlock when
+    # _implicit_declaration are allowed. For some reason, in
+    # this case underscores are removed in implicitly
+    # assigned names (which does not happen when __setitem__
+    # is called).
+    #
+    def __setattr__(self, name, value):
+        # this is copied from the base class, except the
+        # part that replaces '_' with ' ' is removed
+        if name in ConfigBlock._all_slots:
+            super(ConfigBlock, self).__setattr__(name, value)
+        else:
+            ConfigBlock.__setitem__(self, name, value)
+
+    #
+    # Allow deletion of entries to get around issues with
+    # clashing options registration
+    #
+    def __delattr__(self, name):
+        if name not in self._data:
+            _name = name.replace('_', ' ')
+            if _name not in self._data:
+                raise AttributeError("Unknown attribute '%s'" % name)
+            name = _name
+        self._data[name]._parent = None
+        del self._data[name]
+        self._decl_order.remove(name)
+
+    #
+    # Change more strange default behavior for ConfigBlock
+    # when _implicit_declaration are allowed. If the userSet
+    # flag gets set to True on ConfigBlock (happens when new
+    # implicit entry is assigned), this will cause strange
+    # behavior with the user_values() method (it returns
+    # this block).
+    #
+    # Also, make sure that implicitly created entries
+    # have their _userSet flag set to True.
+    def add(self, name, config):
+        ans = super(PySPConfigBlock, self).add(name, config)
+        ans._userSet = True
+        self._userSet = False
+        return ans
+
+    def check_usage(self, error=True):
+        """Check for usage of options that have set
+        by a user.
+
+        Args:
+            error (bool): When :const:`True` (default), an
+                exception is raised when any options set by
+                the user have not been accessed by any
+                code. Otherwise, a warning is logged.
+
+        Returns:
+            :const:`True` when all options set by the user \
+            have been accessed; otherwise, returns \
+            :const:`False` if the :attr:`error` keyword is
+            set to :const:`False`.
+
+        Raises:
+            ValueError: when user-set options exist but have
+                not been accessed (and the :attr:`error`
+                keyword is :const:`True`)
+        """
+        ignored_options = dict((_c._name, _c.value(False))
+                               for _c in self.unused_user_values())
+        if len(ignored_options):
+            msg = ("The following options were "
+                   "explicitly set but never accessed:\n")
+            for name in sorted(ignored_options):
+                msg += (" - %s: %s\n" % (name, ignored_options[name]))
+            msg += ("If you believe this is a bug, please report it "
+                    "to the PySP developers.\n")
+            logger.warning(msg)
+            if error:
+                raise ValueError(msg)
+            else:
+                return False
+        return True
+
 
 def check_options_match(opt1,
                         opt2,
@@ -368,6 +457,23 @@ def _domain_positive_integer(val):
 _domain_positive_integer.doc = \
     "<domain: positive integer>"
 
+class _domain_integer_interval(object):
+    def __init__(self, start, stop):
+        assert start <= stop
+        assert int(start) == start
+        assert int(stop) == stop
+        self.start = int(start)
+        self.stop = int(stop)
+        self.doc = ("<domain: integer interval [%d, %d]"
+                    % (self.start, self.stop))
+    def __call__(self, val):
+        val = int(val)
+        if not (self.start <= val <= self.stop):
+            raise ValueError(
+                "Value %s is not in integer interval [%d, %d]."
+                % (val, self.start, self.stop))
+        return val
+
 def _domain_nonnegative(val):
     val = float(val)
     if val < 0:
@@ -532,17 +638,22 @@ safe_declare_unique_option(
         (),
         domain=_domain_tuple_of_str,
         description=(
-            "File that contains  a 'pysp_postinit_callback' "
-            "function, which is executed on each scenario at the end "
-            "of scenario tree manager initialization. If the scenario tree "
-            "is distributed, then this callback will be transmitted to the "
-            "respective scenario tree workers where the constructed scenario "
-            "instances are available. This callback can be used to update things "
-            "like variable bounds as well as other scenario-specific information "
-            "stored on the Scenario objects. This callback will be executed "
-            "immediately after any 'pysp_aggregategetter_callback' function "
-            "that is specified. This option can be used multiple times from the "
-            "command line to specify more than one callback function location."
+            "File that contains a 'pysp_postinit_callback' "
+            "function, which is executed on each scenario at "
+            "the end of scenario tree manager "
+            "initialization. If the scenario tree is "
+            "distributed, then this callback will be "
+            "transmitted to the respective scenario tree "
+            "workers where the constructed scenario instances "
+            "are available. This callback can be used to "
+            "update things like variable bounds as well as "
+            "other scenario-specific information stored on "
+            "the Scenario objects. This callback will be "
+            "executed immediately after any "
+            "'pysp_aggregategetter_callback' function that is "
+            "specified. This option can be used multiple "
+            "times from the command line to specify more than "
+            "one callback function location."
         ),
         doc=None,
         visibility=0),
@@ -558,18 +669,24 @@ safe_declare_unique_option(
         domain=_domain_tuple_of_str,
         description=(
             "File that contains a "
-            "'pysp_aggregategetter_callback' function, which is executed "
-            "in a sequential call chain on each scenario at the end of "
-            "scenario tree manager initialization. Most useful in cases where "
-            "the scenario tree is distributed across multiple processes, it can "
-            "be used to execute arbitrary code whose return value is passed as input "
-            "into the next call in the chain. At the end of the call chain, the "
-            "final result is broadcast to all scenario tree worker processes and "
-            "stored under the name _aggregate_user_data on the worker object. "
-            "Potential uses include collecting aggregate scenario information "
-            "that is subsequently used by a 'pysp_postinit_callback' function to "
-            "set tight variable bounds. This option can be used multiple times from the "
-            "command line to specify more than one callback function location."
+            "'pysp_aggregategetter_callback' function, which "
+            "is executed in a sequential call chain on each "
+            "scenario at the end of scenario tree manager "
+            "initialization. Most useful in cases where the "
+            "scenario tree is distributed across multiple "
+            "processes, it can be used to execute arbitrary "
+            "code whose return value is passed as input into "
+            "the next call in the chain. At the end of the "
+            "call chain, the final result is broadcast to all "
+            "scenario tree worker processes and stored under "
+            "the name _aggregate_user_data on the worker "
+            "object. Potential uses include collecting "
+            "aggregate scenario information that is "
+            "subsequently used by a 'pysp_postinit_callback' "
+            "function to set tight variable bounds. This "
+            "option can be used multiple times from the "
+            "command line to specify more than one callback "
+            "function location."
         ),
         doc=None,
         visibility=0),
@@ -701,6 +818,7 @@ safe_declare_unique_option(
         visibility=0),
     ap_group=_pyro_options_group_title)
 
+
 safe_declare_unique_option(
     common_block,
     "pyro_handshake_at_startup",
@@ -731,8 +849,8 @@ safe_declare_unique_option(
             "scenarios (or bundles). The default value of 0 "
             "indicates that the manager should attempt to assign each "
             "scenario (or bundle) to a single scenariotreeserver process "
-            "until the timeout (indicated by the pyro_find_scenariotreeservers_timeout "
-            "option) occurs."
+            "until the timeout (indicated by the "
+            "pyro_find_scenariotreeservers_timeout option) occurs."
         ),
         doc=None,
         visibility=0),
@@ -745,10 +863,12 @@ safe_declare_unique_option(
         30,
         domain=float,
         description=(
-            "Set the time limit (seconds) for finding idle scenario tree "
-            "server processes when the 'pyro' scenario tree manager is "
-            "selected. This option is ignored when pyro_required_scenariotreeservers "
-            "is used.  Default is 30 seconds."
+            "Set the time limit (seconds) for finding idle "
+            "scenario tree server processes when the 'pyro' "
+            "scenario tree manager is selected. This option "
+            "is ignored when "
+            "pyro_required_scenariotreeservers is used. "
+            "Default is 30 seconds."
         ),
         doc=None,
         visibility=0),
@@ -761,13 +881,16 @@ safe_declare_unique_option(
         False,
         domain=bool,
         description=(
-            "Causes scenario tree jobs to be assigned to scenario tree servers "
-            "so that all scenarios or bundles assigned to a server will be managed "
-            "by a different worker instantiations. Note that all worker function "
-            "executions are executed in serial on a given scenario tree server. "
-            "This option might be useful for debugging situations or for limiting "
-            "parallel execution of tasks (e.g., when the pyro solver manager is "
-            "used by scenario tree workers)."
+            "Causes scenario tree jobs to be assigned to "
+            "scenario tree servers so that all scenarios or "
+            "bundles assigned to a server will be managed by "
+            "a different worker instantiations. Note that all "
+            "worker function executions are executed in "
+            "serial on a given scenario tree server.  This "
+            "option might be useful for debugging situations "
+            "or for limiting parallel execution of tasks "
+            "(e.g., when the pyro solver manager is used by "
+            "scenario tree workers)."
         ),
         doc=None,
         visibility=0),
@@ -781,12 +904,12 @@ safe_declare_unique_option(
         domain=bool,
         description=(
             "Attempt to shut down all Pyro-related components "
-            "associated with the Pyro name server used by any scenario "
-            "tree manager or solver manager. Components to shutdown "
-            "include the name server, dispatch server, and any "
-            "scenariotreeserver or pyro_mip_server processes. Note "
-            "that if Pyro4 is in use the nameserver will always "
-            "ignore this request."
+            "associated with the Pyro name server for the "
+            "scenario tree manager. Components to shutdown "
+            "include the name server, dispatch server, and "
+            "any scenariotreeserver registered with the "
+            "dispatcher. Note that if Pyro4 is in use the "
+            "nameserver will always ignore this request."
         ),
         doc=None,
         visibility=0),
@@ -800,13 +923,12 @@ safe_declare_unique_option(
         domain=bool,
         description=(
             "Upon exit, send shutdown requests to all worker "
-            "processes that were acquired through the dispatcher. "
-            "This typically includes scenariotreeserver processes "
-            "(used by the Pyro scenario tree manager) and pyro_mip_server "
-            "processes (used by the Pyro solver manager). This leaves "
-            "any dispatchers and namservers running as well as any "
-            "processes registered with the dispather that were not "
-            "acquired for work by this client."
+            "processes that were acquired through the "
+            "dispatcher used by the scenario tree manager. "
+            "This leaves any dispatchers and namservers "
+            "running as well as any processes registered with "
+            "the dispather that were not acquired for work by "
+            "this client."
         ),
         doc=None,
         visibility=0),
@@ -1712,8 +1834,7 @@ safe_declare_unique_option(
         doc=None,
         visibility=0),
     ap_kwds={'action': 'append'},
-    ap_group=_solve_options_group_title,
-    declare_for_argparse=True)
+    ap_group=_solve_options_group_title)
 
 safe_declare_unique_option(
     common_block,
@@ -1768,6 +1889,53 @@ safe_declare_unique_option(
         domain=bool,
         description=(
             "Disable warm-start of all sub-problem solves."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_solve_options_group_title)
+
+safe_declare_unique_option(
+    common_block,
+    "solver_manager_pyro_host",
+    PySPConfigValue(
+        None,
+        domain=_domain_must_be_str,
+        description=(
+            "The hostname to bind on when searching for a Pyro "
+            "nameserver controlling the solver manager."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_solve_options_group_title)
+
+safe_declare_unique_option(
+    common_block,
+    "solver_manager_pyro_port",
+    PySPConfigValue(
+        None,
+        domain=int,
+        description=(
+            "The port to bind on when searching for a Pyro "
+            "nameserver controlling the solver_manager."
+        ),
+        doc=None,
+        visibility=0),
+    ap_group=_solve_options_group_title)
+
+safe_declare_unique_option(
+    common_block,
+    "solver_manager_pyro_shutdown",
+    PySPConfigValue(
+        False,
+        domain=bool,
+        description=(
+            "Attempt to shut down all Pyro-related components "
+            "associated with the Pyro name server for the "
+            "solver manager. Components to shutdown include "
+            "the name server, dispatch server, and any "
+            "pyro_mip_server processes. Note that if Pyro4 is "
+            "in use the nameserver will always ignore this "
+            "request."
         ),
         doc=None,
         visibility=0),
@@ -2234,33 +2402,6 @@ if pyutilib.misc.config.argparse_is_available:
                 "in the future. Please use '--solver-options instead.")
             current = getattr(namespace, 'CONFIGBLOCK.solver_options', values)
             current.append(values)
-
-    def _warn_scenario_solver_options(val):
-        # don't use logger here since users might not import
-        # the pyomo logger in a scripting interface
-        sys.stderr.write(
-            "\tWARNING: The 'scenario_solver_options' config item will be ignored "
-            "unless it is being used as a command-line option "
-            "where it can be redirected to 'solver_options'. "
-            "Please use 'solver_options' instead.\n")
-        return _domain_tuple_of_str(val)
-
-    safe_declare_unique_option(
-        _deprecated_block,
-        "scenario_solver_options",
-        PySPConfigValue(
-            None,
-            domain=_warn_scenario_solver_options,
-            description=(
-                "Deprecated alias for --solver-options"
-            ),
-            doc=None,
-            visibility=1),
-        ap_kwds={'action':_DeprecatedScenarioSolverOptions},
-        ap_group=_deprecated_options_group_title,
-        declare_for_argparse=True)
-    _map_to_deprecated['solver_options'] = \
-        _deprecated_block.get('scenario_solver_options')
 
     #
     # --bounds-cfgfile

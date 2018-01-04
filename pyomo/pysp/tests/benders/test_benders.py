@@ -91,9 +91,9 @@ class _RunBendersTesterBase(object):
         if not testing_solvers[self.solver_name, self.solver_io]:
             self.skipTest("%s (interface=%s) is not available"
                           % (self.solver_name, self.solver_io))
-        options['--solver'] = self.solver_name
+        options['--subproblem-solver'] = self.solver_name
         options['--master-solver'] = self.solver_name
-        options['--solver-io'] = self.solver_io
+        options['--subproblem-solver-io'] = self.solver_io
         options['--master-solver-io'] = self.solver_io
         options['--model-location'] = self.model_location
         if self.scenario_tree_location is not None:

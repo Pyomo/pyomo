@@ -99,8 +99,8 @@ class _EvalXHATTesterBase(object):
         if not testing_solvers[self.solver_name, self.solver_io]:
             self.skipTest("%s (interface=%s) is not available"
                           % (self.solver_name, self.solver_io))
-        options['--solver'] = self.solver_name
-        options['--solver-io'] = self.solver_io
+        options['--subproblem-solver'] = self.solver_name
+        options['--subproblem-solver-io'] = self.solver_io
         options['--model-location'] = self.model_location
         if self.scenario_tree_location is not None:
             options['--scenario-tree-location'] = self.scenario_tree_location
@@ -391,7 +391,7 @@ for solver_name, solver_io in [('ipopt','nl')]:
 
     networkx_examples_dir = join(pysp_examples_dir, "networkx_scenariotree")
     networkx_model_dir = join(networkx_examples_dir, "ReferenceModel.py")
-    networkx_data_dir = None
+    networkx_data_dir = join(networkx_examples_dir, "ScenarioTree.py")
     class_names = create_test_classes('networkx',
                                       networkx_model_dir,
                                       networkx_data_dir,

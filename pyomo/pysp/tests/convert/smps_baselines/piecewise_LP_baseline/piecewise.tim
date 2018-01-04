@@ -1,0 +1,49 @@
+TIME piecewise
+PERIODS EXPLICIT
+    TIME1
+    TIME2
+ROWS
+    x20 TIME1
+    c_l_x21_ TIME1
+    c_e_x22_ TIME2
+    c_e_x23_ TIME2
+    c_e_x24_ TIME2
+    c_e_x25_ TIME2
+    c_l_x26_ TIME2
+    c_u_x27_ TIME2
+    c_u_x28_ TIME2
+    c_u_x29_ TIME2
+    c_u_x30_ TIME2
+    c_u_x31_ TIME2
+    c_u_x32_ TIME2
+    c_u_x33_ TIME2
+    c_u_x34_ TIME2
+    c_u_x35_ TIME2
+    c_u_x36_ TIME2
+    c_u_x37_ TIME2
+    c_u_x38_ TIME2
+    r_l_x39_ TIME2
+    r_u_x39_ TIME2
+    c_e_ONE_VAR_CONSTANT TIME2
+COLS
+    x1 TIME1
+    x10 TIME2
+    x11 TIME2
+    x12 TIME2
+    x13 TIME2
+    x14 TIME2
+    x15 TIME2
+    x16 TIME2
+    x17 TIME2
+    x18 TIME2
+    x19 TIME2
+    x2 TIME2
+    x3 TIME2
+    x4 TIME2
+    x5 TIME2
+    x6 TIME2
+    x7 TIME2
+    x8 TIME2
+    x9 TIME2
+    ONE_VAR_CONSTANT TIME2
+ENDATA

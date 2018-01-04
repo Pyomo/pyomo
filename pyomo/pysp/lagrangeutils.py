@@ -48,7 +48,7 @@ def solve_ph_code(ph, options):
 
       with ExtensiveFormAlgorithm(ph,
                                   options._ef_options,
-                                  prefix="ef_") as ef:
+                                  options_prefix="ef_") as ef:
          ef.build_ef()
          failure = ef.solve(io_options=\
                             {'output_fixed_variable_bounds':
