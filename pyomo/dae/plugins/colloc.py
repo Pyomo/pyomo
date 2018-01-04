@@ -357,8 +357,8 @@ class Collocation_Discretization_Transformation(Transformation):
             self._ncp[None] = tmpncp
             currentds = None
         else :
-            self._nfe[tmpds.local_name]=tmpnfe
-            self._ncp[tmpds.local_name]=tmpncp
+            self._nfe[tmpds.name]=tmpnfe
+            self._ncp[tmpds.name]=tmpncp
             currentds = tmpds.name
 
         self._scheme = self.all_schemes.get(self._scheme_name,None)
@@ -551,7 +551,7 @@ class Collocation_Discretization_Transformation(Transformation):
             else:
                 temp[ds.local_name]=ncp
         else:
-            self._reduced_cp[var.local_name] = {ds.local_name: ncp}
+            self._reduced_cp[var.name] = {ds.name: ncp}
 
         list_name = var.local_name+"_interpolation_constraints"
 
