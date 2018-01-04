@@ -1277,9 +1277,9 @@ class BendersAlgorithm(PySPConfiguredObject):
                 (self.get_option("optimality_gap_epsilon") + \
                  abs(self.incumbent_objective))
 
-            min_time_sub = min(solve_results.solve_time.values())
-            max_time_sub = max(solve_results.solve_time.values())
             if output_solver_log:
+                min_time_sub = min(solve_results.pyomo_solve_time.values())
+                max_time_sub = max(solve_results.pyomo_solve_time.values())
                 print("%6d %16.4f %16.4f %11.3f%% %10.2f %10.2f %10.2f %10.2f"
                       % (i, current_master_bound, self.incumbent_objective,
                          self.optimality_gap*100, stop_time_master - start_time_master,
