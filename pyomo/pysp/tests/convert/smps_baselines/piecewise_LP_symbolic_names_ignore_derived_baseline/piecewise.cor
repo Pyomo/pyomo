@@ -66,10 +66,10 @@ c_e_p_second_stage(1)_INC_constraint1_:
 = -10
 
 c_e_p_second_stage(1)_INC_constraint2_:
++1 fz
 +1 p_second_stage(1)_INC_delta(2)
 -3 p_second_stage(1)_INC_delta(3)
 +1 p_second_stage(1)_INC_delta(4)
-+1 fz
 = 0
 
 c_l_c_second_stage_:

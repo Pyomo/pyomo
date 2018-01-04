@@ -34,15 +34,15 @@ COLS
     p_first_stage_INC_delta(2) TIME1
     p_first_stage_INC_delta(3) TIME1
     p_first_stage_INC_delta(4) TIME1
-    p_second_stage(1)_INC_bin_y(1) TIME1
-    p_second_stage(1)_INC_bin_y(2) TIME1
-    p_second_stage(1)_INC_bin_y(3) TIME1
-    p_second_stage(1)_INC_delta(1) TIME1
-    p_second_stage(1)_INC_delta(2) TIME1
-    p_second_stage(1)_INC_delta(3) TIME1
-    p_second_stage(1)_INC_delta(4) TIME1
     x TIME1
     fz TIME2
+    p_second_stage(1)_INC_bin_y(1) TIME2
+    p_second_stage(1)_INC_bin_y(2) TIME2
+    p_second_stage(1)_INC_bin_y(3) TIME2
+    p_second_stage(1)_INC_delta(1) TIME2
+    p_second_stage(1)_INC_delta(2) TIME2
+    p_second_stage(1)_INC_delta(3) TIME2
+    p_second_stage(1)_INC_delta(4) TIME2
     r TIME2
     z TIME2
     ONE_VAR_CONSTANT TIME2

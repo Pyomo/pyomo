@@ -1,7 +1,10 @@
-from pyomo.pysp.scenariotree.tree_structure_model \
-    import CreateConcreteTwoStageScenarioTreeModel
+from pyomo.pysp.scenariotree.tree_structure_model import \
+    CreateConcreteTwoStageScenarioTreeModel
 
 model = CreateConcreteTwoStageScenarioTreeModel(3)
+for key in model.ConditionalProbability:
+    if key != "RootNode":
+        model.ConditionalProbability[key] = 0.3333333333
 
 first_stage = model.Stages.first()
 second_stage = model.Stages.last()
@@ -19,5 +22,4 @@ model.StageVariables[second_stage].add('z')
 model.StageDerivedVariables[second_stage].add('q')
 model.StageDerivedVariables[second_stage].add('fz')
 model.StageDerivedVariables[second_stage].add('r')
-model.StageDerivedVariables[first_stage].add('p_second_stage')
-
+model.StageDerivedVariables[second_stage].add('p_second_stage')
