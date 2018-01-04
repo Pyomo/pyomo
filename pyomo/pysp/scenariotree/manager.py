@@ -2858,8 +2858,6 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
         safe_declare_common_option(options,
                                    "pyro_find_scenariotreeservers_timeout")
         safe_declare_common_option(options,
-                                   "pyro_multiple_scenariotreeserver_workers")
-        safe_declare_common_option(options,
                                    "pyro_handshake_at_startup")
 
         return options
@@ -3140,100 +3138,56 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
         action_handle_data = {}
         for cntr, server_name in enumerate(worker_initializations):
 
-            if self._options.pyro_multiple_scenariotreeserver_workers:
-
-                #
-                # Multiple workers per server
-                #
-
-                for worker_init in worker_initializations[server_name]:
-                    assert type(worker_init.names) is tuple
-                    assert len(worker_init.names) == 1
-                    object_name = worker_init.names[0]
-                    worker_name = server_name+":Worker_"+str(object_name)
-                    action_handle = self.add_worker(
-                        worker_name,
-                        worker_init,
-                        worker_options,
-                        self._registered_worker_name,
-                        server_name=server_name)
-
-                    if self._options.pyro_handshake_at_startup:
-                        action_handle_data[worker_name] =  \
-                            self.AsyncResult(
-                                self._action_manager,
-                                action_handle_data=action_handle).complete()
-                    else:
-                        action_handle_data[action_handle] = worker_name
-
-                    if worker_init.type_ == "bundles":
-                        assert self._scenario_tree.contains_bundle(object_name)
-                        self._bundle_to_worker_map[object_name] = worker_name
-                        assert type(worker_init.data) is dict
-                        assert len(worker_init.data) == 1
-                        assert len(worker_init.data[object_name]) > 0
-                        for scenario_name in worker_init.data[object_name]:
-                            self._scenario_to_worker_map[scenario_name] = worker_name
-                    else:
-                        assert worker_init.type_ == "scenarios"
-                        assert self._scenario_tree.contains_scenario(object_name)
-                        self._scenario_to_worker_map[object_name] = worker_name
-
+            init_type = worker_initializations[server_name][0].type_
+            assert all(init_type == _worker_init.type_ for _worker_init
+                       in worker_initializations[server_name])
+            assert all(type(_worker_init.names) is tuple
+                       for _worker_init in worker_initializations[server_name])
+            assert all(len(_worker_init.names) == 1
+                       for _worker_init in worker_initializations[server_name])
+            worker_name = None
+            if init_type == "bundles":
+                worker_name = server_name+":Worker_BundleGroup"+str(cntr)
+                worker_init = _BundleWorkerInit(
+                    [_worker_init.names[0] for _worker_init
+                     in worker_initializations[server_name]],
+                    dict((_worker_init.names[0],
+                          _worker_init.data[_worker_init.names[0]])
+                         for _worker_init in worker_initializations[server_name]))
             else:
+                assert init_type == "scenarios"
+                worker_name = server_name+":Worker_ScenarioGroup"+str(cntr)
+                worker_init = _ScenarioWorkerInit(
+                    [_worker_init.names[0] for _worker_init
+                     in worker_initializations[server_name]])
 
-                #
-                # One worker per server
-                #
-                init_type = worker_initializations[server_name][0].type_
-                assert all(init_type == _worker_init.type_ for _worker_init
-                           in worker_initializations[server_name])
-                assert all(type(_worker_init.names) is tuple
-                           for _worker_init in worker_initializations[server_name])
-                assert all(len(_worker_init.names) == 1
-                           for _worker_init in worker_initializations[server_name])
-                worker_name = None
-                if init_type == "bundles":
-                    worker_name = server_name+":Worker_BundleGroup"+str(cntr)
-                    worker_init = _BundleWorkerInit(
-                        [_worker_init.names[0] for _worker_init
-                         in worker_initializations[server_name]],
-                        dict((_worker_init.names[0],
-                              _worker_init.data[_worker_init.names[0]])
-                             for _worker_init in worker_initializations[server_name]))
-                else:
-                    assert init_type == "scenarios"
-                    worker_name = server_name+":Worker_ScenarioGroup"+str(cntr)
-                    worker_init = _ScenarioWorkerInit(
-                        [_worker_init.names[0] for _worker_init
-                         in worker_initializations[server_name]])
+            action_handle = self.add_worker(
+                worker_name,
+                worker_init,
+                worker_options,
+                self._registered_worker_name,
+                server_name=server_name)
 
-                action_handle = self.add_worker(
-                    worker_name,
-                    worker_init,
-                    worker_options,
-                    self._registered_worker_name,
-                    server_name=server_name)
+            if self._options.pyro_handshake_at_startup:
+                action_handle_data[worker_name] =  \
+                    self.AsyncResult(
+                        self._action_manager,
+                        action_handle_data=action_handle).complete()
+            else:
+                action_handle_data[action_handle] = worker_name
 
-                if self._options.pyro_handshake_at_startup:
-                    action_handle_data[worker_name] =  \
-                        self.AsyncResult(
-                            self._action_manager,
-                            action_handle_data=action_handle).complete()
-                else:
-                    action_handle_data[action_handle] = worker_name
-
-                if worker_init.type_ == "bundles":
-                    for bundle_name in worker_init.names:
-                        assert self._scenario_tree.contains_bundle(bundle_name)
-                        self._bundle_to_worker_map[bundle_name] = worker_name
-                        for scenario_name in worker_init.data[bundle_name]:
-                            assert self._scenario_tree.contains_scenario(scenario_name)
-                            self._scenario_to_worker_map[scenario_name] = worker_name
-                else:
-                    assert worker_init.type_ == "scenarios"
-                    for scenario_name in worker_init.names:
+            if worker_init.type_ == "bundles":
+                for bundle_name in worker_init.names:
+                    assert self._scenario_tree.contains_bundle(bundle_name)
+                    self._bundle_to_worker_map[bundle_name] = worker_name
+                    for scenario_name in worker_init.data[bundle_name]:
                         assert self._scenario_tree.contains_scenario(scenario_name)
                         self._scenario_to_worker_map[scenario_name] = worker_name
+            else:
+                assert worker_init.type_ == "scenarios"
+                for scenario_name in worker_init.names:
+                    assert self._scenario_tree.contains_scenario(scenario_name)
+                    self._scenario_to_worker_map[scenario_name] = worker_name
 
         if not self._options.pyro_handshake_at_startup:
             self.unpause_transmit()

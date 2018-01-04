@@ -293,20 +293,6 @@ def create_test_classes(basename,
     @unittest.skipIf(not (using_pyro3 or using_pyro4),
                      "Pyro or Pyro4 is not available")
     @unittest.category('parallel')
-    class TestEvalXHAT_Pyro_MultipleWorkers(_base,
-                                            _EvalXHATPyroTesterBase):
-        def setUp(self):
-            _EvalXHATPyroTesterBase.setUp(self)
-        def _setup(self, options, servers=None):
-            _EvalXHATPyroTesterBase._setup(self, options, servers=servers)
-            options['--pyro-multiple-scenariotreeserver-workers'] = None
-    class_names.append(TestEvalXHAT_Pyro_MultipleWorkers.__name__ + "_"+class_append_name)
-    globals()[class_names[-1]] = type(
-        class_names[-1], (TestEvalXHAT_Pyro_MultipleWorkers, unittest.TestCase), {})
-
-    @unittest.skipIf(not (using_pyro3 or using_pyro4),
-                     "Pyro or Pyro4 is not available")
-    @unittest.category('parallel')
     class TestEvalXHAT_Pyro_HandshakeAtStartup(_base,
                                                _EvalXHATPyroTesterBase):
         def setUp(self):
@@ -317,23 +303,6 @@ def create_test_classes(basename,
     class_names.append(TestEvalXHAT_Pyro_HandshakeAtStartup.__name__ + "_"+class_append_name)
     globals()[class_names[-1]] = type(
         class_names[-1], (TestEvalXHAT_Pyro_HandshakeAtStartup, unittest.TestCase), {})
-
-    @unittest.skipIf(not (using_pyro3 or using_pyro4),
-                     "Pyro or Pyro4 is not available")
-    @unittest.category('parallel')
-    class TestEvalXHAT_Pyro_HandshakeAtStartup_MultipleWorkers(_base,
-                                                               _EvalXHATPyroTesterBase):
-        def setUp(self):
-            _EvalXHATPyroTesterBase.setUp(self)
-        def _setup(self, options, servers=None):
-            _EvalXHATPyroTesterBase._setup(self, options, servers=servers)
-            options['--pyro-handshake-at-startup'] = None
-            options['--pyro-multiple-scenariotreeserver-workers'] = None
-    class_names.append(TestEvalXHAT_Pyro_HandshakeAtStartup_MultipleWorkers.__name__ + "_"+class_append_name)
-    globals()[class_names[-1]] = type(
-        class_names[-1],
-        (TestEvalXHAT_Pyro_HandshakeAtStartup_MultipleWorkers, unittest.TestCase),
-        {})
 
     return class_names
 

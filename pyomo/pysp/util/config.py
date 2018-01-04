@@ -876,28 +876,6 @@ safe_declare_unique_option(
 
 safe_declare_unique_option(
     common_block,
-    "pyro_multiple_scenariotreeserver_workers",
-    PySPConfigValue(
-        False,
-        domain=bool,
-        description=(
-            "Causes scenario tree jobs to be assigned to "
-            "scenario tree servers so that all scenarios or "
-            "bundles assigned to a server will be managed by "
-            "a different worker instantiations. Note that all "
-            "worker function executions are executed in "
-            "serial on a given scenario tree server.  This "
-            "option might be useful for debugging situations "
-            "or for limiting parallel execution of tasks "
-            "(e.g., when the pyro solver manager is used by "
-            "scenario tree workers)."
-        ),
-        doc=None,
-        visibility=0),
-    ap_group=_pyro_options_group_title)
-
-safe_declare_unique_option(
-    common_block,
     "pyro_shutdown",
     PySPConfigValue(
         False,
