@@ -8,8 +8,6 @@ from pyomo.core.kernel.component_map import ComponentMap
 from six import iteritems
 from pyomo.core.kernel.set_types import Reals
 
-__author__ = "Qi Chen <https://github.com/qtothec>"
-
 
 class VariableBoundStripper(IsomorphicTransformation):
     """Strips bounds from variables."""

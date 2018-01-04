@@ -4,8 +4,6 @@ import pyutilib.th as unittest
 from pyomo.environ import (Binary, ConcreteModel, Integers, NonNegativeReals,
                            PositiveReals, Reals, TransformationFactory, Var)
 
-__author__ = "Qi Chen <https://github.com/qtothec>"
-
 
 class TestRemoveZeroTerms(unittest.TestCase):
     """Tests stripping of bounds."""
