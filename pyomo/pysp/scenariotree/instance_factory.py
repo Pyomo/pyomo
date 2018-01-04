@@ -433,6 +433,9 @@ class ScenarioTreeInstanceFactory(object):
                     if isinstance(obj, ScenarioTree):
                         self._scenario_tree = obj
                     else:
+                        assert isinstance(model, (_BlockData, Block)) or \
+                            (has_networkx and \
+                             isinstance(obj, networkx.DiGraph))
                         self._scenario_tree_model = obj
                 elif scenario_tree_model is not None:
                     assert scenario_tree_object is None

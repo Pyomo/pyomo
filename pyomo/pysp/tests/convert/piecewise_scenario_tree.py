@@ -2,9 +2,12 @@ from pyomo.pysp.scenariotree.tree_structure_model import \
     CreateConcreteTwoStageScenarioTreeModel
 
 model = CreateConcreteTwoStageScenarioTreeModel(3)
+
+#### helps with testing across python versions
 for key in model.ConditionalProbability:
     if key != "RootNode":
         model.ConditionalProbability[key] = 0.3333333333
+#####
 
 first_stage = model.Stages.first()
 second_stage = model.Stages.last()
