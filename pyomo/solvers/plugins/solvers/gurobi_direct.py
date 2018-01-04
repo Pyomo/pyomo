@@ -290,7 +290,14 @@ class GurobiDirect(DirectSolver):
 
         self._vars_referenced_by_con[con] = ComponentSet()
 
-        for v, w in con.get_items():
+        if hasattr(con, 'get_items'):
+            # aml sos constraint
+            sos_items = list(con.get_items())
+        else:
+            # kernel sos constraint
+            sos_items = list(con.items())
+
+        for v, w in sos_items:
             self._vars_referenced_by_con[con].add(v)
             gurobi_vars.append(self._pyomo_var_to_solver_var_map[v])
             self._referenced_variables[v] += 1
