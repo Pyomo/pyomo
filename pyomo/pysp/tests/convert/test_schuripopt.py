@@ -31,6 +31,7 @@ pysp_examples_dir = \
     join(dirname(dirname(dirname(dirname(thisdir)))), "examples", "pysp")
 
 _run_verbose = True
+_diff_tolerance = 1e-6
 
 class _SchurIpoptTesterBase(object):
 
@@ -107,6 +108,11 @@ class _SchurIpoptTesterBase(object):
         for name in dc.diff_files:
             fromfile = join(dc.left, name)
             tofile = join(dc.right, name)
+            self.assertFileEqualsBaseline(
+                tofile, fromfile,
+                tolerance=_diff_tolerance,
+                delete=False)
+            """
             with open(fromfile, 'r') as f_from:
                 fromlines = f_from.readlines()
                 with open(tofile, 'r') as f_to:
@@ -125,6 +131,7 @@ class _SchurIpoptTesterBase(object):
                         for line in diff:
                             out.write(line)
                         self.fail(out.getvalue())
+            """
         for subdir in dc.subdirs:
             self._diff(join(baselinedir, subdir),
                        join(outputdir, subdir),
