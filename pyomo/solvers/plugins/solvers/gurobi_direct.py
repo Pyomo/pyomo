@@ -520,11 +520,9 @@ class GurobiDirect(DirectSolver):
             raise RuntimeError('Unrecognized gurobi objective sense: {0}'.format(gprob.ModelSense))
 
         try:
-            self.results.problem.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
+            soln.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
         except TypeError:
-            self.results.problem.gap = None
-
-        soln.gap = self.results.problem.gap
+            soln.gap = None
 
         self.results.problem.number_of_constraints = gprob.NumConstrs + gprob.NumQConstrs + gprob.NumSOS
         self.results.problem.number_of_nonzeros = gprob.NumNZs

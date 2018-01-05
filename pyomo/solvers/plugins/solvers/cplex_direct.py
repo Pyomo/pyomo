@@ -545,11 +545,9 @@ class CPLEXDirect(DirectSolver):
             raise RuntimeError('Unrecognized cplex objective sense: {0}'.format(gprob.objective.get_sense()))
 
         try:
-            self.results.problem.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
+            soln.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
         except TypeError:
-            self.results.problem.gap = None
-
-        soln.gap = self.results.problem.gap
+            soln.gap = None
 
         self.results.problem.name = gprob.get_problem_name()
         stats = gprob.get_stats()
