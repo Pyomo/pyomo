@@ -287,9 +287,10 @@ class PersistentSolver(DirectOrPersistentSolver):
             If True, then the solver log will be printed.
         """
         if len(args) != 0:
-            msg = 'The persistent solver interface does not accept a problem instance in the solve method.'
-            msg += ' The problem instance should be set before the solve using the set_instance method.'
-            raise ValueError(msg)
+            if self._pyomo_model is not args[0]:
+                msg = 'The problem instance provided to the solve method is not the same as the instance provided'
+                msg += ' to the set_instance method in the persistent solver interface. '
+                raise ValueError(msg)
 
         self.available(exception_flag=True)
 
