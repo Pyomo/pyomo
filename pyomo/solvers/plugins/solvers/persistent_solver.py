@@ -87,6 +87,8 @@ class PersistentSolver(DirectOrPersistentSolver):
         ----------
         block: Block
         """
+        if self._pyomo_model is None:
+            raise RuntimeError('You must call set_instance before calling add_block.')
         if block.is_indexed():
             for sub_block in block.values():
                 self._add_block(block)
@@ -102,6 +104,8 @@ class PersistentSolver(DirectOrPersistentSolver):
         ----------
         obj: Objective
         """
+        if self._pyomo_model is None:
+            raise RuntimeError('You must call set_instance before calling set_objective.')
         return self._set_objective(obj)
 
     def add_constraint(self, con):
@@ -112,6 +116,8 @@ class PersistentSolver(DirectOrPersistentSolver):
         ----------
         con: Constraint
         """
+        if self._pyomo_model is None:
+            raise RuntimeError('You must call set_instance before calling add_constraint.')
         if con.is_indexed():
             for child_con in con.values():
                 self._add_constraint(child_con)
@@ -126,6 +132,8 @@ class PersistentSolver(DirectOrPersistentSolver):
         ----------
         var: Var
         """
+        if self._pyomo_model is None:
+            raise RuntimeError('You must call set_instance before calling add_var.')
         if var.is_indexed():
             for child_var in var.values():
                 self._add_var(child_var)
@@ -140,6 +148,8 @@ class PersistentSolver(DirectOrPersistentSolver):
         ----------
         con: SOSConstraint
         """
+        if self._pyomo_model is None:
+            raise RuntimeError('You must call set_instance before calling add_sos_constraint.')
         if con.is_indexed():
             for child_con in con.values():
                 self._add_sos_constraint(child_con)
