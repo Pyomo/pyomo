@@ -373,7 +373,8 @@ class GurobiDirect(DirectSolver):
                                'slack information, please split up the following constraints:\n')
                     for con in self._range_constraints:
                         err_msg += '{0}\n'.format(con)
-                    raise ValueError(err_msg)
+                    logger.warning(err_msg)
+                    extract_slacks = False
             if re.match(suffix, "rc"):
                 extract_reduced_costs = True
                 flag = True
@@ -495,33 +496,33 @@ class GurobiDirect(DirectSolver):
             try:
                 self.results.problem.upper_bound = gprob.ObjVal
                 self.results.problem.lower_bound = gprob.ObjVal
-            except self._gurobipy.GurobiError:
+            except (self._gurobipy.GurobiError, AttributeError):
                 pass
         elif gprob.ModelSense == 1:  # minimizing
             try:
                 self.results.problem.upper_bound = gprob.ObjVal
-            except self._gurobipy.GurobiError:
+            except (self._gurobipy.GurobiError, AttributeError):
                 pass
             try:
                 self.results.problem.lower_bound = gprob.ObjBound
-            except self._gurobipy.GurobiError:
+            except (self._gurobipy.GurobiError, AttributeError):
                 pass
         elif gprob.ModelSense == -1:  # maximizing
             try:
                 self.results.problem.upper_bound = gprob.ObjBound
-            except self._gurobipy.GurobiError:
+            except (self._gurobipy.GurobiError, AttributeError):
                 pass
             try:
                 self.results.problem.lower_bound = gprob.ObjVal
-            except self._gurobipy.GurobiError:
+            except (self._gurobipy.GurobiError, AttributeError):
                 pass
         else:
             raise RuntimeError('Unrecognized gurobi objective sense: {0}'.format(gprob.ModelSense))
 
         try:
-            self.results.problem.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
+            soln.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
         except TypeError:
-            self.results.problem.gap = None
+            soln.gap = None
 
         self.results.problem.number_of_constraints = gprob.NumConstrs + gprob.NumQConstrs + gprob.NumSOS
         self.results.problem.number_of_nonzeros = gprob.NumNZs

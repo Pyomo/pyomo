@@ -66,7 +66,7 @@ class CPLEXDirect(DirectSolver):
                 int(k) for k in self._cplex.Cplex().get_version().split('.'))
             while len(self._version) < 4:
                 self._version += (0,)
-            self._version = self._version[:4]
+            self._version = tuple(int(i) for i in self._version[:4])
             self._version_major = self._version[0]
         except ImportError:
             self._python_api_exists = False
@@ -419,7 +419,8 @@ class CPLEXDirect(DirectSolver):
             self._referenced_variables[var] += 1
 
         self._solver_model.objective.set_sense(sense)
-        self._solver_model.objective.set_offset(cplex_expr.offset)
+        if hasattr(self._solver_model.objective, 'set_offset'):
+            self._solver_model.objective.set_offset(cplex_expr.offset)
         if len(cplex_expr.coefficients) != 0:
             self._solver_model.objective.set_linear(list(zip(cplex_expr.variables, cplex_expr.coefficients)))
         if len(cplex_expr.q_coefficients) != 0:
@@ -451,7 +452,8 @@ class CPLEXDirect(DirectSolver):
                                'slack information, please split up the following constraints:\n')
                     for con in self._range_constraints:
                         err_msg += '{0}\n'.format(con)
-                    raise ValueError(err_msg)
+                    logger.warning(err_msg)
+                    extract_slacks = False
             if re.match(suffix, "rc"):
                 extract_reduced_costs = True
                 flag = True
@@ -543,9 +545,9 @@ class CPLEXDirect(DirectSolver):
             raise RuntimeError('Unrecognized cplex objective sense: {0}'.format(gprob.objective.get_sense()))
 
         try:
-            self.results.problem.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
+            soln.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
         except TypeError:
-            self.results.problem.gap = None
+            soln.gap = None
 
         self.results.problem.name = gprob.get_problem_name()
         stats = gprob.get_stats()
@@ -592,7 +594,6 @@ class CPLEXDirect(DirectSolver):
                     if self._referenced_variables[pyomo_var] > 0:
                         soln_variables[name] = {"Value":var_vals[i]}
 
-                reduced_costs = self._solver_model.solution.get_reduced_costs()
                 if extract_reduced_costs:
                     for i, name in enumerate(var_names):
                         pyomo_var = self._solver_var_to_pyomo_var_map[name]
