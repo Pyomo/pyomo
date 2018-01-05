@@ -51,11 +51,6 @@ class PersistentSolver(DirectOrPersistentSolver):
         DirectOrPersistentSolver.__init__(self, **kwds)
 
     def _presolve(self, *args, **kwds):
-        if len(args) != 0:
-            msg = 'The persistent solver interface does not accept a problem instance in the solve method.'
-            msg += ' The problem instance should be set before the solve using the set_instance method.'
-            raise ValueError(msg)
-
         DirectOrPersistentSolver._presolve(self, *args, **kwds)
 
     def set_instance(self, model, **kwds):
@@ -286,6 +281,10 @@ class PersistentSolver(DirectOrPersistentSolver):
         tee: bool
             If True, then the solver log will be printed.
         """
+        if self._pyomo_model is None:
+            msg = 'Please use set_instance to set the instance before calling solve with the persistent'
+            msg += ' solver interface.'
+            raise RuntimeError(msg)
         if len(args) != 0:
             if self._pyomo_model is not args[0]:
                 msg = 'The problem instance provided to the solve method is not the same as the instance provided'
