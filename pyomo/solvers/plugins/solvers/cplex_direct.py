@@ -66,8 +66,7 @@ class CPLEXDirect(DirectSolver):
                 int(k) for k in self._cplex.Cplex().get_version().split('.'))
             while len(self._version) < 4:
                 self._version += (0,)
-            self._version = self._version[:4]
-            self._version = tuple([int(i) for i in self._version])
+            self._version = tuple(int(i) for i in self._version[:4])
             self._version_major = self._version[0]
         except ImportError:
             self._python_api_exists = False
@@ -549,6 +548,8 @@ class CPLEXDirect(DirectSolver):
             self.results.problem.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
         except TypeError:
             self.results.problem.gap = None
+
+        soln.gap = self.results.problem.gap
 
         self.results.problem.name = gprob.get_problem_name()
         stats = gprob.get_stats()

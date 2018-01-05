@@ -50,8 +50,8 @@ class PersistentSolver(DirectOrPersistentSolver):
     def __init__(self, **kwds):
         DirectOrPersistentSolver.__init__(self, **kwds)
 
-    def _presolve(self, *args, **kwds):
-        DirectOrPersistentSolver._presolve(self, *args, **kwds)
+    def _presolve(self, **kwds):
+        DirectOrPersistentSolver._presolve(self, **kwds)
 
     def set_instance(self, model, **kwds):
         """
@@ -327,7 +327,7 @@ class PersistentSolver(DirectOrPersistentSolver):
             # we're good to go.
             initial_time = time.time()
 
-            self._presolve(*args, **kwds)
+            self._presolve(**kwds)
 
             presolve_completion_time = time.time()
             if self._report_timing:

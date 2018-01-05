@@ -496,25 +496,25 @@ class GurobiDirect(DirectSolver):
             try:
                 self.results.problem.upper_bound = gprob.ObjVal
                 self.results.problem.lower_bound = gprob.ObjVal
-            except self._gurobipy.GurobiError:
+            except (self._gurobipy.GurobiError, AttributeError):
                 pass
         elif gprob.ModelSense == 1:  # minimizing
             try:
                 self.results.problem.upper_bound = gprob.ObjVal
-            except self._gurobipy.GurobiError:
+            except (self._gurobipy.GurobiError, AttributeError):
                 pass
             try:
                 self.results.problem.lower_bound = gprob.ObjBound
-            except self._gurobipy.GurobiError:
+            except (self._gurobipy.GurobiError, AttributeError):
                 pass
         elif gprob.ModelSense == -1:  # maximizing
             try:
                 self.results.problem.upper_bound = gprob.ObjBound
-            except self._gurobipy.GurobiError:
+            except (self._gurobipy.GurobiError, AttributeError):
                 pass
             try:
                 self.results.problem.lower_bound = gprob.ObjVal
-            except self._gurobipy.GurobiError:
+            except (self._gurobipy.GurobiError, AttributeError):
                 pass
         else:
             raise RuntimeError('Unrecognized gurobi objective sense: {0}'.format(gprob.ModelSense))
@@ -523,6 +523,8 @@ class GurobiDirect(DirectSolver):
             self.results.problem.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
         except TypeError:
             self.results.problem.gap = None
+
+        soln.gap = self.results.problem.gap
 
         self.results.problem.number_of_constraints = gprob.NumConstrs + gprob.NumQConstrs + gprob.NumSOS
         self.results.problem.number_of_nonzeros = gprob.NumNZs
