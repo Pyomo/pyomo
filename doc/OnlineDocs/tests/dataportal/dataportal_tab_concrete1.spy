@@ -1,0 +1,5 @@
+data = DataPortal()
+data.load(filename='A.tab', set="A", format="set")
+
+model = ConcreteModel()
+model.A = Set(initialize=data['A'])

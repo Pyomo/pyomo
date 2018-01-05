@@ -181,11 +181,13 @@ class GurobiDirect(DirectSolver):
     def _add_var(self, var):
         varname = self._symbol_map.getSymbol(var, self._labeler)
         vtype = self._gurobi_vtype_from_var(var)
-        lb = value(var.lb)
-        ub = value(var.ub)
-        if lb is None:
+        if var.has_lb():
+            lb = value(var.lb)
+        else:
             lb = -self._gurobipy.GRB.INFINITY
-        if ub is None:
+        if var.has_ub():
+            ub = value(var.ub)
+        else:
             ub = self._gurobipy.GRB.INFINITY
 
         gurobipy_var = self._solver_model.addVar(lb=lb, ub=ub, vtype=vtype, name=varname)
@@ -200,15 +202,14 @@ class GurobiDirect(DirectSolver):
     def _set_instance(self, model, kwds={}):
         self._range_constraints = set()
         DirectOrPersistentSolver._set_instance(self, model, kwds)
-        if model.name is None:
-            model_name = 'Unknown'
-        else:
-            model_name = model.name
         try:
-            self._solver_model = self._gurobipy.Model(model_name)
+            if model.name is not None:
+                self._solver_model = self._gurobipy.Model(model.name)
+            else:
+                self._solver_model = self._gurobipy.Model()
         except Exception:
             e = sys.exc_info()[1]
-            msg = ('Unable to create Gurobi model. Have you ihnstalled the Python bindings for Gurboi?\n\n\t' +
+            msg = ('Unable to create Gurobi model. Have you installed the Python bindings for Gurboi?\n\n\t' +
                    'Error message: {0}'.format(e))
             raise Exception(msg)
 
@@ -293,9 +294,12 @@ class GurobiDirect(DirectSolver):
         self._vars_referenced_by_con[con] = ComponentSet()
 
         if hasattr(con, 'get_items'):
-            sos_items = con.get_items()
+            # aml sos constraint
+            sos_items = list(con.get_items())
         else:
-            sos_items = con.items()
+            # kernel sos constraint
+            sos_items = list(con.items())
+
         for v, w in sos_items:
             self._vars_referenced_by_con[con].add(v)
             gurobi_vars.append(self._pyomo_var_to_solver_var_map[v])

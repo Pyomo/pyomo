@@ -62,7 +62,8 @@ class CPLEXDirect(DirectSolver):
             import cplex
             self._cplex = cplex
             self._python_api_exists = True
-            self._version = tuple(self._cplex.Cplex().get_version().split('.'))
+            self._version = tuple(
+                int(k) for k in self._cplex.Cplex().get_version().split('.'))
             while len(self._version) < 4:
                 self._version += (0,)
             self._version = self._version[:4]
@@ -227,11 +228,13 @@ class CPLEXDirect(DirectSolver):
     def _add_var(self, var):
         varname = self._symbol_map.getSymbol(var, self._labeler)
         vtype = self._cplex_vtype_from_var(var)
-        lb = value(var.lb)
-        ub = value(var.ub)
-        if lb is None:
+        if var.has_lb():
+            lb = value(var.lb)
+        else:
             lb = -self._cplex.infinity
-        if ub is None:
+        if var.has_ub():
+            ub = value(var.ub)
+        else:
             ub = self._cplex.infinity
 
         self._solver_model.variables.add(lb=[lb], ub=[ub], types=[vtype], names=[varname])
@@ -358,9 +361,12 @@ class CPLEXDirect(DirectSolver):
         self._vars_referenced_by_con[con] = ComponentSet()
 
         if hasattr(con, 'get_items'):
-            sos_items = con.get_items()
+            # aml sos constraint
+            sos_items = list(con.get_items())
         else:
-            sos_items = con.items()
+            # kernel sos constraint
+            sos_items = list(con.items())
+
         for v, w in sos_items:
             self._vars_referenced_by_con[con].add(v)
             cplex_vars.append(self._pyomo_var_to_solver_var_map[v])

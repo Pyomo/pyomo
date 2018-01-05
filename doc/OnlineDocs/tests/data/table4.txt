@@ -1,0 +1,19 @@
+2 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['A1', 'A2', 'A3']
+    Z : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
+        [('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')]
+
+2 Param Declarations
+    M : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
+        Key : Value
+         A1 :   4.3
+         A2 :   4.4
+         A3 :   4.5
+    N : Size=3, Index=Z, Domain=Any, Default=None, Mutable=False
+        Key          : Value
+        ('A1', 'B1') :   5.3
+        ('A2', 'B2') :   5.4
+        ('A3', 'B3') :   5.5
+
+4 Declarations: A Z M N
