@@ -619,6 +619,8 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         tee=False:
             Output GAMS log to stdout.
+        logfile=None:
+            Optionally a logfile can be written.
         load_solutions=True:
             Optionally skip loading solution into model, in which case
             the results object will contain the solution data.
@@ -669,6 +671,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         load_solutions = kwds.pop("load_solutions", True)
         tee            = kwds.pop("tee", False)
+        logfile        = kwds.pop("logfile", None)
         keepfiles      = kwds.pop("keepfiles", False)
         tmpdir         = kwds.pop("tmpdir", None)
         report_timing  = kwds.pop("report_timing", False)
@@ -733,8 +736,14 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         exe = self.executable()
         command = [exe, output_filename, 'o=' + lst_filename]
-        if not tee:
+        if not tee and not logfile:
             command.append("lo=0")
+        elif not tee and logfile:
+            command.append("lo=2")
+        elif tee and logfile:
+            command.append("lo=4")
+        if logfile:
+            command.append("lf=" + str(logfile))
 
         try:
             rc = subprocess.call(command)
