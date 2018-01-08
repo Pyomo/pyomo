@@ -32,7 +32,7 @@ from pyomo.core.base.indexed_component import IndexedComponent, \
     UnindexedComponent_set
 from pyomo.core.base.numvalue import native_numeric_types
 
-from six import itervalues, iteritems
+from six import itervalues, iteritems, string_types
 from six.moves import xrange
 
 logger = logging.getLogger('pyomo.core')
@@ -108,6 +108,37 @@ def simple_set_rule( fn ):
             return Set.End
         return value
     return wrapper_function
+
+
+class _robust_sorter(object):
+    def __init__(self):
+        self._typemap = {}
+
+    def __call__(self,a):
+        ta = type(a)
+        if ta not in self._typemap:
+            # 1: try comparison
+            try:
+                a < a
+                self._typemap[ta] = lambda x:x
+            except:
+                # 2: try conversion to string
+                try:
+                    str(a)
+                    self._typemap[ta] = lambda x:str(x)
+                except:
+                    # 3: fallback on id()
+                    self._typemap[ta] = lambda x:id(x)
+        return ta.__name__, self._typemap[ta](a)
+
+def _value_sorter(self, obj):
+    if self.ordered:
+        return obj.value
+    try:
+        return sorted(obj)
+    except:
+        pass
+    return sorted(obj, key=_robust_sorter())
 
 
 # A trivial class that we can use to test if an object is a "legitimate"
@@ -656,9 +687,16 @@ class Set(IndexedComponent):
             tmp_dimen = 1
         if self.initialize is not None:
             #
-            # Convert initialization value to a list (which are copyable)
+            # Convert initialization value to a list (which are
+            # copyable).  There are subtlies here: dict should be left
+            # alone (as dict's are used for initializing indezed Sets),
+            # and lists should be left alone (for efficiency).  tuples,
+            # generators, and iterators like dict.keys() [in Python 3.x]
+            # should definitely be converted to lists.
             #
-            if type(self.initialize) in (tuple, types.GeneratorType):
+            if type(self.initialize) is tuple \
+                    or ( hasattr(self.initialize, "__iter__")
+                         and not hasattr(self.initialize, "__getitem__") ):
                 self.initialize = list(self.initialize)
             #
             # Try to guess dimen from the initialize list
@@ -1685,9 +1723,8 @@ class IndexedSet(Set):
              ("Bounds", self._bounds)],
             iteritems(self._data),
             ("Members",),
-            lambda k, v: [
-                #"Virtual" if not v.concrete or v.virtual else \
-                v.value if self.ordered else sorted(v) ] )
+            lambda k, v: [ _value_sorter(self, v) ]
+            )
 
     def construct(self, values=None):
         """
