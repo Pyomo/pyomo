@@ -221,11 +221,9 @@ def run(args=None):
         #
         # validate the tree prior to doing anything serious
         #
-        if not scenario_tree.validate():
-            raise RuntimeError("Scenario tree is invalid")
-        else:
-            if options.verbose:
-                print("Scenario tree is valid!")
+        scenario_tree.validate()
+        if options.verbose:
+            print("Scenario tree is valid!")
 
         index_list, num_scenarios_for_solution, num_scenarios_per_sample = \
             partition_scenario_space(scenario_tree,

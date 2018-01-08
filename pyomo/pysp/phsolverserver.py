@@ -28,7 +28,6 @@ from pyomo.opt import UndefinedData
 from pyomo.util import pyomo_command
 from pyomo.util.plugin import ExtensionPoint
 from pyomo.opt import (SolverFactory,
-                       PersistentSolver,
                        TerminationCondition,
                        SolutionStatus)
 from pyomo.pysp.phextension import IPHSolverServerExtension
@@ -107,12 +106,6 @@ class _PHSolverServer(_PHBase):
 
         # So we have access to real scenario and bundle probabilities
         self._uncompressed_scenario_tree = None
-
-        # Maps ScenarioTreeID's on the master node ScenarioTree to
-        # ScenarioTreeID's on this PHSolverServers's ScenarioTree
-        # (by node name)
-        self._master_scenario_tree_id_map = {}
-        self._reverse_master_scenario_tree_id_map = {}
 
         # global handle to ph extension plugins
         self._ph_plugins = ExtensionPoint(IPHSolverServerExtension)
@@ -308,8 +301,8 @@ class _PHSolverServer(_PHBase):
         #      should point to the unarchived directories.
         assert os.path.exists(model_location)
         assert (data_location is None) or os.path.exists(data_location)
-        scenario_instance_factory = ScenarioTreeInstanceFactory(model_location,
-                                                                data_location)
+        self._scenario_instance_factory = scenario_instance_factory = ScenarioTreeInstanceFactory(model_location,
+                                                                                                  data_location)
         self._scenario_tree = scenario_instance_factory.generate_scenario_tree(
             downsample_fraction=None,
             bundles=scenario_bundle_specification,
@@ -447,13 +440,11 @@ class _PHSolverServer(_PHBase):
                 scenario = self._scenario_tree.get_scenario(scenario_name)
                 scenario.update_solution_from_instance(stages=stages_to_load)
                 results[scenario_name] = \
-                    scenario.copy_solution(
-                        translate_ids=self._reverse_master_scenario_tree_id_map)
+                    scenario.copy_solution()
         else:
             scenario = self._scenario_tree.get_scenario(object_name)
             scenario.update_solution_from_instance(stages=stages_to_load)
-            results = scenario.copy_solution(
-                translate_ids=self._reverse_master_scenario_tree_id_map)
+            results = scenario.copy_solution()
 
         return results
 
@@ -467,6 +458,10 @@ class _PHSolverServer(_PHBase):
               solver_suffixes,
               warmstart,
               variable_transmission):
+        # TODO: Does this import need to be delayed because
+        #       it is in a plugins subdirectory
+        from pyomo.solvers.plugins.solvers.persistent_solver import \
+            PersistentSolver
 
         if self._verbose:
             if self._scenario_tree.contains_bundles() is True:
@@ -534,7 +529,7 @@ class _PHSolverServer(_PHBase):
                     raise RuntimeError("***We presently can't handle bundles in "
                                        "persistent solver plugins")
                 else:
-                    self._solver.compile_instance(
+                    self._solver.set_instance(
                         self._scenario_tree.get_arbitrary_scenario()._instance,
                         symbolic_solver_labels=self._symbolic_solver_labels,
                         output_fixed_variable_bounds=self._write_fixed_variables)
@@ -558,13 +553,20 @@ class _PHSolverServer(_PHBase):
                 # clear stage cost variables, to ensure feasible warm starts.
                 reset_stage_cost_variables(self._scenario_tree, self._instances)
 
-        common_solve_kwds = {
-            'load_solutions':False,
-            'tee':self._tee,
-            'keepfiles':keepfiles,
-            'symbolic_solver_labels':self._symbolic_solver_labels,
-            'output_fixed_variable_bounds':self._write_fixed_variables,
-            'suffixes':self._solver_suffixes}
+        if isinstance(self._solver, PersistentSolver):
+            common_solve_kwds = {
+                'load_solutions':False,
+                'tee':self._tee,
+                'keepfiles':keepfiles,
+                'suffixes':self._solver_suffixes}
+        else:
+            common_solve_kwds = {
+                'load_solutions':False,
+                'tee':self._tee,
+                'keepfiles':keepfiles,
+                'symbolic_solver_labels':self._symbolic_solver_labels,
+                'output_fixed_variable_bounds':self._write_fixed_variables,
+                'suffixes':self._solver_suffixes}
 
         stages_to_load = None
         if not TransmitType.TransmitAllStages(variable_transmission):
@@ -588,12 +590,19 @@ class _PHSolverServer(_PHBase):
             solve_start_time = time.time()
 
             if  self._warmstart and self._solver.warm_start_capable():
-                results = self._solver.solve(bundle_ef_instance,
-                                             warmstart=True,
-                                             **common_solve_kwds)
+                if isinstance(self._solver, PersistentSolver):
+                    results = self._solver.solve(warmstart=True,
+                                                 **common_solve_kwds)
+                else:
+                    results = self._solver.solve(bundle_ef_instance,
+                                                 warmstart=True,
+                                                 **common_solve_kwds)
             else:
-                results = self._solver.solve(bundle_ef_instance,
-                                             **common_solve_kwds)
+                if isinstance(self._solver, PersistentSolver):
+                    results = self._solver.solve(**common_solve_kwds)
+                else:
+                    results = self._solver.solve(bundle_ef_instance,
+                                                 **common_solve_kwds)
 
             pyomo_solve_time = time.time() - solve_start_time
 
@@ -639,8 +648,7 @@ class _PHSolverServer(_PHBase):
                 for scenario in self._scenario_tree._scenarios:
                     scenario.update_solution_from_instance(stages=stages_to_load)
                     variable_values[scenario._name] = \
-                        scenario.copy_solution(
-                            translate_ids=self._reverse_master_scenario_tree_id_map)
+                        scenario.copy_solution()
 
                 suffix_values = {}
 
@@ -678,12 +686,19 @@ class _PHSolverServer(_PHBase):
             solve_start_time = time.time()
 
             if self._warmstart and self._solver.warm_start_capable():
-                results = self._solver.solve(scenario_instance,
+                if isinstance(self._solver, PersistentSolver):
+                    results = self._solver.solve(warmstart=True,
+                                                 **common_solve_kwds)
+                else:
+                    results = self._solver.solve(scenario_instance,
                                              warmstart=True,
                                              **common_solve_kwds)
             else:
-                results = self._solver.solve(scenario_instance,
-                                             **common_solve_kwds)
+                if isinstance(self._solver, PersistentSolver):
+                    results = self._solver.solve(**common_solve_kwds)
+                else:
+                    results = self._solver.solve(scenario_instance,
+                                                 **common_solve_kwds)
 
             pyomo_solve_time = time.time() - solve_start_time
 
@@ -724,8 +739,7 @@ class _PHSolverServer(_PHBase):
 
                 scenario.update_solution_from_instance(stages=stages_to_load)
                 variable_values = \
-                    scenario.copy_solution(
-                        translate_ids=self._reverse_master_scenario_tree_id_map)
+                    scenario.copy_solution()
 
                 if self._verbose:
                     print("Successfully loaded solution for scenario="+object_name)
@@ -811,33 +825,6 @@ class _PHSolverServer(_PHBase):
 
         return solve_method_result
 
-    def update_master_scenario_tree_ids(self, object_name, new_ids):
-
-        if self._verbose:
-            if self._scenario_tree.contains_bundles() is True:
-                print("Received request to update master "
-                      "scenario tree ids for bundle="+object_name)
-            else:
-                print("Received request to update master "
-                      "scenario tree ids for scenario="+object_name)
-
-        if self._initialized is False:
-            raise RuntimeError("PH solver server has not been initialized!")
-
-
-        for node_name, new_master_node_ids in iteritems(new_ids):
-            tree_node = self._scenario_tree.get_node(node_name)
-            name_index_to_id = tree_node._name_index_to_id
-
-            self._master_scenario_tree_id_map[tree_node._name] = \
-                dict((master_variable_id, name_index_to_id[name_index]) for \
-                      master_variable_id, name_index in iteritems(new_master_node_ids))
-
-            self._reverse_master_scenario_tree_id_map[tree_node._name] = \
-                dict((local_variable_id, master_variable_id) for \
-                     master_variable_id, local_variable_id in \
-                     iteritems(self._master_scenario_tree_id_map[tree_node._name]))
-
     def update_xbars(self, object_name, new_xbars):
 
         if self._verbose:
@@ -851,9 +838,7 @@ class _PHSolverServer(_PHBase):
 
         for node_name, node_xbars in iteritems(new_xbars):
             tree_node = self._scenario_tree._tree_node_map[node_name]
-            master_id_map = self._master_scenario_tree_id_map[tree_node._name]
-            tree_node._xbars.update((master_id_map[master_id_index],val) \
-                                    for master_id_index, val in iteritems(node_xbars))
+            tree_node._xbars.update(node_xbars)
 
     #
     # updating weights only applies to scenarios - not bundles.
@@ -872,11 +857,7 @@ class _PHSolverServer(_PHBase):
 
         scenario = self._scenario_tree._scenario_map[scenario_name]
         for tree_node_name, tree_node_weights in iteritems(new_weights):
-            master_id_map = self._master_scenario_tree_id_map[tree_node_name]
-            scenario._w[tree_node_name].update(
-                (master_id_map[master_id_index], val) \
-                for master_id_index, val in \
-                iteritems(tree_node_weights))
+            scenario._w[tree_node_name].update(tree_node_weights)
 
     #
     # updating rhos is only applicable to scenarios.
@@ -895,11 +876,7 @@ class _PHSolverServer(_PHBase):
 
         scenario = self._scenario_tree._scenario_map[scenario_name]
         for tree_node_name, tree_node_rhos in iteritems(new_rhos):
-            master_id_map = self._master_scenario_tree_id_map[tree_node_name]
-            scenario._rho[tree_node_name].update(
-                (master_id_map[master_id_index], val) \
-                for master_id_index, val in \
-                iteritems(tree_node_rhos))
+            scenario._rho[tree_node_name].update(tree_node_rhos)
 
     #
     # updating tree node statistics is bundle versus scenario agnostic.
@@ -922,20 +899,14 @@ class _PHSolverServer(_PHBase):
             raise RuntimeError("PH solver server has not been initialized!")
 
         for tree_node_name, tree_node_minimums in iteritems(new_node_minimums):
-            master_id_map = self._master_scenario_tree_id_map[tree_node_name]
             this_tree_node_minimums = \
                 self._scenario_tree._tree_node_map[tree_node_name]._minimums
-            this_tree_node_minimums.update(
-                (master_id_map[master_id_index], value) \
-                for master_id_index, value in iteritems(tree_node_minimums))
+            this_tree_node_minimums.update(tree_node_minimums)
 
         for tree_node_name, tree_node_maximums in iteritems(new_node_maximums):
-            master_id_map = self._master_scenario_tree_id_map[tree_node_name]
             this_tree_node_maximums = \
                 self._scenario_tree._tree_node_map[tree_node_name]._maximums
-            this_tree_node_maximums.update(
-                (master_id_map[master_id_index], value) \
-                for master_id_index, value in iteritems(tree_node_maximums))
+            this_tree_node_maximums.update(tree_node_maximums)
 
     #
     # define the indicated suffix on my scenario instance. not dealing
@@ -1236,11 +1207,6 @@ class _PHSolverServer(_PHBase):
 
         elif data.action == "deactivate_ph_objective_weight_terms":
             self.deactivate_ph_objective_weight_terms()
-            result = True
-
-        elif data.action == "update_scenario_tree_ids":
-            self.update_master_scenario_tree_ids(data.name,
-                                                 data.new_ids)
             result = True
 
         elif data.action == "load_rhos":

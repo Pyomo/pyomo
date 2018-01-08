@@ -641,9 +641,6 @@ class TestVarList(PyomoModel):
     def test_initialize_with_dict(self):
         """Test initialize option with a dictionary"""
         self.model.x = VarList(initialize={1:1.3,2:2.3})
-        self.model.x.add()
-        self.model.x.add()
-        self.model.x.add()
         self.instance = self.model.create_instance()
         self.assertEqual(self.instance.x[1], 1.3)
         self.assertEqual(self.instance.x[2], 2.3)
@@ -652,19 +649,12 @@ class TestVarList(PyomoModel):
         self.assertEqual(self.instance.x[1], 1)
         self.assertEqual(self.instance.x[2], 2)
 
-    def test_initialize_with_subdict(self):
+    def test_initialize_with_bad_dict(self):
         """Test initialize option with a dictionary of subkeys"""
-        self.model.x = VarList(initialize={1:1.3})
-        self.model.x.add()
-        self.model.x.add()
-        self.model.x.add()
-        self.instance = self.model.create_instance()
-        self.assertEqual(self.instance.x[1], 1.3)
-        self.assertEqual(self.instance.x[2].value, None)
-        self.instance.x[1] = 1
-        self.instance.x[2] = 2
-        self.assertEqual(self.instance.x[1], 1)
-        self.assertEqual(self.instance.x[2], 2)
+        self.model.x = VarList(initialize={0:1.3})
+        self.assertRaisesRegexp(
+            KeyError, ".*Index '0' is not valid for indexed component 'x'",
+            self.model.create_instance )
 
     def test_initialize_with_const(self):
         """Test initialize option with a constant"""

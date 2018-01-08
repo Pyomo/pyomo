@@ -1,0 +1,13 @@
+DevotedAcreage(CORN)
+DevotedAcreage(SUGAR_BEETS)
+DevotedAcreage(WHEAT)
+QuantityPurchased(CORN)
+QuantityPurchased(SUGAR_BEETS)
+QuantityPurchased(WHEAT)
+QuantitySubQuotaSold(CORN)
+QuantitySubQuotaSold(SUGAR_BEETS)
+QuantitySubQuotaSold(WHEAT)
+QuantitySuperQuotaSold(CORN)
+QuantitySuperQuotaSold(SUGAR_BEETS)
+QuantitySuperQuotaSold(WHEAT)
+ONE_VAR_CONSTANT

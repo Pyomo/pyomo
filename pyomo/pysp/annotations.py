@@ -8,6 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
+
 from pyomo.core.base.suffix import ComponentMap
 from pyomo.core.base.constraint import Constraint, _ConstraintData
 from pyomo.core.base.var import Var, _VarData
@@ -15,6 +17,9 @@ from pyomo.core.base.expression import Expression, _ExpressionData
 from pyomo.core.base.param import Param, _ParamData
 from pyomo.core.base.objective import Objective, _ObjectiveData
 from pyomo.core.base.block import Block, _BlockData
+
+import pyomo.pysp
+logger = logging.getLogger('pyomo.pysp')
 
 def locate_annotations(model, annotation_type, max_allowed=None):
     """
@@ -24,7 +29,10 @@ def locate_annotations(model, annotation_type, max_allowed=None):
     type are found on the model.
     """
 
-    annotations = [(name, obj) for name, obj in vars(model).items()
+    annotations = [(name, obj)
+                   for block in model.block_data_objects(active=True,
+                                                         descend_into=True)
+                   for name, obj in vars(block).items()
                    if isinstance(obj, annotation_type)]
     if (max_allowed is not None) and (len(annotations) > max_allowed):
         raise ValueError("Too many annotations of type %s found on "
@@ -146,7 +154,12 @@ class PySP_Annotation(object):
 
         return items
 
-class PySP_StageCostAnnotation(PySP_Annotation):
+def PySP_StageCostAnnotation(*args, **kwds):
+    logger.warning("DEPRECATED: 'PySP_StageCostAnnotation' "
+                   "has been renamed to 'StageCostAnnotation'. "
+                   "Please update your model file.")
+    return StageCostAnnotation(*args, **kwds)
+class StageCostAnnotation(PySP_Annotation):
     """
     This annotation is used to identify the component
     representing the objective cost associated with
@@ -160,12 +173,21 @@ class PySP_StageCostAnnotation(PySP_Annotation):
     _ctypes = (Var, Expression)
     _ctypes_data = (_VarData, _ExpressionData)
 
+    def __init__(self):
+        super(StageCostAnnotation, self).__init__()
+        self._default = None
+
     def _declare_impl(self, component, stage):
         assert int(stage) == stage
         assert stage >= 1
         self._data[component] = stage
 
-class PySP_VariableStageAnnotation(PySP_Annotation):
+def PySP_VariableStageAnnotation(*args, **kwds):
+    logger.warning("DEPRECATED: 'PySP_VariableStageAnnotation' "
+                   "has been renamed to 'VariableStageAnnotation'. "
+                   "Please update your model file.")
+    return VariableStageAnnotation(*args, **kwds)
+class VariableStageAnnotation(PySP_Annotation):
     """
     This annotation is used to identify what time-stage a
     variable belongs to.
@@ -183,7 +205,7 @@ class PySP_VariableStageAnnotation(PySP_Annotation):
     _ctypes_data = (_VarData,)
 
     def __init__(self):
-        super(PySP_VariableStageAnnotation, self).__init__()
+        super(VariableStageAnnotation, self).__init__()
         self._default = None
 
     def _declare_impl(self, component, stage, derived=False):
@@ -191,7 +213,19 @@ class PySP_VariableStageAnnotation(PySP_Annotation):
         assert stage >= 1
         self._data[component] = (stage, derived)
 
-class PySP_ConstraintStageAnnotation(PySP_Annotation):
+def PySP_ConstraintStageAnnotation(*args, **kwds):
+    logger.warning("DEPRECATED: 'PySP_ConstraintStageAnnotation' "
+                   "is no longer recognized (constraint stages are "
+                   "automatically inferred). It will be removed in "
+                   "the future. Please update your model file.")
+    return _ConstraintStageAnnotation(*args, **kwds)
+def ConstraintStageAnnotation(*args, **kwds):
+    logger.warning("DEPRECATED: 'ConstraintStageAnnotation' "
+                   "is no longer recognized (constraint stages are "
+                   "automatically inferred). It will be removed in "
+                   "the future. Please update your model file.")
+    return _ConstraintStageAnnotation(*args, **kwds)
+class _ConstraintStageAnnotation(PySP_Annotation):
     """
     This annotation is used to identify what time-stage a
     constraint belongs to.
@@ -205,7 +239,7 @@ class PySP_ConstraintStageAnnotation(PySP_Annotation):
     _ctypes_data = (_ConstraintData,)
 
     def __init__(self):
-        super(PySP_ConstraintStageAnnotation, self).__init__()
+        super(_ConstraintStageAnnotation, self).__init__()
         self._default = None
 
     def _declare_impl(self, component, stage):
@@ -213,7 +247,12 @@ class PySP_ConstraintStageAnnotation(PySP_Annotation):
         assert stage >= 1
         self._data[component] = stage
 
-class PySP_StochasticDataAnnotation(PySP_Annotation):
+def PySP_StochasticDataAnnotation(*args, **kwds):
+    logger.warning("DEPRECATED: 'PySP_StochasticDataAnnotation' "
+                   "has been renamed to 'StochasticDataAnnotation'. "
+                   "Please update your model file.")
+    return StochasticDataAnnotation(*args, **kwds)
+class StochasticDataAnnotation(PySP_Annotation):
     """
     This annotation is used to identify stochastic data
     locations in constraints or the objective.
@@ -229,13 +268,18 @@ class PySP_StochasticDataAnnotation(PySP_Annotation):
     _ctypes_data = (_ParamData,)
 
     def __init__(self):
-        super(PySP_StochasticDataAnnotation, self).__init__()
+        super(StochasticDataAnnotation, self).__init__()
         self._default = None
 
     def _declare_impl(self, component, distribution=None):
         self._data[component] = distribution
 
-class PySP_StochasticRHSAnnotation(PySP_Annotation):
+def PySP_StochasticRHSAnnotation(*args, **kwds):
+    logger.warning("DEPRECATED: 'PySP_StochasticRHSAnnotation' "
+                   "has been renamed to 'StochasticConstraintBoundsAnnotation'. "
+                   "Please update your model file.")
+    return StochasticConstraintBoundsAnnotation(*args, **kwds)
+class StochasticConstraintBoundsAnnotation(PySP_Annotation):
     """
     This annotation is used to identify constraints that have
     stochastic bound data.
@@ -248,7 +292,7 @@ class PySP_StochasticRHSAnnotation(PySP_Annotation):
     _ctypes_data = (_ConstraintData,)
 
     def __init__(self):
-        super(PySP_StochasticRHSAnnotation, self).__init__()
+        super(StochasticConstraintBoundsAnnotation, self).__init__()
         self._default = True
 
     def _declare_impl(self, component, lb=True, ub=True):
@@ -260,15 +304,20 @@ class PySP_StochasticRHSAnnotation(PySP_Annotation):
         else:
             self._data[component] = (lb, ub)
 
-class PySP_StochasticMatrixAnnotation(PySP_Annotation):
+def PySP_StochasticMatrixAnnotation(*args, **kwds):
+    logger.warning("DEPRECATED: 'PySP_StochasticMatrixAnnotation' "
+                   "has been renamed to 'StochasticConstraintBodyAnnotation'. "
+                   "Please update your model file.")
+    return StochasticConstraintBodyAnnotation(*args, **kwds)
+class StochasticConstraintBodyAnnotation(PySP_Annotation):
     """
-    This annotation is used to identify variable
-    coefficients within constraints that are stochastic.
+    This annotation is used to identify constraints with
+    stochastic data appearing in the body expression.
 
     When calling declare, the 'variables' keyword can be set to
     a list of variables whose coefficients should be treated
     as stochastic. Leaving 'variables' at its default of
-    None signifies that the coefficients of all variables
+    None signifies that coefficients of all variables
     appearing in the expression should be considered
     stochastic.
     """
@@ -276,13 +325,18 @@ class PySP_StochasticMatrixAnnotation(PySP_Annotation):
     _ctypes_data = (_ConstraintData,)
 
     def __init__(self):
-        super(PySP_StochasticMatrixAnnotation, self).__init__()
+        super(StochasticConstraintBodyAnnotation, self).__init__()
         self._default = None
 
     def _declare_impl(self, component, variables=None):
         self._data[component] = variables
 
-class PySP_StochasticObjectiveAnnotation(PySP_Annotation):
+def PySP_StochasticObjectiveAnnotation(*args, **kwds):
+    logger.warning("DEPRECATED: 'PySP_StochasticObjectiveAnnotation' "
+                   "has been renamed to 'StochasticObjectiveAnnotation'. "
+                   "Please update your model file.")
+    return StochasticObjectiveAnnotation(*args, **kwds)
+class StochasticObjectiveAnnotation(PySP_Annotation):
     """
     This annotation is used to identify variable
     cost-coefficients that are stochastic.
@@ -300,8 +354,30 @@ class PySP_StochasticObjectiveAnnotation(PySP_Annotation):
     _ctypes_data = (_ObjectiveData,)
 
     def __init__(self):
-        super(PySP_StochasticObjectiveAnnotation, self).__init__()
+        super(StochasticObjectiveAnnotation, self).__init__()
         self._default = (None, True)
 
     def _declare_impl(self, component, variables=None, include_constant=True):
         self._data[component] = (variables, include_constant)
+
+class StochasticVariableBoundsAnnotation(PySP_Annotation):
+    """
+    This annotation is used to identify variable
+    bounds that are stochastic.
+
+    When calling declare, at most one of the keywords 'lb' or
+    'ub' can be set to False to disable the annotation for
+    one of the variable bounds.
+    """
+    _ctypes = (Var,)
+    _ctypes_data = (_VarData,)
+
+    def __init__(self):
+        super(StochasticVariableBoundsAnnotation, self).__init__()
+        self._default = (None, (True, True))
+
+    def _declare_impl(self, component,  lb=True, ub=True):
+        assert lb or ub
+        assert (lb is True) or (lb is False)
+        assert (ub is True) or (ub is False)
+        self._data[component] = (lb, ub)
