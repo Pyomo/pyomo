@@ -137,8 +137,7 @@ def _value_sorter(self, obj):
     try:
         return sorted(obj)
     except:
-        pass
-    return sorted(obj, key=_robust_sorter())
+        return sorted(obj, key=_robust_sorter())
 
 
 # A trivial class that we can use to test if an object is a "legitimate"
