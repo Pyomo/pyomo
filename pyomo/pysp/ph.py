@@ -54,6 +54,7 @@ from pyomo.pysp.phutils import (create_block_symbol_maps,
                                 create_ph_parameters,
                                 create_nodal_ph_parameters,
                                 preprocess_scenario_instance,
+                                preprocess_bundle_instance,
                                 find_active_objective,
                                 canonical_preprocess_block_objectives,
                                 canonical_preprocess_block_constraints,
@@ -62,6 +63,8 @@ from pyomo.pysp.phutils import (create_block_symbol_maps,
                                 _OLD_OUTPUT)
 from pyomo.pysp.util.misc import load_external_module
 from pyomo.pysp import phsolverserverutils
+
+from pyomo.opt.parallel.local import SolverManager_Serial
 
 from six import iterkeys, itervalues, iteritems
 from six.moves import xrange
@@ -258,9 +261,15 @@ class _PHBase(object):
     def __init__(self):
 
         # PH solver information / objects.
-        self._solver = None
+
+        # maps object names to solver plugins for the corresponding object (scenario or bundle)
+        self._solver_map = {}
+
+        # the type and I/O method for all solver plugins contained in the map
+        # above - we assume, for now, homogeneity.
         self._solver_type = "cplex"
         self._solver_io = None
+
         self._comparison_tolerance_for_fixed_vars = 1e-5
 
         self._problem_states = None
@@ -301,10 +310,8 @@ class _PHBase(object):
         self._solution_status = {}
 
         # maps scenario name (or bundle name, in the case of bundling)
-        # to the last solve time reported for the corresponding
-        # sub-problem.
-        # presently user time, due to deficiency in solver plugins. ultimately
-        # want wall clock time for PH reporting purposes.
+        # to the last wall clock solve time (as reported by the solver 
+        # plugin) for the corresponding sub-problem.
         self._solve_times = {}
 
         # similar to the above, but the time consumed by the invocation
@@ -662,7 +669,7 @@ class _PHBase(object):
                     (scenario._probability / scenario_bundle._probability) * \
                     weight_expression_component
 
-            if self._solver.problem_format == ProblemFormat.nl:
+            if self._solver_map[next(iterkeys(self._solver_map))].problem_format == ProblemFormat.nl:
                 var_id_map = {}
                 ampl_preprocess_block_objectives(bundle_ef_instance,
                                                  var_id_map)
@@ -931,6 +938,8 @@ class _PHBase(object):
     # be invoked before each iteration of PH, just before scenario
     # solves.
     #
+    # TBD - this method is not named accurately, in that bundles are preprocessed as well.
+    #       should change the name to reflect.
 
     def _preprocess_scenario_instances(self, ignore_bundles=False, subproblems=None):
 
@@ -952,7 +961,7 @@ class _PHBase(object):
                     self._problem_states.ph_constraints[scenario_name],
                     self._problem_states.objective_updated[scenario_name],
                     not self._write_fixed_variables,
-                    self._solver)
+                    self._solver_map[scenario_name])
 
                 # We've preprocessed the instance, reset the relevant flags
                 self._problem_states.clear_update_flags(scenario_name)
@@ -971,8 +980,9 @@ class _PHBase(object):
                 preprocess_bundle_objective = False
                 preprocess_bundle_constraints = False
 
-                for scenario_name in \
-                      self._bundle_scenario_instance_map[scenario_bundle_name]:
+                bundle_solver = self._solver_map[scenario_bundle_name]
+
+                for scenario_name in self._bundle_scenario_instance_map[scenario_bundle_name]:
 
                     scenario_instance = self._instances[scenario_name]
                     fixed_vars = self._problem_states.fixed_variables[scenario_name]
@@ -1002,14 +1012,15 @@ class _PHBase(object):
                         self._problem_states.ph_constraints[scenario_name],
                         objective_updated,
                         not self._write_fixed_variables,
-                        self._solver)
+                        bundle_solver)
 
                     # We've preprocessed the instance, reset the relevant flags
                     self._problem_states.clear_update_flags(scenario_name)
                     self._problem_states.clear_fixed_variables(scenario_name)
                     self._problem_states.clear_freed_variables(scenario_name)
 
-                if self._solver.problem_format == ProblemFormat.nl:
+                # TBD - much of this can be done in preprocess_bundle_instance
+                if bundle_solver.problem_format == ProblemFormat.nl:
                     var_id_map = {}
                     if preprocess_bundle_objective:
                         ampl_preprocess_block_objectives(bundle_ef_instance,
@@ -1025,6 +1036,10 @@ class _PHBase(object):
                     if preprocess_bundle_constraints:
                         canonical_preprocess_block_constraints(bundle_ef_instance,
                                                                var_id_map)
+
+                if preprocess_bundle_objective:
+                    preprocess_bundle_instance(bundle_ef_instance, bundle_solver)
+
         end_time = time.time()
 
         if self._output_times:
@@ -1218,15 +1233,15 @@ class ProgressiveHedging(_PHBase):
 
             return
 
-        if isinstance(self._solver_manager,
+        if isinstance(self._solver_manager, 
                       pyomo.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
             phsolverserverutils.release_phsolverservers(self)
-
-        if self._solver is not None:
-            self._solver.deactivate()
-            self._solver = None
+        
+        for object_name, object_solver in iteritems(self._solver_map):
+            object_solver.deactivate()
+        self._solver_map.clear()
 
         # cleanup the scenario instances for post-processing -
         # ideally, we want to leave them in their original state,
@@ -1722,7 +1737,7 @@ class ProgressiveHedging(_PHBase):
                 ph_bound_base.TREE_VARIABLE_FIXING
             ph_bound_base.RestoreLastPHChange(self)
 
-            if self._verbose:
+            if self._verbose or self._report_subproblem_objectives:
                 print("Successfully completed xhat inner bound solves\n")
 
                 if self._scenario_tree.contains_bundles():
@@ -1863,6 +1878,8 @@ class ProgressiveHedging(_PHBase):
         self._report_rhos_each_iteration = False
         # do I report PH rhos prior to PH iteration 1?
         self._report_rhos_first_iteration = False
+        # do I report PH sub-problem solve objective and related statistics?
+        self._report_subproblem_objectives = False
         # do I report only variable statistics when outputting
         # solutions and weights?
         self._report_only_statistics = False
@@ -1929,9 +1946,6 @@ class ProgressiveHedging(_PHBase):
         # indicating unassigned.
         self._mipgap = None
 
-        # we only store these temporarily...
-        scenario_solver_options = None
-
         # process the keyword options
         self._ph_warmstart_file                   = options.ph_warmstart_file
         self._ph_warmstart_index                  = options.ph_warmstart_index
@@ -1948,7 +1962,7 @@ class ProgressiveHedging(_PHBase):
         self._bound_setter_file                   = options.bounds_cfgfile
         self._solver_type                         = options.solver_type
         self._solver_io                           = options.solver_io
-        scenario_solver_options                   = options.scenario_solver_options
+        self._scenario_solver_options             = options.scenario_solver_options
         self._handshake_with_phpyro               = options.handshake_with_phpyro
         self._mipgap                              = options.scenario_mipgap
         self._write_fixed_variables               = options.write_fixed_variables
@@ -1959,6 +1973,7 @@ class ProgressiveHedging(_PHBase):
         self._verbose                             = options.verbose
         self._report_solutions                    = options.report_solutions
         self._report_weights                      = options.report_weights
+        self._report_subproblem_objectives        = options.report_subproblem_objectives
         self._report_rhos_each_iteration          = options.report_rhos_each_iteration
         self._report_rhos_first_iteration         = options.report_rhos_first_iteration
         self._report_only_statistics              = options.report_only_statistics
@@ -2124,18 +2139,6 @@ class ProgressiveHedging(_PHBase):
                 setattr(self,ph_attr,sys_modules_key)
                 self._mapped_module_name[sys_modules_key] = module_name
 
-        # construct the sub-problem solver.
-        if self._verbose:
-            print("Constructing solver type="+self._solver_type)
-        self._solver = SolverFactory(self._solver_type, solver_io=self._solver_io)
-        if self._solver == None:
-            raise ValueError("Unknown solver type=" + self._solver_type + " specified in call to PH constructor")
-        if len(scenario_solver_options) > 0:
-            if self._verbose:
-                print("Initializing scenario sub-problem solver with options="+str(scenario_solver_options))
-            self._solver.set_options(" ".join(scenario_solver_options))
-        if self._output_times:
-            self._solver._report_timing = True
 
         # a set of all valid PH iteration indicies is generally useful for plug-ins, so create it here.
         self._iteration_index_set = Set(name="PHIterations")
@@ -2290,12 +2293,9 @@ class ProgressiveHedging(_PHBase):
         isPHPyro =  isinstance(self._solver_manager,
                                pyomo.solvers.plugins.\
                                smanager.phpyro.SolverManager_PHPyro)
-        if isinstance(self._solver, PersistentSolver) and \
-           (not isPHPyro):
-            raise TypeError("Persistent solvers are only supported "
-                            "when using PHPyro")
 
         initialization_action_handles = []
+
         if isPHPyro:
 
             if self._verbose:
@@ -2308,6 +2308,22 @@ class ProgressiveHedging(_PHBase):
                 print("PH solver server initialization requests successfully transmitted")
 
         else:
+
+            if self._verbose:
+                print("Constructing solvers of type="+self._solver_type)
+
+            # populate the solver map in the case of serial PH.
+            for subproblem in self._scenario_tree.subproblems:
+                object_solver = self._solver_map[subproblem.name] = SolverFactory(self._solver_type, solver_io=self._solver_io)
+                if object_solver == None:
+                    raise ValueError("Unknown solver type=" + self._solver_type + " specified in call to PH constructor")
+                if len(self._scenario_solver_options) > 0:
+                    if self._verbose:
+                        print("Initializing sub-problem solver with options="+str(self._scenario_solver_options))
+                    self._solver_map[subproblem.name].set_options(" ".join(self._scenario_solver_options))
+                if self._output_times:
+                    object_solver._report_timing = True
+
             # gather the scenario tree instances into
             # the self._instances dictionary and
             # tag appropriate preprocessing flags
@@ -2380,6 +2396,26 @@ class ProgressiveHedging(_PHBase):
             # responsible for farming the instances out for solution.
             if self._scenario_tree.contains_bundles():
                 self._form_bundle_binding_instances()
+
+            # if we are dealing with persistent solver interfaces, 
+            # we need to initialize the instances.
+            if isinstance(self._solver_map[next(iterkeys(self._solver_map))], PersistentSolver):
+                if self._scenario_tree.contains_bundles():
+                    for scenario_bundle in self._scenario_tree.bundles:
+                        self._solver_map[scenario_bundle.name].set_instance(
+                            self._bundle_binding_instance_map[scenario_bundle.name],
+                            symbolic_solver_labels=self._symbolic_solver_labels,
+                            output_fixed_variable_bounds=self._write_fixed_variables)
+                else:
+                    for scenario in self._scenario_tree.scenarios:
+                        if self._verbose:
+                            print("Setting instance for scenario=%s in persistent solver interface" % scenario.name)
+                        self._solver_map[scenario.name].set_instance(
+                            scenario._instance,
+                            symbolic_solver_labels=self._symbolic_solver_labels,
+                            output_fixed_variable_bounds=self._write_fixed_variables)
+
+
 
         # If specified, run the user script to collect aggregate
         # scenario data. This can slow down PH initialization as
@@ -2664,6 +2700,11 @@ class ProgressiveHedging(_PHBase):
 
     def queue_subproblems(self, subproblems=None, warmstart=False, exception_on_failure=False):
 
+        # TODO: Does this import need to be delayed because
+        #       it is in a plugins subdirectory
+        from pyomo.solvers.plugins.solvers.persistent_solver import \
+            PersistentSolver
+
         def bundle_in_subproblems(bundle_name, subproblems):
             if subproblems == None:
                 return True
@@ -2685,8 +2726,8 @@ class ProgressiveHedging(_PHBase):
                 for scenario in self._scenario_tree._scenarios:
                     subproblems.append(scenario._name)
 
-        # Preprocess the scenario instances before solving we're
-        # not using phpyro
+        # Preprocess the scenario instances before solving if 
+        # we are not using phpyro
         if not isinstance(self._solver_manager,
                           pyomo.solvers.plugins.smanager.\
                           phpyro.SolverManager_PHPyro):
@@ -2716,14 +2757,19 @@ class ProgressiveHedging(_PHBase):
         if self._mipgap is not None:
             self._solver.options.mipgap = float(self._mipgap)
 
-        # if running the phpyro solver server, we need to ship the
-        # solver options across the pipe.
+        # if running the phpyro solver server, we need to 
+        # ship the solver options across the pipe. 
         if isinstance(self._solver_manager,
                       pyomo.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
             solver_options = {}
-            for key in self._solver.options:
-                solver_options[key]=self._solver.options[key]
+#            print("MESSING WITH SOLVER OPTIONS")
+#            print(" ".join(self._scenario_solver_options))
+#            foobar
+# TBD - REVISIT THE BELOW - NEED TO STORE SCENARIO SOLVER OPTIONS IN A PROCESSED, DICTIONARY FORM
+#            self._solver_map[subproblem.name].set_options(" ".join(self._scenario_solver_options))
+#            for key in self._solver.options:
+#                solver_options[key]=self._solver.options[key]
 
         # STEP 1: queue up the solves for all scenario sub-problems
         # we could use the same names for scenarios and bundles, but
@@ -2734,31 +2780,42 @@ class ProgressiveHedging(_PHBase):
         bundle_action_handle_map = {} # maps bundle names to action handles
         action_handle_bundle_map = {} # maps action handles to bundle names
 
-        common_kwds = {
+        common_solve_kwds = {
             'tee':self._output_solver_log,
             'keepfiles':self._keep_solver_files,
             'symbolic_solver_labels':self._symbolic_solver_labels,
             'output_fixed_variable_bounds':self._write_fixed_variables}
 
+        # if we are solving locally and not using a persistent solver plugin,
+        # then add the following two options to the standard set of common
+        # solve keywrods
+        if isinstance(self._solver_manager, SolverManager_Serial):
+            # grab an arbitrary solver plugin - we are implicitly assuming
+            # homogeneous solver plugin types across subproblems.
+            some_solver = self._solver_map[next(iterkeys(self._solver_map))]
+            if isinstance(some_solver, PersistentSolver):
+                del common_solve_kwds['symbolic_solver_labels']
+                del common_solve_kwds['output_fixed_variable_bounds']
+
         # TODO: suffixes are not handled equally for
         # scenario/bundles/serial/phpyro
         if isinstance(self._solver_manager,
                       pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-            common_kwds['solver_options'] = solver_options
-            common_kwds['solver_suffixes'] = []
-            common_kwds['warmstart'] = warmstart
-            common_kwds['variable_transmission'] = \
+            common_solve_kwds['solver_options'] = solver_options
+            common_solve_kwds['solver_suffixes'] = []
+            common_solve_kwds['warmstart'] = warmstart
+            common_solve_kwds['variable_transmission'] = \
                 self._phpyro_variable_transmission_flags
-            common_kwds['load_solutions'] = False
 
         # we always rely on ourselves to load solutions - we control
         # the error checking and such.
-        common_kwds['load_solutions'] = False
+        common_solve_kwds['load_solutions'] = False
 
         if isinstance(self._solver_manager,
                       pyomo.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
             self._solver_manager.begin_bulk()
+
         if self._scenario_tree.contains_bundles():
 
             for scenario_bundle in self._scenario_tree._scenario_bundles:
@@ -2780,28 +2837,30 @@ class ProgressiveHedging(_PHBase):
                             action="solve",
                             queue_name=self._phpyro_job_worker_map[scenario_bundle._name],
                             name=scenario_bundle._name,
-                            **common_kwds)
+                            **common_solve_kwds)
                 else:
+
+                    bundle_solver = self._solver_map[scenario_bundle.name]
 
                     if (self._output_times is True) and (self._verbose is False):
                         print("Solver manager queuing instance=%s"
                               % (scenario_bundle._name))
 
-                    if warmstart and self._solver.warm_start_capable():
+                    if warmstart and bundle_solver.warm_start_capable():
                         new_action_handle = \
                             self._solver_manager.queue(
                                 self._bundle_binding_instance_map[\
                                     scenario_bundle._name],
-                                opt=self._solver,
+                                opt=bundle_solver,
                                 warmstart=True,
-                                **common_kwds)
+                                **common_solve_kwds)
                     else:
                         new_action_handle = \
                             self._solver_manager.queue(
                                 self._bundle_binding_instance_map[\
                                     scenario_bundle._name],
-                                opt=self._solver,
-                                **common_kwds)
+                                opt=bundle_solver,
+                                **common_solve_kwds)
 
                 bundle_action_handle_map[scenario_bundle._name] = new_action_handle
                 action_handle_bundle_map[new_action_handle] = scenario_bundle._name
@@ -2830,46 +2889,48 @@ class ProgressiveHedging(_PHBase):
                             action="solve",
                             queue_name=self._phpyro_job_worker_map[scenario._name],
                             name=scenario._name,
-                            **common_kwds)
+                            **common_solve_kwds)
 
                 else:
 
                     instance = scenario._instance
 
+                    scenario_solver = self._solver_map[scenario.name]
+
                     if (self._output_times is True) and (self._verbose is False):
                         print("Solver manager queuing instance=%s"
                               % (scenario._name))
 
-                    if warmstart and self._solver.warm_start_capable():
+                    if warmstart and scenario_solver.warm_start_capable():
 
                         if self._extensions_suffix_list is not None:
                             new_action_handle = \
                                 self._solver_manager.queue(
                                     instance,
-                                    opt=self._solver,
+                                    opt=scenario_solver,
                                     warmstart=True,
                                     suffixes=self._extensions_suffix_list,
-                                    **common_kwds)
+                                    **common_solve_kwds)
                         else:
                             new_action_handle = \
                                 self._solver_manager.queue(instance,
-                                                           opt=self._solver,
+                                                           opt=scenario_solver,
                                                            warmstart=True,
-                                                           **common_kwds)
+                                                           **common_solve_kwds)
                     else:
 
                         if self._extensions_suffix_list is not None:
                             new_action_handle = \
                                 self._solver_manager.queue(
                                     instance,
-                                    opt=self._solver,
+                                    opt=scenario_solver,
                                     suffixes=self._extensions_suffix_list,
-                                    **common_kwds)
+                                    **common_solve_kwds)
                         else:
                             new_action_handle = \
                                 self._solver_manager.queue(instance,
-                                                           opt=self._solver,
-                                                           **common_kwds)
+                                                           opt=scenario_solver,
+                                                           **common_solve_kwds)
 
                 scenario_action_handle_map[scenario._name] = new_action_handle
                 action_handle_scenario_map[new_action_handle] = scenario._name
@@ -2964,12 +3025,9 @@ class ProgressiveHedging(_PHBase):
                     self._solution_status[bundle_name] = \
                         getattr(SolutionStatus, auxilliary_values["solution_status"])
 
-                    if "user_time" in auxilliary_values:
+                    if "wallclock_time" in auxilliary_values:
                         self._solve_times[bundle_name] = \
-                            auxilliary_values["user_time"]
-                    elif "time" in auxilliary_values:
-                        self._solve_times[bundle_name] = \
-                            auxilliary_values["time"]
+                            auxilliary_values["wallclock_time"]
 
                     if "pyomo_solve_time" in auxilliary_values:
                         self._pyomo_solve_times[bundle_name] = \
@@ -3029,23 +3087,10 @@ class ProgressiveHedging(_PHBase):
 
                     self._solution_status[bundle_name] = solution0.status
 
-                    # if the solver plugin doesn't populate the
-                    # user_time field, it is by default of type
-                    # UndefinedData - defined in pyomo.opt.results
-                    if hasattr(bundle_results.solver,"user_time") and \
-                       (not isinstance(bundle_results.solver.user_time,
-                                       UndefinedData)) and \
-                       (bundle_results.solver.user_time is not None):
-                        # the solve time might be a string, or might
-                        # not be - we eventually would like more
-                        # consistency on this front from the solver
-                        # plugins.
+                    if hasattr(bundle_results.solver,"wallclock_time"):
+                        solve_time = bundle_results.solver.wallclock_time
                         self._solve_times[bundle_name] = \
-                            float(bundle_results.solver.user_time)
-                    elif hasattr(bundle_results.solver,"time"):
-                        solve_time = bundle_results.solver.time
-                        self._solve_times[bundle_name] = \
-                            float(bundle_results.solver.time)
+                            float(bundle_results.solver.wallclock_time)
 
                     if hasattr(bundle_results,"pyomo_solve_time"):
                         self._pyomo_solve_times[bundle_name] = \
@@ -3133,12 +3178,9 @@ class ProgressiveHedging(_PHBase):
                     self._solution_status[scenario_name] = \
                         getattr(SolutionStatus, auxilliary_values["solution_status"])
 
-                    if "user_time" in auxilliary_values:
+                    if "wallclock_time" in auxilliary_values:
                         self._solve_times[scenario_name] = \
-                            auxilliary_values["user_time"]
-                    elif "time" in auxilliary_values:
-                        self._solve_times[scenario_name] = \
-                            auxilliary_values["time"]
+                            auxilliary_values["wallclock_time"]
 
                     if "pyomo_solve_time" in auxilliary_values:
                         self._pyomo_solve_times[scenario_name] = \
@@ -3204,22 +3246,10 @@ class ProgressiveHedging(_PHBase):
 
                     self._solution_status[scenario_name] = solution0.status
 
-                    # if the solver plugin doesn't populate the
-                    # user_time field, it is by default of type
-                    # UndefinedData - defined in pyomo.opt.results
-                    if hasattr(results.solver,"user_time") and \
-                       (not isinstance(results.solver.user_time,
-                                       UndefinedData)) and \
-                       (results.solver.user_time is not None):
-                        # the solve time might be a string, or might
-                        # not be - we eventually would like more
-                        # consistency on this front from the solver
-                        # plugins.
+                    if hasattr(results.solver,"wallclock_time"):
+                        print("RESULTS.SOLVER.WALLCLOCK_TIME=",results.solver.wallclock_time)
                         self._solve_times[scenario_name] = \
-                            float(results.solver.user_time)
-                    elif hasattr(results.solver,"time"):
-                        self._solve_times[scenario_name] = \
-                            float(results.solver.time)
+                            float(results.solver.wallclock_time)
 
                     if hasattr(results,"pyomo_solve_time"):
                         self._pyomo_solve_times[scenario_name] = \
@@ -3385,7 +3415,7 @@ class ProgressiveHedging(_PHBase):
 
         failures = self.solve_subproblems(warmstart=self._iteration_0_has_warmstart)
 
-        if self._verbose:
+        if self._verbose or self._report_subproblem_objectives:
             print("Successfully completed PH iteration 0 solves\n"
                   "- solution statistics:\n")
             if self._scenario_tree.contains_bundles():
@@ -3701,7 +3731,7 @@ class ProgressiveHedging(_PHBase):
 
         failures = self.solve_subproblems(warmstart=not self._disable_warmstarts)
 
-        if self._verbose:
+        if self._verbose or self._report_subproblem_objectives:
             print("Successfully completed PH iteration %s solves\n"
                   "- solution statistics:\n" % (self._current_iteration))
             if self._scenario_tree.contains_bundles():

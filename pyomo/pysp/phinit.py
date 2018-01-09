@@ -507,10 +507,15 @@ def construct_ph_options_parser(usage_string):
       action="store_true",
       dest="report_rhos_each_iteration",
       default=False)
-    outputOpts.add_argument('--report-rhos-first-iterations',
+    outputOpts.add_argument('--report-rhos-first-iteration',
       help="Report rhos prior to PH iteration 1. Enabled if --verbose is enabled. Default is False.",
       action="store_true",
       dest="report_rhos_first_iteration",
+      default=False)
+    outputOpts.add_argument('--report-subproblem-objectives',
+      help="Always report PH subproblem objective and related statistics after each iteration. Enabled if --verbose is enabled. Default is False.",
+      action="store_true",
+      dest="report_subproblem_objectives",
       default=False)
     outputOpts.add_argument('--report-for-zero-variable-values',
       help="Report statistics (variables and weights) for all variables, not just those with values differing from 0. Default is False.",
