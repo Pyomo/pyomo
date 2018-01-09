@@ -18,7 +18,7 @@ import weakref
 import logging
 from inspect import isclass
 from operator import itemgetter, attrgetter
-from six import iteritems, itervalues, StringIO, string_types, \
+from six import iteritems, iterkeys, itervalues, StringIO, string_types, \
     advance_iterator, PY3
 
 from pyomo.util.timing import ConstructionTimer
@@ -673,8 +673,8 @@ class _BlockData(ActiveComponentData):
             super(_BlockData, self).__delattr__(name)
 
     def set_value(self, val):
-        for k,v in iteritems(getattr(self, '_decl', {})):
-            super(_BlockData, self).__delattr__(k)
+        for k in list(getattr(self, '_decl', {})):
+            self.del_component(k)
         self._ctypes = {}
         self._decl = {}
         self._decl_order = []

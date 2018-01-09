@@ -1076,7 +1076,7 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
         if self._check_skip_add(None, expr) is None:
             del self[None]
             return None
-        return _GeneralConstraintData.set_value(self, expr)
+        return super(SimpleConstraint, self).set_value(expr)
 
     #
     # Leaving this method for backward compatibility reasons.
