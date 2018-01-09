@@ -19,7 +19,7 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
     """
 
     alias(
-        'core.deactivate_trivial_constraints',
+        'contrib.deactivate_trivial_constraints',
         doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self):

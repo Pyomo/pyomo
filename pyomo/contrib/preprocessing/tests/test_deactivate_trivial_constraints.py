@@ -4,8 +4,6 @@ import pyutilib.th as unittest
 from pyomo.environ import (Constraint, ConcreteModel, TransformationFactory,
                            Var)
 
-__author__ = "Qi Chen <https://github.com/qtothec>"
-
 
 class TestTrivialConstraintDeactivator(unittest.TestCase):
     """Tests deactivation of trivial constraints."""
@@ -22,7 +20,7 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
         m.v1.fix()
 
         TransformationFactory(
-            'core.deactivate_trivial_constraints').apply_to(m)
+            'contrib.deactivate_trivial_constraints').apply_to(m)
         self.assertTrue(m.c.active)
         self.assertTrue(m.c2.active)
         self.assertFalse(m.c3.active)
@@ -39,7 +37,7 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
         m.v1.fix()
 
         xfrm = TransformationFactory(
-            'core.deactivate_trivial_constraints')
+            'contrib.deactivate_trivial_constraints')
         xfrm.apply_to(m, tmp=True)
         self.assertTrue(m.c.active)
         self.assertTrue(m.c2.active)
@@ -58,7 +56,7 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
         m.c = Constraint(expr=m.v1 >= 2)
         m.v1.fix()
         TransformationFactory(
-            'core.deactivate_trivial_constraints').apply_to(m)
+            'contrib.deactivate_trivial_constraints').apply_to(m)
 
     def test_trivial_constraints_ub_conflict(self):
         """Test for violated trivial constraint upper bound."""
@@ -70,7 +68,7 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
         m.c = Constraint(expr=m.v1 <= 0)
         m.v1.fix()
         TransformationFactory(
-            'core.deactivate_trivial_constraints').apply_to(m)
+            'contrib.deactivate_trivial_constraints').apply_to(m)
 
 
 if __name__ == '__main__':

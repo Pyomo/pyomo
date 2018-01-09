@@ -18,7 +18,7 @@ class InitMidpoint(IsomorphicTransformation):
     """
 
     alias(
-        'core.init_vars_midpoint',
+        'contrib.init_vars_midpoint',
         doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self):

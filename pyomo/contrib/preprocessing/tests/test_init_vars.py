@@ -25,7 +25,7 @@ class TestInitVars(unittest.TestCase):
         m.v4.setlb(0)
         m.v4.setub(2)
 
-        TransformationFactory('core.init_vars_midpoint').apply_to(m)
+        TransformationFactory('contrib.init_vars_midpoint').apply_to(m)
         self.assertEquals(value(m.v1), 0)
         self.assertEquals(value(m.v2), 2)
         self.assertEquals(value(m.v3), 2)
@@ -33,7 +33,7 @@ class TestInitVars(unittest.TestCase):
         self.assertEquals(value(m.v5), 2)
         self.assertEquals(value(m.v6), 3)
 
-        TransformationFactory('core.init_vars_midpoint').apply_to(
+        TransformationFactory('contrib.init_vars_midpoint').apply_to(
             m, overwrite=True)
         self.assertEquals(value(m.v1), 0)
         self.assertEquals(value(m.v2), 2)
@@ -57,7 +57,7 @@ class TestInitVars(unittest.TestCase):
         m.v4.setlb(0)
         m.v4.setub(2)
 
-        TransformationFactory('core.init_vars_zero').apply_to(m)
+        TransformationFactory('contrib.init_vars_zero').apply_to(m)
         self.assertEquals(value(m.v1), 0)
         self.assertEquals(value(m.v2), 2)
         self.assertEquals(value(m.v3), -2)
@@ -65,7 +65,7 @@ class TestInitVars(unittest.TestCase):
         self.assertEquals(value(m.v5), 2)
         self.assertEquals(value(m.v6), 3)
 
-        TransformationFactory('core.init_vars_zero').apply_to(
+        TransformationFactory('contrib.init_vars_zero').apply_to(
             m, overwrite=True)
         self.assertEquals(value(m.v1), 0)
         self.assertEquals(value(m.v2), 2)

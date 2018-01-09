@@ -21,7 +21,7 @@ class FixedVarDetector(IsomorphicTransformation):
     """
 
     alias(
-        'core.detect_fixed_vars',
+        'contrib.detect_fixed_vars',
         doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self):

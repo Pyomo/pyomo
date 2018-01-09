@@ -21,7 +21,7 @@ class RemoveZeroTerms(IsomorphicTransformation):
     """
 
     alias(
-        'core.remove_zero_terms',
+        'contrib.remove_zero_terms',
         doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self, *args, **kwargs):

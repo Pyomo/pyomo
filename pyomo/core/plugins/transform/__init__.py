@@ -21,7 +21,3 @@ import pyomo.core.plugins.transform.discrete_vars
 # import pyomo.core.plugins.transform.util
 import pyomo.core.plugins.transform.zero_sum_propagator
 import pyomo.core.plugins.transform.bounds_to_vars
-import pyomo.core.plugins.transform.deactivate_trivial_constraints
-import pyomo.core.plugins.transform.detect_fixed_vars
-import pyomo.core.plugins.transform.init_vars
-import pyomo.core.plugins.transform.remove_zero_terms

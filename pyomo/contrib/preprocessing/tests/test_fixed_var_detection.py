@@ -16,7 +16,7 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
         m.v1.setub(2)
         m.v1.setlb(2)
 
-        TransformationFactory('core.detect_fixed_vars').apply_to(m)
+        TransformationFactory('contrib.detect_fixed_vars').apply_to(m)
         self.assertTrue(m.v1.fixed)
         self.assertFalse(m.v2.fixed)
 
@@ -28,7 +28,7 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
         m.v1.setub(2)
         m.v1.setlb(2)
 
-        xfrm = TransformationFactory('core.detect_fixed_vars')
+        xfrm = TransformationFactory('contrib.detect_fixed_vars')
         xfrm.apply_to(m, tmp=True)
         self.assertTrue(m.v1.fixed)
         self.assertFalse(m.v2.fixed)

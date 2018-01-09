@@ -23,7 +23,7 @@ class TestRemoveZeroTerms(unittest.TestCase):
         m.c4 = Constraint(expr=1 <= m.v1 * m.v2 + m.v3 <= 3)
         m.v1.fix(0)
 
-        TransformationFactory('core.remove_zero_terms').apply_to(m)
+        TransformationFactory('contrib.remove_zero_terms').apply_to(m)
         m.v1.unfix()
         # Check that the term no longer exists
         self.assertFalse(any(id(m.v1) == id(v)
