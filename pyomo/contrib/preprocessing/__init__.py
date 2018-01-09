@@ -1,4 +1,1 @@
-import pyomo.contrib.preprocessing.deactivate_trivial_constraints
-import pyomo.contrib.preprocessing.detect_fixed_vars
-import pyomo.contrib.preprocessing.init_vars
-import pyomo.contrib.preprocessing.remove_zero_terms
+import pyomo.contrib.preprocessing.plugins

@@ -60,7 +60,7 @@ class InitZero(IsomorphicTransformation):
     """
 
     alias(
-        'core.init_vars_zero',
+        'contrib.init_vars_zero',
         doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self):
