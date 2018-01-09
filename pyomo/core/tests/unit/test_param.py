@@ -212,8 +212,8 @@ class ParamTester(object):
         self.assertEqual( value(self.instance.A[idx]),
                           self.instance.A._default_val )
         if self.instance.A._mutable:
-            self.assertEqual( type(self.instance.A[idx]),
-                              pyomo.core.base.param._ParamData )
+            self.assertIsInstance( self.instance.A[idx],
+                                   pyomo.core.base.param._ParamData )
         else:
             self.assertEqual(type(self.instance.A[idx]),
                              type(value(self.instance.A._default_val)))
@@ -224,8 +224,8 @@ class ParamTester(object):
                 self.fail("Expected setitem[%s] to fail for immutable Params"
                           % (idx,))
             self.assertEqual( self.instance.A[idx], 4.3)
-            self.assertEqual( type(self.instance.A[idx]),
-                              pyomo.core.base.param._ParamData )
+            self.assertIsInstance( self.instance.A[idx],
+                                   pyomo.core.base.param._ParamData )
         except TypeError:
             # immutable Params should raise a TypeError exception
             if self.instance.A._mutable:
@@ -796,12 +796,11 @@ class ScalarTester(ParamTester):
 
     def test_value_scalar(self):
         #"""Check the value of the parameter"""
-        if self.sparse_data.get(None,None) is None:
+        if self.data.get(None,None) is None:
             self.assertRaises(ValueError, value, self.instance.A)
             self.assertRaises(TypeError, float, self.instance.A)
             self.assertRaises(TypeError, int, self.instance.A)
         else:
-
             val = self.data[None]
             tmp = value(self.instance.A)
             self.assertEqual( type(tmp), type(val))
@@ -812,7 +811,8 @@ class ScalarTester(ParamTester):
 
     def test_call(self):
         #"""Check the use of the __call__ method"""
-        if self.sparse_data.get(None,None) is None: #not self.sparse_data:
+        if self.sparse_data.get(None,0) is None or \
+           self.data.get(None,None) is None: #not self.sparse_data:
             self.assertRaisesRegexp(
                 ValueError, ".*undefined and no default value",
                 self.instance.A.__call__ )
@@ -820,18 +820,25 @@ class ScalarTester(ParamTester):
             self.assertEqual(self.instance.A(), self.data[None])
 
     def test_get_valueattr(self):
-        self.assertEqual(self.instance.A.value, self.data[None])
+        self.assertEqual( self.instance.A._value,
+                          self.sparse_data.get(None,None) )
+        if self.data.get(None,0) is None: #not self.sparse_data:
+            try:
+                value(self.instance.A)
+                self.fail("Expected value error")
+            except ValueError:
+                pass
+        else:
+            self.assertEqual( self.instance.A.value, self.data[None])
 
     def test_set_valueattr(self):
         self.instance.A.value = 4.3
         self.assertEqual(self.instance.A.value, 4.3)
-        if not self.sparse_data:
-            self.assertRaises(ValueError, self.instance.A)
-        else:
-            self.assertEqual(self.instance.A(), 4.3)
+        self.assertEqual(self.instance.A(), 4.3)
 
     def test_get_value(self):
-        if not self.sparse_data or (None in self.sparse_data and self.sparse_data[None] is None):
+        if self.sparse_data.get(None,0) is None or \
+           self.data.get(None,None) is None: #not self.sparse_data:
             try:
                 value(self.instance.A)
                 self.fail("Expected value error")
@@ -863,7 +870,7 @@ class ScalarParam_mutable_noDefault(ScalarTester, unittest.TestCase):
         self.model = AbstractModel()
         ScalarTester.setUp(self, mutable=True, **kwds)
 
-        self.sparse_data = {None:None}
+        self.sparse_data = {}
         self.data = {None:None}
 
 
@@ -889,7 +896,7 @@ class ScalarParam_mutable_floatDefault(ScalarTester, unittest.TestCase):
         self.model = AbstractModel()
         ScalarTester.setUp(self, mutable=True, default=1.3, **kwds)
 
-        self.sparse_data = {None:1.3}
+        self.sparse_data = {}
         self.data = {None:1.3}
 
 

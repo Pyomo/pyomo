@@ -1,0 +1,15 @@
+Total_Cost_Objective
+c_u_ConstrainTotalAcreage_
+c_l_EnforceCattleFeedRequirement(CORN)_
+c_l_EnforceCattleFeedRequirement(SUGAR_BEETS)_
+c_l_EnforceCattleFeedRequirement(WHEAT)_
+c_u_LimitAmountSold(CORN)_
+c_u_LimitAmountSold(SUGAR_BEETS)_
+c_u_LimitAmountSold(WHEAT)_
+r_l_EnforceQuotas(CORN)_
+r_u_EnforceQuotas(CORN)_
+r_l_EnforceQuotas(SUGAR_BEETS)_
+r_u_EnforceQuotas(SUGAR_BEETS)_
+r_l_EnforceQuotas(WHEAT)_
+r_u_EnforceQuotas(WHEAT)_
+c_e_ONE_VAR_CONSTANT

@@ -1,0 +1,60 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+[    0.03] Applying solver
+[    0.05] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: 0.0
+      Status: optimal
+      Function Value: 2.81
+    Solver results file: results.yml
+[    0.05] Applying Pyomo postprocessing actions
+[    0.05] Pyomo Finished
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Name: unknown
+  Lower bound: 2.81
+  Upper bound: 2.81
+  Number of objectives: 1
+  Number of constraints: 4
+  Number of variables: 10
+  Number of nonzeros: 10
+  Sense: minimize
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Termination condition: optimal
+  Statistics: 
+    Branch and bound: 
+      Number of bounded subproblems: 1
+      Number of created subproblems: 1
+  Error rc: 0
+  Time: 0.006503582000732422
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: optimal
+  Message: None
+  Objective:
+    Total_Cost:
+      Value: 2.81
+  Variable:
+    Buy[Fish Sandwich]:
+      Value: 1
+    Buy[Fries]:
+      Value: 1
+    Buy[Lowfat Milk]:
+      Value: 1
+  Constraint: No values

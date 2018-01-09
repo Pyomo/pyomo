@@ -1,0 +1,49 @@
+TIME piecewise
+PERIODS EXPLICIT
+    TIME1
+    TIME2
+ROWS
+    o TIME1
+    c_l_c_first_stage_ TIME1
+    c_e_p_first_stage_INC_constraint1_ TIME2
+    c_e_p_first_stage_INC_constraint2_ TIME2
+    c_e_p_second_stage(1)_INC_constraint1_ TIME2
+    c_e_p_second_stage(1)_INC_constraint2_ TIME2
+    c_l_c_second_stage_ TIME2
+    c_u_p_first_stage_INC_constraint3(1)_ TIME2
+    c_u_p_first_stage_INC_constraint3(2)_ TIME2
+    c_u_p_first_stage_INC_constraint3(3)_ TIME2
+    c_u_p_first_stage_INC_constraint4(1)_ TIME2
+    c_u_p_first_stage_INC_constraint4(2)_ TIME2
+    c_u_p_first_stage_INC_constraint4(3)_ TIME2
+    c_u_p_second_stage(1)_INC_constraint3(1)_ TIME2
+    c_u_p_second_stage(1)_INC_constraint3(2)_ TIME2
+    c_u_p_second_stage(1)_INC_constraint3(3)_ TIME2
+    c_u_p_second_stage(1)_INC_constraint4(1)_ TIME2
+    c_u_p_second_stage(1)_INC_constraint4(2)_ TIME2
+    c_u_p_second_stage(1)_INC_constraint4(3)_ TIME2
+    r_l_r_second_stage_ TIME2
+    r_u_r_second_stage_ TIME2
+    c_e_ONE_VAR_CONSTANT TIME2
+COLS
+    x TIME1
+    fx TIME2
+    fz TIME2
+    p_first_stage_INC_bin_y(1) TIME2
+    p_first_stage_INC_bin_y(2) TIME2
+    p_first_stage_INC_bin_y(3) TIME2
+    p_first_stage_INC_delta(1) TIME2
+    p_first_stage_INC_delta(2) TIME2
+    p_first_stage_INC_delta(3) TIME2
+    p_first_stage_INC_delta(4) TIME2
+    p_second_stage(1)_INC_bin_y(1) TIME2
+    p_second_stage(1)_INC_bin_y(2) TIME2
+    p_second_stage(1)_INC_bin_y(3) TIME2
+    p_second_stage(1)_INC_delta(1) TIME2
+    p_second_stage(1)_INC_delta(2) TIME2
+    p_second_stage(1)_INC_delta(3) TIME2
+    p_second_stage(1)_INC_delta(4) TIME2
+    r TIME2
+    z TIME2
+    ONE_VAR_CONSTANT TIME2
+ENDATA

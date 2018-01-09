@@ -24,7 +24,8 @@ from pyomo.core.data.process_data import _process_data
 
 class TableData(Plugin):
     """
-    An object that imports data from a table in an external data source.
+    A class used to read/write data from/to a table in an external
+    data source.
     """
 
     implements(IDataManager, service=False)
@@ -39,42 +40,57 @@ class TableData(Plugin):
         self.options.ncolumns = 1
 
     def available(self):
+        """
+        Returns:
+            Return :const:`True` if the data manager is available.
+        """
         return True
 
     def initialize(self, **kwds):
+        """
+        Initialize the data manager with keyword arguments.
+
+        The `filename` argument is recognized here, and other arguments
+        are passed to the :func:`add_options` method.
+        """
         self.filename = kwds.pop('filename')
         self.add_options(**kwds)
 
     def add_options(self, **kwds):
+        """
+        Add the keyword options to the :class:`Options` object in this
+        object.
+        """
         self.options.update(kwds)
 
     def open(self):                        #pragma:nocover
         """
-        Open the table
+        Open the data manager.
         """
         pass
 
     def read(self):                         #pragma:nocover
         """
-        Read data from the table
+        Read data from the data manager.
         """
         return False
 
     def write(self, data):                  #pragma:nocover
         """
-        Write data from the table
+        Write data to the data manager.
         """
         return False
 
     def close(self):                        #pragma:nocover
         """
-        Close the table
+        Close the data manager.
         """
         pass
 
     def process(self, model, data, default):
         """
-        Return the data that was extracted from this table
+        Process the data that was extracted from this data manager and
+        return it.
         """
         if model is None:
             model = self.options.model
@@ -126,6 +142,16 @@ class TableData(Plugin):
         if isinstance(self.options.index, Set):
             self.options.model = self.options.index.model()
             self.options.index = self.options.index.local_name
+
+        elif type(self.options.index) in [tuple, list]:
+            tmp = []
+            for val in self.options.index:
+                if isinstance(val, Set):
+                    tmp.append(val.local_name)
+                    self.options.model = val.model()
+                else:
+                    tmp.append(val)
+            self.options.index = tuple(tmp)
 
         if self.options.format is None:
             if not self.options.set is None:
@@ -192,7 +218,7 @@ class TableData(Plugin):
             msg = "Unknown parameter format: '%s'"
             raise ValueError(msg % self.options.format)
 
-    def get_table(self):
+    def _get_table(self):
         tmp = []
         if not self.options.columns is None:
             tmp.append(self.options.columns)

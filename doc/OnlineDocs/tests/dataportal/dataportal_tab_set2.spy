@@ -1,0 +1,5 @@
+model = AbstractModel()
+model.C = Set(dimen=2)
+data = DataPortal()
+data.load(filename='C.tab', set=model.C)
+instance = model.create_instance(data)

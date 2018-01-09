@@ -1,0 +1,12 @@
+from pyomo.environ import *
+
+model = AbstractModel()
+
+model.A = Set(dimen=4)
+model.B = Param(model.A)
+
+instance = model.create_instance('param8a.dat')
+
+keys = instance.B.keys()
+for key in sorted(keys):
+    print(str(key)+" "+str(value(instance.B[key])))

@@ -414,10 +414,10 @@ class ConvexHull_Transformation(Transformation):
                                 "transformation! Missing bound for %s."
                                 % (var.name))
             bigmConstraint = Constraint(transBlock.lbub)
-            bigmConstraint.add('lb', obj.indicator_var*lb <= disaggregatedVar)
-            bigmConstraint.add('ub', disaggregatedVar <= obj.indicator_var*ub)
             relaxationBlock.add_component(
                 disaggregatedVarName + "_bounds", bigmConstraint)
+            bigmConstraint.add('lb', obj.indicator_var*lb <= disaggregatedVar)
+            bigmConstraint.add('ub', disaggregatedVar <= obj.indicator_var*ub)
             infodict['bigmConstraints'][var] = bigmConstraint
             relaxationBlockInfo['boundConstraintToSrcVar'][bigmConstraint] = var
 

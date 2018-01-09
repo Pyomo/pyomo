@@ -1,0 +1,7 @@
+model = AbstractModel()
+data = DataPortal()
+model.A = Set(dimen=2)
+model.p = Param(model.A)
+data.load(filename='excel.xls', range='PPtable', 
+                    param=model.p, index=model.A)
+instance = model.create_instance(data)
