@@ -110,7 +110,8 @@ class _ParamData(ComponentData, NumericValue):
         if self._value is _NotValid:
             raise ValueError(
                 "Error evaluating Param value (%s):\n\tThe Param value is "
-                "currently set to an invalid value"
+                "currently set to an invalid value.\n\tThis is typically from "
+                "a scalar Param without an initial or default value."
                 % ( self.name, ))
         return self._value
 
