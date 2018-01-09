@@ -521,7 +521,7 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         self.assertEqual(model.ConditionalProbability["Child2"], 0.2)
 
         # FIXME: #300 on GitHub
-        self.assertEqual(model.StageCost["Stage1"]._value, None)
+        self.assertEqual(model.StageCost["Stage1"].value, None)
         self.assertEqual(list(model.StageVariables["Stage1"]), [])
         self.assertEqual(list(model.StageDerivedVariables["Stage1"]), [])
 
@@ -530,7 +530,7 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         self.assertEqual(list(model.NodeDerivedVariables["Root"]), ["y"])
 
         # FIXME: #300 on GitHub
-        self.assertEqual(model.StageCost["Stage2"]._value, None)
+        self.assertEqual(model.StageCost["Stage2"].value, None)
         self.assertEqual(list(model.StageVariables["Stage2"]), [])
         self.assertEqual(list(model.StageDerivedVariables["Stage2"]), [])
 
