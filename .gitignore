@@ -9,7 +9,6 @@
 *.egg-info
 
 # Documentation builds
-*.spy
 doc/OnlineDocs/_build
 
 # Running pyomo / tests / solvers occasionally leaves extra files

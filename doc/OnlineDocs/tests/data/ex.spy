@@ -1,0 +1,9 @@
+from pyomo.environ import *
+
+model = AbstractModel()
+
+model.z = Param()
+
+instance = model.create_instance('ex.dat')
+
+print(value(instance.z))
