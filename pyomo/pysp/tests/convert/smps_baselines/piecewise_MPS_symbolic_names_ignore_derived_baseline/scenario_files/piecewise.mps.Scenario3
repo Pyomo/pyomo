@@ -1,0 +1,128 @@
+* Source:     Pyomo MPS Writer
+* Format:     Free MPS
+*
+NAME Scenario3
+OBJSENSE
+ MIN
+ROWS
+ N  o
+ E  c_e_p_first_stage_INC_constraint1_
+ E  c_e_p_first_stage_INC_constraint2_
+ G  c_l_c_first_stage_
+ L  c_u_p_first_stage_INC_constraint3(1)_
+ L  c_u_p_first_stage_INC_constraint3(2)_
+ L  c_u_p_first_stage_INC_constraint3(3)_
+ L  c_u_p_first_stage_INC_constraint4(1)_
+ L  c_u_p_first_stage_INC_constraint4(2)_
+ L  c_u_p_first_stage_INC_constraint4(3)_
+ E  c_e_p_second_stage(1)_INC_constraint1_
+ E  c_e_p_second_stage(1)_INC_constraint2_
+ G  c_l_c_second_stage_
+ L  c_u_p_second_stage(1)_INC_constraint3(1)_
+ L  c_u_p_second_stage(1)_INC_constraint3(2)_
+ L  c_u_p_second_stage(1)_INC_constraint3(3)_
+ L  c_u_p_second_stage(1)_INC_constraint4(1)_
+ L  c_u_p_second_stage(1)_INC_constraint4(2)_
+ L  c_u_p_second_stage(1)_INC_constraint4(3)_
+ G  r_l_r_second_stage_
+ L  r_u_r_second_stage_
+ E  c_e_ONE_VAR_CONSTANT
+COLUMNS
+     fx o 1
+     fx c_e_p_first_stage_INC_constraint2_ 1
+     p_first_stage_INC_bin_y(1) c_u_p_first_stage_INC_constraint3(1)_ -1
+     p_first_stage_INC_bin_y(1) c_u_p_first_stage_INC_constraint4(1)_ 1
+     p_first_stage_INC_bin_y(2) c_u_p_first_stage_INC_constraint3(2)_ -1
+     p_first_stage_INC_bin_y(2) c_u_p_first_stage_INC_constraint4(2)_ 1
+     p_first_stage_INC_bin_y(3) c_u_p_first_stage_INC_constraint3(3)_ -1
+     p_first_stage_INC_bin_y(3) c_u_p_first_stage_INC_constraint4(3)_ 1
+     p_first_stage_INC_delta(1) c_e_p_first_stage_INC_constraint1_ -2
+     p_first_stage_INC_delta(1) c_u_p_first_stage_INC_constraint4(1)_ -1
+     p_first_stage_INC_delta(2) c_e_p_first_stage_INC_constraint1_ -3
+     p_first_stage_INC_delta(2) c_e_p_first_stage_INC_constraint2_ 1
+     p_first_stage_INC_delta(2) c_u_p_first_stage_INC_constraint3(1)_ 1
+     p_first_stage_INC_delta(2) c_u_p_first_stage_INC_constraint4(2)_ -1
+     p_first_stage_INC_delta(3) c_e_p_first_stage_INC_constraint1_ -2
+     p_first_stage_INC_delta(3) c_e_p_first_stage_INC_constraint2_ -1
+     p_first_stage_INC_delta(3) c_u_p_first_stage_INC_constraint3(2)_ 1
+     p_first_stage_INC_delta(3) c_u_p_first_stage_INC_constraint4(3)_ -1
+     p_first_stage_INC_delta(4) c_e_p_first_stage_INC_constraint1_ -3
+     p_first_stage_INC_delta(4) c_u_p_first_stage_INC_constraint3(3)_ 1
+     x c_e_p_first_stage_INC_constraint1_ 1
+     x c_l_c_first_stage_ 1
+     x c_l_c_second_stage_ 1
+     fz o -1
+     fz c_e_p_second_stage(1)_INC_constraint2_ 1
+     p_second_stage(1)_INC_bin_y(1) c_u_p_second_stage(1)_INC_constraint3(1)_ -1
+     p_second_stage(1)_INC_bin_y(1) c_u_p_second_stage(1)_INC_constraint4(1)_ 1
+     p_second_stage(1)_INC_bin_y(2) c_u_p_second_stage(1)_INC_constraint3(2)_ -1
+     p_second_stage(1)_INC_bin_y(2) c_u_p_second_stage(1)_INC_constraint4(2)_ 1
+     p_second_stage(1)_INC_bin_y(3) c_u_p_second_stage(1)_INC_constraint3(3)_ -1
+     p_second_stage(1)_INC_bin_y(3) c_u_p_second_stage(1)_INC_constraint4(3)_ 1
+     p_second_stage(1)_INC_delta(1) c_e_p_second_stage(1)_INC_constraint1_ -5
+     p_second_stage(1)_INC_delta(1) c_u_p_second_stage(1)_INC_constraint4(1)_ -1
+     p_second_stage(1)_INC_delta(2) c_e_p_second_stage(1)_INC_constraint1_ -5
+     p_second_stage(1)_INC_delta(2) c_e_p_second_stage(1)_INC_constraint2_ 1
+     p_second_stage(1)_INC_delta(2) c_u_p_second_stage(1)_INC_constraint3(1)_ 1
+     p_second_stage(1)_INC_delta(2) c_u_p_second_stage(1)_INC_constraint4(2)_ -1
+     p_second_stage(1)_INC_delta(3) c_e_p_second_stage(1)_INC_constraint1_ -5
+     p_second_stage(1)_INC_delta(3) c_e_p_second_stage(1)_INC_constraint2_ -5
+     p_second_stage(1)_INC_delta(3) c_u_p_second_stage(1)_INC_constraint3(2)_ 1
+     p_second_stage(1)_INC_delta(3) c_u_p_second_stage(1)_INC_constraint4(3)_ -1
+     p_second_stage(1)_INC_delta(4) c_e_p_second_stage(1)_INC_constraint1_ -5
+     p_second_stage(1)_INC_delta(4) c_e_p_second_stage(1)_INC_constraint2_ 3
+     p_second_stage(1)_INC_delta(4) c_u_p_second_stage(1)_INC_constraint3(3)_ 1
+     r o 1
+     r c_l_c_second_stage_ 2
+     r r_l_r_second_stage_ 1
+     r r_u_r_second_stage_ 1
+     z c_e_p_second_stage(1)_INC_constraint1_ 1
+     ONE_VAR_CONSTANT o -2
+     ONE_VAR_CONSTANT c_e_ONE_VAR_CONSTANT 1
+RHS
+     RHS c_e_p_first_stage_INC_constraint1_ 0
+     RHS c_e_p_first_stage_INC_constraint2_ 10
+     RHS c_l_c_first_stage_ 0
+     RHS c_u_p_first_stage_INC_constraint3(1)_ 0
+     RHS c_u_p_first_stage_INC_constraint3(2)_ 0
+     RHS c_u_p_first_stage_INC_constraint3(3)_ 0
+     RHS c_u_p_first_stage_INC_constraint4(1)_ 0
+     RHS c_u_p_first_stage_INC_constraint4(2)_ 0
+     RHS c_u_p_first_stage_INC_constraint4(3)_ 0
+     RHS c_e_p_second_stage(1)_INC_constraint1_ -10
+     RHS c_e_p_second_stage(1)_INC_constraint2_ 0
+     RHS c_l_c_second_stage_ -100
+     RHS c_u_p_second_stage(1)_INC_constraint3(1)_ 0
+     RHS c_u_p_second_stage(1)_INC_constraint3(2)_ 0
+     RHS c_u_p_second_stage(1)_INC_constraint3(3)_ 0
+     RHS c_u_p_second_stage(1)_INC_constraint4(1)_ 0
+     RHS c_u_p_second_stage(1)_INC_constraint4(2)_ 0
+     RHS c_u_p_second_stage(1)_INC_constraint4(3)_ 0
+     RHS r_l_r_second_stage_ -2
+     RHS r_u_r_second_stage_ 0
+     RHS c_e_ONE_VAR_CONSTANT 1
+BOUNDS
+ FR BOUND fx
+ BV BOUND p_first_stage_INC_bin_y(1)
+ BV BOUND p_first_stage_INC_bin_y(2)
+ BV BOUND p_first_stage_INC_bin_y(3)
+ MI BOUND p_first_stage_INC_delta(1)
+ UP BOUND p_first_stage_INC_delta(1) 1
+ FR BOUND p_first_stage_INC_delta(2)
+ FR BOUND p_first_stage_INC_delta(3)
+ LO BOUND p_first_stage_INC_delta(4) 0
+ LO BOUND x 0
+ UP BOUND x 10
+ FR BOUND fz
+ BV BOUND p_second_stage(1)_INC_bin_y(1)
+ BV BOUND p_second_stage(1)_INC_bin_y(2)
+ BV BOUND p_second_stage(1)_INC_bin_y(3)
+ MI BOUND p_second_stage(1)_INC_delta(1)
+ UP BOUND p_second_stage(1)_INC_delta(1) 1
+ FR BOUND p_second_stage(1)_INC_delta(2)
+ FR BOUND p_second_stage(1)_INC_delta(3)
+ LO BOUND p_second_stage(1)_INC_delta(4) 0
+ FR BOUND r
+ LO BOUND z -10
+ UP BOUND z 10
+ENDATA

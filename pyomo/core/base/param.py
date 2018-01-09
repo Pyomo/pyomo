@@ -45,6 +45,12 @@ class _NoArgument(object):
 class _NotValid(object):
     pass
 
+class _NoArgument(object):
+    """A dummy type that is pickle-safe that we can use as the default
+    value for optional arguments where we cannot just use None."""
+    pass
+
+
 class _ParamData(ComponentData, NumericValue):
     """
     This class defines the data for a mutable parameter.
@@ -87,6 +93,10 @@ class _ParamData(ComponentData, NumericValue):
         """Clear the data in this component"""
         self._value = _NotValid
 
+    # FIXME: ComponentData need to have pointers to their index to make
+    # operations like validation efficient.  As it stands now, if
+    # set_value is called without specifying an index, this call
+    # involves a linear scan of the _data dict.
     def set_value(self, value, idx=_NoArgument):
         self._value = value
         if idx is _NoArgument:
@@ -505,7 +515,7 @@ class Param(IndexedComponent):
         # Set the value depending on the type of param value.
         #
         if self._mutable:
-            obj.set_value(value)
+            obj.set_value(value, index)
             return obj
         else:
             self._data[index] = value
@@ -539,11 +549,11 @@ class Param(IndexedComponent):
         try:
             if index is None and not self.is_indexed():
                 self._data[None] = self
-                self.set_value(value)
+                self.set_value(value, index)
                 return self
             elif self._mutable:
                 obj = self._data[index] = _ParamData(self)
-                obj.set_value(value)
+                obj.set_value(value, index)
                 return obj
             else:
                 self._data[index] = value
@@ -925,12 +935,14 @@ class SimpleParam(_ParamData, Param):
                 "the Param has been constructed (there is currently no "
                 "value to return)." % (self.name,) )
 
-    def set_value(self, value):
+    def set_value(self, value, index=_NoArgument):
+        if index is _NoArgument:
+            index = None
         if self._constructed and not self._mutable:
-            _raise_modifying_immutable_error(self, None)
+            _raise_modifying_immutable_error(self, index)
         if not self._data:
-            self._data[None] = self
-        super(SimpleParam, self).set_value(value)
+            self._data[index] = self
+        super(SimpleParam, self).set_value(value, index)
 
     def is_constant(self):
         """Determine if this SimpleParam is constant (and can be eliminated)

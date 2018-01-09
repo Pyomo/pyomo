@@ -50,13 +50,8 @@ class PersistentSolver(DirectOrPersistentSolver):
     def __init__(self, **kwds):
         DirectOrPersistentSolver.__init__(self, **kwds)
 
-    def _presolve(self, *args, **kwds):
-        if len(args) != 0:
-            msg = 'The persistent solver interface does not accept a problem instance in the solve method.'
-            msg += ' The problem instance should be set before the solve using the set_instance method.'
-            raise ValueError(msg)
-
-        DirectOrPersistentSolver._presolve(self, *args, **kwds)
+    def _presolve(self, **kwds):
+        DirectOrPersistentSolver._presolve(self, **kwds)
 
     def set_instance(self, model, **kwds):
         """
@@ -92,6 +87,8 @@ class PersistentSolver(DirectOrPersistentSolver):
         ----------
         block: Block
         """
+        if self._pyomo_model is None:
+            raise RuntimeError('You must call set_instance before calling add_block.')
         if block.is_indexed():
             for sub_block in block.values():
                 self._add_block(block)
@@ -107,6 +104,8 @@ class PersistentSolver(DirectOrPersistentSolver):
         ----------
         obj: Objective
         """
+        if self._pyomo_model is None:
+            raise RuntimeError('You must call set_instance before calling set_objective.')
         return self._set_objective(obj)
 
     def add_constraint(self, con):
@@ -117,6 +116,8 @@ class PersistentSolver(DirectOrPersistentSolver):
         ----------
         con: Constraint
         """
+        if self._pyomo_model is None:
+            raise RuntimeError('You must call set_instance before calling add_constraint.')
         if con.is_indexed():
             for child_con in con.values():
                 self._add_constraint(child_con)
@@ -131,6 +132,8 @@ class PersistentSolver(DirectOrPersistentSolver):
         ----------
         var: Var
         """
+        if self._pyomo_model is None:
+            raise RuntimeError('You must call set_instance before calling add_var.')
         if var.is_indexed():
             for child_var in var.values():
                 self._add_var(child_var)
@@ -145,6 +148,8 @@ class PersistentSolver(DirectOrPersistentSolver):
         ----------
         con: SOSConstraint
         """
+        if self._pyomo_model is None:
+            raise RuntimeError('You must call set_instance before calling add_sos_constraint.')
         if con.is_indexed():
             for child_con in con.values():
                 self._add_sos_constraint(child_con)
@@ -286,10 +291,15 @@ class PersistentSolver(DirectOrPersistentSolver):
         tee: bool
             If True, then the solver log will be printed.
         """
+        if self._pyomo_model is None:
+            msg = 'Please use set_instance to set the instance before calling solve with the persistent'
+            msg += ' solver interface.'
+            raise RuntimeError(msg)
         if len(args) != 0:
-            msg = 'The persistent solver interface does not accept a problem instance in the solve method.'
-            msg += ' The problem instance should be set before the solve using the set_instance method.'
-            raise ValueError(msg)
+            if self._pyomo_model is not args[0]:
+                msg = 'The problem instance provided to the solve method is not the same as the instance provided'
+                msg += ' to the set_instance method in the persistent solver interface. '
+                raise ValueError(msg)
 
         self.available(exception_flag=True)
 
@@ -327,7 +337,7 @@ class PersistentSolver(DirectOrPersistentSolver):
             # we're good to go.
             initial_time = time.time()
 
-            self._presolve(*args, **kwds)
+            self._presolve(**kwds)
 
             presolve_completion_time = time.time()
             if self._report_timing:

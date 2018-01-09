@@ -1,0 +1,104 @@
+\* Source Pyomo model name=AboveAverageScenario *\
+
+min 
+Total_Cost_Objective:
++230 DevotedAcreage(CORN)
++260 DevotedAcreage(SUGAR_BEETS)
++150 DevotedAcreage(WHEAT)
++210 QuantityPurchased(CORN)
++100000 QuantityPurchased(SUGAR_BEETS)
++238 QuantityPurchased(WHEAT)
+-150 QuantitySubQuotaSold(CORN)
+-36 QuantitySubQuotaSold(SUGAR_BEETS)
+-170 QuantitySubQuotaSold(WHEAT)
+-10 QuantitySuperQuotaSold(SUGAR_BEETS)
++0 ONE_VAR_CONSTANT
+
+s.t.
+
+c_u_ConstrainTotalAcreage_:
++1 DevotedAcreage(CORN)
++1 DevotedAcreage(SUGAR_BEETS)
++1 DevotedAcreage(WHEAT)
+<= 500
+
+c_l_EnforceCattleFeedRequirement(CORN)_:
++3.6000000000000001 DevotedAcreage(CORN)
++1 QuantityPurchased(CORN)
+-1 QuantitySubQuotaSold(CORN)
+-1 QuantitySuperQuotaSold(CORN)
+>= 240
+
+c_l_EnforceCattleFeedRequirement(SUGAR_BEETS)_:
++24 DevotedAcreage(SUGAR_BEETS)
++1 QuantityPurchased(SUGAR_BEETS)
+-1 QuantitySubQuotaSold(SUGAR_BEETS)
+-1 QuantitySuperQuotaSold(SUGAR_BEETS)
+>= 0
+
+c_l_EnforceCattleFeedRequirement(WHEAT)_:
++3 DevotedAcreage(WHEAT)
++1 QuantityPurchased(WHEAT)
+-1 QuantitySubQuotaSold(WHEAT)
+-1 QuantitySuperQuotaSold(WHEAT)
+>= 200
+
+c_u_LimitAmountSold(CORN)_:
+-3.6000000000000001 DevotedAcreage(CORN)
++1 QuantitySubQuotaSold(CORN)
++1 QuantitySuperQuotaSold(CORN)
+<= 0
+
+c_u_LimitAmountSold(SUGAR_BEETS)_:
+-24 DevotedAcreage(SUGAR_BEETS)
++1 QuantitySubQuotaSold(SUGAR_BEETS)
++1 QuantitySuperQuotaSold(SUGAR_BEETS)
+<= 0
+
+c_u_LimitAmountSold(WHEAT)_:
+-3 DevotedAcreage(WHEAT)
++1 QuantitySubQuotaSold(WHEAT)
++1 QuantitySuperQuotaSold(WHEAT)
+<= 0
+
+r_l_EnforceQuotas(CORN)_:
++1 QuantitySubQuotaSold(CORN)
+>= 0
+
+r_u_EnforceQuotas(CORN)_:
++1 QuantitySubQuotaSold(CORN)
+<= 100000
+
+r_l_EnforceQuotas(SUGAR_BEETS)_:
++1 QuantitySubQuotaSold(SUGAR_BEETS)
+>= 0
+
+r_u_EnforceQuotas(SUGAR_BEETS)_:
++1 QuantitySubQuotaSold(SUGAR_BEETS)
+<= 6000
+
+r_l_EnforceQuotas(WHEAT)_:
++1 QuantitySubQuotaSold(WHEAT)
+>= 0
+
+r_u_EnforceQuotas(WHEAT)_:
++1 QuantitySubQuotaSold(WHEAT)
+<= 100000
+
+c_e_ONE_VAR_CONSTANT: 
+ONE_VAR_CONSTANT = 1.0
+
+bounds
+   0 <= DevotedAcreage(CORN) <= 500
+   0 <= DevotedAcreage(SUGAR_BEETS) <= 500
+   0 <= DevotedAcreage(WHEAT) <= 500
+   0 <= QuantitySubQuotaSold(CORN) <= +inf
+   0 <= QuantitySubQuotaSold(SUGAR_BEETS) <= +inf
+   0 <= QuantitySubQuotaSold(WHEAT) <= +inf
+   0 <= QuantitySuperQuotaSold(CORN) <= +inf
+   0 <= QuantitySuperQuotaSold(SUGAR_BEETS) <= +inf
+   0 <= QuantitySuperQuotaSold(WHEAT) <= +inf
+   0 <= QuantityPurchased(CORN) <= +inf
+   0 <= QuantityPurchased(SUGAR_BEETS) <= +inf
+   0 <= QuantityPurchased(WHEAT) <= +inf
+end

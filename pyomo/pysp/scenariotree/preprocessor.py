@@ -21,7 +21,6 @@ import time
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.var import Var
 from pyomo.opt import ProblemFormat
-from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.repn.canonical_repn import LinearCanonicalRepn
 from pyomo.repn.compute_canonical_repn import preprocess_block_objectives \
     as canonical_preprocess_block_objectives
@@ -50,7 +49,6 @@ canonical_expression_preprocessor = \
 ampl_expression_preprocessor = \
     pyomo.util.PyomoAPIFactory("pyomo.repn.compute_ampl_repn")
 
-
 #
 # We only want to do the minimal amount of work to get the instance
 # back to a consistent "preprocessed" state. The following attributes
@@ -61,24 +59,23 @@ ampl_expression_preprocessor = \
 #
 class ScenarioTreePreprocessor(PySPConfiguredObject):
 
-    _declared_options = \
-        PySPConfigBlock("Options declared for the "
-                        "ScenarioTreePreprocessor class")
+    @classmethod
+    def _declare_options(cls, options=None):
+        if options is None:
+            options = PySPConfigBlock()
 
-    safe_declare_common_option(_declared_options,
-                               "disable_advanced_preprocessing")
-    safe_declare_common_option(_declared_options,
-                               "preprocess_fixed_variables")
-    safe_declare_common_option(_declared_options,
-                               "symbolic_solver_labels")
+        safe_declare_common_option(options,
+                                   "disable_advanced_preprocessing")
+        safe_declare_common_option(options,
+                                   "preprocess_fixed_variables")
+        safe_declare_common_option(options,
+                                   "symbolic_solver_labels")
+        safe_declare_common_option(options,
+                                   "output_times")
+        safe_declare_common_option(options,
+                                   "verbose")
 
-    #
-    # various
-    #
-    safe_declare_common_option(_declared_options,
-                               "output_times")
-    safe_declare_common_option(_declared_options,
-                               "verbose")
+        return options
 
     def __init__(self, *args, **kwds):
 
@@ -124,7 +121,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
         self.objective_updated[scenario._name] = True
         self.all_constraints_updated[scenario._name] = True
 
-        if not self._options.disable_advanced_preprocessing:
+        if not self.get_option("disable_advanced_preprocessing"):
             scenario_instance = self._scenario_instance[scenario._name]
             for block in scenario_instance.block_data_objects(active=True):
                 block._gen_obj_ampl_repn = False
@@ -137,7 +134,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
         assert scenario._name in self._scenario_instance
         assert scenario._name not in self._scenario_to_bundle_map
 
-        if self._options.disable_advanced_preprocessing:
+        if self.get_option("disable_advanced_preprocessing"):
             scenario_instance = self._scenario_instance[scenario_name]
             for block in scenario_instance.block_data_objects(active=True):
                 block._gen_obj_ampl_repn = False
@@ -245,10 +242,10 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
         if scenarios is None:
             scenarios = self._scenario_instance.keys()
 
-        if self._options.verbose:
+        if self.get_option("verbose"):
             print("Preprocessing %s scenarios" % len(scenarios))
 
-        if self._options.verbose:
+        if self.get_option("verbose"):
             if len(self._bundle_instances) > 0:
                 print("Preprocessing scenarios without bundles. Bundle "
                       "preprocessing dependencies will be lost. Scenario "
@@ -267,7 +264,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
 
         end_time = time.time()
 
-        if self._options.output_times:
+        if self.get_option("output_times"):
             print("Scenario preprocessing time=%.2f seconds"
                   % (end_time - start_time))
 
@@ -289,7 +286,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
         if bundles is None:
             bundles = self._bundle_instances.keys()
 
-        if self._options.verbose:
+        if self.get_option("verbose"):
             print("Preprocessing %s bundles" % len(bundles))
 
         preprocess_bundle_objective = 0b01
@@ -305,7 +302,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
                     preprocess_bundle |= preprocess_bundle_objective
                 if ((len(self.fixed_variables[scenario_name]) > 0) or \
                     (len(self.freed_variables[scenario_name]) > 0)) and \
-                    self._options.preprocess_fixed_variables:
+                    self.get_option("preprocess_fixed_variables"):
                     preprocess_bundle |= \
                         preprocess_bundle_objective | \
                         preprocess_bundle_constraints
@@ -353,11 +350,15 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
 
         end_time = time.time()
 
-        if self._options.output_times:
+        if self.get_option("output_times"):
             print("Bundle preprocessing time=%.2f seconds"
                   % (end_time - start_time))
 
     def _preprocess_scenario(self, scenario_name, solver):
+        # TODO: Does this import need to be delayed because
+        #       it is in a plugins subdirectory
+        from pyomo.solvers.plugins.solvers.persistent_solver import \
+            PersistentSolver
 
         assert scenario_name in self._scenario_instance
         scenario_objective_active = self._scenario_objective[scenario_name].active
@@ -387,16 +388,16 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
 
             # instances are already preproccessed, nothing
             # needs to be done
-            if self._options.verbose:
+            if self.get_option("verbose"):
                 print("No preprocessing necessary for scenario %s"
                       % (scenario_name))
             _cleanup()
             return
 
         if (instance_fixed_variables or instance_freed_variables) and \
-           (self._options.preprocess_fixed_variables):
+           self.get_option("preprocess_fixed_variables"):
 
-            if self._options.verbose:
+            if self.get_option("verbose"):
                 print("Running full preprocessing for scenario %s"
                       % (scenario_name))
 
@@ -412,7 +413,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
 
         if instance_objective_updated:
 
-            if self._options.verbose:
+            if self.get_option("verbose"):
                 print("Preprocessing objective for scenario %s"
                       % (scenario_name))
 
@@ -433,7 +434,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
         if (instance_fixed_variables or instance_freed_variables) and \
            (persistent_solver_in_use):
 
-            if self._options.verbose:
+            if self.get_option("verbose"):
                 print("Compiling fixed status updates in persistent solver "
                       "for scenario %s" % (scenario_name))
 
@@ -449,7 +450,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
 
         if instance_all_constraints_updated:
 
-            if self._options.verbose:
+            if self.get_option("verbose"):
                 print("Preprocessing all constraints for scenario %s"
                       % (scenario_name))
 
@@ -471,7 +472,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
             # TODO
             assert not persistent_solver_in_use
 
-            if self._options.verbose:
+            if self.get_option("verbose"):
                 print("Preprocessing constraint list (size=%s) for "
                       "scenario %s" % (len(instance_constraints_updated_list),
                                        scenario_name))
@@ -496,18 +497,20 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
                 getattr(block, repn_name)[constraint_data] = \
                     repn_func(constraint_data.body, idMap=idMap)
 
-        if persistent_solver_in_use and (not solver.has_instance()):
-            solver.set_instance(scenario_instance,
-                                symbolic_solver_labels=self._options.symbolic_solver_labels,
-                                output_fixed_variable_bounds=not self._options.preprocess_fixed_variables)
+        if persistent_solver_in_use and \
+           (not solver.has_instance()):
+             solver.set_instance(
+                 scenario_instance,
+                 symbolic_solver_labels=self.get_option("symbolic_solver_labels"),
+                 output_fixed_variable_bounds=not self.get_option("preprocess_fixed_variables"))
 
         _cleanup()
 
     def get_solver_keywords(self):
 
         kwds = {}
-        if not self._options.disable_advanced_preprocessing:
-            if not self._options.preprocess_fixed_variables:
+        if not self.get_option("disable_advanced_preprocessing"):
+            if not self.get_option("preprocess_fixed_variables"):
                 kwds['output_fixed_variable_bounds'] = True
 
         return kwds

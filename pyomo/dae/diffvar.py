@@ -244,7 +244,7 @@ class DerivativeVar(Var):
             raise DAE_Error(
                 "Cannot create a new derivative variable for variable "
                 "%s: derivative already defined as %s"
-                % (sVar.name, sVar.get_derivative(*tuple(wrt)).name ))
+                % (sVar.name, sVar.get_derivative(*tuple(wrt)).name))
 
         sVar._derivative[wrtkey] = weakref.ref(self)
         self._sVar = sVar
