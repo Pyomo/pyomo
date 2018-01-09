@@ -40,7 +40,7 @@ def normalize_index(index):
     return idx
 normalize_index.flatten = True
 
-class _NotValid(object):
+class _NotFound(object):
     pass
 
 #
@@ -525,14 +525,14 @@ You can silence this warning by one of three ways:
             self._not_constructed_error(index)
 
         try:
-            obj = self._data.get(index, _NotValid)
+            obj = self._data.get(index, _NotFound)
         except TypeError:
-            obj = _NotValid
+            obj = _NotFound
             index = self._processUnhashableIndex(index)
             if index.__class__ is _IndexedComponent_slicer:
                 return index
 
-        if obj is _NotValid:
+        if obj is _NotFound:
             # Not good: we have to defer this import to now
             # due to circular imports (expr imports _VarData
             # imports indexed_component, but we need expr
@@ -546,12 +546,12 @@ You can silence this warning by one of three ways:
             # slicer
             if index.__class__ is _IndexedComponent_slicer:
                 return index
-            obj = self._data.get(index, _NotValid)
+            obj = self._data.get(index, _NotFound)
             #
             # Call the _getitem_when_not_present helper to retrieve/return
             # the default value
             #
-            if obj is _NotValid:
+            if obj is _NotFound:
                 return self._getitem_when_not_present(index)
 
         return obj
@@ -572,12 +572,12 @@ You can silence this warning by one of three ways:
             self._not_constructed_error(index)
 
         try:
-            obj = self._data.get(index, _NotValid)
+            obj = self._data.get(index, _NotFound)
         except TypeError:
-            obj = _NotValid
+            obj = _NotFound
             index = self._processUnhashableIndex(index)
 
-        if obj is not _NotValid:
+        if obj is not _NotFound:
             return self._setitem_impl(index, obj, val)
         else:
             # If we didn't find the index in the data, then we need to
@@ -600,14 +600,14 @@ You can silence this warning by one of three ways:
             # a copy of the slicer items *before* we start iterating
             # over it in case the setter changes the _data dictionary.
             for idx in list(index):
-                obj = self._data.get(idx, _NotValid)
-                if obj is _NotValid:
+                obj = self._data.get(idx, _NotFound)
+                if obj is _NotFound:
                     self._setitem_when_not_present(idx, val)
                 else:
                     self._setitem_impl(idx, obj, val)
         else:
-            obj = self._data.get(index, _NotValid)
-            if obj is _NotValid:
+            obj = self._data.get(index, _NotFound)
+            if obj is _NotFound:
                 return self._setitem_when_not_present(index, val)
             else:
                 return self._setitem_impl(index, obj, val)
@@ -616,12 +616,12 @@ You can silence this warning by one of three ways:
         if self._constructed is False:
             self._not_constructed_error(index)
         try:
-            obj = self._data.get(index, _NotValid)
+            obj = self._data.get(index, _NotFound)
         except TypeError:
-            obj = _NotValid
+            obj = _NotFound
             index = self._processUnhashableIndex(index)
 
-        if obj is _NotValid:
+        if obj is _NotFound:
             index = self._validate_index(index)
 
         # this supports "del m.x[:,1]" through a simple recursive call
