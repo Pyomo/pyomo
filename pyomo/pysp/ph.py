@@ -31,7 +31,6 @@ from pyomo.opt import (UndefinedData,
                        ProblemFormat,
                        undefined,
                        SolverFactory,
-                       PersistentSolver,
                        SolverStatus,
                        TerminationCondition,
                        SolutionStatus,
@@ -280,6 +279,10 @@ class _PHBase(object):
 
         # maps scenario name to the corresponding model instance
         self._instances = {}
+
+        # the scenario instance factory, which was used to construct 
+        # the above instances.
+        self._scenario_instance_factory = None
 
         # for various reasons (mainly hacks at this point), it's good
         # to know whether we're minimizing or maximizing.
@@ -1189,6 +1192,10 @@ class ProgressiveHedging(_PHBase):
     def get_objective_sense(self):
         return self._objective_sense
 
+    def is_converged(self):
+        return (self._or_convergers and any(converger.isConverged(self) for converger in self._convergers)) or \
+               (not self._or_convergers and all(converger.isConverged(self) for converger in self._convergers))
+    
     def set_dual_mode(self):
 
         self._dual_mode = True
@@ -1966,14 +1973,17 @@ class ProgressiveHedging(_PHBase):
         self._output_scenario_tree_solution       = options.output_scenario_tree_solution
         self._phpyro_transmit_leaf_stage_solution = options.phpyro_transmit_leaf_stage_solution
 
+        self._or_convergers                          = options.or_convergers
         self._termdiff_threshold                     = options.termdiff_threshold
         self._enable_free_discrete_count_convergence = options.enable_free_discrete_count_convergence
         self._free_discrete_count_threshold          = options.free_discrete_count_threshold
         self._enable_normalized_termdiff_convergence = options.enable_normalized_termdiff_convergence
         self._enable_termdiff_convergence            = options.enable_termdiff_convergence
         self._enable_outer_bound_convergence         = options.enable_outer_bound_convergence
+        self._enable_inner_outer_convergence         = options.enable_inner_outer_convergence
         self._enable_primal_dual_residual_convergence = options.enable_primal_dual_residual_convergence
         self._outer_bound_convergence_threshold      = options.outer_bound_convergence_threshold
+        self._inner_outer_convergence_threshold      = options.inner_outer_convergence_threshold
         self._primal_dual_residual_convergence_threshold      = options.primal_dual_residual_convergence_threshold
         self._shutdown_pyro_workers             = options.shutdown_pyro_workers
 
@@ -2085,7 +2095,7 @@ class ProgressiveHedging(_PHBase):
                     sys_modules_key = module_name
                 else:
                     module, sys_modules_key = \
-                        load_external_module(module_name, clear_cache=True)
+                        load_external_module(module_name, clear_cache=True, verbose=True)
                     self._modules_imported[module_name] = module
                 callback = None
                 for oname, obj in inspect.getmembers(module):
@@ -2169,6 +2179,10 @@ class ProgressiveHedging(_PHBase):
 
         import pyomo.environ
         import pyomo.solvers.plugins.smanager.phpyro
+        # TODO: Does this import need to be delayed because
+        #       it is in a plugins subdirectory
+        from pyomo.solvers.plugins.solvers.persistent_solver import \
+            PersistentSolver
 
         self._init_start_time = time.time()
 
@@ -2186,7 +2200,7 @@ class ProgressiveHedging(_PHBase):
         # if other callbacks are in the same location. Doing so might
         # have serious consequences.
         #
-        scenario_instance_factory = scenario_tree._scenario_instance_factory
+        self._scenario_instance_factory = scenario_instance_factory = scenario_tree._scenario_instance_factory
         if scenario_instance_factory._model_module is not None:
             self._modules_imported[scenario_instance_factory.\
                                    _model_filename] = \
@@ -2546,15 +2560,6 @@ class ProgressiveHedging(_PHBase):
             if self._verbose:
                 print("Scenario tree instance data successfully collected")
 
-            if self._verbose:
-                print("Broadcasting scenario tree id mapping"
-                      "to PH solver servers")
-
-            phsolverserverutils.transmit_scenario_tree_ids(self)
-
-            if self._verbose:
-                print("Scenario tree ids successfully sent")
-
         self._objective_sense = \
             self._scenario_tree._scenarios[0]._objective_sense
 
@@ -2581,6 +2586,16 @@ class ProgressiveHedging(_PHBase):
                 (pyomo.pysp.convergence.OuterBoundConvergence(
                     convergence_threshold=self._outer_bound_convergence_threshold,
                     convergence_threshold_sense=(False if self._objective_sense == minimize else True)))
+            self._convergers.append(converger)
+
+        if self._enable_inner_outer_convergence:
+            if self._verbose:
+                print("Enabling convergence based on inner outer bound criterion")
+            if self._inner_outer_convergence_threshold == None:
+                raise RuntimeError("A convergence threshold must be specified when using the inner-outer bound convergence criteron")
+            converger = \
+                (pyomo.pysp.convergence.InnerOuterConvergence(
+                    convergence_threshold=self._inner_outer_convergence_threshold))
             self._convergers.append(converger)
 
         # NOTE: convergers in general are independent, and we converge when any
@@ -2884,6 +2899,8 @@ class ProgressiveHedging(_PHBase):
         failures = []
         subproblems = []
 
+        result_load_times = []
+
         # loop for the solver results, reading them and
         # loading them into instances as they are available.
         if self._scenario_tree.contains_bundles():
@@ -2960,8 +2977,7 @@ class ProgressiveHedging(_PHBase):
 
                     end_time = time.time()
                     if self._output_times:
-                        print("Time loading results for bundle %s=%0.2f seconds"
-                              % (bundle_name, end_time-start_time))
+                        result_load_times.append(end_time-start_time)
 
                 else:
 
@@ -3043,8 +3059,7 @@ class ProgressiveHedging(_PHBase):
 
                     end_time = time.time()
                     if self._output_times:
-                        print("Time loading results for bundle %s=%0.2f seconds"
-                              % (bundle_name, end_time-start_time))
+                        result_load_times.append(end_time-start_time)
 
                 if self._verbose:
                     print("Successfully loaded solution for bundle=%s"
@@ -3132,8 +3147,7 @@ class ProgressiveHedging(_PHBase):
                     end_time = time.time()
 
                     if self._output_times:
-                        print("Time loading results into instance %s=%0.2f seconds"
-                              % (scenario_name, end_time-start_time))
+                        result_load_times.append(end_time-start_time)                        
 
                 else:
 
@@ -3214,14 +3228,23 @@ class ProgressiveHedging(_PHBase):
                     end_time = time.time()
 
                     if self._output_times:
-                        print("Time loading results into instance %s=%0.2f seconds"
-                              % (scenario_name, end_time-start_time))
+                        result_load_times.append(end_time-start_time)                                                      
 
                 if self._verbose:
                     print("Successfully loaded solution for scenario=%s "
                           "- waiting on %d more"
                           % (scenario_name,
                              len(self._scenario_tree._scenarios) - num_results_so_far))
+
+        if self._output_times:
+            mean = sum(result_load_times) / float(len(result_load_times))
+            std_dev = sqrt(sum(pow(x-mean,2.0) for x in result_load_times)) / float(len(result_load_times))
+            print("Result load time statistics - Min: "
+                  "%0.2f Avg: %0.2f Max: %0.2f StdDev: %0.2f (seconds)"
+                  % (min(result_load_times),
+                     mean,
+                     max(result_load_times),
+                     std_dev))                    
 
         return subproblems, failures
 
@@ -3869,8 +3892,8 @@ class ProgressiveHedging(_PHBase):
                     expected_cost = self._scenario_tree.findRootNode().computeExpectedNodeCost()
                     if not _OLD_OUTPUT: print("Expected Cost=%14.4f" % (expected_cost))
                     self._cost_history[self._current_iteration] = expected_cost
-                    if all(converger.isConverged(self)
-                           for converger in self._convergers):
+
+                    if self.is_converged():
 
                         if (len(self._incumbent_cost_history) == 0) or \
                            ((self._objective_sense == minimize) and \
@@ -4084,8 +4107,9 @@ class ProgressiveHedging(_PHBase):
             expected_cost = self._scenario_tree.findRootNode().computeExpectedNodeCost()
             if not _OLD_OUTPUT: print("Expected Cost=%14.4f" % (expected_cost))
             self._cost_history[self._current_iteration] = expected_cost
-            if all(converger.isConverged(self)
-                   for converger in self._convergers):
+            
+            if self.is_converged():
+               
                 if not _OLD_OUTPUT: print("Caching results for new incumbent solution")
                 self.cacheSolutions(self._incumbent_cache_id)
                 self._best_incumbent_key = self._current_iteration
@@ -4284,8 +4308,9 @@ class ProgressiveHedging(_PHBase):
                 expected_cost = self._scenario_tree.findRootNode().computeExpectedNodeCost()
                 if not _OLD_OUTPUT: print("Expected Cost=%14.4f" % (expected_cost))
                 self._cost_history[self._current_iteration] = expected_cost
-                if all(converger.isConverged(self)
-                       for converger in self._convergers):
+
+                if self.is_converged():
+                    
                     if (len(self._incumbent_cost_history) == 0) or \
                        ((self._objective_sense == minimize) and \
                         (expected_cost < min(self._incumbent_cost_history.values()))) or \
@@ -4309,8 +4334,8 @@ class ProgressiveHedging(_PHBase):
 
                 # check for early termination.
                 if not self._dual_mode:
-                    if all(converger.isConverged(self)
-                           for converger in self._convergers):
+
+                    if self.is_converged():
 
                         plugin_convergence = True
                         for plugin in self._ph_plugins:
@@ -4857,8 +4882,12 @@ class ProgressiveHedging(_PHBase):
             # cost variables aren't blended, so go through the gory
             # computation of min/max/avg.  we currently always print
             # these.
-            cost_variable_name = stage._cost_variable[0]
-            cost_variable_index = stage._cost_variable[1]
+            # TODO: This loop needs to change to handle
+            #       per-node cost declarations (they may
+            #       have different component names across
+            #       the same time stage)
+            cost_variable_name = stage.nodes[0]._cost_variable[0]
+            cost_variable_index = stage.nodes[0]._cost_variable[1]
             print("      Cost Variable: "
                   +cost_variable_name+indexToString(cost_variable_index))
             for tree_node in stage._tree_nodes:

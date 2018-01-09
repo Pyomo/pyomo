@@ -35,7 +35,7 @@ from six import advance_iterator, iteritems, itervalues
 logger = logging.getLogger('pyomo.pysp')
 
 #
-# a specialized asynchronous action manager for the SPPyroScenarioTreeServer
+# a specialized asynchronous action manager for the scenariotreeserver
 #
 
 class ScenarioTreeActionManagerPyro(PyroAsynchronousActionManager):
@@ -50,6 +50,12 @@ class ScenarioTreeActionManagerPyro(PyroAsynchronousActionManager):
         # tells the action manager to ignore task errors
         # (it will still report them, just take no action)
         self.ignore_task_errors = False
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
     def close(self):
         """Close the manager."""
@@ -279,7 +285,7 @@ class ScenarioTreeActionManagerPyro(PyroAsynchronousActionManager):
                     if type(task['result']) is TaskProcessingError:
                         ah.status = ActionStatus.error
                         self.event_handle[ah.id].update(ah)
-                        msg = ("SPPyroScenarioTreeServer reported a processing "
+                        msg = ("ScenarioTreeServer reported a processing "
                                "error for task with id=%s. Reason: \n%s"
                                % (task['id'], task['result'].args[0]))
                         if not self.ignore_task_errors:

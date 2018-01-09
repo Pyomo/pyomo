@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.base.component import register_component
+from pyomo.core.base.plugin import register_component
 from pyomo.dae.contset import ContinuousSet
 from pyomo.dae.diffvar import DAE_Error
 from pyomo.core.base.expression import (Expression,
@@ -38,7 +38,7 @@ def create_partial_expression(scheme, expr, ind, loc):
     """
     def _fun(*args):
         return scheme(lambda i:
-                      expr(*(args[0:loc]+(i,) + args[loc + 1:])), ind)
+                      expr(*(args[0:loc] + (i,) + args[loc + 1:])), ind)
     return lambda *args: _fun(*args)(args[loc])
 
 
@@ -134,8 +134,8 @@ class Integral(Expression):
         def _trap_rule(m, *a):
             ds = sorted(m.find_component(wrt.local_name))
             return sum(0.5 * (ds[i + 1] - ds[i]) *
-                       (intexp(m, *(a[0:loc] + (ds[i + 1],)+a[loc:])) +
-                       intexp(m, *(a[0:loc] + (ds[i],) + a[loc:])))
+                       (intexp(m, * (a[0:loc] + (ds[i + 1],) + a[loc:])) +
+                        intexp(m, * (a[0:loc] + (ds[i],) + a[loc:])))
                        for i in range(len(ds) - 1))
 
         kwds['rule'] = _trap_rule    
