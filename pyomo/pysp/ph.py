@@ -3246,8 +3246,9 @@ class ProgressiveHedging(_PHBase):
 
                     self._solution_status[scenario_name] = solution0.status
 
-                    if hasattr(results.solver,"wallclock_time"):
-                        print("RESULTS.SOLVER.WALLCLOCK_TIME=",results.solver.wallclock_time)
+                    if hasattr(results.solver,"wallclock_time") and \
+                       (not isinstance(results.solver.wallclock_time, UndefinedData)) and \
+                       (results.solver.wallclock_time is not None):
                         self._solve_times[scenario_name] = \
                             float(results.solver.wallclock_time)
 
