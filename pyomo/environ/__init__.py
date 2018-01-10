@@ -75,7 +75,6 @@ def _import_packages():
 from pyomo.util.plugin import PluginGlobals as _PG
 _PG.add_env("pyomo")
 _import_packages()
-_do_import('pyomo.contrib')
 _PG.pop_env()
 
 #
