@@ -76,7 +76,7 @@ class FixedVarPropagator(IsomorphicTransformation):
 
     """
 
-    alias('core.propagate_fixed_vars',
+    alias('contrib.propagate_fixed_vars',
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self):
@@ -152,7 +152,7 @@ class VarBoundPropagator(IsomorphicTransformation):
 
     """
 
-    alias('core.propagate_eq_var_bounds',
+    alias('contrib.propagate_eq_var_bounds',
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self):
