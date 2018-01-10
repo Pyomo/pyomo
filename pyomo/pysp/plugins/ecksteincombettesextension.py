@@ -234,6 +234,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         for scenario_name in sorted(sub_phi_map.keys()):
             print("  %30s %16e" % (scenario_name, sub_phi_map[scenario_name]))
 
+        print("")
         print("Computed phi:    %16e" % phi)
         if phi > 0:
             tau = 1.0 # this is the over-relaxation parameter - we need to do something more useful
@@ -363,11 +364,12 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
         print("Computed sub-phi values (scenario, phi, iters-since-last-incorporated):")
         for sub_phi in sorted(sub_phi_to_scenario_map.keys()):
-            print("  %16e: " % sub_phi),
+            print("  %16e: " % sub_phi, end="")
             for scenario_name in sub_phi_to_scenario_map[sub_phi]:
-                print("%30s" % scenario_name),
-                print(" %4d" % (self._total_projection_steps - self._projection_step_of_last_update[scenario_name])), # TBD - not handling multiple scenarios correctly here
-            print("")
+                print("%30s %4d" % (scenario_name,
+                                    self._total_projection_steps - self._projection_step_of_last_update[scenario_name]))
+
+        print("")
 
         print("Computed phi: %16e" % phi)
         with open(self._JName,"a") as f:
@@ -394,9 +396,8 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
             for phi in sorted_phis[0:ph._async_buffer_length]:
                 if ((self._queue_only_negative_subphi_subproblems) and (phi < 0.0)) or (not self._queue_only_negative_subphi_subproblems):
                     scenario_name = sub_phi_to_scenario_map[phi][0] 
-                    print("%30s %16e" % (scenario_name,phi)),
+                    print("%30s %16e" % (scenario_name,phi), end="")
                     self._subproblems_to_queue.append(scenario_name)
-                    print("")
 
         print("")
 
