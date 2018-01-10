@@ -263,6 +263,7 @@ class _PHBase(object):
         # PH solver information / objects.
 
         # maps object names to solver plugins for the corresponding object (scenario or bundle)
+        # note that this dictionary will only be populated when running in serial.
         self._solver_map = {}
 
         # the type and I/O method for all solver plugins contained in the map
@@ -3813,13 +3814,8 @@ class ProgressiveHedging(_PHBase):
             for subproblem in subproblems_to_queue:
                 plugin.asynchronous_pre_scenario_queue(self, scenario._name)
 
-        # grab an solver plugin for an arbitrary scenario / bundle - recall that we
-        # assume homogeneity, so if that changes, this will have to change.
-        arbitrary_subproblem_solver = self._solver_map[next(iterkeys(self._solver_map))]
-
         # queue up the solves for all scenario sub-problems - iteration 0 is special.
-        warmstart = (not self._disable_warmstarts) and arbitrary_subproblem_solver.warm_start_capable()
-        action_handle_scenario_map_updates, a, b, c = self.queue_subproblems(subproblems=subproblems_to_queue, warmstart=warmstart)
+        action_handle_scenario_map_updates, a, b, c = self.queue_subproblems(subproblems=subproblems_to_queue, warmstart=not self._disable_warmstarts)
         action_handle_scenario_map.update(action_handle_scenario_map_updates)
 
         print("Entering PH asynchronous processing loop")
@@ -3994,13 +3990,8 @@ class ProgressiveHedging(_PHBase):
                     for plugin in self._ph_plugins:
                         plugin.asynchronous_pre_scenario_queue(self, scenario_name)
 
-                    # grab an solver plugin for an arbitrary scenario / bundle - recall that we
-                    # assume homogeneity, so if that changes, this will have to change.
-                    arbitrary_subproblem_solver = self._solver_map[next(iterkeys(self._solver_map))]
-
                     # queue stuff!
-                    warmstart = (not self._disable_warmstarts) and arbitrary_subproblem_solver.warm_start_capable()
-                    action_handle_scenario_map_updates, a, b, c = self.queue_subproblems(subproblems=[scenario_name], warmstart=warmstart)
+                    action_handle_scenario_map_updates, a, b, c = self.queue_subproblems(subproblems=[scenario_name], warmstart=not self._disable_warmstarts)
                     action_handle_scenario_map.update(action_handle_scenario_map_updates)
 
                     number_subproblems_queued = len(subproblems_to_queue)
