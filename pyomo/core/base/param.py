@@ -40,9 +40,10 @@ def _raise_modifying_immutable_error(obj, index):
         "declare the parameter as mutable [i.e., Param(mutable=True)]"
         % (name,))
 
-class _NoArgument(object):
-    pass
+
 class _NotValid(object):
+    """A dummy type that is pickle-safe that we can use as the default
+    value for Params to indicate that no valid value is present."""
     pass
 
 class _NoArgument(object):
