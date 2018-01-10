@@ -51,7 +51,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         random.seed(1234)
         print("Kludge warning: set random seed to 1234")
 
-        self._check_output = True
+        self._check_output = False
         self._JName = "PhiSummary.csv"
 
         self._subproblems_to_queue = []
