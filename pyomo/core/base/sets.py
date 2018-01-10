@@ -154,7 +154,7 @@ class _robust_sort_keys(object):
                     # (run-to-run), but at least is consistent within
                     # this run.
                     self._typemap[_type] = lambda x:id(x)
-        return val.__name__, self._typemap[_type](val)
+        return _type.__name__, self._typemap[_type](val)
 
 
 
