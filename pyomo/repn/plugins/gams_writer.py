@@ -20,7 +20,7 @@ from pyutilib.misc import PauseGC
 from pyomo.core.base import (
     SymbolMap, AlphaNumericTextLabeler, NumericLabeler,
     Block, Constraint, Expression, Objective, Var, Set, RangeSet, Param,
-    minimize, Suffix, SortComponents)
+    minimize, Suffix, SortComponents, Connector)
 
 from pyomo.core.base.component import ComponentData
 from pyomo.opt import ProblemFormat
@@ -243,7 +243,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # how to deal with, plus Suffix if solving
         valid_ctypes = set([
             Block, Constraint, Expression, Objective, Param,
-            Set, RangeSet, Var, Suffix ])
+            Set, RangeSet, Var, Suffix, Connector ])
         model_ctypes = model.collect_ctypes(active=True)
         if not model_ctypes.issubset(valid_ctypes):
             invalids = [t.__name__ for t in (model_ctypes - valid_ctypes)]
