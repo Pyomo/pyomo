@@ -110,34 +110,70 @@ def simple_set_rule( fn ):
     return wrapper_function
 
 
-class _robust_sorter(object):
+class _robust_sort_keys(object):
+    """Class for robustly generating sortable keys for arbitrary data.
+
+    Generates keys (for use with Python `sorted()` that are
+    (str(type_name), val), where val is the actual value (if the type
+    is comparable), otherwise is the string representation of the value.
+    If str() also fails, we fall back on id().
+
+    This allows sorting lists with mixed types in Python3
+
+    We implement this as a callable object so that we can store the
+    _typemap without resorting to global variables.
+
+    """
     def __init__(self):
         self._typemap = {}
 
-    def __call__(self,a):
-        ta = type(a)
-        if ta not in self._typemap:
-            # 1: try comparison
+    def __call__(self, val):
+        """Generate a tuple ( str(type_name), val ) for sorting the value.
+
+        `key=` expects a function.  We are generating a functor so we
+        have a convenient place to store the _typemap, which converts
+        the type-specific functions for converting a value to the second
+        argument of the sort key.
+
+        """
+        _type = type(val)
+        if _type not in self._typemap:
+            # If this is not a type we have seen before, determine what
+            # to use for the second value in the tuple.
             try:
-                a < a
-                self._typemap[ta] = lambda x:x
+                # 1: Check if the type is comparable 
+                val < val
+                self._typemap[_type] = lambda x:x
             except:
-                # 2: try conversion to string
                 try:
-                    str(a)
-                    self._typemap[ta] = lambda x:str(x)
+                    # 2: try converting the value to string
+                    str(val)
+                    self._typemap[_type] = lambda x:str(x)
                 except:
-                    # 3: fallback on id()
-                    self._typemap[ta] = lambda x:id(x)
-        return ta.__name__, self._typemap[ta](a)
+                    # 3: fallback on id().  Not deterministic
+                    # (run-to-run), but at least is consistent within
+                    # this run.
+                    self._typemap[_type] = lambda x:id(x)
+        return val.__name__, self._typemap[_type](val)
+
+
 
 def _value_sorter(self, obj):
+    """Utility to sort the values of a Set.
+
+    This returns the values of the Set in a consistent order.  For
+    ordered Sets, simply return the ordered list.  For unordered Sets,
+    first try the standard sorted order, and if that failes (for example
+    with mixed-type Sets in Python3), use the _robust_sorter utility
+    (above) to generate sortable keys.
+
+    """
     if self.ordered:
         return obj.value
     try:
         return sorted(obj)
     except:
-        return sorted(obj, key=_robust_sorter())
+        return sorted(obj, key=_robust_sort_keys())
 
 
 # A trivial class that we can use to test if an object is a "legitimate"
