@@ -165,6 +165,9 @@ after_success:
 
   # Combine coverage reports over all subprocesses
   - cd $TRAVIS_BUILD_DIR
+  - ls -alh
+  - find . -maxdepth 1 -name ".cov*" | wc -l
+  - find . -maxdepth 10 -name ".cov*" | wc -l
   - ls -la .cov*
   - coverage combine $TRAVIS_BUILD_DIR
   - ls -la .cov*
