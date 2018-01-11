@@ -118,7 +118,7 @@ class FixedVarPropagator(IsomorphicTransformation):
             if v1 in processed:
                 continue
 
-            eq_set = eq_var_map[v1]
+            eq_set = eq_var_map.get(v1, ComponentSet([v1]))
             for v2 in eq_set:
                 if (v2.fixed and value(v1) != value(v2)):
                     raise ValueError(
@@ -185,7 +185,7 @@ class VarBoundPropagator(IsomorphicTransformation):
             if var in processed:
                 continue
 
-            var_equality_set = eq_var_map[var]
+            var_equality_set = eq_var_map.get(var, ComponentSet([var]))
 
             #: variable lower bounds in the equality set
             lbs = [v.lb for v in var_equality_set if v.has_lb()]

@@ -43,7 +43,7 @@ class TestEqualityPropagate(unittest.TestCase):
         # check to make sure that all the v's have the same equality set. John
         # had found a logic error.
         TransformationFactory('contrib.propagate_fixed_vars').apply_to(m)
-        m.display()
+        # m.display()
         self.assertTrue(m.v1.fixed)
         self.assertTrue(m.v2.fixed)
         self.assertTrue(m.v3.fixed)
@@ -92,6 +92,16 @@ class TestEqualityPropagate(unittest.TestCase):
         self.assertEquals(value(m.v1.ub), value(m.v2.ub))
         self.assertEquals(value(m.v1.ub), value(m.v3.ub))
         self.assertEquals(value(m.v1.ub), value(m.v4.ub))
+
+    def test_var_bound_propagate_crossover(self):
+        """Test for error message when variable bound crosses over."""
+        m = ConcreteModel()
+        m.v1 = Var(initialize=1, bounds=(1, 3))
+        m.v2 = Var(initialize=5, bounds=(4, 8))
+        m.c1 = Constraint(expr=m.v1 == m.v2)
+        xfrm = TransformationFactory('contrib.propagate_eq_var_bounds')
+        with self.assertRaises(ValueError):
+            xfrm.apply_to(m)
 
     def test_var_bound_propagate_revert(self):
         """Test to make sure bound propagation revert works."""
