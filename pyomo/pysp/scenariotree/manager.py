@@ -3284,6 +3284,7 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
         # can slow down initialization as syncronization across all
         # scenario tree servers is required following serial
         # execution
+        unpause = False
         if len(self._options.aggregategetter_callback_location):
             assert not self._transmission_paused
             for callback_module_key, callback_name in zip(self._aggregategetter_keys,
@@ -3305,14 +3306,27 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
                 print("Broadcasting final aggregate data "
                       "to scenario tree servers")
 
+            self.pause_transmit()
+            unpause = True
             self.invoke_method(
                 "assign_data",
                 method_args=("_aggregate_user_data", self._aggregate_user_data,),
-                oneway=not self._options.pyro_handshake_at_startup)
+                oneway=True)
 
         # run the user script to initialize variable bounds
         if len(self._options.postinit_callback_location):
-
+            # Note: we pause and unpause around the callback
+            #       transmission block to ensure they are
+            #       all sent in the same dispatcher call and
+            #       their execution order on the workers is
+            #       not determined by a race condition
+            was_paused = self.pause_transmit()
+            # we should not have already been paused unless
+            # it happened a few lines above during the
+            # aggregategetter execution
+            assert (not was_paused) or \
+                len(self._options.aggregategetter_callback_location)
+            unpause = True
             for callback_module_key, callback_name in zip(self._postinit_keys,
                                                           self._postinit_names):
                 if self._options.verbose:
@@ -3325,7 +3339,10 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
                     callback_name,
                     self._callback_mapped_module_name[callback_module_key],
                     invocation_type=InvocationType.PerScenario,
-                    oneway=not self._options.pyro_handshake_at_startup)
+                    oneway=True)
+
+        if unpause:
+            self.unpause_transmit()
 
         async_results = self._request_scenario_tree_data()
 

@@ -660,8 +660,8 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
         common_kwds['keepfiles'] = self.get_option("keep_solver_files")
         common_kwds['symbolic_solver_labels'] = \
             self.get_option("symbolic_solver_labels")
-        # we always rely on ourselves to load solutions - we control
-        # the error checking and such.
+        # we always manually load solutions, so we can
+        # control error reporting and such
         common_kwds['load_solutions'] = False
 
         # Load preprocessor related io_options
