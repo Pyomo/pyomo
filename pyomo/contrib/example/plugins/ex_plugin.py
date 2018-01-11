@@ -2,7 +2,6 @@
 from pyomo.util.plugin import alias
 from pyomo.core.base import Transformation
 
-print("HERE")
 
 class Xfrm_PyomoTransformation(Transformation):
 
