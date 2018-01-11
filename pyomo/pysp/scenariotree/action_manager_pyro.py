@@ -281,7 +281,7 @@ class ScenarioTreeActionManagerPyro(PyroAsynchronousActionManager):
                         raise RuntimeError(
                             "The %s found results for task with id=%s"
                             " - but no corresponding action handle "
-                            "could be located!" % (type(self).__name__, task['id']))
+                            "could be located!\n%s" % (type(self).__name__, task['id'], task.get('result', None)))
                     if type(task['result']) is TaskProcessingError:
                         ah.status = ActionStatus.error
                         self.event_handle[ah.id].update(ah)
