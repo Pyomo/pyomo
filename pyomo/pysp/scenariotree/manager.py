@@ -2709,13 +2709,23 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
                   % (len(self._action_manager.server_pool)))
 
         if self._transmission_paused:
-            print("Unpausing pyro transmissions in preparation for "
-                  "releasing scenario tree servers")
+            print("Unpausing pyro transmissions in "
+                  "preparation for releasing manager workers")
             self.unpause_transmit()
+
+        self._action_manager.ignore_task_errors = ignore_errors
+
+        self.pause_transmit()
         # copy the keys since the remove_worker function is modifying
         # the dict
+        action_handles = []
         for worker_name in list(self._pyro_worker_server_map.keys()):
-            self.remove_worker(worker_name)
+            action_handles.append(self.remove_worker(worker_name))
+        self.unpause_transmit()
+        self._action_manager.wait_all(action_handles)
+        for ah in action_handles:
+            self._action_manager.get_results(ah)
+        del action_handles
 
         generate_response = None
         action_name = None
@@ -2729,8 +2739,6 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
         # transmit reset or shutdown requests
         action_handles = []
         self.pause_transmit()
-
-        self._action_manager.ignore_task_errors = ignore_errors
         for server_name in self._action_manager.server_pool:
             action_handles.append(self._action_manager.queue(
                 queue_name=server_name,
@@ -2831,14 +2839,15 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
     def remove_worker(self, worker_name):
         assert self._action_manager is not None
         server_name = self.get_server_for_worker(worker_name)
-        self._action_manager.queue(
+        ah = self._action_manager.queue(
             queue_name=server_name,
             action="ScenarioTreeServerPyro_release",
             worker_name=worker_name,
-            generate_response=False)
+            generate_response=True)
         self._pyro_server_workers_map[server_name].remove(worker_name)
         del self._pyro_worker_server_map[worker_name]
         self._pyro_worker_list.remove(worker_name)
+        return ah
 
     def get_server_for_worker(self, worker_name):
         try:

@@ -166,16 +166,6 @@ class PyroAsynchronousActionManager(AsynchronousActionManager):
 
         dispatcher_name = self._get_dispatcher_name(queue_name)
         task_data = self._get_task_data(ah, *args, **kwds)
-        import sys
-        if kwds.get('action',None) in ("_invoke_function_impl",
-                                       "_invoke_method_impl"):
-            sys.stderr.write("ah.id=%s: actions=%s, name=%s\n"
-                             % (ah.id, kwds['action'],
-                                kwds['args'][0]))
-        else:
-            sys.stderr.write("ah.id=%s: actions=%s\n"
-                             % (ah.id, kwds['action']))
-        sys.stderr.flush()
         task = pyutilib.pyro.Task(data=task_data,
                                   id=ah.id,
                                   generateResponse=generate_response)

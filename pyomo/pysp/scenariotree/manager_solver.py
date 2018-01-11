@@ -891,13 +891,15 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerSolver,
                          ephemeral_solver_options,
                          disable_warmstart)
             worker_name = self._pyro_worker_map[base_worker_name]
+            server_name = \
+                self.manager.get_server_for_worker(base_worker_name)
             action_handle_data[self.manager._action_manager.queue(
-                queue_name=self.manager.get_server_for_worker(base_worker_name),
-                worker_name=worker_name,
-                action="_solve_objects_for_client",
-                args=method_args,
-                kwds={},
-                generate_response=True)] = worker_name
+                    queue_name=server_name,
+                    worker_name=worker_name,
+                    action="_solve_objects_for_client",
+                    args=method_args,
+                    kwds={},
+                    generate_response=True)] = worker_name
         if not was_paused:
             self.manager.unpause_transmit()
 
