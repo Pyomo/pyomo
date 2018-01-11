@@ -30,6 +30,26 @@ class TestEqualityPropagate(unittest.TestCase):
         self.assertEquals(value(m.v4), 2)
         # m.display()
 
+    def test_fixed_var_propagate_backwards(self):
+        m = ConcreteModel()
+        m.v1 = Var(initialize=1)
+        m.v2 = Var(initialize=2)
+        m.v3 = Var(initialize=3)
+        m.v4 = Var(initialize=4)
+        m.c1 = Constraint(expr=m.v1 == m.v2)
+        m.c2 = Constraint(expr=m.v2 == m.v3)
+        m.c3 = Constraint(expr=m.v3 == m.v4)
+        m.v4.fix()
+        # check to make sure that all the v's have the same equality set. John
+        # had found a logic error.
+        TransformationFactory('contrib.propagate_fixed_vars').apply_to(m)
+        m.display()
+        self.assertTrue(m.v1.fixed)
+        self.assertTrue(m.v2.fixed)
+        self.assertTrue(m.v3.fixed)
+        self.assertTrue(m.v4.fixed)
+        self.assertEquals(value(m.v4), 4)
+
     def test_var_fix_revert(self):
         """Test to make sure that variable fixing reversion works."""
         m = ConcreteModel()

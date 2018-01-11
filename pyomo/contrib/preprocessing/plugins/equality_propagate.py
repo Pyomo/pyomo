@@ -4,6 +4,7 @@ import textwrap
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.suffix import Suffix
 from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.canonical_repn import generate_canonical_repn
@@ -22,7 +23,7 @@ def _build_equality_set(m):
 
     """
     #: dict: map of var UID to the set of all equality-linked var UIDs
-    eq_var_map = {}
+    eq_var_map = ComponentMap()
     relevant_vars = ComponentSet()
     for constr in m.component_data_objects(ctype=Constraint,
                                            active=True,
@@ -31,18 +32,19 @@ def _build_equality_set(m):
         if (value(constr.lower) == 0 and value(constr.upper) == 0 and
                 constr.body.polynomial_degree() == 1):
             repn = generate_canonical_repn(constr.body)
+            # only take the variables with nonzero coefficients
             vars_ = [v for i, v in enumerate(repn.variables) if repn.linear[i]]
             if (len(vars_) == 2 and
                     sorted(l for l in repn.linear if l) == [-1, 1]):
                 # this is an a == b constraint.
                 v1 = vars_[0]
                 v2 = vars_[1]
-                set1 = eq_var_map.get(id(v1), ComponentSet([v1]))
-                set2 = eq_var_map.get(id(v2), ComponentSet([v2]))
+                set1 = eq_var_map.get(v1, ComponentSet([v1]))
+                set2 = eq_var_map.get(v2, ComponentSet([v2]))
                 relevant_vars.update([v1, v2])
                 set1.update(set2)  # set1 is now the union
                 for v in set1:
-                    eq_var_map[id(v)] = set1
+                    eq_var_map[v] = set1
 
     return eq_var_map, relevant_vars
 
@@ -109,8 +111,6 @@ class FixedVarPropagator(IsomorphicTransformation):
             instance._tmp_propagate_fixed.update(newly_fixed)
         fixed_vars.update(newly_fixed)
         processed = ComponentSet()
-        # Newly fixed variables can be considered processed already
-        processed.update(newly_fixed)
         # Go through each fixed variable to propagate the 'fixed' status to all
         # equality-linked variabes.
         for v1 in fixed_vars:
@@ -118,7 +118,7 @@ class FixedVarPropagator(IsomorphicTransformation):
             if v1 in processed:
                 continue
 
-            eq_set = eq_var_map[id(v1)]
+            eq_set = eq_var_map[v1]
             for v2 in eq_set:
                 if (v2.fixed and value(v1) != value(v2)):
                     raise ValueError(
@@ -185,7 +185,7 @@ class VarBoundPropagator(IsomorphicTransformation):
             if var in processed:
                 continue
 
-            var_equality_set = eq_var_map[id(var)]
+            var_equality_set = eq_var_map[var]
 
             #: variable lower bounds in the equality set
             lbs = [v.lb for v in var_equality_set if v.has_lb()]
