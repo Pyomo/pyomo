@@ -542,7 +542,7 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
         if not self.get_option("disable_advanced_preprocessing"):
             self._preprocessor = ScenarioTreePreprocessor(self._options,
                                                           options_prefix=self._options_prefix)
-        assert not hasattr(self._manager, "preprocessor")
+        assert self._manager.preprocessor is None
         self._manager.preprocessor = self._preprocessor
 
         #
@@ -579,8 +579,18 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
 
     def _close_impl(self):
         if (self._manager is not None) and \
-           hasattr(self._manager, "preprocessor"):
-            del self._manager.preprocessor
+           (self._manager.preprocessor is not None):
+            assert self.preprocessor is self._manager.preprocessor
+            for bundle in self.manager.scenario_tree._scenario_bundles:
+                self._preprocessor.remove_bundle(bundle)
+            for scenario in self.manager.scenario_tree._scenarios:
+                assert scenario._instance is not None
+                self._preprocessor.remove_scenario(scenario)
+            self._manager.preprocessor = None
+            self._preprocessor = None
+        else:
+            assert self._preprocessor is None
+
         if self._solver_manager is not None:
             self._solver_manager.deactivate()
             self._solver_manager = None
@@ -698,11 +708,13 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
             action_handle_data[new_action_handle] = object_name
 
         return self.manager.AsyncResult(
-            self._solver_manager, action_handle_data=action_handle_data)
+            self._solver_manager,
+            action_handle_data=action_handle_data)
 
-class ScenarioTreeManagerSolverClientSerial(_ScenarioTreeManagerSolverWorker,
-                                            ScenarioTreeManagerSolver,
-                                            PySPConfiguredObject):
+class ScenarioTreeManagerSolverClientSerial(
+        _ScenarioTreeManagerSolverWorker,
+        ScenarioTreeManagerSolver,
+        PySPConfiguredObject):
 
     @classmethod
     def _declare_options(cls, options=None):
@@ -843,15 +855,30 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerSolver,
     #
 
     def _close_impl(self):
-        for base_worker_name in self._pyro_worker_map:
-            worker_name = self._pyro_worker_map[base_worker_name]
-            server_name = self.manager.\
-                          get_server_for_worker(base_worker_name)
-            self.manager._action_manager.queue(
-                queue_name=server_name,
-                action="ScenarioTreeServerPyro_release",
-                worker_name=worker_name,
-                generate_response=False)
+        # release the workers created by this manager solver
+        if len(self._pyro_worker_map):
+            assert len(self._pyro_worker_map) == \
+                len(self._pyro_base_worker_map)
+            if self.manager._transmission_paused:
+                print("Unpausing pyro transmissions in "
+                      "preparation for releasing solver workers")
+                self.manager.unpause_transmit()
+            self.manager.pause_transmit()
+            action_handles = []
+            for base_worker_name in self._pyro_worker_map:
+                worker_name = self._pyro_worker_map[base_worker_name]
+                server_name = self.manager.\
+                              get_server_for_worker(base_worker_name)
+                action_handles.append(
+                    self.manager._action_manager.queue(
+                    queue_name=server_name,
+                    action="ScenarioTreeServerPyro_release",
+                    worker_name=worker_name,
+                    generate_response=True))
+            self.manager.unpause_transmit()
+            self.manager._action_manager.wait_all(action_handles)
+            for ah in action_handles:
+                self.manager._action_manager.get_results(ah)
         self._pyro_worker_map = {}
         self._pyro_base_worker_map = {}
 

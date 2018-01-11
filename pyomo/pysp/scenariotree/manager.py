@@ -1673,7 +1673,7 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
         self._solve_results = {}
 
         # set by advanced solver managers
-        self._preprocessor = None
+        self.preprocessor = None
 
     #
     # Extension of the manager interface so code can handle
@@ -2076,7 +2076,7 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
 
             if len(tree_node._fix_queue):
                 node_count += 1
-                if self._preprocessor is not None:
+                if self.preprocessor is not None:
                     for scenario in tree_node._scenarios:
                         scenario_name = scenario.name
                         for variable_id, (fixed_status, new_value) in \
@@ -2084,11 +2084,11 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
                             variable_name, index = \
                                 tree_node._variable_ids[variable_id]
                             if fixed_status == tree_node.VARIABLE_FREED:
-                                self._preprocessor.\
+                                self.preprocessor.\
                                     freed_variables[scenario_name].\
                                     append((variable_name, index))
                             elif fixed_status == tree_node.VARIABLE_FIXED:
-                                self._preprocessor.\
+                                self.preprocessor.\
                                     fixed_variables[scenario_name].\
                                     append((variable_name, index))
 
