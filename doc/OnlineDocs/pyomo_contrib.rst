@@ -1,9 +1,33 @@
 Third-Party Contributions
 =========================
 
-Pyomo uses the ``pyomo.contrib`` package to facilitate the integrate
-the inclusion of third-party contributions that enhance Pyomo's
-core functionaliy.  The following two examples illustrate two ways
+Pyomo uses the ``pyomo.contrib`` package to facilitate the inclusion
+of third-party contributions that enhance Pyomo's core functionaliy.
+The are two ways that ``pyomo.contrib`` can be used to integrate
+third-party packages:
+
+* ``pyomo.contrib`` can provide wrappers for separate Python packages, thereby allowing these packages to be imported as subpackages of pyomo.
+
+* ``pyomo.contrib`` can include contributed packages that are developed and maintained outside of the Pyomo developer team.  
+
+Including contrib packages in the Pyomo source tree provides a
+convenient mechanism for defining new functionality that can be
+optionally deployed by users.  We expect this mechanism to include
+Pyomo extensions and experimental modeling capabilities.  However,
+contrib packages are treated as optional packages, which are not
+maintained by the Pyomo developer team.  Thus, it is the responsibility
+of the code contributor to keep these packages up-to-date.
+
+Contrib package contributions will be considered as pull-requests,
+which will be reviewed by the Pyomo developer team.  Specifically,
+this review will consider the suitability of the proposed capability,
+whether tests are available to check the execution of the code, and
+whether documentation is available to describe the capability.
+Contrib packages will be tested along with Pyomo.  If test failures
+arise, then these packages will be disabled and an issue will be
+created to resolve these test failures.
+
+The following two examples illustrate the two ways
 that ``pyomo.contrib`` can be used to integrate third-party
 contributions.
 
@@ -17,9 +41,10 @@ illustrates how Pyomo can be used in a simple, less object-oriented
 manner. Specifically, this class mimics the modeling style supported
 by `PuLP <https://github.com/coin-or/pulp>`_.
 
-While ``pyomocontrib_simplemodel`` can be installed and used separate from Pyomo, this
-package is included in ``pyomo/contrib/simplemodel``.   This allows this package to be 
-referenced as if were defined as a subpackage of ``pyomo.contrib``.  For example::
+While ``pyomocontrib_simplemodel`` can be installed and used separate
+from Pyomo, this package is included in ``pyomo/contrib/simplemodel``.
+This allows this package to be referenced as if were defined as a
+subpackage of ``pyomo.contrib``.  For example::
 
     from pyomo.contrib.simplemodel import *
     from math import pi
@@ -64,11 +89,4 @@ treated as an optional package.  Consequently,
 
 * Tests in this package are skipped unless the ``TEST_PYOMO_CONTRIB`` environment variable is set to ``1``.
 
-Including contrib packages in the Pyomo source tree provides a
-convenient mechanism for defining new functionality that can be
-optionally deployed by users.  We expect this mechanism to include
-Pyomo extensions and experimental modeling capabilities.  However,
-contrib packages are treated as optional packages until the Pyomo
-developers decide that they should be fully supported in future
-releases.
 
