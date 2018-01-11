@@ -287,12 +287,12 @@ class CBCSHELL(SystemCallSolver):
                 else:
                     action_options.append('-'+key)
             cmd.extend(["-printingOptions", "all",
-                        "-import", problem_files[0],
-                        "-import",
-                        "-stat=1",
-                        "-solve", 
-                        "-solu", self._soln_file])
+                        "-import", problem_files[0]])
             cmd.extend(action_options)
+            cmd.extend(["-stat=1",
+                        "-solve",
+                        "-solu", self._soln_file])
+
         return pyutilib.misc.Bunch(cmd=cmd, log_file=self._log_file, env=None)
 
     def process_logfile(self):
@@ -361,8 +361,11 @@ class CBCSHELL(SystemCallSolver):
                 soln.objective['__default_objective__']['Value'] = float(tokens[2])
             if len(tokens) > 4 and tokens[0] == "Optimal" and tokens[2] == "objective":
                 # parser for log file generetated without discrete variable
-                soln.status = SolutionStatus.optimal
-                soln.objective['__default_objective__']['Value'] = float(tokens[4])
+                try:
+                    soln.status = SolutionStatus.optimal
+                    soln.objective['__default_objective__']['Value'] = float(tokens[4])
+                except:
+                    print( "skipped the bad one!")
             if len(tokens) > 6 and tokens[4] == "best" and tokens[5] == "objective":
                 if tokens[6].endswith(','):
                     tokens[6] = tokens[6][:-1]
@@ -389,6 +392,10 @@ class CBCSHELL(SystemCallSolver):
                 results.solver.system_time=float(tokens[1])
             if len(tokens) == 2 and tokens[0] == "user":
                 results.solver.user_time=float(tokens[1])
+            if len(tokens) == 10 and "Presolve" in tokens and  \
+               "iterations" in tokens and tokens[0] == "Optimal" and "objective" == tokens[1]:
+                soln.status = SolutionStatus.optimal
+                soln.objective['__default_objective__']['Value'] = float(tokens[2])
             results.solver.user_time=-1.0
 
         if soln.objective['__default_objective__']['Value'] == "1e+50":
