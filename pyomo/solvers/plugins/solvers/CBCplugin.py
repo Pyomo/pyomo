@@ -561,10 +561,10 @@ class CBCSHELL(SystemCallSolver):
                                        "in CBC solution file - line="+line)
 
                 variable_name = tokens[1]
-                variable_value = eval(tokens[2])
+                variable_value = float(tokens[2])
                 variable = solution.variable[variable_name] = {"Value" : variable_value}
                 if extract_reduced_costs is True:
-                    variable_reduced_cost = eval(tokens[3]) # currently ignored.
+                    variable_reduced_cost = float(tokens[3]) # currently ignored.
                     variable["Rc"] = variable_reduced_cost
 
             elif header_processed is True:
