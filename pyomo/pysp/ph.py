@@ -1963,7 +1963,33 @@ class ProgressiveHedging(_PHBase):
         self._bound_setter_file                   = options.bounds_cfgfile
         self._solver_type                         = options.solver_type
         self._solver_io                           = options.solver_io
-        self._scenario_solver_options             = options.scenario_solver_options
+
+        # try to convert an option value string into (1) an integer,
+        # (2) a float, and (3) a string if the former two don't work.
+        # and in that order.
+        def convert_value_string_to_number(s):
+            try:
+                return float(s)
+            except ValueError:
+                try:
+                    return int(s)
+                except ValueError:
+                    return s
+
+        self._scenario_solver_options            = {}
+        for this_option_string in options.scenario_solver_options:
+            for this_option in this_option_string.split():
+                this_option_pieces = this_option.strip().split("=")
+                if len(this_option_pieces) == 2:
+                    option_key = this_option_pieces[0]
+                    option_value = convert_value_string_to_number(this_option_pieces[1])
+                    self._scenario_solver_options[option_key] = option_value
+                elif len(this_option_pieces) == 1:
+                    # TBD - verify None mapping makes sense by looking at CPLEX or GUROBI plugin
+                    self._scenario_solver_options[this_option_pieces[0]] = None
+                else:
+                    raise RuntimeError("Illegally formed scenario solver option=%s detected" % this_option)
+
         self._handshake_with_phpyro               = options.handshake_with_phpyro
         self._mipgap                              = options.scenario_mipgap
         self._write_fixed_variables               = options.write_fixed_variables
@@ -2321,7 +2347,8 @@ class ProgressiveHedging(_PHBase):
                 if len(self._scenario_solver_options) > 0:
                     if self._verbose:
                         print("Initializing sub-problem solver with options="+str(self._scenario_solver_options))
-                    self._solver_map[subproblem.name].set_options(" ".join(self._scenario_solver_options))
+                    for option_key,option_value in iteritems(self._scenario_solver_options):
+                        self._solver_map[subproblem.name].options[option_key] = option_value
                 if self._output_times:
                     object_solver._report_timing = True
 
@@ -2763,14 +2790,7 @@ class ProgressiveHedging(_PHBase):
         if isinstance(self._solver_manager,
                       pyomo.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
-            solver_options = {}
-#            print("MESSING WITH SOLVER OPTIONS")
-#            print(" ".join(self._scenario_solver_options))
-#            foobar
-# TBD - REVISIT THE BELOW - NEED TO STORE SCENARIO SOLVER OPTIONS IN A PROCESSED, DICTIONARY FORM
-#            self._solver_map[subproblem.name].set_options(" ".join(self._scenario_solver_options))
-#            for key in self._solver.options:
-#                solver_options[key]=self._solver.options[key]
+            solver_options = self._scenario_solver_options
 
         # STEP 1: queue up the solves for all scenario sub-problems
         # we could use the same names for scenarios and bundles, but
