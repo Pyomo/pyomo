@@ -546,10 +546,10 @@ class CBCSHELL(SystemCallSolver):
                 constraint_dual = float(tokens[3])
                 if constraint.startswith('c_'):
                     solution.constraint[constraint] = {"Dual" : constraint_dual}
-                # elif constraint.startswith('r_l_'):
-                #     range_duals.setdefault(constraint[4:],[0,0])[0] = constraint_dual
-                # elif constraint.startswith('r_u_'):
-                #     range_duals.setdefault(constraint[4:],[0,0])[1] = constraint_dual
+                elif constraint.startswith('r_l_'):
+                    range_duals.setdefault(constraint[4:],[0,0])[0] = constraint_dual
+                elif constraint.startswith('r_u_'):
+                    range_duals.setdefault(constraint[4:],[0,0])[1] = constraint_dual
 
             elif processing_constraints is False:
                 if len(tokens) == 4:
@@ -581,12 +581,12 @@ class CBCSHELL(SystemCallSolver):
 
         # For the range constraints, supply only the dual with the largest
         # magnitude (at least one should always be numerically zero)
-        # soln_constraints = solution.constraint
-        # for key,(ld,ud) in iteritems(range_duals):
-        #     if abs(ld) > abs(ud):
-        #         soln_constraints['r_l_'+key] = {"Dual" : ld}
-        #     else:
-        #         soln_constraints['r_l_'+key] = {"Dual" : ud}        # Use the same key
+        soln_constraints = solution.constraint
+        for key,(ld,ud) in iteritems(range_duals):
+            if abs(ld) > abs(ud):
+                soln_constraints['r_l_'+key] = {"Dual" : ld}
+            else:
+                soln_constraints['r_l_'+key] = {"Dual" : ud}        # Use the same key
 
 
 class MockCBC(CBCSHELL,MockMIP):
