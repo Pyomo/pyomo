@@ -472,13 +472,10 @@ class CBCSHELL(SystemCallSolver):
             INPUT = open(self._soln_file,"r")
         except IOError:
             INPUT = []
+
         for line in INPUT:
             tokens = re.split('[ \t]+',line.strip())
-            #
-            # Ignore warnings of values out of bounds
-            #
-            if tokens[0] == "**":
-                tokens = tokens[1:]
+
             #
             # These are the only header entries CBC will generate (identified via browsing CbcSolver.cpp)
             #
@@ -517,21 +514,24 @@ class CBCSHELL(SystemCallSolver):
                 elif tokens[0] in ("Optimal", "Infeasible", "Unbounded", "Stopped", "Integer", "Status"):
                     print("***WARNING: CBC plugin currently not processing solution status="+tokens[0]+" correctly. Full status line is: "+line.strip())
 
-            if tokens[0] in ("Optimal", "Infeasible", "Unbounded", "Stopped", "Integer", "Status"):
-                    if optim_value:
-                        solution.objective['__default_objective__']['Value'] = optim_value
-                        if results.problem.sense == ProblemSense.maximize:
-                            solution.objective['__default_objective__']['Value'] *= -1
-                    header_processed = True
-
-            elif tokens[0] == "0": # indicates section start.
+            # most of the first tokens should be integers
+            # if it's not an integer, only then check the list of results
+            try:
+                row_number = int( tokens[0])
+                if row_number == 0: # indicates section start.
                     if processing_constraints is None:
                         processing_constraints = True
                     elif processing_constraints is True:
                         processing_constraints = False
                     else:
                         raise RuntimeError("CBC plugin encountered unexpected line=("+line.strip()+") in solution file="+self._soln_file+"; constraint and variable sections already processed!")
-
+            except ValueError:
+                if tokens[0] in ("Optimal", "Infeasible", "Unbounded", "Stopped", "Integer", "Status"):
+                    if optim_value:
+                        solution.objective['__default_objective__']['Value'] = optim_value
+                        if results.problem.sense == ProblemSense.maximize:
+                            solution.objective['__default_objective__']['Value'] *= -1
+                    header_processed = True
 
             if (processing_constraints is True) and (extract_duals is True):
                 if len(tokens) == 4:
@@ -544,7 +544,6 @@ class CBCSHELL(SystemCallSolver):
                 constraint = tokens[1]
                 constraint_ax = float(tokens[2]) # CBC reports the constraint row times the solution vector - not the slack.
                 constraint_dual = float(tokens[3])
-#                print( range_duals)
                 if constraint[:2] == 'c_':
                     solution.constraint[constraint] = {"Dual" : constraint_dual}
                 elif constraint[:4] == 'r_l_':
