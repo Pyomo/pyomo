@@ -621,19 +621,12 @@ class _PHSolverServer(_PHBase):
             solve_start_time = time.time()
 
             if  self._warmstart and object_solver.warm_start_capable():
-                if isinstance(object_solver, PersistentSolver):
-                    results = object_solver.solve(warmstart=True,
-                                                 **common_solve_kwds)
-                else:
-                    results = object_solver.solve(bundle_ef_instance,
-                                                 warmstart=True,
-                                                 **common_solve_kwds)
+                results = object_solver.solve(bundle_ef_instance,
+                                              warmstart=True,
+                                              **common_solve_kwds)
             else:
-                if isinstance(object_solver, PersistentSolver):
-                    results = object_solver.solve(**common_solve_kwds)
-                else:
-                    results = object_solver.solve(bundle_ef_instance,
-                                                 **common_solve_kwds)
+                results = object_solver.solve(bundle_ef_instance,
+                                              **common_solve_kwds)
 
             pyomo_solve_time = time.time() - solve_start_time
 
@@ -712,19 +705,12 @@ class _PHSolverServer(_PHBase):
             solve_start_time = time.time()
 
             if self._warmstart and object_solver.warm_start_capable():
-                if isinstance(object_solver, PersistentSolver):
-                    results = object_solver.solve(warmstart=True,
-                                                 **common_solve_kwds)
-                else:
-                    results = object_solver.solve(scenario_instance,
-                                             warmstart=True,
-                                             **common_solve_kwds)
+                results = object_solver.solve(scenario_instance,
+                                              warmstart=True,
+                                              **common_solve_kwds)
             else:
-                if isinstance(object_solver, PersistentSolver):
-                    results = object_solver.solve(**common_solve_kwds)
-                else:
-                    results = object_solver.solve(scenario_instance,
-                                                 **common_solve_kwds)
+                results = object_solver.solve(scenario_instance,
+                                              **common_solve_kwds)
 
             pyomo_solve_time = time.time() - solve_start_time
 
