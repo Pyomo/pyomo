@@ -60,7 +60,7 @@ class DirectSolver(DirectOrPersistentSolver):
 
         self._set_instance(model, kwds)
 
-        DirectOrPersistentSolver._presolve(self, *args, **kwds)
+        DirectOrPersistentSolver._presolve(self, **kwds)
 
     def solve(self, *args, **kwds):
         """ Solve the problem """

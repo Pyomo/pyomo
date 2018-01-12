@@ -1,0 +1,97 @@
+* Source:     Pyomo MPS Writer
+* Format:     Free MPS
+*
+NAME AverageScenario
+OBJSENSE
+ MIN
+ROWS
+ N  Total_Cost_Objective
+ L  c_u_ConstrainTotalAcreage_
+ G  c_l_EnforceCattleFeedRequirement(CORN)_
+ G  c_l_EnforceCattleFeedRequirement(SUGAR_BEETS)_
+ G  c_l_EnforceCattleFeedRequirement(WHEAT)_
+ L  c_u_LimitAmountSold(CORN)_
+ L  c_u_LimitAmountSold(SUGAR_BEETS)_
+ L  c_u_LimitAmountSold(WHEAT)_
+ G  r_l_EnforceQuotas(CORN)_
+ L  r_u_EnforceQuotas(CORN)_
+ G  r_l_EnforceQuotas(SUGAR_BEETS)_
+ L  r_u_EnforceQuotas(SUGAR_BEETS)_
+ G  r_l_EnforceQuotas(WHEAT)_
+ L  r_u_EnforceQuotas(WHEAT)_
+ E  c_e_ONE_VAR_CONSTANT
+COLUMNS
+     DevotedAcreage(CORN) Total_Cost_Objective 230
+     DevotedAcreage(CORN) c_u_ConstrainTotalAcreage_ 1
+     DevotedAcreage(CORN) c_l_EnforceCattleFeedRequirement(CORN)_ 3
+     DevotedAcreage(CORN) c_u_LimitAmountSold(CORN)_ -3
+     DevotedAcreage(SUGAR_BEETS) Total_Cost_Objective 260
+     DevotedAcreage(SUGAR_BEETS) c_u_ConstrainTotalAcreage_ 1
+     DevotedAcreage(SUGAR_BEETS) c_l_EnforceCattleFeedRequirement(SUGAR_BEETS)_ 20
+     DevotedAcreage(SUGAR_BEETS) c_u_LimitAmountSold(SUGAR_BEETS)_ -20
+     DevotedAcreage(WHEAT) Total_Cost_Objective 150
+     DevotedAcreage(WHEAT) c_u_ConstrainTotalAcreage_ 1
+     DevotedAcreage(WHEAT) c_l_EnforceCattleFeedRequirement(WHEAT)_ 2.5
+     DevotedAcreage(WHEAT) c_u_LimitAmountSold(WHEAT)_ -2.5
+     QuantityPurchased(CORN) Total_Cost_Objective 210
+     QuantityPurchased(CORN) c_l_EnforceCattleFeedRequirement(CORN)_ 1
+     QuantityPurchased(SUGAR_BEETS) Total_Cost_Objective 100000
+     QuantityPurchased(SUGAR_BEETS) c_l_EnforceCattleFeedRequirement(SUGAR_BEETS)_ 1
+     QuantityPurchased(WHEAT) Total_Cost_Objective 238
+     QuantityPurchased(WHEAT) c_l_EnforceCattleFeedRequirement(WHEAT)_ 1
+     QuantitySubQuotaSold(CORN) Total_Cost_Objective -150
+     QuantitySubQuotaSold(CORN) c_l_EnforceCattleFeedRequirement(CORN)_ -1
+     QuantitySubQuotaSold(CORN) c_u_LimitAmountSold(CORN)_ 1
+     QuantitySubQuotaSold(CORN) r_l_EnforceQuotas(CORN)_ 1
+     QuantitySubQuotaSold(CORN) r_u_EnforceQuotas(CORN)_ 1
+     QuantitySubQuotaSold(SUGAR_BEETS) Total_Cost_Objective -36
+     QuantitySubQuotaSold(SUGAR_BEETS) c_l_EnforceCattleFeedRequirement(SUGAR_BEETS)_ -1
+     QuantitySubQuotaSold(SUGAR_BEETS) c_u_LimitAmountSold(SUGAR_BEETS)_ 1
+     QuantitySubQuotaSold(SUGAR_BEETS) r_l_EnforceQuotas(SUGAR_BEETS)_ 1
+     QuantitySubQuotaSold(SUGAR_BEETS) r_u_EnforceQuotas(SUGAR_BEETS)_ 1
+     QuantitySubQuotaSold(WHEAT) Total_Cost_Objective -170
+     QuantitySubQuotaSold(WHEAT) c_l_EnforceCattleFeedRequirement(WHEAT)_ -1
+     QuantitySubQuotaSold(WHEAT) c_u_LimitAmountSold(WHEAT)_ 1
+     QuantitySubQuotaSold(WHEAT) r_l_EnforceQuotas(WHEAT)_ 1
+     QuantitySubQuotaSold(WHEAT) r_u_EnforceQuotas(WHEAT)_ 1
+     QuantitySuperQuotaSold(CORN) c_l_EnforceCattleFeedRequirement(CORN)_ -1
+     QuantitySuperQuotaSold(CORN) c_u_LimitAmountSold(CORN)_ 1
+     QuantitySuperQuotaSold(SUGAR_BEETS) Total_Cost_Objective -10
+     QuantitySuperQuotaSold(SUGAR_BEETS) c_l_EnforceCattleFeedRequirement(SUGAR_BEETS)_ -1
+     QuantitySuperQuotaSold(SUGAR_BEETS) c_u_LimitAmountSold(SUGAR_BEETS)_ 1
+     QuantitySuperQuotaSold(WHEAT) c_l_EnforceCattleFeedRequirement(WHEAT)_ -1
+     QuantitySuperQuotaSold(WHEAT) c_u_LimitAmountSold(WHEAT)_ 1
+     ONE_VAR_CONSTANT Total_Cost_Objective 0
+     ONE_VAR_CONSTANT c_e_ONE_VAR_CONSTANT 1
+RHS
+     RHS c_u_ConstrainTotalAcreage_ 500
+     RHS c_l_EnforceCattleFeedRequirement(CORN)_ 240
+     RHS c_l_EnforceCattleFeedRequirement(SUGAR_BEETS)_ 0
+     RHS c_l_EnforceCattleFeedRequirement(WHEAT)_ 200
+     RHS c_u_LimitAmountSold(CORN)_ 0
+     RHS c_u_LimitAmountSold(SUGAR_BEETS)_ 0
+     RHS c_u_LimitAmountSold(WHEAT)_ 0
+     RHS r_l_EnforceQuotas(CORN)_ 0
+     RHS r_u_EnforceQuotas(CORN)_ 100000
+     RHS r_l_EnforceQuotas(SUGAR_BEETS)_ 0
+     RHS r_u_EnforceQuotas(SUGAR_BEETS)_ 6000
+     RHS r_l_EnforceQuotas(WHEAT)_ 0
+     RHS r_u_EnforceQuotas(WHEAT)_ 100000
+     RHS c_e_ONE_VAR_CONSTANT 1
+BOUNDS
+ LO BOUND DevotedAcreage(CORN) 0
+ UP BOUND DevotedAcreage(CORN) 500
+ LO BOUND DevotedAcreage(SUGAR_BEETS) 0
+ UP BOUND DevotedAcreage(SUGAR_BEETS) 500
+ LO BOUND DevotedAcreage(WHEAT) 0
+ UP BOUND DevotedAcreage(WHEAT) 500
+ LO BOUND QuantityPurchased(CORN) 0
+ LO BOUND QuantityPurchased(SUGAR_BEETS) 0
+ LO BOUND QuantityPurchased(WHEAT) 0
+ LO BOUND QuantitySubQuotaSold(CORN) 0
+ LO BOUND QuantitySubQuotaSold(SUGAR_BEETS) 0
+ LO BOUND QuantitySubQuotaSold(WHEAT) 0
+ LO BOUND QuantitySuperQuotaSold(CORN) 0
+ LO BOUND QuantitySuperQuotaSold(SUGAR_BEETS) 0
+ LO BOUND QuantitySuperQuotaSold(WHEAT) 0
+ENDATA

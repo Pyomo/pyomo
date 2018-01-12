@@ -8,8 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-
-
 import logging
 from pyomo.util.timing import ConstructionTimer
 from pyomo.core import *
@@ -194,7 +192,7 @@ class ContinuousSet(OrderedSimpleSet):
                     # the desired finite element bound is returned
                     tmp = self._fe.index(point)
                     if tmp != 0:
-                        return self._fe[tmp-1]
+                        return self._fe[tmp - 1]
             return point
         elif point < min(self._fe):
             print("****WARNING: The point '%s' is less than the lower bound "
@@ -225,12 +223,12 @@ class ContinuousSet(OrderedSimpleSet):
         if self._bounds is None:
             raise ValueError("ContinuousSet '%s' must have at least two values"
                              " indicating the range over which a differential "
-                             "equation is to be discretized" % (self.name))
+                             "equation is to be discretized" % self.name)
 
         # If bounds were set using pyomo parameters, get their values
         lb = value(self._bounds[0])
         ub = value(self._bounds[1])
-        self._bounds = (lb,ub)
+        self._bounds = (lb, ub)
 
         if self._bounds[0].__class__ not in native_numeric_types:
             raise ValueError("Bounds on ContinuousSet must be numeric values")
@@ -253,7 +251,7 @@ class ContinuousSet(OrderedSimpleSet):
         if len(self) < 2:
             raise ValueError("ContinuousSet '%s' must have at least two values"
                              " indicating the range over which a differential "
-                             "equation is to be discretized" % (self.name))
+                             "equation is to be discretized" % self.name)
         self._fe = sorted(self)
         timer.report()
 

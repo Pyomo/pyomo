@@ -114,7 +114,7 @@ class DirectOrPersistentSolver(OptSolver):
         the results directly from the solver object. If False, the solution will not be loaded into the Solution
         object."""
 
-    def _presolve(self, *args, **kwds):
+    def _presolve(self, **kwds):
         warmstart_flag = kwds.pop('warmstart', False)
         self._keepfiles = kwds.pop('keepfiles', False)
         self._save_results = kwds.pop('save_results', True)
@@ -133,7 +133,7 @@ class DirectOrPersistentSolver(OptSolver):
         self._results_format = ResultsFormat.soln
         # use the base class _presolve to consume the
         # important keywords
-        OptSolver._presolve(self, *args, **kwds)
+        OptSolver._presolve(self, **kwds)
 
         # ***********************************************************
         # The following code is only needed for backwards compatability of load_solutions=False.
