@@ -620,13 +620,11 @@ class _PHSolverServer(_PHBase):
 
             solve_start_time = time.time()
 
-            if  self._warmstart and object_solver.warm_start_capable():
-                results = object_solver.solve(bundle_ef_instance,
-                                              warmstart=True,
-                                              **common_solve_kwds)
-            else:
-                results = object_solver.solve(bundle_ef_instance,
-                                              **common_solve_kwds)
+            warmstart_bundle_solve = self._warmstart and object_solver.warm_start_capable()
+            
+            results = object_solver.solve(bundle_ef_instance,
+                                          warmstart=warmstart_bundle_solve,
+                                          **common_solve_kwds)
 
             pyomo_solve_time = time.time() - solve_start_time
 
@@ -704,13 +702,11 @@ class _PHSolverServer(_PHBase):
 
             solve_start_time = time.time()
 
-            if self._warmstart and object_solver.warm_start_capable():
-                results = object_solver.solve(scenario_instance,
-                                              warmstart=True,
-                                              **common_solve_kwds)
-            else:
-                results = object_solver.solve(scenario_instance,
-                                              **common_solve_kwds)
+            warmstart_scenario_solve = self._warmstart and object_solver.warm_start_capable()
+
+            results = object_solver.solve(scenario_instance,
+                                          warmstart=warmstart_scenario_solve,
+                                          **common_solve_kwds)
 
             pyomo_solve_time = time.time() - solve_start_time
 
