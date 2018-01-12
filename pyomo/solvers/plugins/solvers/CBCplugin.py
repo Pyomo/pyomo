@@ -544,11 +544,12 @@ class CBCSHELL(SystemCallSolver):
                 constraint = tokens[1]
                 constraint_ax = float(tokens[2]) # CBC reports the constraint row times the solution vector - not the slack.
                 constraint_dual = float(tokens[3])
-                if constraint.startswith('c_'):
+#                print( range_duals)
+                if constraint[:2] == 'c_':
                     solution.constraint[constraint] = {"Dual" : constraint_dual}
-                elif constraint.startswith('r_l_'):
+                elif constraint[:4] == 'r_l_':
                     range_duals.setdefault(constraint[4:],[0,0])[0] = constraint_dual
-                elif constraint.startswith('r_u_'):
+                elif constraint[:4] == 'r_u_':
                     range_duals.setdefault(constraint[4:],[0,0])[1] = constraint_dual
 
             elif processing_constraints is False:
