@@ -368,14 +368,13 @@ class _PHSolverServer(_PHBase):
 
         self._setup_scenario_instances()
 
-        # let plugins know if they care.
-        if self._verbose:
-            print("Invoking post-instance-creation PHSolverServer plugins")
-
         # let plugins know if they care - this callback point allows
         # users to create/modify the original scenario instances
         # and/or the scenario tree prior to creating PH-related
         # parameters, variables, and the like.
+        if self._verbose:
+            print("Invoking post-instance-creation PHSolverServer plugins")
+
         for plugin in self._ph_plugins:
             plugin.post_instance_creation(self)
 

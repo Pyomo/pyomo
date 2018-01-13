@@ -2781,16 +2781,11 @@ class ProgressiveHedging(_PHBase):
                 self._solve_times[scenario._name] = undefined
                 self._pyomo_solve_times[scenario._name] = undefined
 
-        # STEP 0: set up all global solver options.
-        if self._mipgap is not None:
-            self._solver.options.mipgap = float(self._mipgap)
-
-        # if running the phpyro solver server, we need to 
-        # ship the solver options across the pipe. 
-        if isinstance(self._solver_manager,
-                      pyomo.solvers.plugins.smanager.\
-                      phpyro.SolverManager_PHPyro):
-            solver_options = self._scenario_solver_options
+        # STEP 0: set up the mipgap option if running with serial/local solves.
+        if isinstance(self._solver_manager, SolverManager_Serial):
+            if self._mipgap is not None:
+                for object_solver in itervalues(self._solver_map):
+                    object_solver.options.mipgap = float(self._mipgap)
 
         # STEP 1: queue up the solves for all scenario sub-problems
         # we could use the same names for scenarios and bundles, but
@@ -2809,7 +2804,7 @@ class ProgressiveHedging(_PHBase):
 
         # if we are solving locally and not using a persistent solver plugin,
         # then add the following two options to the standard set of common
-        # solve keywrods
+        # solve keywords
         if isinstance(self._solver_manager, SolverManager_Serial):
             # grab an arbitrary solver plugin - we are implicitly assuming
             # homogeneous solver plugin types across subproblems.
@@ -2822,6 +2817,9 @@ class ProgressiveHedging(_PHBase):
         # scenario/bundles/serial/phpyro
         if isinstance(self._solver_manager,
                       pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
+            solver_options = self._scenario_solver_options            
+            if self._mipgap is not None:
+                solver_options["mipgap"] = float(self._mipgap)
             common_solve_kwds['solver_options'] = solver_options
             common_solve_kwds['solver_suffixes'] = []
             common_solve_kwds['warmstart'] = warmstart
