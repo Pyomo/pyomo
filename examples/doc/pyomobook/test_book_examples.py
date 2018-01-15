@@ -13,32 +13,41 @@ except:
     yaml_available=False
 
 # Find all *.txt files, and use them to define baseline tests
-currdir = os.path.dirname(os.path.abspath(__file__))+os.sep
+currdir = os.path.dirname(os.path.abspath(__file__))
 datadir = currdir
 testdirs = [currdir, ]
 
 solver_dependencies =   {
-                        'Test_nonlinear_ch': 
-                            {'test_rosen_pyomo_rosen': 'ipopt',
-                             'test_react_design_run_pyomo_reactor_table': 'ipopt',
-                             'test_react_design_run_pyomo_reactor': 'ipopt',
-                             'test_multimodal_pyomo_multimodal_init1': 'ipopt',
-                             'test_multimodal_pyomo_multimodal_init2': 'ipopt',
-                             'test_disease_est_run_disease_summary': 'ipopt',
-                             'test_disease_est_run_disease_callback': 'ipopt',
-                             'test_deer_run_deer': 'ipopt'},
-                        'Test_mpec_ch': {'test_mpec_ch_path1': 'path'}
-                        }
+    'Test_nonlinear_ch': {
+        'test_rosen_pyomo_rosen': 'ipopt',
+        'test_react_design_run_pyomo_reactor_table': 'ipopt',
+        'test_react_design_run_pyomo_reactor': 'ipopt',
+        'test_multimodal_pyomo_multimodal_init1': 'ipopt',
+        'test_multimodal_pyomo_multimodal_init2': 'ipopt',
+        'test_disease_est_run_disease_summary': 'ipopt',
+        'test_disease_est_run_disease_callback': 'ipopt',
+        'test_deer_run_deer': 'ipopt',
+    },
+    'Test_mpec_ch': {
+        'test_mpec_ch_path1': 'path',
+    },
+    'Test_dae_ch': {
+        'test_run_path_constraint_tester': 'ipopt',
+    },
+}
 package_dependencies =  {
-                        'Test_data_abstract_ch':
-                            {'test_data_abstract_ch_ABCD9': ['pyodbc',],
-                            'test_data_abstract_ch_ABCD8': ['pyodbc',],
-                             'test_data_abstract_ch_ABCD7': ['win32com',]},
-                        'Test_overview_ch':
-                            {'test_overview_ch_pyomo_wl_excel': ['numpy','pandas','xlrd',]},
-                        'Test_scripts_ch':
-                            {'test_scripts_ch_warehouse_function_cuts': ['numpy','matplotlib',]},
-                        }
+    'Test_data_abstract_ch': {
+        'test_data_abstract_ch_ABCD9': ['pyodbc',],
+        'test_data_abstract_ch_ABCD8': ['pyodbc',],
+        'test_data_abstract_ch_ABCD7': ['win32com',],
+    },
+    'Test_overview_ch': {
+        'test_overview_ch_pyomo_wl_excel': ['numpy','pandas','xlrd',],
+    },
+    'Test_scripts_ch': {
+        'test_scripts_ch_warehouse_function_cuts': ['numpy','matplotlib',],
+    },
+}
 solver_available = {}
 package_available = {}
 
@@ -148,62 +157,76 @@ def filter(line):
 
 for tdir in testdirs:
 
-  for fname in glob.glob(os.path.join(tdir,'*')):
-    if not os.path.isdir(fname):
+  for testdir in glob.glob(os.path.join(tdir,'*')):
+    if not os.path.isdir(testdir):
         continue
     # Only test files in directories ending in -ch. These directories
     # contain the updated python and scripting files corresponding to
     # each chapter in the book.
-    if '-ch' not in fname:
+    if '-ch' not in testdir:
         continue
 
-    # print("Testing ",fname)
+    # print("Testing ",testdir)
 
-    # Declare an empty TestCase class
-    fname_ = fname.replace('-','_')
-    tfname_ = 'Test_'+fname_.split("pyomobook"+os.sep)[1]
-    Test = globals()[tfname_] = type(tfname_, (unittest.TestCase,), {})
-    if tfname_ in only_book_tests:
+    #
+    # JDS: This is crazy fragile.  If testdirs is ever anything BUT
+    # "pyomobook" you will be creating invalid class names
+    #
+    #testdir_ = testdir.replace('-','_')
+    #testClassName = 'Test_'+testdir_.split("pyomobook"+os.sep)[1]
+    testClassName = 'Test_'+os.path.basename(testdir).replace('-','_')
+    assert '.' not in testClassName
+    Test = globals()[testClassName] = type(
+        testClassName, (unittest.TestCase,), {})
+    if testClassName in only_book_tests:
         Test = unittest.category("book")(Test)
     else:
         Test = unittest.category("book","smoke","nightly")(Test)
     
     # Find all .py files in the test directory
-    for file in list(glob.glob(fname+'/*.py')) + list(glob.glob(fname+'/*/*.py')):
+    for file in list(glob.glob(os.path.join(testdir,'*.py'))) \
+        + list(glob.glob(os.path.join(testdir,'*','*.py'))):
     
-        bname = os.path.basename(file)
-        dir_ = os.path.dirname(os.path.abspath(file))+os.sep
-        name='.'.join(bname.split('.')[:-1])
-        tname = os.path.basename(os.path.dirname(dir_))+'_'+name
+        test_file = os.path.abspath(file)
+        bname = os.path.basename(test_file)
+        dir_ = os.path.dirname(test_file)
+        name=os.path.splitext(bname)[0]
+        tname = os.path.basename(dir_)+'_'+name
     
         suffix = None
         # Look for txt and yml file names matching py file names. Add
         # a test for any found
         for suffix_ in ['.txt', '.yml']:
-            if os.path.exists(dir_+name+suffix_):
+            if os.path.exists(os.path.join(dir_,name+suffix_)):
                 suffix = suffix_
                 break
-            elif os.path.exists(dir_+name+'.py2'+suffix_) and sys.version_info[0] == 2:
+            elif os.path.exists(os.path.join(dir_,name+'.py2'+suffix_)) \
+                 and sys.version_info[0] == 2:
                 suffix = '.py2'+suffix_
                 break
-            elif os.path.exists(dir_+name+'.py3'+suffix_) and sys.version_info[0] == 3:
+            elif os.path.exists(os.path.join(dir_, name+'.py3'+suffix_)) \
+                 and sys.version_info[0] == 3:
                 suffix = '.py3'+suffix_
                 break
         if not suffix is None:
             cwd = os.getcwd()
-            os.chdir(dir_)
             tname = tname.replace('-','_')
             tname = tname.replace('.','_')
             # print(tname)
-            forceskip = check_skip(tfname_, 'test_'+tname)
-            Test.add_baseline_test(cmd='cd %s; %s %s' % (dir_,
-                                                         sys.executable, os.path.abspath(bname)),
-                                   baseline=dir_+name+suffix, name=tname, filter=filter,
-                                   tolerance=1e-3, forceskip=forceskip)
+            forceskip = check_skip(testClassName, 'test_'+tname)
+            Test.add_baseline_test(
+                cmd=(sys.executable, test_file),
+                cwd = dir_,
+                baseline=os.path.join(dir_,name+suffix),
+                name=tname,
+                filter=filter,
+                tolerance=1e-3,
+                forceskip=forceskip)
             os.chdir(cwd)
 
     # Find all .sh files in the test directory
-    for file in list(glob.glob(fname+'/*.sh')) + list(glob.glob(fname+'/*/*.sh')):
+    for file in list(glob.glob(os.path.join(testdir,'*.sh'))) \
+            + list(glob.glob(os.path.join(testdir,'*','*.sh'))):
         bname = os.path.basename(file)
         dir_ = os.path.dirname(os.path.abspath(file))+os.sep
         name='.'.join(bname.split('.')[:-1])
@@ -226,7 +249,11 @@ for tdir in testdirs:
             os.chdir(dir_)
             tname = tname.replace('-','_')
             tname = tname.replace('.','_')
-            forceskip = check_skip(tfname_, 'test_'+tname)
+            # For now, skip all shell tests on Windows.
+            if os.name == 'nt':
+                forceskip = "Shell tests are not runnable on Windows"
+            else:
+                forceskip = check_skip(testClassName, 'test_'+tname)
             Test.add_baseline_test(cmd='cd %s; %s' % (dir_,
                                                       os.path.abspath(bname)), baseline=dir_+name+suffix,
                                    name=tname, filter=filter, tolerance=1e-3,

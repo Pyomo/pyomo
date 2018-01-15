@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -26,7 +26,8 @@ from pyomo.core.base.expression import (_ExpressionData,
                                         SimpleExpression,
                                         Expression)
 from pyomo.core.base.objective import (_GeneralObjectiveData,
-                                       SimpleObjective)
+                                       SimpleObjective,
+                                       _ObjectiveData)
 from pyomo.core.base.connector import (_ConnectorData,
                                        SimpleConnector,
                                        Connector)
@@ -34,6 +35,8 @@ from pyomo.core.base.var import (SimpleVar,
                                  Var,
                                  _GeneralVarData,
                                  _VarData)
+from pyomo.core.kernel.component_objective import IObjective
+from pyomo.core.base.numvalue import NumericConstant
 
 from pyomo.core.base import expr_pyomo4
 from pyomo.core.base import expr_coopr3
@@ -751,6 +754,7 @@ _linear_collectors = {
     param.SimpleParam       : _collect_linear_const,
     param.Param             : _collect_linear_const,
     parameter               : _collect_linear_const,
+    NumericConstant         : _collect_linear_const,
     _GeneralVarData         : _collect_linear_var,
     SimpleVar               : _collect_linear_var,
     Var                     : _collect_linear_var,
@@ -773,7 +777,7 @@ def _get_linear_collector(exp, idMap, multiplier,
         if isinstance(exp, (_VarData, IVariable)):
             _collect_linear_var(exp, idMap, multiplier,
                                 coef, varmap, compute_values)
-        elif isinstance(exp, (param._ParamData, IParameter)):
+        elif isinstance(exp, (param._ParamData, IParameter, NumericConstant)):
             _collect_linear_const(exp, idMap, multiplier,
                                   coef, varmap, compute_values)
         elif isinstance(exp, (_ExpressionData, IIdentityExpression)):
@@ -802,6 +806,8 @@ def collect_linear_canonical_repn(exp, idMap, compute_values=True):
 #########################################################################
 
 def coopr3_generate_canonical_repn(exp, idMap=None, compute_values=True):
+    if exp is None:
+        return CompiledLinearCanonicalRepn()
     degree = exp.polynomial_degree()
 
     if idMap is None:
@@ -857,6 +863,8 @@ _identity_collectors = set([
 
 
 def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
+    if exp is None:
+        return CompiledLinearCanonicalRepn()
     if exp.__class__ in native_numeric_types:
         ans = CompiledLinearCanonicalRepn()
         ans.constant = value(exp)

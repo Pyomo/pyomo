@@ -76,7 +76,7 @@ class TextTable(TableData):
         if self.options.set is None and self.options.param is None:
             raise IOError("Unspecified model component")
         self.FILE = open(self.filename, 'w')
-        table = self.get_table()
+        table = self._get_table()
         for line in table:
             self.FILE.write(' '.join(map(str, line))+'\n')
         self.FILE.close()

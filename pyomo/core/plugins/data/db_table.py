@@ -589,7 +589,10 @@ class sqlite3_db_Table(db_Table):
         if not os.path.exists(filename):
             raise Exception("No such file: " + filename)
 
-        return sqlite3.connect(filename)
+        con = sqlite3.connect(filename)
+        if options.text_factory:
+            con.text_factory = options.text_factory
+        return con
 
 
 class pymysql_db_Table(db_Table):

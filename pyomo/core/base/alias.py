@@ -2,6 +2,7 @@ import weakref
 import logging
 from copy import deepcopy
 
+from pyomo.util.timing import ConstructionTimer
 from pyomo.core.base.component import Component, ComponentData
 
 logger = logging.getLogger('pyomo.core')
@@ -88,7 +89,9 @@ class Alias(Component):
                                  "from data=%s", name, str(data))
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed = True
+        timer.report()
 
     def _pprint(self):
         if self.aliased_object is None:

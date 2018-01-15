@@ -164,3 +164,5 @@ class ComponentMap(collections.MutableMapping):
         else:
             self[key] = default
         return default
+
+

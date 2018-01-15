@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import glob
 import sys
 import os
 import subprocess
@@ -40,17 +41,9 @@ sys.argv = ['dummy', '--trunk', '--source', 'src', '-a', 'pyyaml']
 #
 # Machine-specific configurations
 #
-if hname == "snotra":
-    # Pick up CPLEX
-    _CPLEX = '/opt/ibm/ILOG/CPLEX_Studio126/cplex'
-    if sys.version_info[:2] < (3,0):
-        # Python bindings for 12.6 only support 2.6/2.7
-        sys.argv.append('-a')
-        sys.argv.append(_CPLEX+'/python/x86-64_linux')
-    os.environ['PATH'] += os.pathsep+_CPLEX+'/bin/x86-64_linux'
-    # Pick up the BARON license
-    os.environ['PATH'] += os.pathsep+os.environ['HOME']+'/bin'
-
+#if hname == "snotra":
+#    ### snotra configuration is now handled through local module files
+#
 
 
 if 'LD_LIBRARY_PATH' not in os.environ:
@@ -66,6 +59,12 @@ coverage_omit=','.join([
     os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*']),
     'pyutilib.*',
 ])
+
+pyomo_packages = [
+    'pyomo.%s' % os.path.basename(x) for x in
+    glob.glob(os.path.join(
+            os.environ['WORKSPACE'], 'src', 'pyomo', 'pyomo', '*' ))
+    if os.path.isdir(x) ]
 
 if config == "notests":
     driver.perform_install('pyomo', config='pyomo_all.ini')
@@ -90,14 +89,18 @@ elif config == "core":
     else:
         assert False
     # Test
-    os.environ['TEST_PACKAGES'] = 'checker core environ opt repn scripting solvers util version'
+    os.environ['TEST_PACKAGES'] = ' '.join([
+            'pyomo.checker','pyomo.core','pyomo.environ','pyomo.opt',
+            'pyomo.repn','pyomo.scripting','pyomo.solvers','pyomo.util',
+            'pyomo.version'])
     print("-" * 60)
     print("Performing tests")
     print("-" * 60)
     driver.perform_tests('pyomo', coverage=True, omit=coverage_omit)
 
 elif config == "nonpysp":
-    os.environ['TEST_PACKAGES'] = '-e pysp'
+    os.environ['TEST_PACKAGES'] = ' '.join(
+        x for x in pyomo_packages if x != 'pyomo.pysp' )
     driver.perform_build('pyomo', coverage=True, omit=coverage_omit, config='pyomo_all.ini')
 
 elif config == "parallel":
