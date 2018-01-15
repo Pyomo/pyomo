@@ -3,7 +3,7 @@ Multistart Solver
 
 The multistart solver is used in cases where the objective function is known
 to be non-convex but the global optimum is still desired. It works by running a non-linear
-solver of you choice multiple times at different starting points, and
+solver of your choice multiple times at different starting points, and
 returns the best of the solutions.
 
 
