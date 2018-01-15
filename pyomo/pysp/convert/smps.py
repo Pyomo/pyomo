@@ -367,7 +367,7 @@ def _convert_external_setup_without_cleanup(
                     "The %s annotation was declared "
                     "with explicit entries but no active Constraint "
                     "objects were recovered from those entries."
-                    % (StochasticConstraintBoundsAnnotation.__name__))
+                    % (StochasticConstraintBodyAnnotation.__name__))
         else:
             empty_matrix_annotation = True
             stochastic_matrix_entries = tuple((con,stochastic_matrix.default)

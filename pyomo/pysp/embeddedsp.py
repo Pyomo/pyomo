@@ -671,25 +671,25 @@ class EmbeddedSP(object):
                              "a StochasticObjectiveAnnotation declaration.")
 
         # now add any necessary annotations
-        if sto_obj.has_declarations():
+        if sto_obj.has_declarations:
             assert not hasattr(self.reference_model,
                                ".pyspembeddedsp_stochastic_objective_annotation")
             setattr(self.reference_model,
                     ".pyspembeddedsp_stochastic_objective_annotation",
                     sto_obj)
-        if sto_conbody.has_declarations():
+        if sto_conbody.has_declarations:
             assert not hasattr(self.reference_model,
                                ".pyspembeddedsp_stochastic_constraint_body_annotation")
             setattr(self.reference_model,
                     ".pyspembeddedsp_stochastic_constraint_body_annotation",
                     sto_conbody)
-        if sto_conbounds.has_declarations():
+        if sto_conbounds.has_declarations:
             assert not hasattr(self.reference_model,
                                ".pyspembeddedsp_stochastic_constraint_bounds_annotation")
             setattr(self.reference_model,
                     ".pyspembeddedsp_stochastic_constraint_bounds_annotation",
                     sto_conbounds)
-        if sto_varbounds.has_declarations():
+        if sto_varbounds.has_declarations:
             assert not hasattr(self.reference_model,
                                ".pyspembeddedsp_stochastic_variable_bounds_annotation")
             setattr(self.reference_model,

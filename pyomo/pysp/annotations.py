@@ -55,6 +55,7 @@ class PySP_Annotation(object):
     def default(self):
         return self._default
 
+    @property
     def has_declarations(self):
         return bool(len(self._data) > 0)
 
@@ -70,9 +71,6 @@ class PySP_Annotation(object):
                 % (self.__class__.__name__,
                    (",".join(ctype.__name__ for ctype in self._ctypes)),
                    type(component)))
-
-    def pprint(self, *args, **kwds):
-        self._data.pprint(*args, **kwds)
 
     def expand_entries(self, expand_containers=True):
         """
@@ -113,23 +111,13 @@ class PySP_Annotation(object):
                             _append(obj, component_annotation_value)
                 else:
                     _append(component, component_annotation_value)
-            elif isinstance(component, _BlockData):
-                for ctype in self._ctypes:
-                    if expand_containers:
-                        for obj in component.component_data_objects(
-                                ctype,
-                                active=True,
-                                descend_into=True):
-                            _append(obj, component_annotation_value)
-                    else:
-                        for obj in component.component_data_objects(
-                                ctype,
-                                active=True,
-                                descend_into=True):
-                            _append(obj, component_annotation_value)
-            elif isinstance(component, Block):
-                for index in component:
-                    block = component[index]
+            else:
+                if isinstance(component, _BlockData):
+                    block_list = (component,)
+                else:
+                    isinstance(component, Block)
+                    block_list = (component[index] for index in component)
+                for block in block_list:
                     if block.active:
                         for ctype in self._ctypes:
                             if expand_containers:
@@ -144,13 +132,6 @@ class PySP_Annotation(object):
                                         active=True,
                                         descend_into=True):
                                     _append(obj, component_annotation_value)
-            else:
-                raise TypeError(
-                    "Declarations in annotation type %s must be of types "
-                    "%s or Block. Invalid type: %s"
-                    % (self.__class__.__name__,
-                       (",".join(ctype.__name__ for ctype in self._ctypes)),
-                       type(component)))
 
         return items
 
@@ -374,7 +355,7 @@ class StochasticVariableBoundsAnnotation(PySP_Annotation):
 
     def __init__(self):
         super(StochasticVariableBoundsAnnotation, self).__init__()
-        self._default = (None, (True, True))
+        self._default = (True, True)
 
     def _declare_impl(self, component,  lb=True, ub=True):
         assert lb or ub
