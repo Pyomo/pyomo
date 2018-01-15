@@ -329,7 +329,7 @@ def _convert_external_setup_without_cleanup(
     else:
         assert len(stochastic_rhs) == 1
         stochastic_rhs = stochastic_rhs[0][1]
-        if stochastic_rhs.has_declarations():
+        if stochastic_rhs.has_declarations:
             empty_rhs_annotation = False
             stochastic_rhs_entries = stochastic_rhs.expand_entries()
             stochastic_rhs_entries.sort(
@@ -357,7 +357,7 @@ def _convert_external_setup_without_cleanup(
     else:
         assert len(stochastic_matrix) == 1
         stochastic_matrix = stochastic_matrix[0][1]
-        if stochastic_matrix.has_declarations():
+        if stochastic_matrix.has_declarations:
             empty_matrix_annotation = False
             stochastic_matrix_entries = stochastic_matrix.expand_entries()
             stochastic_matrix_entries.sort(
@@ -894,7 +894,7 @@ def _convert_external_setup_without_cleanup(
             #
             obj_template = "    %s    %s    %.17g\n"
             if stochastic_objective is not None:
-                if stochastic_objective.has_declarations():
+                if stochastic_objective.has_declarations:
                     sorted_values = stochastic_objective.expand_entries()
                     assert len(sorted_values) <= 1
                     if len(sorted_values) == 0:

@@ -249,9 +249,9 @@ def _map_variable_stages(model):
     else:
         assert len(variable_stage_annotation) == 1
         variable_stage_annotation = variable_stage_annotation[0][1]
+
     variable_stage_assignments = ComponentMap(
-        variable_stage_annotation.expand_entries(
-            expand_containers=False))
+        variable_stage_annotation.expand_entries())
     if len(variable_stage_assignments) == 0:
         raise ValueError("At least one variable stage assignment "
                          "is required.")
