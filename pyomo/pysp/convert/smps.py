@@ -31,7 +31,8 @@ from pyomo.core.base.suffix import ComponentMap
 from pyomo.repn import LinearCanonicalRepn
 from pyomo.repn import generate_canonical_repn
 from pyomo.pysp.scenariotree.manager import InvocationType
-from pyomo.pysp.embeddedsp import EmbeddedSP
+from pyomo.pysp.embeddedsp import (EmbeddedSP,
+                                   TableDistribution)
 from pyomo.pysp.annotations import (locate_annotations,
                                     StochasticConstraintBoundsAnnotation,
                                     StochasticConstraintBodyAnnotation,
@@ -1020,7 +1021,8 @@ def convert_external(output_directory,
     if io_options is None:
         io_options = {}
 
-    assert os.path.exists(output_directory)
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory)
 
     scenario_tree = scenario_tree_manager.scenario_tree
 
@@ -1401,7 +1403,9 @@ def convert_embedded(output_directory,
         io_options = {}
 
     import pyomo.environ
-    assert os.path.exists(output_directory)
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory)
+
     assert core_format in ('lp', 'mps')
 
     io_options = dict(io_options)
@@ -1523,7 +1527,7 @@ def convert_embedded(output_directory,
                                    basename+".cor")
     input_files["cor"] = output_filename
     symbols_filename = os.path.join(output_directory,
-                                    basename+".core.symbols")
+                                    basename+".cor.symbols")
     input_files["symbols"] = symbols_filename
     with WriterFactory(core_format) as writer:
         assert 'column_order' not in io_options
@@ -1690,8 +1694,8 @@ def convert_embedded(output_directory,
                 raise ValueError(
                     "Cannot output embedded SP representation for component "
                     "'%s'. The embedded SMPS writer does not yet handle "
-                    "stochastic constraints within nonlinear expressions."
-                    % (con.name))
+                    "stochastic nonlinear expressions. Invalid expression: %s"
+                    % (sp.objective.name, sp.objective.expr))
 
             # sort the variable list by the column ordering
             # so that we have deterministic output
@@ -1700,7 +1704,7 @@ def convert_embedded(output_directory,
             objective_vars.sort(key=lambda x: column_order[x[0]])
             if objective_repn.constant is not None:
                 objective_vars.append(("ONE_VAR_CONSTANT",
-                                                objective_repn.constant))
+                                       objective_repn.constant))
             stochastic_objective_label = symbol_map.byObject[id(sp.objective)]
             for var, varcoef in objective_vars:
                 params = list(sp._collect_mutable_parameters(varcoef).values())
@@ -1718,7 +1722,7 @@ def convert_embedded(output_directory,
                             "variable coefficients within a constraint). The "
                             "parameter '%s' appearing in component '%s' was "
                             "previously encountered in another location in "
-                            "component %s."
+                            "component '%s'."
                             % (sp.objective.name,
                                param.name,
                                sp.objective.name,
@@ -1739,35 +1743,36 @@ def convert_embedded(output_directory,
                             "case where a stochastic data component appears "
                             "in an expression that defines a single variable's "
                             "coefficient. The coefficient for variable '%s' must be "
-                            "exactly set to parameters '%s' in the expression."
+                            "exactly set to parameter '%s' in the expression. Invalid "
+                            "expression: %s"
                             % (sp.objective.name,
-                               (var.name if var != "ONE_VAR_CONSTANT" else "ONE_VAR_CONSTANT"),
-                               paramdata.name))
+                               str(var),
+                               paramdata.name,
+                               varcoef))
 
                     # output the parameter's distribution (provided by the user)
                     distribution = sp.stochastic_data[paramdata]
-                    if type(distribution) is not list:
+                    if type(distribution) is not TableDistribution:
                         # TODO: relax this when we start supporting other distributions
                         #       or add some object oriented components for defining
                         #       them.
-                        raise TypeError(
+                        raise ValueError(
                             "Invalid distribution type '%s' for stochastic "
                             "parameter '%s'. The embedded SMPS writer currently "
-                            "only supports discrete table distributions defined "
-                            "by a list of values or a list of (probability, value) "
-                            "tuples.")
-                    assert len(distribution) > 0
-                    if type(distribution[0]) is not tuple:
-                        uniformp = 1.0/len(distribution)
-                        distribution = [(uniformp, v_) for v_ in distribution]
-                    else:
-                        assert len(distribution[0]) == 2
+                            "only supports discrete table distributions of type "
+                            "pyomo.pysp.embeddedsp.TableDistribution."
+                            % (distribution.__class__.__name__,
+                               paramdata.name))
                     if not isinstance(var, _VarData):
                         assert var == "ONE_VAR_CONSTANT"
                         varlabel = var
                     else:
                         varlabel = symbol_map.byObject[id(var)]
-                    for prob, val in distribution:
+                    assert len(distribution.values) > 0
+                    assert len(distribution.weights) == \
+                        len(distribution.values)
+                    for prob, val in zip(distribution.weights,
+                                         distribution.values):
                         f_sto.write(line_template % (varlabel,
                                                      stochastic_objective_label,
                                                      _no_negative_zero(val),
@@ -1806,8 +1811,8 @@ def convert_embedded(output_directory,
                 raise ValueError(
                     "Cannot output embedded SP representation for component "
                     "'%s'. The embedded SMPS writer does not yet handle "
-                    "stochastic constraints within nonlinear expressions."
-                    % (con.name))
+                    "stochastic nonlinear expressions. Invalid expression: %s"
+                    % (con.name, con.body))
 
             # sort the variable list by the column ordering
             # so that we have deterministic output
@@ -1826,7 +1831,7 @@ def convert_embedded(output_directory,
                 #       that is hard to reproduce because _ConstraintData moves
                 #       this stuff out of the body when it is build (so it won't
                 #       show up in the body canonical repn)
-                for param in sp._collect_mutable_parameters(constraint_repn.constant):
+                for param in sp._collect_mutable_parameters(constraint_repn.constant).values():
                     if param in sp.stochastic_data:
                         raise ValueError(
                             "Cannot output embedded SP representation for component "
@@ -1862,7 +1867,6 @@ def convert_embedded(output_directory,
                 params = list(sp._collect_mutable_parameters(varcoef).values())
                 stochastic_params = [param for param in params
                                      if param in sp.stochastic_data]
-                # NOTE: Be sure to keep track of
                 for param in stochastic_params:
                     if param in stochastic_data_seen:
                         raise ValueError(
@@ -1874,7 +1878,7 @@ def convert_embedded(output_directory,
                             "variable coefficients within a constraint). The "
                             "parameter '%s' appearing in component '%s' was "
                             "previously encountered in another location in "
-                            "component %s."
+                            "component '%s'."
                             % (con.name,
                                param.name,
                                con.name,
@@ -1895,30 +1899,31 @@ def convert_embedded(output_directory,
                             "case where a stochastic data component appears "
                             "in an expression that defines a single variable's "
                             "coefficient. The coefficient for variable '%s' must be "
-                            "exactly set to parameters '%s' in the expression."
+                            "exactly set to parameter '%s' in the expression. Invalid "
+                            "expression: %s"
                             % (con.name,
-                               (var.name if var != "RHS" else "RHS"),
-                               paramdata.name))
+                               str(var),
+                               paramdata.name,
+                               varcoef))
 
                     # output the parameter's distribution (provided by the user)
                     distribution = sp.stochastic_data[paramdata]
-                    if type(distribution) is not list:
+                    if type(distribution) is not TableDistribution:
                         # TODO: relax this when we start supporting other distributions
                         #       or add some object oriented components for defining
                         #       them.
-                        raise TypeError(
+                        raise ValueError(
                             "Invalid distribution type '%s' for stochastic "
                             "parameter '%s'. The embedded SMPS writer currently "
-                            "only supports discrete table distributions defined "
-                            "by a list of values or a list of (probability, value) "
-                            "tuples.")
-                    assert len(distribution) > 0
-                    if type(distribution[0]) is not tuple:
-                        uniformp = 1.0/len(distribution)
-                        distribution = [(uniformp, v_) for v_ in distribution]
-                    else:
-                        assert len(distribution[0]) == 2
-                    for prob, val in distribution:
+                            "only supports discrete table distributions of type "
+                            "pyomo.pysp.embeddedsp.TableDistribution."
+                            % (distribution.__class__.__name__,
+                               paramdata.name))
+                    assert len(distribution.values) > 0
+                    assert len(distribution.weights) == \
+                        len(distribution.values)
+                    for prob, val in zip(distribution.weights,
+                                         distribution.values):
                         f_sto.write(line_template % (varlabel,
                                                      stochastic_constraint_label,
                                                      _no_negative_zero(val),

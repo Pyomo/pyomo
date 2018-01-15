@@ -90,10 +90,11 @@ class TableDistribution(Distribution):
     def __init__(self, values, weights=None):
         if len(values) == 0:
             raise ValueError("Empty tables are not allowed")
-        self.values = values
-        self.weights = weights
-        if self.weights is None:
+        self.values = tuple(values)
+        if weights is None:
             self.weights = [1.0/len(self.values)]*len(self.values)
+        else:
+            self.weights = tuple(weights)
         if len(self.values) != len(self.weights):
             raise ValueError("Different number of weights than values")
         if abs(sum(self.weights) - 1) > 1e-6:

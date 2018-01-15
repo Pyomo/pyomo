@@ -201,8 +201,8 @@ class VariableStageAnnotation(PySP_Annotation):
     non-anticipativity constraints be added when that time
     stage is not the last.
     """
-    _ctypes = (Var,)
-    _ctypes_data = (_VarData,)
+    _ctypes = (Var, Expression)
+    _ctypes_data = (_VarData, _ExpressionData)
 
     def __init__(self):
         super(VariableStageAnnotation, self).__init__()
