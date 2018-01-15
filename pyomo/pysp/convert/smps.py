@@ -1516,7 +1516,7 @@ def convert_embedded(output_directory,
     # initialized with a value)
     param_vals_orig = ComponentMap()
     for paramdata in sp.stochastic_data:
-        param_vals_orig[paramdata] = paramdata.value
+        param_vals_orig[paramdata] = paramdata._value
         paramdata.value = 0
 
     input_files = {}
@@ -1558,9 +1558,8 @@ def convert_embedded(output_directory,
 
     # Reset stochastic parameter to their
     # original setting values
-    param_vals_orig = ComponentMap()
     for paramdata, orig_val in param_vals_orig.items():
-        paramdata.value = orig_val
+        paramdata._value = orig_val
     del param_vals_orig
 
     # Collect constraint symbols and deal with the fact that
