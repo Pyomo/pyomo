@@ -162,5 +162,53 @@ class GAMSTests(unittest.TestCase):
 
             shutil.rmtree(tmpdir)
 
+
+class GAMSTests(unittest.TestCase):
+    """Test class for testing permultations of tee and logfile options.
+
+    The tests build a simple model and solve it using the different options.
+    """
+
+    def setUp(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.c = Constraint(expr= m.x >= 10)
+        m.o = Objective(expr= m.x)
+        self.m = m
+        self.tmpdir = mkdtemp()
+        self.logfile = os.path.join(self.tmpdir, 'logfile.log')
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir)
+
+    @unittest.skipIf(not gamsgms_available,
+                     "The 'gams' executable is not available")
+    def test_tee_gms(self):
+        with SolverFactory("gams", solver_io="gms") as opt:
+            opt.solve(self.m, tee=False)
+            self.assertFalse(os.path.exists(self.logfile))
+
+    @unittest.skipIf(not gamsgms_available,
+                     "The 'gams' executable is not available")
+    def test_no_tee_gms(self):
+        with SolverFactory("gams", solver_io="gms") as opt:
+            opt.solve(self.m, tee=True)
+            self.assertFalse(os.path.exists(self.logfile))
+
+    @unittest.skipIf(not gamsgms_available,
+                     "The 'gams' executable is not available")
+    def test_logfile_gms(self):
+        with SolverFactory("gams", solver_io="gms") as opt:
+            opt.solve(self.m, logfile=self.logfile)
+            self.assertTrue(os.path.exists(self.logfile))
+
+    @unittest.skipIf(not gamsgms_available,
+                     "The 'gams' executable is not available")
+    def test_tee_and_logfile_gms(self):
+        with SolverFactory("gams", solver_io="gms") as opt:
+            opt.solve(self.m, logfile=self.logfile, tee=True)
+            self.assertTrue(os.path.exists(self.logfile))
+
+
 if __name__ == "__main__":
     unittest.main()
