@@ -361,11 +361,8 @@ class CBCSHELL(SystemCallSolver):
                 soln.objective['__default_objective__']['Value'] = float(tokens[2])
             if len(tokens) > 4 and tokens[0] == "Optimal" and tokens[2] == "objective":
                 # parser for log file generetated without discrete variable
-                try:
-                    soln.status = SolutionStatus.optimal
-                    soln.objective['__default_objective__']['Value'] = float(tokens[4])
-                except:
-                    print( "skipped the bad one!")
+                soln.status = SolutionStatus.optimal
+                soln.objective['__default_objective__']['Value'] = float(tokens[4])
             if len(tokens) > 6 and tokens[4] == "best" and tokens[5] == "objective":
                 if tokens[6].endswith(','):
                     tokens[6] = tokens[6][:-1]
