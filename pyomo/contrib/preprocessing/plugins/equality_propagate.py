@@ -10,8 +10,6 @@ from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.canonical_repn import generate_canonical_repn
 from pyomo.util.plugin import alias
 
-__author__ = "Qi Chen <https://github.com/qtothec>"
-
 
 def _build_equality_set(m):
     """Construct an equality set map.
