@@ -95,7 +95,7 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
                 #
                 # The 'chainedInequality' value is None
                 #
-                self.assertIsNone(EXPR.InequalityExpression.chainedInequality)
+                self.assertIsNone(EXPR._chainedInequality.prev)
             else:
                 #
                 # The relational expression may not be constant
@@ -106,14 +106,14 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
                 #
                 # Check that the 'chainedInequality' value is the current expression
                 #
-                self.assertIs(exp,EXPR.InequalityExpression.chainedInequality)
+                self.assertIs(exp,EXPR._chainedInequality.prev)
         finally:
             #
             # TODO: Why would we get here?  Because the expression isn't constant?
             #
             # Check that the 'chainedInequality' value is None
             #
-           EXPR.InequalityExpression.chainedInequality = None
+           EXPR._chainedInequality.prev = None
 
     def test_lt(self):
         #
@@ -1883,8 +1883,8 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.a)
         self.assertIs(e.arg(1), m.b)
-        self.assertEqual(len(e._strict), 1)
-        self.assertEqual(e._strict[0], True)
+        #self.assertEqual(len(e._strict), 1)
+        self.assertEqual(e._strict, True)
 
         #    <=
         #   / \
@@ -1894,8 +1894,8 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.a)
         self.assertIs(e.arg(1), m.b)
-        self.assertEqual(len(e._strict), 1)
-        self.assertEqual(e._strict[0], False)
+        #self.assertEqual(len(e._strict), 1)
+        self.assertEqual(e._strict, False)
 
         #    >
         #   / \
@@ -1905,8 +1905,8 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.b)
         self.assertIs(e.arg(1), m.a)
-        self.assertEqual(len(e._strict), 1)
-        self.assertEqual(e._strict[0], True)
+        #self.assertEqual(len(e._strict), 1)
+        self.assertEqual(e._strict, True)
 
         #    >=
         #   / \
@@ -1916,8 +1916,8 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.b)
         self.assertIs(e.arg(1), m.a)
-        self.assertEqual(len(e._strict), 1)
-        self.assertEqual(e._strict[0], False)
+        #self.assertEqual(len(e._strict), 1)
+        self.assertEqual(e._strict, False)
 
     def test_compoundInequality(self):
         m = self.m
@@ -1927,12 +1927,12 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #    / \
         #   a   b
         e = m.a < m.b < m.c
-        self.assertIs(type(e), EXPR.InequalityExpression)
+        self.assertIs(type(e), EXPR.RangedExpression)
         self.assertEqual(e.nargs(), 3)
         self.assertIs(e.arg(0), m.a)
         self.assertIs(e.arg(1), m.b)
         self.assertIs(e.arg(2), m.c)
-        self.assertEqual(len(e._strict), 2)
+        #self.assertEqual(len(e._strict), 2)
         self.assertEqual(e._strict[0], True)
         self.assertEqual(e._strict[1], True)
 
@@ -1942,12 +1942,12 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #    / \
         #   a   b
         e = m.a <= m.b <= m.c
-        self.assertIs(type(e), EXPR.InequalityExpression)
+        self.assertIs(type(e), EXPR.RangedExpression)
         self.assertEqual(e.nargs(), 3)
         self.assertIs(e.arg(0), m.a)
         self.assertIs(e.arg(1), m.b)
         self.assertIs(e.arg(2), m.c)
-        self.assertEqual(len(e._strict), 2)
+        #self.assertEqual(len(e._strict), 2)
         self.assertEqual(e._strict[0], False)
         self.assertEqual(e._strict[1], False)
 
@@ -1957,12 +1957,12 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #    / \
         #   a   b
         e = m.a > m.b > m.c
-        self.assertIs(type(e), EXPR.InequalityExpression)
+        self.assertIs(type(e), EXPR.RangedExpression)
         self.assertEqual(e.nargs(), 3)
         self.assertIs(e.arg(0), m.c)
         self.assertIs(e.arg(1), m.b)
         self.assertIs(e.arg(2), m.a)
-        self.assertEqual(len(e._strict), 2)
+        #self.assertEqual(len(e._strict), 2)
         self.assertEqual(e._strict[0], True)
         self.assertEqual(e._strict[1], True)
 
@@ -1972,12 +1972,12 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #    / \
         #   a   b
         e = m.a >= m.b >= m.c
-        self.assertIs(type(e), EXPR.InequalityExpression)
+        self.assertIs(type(e), EXPR.RangedExpression)
         self.assertEqual(e.nargs(), 3)
         self.assertIs(e.arg(0), m.c)
         self.assertIs(e.arg(1), m.b)
         self.assertIs(e.arg(2), m.a)
-        self.assertEqual(len(e._strict), 2)
+        #self.assertEqual(len(e._strict), 2)
         self.assertEqual(e._strict[0], False)
         self.assertEqual(e._strict[1], False)
 
@@ -1987,12 +1987,12 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #    / \
         #   0   a
         e = 0 <= m.a < 1
-        self.assertIs(type(e), EXPR.InequalityExpression)
+        self.assertIs(type(e), EXPR.RangedExpression)
         self.assertEqual(e.nargs(), 3)
         self.assertEqual(e.arg(0)(), 0)
         self.assertIs(e.arg(1), m.a)
         self.assertEqual(e.arg(2)(), 1)
-        self.assertEqual(len(e._strict), 2)
+        #self.assertEqual(len(e._strict), 2)
         self.assertEqual(e._strict[0], False)
         self.assertEqual(e._strict[1], True)
 
@@ -2060,8 +2060,8 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e.nargs(), 2)
         self.assertEqual(e.arg(0)(), 1)
         self.assertIs(e.arg(1), m.a)
-        self.assertEqual(len(e._strict), 1)
-        self.assertEqual(e._strict[0], True)
+        #self.assertEqual(len(e._strict), 1)
+        self.assertEqual(e._strict, True)
 
     def test_eval_compoundInequality(self):
         #
@@ -2071,18 +2071,18 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         m.x = Var(initialize=0)
 
         self.assertTrue( 0 <= m.x <= 0 )
-        self.assertIsNone(EXPR.InequalityExpression.chainedInequality)
+        self.assertIsNone(EXPR._chainedInequality.prev)
         self.assertFalse( 1 <= m.x <= 1 )
-        self.assertIsNone(EXPR.InequalityExpression.chainedInequality)
+        self.assertIsNone(EXPR._chainedInequality.prev)
         self.assertFalse( -1 <= m.x <= -1 )
-        self.assertIsNone(EXPR.InequalityExpression.chainedInequality)
+        self.assertIsNone(EXPR._chainedInequality.prev)
 
         self.assertTrue( 0 <= m.x <= 1 )
-        self.assertIsNone(EXPR.InequalityExpression.chainedInequality)
+        self.assertIsNone(EXPR._chainedInequality.prev)
         self.assertFalse( 1 <= m.x <= 2 )
-        self.assertIsNone(EXPR.InequalityExpression.chainedInequality)
+        self.assertIsNone(EXPR._chainedInequality.prev)
         self.assertTrue( -1 <= m.x <= 0 )
-        self.assertIsNone(EXPR.InequalityExpression.chainedInequality)
+        self.assertIsNone(EXPR._chainedInequality.prev)
 
     def test_compoundInequality_errors(self):
         #
@@ -2136,7 +2136,7 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #
         # Confirm error when 
         self.assertTrue(m.x <= 0)
-        self.assertIsNotNone(EXPR.InequalityExpression.chainedInequality)
+        self.assertIsNotNone(EXPR._chainedInequality.prev)
         try:
             m.x == 5
             self.fail("expected construction of relational expression to "
@@ -2147,7 +2147,7 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
                 str(e) )
 
         self.assertTrue(m.x <= 0)
-        self.assertIsNotNone(EXPR.InequalityExpression.chainedInequality)
+        self.assertIsNotNone(EXPR._chainedInequality.prev)
         try:
             m.x*2 <= 5
             self.fail("expected construction of relational expression to "
@@ -2161,7 +2161,7 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         # Error because expression is being detected in an unusual context
         #
         self.assertTrue(m.x <= 0)
-        self.assertIsNotNone(EXPR.InequalityExpression.chainedInequality)
+        self.assertIsNotNone(EXPR._chainedInequality.prev)
         try:
             m.x <= 0
             self.fail("expected construction of relational expression to "
@@ -2193,24 +2193,20 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
             #
             # Check error with more than two inequalities
             #
-            self.assertRaisesRegexp(ValueError, "InequalityExpression .*"
-                                   "more than 3 terms",
-                                   e.__lt__, m.c)
-            self.assertRaisesRegexp(ValueError, "InequalityExpression .*"
-                                   "more than 3 terms",
-                                   e.__gt__, m.c)
+            self.assertRaisesRegexp(TypeError, "Cannot create an InequalityExpression where one of the sub-expressions is an equality or ranged expression:.*", e.__lt__, m.c)
+            self.assertRaisesRegexp(TypeError, "Cannot create an InequalityExpression where one of the sub-expressions is an equality or ranged expression:.*", e.__gt__, m.c)
 
             #
             # Check error when both expressions are relational
             #
             self.assertRaisesRegexp(TypeError, "InequalityExpression .*"
-                                   "both sub-expressions are also relational",
+                                   "one of the sub-expressions is an equality or ranged expression",
                                    e.__lt__, m.a < m.b)
             self.assertRaisesRegexp(TypeError, "InequalityExpression .*"
-                                   "sub-expressions is an equality",
+                                   "one of the sub-expressions is an equality or ranged expression",
                                    m.a.__lt__, e1)
             self.assertRaisesRegexp(TypeError, "InequalityExpression .*"
-                                   "sub-expressions is an equality",
+                                   "one of the sub-expressions is an equality or ranged expression",
                                    m.a.__gt__, e1)
         else:
             self.assertRaises(TypeError, m.a.__lt__, m.x)
@@ -2241,12 +2237,12 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         try:
             e < m.c
             self.fail("expected 4-term inequality to raise ValueError")
-        except ValueError:
+        except TypeError:
             pass
         try:
             m.c < e
             self.fail("expected 4-term inequality to raise ValueError")
-        except ValueError:
+        except TypeError:
             pass
         try:
             e1 = m.a < m.b
@@ -2948,7 +2944,7 @@ class TestExprConditionalContext(unittest.TestCase):
 
     def tearDown(self):
         # Make sure errors here don't bleed over to other tests
-        EXPR.InequalityExpression.chainedInequality = None
+        EXPR._chainedInequality.prev = None
 
     def checkCondition(self, expr, expectedValue):
         try:
@@ -2966,7 +2962,7 @@ class TestExprConditionalContext(unittest.TestCase):
             if expectedValue is not None:
                 raise
         finally:
-            EXPR.InequalityExpression.chainedInequality = None
+            EXPR._chainedInequality.prev = None
 
     def test_immutable_paramConditional(self):
         model = AbstractModel()

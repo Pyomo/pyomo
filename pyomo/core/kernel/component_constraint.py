@@ -530,8 +530,8 @@ class constraint(_MutableBoundsConstraintMixin,
         # user did ( var < 1 > 0 ) (which also results in a non-None
         # chainedInequality value)
         #
-        if EXPR.InequalityExpression.chainedInequality is not None:
-            raise TypeError(EXPR.chainedInequalityErrorMessage())
+        if EXPR._chainedInequality.prev is not None:
+            raise TypeError(EXPR._chainedInequality.error_message())
         #
         # Process relational expressions
         # (i.e. explicit '==', '<', and '<=')
@@ -550,69 +550,59 @@ class constraint(_MutableBoundsConstraintMixin,
                     self.rhs = ZeroConstant
                     self.body = expr.arg(0)
                     self.body -= expr.arg(1)
-            else:
-                # Inequality expression: 2 or 3 arguments
+
+            elif _expr_type is EXPR.InequalityExpression:
                 if expr._strict:
-                    try:
-                        _strict = any(expr._strict)
-                    except:
-                        _strict = True
-                    if _strict:
-                        #
-                        # We can relax this when:
-                        #   (a) we have a need for this
-                        #   (b) we have problem writer that
-                        #       explicitly handles this
-                        #   (c) we make sure that all problem writers
-                        #       that don't handle this make it known
-                        #       to the user through an error or
-                        #       warning
-                        #
-                        raise ValueError(
-                            "Constraint '%s' encountered a strict "
-                            "inequality expression ('>' or '<'). All"
-                            " constraints must be formulated using "
-                            "using '<=', '>=', or '=='."
-                            % (self.name))
+                    raise ValueError(
+                        "Constraint '%s' encountered a strict "
+                        "inequality expression ('>' or '<'). All"
+                        " constraints must be formulated using "
+                        "using '<=', '>=', or '=='."
+                        % (self.name))
 
-                if expr.nargs() == 3:
-
-                    if expr.arg(0).is_potentially_variable():
-                        raise ValueError(
-                            "Constraint '%s' found a double-sided "
-                            "inequality expression (lower <= "
-                            "expression <= upper) but the lower "
-                            "bound was not data or an expression "
-                            "restricted to storage of data."
-                            % (self.name))
-                    if expr.arg(2).is_potentially_variable():
-                        raise ValueError(
-                            "Constraint '%s' found a double-sided "\
-                            "inequality expression (lower <= "
-                            "expression <= upper) but the upper "
-                            "bound was not data or an expression "
-                            "restricted to storage of data."
-                            % (self.name))
-
+                if not expr.arg(1).is_potentially_variable():
+                    self.lb = None
+                    self.body  = expr.arg(0)
+                    self.ub = expr.arg(1)
+                elif not expr.arg(0).is_potentially_variable():
                     self.lb = expr.arg(0)
                     self.body  = expr.arg(1)
-                    self.ub = expr.arg(2)
-
+                    self.ub = None
                 else:
+                    self.lb = None
+                    self.body  = expr.arg(0)
+                    self.body -= expr.arg(1)
+                    self.ub = ZeroConstant
 
-                    if not expr.arg(1).is_potentially_variable():
-                        self.lb = None
-                        self.body  = expr.arg(0)
-                        self.ub = expr.arg(1)
-                    elif not expr.arg(0).is_potentially_variable():
-                        self.lb = expr.arg(0)
-                        self.body  = expr.arg(1)
-                        self.ub = None
-                    else:
-                        self.lb = None
-                        self.body  = expr.arg(0)
-                        self.body -= expr.arg(1)
-                        self.ub = ZeroConstant
+            else:   # RangedExpression
+                if any(expr._strict):
+                    raise ValueError(
+                        "Constraint '%s' encountered a strict "
+                        "inequality expression ('>' or '<'). All"
+                        " constraints must be formulated using "
+                        "using '<=', '>=', or '=='."
+                        % (self.name))
+
+                if expr.arg(0).is_potentially_variable():
+                    raise ValueError(
+                        "Constraint '%s' found a double-sided "
+                        "inequality expression (lower <= "
+                        "expression <= upper) but the lower "
+                        "bound was not data or an expression "
+                        "restricted to storage of data."
+                        % (self.name))
+                if expr.arg(2).is_potentially_variable():
+                    raise ValueError(
+                        "Constraint '%s' found a double-sided "\
+                        "inequality expression (lower <= "
+                        "expression <= upper) but the upper "
+                        "bound was not data or an expression "
+                        "restricted to storage of data."
+                        % (self.name))
+
+                self.lb = expr.arg(0)
+                self.body  = expr.arg(1)
+                self.ub = expr.arg(2)
 
         #
         # Replace numeric bound values with a NumericConstant object,
