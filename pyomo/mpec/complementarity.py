@@ -48,15 +48,14 @@ class _ComplementarityData(_BlockData):
             else:
                 _e = ( ZeroConstant, e.arg(0) - e.arg(1))
         elif e.__class__ is EXPR.InequalityExpression:
-            if e.nargs() == 3:
-                _e = (e.arg(0), e.arg(1), e.arg(2))
+            if e.arg(1).is_fixed():
+                _e = (None, e.arg(0), e.arg(1))
+            elif e.arg(0).is_fixed():
+                _e = (e.arg(0), e.arg(1), None)
             else:
-                if e.arg(1).is_fixed():
-                    _e = (None, e.arg(0), e.arg(1))
-                elif e.arg(0).is_fixed():
-                    _e = (e.arg(0), e.arg(1), None)
-                else:
-                    _e = ( ZeroConstant, e.arg(1) - e.arg(0), None )
+                _e = ( ZeroConstant, e.arg(1) - e.arg(0), None )
+        elif e.__class__ is EXPR.RangedExpression:
+                _e = (e.arg(0), e.arg(1), e.arg(2))
         else:
             _e = (None, e, None)
         return _e
