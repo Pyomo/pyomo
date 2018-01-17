@@ -127,7 +127,7 @@ class TestMisc(unittest.TestCase):
         b.eu = data_expression(b.p**2 + 10)
         b.el = data_expression(-b.p**2 - 10)
         b.o = objective(b.v + b.y)
-        b.c1 = constraint(b.el + 1 <= b.e + 2 <= b.eu + 2)
+        b.c1 = constraint((b.el + 1, b.e + 2, b.eu + 2))
         b.c2 = constraint(lb=b.el, body=b.v)
         b.c3 = constraint(body=b.v, ub=b.eu)
 
@@ -262,7 +262,7 @@ class TestMisc(unittest.TestCase):
         b.eu = data_expression(b.p**2 + 10)
         b.el = data_expression(-b.p**2 - 10)
         b.o = objective(b.v + b.y)
-        b.c1 = constraint(b.el + 1 <= b.e + 2 <= b.eu + 2)
+        b.c1 = constraint((b.el + 1, b.e + 2, b.eu + 2))
         b.c2 = constraint(lb=b.el, body=b.v)
         b.c3 = constraint(body=b.v, ub=b.eu)
         b.dual = suffix(direction=suffix.IMPORT)
@@ -508,7 +508,7 @@ class TestMisc(unittest.TestCase):
         b.cdict = constraint_dict(((i, constraint(b.vdict[i] == i))
                                   for i in b.vdict),
                                   ordered=True)
-        b.clist = constraint_list(constraint(0 <= v_ <= i)
+        b.clist = constraint_list(constraint((0, v_, i))
                                   for i, v_ in enumerate(b.vlist))
         b.p = parameter()
         b.pdict = parameter_dict(((i, parameter(i))
