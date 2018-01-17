@@ -36,7 +36,7 @@ class Test(unittest.TestCase):
             if i == 1:
                 return model.x <= 2
             elif i == 2:
-                return 3 <= model.x <= 4
+                return (3, model.x, 4)
             else:
                 return model.x == 5
         model.c2 = Constraint(model.A, rule=c2_)
