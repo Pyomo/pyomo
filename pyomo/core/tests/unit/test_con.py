@@ -321,17 +321,17 @@ class TestConstraintCreation(unittest.TestCase):
         model.e2 = Expression()
         model.e3 = Expression()
         with self.assertRaises(ValueError):
-            model.c.set_value(model.e1 <= model.e2 <= model.e3)
+            model.c.set_value((model.e1, model.e2, model.e3))
         model.e1.expr = 1.0
         model.e2.expr = 1.0
         model.e3.expr = 1.0
         with self.assertRaises(ValueError):
-            model.c.set_value(model.e1 <= model.e2 <= model.e3)
+            model.c.set_value((model.e1, model.e2, model.e3))
         model.p1 = Param(mutable=True)
         model.p2 = Param(mutable=True)
-        model.c.set_value(model.p1 <= model.e1 <= model.p2)
+        model.c.set_value((model.p1, model.e1, model.p2))
         model.e1.expr = None
-        model.c.set_value(model.p1 <= model.e1 <= model.p2)
+        model.c.set_value((model.p1, model.e1, model.p2))
 
     # make sure we can use a mutable param that
     # has not been given a value in the upper bound
@@ -363,7 +363,7 @@ class TestConstraintCreation(unittest.TestCase):
         self.assertEqual(model.c.equality, False)
         model.del_component(model.c)
 
-        model.c = Constraint(expr=model.p <= model.x <= model.p + 1)
+        model.c = Constraint(expr=(model.p, model.x, model.p + 1))
         self.assertEqual(model.c.equality, False)
         model.del_component(model.c)
 
@@ -385,10 +385,6 @@ class TestConstraintCreation(unittest.TestCase):
         model.del_component(model.c)
 
         model.c = Constraint(expr=model.x >= (model.p + 1)**2)
-        self.assertEqual(model.c.equality, False)
-        model.del_component(model.c)
-
-        model.c = Constraint(expr=model.p + 1 >= model.x >= model.p)
         self.assertEqual(model.c.equality, False)
         model.del_component(model.c)
 
@@ -439,7 +435,7 @@ class TestConstraintCreation(unittest.TestCase):
         self.assertEqual(model.c.equality, False)
         model.del_component(model.c)
 
-        model.c = Constraint(expr=model.p + 1 <= model.x <= model.p)
+        model.c = Constraint(expr=(model.p + 1, model.x, model.p))
         self.assertEqual(model.c.equality, False)
         model.del_component(model.c)
 
@@ -461,10 +457,6 @@ class TestConstraintCreation(unittest.TestCase):
         model.del_component(model.c)
 
         model.c = Constraint(expr=(model.p + 1)**2 >= model.x)
-        self.assertEqual(model.c.equality, False)
-        model.del_component(model.c)
-
-        model.c = Constraint(expr=model.p >= model.x >= model.p + 1)
         self.assertEqual(model.c.equality, False)
         model.del_component(model.c)
 
@@ -583,7 +575,7 @@ class TestSimpleCon(unittest.TestCase):
         model = ConcreteModel()
         model.A = RangeSet(1,4)
         model.x = Var(model.A,initialize=2)
-        model.c = Constraint(expr=0 <= sum(model.x[i] for i in model.A) <= 1)
+        model.c = Constraint(expr=(0, sum(model.x[i] for i in model.A), 1))
 
         self.assertEqual(model.c(), 8)
         self.assertEqual(value(model.c.body), 8)
@@ -613,7 +605,7 @@ class TestSimpleCon(unittest.TestCase):
             ans=0
             for i in model.B:
                 ans = ans + model.x[i]
-            return (0,ans,1)
+            return (0, ans, 1)
         model.x = Var(model.B, initialize=2)
         model.c = Constraint(rule=f)
 
@@ -628,7 +620,7 @@ class TestSimpleCon(unittest.TestCase):
             ans=0
             for i in model.B:
                 ans = ans + model.x[i]
-            return (0,ans,None)
+            return (0, ans, None)
         model.x = Var(model.B, initialize=2)
         model.c = Constraint(rule=f)
 
@@ -643,7 +635,7 @@ class TestSimpleCon(unittest.TestCase):
             ans=0
             for i in model.B:
                 ans = ans + model.x[i]
-            return (None,ans,1)
+            return (None, ans, 1)
         model.x = Var(model.B, initialize=2)
         model.c = Constraint(rule=f)
 
@@ -658,7 +650,7 @@ class TestSimpleCon(unittest.TestCase):
             ans=0
             for i in model.B:
                 ans = ans + model.x[i]
-            return (ans,1)
+            return (ans, 1)
         model.x = Var(model.B, initialize=2)
         model.c = Constraint(rule=f)
 
@@ -1075,7 +1067,7 @@ class MiscConTests(unittest.TestCase):
         model.cU = Constraint(expr=model.x**2 <= U)
         self.assertEqual(model.cU.lslack(), float('-inf'))
         self.assertEqual(model.cU.uslack(), 1.0)
-        model.cR = Constraint(expr=L <= model.x**2 <= U)
+        model.cR = Constraint(expr=(L, model.x**2, U))
         self.assertEqual(model.cR.lslack(), 5.0)
         self.assertEqual(model.cR.uslack(), 1.0)
 
@@ -1148,7 +1140,7 @@ class MiscConTests(unittest.TestCase):
             pass
         x = Var(initialize=1.0)
         x.construct()
-        a.set_value(2 >= x >= 0)
+        a.set_value((0, x, 2))
         self.assertEqual(len(a), 1)
         self.assertEqual(a(), 1)
         self.assertEqual(a.body(), 1)
@@ -1200,7 +1192,7 @@ class MiscConTests(unittest.TestCase):
         x = Var(initialize=1.0)
         x.construct()
         a.construct()
-        a.set_value(2 >= x >= 0)
+        a.set_value((0, x, 2))
         self.assertEqual(len(a), 1)
         self.assertEqual(a(), 1)
         self.assertEqual(a.body(), 1)
@@ -1398,6 +1390,14 @@ class MiscConTests(unittest.TestCase):
         self.assertRaises(ValueError, model.create_instance)
         #
         def rule1(model):
+            expr = model.x <= model.L
+            return expr
+        model = ConcreteModel()
+        model.x = Var()
+        model.L = Param(initialize=0)
+        model.o = Constraint(rule=rule1)
+        #
+        def rule1(model):
             expr = model.y >= model.x
             expr = model.y <= expr
             return expr
@@ -1406,15 +1406,6 @@ class MiscConTests(unittest.TestCase):
         model.y = Var()
         model.o = Constraint(rule=rule1)
         self.assertRaises(ValueError, model.create_instance)
-        #
-        def rule1(model):
-            expr = model.x <= model.L
-            return expr
-        model = ConcreteModel()
-        model.x = Var()
-        model.L = Param(initialize=0)
-        model.o = Constraint(rule=rule1)
-
         #
         def rule1(model):
             expr = model.U <= model.x
