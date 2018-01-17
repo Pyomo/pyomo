@@ -48,9 +48,9 @@ class LP_simple(_BaseTestModel):
         model.obj = Objective(expr=model.p + model.inactive_obj)
 
         model.c1 = Constraint(expr=model.dummy_expr1 <= model.dummy_expr2)
-        model.c2 = Constraint(expr=2.0 <= model.x/model.a3 - model.y <= 10)
-        model.c3 = Constraint(expr=0 <= model.z1 + 1 <= 10)
-        model.c4 = Constraint(expr=-10 <= model.z2 + 1 <= 0)
+        model.c2 = Constraint(expr=(2.0, model.x/model.a3 - model.y, 10))
+        model.c3 = Constraint(expr=(0, model.z1 + 1, 10))
+        model.c4 = Constraint(expr=(-10, model.z2 + 1, 0))
 
     def warmstart_model(self):
         assert self.model is not None
@@ -86,6 +86,6 @@ class LP_simple_kernel(LP_simple):
         model.obj = pmo.objective(model.p + model.inactive_obj)
 
         model.c1 = pmo.constraint(model.dummy_expr1 <= pmo.noclone(model.dummy_expr2))
-        model.c2 = pmo.constraint(2.0 <= model.x/model.a3 - model.y <= 10)
-        model.c3 = pmo.constraint(0 <= model.z1 + 1 <= 10)
-        model.c4 = pmo.constraint(-10 <= model.z2 + 1 <= 0)
+        model.c2 = pmo.constraint((2.0, model.x/model.a3 - model.y, 10))
+        model.c3 = pmo.constraint((0, model.z1 + 1, 10))
+        model.c4 = pmo.constraint((-10, model.z2 + 1, 0))
