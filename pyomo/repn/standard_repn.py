@@ -755,6 +755,7 @@ _repn_collectors = {
     EXPR.NegationExpression                     : _collect_negation,
     EXPR.LinearExpression                       : _collect_linear,
     EXPR.InequalityExpression                   : _collect_comparison,
+    EXPR.RangedExpression                       : _collect_comparison,
     EXPR.EqualityExpression                     : _collect_comparison,
     EXPR.ExternalFunctionExpression             : _collect_external_fn,
     #EXPR.LinearViewSumExpression               : _collect_linear_sum,

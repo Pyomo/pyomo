@@ -548,27 +548,34 @@ class ProblemWriter_nl(AbstractProblemWriter):
             elif exp_type is EXPR.InequalityExpression:
                 and_str, lt_str, le_str = \
                     self._op_string[EXPR.InequalityExpression]
-                len_args = exp.nargs()
-                assert len_args in [2,3]
+                left = exp.arg(0)
+                right = exp.arg(1)
+                if exp._strict:
+                    OUTPUT.write(lt_str)
+                else:
+                    OUTPUT.write(le_str)
+                self._print_nonlinear_terms_NL(left)
+                self._print_nonlinear_terms_NL(right)
+
+            elif exp_type is EXPR.RangedExpression:
+                and_str, lt_str, le_str = \
+                    self._op_string[EXPR.InequalityExpression]
                 left = exp.arg(0)
                 middle = exp.arg(1)
-                right = None
-                if len_args == 3:
-                    right = exp.arg(2)
-                    OUTPUT.write(and_str)
+                right = exp.arg(2)
+                OUTPUT.write(and_str)
                 if exp._strict[0]:
                     OUTPUT.write(lt_str)
                 else:
                     OUTPUT.write(le_str)
                 self._print_nonlinear_terms_NL(left)
                 self._print_nonlinear_terms_NL(middle)
-                if not right is None:
-                    if exp._strict[1]:
-                        OUTPUT.write(lt_str)
-                    else:
-                        OUTPUT.write(le_str)
-                    self._print_nonlinear_terms_NL(middle)
-                    self._print_nonlinear_terms_NL(right)
+                if exp._strict[1]:
+                    OUTPUT.write(lt_str)
+                else:
+                    OUTPUT.write(le_str)
+                self._print_nonlinear_terms_NL(middle)
+                self._print_nonlinear_terms_NL(right)
 
             elif exp_type is EXPR.EqualityExpression:
                 OUTPUT.write(self._op_string[EXPR.EqualityExpression])
