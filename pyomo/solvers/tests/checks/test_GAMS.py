@@ -163,13 +163,15 @@ class GAMSTests(unittest.TestCase):
             shutil.rmtree(tmpdir)
 
 
-class GAMSTests(unittest.TestCase):
+@unittest.skipIf(not gamsgms_available, "The 'gams' executable is not available")
+class GAMSLogfileTests(unittest.TestCase):
     """Test class for testing permultations of tee and logfile options.
 
     The tests build a simple model and solve it using the different options.
     """
 
     def setUp(self):
+        """Set up model and temporary directory."""
         m = ConcreteModel()
         m.x = Var()
         m.c = Constraint(expr= m.x >= 10)
@@ -179,31 +181,24 @@ class GAMSTests(unittest.TestCase):
         self.logfile = os.path.join(self.tmpdir, 'logfile.log')
 
     def tearDown(self):
+        """Clean up temporary directory after tests are over."""
         shutil.rmtree(self.tmpdir)
 
-    @unittest.skipIf(not gamsgms_available,
-                     "The 'gams' executable is not available")
     def test_tee_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
             opt.solve(self.m, tee=False)
             self.assertFalse(os.path.exists(self.logfile))
 
-    @unittest.skipIf(not gamsgms_available,
-                     "The 'gams' executable is not available")
     def test_no_tee_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
             opt.solve(self.m, tee=True)
             self.assertFalse(os.path.exists(self.logfile))
 
-    @unittest.skipIf(not gamsgms_available,
-                     "The 'gams' executable is not available")
     def test_logfile_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
             opt.solve(self.m, logfile=self.logfile)
             self.assertTrue(os.path.exists(self.logfile))
 
-    @unittest.skipIf(not gamsgms_available,
-                     "The 'gams' executable is not available")
     def test_tee_and_logfile_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
             opt.solve(self.m, logfile=self.logfile, tee=True)
