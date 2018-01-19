@@ -15,7 +15,7 @@ from collections import namedtuple
 
 from pyomo.util.timing import ConstructionTimer
 from pyomo.core.expr import current as EXPR
-from pyomo.core.expr.numvalue import ZeroConstant, _sub
+from pyomo.core.expr.numvalue import ZeroConstant, _sub, native_numeric_types
 from pyomo.core import *
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.block import _BlockData
@@ -111,9 +111,9 @@ class _ComplementarityData(_BlockData):
             self.c._type = 1
         #
         if not _e1[0] is None and not _e1[2] is None:
-            if not _e1[0].is_constant():
+            if not (_e1[0].__class__ in native_numeric_types or _e1[0].is_constant()):
                 raise RuntimeError("Cannot express a complementarity problem of the form L < v < U _|_ g(x) where L is not a constant value")
-            if not _e1[2].is_constant():
+            if not (_e1[2].__class__ in native_numeric_types or _e1[2].is_constant()):
                 raise RuntimeError("Cannot express a complementarity problem of the form L < v < U _|_ g(x) where U is not a constant value")
             self.v = Var(bounds=(_e1[0], _e1[2]))
             self.ve = Constraint(expr=self.v == _e1[1])
