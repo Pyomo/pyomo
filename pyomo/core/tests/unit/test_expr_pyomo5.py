@@ -1926,7 +1926,7 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #     <   c
         #    / \
         #   a   b
-        e = m.a < m.b < m.c
+        e = inequality(m.a, m.b, m.c, strict=True)
         self.assertIs(type(e), EXPR.RangedExpression)
         self.assertEqual(e.nargs(), 3)
         self.assertIs(e.arg(0), m.a)
@@ -1941,7 +1941,7 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #     <=  c
         #    / \
         #   a   b
-        e = m.a <= m.b <= m.c
+        e = inequality(m.a, m.b, m.c)
         self.assertIs(type(e), EXPR.RangedExpression)
         self.assertEqual(e.nargs(), 3)
         self.assertIs(e.arg(0), m.a)
@@ -1956,12 +1956,12 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #     >   c
         #    / \
         #   a   b
-        e = m.a > m.b > m.c
+        e = inequality(upper=m.c, body=m.b, lower=m.a, strict=True)
         self.assertIs(type(e), EXPR.RangedExpression)
         self.assertEqual(e.nargs(), 3)
-        self.assertIs(e.arg(0), m.c)
+        self.assertIs(e.arg(2), m.c)
         self.assertIs(e.arg(1), m.b)
-        self.assertIs(e.arg(2), m.a)
+        self.assertIs(e.arg(0), m.a)
         #self.assertEqual(len(e._strict), 2)
         self.assertEqual(e._strict[0], True)
         self.assertEqual(e._strict[1], True)
@@ -1971,97 +1971,40 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #     >=  c
         #    / \
         #   a   b
-        e = m.a >= m.b >= m.c
+        e = inequality(upper=m.c, body=m.b, lower=m.a)
         self.assertIs(type(e), EXPR.RangedExpression)
         self.assertEqual(e.nargs(), 3)
-        self.assertIs(e.arg(0), m.c)
+        self.assertIs(e.arg(2), m.c)
         self.assertIs(e.arg(1), m.b)
-        self.assertIs(e.arg(2), m.a)
+        self.assertIs(e.arg(0), m.a)
         #self.assertEqual(len(e._strict), 2)
         self.assertEqual(e._strict[0], False)
         self.assertEqual(e._strict[1], False)
 
-        #       <
-        #      / \
-        #     <=  1
-        #    / \
-        #   0   a
-        e = 0 <= m.a < 1
-        self.assertIs(type(e), EXPR.RangedExpression)
-        self.assertEqual(e.nargs(), 3)
-        self.assertEqual(e.arg(0)(), 0)
-        self.assertIs(e.arg(1), m.a)
-        self.assertEqual(e.arg(2)(), 1)
-        #self.assertEqual(len(e._strict), 2)
-        self.assertEqual(e._strict[0], False)
-        self.assertEqual(e._strict[1], True)
-
         #       <=
         #      / \
         #     <=  0
         #    / \
         #   0   a
-        e = 0 <= m.a <= 0
+        e = inequality(0, m.a, 0)
         self.assertIs(type(e), EXPR.EqualityExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.a)
-        self.assertEqual(e.arg(1)(), 0)
-
-        #       >=
-        #      / \
-        #     >=  0
-        #    / \
-        #   0   a
-        e = 0 >= m.a >= 0
-        self.assertIs(type(e), EXPR.EqualityExpression)
-        self.assertEqual(e.nargs(), 2)
-        self.assertEqual(e.arg(0)(), 0)
-        self.assertIs(e.arg(1), m.a)
-
-        #       <=
-        #      / \
-        #     <   0
-        #    / \
-        #   0   a
-        try:
-            0 < m.a <= 0
-            self.fail("expected construction of invalid compound inequality: "
-                      "combining strict and nonstrict relationships in an "
-                      "implicit equality.")
-        except TypeError as e:
-            self.assertIn(
-                "Cannot create a compound inequality with identical upper and "
-                "lower bounds using strict inequalities",
-                re.sub('\s+',' ',str(e)) )
+        self.assertEqual(e.arg(1), 0)
 
         #       <
         #      / \
-        #     <=  0
+        #     <  0
         #    / \
         #   0   a
         try:
-            0 <= m.a < 0
+            inequality(0, m.a, 0, True)
             self.fail("expected construction of invalid compound inequality: "
-                      "combining strict and nonstrict relationships in an "
-                      "implicit equality.")
-        except TypeError as e:
+                      "an equality expression with strict inequalities.")
+        except ValueError as e:
             self.assertIn(
-                "Cannot create a compound inequality with identical upper and "
-                "lower bounds using strict inequalities",
+                "Invalid equality expression with strict inequalities.",
                 re.sub('\s+',' ',str(e)) )
-
-        #       <
-        #      / \
-        #     <=  a
-        #    / \
-        #   0   1
-        e = 0 <= 1 < m.a
-        self.assertIs(type(e), EXPR.InequalityExpression)
-        self.assertEqual(e.nargs(), 2)
-        self.assertEqual(e.arg(0)(), 1)
-        self.assertIs(e.arg(1), m.a)
-        #self.assertEqual(len(e._strict), 1)
-        self.assertEqual(e._strict, True)
 
     def test_eval_compoundInequality(self):
         #
