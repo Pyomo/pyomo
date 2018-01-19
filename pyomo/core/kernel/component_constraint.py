@@ -140,7 +140,7 @@ class IConstraint(IComponent, _ActiveComponentMixin):
                 return body_expr <= self.ub
             elif self.ub is None:
                 return self.lb <= body_expr
-            return self.lb <= body_expr <= self.ub
+            return EXPR.RangedExpression((self.lb, body_expr, self.ub), (False,False))
 
     @property
     def bounds(self):
