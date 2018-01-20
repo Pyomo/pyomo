@@ -24,6 +24,7 @@ from pyomo.core.expr.numvalue import (ZeroConstant,
                                       as_numeric,
                                       is_constant,
                                       _sub)
+from pyomo.core.base.plugin import register_component
 from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import \
     ( ActiveIndexedComponent,

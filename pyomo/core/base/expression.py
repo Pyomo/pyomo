@@ -17,8 +17,8 @@ from weakref import ref as weakref_ref
 from pyomo.util.timing import ConstructionTimer
 
 from pyomo.core.expr import current as EXPR
-from pyomo.core.base.component import (ComponentData,
-                                       register_component)
+from pyomo.core.base.component import ComponentData
+from pyomo.core.base.plugin import register_component
 from pyomo.core.base.indexed_component import (
     IndexedComponent,
     UnindexedComponent_set, )

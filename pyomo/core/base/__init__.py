@@ -40,6 +40,7 @@ from pyomo.core.base.set_types import *
 from pyomo.core.base.misc import *
 from pyomo.core.base.block import *
 from pyomo.core.base.PyomoModel import *
+from pyomo.core.base.plugin import *
 #
 import pyomo.core.base._pyomo
 #
