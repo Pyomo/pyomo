@@ -307,12 +307,11 @@ class TestExpression_Intrinsic(unittest.TestCase):
 
     def test_abs_param(self):
         m = ConcreteModel()
-        m.p = Param(initialize=0)
-        m.p.value = 1.5
+        m.p = Param(initialize=1.5)
         e = abs(m.p)
         self.assertAlmostEqual(value(e), 1.5)
-        m.p.value = -1.5
-        e = abs(m.p)
+        m.q = Param(initialize=-1.5)
+        e = abs(m.q)
         self.assertAlmostEqual(value(e), 1.5)
 
     def test_abs_mutableparam(self):
@@ -334,12 +333,11 @@ class TestExpression_Intrinsic(unittest.TestCase):
 
     def test_ceil_param(self):
         m = ConcreteModel()
-        m.p = Param(initialize=0)
-        m.p.value = 1.5
+        m.p = Param(initialize=1.5)
         e = ceil(m.p)
         self.assertAlmostEqual(value(e), 2.0)
-        m.p.value = -1.5
-        e = ceil(m.p)
+        m.q = Param(initialize=-1.5)
+        e = ceil(m.q)
         self.assertAlmostEqual(value(e), -1.0)
 
     def test_ceil_mutableparam(self):
@@ -1089,7 +1087,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #
         m = ConcreteModel()
         m.a = Var()
-        m.p = Param()
+        m.p = Param(mutable=True)
 
         # a - 0
         e = m.a - 0

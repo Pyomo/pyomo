@@ -25,35 +25,35 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
 
         m2 = TransformationFactory(
             'core.constraints_to_var_bounds').create_using(m)
-        self.assertEquals(value(m2.v1.lb), 2)
-        self.assertEquals(value(m2.v1.ub), 2)
+        self.assertEqual(value(m2.v1.lb), 2)
+        self.assertEqual(value(m2.v1.ub), 2)
         # at this point in time, do not expect for v1 to be fixed
         self.assertFalse(m2.v1.fixed)
 
-        self.assertEquals(value(m2.v2.lb), -2)
+        self.assertEqual(value(m2.v2.lb), -2)
         self.assertFalse(m2.v2.has_ub())
 
-        self.assertEquals(value(m2.v3.ub), 5)
+        self.assertEqual(value(m2.v3.ub), 5)
         self.assertFalse(m2.v3.has_lb())
 
-        self.assertEquals(value(m2.v4.ub), 5)
+        self.assertEqual(value(m2.v4.ub), 5)
         self.assertFalse(m2.v4.has_lb())
 
         del m2  # to keep from accidentally using it below
 
         TransformationFactory('core.constraints_to_var_bounds').apply_to(m)
-        self.assertEquals(value(m.v1.lb), 2)
-        self.assertEquals(value(m.v1.ub), 2)
+        self.assertEqual(value(m.v1.lb), 2)
+        self.assertEqual(value(m.v1.ub), 2)
         # at this point in time, do not expect for v1 to be fixed
         self.assertFalse(m.v1.fixed)
 
-        self.assertEquals(value(m.v2.lb), -2)
+        self.assertEqual(value(m.v2.lb), -2)
         self.assertFalse(m.v2.has_ub())
 
-        self.assertEquals(value(m.v3.ub), 5)
+        self.assertEqual(value(m.v3.ub), 5)
         self.assertFalse(m.v3.has_lb())
 
-        self.assertEquals(value(m.v4.ub), 5)
+        self.assertEqual(value(m.v4.ub), 5)
         self.assertFalse(m.v4.has_lb())
 
     def test_zero_coefficient(self):
@@ -65,9 +65,10 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
         m.c = Constraint(expr=m.x * m.y == m.z)
         m.z.fix(0)
         m.y.fix(0)
+        self.assertTrue(m.c.active)
         TransformationFactory('core.constraints_to_var_bounds').apply_to(m)
         self.assertEqual(m.c.body.polynomial_degree(), 1)
-        self.assertFalse(m.c.active)
+        self.assertTrue(m.c.active)
         self.assertFalse(m.x.has_lb())
         self.assertFalse(m.x.has_ub())
 
