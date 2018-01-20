@@ -1135,12 +1135,15 @@ class MiscConTests(unittest.TestCase):
         model.cL = Constraint(expr=model.x**2 >= L)
         self.assertEqual(model.cL.lslack(), 5.0)
         self.assertEqual(model.cL.uslack(), float('inf'))
+        self.assertEqual(model.cL.slack(), 5.0)
         model.cU = Constraint(expr=model.x**2 <= U)
-        self.assertEqual(model.cU.lslack(), float('-inf'))
+        self.assertEqual(model.cU.lslack(), float('inf'))
         self.assertEqual(model.cU.uslack(), 1.0)
+        self.assertEqual(model.cU.slack(), 1.0)
         model.cR = Constraint(expr=L <= model.x**2 <= U)
         self.assertEqual(model.cR.lslack(), 5.0)
         self.assertEqual(model.cR.uslack(), 1.0)
+        self.assertEqual(model.cR.slack(), 1.0)
 
     def test_constructor(self):
         a = Constraint(name="b")

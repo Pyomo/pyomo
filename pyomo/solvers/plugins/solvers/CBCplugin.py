@@ -265,6 +265,7 @@ class CBCSHELL(SystemCallSolver):
 
             if self._timelimit is not None and self._timelimit > 0.0:
                 cmd.extend(['-sec', str(self._timelimit)])
+                cmd.extend(['-timeMode', "elapsed"])
             if "debug" in self.options:
                 cmd.extend(["-log","5"])
             for key, val in _check_and_escape_options(self.options):
@@ -277,6 +278,7 @@ class CBCSHELL(SystemCallSolver):
         else:
             if self._timelimit is not None and self._timelimit > 0.0:
                 cmd.extend(['-sec', str(self._timelimit)])
+                cmd.extend(['-timeMode', "elapsed"])
             if "debug" in self.options:
                 cmd.extend(["-log","5"])
             # these must go after options that take a value

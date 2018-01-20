@@ -17,7 +17,7 @@ import six
 try:
     import networkx
     has_networkx = True
-except ImportError:
+except ImportError:                               #pragma:nocover
     has_networkx = False
 
 def CreateAbstractScenarioTreeModel():
@@ -228,25 +228,24 @@ def ScenarioTreeModelFromNetworkX(
         >>> model = ScenarioTreeModelFromNetworkX(G)
     """
 
-    if not has_networkx:
-        raise ValueError("networkx module is not available")
+    if not has_networkx:                          #pragma:nocover
+        raise ValueError(
+            "networkx module is not available")
 
     if not networkx.is_tree(tree):
         raise TypeError(
-            "object is not a tree (see networkx.is_tree)")
+            "Graph object is not a tree "
+            "(see networkx.is_tree)")
 
     if not networkx.is_directed(tree):
         raise TypeError(
-            "object is not directed (see networkx.is_directed)")
+            "Graph object is not directed "
+            "(see networkx.is_directed)")
 
     if not networkx.is_branching(tree):
         raise TypeError(
-            "object is not a branching (see networkx.is_branching")
-
-    if not networkx.is_arborescence(tree):
-            raise TypeError("Object must be a directed, rooted tree "
-                            "in which all edges point away from the "
-                            "root (see networkx.is_arborescence)")
+            "Grapn object is not a branching "
+            "(see networkx.is_branching")
 
     in_degree_items = tree.in_degree()
     # Prior to networkx ~2.0, in_degree() returned a dictionary.
@@ -282,7 +281,8 @@ def ScenarioTreeModelFromNetworkX(
         if node_name_attribute is not None:
             if node_name_attribute not in tree.node[u]:
                 raise KeyError(
-                    "node '%s' missing name attribute: '%s'"
+                    "node '%s' missing node name "
+                    "attribute: '%s'"
                     % (u, node_name_attribute))
             node_name = tree.node[u][node_name_attribute]
         else:
@@ -297,7 +297,8 @@ def ScenarioTreeModelFromNetworkX(
             if scenario_name_attribute is not None:
                 if scenario_name_attribute not in tree.node[u]:
                     raise KeyError(
-                        "node '%s' missing attribute: '%s'"
+                        "node '%s' missing scenario name "
+                        "attribute: '%s'"
                         % (u, scenario_name_attribute))
                 scenario_name = tree.node[u][scenario_name_attribute]
             else:
@@ -310,14 +311,7 @@ def ScenarioTreeModelFromNetworkX(
            networkx.dfs_successors(tree, root))
     m = m.create_instance()
     def _add_node(u, stage, succ, pred):
-        if node_name_attribute is not None:
-            if node_name_attribute not in tree.node[u]:
-                raise KeyError(
-                    "node '%s' missing name attribute: '%s'"
-                    % (u, node_name_attribute))
-            node_name = tree.node[u][node_name_attribute]
-        else:
-            node_name = u
+        node_name = node_to_name[u]
         m.NodeStage[node_name] = m.Stages[stage]
         if u == root:
             m.ConditionalProbability[node_name] = 1.0
