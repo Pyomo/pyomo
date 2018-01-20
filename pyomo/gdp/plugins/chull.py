@@ -201,8 +201,7 @@ class ConvexHull_Transformation(Transformation):
 
 
     def _declareDisjunctionConstraints(self, disjunction):
-        # Put the disjunction constraint on its parent block and
-        # determine whether it is an OR or XOR constraint.
+        # Put the disjunction constraint on its parent block
 
         # We never do this for just a DisjunctionData because we need
         # to know about the index set of its parent component. So if
@@ -231,13 +230,6 @@ class ConvexHull_Transformation(Transformation):
         # It's indexed if this is an IndexedDisjunction, not otherwise
         orC = Constraint(disjunction.index_set()) if \
               disjunction.is_indexed() else Constraint()
-        xor = disjunction.xor
-        # Convex hull doesn't work if this is an or constraint. So if
-        # xor is false, give up
-        if not xor:
-            raise GDP_Error("Cannot do convex hull transformation for "
-                            "disjunction %s with or constraint. Must be an xor!"
-                            % disjunction.name)
         nm = '_xor'
         orCname = unique_component_name(parent, '_gdp_chull_relaxation_' + \
                                         disjunction.name + nm)
@@ -273,6 +265,13 @@ class ConvexHull_Transformation(Transformation):
     def _transformDisjunctionData(self, obj, transBlock, index,
                                   orConstraint=None,
                                   disaggregationConstraint=None):
+        # Convex hull doesn't work if this is an or constraint. So if
+        # xor is false, give up
+        if not obj.xor:
+            raise GDP_Error("Cannot do convex hull transformation for "
+                            "disjunction %s with or constraint. Must be an xor!"
+                            % obj.name)
+
         parent_component = obj.parent_component()
         if orConstraint is None:
             parent_bock = obj.parent_block()

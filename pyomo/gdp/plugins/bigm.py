@@ -206,35 +206,37 @@ class BigM_Transformation(Transformation):
         # It's indexed if this is an IndexedDisjunction, not otherwise
         orC = Constraint(disjunction.index_set()) if \
             disjunction.is_indexed() else Constraint()
-        xor = disjunction.xor
-        nm = '_xor' if xor else '_or'
+        #xor = disjunction.xor
+        #nm = '_xor' if xor else '_or'
+        nm = '_xor'
         orCname = unique_component_name(parent, '_gdp_bigm_relaxation_' +
                                         disjunction.name + nm)
         parent.add_component(orCname, orC)
         infodict.setdefault('disjunction_or_constraint', {})[
             disjunction.local_name] = orC
-        return orC, xor
+        return orC
 
     def _transformDisjunction(self, obj, transBlock, bigM):
         # create the disjunction constraint and then relax each of the
         # disjunctionDatas
-        orConstraint, xor = self._declareXorConstraint(obj)
+        orConstraint = self._declareXorConstraint(obj)
         if obj.is_indexed():
             transBlock.disjContainers.add(obj)
             for i in sorted(iterkeys(obj)):
                 self._transformDisjunctionData(obj[i], transBlock,
-                                               bigM, i, orConstraint, xor)
+                                               bigM, i, orConstraint)
         else:
             self._transformDisjunctionData(obj, transBlock, bigM,
-                                           None, orConstraint, xor)
+                                           None, orConstraint)
 
         # deactivate so we know we relaxed
         obj.deactivate()
 
     def _transformDisjunctionData(self, obj, transBlock, bigM,
-                                  index, orConstraint=None, xor=None):
+                                  index, orConstraint=None):
         parent_component = obj.parent_component()
-        if xor is None:
+        xor = obj.xor
+        if orConstraint is None:
             # If the orConstraint is already on the block fetch it.
             # Otherwise call _declareXorConstraint.
             parent_block = obj.parent_block()
@@ -249,10 +251,9 @@ class BigM_Transformation(Transformation):
                         # we fetch it and get the value of xor from the
                         # parent.
                         orConstraint = orConsDict[parent_component.local_name]
-                        xor = parent_component.xor
-            if xor is None:
+            if orConstraint is None:
                 # orConstraint wasn't already declared, so we declare it
-                orConstraint, xor = self._declareXorConstraint(
+                orConstraint = self._declareXorConstraint(
                     obj.parent_component())
         or_expr = 0
         for disjunct in obj.disjuncts:
