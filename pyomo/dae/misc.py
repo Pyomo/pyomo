@@ -244,7 +244,7 @@ def _update_block(blk):
     for idx in list(missing_idx):
         _block = blk[idx]
         obj = apply_indexed_rule(
-            None, blk._rule, _block, idx, blk._options)
+            blk, blk._rule, _block, idx, blk._options)
  
         if isinstance(obj, _BlockData) and obj is not _block:
             # If the user returns a block, use their block instead
