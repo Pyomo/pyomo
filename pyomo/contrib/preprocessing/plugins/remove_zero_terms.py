@@ -4,9 +4,12 @@ from __future__ import division
 
 import textwrap
 
+from pyutilib.math.util import isclose
+from pyomo.core.expr import current as EXPR
+from pyomo.core import Sum
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.repn.canonical_repn import generate_canonical_repn
+from pyomo.repn import generate_standard_repn
 from pyomo.util.plugin import alias
 
 
@@ -36,18 +39,18 @@ class RemoveZeroTerms(IsomorphicTransformation):
                 ctype=Constraint, active=True, descend_into=True):
             if not constr.body.polynomial_degree() == 1:
                 continue  # we currently only process linear constraints
-            repn = generate_canonical_repn(constr.body)
+            repn = generate_standard_repn(constr.body)
 
             # get the index of all nonzero coefficient variables
             nonzero_vars_indx = [
-                i for i, _ in enumerate(repn.variables)
-                if not repn.linear[i] == 0
+                i for i, _ in enumerate(repn.linear_vars)
+                if not isclose(repn.linear_coefs[i],0)
             ]
-            const = repn.constant if repn.constant is not None else 0
+            const = repn.constant
 
             # reconstitute the constraint, including only variable terms with
             # nonzero coefficients
-            constr_body = sum(repn.linear[i] * repn.variables[i]
+            constr_body = Sum(repn.linear_coefs[i] * repn.linear_vars[i]
                               for i in nonzero_vars_indx) + const
             if constr.equality:
                 constr.set_value(constr_body == constr.upper)
@@ -57,5 +60,4 @@ class RemoveZeroTerms(IsomorphicTransformation):
                 constr.set_value(constr_body <= constr.upper)
             else:
                 # constraint is a bounded inequality of form a <= x <= b.
-                # I don't think this is a great idea, but ¯\_(ツ)_/¯
-                constr.set_value(constr.lower <= constr_body <= constr.upper)
+                constr.set_value(EXPR.inequality(constr.lower, constr_body, constr.upper))

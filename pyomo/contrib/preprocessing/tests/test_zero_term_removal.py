@@ -2,7 +2,7 @@
 import pyutilib.th as unittest
 from pyomo.environ import (ConcreteModel, Constraint, TransformationFactory,
                            Var)
-from pyomo.core.base.expr import identify_variables
+from pyomo.core.expr import current as EXPR
 
 __author__ = "Qi Chen <https://github.com/qtothec>"
 
@@ -27,13 +27,13 @@ class TestRemoveZeroTerms(unittest.TestCase):
         m.v1.unfix()
         # Check that the term no longer exists
         self.assertFalse(any(id(m.v1) == id(v)
-                             for v in identify_variables(m.c.body)))
+                             for v in EXPR.identify_variables(m.c.body)))
         self.assertFalse(any(id(m.v1) == id(v)
-                             for v in identify_variables(m.c2.body)))
+                             for v in EXPR.identify_variables(m.c2.body)))
         self.assertFalse(any(id(m.v1) == id(v)
-                             for v in identify_variables(m.c3.body)))
+                             for v in EXPR.identify_variables(m.c3.body)))
         self.assertFalse(any(id(m.v1) == id(v)
-                             for v in identify_variables(m.c4.body)))
+                             for v in EXPR.identify_variables(m.c4.body)))
 
 
 if __name__ == '__main__':
