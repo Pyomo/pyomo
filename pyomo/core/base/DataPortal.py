@@ -18,22 +18,27 @@ logger = logging.getLogger('pyomo.core')
 
 class DataPortal(object):
     """
-    An object that manages loading and storing data from
-    external data sources.  This object interfaces to plugins that
-    manipulate the data in a manner that is dependent on the
-    data format.
+    An object that manages loading and storing data from external
+    data sources.  This object interfaces to plugins that manipulate
+    the data in a manner that is dependent on the data format.
 
-    Note that data is organized as follows:
+    Internally, the data in a DataPortal object is organized as follows::
+
         data[namespace][symbol][index] -> value
-    The default namespace is None.
 
-    Constructor Arguments:
-        model       The model for which this data is associated.  This is
-                        used for error checing (e.g. object names must
-                        exist in the model, set dimensions must match, etc.)
-        filename    A file that is loaded
-        data_dict   A dictionarity used to initialize the data map
-                        in this object.
+    All data is associated with a symbol name, which may be indexed,
+    and which may belong to a namespace.  The default namespace is
+    :const:`None`.
+
+    Args:
+        model: The model for which this data is associated.  This is
+            used for error checking (e.g. object names must
+            exist in the model, set dimensions must match, etc.).
+            Default is :const:`None`.
+        filename (str): A file from which data is loaded.  Default
+            is :const:`None`.
+        data_dict (dict): A dictionary used to initialize the data 
+            in this object.  Default is :const:`None`.
     """
 
     def __init__(self, *args, **kwds):
@@ -74,9 +79,13 @@ class DataPortal(object):
         Construct a data manager object that is associated with the input source.
         This data manager is used to process future data imports and exports.
 
-        Arguments:
-            filename    A file that is loaded
-            server      The name of the remote server that hosts the data
+        Args:
+            filename (str): A filename that specifies the data source.  
+                Default is :const:`None`.
+            server (str): The name of the remote server that hosts the data.  
+                Default is :const:`None`.
+            using (str): The name of the resource used to load the data.
+                Default is :const:`None`.
 
         Other keyword arguments are passed to the data manager object.
         """
@@ -99,7 +108,8 @@ class DataPortal(object):
 
     def disconnect(self):
         """
-        Close the data manager object that is associated with the input source.
+        Close the data manager object that is associated with the
+        input source.
         """
         self._data_manager.close()
         self._data_manager = None
@@ -108,18 +118,11 @@ class DataPortal(object):
         """
         Import data from an external data source.
 
-        Arguments:
-            model       The model for which this data is associated.
-            set         TODO
-            param       TODO
-            index       TODO
+        Args:
+            model: The model object for which this data is associated.
+                Default is :const:`None`.
 
-            format      TODO
-            select      TODO
-            filename    TODO
-            namespace   TODO
-
-        Other keyword arguments are passed to connect().
+        Other keyword arguments are passed to the :func:`connect()` method.
         """
         if __debug__ and logger.isEnabledFor(logging.DEBUG):        #pragma:nocover
             logger.debug("Loading data...")
@@ -129,7 +132,10 @@ class DataPortal(object):
         _model = kwds.pop('model', None)
         if not _model is None:
             self._model=_model
-        # If _disconnect is True, then disconnect the data manager after we load data
+        #
+        # If _disconnect is True, then disconnect the data 
+        # manager after we load data
+        #
         _disconnect=False
         if self._data_manager is None:
             #
@@ -143,6 +149,7 @@ class DataPortal(object):
             #
             # Q: Should we reinitialize?  The semantic difference between
             # initialize() and add_options() aren't clear.
+            #
             self._data_manager.add_options(**kwds)
         #
         # Preprocess the command-line options
@@ -166,19 +173,13 @@ class DataPortal(object):
 
     def store(self, **kwds):
         """
-        Export data from to an external data source.
+        Export data to an external data source.
 
-        Arguments:
-            model       The model for which this data is associated.
-            set         TODO
-            param       TODO
-            index       TODO
-            data        TODO
+        Args:
+            model: The model object for which this data is associated.
+                Default is :const:`None`.
 
-            columns     TODO
-            filename    TODO
-
-        Other keyword arguments are passed to connect().
+        Other keyword arguments are passed to the :func:`connect()` method.
         """
         if __debug__ and logger.isEnabledFor(logging.DEBUG):        #pragma:nocover
             logger.debug("Storing data...")
@@ -188,14 +189,19 @@ class DataPortal(object):
         _model = kwds.pop('model', None)
         if not _model is None:
             self._model=_model
-        # If _disconnect is True, then disconnect the data manager after we load data
+        #
+	    # If _disconnect is True, then disconnect the data manager
+	    # after we load data
+        #
         _disconnect=False
         if self._data_manager is None:
             self.connect(**kwds)
             _disconnect=True
         elif len(kwds) > 0:
+            #
             # Q: Should we reinitialize?  The semantic difference between
             # initialize() and add_options() aren't clear.
+            #
             self._data_manager.add_options(**kwds)
         #
         # Preprocess the command-line options
@@ -216,10 +222,22 @@ class DataPortal(object):
 
     def data(self, name=None, namespace=None):
         """
-        Return the data associated with a symbol and namespace
+	    Return the data associated with a symbol and namespace
 
-        If the data is simply a value, then the value is returned.  Otherwise,
-        a dictionary is returned that maps index to value.
+        Args:
+            name (str): The name of the symbol that is returned.
+                Default is :const:`None`, which indicates that the
+                entire data in the namespace is returned.
+            namespace (str): The name of the namespace that is accessed.
+                Default is :const:`None`.
+
+        Returns:
+            If ``name`` is :const:`None`, then the dictionary for
+            the namespace is returned.  Otherwise, the data 
+            associated with ``name`` in given namespace is returned.
+            The return value is a constant if :const:`None` if 
+            there is a single value in the symbol dictionary, and otherwise
+            the symbol dictionary is returned.            
         """
         if not namespace in self._data:
             raise IOError("Unknown namespace '%s'" % str(namespace))
@@ -233,10 +251,27 @@ class DataPortal(object):
 
     def __getitem__(self, *args):
         """
-        Return the specified data value:
+        Return the specified data value.  
+
+        If a single argument is given, then this is the symbol name::
+
             dp = DataPortal()
             dp[name]
+
+        If a two arguments are given, then the first is the namespace and
+        the second is the symbol name::
+
+            dp = DataPortal()
             dp[namespace, name]
+
+        Args:
+            *args (str): A tuple of arguents.
+
+        Returns:
+            If a single argument is given, then the data associated
+            with that symbol in the namespace :const:`None` is returned.
+            If two arguments are given, then the data associated with
+            symbol in the given namespace is returned.
         """
         if type(args[0]) is tuple or type(args[0]) is list:
             assert(len(args) == 1)
@@ -256,14 +291,24 @@ class DataPortal(object):
             return ans[None]
         return ans
 
-    def __setitem__(self, index, value):
+    def __setitem__(self, name, value):
+        """
+        Set the value of ``name`` with the given value.
+
+        Args:
+            name (str): The name of the symbol that is set.
+            value: The value of the symbol.
+        """
         if not None in self._data:
             self._data[None] = {}
-        self._data[None][index] = value
+        self._data[None][name] = value
 
     def namespaces(self):
         """
-        Return an iterator for the data namespaces
+        Return an iterator for the namespaces in the data portal.
+
+        Yields:
+            A string name for the next namespace.
         """
         for key in self._data:
             yield key
@@ -271,7 +316,10 @@ class DataPortal(object):
     def keys(self, namespace=None):
         """
         Return an iterator of the data keys in
-        the specified namespace
+        the specified namespace.
+
+        Yields:
+            A string name for the next symbol in the specified namespace.
         """
         for key in self._data[namespace]:
             yield key
@@ -279,7 +327,11 @@ class DataPortal(object):
     def values(self, namespace=None):
         """
         Return an iterator of the data values in
-        the specified namespace
+        the specified namespace.
+
+        Yields:
+            The data value for the next symbol in the specified namespace.
+            This may be a simple value, or a dictionary of values.
         """
         for key in self._data[namespace]:
             ans = self._data[namespace][key]
@@ -291,7 +343,13 @@ class DataPortal(object):
     def items(self, namespace=None):
         """
         Return an iterator of (name, value) tuples from the data in
-        the specified namespace
+        the specified namespace.
+
+        Yields:
+            The next (name, value) tuple in the namespace.  If the symbol
+            has a simple data value, then that is included in the tuple.
+            Otherwise, the tuple includes a dictionary mapping
+            symbol indices to values.
         """
         for key in self._data[namespace]:
             ans = self._data[namespace][key]

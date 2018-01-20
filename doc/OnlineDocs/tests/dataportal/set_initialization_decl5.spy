@@ -1,0 +1,3 @@
+def g(model):
+    return [2,3,5]
+model.G = Set(initialize=g)

@@ -1,0 +1,5 @@
+TIME baa99
+PERIODS IMPLICIT
+    x1 obj TIME1
+    u1 c_e_d1_ TIME2
+ENDATA

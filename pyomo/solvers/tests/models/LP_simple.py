@@ -36,7 +36,7 @@ class LP_simple(_BaseTestModel):
         model.a4 = Param([1], initialize=1.0, mutable=False)
         model.x = Var(within=NonNegativeReals)
         model.y = Var(within=NonNegativeReals)
-        model.z1 = Var()
+        model.z1 = Var(bounds=(float('-inf'), float('inf')))
         model.z2 = Var()
         model.dummy_expr1 = Expression(initialize=model.a1*model.a2[1])
         model.dummy_expr2 = Expression(initialize=model.y/model.a3*model.a4[1])

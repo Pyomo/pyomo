@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -22,7 +22,10 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, AbstractModel, Var, Constraint, \
+    ConstraintList, Param, RangeSet, Set, Expression, value, \
+    simple_constraintlist_rule, simple_constraint_rule
+from pyomo.core.base.constraint import _GeneralConstraintData
 
 from six import StringIO
 
@@ -313,6 +316,47 @@ class TestConstraintCreation(unittest.TestCase):
             return float('-inf') >= model.y
         model.c = Constraint(rule=rule)
         self.assertRaises(ValueError, model.create_instance)
+
+    def test_expr_construct_invalid(self):
+        m = ConcreteModel()
+        c = Constraint(rule=lambda m: None)
+        self.assertRaisesRegexp(
+            ValueError, ".*rule returned None",
+            m.add_component, 'c', c)
+
+        m = ConcreteModel()
+        c = Constraint([1], rule=lambda m,i: None)
+        self.assertRaisesRegexp(
+            ValueError, ".*rule returned None",
+            m.add_component, 'c', c)
+
+        m = ConcreteModel()
+        c = Constraint(rule=lambda m: True)
+        self.assertRaisesRegexp(
+            ValueError,
+            ".*resolved to a trivial Boolean \(True\).*Constraint\.Feasible",
+            m.add_component, 'c', c)
+
+        m = ConcreteModel()
+        c = Constraint([1], rule=lambda m,i: True)
+        self.assertRaisesRegexp(
+            ValueError,
+            ".*resolved to a trivial Boolean \(True\).*Constraint\.Feasible",
+            m.add_component, 'c', c)
+
+        m = ConcreteModel()
+        c = Constraint(rule=lambda m: False)
+        self.assertRaisesRegexp(
+            ValueError,
+            ".*resolved to a trivial Boolean \(False\).*Constraint\.Infeasible",
+            m.add_component, 'c', c)
+
+        m = ConcreteModel()
+        c = Constraint([1], rule=lambda m,i: False)
+        self.assertRaisesRegexp(
+            ValueError,
+            ".*resolved to a trivial Boolean \(False\).*Constraint\.Infeasible",
+            m.add_component, 'c', c)
 
     def test_nondata_bounds(self):
         model = ConcreteModel()
@@ -695,6 +739,20 @@ class TestSimpleCon(unittest.TestCase):
         inst = model.create_instance()
         self.assertEqual(len(inst.c),1)
 
+    def test_setitem(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.c = Constraint()
+        self.assertEqual(len(m.c), 0)
+
+        m.c = m.x**2 <= 4
+        self.assertEqual(len(m.c), 1)
+        self.assertEqual(list(m.c.keys()), [None])
+        self.assertEqual(m.c.upper, 4)
+
+        m.c = Constraint.Skip
+        self.assertEqual(len(m.c), 0)
+
 class TestArrayCon(unittest.TestCase):
 
     def create_model(self):
@@ -703,7 +761,6 @@ class TestArrayCon(unittest.TestCase):
         return model
 
     def test_rule_option1(self):
-        """Test rule option"""
         model = self.create_model()
         model.B = RangeSet(1,4)
         def f(model, i):
@@ -722,7 +779,6 @@ class TestArrayCon(unittest.TestCase):
         self.assertEqual(len(model.c), 4)
 
     def test_rule_option2(self):
-        """Test rule option"""
         model = self.create_model()
         model.B = RangeSet(1,4)
         def f(model, i):
@@ -742,7 +798,6 @@ class TestArrayCon(unittest.TestCase):
         self.assertEqual(len(model.c), 2)
 
     def test_rule_option3(self):
-        """Test rule option"""
         model = self.create_model()
         model.B = RangeSet(1,4)
         def f(model, i):
@@ -762,7 +817,6 @@ class TestArrayCon(unittest.TestCase):
         self.assertEqual(len(model.c), 2)
 
     def test_rule_option2a(self):
-        """Test rule option"""
         model = self.create_model()
         model.B = RangeSet(1,4)
         @simple_constraint_rule
@@ -783,7 +837,6 @@ class TestArrayCon(unittest.TestCase):
         self.assertEqual(len(model.c), 2)
 
     def test_rule_option3a(self):
-        """Test rule option"""
         model = self.create_model()
         model.B = RangeSet(1,4)
         @simple_constraint_rule
@@ -804,21 +857,18 @@ class TestArrayCon(unittest.TestCase):
         self.assertEqual(len(model.c), 2)
 
     def test_dim(self):
-        """Test dim method"""
         model = self.create_model()
         model.c = Constraint(model.A)
 
         self.assertEqual(model.c.dim(),1)
 
     def test_keys(self):
-        """Test keys method"""
         model = self.create_model()
         model.c = Constraint(model.A)
 
         self.assertEqual(len(list(model.c.keys())),0)
 
     def test_len(self):
-        """Test len method"""
         model = self.create_model()
         model.c = Constraint(model.A)
         self.assertEqual(len(model.c),0)
@@ -837,6 +887,28 @@ class TestArrayCon(unittest.TestCase):
 
         self.assertEqual(len(model.c),1)
 
+    def test_setitem(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.c = Constraint(range(5))
+        self.assertEqual(len(m.c), 0)
+
+        m.c[2] = m.x**2 <= 4
+        self.assertEqual(len(m.c), 1)
+        self.assertEqual(list(m.c.keys()), [2])
+        self.assertIsInstance(m.c[2], _GeneralConstraintData)
+        self.assertEqual(m.c[2].upper, 4)
+
+        m.c[3] = Constraint.Skip
+        self.assertEqual(len(m.c), 1)
+        self.assertRaisesRegexp( KeyError, "3", m.c.__getitem__, 3)
+
+        self.assertRaisesRegexp( ValueError, "'c\[3\]': rule returned None",
+                                 m.c.__setitem__, 3, None)
+        self.assertEqual(len(m.c), 1)
+
+        m.c[2] = Constraint.Skip
+        self.assertEqual(len(m.c), 0)
 
 class TestConList(unittest.TestCase):
 
@@ -864,7 +936,6 @@ class TestConList(unittest.TestCase):
         self.assertEqual(len(model.c), 1)
 
     def test_rule_option1(self):
-        """Test rule option"""
         model = self.create_model()
         model.B = RangeSet(1,4)
         def f(model, i):
@@ -885,7 +956,6 @@ class TestConList(unittest.TestCase):
         self.assertEqual(len(model.c), 4)
 
     def test_rule_option2(self):
-        """Test rule option"""
         model = self.create_model()
         model.B = RangeSet(1,4)
         def f(model, i):
@@ -906,7 +976,6 @@ class TestConList(unittest.TestCase):
         self.assertEqual(len(model.c), 2)
 
     def test_rule_option1a(self):
-        """Test rule option"""
         model = self.create_model()
         model.B = RangeSet(1,4)
         @simple_constraintlist_rule
@@ -928,7 +997,6 @@ class TestConList(unittest.TestCase):
         self.assertEqual(len(model.c), 4)
 
     def test_rule_option2a(self):
-        """Test rule option"""
         model = self.create_model()
         model.B = RangeSet(1,4)
         @simple_constraintlist_rule
@@ -950,7 +1018,6 @@ class TestConList(unittest.TestCase):
         self.assertEqual(len(model.c), 2)
 
     def test_rule_option3(self):
-        """Test rule option"""
         model = self.create_model()
         model.y = Var(initialize=2)
         def f(model):
@@ -966,7 +1033,6 @@ class TestConList(unittest.TestCase):
         self.assertEqual(model.d[1](), 2)
 
     def test_rule_option4(self):
-        """Test rule option"""
         model = self.create_model()
         model.y = Var(initialize=2)
         model.c = ConstraintList(rule=((i+1)*model.y >= 0 for i in range(3)))
@@ -974,21 +1040,18 @@ class TestConList(unittest.TestCase):
         self.assertEqual(model.c[1](), 2)
 
     def test_dim(self):
-        """Test dim method"""
         model = self.create_model()
         model.c = ConstraintList()
 
         self.assertEqual(model.c.dim(),1)
 
     def test_keys(self):
-        """Test keys method"""
         model = self.create_model()
         model.c = ConstraintList()
 
         self.assertEqual(len(list(model.c.keys())),0)
 
     def test_len(self):
-        """Test len method"""
         model = self.create_model()
         model.c = ConstraintList()
 
@@ -1064,12 +1127,15 @@ class MiscConTests(unittest.TestCase):
         model.cL = Constraint(expr=model.x**2 >= L)
         self.assertEqual(model.cL.lslack(), 5.0)
         self.assertEqual(model.cL.uslack(), float('inf'))
+        self.assertEqual(model.cL.slack(), 5.0)
         model.cU = Constraint(expr=model.x**2 <= U)
-        self.assertEqual(model.cU.lslack(), float('-inf'))
+        self.assertEqual(model.cU.lslack(), float('inf'))
         self.assertEqual(model.cU.uslack(), 1.0)
+        self.assertEqual(model.cU.slack(), 1.0)
         model.cR = Constraint(expr=(L, model.x**2, U))
         self.assertEqual(model.cR.lslack(), 5.0)
         self.assertEqual(model.cR.uslack(), 1.0)
+        self.assertEqual(model.cR.slack(), 1.0)
 
     def test_constructor(self):
         a = Constraint(name="b")

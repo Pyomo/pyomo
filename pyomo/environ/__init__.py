@@ -34,6 +34,7 @@ _packages = [
     'pyomo.dae',
     'pyomo.bilevel',
     'pyomo.scripting',
+    'pyomo.contrib.preprocessing',
 ]
 #_packages = [ _packages[int(_sys.argv[1])] ]
 #_sys.stdout.write("%s  " % _packages[0])

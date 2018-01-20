@@ -615,7 +615,7 @@ class DDSIP_Input(object):
 
         for stage in ph._scenario_tree._stages:
             cost_variable_name, cost_variable_index = \
-                stage._cost_variable
+                stage.nodes[0]._cost_variable
             stage_cost_component = \
                 self._reference_scenario_instance.\
                 find_component(cost_variable_name)
@@ -674,7 +674,7 @@ class DDSIP_Input(object):
             cost_vars = set()
             for stage in ph._scenario_tree._stages:
                 cost_variable_name, cost_variable_index = \
-                    stage._cost_variable
+                    stage.nodes[0]._cost_variable
                 stage_cost_component = \
                     self._reference_scenario_instance.\
                     find_component(cost_variable_name)
@@ -1212,7 +1212,7 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
         sipin.write('BOUSTRATEGY 1 * Bounding strategy in DD\n')
         sipin.write('NULLDISP 1e-16\n')
         sipin.write('RELAXF 0\n')
-        sipin.write('INTFIRST 0 * Branch first on integer\n')
+        sipin.write('INTFIRST 1 * Branch first on integer\n')
         sipin.write('HOTSTART 4 * use previous solution as integer starting info\n')
 
         sipin.write('\n\nRISKMO 0 * Risk Model\n')

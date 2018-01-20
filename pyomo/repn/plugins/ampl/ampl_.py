@@ -1371,7 +1371,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     "components to exist on a single model. To avoid this "
                     "error please use only one of these methods to define "
                     "special ordered sets.")
-        for suffix_name, suffixes in iteritems(suffix_dict):
+        # do a sort to make sure NL file output is deterministic
+        # across python versions
+        for suffix_name in sorted(suffix_dict):
+            suffixes = suffix_dict[suffix_name]
             datatypes = set()
             for suffix in suffixes:
                 try:

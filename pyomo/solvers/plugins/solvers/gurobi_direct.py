@@ -181,11 +181,13 @@ class GurobiDirect(DirectSolver):
     def _add_var(self, var):
         varname = self._symbol_map.getSymbol(var, self._labeler)
         vtype = self._gurobi_vtype_from_var(var)
-        lb = value(var.lb)
-        ub = value(var.ub)
-        if lb is None:
+        if var.has_lb():
+            lb = value(var.lb)
+        else:
             lb = -self._gurobipy.GRB.INFINITY
-        if ub is None:
+        if var.has_ub():
+            ub = value(var.ub)
+        else:
             ub = self._gurobipy.GRB.INFINITY
 
         gurobipy_var = self._solver_model.addVar(lb=lb, ub=ub, vtype=vtype, name=varname)
@@ -201,10 +203,13 @@ class GurobiDirect(DirectSolver):
         self._range_constraints = set()
         DirectOrPersistentSolver._set_instance(self, model, kwds)
         try:
-            self._solver_model = self._gurobipy.Model(model.name)
+            if model.name is not None:
+                self._solver_model = self._gurobipy.Model(model.name)
+            else:
+                self._solver_model = self._gurobipy.Model()
         except Exception:
             e = sys.exc_info()[1]
-            msg = ('Unable to create Gurobi model. Have you ihnstalled the Python bindings for Gurboi?\n\n\t' +
+            msg = ('Unable to create Gurobi model. Have you installed the Python bindings for Gurboi?\n\n\t' +
                    'Error message: {0}'.format(e))
             raise Exception(msg)
 
@@ -288,7 +293,14 @@ class GurobiDirect(DirectSolver):
 
         self._vars_referenced_by_con[con] = ComponentSet()
 
-        for v, w in con.get_items():
+        if hasattr(con, 'get_items'):
+            # aml sos constraint
+            sos_items = list(con.get_items())
+        else:
+            # kernel sos constraint
+            sos_items = list(con.items())
+
+        for v, w in sos_items:
             self._vars_referenced_by_con[con].add(v)
             gurobi_vars.append(self._pyomo_var_to_solver_var_map[v])
             self._referenced_variables[v] += 1
@@ -361,7 +373,8 @@ class GurobiDirect(DirectSolver):
                                'slack information, please split up the following constraints:\n')
                     for con in self._range_constraints:
                         err_msg += '{0}\n'.format(con)
-                    raise ValueError(err_msg)
+                    logger.warning(err_msg)
+                    extract_slacks = False
             if re.match(suffix, "rc"):
                 extract_reduced_costs = True
                 flag = True
@@ -483,33 +496,33 @@ class GurobiDirect(DirectSolver):
             try:
                 self.results.problem.upper_bound = gprob.ObjVal
                 self.results.problem.lower_bound = gprob.ObjVal
-            except self._gurobipy.GurobiError:
+            except (self._gurobipy.GurobiError, AttributeError):
                 pass
         elif gprob.ModelSense == 1:  # minimizing
             try:
                 self.results.problem.upper_bound = gprob.ObjVal
-            except self._gurobipy.GurobiError:
+            except (self._gurobipy.GurobiError, AttributeError):
                 pass
             try:
                 self.results.problem.lower_bound = gprob.ObjBound
-            except self._gurobipy.GurobiError:
+            except (self._gurobipy.GurobiError, AttributeError):
                 pass
         elif gprob.ModelSense == -1:  # maximizing
             try:
                 self.results.problem.upper_bound = gprob.ObjBound
-            except self._gurobipy.GurobiError:
+            except (self._gurobipy.GurobiError, AttributeError):
                 pass
             try:
                 self.results.problem.lower_bound = gprob.ObjVal
-            except self._gurobipy.GurobiError:
+            except (self._gurobipy.GurobiError, AttributeError):
                 pass
         else:
             raise RuntimeError('Unrecognized gurobi objective sense: {0}'.format(gprob.ModelSense))
 
         try:
-            self.results.problem.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
+            soln.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
         except TypeError:
-            self.results.problem.gap = None
+            soln.gap = None
 
         self.results.problem.number_of_constraints = gprob.NumConstrs + gprob.NumQConstrs + gprob.NumSOS
         self.results.problem.number_of_nonzeros = gprob.NumNZs

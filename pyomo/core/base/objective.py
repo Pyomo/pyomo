@@ -38,6 +38,13 @@ from six import iteritems
 
 logger = logging.getLogger('pyomo.core')
 
+_rule_returned_none_error = """Objective '%s': rule returned None.
+
+Objective rules must return either a valid expression, numeric value, or
+Objective.Skip.  The most common cause of this error is forgetting to
+include the "return" statement at the end of your rule.
+"""
+
 def simple_objective_rule(fn):
     """
     This is a decorator that translates None into Objective.Skip.
@@ -165,7 +172,7 @@ class _GeneralObjectiveData(_GeneralExpressionDataImpl,
     __slots__ = __pickle_slots__ + \
                 _GeneralExpressionDataImpl.__expression_slots__
 
-    def __init__(self, expr, sense=minimize, component=None):
+    def __init__(self, expr=None, sense=minimize, component=None):
         _GeneralExpressionDataImpl.__init__(self, expr)
         # Inlining ActiveComponentData.__init__
         self._component = weakref_ref(component) if (component is not None) \
@@ -250,6 +257,7 @@ class Objective(ActiveIndexedComponent):
         _type               The class type for the derived subclass
     """
 
+    _ComponentDataClass = _GeneralObjectiveData
     NoObjective = (1000,)
     Skip        = (1000,)
 
@@ -267,6 +275,30 @@ class Objective(ActiveIndexedComponent):
         self._init_expr  = kwargs.pop('expr', None)
         kwargs.setdefault('ctype', Objective)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
+
+    #
+    # TODO: Ideally we would not override these methods and instead add
+    # the contents of _check_skip_add to the set_value() method.
+    # Unfortunately, until IndexedComponentData objects know their own
+    # index, determining the index is a *very* expensive operation.  If
+    # we refactor things so that the Data objects have their own index,
+    # then we can remove these overloads.
+    #
+
+    def _setitem_impl(self, index, obj, value):
+        if self._check_skip_add(index, value) is None:
+            del self[index]
+            return None
+        else:
+            obj.set_value(value)
+            return obj
+
+    def _setitem_when_not_present(self, index, value):
+        if self._check_skip_add(index, value) is None:
+            return None
+        else:
+            return super(Objective, self)._setitem_when_not_present(
+                index=index, value=value)
 
     def construct(self, data=None):
         """
@@ -315,26 +347,11 @@ class Objective(ActiveIndexedComponent):
                            type(err).__name__,
                            err))
                     raise
-                if tmp is None:
-                    raise ValueError(
-                        "Objective rule returned None instead of "
-                        "Objective.Skip")
-
-            assert None not in self._data
-            cdata = self._check_skip_add(None, tmp, objdata=self)
-            if cdata is not None:
-                # this happens as a side-effect of set_value on
-                # SimpleObjective (normally _check_skip_add does not
-                # add anything to the _data dict but it does call
-                # set_value on the objdata object we pass in)
-                assert None in self._data
-                cdata.set_sense(_init_sense)
-            else:
-                assert None not in self._data
+            if self._setitem_when_not_present(None, tmp) is not None:
+                self.set_sense(_init_sense)
 
         else:
-
-            if not _init_expr is None:
+            if _init_expr is not None:
                 raise IndexError(
                     "Cannot initialize multiple indices of an "
                     "objective with a single expression")
@@ -354,15 +371,9 @@ class Objective(ActiveIndexedComponent):
                            type(err).__name__,
                            err))
                     raise
-                if tmp is None:
-                    raise ValueError(
-                        "Objective rule returned None instead of "
-                        "Objective.Skip for index %s" % (str(ndx)))
-
-                cdata = self._check_skip_add(ndx, tmp)
-                if cdata is not None:
-                    cdata.set_sense(_init_sense)
-                    self._data[ndx] = cdata
+                ans = self._setitem_when_not_present(ndx, tmp)
+                if ans is not None:
+                    ans.set_sense(_init_sense)
         timer.report()
 
     def _pprint(self):
@@ -411,47 +422,22 @@ class Objective(ActiveIndexedComponent):
     # is returned or an exception is raised.
     #
     def _check_skip_add(self, index, expr, objdata=None):
-
-        #
-        # Adds a dummy objective object to the _data
-        # dict just before an error message is generated
-        # so that we can generate a fully qualified name
-        #
-        def _prep_for_error():
-            if objdata is None:
-                self._data[index] = _GeneralObjectiveData(None,
-                                                          component=self)
-            else:
-                self._data[index] = objdata
-
-        _expr_type = expr.__class__
         #
         # Convert deprecated expression values
         #
         if expr is None:
-            _prep_for_error()
             raise ValueError(
-                "Invalid objective expression. The objective "
-                "expression resolved to None instead of a Pyomo "
-                "object or numeric value. Please modify your rule "
-                "to return Objective.Skip instead of None."
-                "\n\nError thrown for Objective '%s'"
-                % (self._data[index].name))
+                _rule_returned_none_error %
+                (_get_indexed_component_data_name(self, index),) )
 
         #
         # Ignore an 'empty' objective
         #
-        if _expr_type is tuple:
+        if expr.__class__ is tuple:
             if expr == Objective.Skip:
                 return None
 
-        if objdata is None:
-            objdata = _GeneralObjectiveData(expr, component=self)
-        else:
-            objdata.set_value(expr)
-            assert objdata.parent_component() is self
-
-        return objdata
+        return expr
 
 class SimpleObjective(_GeneralObjectiveData, Objective):
     """
@@ -460,7 +446,7 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
     """
 
     def __init__(self, *args, **kwd):
-        _GeneralObjectiveData.__init__(self, None, component=self)
+        _GeneralObjectiveData.__init__(self, expr=None, component=self)
         Objective.__init__(self, *args, **kwd)
 
     #
@@ -547,15 +533,19 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
 
     def set_value(self, expr):
         """Set the expression of this objective."""
-        if self._constructed:
-            if len(self._data) == 0:
-                self._data[None] = self
-            return _GeneralObjectiveData.set_value(self, EXPR.compress_expression(expr))
-        raise ValueError(
-            "Setting the value of objective '%s' "
-            "before the Objective has been constructed (there "
-            "is currently no object to set)."
-            % (self.name))
+        if not self._constructed:
+            raise ValueError(
+                "Setting the value of objective '%s' "
+                "before the Objective has been constructed (there "
+                "is currently no object to set)."
+                % (self.name))
+
+        if len(self._data) == 0:
+            self._data[None] = self
+        if self._check_skip_add(None, expr) is None:
+            del self[None]
+            return None
+        return _GeneralObjectiveData.set_value(self, EXPR.compress_expression(expr))
 
     def set_sense(self, sense):
         """Set the sense (direction) of this objective."""
@@ -587,17 +577,14 @@ class IndexedObjective(Objective):
 
     #
     # Leaving this method for backward compatibility reasons
-    # Note: It allows adding members outside of self._index.
-    #       This has always been the case. Not sure there is
-    #       any reason to maintain a reference to a separate
-    #       index set if we allow this.
+    #
+    # Note: Beginning after Pyomo 5.2 this method will now validate that
+    # the index is in the underlying index set (through 5.2 the index
+    # was not checked).
     #
     def add(self, index, expr):
         """Add an objective with a given index."""
-        cdata = self._check_skip_add(index, expr)
-        if cdata is not None:
-            self._data[index] = cdata
-        return cdata
+        return self.__setitem__(index, expr)
 
 class ObjectiveList(IndexedObjective):
     """
@@ -611,7 +598,6 @@ class ObjectiveList(IndexedObjective):
     def __init__(self, **kwargs):
         """Constructor"""
         args = (Set(),)
-        self._nobjectives = 0
         if 'expr' in kwargs:
             raise ValueError(
                 "ObjectiveList does not accept the 'expr' keyword")
@@ -655,7 +641,7 @@ class ObjectiveList(IndexedObjective):
             _generator = _init_rule
         if _generator is None:
             while True:
-                val = self._nobjectives + 1
+                val = len(self._index) + 1
                 if generate_debug_messages:
                     logger.debug(
                         "   Constructing objective index "+str(val))
@@ -663,10 +649,6 @@ class ObjectiveList(IndexedObjective):
                                           _init_rule,
                                           _self_parent,
                                           val)
-                if expr is None:
-                    raise ValueError(
-                        "Objective rule returned None "
-                        "instead of ObjectiveList.End")
                 if (expr.__class__ is tuple) and \
                    (expr == ObjectiveList.End):
                     return
@@ -675,10 +657,6 @@ class ObjectiveList(IndexedObjective):
         else:
 
             for expr in _generator:
-                if expr is None:
-                    raise ValueError(
-                        "Objective generator returned None "
-                        "instead of ObjectiveList.End")
                 if (expr.__class__ is tuple) and \
                    (expr == ObjectiveList.End):
                     return
@@ -686,13 +664,12 @@ class ObjectiveList(IndexedObjective):
 
     def add(self, expr, sense=minimize):
         """Add an objective to the list."""
-        cdata = self._check_skip_add(self._nobjectives + 1, expr)
-        self._nobjectives += 1
-        self._index.add(self._nobjectives)
-        if cdata is not None:
-            cdata.set_sense(sense)
-            self._data[self._nobjectives] = cdata
-        return cdata
+        next_idx = len(self._index) + 1
+        self._index.add(next_idx)
+        ans = self.__setitem__(next_idx, expr)
+        if ans is not None:
+            ans.set_sense(sense)
+        return ans
 
 register_component(Objective,
                    "Expressions that are minimized or maximized.")

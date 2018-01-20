@@ -14,7 +14,6 @@ import copy
 
 import pyomo.util.plugin
 from pyomo.opt import SolverFactory
-from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.core import *
 from pyomo.pysp import phextension
 from pyomo.pysp.plugins.phboundextension import (_PHBoundBase,
@@ -222,6 +221,10 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
     # populate the master bundle model from the PH parameters
     #
     def _populate_bundle_dual_master_model(self, ph):
+        # TODO: Does this import need to be delayed because
+        #       it is in a plugins subdirectory
+        from pyomo.solvers.plugins.solvers.persistent_solver import \
+            PersistentSolver
 
         current_iteration = ph._current_iteration
 

@@ -374,6 +374,14 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         with self.assertRaises(TypeError):
             ScenarioTreeModelFromNetworkX(G)
 
+    def test_not_directed(self):
+        G = networkx.Graph()
+        G.add_node("1")
+        G.add_node("2")
+        G.add_edge("1", "2")
+        with self.assertRaises(TypeError):
+            ScenarioTreeModelFromNetworkX(G)
+
     def test_not_branching(self):
         G = networkx.DiGraph()
         G.add_node("1")
@@ -390,17 +398,27 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         with self.assertRaises(ValueError):
             ScenarioTreeModelFromNetworkX(G)
 
-    def test_missing_name(self):
+    def test_missing_node_name(self):
         G = networkx.DiGraph()
         G.add_node("R", name="Root")
         G.add_node("C")
-        G.add_edge("R", "C", probability=1)
+        G.add_edge("R", "C", weight=1)
         with self.assertRaises(KeyError):
             ScenarioTreeModelFromNetworkX(
                 G,
                 node_name_attribute="name")
 
-    def test_missing_probability(self):
+    def test_missing_scenario_name(self):
+        G = networkx.DiGraph()
+        G.add_node("R", name="Root")
+        G.add_node("C")
+        G.add_edge("R", "C", weight=1)
+        with self.assertRaises(KeyError):
+            ScenarioTreeModelFromNetworkX(
+                G,
+                scenario_name_attribute="name")
+
+    def test_missing_weight(self):
         G = networkx.DiGraph()
         G.add_node("R", name="Root")
         G.add_node("C", name="Child")
@@ -408,21 +426,21 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         with self.assertRaises(KeyError):
             ScenarioTreeModelFromNetworkX(G)
 
-    def test_bad_probability1(self):
+    def test_bad_weight1(self):
         G = networkx.DiGraph()
         G.add_node("R",)
         G.add_node("C",)
-        G.add_edge("R", "C",probability=0.8)
+        G.add_edge("R", "C",weight=0.8)
         with self.assertRaises(ValueError):
             ScenarioTreeModelFromNetworkX(G)
 
-    def test_bad_probability2(self):
+    def test_bad_weight2(self):
         G = networkx.DiGraph()
         G.add_node("R")
         G.add_node("C1")
-        G.add_edge("R", "C1", probability=0.8)
+        G.add_edge("R", "C1", weight=0.8)
         G.add_node("C2")
-        G.add_edge("R", "C2", probability=0.1)
+        G.add_edge("R", "C2", weight=0.1)
         with self.assertRaises(ValueError):
             ScenarioTreeModelFromNetworkX(G)
 
@@ -430,7 +448,7 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         G = networkx.DiGraph()
         G.add_node("R",)
         G.add_node("C1")
-        G.add_edge("R", "C1", probability=1.0)
+        G.add_edge("R", "C1", weight=1.0)
         with self.assertRaises(ValueError):
             ScenarioTreeModelFromNetworkX(
                 G, stage_names=["Stage1"])
@@ -439,7 +457,7 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         G = networkx.DiGraph()
         G.add_node("R")
         G.add_node("C1")
-        G.add_edge("R", "C1", probability=1.0)
+        G.add_edge("R", "C1", weight=1.0)
         with self.assertRaises(ValueError):
             ScenarioTreeModelFromNetworkX(
                 G, stage_names=["Stage1","Stage1"])
@@ -448,9 +466,9 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         G = networkx.DiGraph()
         G.add_node("Root")
         G.add_node("Child1")
-        G.add_edge("Root", "Child1", probability=0.8)
+        G.add_edge("Root", "Child1", weight=0.8)
         G.add_node("Child2")
-        G.add_edge("Root", "Child2", probability=0.2)
+        G.add_edge("Root", "Child2", weight=0.2)
         model = ScenarioTreeModelFromNetworkX(G)
         self.assertEqual(
             sorted(list(model.Stages)),
@@ -476,18 +494,86 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         model.StageCost["Stage1"] = "c1"
         model.StageCost["Stage2"] = "c2"
         model.StageVariables["Stage1"].add("x")
+        self.assertEqual(model.Bundling.value, False)
+        self.assertEqual(list(model.Bundles), [])
+        self.assertEqual(len(model.BundleScenarios), 0)
+        ScenarioTree(scenariotreeinstance=model)
+
+    def test_two_stage_more_node_attributes(self):
+        G = networkx.DiGraph()
+        G.add_node("Root",
+                   cost="c1",
+                   variables=["x"],
+                   derived_variables=["y"])
+        G.add_node("Child1",
+                   cost="c2",
+                   variables=["q"],
+                   derived_variables=["z"])
+        G.add_edge("Root", "Child1", weight=0.8)
+        G.add_node("Child2",
+                   cost="c2",
+                   variables=["q"],
+                   derived_variables=["z"])
+        G.add_edge("Root", "Child2", weight=0.2)
+        model = ScenarioTreeModelFromNetworkX(G)
+        self.assertEqual(
+            sorted(list(model.Stages)),
+            sorted(["Stage1", "Stage2"]))
+        self.assertEqual(
+            sorted(list(model.Nodes)),
+            sorted(["Root", "Child1", "Child2"]))
+        self.assertEqual(
+            sorted(list(model.Children["Root"])),
+            sorted(["Child1", "Child2"]))
+        self.assertEqual(
+            sorted(list(model.Children["Child1"])),
+            sorted([]))
+        self.assertEqual(
+            sorted(list(model.Children["Child2"])),
+            sorted([]))
+        self.assertEqual(
+            sorted(list(model.Scenarios)),
+            sorted(["Child1", "Child2"]))
+        self.assertEqual(model.ConditionalProbability["Root"], 1.0)
+        self.assertEqual(model.ConditionalProbability["Child1"], 0.8)
+        self.assertEqual(model.ConditionalProbability["Child2"], 0.2)
+
+        # FIXME: #300 on GitHub
+        self.assertEqual(model.StageCost["Stage1"]._value, None)
+        self.assertEqual(list(model.StageVariables["Stage1"]), [])
+        self.assertEqual(list(model.StageDerivedVariables["Stage1"]), [])
+
+        self.assertEqual(model.NodeCost["Root"].value, "c1")
+        self.assertEqual(list(model.NodeVariables["Root"]), ["x"])
+        self.assertEqual(list(model.NodeDerivedVariables["Root"]), ["y"])
+
+        # FIXME: #300 on GitHub
+        self.assertEqual(model.StageCost["Stage2"]._value, None)
+        self.assertEqual(list(model.StageVariables["Stage2"]), [])
+        self.assertEqual(list(model.StageDerivedVariables["Stage2"]), [])
+
+        self.assertEqual(model.NodeCost["Child1"].value, "c2")
+        self.assertEqual(list(model.NodeVariables["Child1"]), ["q"])
+        self.assertEqual(list(model.NodeDerivedVariables["Child1"]), ["z"])
+
+        self.assertEqual(model.NodeCost["Child2"].value, "c2")
+        self.assertEqual(list(model.NodeVariables["Child2"]), ["q"])
+        self.assertEqual(list(model.NodeDerivedVariables["Child2"]), ["z"])
+        self.assertEqual(model.Bundling.value, False)
+        self.assertEqual(list(model.Bundles), [])
+        self.assertEqual(len(model.BundleScenarios), 0)
         ScenarioTree(scenariotreeinstance=model)
 
     def test_two_stage_custom_names(self):
         G = networkx.DiGraph()
         G.add_node("R", label="Root")
         G.add_node("C1", label="Child1", scenario="S1")
-        G.add_edge("R", "C1", weight=0.8)
+        G.add_edge("R", "C1", probability=0.8)
         G.add_node("C2", label="Child2", scenario="S2")
-        G.add_edge("R", "C2", weight=0.2)
+        G.add_edge("R", "C2", probability=0.2)
         model = ScenarioTreeModelFromNetworkX(
             G,
-            edge_probability_attribute="weight",
+            edge_probability_attribute="probability",
             node_name_attribute="label",
             stage_names=["T1","T2"],
             scenario_name_attribute="scenario")
@@ -515,6 +601,9 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         model.StageCost["T1"] = "c1"
         model.StageCost["T2"] = "c2"
         model.StageVariables["T1"].add("x")
+        self.assertEqual(model.Bundling.value, False)
+        self.assertEqual(list(model.Bundles), [])
+        self.assertEqual(len(model.BundleScenarios), 0)
         ScenarioTree(scenariotreeinstance=model)
 
     def test_multi_stage(self):
@@ -589,8 +678,10 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         model.StageVariables["Stage1"].add("x")
         model.StageVariables["Stage2"].add("y")
         model.StageVariables["Stage3"].add("y")
+        self.assertEqual(model.Bundling.value, False)
+        self.assertEqual(list(model.Bundles), [])
+        self.assertEqual(len(model.BundleScenarios), 0)
         ScenarioTree(scenariotreeinstance=model)
-
 
     def test_unbalanced(self):
         G = networkx.DiGraph()
@@ -640,7 +731,74 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         model.StageCost["Stage3"] = "c3"
         model.StageVariables["Stage1"].add("x")
         model.StageVariables["Stage2"].add("x")
+        self.assertEqual(model.Bundling.value, False)
+        self.assertEqual(list(model.Bundles), [])
+        self.assertEqual(len(model.BundleScenarios), 0)
         ScenarioTree(scenariotreeinstance=model)
+
+    def test_bundles(self):
+        G = networkx.DiGraph()
+        G.add_node("r")
+        for i in range(4):
+            G.add_node("u"+str(i), bundle=i%2)
+            G.add_edge("r", "u"+str(i))
+        model = ScenarioTreeModelFromNetworkX(
+            G,
+            edge_probability_attribute=None)
+        self.assertEqual(
+            sorted(list(model.Stages)),
+            sorted(["Stage1", "Stage2"]))
+        self.assertEqual(
+            sorted(list(model.Nodes)),
+            sorted(["r", "u0", "u1", "u2", "u3"]))
+        self.assertEqual(
+            sorted(list(model.Children["r"])),
+            sorted(["u0", "u1", "u2", "u3"]))
+        for i in range(4):
+            self.assertEqual(
+                sorted(list(model.Children["u"+str(i)])),
+                sorted([]))
+        self.assertEqual(
+            sorted(list(model.Scenarios)),
+            sorted(["u0", "u1", "u2", "u3"]))
+        self.assertEqual(model.ConditionalProbability["r"], 1.0)
+        for i in range(4):
+            self.assertEqual(model.ConditionalProbability["u"+str(i)],
+                             0.25)
+        self.assertEqual(model.Bundling.value, True)
+        self.assertEqual(list(model.Bundles), [0, 1])
+        for k, bundle_name in enumerate(model.Bundles):
+            self.assertEqual(list(model.BundleScenarios[bundle_name]),
+                             ["u"+str(i) for i in range(4)
+                              if i%2 == k])
+        model.StageCost["Stage1"] = "c1"
+        model.StageCost["Stage2"] = "c2"
+        model.StageVariables["Stage1"].add("x")
+        ScenarioTree(scenariotreeinstance=model)
+
+    def test_bundles_incomplete(self):
+        G = networkx.DiGraph()
+        G.add_node("r")
+        for i in range(4):
+            G.add_node("u"+str(i), bundle="B")
+            G.add_edge("r", "u"+str(i))
+        model = ScenarioTreeModelFromNetworkX(
+            G,
+            edge_probability_attribute=None)
+        self.assertEqual(model.Bundling.value, True)
+        self.assertEqual(list(model.Bundles), ["B"])
+        self.assertEqual(list(model.BundleScenarios["B"]),
+                         ["u"+str(i) for i in range(4)])
+        G.node["u0"]["bundle"] = None
+        with self.assertRaises(ValueError):
+            ScenarioTreeModelFromNetworkX(
+                G,
+                edge_probability_attribute=None)
+        del G.node["u0"]["bundle"]
+        with self.assertRaises(ValueError):
+            ScenarioTreeModelFromNetworkX(
+                G,
+                edge_probability_attribute=None)
 
 TestScenarioTree = unittest.category('smoke','nightly','expensive')(TestScenarioTree)
 TestScenarioTreeFromNetworkX = unittest.category('smoke','nightly','expensive')(TestScenarioTreeFromNetworkX)
