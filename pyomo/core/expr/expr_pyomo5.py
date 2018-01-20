@@ -1697,18 +1697,17 @@ class PowExpression(ExpressionBase):
         if isclose(r, 0):
             if isclose(l, 0):
                 return 0
-            try:
-                # NOTE: use value before int() so that we don't
-                #       run into the disabled __int__ method on
-                #       NumericValue
-                exp = value(self._args_[1])
-                if exp == int(exp):
-                    if l is not None and exp > 0:
-                        return l * exp
-                    elif exp == 0:
-                        return 0
-            except:
-                pass
+            # NOTE: use value before int() so that we don't
+            #       run into the disabled __int__ method on
+            #       NumericValue
+            exp = value(self._args_[1], exception=False)
+            if exp is None:
+                return None
+            if exp == int(exp):
+                if l is not None and exp > 0:
+                    return l * exp
+                elif exp == 0:
+                    return 0
         return None
 
     def _is_fixed(self, args):
@@ -2760,9 +2759,7 @@ def _process_arg(obj):
     if (obj.__class__ is _ParamData or obj.__class__ is SimpleParam) and not obj._component()._mutable:
         if not obj._constructed:
             return obj
-        if obj.value is None:
-            return obj
-        return obj.value
+        return obj()
 
     if obj.is_indexed():
         raise TypeError(
