@@ -1,14 +1,14 @@
 """Transformation to convert explicit bounds to variable bounds."""
+
 from __future__ import division
 import textwrap
 
+from pyutilib.math.util import isclose
 from pyomo.core.base.constraint import Constraint
-from pyomo.core.kernel.numvalue import value
+from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.util.plugin import alias
-from pyomo.repn.canonical_repn import generate_canonical_repn
-
-__author__ = "Qi Chen <https://github.com/qtothec>"
+from pyomo.repn import generate_standard_repn
 
 
 class ConstraintToVarBoundTransform(IsomorphicTransformation):
@@ -18,6 +18,9 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
     (c2 - c1)/k if it results in a tighter bound. Also does the same thing for
     lower bounds.
 
+    .. note::
+        If one element of a bilinear term is fixed to zero, then this 
+        transformation ignores that constraint.
     """
 
     alias('core.constraints_to_var_bounds',
@@ -41,15 +44,15 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
                                                active=True,
                                                descend_into=True):
             # Check if the constraint is k * x + c1 <= c2 or c2 <= k * x + c1
-            if constr.body.polynomial_degree() == 1:
-                repn = generate_canonical_repn(constr.body)
-                if repn.variables is not None and len(repn.variables) == 1:
-                    var = repn.variables[0]
-                    const = repn.constant if repn.constant is not None else 0
-                    coef = float(repn.linear[0])
-                    if coef == 0:
-                        # This can happen when a one element of a bilinear term
-                        # is fixed to zero. Obviously, do not divide by zero.
+            repn = generate_standard_repn(constr.body)
+            if repn.is_linear():
+                if len(repn.linear_vars) == 1:
+                    var = repn.linear_vars[0]
+                    const = repn.constant
+                    coef = float(repn.linear_coefs[0])
+                    if isclose(coef,0):
+                        # If a value is nearly zero, we ignore it so we don't divide by a 
+                        # small value.
                         pass
                     else:
                         if constr.upper is not None:
@@ -84,3 +87,4 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
                         var.set_value(var.lb)
                     if var.has_ub() and var.value > var.ub:
                         var.set_value(var.ub)
+
