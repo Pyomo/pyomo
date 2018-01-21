@@ -925,13 +925,15 @@ class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
 
     def activate(self):
         """Set the active attribute to True"""
-        ActiveComponent.activate(self)
-        for component_data in itervalues(self):
-            component_data._active = True
+        super(ActiveIndexedComponent, self).activate()
+        if self.is_indexed():
+            for component_data in itervalues(self):
+                component_data.activate()
 
     def deactivate(self):
         """Set the active attribute to False"""
-        ActiveComponent.deactivate(self)
-        for component_data in itervalues(self):
-            component_data._active = False
+        super(ActiveIndexedComponent, self).deactivate()
+        if self.is_indexed():
+            for component_data in itervalues(self):
+                component_data.deactivate()
 
