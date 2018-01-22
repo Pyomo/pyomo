@@ -30,7 +30,7 @@ __all__ = (
 'evaluate_expression',
 'identify_components',
 'identify_variables',
-'identify_mutable_params',
+'identify_mutable_parameters',
 'expression_to_string',
 'ExpressionBase',
 'EqualityExpression',
@@ -955,7 +955,7 @@ def identify_variables(expr, include_fixed=True):
 
 
 # =====================================================
-#  identify_mutable_params
+#  identify_mutable_parameters
 # =====================================================
 
 class _MutableParamVisitor(SimpleExpressionVisitor):
@@ -975,7 +975,7 @@ class _MutableParamVisitor(SimpleExpressionVisitor):
             return node
 
 
-def identify_mutable_params(expr):
+def identify_mutable_parameters(expr):
     """
     A generator that yields a sequence of mutable
     parameters in an expression tree.
