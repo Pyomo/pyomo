@@ -24,7 +24,7 @@ from pyomo.core.base.var import Var, _VarData
 from pyomo.core.base.constraint import Constraint, _ConstraintData
 from pyomo.core.base.suffix import ComponentMap
 from pyomo.core.base import TextLabeler, NumericLabeler
-from pyomo.repn import LinearCanonicalRepn
+#from pyomo.repn import LinearCanonicalRepn
 from pyomo.pysp.scenariotree.manager import InvocationType
 from pyomo.pysp.annotations import (locate_annotations,
                                     StochasticConstraintBoundsAnnotation,
