@@ -4728,6 +4728,99 @@ class TestExpressionUtilities(unittest.TestCase):
         #                  [ m.a, m.a, m.a,  ] )
 
 
+class TestIdentifyParams(unittest.TestCase):
+
+    def test_identify_params_numeric(self):
+        #
+        # There are no parameters in a constant expression
+        #
+        self.assertEqual( list(EXPR.identify_mutable_params(5)), [] )
+
+    def test_identify_mutable_params(self):
+        m = ConcreteModel()
+        m.I = RangeSet(3)
+        m.a = Var(initialize=1)
+        m.b = Var(m.I, initialize=1)
+        #
+        # There are no variables in expressions with only vars
+        #
+        self.assertEqual( list(EXPR.identify_mutable_params(m.a)), [] )
+        self.assertEqual( list(EXPR.identify_mutable_params(m.b[1])), [] )
+        self.assertEqual( list(EXPR.identify_mutable_params(m.a+m.b[1])), [] )
+        self.assertEqual( list(EXPR.identify_mutable_params(m.a**m.b[1])), [] )
+        self.assertEqual( list(EXPR.identify_mutable_params(
+            m.a**m.b[1] + m.b[2])), [] )
+        self.assertEqual( list(EXPR.identify_mutable_params(
+            m.a**m.b[1] + m.b[2]*m.b[3]*m.b[2])), [] )
+
+    def test_identify_duplicate_params(self):
+        #
+        # Identify mutable params when there are duplicates
+        #
+        m = ConcreteModel()
+        m.a = Param(initialize=1, mutable=True)
+
+        self.assertEqual( list(EXPR.identify_mutable_params(2*m.a+2*m.a)),
+                          [ m.a ] )
+
+    def test_identify_mutable_params_expr(self):
+        #
+        # Identify variables when there are duplicates
+        #
+        m = ConcreteModel()
+        m.a = Param(initialize=1, mutable=True)
+        m.b = Param(initialize=2, mutable=True)
+        m.e = Expression(expr=3*m.a)
+        m.E = Expression([0,1], initialize={0:3*m.a, 1:4*m.b})
+
+        self.assertEqual( list(EXPR.identify_mutable_params(m.b+m.e)), [ m.b, m.a ] )
+        self.assertEqual( list(EXPR.identify_mutable_params(m.E[0])), [ m.a ] )
+        self.assertEqual( list(EXPR.identify_mutable_params(m.E[1])), [ m.b ] )
+
+    def test_identify_mutable_params_params(self):
+        m = ConcreteModel()
+        m.I = RangeSet(3)
+        m.a = Param(initialize=1, mutable=True)
+        m.b = Param(m.I, initialize=1, mutable=True)
+        m.p = Var(initialize=1)
+        m.x = ExternalFunction(library='foo.so', function='bar')
+        #
+        # Identify variables in various algebraic expressions
+        #
+        self.assertEqual( list(EXPR.identify_mutable_params(m.a)), [m.a] )
+        self.assertEqual( list(EXPR.identify_mutable_params(m.b[1])), [m.b[1]] )
+        self.assertEqual( list(EXPR.identify_mutable_params(m.a+m.b[1])),
+                          [ m.a, m.b[1] ] )
+        self.assertEqual( list(EXPR.identify_mutable_params(m.a**m.b[1])),
+                          [ m.a, m.b[1] ] )
+        self.assertEqual( list(EXPR.identify_mutable_params(m.a**m.b[1] + m.b[2])),
+                          [ m.a, m.b[1], m.b[2] ] )
+        self.assertEqual( list(EXPR.identify_mutable_params(
+            m.a**m.b[1] + m.b[2]*m.b[3]*m.b[2])),
+                          [ m.a, m.b[1], m.b[2], m.b[3] ] )
+        self.assertEqual( list(EXPR.identify_mutable_params(
+            m.a**m.b[1] + m.b[2]/m.b[3]*m.b[2])),
+                          [ m.a, m.b[1], m.b[2], m.b[3] ] )
+        #
+        # Identify variables in the arguments to functions
+        #
+        self.assertEqual( list(EXPR.identify_mutable_params(
+            m.x(m.a, 'string_param', 1, [])*m.b[1] )),
+                          [ m.a, m.b[1] ] )
+        self.assertEqual( list(EXPR.identify_mutable_params(
+            m.x(m.p, 'string_param', 1, [])*m.b[1] )),
+                          [ m.b[1] ] )
+        self.assertEqual( list(EXPR.identify_mutable_params(
+            tanh(m.a)*m.b[1] )), [ m.a, m.b[1] ] )
+        self.assertEqual( list(EXPR.identify_mutable_params(
+            abs(m.a)*m.b[1] )), [ m.a, m.b[1] ] )
+        #
+        # Check logic for allowing duplicates
+        #
+        self.assertEqual( list(EXPR.identify_mutable_params(m.a**m.a + m.a)),
+                          [ m.a ] )
+
+
 class TestMultiArgumentExpressions(unittest.TestCase):
 
     def test_double_sided_ineq(self):
@@ -5458,6 +5551,7 @@ class ReplacementWalkerTest(EXPR.ExpressionReplacementVisitor):
             self.memo[id(node)] = self.model.w.add()
             return True, self.memo[id(node)]
         return False, None
+
 
 class WalkerTests(unittest.TestCase):
 
