@@ -34,8 +34,55 @@ logger = logging.getLogger('pyomo.gdp')
 class BigM_Transformation(Transformation):
     """Relax disjunctive model using big-M terms.
 
-    Relaxes a disjunctive model into an algebraic model by adding Big-M terms
-    to all disjunctive constraints.
+    Relaxes a disjunctive model into an algebraic model by adding Big-M
+    terms to all disjunctive constraints.
+
+    This transformation accepts the following keyword arguments:
+        bigM: A user-specified value (or dict) of M values to use (see below)
+        targets: the targets to transform [default: the instance]
+
+    M values are determined as follows:
+       1) if the constraint CUID appears in the bigM argument dict
+       2) if the constraint parent_component CUID appears in the bigM
+          argument dict
+       3) if 'None' is in the bigM argument dict
+       4) if the constraint or the constraint parent_component appear in
+          a BigM Suffix attached to any parent_block() beginning with the
+          constraint's parent_block and moving up to the the root model.
+       5) if None appears in a BigM Suffix attached to any
+          parent_block() between the constraint and the root model.
+       6) if the constraint is linear, estimate M using the variable bounds
+
+    M values may be a single value or a 2-tuple specifying the M for the
+    lower bound and the upper bound of the constraint body.
+
+    Specifying "bigM=N" is automatically mapped to "bigM={None: N}".
+
+    After transformation, every transformed disjunct will have a
+    "_gdp_transformation_info" dict containing 2 entries:
+
+        'relaxed': True,
+        'bigm': {
+            'relaxationBlock': <block>,
+            'relaxedConstraints': ComponentMap(constraint: relaxed_constraint)
+        }
+
+    In addition, any block or disjunct containind a relaxed disjunction
+    will have a "_gdp_transformation_info" dict with the following
+    entry:
+
+        'disjunction_or_constraint': <constraint>
+
+    Finally, the transformation will create a new Block with a unique
+    name beginning "_pyomo_gdp_bigm_relaxation".  That Block will
+    contain an indexed Block names "relaxedDisjuncts", which will hold
+    the relaxed disjuncts.  This block is indexed by an integer
+    indicating the order in which the disjuncts were relaxed.  Each
+    block will have a "_gdp_transformation_info" dict with the following
+    entries:
+
+        'src': <source disjunct>
+        'srcConstraints': ComponentMap(relaxed_constraint: constraint)
     """
 
     alias('gdp.bigm', doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
