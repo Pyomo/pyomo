@@ -578,19 +578,20 @@ class BigM_Transformation(Transformation):
                 newConstraint.add(i_ub, c.body - M_expr <= c.upper)
 
     def _get_M_from_args(self, constraint, bigMargs):
-        M = None
         # check args: we only have to look for constraint, constraintdata, and
         # None
-        if bigMargs is not None:
-            cuid = ComponentUID(constraint)
-            parentcuid = ComponentUID(constraint.parent_component())
-            if cuid in bigMargs:
-                M = bigMargs[cuid]
-            elif parentcuid in bigMargs:
-                M = bigMargs[parentcuid]
-            elif None in bigMargs:
-                M = bigMargs[None]
-        return M
+        if bigMargs is None:
+            return None
+
+        cuid = ComponentUID(constraint)
+        parentcuid = ComponentUID(constraint.parent_component())
+        if cuid in bigMargs:
+            return bigMargs[cuid]
+        elif parentcuid in bigMargs:
+            return bigMargs[parentcuid]
+        elif None in bigMargs:
+            return bigMargs[None]
+        return None
 
     def _get_M_from_suffixes(self, constraint, suffix_list):
         M = None
