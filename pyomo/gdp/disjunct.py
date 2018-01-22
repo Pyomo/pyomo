@@ -13,7 +13,6 @@ import sys
 from six import iteritems
 from weakref import ref as weakref_ref
 
-#from pyomo.core import *
 from pyomo.util.modeling import unique_component_name
 from pyomo.util.timing import ConstructionTimer
 from pyomo.core import register_component, Binary, Block, Var, Constraint, Any
@@ -95,6 +94,17 @@ class _DisjunctData(_BlockData):
         else:
             self.add_component('indicator_var', _indicator_var)
 
+    def activate(self):
+        super(_DisjunctData, self).activate()
+        self.indicator_var.unfix()
+
+    def deactivate(self):
+        super(_DisjunctData, self).deactivate()
+        self.indicator_var.fix(0)
+
+    def _deactivate_without_fixing_indicator(self):
+        super(_DisjunctData, self).deactivate()
+
 class Disjunct(Block):
 
     _ComponentDataClass = _DisjunctData
@@ -117,6 +127,14 @@ class Disjunct(Block):
         kwargs.setdefault('ctype', Disjunct)
         Block.__init__(self, *args, **kwargs)
 
+    #def _deactivate_without_fixing_indicator(self):
+    #    # Ideally, this would be a super call from this class.  However,
+    #    # doing that would trigger a call to deactivate() on all the
+    #    # _DisjunctData objects (exactly what we want to aviod!)
+    #    #
+    #    # For the time being, we will do something bad and directly call
+    #    # the base class method from where we would otherwise want to
+    #    # call this method.
 
 class SimpleDisjunct(_DisjunctData, Disjunct):
 
