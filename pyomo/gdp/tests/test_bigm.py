@@ -102,9 +102,9 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertIsInstance(infodict, dict)
         self.assertEqual(len(infodict), 1)
         orDict = infodict['disjunction_or_constraint']
-        self.assertIsInstance(orDict, dict)
+        self.assertIsInstance(orDict, ComponentMap)
         self.assertIs(
-            orDict[m.disjunction.name],
+            orDict[m.disjunction],
             m._gdp_bigm_relaxation_disjunction_xor)
 
     def test_disjunct_and_constraint_maps(self):
@@ -1422,10 +1422,10 @@ class DisjunctInMultipleDisjunctions(unittest.TestCase, CommonTests):
         self.assertIsInstance(infodict, dict)
         self.assertEqual(len(infodict), 1)
         orDict = infodict['disjunction_or_constraint']
-        self.assertIsInstance(orDict, dict)
-        self.assertIs(orDict[m.disjunction1.local_name],
+        self.assertIsInstance(orDict, ComponentMap)
+        self.assertIs(orDict[m.disjunction1],
                       m._gdp_bigm_relaxation_disjunction1_xor)
-        self.assertIs(orDict[m.disjunction2.local_name],
+        self.assertIs(orDict[m.disjunction2],
                       m._gdp_bigm_relaxation_disjunction2_xor)
 
     def test_transformed_constraints(self):
@@ -2281,7 +2281,7 @@ class IndexedDisjunction(unittest.TestCase):
                      ComponentUID(m.disjunction[3])])
 
         xorC = m._gdp_transformation_info['disjunction_or_constraint'][
-            m.disjunction.local_name]
+            m.disjunction]
         self.assertIsInstance(xorC, Constraint)
         self.assertEqual(len(xorC), 2)
         
