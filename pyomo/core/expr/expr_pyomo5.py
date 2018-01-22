@@ -30,6 +30,7 @@ __all__ = (
 'evaluate_expression',
 'identify_components',
 'identify_variables',
+'identify_mutable_params',
 'expression_to_string',
 'ExpressionBase',
 'EqualityExpression',
@@ -951,6 +952,43 @@ def identify_variables(expr, include_fixed=True):
         for v in visitor.xbfs_yield_leaves(expr):
             if not v.is_fixed():
                 yield v
+
+
+# =====================================================
+#  identify_mutable_params
+# =====================================================
+
+class _MutableParamVisitor(SimpleExpressionVisitor):
+
+    def __init__(self):
+        self.seen = set()
+        
+    def visit(self, node):
+        if node.__class__ in nonpyomo_leaf_types:
+            return
+
+        # TODO: Confirm that this has the right semantics
+        if not node.is_variable_type() and node.is_fixed():
+            if id(node) in self.seen:
+                return
+            self.seen.add(id(node))
+            return node
+
+
+def identify_mutable_params(expr):
+    """
+    A generator that yields a sequence of mutable
+    parameters in an expression tree.
+
+    Args:
+        expr: The root node of an expression tree.
+
+    Yields:
+        Each mutable parameter that is found.
+    """
+    visitor = _MutableParamVisitor()
+    for v in visitor.xbfs_yield_leaves(expr):
+        yield v
 
 
 # =====================================================
