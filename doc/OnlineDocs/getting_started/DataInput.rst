@@ -4,7 +4,7 @@ Data Input for Abstract Models
 This section provides a brief introduction to data commands and options
 that are used primarily in abstract models, although they
 also can be used on concrete models. For more informatation,
-see the documentation in :ref:`page-managingdata'.
+see the documentation in :ref:`page-managingdata`.
 
 
 Data Command Files
