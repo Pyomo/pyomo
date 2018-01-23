@@ -4,7 +4,7 @@ Data Input for Abstract Models
 This section provides a brief introduction to data commands and options
 that are used primarily in abstract models, although they
 also can be used on concrete models. For more informatation,
-see the documentation with the title Managing Data in Pyomo Models.
+see the documentation in :ref:`page-managingdata'.
 
 
 Data Command Files
@@ -55,6 +55,6 @@ Loading Data
 The `load` method can be used to load data into Pyomo models from a variety of 
 sources and formats.  The most common format is a table representation of set and
 parameter data.   For more informatation,
-see the documentation with the title Managing Data in Pyomo Models.
+see the documentation in :ref:`_page-dataportals`.
 
 
