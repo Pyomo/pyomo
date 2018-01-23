@@ -64,10 +64,9 @@ class GDP_Disjunct_Fixer(Transformation):
         self._transformContainer(obj)
 
     def _transformDisjunctionData(self, disjunction):
-        xor = disjunction.parent_component().xor
         logical_sum = sum(value(disj.indicator_var)
                           for disj in disjunction.disjuncts)
-        if xor and not logical_sum == 1:
+        if disjunction.xor and not logical_sum == 1:
             raise GDP_Error(
                 "Disjunction %s violated. "
                 "Expected 1 disjunct to be active, but %s were active."
