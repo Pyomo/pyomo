@@ -142,18 +142,17 @@ class ConvexHull_Transformation(Transformation):
                     "Target %s is not a component on the instance!" % _t)
             if not t.active:
                 continue
-            # TODO: This is compensating for Issue #185. I do need to
-            # check if something is a DisjunctData, but the other
-            # places where I am checking type I would like to only
-            # check ctype.
-            if type(t) is disjunct._DisjunctionData:
-                self._transformDisjunctionData(t, transBlock, t.index())
-            elif type(t) is disjunct._DisjunctData:
-                self._transformBlock(t, transBlock)
-            elif type(t) is _BlockData or t.type() in (Block, Disjunct):
-                self._transformBlock(t, transBlock)
-            elif t.type() is Disjunction:
-                self._transformDisjunction(t, transBlock)
+
+            if t.type() is Disjunction:
+                if t.parent_component() is t:
+                    self._transformDisjunction(t, transBlock)
+                else:
+                    self._transformDisjunctionData(t, transBlock, t.index())
+            elif t.type() in (Block, Disjunct):
+                if t.parent_component() is t:
+                    self._transformBlock(t, transBlock)
+                else:
+                    self._transformBlockData(t, transBlock)
             else:
                 raise GDP_Error(
                     "Target %s was not a Block, Disjunct, or Disjunction. "
@@ -165,12 +164,29 @@ class ConvexHull_Transformation(Transformation):
         # them. So the invalid component logic will tell us if we
         # missed something getting transformed.
         for obj in transBlock.disjContainers:
-            if obj.active:
-                for i in obj:
-                    if obj[i].active:
-                        break
-                else:
-                    obj.deactivate()
+            if not obj.active:
+                continue
+            for i in obj:
+                if obj[i].active:
+                    break
+            else:
+                # HACK due to active flag implementation.
+                #
+                # Ideally we would not have to do any of this (an
+                # ActiveIndexedComponent would get its active status by
+                # querring the active status of all the contained Data
+                # objects).  As a fallback, we would like to call:
+                #
+                #    obj._deactivate_without_fixing_indicator()
+                #
+                # However, the sreaightforward implementation of that
+                # method would have unintended side effects (fixing the
+                # contained _DisjunctData's indicator_vars!) due to our
+                # class hierarchy.  Instead, we will directly call the
+                # relevant base class (safe-ish since we are verifying
+                # that all the contained _DisjunctionData are
+                # deactivated directly above).
+                ActiveComponent.deactivate(obj)
 
         # HACK for backwards compatibility with the older GDP transformations
         #
