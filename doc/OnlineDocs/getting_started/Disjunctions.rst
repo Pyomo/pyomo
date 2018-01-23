@@ -7,7 +7,6 @@ A disjunction is a set of collections of variables, parameters, and constraints 
 
 D1 V D2
 
-<<<<<<< HEAD
 That is, either the constraints in the collection D1 are enforced, OR the constraints in the collection D2 are enforced.
 
 In pyomo, we model each collection using a special type of block
@@ -79,7 +78,5 @@ Some notes:
 
 When you declare a Disjunct, it (at declaration time) will
 automatically have a variable “indicator_var” defined and attached to
-it.  After that, it is just a Var like any other Var.
-=======
-That is, either the constraints in the collection D1 are enforced, OR the constraints in the collection D2 are enforced. 
->>>>>>> 86ea2b76276d40d8a2301c1405301d27cc4a1c47
+it.  After that, it is just a `Var` like any other `Var`.
+

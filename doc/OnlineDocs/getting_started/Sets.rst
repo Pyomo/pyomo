@@ -31,7 +31,6 @@ the ``dimen`` argument:
 
 To create a set of all the numbers in set ``model.A`` doubled, one could use
 
-<<<<<<< HEAD
 .. literalinclude:: examples/doubleA.py
    :language: python
 
@@ -317,8 +316,4 @@ Here is the first few lines of a model that illustrates this:
 .. rubric:: References
 
 .. [PyomoBookII] Hart, W.E.; Laird, C.; Watson, J.-P.; Woodruff, D.L.; Hackebeil, G.A.; Nicholson, B.L.; Siirola, J.D.: Pyomo – Optimization Modeling in Python, Springer, 2017.
-=======
 
-
-
->>>>>>> 86ea2b76276d40d8a2301c1405301d27cc4a1c47
