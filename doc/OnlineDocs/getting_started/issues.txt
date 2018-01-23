@@ -4,8 +4,11 @@ The conversion is "done."
    - Many examples need to be redone so they are better tested.
    - There are are errors and typos.
    - There is an issue dealing with Bill's data section and cross-ref.
+   - A had a big fight with git to get this pushed, so who knows what got messed up
+     during that fight. (crazy text may appear at the end of a file and/or
+     a little text might be missing from the beginning)
 
-
+=======
 dlw Dec 2017
 Issues related to conversion from asciidoc to sphinx
 

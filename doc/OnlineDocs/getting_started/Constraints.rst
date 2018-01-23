@@ -45,3 +45,4 @@ to buy where the cost per item is given by the parameter ``model.a``:
 
 NOTE: Python and Pyomo are case sensitive so ``model.a`` is not the same
 as ``model.A``.
+

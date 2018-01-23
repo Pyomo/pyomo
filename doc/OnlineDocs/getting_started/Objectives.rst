@@ -22,3 +22,4 @@ the same index set, while ``model.y`` has been declared as a singleton:
 
 This example uses the ``sense`` option to specify maximization. The default sense is
 ``minimize``.
+

@@ -242,3 +242,4 @@ expressions, you can use the ``Expression`` component.
 .. rubric:: References
 
 .. [Vielma_et_al] Vielma, J.P, Ahmed, S., Nemhauser, G., "Mixed-Integer Models for Non-separable Piecewise Linear Optimization: Unifying framework and Extensions," Operations Research 58, 2010. pp. 303-315.
+

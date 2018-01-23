@@ -36,3 +36,4 @@ to provide bounds:
 
 NOTE: Many of the pre-defined virtual sets that are used as domains imply bounds. A strong
 example is the set ``Boolean`` that implies bounds of zero and one.
+

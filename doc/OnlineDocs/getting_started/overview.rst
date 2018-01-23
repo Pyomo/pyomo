@@ -1,6 +1,3 @@
-..
-   As of Dec 2017: checked in to pyomo by dlw; do not edit in pyomodoc repo
-
 Pyomo Overview
 ===============
 

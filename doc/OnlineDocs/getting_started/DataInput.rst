@@ -56,5 +56,3 @@ The `load` method can be used to load data into Pyomo models from a variety of
 sources and formats.  The most common format is a table representation of set and
 parameter data.   For more informatation,
 see the documentation in :ref:`_page-dataportals`.
-
-
