@@ -15,14 +15,15 @@ from pyomo.util.modeling import unique_component_name
 from pyomo.util.plugin import alias
 from pyomo.core import *
 from pyomo.core.base import expr as EXPR, Transformation
-from pyomo.core.base.block import SortComponents, _BlockData
+from pyomo.core.base.block import SortComponents
+from pyomo.core.base.component import ComponentUID, ActiveComponent
 from pyomo.core.base import _ExpressionData
 from pyomo.core.base.var import _VarData
 from pyomo.repn import generate_canonical_repn, LinearCanonicalRepn
 from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.core.kernel.expr_common import clone_expression
 from pyomo.core.base.expr import identify_variables
-from pyomo.gdp import *
+from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 
 from six import iteritems, iterkeys
@@ -206,8 +207,7 @@ class ConvexHull_Transformation(Transformation):
         # We never do this for just a DisjunctionData because we need
         # to know about the index set of its parent component. So if
         # we called this on a DisjunctionData, we did something wrong.
-        assert type(disjunction) in (disjunct.SimpleDisjunction,
-                             disjunct.IndexedDisjunction)
+        assert isinstance(disjunction, Disjunction)
         parent = disjunction.parent_block()
         if hasattr(parent, "_gdp_transformation_info"):
             infodict = parent._gdp_transformation_info

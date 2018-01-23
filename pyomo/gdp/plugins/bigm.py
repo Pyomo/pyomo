@@ -15,13 +15,12 @@ import textwrap
 from pyomo.core import (Block, Connector, Constraint, Param, Set, Suffix, Var,
                         value)
 from pyomo.core.base import Transformation
-from pyomo.core.base.block import SortComponents, TraversalStrategy, _BlockData
+from pyomo.core.base.block import SortComponents, TraversalStrategy
 from pyomo.core.base.component import ComponentUID, ActiveComponent
 from pyomo.core.base.set_types import Any
 from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.disjunct import (IndexedDisjunction, SimpleDisjunction,
-                                _DisjunctData, _DisjunctionData)
+from pyomo.gdp.disjunct import IndexedDisjunction, SimpleDisjunction
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 from pyomo.repn import LinearCanonicalRepn, generate_canonical_repn
 from pyomo.util.modeling import unique_component_name
