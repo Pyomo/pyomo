@@ -1,5 +1,3 @@
-These files are "done" and available for others to look at, comment on, and
-edit:
+DLW: These files are all "done" and available for others to look at,
+comment on, and edit as of Jan 23, 2018.
 
-overview.rst
-Parameters.rst

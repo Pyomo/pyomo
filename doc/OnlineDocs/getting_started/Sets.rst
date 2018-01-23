@@ -14,7 +14,7 @@ The ``Set`` function takes optional arguments such as:
 
 .. autosummary::
    :nosignatures:
-   
+
 - doc = String describing the set
 - dimen = Dimension of the members of the set
 - filter = A boolean function used during construction to indicate if a potential new member should be assigned to the set
@@ -31,6 +31,288 @@ the ``dimen`` argument:
 
 To create a set of all the numbers in set ``model.A`` doubled, one could use
 
+.. literalinclude:: examples/doubleA.py
+   :language: python
+
+>>> model.C = Set(initialize=DoubleA_init)
+
+As an aside we note that as always in Python, there are lot
+of ways to accomplish the same thing. Also, note that this
+will generate an error if ``model.A`` contains elements for
+which multiplication times two is not defined.
+
+The ``initialize`` option can refer to a Python set, which can be returned by a function or given directly as in
+
+>>> model.D = Set(initialize=['red', 'green', 'blue'])
+
+The ``initialize`` option can also specify a
+function that is applied sequentially to generate set members. Consider the case of
+a simple set. In this case, the initialization
+function accepts a set element number and model and
+returns the set element associated with that number:
+
+.. literalinclude:: examples/Z_init.py
+   :language: python
+
+>>> model.Z = Set(initialize=Z_init)
+
+The ``Set.End`` return value terminates input to the set. Additional information about iterators for set initialization is
+in the [PyomoBookII]_ book.
+
+NOTE: Data specified in an input file will override the data specified by the initialize options.
+
+If sets are given as arguments to ``Set`` without keywords, they are interpreted as indexes for an array of sets. For example, to create an array of sets
+that is indexed by the members of the set ``model.A``, use
+
+>>> model.E = Set(model.A)
+
+Arguments can be combined. For example, to create an array of sets with three dimensional members indexed by set ``model.A``, use
+
+>>> model.F = Set(model.A, dimen=3)
+
+The ``initialize`` option can be used to
+create a set that contains a sequence of numbers, but
+the ``RangeSet`` function provides a concise mechanism for simple
+sequences. This function
+takes as its arguments a start value, a final value, and a
+step size. If the ``RangeSet`` has only a single argument, then that value defines the final value in the sequence; the first value and step size default to one. If two values given, they are the first and last value in the sequence and the step size defaults to one. For
+example, the following declaration creates a set with the
+numbers 1.5, 5 and 8.5:
+
+>>> model.G = RangeSet(1.5, 10, 3.5)
+
+Operations
+-----------
+
+Sets may also be created by assigning other Pyomo sets as in these examples that also
+illustrate the set operators union, intersection, difference, and exclusive-or:
+
+>>> model.H = model.A
+>>> model.I = model.A | model.D # union
+>>> model.J = model.A & model.D # intersection
+>>> model.K = model.A - model.D # difference
+>>> model.L = model.A ^ model.D # exclusive-or
+
+The cross-product operator is the asterisk (*). For example, to assign
+a set the cross product of two other sets, one could use
+
+>>> model.K = model.B * model.c
+
+or to indicate the the members of a set are restricted to be
+in the cross product of two other sets, one could use
+
+>>> model.K = Set(within=model.B * model.C)
+
+The cross-product operator is the asterisk (*).
+For example, to create a set that contains the cross-product
+of sets A and B, use
+
+>>> model.C = Set(model.A * model.B)
+
+to instead create a set that can contain a subset of the members of this
+cross-product, use
+
+>>> model.C = Set(within=model.A * model.B)
+
+Predefined Virtual Sets
+-----------------------
+
+For use in specifying domains for sets, parameters and variables, Pyomo
+provides the following pre-defined virtual sets:
+
+.. autosummary::
+   :nosignatures:
+
+- Any = all possible values
+- Reals = floating point values
+- PositiveReals = strictly positive floating point values
+- NonPositiveReals = non-positive floating point values
+- NegativeReals = strictly negative floating point values
+- NonNegativeReals = non-negative floating point values
+- PercentFraction = floating point values in the interval [0,1]
+- UnitInterval = alias for PercentFraction
+- Integers = integer values
+- PositiveIntegers = positive integer values
+- NonPositiveIntegers = non-positive integer values
+- NegativeIntegers = negative integer values
+- NonNegativeIntegers = non-negative integer values
+- Boolean = boolean values, which can be represented as False/True, 0/1, ’False’/’True’ and ’F’/’T’
+- Binary = same as boolean
+
+For example, if the set ``model.M`` is declared to be within the virtual set ``NegativeIntegers`` then
+an attempt to add anything other than a negative integer will result in an error. Here
+is the declaration:
+
+>>> model.M = Set(within=NegativeIntegers)
+
+.. _Isinglecomm.py:
+
+Sparse Index Sets
+-----------------
+
+Sets provide indexes for parameters, variables and other sets. Index
+set issues are important for modelers in part because of efficiency
+considerations, but primarily because the right choice of index
+sets can result in very natural formulations that are condusive
+to understanding and maintenance. Pyomo
+leverages Python to provide a rich collection of options for index set
+creation and use.
+
+The choice of how to represent indexes often depends on the application
+and the nature of the instance data that are expected. To illustrate
+some of the options and issues, we will consider problems involving
+networks. In many network applications, it is useful to declare a set
+of nodes, such as
+
+>>> model.Nodes = Set()
+
+and then a set of arcs can be created with reference to the nodes.
+
+Consider the following simple version of minimum cost flow problem:
+
+.. math::
+   :nowrap:
+
+	\begin{array}{lll}
+	\mbox{minimize} & \sum_{a \in \mathcal{A}} c_{a}x_{a} \\
+	\mbox{subject to:} & S_{n} + \sum_{(i,n) \in \mathcal{A}}x_{(i,n)} &  \\
+					& -D_{n} - \sum_{(n,j) \in \mathcal{A}}x_{(n,j)} & n \in \mathcal{N} \\
+					& x_{a} \geq 0, &  a \in \mathcal{A}
+	\end{array}
+
+where
+
+.. autosummary::
+   :nosignatures:
+
+- Set: Nodes :math:`\equiv \mathcal{N}`
+- Set: Arcs :math:`\equiv \mathcal{A} \subseteq \mathcal{N} \times \mathcal{N}`
+- Var: Flow on arc :math:`(i,j)` :math:`\equiv x_{i,j},\; (i,j) \in \mathcal{A}`
+- Param: Flow Cost on arc :math:`(i,j)` :math:`\equiv c_{i,j},\; (i,j) \in \mathcal{A}`
+- Param: Demand at node latexmath:`i` :math:`\equiv D_{i},\; i \in \mathcal{N}`
+- Param: Supply at node latexmath:`i` :math:`\equiv S_{i},\; i \in \mathcal{N}`
+
+In the simplest case, the arcs can just be the cross product of the nodes,
+which is accomplished by the definition
+
+>>> model.Arcs = model.Nodes * model.Nodes
+
+that creates a set with two dimensional members.
+For applications where all nodes are always connected to all other nodes
+this may suffice. However, issues can arise when the network is not fully
+dense. For example, the burden of avoiding flow on arcs that do not exist falls
+on the data file where high-enough costs must be provided for those arcs.
+Such a scheme is not very elegant or robust.
+
+For many network flow applications, it might be better to declare the
+arcs using
+
+>>> model.Arcs = Set(within=model.Nodes*model.Nodes)
+
+or
+
+>>> model.Arcs = Set(dimen=2)
+
+where the difference is that the first version will provide error checking as
+data is assigned to the set elements. This would enable specification of a
+sparse network in a natural way. But this results in a need to
+change the ``FlowBalance`` constraint because as it was written in the simple
+example, it sums over the entire set of nodes for each node. One way
+to remedy this is to sum only over the members of the set ``model.arcs`` as
+in
+
+.. literalinclude:: examples/FlowBalance_rule.py
+   :language: python
+
+This will be OK unless the number of nodes becomes very large for a sparse network, then
+the time to generate this constraint might become an issue (admittely, only for
+very large networks, but such networks do exist).
+
+Another method, which comes in handy in many network applications, is to have a set
+for each node that contain the nodes at the other end of arcs going to the node at hand and another set giving the nodes on out-going arcs. If these sets are called ``model.NodesIn`` and
+``model.NodesOut`` respectively, then the flow balance rule can be re-written as
+
+.. literalinclude:: examples/FlowBalance_rule2.py
+   :language: python
+
+The data for ``NodesIn`` and ``NodesOut`` could be added to the input file,
+and this may be the most efficient option.
+
+For all but the largest networks, rather than reading
+``Arcs``, ``NodesIn`` and ``NodesOut`` from a data file,
+it might be more elegant to read only ``Arcs`` from a
+data file and declare ``model.NodesIn``
+with an ``initialize`` option specifying the creation as follows:
+
+.. literalinclude:: examples/NodesIn_init.py
+   :language: python
+
+with a similar definition for ``model.NodesOut``.  This code creates a list of sets
+for ``NodesIn``, one set of nodes for each node. The full model is:
+
+.. literalinclude:: examples/Isinglecomm.py
+   :language: python
+
+for this model, a toy data file would be:
+
+.. literalinclude:: examples/Isinglecomm.dat
+   :language: python
+
+This can be done somewhat more efficiently, and perhaps more clearly,
+using a BuildAction as shown in Isinglebuild.py in :ref:Isinglebuild.py.
+
+Sparse Index Sets Example
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+One may want to have a constraint that holds
+
+>>> for i in model.I, k in model.K, v in model.V[k]
 
 
+There are many ways to accomplish this, but one good way
+is to create a set of tuples composed of all of ``model.k, model.V[k]`` pairs.
+This can be done as follows:
 
+>>> def kv_init(model):
+>>>     return ((k,v) for k in model.K for v in model.V[k])
+>>> model.KV=Set(dimen=2, initialize=kv_init)
+
+So then if there was a constraint defining rule such as
+
+>>> def MyC_rule(model, i, k, v):
+>>>    return ...
+
+Then a constraint could be declared using
+
+>>> model.MyConstraint = Constraint(model.I,model.KV,rule=c1Rule)
+
+
+Here is the first few lines of a model that illustrates this:
+
+>>> from pyomo.environ import *
+>>>
+>>> model = AbstractModel()
+>>>
+>>> model.I=Set()
+>>> model.K=Set()
+>>> model.V=Set(model.K)
+>>>
+>>> def kv_init(model):
+>>>     return ((k,v) for k in model.K for v in model.V[k])
+>>> model.KV=Set(dimen=2, initialize=kv_init)
+>>>
+>>> model.a = Param(model.I, model.K)
+>>>
+>>> model.y = Var(model.I)
+>>> model.x = Var(model.I, model.KV)
+>>>
+>>> #include a constraint
+>>> #x[i,k,v] <= a[i,k]*y[i], for i in model.I, k in model.K, v in model.V[k]
+>>>
+>>> def c1Rule(model,i,k,v):
+>>>    return model.x[i,k,v] <= model.a[i,k]*model.y[i]
+>>> model.c1 = Constraint(model.I,model.KV,rule=c1Rule)
+
+.. rubric:: References
+
+.. [PyomoBookII] Hart, W.E.; Laird, C.; Watson, J.-P.; Woodruff, D.L.; Hackebeil, G.A.; Nicholson, B.L.; Siirola, J.D.: Pyomo – Optimization Modeling in Python, Springer, 2017.

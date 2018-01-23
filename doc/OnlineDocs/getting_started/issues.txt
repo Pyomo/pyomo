@@ -1,3 +1,11 @@
+dlw Jan 2018
+
+The conversion is "done."
+   - Many examples need to be redone so they are better tested.
+   - There are are errors and typos.
+   - There is an issue dealing with Bill's data section and cross-ref.
+
+
 dlw Dec 2017
 Issues related to conversion from asciidoc to sphinx
 
