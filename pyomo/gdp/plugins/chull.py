@@ -30,7 +30,7 @@ from six import iteritems, iterkeys
 # DEBUG
 from nose.tools import set_trace
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.gdp')
 
 # NL_Mode_LeeGrossmann is the original NL convex hull from Lee &
 # Grossmann (2000), which substitutes nonlinear constraints
@@ -201,8 +201,7 @@ class ConvexHull_Transformation(Transformation):
 
 
     def _declareDisjunctionConstraints(self, disjunction):
-        # Put the disjunction constraint on its parent block and
-        # determine whether it is an OR or XOR constraint.
+        # Put the disjunction constraint on its parent block
 
         # We never do this for just a DisjunctionData because we need
         # to know about the index set of its parent component. So if
@@ -231,13 +230,6 @@ class ConvexHull_Transformation(Transformation):
         # It's indexed if this is an IndexedDisjunction, not otherwise
         orC = Constraint(disjunction.index_set()) if \
               disjunction.is_indexed() else Constraint()
-        xor = disjunction.xor
-        # Convex hull doesn't work if this is an or constriant. So if
-        # xor is false, give up
-        if not xor:
-            raise GDP_Error("Cannot do convex hull transformation for "
-                            "disjunction %s with or constraint. Must be an xor!"
-                            % disjunction.name)
         nm = '_xor'
         orCname = unique_component_name(parent, '_gdp_chull_relaxation_' + \
                                         disjunction.name + nm)
@@ -273,6 +265,13 @@ class ConvexHull_Transformation(Transformation):
     def _transformDisjunctionData(self, obj, transBlock, index,
                                   orConstraint=None,
                                   disaggregationConstraint=None):
+        # Convex hull doesn't work if this is an or constraint. So if
+        # xor is false, give up
+        if not obj.xor:
+            raise GDP_Error("Cannot do convex hull transformation for "
+                            "disjunction %s with or constraint. Must be an xor!"
+                            % obj.name)
+
         parent_component = obj.parent_component()
         if orConstraint is None:
             parent_bock = obj.parent_block()
@@ -280,9 +279,8 @@ class ConvexHull_Transformation(Transformation):
             type(parent_block._gdp_transformation_info) is dict):
                 infodict = parent_block._gdp_transformation_info
                 if parent_component.name in infodict:
-                    # if the orConstraint and disaggregation
-                    # constraints have already been declared, we fetch
-                    # them.
+                    # if the orConstraint and disaggregation constraints have
+                    # already been declared, we fetch them.
                     orConstraint = infodict['disjunction_or_constraint'][
                         parent_component.local_name]
                     disaggregationConstraint = infodict[
@@ -308,7 +306,7 @@ class ConvexHull_Transformation(Transformation):
                 # variables. This means there is trouble if they are
                 # unfixed later...  
                 for var in identify_variables(cons.body, include_fixed=False):
-                    # Note the use of a dict so that we will eventually
+                    # Note the use of a list so that we will eventually
                     # disaggregate the vars in a deterministic order
                     # (the order that we found them)
                     if var not in varSet_tmp:
@@ -329,8 +327,20 @@ class ConvexHull_Transformation(Transformation):
                 disaggregatedVar = disjunct._gdp_transformation_info[
                     'disaggregatedVars'][var]
                 disaggregatedExpr += disaggregatedVar
+            # TODO: The name below is a problem. We could potentially have
+            # variables of the same name because these variables could live on
+            # different blocks. So we really need the name to be unique with
+            # respect to all of the other variables that will be disaggregated
+            # in this disjunction. which is not what the line below does.
             consName = unique_component_name(disjunct, var.name)
-            consIdx = index + (consName,) if index is not None else consName
+            # TODO: This is one idea for how to add an index, Qi has another. We
+            # should probably choose one.
+            if type(index) is tuple: 
+                index = consIdx = index + (consName,)
+            else:               
+                consIdx = (index,) + (consName,) if index is not None \
+                          else consName
+
             disaggregationConstraint.add(
                 consIdx,
                 var == disaggregatedExpr)
@@ -402,10 +412,10 @@ class ConvexHull_Transformation(Transformation):
                                 "transformation! Missing bound for %s."
                                 % (var.name))
             bigmConstraint = Constraint(transBlock.lbub)
-            bigmConstraint.add('lb', obj.indicator_var*lb <= disaggregatedVar)
-            bigmConstraint.add('ub', disaggregatedVar <= obj.indicator_var*ub)
             relaxationBlock.add_component(
                 disaggregatedVarName + "_bounds", bigmConstraint)
+            bigmConstraint.add('lb', obj.indicator_var*lb <= disaggregatedVar)
+            bigmConstraint.add('ub', disaggregatedVar <= obj.indicator_var*ub)
             infodict['bigmConstraints'][var] = bigmConstraint
             relaxationBlockInfo['boundConstraintToSrcVar'][bigmConstraint] = var
 

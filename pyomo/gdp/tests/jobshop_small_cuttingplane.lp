@@ -21,48 +21,33 @@ c_u_Feas(C)_:
 +1 t(C)
 <= -6
 
-r_l__gdp_bigm_relaxation_disj_xor(A_B_3)_:
+c_e__gdp_bigm_relaxation_disj_xor(A_B_3)_:
 +1 NoClash(A_B_3_0)_indicator_var
 +1 NoClash(A_B_3_1)_indicator_var
->= 1
+= 1
 
-r_u__gdp_bigm_relaxation_disj_xor(A_B_3)_:
-+1 NoClash(A_B_3_0)_indicator_var
-+1 NoClash(A_B_3_1)_indicator_var
-<= 1
-
-r_l__gdp_bigm_relaxation_disj_xor(A_C_1)_:
+c_e__gdp_bigm_relaxation_disj_xor(A_C_1)_:
 +1 NoClash(A_C_1_0)_indicator_var
 +1 NoClash(A_C_1_1)_indicator_var
->= 1
+= 1
 
-r_u__gdp_bigm_relaxation_disj_xor(A_C_1)_:
-+1 NoClash(A_C_1_0)_indicator_var
-+1 NoClash(A_C_1_1)_indicator_var
-<= 1
-
-r_l__gdp_bigm_relaxation_disj_xor(B_C_2)_:
+c_e__gdp_bigm_relaxation_disj_xor(B_C_2)_:
 +1 NoClash(B_C_2_0)_indicator_var
 +1 NoClash(B_C_2_1)_indicator_var
->= 1
-
-r_u__gdp_bigm_relaxation_disj_xor(B_C_2)_:
-+1 NoClash(B_C_2_0)_indicator_var
-+1 NoClash(B_C_2_1)_indicator_var
-<= 1
+= 1
 
 c_l__pyomo_gdp_cuttingplane_relaxation_cuts(0)_:
--0.00014437760999996829 NoClash(A_B_3_0)_indicator_var
-+0.00014437761046799999 NoClash(A_B_3_1)_indicator_var
--0.13877551036900004 NoClash(A_C_1_0)_indicator_var
-+0.13877551036889998 NoClash(A_C_1_1)_indicator_var
--0.04736841734589 NoClash(B_C_2_0)_indicator_var
-+0.047368417346000058 NoClash(B_C_2_1)_indicator_var
-+1.5319727890199992 ms
-+1.5319727889200001 t(A)
-+0.0157895270171 t(B)
-+1.17006802825 t(C)
->= 18.29212204269399
+-0.00014612284600001857 NoClash(A_B_3_0)_indicator_var
++0.00014612284626299999 NoClash(A_B_3_1)_indicator_var
+-0.138775510381 NoClash(A_C_1_0)_indicator_var
++0.1387755103809 NoClash(A_C_1_1)_indicator_var
+-0.04736841867555 NoClash(B_C_2_0)_indicator_var
++0.047368418676000057 NoClash(B_C_2_1)_indicator_var
++1.5319727890399992 ms
++1.5319727889100001 t(A)
++0.0157895243957 t(B)
++1.17006802835 t(C)
+>= 18.292120300259779
 
 c_u__pyomo_gdp_bigm_relaxation_relaxedDisjuncts(0)_NoClash(A_B_3_0)_c(ub)_:
 +19 NoClash(A_B_3_0)_indicator_var

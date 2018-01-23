@@ -11,7 +11,7 @@
 import sys
 
 from pyomo.core import *
-from pyomo.opt import ProblemFormat, PersistentSolver
+from pyomo.opt import ProblemFormat
 
 # these are the only two preprocessors currently invoked by the
 # simple_preprocessor, which in turn is invoked by the preprocess()
@@ -663,6 +663,10 @@ def preprocess_scenario_instance(scenario_instance,
                                  instance_objective_modified,
                                  preprocess_fixed_variables,
                                  solver):
+    # TODO: Does this import need to be delayed because
+    #       it is in a plugins subdirectory
+    from pyomo.solvers.plugins.solvers.persistent_solver import \
+        PersistentSolver
 
     persistent_solver_in_use = isinstance(solver, PersistentSolver)
     if (not instance_objective_modified) and \
@@ -686,8 +690,13 @@ def preprocess_scenario_instance(scenario_instance,
 
             canonical_preprocess_block_objectives(scenario_instance)
 
-        if persistent_solver_in_use and solver.instance_compiled():
-            solver.compile_objective(scenario_instance)
+        if persistent_solver_in_use and solver.has_instance():
+            obj_count = 0
+            for obj in scenario_instance.component_data_objects(ctype=Objective, descend_into=True, active=True):
+                obj_count += 1
+                if obj_count > 1:
+                    raise RuntimeError('Persistent solver interface only supports a single objective.')
+                solver.set_objective(obj)
 
     if (instance_variables_fixed or instance_variables_freed) and \
        (preprocess_fixed_variables):
@@ -707,11 +716,11 @@ def preprocess_scenario_instance(scenario_instance,
         # instance compiled, depending on what state the solver plugin
         # is in relative to the instance.  if this is the case, just
         # don't compile the variable bounds.
-        if solver.instance_compiled():
+        if solver.has_instance():
             variables_to_change = \
                 instance_variables_fixed + instance_variables_freed
-            solver.compile_variable_bounds(scenario_instance,
-                                           vars_to_update=variables_to_change)
+            for var_name, var_index in variables_to_change:
+                solver.update_var(scenario_instance.find_component(var_name)[var_index])
 
     if instance_user_constraints_modified:
         if solver.problem_format() == ProblemFormat.nl:

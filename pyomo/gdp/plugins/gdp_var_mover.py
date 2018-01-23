@@ -21,7 +21,7 @@ from pyomo.gdp import Disjunct
 
 from six import itervalues
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.gdp')
 
 
 class HACK_GDP_Var_Mover(Transformation):

@@ -28,7 +28,7 @@ from pyomo.util.modeling import unique_component_name
 from pyomo.util.plugin import alias
 from six import iterkeys, iteritems
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.gdp')
 
 
 class BigM_Transformation(Transformation):
@@ -206,35 +206,37 @@ class BigM_Transformation(Transformation):
         # It's indexed if this is an IndexedDisjunction, not otherwise
         orC = Constraint(disjunction.index_set()) if \
             disjunction.is_indexed() else Constraint()
-        xor = disjunction.xor
-        nm = '_xor' if xor else '_or'
+        #xor = disjunction.xor
+        #nm = '_xor' if xor else '_or'
+        nm = '_xor'
         orCname = unique_component_name(parent, '_gdp_bigm_relaxation_' +
                                         disjunction.name + nm)
         parent.add_component(orCname, orC)
         infodict.setdefault('disjunction_or_constraint', {})[
             disjunction.local_name] = orC
-        return orC, xor
+        return orC
 
     def _transformDisjunction(self, obj, transBlock, bigM):
         # create the disjunction constraint and then relax each of the
         # disjunctionDatas
-        orConstraint, xor = self._declareXorConstraint(obj)
+        orConstraint = self._declareXorConstraint(obj)
         if obj.is_indexed():
             transBlock.disjContainers.add(obj)
             for i in sorted(iterkeys(obj)):
                 self._transformDisjunctionData(obj[i], transBlock,
-                                               bigM, i, orConstraint, xor)
+                                               bigM, i, orConstraint)
         else:
             self._transformDisjunctionData(obj, transBlock, bigM,
-                                           None, orConstraint, xor)
+                                           None, orConstraint)
 
         # deactivate so we know we relaxed
         obj.deactivate()
 
     def _transformDisjunctionData(self, obj, transBlock, bigM,
-                                  index, orConstraint=None, xor=None):
+                                  index, orConstraint=None):
         parent_component = obj.parent_component()
-        if xor is None:
+        xor = obj.xor
+        if orConstraint is None:
             # If the orConstraint is already on the block fetch it.
             # Otherwise call _declareXorConstraint.
             parent_block = obj.parent_block()
@@ -249,10 +251,9 @@ class BigM_Transformation(Transformation):
                         # we fetch it and get the value of xor from the
                         # parent.
                         orConstraint = orConsDict[parent_component.local_name]
-                        xor = parent_component.xor
-            if xor is None:
+            if orConstraint is None:
                 # orConstraint wasn't already declared, so we declare it
-                orConstraint, xor = self._declareXorConstraint(
+                orConstraint = self._declareXorConstraint(
                     obj.parent_component())
         or_expr = 0
         for disjunct in obj.disjuncts:
@@ -482,39 +483,29 @@ class BigM_Transformation(Transformation):
                              "after estimating (if needed) is %s." %
                              (obj.name, str(M)))
 
-            # TODO: The commented out code should work here after
-            # issue #116 is resolved. As it is, I can't get this to
-            # work because ('lb',) isn't the same as 'lb'... I get the
-            # DeveloperError about IndexedConstraint failing to define
-            # _default(). So for now I'll just check if the constraint
-            # is indexed below.
+            # Handle indices for both SimpleConstraint and IndexedConstraint
+            if i.__class__ is tuple:
+                i_lb = i + ('lb',)
+                i_ub = i + ('ub',)
+            elif obj.is_indexed():
+                i_lb = (i, 'lb',)
+                i_ub = (i, 'ub',)
+            else:
+                i_lb = 'lb'
+                i_ub = 'ub'
 
-            # if i.__class__ is tuple:
-            #     pass
-            # elif obj.is_indexed():
-            #     i = (i,)
-            # else:
-            #     i = ()
             if c.lower is not None:
                 if M[0] is None:
                     raise GDP_Error("Cannot relax disjunctive constraint %s "
                                     "because M is not defined." % name)
                 M_expr = M[0] * (1 - disjunct.indicator_var)
-                # newConstraint.add(i+('lb',), c.lower <= c. body - M_expr)
-                if obj.is_indexed():
-                    newConstraint.add((i, 'lb'), c.lower <= c.body - M_expr)
-                else:
-                    newConstraint.add('lb', c.lower <= c.body - M_expr)
+                newConstraint.add(i_lb, c.lower <= c. body - M_expr)
             if c.upper is not None:
                 if M[1] is None:
                     raise GDP_Error("Cannot relax disjunctive constraint %s "
                                     "because M is not defined." % name)
                 M_expr = M[1] * (1 - disjunct.indicator_var)
-                # newConstraint.add(i+('ub',), c.body - M_expr <= c.upper)
-                if obj.is_indexed():
-                    newConstraint.add((i, 'ub'), c.body - M_expr <= c.upper)
-                else:
-                    newConstraint.add('ub', c.body - M_expr <= c.upper)
+                newConstraint.add(i_ub, c.body - M_expr <= c.upper)
 
     def _get_M_from_args(self, constraint, bigMargs):
         M = None

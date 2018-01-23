@@ -245,7 +245,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.bigm').apply_to(m)
 
         # check or constraint is an or (upper bound is None)
-        orcons = m.component("_gdp_bigm_relaxation_disjunction_or")
+        orcons = m.component("_gdp_bigm_relaxation_disjunction_xor")
         self.assertIsInstance(orcons, Constraint) 
         self.assertIs(m.d[0].indicator_var, orcons.body._args[0])
         self.assertIs(m.d[1].indicator_var, orcons.body._args[1])

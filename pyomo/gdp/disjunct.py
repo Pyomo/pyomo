@@ -8,29 +8,29 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
 import sys
 from six import iteritems
 from weakref import ref as weakref_ref
 
 #from pyomo.core import *
 from pyomo.util.modeling import unique_component_name
+from pyomo.util.timing import ConstructionTimer
 from pyomo.core import register_component, Binary, Block, Var, Constraint, Any
-from pyomo.core.base.component import ( ActiveComponentData, )
+from pyomo.core.base.component import ( ActiveComponentData, ComponentData)
+from pyomo.core.base.numvalue import native_types
+#=======
+#from pyomo.core import *
+#from pyomo.core.base.plugin import register_component
+#from pyomo.core.base.constraint import (SimpleConstraint,
+#                                        IndexedConstraint,
+#                                        _GeneralConstraintData)
+#>>>>>>> master
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
 
-from os.path import abspath, dirname, join, normpath
-pyomo_base = normpath(join(dirname(abspath(__file__)), '..', '..', '..'))
-
-from pyutilib.misc import LogHandler
-
-import logging
 logger = logging.getLogger('pyomo.gdp')
-logger.setLevel(logging.WARNING)
-logger.addHandler( LogHandler(
-    pyomo_base, verbosity=lambda: logger.isEnabledFor(logging.DEBUG)) )
-
 
 _rule_returned_none_error = """Disjunction '%s': rule returned None.
 
@@ -44,17 +44,60 @@ class GDP_Error(Exception):
     """Exception raised while processing GDP Models"""
 
 
+# THe following should eventually be promoted so that all
+# IndexedComponents can use it
+class _Initializer(object):
+    value = 0
+    deferred_value = 1
+    function = 2
+    dict_like = 3
+
+    @staticmethod
+    def process(arg):
+        if type(arg) in native_types:
+            return (_Initializer.value, bool(arg))
+        elif type(arg) is types.FunctionType:
+            return (_Initializer.function, arg)
+        elif isinstance(arg, ComponentData):
+            return (_Initializer.deferred_value, arg)
+        elif hasattr(arg, '__getitem__'):
+            return (_Initializer.dict_like, arg)
+        else:
+            # Hopefully this thing is castable to teh type that is desired
+            return (_Initializer.deferred_value, arg)
+
+
 class _DisjunctData(_BlockData):
 
-    def __init__(self, owner):
-        _BlockData.__init__(self, owner)
+    def __init__(self, component):
+        _BlockData.__init__(self, component)
         self.indicator_var = Var(within=Binary)
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
         _BlockData.pprint(self, ostream=ostream, verbose=verbose, prefix=prefix)
 
+    def set_value(self, val):
+        _indicator_var = self.indicator_var
+        # Remove everything
+        for k in list(getattr(self, '_decl', {})):
+            self.del_component(k)
+        self._ctypes = {}
+        self._decl = {}
+        self._decl_order = []
+        # Now copy over everything from the other block.  If the other
+        # block has an indicator_var, it should override this block's.
+        # Otherwise restore this block's indicator_var.
+        if val:
+            if 'indicator_var' not in val:
+                self.add_component('indicator_var', _indicator_var)
+            for k in sorted(iterkeys(val)):
+                self.add_component(k,val[k])
+        else:
+            self.add_component('indicator_var', _indicator_var)
 
 class Disjunct(Block):
+
+    _ComponentDataClass = _DisjunctData
 
     def __new__(cls, *args, **kwds):
         if cls != Disjunct:
@@ -73,9 +116,6 @@ class Disjunct(Block):
 
         kwargs.setdefault('ctype', Disjunct)
         Block.__init__(self, *args, **kwargs)
-
-    def _default(self, idx):
-        return self._data.setdefault(idx, _DisjunctData(self))
 
 
 class SimpleDisjunct(_DisjunctData, Disjunct):
@@ -101,7 +141,7 @@ class IndexedDisjunct(Disjunct):
 
 
 class _DisjunctionData(ActiveComponentData):
-    __slots__ = ('disjuncts',)
+    __slots__ = ('disjuncts','xor')
     _NoArgument = (0,)
 
     def __init__(self, component=None):
@@ -115,6 +155,7 @@ class _DisjunctionData(ActiveComponentData):
                           else None
         self._active = True
         self.disjuncts = []
+        self.xor = True
 
     def __getstate__(self):
         """
@@ -126,9 +167,6 @@ class _DisjunctionData(ActiveComponentData):
         return result
 
     def set_value(self, expr):
-        return self._set_value_impl(expr)
-
-    def _set_value_impl(self, expr, idx=_NoArgument):
         for e in expr:
             # The user gave us a proper Disjunct block
             if isinstance(e, _DisjunctData):
@@ -165,6 +203,7 @@ class _DisjunctionData(ActiveComponentData):
 
 class Disjunction(ActiveIndexedComponent):
     Skip = (0,)
+    _ComponentDataClass = _DisjunctionData
 
     def __new__(cls, *args, **kwds):
         if cls != Disjunction:
@@ -177,7 +216,7 @@ class Disjunction(ActiveIndexedComponent):
     def __init__(self, *args, **kwargs):
         self._init_rule = kwargs.pop('rule', None)
         self._init_expr = kwargs.pop('expr', None)
-        self.xor = kwargs.pop('xor', True)
+        self._init_xor = _Initializer.process(kwargs.pop('xor', True))
         self._autodisjuncts = None
         kwargs.setdefault('ctype', Disjunction)
         super(Disjunction, self).__init__(*args, **kwargs)
@@ -187,12 +226,58 @@ class Disjunction(ActiveIndexedComponent):
                 "Cannot specify both rule= and expr= for Disjunction %s"
                 % ( self.name, ))
 
+    #
+    # TODO: Ideally we would not override these methods and instead add
+    # the contents of _check_skip_add to the set_value() method.
+    # Unfortunately, until IndexedComponentData objects know their own
+    # index, determining the index is a *very* expensive operation.  If
+    # we refactor things so that the Data objects have their own index,
+    # then we can remove these overloads.
+    #
+
+    def _setitem_impl(self, index, obj, value):
+        if value is Disjunction.Skip:
+            del self[index]
+            return None
+        else:
+            obj.set_value(value)
+            return obj
+
+    def _setitem_when_not_present(self, index, value):
+        if value is Disjunction.Skip:
+            return None
+        else:
+            ans = super(Disjunction, self)._setitem_when_not_present(
+                index=index, value=value)
+            self._initialize_members((index,))
+            return ans
+
+    def _initialize_members(self, init_set):
+        if self._init_xor[0] == _Initializer.value: # POD data
+            val = self._init_xor[1]
+            for key in init_set:
+                self._data[key].xor = val
+        elif self._init_xor[0] == _Initializer.deferred_value: # Param data
+            val = self._init_xor[1]
+            for key in init_set:
+                self._data[key].xor = bool(value(val))
+        elif self._init_xor[0] == _Initializer.function: # rule
+            fcn = self._init_xor[1]
+            for key in init_set:
+                self._data[key].xor = bool(value(apply_indexed_rule(
+                    self, fcn, self._parent(), key)))
+        elif self._init_xor[0] == _Initializer.dict_like: # dict-like thing
+            val = self._init_xor[1]
+            for key in init_set:
+                self._data[key].xor = bool(value(val[key]))
+
     def construct(self, data=None):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             logger.debug("Constructing disjunction %s"
                          % (self.name))
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed=True
 
         _self_parent = self.parent_block()
@@ -204,9 +289,10 @@ class Disjunction(ActiveIndexedComponent):
             if expr is None:
                 raise ValueError( _rule_returned_none_error % (self.name,) )
             if expr is Disjunction.Skip:
+                timer.report()
                 return
             self._data[None] = self
-            self._set_value_impl( expr, None )
+            self._setitem_when_not_present( None, expr )
         else:
             if self._init_expr is not None:
                 raise IndexError(
@@ -235,16 +321,8 @@ class Disjunction(ActiveIndexedComponent):
                     raise ValueError( _rule_returned_none_error % (_name,) )
                 if expr is Disjunction.Skip:
                     continue
-                self[ndx]._set_value_impl(expr, ndx)
-
-    #
-    # This method must be defined on subclasses of IndexedComponent
-    #
-    def _default(self, idx):
-        """Returns the default component data value."""
-        data = self._data[idx] = _DisjunctionData(component=self)
-        return data
-
+                self._setitem_when_not_present(ndx, expr)
+        timer.report()
 
     def _pprint(self):
         """
@@ -253,12 +331,11 @@ class Disjunction(ActiveIndexedComponent):
         return (
             [("Size", len(self)),
              ("Index", self._index if self.is_indexed() else None),
-             ("XOR", self.xor),
              ("Active", self.active),
              ],
             iteritems(self),
-            ( "Disjuncts", "Active" ),
-            lambda k, v: [ [x.name for x in v.disjuncts], v.active, ]
+            ( "Disjuncts", "Active", "XOR" ),
+            lambda k, v: [ [x.name for x in v.disjuncts], v.active, v.xor]
             )
 
 
@@ -281,15 +358,19 @@ class SimpleDisjunction(_DisjunctionData, Disjunction):
 
     def set_value(self, expr):
         """Set the expression on this disjunction."""
-        if self._constructed:
-            if len(self._data) == 0:
-                self._data[None] = self
-            return _set_value_impl(self, expr, None)
-        raise ValueError(
-            "Setting the value of disjunction '%s' "
-            "before the Disjunction has been constructed (there "
-            "is currently no object to set)."
-            % (self.name))
+        if not self._constructed:
+            raise ValueError(
+                "Setting the value of disjunction '%s' "
+                "before the Disjunction has been constructed (there "
+                "is currently no object to set)."
+                % (self.name))
+
+        if len(self._data) == 0:
+            self._data[None] = self
+        if expr is Disjunction.Skip:
+            del self[None]
+            return None
+        return super(SimpleDisjunction, self).set_value(expr)
 
 class IndexedDisjunction(Disjunction):
     pass

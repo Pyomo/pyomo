@@ -2,32 +2,42 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
 __all__ = ("InvocationType",
            "ScenarioTreeManagerClientSerial",
-           "ScenarioTreeManagerClientPyro")
+           "ScenarioTreeManagerClientPyro",
+           "ScenarioTreeManagerFactory")
 
+import math
 import sys
 import time
 import itertools
 import inspect
 import logging
 import traceback
-from collections import defaultdict
+from collections import (defaultdict,
+                         namedtuple)
 
 import pyutilib.misc
 import pyutilib.enum
-from pyutilib.pyro import shutdown_pyro_components
+from pyutilib.pyro import (shutdown_pyro_components,
+                           using_pyro4)
+from pyomo.opt import (UndefinedData,
+                       undefined,
+                       SolverStatus,
+                       TerminationCondition,
+                       SolutionStatus)
 from pyomo.opt.parallel.manager import ActionHandle
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
                                     safe_declare_common_option,
+                                    safe_register_common_option,
                                     _domain_must_be_str,
                                     _domain_tuple_of_str)
 from pyomo.pysp.util.misc import (load_external_module,
@@ -38,21 +48,20 @@ from pyomo.pysp.scenariotree.action_manager_pyro \
     import ScenarioTreeActionManagerPyro
 from pyomo.pysp.scenariotree.server_pyro \
     import ScenarioTreeServerPyro
-from pyomo.pysp.scenariotree.server_pyro_utils \
-    import (ScenarioWorkerInit,
-            BundleWorkerInit,
-            WorkerInit,
-            WorkerInitType)
 from pyomo.pysp.ef import create_ef_instance
 
-from six import iteritems, itervalues, StringIO
+import six
+from six import (iteritems,
+                 itervalues,
+                 StringIO,
+                 string_types)
 from six.moves import xrange
 
 try:
-    from guppy import hpy
-    guppy_available = True
-except ImportError:
-    guppy_available = False
+    import dill
+    dill_available = True                         #pragma:nocover
+except ImportError:                               #pragma:nocover
+    dill_available = False
 
 logger = logging.getLogger('pyomo.pysp')
 
@@ -226,11 +235,464 @@ _deprecated_invocation_types = \
      InvocationType.PerBundleInvocation: InvocationType.PerBundle,
      InvocationType.PerBundleChainedInvocation: InvocationType.PerBundleChained}
 def _map_deprecated_invocation_type(invocation_type):
-    if invocation_type in _deprecated_invocation_types:
+    if invocation_type in _deprecated_invocation_types:      #pragma:nocover
         logger.warning("DEPRECATED: %s has been renamed to %s"
                        % (invocation_type, _deprecated_invocation_types[invocation_type]))
         invocation_type = _deprecated_invocation_types[invocation_type]
     return invocation_type
+
+#
+# A named tuple that groups together the information required
+# to initialize a new worker on a scenario tree server:
+#  - type_: "bundles" or "scenarios"
+#  - names: A list of names for the scenario tree objects
+#           that will be initialized on the worker. The
+#           names should represent scenarios or bundles
+#           depending on the choice of type_.
+#  - data: The data associated with choice of type_.  For
+#          'Scenarios', this should be None. For 'Bundles'
+#          this should be a dictionary mapping bundle name
+#          to a list of scenario names.
+#
+_WorkerInit = namedtuple('_WorkerInit',
+                         ['type_', 'names', 'data'])
+
+#
+# A convenience function for populating a _WorkerInit tuple
+# for scenario worker initializations. If initializing a single
+# scenario, arg should be a scenario name. If initializing a list
+# of scenarios, arg should be a list or tuple of scenario names.
+#
+def _ScenarioWorkerInit(arg):
+    if isinstance(arg, string_types):
+        # a single scenario
+        return _WorkerInit(type_="scenarios",
+                           names=(arg,),
+                           data=None)
+    else:
+        # a list of scenarios
+        assert type(arg) in (list, tuple)
+        for name in arg:
+            assert isinstance(name, string_types)
+        return _WorkerInit(type_="scenarios",
+                           names=arg,
+                           data=None)
+
+#
+# A convenience function for populating a _WorkerInit tuple
+# for bundle worker initializations. If initializing a single
+# bundle, arg should be the bundle name and data should be a
+# list or tuple. If initializing a list of bundles, arg should
+# a list or tuple of bundle names, and data should be a dict
+# mapping bundle name to a list or tuple of scenarios.
+#
+def _BundleWorkerInit(arg, data):
+    if isinstance(arg, string_types):
+        # a single bundle
+        assert type(data) in (list, tuple)
+        assert len(data) > 0
+        return _WorkerInit(type_="bundles",
+                           names=(arg,),
+                           data={arg: data})
+    else:
+        # a list of bundles
+        assert type(arg) in (list, tuple)
+        assert type(data) is dict
+        for name in arg:
+            assert isinstance(name, string_types)
+            assert type(data[name]) in (list, tuple)
+            assert len(data[name]) > 0
+        return _WorkerInit(type_="bundles",
+                           names=arg,
+                           data=data)
+
+class ScenarioTreeSolveResults(object):
+    """A container that summarizes the results of solve
+    request to a ScenarioTreeManagerSolver. Results will
+    be organized by scenario name or bundle name,
+    depending on the solve type."""
+
+    def __init__(self, solve_type):
+        assert solve_type in ('scenarios','bundles')
+
+        # The type of solve used to generate these results
+        # Will always be one of 'scenarios' or 'bundles'
+        self._solve_type = solve_type
+
+        # Maps scenario name (or bundle name) to the
+        # objective value reported by the corresponding
+        # sub-problem.
+        self._objective = {}
+
+        # Similar to the above, but calculated from the
+        # some of the stage costs for the object, which
+        # can be different from the objective when it is
+        # augmented by a PySP algorithm.
+        self._cost = {}
+
+        # Maps scenario name (or bundle name) to the gap
+        # reported by the solver when solving the
+        # associated instance. If there is no entry,
+        # then there has been no solve. Values can be
+        # undefined when the solver plugin does not
+        # report a gap.
+        self._gap = {}
+
+        # Maps scenario name (or bundle name) to the
+        # last solve time reported for the corresponding
+        # sub-problem. Presently user time, due to
+        # deficiency in solver plugins. Ultimately want
+        # wall clock time for reporting purposes.
+        self._solve_time = {}
+
+        # Similar to the above, but the time consumed by
+        # the invocation of the solve() method on
+        # whatever solver plugin was used.
+        self._pyomo_solve_time = {}
+
+        # Maps scenario name (or bundle name) to the
+        # solver status associated with the solves. If
+        # there is no entry or it is undefined, then the
+        # object was not solved.
+        self._solver_status = {}
+
+        # Maps scenario name (or bundle name) to the
+        # solver termination condition associated with
+        # the solves. If there is no entry or it is
+        # undefined, then the object was not solved
+        self._solver_message = {}
+
+        # Maps scenario name (or bundle name) to the
+        # solver termination condition associated with
+        # the solves. If there is no entry or it is
+        # undefined, then the object was not solved.
+        self._termination_condition = {}
+
+        # Maps scenario name (or bundle name) to the
+        # solution status associated with the solves. If
+        # there is no entry or it is undefined, then the
+        # object was not solved.
+        self._solution_status = {}
+
+    @property
+    def solve_type(self):
+        """Return a string indicating the type of
+        objects associated with these solve results
+        ('scenarios' or 'bundles')."""
+        return self._solve_type
+
+    @property
+    def objective(self):
+        """Return a dictionary with the objective values
+        for all objects associated with these solve
+        results."""
+        return self._objective
+
+    @property
+    def cost(self):
+        """Return a dictionary with the sum of the stage
+        costs for all objects associated with these
+        solve results."""
+        return self._cost
+
+    @property
+    def pyomo_solve_time(self):
+        """Return a dictionary with the pyomo solve
+        times for all objects associated with these
+        solve results."""
+        return self._pyomo_solve_time
+
+    @property
+    def solve_time(self):
+        """Return a dictionary with solve times for all
+        objects associated with these solve results."""
+        return self._solve_time
+
+    @property
+    def gap(self):
+        """Return a dictionary with solution gaps for
+        all objects associated with these solve
+        results."""
+        return self._gap
+
+    @property
+    def solver_status(self):
+        """Return a dictionary with solver statuses for
+        all objects associated with these solve
+        results."""
+        return self._solver_status
+
+    @property
+    def solver_message(self):
+        """Return a dictionary with solver messages for
+        all objects associated with these solve
+        results."""
+        return self._solver_message
+
+    @property
+    def termination_condition(self):
+        """Return a dictionary with solver termination
+        conditions for all objects associated with these
+        solve results."""
+        return self._termination_condition
+
+    @property
+    def solution_status(self):
+        """Return a dictionary with solution statuses
+        for all objects associated with these solve
+        results."""
+        return self._solution_status
+
+
+    def update(self, results):
+        assert isinstance(results,
+                          ScenarioTreeSolveResults)
+        if results.solve_type != self.solve_type:
+            raise ValueError(
+                "Can not update scenario tree manager solver "
+                "results object with solve type '%s' from "
+                "another results object with a different solve "
+                "type '%s'" % (self.solve_type, results.solve_type))
+        for attr_name in ("objective",
+                          "cost",
+                          "pyomo_solve_time",
+                          "solve_time",
+                          "gap",
+                          "solver_status",
+                          "solver_message",
+                          "termination_condition",
+                          "solution_status"):
+            getattr(self, attr_name).update(
+                getattr(results, attr_name))
+
+    def results_for(self, object_name):
+        """Return a dictionary that summarizes all
+        results information for an individual object
+        associated with these solve results."""
+        if object_name not in self.objective:
+            raise KeyError(
+                "This results object does not hold any "
+                "results for scenario tree object with "
+                "name: %s" % (object_name))
+        results = {}
+        for attr_name in ("objective",
+                          "cost",
+                          "pyomo_solve_time",
+                          "solve_time",
+                          "gap",
+                          "solver_status",
+                          "solver_message",
+                          "termination_condition",
+                          "solution_status"):
+            results[attr_name] = getattr(self, attr_name)[object_name]
+        return results
+
+    def pprint(self, output_times=False, filter_names=None):
+        """Print a summary of the solve results included in this object."""
+
+        object_names = list(filter(filter_names,
+                                   sorted(self.objective.keys())))
+        if len(object_names) == 0:
+            print("No result data available")
+            return
+
+        max_name_len = max(len(str(_object_name)) \
+                           for _object_name in object_names)
+        if self.solve_type == 'bundles':
+            max_name_len = max((len("Bundle Name"), max_name_len))
+            line = (("%-"+str(max_name_len)+"s  ") % "Bundle Name")
+        else:
+            assert self.solve_type == 'scenarios'
+            max_name_len = max((len("Scenario Name"), max_name_len))
+            line = (("%-"+str(max_name_len)+"s  ") % "Scenario Name")
+        line += ("%-16s %-16s %-14s %-14s %-16s"
+                 % ("Cost",
+                    "Objective",
+                    "Objective Gap",
+                    "Solver Status",
+                    "Term. Condition"))
+        if output_times:
+            line += (" %-11s" % ("Solve Time"))
+            line += (" %-11s" % ("Pyomo Time"))
+        print(line)
+        for object_name in object_names:
+            objective_value = self.objective[object_name]
+            cost_value = self.cost[object_name]
+            gap = self.gap[object_name]
+            solver_status = self.solver_status[object_name]
+            term_condition = self.termination_condition[object_name]
+            line = ("%-"+str(max_name_len)+"s  ")
+            if isinstance(objective_value, UndefinedData):
+                line += "%-16s"
+            else:
+                line += "%-16.7e"
+            if isinstance(cost_value, UndefinedData):
+                line += " %-16s"
+            else:
+                line += " %-16.7e"
+            if (not isinstance(gap, UndefinedData)) and \
+               (gap is not None):
+                line += (" %-14.4e")
+            else:
+                line += (" %-14s")
+            line += (" %-14s %-16s")
+            line %= (object_name,
+                     cost_value,
+                     objective_value,
+                     gap,
+                     solver_status,
+                     term_condition)
+            if output_times:
+                solve_time = self.solve_time.get(object_name)
+                if (not isinstance(solve_time, UndefinedData)) and \
+                   (solve_time is not None):
+                    line += (" %-11.2f")
+                else:
+                    line += (" %-11s")
+                line %= (solve_time,)
+
+                pyomo_solve_time = self.pyomo_solve_time.get(object_name)
+                if (not isinstance(pyomo_solve_time, UndefinedData)) and \
+                   (pyomo_solve_time is not None):
+                    line += (" %-11.2f")
+                else:
+                    line += (" %-11s")
+                line %= (pyomo_solve_time,)
+            print(line)
+        print("")
+
+    def pprint_status(self, filter_names=None):
+        """Print a summary of the solve results included in this object."""
+
+        object_names = list(filter(filter_names,
+                                   sorted(self.objective.keys())))
+        if len(object_names) == 0:
+            print("No result data available")
+            return
+
+        max_name_len = max(len(str(_object_name)) \
+                           for _object_name in object_names)
+        if self.solve_type == 'bundles':
+            max_name_len = max((len("Bundle Name"), max_name_len))
+            line = (("%-"+str(max_name_len)+"s  ") % "Bundle Name")
+        else:
+            assert self.solve_type == 'scenarios'
+            max_name_len = max((len("Scenario Name"), max_name_len))
+            line = (("%-"+str(max_name_len)+"s  ") % "Scenario Name")
+        line += ("%-14s %-16s"
+                 % ("Solver Status",
+                    "Term. Condition"))
+        print(line)
+        for object_name in object_names:
+            solver_status = self.solver_status[object_name]
+            term_condition = self.termination_condition[object_name]
+            line = ("%-"+str(max_name_len)+"s  ")
+            line += ("%-14s %-16s")
+            line %= (object_name,
+                     solver_status,
+                     term_condition)
+            print(line)
+        print("")
+
+    def print_timing_summary(self, filter_names=None):
+
+        object_names = list(filter(filter_names,
+                                   sorted(self.objective.keys())))
+        if len(object_names) == 0:
+            print("No result data available")
+            return
+
+        # if any of the solve times are of type
+        # pyomo.opt.results.container.UndefinedData, then don't
+        # output timing statistics.
+        solve_times = list(self.solve_time[object_name]
+                           for object_name in object_names)
+        if any(isinstance(x, UndefinedData)
+               for x in solve_times):
+            print("At least one of the %s had an undefined solve time - "
+                  "skipping timing statistics" % (object_type))
+        else:
+            solve_times = [float(x) for x in solve_times]
+            mean = sum(solve_times) / float(len(solve_times))
+            std_dev = math.sqrt(sum(pow(x-mean,2.0) for x in solve_times) / \
+                                float(len(solve_times)))
+            print("Solve time statistics for %s - Min: "
+                  "%0.2f Avg: %0.2f Max: %0.2f StdDev: %0.2f (seconds)"
+                  % (self.solve_type,
+                     min(solve_times),
+                     mean,
+                     max(solve_times),
+                     std_dev))
+
+        # if any of the solve times are of type
+        # pyomo.opt.results.container.UndefinedData, then don't
+        # output timing statistics.
+        pyomo_solve_times = list(self.pyomo_solve_time[object_name]
+                                 for object_name in object_names)
+        if any(isinstance(x, UndefinedData)
+               for x in pyomo_solve_times):
+            print("At least one of the %s had an undefined pyomo solve time - "
+                  "skipping timing statistics" % (object_type))
+        else:
+            pyomo_solve_times = [float(x) for x in pyomo_solve_times]
+            mean = sum(pyomo_solve_times) / float(len(pyomo_solve_times))
+            std_dev = \
+                math.sqrt(sum(pow(x-mean,2.0) for x in pyomo_solve_times) / \
+                          float(len(pyomo_solve_times)))
+            print("Pyomo solve time statistics for %s - Min: "
+                  "%0.2f Avg: %0.2f Max: %0.2f StdDev: %0.2f (seconds)"
+                  % (self.solve_type,
+                     min(pyomo_solve_times),
+                     mean,
+                     max(pyomo_solve_times),
+                     std_dev))
+
+if using_pyro4:
+    import Pyro4
+    from Pyro4.util import SerializerBase
+    # register hooks for ScenarioTreeSolveResults
+    def ScenarioTreeSolveResults_to_dict(obj):
+        data = {"__class__": ("pyomo.pysp.scenario_tree.manager_solver."
+                              "ScenarioTreeSolveResults")}
+        data.update(obj.__dict__)
+        # Convert enums to strings to avoid difficult
+        # behavior related to certain Pyro serializer
+        # settings
+        for attr_name in ('_solver_status',
+                          '_termination_condition',
+                          '_solution_status'):
+            data[attr_name] = \
+                dict((key, str(val)) for key,val
+                     in data[attr_name].items())
+        return data
+    def dict_to_ScenarioTreeSolveResults(classname, d):
+        obj = ScenarioTreeSolveResults(d['_solve_type'])
+        assert "__class__" not in d
+        obj.__dict__.update(d)
+        # Convert status strings back to enums. These are
+        # transmitted as strings to avoid difficult behavior
+        # related to certain Pyro serializer settings
+        for object_name in obj.solver_status:
+            obj.solver_status[object_name] = \
+                getattr(SolverStatus,
+                        obj.solver_status[object_name])
+        for object_name in obj.termination_condition:
+            obj.termination_condition[object_name] = \
+                getattr(TerminationCondition,
+                        obj.termination_condition[object_name])
+        for object_name in obj.solution_status:
+            obj.solution_status[object_name] = \
+                getattr(SolutionStatus,
+                    obj.solution_status[object_name])
+        return obj
+    SerializerBase.register_class_to_dict(
+        ScenarioTreeSolveResults,
+        ScenarioTreeSolveResults_to_dict)
+    SerializerBase.register_dict_to_class(
+        ("pyomo.pysp.scenario_tree.manager_solver."
+         "ScenarioTreeSolveResults"),
+        dict_to_ScenarioTreeSolveResults)
+
 
 #
 # A base class and interface that is common to all scenario tree
@@ -239,9 +701,11 @@ def _map_deprecated_invocation_type(invocation_type):
 
 class ScenarioTreeManager(PySPConfiguredObject):
 
-    _declared_options = \
-        PySPConfigBlock("Options declared for the "
-                        "ScenarioTreeManager class")
+    @classmethod
+    def _declare_options(cls, options=None):
+        if options is None:
+            options = PySPConfigBlock()
+        return options
 
     #
     # Note: These Async objects can be cleaned up.
@@ -249,7 +713,8 @@ class ScenarioTreeManager(PySPConfiguredObject):
     #
     class Async(object):
         def complete(self):
-            raise NotImplementedError(type(self).__name__+": This method is abstract")
+            """Wait for the job request to complete and return the result."""
+            raise NotImplementedError                  #pragma:nocover
 
     class AsyncResult(Async):
 
@@ -277,7 +742,7 @@ class ScenarioTreeManager(PySPConfiguredObject):
             self._map_result = map_result
 
         def complete(self):
-
+            """Wait for the job request to complete and return the result."""
             if self._result is not None:
                 if isinstance(self._result,
                               ScenarioTreeManager.Async):
@@ -322,13 +787,15 @@ class ScenarioTreeManager(PySPConfiguredObject):
             self._return_index = return_index
 
         def complete(self):
+            """Wait for the job request to complete and return the result."""
             for i in xrange(len(self._results)):
                 assert isinstance(self._results[i],
                                   ScenarioTreeManager.Async)
                 self._results[i] = self._results[i].complete()
+            result = None
             if self._return_index is not None:
-                return self._results[self._return_index]
-            return None
+                result = self._results[self._return_index]
+            return result
 
     # This class returns the result of a callback function
     # when completing an asynchronous action
@@ -340,6 +807,7 @@ class ScenarioTreeManager(PySPConfiguredObject):
             self._done = False
 
         def complete(self):
+            """Wait for the job request to complete and return the result."""
             if not self._done:
                 self._result = self._result()
                 self._done = True
@@ -352,7 +820,6 @@ class ScenarioTreeManager(PySPConfiguredObject):
 
         super(ScenarioTreeManager, self).__init__(*args, **kwds)
 
-        init_start_time = time.time()
         self._error_shutdown = False
         self._scenario_tree = None
         # bundle info
@@ -365,10 +832,17 @@ class ScenarioTreeManager(PySPConfiguredObject):
         self._inside_with_block = False
         self._initialized = False
 
-    def _add_bundle(self, bundle_name, scenario_list):
+        # the objective sense of the subproblems
+        self._objective_sense = None
 
+
+    def _init_bundle(self, bundle_name, scenario_list):
+        if self._options.verbose:
+            print("Initializing scenario bundle with name %s"
+                  % (bundle_name))
+        # make sure the bundle was already added to the scenario tree
+        assert self._scenario_tree.contains_bundle(bundle_name)
         for scenario_name in scenario_list:
-
             if scenario_name in self._scenario_to_bundle_map:
                 raise ValueError(
                     "Unable to form binding instance for bundle %s. "
@@ -376,12 +850,32 @@ class ScenarioTreeManager(PySPConfiguredObject):
                     % (bundle_name,
                        scenario_name,
                        self._scenario_to_bundle_map[scenario_name]))
-
             self._scenario_to_bundle_map[scenario_name] = bundle_name
+
+    def _release_bundle(self, bundle_name):
+        if self._options.verbose:
+            print("Releasing scenario bundle with name %s"
+                  % (bundle_name))
+
+        # make sure the bundle was already added to the scenario tree
+        assert self._scenario_tree.contains_bundle(bundle_name)
+        bundle = self._scenario_tree.get_bundle(bundle_name)
+        for scenario_name in bundle._scenario_names:
+            del self._scenario_to_bundle_map[scenario_name]
 
     #
     # Interface:
     #
+
+    @property
+    def objective_sense(self):
+        """Return the objective sense declared for all
+        subproblems."""
+        return self._objective_sense
+
+    @property
+    def modules_imported(self):
+        raise NotImplementedError                  #pragma:nocover
 
     @property
     def scenario_tree(self):
@@ -399,6 +893,7 @@ class ScenarioTreeManager(PySPConfiguredObject):
 
         init_start_time = time.time()
         result = None
+        self._initialized = True
         try:
             if self._options.verbose:
                 print("Initializing %s with options:"
@@ -425,17 +920,6 @@ class ScenarioTreeManager(PySPConfiguredObject):
            self._options.verbose:
             print("Overall initialization time=%.2f seconds"
                   % (time.time() - init_start_time))
-
-        # gather and report memory statistics (for leak
-        # detection purposes) if specified.
-        if self._options.profile_memory:
-            if guppy_available:
-                print(hpy().heap())
-            else:
-                print("Guppy module is unavailable for "
-                      "memory profiling")
-
-        self._initialized = True
 
         return result
 
@@ -472,109 +956,103 @@ class ScenarioTreeManager(PySPConfiguredObject):
         self._scenario_tree = None
         self._scenario_to_bundle_map = {}
         self._aggregate_user_data = {}
-
-    def add_bundle(self, bundle_name, scenario_list):
-        """Add a scenario bundle to this scenario tree manager and the
-        scenario tree that it manages."""
-        if self._options.verbose:
-            print("Adding scenario bundle with name %s"
-                  % (bundle_name))
-
-        if self._scenario_tree.contains_bundle(bundle_name):
-            raise ValueError(
-                "Unable to create bundle with name %s. A bundle "
-                "with that name already exists on the scenario tree"
-                % (bundle_name))
-
-        self._scenario_tree.add_bundle(bundle_name, scenario_list)
-        self._add_bundle(bundle_name, scenario_list)
-        self._add_bundle_impl(bundle_name, scenario_list)
-
-    def remove_bundle(self, bundle_name):
-        """Remove a bundle from this scenario tree manager and the
-        scenario tree that it manages."""
-        if self._options.verbose:
-            print("Removing scenario bundle with name %s"
-                  % (bundle_name))
-
-        if not self._scenario_tree.contains_bundle(bundle_name):
-            raise ValueError(
-                "Unable to remove bundle with name %s. A bundle "
-                "with that name does not exist on the scenario tree"
-                % (bundle_name))
-
-        self._remove_bundle_impl(bundle_name)
-
-        bundle = self._scenario_tree.get_bundle(bundle_name)
-        for scenario_name in bundle._scenario_names:
-
-            del self._scenario_to_bundle_map[scenario_name]
-
-        self._scenario_tree.remove_bundle(bundle_name)
+        self._inside_with_block = False
+        self._initialized = False
+        self._objective_sense = None
 
     def invoke_function(self,
-                        function_name,
-                        module_name,
+                        function,
+                        module_name=None,
                         invocation_type=InvocationType.Single,
                         function_args=(),
                         function_kwds=None,
                         async=False,
                         oneway=False):
-        """Invokes a function on scenario tree constructs managed by
-           this scenario tree manager. The function must always accept
-           at least one argument, which is the process-local scenario
-           tree worker object (may or may not be this object).
+        """Invokes a function on scenario tree constructs
+        managed by this scenario tree manager. The first
+        argument accepted by the function must always be the
+        process-local scenario tree worker object, which may
+        or may not be this object.
 
         Args:
-            function_name:
-                 The name of the function to be invoked.
+            function:
+                 The function or name of the function to be
+                 invoked. If the object is a function, then
+                 the manager will attempt to transmit it
+                 using the dill package. Otherwise, the
+                 argument must be a string and the
+                 module_name keyword is required.
             module_name:
-                 The name / location of the module containing the
-                 function.
+                 The name of the module containing the
+                 function. This can also be an absolute path
+                 to a file that contains the function
+                 definition. If this function argument is an
+                 actual function, this keyword must be left
+                 at its default value of None; otherwise, it
+                 is required.
             invocation_type:
-                 Controls how the function is invoked. Refer to the
-                 doc string for pyomo.pysp.scenariotree.manager.InvocationType
+                 Controls how the function is invoked. Refer
+                 to the doc string for
+                 pyomo.pysp.scenariotree.manager.InvocationType
                  for more information.
             function_args:
-                 Extra arguments passed to the function when it is
-                 invoked. These will always be placed after the
-                 initial process-local scenario tree worker object as
-                 well as any additional arguments governed by the
+                 Extra arguments passed to the function when
+                 it is invoked. These will always be placed
+                 after the initial process-local scenario
+                 tree worker object as well as any
+                 additional arguments governed by the
                  invocation type.
             function_kwds:
-                 Additional keywords to pass to the function when it
-                 is invoked.
+                 Additional keywords to pass to the function
+                 when it is invoked.
             async:
-                 When set to True, the return value will be an
-                 asynchronous object. Invocation results can be
-                 obtained at any point by calling the complete()
-                 method on this object, which will block until all
-                 associated action handles are collected.
+                 When set to True, the return value will be
+                 an asynchronous object. Invocation results
+                 can be obtained at any point by calling the
+                 complete() method on this object, which
+                 will block until all associated action
+                 handles are collected.f
             oneway:
-                 When set to True, it will be assumed no return value
-                 is expected from this function (async is
-                 implied). Setting both async and oneway to True will
-                 result in an exception being raised.
+                 When set to True, it will be assumed no
+                 return value is expected from this function
+                 (async is implied). Setting both async and
+                 oneway to True will result in an exception
+                 being raised.
 
-            *Note: The 'oneway' and 'async' keywords are valid for all
-                   scenario tree manager implementations. However,
-                   they are designed for use with Pyro-based
+            *Note: The 'oneway' and 'async' keywords are
+                   valid for all scenario tree manager
+                   implementations. However, they are
+                   designed for use with Pyro-based
                    implementations. Their existence in other
                    implementations is not meant to guarantee
-                   asynchronicity, but rather to provide a consistent
-                   interface for code to be written around.
+                   asynchronicity, but rather to provide a
+                   consistent interface for code to be
+                   written around.
 
         Returns:
-            If 'oneway' is True, this function will always return
-            None. Otherwise, the return value type is governed by the
-            'invocation_type' keyword, which will be nested inside an
-            asynchronous object if 'async' is set to True.
+            If 'oneway' is True, this function will always
+            return None. Otherwise, the return value type is
+            governed by the 'invocation_type' keyword, which
+            will be nested inside an asynchronous object if
+            'async' is set to True.
         """
+        if not self.initialized:
+            raise RuntimeError(
+                "The scenario tree manager is not initialized.")
         if async and oneway:
             raise ValueError("async oneway calls do not make sense")
         invocation_type = _map_deprecated_invocation_type(invocation_type)
-        return self._invoke_function_impl(function_name,
-                                          module_name,
+        if (invocation_type == InvocationType.PerBundle) or \
+           (invocation_type == InvocationType.PerBundleChained) or \
+           (invocation_type == InvocationType.OnBundle) or \
+           (invocation_type == InvocationType.OnBundles) or \
+           (invocation_type == InvocationType.OnBundlesChained):
+            if not self._scenario_tree.contains_bundles():
+                raise ValueError(
+                    "Received request for bundle invocation type "
+                    "but the scenario tree does not contain bundles.")
+        return self._invoke_function_impl(function,
+                                          module_name=module_name,
                                           invocation_type=invocation_type,
                                           function_args=function_args,
                                           function_kwds=function_kwds,
@@ -624,6 +1102,9 @@ class ScenarioTreeManager(PySPConfiguredObject):
             method's return value, which will be nested inside an
             asynchronous object if 'async' is set to True.
         """
+        if not self.initialized:
+            raise RuntimeError(
+                "The scenario tree manager is not initialized.")
         if async and oneway:
             raise ValueError("async oneway calls do not make sense")
         return self._invoke_method_impl(method_name,
@@ -632,6 +1113,25 @@ class ScenarioTreeManager(PySPConfiguredObject):
                                         async=async,
                                         oneway=oneway)
 
+    def push_fix_queue_to_instances(self):
+        """Push the fixed queue on the scenario tree nodes onto the
+        actual variables on the scenario instances.
+
+        * NOTE: This function is poorly named and this functionality
+                will likely be changed in the near future. Ideally, fixing
+                would be done through the scenario tree manager, rather
+                than through the scenario tree.
+        """
+        if self.get_option("verbose"):
+            print("Synchronizing fixed variable statuses on scenario tree nodes")
+            node_count = self._push_fix_queue_to_instances_impl()
+            if node_count > 0:
+                if self.get_option("verbose"):
+                    print("Updated fixed statuses on %s scenario tree nodes"
+                          % (node_count))
+            else:
+                if self.get_option("verbose"):
+                    print("No synchronization was needed for scenario tree nodes")
 
     #
     # Methods defined by derived class that are not
@@ -639,22 +1139,25 @@ class ScenarioTreeManager(PySPConfiguredObject):
     #
 
     def _init(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _close_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _invoke_function_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _invoke_method_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
-    def _add_bundle_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+    def _process_bundle_solve_result(self, *args, **kwds):
+        raise NotImplementedError                  #pragma:nocover
 
-    def _remove_bundle_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+    def _process_scenario_solve_result(self, *args, **kwds):
+        raise NotImplementedError                  #pragma:nocover
+
+    def _push_fix_queue_to_instances_impl(self, *args, **kwds):
+        raise NotImplementedError                  #pragma:nocover
 
 #
 # A base class and interface that is common to client-side scenario
@@ -665,50 +1168,54 @@ class ScenarioTreeManager(PySPConfiguredObject):
 class ScenarioTreeManagerClient(ScenarioTreeManager,
                                 PySPConfiguredObject):
 
-    _declared_options = \
-        PySPConfigBlock("Options declared for the "
-                        "ScenarioTreeManagerClient class")
+    @classmethod
+    def _declare_options(cls, options=None):
+        if options is None:
+            options = PySPConfigBlock()
 
-    #
-    # scenario instance construction
-    #
-    safe_declare_common_option(_declared_options,
-                               "model_location")
-    safe_declare_common_option(_declared_options,
-                               "scenario_tree_location")
-    safe_declare_common_option(_declared_options,
-                               "objective_sense_stage_based")
-    safe_declare_common_option(_declared_options,
-                               "postinit_callback_location")
-    safe_declare_common_option(_declared_options,
-                               "aggregategetter_callback_location")
+        #
+        # scenario instance construction
+        #
+        safe_declare_common_option(options,
+                                   "model_location")
+        safe_declare_common_option(options,
+                                   "scenario_tree_location")
+        safe_declare_common_option(options,
+                                   "objective_sense_stage_based")
+        safe_declare_common_option(options,
+                                   "postinit_callback_location")
+        safe_declare_common_option(options,
+                                   "aggregategetter_callback_location")
 
-    #
-    # scenario tree generation
-    #
-    safe_declare_common_option(_declared_options,
-                               "scenario_tree_random_seed")
-    safe_declare_common_option(_declared_options,
-                               "scenario_tree_downsample_fraction")
-    safe_declare_common_option(_declared_options,
-                               "scenario_bundle_specification")
-    safe_declare_common_option(_declared_options,
-                               "create_random_bundles")
+        #
+        # scenario tree generation
+        #
+        safe_declare_common_option(options,
+                                   "scenario_tree_random_seed")
+        safe_declare_common_option(options,
+                                   "scenario_tree_downsample_fraction")
+        safe_declare_common_option(options,
+                                   "scenario_bundle_specification")
+        safe_declare_common_option(options,
+                                   "create_random_bundles")
 
-    #
-    # various
-    #
-    safe_declare_common_option(_declared_options,
-                               "output_times")
-    safe_declare_common_option(_declared_options,
-                               "verbose")
-    safe_declare_common_option(_declared_options,
-                               "profile_memory")
+        #
+        # various
+        #
+        safe_declare_common_option(options,
+                                   "output_times")
+        safe_declare_common_option(options,
+                                   "verbose")
+        safe_declare_common_option(options,
+                                   "profile_memory")
+
+        return options
 
     def __init__(self, *args, **kwds):
         if self.__class__ is ScenarioTreeManagerClient:
             raise NotImplementedError(
                 "%s is an abstract class for subclassing" % self.__class__)
+        factory = kwds.pop("factory", None)
         super(ScenarioTreeManagerClient, self).__init__(*args, **kwds)
 
         # callback info
@@ -720,8 +1227,16 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
         self._postinit_keys = []
         self._postinit_names = []
         self._modules_imported = {}
-        self._generate_scenario_tree()
-        self._import_callbacks()
+        if factory is None:
+            self._generate_scenario_tree()
+            self._import_callbacks()
+        else:
+            self._scenario_tree = factory.generate_scenario_tree(
+                downsample_fraction=self._options.scenario_tree_downsample_fraction,
+                bundles=self._options.scenario_bundle_specification,
+                random_bundles=self._options.create_random_bundles,
+                random_seed=self._options.scenario_tree_random_seed,
+                verbose=self._options.verbose)
 
     def _generate_scenario_tree(self):
 
@@ -740,12 +1255,12 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
         # have serious consequences.
         #
         if scenario_instance_factory._model_module is not None:
-            self._modules_imported[scenario_instance_factory.\
-                                   _model_filename] = \
+            self.modules_imported[scenario_instance_factory.\
+                                  _model_filename] = \
                 scenario_instance_factory._model_module
         if scenario_instance_factory._scenario_tree_module is not None:
-            self._modules_imported[scenario_instance_factory.\
-                                   _scenario_tree_filename] = \
+            self.modules_imported[scenario_instance_factory.\
+                                  _scenario_tree_filename] = \
                 scenario_instance_factory._scenario_tree_module
 
         if self._options.output_times or \
@@ -772,11 +1287,9 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
                 self._scenario_tree.pprint()
 
             # validate the tree prior to doing anything serious
-            if not self._scenario_tree.validate():
-                raise RuntimeError("Scenario tree is invalid")
-            else:
-                if self._options.verbose:
-                    print("Scenario tree is valid!")
+            self._scenario_tree.validate()
+            if self._options.verbose:
+                print("Scenario tree is valid!")
 
         except:
             print("Failed to generate scenario tree")
@@ -801,13 +1314,15 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
             assert callback_name in renamed.keys()
             deprecated_callback_name = renamed[callback_name]
             for module_name in module_names:
-                if module_name in self._modules_imported:
-                    module = self._modules_imported[module_name]
+                if module_name in self.modules_imported:
+                    module = self.modules_imported[module_name]
                     sys_modules_key = module_name
                 else:
                     module, sys_modules_key = \
-                        load_external_module(module_name, clear_cache=True)
-                    self._modules_imported[module_name] = module
+                        load_external_module(module_name,
+                                             clear_cache=True,
+                                             verbose=self.get_option("verbose"))
+                    self.modules_imported[module_name] = module
                 callback = None
                 for oname, obj in inspect.getmembers(module):
                     if oname == callback_name:
@@ -846,9 +1361,19 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
     # Interface
     #
 
+    @property
+    def modules_imported(self):
+        return self._modules_imported
+
     # override initialize on ScenarioTreeManager for documentation purposes
     def initialize(self, async=False):
         """Initialize the scenario tree manager client.
+
+        Note: Calling complete() on an asynchronous result
+              returned from this method will causes changes
+              in the state of this object. One should avoid
+              using the client until initialization is
+              complete.
 
         Args:
             async:
@@ -863,83 +1388,108 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
             initial return value (True is most cases). If 'async' is
             set to True, this return value will be nested inside an
             asynchronous object.
-
-        *NOTE: Calling complete() on an asynchronous object returned
-               from this method may causes changes in the object whose
-               method is called. One should avoid using the client
-               until initialization is complete.
         """
         return super(ScenarioTreeManagerClient, self).initialize(async=async)
 
     def invoke_function_on_worker(self,
                                   worker_name,
-                                  function_name,
-                                  module_name,
+                                  function,
+                                  module_name=None,
                                   invocation_type=InvocationType.Single,
                                   function_args=(),
                                   function_kwds=None,
                                   async=False,
                                   oneway=False):
-        """Invokes a function on a scenario tree worker managed
-           by this scenario tree manager client. The function must
-           always accept at least one argument, which is the
-           process-local scenario tree worker object (may or may not
-           be this object).
+        """Invokes a function on a scenario tree worker
+        managed by this scenario tree manager client. The
+        first argument accepted by the function must always
+        be the process-local scenario tree worker object,
+        which may or may not be this object.
 
         Args:
             worker_name:
-                 The name of the scenario tree worker. The list of worker
-                 names can be found at client.worker_names.
-            function_name:
-                 The name of the function to be invoked.
+                 The name of the scenario tree worker. The
+                 list of worker names can be found at
+                 client.worker_names.
+            function:
+                 The function or name of the function to be
+                 invoked. If the object is a function, then
+                 the manager will attempt to transmit it
+                 using the dill package. Otherwise, the
+                 argument must be a string and the
+                 module_name keyword is required.
             module_name:
-                 The name / location of the module containing the
-                 function.
+                 The name of the module containing the
+                 function. This can also be an absolute path
+                 to a file that contains the function
+                 definition. If this function argument is an
+                 actual function, this keyword must be left
+                 at its default value of None; otherwise, it
+                 is required.
             invocation_type:
-                 Controls how the function is invoked. Refer to the
-                 doc string for pyomo.pysp.scenariotree.manager.InvocationType
+                 Controls how the function is invoked. Refer
+                 to the doc string for
+                 pyomo.pysp.scenariotree.manager.InvocationType
                  for more information.
             function_args:
-                 Extra arguments passed to the function when it is
-                 invoked. These will always be placed after the
-                 initial process-local scenario tree worker object as
-                 well as any additional arguments governed by the
+                 Extra arguments passed to the function when
+                 it is invoked. These will always be placed
+                 after the initial process-local scenario
+                 tree worker object as well as any
+                 additional arguments governed by the
                  invocation type.
             function_kwds:
-                 Additional keywords to pass to the function when it
-                 is invoked.
+                 Additional keywords to pass to the function
+                 when it is invoked.
             async:
-                 When set to True, the return value will be an
-                 asynchronous object. Invocation results can be
-                 obtained at any point by calling the complete()
-                 method on this object, which will block until all
-                 associated action handles are collected.
+                 When set to True, the return value will be
+                 an asynchronous object. Invocation results
+                 can be obtained at any point by calling the
+                 complete() method on this object, which
+                 will block until all associated action
+                 handles are collected.
             oneway:
-                 When set to True, it will be assumed no return value
-                 is expected from this function (async is
-                 implied). Setting both async and oneway to True will
-                 result in an exception being raised.
+                 When set to True, it will be assumed no
+                 return value is expected from this function
+                 (async is implied). Setting both async and
+                 oneway to True will result in an exception
+                 being raised.
 
-            *Note: The 'oneway' and 'async' keywords are valid for all
-                   scenario tree manager implementations. However,
-                   they are designed for use with Pyro-based
+            *Note: The 'oneway' and 'async' keywords are
+                   valid for all scenario tree manager
+                   implementations. However, they are
+                   designed for use with Pyro-based
                    implementations. Their existence in other
                    implementations is not meant to guarantee
-                   asynchronicity, but rather to provide a consistent
-                   interface for code to be written around.
+                   asynchronicity, but rather to provide a
+                   consistent interface for code to be
+                   written around.
 
         Returns:
-            If 'oneway' is True, this function will always return
-            None. Otherwise, the return value type is governed by the
-            'invocation_type' keyword, which will be nested inside an
-            asynchronous object if 'async' is set to True.
+            If 'oneway' is True, this function will always
+            return None. Otherwise, the return value type is
+            governed by the 'invocation_type' keyword, which
+            will be nested inside an asynchronous object if
+            'async' is set to True.
         """
+        if not self.initialized:
+            raise RuntimeError(
+                "The scenario tree manager is not initialized.")
         if async and oneway:
             raise ValueError("async oneway calls do not make sense")
         invocation_type = _map_deprecated_invocation_type(invocation_type)
+        if (invocation_type == InvocationType.PerBundle) or \
+           (invocation_type == InvocationType.PerBundleChained) or \
+           (invocation_type == InvocationType.OnBundle) or \
+           (invocation_type == InvocationType.OnBundles) or \
+           (invocation_type == InvocationType.OnBundlesChained):
+            if not self._scenario_tree.contains_bundles():
+                raise ValueError(
+                    "Received request for bundle invocation type "
+                    "but the scenario tree does not contain bundles.")
         return self._invoke_function_on_worker_impl(worker_name,
-                                                    function_name,
-                                                    module_name,
+                                                    function,
+                                                    module_name=module_name,
                                                     invocation_type=invocation_type,
                                                     function_args=function_args,
                                                     function_kwds=function_kwds,
@@ -993,6 +1543,9 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
             method's return value, which will be nested inside an
             asynchronous object if 'async' is set to True.
         """
+        if not self.initialized:
+            raise RuntimeError(
+                "The scenario tree manager is not initialized.")
         if async and oneway:
             raise ValueError("async oneway calls do not make sense")
         return self._invoke_method_on_worker_impl(worker_name,
@@ -1056,28 +1609,28 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
     #
 
     def _init_client(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _invoke_function_on_worker_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _invoke_method_on_worker_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _worker_names_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _get_worker_for_scenario_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _get_worker_for_bundle_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _get_scenarios_for_worker_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _get_bundles_for_worker_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
 #
 # A partial implementation of the ScenarioTreeManager
@@ -1088,17 +1641,17 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
 
 class _ScenarioTreeManagerWorker(PySPConfiguredObject):
 
-    _declared_options = \
-        PySPConfigBlock("Options declared for the "
-                        "_ScenarioTreeManagerWorker class")
+    @classmethod
+    def _declare_options(cls, options=None):
+        if options is None:
+            options = PySPConfigBlock()
 
-    #
-    # various
-    #
-    safe_declare_common_option(_declared_options,
-                               "output_times")
-    safe_declare_common_option(_declared_options,
-                               "verbose")
+        safe_declare_common_option(options,
+                                   "output_times")
+        safe_declare_common_option(options,
+                                   "verbose")
+
+        return options
 
     def __init__(self, *args, **kwds):
         if self.__class__ is _ScenarioTreeManagerWorker:
@@ -1108,13 +1661,33 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
 
         # scenario instance models
         self._instances = None
+
         # bundle instance models
         self._bundle_binding_instance_map = {}
-        self._modules_imported = {}
+
+        # results objects from the most recent call to
+        # _process_*_solve_results, may hold more
+        # information than just variable values and so can
+        # be useful to hold on to until the next round of
+        # solves (keys are bundle name or scenario name)
+        self._solve_results = {}
+
+        # set by advanced solver managers
+        self.preprocessor = None
+
+    #
+    # Extension of the manager interface so code can handle
+    # cases where multiple workers own a different portions of the
+    # scenario tree.
+    #
+
+    @property
+    def uncompressed_scenario_tree(self):
+        raise NotImplementedError                  #pragma:nocover
 
     def _invoke_function_by_worker(self,
-                                   function_name,
-                                   module_name,
+                                   function,
+                                   module_name=None,
                                    invocation_type=InvocationType.Single,
                                    function_args=(),
                                    function_kwds=None):
@@ -1122,28 +1695,42 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
         if function_kwds is None:
             function_kwds = {}
 
-        if module_name in self._modules_imported:
-            this_module = self._modules_imported[module_name]
-        elif module_name in sys.modules:
-            this_module = sys.modules[module_name]
+        if not isinstance(function, six.string_types):
+            if module_name is not None:
+                raise ValueError(
+                    "The module_name keyword must be None "
+                    "when the function argument is not a string.")
         else:
-            this_module = pyutilib.misc.import_file(module_name,
-                                                    clear_cache=True)
-            self._modules_imported[module_name] = this_module
-            self._modules_imported[this_module.__file__] = this_module
-            if this_module.__file__.endswith(".pyc"):
-                self._modules_imported[this_module.__file__[:-1]] = \
-                    this_module
+            if module_name is None:
+                raise ValueError(
+                    "A module name is required when "
+                    "a function name is given")
+            elif module_name in self.modules_imported:
+                this_module = self.modules_imported[module_name]
+            elif module_name in sys.modules:
+                this_module = sys.modules[module_name]
+            else:
+                this_module = pyutilib.misc.import_file(module_name,
+                                                        clear_cache=True)
+                self.modules_imported[module_name] = this_module
+                self.modules_imported[this_module.__file__] = this_module
+                if this_module.__file__.endswith(".pyc"):
+                    self.modules_imported[this_module.__file__[:-1]] = \
+                        this_module
 
-        module_attrname = function_name
-        subname = None
-        if not hasattr(this_module, module_attrname):
-            if "." in module_attrname:
-                module_attrname, subname = function_name.split(".",1)
+            module_attrname = function
+            subname = None
             if not hasattr(this_module, module_attrname):
-                raise RuntimeError(
-                    "Function="+function_name+" is not present "
-                    "in module="+module_name)
+                if "." in module_attrname:
+                    module_attrname, subname = function.split(".",1)
+                if not hasattr(this_module, module_attrname):
+                    raise RuntimeError(
+                        "Function="+function+" is not present "
+                        "in module="+module_name)
+
+            function = getattr(this_module, module_attrname)
+            if subname is not None:
+                function = getattr(function, subname)
 
         call_objects = None
         if invocation_type == InvocationType.Single:
@@ -1160,19 +1747,14 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
                             for scenario_name in invocation_type.data]
         elif (invocation_type == InvocationType.PerBundle) or \
              (invocation_type == InvocationType.PerBundleChained):
-            if not self._scenario_tree.contains_bundles():
-                raise ValueError(
-                    "Received request for bundle invocation type "
-                    "but the scenario tree does not contain bundles.")
+            assert self._scenario_tree.contains_bundles()
             call_objects = self._scenario_tree.bundles
         elif (invocation_type == InvocationType.OnBundle):
+            assert self._scenario_tree.contains_bundles()
             call_objects = [self._scenario_tree.get_bundle(invocation_type.data)]
         elif (invocation_type == InvocationType.OnBundles) or \
              (invocation_type == InvocationType.OnBundlesChained):
-            if not self._scenario_tree.contains_bundles():
-                raise ValueError(
-                    "Received request for bundle invocation type "
-                    "but the scenario tree does not contain bundles.")
+            assert self._scenario_tree.contains_bundles()
             assert len(invocation_type.data) != 0
             call_objects = [self._scenario_tree.get_bundle(bundle_name)
                             for bundle_name in invocation_type.data]
@@ -1181,13 +1763,6 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
                              "Expected one of %s"
                              % (invocation_type,
                                 [str(v) for v in InvocationType._values]))
-
-        function = getattr(this_module, module_attrname)
-        if subname is not None:
-            function = getattr(function, subname)
-
-        if function_kwds is None:
-            function_kwds = {}
 
         result = None
         if (invocation_type == InvocationType.Single):
@@ -1233,29 +1808,10 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
 
         return result
 
-    #
-    # Abstract methods for ScenarioTreeManager:
-    #
-
-    def _close_impl(self):
-        # copy the list of bundle names as the next loop will modify
-        # the scenario_tree._scenario_bundles list
-        if self._scenario_tree is not None:
-            bundle_names = \
-                [bundle.name for bundle in self._scenario_tree._scenario_bundles]
-            for bundle_name in bundle_names:
-                self.remove_bundle(bundle_name)
-            assert not self._scenario_tree.contains_bundles()
-        self._instances = None
-        self._bundle_binding_instance_map = None
-
-    def _invoke_function_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
-
-    def _invoke_method_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
-
-    def _add_bundle_impl(self, bundle_name, scenario_list):
+    # override what is already implemented
+    def _init_bundle(self, bundle_name, scenario_list):
+        super(_ScenarioTreeManagerWorker, self).\
+            _init_bundle(bundle_name, scenario_list)
 
         if self._options.verbose:
             print("Forming binding instance for scenario bundle %s"
@@ -1263,11 +1819,7 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
 
         start_time = time.time()
 
-        if not self._scenario_tree.contains_bundle(bundle_name):
-            raise RuntimeError(
-                "Failed to create binding instances for scenario "
-                "bundle - no scenario bundle with name %s exists."
-                % (bundle_name))
+        assert self._scenario_tree.contains_bundle(bundle_name)
 
         assert bundle_name not in self._bundle_binding_instance_map
 
@@ -1306,7 +1858,8 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
             print("Time construct binding instance for scenario bundle "
                   "%s=%.2f seconds" % (bundle_name, end_time - start_time))
 
-    def _remove_bundle_impl(self, bundle_name):
+    # override what is already implemented
+    def _release_bundle(self, bundle_name):
 
         assert self._scenario_tree.contains_bundle(bundle_name)
         assert bundle_name in self._bundle_binding_instance_map
@@ -1323,6 +1876,226 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
 
         del self._bundle_binding_instance_map[bundle_name]
 
+        # call the base class method
+        super(_ScenarioTreeManagerWorker, self).\
+            _release_bundle(bundle_name)
+
+    #
+    # Abstract methods for ScenarioTreeManager:
+    #
+
+    def _close_impl(self):
+        # copy the list of bundle names as the next loop will modify
+        # the scenario_tree._scenario_bundles list
+        if self._scenario_tree is not None:
+            bundle_names = \
+                [bundle.name for bundle in self._scenario_tree._scenario_bundles]
+            for bundle_name in bundle_names:
+                self._release_bundle(bundle_name)
+        self._instances = None
+        self._bundle_binding_instance_map = None
+
+    def _process_bundle_solve_result(self,
+                                     bundle_name,
+                                     results,
+                                     manager_results=None,
+                                     **kwds):
+
+        if manager_results is None:
+            manager_results = ScenarioTreeSolveResults('bundles')
+
+        bundle = self.scenario_tree.get_bundle(bundle_name)
+        bundle_instance = self._bundle_binding_instance_map[bundle.name]
+
+        # if the solver plugin doesn't populate the
+        # user_time field, it is by default of type
+        # UndefinedData - defined in pyomo.opt.results
+        if hasattr(results.solver,"user_time") and \
+           (not isinstance(results.solver.user_time,
+                           UndefinedData)) and \
+           (results.solver.user_time is not None):
+            # the solve time might be a string, or might
+            # not be - we eventually would like more
+            # consistency on this front from the solver
+            # plugins.
+            manager_results.solve_time[bundle_name] = \
+                float(results.solver.user_time)
+        elif hasattr(results.solver,"wallclock_time") and \
+             (not isinstance(results.solver.wallclock_time,
+                             UndefinedData))and \
+             (results.solver.wallclock_time is not None):
+            manager_results.solve_time[bundle_name] = \
+                float(results.solver.wallclock_time)
+        elif hasattr(results.solver,"time"):
+            solve_time = results.solver.time
+            manager_results.solve_time[bundle_name] = \
+                float(results.solver.time)
+        else:
+            manager_results.solve_time[bundle_name] = undefined
+
+        if hasattr(results,"pyomo_solve_time"):
+            manager_results.pyomo_solve_time[bundle_name] = \
+                results.pyomo_solve_time
+        else:
+            manager_results.pyomo_solve_time[bundle_name] = undefined
+
+        manager_results.solver_status[bundle_name] = \
+            results.solver.status
+        manager_results.solver_message[bundle_name] = \
+            results.solver.message
+        manager_results.termination_condition[bundle_name] = \
+            results.solver.termination_condition
+
+        if len(results.solution) > 0:
+            assert len(results.solution) == 1
+
+            results_sm = results._smap
+            bundle_instance.solutions.load_from(results, **kwds)
+            self._solve_results[bundle_name] = (results, results_sm)
+
+            solution0 = results.solution(0)
+            if hasattr(solution0, "gap") and \
+               (solution0.gap is not None):
+                manager_results.gap[bundle_name] = solution0.gap
+            else:
+                manager_results.gap[bundle_name] = undefined
+
+            manager_results.solution_status[bundle_name] = solution0.status
+
+            bundle_objective_value = 0.0
+            bundle_cost_value = 0.0
+            for bundle_scenario in bundle._scenario_tree._scenarios:
+                scenario = self.scenario_tree.\
+                           get_scenario(bundle_scenario.name)
+                scenario.update_solution_from_instance()
+                # And we need to make sure to use the
+                # probabilities assigned to scenarios in the
+                # compressed bundle scenario tree
+                bundle_objective_value += scenario._objective * \
+                                          bundle_scenario.probability
+                bundle_cost_value += scenario._cost * \
+                                     bundle_scenario.probability
+
+            manager_results.objective[bundle_name] = bundle_objective_value
+            manager_results.cost[bundle_name] = bundle_cost_value
+
+        else:
+
+            manager_results.objective[bundle_name] = undefined
+            manager_results.cost[bundle_name] = undefined
+            manager_results.gap[bundle_name] = undefined
+            manager_results.solution_status[bundle_name] = undefined
+
+        return manager_results
+
+    def _process_scenario_solve_result(self,
+                                       scenario_name,
+                                       results,
+                                       manager_results=None,
+                                       **kwds):
+
+        if manager_results is None:
+            manager_results = ScenarioTreeSolveResults('scenarios')
+
+        scenario = self.scenario_tree.get_scenario(scenario_name)
+        scenario_instance = scenario._instance
+        if self.scenario_tree.contains_bundles():
+            scenario._instance_objective.deactivate()
+
+        # if the solver plugin doesn't populate the
+        # user_time field, it is by default of type
+        # UndefinedData - defined in pyomo.opt.results
+        if hasattr(results.solver,"user_time") and \
+           (not isinstance(results.solver.user_time,
+                           UndefinedData)) and \
+           (results.solver.user_time is not None):
+            # the solve time might be a string, or might
+            # not be - we eventually would like more
+            # consistency on this front from the solver
+            # plugins.
+            manager_results.solve_time[scenario_name] = \
+                float(results.solver.user_time)
+        elif hasattr(results.solver,"wallclock_time") and \
+             (not isinstance(results.solver.wallclock_time,
+                             UndefinedData))and \
+             (results.solver.wallclock_time is not None):
+            manager_results.solve_time[scenario_name] = \
+                float(results.solver.wallclock_time)
+        elif hasattr(results.solver,"time"):
+            manager_results.solve_time[scenario_name] = \
+                float(results.solver.time)
+        else:
+            manager_results.solve_time[scenario_name] = undefined
+
+        if hasattr(results,"pyomo_solve_time"):
+            manager_results.pyomo_solve_time[scenario_name] = \
+                results.pyomo_solve_time
+        else:
+            manager_results.pyomo_solve_time[scenario_name] = undefined
+
+        manager_results.solver_status[scenario_name] = \
+            results.solver.status
+        manager_results.solver_message[scenario_name] = \
+            results.solver.message
+        manager_results.termination_condition[scenario_name] = \
+            results.solver.termination_condition
+
+        if len(results.solution) > 0:
+            assert len(results.solution) == 1
+
+            results_sm = results._smap
+            scenario_instance.solutions.load_from(results, **kwds)
+            self._solve_results[scenario.name] = (results, results_sm)
+
+            scenario.update_solution_from_instance()
+
+            solution0 = results.solution(0)
+            if hasattr(solution0, "gap") and \
+               (solution0.gap is not None):
+                manager_results.gap[scenario_name] = solution0.gap
+            else:
+                manager_results.gap[scenario_name] = undefined
+
+            manager_results.solution_status[scenario_name] = solution0.status
+            manager_results.objective[scenario_name] = scenario._objective
+            manager_results.cost[scenario_name] = scenario._cost
+
+        else:
+
+            manager_results.objective[scenario_name] = undefined
+            manager_results.cost[scenario_name] = undefined
+            manager_results.gap[scenario_name] = undefined
+            manager_results.solution_status[scenario_name] = undefined
+
+        return manager_results
+
+    def _push_fix_queue_to_instances_impl(self):
+
+        node_count = 0
+        for tree_node in self._scenario_tree._tree_nodes:
+
+            if len(tree_node._fix_queue):
+                node_count += 1
+                if self.preprocessor is not None:
+                    for scenario in tree_node._scenarios:
+                        scenario_name = scenario.name
+                        for variable_id, (fixed_status, new_value) in \
+                              iteritems(tree_node._fix_queue):
+                            variable_name, index = \
+                                tree_node._variable_ids[variable_id]
+                            if fixed_status == tree_node.VARIABLE_FREED:
+                                self.preprocessor.\
+                                    freed_variables[scenario_name].\
+                                    append((variable_name, index))
+                            elif fixed_status == tree_node.VARIABLE_FIXED:
+                                self.preprocessor.\
+                                    fixed_variables[scenario_name].\
+                                    append((variable_name, index))
+
+            tree_node.push_fix_queue_to_instances()
+
+        return node_count
+
 #
 # The Serial scenario tree manager class. This is a full
 # implementation of the ScenarioTreeManager, ScenarioTreeManagerClient
@@ -1333,17 +2106,20 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
                                       ScenarioTreeManagerClient,
                                       PySPConfiguredObject):
 
-    _declared_options = \
-        PySPConfigBlock("Options declared for the "
-                        "ScenarioTreeManagerClientSerial class")
+    @classmethod
+    def _declare_options(cls, options=None):
+        if options is None:
+            options = PySPConfigBlock()
 
-    #
-    # scenario instance construction
-    #
-    safe_declare_common_option(_declared_options,
-                               "output_instance_construction_time")
-    safe_declare_common_option(_declared_options,
-                               "compile_scenario_instances")
+        #
+        # scenario instance construction
+        #
+        safe_declare_common_option(options,
+                                   "output_instance_construction_time")
+        safe_declare_common_option(options,
+                                   "compile_scenario_instances")
+
+        return options
 
     def __init__(self, *args, **kwds):
         self._worker_name = 'ScenarioTreeManagerClientSerial:MainWorker'
@@ -1353,6 +2129,24 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
         self._scenario_names = []
         self._bundle_names = []
         super(ScenarioTreeManagerClientSerial, self).__init__(*args, **kwds)
+
+    # override what is implemented by _ScenarioTreeManagerWorker
+    def _init_bundle(self, bundle_name, scenario_list):
+        super(ScenarioTreeManagerClientSerial, self).\
+            _init_bundle(bundle_name, scenario_list)
+        assert bundle_name not in self._bundle_names
+        self._bundle_names.append(bundle_name)
+
+    # override what is implemented by _ScenarioTreeManagerWorker
+    def _release_bundle(self, bundle_name):
+        super(ScenarioTreeManagerClientSerial, self).\
+            _release_bundle(bundle_name)
+        assert bundle_name in self._bundle_names
+        self._bundle_names.remove(bundle_name)
+
+    @property
+    def uncompressed_scenario_tree(self):
+        return self._scenario_tree
 
     #
     # Abstract methods for ScenarioTreeManagerClient:
@@ -1377,7 +2171,8 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
                 output_instance_construction_time=\
                    self._options.output_instance_construction_time,
                 profile_memory=self._options.profile_memory,
-                compile_scenario_instances=self._options.compile_scenario_instances,
+                compile_scenario_instances=\
+                    self._options.compile_scenario_instances,
                 verbose=self._options.verbose)
 
         if self._options.output_times or \
@@ -1397,6 +2192,12 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
             self._instances,
             objective_sense=self._options.objective_sense_stage_based,
             create_variable_ids=True)
+
+        self._objective_sense = \
+            self.scenario_tree._scenarios[0]._objective_sense
+        assert all(_s._objective_sense == self._objective_sense
+                   for _s in self.scenario_tree._scenarios)
+
         self._scenario_names = [_scenario.name for _scenario in
                                 self._scenario_tree._scenarios]
         if self._options.output_times or \
@@ -1413,8 +2214,7 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
                 print("Construction extensive form instances for all bundles.")
 
             for bundle in self._scenario_tree._scenario_bundles:
-                self._add_bundle(bundle.name, bundle._scenario_names)
-                self._add_bundle_impl(bundle.name, bundle._scenario_names)
+                self._init_bundle(bundle.name, bundle._scenario_names)
 
             end_time = time.time()
             if self._options.output_times or \
@@ -1454,8 +2254,8 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
 
     def _invoke_function_on_worker_impl(self,
                                         worker_name,
-                                        function_name,
-                                        module_name,
+                                        function,
+                                        module_name=None,
                                         invocation_type=InvocationType.Single,
                                         function_args=(),
                                         function_kwds=None,
@@ -1466,12 +2266,12 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
         start_time = time.time()
 
         if self._options.verbose:
-            print("Invoking function=%s in module=%s "
-                  "on worker=%s"
-                  % (function_name, module_name, worker_name))
+            print("Transmitting external function invocation request "
+                  "for function=%s in module=%s on worker=%s."
+                  % (str(function), module_name, worker_name))
 
-        result = self._invoke_function_by_worker(function_name,
-                                                 module_name,
+        result = self._invoke_function_by_worker(function,
+                                                 module_name=module_name,
                                                  invocation_type=invocation_type,
                                                  function_args=function_args,
                                                  function_kwds=function_kwds)
@@ -1548,8 +2348,8 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
     #def _close_impl(...)
 
     def _invoke_function_impl(self,
-                              function_name,
-                              module_name,
+                              function,
+                              module_name=None,
                               invocation_type=InvocationType.Single,
                               function_args=(),
                               function_kwds=None,
@@ -1559,8 +2359,8 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
 
         result = self._invoke_function_on_worker_impl(
             self._worker_name,
-            function_name,
-            module_name,
+            function,
+            module_name=module_name,
             invocation_type=invocation_type,
             function_args=function_args,
             function_kwds=function_kwds,
@@ -1598,20 +2398,6 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
 
         return result
 
-    # override what is implemented by _ScenarioTreeManagerWorker
-    def _add_bundle_impl(self, bundle_name, scenario_list):
-        super(ScenarioTreeManagerClientSerial, self).\
-            _add_bundle_impl(bundle_name, scenario_list)
-        assert bundle_name not in self._bundle_names
-        self._bundle_names.append(bundle_name)
-
-    # override what is implemented by _ScenarioTreeManagerWorker
-    def _remove_bundle_impl(self, bundle_name):
-        super(ScenarioTreeManagerClientSerial, self).\
-            _remove_bundle_impl(bundle_name)
-        assert bundle_name in self._bundle_names
-        self._bundle_names.remove(bundle_name)
-
 #
 # A partial implementation of the ScenarioTreeManager and
 # ScenarioTreeManagerClient interfaces for Pyro that may serve some
@@ -1622,19 +2408,21 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
 class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
                                              PySPConfiguredObject):
 
-    _declared_options = \
-        PySPConfigBlock("Options declared for the "
-                        "_ScenarioTreeManagerClientPyroAdvanced class")
+    @classmethod
+    def _declare_options(cls, options=None):
+        if options is None:
+            options = PySPConfigBlock()
 
-    safe_declare_common_option(_declared_options,
-                               "pyro_host")
-    safe_declare_common_option(_declared_options,
-                               "pyro_port")
-    safe_declare_common_option(_declared_options,
-                               "pyro_shutdown")
-    safe_declare_common_option(_declared_options,
-                               "pyro_shutdown_workers")
-    ScenarioTreeServerPyro.register_options(_declared_options)
+        safe_declare_common_option(options,
+                                   "pyro_host")
+        safe_declare_common_option(options,
+                                   "pyro_port")
+        safe_declare_common_option(options,
+                                   "pyro_shutdown")
+        safe_declare_common_option(options,
+                                   "pyro_shutdown_workers")
+
+        return options
 
     def __init__(self, *args, **kwds):
         # distributed worker information
@@ -1652,8 +2440,8 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
 
     def _invoke_function_on_worker_pyro(self,
                                         worker_name,
-                                        function_name,
-                                        module_name,
+                                        function,
+                                        module_name=None,
                                         invocation_type=InvocationType.Single,
                                         function_args=(),
                                         function_kwds=None,
@@ -1664,9 +2452,9 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
             worker_name=worker_name,
             action="_invoke_function_impl",
             generate_response=not oneway,
-            args=(function_name,
-                  module_name),
-            kwds={'invocation_type': (invocation_type.key,
+            args=(function,),
+            kwds={'module_name': module_name,
+                  'invocation_type': (invocation_type.key,
                                       getattr(invocation_type, 'data', None)),
                   'function_args': function_args,
                   'function_kwds': function_kwds})
@@ -1698,8 +2486,8 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
 
     def _invoke_function_on_worker_impl(self,
                                         worker_name,
-                                        function_name,
-                                        module_name,
+                                        function,
+                                        module_name=None,
                                         invocation_type=InvocationType.Single,
                                         function_args=(),
                                         function_kwds=None,
@@ -1713,12 +2501,28 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
         if self._options.verbose:
             print("Invoking external function=%s in module=%s "
                   "on worker=%s"
-                  % (function_name, module_name, worker_name))
+                  % (str(function), module_name, worker_name))
+
+        if not isinstance(function, six.string_types):
+            if not dill_available:
+                raise ValueError(
+                    "The dill module must be available "
+                    "when transmitting function objects")
+            if module_name is not None:
+                raise ValueError(
+                    "The module_name keyword must be None "
+                    "when the function argument is not a string.")
+            function = dill.dumps(function)
+        else:
+            if module_name is None:
+                raise ValueError(
+                    "A module name is required when "
+                    "a function name is given")
 
         action_handle = self._invoke_function_on_worker_pyro(
             worker_name,
-            function_name,
-            module_name,
+            function,
+            module_name=module_name,
             invocation_type=invocation_type,
             function_args=function_args,
             function_kwds=function_kwds,
@@ -1782,13 +2586,13 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
         return result
 
     def _worker_names_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _get_worker_for_scenario_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _get_worker_for_bundle_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _get_scenarios_for_worker_impl(self, worker_name):
         assert worker_name in self._pyro_worker_list
@@ -1817,16 +2621,10 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
                 caller_name=self.__class__.__name__)
 
     def _invoke_function_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _invoke_method_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
-
-    def _add_bundle_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
-
-    def _remove_bundle_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     #
     # Extended interface for Pyro
@@ -1842,28 +2640,59 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
             host=self._options.pyro_host,
             port=self._options.pyro_port)
         self._action_manager.acquire_servers(num_servers, timeout=timeout)
-        # extract server options
-        server_options = ScenarioTreeServerPyro.\
-                             extract_user_options_to_dict(self._options)
-        # override these options just in case this instance factory
-        # extracted from an archive
-        server_options['model_location'] = \
-            self._scenario_tree._scenario_instance_factory._model_filename
-        server_options['scenario_tree_location'] = \
-            self._scenario_tree._scenario_instance_factory._scenario_tree_filename
+
+        scenario_instance_factory = \
+            self._scenario_tree._scenario_instance_factory
+        server_init = {}
+        if scenario_instance_factory._model_filename is not None:
+            server_init['model'] = \
+                scenario_instance_factory._model_filename
+        elif scenario_instance_factory._model_object is not None:
+            # we are pickling a model!
+            server_init['model'] = \
+                scenario_instance_factory._model_object
+        else:
+            assert scenario_instance_factory._model_callback is not None
+            if dill_available:
+                server_init['model_callback'] = \
+                    dill.dumps(scenario_instance_factory._model_callback)
+            else:
+                raise ValueError(
+                    "The dill module is required in order to "
+                    "initialize the Pyro-based scenario tree "
+                    "manager using a model callback function")
+
+        # check if we need to define an MPI subgroup
+        if "MPIRank" in self._action_manager.server_pool[0]:
+            # extract the MPI rank from the server names
+            mpi_group = []
+            for server_name in self._action_manager.server_pool:
+                items = server_name.split('_')
+                assert items[-2] == "MPIRank"
+                mpi_group.append(int(items[-1]))
+            server_init["mpi_group"] = mpi_group
 
         # transmit setup requests
         action_handles = []
-        self.pause_transmit()
-        for server_name in self._action_manager.server_pool:
-            action_handles.append(
-                self._action_manager.queue(
-                    queue_name=server_name,
-                    action="ScenarioTreeServerPyro_setup",
-                    options=server_options,
-                    generate_response=True))
-            self._pyro_server_workers_map[server_name] = []
-        self.unpause_transmit()
+        # temporarily remove this attribute so that the
+        # scenario tree object can be pickled
+        instance_factory = self._scenario_tree._scenario_instance_factory
+        self._scenario_tree._scenario_instance_factory = None
+        server_init['scenario_tree'] = self._scenario_tree
+        server_init['data'] = instance_factory.data_directory()
+        try:
+            self.pause_transmit()
+            for server_name in self._action_manager.server_pool:
+                action_handles.append(
+                    self._action_manager.queue(
+                        queue_name=server_name,
+                        action="ScenarioTreeServerPyro_setup",
+                        options=server_init,
+                        generate_response=True))
+                self._pyro_server_workers_map[server_name] = []
+            self.unpause_transmit()
+        finally:
+            self._scenario_tree._scenario_instance_factory = instance_factory
         self._action_manager.wait_all(action_handles)
         for ah in action_handles:
             self._action_manager.get_results(ah)
@@ -1880,13 +2709,23 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
                   % (len(self._action_manager.server_pool)))
 
         if self._transmission_paused:
-            print("Unpausing pyro transmissions in preparation for "
-                  "releasing scenario tree servers")
+            print("Unpausing pyro transmissions in "
+                  "preparation for releasing manager workers")
             self.unpause_transmit()
+
+        self._action_manager.ignore_task_errors = ignore_errors
+
+        self.pause_transmit()
         # copy the keys since the remove_worker function is modifying
         # the dict
+        action_handles = []
         for worker_name in list(self._pyro_worker_server_map.keys()):
-            self.remove_worker(worker_name)
+            action_handles.append(self.remove_worker(worker_name))
+        self.unpause_transmit()
+        self._action_manager.wait_all(action_handles)
+        for ah in action_handles:
+            self._action_manager.get_results(ah)
+        del action_handles
 
         generate_response = None
         action_name = None
@@ -1900,8 +2739,6 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
         # transmit reset or shutdown requests
         action_handles = []
         self.pause_transmit()
-
-        self._action_manager.ignore_task_errors = ignore_errors
         for server_name in self._action_manager.server_pool:
             action_handles.append(self._action_manager.queue(
                 queue_name=server_name,
@@ -1963,40 +2800,34 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
             except KeyError:
                 raise KeyError(
                     "Unable to serialize options for registered worker name %s "
-                    "(class=%s). The worker_options did not seem to match the "
+                    "(class=%s). The worker options did not seem to match the "
                     "registered options on the worker class. Did you forget to "
                     "register them? Message: %s" % (worker_registered_name,
                                                     worker_type.__name__,
                                                     str(sys.exc_info()[1])))
 
-        if type(worker_init) is not WorkerInit:
+        if type(worker_init) is not _WorkerInit:
             raise TypeError("worker_init argument has invalid type %s. "
                             "Must be of type %s" % (type(worker_init),
-                                                    WorkerInit))
-
-        # replace enum with the string name to avoid
-        # serialization issues with default Pyro4 serializers.
-        _worker_init = WorkerInit(type_=worker_init.type_.key,
-                                 names=worker_init.names,
-                                 data=worker_init.data)
+                                                    _WorkerInit))
 
         action_handle = self._action_manager.queue(
             queue_name=server_name,
             action="ScenarioTreeServerPyro_initialize",
             worker_type=worker_registered_name,
             worker_name=worker_name,
-            worker_init=_worker_init,
-            options=worker_options,
+            init_args=(worker_init,),
+            init_kwds=worker_options,
             generate_response=not oneway)
 
         self._pyro_server_workers_map[server_name].append(worker_name)
         self._pyro_worker_server_map[worker_name] = server_name
         self._pyro_worker_list.append(worker_name)
 
-        if worker_init.type_ == WorkerInitType.Scenarios:
+        if worker_init.type_ == "scenarios":
             self._pyro_worker_scenarios_map[worker_name] = worker_init.names
         else:
-            assert worker_init.type_ == WorkerInitType.Bundles
+            assert worker_init.type_ == "bundles"
             self._pyro_worker_bundles_map[worker_name] = worker_init.names
             self._pyro_worker_scenarios_map[worker_name] = []
             for bundle_name in worker_init.names:
@@ -2008,14 +2839,15 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
     def remove_worker(self, worker_name):
         assert self._action_manager is not None
         server_name = self.get_server_for_worker(worker_name)
-        self._action_manager.queue(
+        ah = self._action_manager.queue(
             queue_name=server_name,
             action="ScenarioTreeServerPyro_release",
             worker_name=worker_name,
-            generate_response=False)
+            generate_response=True)
         self._pyro_server_workers_map[server_name].remove(worker_name)
         del self._pyro_worker_server_map[worker_name]
         self._pyro_worker_list.remove(worker_name)
+        return ah
 
     def get_server_for_worker(self, worker_name):
         try:
@@ -2037,25 +2869,21 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
 class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
                                     PySPConfiguredObject):
 
-    _declared_options = \
-        PySPConfigBlock("Options declared for the ScenarioTreeManagerClientPyro class")
-    safe_declare_common_option(_declared_options,
-                               "pyro_required_scenariotreeservers")
-    safe_declare_common_option(_declared_options,
-                               "pyro_find_scenariotreeservers_timeout")
-    safe_declare_common_option(_declared_options,
-                               "pyro_multiple_scenariotreeserver_workers")
-    safe_declare_common_option(_declared_options,
-                               "pyro_handshake_at_startup")
+    @classmethod
+    def _declare_options(cls, options=None):
+        if options is None:
+            options = PySPConfigBlock()
+
+        safe_declare_common_option(options,
+                                   "pyro_required_scenariotreeservers")
+        safe_declare_common_option(options,
+                                   "pyro_find_scenariotreeservers_timeout")
+        safe_declare_common_option(options,
+                                   "pyro_handshake_at_startup")
+
+        return options
 
     default_registered_worker_name = 'ScenarioTreeManagerWorkerPyro'
-
-    def __init__(self, *args, **kwds):
-        self._scenario_to_worker_map = {}
-        self._bundle_to_worker_map = {}
-        self._worker_registered_name = kwds.pop('registered_worker_name',
-                                                self.default_registered_worker_name)
-        super(ScenarioTreeManagerClientPyro, self).__init__(*args, **kwds)
 
     #
     # Override the PySPConfiguredObject register_options implementation so
@@ -2065,20 +2893,6 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
 
     @classmethod
     def register_options(cls, *args, **kwds):
-        """Cls.register_options(
-              [options],
-              registered_worker_name=Cls.default_registered_worker_name) -> options.
-        Fills an options block will all registered options for this
-        class. The optional argument 'options' can be a previously
-        existing options block, which would be both updated and
-        returned by this function.
-
-        The optional flag 'registered_worker_name' can be used to
-        control the worker type whose options will be additionaly
-        registered with this classes options.  This flag can be set to
-        None, implying that no additional worker options should be
-        registered."""
-
         registered_worker_name = \
             kwds.pop('registered_worker_name',
                      cls.default_registered_worker_name)
@@ -2087,8 +2901,199 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
         if registered_worker_name is not None:
             worker_type = ScenarioTreeServerPyro.\
                           get_registered_worker_type(registered_worker_name)
-            worker_type.register_options(options)
+            worker_type.register_options(options, **kwds)
+
         return options
+
+    def __init__(self, *args, **kwds):
+        self._scenario_to_worker_map = {}
+        self._bundle_to_worker_map = {}
+        self._registered_worker_name = \
+            kwds.pop('registered_worker_name',
+                     self.default_registered_worker_name)
+        super(ScenarioTreeManagerClientPyro, self).__init__(*args, **kwds)
+
+    def _request_scenario_tree_data(self):
+
+        start_time = time.time()
+
+        if self.get_option("verbose"):
+            print("Broadcasting requests to collect scenario tree "
+                  "data from workers")
+
+        # maps scenario or bundle name to async object
+        async_results = {}
+
+        need_node_data = dict((tree_node.name, True)
+                              for tree_node in self._scenario_tree._tree_nodes)
+        need_scenario_data = dict((scenario.name,True)
+                                  for scenario in self._scenario_tree._scenarios)
+
+        assert not self._transmission_paused
+        self.pause_transmit()
+        if self._scenario_tree.contains_bundles():
+
+            for bundle in self._scenario_tree._scenario_bundles:
+
+                object_names = {}
+                object_names['nodes'] = \
+                    [tree_node.name
+                     for scenario in bundle._scenario_tree._scenarios
+                     for tree_node in scenario.node_list
+                     if need_node_data[tree_node.name]]
+                object_names['scenarios'] = \
+                    [scenario_name \
+                     for scenario_name in bundle._scenario_names]
+
+                async_results[bundle.name] = \
+                    self.invoke_method_on_worker(
+                        self.get_worker_for_bundle(bundle.name),
+                        "_collect_scenario_tree_data_for_client",
+                        method_args=(object_names,),
+                        async=True)
+
+                for node_name in object_names['nodes']:
+                    need_node_data[node_name] = False
+                for scenario_name in object_names['scenarios']:
+                    need_scenario_data[scenario_name] = False
+
+        else:
+
+            for scenario in self._scenario_tree._scenarios:
+
+                object_names = {}
+                object_names['nodes'] = \
+                    [tree_node.name for tree_node in scenario.node_list \
+                     if need_node_data[tree_node.name]]
+                object_names['scenarios'] = [scenario.name]
+
+                async_results[scenario.name] = \
+                    self.invoke_method_on_worker(
+                        self.get_worker_for_scenario(scenario.name),
+                        "_collect_scenario_tree_data_for_client",
+                        method_args=(object_names,),
+                        async=True)
+
+                for node_name in object_names['nodes']:
+                    need_node_data[node_name] = False
+                for scenario_name in object_names['scenarios']:
+                    need_scenario_data[scenario_name] = False
+
+        self.unpause_transmit()
+
+        assert all(not val for val in itervalues(need_node_data))
+        assert all(not val for val in itervalues(need_scenario_data))
+
+        return async_results
+
+    def _gather_scenario_tree_data(self, async_results):
+
+        start_time = time.time()
+
+        have_node_data = dict((tree_node.name, False)
+                              for tree_node in self._scenario_tree._tree_nodes)
+        have_scenario_data = dict((scenario.name, False)
+                                  for scenario in self._scenario_tree._scenarios)
+
+        if self.get_option("verbose"):
+            print("Waiting for scenario tree data collection")
+
+        if self._scenario_tree.contains_bundles():
+
+            for bundle_name in async_results:
+
+                results = async_results[bundle_name].complete()
+
+                for tree_node_name, node_data in iteritems(results['nodes']):
+                    assert have_node_data[tree_node_name] == False
+                    have_node_data[tree_node_name] = True
+                    tree_node = self._scenario_tree.get_node(tree_node_name)
+                    tree_node._variable_ids.update(
+                        node_data['_variable_ids'])
+                    tree_node._standard_variable_ids.update(
+                        node_data['_standard_variable_ids'])
+                    tree_node._variable_indices.update(
+                        node_data['_variable_indices'])
+                    tree_node._integer.update(node_data['_integer'])
+                    tree_node._binary.update(node_data['_binary'])
+                    tree_node._semicontinuous.update(
+                        node_data['_semicontinuous'])
+                    # these are implied
+                    tree_node._derived_variable_ids = \
+                        set(tree_node._variable_ids) - \
+                        tree_node._standard_variable_ids
+                    tree_node._name_index_to_id = \
+                        dict((val,key)
+                             for key,val in iteritems(tree_node._variable_ids))
+
+                for scenario_name, scenario_data in \
+                      iteritems(results['scenarios']):
+                    assert have_scenario_data[scenario_name] == False
+                    have_scenario_data[scenario_name] = True
+                    scenario = self._scenario_tree.get_scenario(scenario_name)
+                    scenario._objective_name = scenario_data['_objective_name']
+                    scenario._objective_sense = scenario_data['_objective_sense']
+
+                if self.get_option("verbose"):
+                    print("Successfully loaded scenario tree data "
+                          "for bundle="+bundle_name)
+
+        else:
+
+            for scenario_name in async_results:
+
+                results = async_results[scenario_name].complete()
+
+                for tree_node_name, node_data in iteritems(results['nodes']):
+                    assert have_node_data[tree_node_name] == False
+                    have_node_data[tree_node_name] = True
+                    tree_node = self._scenario_tree.get_node(tree_node_name)
+                    tree_node._variable_ids.update(
+                        node_data['_variable_ids'])
+                    tree_node._standard_variable_ids.update(
+                        node_data['_standard_variable_ids'])
+                    tree_node._variable_indices.update(
+                        node_data['_variable_indices'])
+                    tree_node._integer.update(node_data['_integer'])
+                    tree_node._binary.update(node_data['_binary'])
+                    tree_node._semicontinuous.update(
+                        node_data['_semicontinuous'])
+                    # these are implied
+                    tree_node._derived_variable_ids = \
+                        set(tree_node._variable_ids) - \
+                        tree_node._standard_variable_ids
+                    tree_node._name_index_to_id = \
+                        dict((val,key)
+                             for key,val in iteritems(tree_node._variable_ids))
+
+                for scenario_name, scenario_data in \
+                      iteritems(results['scenarios']):
+                    assert have_scenario_data[scenario_name] == False
+                    have_scenario_data[scenario_name] = True
+                    scenario = self._scenario_tree.get_scenario(scenario_name)
+                    scenario._objective_name = scenario_data['_objective_name']
+                    scenario._objective_sense = scenario_data['_objective_sense']
+
+                if self.get_option("verbose"):
+                    print("Successfully loaded scenario tree data for "
+                          "scenario="+scenario_name)
+
+        self._objective_sense = \
+            self._scenario_tree._scenarios[0]._objective_sense
+        assert all(_s._objective_sense == self._objective_sense
+                   for _s in self._scenario_tree._scenarios)
+
+        assert all(itervalues(have_node_data))
+        assert all(itervalues(have_scenario_data))
+
+        if self.get_option("verbose"):
+            print("Scenario tree instance data successfully "
+                  "collected")
+
+        if self.get_option("output_times") or \
+           self.get_option("verbose"):
+            print("Scenario tree data collection time=%.2f seconds"
+                  % (time.time() - start_time))
 
     def _initialize_scenariotree_workers(self):
 
@@ -2102,22 +3107,20 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
                 "No scenario tree server processes have been acquired!")
 
         if self._scenario_tree.contains_bundles():
-            jobs = [BundleWorkerInit(bundle.name,
-                                     bundle.scenario_names)
+            jobs = [_BundleWorkerInit(bundle.name,
+                                      bundle.scenario_names)
                     for bundle in reversed(self._scenario_tree.bundles)]
         else:
-            jobs = [ScenarioWorkerInit(scenario.name)
+            jobs = [_ScenarioWorkerInit(scenario.name)
                     for scenario in reversed(self._scenario_tree.scenarios)]
 
         assert len(self._pyro_server_workers_map) == \
             len(self._action_manager.server_pool)
         assert len(self._pyro_worker_server_map) == 0
         assert len(self._pyro_worker_list) == 0
-        scenario_instance_factory = \
-            self._scenario_tree._scenario_instance_factory
 
         worker_type = ScenarioTreeServerPyro.\
-                      get_registered_worker_type(self._worker_registered_name)
+                      get_registered_worker_type(self._registered_worker_name)
         worker_options = None
         try:
             worker_options = worker_type.\
@@ -2127,7 +3130,7 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
                 "Unable to extract options for registered worker name %s (class=%s). "
                 "Did you forget to register the worker options into the options "
                 "object passed into this class? Message: %s"
-                  % (self._worker_registered_name,
+                  % (self._registered_worker_name,
                      worker_type.__name__,
                      str(sys.exc_info()[1])))
 
@@ -2156,101 +3159,56 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
         action_handle_data = {}
         for cntr, server_name in enumerate(worker_initializations):
 
-            if self._options.pyro_multiple_scenariotreeserver_workers:
-
-                #
-                # Multiple workers per server
-                #
-
-                for worker_init in worker_initializations[server_name]:
-                    assert type(worker_init.names) is tuple
-                    assert len(worker_init.names) == 1
-                    object_name = worker_init.names[0]
-                    worker_name = server_name+":Worker_"+str(object_name)
-                    action_handle = self.add_worker(
-                        worker_name,
-                        worker_init,
-                        worker_options,
-                        self._worker_registered_name,
-                        server_name=server_name)
-
-                    if self._options.pyro_handshake_at_startup:
-                        action_handle_data[worker_name] =  \
-                            self.AsyncResult(
-                                self._action_manager,
-                                action_handle_data=action_handle).complete()
-                    else:
-                        action_handle_data[action_handle] = worker_name
-
-                    if worker_init.type_ == WorkerInitType.Bundles:
-                        assert self._scenario_tree.contains_bundle(object_name)
-                        self._bundle_to_worker_map[object_name] = worker_name
-                        assert type(worker_init.data) is dict
-                        assert len(worker_init.data) == 1
-                        assert len(worker_init.data[object_name]) > 0
-                        for scenario_name in worker_init.data[object_name]:
-                            self._scenario_to_worker_map[scenario_name] = worker_name
-                    else:
-                        assert worker_init.type_ == WorkerInitType.Scenarios
-                        assert self._scenario_tree.contains_scenario(object_name)
-                        self._scenario_to_worker_map[object_name] = worker_name
-
+            init_type = worker_initializations[server_name][0].type_
+            assert all(init_type == _worker_init.type_ for _worker_init
+                       in worker_initializations[server_name])
+            assert all(type(_worker_init.names) is tuple
+                       for _worker_init in worker_initializations[server_name])
+            assert all(len(_worker_init.names) == 1
+                       for _worker_init in worker_initializations[server_name])
+            worker_name = None
+            if init_type == "bundles":
+                worker_name = server_name+":Worker_BundleGroup"+str(cntr)
+                worker_init = _BundleWorkerInit(
+                    [_worker_init.names[0] for _worker_init
+                     in worker_initializations[server_name]],
+                    dict((_worker_init.names[0],
+                          _worker_init.data[_worker_init.names[0]])
+                         for _worker_init in worker_initializations[server_name]))
             else:
+                assert init_type == "scenarios"
+                worker_name = server_name+":Worker_ScenarioGroup"+str(cntr)
+                worker_init = _ScenarioWorkerInit(
+                    [_worker_init.names[0] for _worker_init
+                     in worker_initializations[server_name]])
 
-                #
-                # One worker per server
-                #
+            action_handle = self.add_worker(
+                worker_name,
+                worker_init,
+                worker_options,
+                self._registered_worker_name,
+                server_name=server_name)
 
-                init_type = worker_initializations[server_name][0].type_
-                assert all(init_type == _worker_init.type_ for _worker_init
-                           in worker_initializations[server_name])
-                assert all(type(_worker_init.names) is tuple
-                           for _worker_init in worker_initializations[server_name])
-                assert all(len(_worker_init.names) == 1
-                           for _worker_init in worker_initializations[server_name])
-                worker_name = None
-                if init_type == WorkerInitType.Bundles:
-                    worker_name = server_name+":Worker_BundleGroup"+str(cntr)
-                    worker_init = BundleWorkerInit(
-                        [_worker_init.names[0] for _worker_init
-                         in worker_initializations[server_name]],
-                        dict((_worker_init.names[0],
-                              _worker_init.data[_worker_init.names[0]])
-                             for _worker_init in worker_initializations[server_name]))
-                else:
-                    assert init_type == WorkerInitType.Scenarios
-                    worker_name = server_name+":Worker_ScenarioGroup"+str(cntr)
-                    worker_init = ScenarioWorkerInit(
-                        [_worker_init.names[0] for _worker_init
-                         in worker_initializations[server_name]])
+            if self._options.pyro_handshake_at_startup:
+                action_handle_data[worker_name] =  \
+                    self.AsyncResult(
+                        self._action_manager,
+                        action_handle_data=action_handle).complete()
+            else:
+                action_handle_data[action_handle] = worker_name
 
-                action_handle = self.add_worker(
-                    worker_name,
-                    worker_init,
-                    worker_options,
-                    self._worker_registered_name,
-                    server_name=server_name)
-
-                if self._options.pyro_handshake_at_startup:
-                    action_handle_data[worker_name] =  \
-                        self.AsyncResult(
-                            self._action_manager,
-                            action_handle_data=action_handle).complete()
-                else:
-                    action_handle_data[action_handle] = worker_name
-
-                if worker_init.type_ == WorkerInitType.Bundles:
-                    for bundle_name in worker_init.names:
-                        assert self._scenario_tree.contains_bundle(bundle_name)
-                        self._bundle_to_worker_map[bundle_name] = worker_name
-                        for scenario_name in worker_init.data[bundle_name]:
-                            assert self._scenario_tree.contains_scenario(scenario_name)
-                            self._scenario_to_worker_map[scenario_name] = worker_name
-                else:
-                    assert worker_init.type_ == WorkerInitType.Scenarios
-                    for scenario_name in worker_init.names:
+            if worker_init.type_ == "bundles":
+                for bundle_name in worker_init.names:
+                    assert self._scenario_tree.contains_bundle(bundle_name)
+                    self._bundle_to_worker_map[bundle_name] = worker_name
+                    for scenario_name in worker_init.data[bundle_name]:
                         assert self._scenario_tree.contains_scenario(scenario_name)
                         self._scenario_to_worker_map[scenario_name] = worker_name
+            else:
+                assert worker_init.type_ == "scenarios"
+                for scenario_name in worker_init.names:
+                    assert self._scenario_tree.contains_scenario(scenario_name)
+                    self._scenario_to_worker_map[scenario_name] = worker_name
 
         if not self._options.pyro_handshake_at_startup:
             self.unpause_transmit()
@@ -2277,7 +3235,7 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
         assert self._scenario_tree is not None
         if self._scenario_tree.contains_bundles():
             for bundle in self._scenario_tree._scenario_bundles:
-                self._add_bundle(bundle.name, bundle._scenario_names)
+                self._init_bundle(bundle.name, bundle._scenario_names)
             num_jobs = len(self._scenario_tree._scenario_bundles)
             if self._options.verbose:
                 print("Bundle jobs available: %s"
@@ -2306,7 +3264,7 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
         if self._options.verbose:
             if servers_required == 0:
                 assert timeout is not None
-                print("Using timeout of %s seconds to aquire up to "
+                print("Using timeout of %s seconds to acquire up to "
                       "%s servers" % (timeout, num_jobs))
             else:
                 print("Waiting to acquire exactly %s servers to distribute "
@@ -2326,6 +3284,7 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
         # can slow down initialization as syncronization across all
         # scenario tree servers is required following serial
         # execution
+        unpause = False
         if len(self._options.aggregategetter_callback_location):
             assert not self._transmission_paused
             for callback_module_key, callback_name in zip(self._aggregategetter_keys,
@@ -2347,14 +3306,27 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
                 print("Broadcasting final aggregate data "
                       "to scenario tree servers")
 
+            self.pause_transmit()
+            unpause = True
             self.invoke_method(
                 "assign_data",
                 method_args=("_aggregate_user_data", self._aggregate_user_data,),
-                oneway=not self._options.pyro_handshake_at_startup)
+                oneway=True)
 
         # run the user script to initialize variable bounds
         if len(self._options.postinit_callback_location):
-
+            # Note: we pause and unpause around the callback
+            #       transmission block to ensure they are
+            #       all sent in the same dispatcher call and
+            #       their execution order on the workers is
+            #       not determined by a race condition
+            was_paused = self.pause_transmit()
+            # we should not have already been paused unless
+            # it happened a few lines above during the
+            # aggregategetter execution
+            assert (not was_paused) or \
+                len(self._options.aggregategetter_callback_location)
+            unpause = True
             for callback_module_key, callback_name in zip(self._postinit_keys,
                                                           self._postinit_names):
                 if self._options.verbose:
@@ -2367,9 +3339,23 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
                     callback_name,
                     self._callback_mapped_module_name[callback_module_key],
                     invocation_type=InvocationType.PerScenario,
-                    oneway=not self._options.pyro_handshake_at_startup)
+                    oneway=True)
 
-        return initialization_handle
+        if unpause:
+            self.unpause_transmit()
+
+        async_results = self._request_scenario_tree_data()
+
+        self._initialized = False
+        def _complete_init():
+            self._gather_scenario_tree_data(async_results)
+            self._initialized = True
+            return None
+
+        async_callback = self.AsyncResultCallback(_complete_init)
+        return self.AsyncResultChain(
+            results=[initialization_handle, async_callback],
+            return_index=0)
 
     # implemented by _ScenarioTreeManagerClientPyroAdvanced
     #def _invoke_function_on_worker_impl(...)
@@ -2395,8 +3381,8 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
 
     def _invoke_function_impl(
             self,
-            function_name,
-            module_name,
+            function,
+            module_name=None,
             invocation_type=InvocationType.Single,
             function_args=(),
             function_kwds=None,
@@ -2408,7 +3394,24 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
 
         if self._options.verbose:
             print("Transmitting external function invocation request "
-                  "to scenario tree workers")
+                  "for function=%s in module=%s."
+                  % (str(function), module_name))
+
+        if not isinstance(function, six.string_types):
+            if not dill_available:
+                raise ValueError(
+                    "This dill module must be available "
+                    "when transmitting function objects")
+            if module_name is not None:
+                raise ValueError(
+                    "The module_name keyword must be None "
+                    "when the function argument is not a string.")
+            function = dill.dumps(function)
+        else:
+            if module_name is None:
+                raise ValueError(
+                    "A module name is required when "
+                    "a function name is given")
 
         if self._transmission_paused:
             if (not async) and (not oneway):
@@ -2432,8 +3435,8 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
             for worker_name in self._pyro_worker_list:
                 action_handle_data[self._invoke_function_on_worker_pyro(
                     worker_name,
-                    function_name,
-                    module_name,
+                    function,
+                    module_name=module_name,
                     invocation_type=invocation_type,
                     function_args=function_args,
                     function_kwds=function_kwds,
@@ -2452,8 +3455,8 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
 
             action_handle_data = self._invoke_function_on_worker_pyro(
                 self.get_worker_for_scenario(invocation_type.data),
-                function_name,
-                module_name,
+                function,
+                module_name=module_name,
                 invocation_type=invocation_type,
                 function_args=function_args,
                 function_kwds=function_kwds,
@@ -2463,8 +3466,8 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
 
             action_handle_data = self._invoke_function_on_worker_pyro(
                 self.get_worker_for_bundle(invocation_type.data),
-                function_name,
-                module_name,
+                function,
+                module_name=module_name,
                 invocation_type=invocation_type,
                 function_args=function_args,
                 function_kwds=function_kwds,
@@ -2495,8 +3498,8 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
             for worker_name in worker_map:
                 action_handle_data[self._invoke_function_on_worker_pyro(
                     worker_name,
-                    function_name,
-                    module_name,
+                    function,
+                    module_name=module_name,
                     invocation_type=_invocation_type(worker_map[worker_name]),
                     function_args=function_args,
                     function_kwds=function_kwds,
@@ -2525,8 +3528,8 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
                     self._action_manager,
                     action_handle_data=self._invoke_function_on_worker_pyro(
                         worker_name,
-                        function_name,
-                        module_name,
+                        function,
+                        module_name=module_name,
                         invocation_type=invocation_type,
                         function_args=result,
                         function_kwds=function_kwds,
@@ -2536,8 +3539,8 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
 
             action_handle_data = self._invoke_function_on_worker_pyro(
                 self._pyro_worker_list[-1],
-                function_name,
-                module_name,
+                function,
+                module_name=module_name,
                 invocation_type=invocation_type,
                 function_args=result,
                 function_kwds=function_kwds,
@@ -2580,8 +3583,8 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
                    (worker_name != _get_worker_func(object_names[-1])):
                     action_handle_data=self._invoke_function_on_worker_pyro(
                         worker_name,
-                        function_name,
-                        module_name,
+                        function,
+                        module_name=module_name,
                         invocation_type=_invocation_type(object_names_for_worker),
                         function_args=result,
                         function_kwds=function_kwds,
@@ -2681,13 +3684,133 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
 
         return result
 
-    # TODO
-    def _add_bundle_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+    def _process_bundle_solve_result(self,
+                                     bundle_name,
+                                     results,
+                                     manager_results=None,
+                                     **kwds):
 
-    # TODO
-    def _remove_bundle_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        if manager_results is None:
+            manager_results = ScenarioTreeSolveResults('bundles')
+
+        assert len(results) == 2
+        object_results, scenario_tree_results = results
+
+        # update the manager_results object
+        for key in object_results:
+            getattr(manager_results, key)[bundle_name] = \
+                object_results[key]
+
+        # Convert status strings back to enums. These are
+        # transmitted as strings to avoid difficult behavior
+        # related to certain Pyro serializer settings
+        if manager_results.solver_status[bundle_name] is not None:
+            manager_results.solver_status[bundle_name] = \
+                getattr(SolverStatus,
+                        str(manager_results.solver_status[bundle_name]))
+        else:
+            manager_results.solver_status[bundle_name] = undefined
+        if manager_results.termination_condition[bundle_name] is not None:
+            manager_results.termination_condition[bundle_name] = \
+                getattr(TerminationCondition,
+                        str(manager_results.termination_condition[bundle_name]))
+        else:
+            manager_results.termination_condition[bundle_name] = undefined
+        if manager_results.solution_status[bundle_name] is not None:
+            manager_results.solution_status[bundle_name] = \
+                getattr(SolutionStatus,
+                        str(manager_results.solution_status[bundle_name]))
+        else:
+            manager_results.solution_status[bundle_name] = undefined
+
+        # update the scenario tree solution
+        if scenario_tree_results is not None:
+            bundle_scenarios = self.scenario_tree.\
+                get_bundle(bundle_name).scenario_names
+            assert len(bundle_scenarios) == len(scenario_tree_results)
+            for scenario_name in bundle_scenarios:
+                self.scenario_tree.get_scenario(scenario_name).\
+                    set_solution(scenario_tree_results[scenario_name])
+
+        return manager_results
+
+    def _process_scenario_solve_result(self,
+                                       scenario_name,
+                                       results,
+                                       manager_results=None,
+                                       **kwds):
+        if manager_results is None:
+            manager_results = ScenarioTreeSolveResults('scenarios')
+
+        assert len(results) == 2
+        object_results, scenario_tree_results = results
+
+        # update the manager_results object
+        for key in object_results:
+            getattr(manager_results, key)[scenario_name] = \
+                object_results[key]
+
+        # Convert status strings back to enums. These are
+        # transmitted as strings to avoid difficult behavior
+        # related to certain Pyro serializer settings
+        if manager_results.solver_status[scenario_name] is not None:
+            manager_results.solver_status[scenario_name] = \
+                getattr(SolverStatus,
+                        str(manager_results.solver_status[scenario_name]))
+        else:
+            manager_results.solver_status[scenario_name] = undefined
+        if manager_results.termination_condition[scenario_name] is not None:
+            manager_results.termination_condition[scenario_name] = \
+                getattr(TerminationCondition,
+                        str(manager_results.termination_condition[scenario_name]))
+        else:
+            manager_results.termination_condition[scenario_name] = undefined
+        if manager_results.solution_status[scenario_name] is not None:
+            manager_results.solution_status[scenario_name] = \
+                getattr(SolutionStatus,
+                        str(manager_results.solution_status[scenario_name]))
+        else:
+            manager_results.solution_status[scenario_name] = undefined
+
+        # update the scenario tree solution
+        if scenario_tree_results is not None:
+            self.scenario_tree.get_scenario(scenario_name).\
+                set_solution(scenario_tree_results)
+
+        return manager_results
+
+    def _push_fix_queue_to_instances_impl(self):
+
+        worker_map = {}
+        node_count = 0
+        for stage in self.scenario_tree.stages:
+
+            for tree_node in stage.nodes:
+
+                if len(tree_node._fix_queue):
+                    node_count += 1
+                    for scenario in tree_node.scenarios:
+                        worker_name = self.get_worker_for_scenario(scenario.name)
+                        if worker_name not in worker_map:
+                            worker_map[worker_name] = {}
+                        if tree_node.name not in worker_map[worker_name]:
+                            worker_map[worker_name][tree_node.name] = tree_node._fix_queue
+
+        if node_count > 0:
+
+            assert not self._transmission_paused
+            self.pause_transmit()
+            action_handles = []
+            for worker_name in worker_map:
+                action_handles.append(self._invoke_method_on_worker_pyro(
+                    worker_name,
+                    "_update_fixed_variables_for_client",
+                    method_args=(worker_map[worker_name],),
+                    oneway=False))
+            self.unpause_transmit()
+            self._action_manager.wait_all(action_handles)
+
+        return node_count
 
     #
     # Extended Interface for Pyro
@@ -2700,3 +3823,49 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
     def get_server_for_bundle(self, bundle_name):
         return self.get_server_for_worker(
             self.get_worker_for_bundle(bundle_name))
+
+def ScenarioTreeManagerFactory(options, *args, **kwds):
+    type_ = options.scenario_tree_manager
+    try:
+        manager_type = ScenarioTreeManagerFactory.\
+                       registered_types[type_]
+    except KeyError:
+        raise ValueError("Unrecognized value for option '%s': %s.\n"
+                         "Must be one of: %s"
+                         % ("scenario_tree_manager",
+                            options.scenario_tree_manager,
+                            str(sorted(ScenarioTreeManagerFactory.\
+                                       registered_types.keys()))))
+    return manager_type(options, *args, **kwds)
+
+ScenarioTreeManagerFactory.registered_types = {}
+ScenarioTreeManagerFactory.registered_types['serial'] = \
+    ScenarioTreeManagerClientSerial
+ScenarioTreeManagerFactory.registered_types['pyro'] = \
+    ScenarioTreeManagerClientPyro
+
+def _register_scenario_tree_manager_options(*args, **kwds):
+    if len(args) == 0:
+        options = PySPConfigBlock()
+    else:
+        if len(args) != 1:
+            raise TypeError(
+                "register_options(...) takes at most 1 argument (%s given)"
+                % (len(args)))
+        options = args[0]
+        if not isinstance(options, PySPConfigBlock):
+            raise TypeError(
+                "register_options(...) argument must be of type PySPConfigBlock, "
+                "not %s" % (type(options).__name__))
+    safe_register_common_option(options,
+                                "scenario_tree_manager",
+                                **kwds)
+    ScenarioTreeManagerClientSerial.register_options(options,
+                                                     **kwds)
+    ScenarioTreeManagerClientPyro.register_options(options,
+                                                   **kwds)
+
+    return options
+
+ScenarioTreeManagerFactory.register_options = \
+    _register_scenario_tree_manager_options

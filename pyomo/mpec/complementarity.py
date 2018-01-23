@@ -13,7 +13,9 @@ import inspect
 from six import iteritems
 from collections import namedtuple
 
+from pyomo.util.timing import ConstructionTimer
 from pyomo.core import *
+from pyomo.core.base.plugin import register_component
 from pyomo.core.base.numvalue import ZeroConstant, _sub
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.block import _BlockData
@@ -160,6 +162,8 @@ class Complementarity(Block):
                          self.__class__.__name__, self.name, str(data))
         if self._constructed:                                       #pragma:nocover
             return
+        timer = ConstructionTimer(self)
+
         #
         _self_rule = self._rule
         self._rule = None
@@ -204,6 +208,7 @@ class Complementarity(Block):
                         "complementarity %s with index %s:\n%s: %s"
                         % ( self.name, idx, type(err).__name__, err ) )
                     raise
+        timer.report()
 
     def add(self, index, cc):
         """
@@ -283,7 +288,7 @@ class SimpleComplementarity(_ComplementarityData, Complementarity):
 
 class IndexedComplementarity(Complementarity):
 
-    def _default(self, idx):
+    def _getitem_when_not_present(self, idx):
         return self._data.setdefault(idx, _ComplementarityData(self))
 
 
@@ -319,6 +324,7 @@ class ComplementarityList(IndexedComplementarity):
             logger.debug("Constructing complementarity list %s", self.name)
         if self._constructed:               #pragma:nocover
             return
+        timer = ConstructionTimer(self)
         _self_rule = self._rule
         self._constructed=True
         if _self_rule is None:
@@ -350,6 +356,7 @@ class ComplementarityList(IndexedComplementarity):
                 if (expr.__class__ is tuple and expr == ComplementarityList.End):
                     return
                 self.add(expr)
+        timer.report()
 
 
 register_component(Complementarity, "Complementarity conditions.")

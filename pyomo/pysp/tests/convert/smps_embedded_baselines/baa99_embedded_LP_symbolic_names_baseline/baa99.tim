@@ -1,0 +1,23 @@
+TIME baa99
+PERIODS EXPLICIT
+    TIME1
+    TIME2
+ROWS
+    obj TIME1
+    c_e_d1_ TIME2
+    c_e_d2_ TIME2
+    c_e_s1_ TIME2
+    c_e_s2_ TIME2
+    c_e_ONE_VAR_CONSTANT TIME2
+COLS
+    x1 TIME1
+    x2 TIME1
+    u1 TIME2
+    u2 TIME2
+    v1 TIME2
+    v2 TIME2
+    w11 TIME2
+    w12 TIME2
+    w22 TIME2
+    ONE_VAR_CONSTANT TIME2
+ENDATA

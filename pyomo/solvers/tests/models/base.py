@@ -15,7 +15,8 @@ import six
 import pyomo.kernel as pmo
 from pyomo.core.kernel.component_block import IBlockStorage
 from pyomo.core import Suffix, Var, Constraint, Objective
-from pyomo.opt import ProblemFormat, PersistentSolver, SolverFactory, TerminationCondition
+from pyomo.opt import ProblemFormat, SolverFactory, TerminationCondition
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
 thisDir = dirname(abspath( __file__ ))
 
@@ -96,21 +97,30 @@ class _BaseTestModel(object):
 
         try:
             if isinstance(opt, PersistentSolver):
-                opt.compile_instance(self.model, symbolic_solver_labels=symbolic_labels)
-
-            if opt.warm_start_capable():
-                results = opt.solve(
-                    self.model,
-                    symbolic_solver_labels=symbolic_labels,
-                    warmstart=True,
-                    load_solutions=load_solutions,
-                    **io_options)
+                opt.set_instance(self.model, symbolic_solver_labels=symbolic_labels)
+                if opt.warm_start_capable():
+                    results = opt.solve(symbolic_solver_labels=symbolic_labels,
+                                        warmstart=True,
+                                        load_solutions=load_solutions,
+                                        **io_options)
+                else:
+                    results = opt.solve(symbolic_solver_labels=symbolic_labels,
+                                        load_solutions=load_solutions,
+                                        **io_options)
             else:
-                results = opt.solve(
-                    self.model,
-                    symbolic_solver_labels=symbolic_labels,
-                    load_solutions=load_solutions,
-                    **io_options)
+                if opt.warm_start_capable():
+                    results = opt.solve(
+                        self.model,
+                        symbolic_solver_labels=symbolic_labels,
+                        warmstart=True,
+                        load_solutions=load_solutions,
+                        **io_options)
+                else:
+                    results = opt.solve(
+                        self.model,
+                        symbolic_solver_labels=symbolic_labels,
+                        load_solutions=load_solutions,
+                        **io_options)
 
             return opt, results
         finally:

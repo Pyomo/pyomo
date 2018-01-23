@@ -5,9 +5,10 @@ from pyomo.gdp import *
 
 # 2-D Constrained layout example from http://minlp.org/library/lib.php?lib=GDP
 
-# Given a set of boxes and a set of circular areas, we determine a layout for the boxes
-# which minimizes the distance among them (according to various costs associated with each
-# pair of boxes) while ensuring that each box is within at least one of the circular areas
+# Given a set of boxes and a set of circular areas, we determine a layout for
+# the boxes which minimizes the distance among them (according to various costs
+# associated with each pair of boxes) while ensuring that each box is within at
+# least one of the circular areas
 
 model = AbstractModel()
 
@@ -82,7 +83,6 @@ def horiz_dist_rule1(model, i, j):
     return model.horizDist[i,j] >= model.xCoord[i] - model.xCoord[j]
 model.horiz_dist1 = Constraint(model.BoxPairs, rule=horiz_dist_rule1)
 
-# TODO: can I combine this and the above and use an &??
 def horiz_dist_rule2(model, i, j):
     return model.horizDist[i,j] >= model.xCoord[j] - model.xCoord[i]
 model.horiz_dist2 = Constraint(model.BoxPairs, rule=horiz_dist_rule2)
@@ -124,18 +124,27 @@ def in_circ_disjunct_rule(disjunct, i, k):
     model = disjunct.model()
     if 1:
         disjunct.upperLeftIn = Constraint(
-            expr=(model.xCoord[i] - model.Length[i]/2 - model.CenterXCoord[k])**2 + \
-            (model.yCoord[i] + model.Height[i]/2 - model.CenterYCoord[k])**2 <= model.Radius[k]**2)
+            expr=(model.xCoord[i] - model.Length[i]/2 - \
+                  model.CenterXCoord[k])**2 + \
+            (model.yCoord[i] + model.Height[i]/2 - model.CenterYCoord[k])**2 <= \
+            model.Radius[k]**2)
         disjunct.lowerLeftIn = Constraint(
-            expr=(model.xCoord[i] - model.Length[i]/2 - model.CenterXCoord[k])**2 + \
-            (model.yCoord[i] - model.Height[i]/2 - model.CenterYCoord[k])**2 <= model.Radius[k]**2)
+            expr=(model.xCoord[i] - model.Length[i]/2 - \
+                  model.CenterXCoord[k])**2 + \
+            (model.yCoord[i] - model.Height[i]/2 - model.CenterYCoord[k])**2 <= \
+            model.Radius[k]**2)
         disjunct.upperRightIn = Constraint(
-            expr=(model.xCoord[i] + model.Length[i]/2 - model.CenterXCoord[k])**2 + \
-            (model.yCoord[i] + model.Height[i]/2 - model.CenterYCoord[k])**2 <= model.Radius[k]**2)
+            expr=(model.xCoord[i] + model.Length[i]/2 - \
+                  model.CenterXCoord[k])**2 + \
+            (model.yCoord[i] + model.Height[i]/2 - model.CenterYCoord[k])**2 <= \
+            model.Radius[k]**2)
         disjunct.lowerRightIn = Constraint(
-            expr=(model.xCoord[i] + model.Length[i]/2 - model.CenterXCoord[k])**2 + \
-            (model.yCoord[i] - model.Height[i]/2 - model.CenterYCoord[k])**2 <= model.Radius[k]**2)
-model.in_circ_disjunct = Disjunct(model.BOXES, model.CIRCLES, rule=in_circ_disjunct_rule)
+            expr=(model.xCoord[i] + model.Length[i]/2 - \
+                  model.CenterXCoord[k])**2 + \
+            (model.yCoord[i] - model.Height[i]/2 - model.CenterYCoord[k])**2 <= \
+            model.Radius[k]**2)
+model.in_circ_disjunct = Disjunct(model.BOXES, model.CIRCLES,
+                                  rule=in_circ_disjunct_rule)
 
 def in_circ_rule(model, i):
     return [model.in_circ_disjunct[i, k] for k in model.CIRCLES]

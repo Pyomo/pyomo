@@ -1,5 +1,6 @@
 # Implements cutting plane reformulation for linear, convex GDPs
 from __future__ import division
+from collections import OrderedDict
 
 from pyomo.util.modeling import unique_component_name
 from pyomo.core import *
@@ -11,7 +12,7 @@ from pyomo.core.base import Transformation
 from six import iterkeys, itervalues
 
 import logging
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.gdp')
 
 # DEBUG
 from nose.tools import set_trace
@@ -19,18 +20,18 @@ from nose.tools import set_trace
 # TODO: this should be an option probably, right?
 # do I have other options that won't be mad about the quadratic objective in the
 # separation problem?
-SOLVER = 'gurobi'
+SOLVER = 'ipopt'
 stream_solvers = False
 
 class CuttingPlane_Transformation(Transformation):
-    
+
     alias('gdp.cuttingplane', doc="Relaxes a linear disjunctive model by "
           "adding cuts from convex hull to Big-M relaxation.")
 
     def __init__(self):
         super(CuttingPlane_Transformation, self).__init__()
 
-    def _apply_to(self, instance, **kwds):
+    def _apply_to(self, instance, bigM=None, **kwds):
         options = kwds.pop('options', {})
 
         if kwds:
@@ -42,7 +43,7 @@ class CuttingPlane_Transformation(Transformation):
 
         # create transformation block
         transBlock = self._add_relaxation_block(
-            instance, 
+            instance,
             '_pyomo_gdp_cuttingplane_relaxation')
         # we need to later find the transformation block on transformed versions
         # of this instance, so we are going to grab the cuid here.
@@ -68,7 +69,7 @@ class CuttingPlane_Transformation(Transformation):
         reclassify.apply_to(instance_rChull)
         relaxIntegrality.apply_to(instance_rChull)
 
-        bigMRelaxation.apply_to(instance)
+        bigMRelaxation.apply_to(instance, bigM=bigM)
         reclassify.apply_to(instance)
         instance_rBigm = relaxIntegrality.create_using(instance)
 
@@ -96,7 +97,7 @@ class CuttingPlane_Transformation(Transformation):
         # build map of components and their cuids. (I need cuids because I need
         # to be able to find the same component on the convex hull instance
         # later.)
-        v_map = {}
+        v_map = OrderedDict()
         for v in instance_rBigm.component_data_objects(
             Var,
             descend_into=(Block, Disjunct),
@@ -110,7 +111,7 @@ class CuttingPlane_Transformation(Transformation):
         # the writer will yell when we try to solve below. If there are 0, we
         # will yell here.
         rBigM_obj = next(instance_rBigm.component_data_objects(
-            Objective, 
+            Objective,
             active=True), None)
         if rBigM_obj is None:
             raise GDP_Error("Cannot apply cutting planes transformation "
@@ -135,7 +136,7 @@ class CuttingPlane_Transformation(Transformation):
             obj_diff = prev_obj - rBigm_objVal
             improving = abs(obj_diff) > epsilon if abs(obj_diff) < 1 else \
                         abs(obj_diff/prev_obj) > epsilon
-           
+
             prev_obj = rBigm_objVal
             iteration += 1
 
@@ -144,7 +145,7 @@ class CuttingPlane_Transformation(Transformation):
         # creates transformation block with a unique name based on name, adds it
         # to instance, and returns it.
         transBlockName = unique_component_name(
-            instance, 
+            instance,
             '_pyomo_gdp_cuttingplane_relaxation')
         transBlock = Block()
         instance.add_component(transBlockName, transBlock)
@@ -157,7 +158,7 @@ class CuttingPlane_Transformation(Transformation):
         # to the transformation block so that we don't have to worry about name
         # conflicts.
         transBlock_rChull.xstar = Param(range(len(v_map)), mutable=True)
-        
+
         obj_expr = 0
         for cuid, v, i in itervalues(v_map):
             x_star = transBlock_rChull.xstar[i]
@@ -166,7 +167,7 @@ class CuttingPlane_Transformation(Transformation):
         # add separation objective to transformation block
         transBlock_rChull.separation_objective = Objective(expr=obj_expr)
 
-    
+
     def _add_cut(self, v_map, instance, instance_rChull, transBlock,
                  transBlock_rChull, transBlock_rBigm, cut_index):
         # add cut to BM and rBM
@@ -175,6 +176,9 @@ class CuttingPlane_Transformation(Transformation):
 
         cutexpr_bigm = 0
         cutexpr_rBigm = 0
+        # QUESTION: I think that this is not deterministic? We are getting the
+        # variables in different orders when we build this constraint. Which is
+        # awful for testing.
         for cuid, v, i in itervalues(v_map):
             xhat = cuid.find_component(instance_rChull).value
             xstar = transBlock_rChull.xstar[i].value

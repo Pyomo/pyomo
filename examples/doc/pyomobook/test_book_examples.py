@@ -18,27 +18,36 @@ datadir = currdir
 testdirs = [currdir, ]
 
 solver_dependencies =   {
-                        'Test_nonlinear_ch': 
-                            {'test_rosen_pyomo_rosen': 'ipopt',
-                             'test_react_design_run_pyomo_reactor_table': 'ipopt',
-                             'test_react_design_run_pyomo_reactor': 'ipopt',
-                             'test_multimodal_pyomo_multimodal_init1': 'ipopt',
-                             'test_multimodal_pyomo_multimodal_init2': 'ipopt',
-                             'test_disease_est_run_disease_summary': 'ipopt',
-                             'test_disease_est_run_disease_callback': 'ipopt',
-                             'test_deer_run_deer': 'ipopt'},
-                        'Test_mpec_ch': {'test_mpec_ch_path1': 'path'}
-                        }
+    'Test_nonlinear_ch': {
+        'test_rosen_pyomo_rosen': 'ipopt',
+        'test_react_design_run_pyomo_reactor_table': 'ipopt',
+        'test_react_design_run_pyomo_reactor': 'ipopt',
+        'test_multimodal_pyomo_multimodal_init1': 'ipopt',
+        'test_multimodal_pyomo_multimodal_init2': 'ipopt',
+        'test_disease_est_run_disease_summary': 'ipopt',
+        'test_disease_est_run_disease_callback': 'ipopt',
+        'test_deer_run_deer': 'ipopt',
+    },
+    'Test_mpec_ch': {
+        'test_mpec_ch_path1': 'path',
+    },
+    'Test_dae_ch': {
+        'test_run_path_constraint_tester': 'ipopt',
+    },
+}
 package_dependencies =  {
-                        'Test_data_abstract_ch':
-                            {'test_data_abstract_ch_ABCD9': ['pyodbc',],
-                            'test_data_abstract_ch_ABCD8': ['pyodbc',],
-                             'test_data_abstract_ch_ABCD7': ['win32com',]},
-                        'Test_overview_ch':
-                            {'test_overview_ch_pyomo_wl_excel': ['numpy','pandas','xlrd',]},
-                        'Test_scripts_ch':
-                            {'test_scripts_ch_warehouse_function_cuts': ['numpy','matplotlib',]},
-                        }
+    'Test_data_abstract_ch': {
+        'test_data_abstract_ch_ABCD9': ['pyodbc',],
+        'test_data_abstract_ch_ABCD8': ['pyodbc',],
+        'test_data_abstract_ch_ABCD7': ['win32com',],
+    },
+    'Test_overview_ch': {
+        'test_overview_ch_pyomo_wl_excel': ['numpy','pandas','xlrd',],
+    },
+    'Test_scripts_ch': {
+        'test_scripts_ch_warehouse_function_cuts': ['numpy','matplotlib',],
+    },
+}
 solver_available = {}
 package_available = {}
 

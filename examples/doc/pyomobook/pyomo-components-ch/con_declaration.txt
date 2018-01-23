@@ -76,7 +76,7 @@
 
 4 Declarations: StartTime_index StartTime Pred_index Pred
 0.0
--inf
+inf
 7.5
 2.5
 inf

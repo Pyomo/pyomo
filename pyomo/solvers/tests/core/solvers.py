@@ -214,6 +214,7 @@ class SolverTestRunner(unittest.TextTestRunner):
         logging.disable(logging.CRITICAL)
         # Temporarily disable printing
         if not self.options.debug:
+            _std = sys.stdout, sys.stderr
             sys.stdout = SolverTestRunner.NullStream()
             sys.stderr = SolverTestRunner.NullStream()
 
@@ -222,10 +223,9 @@ class SolverTestRunner(unittest.TextTestRunner):
         filteredSuite(result)
 
         # Re-enable logging, printing
+        logging.disable(logging.NOTSET)
         if not self.options.debug:
-            #logging.disable(logging.NOTSET)
-            sys.stdout = sys.__stdout__
-            sys.stderr = sys.__stderr__
+            sys.stdout, sys.stderr = _std
 
         # Report results
         print("\nTest Problem Summary - {0} problems: {1} failures, {2} errors ({3} skipped)".format(result.testsRun, len(result.failures), len(result.errors), len(result.skipped)))

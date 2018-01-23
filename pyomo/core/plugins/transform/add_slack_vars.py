@@ -17,11 +17,13 @@ from nose.tools import set_trace
 
 class AddSlackVariables(NonIsomorphicTransformation):
     """
-    This plugin adds slack variables to every constraint
+    This plugin adds slack variables to every constraint or to the constraints
+    specified in targets
     """
 
     alias('core.add_slack_variables', \
-          doc="Create a model where we had slack variables to every constraint and add new objective penalizing the sum of the slacks")
+          doc="Create a model where we had slack variables to every constraint "
+          "and add new objective penalizing the sum of the slacks")
 
     def __init__(self, **kwds):
         kwds['name'] = "add_slack_vars"
@@ -31,7 +33,8 @@ class AddSlackVariables(NonIsomorphicTransformation):
         targets = kwds.pop('targets', None)
 
         if kwds:
-            logger.warning("Unrecognized keyword arguments in add slack variable transformation:\n%s"
+            logger.warning("Unrecognized keyword arguments in add slack "
+                           "variable transformation:\n%s"
                            % ( '\n'.join(iterkeys(kwds)), ))
 
         if targets is None:
@@ -60,8 +63,10 @@ class AddSlackVariables(NonIsomorphicTransformation):
         for cons in constraintDatas:
             if (cons.lower is not None and cons.upper is not None) and \
                value(cons.lower) > value(cons.upper):
-                # this is a structural infeasibility so slacks aren't going to help:
-                raise RuntimeError("Lower bound exceeds upper bound in constraint %s" % cons.name)
+                # this is a structural infeasibility so slacks aren't going to
+                # help:
+                raise RuntimeError("Lower bound exceeds upper bound in "
+                                   "constraint %s" % cons.name)
             if not cons.active: continue
             if cons.lower is not None:
                 # we add positive slack variable to body:
