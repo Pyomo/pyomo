@@ -199,11 +199,8 @@ class ConvexHull_Transformation(Transformation):
 
 
     def _transformBlock(self, obj, transBlock):
-        if obj.is_indexed():
-            for i in sorted(iterkeys(obj)):
-                self._transformBlockData(obj[i], transBlock)
-        else:
-            self._transformBlockData(obj, transBlock)
+        for i in sorted(iterkeys(obj)):
+            self._transformBlockData(obj[i], transBlock)
 
 
     def _transformBlockData(self, obj, transBlock):
@@ -217,7 +214,7 @@ class ConvexHull_Transformation(Transformation):
             self._transformDisjunction(disjunction, transBlock)
 
 
-    def _declareDisjunctionConstraints(self, disjunction):
+    def _getDisjunctionConstraints(self, disjunction):
         # Put the disjunction constraint on its parent block
 
         # We never do this for just a DisjunctionData because we need
@@ -230,57 +227,71 @@ class ConvexHull_Transformation(Transformation):
             if type(infodict) is not dict:
                 raise GDP_Error(
                     "Component %s contains an attribute named "
-                    "_gdp_transformation_info. The transformation requires that "
-                    "it can create this attribute!" % parent.name)
+                    "_gdp_transformation_info. The transformation requires "
+                    "that it can create this attribute!" % parent.name)
+            try:
+                # On the off-chance that another GDP transformation went
+                # first, the infodict may exist, but the specific map we
+                # want will not be present
+                orConstraintMap = infodict['disjunction_or_constraint']
+            except KeyError:
+                orConstraintMap = infodict['disjunction_or_constraint'] \
+                                  = ComponentMap()
+            try:
+                disaggregationConstraintMap = infodict[
+                    'disjunction_disaggregation_constraints']
+            except KeyError:
+                disaggregationConstraintMap = infodict[
+                    'disjunction_disaggregation_constraints'] \
+                    = ComponentMap()
         else:
             infodict = parent._gdp_transformation_info = {}
+            orConstraintMap = infodict['disjunction_or_constraint'] \
+                              = ComponentMap()
+            disaggregationConstraintMap = infodict[
+                'disjunction_disaggregation_constraints'] \
+                = ComponentMap()
 
-        # add the disaggregation constraint
-        disaggregationConstraint = Constraint(Any)
-        parent.add_component(
-            unique_component_name(parent, '_gdp_chull_relaxation_' + \
-                                  disjunction.name + '_disaggregation'), 
-            disaggregationConstraint)
+        if disjunction in disaggregationConstraintMap:
+            disaggregationConstraint = disaggregationConstraintMap[disjunction]
+        else:
+            # add the disaggregation constraint
+            disaggregationConstraint \
+                = disaggregationConstraintMap[disjunction] = Constraint(Any)
+            parent.add_component(
+                unique_component_name(parent, '_gdp_chull_relaxation_' + \
+                                      disjunction.name + '_disaggregation'),
+                disaggregationConstraint)
 
-        # add the XOR (or OR) constraints to parent block (with unique name)
-        # It's indexed if this is an IndexedDisjunction, not otherwise
-        orC = Constraint(disjunction.index_set()) if \
-              disjunction.is_indexed() else Constraint()
-        nm = '_xor'
-        orCname = unique_component_name(parent, '_gdp_chull_relaxation_' + \
-                                        disjunction.name + nm)
-        parent.add_component(orCname, orC)
-        # TODO: map the other way also
-        infodict.setdefault('disjunction_or_constraint', {})[
-            disjunction.local_name] = orC
-        infodict.setdefault('disjunction_disaggregation_constraints', {})[
-            disjunction.local_name] = disaggregationConstraint
+        # If the Constraint already exists, return it
+        if disjunction in orConstraintMap:
+            orC = orConstraintMap[disjunction]
+        else:
+            # add the XOR (or OR) constraints to parent block (with
+            # unique name) It's indexed if this is an
+            # IndexedDisjunction, not otherwise
+            orC = Constraint(disjunction.index_set()) if \
+                  disjunction.is_indexed() else Constraint()
+            parent.add_component(
+                unique_component_name(parent, '_gdp_chull_relaxation_' +
+                                      disjunction.name + '_xor'),
+                orC)
+            orConstraintMap[disjunction] = orC
+
         return orC, disaggregationConstraint
 
 
     def _transformDisjunction(self, obj, transBlock): 
         # create the disjunction constraint and disaggregation
         # constraints and then relax each of the disjunctionDatas
-        orConstraint, disaggregationConstraint = \
-        self._declareDisjunctionConstraints(obj)
-        if obj.is_indexed():
-            transBlock.disjContainers.add(obj)
-            for i in sorted(iterkeys(obj)):
-                self._transformDisjunctionData(obj[i], transBlock, i,
-                                               orConstraint,
-                                               disaggregationConstraint)
-        else:
-            self._transformDisjunctionData(obj, transBlock, None,
-                                           orConstraint,
-                                           disaggregationConstraint)
+        for i in sorted(iterkeys(obj)):
+            self._transformDisjunctionData(obj[i], transBlock, i)
        
         # deactivate so we know we relaxed
         obj.deactivate()
 
 
-    def _transformDisjunctionData(self, obj, transBlock, index,
-                                  orConstraint=None,
-                                  disaggregationConstraint=None):
+    def _transformDisjunctionData(self, obj, transBlock, index):
         # Convex hull doesn't work if this is an or constraint. So if
         # xor is false, give up
         if not obj.xor:
@@ -289,24 +300,9 @@ class ConvexHull_Transformation(Transformation):
                             % obj.name)
 
         parent_component = obj.parent_component()
-        if orConstraint is None:
-            parent_bock = obj.parent_block()
-            if (hasattr(parent_block, "_gdp_transformation_info") and 
-            type(parent_block._gdp_transformation_info) is dict):
-                infodict = parent_block._gdp_transformation_info
-                if parent_component.name in infodict:
-                    # if the orConstraint and disaggregation constraints have
-                    # already been declared, we fetch them.
-                    orConstraint = infodict['disjunction_or_constraint'][
-                        parent_component.local_name]
-                    disaggregationConstraint = infodict[
-                        'disjunction_disaggregation_constraints'][
-                            parent_component.local_name]
-            if orConstraint is None:
-                # orConstraint wasn't already declared, so we declare
-                # it and the disaggregationConstraint
-                orConstraint, disaggregationConstraint = \
-                self._declareDisjunctionConstraints(obj.parent_component() )
+        transBlock.disjContainers.add(parent_component)
+        orConstraint, disaggregationConstraint \
+            = self._getDisjunctionConstraints(parent_component)
 
         # We first go through and collect all the variables that we
         # are going to disaggregate.
@@ -335,27 +331,20 @@ class ConvexHull_Transformation(Transformation):
         for disjunct in obj.disjuncts:
             or_expr += disjunct.indicator_var
             self._transform_disjunct(disjunct, transBlock, varSet)
-         
         orConstraint.add(index, (or_expr, 1))
-        for var in varSet:
+
+        for i, var in enumerate(varSet):
             disaggregatedExpr = 0
             for disjunct in obj.disjuncts:
                 disaggregatedVar = disjunct._gdp_transformation_info[
                     'disaggregatedVars'][var]
                 disaggregatedExpr += disaggregatedVar
-            # TODO: The name below is a problem. We could potentially have
-            # variables of the same name because these variables could live on
-            # different blocks. So we really need the name to be unique with
-            # respect to all of the other variables that will be disaggregated
-            # in this disjunction. which is not what the line below does.
-            consName = unique_component_name(disjunct, var.name)
-            # TODO: This is one idea for how to add an index, Qi has another. We
-            # should probably choose one.
             if type(index) is tuple: 
-                index = consIdx = index + (consName,)
-            else:               
-                consIdx = (index,) + (consName,) if index is not None \
-                          else consName
+                consIdx = index + (i,)
+            elif parent_component.is_indexed():
+                consIdx = (index,) + (i,)
+            else:
+                consIdx = i
 
             disaggregationConstraint.add(
                 consIdx,

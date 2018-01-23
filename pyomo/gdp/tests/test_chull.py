@@ -328,11 +328,11 @@ class TwoTermDisj(unittest.TestCase):
         self.assertIsInstance(disCons, Constraint)
         # one for each of the variables
         self.assertEqual(len(disCons), 3)
-        self.check_disaggregation_constraint(disCons['w'], m.w, disjBlock[0].w,
+        self.check_disaggregation_constraint(disCons[2], m.w, disjBlock[0].w,
                                              disjBlock[1].w)
-        self.check_disaggregation_constraint(disCons['x'], m.x, disjBlock[0].x,
+        self.check_disaggregation_constraint(disCons[0], m.x, disjBlock[0].x,
                                              disjBlock[1].x)
-        self.check_disaggregation_constraint(disCons['y'], m.y, disjBlock[0].y,
+        self.check_disaggregation_constraint(disCons[1], m.y, disjBlock[0].y,
                                              disjBlock[1].y)
 
     def test_original_disjuncts_deactivated(self):
@@ -498,11 +498,11 @@ class IndexedDisjunction(unittest.TestCase):
         self.assertEqual(len(disaggregationCons), 3)
 
         disaggregatedVars = {
-            (1, 'x[1]'): [relaxedDisjuncts[0].component('x[1]'), 
+            (1, 0): [relaxedDisjuncts[0].component('x[1]'), 
                           relaxedDisjuncts[1].component('x[1]')], 
-            (2, 'x[2]'): [relaxedDisjuncts[2].component('x[2]'), 
+            (2, 0): [relaxedDisjuncts[2].component('x[2]'), 
                           relaxedDisjuncts[3].component('x[2]')], 
-            (3, 'x[3]'): [relaxedDisjuncts[4].component('x[3]'), 
+            (3, 0): [relaxedDisjuncts[4].component('x[3]'), 
                           relaxedDisjuncts[5].component('x[3]')],
         }
 
