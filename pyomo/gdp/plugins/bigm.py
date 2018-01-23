@@ -20,7 +20,6 @@ from pyomo.core.base.component import ComponentUID, ActiveComponent
 from pyomo.core.base.set_types import Any
 from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.disjunct import IndexedDisjunction, SimpleDisjunction
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 from pyomo.repn import LinearCanonicalRepn, generate_canonical_repn
 from pyomo.util.modeling import unique_component_name
@@ -248,17 +247,15 @@ class BigM_Transformation(Transformation):
         # We never do this for just a DisjunctionData because we need
         # to know about the index set of its parent component. So if
         # we called this on a DisjunctionData, we did something wrong.
-        assert type(disjunction) in (SimpleDisjunction,
-                                     IndexedDisjunction)
+        assert isinstance(disjunction, Disjunction)
         parent = disjunction.parent_block()
         if hasattr(parent, "_gdp_transformation_info"):
             infodict = parent._gdp_transformation_info
             if type(infodict) is not dict:
                 raise GDP_Error(
                     "Component %s contains an attribute named "
-                    "_gdp_transformation_info. "
-                    "The transformation requires that "
-                    "it can create this attribute!" % parent.name)
+                    "_gdp_transformation_info. The transformation requires "
+                    "that it can create this attribute!" % parent.name)
             try:
                 # On the off-chance that another GDP transformation went
                 # first, the infodict may exist, but the specific map we
