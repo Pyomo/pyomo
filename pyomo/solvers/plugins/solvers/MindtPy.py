@@ -5,8 +5,9 @@ decomposition-based approaches to solve nonlinear continuous-discrete problems.
 These approaches include:
 
 - Outer approximation
-- Benders decomposition (questionable)
+- Benders decomposition
 - Partial surrogate cuts
+- Extended cutting plane
 
 This solver implementation was developed by Carnegie Mellon University in the
 research group of Ignacio Grossmann.
