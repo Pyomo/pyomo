@@ -471,6 +471,35 @@ class TwoTermDisj(unittest.TestCase):
             TransformationFactory('gdp.chull').apply_to,
             m)
 
+    def test_indexed_constraints_in_disjunct(self):
+        m = ConcreteModel()
+        m.I = [1,2,3]
+        m.x = Var(m.I, bounds=(0,10))
+        def c_rule(b,i):
+            m = b.model()
+            return m.x[i] >= i
+        def d_rule(d,j):
+            m = d.model()
+            d.c = Constraint(m.I[:j], rule=c_rule)
+        m.d = Disjunct(m.I, rule=d_rule)
+        m.disjunction = Disjunction(expr=[m.d[i] for i in m.I])
+
+        TransformationFactory('gdp.chull').apply_to(m)
+        transBlock = m._pyomo_gdp_chull_relaxation
+
+        # 2 blocks: the original Disjunct and the transformation block
+        self.assertEqual(
+            len(list(m.component_objects(Block, descend_into=False))), 2)
+        self.assertEqual(
+            len(list(m.component_objects(Disjunct))), 0)
+
+        # Each relaxed disjunct should have 3 vars, but i "d[i].c"
+        # Constraints
+        for i in [1,2,3]:
+            relaxed = transBlock.relaxedDisjuncts[i-1]
+            self.assertEqual(len(list(relaxed.component_objects(Var))), 3)
+            self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)
+
 
 class IndexedDisjunction(unittest.TestCase):
     @staticmethod

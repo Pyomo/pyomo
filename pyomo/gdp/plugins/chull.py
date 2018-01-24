@@ -309,7 +309,7 @@ class ConvexHull_Transformation(Transformation):
         varSet_tmp = ComponentSet()
         varSet = []
         for disjunct in obj.disjuncts:
-            for cons in disjunct.component_objects(
+            for cons in disjunct.component_data_objects(
                     Constraint,
                     active = True,
                     sort=SortComponents.deterministic,
