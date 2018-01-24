@@ -594,6 +594,40 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m = self.makeModel()
         self.diff_apply_to_and_create_using(m)
 
+    def test_indexed_constraints_in_disjunct(self):
+        m = ConcreteModel()
+        m.I = [1,2,3]
+        m.x = Var(m.I, bounds=(0,10))
+        def c_rule(b,i):
+            m = b.model()
+            return m.x[i] >= i
+        def d_rule(d,j):
+            m = d.model()
+            d.c = Constraint(m.I[:j], rule=c_rule)
+        m.d = Disjunct(m.I, rule=d_rule)
+        m.disjunction = Disjunction(expr=[m.d[i] for i in m.I])
+
+        TransformationFactory('gdp.bigm').apply_to(m)
+        transBlock = m._pyomo_gdp_bigm_relaxation
+
+        # 2 blocks: the original Disjunct and the transformation block
+        self.assertEqual(
+            len(list(m.component_objects(Block, descend_into=False))), 2)
+        self.assertEqual(
+            len(list(m.component_objects(Disjunct))), 0)
+
+        # Each relaxed disjunct should have 0 vars, and i "d[i].c"
+        # Constraints
+        for i in [1,2,3]:
+            relaxed = transBlock.relaxedDisjuncts[i-1]
+            self.assertEqual(len(list(relaxed.component_objects(Var))), 0)
+            self.assertEqual(len(list(relaxed.component_data_objects(Var))), 0)
+            self.assertEqual(
+                len(list(relaxed.component_objects(Constraint))), 1)
+            self.assertEqual(
+                len(list(relaxed.component_data_objects(Constraint))), i)
+            self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)
+
 
 class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
     def setUp(self):

@@ -498,6 +498,11 @@ class TwoTermDisj(unittest.TestCase):
         for i in [1,2,3]:
             relaxed = transBlock.relaxedDisjuncts[i-1]
             self.assertEqual(len(list(relaxed.component_objects(Var))), 3)
+            self.assertEqual(len(list(relaxed.component_data_objects(Var))), 3)
+            self.assertEqual(
+                len(list(relaxed.component_objects(Constraint))), 4)
+            self.assertEqual(
+                len(list(relaxed.component_data_objects(Constraint))), 3*2+i)
             self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)
 
 
