@@ -5,7 +5,7 @@ from pyomo.core.base import expr_common, expr as EXPR
 from pyomo.gdp import *
 
 import random
-from six import iteritems
+from six import iteritems, iterkeys
 
 # DEBUG
 from nose.tools import set_trace
@@ -366,14 +366,14 @@ class TwoTermDisj(unittest.TestCase):
 
             disjDict = m.d[i]._gdp_transformation_info
             self.assertIsInstance(disjDict, dict)
-            self.assertEqual(len(disjDict), 5)
+            self.assertEqual(sorted(iterkeys(disjDict)), ['chull','relaxed'])
             self.assertTrue(disjDict['relaxed'])
-            self.assertIs(disjDict['chull'], disjBlock[i])
-            disaggregatedVars = disjDict['disaggregatedVars']
+            self.assertIs(disjDict['chull']['relaxationBlock'], disjBlock[i])
+            disaggregatedVars = disjDict['chull']['disaggregatedVars']
             self.assertIsInstance(disaggregatedVars, ComponentMap)
-            bigmConstraints = disjDict['bigmConstraints']
+            bigmConstraints = disjDict['chull']['bigmConstraints']
             self.assertIsInstance(bigmConstraints, ComponentMap)
-            relaxedConstraints = disjDict['relaxedConstraints']
+            relaxedConstraints = disjDict['chull']['relaxedConstraints']
             self.assertIsInstance(relaxedConstraints, ComponentMap)
 
     def test_transformed_constraint_mappings(self):
@@ -384,7 +384,8 @@ class TwoTermDisj(unittest.TestCase):
 
         # first disjunct
         srcConsdict = disjBlock[0]._gdp_transformation_info['srcConstraints']
-        transConsdict = m.d[0]._gdp_transformation_info['relaxedConstraints']
+        transConsdict = m.d[0]._gdp_transformation_info['chull'][
+            'relaxedConstraints']
 
         self.assertEqual(len(srcConsdict), 1)
         self.assertEqual(len(transConsdict), 1)
@@ -395,7 +396,8 @@ class TwoTermDisj(unittest.TestCase):
         
         # second disjunct
         srcConsdict = disjBlock[1]._gdp_transformation_info['srcConstraints']
-        transConsdict = m.d[1]._gdp_transformation_info['relaxedConstraints']
+        transConsdict = m.d[1]._gdp_transformation_info['chull'][
+            'relaxedConstraints']
 
         self.assertEqual(len(srcConsdict), 2)
         self.assertEqual(len(transConsdict), 2)
@@ -418,7 +420,8 @@ class TwoTermDisj(unittest.TestCase):
 
         for i in [0,1]:
             srcVars = disjBlock[i]._gdp_transformation_info['srcVars']
-            disVars = m.d[i]._gdp_transformation_info['disaggregatedVars']
+            disVars = m.d[i]._gdp_transformation_info['chull'][
+                'disaggregatedVars']
             self.assertEqual(len(srcVars), 3)
             self.assertEqual(len(disVars), 3)
             # TODO: there has got to be better syntax for this??
@@ -439,7 +442,7 @@ class TwoTermDisj(unittest.TestCase):
         for i in [0,1]:
             srcBigm = disjBlock[i]._gdp_transformation_info[
                 'boundConstraintToSrcVar']
-            bigm = m.d[i]._gdp_transformation_info['bigmConstraints']
+            bigm = m.d[i]._gdp_transformation_info['chull']['bigmConstraints']
             self.assertEqual(len(srcBigm), 3)
             self.assertEqual(len(bigm), 3)
             # TODO: this too...
