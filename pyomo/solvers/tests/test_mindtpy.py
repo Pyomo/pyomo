@@ -12,7 +12,6 @@ else:
 
 diff_tol = 1e-4
 
-__author__ = "Qi Chen <https://github.com/qtothec>"
 
 
 class TestMindtPy(unittest.TestCase):

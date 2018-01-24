@@ -12,7 +12,6 @@ else:
 
 diff_tol = 1e-4
 
-__author__ = "David Bernal <https://github.com/bernalde>"
 
 
 class TestMindtPy(unittest.TestCase):
