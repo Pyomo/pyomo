@@ -163,7 +163,7 @@ def _value_sorter(self, obj):
 
     This returns the values of the Set in a consistent order.  For
     ordered Sets, simply return the ordered list.  For unordered Sets,
-    first try the standard sorted order, and if that failes (for example
+    first try the standard sorted order, and if that fails (for example
     with mixed-type Sets in Python3), use the _robust_sorter utility
     (above) to generate sortable keys.
 
