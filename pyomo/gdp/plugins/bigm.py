@@ -328,9 +328,8 @@ class BigM_Transformation(Transformation):
             if type(infodict) is not dict:
                 raise GDP_Error(
                     "Disjunct %s contains an attribute named "
-                    "_gdp_transformation_info. "
-                    "The transformation requires that "
-                    "it can create this attribute!" % obj.name)
+                    "_gdp_transformation_info. The transformation requires "
+                    "that it can create this attribute!" % obj.name)
         else:
             infodict = obj._gdp_transformation_info = {}
 
@@ -352,12 +351,6 @@ class BigM_Transformation(Transformation):
                     "indicator_var is not fixed and the disjunct does not "
                     "appear to have been relaxed. This makes no sense."
                     % ( obj.name, ))
-                # If it hasn't been relaxed, user deactivated it and so we
-                # fix ind var to 0 and be done. If it has been relaxed, we will
-                # check if it was bigm that did it, and if not, we will apply
-                # bigm.
-                obj.indicator_var.fix(0)
-                return
 
         if 'bigm' in infodict:
             # we've transformed it (with BigM), so don't do it again.
