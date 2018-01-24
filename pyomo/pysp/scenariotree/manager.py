@@ -1673,7 +1673,7 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
         self._solve_results = {}
 
         # set by advanced solver managers
-        self._preprocessor = None
+        self.preprocessor = None
 
     #
     # Extension of the manager interface so code can handle
@@ -2076,7 +2076,7 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
 
             if len(tree_node._fix_queue):
                 node_count += 1
-                if self._preprocessor is not None:
+                if self.preprocessor is not None:
                     for scenario in tree_node._scenarios:
                         scenario_name = scenario.name
                         for variable_id, (fixed_status, new_value) in \
@@ -2084,11 +2084,11 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
                             variable_name, index = \
                                 tree_node._variable_ids[variable_id]
                             if fixed_status == tree_node.VARIABLE_FREED:
-                                self._preprocessor.\
+                                self.preprocessor.\
                                     freed_variables[scenario_name].\
                                     append((variable_name, index))
                             elif fixed_status == tree_node.VARIABLE_FIXED:
-                                self._preprocessor.\
+                                self.preprocessor.\
                                     fixed_variables[scenario_name].\
                                     append((variable_name, index))
 
@@ -2709,13 +2709,23 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
                   % (len(self._action_manager.server_pool)))
 
         if self._transmission_paused:
-            print("Unpausing pyro transmissions in preparation for "
-                  "releasing scenario tree servers")
+            print("Unpausing pyro transmissions in "
+                  "preparation for releasing manager workers")
             self.unpause_transmit()
+
+        self._action_manager.ignore_task_errors = ignore_errors
+
+        self.pause_transmit()
         # copy the keys since the remove_worker function is modifying
         # the dict
+        action_handles = []
         for worker_name in list(self._pyro_worker_server_map.keys()):
-            self.remove_worker(worker_name)
+            action_handles.append(self.remove_worker(worker_name))
+        self.unpause_transmit()
+        self._action_manager.wait_all(action_handles)
+        for ah in action_handles:
+            self._action_manager.get_results(ah)
+        del action_handles
 
         generate_response = None
         action_name = None
@@ -2729,8 +2739,6 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
         # transmit reset or shutdown requests
         action_handles = []
         self.pause_transmit()
-
-        self._action_manager.ignore_task_errors = ignore_errors
         for server_name in self._action_manager.server_pool:
             action_handles.append(self._action_manager.queue(
                 queue_name=server_name,
@@ -2831,14 +2839,15 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
     def remove_worker(self, worker_name):
         assert self._action_manager is not None
         server_name = self.get_server_for_worker(worker_name)
-        self._action_manager.queue(
+        ah = self._action_manager.queue(
             queue_name=server_name,
             action="ScenarioTreeServerPyro_release",
             worker_name=worker_name,
-            generate_response=False)
+            generate_response=True)
         self._pyro_server_workers_map[server_name].remove(worker_name)
         del self._pyro_worker_server_map[worker_name]
         self._pyro_worker_list.remove(worker_name)
+        return ah
 
     def get_server_for_worker(self, worker_name):
         try:
@@ -3275,6 +3284,7 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
         # can slow down initialization as syncronization across all
         # scenario tree servers is required following serial
         # execution
+        unpause = False
         if len(self._options.aggregategetter_callback_location):
             assert not self._transmission_paused
             for callback_module_key, callback_name in zip(self._aggregategetter_keys,
@@ -3296,14 +3306,27 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
                 print("Broadcasting final aggregate data "
                       "to scenario tree servers")
 
+            self.pause_transmit()
+            unpause = True
             self.invoke_method(
                 "assign_data",
                 method_args=("_aggregate_user_data", self._aggregate_user_data,),
-                oneway=not self._options.pyro_handshake_at_startup)
+                oneway=True)
 
         # run the user script to initialize variable bounds
         if len(self._options.postinit_callback_location):
-
+            # Note: we pause and unpause around the callback
+            #       transmission block to ensure they are
+            #       all sent in the same dispatcher call and
+            #       their execution order on the workers is
+            #       not determined by a race condition
+            was_paused = self.pause_transmit()
+            # we should not have already been paused unless
+            # it happened a few lines above during the
+            # aggregategetter execution
+            assert (not was_paused) or \
+                len(self._options.aggregategetter_callback_location)
+            unpause = True
             for callback_module_key, callback_name in zip(self._postinit_keys,
                                                           self._postinit_names):
                 if self._options.verbose:
@@ -3316,7 +3339,10 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
                     callback_name,
                     self._callback_mapped_module_name[callback_module_key],
                     invocation_type=InvocationType.PerScenario,
-                    oneway=not self._options.pyro_handshake_at_startup)
+                    oneway=True)
+
+        if unpause:
+            self.unpause_transmit()
 
         async_results = self._request_scenario_tree_data()
 

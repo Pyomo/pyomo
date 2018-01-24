@@ -216,7 +216,7 @@ class _ConstraintData(ActiveComponentData):
             (U >=) f(x) >= L
         """
         if self.lower is None:
-            return float('-inf')
+            return float('inf')
         else:
             return value(self.body)-value(self.lower)
 

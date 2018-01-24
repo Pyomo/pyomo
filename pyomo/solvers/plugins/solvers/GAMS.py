@@ -43,8 +43,7 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
 
     Pass solver_io keyword arg to SolverFactory to choose solver mode:
         solver_io='direct' or 'python' to use GAMS Python API
-            Requires installation, visit this url for help:
-            https://www.gams.com/latest/docs/apis/examples_python/index.html
+            Requires installation, visit https://www.gams.com for help.
         solver_io='shell' or 'gms' to use command line to call gams
             Requires the gams executable be on your system PATH.
     """
@@ -133,8 +132,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
 
     def solve(self, *args, **kwds):
         """
-        Uses GAMS Python API. For installation help visit:
-        https://www.gams.com/latest/docs/apis/examples_python/index.html
+        Uses GAMS Python API. Visit https://www.gams.com for installation help.
 
         tee=False:
             Output GAMS log to stdout.

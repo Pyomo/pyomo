@@ -374,6 +374,14 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         with self.assertRaises(TypeError):
             ScenarioTreeModelFromNetworkX(G)
 
+    def test_not_directed(self):
+        G = networkx.Graph()
+        G.add_node("1")
+        G.add_node("2")
+        G.add_edge("1", "2")
+        with self.assertRaises(TypeError):
+            ScenarioTreeModelFromNetworkX(G)
+
     def test_not_branching(self):
         G = networkx.DiGraph()
         G.add_node("1")
@@ -390,7 +398,7 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         with self.assertRaises(ValueError):
             ScenarioTreeModelFromNetworkX(G)
 
-    def test_missing_name(self):
+    def test_missing_node_name(self):
         G = networkx.DiGraph()
         G.add_node("R", name="Root")
         G.add_node("C")
@@ -399,6 +407,16 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
             ScenarioTreeModelFromNetworkX(
                 G,
                 node_name_attribute="name")
+
+    def test_missing_scenario_name(self):
+        G = networkx.DiGraph()
+        G.add_node("R", name="Root")
+        G.add_node("C")
+        G.add_edge("R", "C", weight=1)
+        with self.assertRaises(KeyError):
+            ScenarioTreeModelFromNetworkX(
+                G,
+                scenario_name_attribute="name")
 
     def test_missing_weight(self):
         G = networkx.DiGraph()
