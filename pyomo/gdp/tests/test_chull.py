@@ -72,7 +72,7 @@ class TwoTermDisj(unittest.TestCase):
         self.assertIsInstance(disjBlock[0].component("d[0].c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("d[1].c1"), Constraint)
         self.assertIsInstance(disjBlock[1].component("d[1].c2"), Constraint)
-        
+
         # we didn't add to the block that wasn't ours
         self.assertEqual(len(m._pyomo_gdp_chull_relaxation), 0)
 
@@ -82,10 +82,10 @@ class TwoTermDisj(unittest.TestCase):
         # should yell if there is a non-dictionary component of the same name.
         m._gdp_transformation_info = Block()
         self.assertRaisesRegexp(
-            GDP_Error, 
+            GDP_Error,
             "Component unknown contains an attribute named "
             "_gdp_transformation_info. The transformation requires that it can "
-            "create this attribute!*", 
+            "create this attribute!*",
             TransformationFactory('gdp.chull').apply_to,
             m)
 
@@ -266,7 +266,7 @@ class TwoTermDisj(unittest.TestCase):
     def test_disaggregatedVar_bounds(self):
         m = self.makeModel()
         TransformationFactory('gdp.chull').apply_to(m)
-        
+
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
         for i in [0,1]:
             # check bounds constraints for each variable on each of the two
@@ -285,7 +285,7 @@ class TwoTermDisj(unittest.TestCase):
         xorC = m._gdp_chull_relaxation_disjunction_xor
         self.assertIsInstance(xorC, Constraint)
         self.assertEqual(len(xorC), 1)
-        
+
         self.assertEqual(xorC.lower, 1)
         self.assertEqual(xorC.upper, 1)
         self.assertEqual(xorC.body._const, 0)
@@ -295,7 +295,7 @@ class TwoTermDisj(unittest.TestCase):
         self.assertIs(xorC.body._args[1], m.d[1].indicator_var)
         self.assertEqual(xorC.body._coef[0], 1)
         self.assertEqual(xorC.body._coef[1], 1)
-        
+
     def test_error_for_or(self):
         m = self.makeModel()
         m.disjunction.xor = False
@@ -393,7 +393,7 @@ class TwoTermDisj(unittest.TestCase):
         trans1 = disjBlock[0].component("d[0].c")
         self.assertIs(srcConsdict[trans1], orig1)
         self.assertIs(transConsdict[orig1], trans1)
-        
+
         # second disjunct
         srcConsdict = disjBlock[1]._gdp_transformation_info['srcConstraints']
         transConsdict = m.d[1]._gdp_transformation_info['chull'][
@@ -437,7 +437,7 @@ class TwoTermDisj(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('gdp.chull').apply_to(m)
 
-        disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts   
+        disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
 
         for i in [0,1]:
             srcBigm = disjBlock[i]._gdp_transformation_info[
@@ -501,11 +501,11 @@ class IndexedDisjunction(unittest.TestCase):
         self.assertEqual(len(disaggregationCons), 3)
 
         disaggregatedVars = {
-            (1, 0): [relaxedDisjuncts[0].component('x[1]'), 
-                          relaxedDisjuncts[1].component('x[1]')], 
-            (2, 0): [relaxedDisjuncts[2].component('x[2]'), 
-                          relaxedDisjuncts[3].component('x[2]')], 
-            (3, 0): [relaxedDisjuncts[4].component('x[3]'), 
+            (1, 0): [relaxedDisjuncts[0].component('x[1]'),
+                          relaxedDisjuncts[1].component('x[1]')],
+            (2, 0): [relaxedDisjuncts[2].component('x[2]'),
+                          relaxedDisjuncts[3].component('x[2]')],
+            (3, 0): [relaxedDisjuncts[4].component('x[3]'),
                           relaxedDisjuncts[5].component('x[3]')],
         }
 
@@ -544,7 +544,7 @@ class DisaggregatedVarNamingConflict(unittest.TestCase):
         m.disjunction = Disjunction(expr=[m.disjunct[0], m.disjunct[1]])
 
         return m
-    
+
     def test_disaggregation_constraints(self):
         m = self.makeModel()
         TransformationFactory('gdp.chull').apply_to(m)
@@ -560,5 +560,5 @@ class DisaggregatedVarNamingConflict(unittest.TestCase):
 # class NestedDisjunction(unittest.TestCase):
 #     @staticmethod
 #     def makeModel():
-        
+
 

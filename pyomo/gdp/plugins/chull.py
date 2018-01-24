@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -156,7 +156,7 @@ class ConvexHull_Transformation(Transformation):
             else:
                 raise GDP_Error(
                     "Target %s was not a Block, Disjunct, or Disjunction. "
-                    "It was of type %s and can't be transformed" 
+                    "It was of type %s and can't be transformed"
                     % (t.name, type(t)) )
 
         # Go through our dictionary of indexed things and deactivate
@@ -281,12 +281,12 @@ class ConvexHull_Transformation(Transformation):
         return orC, disaggregationConstraint
 
 
-    def _transformDisjunction(self, obj, transBlock): 
+    def _transformDisjunction(self, obj, transBlock):
         # create the disjunction constraint and disaggregation
         # constraints and then relax each of the disjunctionDatas
         for i in sorted(iterkeys(obj)):
             self._transformDisjunctionData(obj[i], transBlock, i)
-       
+
         # deactivate so we know we relaxed
         obj.deactivate()
 
@@ -316,7 +316,7 @@ class ConvexHull_Transformation(Transformation):
                     descend_into=Block):
                 # we aren't going to disaggregate fixed
                 # variables. This means there is trouble if they are
-                # unfixed later...  
+                # unfixed later...
                 for var in identify_variables(cons.body, include_fixed=False):
                     # Note the use of a list so that we will eventually
                     # disaggregate the vars in a deterministic order
@@ -339,7 +339,7 @@ class ConvexHull_Transformation(Transformation):
                 disaggregatedVar = disjunct._gdp_transformation_info['chull'][
                     'disaggregatedVars'][var]
                 disaggregatedExpr += disaggregatedVar
-            if type(index) is tuple: 
+            if type(index) is tuple:
                 consIdx = index + (i,)
             elif parent_component.is_indexed():
                 consIdx = (index,) + (i,)
@@ -354,8 +354,8 @@ class ConvexHull_Transformation(Transformation):
     def _transform_disjunct(self, obj, transBlock, varSet):
         if hasattr(obj, "_gdp_transformation_info"):
             infodict = obj._gdp_transformation_info
-            # If the user has something with our name that is not a dict, we 
-            # scream. If they have a dict with this name then we are just going 
+            # If the user has something with our name that is not a dict, we
+            # scream. If they have a dict with this name then we are just going
             # to use it...
             if type(infodict) is not dict:
                 raise GDP_Error(
@@ -391,7 +391,7 @@ class ConvexHull_Transformation(Transformation):
         relaxedDisjuncts = transBlock.relaxedDisjuncts
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
         relaxationBlockInfo = relaxationBlock._gdp_transformation_info = {
-            'src': obj, 
+            'src': obj,
             'srcVars': ComponentMap(),
             'srcConstraints': ComponentMap(),
             'boundConstraintToSrcVar': ComponentMap(),
@@ -424,7 +424,7 @@ class ConvexHull_Transformation(Transformation):
                 disaggregatedVarName, disaggregatedVar)
             chull['disaggregatedVars'][var] = disaggregatedVar
             relaxationBlockInfo['srcVars'][disaggregatedVar] = var
-            
+
             lb = var.lb
             ub = var.ub
             if lb is None or ub is None:
@@ -440,22 +440,22 @@ class ConvexHull_Transformation(Transformation):
             chull['bigmConstraints'][var] = bigmConstraint
             relaxationBlockInfo['boundConstraintToSrcVar'][bigmConstraint] = var
 
-        var_substitute_map = dict((id(v), newV) for v, newV in 
+        var_substitute_map = dict((id(v), newV) for v, newV in
                                   iteritems(chull['disaggregatedVars']))
-        zero_substitute_map = dict((id(v), NumericConstant(0)) for v, newV in 
+        zero_substitute_map = dict((id(v), NumericConstant(0)) for v, newV in
                                    iteritems(chull['disaggregatedVars']))
-        
+
         # Transform each component within this disjunct
         self._transform_block_components(obj, obj, infodict, var_substitute_map,
                                          zero_substitute_map)
-        
+
         # deactivate disjunct so we know we've relaxed it
         obj._deactivate_without_fixing_indicator()
         infodict['relaxed'] = True
-        
+
 
     def _transform_block_components(
-            self, block, disjunct, infodict, 
+            self, block, disjunct, infodict,
             var_substitute_map, zero_substitute_map):
         # Look through the component map of block and transform
         # everything we have a handler for. Yell if we don't know how
@@ -473,7 +473,7 @@ class ConvexHull_Transformation(Transformation):
             # obj is what we are transforming, we pass disjunct
             # through so that we will have access to the indicator
             # variables down the line.
-            handler(obj, disjunct, infodict, var_substitute_map, 
+            handler(obj, disjunct, infodict, var_substitute_map,
                     zero_substitute_map)
 
 
@@ -527,7 +527,7 @@ class ConvexHull_Transformation(Transformation):
                         "is not in a disjunction or the disjunction it is in "
                         "has not been transformed. {0} needs to be deactivated "
                         "or its disjunction transformed before {1} can be "
-                        "transformed.".format(problemdisj.name, 
+                        "transformed.".format(problemdisj.name,
                                               outerdisjunct.name))
 
 
@@ -554,7 +554,7 @@ class ConvexHull_Transformation(Transformation):
         # since constraints from all blocks are getting moved onto the
         # same block. So we get a unique name
         name = unique_component_name(relaxationBlock, obj.name)
-        
+
         if obj.is_indexed():
             newConstraint = Constraint(obj.index_set(), transBlock.lbub)
         else:
@@ -574,7 +574,7 @@ class ConvexHull_Transformation(Transformation):
             if not c.active:
                 continue
             c.deactivate()
-        
+
             NL = c.body.polynomial_degree() not in (0,1)
 
             # We need to evaluate the expression at the origin *before*
@@ -582,7 +582,7 @@ class ConvexHull_Transformation(Transformation):
             # disaggregated variables
             if not NL or self._mode == NL_Mode_FurmanSawayaGrossmann:
                 h_0 = clone_expression(c.body, substitute=zero_substitute_map)
-                
+
             expr = clone_expression(c.body, substitute=var_substitute_map)
             y = disjunct.indicator_var
             if NL:
@@ -604,7 +604,7 @@ class ConvexHull_Transformation(Transformation):
                     expr = (y + EPS) * sub_expr
                 elif self._mode == NL_Mode_FurmanSawayaGrossmann:
                     sub_expr = clone_expression(
-                        c.body, 
+                        c.body,
                         substitute=dict(
                             (var, subs/((1 - EPS)*y + EPS))
                             for var, subs in iteritems(var_substitute_map) )
@@ -629,7 +629,7 @@ class ConvexHull_Transformation(Transformation):
                     newConstraint.add((i, 'lb'), newConsExpr)
                 else:
                     newConstraint.add('lb', newConsExpr)
-                
+
             if c.upper is not None:
                 if __debug__ and logger.isEnabledFor(logging.DEBUG):
                     logger.debug("GDP(cHull): Transforming constraint " +
