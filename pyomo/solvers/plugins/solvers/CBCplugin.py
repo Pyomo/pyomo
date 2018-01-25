@@ -546,8 +546,16 @@ class CBCSHELL(SystemCallSolver):
                 elif constraint[:2] == 'r_':
                     # For the range constraints, supply only the dual with the largest
                     # magnitude (at least one should always be numerically zero)
-                    if abs(constraint_dual) > 0:
-                        #use same key for r_u_ and r_l_
+                    existing_constraint_dual_dict = solution.constraint.get( 'r_l_' + constraint[4:], None )
+                    if existing_constraint_dual_dict:
+                        # if a constraint dual is already saved, then update it if its
+                        # magnitude is larger than existing; this avoids checking vs
+                        # zero (avoiding problems with solver tolerances)
+                        existing_constraint_dual = existing_constraint_dual_dict["Dual"]
+                        if abs( constraint_dual) > abs(existing_constraint_dual):
+                            solution.constraint[ 'r_l_' + constraint[4:] ] = {"Dual": constraint_dual}
+                    else:
+                        # if no constraint with that name yet, just save it in the solution constraint dictionary
                         solution.constraint[ 'r_l_' + constraint[4:] ] = {"Dual": constraint_dual}
 
             elif processing_constraints is False:
