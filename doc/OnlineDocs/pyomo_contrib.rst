@@ -61,10 +61,10 @@ subpackage of ``pyomo.contrib``.  For example::
 
 This example illustrates that a package can be distributed separate
 from Pyomo while appearing to be included in the ``pyomo.contrib``
-subpackage.  Pyomo currently requires a separate directory be defined
-under ``pyomo/contrib`` for each such package, so the Pyomo developer
-team will explicitly approve the inclusion of third-party packages
-in this manner.
+subpackage.  Pyomo requires a separate directory be defined under
+``pyomo/contrib`` for each such package, and the Pyomo developer
+team will approve the inclusion of third-party packages in this
+manner.
 
 
 Contrib Packages within Pyomo
@@ -82,11 +82,13 @@ imported as a subpackage of ``pyomo.contrib``::
     # Print the value of 'a' defined by this package
     print(a)
 
-Although ``pyomo.contrib.example`` is included in the Pyomo source tree, it is
-treated as an optional package.  Consequently,
+Although ``pyomo.contrib.example`` is included in the Pyomo source
+tree, it is treated as an optional package.  Pyomo will attempt to
+import this package, but if an import failure occurs, Pyomo will
+silently ignore it.  Otherwise, this pyomo package will be treated
+like any other.  Specifically:
 
-* Plugin classes defined in this package are not loaded when `pyomo.environ` is loaded.  Plugins are loaded when the ``pyomo.contrib.example`` package is imported.
+* Plugin classes defined in this package are loaded when `pyomo.environ` is loaded.
 
-* Tests in this package are skipped unless the ``TEST_PYOMO_CONTRIB`` environment variable is set to ``1``.
-
+* Tests in this package are run with other Pyomo tests.
 
