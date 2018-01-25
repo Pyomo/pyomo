@@ -21,6 +21,7 @@ with a diverse set of optimization capabilities.
    solvers/persistent_solvers.rst
    library_reference/index.rst
    problem_reference/index.rst
+   pyomo_contrib.rst
    bibliography.rst
 
 
