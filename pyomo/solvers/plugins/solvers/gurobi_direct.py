@@ -135,39 +135,25 @@ class GurobiDirect(DirectSolver):
         if (degree is None) or (degree > max_degree):
             raise DegreeError('GurobiDirect does not support expressions of degree {0}.'.format(degree))
 
-        if isinstance(repn, LinearCanonicalRepn):
-            if (repn.linear is not None) and (len(repn.linear) > 0):
-                list(map(referenced_vars.add, repn.variables))
-                new_expr = self._gurobipy.LinExpr(repn.linear, [self._pyomo_var_to_solver_var_map[i] for i in repn.variables])
-            else:
-                new_expr = 0
+        new_expr = repn.constant
 
-            if repn.constant is not None:
-                new_expr += repn.constant
+        for i,v in enumerate(repn.linear_vars):
+            new_expr += repn.linear_coefs[i] * self._pyomo_var_to_solver_var_map[v]
+            referenced_vars.add(v)
 
-        else:
-            new_expr = 0
-            if 0 in repn:
-                new_expr += repn[0][None]
-
-            if 1 in repn:
-                for ndx, coeff in repn[1].items():
-                    new_expr += coeff * self._pyomo_var_to_solver_var_map[repn[-1][ndx]]
-                    referenced_vars.add(repn[-1][ndx])
-
-            if 2 in repn:
-                for key, coeff in repn[2].items():
-                    tmp_expr = coeff
-                    for ndx, power in key.items():
-                        referenced_vars.add(repn[-1][ndx])
-                        for i in range(power):
-                            tmp_expr *= self._pyomo_var_to_solver_var_map[repn[-1][ndx]]
-                    new_expr += tmp_expr
-
+        for i,v in enumerate(repn.quadratic_vars):
+            x,y = v
+            new_expr += repn.linear_coefs[i] * self._pyomo_var_to_solver_var_map[x] * self._pyomo_var_to_solver_var_map[v]
+            referenced_vars.add(x)
+            referenced_vars.add(y)
+        
         return new_expr, referenced_vars
 
     def _get_expr_from_pyomo_expr(self, expr, max_degree=2):
-        repn = generate_canonical_repn(expr)
+        if max_degree == 2:
+            repn = generate_standard_repn(expr, quadratic=True)
+        else:
+            repn = generate_standard_repn(expr, quadratic=False)
 
         try:
             gurobi_expr, referenced_vars = self._get_expr_from_pyomo_repn(repn, max_degree)
@@ -240,13 +226,17 @@ class GurobiDirect(DirectSolver):
 
         conname = self._symbol_map.getSymbol(con, self._labeler)
 
-        if con._linear_canonical_form:
-            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_repn(con.canonical_form(),
-                                                                          self._max_constraint_degree)
-        elif isinstance(con, LinearCanonicalRepn):
-            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_repn(con, self._max_constraint_degree)
-        else:
-            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(con.body, self._max_constraint_degree)
+        # WEH - When would these other forms be used?  Are we allowing constraints to be added
+        # when they already have been converted to a canonical form?
+        #
+        #if con._linear_canonical_form:
+        #    gurobi_expr, referenced_vars = self._get_expr_from_pyomo_repn(con.canonical_form(),
+        #                                                                  self._max_constraint_degree)
+        #elif False and isinstance(con, LinearCanonicalRepn):
+        #    gurobi_expr, referenced_vars = self._get_expr_from_pyomo_repn(con, self._max_constraint_degree)
+        #else:
+        #    gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(con.body, self._max_constraint_degree)
+        gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(con.body, self._max_constraint_degree)
 
         if con.has_lb():
             if not is_fixed(con.lower):
