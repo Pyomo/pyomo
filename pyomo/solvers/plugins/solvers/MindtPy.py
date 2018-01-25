@@ -109,7 +109,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
 
         """
         self.bound_tolerance = kwds.pop('tol', 1E-5)
-        self.iteration_limit = kwds.pop('iterlim', 1000) # ERASE
+        self.iteration_limit = kwds.pop('iterlim', 50) # ERASE
         self.decomposition_strategy = kwds.pop('strategy', 'OA')
         self.initialization_strategy = kwds.pop('init_strategy', None)
         self.integer_cuts = kwds.pop('int_cuts', 1)
@@ -959,8 +959,10 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
                  sign_adjust*(rhs - value(c.body)))
             for var in m.component_data_objects(ctype=Var,
                                                 descend_into=True):
-                m.ipopt_zL_out[var] = 0
-                m.ipopt_zU_out[var] = 0
+                
+                if self._decomposition_strategy == 'PSC' or self._decomposition_strategy == 'GBD':
+                    m.ipopt_zL_out[var] = 0
+                    m.ipopt_zU_out[var] = 0
                 if var.ub is not None and abs(var.ub - value(var)) < self.bound_tolerance:
                     m.ipopt_zL_out[var] = 1
                 elif var.lb is not None and abs(value(var) - var.lb) < self.bound_tolerance:
