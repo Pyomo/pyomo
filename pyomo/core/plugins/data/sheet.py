@@ -31,7 +31,8 @@ if win32com_available:
 try:
     import openpyxl
     openpyxl_available=True
-except ImportError:
+except (ImportError, SyntaxError):
+    # Some versions of openpyxl contain python2.6-incompatible syntax
     openpyxl_available=False
 try:
     import xlrd
