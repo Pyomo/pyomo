@@ -10,13 +10,15 @@
 
 import logging
 import sys
-from six import iteritems
+from six import iteritems, itervalues
 from weakref import ref as weakref_ref
 
 from pyomo.util.modeling import unique_component_name
 from pyomo.util.timing import ConstructionTimer
 from pyomo.core import register_component, Binary, Block, Var, Constraint, Any
-from pyomo.core.base.component import ( ActiveComponentData, ComponentData)
+from pyomo.core.base.component import (
+    ActiveComponent, ActiveComponentData, ComponentData
+)
 from pyomo.core.base.numvalue import native_types
 #=======
 #from pyomo.core import *
@@ -106,7 +108,7 @@ class _DisjunctData(_BlockData):
         super(_DisjunctData, self).deactivate()
 
     def _activate_without_unfixing_indicator(self):
-        super(_DisjunctData, self).deactivate()
+        super(_DisjunctData, self).activate()
 
 class Disjunct(Block):
 
@@ -130,6 +132,8 @@ class Disjunct(Block):
         kwargs.setdefault('ctype', Disjunct)
         Block.__init__(self, *args, **kwargs)
 
+    # For the time being, this method is not needed.
+    #
     #def _deactivate_without_fixing_indicator(self):
     #    # Ideally, this would be a super call from this class.  However,
     #    # doing that would trigger a call to deactivate() on all the
@@ -138,6 +142,20 @@ class Disjunct(Block):
     #    # For the time being, we will do something bad and directly call
     #    # the base class method from where we would otherwise want to
     #    # call this method.
+
+    def _activate_without_unfixing_indicator(self):
+        # Ideally, this would be a super call from this class.  However,
+        # doing that would trigger a call to deactivate() on all the
+        # _DisjunctData objects (exactly what we want to aviod!)
+        #
+        # For the time being, we will do something bad and directly call
+        # the base class method from where we would otherwise want to
+        # call this method.
+        ActiveComponent.activate(self)
+        if self.is_indexed():
+            for component_data in itervalues(self):
+                component_data._activate_without_unfixing_indicator()
+
 
 class SimpleDisjunct(_DisjunctData, Disjunct):
 
