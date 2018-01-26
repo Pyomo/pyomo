@@ -105,6 +105,9 @@ class _DisjunctData(_BlockData):
     def _deactivate_without_fixing_indicator(self):
         super(_DisjunctData, self).deactivate()
 
+    def _activate_without_unfixing_indicator(self):
+        super(_DisjunctData, self).deactivate()
+
 class Disjunct(Block):
 
     _ComponentDataClass = _DisjunctData
