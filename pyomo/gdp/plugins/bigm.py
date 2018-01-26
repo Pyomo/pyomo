@@ -1,4 +1,3 @@
-"""Big-M Generalized Disjunctive Programming transformation module."""
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
@@ -8,6 +7,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
+"""Big-M Generalized Disjunctive Programming transformation module."""
 
 import logging
 import textwrap

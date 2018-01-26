@@ -21,9 +21,9 @@ from pyomo.core.base import _ExpressionData
 from pyomo.core.base.var import _VarData
 from pyomo.repn import generate_canonical_repn, LinearCanonicalRepn
 from pyomo.core.kernel import ComponentMap, ComponentSet
-from pyomo.core.kernel.expr_common import clone_expression
 from pyomo.core.base.expr import identify_variables
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
+from pyomo.gdp.util import clone_without_expression_components
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 
 from six import iteritems, iterkeys
@@ -581,13 +581,13 @@ class ConvexHull_Transformation(Transformation):
             # we substitute the expression variables with the
             # disaggregated variables
             if not NL or self._mode == NL_Mode_FurmanSawayaGrossmann:
-                h_0 = clone_expression(c.body, substitute=zero_substitute_map)
+                h_0 = clone_without_expression_components(
+                    c.body, substitute=zero_substitute_map)
 
-            expr = clone_expression(c.body, substitute=var_substitute_map)
             y = disjunct.indicator_var
             if NL:
                 if self._mode == NL_Mode_LeeGrossmann:
-                    sub_expr = clone_expression(
+                    sub_expr = clone_without_expression_components(
                         c.body,
                         substitute=dict(
                             (var,  subs/y)
@@ -595,7 +595,7 @@ class ConvexHull_Transformation(Transformation):
                     )
                     expr = sub_expr * y
                 elif self._mode == NL_Mode_GrossmannLee:
-                    sub_expr = clone_expression(
+                    sub_expr = clone_without_expression_components(
                         c.body,
                         substitute=dict(
                             (var, subs/(y + EPS))
@@ -603,7 +603,7 @@ class ConvexHull_Transformation(Transformation):
                     )
                     expr = (y + EPS) * sub_expr
                 elif self._mode == NL_Mode_FurmanSawayaGrossmann:
-                    sub_expr = clone_expression(
+                    sub_expr = clone_without_expression_components(
                         c.body,
                         substitute=dict(
                             (var, subs/((1 - EPS)*y + EPS))
@@ -612,6 +612,10 @@ class ConvexHull_Transformation(Transformation):
                     expr = ((1-EPS)*y + EPS)*sub_expr - EPS*h_0*(1-y)
                 else:
                     raise RuntimeError("Unknown NL CHull mode")
+            else:
+                expr = clone_without_expression_components(
+                    c.body, substitute=var_substitute_map)
+
 
             if c.lower is not None:
                 # TODO: At the moment there is no reason for this to be in both

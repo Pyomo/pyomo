@@ -1,8 +1,3 @@
-"""Collection of GDP-related hacks.
-
-Hacks for dealing with the fact that solver writers may sometimes fail to
-detect variables inside of Disjuncts or deactivated Blocks.
-"""
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
@@ -12,6 +7,12 @@ detect variables inside of Disjuncts or deactivated Blocks.
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
+"""Collection of GDP-related hacks.
+
+Hacks for dealing with the fact that solver writers may sometimes fail to
+detect variables inside of Disjuncts or deactivated Blocks.
+"""
 
 import logging
 import textwrap
