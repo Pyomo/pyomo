@@ -97,13 +97,12 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
             lb = var.value
             ub = var.value
         else:
-            lb = value(var.lb)
-            ub = value(var.ub)
-        if lb is None:
             lb = -self._cplex.infinity
-        if ub is None:
             ub = self._cplex.infinity
-
+            if var.has_lb():
+                lb = value(var.lb)
+            if var.has_ub():
+                ub = value(var.ub)
         self._solver_model.variables.set_lower_bounds(cplex_var, lb)
         self._solver_model.variables.set_upper_bounds(cplex_var, ub)
         self._solver_model.variables.set_types(cplex_var, vtype)

@@ -81,4 +81,4 @@ completely relaxed before applying the gdp.reclassify transformation""")
             # Reclassify this disjunct as a block
             disjunct_component.parent_block().reclassify_component_type(
                 disjunct_component, Block)
-            disjunct_component.activate()
+            disjunct_component._activate_without_unfixing_indicator()

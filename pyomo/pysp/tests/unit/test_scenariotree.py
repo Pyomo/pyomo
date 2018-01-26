@@ -374,6 +374,14 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         with self.assertRaises(TypeError):
             ScenarioTreeModelFromNetworkX(G)
 
+    def test_not_directed(self):
+        G = networkx.Graph()
+        G.add_node("1")
+        G.add_node("2")
+        G.add_edge("1", "2")
+        with self.assertRaises(TypeError):
+            ScenarioTreeModelFromNetworkX(G)
+
     def test_not_branching(self):
         G = networkx.DiGraph()
         G.add_node("1")
@@ -390,7 +398,7 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         with self.assertRaises(ValueError):
             ScenarioTreeModelFromNetworkX(G)
 
-    def test_missing_name(self):
+    def test_missing_node_name(self):
         G = networkx.DiGraph()
         G.add_node("R", name="Root")
         G.add_node("C")
@@ -399,6 +407,16 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
             ScenarioTreeModelFromNetworkX(
                 G,
                 node_name_attribute="name")
+
+    def test_missing_scenario_name(self):
+        G = networkx.DiGraph()
+        G.add_node("R", name="Root")
+        G.add_node("C")
+        G.add_edge("R", "C", weight=1)
+        with self.assertRaises(KeyError):
+            ScenarioTreeModelFromNetworkX(
+                G,
+                scenario_name_attribute="name")
 
     def test_missing_weight(self):
         G = networkx.DiGraph()
@@ -520,8 +538,7 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         self.assertEqual(model.ConditionalProbability["Child1"], 0.8)
         self.assertEqual(model.ConditionalProbability["Child2"], 0.2)
 
-        # FIXME: #300 on GitHub
-        self.assertEqual(model.StageCost["Stage1"]._value, None)
+        self.assertEqual(model.StageCost["Stage1"].value, None)
         self.assertEqual(list(model.StageVariables["Stage1"]), [])
         self.assertEqual(list(model.StageDerivedVariables["Stage1"]), [])
 
@@ -529,8 +546,7 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         self.assertEqual(list(model.NodeVariables["Root"]), ["x"])
         self.assertEqual(list(model.NodeDerivedVariables["Root"]), ["y"])
 
-        # FIXME: #300 on GitHub
-        self.assertEqual(model.StageCost["Stage2"]._value, None)
+        self.assertEqual(model.StageCost["Stage2"].value, None)
         self.assertEqual(list(model.StageVariables["Stage2"]), [])
         self.assertEqual(list(model.StageDerivedVariables["Stage2"]), [])
 

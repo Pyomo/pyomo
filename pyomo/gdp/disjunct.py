@@ -10,14 +10,16 @@
 
 import logging
 import sys
-from six import iteritems
+from six import iteritems, itervalues
 from weakref import ref as weakref_ref
 
-#from pyomo.core import *
 from pyomo.util.modeling import unique_component_name
 from pyomo.util.timing import ConstructionTimer
 from pyomo.core import register_component, Binary, Block, Var, Constraint, Any
-from pyomo.core.base.component import ( ActiveComponentData, )
+from pyomo.core.base.component import (
+    ActiveComponent, ActiveComponentData, ComponentData
+)
+from pyomo.core.base.numvalue import native_types
 #=======
 #from pyomo.core import *
 #from pyomo.core.base.plugin import register_component
@@ -41,6 +43,29 @@ your rule.
 
 class GDP_Error(Exception):
     """Exception raised while processing GDP Models"""
+
+
+# THe following should eventually be promoted so that all
+# IndexedComponents can use it
+class _Initializer(object):
+    value = 0
+    deferred_value = 1
+    function = 2
+    dict_like = 3
+
+    @staticmethod
+    def process(arg):
+        if type(arg) in native_types:
+            return (_Initializer.value, bool(arg))
+        elif type(arg) is types.FunctionType:
+            return (_Initializer.function, arg)
+        elif isinstance(arg, ComponentData):
+            return (_Initializer.deferred_value, arg)
+        elif hasattr(arg, '__getitem__'):
+            return (_Initializer.dict_like, arg)
+        else:
+            # Hopefully this thing is castable to teh type that is desired
+            return (_Initializer.deferred_value, arg)
 
 
 class _DisjunctData(_BlockData):
@@ -71,6 +96,20 @@ class _DisjunctData(_BlockData):
         else:
             self.add_component('indicator_var', _indicator_var)
 
+    def activate(self):
+        super(_DisjunctData, self).activate()
+        self.indicator_var.unfix()
+
+    def deactivate(self):
+        super(_DisjunctData, self).deactivate()
+        self.indicator_var.fix(0)
+
+    def _deactivate_without_fixing_indicator(self):
+        super(_DisjunctData, self).deactivate()
+
+    def _activate_without_unfixing_indicator(self):
+        super(_DisjunctData, self).activate()
+
 class Disjunct(Block):
 
     _ComponentDataClass = _DisjunctData
@@ -92,6 +131,30 @@ class Disjunct(Block):
 
         kwargs.setdefault('ctype', Disjunct)
         Block.__init__(self, *args, **kwargs)
+
+    # For the time being, this method is not needed.
+    #
+    #def _deactivate_without_fixing_indicator(self):
+    #    # Ideally, this would be a super call from this class.  However,
+    #    # doing that would trigger a call to deactivate() on all the
+    #    # _DisjunctData objects (exactly what we want to aviod!)
+    #    #
+    #    # For the time being, we will do something bad and directly call
+    #    # the base class method from where we would otherwise want to
+    #    # call this method.
+
+    def _activate_without_unfixing_indicator(self):
+        # Ideally, this would be a super call from this class.  However,
+        # doing that would trigger a call to deactivate() on all the
+        # _DisjunctData objects (exactly what we want to aviod!)
+        #
+        # For the time being, we will do something bad and directly call
+        # the base class method from where we would otherwise want to
+        # call this method.
+        ActiveComponent.activate(self)
+        if self.is_indexed():
+            for component_data in itervalues(self):
+                component_data._activate_without_unfixing_indicator()
 
 
 class SimpleDisjunct(_DisjunctData, Disjunct):
@@ -117,7 +180,7 @@ class IndexedDisjunct(Disjunct):
 
 
 class _DisjunctionData(ActiveComponentData):
-    __slots__ = ('disjuncts',)
+    __slots__ = ('disjuncts','xor')
     _NoArgument = (0,)
 
     def __init__(self, component=None):
@@ -131,6 +194,7 @@ class _DisjunctionData(ActiveComponentData):
                           else None
         self._active = True
         self.disjuncts = []
+        self.xor = True
 
     def __getstate__(self):
         """
@@ -191,7 +255,7 @@ class Disjunction(ActiveIndexedComponent):
     def __init__(self, *args, **kwargs):
         self._init_rule = kwargs.pop('rule', None)
         self._init_expr = kwargs.pop('expr', None)
-        self.xor = kwargs.pop('xor', True)
+        self._init_xor = _Initializer.process(kwargs.pop('xor', True))
         self._autodisjuncts = None
         kwargs.setdefault('ctype', Disjunction)
         super(Disjunction, self).__init__(*args, **kwargs)
@@ -222,8 +286,29 @@ class Disjunction(ActiveIndexedComponent):
         if value is Disjunction.Skip:
             return None
         else:
-            return super(Disjunction, self)._setitem_when_not_present(
+            ans = super(Disjunction, self)._setitem_when_not_present(
                 index=index, value=value)
+            self._initialize_members((index,))
+            return ans
+
+    def _initialize_members(self, init_set):
+        if self._init_xor[0] == _Initializer.value: # POD data
+            val = self._init_xor[1]
+            for key in init_set:
+                self._data[key].xor = val
+        elif self._init_xor[0] == _Initializer.deferred_value: # Param data
+            val = self._init_xor[1]
+            for key in init_set:
+                self._data[key].xor = bool(value(val))
+        elif self._init_xor[0] == _Initializer.function: # rule
+            fcn = self._init_xor[1]
+            for key in init_set:
+                self._data[key].xor = bool(value(apply_indexed_rule(
+                    self, fcn, self._parent(), key)))
+        elif self._init_xor[0] == _Initializer.dict_like: # dict-like thing
+            val = self._init_xor[1]
+            for key in init_set:
+                self._data[key].xor = bool(value(val[key]))
 
     def construct(self, data=None):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
@@ -285,12 +370,11 @@ class Disjunction(ActiveIndexedComponent):
         return (
             [("Size", len(self)),
              ("Index", self._index if self.is_indexed() else None),
-             ("XOR", self.xor),
              ("Active", self.active),
              ],
             iteritems(self),
-            ( "Disjuncts", "Active" ),
-            lambda k, v: [ [x.name for x in v.disjuncts], v.active, ]
+            ( "Disjuncts", "Active", "XOR" ),
+            lambda k, v: [ [x.name for x in v.disjuncts], v.active, v.xor]
             )
 
 

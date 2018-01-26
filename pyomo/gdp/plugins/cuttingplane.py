@@ -12,7 +12,7 @@ from pyomo.core.base import Transformation
 from six import iterkeys, itervalues
 
 import logging
-logger = logging.getLogger('pyomo.gdp')
+logger = logging.getLogger('pyomo.gdp.cuttingplane')
 
 # DEBUG
 from nose.tools import set_trace
