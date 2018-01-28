@@ -86,7 +86,7 @@ class _ComponentBase(object):
         # copy.
         #
         # Nominally, expressions only point to ComponentData
-        # derivatives.  However, with the developemtn of Expression
+        # derivatives.  However, with the development of Expression
         # Templates (and the corresponding _GetItemExpression object),
         # expressions can refer to container (non-Simple) components, so
         # we need to override __deepcopy__ for both Component and
