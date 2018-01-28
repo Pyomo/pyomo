@@ -103,6 +103,9 @@ def Sum(args, start=0, linear=None):
                 e += start
                 for arg in args:
                     e += arg
+            # Return the constant term if the linear expression does not contains variables
+            if e.is_constant():
+                return e.constant
             return e
         else:
             with EXPR.nonlinear_expression as e:
