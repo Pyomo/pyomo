@@ -530,7 +530,7 @@ class constraint(_MutableBoundsConstraintMixin,
         # user did ( var < 1 > 0 ) (which also results in a non-None
         # chainedInequality value)
         #
-        if EXPR._chainedInequality.prev is not None:
+        if EXPR._using_chained_inequality and EXPR._chainedInequality.prev is not None:
             raise TypeError(EXPR._chainedInequality.error_message())
         #
         # Process relational expressions
