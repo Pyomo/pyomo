@@ -89,7 +89,6 @@ from pyomo.core.kernel.set_types import (RealSet,
                                          Binary,
                                          RealInterval,
                                          IntegerInterval)
-from pyomo.core.kernel.numvalue import value
 from pyomo.core.kernel.util import pprint
 
 #
@@ -102,7 +101,7 @@ from pyomo.core.kernel.util import pprint
 #
 # Ducktyping to work with a few solver interfaces
 #
-from pyomo.core.kernel.component_block import _block_base
+from pyomo.core.kernel.component_block import _block_base, block, block_tuple, block_list, block_dict, tiny_block
 
 # This is ugly and bad (keys are local names
 # so they can overwrite each other). Not sure
