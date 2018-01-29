@@ -10,6 +10,8 @@
 
 from __future__ import division
 
+_using_chained_inequality = True
+
 #
 # These symbols are part of pyomo.core.expr
 #
@@ -59,11 +61,13 @@ __all__ = (
 'SimpleExpressionVisitor',
 'ExpressionValueVisitor',
 'ExpressionReplacementVisitor',
+'LinearDecompositionError',
 '_SumExpression',               # This should not be referenced, except perhaps while testing code
 '_MutableViewSumExpression',    # This should not be referenced, except perhaps while testing code
 '_MutableLinearExpression',     # This should not be referenced, except perhaps while testing code
 '_decompose_terms',             # This should not be referenced, except perhaps while testing code
 '_chainedInequality',           # This should not be referenced, except perhaps while testing code
+'_using_chained_inequality',           # This should not be referenced, except perhaps while testing code
 '_generate_sum_expression',                 # Only used within pyomo.core.expr
 '_generate_mul_expression',                 # Only used within pyomo.core.expr
 '_generate_other_expression',               # Only used within pyomo.core.expr
@@ -106,41 +110,45 @@ from pyomo.core.expr.expr_common import \
 from pyomo.core.expr import expr_common as common
 
 
-class _chainedInequality(object):
+if _using_chained_inequality:               #pragma: no cover
+    class _chainedInequality(object):
 
-    prev = None
-    call_info = None
-    cloned_from = []
+        prev = None
+        call_info = None
+        cloned_from = []
 
-    @staticmethod
-    def error_message(msg=None):
-        if msg is None:
-            msg = "Relational expression used in an unexpected Boolean context."
-        val = _chainedInequality.prev.to_string()
-        # We are about to raise an exception, so it's OK to reset chainedInequality
-        info = _chainedInequality.call_info
-        _chainedInequality.call_info = None
-        _chainedInequality.prev = None
+        @staticmethod
+        def error_message(msg=None):
+            if msg is None:
+                msg = "Relational expression used in an unexpected Boolean context."
+            val = _chainedInequality.prev.to_string()
+            # We are about to raise an exception, so it's OK to reset chainedInequality
+            info = _chainedInequality.call_info
+            _chainedInequality.call_info = None
+            _chainedInequality.prev = None
 
-        args = ( str(msg).strip(), val.strip(), info[0], info[1],
-                 ':\n    %s' % info[3] if info[3] is not None else '.' )
-        return """%s
+            args = ( str(msg).strip(), val.strip(), info[0], info[1],
+                     ':\n    %s' % info[3] if info[3] is not None else '.' )
+            return """%s
 
-    The inequality expression:
-        %s
-    contains non-constant terms (variables) that were evaluated in an
-    unexpected Boolean context at
-      File '%s', line %s%s
+        The inequality expression:
+            %s
+        contains non-constant terms (variables) that were evaluated in an
+        unexpected Boolean context at
+          File '%s', line %s%s
 
-    Evaluating Pyomo variables in a Boolean context, e.g.
-        if expression <= 5:
-    is generally invalid.  If you want to obtain the Boolean value of the
-    expression based on the current variable values, explicitly evaluate the
-    expression using the value() function:
-        if value(expression) <= 5:
-    or
-        if value(expression <= 5):
-    """ % args
+        Evaluating Pyomo variables in a Boolean context, e.g.
+            if expression <= 5:
+        is generally invalid.  If you want to obtain the Boolean value of the
+        expression based on the current variable values, explicitly evaluate the
+        expression using the value() function:
+            if value(expression) <= 5:
+        or
+            if value(expression <= 5):
+        """ % args
+
+else:
+    _chainedInequality = None
 
 
 _ParamData = None
@@ -1095,7 +1103,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
             arg = node._args_[i]
 
             if arg is None:
-                tmp.append('Undefined')
+                tmp.append('Undefined')                 # TODO: coverage
             elif arg.__class__ in native_numeric_types:
                 tmp.append(val)
             elif arg.__class__ in nonpyomo_leaf_types:
@@ -1116,7 +1124,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
         Return True if the node is not expanded.
         """
         if node is None:
-            return True, None
+            return True, None                           # TODO: coverage
 
         if node.__class__ in nonpyomo_leaf_types:
             return True, str(node)
@@ -1163,15 +1171,22 @@ def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_va
     #
     # Note: We do not standardize the rep
     #
-    # TODO: add logic for inequality expressions
-    #
     if standardize and not verbose:
         from pyomo.repn import generate_standard_repn
         try:
             if expr.__class__ is EqualityExpression:
-                repn0 = generate_standard_repn(expr._args_[0], quadratic=False, compute_values=compute_values)
-                repn1 = generate_standard_repn(expr._args_[1], quadratic=False, compute_values=compute_values)
+                repn0 = generate_standard_repn(expr._args_[0], quadratic=True, compute_values=compute_values)
+                repn1 = generate_standard_repn(expr._args_[1], quadratic=True, compute_values=compute_values)
                 expr = EqualityExpression( (repn0.to_expression(), repn1.to_expression()) )
+            elif expr.__class__ is InequalityExpression:
+                repn0 = generate_standard_repn(expr._args_[0], quadratic=True, compute_values=compute_values)
+                repn1 = generate_standard_repn(expr._args_[1], quadratic=True, compute_values=compute_values)
+                expr = InequalityExpression( (repn0.to_expression(), repn1.to_expression()), strict=expr._strict )
+            elif expr.__class__ is RangedExpression:
+                repn0 = generate_standard_repn(expr._args_[0], quadratic=True, compute_values=compute_values)
+                repn1 = generate_standard_repn(expr._args_[1], quadratic=True, compute_values=compute_values)
+                repn2 = generate_standard_repn(expr._args_[2], quadratic=True, compute_values=compute_values)
+                expr = RangedExpression( (repn0.to_expression(), repn1.to_expression(), repn2.to_expression()), strict=expr._strict )
             else:
                 repn = generate_standard_repn(expr, quadratic=True, compute_values=compute_values)
                 expr = repn.to_expression()
@@ -1516,7 +1531,7 @@ class ExpressionBase(NumericValue):
         """
         Return :const:`True` if this object is a named expression.
 
-        This method obviously returns :const:`True` for this class, but it
+        This method returns :const:`False` for this class, and it
         is included in other classes within Pyomo that are not named
         expressions, which allows for a check for named expressions 
         without evaluating the class type.
@@ -1686,10 +1701,10 @@ class ExternalFunctionExpression(ExpressionBase):
         return self.__class__(args, self._fcn)
 
     def __getstate__(self):
-        result = super(ExternalFunctionExpression, self).__getstate__()
+        state = super(ExternalFunctionExpression, self).__getstate__()
         for i in ExternalFunctionExpression.__slots__:
-            result[i] = getattr(self, i)
-        return result
+            state[i] = getattr(self, i)
+        return state
 
     def getname(self, *args, **kwds):           #pragma: no cover
         return self._fcn.getname(*args, **kwds)
@@ -1909,10 +1924,10 @@ class RangedExpression(_LinearOperatorExpression):
         return self.__class__(args, self._strict)
 
     def __getstate__(self):
-        result = super(RangedExpression, self).__getstate__()
+        state = super(RangedExpression, self).__getstate__()
         for i in RangedExpression.__slots__:
-            result[i] = getattr(self, i)
-        return result
+            state[i] = getattr(self, i)
+        return state
 
     def __nonzero__(self):
         return bool(self())
@@ -1941,10 +1956,17 @@ class RangedExpression(_LinearOperatorExpression):
         return "{0}  {1}  {2}  {3}  {4}".format(values[0], '<' if self._strict[0] else '<=', values[1], '<' if self._strict[1] else '<=', values[2])
         
     def is_constant(self):
-        return self._args_[0].is_constant() and self._args_[1].is_constant() and self._args_[2].is_constant()
+        return (self._args_[0].__class__ in native_numeric_types or self._args_[0].is_constant()) and \
+               (self._args_[1].__class__ in native_numeric_types or self._args_[1].is_constant()) and \
+               (self._args_[2].__class__ in native_numeric_types or self._args_[2].is_constant())
 
     def is_potentially_variable(self):
-        return self._args_[1].is_potentially_variable() or self._args_[0].is_potentially_variable() or self._args_[1].is_potentially_variable()
+        return (self._args_[1].__class__ not in native_numeric_types and \
+                self._args_[1].is_potentially_variable()) or \
+               (self._args_[0].__class__ not in native_numeric_types and \
+                self._args_[0].is_potentially_variable()) or \
+               (self._args_[2].__class__ not in native_numeric_types and \
+                self._args_[2].is_potentially_variable())
 
 
 class InequalityExpression(_LinearOperatorExpression):
@@ -1974,13 +1996,13 @@ class InequalityExpression(_LinearOperatorExpression):
         return self.__class__(args, self._strict)
 
     def __getstate__(self):
-        result = super(InequalityExpression, self).__getstate__()
+        state = super(InequalityExpression, self).__getstate__()
         for i in InequalityExpression.__slots__:
-            result[i] = getattr(self, i)
-        return result
+            state[i] = getattr(self, i)
+        return state
 
     def __nonzero__(self):
-        if not self.is_constant():
+        if _using_chained_inequality and not self.is_constant():    #pragma: no cover
             _chainedInequality.call_info = traceback.extract_stack(limit=2)[-2]
             _chainedInequality.prev = self
             return True
@@ -2007,10 +2029,14 @@ class InequalityExpression(_LinearOperatorExpression):
             return "{0}  {1}  {2}".format(values[0], '<' if self._strict else '<=', values[1])
         
     def is_constant(self):
-        return self._args_[0].is_constant() and self._args_[1].is_constant()
+        return (self._args_[0].__class__ in native_numeric_types or self._args_[0].is_constant()) and \
+               (self._args_[1].__class__ in native_numeric_types or self._args_[1].is_constant())
 
     def is_potentially_variable(self):
-        return self._args_[0].is_potentially_variable() or self._args_[1].is_potentially_variable()
+        return (self._args_[0].__class__ not in native_numeric_types and \
+                self._args_[0].is_potentially_variable()) or \
+               (self._args_[1].__class__ not in native_numeric_types and \
+                self._args_[1].is_potentially_variable())
 
 
 def inequality(lower=None, body=None, upper=None, strict=False):
@@ -2053,20 +2079,17 @@ def inequality(lower=None, body=None, upper=None, strict=False):
         if body is None or upper is None:
             raise ValueError("Invalid inequality expression.")
         return InequalityExpression((body, upper), strict)
-    elif body is None:
+    if body is None:
         if lower is None or upper is None:
             raise ValueError("Invalid inequality expression.")
         return InequalityExpression((lower, upper), strict)
-    elif upper is None:
-        if lower is None or body is None:
-            raise ValueError("Invalid inequality expression.")
+    if upper is None:
         return InequalityExpression((lower, body), strict)
-    elif id(lower) == id(upper):
+    if id(lower) == id(upper):
         if strict:
             raise ValueError("Invalid equality expression with strict inequalities.")
         return EqualityExpression((body, lower))
-    else:
-        return RangedExpression((lower, body, upper), (strict, strict))
+    return RangedExpression((lower, body, upper), (strict, strict))
 
 
 
@@ -2185,10 +2208,10 @@ class ViewSumExpression(_SumExpression):
         return self.__class__(list(args))
 
     def __getstate__(self):
-        result = super(ViewSumExpression, self).__getstate__()
+        state = super(ViewSumExpression, self).__getstate__()
         for i in ViewSumExpression.__slots__:
-            result[i] = getattr(self, i)
-        return result
+            state[i] = getattr(self, i)
+        return state
 
     def is_constant(self):
         #
@@ -2277,10 +2300,10 @@ class GetItemExpression(ExpressionBase):
         return self.__class__(args, self._base)
 
     def __getstate__(self):
-        result = super(GetItemExpression, self).__getstate__()
+        state = super(GetItemExpression, self).__getstate__()
         for i in GetItemExpression.__slots__:
-            result[i] = getattr(self, i)
-        return result
+            state[i] = getattr(self, i)
+        return state
 
     def getname(self, *args, **kwds):
         return self._base.getname(*args, **kwds)
@@ -2308,7 +2331,7 @@ class GetItemExpression(ExpressionBase):
                     return False
         return True
 
-    def _compute_polynomial_degree(self, result):
+    def _compute_polynomial_degree(self, result):       # TODO: coverage
         if any(x != 0 for x in result):
             return None
         ans = 0
@@ -2322,7 +2345,7 @@ class GetItemExpression(ExpressionBase):
                 ans = tmp
         return ans
 
-    def _apply_operation(self, result):
+    def _apply_operation(self, result):                 # TODO: coverage
         return value(self._base.__getitem__( tuple(result) ))
 
     def _to_string(self, values, verbose, smap, compute_values):
@@ -2330,7 +2353,7 @@ class GetItemExpression(ExpressionBase):
             return "{0}({1})".format(self.getname(), values[0])
         return "%s%s" % (self.getname(), values[0])
 
-    def resolve_template(self):
+    def resolve_template(self):                         # TODO: coverage
         return self._base.__getitem__(tuple(value(i) for i in self._args_))
 
 
@@ -2412,8 +2435,6 @@ class Expr_if(ExpressionBase):
         return _then if _if else _else
 
 
-# TODO: Unary functions should define their own subclasses so as to
-# eliminate the need for the fcn and name slots
 class UnaryFunctionExpression(ExpressionBase):
     """
     An expression object used to define intrinsic functions (e.g. sin, cos, tan).
@@ -2439,10 +2460,10 @@ class UnaryFunctionExpression(ExpressionBase):
         return self.__class__(args, self._name, self._fcn)
 
     def __getstate__(self):
-        result = super(UnaryFunctionExpression, self).__getstate__()
+        state = super(UnaryFunctionExpression, self).__getstate__()
         for i in UnaryFunctionExpression.__slots__:
-            result[i] = getattr(self, i)
-        return result
+            state[i] = getattr(self, i)
+        return state
 
     def getname(self, *args, **kwds):
         return self._name
@@ -2551,9 +2572,9 @@ class LinearExpression(ExpressionBase):
         if len(self.linear_vars) == 0:
             return True
         for v in self.linear_vars:
-            if v.fixed:
-                return True
-        return False
+            if not v.fixed:
+                return False
+        return True
 
     def _to_string(self, values, verbose, smap, compute_values):
         tmp = []
@@ -2561,6 +2582,28 @@ class LinearExpression(ExpressionBase):
             const_ = value(self.constant)
             if not isclose(const_,0):
                 tmp = [str(const_)]
+        elif self.constant.__class__ in native_numeric_types:
+            if not isclose(self.constant, 0):
+                tmp = [str(self.constant)]
+        else:
+            tmp = [self.constant.to_string(compute_values=False)]
+        if verbose:
+            for c,v in zip(self.linear_coefs, self.linear_vars):
+                if smap:                        # TODO: coverage
+                    v_ = smap.getSymbol(v)
+                else:
+                    v_ = str(v)
+                if c.__class__ in native_numeric_types or compute_values: 
+                    c_ = value(c)
+                    if isclose(c_,1):
+                        tmp.append(str(v_))
+                    elif isclose(c_,0):
+                        continue
+                    else:
+                        tmp.append("prod(%s, %s)" % (str(c_),str(v_)))
+                else:
+                    tmp.append("prod(%s, %s)" % (str(c), v_))
+            return "{0}({1})".format(self.getname(), ', '.join(tmp))
         for c,v in zip(self.linear_coefs, self.linear_vars):
             if smap:
                 v_ = smap.getSymbol(v)
@@ -2581,7 +2624,7 @@ class LinearExpression(ExpressionBase):
             else:
                 tmp.append(" + %s*%s" % (str(c), v_))
         s = "".join(tmp)
-        if len(s) == 0:
+        if len(s) == 0:                 #pragma: no cover
             return s
         if s[0] == " ":
             if s[1] == "+":
@@ -2613,22 +2656,24 @@ class LinearExpression(ExpressionBase):
 
             if _other.__class__ in native_numeric_types or not _other.is_potentially_variable():
                 self.constant = self.constant + omult * _other
-            elif _other.__class__ is _MutableLinearExpression:
-                self.constant = self.constant + omult * _other.constant
-                for c,v in zip(_other.linear_coefs, _other.linear_vars):
-                    self.linear_coefs.append(omult*c)
-                    self.linear_vars.append(v)
-            elif _other.__class__ is ViewSumExpression or _other.__class__ is _MutableViewSumExpression:
-                for e in _other._args_:
-                    #C,c,v = _MutableLinearExpression._decompose_term(e)
-                    for c,v in _decompose_terms(e, multiplier=omult):
-                        if v is None:
-                            self.constant += c
-                        else:
-                            self.linear_coefs.append(c)
-                            self.linear_vars.append(v)
+            #
+            # WEH - These seem like uncommon cases, so I think we should defer processing them
+            #       until _decompose_terms
+            #
+            #elif _other.__class__ is _MutableLinearExpression:
+            #    self.constant = self.constant + omult * _other.constant
+            #    for c,v in zip(_other.linear_coefs, _other.linear_vars):
+            #        self.linear_coefs.append(omult*c)
+            #        self.linear_vars.append(v)
+            #elif _other.__class__ is ViewSumExpression or _other.__class__ is _MutableViewSumExpression:
+            #    for e in _other._args_:
+            #        for c,v in _decompose_terms(e, multiplier=omult):
+            #            if v is None:
+            #                self.constant += c
+            #            else:
+            #                self.linear_coefs.append(c)
+            #                self.linear_vars.append(v)
             else:
-                #C,c,v = _MutableLinearExpression._decompose_term(_other)
                 for c,v in _decompose_terms(_other, multiplier=omult):
                     if v is None:
                         self.constant += c
@@ -2646,13 +2691,14 @@ class LinearExpression(ExpressionBase):
                 # The linear expression is a constant, so re-initialize it with
                 # a single term that multiplies the expression by the constant value.
                 #
-                #C,c,v = _MutableLinearExpression._decompose_term(_other)
+                c_ = self.constant
+                self.constant = 0
                 for c,v in _decompose_terms(_other):
                     if v is None:
-                        self.constant = c*self.constant
+                        self.constant = c*c_
                     else:
                         self.linear_vars.append(v)
-                        self.linear_coefs.append(c*self.constant)
+                        self.linear_coefs.append(c*c_)
                 return self
             else:
                 multiplier = _other
@@ -2669,7 +2715,7 @@ class LinearExpression(ExpressionBase):
         elif etype == _div:
             if _other.__class__ in native_numeric_types:
                 divisor = _other
-            elif self.is_potentially_variable():
+            elif _other.is_potentially_variable():
                 raise ValueError("Unallowed operation on linear expression: division with a variable RHS")
             else:
                 divisor = _other
@@ -2680,17 +2726,7 @@ class LinearExpression(ExpressionBase):
         elif etype == -_div:
             if self.is_potentially_variable():
                 raise ValueError("Unallowed operation on linear expression: division with a variable RHS")
-            #C,c,v = _MutableLinearExpression._decompose_term(_other)
-            first = True
-            for c,v in _decompose_terms(_other):
-                if not first:
-                    raise ValueError("Expected a single linear term.")
-                first = False
-                if v is None:
-                    self.constant = C/self.constant
-                else:
-                    self.linear_var = [v]
-                    self.linear_coef = [c/self.constant]
+            return _other / self.constant
             
         elif etype == _neg:
             self.constant *= -1
@@ -2698,7 +2734,7 @@ class LinearExpression(ExpressionBase):
                 self.linear_coefs[i] = - c
 
         else:
-            raise ValueError("Unallowed operation on mutable linear expression: %d" % etype)
+            raise ValueError("Unallowed operation on mutable linear expression: %d" % etype)    #pragma: no cover
 
         return self
 
@@ -2738,8 +2774,13 @@ def decompose_term(expr):
         try:
             terms = [t_ for t_ in _decompose_terms(expr)]
             return True, terms
-        except ValueError:
+        except LinearDecompositionError:
             return False, None
+
+class LinearDecompositionError(Exception):
+
+    def __init__(self, message):
+        super(LinearDecompositionError, self).__init__(message)
 
 
 def _decompose_terms(expr, multiplier=1):
@@ -2752,12 +2793,12 @@ def _decompose_terms(expr, multiplier=1):
             for term in _decompose_terms(expr._args_[1], multiplier*expr._args_[0]):
                 yield term
         else:
-            raise ValueError("Quadratic terms exist in a product expression.")
+            raise LinearDecompositionError("Quadratic terms exist in a product expression.")
     elif expr.__class__ is ReciprocalExpression:
         # The argument is potentially variable, so this represents a nonlinear term
         #
         # NOTE: We're ignoring possible simplifications 
-        raise ValueError("Unexpected nonlinear term")
+        raise LinearDecompositionError("Unexpected nonlinear term")
     elif expr.__class__ is ViewSumExpression or expr.__class__ is _MutableViewSumExpression:
         for arg in expr.args:
             for term in _decompose_terms(arg, multiplier):
@@ -2772,7 +2813,7 @@ def _decompose_terms(expr, multiplier=1):
             for c,v in zip(expr.linear_coefs, expr.linear_vars):
                 yield (multiplier*c,v)
     else:
-        raise ValueError("Unexpected nonlinear term")   #pragma: no cover
+        raise LinearDecompositionError("Unexpected nonlinear term")   #pragma: no cover
 
 
 def _process_arg(obj):
@@ -2823,14 +2864,14 @@ def _generate_sum_expression(etype, _self, _other):
                 if not (_other.__class__ in native_types or _other.is_expression_type()):
                     _other = _process_arg(_other)
             return _self._combine_expr(etype, _other)
-        except:
+        except LinearDecompositionError:
             pass
     elif _other.__class__ is _MutableLinearExpression:
         try:
             if not (_self.__class__ in native_types or _self.is_expression_type()):
                 _self = _process_arg(_self)
             return _other._combine_expr(-etype, _self)
-        except:
+        except LinearDecompositionError:
             pass
 
     #
@@ -2949,14 +2990,14 @@ def _generate_mul_expression(etype, _self, _other):
                 if not (_other.__class__ in native_types or _other.is_expression_type()):
                     _other = _process_arg(_other)
             return _self._combine_expr(etype, _other)
-        except:
+        except LinearDecompositionError:
             pass
     elif _other.__class__ is _MutableLinearExpression:
         try:
             if not (_self.__class__ in native_types or _self.is_expression_type()):
                 _self = _process_arg(_self)
             return _other._combine_expr(-etype, _self)
-        except:
+        except LinearDecompositionError:
             pass
 
     #
@@ -3102,127 +3143,187 @@ def _generate_other_expression(etype, _self, _other):
     raise RuntimeError("Unknown expression type '%s'" % etype)      #pragma: no cover
 
 
-def _generate_relational_expression(etype, lhs, rhs):
-    # We cannot trust Python not to recycle ID's for temporary POD data
-    # (e.g., floats).  So, if it is a "native" type, we will record the
-    # value, otherwise we will record the ID.  The tuple for native
-    # types is to guarantee that a native value will *never*
-    # accidentally match an ID
-    cloned_from = (\
-        id(lhs) if lhs.__class__ not in native_numeric_types else (0,lhs),
-        id(rhs) if rhs.__class__ not in native_numeric_types else (0,rhs)
-        )
-    rhs_is_relational = False
-    lhs_is_relational = False
+if _using_chained_inequality:
+    def _generate_relational_expression(etype, lhs, rhs):               #pragma: no cover
+        # We cannot trust Python not to recycle ID's for temporary POD data
+        # (e.g., floats).  So, if it is a "native" type, we will record the
+        # value, otherwise we will record the ID.  The tuple for native
+        # types is to guarantee that a native value will *never*
+        # accidentally match an ID
+        cloned_from = (\
+            id(lhs) if lhs.__class__ not in native_numeric_types else (0,lhs),
+            id(rhs) if rhs.__class__ not in native_numeric_types else (0,rhs)
+            )
+        rhs_is_relational = False
+        lhs_is_relational = False
 
-    if not (lhs.__class__ in native_types or lhs.is_expression_type()):
-        lhs = _process_arg(lhs)
-    if not (rhs.__class__ in native_types or rhs.is_expression_type()):
-        rhs = _process_arg(rhs)
+        if not (lhs.__class__ in native_types or lhs.is_expression_type()):
+            lhs = _process_arg(lhs)
+        if not (rhs.__class__ in native_types or rhs.is_expression_type()):
+            rhs = _process_arg(rhs)
 
-    if lhs.__class__ in native_numeric_types:
-        # TODO: Why do we need this?
-        lhs = as_numeric(lhs)
-    elif lhs.is_relational():
-        lhs_is_relational = True
+        if lhs.__class__ in native_numeric_types:
+            lhs = as_numeric(lhs)
+        elif lhs.is_relational():
+            lhs_is_relational = True
 
-    if rhs.__class__ in native_numeric_types:
-        # TODO: Why do we need this?
-        rhs = as_numeric(rhs)
-    elif rhs.is_relational():
-        rhs_is_relational = True
+        if rhs.__class__ in native_numeric_types:
+            rhs = as_numeric(rhs)
+        elif rhs.is_relational():
+            rhs_is_relational = True
 
-    if _chainedInequality.prev is not None:
-        prevExpr = _chainedInequality.prev
-        match = []
-        # This is tricky because the expression could have been posed
-        # with >= operators, so we must figure out which arguments
-        # match.  One edge case is when the upper and lower bounds are
-        # the same (implicit equality) - in which case *both* arguments
-        # match, and this should be converted into an equality
-        # expression.
-        for i,arg in enumerate(_chainedInequality.cloned_from):
-            if arg == cloned_from[0]:
-                match.append((i,0))
-            elif arg == cloned_from[1]:
-                match.append((i,1))
-        if etype == _eq:
-            raise TypeError(_chainedInequality.error_message())
-        if len(match) == 1:
-            if match[0][0] == match[0][1]:
-                raise TypeError(_chainedInequality.error_message(
-                    "Attempting to form a compound inequality with two "
-                    "%s bounds" % ('lower' if match[0][0] else 'upper',)))
-            if not match[0][1]:
-                cloned_from = _chainedInequality.cloned_from + (cloned_from[1],)
-                lhs = prevExpr
-                lhs_is_relational = True
-            else:
-                cloned_from = (cloned_from[0],) + _chainedInequality.cloned_from
-                rhs = prevExpr
-                rhs_is_relational = True
-        elif len(match) == 2:
-            # Special case: implicit equality constraint posed as a <= b <= a
-            if prevExpr._strict or etype == _lt:
-                _chainedInequality.prev = None
-                raise TypeError("Cannot create a compound inequality with "
-                      "identical upper and lower\n\tbounds using strict "
-                      "inequalities: constraint infeasible:\n\t%s and "
-                      "%s < %s" % ( prevExpr.to_string(), lhs, rhs ))
-            if match[0] == (0,0):
-                # This is a particularly weird case where someone
-                # evaluates the *same* inequality twice in a row.  This
-                # should always be an error (you can, for example, get
-                # it with "0 <= a >= 0").
+        if _chainedInequality.prev is not None:
+            prevExpr = _chainedInequality.prev
+            match = []
+            # This is tricky because the expression could have been posed
+            # with >= operators, so we must figure out which arguments
+            # match.  One edge case is when the upper and lower bounds are
+            # the same (implicit equality) - in which case *both* arguments
+            # match, and this should be converted into an equality
+            # expression.
+            for i,arg in enumerate(_chainedInequality.cloned_from):
+                if arg == cloned_from[0]:
+                    match.append((i,0))
+                elif arg == cloned_from[1]:
+                    match.append((i,1))
+            if etype == _eq:
                 raise TypeError(_chainedInequality.error_message())
-            etype = _eq
-        else:
-            raise TypeError(_chainedInequality.error_message())
-        _chainedInequality.prev = None
+            if len(match) == 1:
+                if match[0][0] == match[0][1]:
+                    raise TypeError(_chainedInequality.error_message(
+                        "Attempting to form a compound inequality with two "
+                        "%s bounds" % ('lower' if match[0][0] else 'upper',)))
+                if not match[0][1]:
+                    cloned_from = _chainedInequality.cloned_from + (cloned_from[1],)
+                    lhs = prevExpr
+                    lhs_is_relational = True
+                else:
+                    cloned_from = (cloned_from[0],) + _chainedInequality.cloned_from
+                    rhs = prevExpr
+                    rhs_is_relational = True
+            elif len(match) == 2:
+                # Special case: implicit equality constraint posed as a <= b <= a
+                if prevExpr._strict or etype == _lt:
+                    _chainedInequality.prev = None
+                    raise TypeError("Cannot create a compound inequality with "
+                          "identical upper and lower\n\tbounds using strict "
+                          "inequalities: constraint infeasible:\n\t%s and "
+                          "%s < %s" % ( prevExpr.to_string(), lhs, rhs ))
+                if match[0] == (0,0):
+                    # This is a particularly weird case where someone
+                    # evaluates the *same* inequality twice in a row.  This
+                    # should always be an error (you can, for example, get
+                    # it with "0 <= a >= 0").
+                    raise TypeError(_chainedInequality.error_message())
+                etype = _eq
+            else:
+                raise TypeError(_chainedInequality.error_message())
+            _chainedInequality.prev = None
 
-    if etype == _eq:
-        if lhs_is_relational or rhs_is_relational:
+        if etype == _eq:
+            if lhs_is_relational or rhs_is_relational:
+                if lhs_is_relational:
+                    val = lhs.to_string()
+                else:
+                    val = rhs.to_string()
+                raise TypeError("Cannot create an EqualityExpression where "\
+                      "one of the sub-expressions is a relational expression:\n"\
+                      "    " + val)
+            _chainedInequality.prev = None
+            return EqualityExpression((lhs,rhs))
+        else:
+            if etype == _le:
+                strict = False
+            elif etype == _lt:
+                strict = True
+            else:
+                raise ValueError("Unknown relational expression type '%s'" % etype) #pragma: no cover
             if lhs_is_relational:
-                val = lhs.to_string()
-            else:
-                val = rhs.to_string()
-            raise TypeError("Cannot create an EqualityExpression where "\
-                  "one of the sub-expressions is a relational expression:\n"\
-                  "    " + val)
-        _chainedInequality.prev = None
-        return EqualityExpression((lhs,rhs))
-    else:
-        if etype == _le:
-            strict = False
-        elif etype == _lt:
-            strict = True
-        else:
-            raise ValueError("Unknown relational expression type '%s'" % etype) #pragma: no cover
-        if lhs_is_relational:
-            if lhs.__class__ is InequalityExpression:
-                if rhs_is_relational:
+                if lhs.__class__ is InequalityExpression:
+                    if rhs_is_relational:
+                        raise TypeError("Cannot create an InequalityExpression "\
+                              "where both sub-expressions are relational "\
+                              "expressions.")
+                    _chainedInequality.prev = None
+                    return RangedExpression(lhs._args_ + (rhs,), (lhs._strict,strict))
+                else:
                     raise TypeError("Cannot create an InequalityExpression "\
-                          "where both sub-expressions are relational "\
-                          "expressions.")
-                _chainedInequality.prev = None
-                return RangedExpression(lhs._args_ + (rhs,), (lhs._strict,strict))
+                          "where one of the sub-expressions is an equality "\
+                          "or ranged expression:\n    " + lhs.to_string())
+            elif rhs_is_relational:
+                if rhs.__class__ is InequalityExpression:
+                    _chainedInequality.prev = None
+                    return RangedExpression((lhs,) + rhs._args_, (strict, rhs._strict))
+                else:
+                    raise TypeError("Cannot create an InequalityExpression "\
+                          "where one of the sub-expressions is an equality "\
+                          "or ranged expression:\n    " + rhs.to_string())
             else:
-                raise TypeError("Cannot create an InequalityExpression "\
-                      "where one of the sub-expressions is an equality "\
-                      "or ranged expression:\n    " + lhs.to_string())
-        elif rhs_is_relational:
-            if rhs.__class__ is InequalityExpression:
-                _chainedInequality.prev = None
-                return RangedExpression((lhs,) + rhs._args_, (strict, rhs._strict))
-            else:
-                raise TypeError("Cannot create an InequalityExpression "\
-                      "where one of the sub-expressions is an equality "\
-                      "or ranged expression:\n    " + rhs.to_string())
+                obj = InequalityExpression((lhs, rhs), strict)
+                #_chainedInequality.prev = obj
+                _chainedInequality.cloned_from = cloned_from
+                return obj
+
+else:
+
+    def _generate_relational_expression(etype, lhs, rhs):               #pragma: no cover
+        rhs_is_relational = False
+        lhs_is_relational = False
+
+        if not (lhs.__class__ in native_types or lhs.is_expression_type()):
+            lhs = _process_arg(lhs)
+        if not (rhs.__class__ in native_types or rhs.is_expression_type()):
+            rhs = _process_arg(rhs)
+
+        if lhs.__class__ in native_numeric_types:
+            # TODO: Why do we need this?
+            lhs = as_numeric(lhs)
+        elif lhs.is_relational():
+            lhs_is_relational = True
+
+        if rhs.__class__ in native_numeric_types:
+            # TODO: Why do we need this?
+            rhs = as_numeric(rhs)
+        elif rhs.is_relational():
+            rhs_is_relational = True
+
+        if etype == _eq:
+            if lhs_is_relational or rhs_is_relational:
+                if lhs_is_relational:
+                    val = lhs.to_string()
+                else:
+                    val = rhs.to_string()
+                raise TypeError("Cannot create an EqualityExpression where "\
+                      "one of the sub-expressions is a relational expression:\n"\
+                      "    " + val)
+            return EqualityExpression((lhs,rhs))
         else:
-            obj = InequalityExpression((lhs, rhs), strict)
-            #_chainedInequality.prev = obj
-            _chainedInequality.cloned_from = cloned_from
-            return obj
+            if etype == _le:
+                strict = False
+            elif etype == _lt:
+                strict = True
+            else:
+                raise ValueError("Unknown relational expression type '%s'" % etype) #pragma: no cover
+            if lhs_is_relational:
+                if lhs.__class__ is InequalityExpression:
+                    if rhs_is_relational:
+                        raise TypeError("Cannot create an InequalityExpression "\
+                              "where both sub-expressions are relational "\
+                              "expressions.")
+                    return RangedExpression(lhs._args_ + (rhs,), (lhs._strict,strict))
+                else:
+                    raise TypeError("Cannot create an InequalityExpression "\
+                          "where one of the sub-expressions is an equality "\
+                          "or ranged expression:\n    " + lhs.to_string())
+            elif rhs_is_relational:
+                if rhs.__class__ is InequalityExpression:
+                    return RangedExpression((lhs,) + rhs._args_, (strict, rhs._strict))
+                else:
+                    raise TypeError("Cannot create an InequalityExpression "\
+                          "where one of the sub-expressions is an equality "\
+                          "or ranged expression:\n    " + rhs.to_string())
+            else:
+                return InequalityExpression((lhs, rhs), strict)
 
 
 def _generate_intrinsic_function_expression(arg, name, fcn):
