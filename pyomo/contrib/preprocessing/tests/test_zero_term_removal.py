@@ -20,7 +20,7 @@ class TestRemoveZeroTerms(unittest.TestCase):
         m.c = Constraint(expr=m.v0 == m.v1 * m.v2 + m.v3)
         m.c2 = Constraint(expr=m.v1 * m.v2 + m.v3 <= m.v0)
         m.c3 = Constraint(expr=m.v0 <= m.v1 * m.v2 + m.v3)
-        m.c4 = Constraint(expr=1 <= m.v1 * m.v2 + m.v3 <= 3)
+        m.c4 = Constraint(expr=EXPR.inequality(1, m.v1 * m.v2 + m.v3, 3))
         m.v1.fix(0)
 
         TransformationFactory('contrib.remove_zero_terms').apply_to(m)
