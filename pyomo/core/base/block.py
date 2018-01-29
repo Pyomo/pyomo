@@ -1778,7 +1778,7 @@ class Block(ActiveIndexedComponent):
             if data is not None and idx in data:
                 _BlockConstruction.data[id(_block)] = data[idx]
             obj = apply_indexed_rule(
-                None, self._rule, _block, idx, self._options)
+                self, self._rule, _block, idx, self._options)
             if id(_block) in _BlockConstruction.data:
                 del _BlockConstruction.data[id(_block)]
 

@@ -15,3 +15,4 @@ Python scripts using Pyomo.
    kernel/index.rst
    data/index.rst
    solvers/index.rst
+   contrib.rst
