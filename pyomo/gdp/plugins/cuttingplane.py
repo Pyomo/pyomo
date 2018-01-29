@@ -15,7 +15,10 @@ Implements a general cutting plane-based reformulation for linear and
 convex GDPs.
 """
 from __future__ import division
-from collections import OrderedDict
+try:
+    from collections import OrderedDict
+except:
+    from ordereddict import OrderedDict
 
 from pyomo.util.modeling import unique_component_name
 from pyomo.core import *
