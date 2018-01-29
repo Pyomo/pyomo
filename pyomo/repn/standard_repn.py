@@ -241,7 +241,7 @@ class StandardRepn(object):
                 if isclose_const(val, 1.0):
                     expr += term
                 elif isclose_const(val, -1.0):
-                    expr -= - term
+                    expr -= term
                 else:
                     expr += self.quadratic_coefs[i]*term
             else:
@@ -793,7 +793,7 @@ def _collect_standard_repn(exp, multiplier, idMap,
         #
         if exp.is_variable_type():
             return _collect_var(exp, multipier, idMap, compute_values, verbose, quadratic)
-        if exp.is_named_expression():
+        if exp.is_named_expression_type():
             return _collect_identity(exp, multipier, idMap, compute_values, verbose, quadratic)
         raise ValueError( "Unexpected expression (type %s)" % type(exp).__name__)
 
