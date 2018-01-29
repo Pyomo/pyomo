@@ -559,7 +559,13 @@ class ConvexHull_Transformation(Transformation):
         name = unique_component_name(relaxationBlock, obj.name)
 
         if obj.is_indexed():
-            newConstraint = Constraint(obj.index_set(), transBlock.lbub)
+            try:
+                newConstraint = Constraint(obj.index_set(), transBlock.lbub)
+            except:
+                # The original constraint may have been indexed by a
+                # non-concrete set (like an Any).  We will give up on
+                # strict index verification and just blindly proceed.
+                newConstraint = Constraint(Any)
         else:
             newConstraint = Constraint(transBlock.lbub)
         relaxationBlock.add_component(name, newConstraint)
