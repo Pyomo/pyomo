@@ -415,7 +415,7 @@ class ConvexHull_Transformation(Transformation):
         # add the disaggregated variables and their bigm constraints
         # to the relaxationBlock
         for var in varSet:
-            disaggregatedVar = Var(within=Reals)
+            disaggregatedVar = Var(within=Reals, bounds=var.bounds)
             # naming conflicts are possible here since this is a bunch
             # of variables from different blocks coming together, so we
             # get a unique name
