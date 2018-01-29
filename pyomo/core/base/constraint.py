@@ -23,6 +23,7 @@ from pyomo.core.expr.numvalue import (ZeroConstant,
                                       value,
                                       as_numeric,
                                       is_constant,
+                                      native_numeric_types,
                                       _sub)
 from pyomo.core.base.plugin import register_component
 from pyomo.core.base.component import ActiveComponentData
@@ -495,7 +496,7 @@ class _GeneralConstraintData(_ConstraintData):
         # user did ( var < 1 > 0 ) (which also results in a non-None
         # chainedInequality value)
         #
-        if EXPR._chainedInequality.prev is not None:
+        if EXPR._using_chained_inequality and EXPR._chainedInequality.prev is not None:
             raise TypeError(EXPR._chainedInequality.error_message())
         #
         # Process relational expressions
@@ -506,10 +507,10 @@ class _GeneralConstraintData(_ConstraintData):
                 # Equality expression: only 2 arguments!
                 self._equality = True
 
-                if not expr.arg(1).is_potentially_variable():
+                if expr.arg(1).__class__ in native_numeric_types or not expr.arg(1).is_potentially_variable():
                     self._lower = self._upper = expr.arg(1)
                     self._body = expr.arg(0)
-                elif not expr.arg(0).is_potentially_variable():
+                elif expr.arg(0).__class__ in native_numeric_types or not expr.arg(0).is_potentially_variable():
                     self._lower = self._upper = expr.arg(0)
                     self._body = expr.arg(1)
                 else:
@@ -550,33 +551,32 @@ class _GeneralConstraintData(_ConstraintData):
                         "using '<=', '>=', or '=='."
                         % (self.name))
 
-                if expr.arg(0).is_potentially_variable():
-                    raise ValueError(
-                        "Constraint '%s' found a double-sided "
-                        "inequality expression (lower <= "
-                        "expression <= upper) but the lower "
-                        "bound was not data or an expression "
-                        "restricted to storage of data."
-                        % (self.name))
-                if expr.arg(2).is_potentially_variable():
-                    raise ValueError(
-                        "Constraint '%s' found a double-sided "\
-                        "inequality expression (lower <= "
-                        "expression <= upper) but the upper "
-                        "bound was not data or an expression "
-                        "restricted to storage of data."
-                        % (self.name))
+                #if expr.arg(0).is_potentially_variable():
+                #    raise ValueError(
+                #        "Constraint '%s' found a double-sided "
+                #        "inequality expression (lower <= "
+                #        "expression <= upper) but the lower "
+                #        "bound was not data or an expression "
+                #        "restricted to storage of data."
+                #        % (self.name))
+                #if expr.arg(2).is_potentially_variable():
+                #    raise ValueError(
+                #        "Constraint '%s' found a double-sided "\
+                #        "inequality expression (lower <= "
+                #        "expression <= upper) but the upper "
+                #        "bound was not data or an expression "
+                #        "restricted to storage of data."
+                #        % (self.name))
 
                 self._lower = expr.arg(0)
                 self._body  = expr.arg(1)
                 self._upper = expr.arg(2)
 
         #
-        # Replace numeric bound values with a NumericConstant object,
-        # and reset the values to 'None' if they are 'infinite'
+        # Reset the values to 'None' if they are 'infinite'
         #
         if (self._lower is not None) and is_constant(self._lower):
-            val = self._lower()
+            val = self._lower if self._lower.__class__ in native_numeric_types else self._lower()
             if not pyutilib.math.is_finite(val):
                 if val > 0:
                     raise ValueError(
@@ -589,7 +589,7 @@ class _GeneralConstraintData(_ConstraintData):
                     "lower bound." % (self.name))
 
         if (self._upper is not None) and is_constant(self._upper):
-            val = self._upper()
+            val = self._upper if self._upper.__class__ in native_numeric_types else self._upper()
             if not pyutilib.math.is_finite(val):
                 if val < 0:
                     raise ValueError(
@@ -852,7 +852,7 @@ class Constraint(ActiveIndexedComponent):
             # non-None, but the expression will be a bool.  For
             # example, model.a < 1 > 0.
             #
-            if EXPR._chainedInequality.prev is not None:
+            if EXPR._using_chained_inequality and EXPR._chainedInequality.prev is not None:
 
                 buf = StringIO()
                 EXPR._chainedInequality.prev.pprint(buf)
