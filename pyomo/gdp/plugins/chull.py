@@ -415,7 +415,16 @@ class ConvexHull_Transformation(Transformation):
         # add the disaggregated variables and their bigm constraints
         # to the relaxationBlock
         for var in varSet:
-            disaggregatedVar = Var(within=Reals, bounds=var.bounds)
+            lb = var.lb
+            ub = var.ub
+            if lb is None or ub is None:
+                raise GDP_Error("Variables that appear in disjuncts must be "
+                                "bounded in order to use the chull "
+                                "transformation! Missing bound for %s."
+                                % (var.name))
+
+            disaggregatedVar = Var(within=Reals,
+                                   bounds=(min(0, lb), max(0, ub)))
             # naming conflicts are possible here since this is a bunch
             # of variables from different blocks coming together, so we
             # get a unique name
@@ -426,13 +435,6 @@ class ConvexHull_Transformation(Transformation):
             chull['disaggregatedVars'][var] = disaggregatedVar
             relaxationBlockInfo['srcVars'][disaggregatedVar] = var
 
-            lb = var.lb
-            ub = var.ub
-            if lb is None or ub is None:
-                raise GDP_Error("Variables that appear in disjuncts must be "
-                                "bounded in order to use the chull "
-                                "transformation! Missing bound for %s."
-                                % (var.name))
             bigmConstraint = Constraint(transBlock.lbub)
             relaxationBlock.add_component(
                 disaggregatedVarName + "_bounds", bigmConstraint)

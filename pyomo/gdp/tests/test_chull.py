@@ -37,7 +37,7 @@ class TwoTermDisj(unittest.TestCase):
         m = ConcreteModel()
         m.w = Var(bounds=(2,7))
         m.x = Var(bounds=(1, 8))
-        m.y = Var(bounds=(3, 10))
+        m.y = Var(bounds=(-10, -3))
         def d_rule(disjunct, flag):
             m = disjunct.model()
             if flag:
@@ -130,12 +130,12 @@ class TwoTermDisj(unittest.TestCase):
             self.assertIsInstance(x.domain, RealSet)
             self.assertIsInstance(y.domain, RealSet)
             # they don't have bounds
-            self.assertIsNone(w.lb)
-            self.assertIsNone(w.ub)
-            self.assertIsNone(x.lb)
-            self.assertIsNone(x.ub)
-            self.assertIsNone(y.lb)
-            self.assertIsNone(y.ub)
+            self.assertEqual(w.lb, 0)
+            self.assertEqual(w.ub, 7)
+            self.assertEqual(x.lb, 0)
+            self.assertEqual(x.ub, 8)
+            self.assertEqual(y.lb, -10)
+            self.assertEqual(y.ub, 0)
 
     def check_furman_et_al_denominator(self, expr, ind_var):
         self.assertEqual(expr._const, EPS)
@@ -286,7 +286,7 @@ class TwoTermDisj(unittest.TestCase):
             self.check_bound_constraints(disjBlock[i].x_bounds, disjBlock[i].x,
                                          m.d[i].indicator_var, 1, 8)
             self.check_bound_constraints(disjBlock[i].y_bounds, disjBlock[i].y,
-                                         m.d[i].indicator_var, 3, 10)
+                                         m.d[i].indicator_var, -10, -3)
 
     def test_xor_constraint(self):
         m = self.makeModel()

@@ -230,18 +230,18 @@ bounds
    0 <= NoClash(A_C_1_1)_indicator_var <= 1
    0 <= NoClash(B_C_2_0)_indicator_var <= 1
    0 <= NoClash(B_C_2_1)_indicator_var <= 1
-    -inf <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(0)_t(B) <= +inf
-    -inf <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(0)_t(A) <= +inf
-    -inf <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(1)_t(B) <= +inf
-    -inf <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(1)_t(A) <= +inf
-    -inf <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(2)_t(C) <= +inf
-    -inf <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(2)_t(A) <= +inf
-    -inf <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(3)_t(C) <= +inf
-    -inf <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(3)_t(A) <= +inf
-    -inf <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(4)_t(C) <= +inf
-    -inf <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(4)_t(B) <= +inf
-    -inf <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(5)_t(C) <= +inf
-    -inf <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(5)_t(B) <= +inf
+   0 <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(0)_t(B) <= 19
+   0 <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(0)_t(A) <= 19
+   0 <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(1)_t(B) <= 19
+   0 <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(1)_t(A) <= 19
+   0 <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(2)_t(C) <= 19
+   0 <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(2)_t(A) <= 19
+   0 <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(3)_t(C) <= 19
+   0 <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(3)_t(A) <= 19
+   0 <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(4)_t(C) <= 19
+   0 <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(4)_t(B) <= 19
+   0 <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(5)_t(C) <= 19
+   0 <= _pyomo_gdp_chull_relaxation_relaxedDisjuncts(5)_t(B) <= 19
 binary
   NoClash(A_B_3_0)_indicator_var
   NoClash(A_B_3_1)_indicator_var
