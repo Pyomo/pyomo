@@ -1,6 +1,8 @@
 import pickle
 
 import pyutilib.th as unittest
+from pyomo.core.expr import current as EXPR
+from pyomo.core.expr import inequality
 import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
@@ -27,6 +29,7 @@ from pyomo.core.kernel.component_block import block
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet)
 from pyomo.core.base.constraint import Constraint
+
 
 class Test_constraint(unittest.TestCase):
 
@@ -712,7 +715,7 @@ class Test_constraint(unittest.TestCase):
         c = constraint(expr=x == p + 1)
         self.assertEqual(c.equality, True)
 
-        c = constraint(expr=p <= x <= p)
+        c = constraint(expr=inequality(p, x, p))
         self.assertTrue(c.ub is p)
         # GH: Not sure if we are supposed to detect equality
         #     in this situation. I would rather us not, for
@@ -1223,6 +1226,7 @@ class Test_constraint(unittest.TestCase):
         with self.assertRaises(ValueError):
             c.expr = (True)
 
+    @unittest.skipIf(not EXPR._using_chained_inequality, "Chained inequalities are not supported.")
     def test_chainedInequalityError(self):
         x = variable()
         c = constraint()

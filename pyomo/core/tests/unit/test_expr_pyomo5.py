@@ -95,25 +95,31 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
                 #
                 # The 'chainedInequality' value is None
                 #
-                self.assertIsNone(EXPR._chainedInequality.prev)
+                if EXPR._using_chained_inequality:
+                    self.assertIsNone(EXPR._chainedInequality.prev)
             else:
                 #
                 # The relational expression may not be constant
                 #
-                # Check that the expression evaluates to True
+                # Check that the expression evaluates to 'val'
                 #
-                self.assertEqual(bool(exp), True)
+                if EXPR._using_chained_inequality:
+                    self.assertEqual(bool(exp), True)
+                else:
+                    self.assertEqual(bool(exp), val)
                 #
                 # Check that the 'chainedInequality' value is the current expression
                 #
-                self.assertIs(exp,EXPR._chainedInequality.prev)
+                if EXPR._using_chained_inequality:
+                    self.assertIs(exp,EXPR._chainedInequality.prev)
         finally:
             #
             # TODO: Why would we get here?  Because the expression isn't constant?
             #
             # Check that the 'chainedInequality' value is None
             #
-           EXPR._chainedInequality.prev = None
+            if EXPR._using_chained_inequality:
+                EXPR._chainedInequality.prev = None
 
     def test_lt(self):
         #
@@ -1868,7 +1874,7 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         except TypeError:
             pass
 
-    def test_simpleInequality(self):
+    def test_simpleInequality1(self):
         #
         # Check the structure of a simple inequality
         #
@@ -1916,6 +1922,83 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertIs(e.arg(1), m.a)
         #self.assertEqual(len(e._strict), 1)
         self.assertEqual(e._strict, False)
+
+    def test_simpleInequality2(self):
+        #
+        # Check the structure of a simple inequality
+        #
+        m = self.m
+        #    <
+        #   / \
+        #  a   b
+        e = inequality(lower=m.a, body=m.b, strict=True)
+        self.assertIs(type(e), EXPR.InequalityExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(e.arg(0), m.a)
+        self.assertIs(e.arg(1), m.b)
+        #self.assertEqual(len(e._strict), 1)
+        self.assertEqual(e._strict, True)
+
+        #    <=
+        #   / \
+        #  a   b
+        e = inequality(lower=m.a, upper=m.b)
+        self.assertIs(type(e), EXPR.InequalityExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(e.arg(0), m.a)
+        self.assertIs(e.arg(1), m.b)
+        #self.assertEqual(len(e._strict), 1)
+        self.assertEqual(e._strict, False)
+
+        #    >
+        #   / \
+        #  a   b
+        e = inequality(lower=m.b, upper=m.a, strict=True)
+        self.assertIs(type(e), EXPR.InequalityExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(e.arg(0), m.b)
+        self.assertIs(e.arg(1), m.a)
+        #self.assertEqual(len(e._strict), 1)
+        self.assertEqual(e._strict, True)
+
+        #    >=
+        #   / \
+        #  a   b
+        e = m.a >= m.b
+        e = inequality(body=m.b, upper=m.a)
+        self.assertIs(type(e), EXPR.InequalityExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(e.arg(0), m.b)
+        self.assertIs(e.arg(1), m.a)
+        #self.assertEqual(len(e._strict), 1)
+        self.assertEqual(e._strict, False)
+
+        try:
+            inequality(None, None)
+            self.fail("expected invalid inequality error.")
+        except ValueError:
+            pass
+
+        try:
+            inequality(m.a, None)
+            self.fail("expected invalid inequality error.")
+        except ValueError:
+            pass
+
+
+class TestGenerate_RangedExpression(unittest.TestCase):
+
+    def setUp(self):
+        m = AbstractModel()
+        m.I = Set()
+        m.a = Var()
+        m.b = Var()
+        m.c = Var()
+        m.x = Var(m.I)
+        self.m = m
+
+    def tearDown(self):
+        self.m = None
 
     def test_compoundInequality(self):
         m = self.m
@@ -2004,6 +2087,44 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
                 "Invalid equality expression with strict inequalities.",
                 re.sub('\s+',' ',str(e)) )
 
+    def test_val1(self):
+        m = ConcreteModel()
+        m.v = Var(initialize=2)
+
+        e = inequality(0, m.v, 2)
+        self.assertEqual(e.__nonzero__(), True)
+        e = inequality(0, m.v, 1)
+        self.assertEqual(e.__nonzero__(), False)
+        e = inequality(0, m.v, 2, strict=True)
+        self.assertEqual(e.__nonzero__(), False)
+
+    def test_val2(self):
+        m = ConcreteModel()
+        m.v = Var(initialize=2)
+
+        e = 1 < m.v
+        e = e <= 2
+        self.assertEqual(e.__nonzero__(), True)
+        e = 1 <= m.v
+        e = e < 2
+        self.assertEqual(e.__nonzero__(), False)
+
+
+@unittest.skipIf(not EXPR._using_chained_inequality, "Skipping tests of chained inequalities")
+class TestGenerate_ChainedRelationalExpression(unittest.TestCase):
+
+    def setUp(self):
+        m = AbstractModel()
+        m.I = Set()
+        m.a = Var()
+        m.b = Var()
+        m.c = Var()
+        m.x = Var(m.I)
+        self.m = m
+
+    def tearDown(self):
+        self.m = None
+
     def test_eval_compoundInequality(self):
         #
         # Evaluate a compound inequality
@@ -2011,6 +2132,7 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(initialize=0)
 
+        # Implicit equalities
         self.assertTrue( 0 <= m.x <= 0 )
         self.assertIsNone(EXPR._chainedInequality.prev)
         self.assertFalse( 1 <= m.x <= 1 )
@@ -2018,11 +2140,20 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertFalse( -1 <= m.x <= -1 )
         self.assertIsNone(EXPR._chainedInequality.prev)
 
+        # Chained inequalities
         self.assertTrue( 0 <= m.x <= 1 )
         self.assertIsNone(EXPR._chainedInequality.prev)
         self.assertFalse( 1 <= m.x <= 2 )
         self.assertIsNone(EXPR._chainedInequality.prev)
         self.assertTrue( -1 <= m.x <= 0 )
+        self.assertIsNone(EXPR._chainedInequality.prev)
+
+        # Chained inequalities
+        self.assertFalse( 0 < m.x <= 1 )
+        self.assertIsNone(EXPR._chainedInequality.prev)
+        self.assertTrue( 0 <= m.x < 1 )
+        self.assertIsNone(EXPR._chainedInequality.prev)
+        self.assertFalse( 0 < m.x < 1 )
         self.assertIsNone(EXPR._chainedInequality.prev)
 
     def test_compoundInequality_errors(self):
@@ -2232,6 +2363,30 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         expr = 2 + model.p
         self.assertEqual("sum(2, p)", str(expr))
 
+    def test_linearsum(self):
+        #
+        # Print simple sum
+        #
+        model = ConcreteModel()
+        A = range(5)
+        model.a = Var(A)
+        model.p = Param(A, initialize=2, mutable=True)
+
+        expr = Sum(i*model.a[i] for i in A)
+        self.assertEqual("sum(a[1], prod(2, a[2]), prod(3, a[3]), prod(4, a[4]))", str(expr))
+
+        expr = Sum((i-2)*model.a[i] for i in A)
+        self.assertEqual("sum(prod(-2, a[0]), prod(-1, a[1]), a[3], prod(2, a[4]))", str(expr))
+
+        expr = Sum(model.a[i] for i in A)
+        self.assertEqual("sum(a[0], a[1], a[2], a[3], a[4])", str(expr))
+
+        model.p[1].value = 0
+        model.p[3].value = 3
+        expr = Sum(model.p[i]*model.a[i] if i != 3 else model.p[i] for i in A)
+        self.assertEqual("sum(3, prod(2, a[0]), prod(2, a[2]), prod(2, a[4]))", EXPR.expression_to_string(expr, compute_values=True))
+        self.assertEqual("sum(p[3], prod(p[0], a[0]), prod(p[1], a[1]), prod(p[2], a[2]), prod(p[4], a[4]))", EXPR.expression_to_string(expr, compute_values=False))
+
     def test_expr(self):
         #
         # Print simple expressions with products and divisions
@@ -2391,6 +2546,38 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         expr = 2 - model.p
         self.assertEqual("2 - p", str(expr))
 
+    def test_linearsum(self):
+        #
+        # Print simple sum
+        #
+        model = ConcreteModel()
+        A = range(5)
+        model.a = Var(A)
+        model.p = Param(A, initialize=2, mutable=True)
+
+        expr = Sum(i*model.a[i] for i in A) + 3
+        self.assertEqual("3 + a[1] + 2*a[2] + 3*a[3] + 4*a[4]", str(expr))
+        self.assertEqual("a[1] + 2*a[2] + 3*a[3] + 4*a[4] + 3", EXPR.expression_to_string(expr, compute_values=True))
+
+        expr = Sum((i-2)*model.a[i] for i in A) + 3
+        self.assertEqual("3 - 2*a[0] - a[1] + a[3] + 2*a[4]", str(expr))
+        self.assertEqual("- 2.0*a[0] - a[1] + a[3] + 2*a[4] + 3", EXPR.expression_to_string(expr, compute_values=True))
+
+        expr = Sum(model.a[i] for i in A) + 3
+        self.assertEqual("3 + a[0] + a[1] + a[2] + a[3] + a[4]", str(expr))
+
+        expr = Sum(model.p[i]*model.a[i] for i in A)
+        self.assertEqual("2*a[0] + 2*a[1] + 2*a[2] + 2*a[3] + 2*a[4]", EXPR.expression_to_string(expr, compute_values=True))
+        self.assertEqual("p[0]*a[0] + p[1]*a[1] + p[2]*a[2] + p[3]*a[3] + p[4]*a[4]", EXPR.expression_to_string(expr, compute_values=False))
+        self.assertEqual("p[0]*a[0] + p[1]*a[1] + p[2]*a[2] + p[3]*a[3] + p[4]*a[4]", str(expr))
+
+        model.p[1].value = 0
+        model.p[3].value = 3
+        expr = Sum(model.p[i]*model.a[i] if i != 3 else model.p[i] for i in A)
+        self.assertEqual("3 + 2*a[0] + 2*a[2] + 2*a[4]", EXPR.expression_to_string(expr, compute_values=True))
+        expr = Sum(model.p[i]*model.a[i] if i != 3 else -3 for i in A)
+        self.assertEqual("-3 + p[0]*a[0] + p[1]*a[1] + p[2]*a[2] + p[4]*a[4]", EXPR.expression_to_string(expr, compute_values=False))
+        
     def test_negation(self):
         M = ConcreteModel()
         M.x = Var()
@@ -2459,10 +2646,10 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         self.assertEqual( "5.0  <=  a  <  10.0", str(expr) )
 
         expr = 5 <= model.a + 5
-        self.assertEqual( "5.0  <=  a + 5", str(expr) )
+        self.assertEqual( "5.0  <=  5 + a", str(expr) )
 
         expr = expr < 10
-        self.assertEqual( "5.0  <=  a + 5  <  10.0", str(expr) )
+        self.assertEqual( "5.0  <=  5 + a  <  10.0", str(expr) )
 
     def test_equality(self):
         #
@@ -2885,12 +3072,13 @@ class TestExprConditionalContext(unittest.TestCase):
 
     def tearDown(self):
         # Make sure errors here don't bleed over to other tests
-        EXPR._chainedInequality.prev = None
+        if EXPR._using_chained_inequality:
+            EXPR._chainedInequality.prev = None
 
     def checkCondition(self, expr, expectedValue):
         try:
             if expr:
-                if expectedValue != True:
+                if not EXPR._using_chained_inequality and expectedValue != True:
                     self.fail("__nonzero__ returned the wrong condition value"
                               " (expected %s)" % expectedValue)
             else:
@@ -2903,29 +3091,38 @@ class TestExprConditionalContext(unittest.TestCase):
             if expectedValue is not None:
                 raise
         finally:
-            EXPR._chainedInequality.prev = None
+            if EXPR._using_chained_inequality:
+                EXPR._chainedInequality.prev = None
 
     def test_immutable_paramConditional(self):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=False)
         #
-        # TODO: Inequalities evaluate True when the parameter is unconstructed?
-        #
-        self.checkCondition(model.p > 0, True)
-        self.checkCondition(model.p >= 0, True)
-        self.checkCondition(model.p < 1, True)
-        self.checkCondition(model.p <= 1, True)
-        self.checkCondition(model.p == 0, None)
+        try:
+            self.checkCondition(model.p > 0, True)
+            if not EXPR._using_chained_inequality:
+                self.fail("Expected ValueError because the parameter is unconstructed.")
+        except ValueError:
+            pass
+        #self.checkCondition(model.p >= 0, True)
+        #self.checkCondition(model.p < 1, True)
+        #self.checkCondition(model.p <= 1, True)
+        #self.checkCondition(model.p == 0, None)
 
         instance = model.create_instance()
         #
         # Inequalities evaluate normally when the parameter is initialized
         #
-        self.checkCondition(model.p > 0, True)
-        self.checkCondition(model.p >= 0, True)
-        self.checkCondition(model.p < 1, True)
-        self.checkCondition(model.p <= 1, True)
-        self.checkCondition(model.p == 0, None)
+        try:
+            self.checkCondition(model.p > 0, True)
+            if not EXPR._using_chained_inequality:
+                self.fail("Expected ValueError because the parameter is unconstructed.")
+        except ValueError:
+            pass
+        #self.checkCondition(model.p >= 0, True)
+        #self.checkCondition(model.p < 1, True)
+        #self.checkCondition(model.p <= 1, True)
+        #self.checkCondition(model.p == 0, None)
 
         instance = model.create_instance()
         self.checkCondition(instance.p > 0, True)
@@ -2973,13 +3170,16 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=False)
         #
-        # TODO: Inequalities evaluate True when the parameter is unconstructed?
-        #
-        self.checkCondition(0 < model.p, True)
-        self.checkCondition(0 <= model.p, True)
-        self.checkCondition(1 > model.p, True)
-        self.checkCondition(1 >= model.p, True)
-        self.checkCondition(0 == model.p, None)
+        try:
+            self.checkCondition(0 < model.p, True)
+            if not EXPR._using_chained_inequality:
+                self.fail("Expected ValueError because the parameter value is being accessed before it is constructed.")
+        except ValueError:
+            pass
+        #self.checkCondition(0 <= model.p, True)
+        #self.checkCondition(1 > model.p, True)
+        #self.checkCondition(1 >= model.p, True)
+        #self.checkCondition(0 == model.p, None)
 
         instance = model.create_instance()
         #
@@ -3000,26 +3200,29 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=True)
         #
-        # TODO: Inequalities evaluate True when the parameter is unconstructed?
-        #
-        self.checkCondition(model.p > 0, True)
-        self.checkCondition(model.p >= 0, True)
-        self.checkCondition(model.p < 1, True)
-        self.checkCondition(model.p <= 1, True)
-        self.checkCondition(model.p == 0, None)
+        try:
+            self.checkCondition(model.p > 0, True)
+            if not EXPR._using_chained_inequality:
+                self.fail("Expected ValueError because the parameter value is being accessed before it is constructed.")
+        except ValueError:
+            pass
+        #self.checkCondition(model.p >= 0, True)
+        #self.checkCondition(model.p < 1, True)
+        #self.checkCondition(model.p <= 1, True)
+        #self.checkCondition(model.p == 0, None)
 
         instance = model.create_instance()
         #
         # Inequalities evaluate normally when the parameter is initialized
         #
         self.checkCondition(instance.p > 0, True)
-        self.checkCondition(instance.p > 2, True)
+        self.checkCondition(instance.p > 2, False)
         self.checkCondition(instance.p >= 1, True)
-        self.checkCondition(instance.p >= 2, True)
+        self.checkCondition(instance.p >= 2, False)
         self.checkCondition(instance.p < 2, True)
-        self.checkCondition(instance.p < 0, True)
+        self.checkCondition(instance.p < 0, False)
         self.checkCondition(instance.p <= 1, True)
-        self.checkCondition(instance.p <= 0, True)
+        self.checkCondition(instance.p <= 0, False)
         self.checkCondition(instance.p == 1, True)
         self.checkCondition(instance.p == 2, False)
 
@@ -3027,26 +3230,29 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=True)
         #
-        # TODO: Inequalities evaluate True when the parameter is unconstructed?
-        #
-        self.checkCondition(0 < model.p, True)
-        self.checkCondition(0 <= model.p, True)
-        self.checkCondition(1 > model.p, True)
-        self.checkCondition(1 >= model.p, True)
-        self.checkCondition(0 == model.p, None)
+        try:
+            self.checkCondition(0 < model.p, True)
+            if not EXPR._using_chained_inequality:
+                self.fail("Expected ValueError because the parameter value is being accessed before it is constructed.")
+        except ValueError:
+            pass
+        #self.checkCondition(0 <= model.p, True)
+        #self.checkCondition(1 > model.p, True)
+        #self.checkCondition(1 >= model.p, True)
+        #self.checkCondition(0 == model.p, None)
 
         instance = model.create_instance()
         #
         # Inequalities evaluate normally when the parameter is initialized
         #
         self.checkCondition(0 < instance.p, True)
-        self.checkCondition(2 < instance.p, True)
+        self.checkCondition(2 < instance.p, False)
         self.checkCondition(1 <= instance.p, True)
-        self.checkCondition(2 <= instance.p, True)
+        self.checkCondition(2 <= instance.p, False)
         self.checkCondition(2 > instance.p, True)
-        self.checkCondition(0 > instance.p, True)
+        self.checkCondition(0 > instance.p, False)
         self.checkCondition(1 >= instance.p, True)
-        self.checkCondition(0 >= instance.p, True)
+        self.checkCondition(0 >= instance.p, False)
         self.checkCondition(1 == instance.p, True)
         self.checkCondition(2 == instance.p, False)
 
@@ -3054,26 +3260,29 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
         #
-        # TODO: Inequalities evaluate True when the variable is unconstructed?
-        #
-        self.checkCondition(model.v > 0, True)
-        self.checkCondition(model.v >= 0, True)
-        self.checkCondition(model.v < 1, True)
-        self.checkCondition(model.v <= 1, True)
-        self.checkCondition(model.v == 0, None)
+        try:
+            self.checkCondition(model.v > 0, True)
+            if not EXPR._using_chained_inequality:
+                self.fail("Expected ValueError because the variable value is being accessed before it is constructed.")
+        except:
+            pass
+        #self.checkCondition(model.v >= 0, True)
+        #self.checkCondition(model.v < 1, True)
+        #self.checkCondition(model.v <= 1, True)
+        #self.checkCondition(model.v == 0, None)
 
         instance = model.create_instance()
         #
         # Inequalities evaluate normally when the variable is initialized
         #
         self.checkCondition(instance.v > 0, True)
-        self.checkCondition(instance.v > 2, True)
+        self.checkCondition(instance.v > 2, False)
         self.checkCondition(instance.v >= 1, True)
-        self.checkCondition(instance.v >= 2, True)
+        self.checkCondition(instance.v >= 2, False)
         self.checkCondition(instance.v < 2, True)
-        self.checkCondition(instance.v < 0, True)
+        self.checkCondition(instance.v < 0, False)
         self.checkCondition(instance.v <= 1, True)
-        self.checkCondition(instance.v <= 0, True)
+        self.checkCondition(instance.v <= 0, False)
         self.checkCondition(instance.v == 1, True)
         self.checkCondition(instance.v == 2, False)
 
@@ -3081,26 +3290,29 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
         #
-        # TODO: Inequalities evaluate True when the variable is unconstructed?
-        #
-        self.checkCondition(0 < model.v, True)
-        self.checkCondition(0 <= model.v, True)
-        self.checkCondition(1 > model.v, True)
-        self.checkCondition(1 >= model.v, True)
-        self.checkCondition(0 == model.v, None)
+        try:
+            self.checkCondition(0 < model.v, True)
+            if not EXPR._using_chained_inequality:
+                self.fail("Expected ValueError because the variable value is being accessed before it is constructed.")
+        except:
+            pass
+        #self.checkCondition(0 <= model.v, True)
+        #self.checkCondition(1 > model.v, True)
+        #self.checkCondition(1 >= model.v, True)
+        #self.checkCondition(0 == model.v, None)
 
         instance = model.create_instance()
         #
         # Inequalities evaluate normally when the variable is initialized
         #
         self.checkCondition(0 < instance.v, True)
-        self.checkCondition(2 < instance.v, True)
+        self.checkCondition(2 < instance.v, False)
         self.checkCondition(1 <= instance.v, True)
-        self.checkCondition(2 <= instance.v, True)
+        self.checkCondition(2 <= instance.v, False)
         self.checkCondition(2 > instance.v, True)
-        self.checkCondition(0 > instance.v, True)
+        self.checkCondition(0 > instance.v, False)
         self.checkCondition(1 >= instance.v, True)
-        self.checkCondition(0 >= instance.v, True)
+        self.checkCondition(0 >= instance.v, False)
         self.checkCondition(1 == instance.v, True)
         self.checkCondition(2 == instance.v, False)
 
@@ -3319,6 +3531,23 @@ class TestPolynomialDegree(unittest.TestCase):
         self.assertEqual(expr.polynomial_degree(), 1)
         self.model.a.fixed = True
         self.assertEqual(expr.polynomial_degree(), 0)
+
+    def test_linearsum(self):
+        m = ConcreteModel()
+        A = range(5)
+        m.v = Var(A)
+
+        e = Sum(m.v[i] for i in A)
+        self.assertEqual(e.polynomial_degree(), 1) 
+
+        e = Sum(i*m.v[i] for i in A)
+        self.assertEqual(e.polynomial_degree(), 1) 
+
+        e = Sum(1 for i in A)
+        self.assertEqual(e.polynomial_degree(), 0) 
+
+        e = Sum((1 for i in A), linear=True)
+        self.assertTrue(e.__class__ in native_numeric_types)
 
     def test_relational_ops(self):
         #
@@ -3867,6 +4096,7 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual( expr2(), 15 )
             self.assertNotEqual( id(expr1),       id(expr2) )
             self.assertNotEqual( id(expr1._args_), id(expr2._args_) )
+            # WEH - Why does this next test make sense?
             self.assertEqual( id(expr1.arg(0)), id(expr2.arg(0)) )
             self.assertEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             expr1 += self.m.b
@@ -3879,6 +4109,31 @@ class TestCloneExpression(unittest.TestCase):
             #
             total = EXPR.clone_counter.count - start
             self.assertEqual(total, 1)
+            
+    def test_SumExpressionY(self):
+        self.m = ConcreteModel()
+        A = range(5)
+        self.m.a = Var(A, initialize=5)
+        self.m.b = Var(initialize=10)
+
+        with EXPR.clone_counter:
+            start = EXPR.clone_counter.count
+            expr1 = Sum(self.m.a[i] for i in self.m.a)
+            expr2 = copy.deepcopy(expr1)
+            self.assertEqual( expr1(), 25 )
+            self.assertEqual( expr2(), 25 )
+            self.assertNotEqual( id(expr1),        id(expr2) )
+            self.assertEqual( id(expr1._args_), id(expr2._args_) )
+            self.assertNotEqual( id(expr1.linear_vars[0]), id(expr2.linear_vars[0]) )
+            self.assertNotEqual( id(expr1.linear_vars[1]), id(expr2.linear_vars[1]) )
+            expr1 += self.m.b
+            self.assertEqual( expr1(), 35 )
+            self.assertEqual( expr2(), 25 )
+            self.assertNotEqual( id(expr1),        id(expr2) )
+            self.assertNotEqual( id(expr1._args_), id(expr2._args_) )
+            #
+            total = EXPR.clone_counter.count - start
+            self.assertEqual(total, 0)
             
     def test_ProductExpression_mult(self):
         with EXPR.clone_counter:
@@ -4222,11 +4477,31 @@ class TestIsFixedIsConstant(unittest.TestCase):
         self.assertEqual(expr.is_constant(), False)
         self.assertEqual(expr.is_potentially_variable(), True)
 
+    def test_linear_sum(self):
+        m = ConcreteModel()
+        A = range(5)
+        m.v = Var(A)
+
+        e = Sum(m.v[i] for i in A)
+        self.assertEqual(e.is_fixed(), False)
+        for i in A:
+            m.v[i].fixed = True
+        self.assertEqual(e.is_fixed(), True)
+
+        with linear_expression as e:
+            e += 1
+        self.assertEqual(len(e.linear_vars), 0)
+        self.assertEqual(e.is_fixed(), True)
+
     def test_relational_ops(self):
         #
         # Relation of mutable parameters:  fixed, not constant, pvar
         #
         expr = self.instance.c < self.instance.d
+        self.assertEqual(expr.is_fixed(), True)
+        self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr.is_potentially_variable(), False)
+        expr = inequality(0, self.instance.c, self.instance.d)
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
         self.assertEqual(expr.is_potentially_variable(), False)
@@ -4238,6 +4513,10 @@ class TestIsFixedIsConstant(unittest.TestCase):
         # Relation of unfixed variable and mutable parameters:  not fixed, not constant, pvar
         #
         expr = self.instance.a <= self.instance.d
+        self.assertEqual(expr.is_fixed(), False)
+        self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr.is_potentially_variable(), True)
+        expr = inequality(0, self.instance.a, self.instance.d)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
         self.assertEqual(expr.is_potentially_variable(), True)
@@ -4253,6 +4532,10 @@ class TestIsFixedIsConstant(unittest.TestCase):
         self.assertEqual(expr.is_constant(), False)
         self.assertEqual(expr.is_potentially_variable(), True)
         expr = self.instance.a * self.instance.a == self.instance.b
+        self.assertEqual(expr.is_fixed(), False)
+        self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr.is_potentially_variable(), True)
+        expr = inequality(self.instance.b, self.instance.a * self.instance.a, 0)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
         self.assertEqual(expr.is_potentially_variable(), True)
@@ -4831,7 +5114,7 @@ class TestMultiArgumentExpressions(unittest.TestCase):
         m.v = Var(m.s)
 
         def _con(m, i):
-            return m.vmin[i]**2 <= m.v[i] <= m.vmax[i]**2
+            return inequality(m.vmin[i]**2, m.v[i], m.vmax[i]**2)
         m.con = Constraint(m.s, rule=_con)
 
         OUT = six.StringIO()
@@ -4840,7 +5123,7 @@ class TestMultiArgumentExpressions(unittest.TestCase):
             OUT.write("\n")
         display(m.con, ostream=OUT)
 
-        reference="""v[1.0]  ==  1.0
+        reference="""1.0  <=  v[1.0]  <=  1.0
 4.0  <=  v[2.0]  <=  16.0
 9.0  <=  v[3.0]  <=  81.0
 16.0  <=  v[4.0]  <=  256.0
@@ -4856,32 +5139,150 @@ con : Size=5
         self.assertEqual(OUT.getvalue(), reference)
 
 
+# NOTE: These are fairly weak coverage tests.  
+# It's probably worth confirming the final linear expression that is generated.
 class TestLinearExpression(unittest.TestCase):
 
     def test_sum_other(self):
         m = ConcreteModel()
         m.v = Var(range(5))
+        m.p = Param(mutable=True, initialize=2)
 
         with linear_expression as e:
+            e = e + 2
+            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            e = e + m.p*(1+m.v[0])
+            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            e = e + m.v[0]
+            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+
             e = 2 + e
+            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            e = m.p*(1+m.v[0]) + e
             self.assertIs(e.__class__, EXPR._MutableLinearExpression)
             e = m.v[0] + e
             self.assertIs(e.__class__, EXPR._MutableLinearExpression)
 
-    def test_mul_other(self):
-        m = ConcreteModel()
-        m.v = Var(range(5))
+            e = e - 2
+            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            e = e - m.p(1+m.v[0])
+            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            e = e - m.v[0]
+            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+
+            e = 2 - e
+            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            e = m.p*(1+m.v[0]) - e
+            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            e = m.v[0] - e
+            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
 
         with linear_expression as e:
-            e = 2 * e
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
-            e = m.v[0] * e
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            e += m.v[0]*m.v[1]
+            self.assertIs(e.__class__, EXPR.ViewSumExpression)
+
         with linear_expression as e:
-            e = e*2
+            e = e + m.v[0]*m.v[1]
+            self.assertIs(e.__class__, EXPR.ViewSumExpression)
+
+        with linear_expression as e:
+            e = m.v[0]*m.v[1] + e
+            self.assertIs(e.__class__, EXPR.ViewSumExpression)
+
+    def test_mul_other(self):
+        m = ConcreteModel()
+        m.v = Var(range(5), initialize=1)
+        m.p = Param(initialize=2, mutable=True)
+
+        with linear_expression as e:
+            e += 1
+            e = 2 * e
+            self.assertEqual("2", str(e))
             self.assertIs(e.__class__, EXPR._MutableLinearExpression)
-            e = e*m.v[0]
+            e = (1+m.v[0]) * e
+            self.assertEqual("2 + 2*v[0]", str(e))
             self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            try:
+                e = m.v[0] * e
+                self.fail("Expecting ValueError")
+            except ValueError:
+                pass
+
+        with linear_expression as e:
+            e += 1
+            e = e * m.p
+            self.assertEqual("p", str(e))
+            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+
+        with linear_expression as e:
+            e += 1
+            e = e * 0
+            self.assertEqual(e.constant, 0)
+            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+
+        with linear_expression as e:
+            e += m.v[0]
+            e = e * 2
+            self.assertEqual("2*v[0]", str(e))
+            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+
+        with linear_expression as e:
+            e += 1
+            e *= m.v[0]*m.v[1]
+            self.assertIs(e.__class__, EXPR.ProductExpression)
+
+        with linear_expression as e:
+            e += 1
+            e = e * (m.v[0]*m.v[1])
+            self.assertIs(e.__class__, EXPR.ProductExpression)
+
+        with linear_expression as e:
+            e += 1
+            e = (m.v[0]*m.v[1]) * e
+            self.assertIs(e.__class__, EXPR.ProductExpression)
+
+    def test_div(self):
+        m = ConcreteModel()
+        m.v = Var(range(5), initialize=1)
+        m.p = Param(initialize=2, mutable=True)
+
+        with linear_expression as e:
+            e += m.v[0]
+            e /= 2
+            self.assertEqual("0.5*v[0]", str(e))
+            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+
+        with linear_expression as e:
+            e += m.v[0]
+            e /= m.p
+            self.assertEqual("(1/p)*v[0]", str(e))
+            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+
+        with linear_expression as e:
+            e += 1
+            try:
+                e /= m.v[0]
+                self.fail("Expected ValueError")
+            except:
+                pass
+
+    def test_div_other(self):
+        m = ConcreteModel()
+        m.v = Var(range(5), initialize=1)
+        m.p = Param(initialize=2, mutable=True)
+
+        with linear_expression as e:
+            e += m.v[0]
+            try:
+                e = 1 / e
+                self.fail("Expected ValueError")
+            except:
+                pass
+
+        with linear_expression as e:
+            e += 1
+            e = 1 / e
+            self.assertEqual("1.0",str(e))
 
     def test_negation_other(self):
         m = ConcreteModel()
@@ -4971,7 +5372,7 @@ class TestLinearDecomp(unittest.TestCase):
         self.assertEqual(list(EXPR._decompose_terms(2*M.v)), [(2,M.v)])
         self.assertEqual(list(EXPR._decompose_terms(M.q*M.v)), [(2,M.v)])
         self.assertEqual(list(EXPR._decompose_terms(M.v*M.q)), [(2,M.v)])
-        self.assertRaises(ValueError, list, EXPR._decompose_terms(M.w*M.v))
+        self.assertRaises(EXPR.LinearDecompositionError, list, EXPR._decompose_terms(M.w*M.v))
 
     def test_negation(self):
         M = ConcreteModel()
@@ -4983,7 +5384,7 @@ class TestLinearDecomp(unittest.TestCase):
         M = ConcreteModel()
         M.v = Var()
         M.q = Param(initialize=2)
-        self.assertRaises(ValueError, list, EXPR._decompose_terms(1/M.v))
+        self.assertRaises(EXPR.LinearDecompositionError, list, EXPR._decompose_terms(1/M.v))
         self.assertEqual(list(EXPR._decompose_terms(1/M.q)), [(0.5,None)])
         
     def test_multisum(self):
@@ -5125,6 +5526,19 @@ class Test_pickle(unittest.TestCase):
         self.assertEqual(terms[1][0], 2)
         self.assertEqual(terms[1][1], None)
 
+    def Xtest_Sum(self):
+        M = ConcreteModel()
+        A = range(5)
+        M.v = Var(A)
+        e = Sum(M.v[i] for i in M.v)
+        s = pickle.dumps(e)
+        e_ = pickle.loads(s)
+        flag, terms = EXPR.decompose_term(e_)
+        self.assertTrue(flag)
+        self.assertEqual(terms[0][0], 1)
+        self.assertEqual(str(terms[0][1]), str(M.v[0]))
+        self.assertEqual(terms[1][0], 1)
+
     def test_prod(self):
         M = ConcreteModel()
         M.v = Var()
@@ -5231,6 +5645,14 @@ class Test_pickle(unittest.TestCase):
         M = ConcreteModel()
         M.v = Var()
         e = M.v >= 0
+        s = pickle.dumps(e)
+        e_ = pickle.loads(s)
+        self.assertEqual(str(e), str(e_))
+
+    def test_range(self):
+        M = ConcreteModel()
+        M.v = Var()
+        e = inequality(0, M.v, 1)
         s = pickle.dumps(e)
         e_ = pickle.loads(s)
         self.assertEqual(str(e), str(e_))
@@ -5575,6 +5997,30 @@ class WalkerTests(unittest.TestCase):
         f = walker.dfs_postorder_stack(e)
         self.assertEqual("x", str(e))
         self.assertEqual("w[1]", str(f))
+
+    def test_replacement_walker3(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.y = Var()
+        M.w = VarList()
+
+        e = sin(M.x) + M.x*M.y + 3 <= 0
+        walker = ReplacementWalkerTest(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("3 + x*y + sin(x)  <=  0.0", str(e))
+        self.assertEqual("3 + w[1]*w[2] + sin(w[1])  <=  0.0", str(f))
+
+    def test_replacement_walker4(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.y = Var()
+        M.w = VarList()
+
+        e = inequality(0, sin(M.x) + M.x*M.y + 3, 1)
+        walker = ReplacementWalkerTest(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("0  <=  3 + x*y + sin(x)  <=  1", str(e))
+        self.assertEqual("0  <=  3 + w[1]*w[2] + sin(w[1])  <=  1", str(f))
 
     def test_identify_components(self):
         M = ConcreteModel()
