@@ -419,7 +419,8 @@ class ConvexHull_Transformation(Transformation):
             # naming conflicts are possible here since this is a bunch
             # of variables from different blocks coming together, so we
             # get a unique name
-            disaggregatedVarName = unique_component_name(obj, var.local_name)
+            disaggregatedVarName = unique_component_name(
+                relaxationBlock, var.local_name)
             relaxationBlock.add_component(
                 disaggregatedVarName, disaggregatedVar)
             chull['disaggregatedVars'][var] = disaggregatedVar
