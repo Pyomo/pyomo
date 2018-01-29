@@ -91,6 +91,7 @@ logger = logging.getLogger('pyomo.core')
 from pyutilib.misc.visitor import SimpleVisitor, ValueVisitor
 from pyutilib.math.util import isclose
 
+from pyomo.util.deprecation import deprecation_warning
 from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.expr.numvalue import \
     (NumericValue,
@@ -2003,6 +2004,7 @@ class InequalityExpression(_LinearOperatorExpression):
 
     def __nonzero__(self):
         if _using_chained_inequality and not self.is_constant():    #pragma: no cover
+            deprecation_warning("Chained inequalities are deprecated.  Use the inequality() function to express ranged inequality expressions.")     # Remove in Pyomo 6.0
             _chainedInequality.call_info = traceback.extract_stack(limit=2)[-2]
             _chainedInequality.prev = self
             return True
