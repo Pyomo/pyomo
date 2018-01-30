@@ -102,11 +102,9 @@ class _BaseTestModel(object):
                 if opt.warm_start_capable():
                     results = opt.solve(warmstart=True,
                                         load_solutions=load_solutions,
-                                        save_results=False,
                                         **io_options)
                 else:
                     results = opt.solve(load_solutions=load_solutions,
-                                        save_results=False,
                                         **io_options)
             else:
                 if opt.warm_start_capable():

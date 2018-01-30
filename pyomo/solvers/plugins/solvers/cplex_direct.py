@@ -583,7 +583,6 @@ class CPLEXDirect(DirectSolver):
                 for i, name in enumerate(var_names):
                     pyomo_var = self._pyomo_var_to_solver_var_map.reverse_getitem(name)
                     if self._referenced_variables[pyomo_var] > 0:
-                        print(name)
                         pyomo_var.stale = False
                         soln_variables[name] = {"Value":var_vals[i]}
 
