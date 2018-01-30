@@ -172,6 +172,7 @@ class CommonTests:
                     preprocess='chull')
         self.check( 'jobshop_large', 'chull' )
 
+    @unittest.skip("cutting plane LP file tests are too fragile")
     @unittest.skipIf('gurobi' not in solvers, 'Gurobi solver not available')
     def test_cuttingplane_jobshop_small(self):
         self.problem='test_cuttingplane_jobshop_small'
@@ -179,6 +180,7 @@ class CommonTests:
                     preprocess='cuttingplane')
         self.check( 'jobshop_small', 'cuttingplane' )
 
+    @unittest.skip("cutting plane LP file tests are too fragile")
     @unittest.skipIf('gurobi' not in solvers, 'Gurobi solver not available')
     def test_cuttingplane_jobshop_large(self):
         self.problem='test_cuttingplane_jobshop_large'
