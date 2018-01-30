@@ -53,7 +53,6 @@ class CPLEXDirect(DirectSolver):
         DirectSolver.__init__(self, **kwds)
         self._init()
         self._wallclock_time = None
-        self._solver_var_to_pyomo_var_map = {}
         self._pyomo_var_to_ndx_map = ComponentMap()
         self._ndx_count = 0
 
@@ -239,7 +238,6 @@ class CPLEXDirect(DirectSolver):
         self._solver_model.variables.add(lb=[lb], ub=[ub], types=[vtype], names=[varname])
 
         self._pyomo_var_to_solver_var_map[var] = varname
-        self._solver_var_to_pyomo_var_map[varname] = var
         self._pyomo_var_to_ndx_map[var] = self._ndx_count
         self._ndx_count += 1
         self._referenced_variables[var] = 0
@@ -249,7 +247,6 @@ class CPLEXDirect(DirectSolver):
             self._solver_model.variables.set_upper_bounds(varname, var.value)
 
     def _set_instance(self, model, kwds={}):
-        self._solver_var_to_pyomo_var_map = {}
         self._pyomo_var_to_ndx_map = ComponentMap()
         self._ndx_count = 0
         self._range_constraints = set()
@@ -447,13 +444,6 @@ class CPLEXDirect(DirectSolver):
             if re.match(suffix, "slack"):
                 extract_slacks = True
                 flag = True
-                if len(self._range_constraints) != 0:
-                    err_msg = ('CPLEXDirect does not support range constraints and slack suffixes. \nIf you want ' +
-                               'slack information, please split up the following constraints:\n')
-                    for con in self._range_constraints:
-                        err_msg += '{0}\n'.format(con)
-                    logger.warning(err_msg)
-                    extract_slacks = False
             if re.match(suffix, "rc"):
                 extract_reduced_costs = True
                 flag = True
@@ -588,19 +578,23 @@ class CPLEXDirect(DirectSolver):
                 soln_constraints = soln.constraint
 
                 var_names = self._solver_model.variables.get_names()
-                var_vals = self._solver_model.solution.get_values()
+                var_names = list(set(var_names).intersection(set(self._pyomo_var_to_solver_var_map.values())))
+                var_vals = self._solver_model.solution.get_values(var_names)
                 for i, name in enumerate(var_names):
-                    pyomo_var = self._solver_var_to_pyomo_var_map[name]
+                    pyomo_var = self._pyomo_var_to_solver_var_map.reverse_getitem(name)
                     if self._referenced_variables[pyomo_var] > 0:
+                        print(name)
+                        pyomo_var.stale = False
                         soln_variables[name] = {"Value":var_vals[i]}
 
                 if extract_reduced_costs:
+                    reduced_costs = self._solver_model.solution.get_reduced_costs(var_names)
                     for i, name in enumerate(var_names):
-                        pyomo_var = self._solver_var_to_pyomo_var_map[name]
+                        pyomo_var = self._pyomo_var_to_solver_var_map.reverse_getitem(name)
                         if self._referenced_variables[pyomo_var] > 0:
-                            soln_variables[name]["Rc"] = self._solver_model.solution.get_reduced_costs(name)
+                            soln_variables[name]["Rc"] = reduced_costs[i]
 
-                if extract_duals and extract_slacks:
+                if extract_slacks:
                     for con_name in self._solver_model.linear_constraints.get_names():
                         soln_constraints[con_name] = {}
                     for con_name in self._solver_model.quadratic_constraints.get_names():
@@ -608,11 +602,6 @@ class CPLEXDirect(DirectSolver):
                 elif extract_duals:
                     # CPLEX PYTHON API DOES NOT SUPPORT QUADRATIC DUAL COLLECTION
                     for con_name in self._solver_model.linear_constraints.get_names():
-                        soln_constraints[con_name] = {}
-                elif extract_slacks:
-                    for con_name in self._solver_model.linear_constraints.get_names():
-                        soln_constraints[con_name] = {}
-                    for con_name in self._solver_model.quadratic_constraints.get_names():
                         soln_constraints[con_name] = {}
 
                 if extract_duals:
@@ -624,7 +613,20 @@ class CPLEXDirect(DirectSolver):
                     linear_slacks = self._solver_model.solution.get_linear_slacks()
                     qudratic_slacks = self._solver_model.solution.get_quadratic_slacks()
                     for i, con_name in enumerate(self._solver_model.linear_constraints.get_names()):
-                        soln_constraints[con_name]["Slack"] = linear_slacks[i]
+                        pyomo_con = self._pyomo_con_to_solver_con_map.reverse_getitem(con_name)
+                        if pyomo_con in self._range_constraints:
+                            R_ = self._solver_model.linear_constraints.get_range_values(con_name)
+                            if R_ == 0:
+                                soln_constraints[con_name]["Slack"] = linear_slacks[i]
+                            else:
+                                Ls_ = linear_slacks[i]
+                                Us_ = R_ - Ls_
+                                if Us_ > Ls_:
+                                    soln_constraints[con_name]["Slack"] = Us_
+                                else:
+                                    soln_constraints[con_name]["Slack"] = -Ls_
+                        else:
+                            soln_constraints[con_name]["Slack"] = linear_slacks[i]
                     for i, con_name in enumerate(self._solver_model.quadratic_constraints.get_names()):
                         soln_constraints[con_name]["Slack"] = qudratic_slacks[i]
         elif self._load_solutions:
@@ -668,15 +670,13 @@ class CPLEXDirect(DirectSolver):
         if vars_to_load is None:
             vars_to_load = var_map.keys()
 
-        names = self._solver_model.variables.get_names()
-        vals = self._solver_model.solution.get_values()
+        cplex_vars_to_load = [var_map[pyomo_var] for pyomo_var in vars_to_load]
+        vals = self._solver_model.solution.get_values(cplex_vars_to_load)
 
-        for i, name in enumerate(names):
-            pyomo_var = self._solver_var_to_pyomo_var_map[name]
-            if pyomo_var in vars_to_load:
-                if ref_vars[pyomo_var] > 0:
-                    pyomo_var.stale = False
-                    pyomo_var.value = vals[i]
+        for i, pyomo_var in enumerate(vars_to_load):
+            if ref_vars[pyomo_var] > 0:
+                pyomo_var.stale = False
+                pyomo_var.value = vals[i]
 
     def _load_rc(self, vars_to_load=None):
         if not hasattr(self._pyomo_model, 'rc'):
@@ -687,48 +687,68 @@ class CPLEXDirect(DirectSolver):
         if vars_to_load is None:
             vars_to_load = var_map.keys()
 
-        for var in vars_to_load:
-            if ref_vars[var] > 0:
-                rc[var] = self._solver_model.solution.get_reduced_costs(var_map[var])
+        cplex_vars_to_load = [var_map[pyomo_var] for pyomo_var in vars_to_load]
+        vals = self._solver_model.solution.get_reduced_costs(cplex_vars_to_load)
+
+        for i, pyomo_var in enumerate(vars_to_load):
+            if ref_vars[pyomo_var] > 0:
+                rc[pyomo_var] = vals[i]
 
     def _load_duals(self, cons_to_load=None):
         if not hasattr(self._pyomo_model, 'dual'):
             self._pyomo_model.dual = Suffix(direction=Suffix.IMPORT)
         con_map = self._pyomo_con_to_solver_con_map
         dual = self._pyomo_model.dual
+
         if cons_to_load is None:
-            cons_to_load = ComponentSet(con_map.keys())
+            linear_cons_to_load = self._solver_model.linear_constraints.get_names()
+            vals = self._solver_model.solution.get_dual_values()
+        else:
+            cplex_cons_to_load = {con_map[pyomo_con] for pyomo_con in cons_to_load}
+            linear_cons_to_load = cplex_cons_to_load.intersection(set(self._solver_model.linear_constraints.get_names()))
+            vals = self._solver_model.solution.get_dual_values(linear_cons_to_load)
 
-        reverse_con_map = {}
-        for pyomo_con, con in con_map.items():
-            reverse_con_map[con] = pyomo_con
-
-        for cplex_con in self._solver_model.linear_constraints.get_names():
-            pyomo_con = reverse_con_map[cplex_con]
-            if pyomo_con in cons_to_load:
-                dual[pyomo_con] = self._solver_model.solution.get_dual_values(cplex_con)
+        for i, cplex_con in enumerate(linear_cons_to_load):
+            pyomo_con = con_map.reverse_getitem(cplex_con)
+            dual[pyomo_con] = vals[i]
 
     def _load_slacks(self, cons_to_load=None):
         if not hasattr(self._pyomo_model, 'slack'):
             self._pyomo_model.slack = Suffix(direction=Suffix.IMPORT)
         con_map = self._pyomo_con_to_solver_con_map
         slack = self._pyomo_model.slack
+
         if cons_to_load is None:
-            cons_to_load = ComponentSet(con_map.keys())
+            linear_cons_to_load = self._solver_model.linear_constraints.get_names()
+            linear_vals = self._solver_model.solution.get_linear_slacks()
+            quadratic_cons_to_load = self._solver_model.quadratic_constraints.get_names()
+            quadratic_vals = self._solver_model.solution.get_quadratic_slacks()
+        else:
+            cplex_cons_to_load = {con_map[pyomo_con] for pyomo_con in cons_to_load}
+            linear_cons_to_load = cplex_cons_to_load.intersection(set(self._solver_model.linear_constraints.get_names()))
+            linear_vals = self._solver_model.solution.get_linear_slacks(linear_cons_to_load)
+            quadratic_cons_to_load = cplex_cons_to_load.intersection(set(self._solver_model.quadratic_constraints.get_names()))
+            quadratic_vals = self._solver_model.solution.get_quadratic_slacks(quadratic_cons_to_load)
 
-        reverse_con_map = {}
-        for pyomo_con, con in con_map.items():
-            reverse_con_map[con] = pyomo_con
+        for i, cplex_con in enumerate(linear_cons_to_load):
+            pyomo_con = con_map.reverse_getitem(cplex_con)
+            if pyomo_con in self._range_constraints:
+                R_ = self._solver_model.linear_constraints.get_range_values(cplex_con)
+                if R_ == 0:
+                    slack[pyomo_con] = linear_vals[i]
+                else:
+                    Ls_ = linear_vals[i]
+                    Us_ = R_ - Ls_
+                    if Us_ > Ls_:
+                        slack[pyomo_con] = Us_
+                    else:
+                        slack[pyomo_con] = -Ls_
+            else:
+                slack[pyomo_con] = linear_vals[i]
 
-        for cplex_con in self._solver_model.linear_constraints.get_names():
-            pyomo_con = reverse_con_map[cplex_con]
-            if pyomo_con in cons_to_load:
-                slack[pyomo_con] = self._solver_model.solution.get_linear_slacks(cplex_con)
-
-        for cplex_con in self._solver_model.quadratic_constraints.get_names():
-            pyomo_con = reverse_con_map[cplex_con]
-            if pyomo_con in cons_to_load:
-                slack[pyomo_con] = self._solver_model.solution.get_quadratic_slacks(cplex_con)
+        for i, cplex_con in enumerate(quadratic_cons_to_load):
+            pyomo_con = con_map.reverse_getitem(cplex_con)
+            slack[pyomo_con] = quadratic_vals[i]
 
     def load_duals(self, cons_to_load=None):
         """

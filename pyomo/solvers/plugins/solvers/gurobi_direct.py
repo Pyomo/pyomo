@@ -17,7 +17,7 @@ from pyomo.util.plugin import alias
 from pyomo.core.kernel.numvalue import is_fixed
 from pyomo.repn import generate_canonical_repn, LinearCanonicalRepn, canonical_degree
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
-from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
+from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver, _IDReverseAccessIDDict
 from pyomo.core.kernel.numvalue import value
 import pyomo.core.kernel
 from pyomo.core.kernel.component_set import ComponentSet
@@ -40,6 +40,8 @@ class GurobiDirect(DirectSolver):
     def __init__(self, **kwds):
         kwds['type'] = 'gurobi_direct'
         DirectSolver.__init__(self, **kwds)
+        self._pyomo_var_to_solver_var_map = _IDReverseAccessIDDict()
+        self._pyomo_con_to_solver_con_map = _IDReverseAccessIDDict()
         self._init()
 
     def _init(self):
@@ -202,6 +204,8 @@ class GurobiDirect(DirectSolver):
     def _set_instance(self, model, kwds={}):
         self._range_constraints = set()
         DirectOrPersistentSolver._set_instance(self, model, kwds)
+        self._pyomo_con_to_solver_con_map = _IDReverseAccessIDDict()
+        self._pyomo_var_to_solver_var_map = _IDReverseAccessIDDict()
         try:
             if model.name is not None:
                 self._solver_model = self._gurobipy.Model(model.name)
@@ -368,13 +372,6 @@ class GurobiDirect(DirectSolver):
             if re.match(suffix, "slack"):
                 extract_slacks = True
                 flag = True
-                if len(self._range_constraints) != 0:
-                    err_msg = ('GurobiDirect does not support range constraints and slack suffixes. \nIf you want ' +
-                               'slack information, please split up the following constraints:\n')
-                    for con in self._range_constraints:
-                        err_msg += '{0}\n'.format(con)
-                    logger.warning(err_msg)
-                    extract_slacks = False
             if re.match(suffix, "rc"):
                 extract_reduced_costs = True
                 flag = True
@@ -545,35 +542,65 @@ class GurobiDirect(DirectSolver):
                 soln_variables = soln.variable
                 soln_constraints = soln.constraint
 
-                for pyomo_var, solver_var in self._pyomo_var_to_solver_var_map.items():
+                gurobi_vars = self._solver_model.getVars()
+                gurobi_vars = list(set(gurobi_vars).intersection(set(self._pyomo_var_to_solver_var_map.values())))
+                var_vals = self._solver_model.getAttr("X", gurobi_vars)
+                names = self._solver_model.getAttr("VarName", gurobi_vars)
+                for gurobi_var, val, name in zip(gurobi_vars, var_vals, names):
+                    pyomo_var = self._pyomo_var_to_solver_var_map.reverse_getitem(gurobi_var)
                     if self._referenced_variables[pyomo_var] > 0:
-                        soln_variables[solver_var.VarName] = {"Value":solver_var.X}
+                        soln_variables[name] = {"Value": val}
 
                 if extract_reduced_costs:
-                    for pyomo_var, solver_var in self._pyomo_var_to_solver_var_map.items():
+                    vals = self._solver_model.getAttr("Rc", gurobi_vars)
+                    for gurobi_var, val, name in zip(gurobi_vars, vals, names):
+                        pyomo_var = self._pyomo_var_to_solver_var_map.reverse_getitem(gurobi_var)
                         if self._referenced_variables[pyomo_var] > 0:
-                            soln_variables[solver_var.VarName]["Rc"] = solver_var.Rc
+                            soln_variables[name]["Rc"] = val
 
                 if extract_duals or extract_slacks:
-                    for con in self._solver_model.getConstrs():
-                        soln_constraints[con.ConstrName] = {}
+                    gurobi_cons = self._solver_model.getConstrs()
+                    con_names = self._solver_model.getAttr("ConstrName", gurobi_cons)
+                    for name in con_names:
+                        soln_constraints[name] = {}
                     if self._version_major >= 5:
-                        for con in self._solver_model.getQConstrs():
-                            soln_constraints[con.QCName] = {}
+                        gurobi_q_cons = self._solver_model.getQConstrs()
+                        q_con_names = self._solver_model.getAttr("QCName", gurobi_q_cons)
+                        for name in q_con_names:
+                            soln_constraints[name] = {}
 
                 if extract_duals:
-                    for con in self._solver_model.getConstrs():
-                        soln_constraints[con.ConstrName]["Dual"] = con.Pi
+                    vals = self._solver_model.getAttr("Pi", gurobi_cons)
+                    for val, name in zip(vals, con_names):
+                        soln_constraints[name]["Dual"] = val
                     if self._version_major >= 5:
-                        for con in self._solver_model.getQConstrs():
-                            soln_constraints[con.QCName]["Dual"] = con.QCPi
+                        q_vals = self._solver_model.getAttr("QCPi", gurobi_q_cons)
+                        for val, name in zip(q_vals, q_con_names):
+                            soln_constraints[name]["Dual"] = val
 
                 if extract_slacks:
-                    for con in self._solver_model.getConstrs():
-                        soln_constraints[con.ConstrName]["Slack"] = con.Slack
+                    gurobi_range_con_vars = set(self._solver_model.getVars()) - set(self._pyomo_var_to_solver_var_map.values())
+                    vals = self._solver_model.getAttr("Slack", gurobi_cons)
+                    for gurobi_con, val, name in zip(gurobi_cons, vals, con_names):
+                        pyomo_con = self._pyomo_con_to_solver_con_map.reverse_getitem(gurobi_con)
+                        if pyomo_con in self._range_constraints:
+                            lin_expr = self._solver_model.getRow(gurobi_con)
+                            for i in reversed(range(lin_expr.size())):
+                                v = lin_expr.getVar(i)
+                                if v in gurobi_range_con_vars:
+                                    Us_ = v.X
+                                    Ls_ = v.UB - v.X
+                                    if Us_ > Ls_:
+                                        soln_constraints[name]["Slack"] = Us_
+                                    else:
+                                        soln_constraints[name]["Slack"] = -Ls_
+                                    break
+                        else:
+                            soln_constraints[name]["Slack"] = val
                     if self._version_major >= 5:
-                        for con in self._solver_model.getQConstrs():
-                            soln_constraints[con.QCName]["Slack"] = con.QCSlack
+                        q_vals = self._solver_model.getAttr("QCSlack", gurobi_q_cons)
+                        for val, name in zip(q_vals, q_con_names):
+                            soln_constraints[name]["Slack"] = val
         elif self._load_solutions:
             if gprob.SolCount > 0:
 
@@ -610,10 +637,13 @@ class GurobiDirect(DirectSolver):
         if vars_to_load is None:
             vars_to_load = var_map.keys()
 
-        for var in vars_to_load:
+        gurobi_vars_to_load = [var_map[pyomo_var] for pyomo_var in vars_to_load]
+        vals = self._solver_model.getAttr("X", gurobi_vars_to_load)
+
+        for var, val in zip(vars_to_load, vals):
             if ref_vars[var] > 0:
                 var.stale = False
-                var.value = var_map[var].x
+                var.value = val
 
     def _load_rc(self, vars_to_load=None):
         if not hasattr(self._pyomo_model, 'rc'):
@@ -624,55 +654,81 @@ class GurobiDirect(DirectSolver):
         if vars_to_load is None:
             vars_to_load = var_map.keys()
 
-        for var in vars_to_load:
+        gurobi_vars_to_load = [var_map[pyomo_var] for pyomo_var in vars_to_load]
+        vals = self._solver_model.getAttr("Rc", gurobi_vars_to_load)
+
+        for var, val in zip(vars_to_load, vals):
             if ref_vars[var] > 0:
-                rc[var] = var_map[var].Rc
+                rc[var] = val
 
     def _load_duals(self, cons_to_load=None):
         if not hasattr(self._pyomo_model, 'dual'):
             self._pyomo_model.dual = Suffix(direction=Suffix.IMPORT)
         con_map = self._pyomo_con_to_solver_con_map
         dual = self._pyomo_model.dual
+
         if cons_to_load is None:
-            cons_to_load = ComponentSet(con_map.keys())
-
-        reverse_con_map = {}
-        for pyomo_con, con in con_map.items():
-            reverse_con_map[con] = pyomo_con
-
-        for gurobi_con in self._solver_model.getConstrs():
-            pyomo_con = reverse_con_map[gurobi_con]
-            if pyomo_con in cons_to_load:
-                dual[pyomo_con] = gurobi_con.Pi
-
+            linear_cons_to_load = self._solver_model.getConstrs()
+            if self._version_major >= 5:
+                quadratic_cons_to_load = self._solver_model.getQConstrs()
+        else:
+            gurobi_cons_to_load = {con_map[pyomo_con] for pyomo_con in cons_to_load}
+            linear_cons_to_load = gurobi_cons_to_load.intersection(set(self._solver_model.getConstrs()))
+            if self._version_major >= 5:
+                quadratic_cons_to_load = gurobi_cons_to_load.intersection(set(self._solver_model.getQConstrs()))
+        linear_vals = self._solver_model.getAttr("Pi", linear_cons_to_load)
         if self._version_major >= 5:
-            for gurobi_con in self._solver_model.getQConstrs():
-                pyomo_con = reverse_con_map[gurobi_con]
-                if pyomo_con in cons_to_load:
-                    dual[pyomo_con] = gurobi_con.QCPi
+            quadratic_vals = self._solver_model.getAttr("QCPi", quadratic_cons_to_load)
+
+        for gurobi_con, val in zip(linear_cons_to_load, linear_vals):
+            pyomo_con = con_map.reverse_getitem(gurobi_con)
+            dual[pyomo_con] = val
+        if self._version_major >= 5:
+            for gurobi_con, val in zip(quadratic_cons_to_load, quadratic_vals):
+                pyomo_con = con_map.reverse_getitem(gurobi_con)
+                dual[pyomo_con] = val
 
     def _load_slacks(self, cons_to_load=None):
         if not hasattr(self._pyomo_model, 'slack'):
             self._pyomo_model.slack = Suffix(direction=Suffix.IMPORT)
         con_map = self._pyomo_con_to_solver_con_map
         slack = self._pyomo_model.slack
+
+        gurobi_range_con_vars = set(self._solver_model.getVars()) - set(self._pyomo_var_to_solver_var_map.values())
+
         if cons_to_load is None:
-            cons_to_load = ComponentSet(con_map.keys())
-
-        reverse_con_map = {}
-        for pyomo_con, con in con_map.items():
-            reverse_con_map[con] = pyomo_con
-
-        for gurobi_con in self._solver_model.getConstrs():
-            pyomo_con = reverse_con_map[gurobi_con]
-            if pyomo_con in cons_to_load:
-                slack[pyomo_con] = gurobi_con.Slack
-
+            linear_cons_to_load = self._solver_model.getConstrs()
+            if self._version_major >= 5:
+                quadratic_cons_to_load = self._solver_model.getQConstrs()
+        else:
+            gurobi_cons_to_load = {con_map[pyomo_con] for pyomo_con in cons_to_load}
+            linear_cons_to_load = gurobi_cons_to_load.intersection(set(self._solver_model.getConstrs()))
+            if self._version_major >= 5:
+                quadratic_cons_to_load = gurobi_cons_to_load.intersection(set(self._solver_model.getQConstrs()))
+        linear_vals = self._solver_model.getAttr("Slack", linear_cons_to_load)
         if self._version_major >= 5:
-            for gurobi_con in self._solver_model.getQConstrs():
-                pyomo_con = reverse_con_map[gurobi_con]
-                if pyomo_con in cons_to_load:
-                    slack[pyomo_con] = gurobi_con.QCSlack
+            quadratic_vals = self._solver_model.getAttr("QCSlack", quadratic_cons_to_load)
+
+        for gurobi_con, val in zip(linear_cons_to_load, linear_vals):
+            pyomo_con = con_map.reverse_getitem(gurobi_con)
+            if pyomo_con in self._range_constraints:
+                lin_expr = self._solver_model.getRow(gurobi_con)
+                for i in reversed(range(lin_expr.size())):
+                    v = lin_expr.getVar(i)
+                    if v in gurobi_range_con_vars:
+                        Us_ = v.X
+                        Ls_ = v.UB - v.X
+                        if Us_ > Ls_:
+                            slack[pyomo_con] = Us_
+                        else:
+                            slack[pyomo_con] = -Ls_
+                        break
+            else:
+                slack[pyomo_con] = val
+        if self._version_major >= 5:
+            for gurobi_con, val in zip(quadratic_cons_to_load, quadratic_vals):
+                pyomo_con = con_map.reverse_getitem(gurobi_con)
+                slack[pyomo_con] = val
 
     def load_duals(self, cons_to_load=None):
         """

@@ -19,6 +19,7 @@ from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt.base.formats import ResultsFormat
 from pyutilib.misc import Options
+from collections import MutableMapping, OrderedDict
 
 
 class DirectOrPersistentSolver(OptSolver):
@@ -55,10 +56,10 @@ class DirectOrPersistentSolver(OptSolver):
         self._labeler = None
         """The labeler for creating names for the solver model components."""
 
-        self._pyomo_var_to_solver_var_map = ComponentMap()
+        self._pyomo_var_to_solver_var_map = _ReverseAccessIDDict()
         """A dictionary mapping pyomo Var's to the solver variables."""
 
-        self._pyomo_con_to_solver_con_map = ComponentMap()
+        self._pyomo_con_to_solver_con_map = _ReverseAccessIDDict()
         """A dictionary mapping pyomo constraints to solver constraints."""
 
         self._vars_referenced_by_con = ComponentMap()
@@ -178,8 +179,8 @@ class DirectOrPersistentSolver(OptSolver):
         self._skip_trivial_constraints = kwds.pop('skip_trivial_constraints', self._skip_trivial_constraints)
         self._output_fixed_variable_bounds = kwds.pop('output_fixed_variable_bounds',
                                                       self._output_fixed_variable_bounds)
-        self._pyomo_var_to_solver_var_map = ComponentMap()
-        self._pyomo_con_to_solver_con_map = ComponentMap()
+        self._pyomo_var_to_solver_var_map = _ReverseAccessIDDict()
+        self._pyomo_con_to_solver_con_map = _ReverseAccessIDDict()
         self._vars_referenced_by_con = ComponentMap()
         self._vars_referenced_by_obj = ComponentSet()
         self._referenced_variables = ComponentMap()
@@ -276,3 +277,58 @@ class DirectOrPersistentSolver(OptSolver):
         if self._version is None:
             return pyomo.opt.base.solvers._extract_version('')
         return self._version
+
+
+class _IDReverseAccessIDDict(MutableMapping):
+    def __init__(self, mapping=None):
+        self._data = OrderedDict()
+        self._reversed = OrderedDict()
+
+        if mapping is not None:
+            self.update(mapping)
+
+    def __getitem__(self, key):
+        return self._data[id(key)]
+
+    def __setitem__(self, key, value):
+        self._data[id(key)] = value
+        self._reversed[id(value)] = key
+
+    def __delitem__(self, key):
+        val = self._data[id(key)]
+        del self._data[id(key)]
+        del self._reversed[id(val)]
+
+    def __iter__(self):
+        return iter(self._reversed.values())
+
+    def __len__(self):
+        return len(self._data)
+
+    def __str__(self):
+        s = '{'
+        for i, key in self._reversed.items():
+            val = self._data[id(key)]
+            s += str(key)
+            s += ': '
+            s += str(val)
+            s += ', '
+        s += '}'
+        return s
+
+    def reverse_getitem(self, key):
+        return self._reversed[id(key)]
+
+
+class _ReverseAccessIDDict(_IDReverseAccessIDDict):
+    def __setitem__(self, key, value):
+        self._data[id(key)] = value
+        self._reversed[value] = key
+
+    def __delitem__(self, key):
+        val = self._data[id(key)]
+        del self._data[id(key)]
+        del self._reversed[val]
+
+    def reverse_getitem(self, key):
+        return self._reversed[key]
