@@ -90,10 +90,11 @@ class TableDistribution(Distribution):
     def __init__(self, values, weights=None):
         if len(values) == 0:
             raise ValueError("Empty tables are not allowed")
-        self.values = values
-        self.weights = weights
-        if self.weights is None:
+        self.values = tuple(values)
+        if weights is None:
             self.weights = [1.0/len(self.values)]*len(self.values)
+        else:
+            self.weights = tuple(weights)
         if len(self.values) != len(self.weights):
             raise ValueError("Different number of weights than values")
         if abs(sum(self.weights) - 1) > 1e-6:
@@ -248,9 +249,9 @@ def _map_variable_stages(model):
     else:
         assert len(variable_stage_annotation) == 1
         variable_stage_annotation = variable_stage_annotation[0][1]
+
     variable_stage_assignments = ComponentMap(
-        variable_stage_annotation.expand_entries(
-            expand_containers=False))
+        variable_stage_annotation.expand_entries())
     if len(variable_stage_assignments) == 0:
         raise ValueError("At least one variable stage assignment "
                          "is required.")
@@ -670,25 +671,25 @@ class EmbeddedSP(object):
                              "a StochasticObjectiveAnnotation declaration.")
 
         # now add any necessary annotations
-        if sto_obj.has_declarations():
+        if sto_obj.has_declarations:
             assert not hasattr(self.reference_model,
                                ".pyspembeddedsp_stochastic_objective_annotation")
             setattr(self.reference_model,
                     ".pyspembeddedsp_stochastic_objective_annotation",
                     sto_obj)
-        if sto_conbody.has_declarations():
+        if sto_conbody.has_declarations:
             assert not hasattr(self.reference_model,
                                ".pyspembeddedsp_stochastic_constraint_body_annotation")
             setattr(self.reference_model,
                     ".pyspembeddedsp_stochastic_constraint_body_annotation",
                     sto_conbody)
-        if sto_conbounds.has_declarations():
+        if sto_conbounds.has_declarations:
             assert not hasattr(self.reference_model,
                                ".pyspembeddedsp_stochastic_constraint_bounds_annotation")
             setattr(self.reference_model,
                     ".pyspembeddedsp_stochastic_constraint_bounds_annotation",
                     sto_conbounds)
-        if sto_varbounds.has_declarations():
+        if sto_varbounds.has_declarations:
             assert not hasattr(self.reference_model,
                                ".pyspembeddedsp_stochastic_variable_bounds_annotation")
             setattr(self.reference_model,
