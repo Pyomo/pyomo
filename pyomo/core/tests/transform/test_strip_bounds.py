@@ -9,7 +9,7 @@ class TestStripBounds(unittest.TestCase):
     """Tests stripping of bounds."""
 
     def test_strip_bounds_maps_exist(self):
-        # Tests if component maps for reversion already exist.
+        """Tests if component maps for reversion already exist."""
         m = ConcreteModel()
         m.v0 = Var(bounds=(2, 4))
         m.v1 = Var(domain=NonNegativeReals)
@@ -25,7 +25,7 @@ class TestStripBounds(unittest.TestCase):
             xfrm.apply_to(m, reversible=True)
 
     def test_strip_bounds(self):
-        # Test bound stripping and restoration.
+        """Test bound stripping and restoration."""
         m = ConcreteModel()
         m.v0 = Var(bounds=(2, 4))
         m.v1 = Var(domain=NonNegativeReals)
@@ -64,7 +64,7 @@ class TestStripBounds(unittest.TestCase):
         self.assertEqual(m.v5.domain, Integers)
 
     def test_no_strip_domain(self):
-        # Test bounds stripping without domain change.
+        """Test bounds stripping without domain change."""
         m = ConcreteModel()
         m.v0 = Var(bounds=(2, 4))
         m.v1 = Var(domain=NonNegativeReals)
