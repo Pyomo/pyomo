@@ -57,8 +57,14 @@ class CPLEX(OptSolver):
             opt = SolverFactory('_cplex_shell', **kwds)
             opt.set_problem_format(ProblemFormat.mps)
             return opt
-        if mode == 'python':
-            opt = SolverFactory('_cplex_direct', **kwds)
+        if mode in ['python', 'direct']:
+            opt = SolverFactory('cplex_direct', **kwds)
+            if opt is None:
+                logging.getLogger('pyomo.solvers').error('Python API for CPLEX is not installed')
+                return
+            return opt
+        if mode == 'persistent':
+            opt = SolverFactory('cplex_persistent', **kwds)
             if opt is None:
                 logging.getLogger('pyomo.solvers').error('Python API for CPLEX is not installed')
                 return
@@ -268,8 +274,9 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         script = "set logfile %s\n" % (self._log_file,)
         if self._timelimit is not None and self._timelimit > 0.0:
             script += "set timelimit %s\n" % ( self._timelimit, )
+
         if (self.options.mipgap is not None) and \
-           (self.options.mipgap > 0.0):
+           (float(self.options.mipgap) > 0.0):
             script += ("set mip tolerances mipgap %s\n"
                        % (self.options.mipgap,))
         for key in self.options:

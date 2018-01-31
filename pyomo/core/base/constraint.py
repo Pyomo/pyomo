@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -19,16 +19,17 @@ from weakref import ref as weakref_ref
 import pyutilib.math
 from pyomo.util.timing import ConstructionTimer
 from pyomo.core.base import expr as EXPR
+from pyomo.core.base.plugin import register_component
 from pyomo.core.base.numvalue import (ZeroConstant,
                                       value,
                                       as_numeric,
                                       is_constant,
                                       _sub)
-from pyomo.core.base.component import (ActiveComponentData,
-                                       register_component)
+from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import \
-    (ActiveIndexedComponent,
-     UnindexedComponent_set)
+    ( ActiveIndexedComponent,
+      UnindexedComponent_set,
+      _get_indexed_component_data_name, )
 from pyomo.core.base.misc import (apply_indexed_rule,
                                   tabular_writer)
 from pyomo.core.base.sets import Set
@@ -215,7 +216,7 @@ class _ConstraintData(ActiveComponentData):
             (U >=) f(x) >= L
         """
         if self.lower is None:
-            return float('-inf')
+            return float('inf')
         else:
             return value(self.body)-value(self.lower)
 
@@ -311,7 +312,7 @@ class _GeneralConstraintData(_ConstraintData):
 
     __slots__ = ('_body', '_lower', '_upper', '_equality')
 
-    def __init__(self,  expr, component=None):
+    def __init__(self,  expr=None, component=None):
         #
         # These lines represent in-lining of the
         # following constructors:
@@ -682,6 +683,7 @@ class Constraint(ActiveIndexedComponent):
         _type               The class type for the derived subclass
     """
 
+    _ComponentDataClass = _GeneralConstraintData
     NoConstraint    = (1000,)
     Skip            = (1000,)
     Infeasible      = (1001,)
@@ -705,6 +707,29 @@ class Constraint(ActiveIndexedComponent):
         kwargs.setdefault('ctype', Constraint)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
+    #
+    # TODO: Ideally we would not override these methods and instead add
+    # the contents of _check_skip_add to the set_value() method.
+    # Unfortunately, until IndexedComponentData objects know their own
+    # index, determining the index is a *very* expensive operation.  If
+    # we refactor things so that the Data objects have their own index,
+    # then we can remove these overloads.
+    #
+
+    def _setitem_impl(self, index, obj, value):
+        if self._check_skip_add(index, value) is None:
+            del self[index]
+            return None
+        else:
+            obj.set_value(value)
+            return obj
+
+    def _setitem_when_not_present(self, index, value):
+        if self._check_skip_add(index, value) is None:
+            return None
+        else:
+            return super(Constraint, self)._setitem_when_not_present(
+                index=index, value=value)
 
     def construct(self, data=None):
         """
@@ -751,24 +776,10 @@ class Constraint(ActiveIndexedComponent):
                            type(err).__name__,
                            err))
                     raise
-                if tmp is None:
-                    raise ValueError(
-                        _rule_returned_none_error % (self.name,) )
-
-            assert None not in self._data
-            cdata = self._check_skip_add(None, tmp, condata=self)
-            if cdata is not None:
-                # this happens as a side-effect of set_value on
-                # SimpleConstraint (normally _check_skip_add does not
-                # add anything to the _data dict but it does call
-                # set_value on the condata object we pass in)
-                assert None in self._data
-            else:
-                assert None not in self._data
+            self._setitem_when_not_present(None, tmp)
 
         else:
-
-            if not _init_expr is None:
+            if _init_expr is not None:
                 raise IndexError(
                     "Constraint '%s': Cannot initialize multiple indices "
                     "of a constraint with a single expression" %
@@ -790,14 +801,7 @@ class Constraint(ActiveIndexedComponent):
                            type(err).__name__,
                            err))
                     raise
-                if tmp is None:
-                    raise ValueError(
-                        _rule_returned_none_error %
-                        ('%s[%s]' % (self.name, str(ndx)),) )
-
-                cdata = self._check_skip_add(ndx, tmp)
-                if cdata is not None:
-                    self._data[ndx] = cdata
+                self._setitem_when_not_present(ndx, tmp)
         timer.report()
 
     def _pprint(self):
@@ -842,43 +846,21 @@ class Constraint(ActiveIndexedComponent):
                                        ] )
 
     #
-    # Checks flags like Constraint.Skip, etc. before
-    # actually creating a constraint object. Optionally
-    # pass in the _ConstraintData object to set the value
-    # on. Only returns the _ConstraintData object when it
-    # should be added to the _data dict; otherwise, None
-    # is returned or an exception is raised.
+    # Checks flags like Constraint.Skip, etc. before actually creating a
+    # constraint object. Returns the _ConstraintData object when it should be
+    #  added to the _data dict; otherwise, None is returned or an exception
+    # is raised.
     #
-    def _check_skip_add(self, index, expr, condata=None):
-
-        #
-        # Adds a dummy constraint object to the _data
-        # dict just before an error message is generated
-        # so that we can generate a fully qualified name
-        #
-        def _prep_for_error():
-            if condata is None:
-                self._data[index] = _GeneralConstraintData(None,
-                                                           component=self)
-            else:
-                self._data[index] = condata
-
+    def _check_skip_add(self, index, expr):
         _expr_type = expr.__class__
         #
         # Convert deprecated expression values
         #
         if _expr_type in _simple_constraint_rule_types:
-
-            _prep_for_error()
-
             if expr is None:
                 raise ValueError(
-                    "Invalid constraint expression. The constraint "
-                    "expression resolved to None instead of a Pyomo "
-                    "object. Please modify your rule to return "
-                    "Constraint.Skip instead of None."
-                    "\n\nError thrown for Constraint '%s'"
-                    % (self._data[index].name))
+                    _rule_returned_none_error %
+                    (_get_indexed_component_data_name(self, index),) )
 
             #
             # There are cases where a user thinks they are generating
@@ -912,7 +894,7 @@ class Constraint(ActiveIndexedComponent):
                     "\n\nError thrown for Constraint '%s'"
                     "\n\nUnresolved (dangling) inequality "
                     "expression: %s"
-                    % (expr, self._data[index].name, buf))
+                    % (expr, _get_indexed_component_data_name(self,index), buf))
             else:
                 raise ValueError(
                     "Invalid constraint expression. The constraint "
@@ -923,7 +905,7 @@ class Constraint(ActiveIndexedComponent):
                     % (expr,
                        expr and "Feasible" or "Infeasible",
                        expr,
-                       self._data[index].name))
+                       _get_indexed_component_data_name(self,index)))
 
         #
         # Ignore an 'empty' constraint
@@ -933,18 +915,12 @@ class Constraint(ActiveIndexedComponent):
                (expr == Constraint.Feasible):
                 return None
             if expr == Constraint.Infeasible:
-                _prep_for_error()
                 raise ValueError(
                     "Constraint '%s' is always infeasible"
-                    % self._data[index].name)
+                    % (_get_indexed_component_data_name(self,index),) )
 
-        if condata is None:
-            self._data[index] = condata = \
-                _GeneralConstraintData(None, component=self)
-        condata.set_value(expr)
-        assert condata.parent_component() is self
+        return expr
 
-        return condata
 
 class SimpleConstraint(_GeneralConstraintData, Constraint):
     """
@@ -1088,15 +1064,19 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
 
     def set_value(self, expr):
         """Set the expression on this constraint."""
-        if self._constructed:
-            if len(self._data) == 0:
-                self._data[None] = self
-            return _GeneralConstraintData.set_value(self, expr)
-        raise ValueError(
-            "Setting the value of constraint '%s' "
-            "before the Constraint has been constructed (there "
-            "is currently no object to set)."
-            % (self.name))
+        if not self._constructed:
+            raise ValueError(
+                "Setting the value of constraint '%s' "
+                "before the Constraint has been constructed (there "
+                "is currently no object to set)."
+                % (self.name))
+
+        if len(self._data) == 0:
+            self._data[None] = self
+        if self._check_skip_add(None, expr) is None:
+            del self[None]
+            return None
+        return _GeneralConstraintData.set_value(self, expr)
 
     #
     # Leaving this method for backward compatibility reasons.
@@ -1116,21 +1096,15 @@ class IndexedConstraint(Constraint):
 
     #
     # Leaving this method for backward compatibility reasons
-    # Note: It allows adding members outside of self._index.
-    #       This has always been the case. Not sure there is
-    #       any reason to maintain a reference to a separate
-    #       index set if we allow this.
+    #
+    # Note: Beginning after Pyomo 5.2 this method will now validate that
+    # the index is in the underlying index set (through 5.2 the index
+    # was not checked).
     #
     def add(self, index, expr):
         """Add a constraint with a given index."""
-        cdata = self._check_skip_add(index, expr)
-        if cdata is not None:
-            self._data[index] = cdata
-        return cdata
+        return self.__setitem__(index, expr)
 
-    # This should be supported by all indexed components
-    def __delitem__(self, index):
-        del self._data[index]
 
 class ConstraintList(IndexedConstraint):
     """
@@ -1144,7 +1118,6 @@ class ConstraintList(IndexedConstraint):
     def __init__(self, **kwargs):
         """Constructor"""
         args = (Set(),)
-        self._nconstraints = 0
         if 'expr' in kwargs:
             raise ValueError(
                 "ConstraintList does not accept the 'expr' keyword")
@@ -1185,7 +1158,7 @@ class ConstraintList(IndexedConstraint):
             _generator = _init_rule
         if _generator is None:
             while True:
-                val = self._nconstraints + 1
+                val = len(self._index) + 1
                 if generate_debug_messages:
                     logger.debug(
                         "   Constructing constraint index "+str(val))
@@ -1216,12 +1189,9 @@ class ConstraintList(IndexedConstraint):
 
     def add(self, expr):
         """Add a constraint with an implicit index."""
-        cdata = self._check_skip_add(self._nconstraints + 1, expr)
-        self._nconstraints += 1
-        self._index.add(self._nconstraints)
-        if cdata is not None:
-            self._data[self._nconstraints] = cdata
-        return cdata
+        next_idx = len(self._index) + 1
+        self._index.add(next_idx)
+        return self.__setitem__(next_idx, expr)
 
 register_component(Constraint, "General constraint expressions.")
 register_component(ConstraintList, "A list of constraint expressions.")

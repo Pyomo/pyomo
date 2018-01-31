@@ -55,7 +55,7 @@ model.UnmetDemandThreshold = Param(within=NonNegativeReals)
 # lambdaMult is the Lagrangian multiplier for the relaxed chance constraint
 # (note: lambda is a reserved word in Python)
 # note: a default makes no sense so watch out because zero is special (no delta)
-model.lambdaMult = Param(default = 0)
+model.lambdaMult = Param(mutable=True, default = 0)
 
 # big M is needed to establish delta
 # set it to total demand + 1

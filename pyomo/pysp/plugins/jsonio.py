@@ -44,16 +44,19 @@ class JSONSolutionLoaderExtension(PySPConfiguredExtension,
 
     implements(IPySPSolutionLoaderExtension)
 
-    _declared_options = \
-        PySPConfigBlock("Options declared for the "
-                        "JSONSolutionLoaderExtension class")
+    @classmethod
+    def _declare_options(cls, options=None):
+        if options is None:
+            options = PySPConfigBlock()
 
-    safe_declare_common_option(_declared_options,
-                               "input_name")
-    safe_declare_common_option(_declared_options,
-                               "load_stages")
+        safe_declare_common_option(options,
+                                   "input_name")
+        safe_declare_common_option(options,
+                                   "load_stages")
 
-    _default_prefix = "jsonloader_"
+        return options
+
+    _default_options_prefix = "jsonloader_"
 
     #
     # Note: Do not try to user super() or access the
@@ -153,16 +156,19 @@ class JSONSolutionSaverExtension(PySPConfiguredExtension,
 
     implements(IPySPSolutionSaverExtension)
 
-    _declared_options = \
-        PySPConfigBlock("Options declared for the "
-                        "JSONSolutionSaverExtension class")
+    @classmethod
+    def _declare_options(cls, options=None):
+        if options is None:
+            options = PySPConfigBlock()
 
-    safe_declare_common_option(_declared_options,
-                               "output_name")
-    safe_declare_common_option(_declared_options,
-                               "save_stages")
+        safe_declare_common_option(options,
+                                   "output_name")
+        safe_declare_common_option(options,
+                                   "save_stages")
 
-    _default_prefix = "jsonsaver_"
+        return options
+
+    _default_options_prefix = "jsonsaver_"
 
     #
     # Note: Do not try to user super() or access the

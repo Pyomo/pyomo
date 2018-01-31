@@ -31,6 +31,9 @@ from pyomo.core.kernel import expr as EXPR
 import six
 from six.moves import zip
 
+_pos_inf = float('inf')
+_neg_inf = float('-inf')
+
 class IConstraint(IComponent, _ActiveComponentMixin):
     """The interface for constraints"""
     __slots__ = ()
@@ -89,10 +92,12 @@ class IConstraint(IComponent, _ActiveComponentMixin):
         body = self(exception=False)
         if body is None:
             return None
-        elif self.lb is None:
-            return float('inf')
+        lb = self.lb
+        if lb is None:
+            lb = _neg_inf
         else:
-            return body - value(self.lb)
+            lb = value(lb)
+        return body - lb
 
     @property
     def uslack(self):
@@ -104,10 +109,12 @@ class IConstraint(IComponent, _ActiveComponentMixin):
         body = self(exception=False)
         if body is None:
             return None
-        elif self.ub is None:
-            return float('inf')
+        ub = self.ub
+        if ub is None:
+            ub = _pos_inf
         else:
-            return value(self.ub) - body
+            ub = value(ub)
+        return ub - body
 
     @property
     def slack(self):
@@ -119,13 +126,7 @@ class IConstraint(IComponent, _ActiveComponentMixin):
         body = self(exception=False)
         if body is None:
             return None
-        elif self.lb is None:
-            return self.uslack
-        elif self.ub is None:
-            return self.lslack
-        lslack = self.lslack
-        uslack = self.uslack
-        return min(lslack, uslack)
+        return min(self.lslack, self.uslack)
 
     @property
     def expr(self):

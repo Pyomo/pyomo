@@ -70,7 +70,7 @@ install:
   - pip --version
   #
   - if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install 'cryptography<2.1.1'; fi
-  - if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install pyOpenSSL; fi
+  - if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install 'pyOpenSSL<17.5'; fi
   - if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install urllib3; fi
   - if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install ordereddict; fi
   #
@@ -85,6 +85,7 @@ install:
   - pip install --quiet xlrd
   - pip install --quiet openpyxl
   - pip install sphinx_rtd_theme
+  - pip install dill
   - conda install -q -y -c anaconda pandas networkx
 
   - if [ "${TRAVIS_PYTHON_VERSION}" != "2.6" -a -n "${EXTRAS}" ]; then
@@ -118,7 +119,8 @@ install:
   - glpsol -v
   - conda install -q -y -c conda-forge --no-update-dependencies ipopt
   - ipopt -v
-
+  - conda install -q -y -c conda-forge --no-update-dependencies coincbc
+  - echo quit | cbc -
   #
   # Clone but don't install pyomo-model-libraries
   #
@@ -164,6 +166,9 @@ after_success:
 
   # Combine coverage reports over all subprocesses
   - cd $TRAVIS_BUILD_DIR
+  - ls -alh
+  - find . -maxdepth 1 -name ".cov*" | wc -l
+  - find . -maxdepth 10 -name ".cov*" | wc -l
   - ls -la .cov*
   - coverage combine $TRAVIS_BUILD_DIR
   - ls -la .cov*

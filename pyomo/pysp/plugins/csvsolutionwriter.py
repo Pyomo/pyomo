@@ -89,4 +89,3 @@ class CSVSolutionWriter(pyomo.util.plugin.SingletonPlugin):
 
     def write(self, scenario_tree, output_file_prefix):
         write_csv_soln(scenario_tree, output_file_prefix)
-
