@@ -1,10 +1,4 @@
 *** Pyro Name Server ***
-Trying to import module=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/aggregategetter.py
-Module successfully loaded
-Trying to import module=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/rhosettermixed.py
-Module successfully loaded
-Trying to import module=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/networkflow/config/xboundsetter.py
-Module successfully loaded
 Name server listening on: ('0.0.0.0', 9090)
 Broadcast server listening on: ('0.0.0.0', 9090)
 URI is: PYRO://134.253.112.95:9090/86fd705f135821f227b08afaa118d0f4271
@@ -48,6 +42,12 @@ This is worker Worker_79243@sanj2010-112-95.sandia.gov
 Listening for work from dispatcher...
 Attempting to find Pyro dispatcher object...
 Dispatcher Object URI: PYRO://134.253.112.95:7766/86fd705f135831f227b09e34bfb6f4b8be0
+Importing module=/Users/ghackebeil/Projects/Pyomo/pyomo/examples/pysp/networkflow/config/aggregategetter.py
+Module successfully loaded
+Importing module=/Users/ghackebeil/Projects/Pyomo/pyomo/examples/pysp/networkflow/config/rhosettermixed.py
+Module successfully loaded
+Importing module=/Users/ghackebeil/Projects/Pyomo/pyomo/examples/pysp/networkflow/config/xboundsetter.py
+Module successfully loaded
 This is client 79246@sanj2010-112-95.sandia.gov
 Initializing PH
 
