@@ -620,7 +620,7 @@ class CPLEXDirect(DirectSolver):
                             else:
                                 Ls_ = linear_slacks[i]
                                 Us_ = R_ - Ls_
-                                if Us_ > Ls_:
+                                if abs(Us_) > abs(Ls_):
                                     soln_constraints[con_name]["Slack"] = Us_
                                 else:
                                     soln_constraints[con_name]["Slack"] = -Ls_
@@ -738,7 +738,7 @@ class CPLEXDirect(DirectSolver):
                 else:
                     Ls_ = linear_vals[i]
                     Us_ = R_ - Ls_
-                    if Us_ > Ls_:
+                    if abs(Us_) > abs(Ls_):
                         slack[pyomo_con] = Us_
                     else:
                         slack[pyomo_con] = -Ls_

@@ -549,6 +549,7 @@ class GurobiDirect(DirectSolver):
                 for gurobi_var, val, name in zip(gurobi_vars, var_vals, names):
                     pyomo_var = self._pyomo_var_to_solver_var_map.reverse_getitem(gurobi_var)
                     if self._referenced_variables[pyomo_var] > 0:
+                        pyomo_var.stale = False
                         soln_variables[name] = {"Value": val}
 
                 if extract_reduced_costs:
