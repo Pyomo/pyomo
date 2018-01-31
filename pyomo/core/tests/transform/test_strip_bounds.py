@@ -8,6 +8,10 @@ from pyomo.environ import (Binary, ConcreteModel, Integers, NonNegativeReals,
 class TestStripBounds(unittest.TestCase):
     """Tests stripping of bounds."""
 
+    def shortDescription(self):
+        """Suppress one-line description at high verbosity."""
+        return None
+
     def test_strip_bounds_maps_exist(self):
         """Tests if component maps for reversion already exist."""
         m = ConcreteModel()
