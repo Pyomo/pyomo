@@ -20,7 +20,7 @@ from pyutilib.misc import PauseGC
 from pyomo.core.base import (
     SymbolMap, AlphaNumericTextLabeler, NumericLabeler,
     Block, Constraint, Expression, Objective, Var, Set, RangeSet, Param,
-    minimize, Suffix, SortComponents)
+    minimize, Suffix, SortComponents, Connector)
 
 from pyomo.core.base.component import ComponentData
 from pyomo.opt import ProblemFormat
@@ -41,6 +41,40 @@ def _get_bound(exp):
     if is_fixed(exp):
         return value(exp)
     raise ValueError("non-fixed bound or weight: " + str(exp))
+
+
+# HACK: Temporary check for Connectors in active constriants.
+# This should be removed after the writer is moved to an
+# explicit GAMS-specific expression walker for generating the
+# constraint strings.
+import pyomo.core.base.expr_coopr3 as coopr3
+from pyomo.core.kernel.numvalue import native_types
+from pyomo.core.base.connector import _ConnectorData
+def _check_for_connectors(con):
+    _stack = [ ([con.body], 0, 1) ]
+    while _stack:
+        _argList, _idx, _len = _stack.pop()
+        while _idx < _len:
+            _sub = _argList[_idx]
+            _idx += 1
+            if type(_sub) in native_types:
+                pass
+            elif _sub.is_expression():
+                _stack.append(( _argList, _idx, _len ))
+                if type(_sub) is coopr3._ProductExpression:
+                    if _sub._denominator:
+                        _stack.append(
+                            (_sub._denominator, 0, len(_sub._denominator)) )
+                    _argList = _sub._numerator
+                else:
+                    _argList = _sub._args
+                _idx = 0
+                _len = len(_argList)
+            elif isinstance(_sub, _ConnectorData):
+                raise TypeError(
+                    "Constraint '%s' body contains unexpanded connectors"
+                    % (con.name,))
+
 
 class ProblemWriter_gams(AbstractProblemWriter):
     pyomo.util.plugin.alias('gams', 'Generate the corresponding GAMS file')
@@ -243,7 +277,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # how to deal with, plus Suffix if solving
         valid_ctypes = set([
             Block, Constraint, Expression, Objective, Param,
-            Set, RangeSet, Var, Suffix ])
+            Set, RangeSet, Var, Suffix, Connector ])
         model_ctypes = model.collect_ctypes(active=True)
         if not model_ctypes.issubset(valid_ctypes):
             invalids = [t.__name__ for t in (model_ctypes - valid_ctypes)]
@@ -251,6 +285,12 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 "Unallowable component(s) %s.\nThe GAMS writer cannot "
                 "export models with this component type" %
                 ", ".join(invalids))
+
+        # HACK: Temporary check for Connectors in active constriants.
+        # This should be removed after the writer is moved to an
+        # explicit GAMS-specific expression walker for generating the
+        # constraint strings.
+        has_Connectors = Connector in model_ctypes
 
         # Walk through the model and generate the constraint definition
         # for all active constraints.  Any Vars / Expressions that are
@@ -264,6 +304,10 @@ class ProblemWriter_gams(AbstractProblemWriter):
                (not con.has_ub()):
                 assert not con.equality
                 continue # non-binding, so skip
+
+            # HACK: Temporary check for Connectors in active constriants.
+            if has_Connectors:
+                _check_for_connectors(con)
 
             con_body = as_numeric(con.body)
             if skip_trivial_constraints and con_body.is_fixed():

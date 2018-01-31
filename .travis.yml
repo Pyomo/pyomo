@@ -119,7 +119,8 @@ install:
   - glpsol -v
   - conda install -q -y -c conda-forge --no-update-dependencies ipopt
   - ipopt -v
-
+  - conda install -q -y -c conda-forge --no-update-dependencies coincbc
+  - echo quit | cbc -
   #
   # Clone but don't install pyomo-model-libraries
   #
@@ -165,6 +166,9 @@ after_success:
 
   # Combine coverage reports over all subprocesses
   - cd $TRAVIS_BUILD_DIR
+  - ls -alh
+  - find . -maxdepth 1 -name ".cov*" | wc -l
+  - find . -maxdepth 10 -name ".cov*" | wc -l
   - ls -la .cov*
   - coverage combine $TRAVIS_BUILD_DIR
   - ls -la .cov*
