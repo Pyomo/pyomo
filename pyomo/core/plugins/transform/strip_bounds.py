@@ -34,8 +34,15 @@ class VariableBoundStripper(NonIsomorphicTransformation):
 
         """
         if reversible:
-            # Component maps to store data for reversion. Pyomo should warn if
-            # a map already exists.
+            if any(hasattr(instance, map_name) for map_name in [
+                    '_tmp_var_bound_strip_lb',
+                    '_tmp_var_bound_strip_ub',
+                    '_tmp_var_bound_strip_domain']):
+                raise RuntimeError(
+                    'Variable stripping reversion component maps already '
+                    'exist. Did you already apply a temporary transformation '
+                    'without a subsequent reversion?')
+            # Component maps to store data for reversion.
             instance._tmp_var_bound_strip_lb = ComponentMap()
             instance._tmp_var_bound_strip_ub = ComponentMap()
             instance._tmp_var_bound_strip_domain = ComponentMap()
