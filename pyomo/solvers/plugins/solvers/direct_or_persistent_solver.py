@@ -19,7 +19,7 @@ from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt.base.formats import ResultsFormat
 from pyutilib.misc import Options
-from collections import MutableMapping, OrderedDict
+from collections import MutableMapping
 
 
 class DirectOrPersistentSolver(OptSolver):
@@ -281,8 +281,8 @@ class DirectOrPersistentSolver(OptSolver):
 
 class _IDReverseAccessIDDict(MutableMapping):
     def __init__(self, mapping=None):
-        self._data = OrderedDict()
-        self._reversed = OrderedDict()
+        self._data = dict()
+        self._reversed = dict()
 
         if mapping is not None:
             self.update(mapping)
