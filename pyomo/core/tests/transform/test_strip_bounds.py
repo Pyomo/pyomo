@@ -9,7 +9,7 @@ class TestStripBounds(unittest.TestCase):
     """Tests stripping of bounds."""
 
     def test_strip_bounds_maps_exist(self):
-        """Tests if component maps for reversion already exist"""
+        """Tests if component maps for reversion already exist."""
         m = ConcreteModel()
         m.v0 = Var(bounds=(2, 4))
         m.v1 = Var(domain=NonNegativeReals)

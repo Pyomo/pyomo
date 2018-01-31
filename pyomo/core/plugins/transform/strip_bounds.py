@@ -62,12 +62,14 @@ class VariableBoundStripper(NonIsomorphicTransformation):
 
     def revert(self, instance):
         """Revert variable bounds and domains changed by the transformation."""
-        for var, lb in iteritems(instance._tmp_var_bound_strip_lb):
-            var.setlb(lb)
-        for var, ub in iteritems(instance._tmp_var_bound_strip_ub):
-            var.setub(ub)
-        for var, dom in iteritems(instance._tmp_var_bound_strip_domain):
-            var.domain = dom
+        for var in instance.component_data_objects(
+                ctype=Var, descend_into=True):
+            if var in instance._tmp_var_bound_strip_lb:
+                var.setlb(instance._tmp_var_bound_strip_lb[var])
+            if var in instance._tmp_var_bound_strip_ub:
+                var.setub(instance._tmp_var_bound_strip_ub[var])
+            if var in instance._tmp_var_bound_strip_domain:
+                var.domain = instance._tmp_var_bound_strip_domain[var]
         del instance._tmp_var_bound_strip_lb
         del instance._tmp_var_bound_strip_ub
         del instance._tmp_var_bound_strip_domain
