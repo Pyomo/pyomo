@@ -93,9 +93,9 @@ class CPLEXDirect(DirectSolver):
         self._capabilities.sos2 = True
 
     def _apply_solver(self):
-        for var in self._pyomo_model.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=True,
-                                                            active=None, sort=False):
-            var.stale = True
+        for block in self._pyomo_model.block_data_objects(descend_into=True, active=True):
+            for var in block.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=False, active=True, sort=False):
+                var.stale = True
         if self._tee:
             def _process_stream(arg):
                 sys.stdout.write(arg)
