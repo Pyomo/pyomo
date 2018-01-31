@@ -33,11 +33,11 @@ class VariableBoundStripper(NonIsomorphicTransformation):
             None
 
         """
-        if reversible and not hasattr(instance, '_tmp_var_bound_strip_lb'):
+        if reversible:
+            # Component maps to store data for reversion. Pyomo should warn if
+            # a map already exists.
             instance._tmp_var_bound_strip_lb = ComponentMap()
-        if reversible and not hasattr(instance, '_tmp_var_bound_strip_ub'):
             instance._tmp_var_bound_strip_ub = ComponentMap()
-        if reversible and not hasattr(instance, '_tmp_var_bound_strip_domain'):
             instance._tmp_var_bound_strip_domain = ComponentMap()
         for var in instance.component_data_objects(ctype=Var):
             if strip_domains and not var.domain == Reals:
@@ -54,7 +54,7 @@ class VariableBoundStripper(NonIsomorphicTransformation):
                 var.setub(None)
 
     def revert(self, instance):
-        """Revert variables fixed by the transformation."""
+        """Revert variable bounds and domains changed by the transformation."""
         for var, lb in iteritems(instance._tmp_var_bound_strip_lb):
             var.setlb(lb)
         for var, ub in iteritems(instance._tmp_var_bound_strip_ub):
