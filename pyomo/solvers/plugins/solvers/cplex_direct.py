@@ -703,7 +703,7 @@ class CPLEXDirect(DirectSolver):
             linear_cons_to_load = self._solver_model.linear_constraints.get_names()
             vals = self._solver_model.solution.get_dual_values()
         else:
-            cplex_cons_to_load = {con_map[pyomo_con] for pyomo_con in cons_to_load}
+            cplex_cons_to_load = set([con_map[pyomo_con] for pyomo_con in cons_to_load])
             linear_cons_to_load = cplex_cons_to_load.intersection(set(self._solver_model.linear_constraints.get_names()))
             vals = self._solver_model.solution.get_dual_values(linear_cons_to_load)
 
@@ -723,7 +723,7 @@ class CPLEXDirect(DirectSolver):
             quadratic_cons_to_load = self._solver_model.quadratic_constraints.get_names()
             quadratic_vals = self._solver_model.solution.get_quadratic_slacks()
         else:
-            cplex_cons_to_load = {con_map[pyomo_con] for pyomo_con in cons_to_load}
+            cplex_cons_to_load = set([con_map[pyomo_con] for pyomo_con in cons_to_load}])
             linear_cons_to_load = cplex_cons_to_load.intersection(set(self._solver_model.linear_constraints.get_names()))
             linear_vals = self._solver_model.solution.get_linear_slacks(linear_cons_to_load)
             quadratic_cons_to_load = cplex_cons_to_load.intersection(set(self._solver_model.quadratic_constraints.get_names()))

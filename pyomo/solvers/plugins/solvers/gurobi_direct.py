@@ -673,7 +673,7 @@ class GurobiDirect(DirectSolver):
             if self._version_major >= 5:
                 quadratic_cons_to_load = self._solver_model.getQConstrs()
         else:
-            gurobi_cons_to_load = {con_map[pyomo_con] for pyomo_con in cons_to_load}
+            gurobi_cons_to_load = set([con_map[pyomo_con] for pyomo_con in cons_to_load])
             linear_cons_to_load = gurobi_cons_to_load.intersection(set(self._solver_model.getConstrs()))
             if self._version_major >= 5:
                 quadratic_cons_to_load = gurobi_cons_to_load.intersection(set(self._solver_model.getQConstrs()))
@@ -702,7 +702,7 @@ class GurobiDirect(DirectSolver):
             if self._version_major >= 5:
                 quadratic_cons_to_load = self._solver_model.getQConstrs()
         else:
-            gurobi_cons_to_load = {con_map[pyomo_con] for pyomo_con in cons_to_load}
+            gurobi_cons_to_load = set([con_map[pyomo_con] for pyomo_con in cons_to_load])
             linear_cons_to_load = gurobi_cons_to_load.intersection(set(self._solver_model.getConstrs()))
             if self._version_major >= 5:
                 quadratic_cons_to_load = gurobi_cons_to_load.intersection(set(self._solver_model.getQConstrs()))
