@@ -1,0 +1,20 @@
+\* Source Pyomo model name=unknown *\
+
+min 
+x3:
++1 x1
+
+s.t.
+
+c_u_x4_:
++2 x1
++1 x2
+<= 0
+
+c_e_ONE_VAR_CONSTANT: 
+ONE_VAR_CONSTANT = 1.0
+
+bounds
+    -inf <= x1 <= +inf
+    -inf <= x2 <= +inf
+end
