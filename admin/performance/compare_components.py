@@ -308,7 +308,7 @@ def build_linear_constraint_list():
 def build_matrix_constraint():
     """Build a constraint_list with no references to external
     objects so its size can be computed."""
-    return matrix_constraint(A, rhs=b, variable_order=X_kernel)
+    return matrix_constraint(A, rhs=b, x=X_kernel)
 
 def build_Block():
     """Build a Block with a few components."""
