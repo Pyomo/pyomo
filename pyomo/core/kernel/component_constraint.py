@@ -712,9 +712,9 @@ class linear_constraint(_MutableBoundsConstraintMixin,
         >>> x = pmo.variable()
         >>> y = pmo.variable()
         >>> # An upper bound constraint
-        >>> c = pmo.constraint(variables=[x,y], coefficients=[1,2], ub=1)
+        >>> c = pmo.linear_constraint(variables=[x,y], coefficients=[1,2], ub=1)
         >>> # (equivalent form)
-        >>> c = pmo.constraint(terms=[(x,1), (y,2)], ub=1)
+        >>> c = pmo.linear_constraint(terms=[(x,1), (y,2)], ub=1)
         >>> # (equivalent form using a general constraint)
         >>> c = pmo.constraint(x + 2*y <= 1)
     """
