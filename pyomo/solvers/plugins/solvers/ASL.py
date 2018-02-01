@@ -100,9 +100,10 @@ class ASL(SystemCallSolver):
         #
         # Define log file
         #
+        solver_name = os.path.basename(self.options.solver)
         if self._log_file is None:
             self._log_file = pyutilib.services.TempfileManager.\
-                             create_tempfile(suffix="_%s.log" % self.options.solver)
+                             create_tempfile(suffix="_%s.log" % solver_name)
 
         #
         # Define solution file
