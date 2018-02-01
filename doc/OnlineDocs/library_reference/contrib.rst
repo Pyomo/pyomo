@@ -2,7 +2,7 @@ Third-Party Contributions
 =========================
 
 Pyomo includes a variety of additional features and functionality
-provided by thiry parties through the ``pyomo.contrib`` package.  This
+provided by third parties through the ``pyomo.contrib`` package.  This
 package includes both contributions included with the main Pyomo
 distribution and wrappers for third-party packages that must be
 installed separately.
