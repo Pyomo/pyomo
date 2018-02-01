@@ -1,8 +1,11 @@
 """Tests for the GDPopt solver plugin."""
-import pyutilib.th as unittest
-from pyomo.environ import SolverFactory, value
-from pyomo.solvers.tests.gdp.eight_process_problem import EightProcessFlowsheet
 from math import fabs
+
+import pyutilib.th as unittest
+
+from pyomo.contrib.gdpopt.tests.eight_process_problem import \
+    EightProcessFlowsheet
+from pyomo.environ import SolverFactory, value
 
 required_solvers = ('ipopt', 'gurobi')
 if all(SolverFactory(s).available() for s in required_solvers):

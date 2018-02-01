@@ -1,2 +1,1 @@
-def load():
-    import pyomo.contrib.gdpopt.GDPopt
+import pyomo.contrib.gdpopt.GDPopt
