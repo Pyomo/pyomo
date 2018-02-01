@@ -38,14 +38,15 @@ class SimpleMINLP(ConcreteModel):
             'sub1': {1: 1, 2: 1, 3: 1},
             'sub2': {1: 0, 2: 1, 3: 1},
             'sub3': {1: 1, 2: 0, 3: 1},
-            'sub4': {1: 1, 2: 1, 3: 0}
+            'sub4': {1: 1, 2: 1, 3: 0},
+            'sub5': {1: 0, 2: 0, 3: 0}
         }
         # initial point information for continuous variables
         initX = {1: 0, 2: 0}
 
         """Variable declarations"""
         # DISCRETE VARIABLES
-        Y = m.Y = Var(J, domain=Binary, initialize=initY['sub1'])
+        Y = m.Y = Var(J, domain=Binary, initialize=initY['sub2'])
         # CONTINUOUS VARIABLES
         X = m.X = Var(I, domain=NonNegativeReals, initialize=initX)
 

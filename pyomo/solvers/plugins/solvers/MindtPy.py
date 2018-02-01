@@ -109,7 +109,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
 
         """
         self.bound_tolerance = kwds.pop('tol', 1E-5)
-        self.iteration_limit = kwds.pop('iterlim', 50) # ERASE
+        self.iteration_limit = kwds.pop('iterlim', 1) # ERASE
         self.decomposition_strategy = kwds.pop('strategy', 'OA')
         self.initialization_strategy = kwds.pop('init_strategy', None)
         self.integer_cuts = kwds.pop('int_cuts', 1)
@@ -735,7 +735,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         m.MindtPy_linear_cuts.activate()
         getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
         getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
-        # m.pprint() #ERASE
+        m.pprint() #ERASE
         results = self.mip_solver.solve(m, load_solutions=False,
                                         **self.mip_solver_kwargs)
         for c in self.nonlinear_constraints:
@@ -781,7 +781,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         # Call the MILP post-solve callback
         self.master_postsolve(m, self)
 
-    def _solve_GBD_master(self, leave_linear_active=False):
+    def _solve_GBD_master(self, leave_linear_active=True):
         m = self.m
         self.mip_iter += 1
         print('MILP {}: Solve master problem.'.format(self.mip_iter))
@@ -902,7 +902,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         t = TransformationFactory('core.deactivate_trivial_constraints')
         t.apply_to(m,tmp=True,ignore_infeasible=True)
         # Solve the NLP
-        # m.pprint() # ERASE
+        m.pprint() # ERASE
         results = self.nlp_solver.solve(m, load_solutions=False,
                                         **self.nlp_solver_kwargs)
         t.revert(m)
@@ -963,10 +963,10 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
                 if self._decomposition_strategy == 'PSC' or self._decomposition_strategy == 'GBD':
                     m.ipopt_zL_out[var] = 0
                     m.ipopt_zU_out[var] = 0
-                if var.ub is not None and abs(var.ub - value(var)) < self.bound_tolerance:
-                    m.ipopt_zL_out[var] = 1
-                elif var.lb is not None and abs(value(var) - var.lb) < self.bound_tolerance:
-                    m.ipopt_zU_out[var] = -1
+                    if var.ub is not None and abs(var.ub - value(var)) < self.bound_tolerance:
+                        m.ipopt_zL_out[var] = 1
+                    elif var.lb is not None and abs(value(var) - var.lb) < self.bound_tolerance:
+                        m.ipopt_zU_out[var] = -1
             # m.pprint() #ERASE
             if self._decomposition_strategy == 'PSC':
                 print('Adding PSC feasibility cut.')
