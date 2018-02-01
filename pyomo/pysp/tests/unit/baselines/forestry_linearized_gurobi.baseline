@@ -1,5 +1,3 @@
-Importing module=/home/gahacke/Project/Pyomo/jenkins/src/pyomo/examples/pysp/forestry/models-nb-yr/ReferenceModel.py
-Module successfully loaded
 *** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile1' will not be used. ***
 *** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile10' will not be used. ***
 *** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile11' will not be used. ***

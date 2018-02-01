@@ -1,25 +1,6 @@
-*** Pyro Name Server ***
-The Name Server appears to be already running on this segment.
-(host: 127.0.0.1  port: 9090 )
-Cannot start multiple Name Servers in the same network segment.
-Dispatcher is ready.
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201296b2170780260539a3da799f0
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_10605@snotra.sandia.gov
-Listening for work from dispatcher...
-Worker attempting to find Pyro dispatcher object...
-Worker attempting to find Pyro dispatcher object...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201296b2170780260539a3da799f0
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_10604@snotra.sandia.gov
-Listening for work from dispatcher...
-Dispatcher Object URI:PYRO://134.253.194.1:7766/86fdc201296b2170780260539a3da799f0
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is worker: Worker_10606@snotra.sandia.gov
-Listening for work from dispatcher...
-Client attempting to find Pyro dispatcher object...
-Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc201296b2170780260539a3da799f0
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 10607@snotra.sandia.gov
-Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/sizes/config/rhosetter.py
+Importing module=/Users/ghackebeil/Projects/Pyomo/pyomo/examples/pysp/sizes/config/rhosetter.py
 Module successfully loaded
+Client assigned dispatcher with URI=PYRO::PyUtilibServer.dispatcher.7c788ec5-81ac-4073-9191-30523cb7ca91@127.0.0.1:52733
 Initializing PH
 
 Transmitting user rho callback invocations to phsolverservers
