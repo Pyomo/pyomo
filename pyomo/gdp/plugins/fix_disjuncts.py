@@ -96,6 +96,8 @@ class GDP_Disjunct_Fixer(Transformation):
             obj.parent_block().reclassify_component_type(obj, Block)
             obj.indicator_var.fix(0)
             # Deactivate all constituent constraints and disjunctions
+            # HACK I do not deactivate the whole block because some writers
+            # do not look for variables in deactivated blocks.
             for constr in obj.component_objects(
                     ctype=(Constraint, Disjunction),
                     active=True, descend_into=True):
