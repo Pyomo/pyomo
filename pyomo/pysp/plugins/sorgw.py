@@ -144,7 +144,7 @@ class sorgwextension(pyomo.util.plugin.SingletonPlugin):
             nodename = parts[1]
             scenname = parts[2]
             varname = parts[3]
-            varid = num(parts[4])
+            varid = parts[4]
             wval = num(parts[5])
             if iternum != curriter:
                 if iternum-curriter == 1:
