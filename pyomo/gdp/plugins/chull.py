@@ -456,7 +456,8 @@ class ConvexHull_Transformation(Transformation):
                                 % (var.name))
 
             disaggregatedVar = Var(within=Reals,
-                                   bounds=(min(0, lb), max(0, ub)))
+                                   bounds=(min(0, lb), max(0, ub)),
+                                   initialize=var.value)
             # naming conflicts are possible here since this is a bunch
             # of variables from different blocks coming together, so we
             # get a unique name
