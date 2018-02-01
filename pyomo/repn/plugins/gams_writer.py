@@ -20,7 +20,7 @@ from pyutilib.misc import PauseGC
 from pyomo.core.base import (
     SymbolMap, AlphaNumericTextLabeler, NumericLabeler,
     Block, Constraint, Expression, Objective, Var, Set, RangeSet, Param,
-    minimize, Suffix, SortComponents)
+    minimize, Suffix, SortComponents, Connector)
 
 from pyomo.core.base.component import ComponentData
 from pyomo.opt import ProblemFormat
@@ -41,6 +41,40 @@ def _get_bound(exp):
     if is_fixed(exp):
         return value(exp)
     raise ValueError("non-fixed bound or weight: " + str(exp))
+
+
+# HACK: Temporary check for Connectors in active constriants.
+# This should be removed after the writer is moved to an
+# explicit GAMS-specific expression walker for generating the
+# constraint strings.
+import pyomo.core.base.expr_coopr3 as coopr3
+from pyomo.core.kernel.numvalue import native_types
+from pyomo.core.base.connector import _ConnectorData
+def _check_for_connectors(con):
+    _stack = [ ([con.body], 0, 1) ]
+    while _stack:
+        _argList, _idx, _len = _stack.pop()
+        while _idx < _len:
+            _sub = _argList[_idx]
+            _idx += 1
+            if type(_sub) in native_types:
+                pass
+            elif _sub.is_expression():
+                _stack.append(( _argList, _idx, _len ))
+                if type(_sub) is coopr3._ProductExpression:
+                    if _sub._denominator:
+                        _stack.append(
+                            (_sub._denominator, 0, len(_sub._denominator)) )
+                    _argList = _sub._numerator
+                else:
+                    _argList = _sub._args
+                _idx = 0
+                _len = len(_argList)
+            elif isinstance(_sub, _ConnectorData):
+                raise TypeError(
+                    "Constraint '%s' body contains unexpanded connectors"
+                    % (con.name,))
+
 
 class ProblemWriter_gams(AbstractProblemWriter):
     pyomo.util.plugin.alias('gams', 'Generate the corresponding GAMS file')
@@ -243,7 +277,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # how to deal with, plus Suffix if solving
         valid_ctypes = set([
             Block, Constraint, Expression, Objective, Param,
-            Set, RangeSet, Var, Suffix ])
+            Set, RangeSet, Var, Suffix, Connector ])
         model_ctypes = model.collect_ctypes(active=True)
         if not model_ctypes.issubset(valid_ctypes):
             invalids = [t.__name__ for t in (model_ctypes - valid_ctypes)]
@@ -251,6 +285,12 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 "Unallowable component(s) %s.\nThe GAMS writer cannot "
                 "export models with this component type" %
                 ", ".join(invalids))
+
+        # HACK: Temporary check for Connectors in active constriants.
+        # This should be removed after the writer is moved to an
+        # explicit GAMS-specific expression walker for generating the
+        # constraint strings.
+        has_Connectors = Connector in model_ctypes
 
         # Walk through the model and generate the constraint definition
         # for all active constraints.  Any Vars / Expressions that are
@@ -264,6 +304,10 @@ class ProblemWriter_gams(AbstractProblemWriter):
                (not con.has_ub()):
                 assert not con.equality
                 continue # non-binding, so skip
+
+            # HACK: Temporary check for Connectors in active constriants.
+            if has_Connectors:
+                _check_for_connectors(con)
 
             con_body = as_numeric(con.body)
             if skip_trivial_constraints and con_body.is_fixed():
@@ -319,50 +363,33 @@ class ProblemWriter_gams(AbstractProblemWriter):
         ))
 
         # Categorize the variables that we found
-        binary = []
-        ints = []
-        positive = []
-        reals = []
-        for var in var_list:
-            v = symbolMap.getObject(var)
-            if v.is_binary():
-                binary.append(var)
-            elif v.is_integer():
-                if (v.has_lb() and (value(v.lb) >= 0)) and \
-                   (v.has_ub() and (value(v.ub) <= 1)):
-                    binary.append(var)
-                else:
-                    ints.append(var)
-            elif value(v.lb) == 0:
-                positive.append(var)
-            else:
-                reals.append(var)
+        categorized_vars = Categorizer(var_list, symbolMap)
 
         # Write the GAMS model
         # $offdigit ignores extra precise digits instead of erroring
         output_file.write("$offdigit\n\n")
         output_file.write("EQUATIONS\n\t")
         output_file.write("\n\t".join(constraint_names))
-        if binary:
+        if categorized_vars.binary:
             output_file.write(";\n\nBINARY VARIABLES\n\t")
-            output_file.write("\n\t".join(binary))
-        if ints:
+            output_file.write("\n\t".join(categorized_vars.binary))
+        if categorized_vars.ints:
             output_file.write(";\n\nINTEGER VARIABLES")
             output_file.write("\n\t")
-            output_file.write("\n\t".join(ints))
-        if positive:
+            output_file.write("\n\t".join(categorized_vars.ints))
+        if categorized_vars.positive:
             output_file.write(";\n\nPOSITIVE VARIABLES\n\t")
-            output_file.write("\n\t".join(positive))
+            output_file.write("\n\t".join(categorized_vars.positive))
         output_file.write(";\n\nVARIABLES\n\tGAMS_OBJECTIVE\n\t")
-        output_file.write("\n\t".join(reals))
+        output_file.write("\n\t".join(categorized_vars.reals))
         output_file.write(";\n\n")
 
         for line in ConstraintIO.getvalue().splitlines():
             if '**' in line:
                 # Investigate power functions for an integer exponent, in which
                 # case replace with power(x, int) function to improve domain
-                # issues. Skip first term since it's always "con_name.."
-                line = replace_power(line) + ';'
+                # issues.
+                line = replace_power(line)
             if len(line) > 80000:
                 line = split_long_line(line)
             output_file.write(line + "\n")
@@ -370,22 +397,22 @@ class ProblemWriter_gams(AbstractProblemWriter):
         output_file.write("\n")
 
         warn_int_bounds = False
-        for varName in var_list:
-            var = symbolMap.getObject(varName)
-            if varName in positive:
+        for category, var_name in categorized_vars:
+            var = symbolMap.getObject(var_name)
+            if category == 'positive':
                 if var.has_ub():
                     output_file.write("%s.up = %s;\n" %
-                                      (varName, _get_bound(var.ub)))
-            elif varName in ints:
+                                      (var_name, _get_bound(var.ub)))
+            elif category == 'ints':
                 if not var.has_lb():
                     warn_int_bounds = True
                     # GAMS doesn't allow -INF lower bound for ints
                     logger.warning("Lower bound for integer variable %s set "
                                    "to -1.0E+100." % var.name)
-                    output_file.write("%s.lo = -1.0E+100;\n" % (varName))
+                    output_file.write("%s.lo = -1.0E+100;\n" % (var_name))
                 elif value(var.lb) != 0:
                     output_file.write("%s.lo = %s;\n" %
-                                      (varName, _get_bound(var.lb)))
+                                      (var_name, _get_bound(var.lb)))
                 if not var.has_ub():
                     warn_int_bounds = True
                     # GAMS has an option value called IntVarUp that is the
@@ -394,32 +421,34 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     # 2147483647, so we can go higher by setting the bound.
                     logger.warning("Upper bound for integer variable %s set "
                                    "to +1.0E+100." % var.name)
-                    output_file.write("%s.up = +1.0E+100;\n" % (varName))
+                    output_file.write("%s.up = +1.0E+100;\n" % (var_name))
                 else:
                     output_file.write("%s.up = %s;\n" %
-                                      (varName, _get_bound(var.ub)))
-            elif varName in binary:
+                                      (var_name, _get_bound(var.ub)))
+            elif category == 'binary':
                 if var.has_lb() and value(var.lb) != 0:
                     output_file.write("%s.lo = %s;\n" %
-                                      (varName, _get_bound(var.lb)))
+                                      (var_name, _get_bound(var.lb)))
                 if var.has_ub() and value(var.ub) != 1:
                     output_file.write("%s.up = %s;\n" %
-                                      (varName, _get_bound(var.ub)))
-            elif varName in reals:
+                                      (var_name, _get_bound(var.ub)))
+            elif category == 'reals':
                 if var.has_lb():
                     output_file.write("%s.lo = %s;\n" %
-                                      (varName, _get_bound(var.lb)))
+                                      (var_name, _get_bound(var.lb)))
                 if var.has_ub():
                     output_file.write("%s.up = %s;\n" %
-                                      (varName, _get_bound(var.ub)))
+                                      (var_name, _get_bound(var.ub)))
+            else:
+                raise KeyError('Category %s not supported' % category)
             if warmstart and var.value is not None:
-                output_file.write("%s.l = %s;\n" % (varName, var.value))
+                output_file.write("%s.l = %s;\n" % (var_name, var.value))
             if var.is_fixed():
                 # This probably doesn't run, since all fixed vars are by default
                 # replaced with their value and not assigned a symbol.
                 # But leave this here in case we change handling of fixed vars
                 assert var.value is not None, "Cannot fix variable at None"
-                output_file.write("%s.fx = %s;\n" % (varName, var.value))
+                output_file.write("%s.fx = %s;\n" % (var_name, var.value))
 
         if warn_int_bounds:
             logger.warning(
@@ -435,7 +464,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
         if mtype is None:
             mtype =  ('lp','nlp','mip','minlp')[
                 (0 if linear else 1) +
-                (2 if (binary or ints) else 0)]
+                (2 if (categorized_vars.binary or categorized_vars.ints)
+                 else 0)]
 
         if solver is not None:
             if mtype.upper() not in valid_solvers[solver.upper()]:
@@ -508,11 +538,51 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 output_file.write("\nput '%s' %s /;\n" % (stat, stat))
 
 
+class Categorizer(object):
+    """Class for representing categorized variables.
+
+    Given a list of variable names and a symbol map, categorizes the variable
+    names into the categories: binary, ints, positive and reals.
+
+    """
+
+    def __init__(self, var_list, symbol_map):
+        self.binary = []
+        self.ints = []
+        self.positive = []
+        self.reals = []
+
+        # categorize variables
+        for var in var_list:
+            v = symbol_map.getObject(var)
+            if v.is_binary():
+                self.binary.append(var)
+            elif v.is_integer():
+                if (v.has_lb() and (value(v.lb) >= 0)) and \
+                   (v.has_ub() and (value(v.ub) <= 1)):
+                    self.binary.append(var)
+                else:
+                    self.ints.append(var)
+            elif value(v.lb) == 0:
+                self.positive.append(var)
+            else:
+                self.reals.append(var)
+
+    def __iter__(self):
+        """Iterate over all variables.
+
+        Yield a tuple containing the variables category and its name.
+        """
+        for category in ['binary', 'ints', 'positive', 'reals']:
+            var_list = getattr(self, category)
+            for var_name in var_list:
+                yield category, var_name
+
+
 def split_terms(line):
     """
     Take line from GAMS model file and return list of terms split by space
-    but grouping together parentheses-bound expressions. Assumes lines end
-    with space followed by semicolon.
+    but grouping together parentheses-bound expressions.
     """
     terms = []
     begin = 0
@@ -537,10 +607,9 @@ def split_terms(line):
                     terms.append(line[begin:i])
                 terms.append(line[i])
                 begin = i + 1
-    if begin < len(line) - 1:
+    assert inparens == 0, "Missing close parenthesis in line '%s'" % line
+    if begin < len(line):
         terms.append(line[begin:len(line)])
-    if terms[-1][-1] == ';':
-        terms[-1] = terms[-1][:-1]
     return terms
 
 
@@ -562,6 +631,7 @@ def split_args(term):
             assert i > begin, "Invalid syntax around '**' operator"
             args.append(term[begin:i])
             begin = i + 2
+    assert inparens == 0, "Missing close parenthesis in term '%s'" % term
     args.append(term[begin:len(term)])
     return args
 
@@ -573,10 +643,13 @@ def replace_power(line):
             args = split_args(term)
             for i in xrange(len(args)):
                 if '**' in args[i]:
-                    assert args[i][0] == '(' and args[i][-1] == ')',\
-                        "Assume arg is a parenthesis-bound expression"
-                    arg = args[i][1:-1]
-                    args[i] = '( %s)' % replace_power(arg)
+                    first_paren = args[i].find('(')
+                    assert ((first_paren != -1) and (args[i][-1] == ')')), (
+                        "Assumed arg '%s' was a parenthesis-bound expression "
+                        "or function" % args[i])
+                    arg = args[i][first_paren + 1:-1]
+                    args[i] = '%s( %s )' % (args[i][:first_paren],
+                                            replace_power(arg))
             try:
                 if float(args[-1]) == int(float(args[-1])):
                     term = ''
@@ -589,7 +662,8 @@ def replace_power(line):
                     term += arg + '**'
                 term += args[-1]
         new_line += term + ' '
-    return new_line
+    # Remove trailing space
+    return new_line[:-1]
 
 
 def split_long_line(line):

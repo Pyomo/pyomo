@@ -16,13 +16,15 @@ from six import iteritems, itervalues, iterkeys
 from six.moves import xrange
 from weakref import ref as weakref_ref
 
+from pyomo.util.timing import ConstructionTimer
 from pyomo.util.plugin import Plugin, implements
 
-from pyomo.core.base.component import ComponentData, register_component
+from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.numvalue import NumericValue, value
-from pyomo.core.base.plugin import IPyomoScriptModifyInstance, TransformationFactory
+from pyomo.core.base.plugin import register_component, \
+    IPyomoScriptModifyInstance, TransformationFactory
 
 logger = logging.getLogger('pyomo.core')
 
@@ -160,7 +162,7 @@ class Connector(IndexedComponent):
     # This method must be defined on subclasses of
     # IndexedComponent
     #
-    def _default(self, idx):
+    def _getitem_when_not_present(self, idx):
         _conval = self._data[idx] = _ConnectorData(component=self)
         return _conval
 
@@ -171,6 +173,7 @@ class Connector(IndexedComponent):
                           % (self.name, data) )
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed=True
         #
         # Construct _ConnectorData objects for all index values
@@ -180,6 +183,7 @@ class Connector(IndexedComponent):
         else:
             self._data[None] = self
             self._initialize_members([None])
+        timer.report()
 
     def _initialize_members(self, initSet):
         for idx in initSet:

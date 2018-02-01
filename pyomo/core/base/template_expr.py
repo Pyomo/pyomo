@@ -185,7 +185,6 @@ class _GetItemIndexer(object):
         _hash = [ id(self._base) ]
         for x in expr._args:
             try:
-                active_level = logging.root.manager.disable
                 logging.disable(logging.CRITICAL)
                 val = value(x)
                 self._args.append(val)
@@ -200,7 +199,7 @@ class _GetItemIndexer(object):
                 self._args.append(e.template)
                 _hash.append(id(e.template._set))
             finally:
-                logging.disable(active_level)
+                logging.disable(logging.NOTSET)
 
         self._hash = tuple(_hash)
 

@@ -11,7 +11,6 @@
 from pyomo.util.plugin import PluginGlobals
 PluginGlobals.add_env("pyomo")
 
-import pyomo.pysp.log_config
 import pyomo.pysp.annotations
 import pyomo.pysp.solutionioextensions
 import pyomo.pysp.util
@@ -25,7 +24,7 @@ import pyomo.pysp.generators
 import pyomo.pysp.convergence
 import pyomo.pysp.scenariotree
 import pyomo.pysp.phobjective
-import pyomo.pysp.implicitsp
+import pyomo.pysp.embeddedsp
 
 import pyomo.pysp.ef
 import pyomo.pysp.ph
@@ -38,8 +37,8 @@ import pyomo.pysp.computeconf
 import pyomo.pysp.drive_lagrangian_cc
 import pyomo.pysp.lagrangeMorePR
 import pyomo.pysp.lagrangeParam
-import pyomo.pysp.benders
-import pyomo.pysp.smps
+import pyomo.pysp.convert
 import pyomo.pysp.solvers
+import pyomo.pysp.benders
 
 PluginGlobals.pop_env()

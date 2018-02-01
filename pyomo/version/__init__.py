@@ -24,7 +24,7 @@ _init_url="$URL$"
 # VOTD build. releaselever should be left at 'invalid' for trunk
 # development and set to 'final' for releases.
 _major=5
-_minor=2
+_minor=3
 _micro=0
 _releaselevel='invalid'
 #_releaselevel='final'

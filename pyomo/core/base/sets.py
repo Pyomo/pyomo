@@ -23,12 +23,16 @@ from weakref import ref as weakref_ref
 
 from pyutilib.misc import flatten_tuple as pyutilib_misc_flatten_tuple
 
-from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
-from pyomo.core.base.component import Component, register_component, ComponentData
-from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
+from pyomo.util.timing import ConstructionTimer
+from pyomo.core.base.misc import apply_indexed_rule, \
+    apply_parameterized_indexed_rule
+from pyomo.core.base.plugin import register_component
+from pyomo.core.base.component import Component, ComponentData
+from pyomo.core.base.indexed_component import IndexedComponent, \
+    UnindexedComponent_set
 from pyomo.core.base.numvalue import native_numeric_types
 
-from six import itervalues, iteritems
+from six import itervalues, iteritems, string_types
 from six.moves import xrange
 
 logger = logging.getLogger('pyomo.core')
@@ -104,6 +108,72 @@ def simple_set_rule( fn ):
             return Set.End
         return value
     return wrapper_function
+
+
+class _robust_sort_keys(object):
+    """Class for robustly generating sortable keys for arbitrary data.
+
+    Generates keys (for use with Python `sorted()` that are
+    (str(type_name), val), where val is the actual value (if the type
+    is comparable), otherwise is the string representation of the value.
+    If str() also fails, we fall back on id().
+
+    This allows sorting lists with mixed types in Python3
+
+    We implement this as a callable object so that we can store the
+    _typemap without resorting to global variables.
+
+    """
+    def __init__(self):
+        self._typemap = {}
+
+    def __call__(self, val):
+        """Generate a tuple ( str(type_name), val ) for sorting the value.
+
+        `key=` expects a function.  We are generating a functor so we
+        have a convenient place to store the _typemap, which converts
+        the type-specific functions for converting a value to the second
+        argument of the sort key.
+
+        """
+        _type = type(val)
+        if _type not in self._typemap:
+            # If this is not a type we have seen before, determine what
+            # to use for the second value in the tuple.
+            try:
+                # 1: Check if the type is comparable 
+                val < val
+                self._typemap[_type] = lambda x:x
+            except:
+                try:
+                    # 2: try converting the value to string
+                    str(val)
+                    self._typemap[_type] = lambda x:str(x)
+                except:
+                    # 3: fallback on id().  Not deterministic
+                    # (run-to-run), but at least is consistent within
+                    # this run.
+                    self._typemap[_type] = lambda x:id(x)
+        return _type.__name__, self._typemap[_type](val)
+
+
+
+def _value_sorter(self, obj):
+    """Utility to sort the values of a Set.
+
+    This returns the values of the Set in a consistent order.  For
+    ordered Sets, simply return the ordered list.  For unordered Sets,
+    first try the standard sorted order, and if that fails (for example
+    with mixed-type Sets in Python3), use the _robust_sorter utility
+    (above) to generate sortable keys.
+
+    """
+    if self.ordered:
+        return obj.value
+    try:
+        return sorted(obj)
+    except:
+        return sorted(obj, key=_robust_sort_keys())
 
 
 # A trivial class that we can use to test if an object is a "legitimate"
@@ -652,9 +722,16 @@ class Set(IndexedComponent):
             tmp_dimen = 1
         if self.initialize is not None:
             #
-            # Convert initialization value to a list (which are copyable)
+            # Convert initialization value to a list (which are
+            # copyable).  There are subtlies here: dict should be left
+            # alone (as dict's are used for initializing indezed Sets),
+            # and lists should be left alone (for efficiency).  tuples,
+            # generators, and iterators like dict.keys() [in Python 3.x]
+            # should definitely be converted to lists.
             #
-            if type(self.initialize) in (tuple, types.GeneratorType):
+            if type(self.initialize) is tuple \
+                    or ( hasattr(self.initialize, "__iter__")
+                         and not hasattr(self.initialize, "__getitem__") ):
                 self.initialize = list(self.initialize)
             #
             # Try to guess dimen from the initialize list
@@ -1073,6 +1150,7 @@ class SimpleSetBase(Set):
                 logger.debug("Constructing SimpleSet, name="+self.name+", from data="+repr(values))
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed=True
 
         if self.initialize is None:                             # TODO: deprecate this functionality
@@ -1203,6 +1281,7 @@ class SimpleSetBase(Set):
                 self.add(val)
             if all_numeric:
                 self._bounds = (first,last)
+        timer.report()
 
 
 class SimpleSet(SimpleSetBase,_SetData):
@@ -1292,7 +1371,7 @@ class SetOf(SimpleSet):
         """
         Disabled construction method
         """
-        pass
+        ConstructionTimer(self).report()
 
     def __len__(self):
         """
@@ -1374,7 +1453,7 @@ class _SetOperator(SimpleSet):
 
     def construct(self, values=None):
         """ Disabled construction method """
-        pass
+        timer = ConstructionTimer(self).report()
 
     def __len__(self):
         """The number of items in the set."""
@@ -1617,7 +1696,7 @@ class IndexedSet(Set):
             #
             pass
 
-    def _default(self, index):
+    def _getitem_when_not_present(self, index):
         """
         Return the default component data value
 
@@ -1679,9 +1758,8 @@ class IndexedSet(Set):
              ("Bounds", self._bounds)],
             iteritems(self._data),
             ("Members",),
-            lambda k, v: [
-                #"Virtual" if not v.concrete or v.virtual else \
-                v.value if self.ordered else sorted(v) ] )
+            lambda k, v: [ _value_sorter(self, v) ]
+            )
 
     def construct(self, values=None):
         """
@@ -1691,6 +1769,7 @@ class IndexedSet(Set):
                 logger.debug("Constructing IndexedSet, name="+self.name+", from data="+repr(values))
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed=True
         #
         if self.initialize is None:             # TODO: deprecate this functionality
@@ -1763,7 +1842,7 @@ class IndexedSet(Set):
                     for val in self.initialize[key]:
                         tmp._add(val)
                     self._data[key] = tmp
-
+        timer.report()
 
 
 register_component(SetOf, "Define a Pyomo Set component using an iterable data object.")

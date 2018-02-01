@@ -1,0 +1,3 @@
+def c(model):
+    return {1:1, 2:2, 3:3}
+model.c = Param([1,2,3], initialize=c)

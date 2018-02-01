@@ -1,10 +1,8 @@
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python3.4_snotra_parallel/src/pyomo/examples/pysp/networkflow/models/ReferenceModel.py
+Importing module=/Users/ghackebeil/Projects/Pyomo/pyomo/examples/pysp/networkflow/config/aggregategetter.py
 Module successfully loaded
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python3.4_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/aggregategetter.py
+Importing module=/Users/ghackebeil/Projects/Pyomo/pyomo/examples/pysp/networkflow/config/rhosettermixed.py
 Module successfully loaded
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python3.4_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/rhosettermixed.py
-Module successfully loaded
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python3.4_snotra_parallel/src/pyomo/examples/pysp/networkflow/config/xboundsetter.py
+Importing module=/Users/ghackebeil/Projects/Pyomo/pyomo/examples/pysp/networkflow/config/xboundsetter.py
 Module successfully loaded
 Client assigned dispatcher with URI=PYRO::PyUtilibServer.dispatcher.3a85ed4a-2b08-4f58-8ed3-cf2d6d174d5f@localhost:52435
 Initializing PH

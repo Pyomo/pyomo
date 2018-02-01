@@ -46,6 +46,7 @@ _common_module_members = [
     '_ExternalFunctionExpression',
     '_IntrinsicFunctionExpression',
     '_GetItemExpression',
+    'clone_counter',
     'Expr_if',
     'sum',
 ]

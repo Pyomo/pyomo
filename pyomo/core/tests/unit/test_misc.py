@@ -146,5 +146,24 @@ class PyomoBadModels ( unittest.TestCase ):
         self.pyomo('uninstantiated_model_quadratic.py --solver=cplex', file=fout )
         self.assertFileEqualsBaseline( fout, fbase )
 
+
+class TestApplyIndexedRule(unittest.TestCase):
+    def test_rules_with_None_in_set(self):
+        def noarg_rule(b):
+            b.args = ()
+        def onearg_rule(b, i):
+            b.args = (i,)
+        def twoarg_rule(b, i, j):
+            b.args = (i,j)
+        m = ConcreteModel()
+        m.b1 = Block(rule=noarg_rule)
+        self.assertEqual(m.b1.args, ())
+
+        m.b2 = Block([None], rule=onearg_rule)
+        self.assertEqual(m.b2[None].args, (None,))
+
+        m.b3 = Block([(None,1)], rule=twoarg_rule)
+        self.assertEqual(m.b3[None,1].args, ((None,1)))
+
 if __name__ == "__main__":
     unittest.main()

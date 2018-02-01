@@ -11,23 +11,13 @@
 from pyutilib.misc.indent_io import StreamIndenter
 
 from pyomo.core import *
+from pyomo.core.base.plugin import register_component
 from pyomo.core.base.constraint import (SimpleConstraint,
                                         IndexedConstraint,
                                         _GeneralConstraintData)
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.sets import Set
 from pyomo.core.base.indexed_component import normalize_index
-
-from os.path import abspath, dirname, join, normpath
-pyomo_base = normpath(join(dirname(abspath(__file__)), '..', '..', '..'))
-
-from pyutilib.misc import LogHandler
-
-import logging
-logger = logging.getLogger('pyomo.gdp')
-logger.setLevel(logging.WARNING)
-logger.addHandler( LogHandler(
-    pyomo_base, verbosity=lambda: logger.isEnabledFor(logging.DEBUG)) )
 
 
 class GDP_Error(Exception):
@@ -36,8 +26,8 @@ class GDP_Error(Exception):
 
 class _DisjunctData(_BlockData):
 
-    def __init__(self, owner):
-        _BlockData.__init__(self, owner)
+    def __init__(self, component):
+        _BlockData.__init__(self, component)
         self._M = None
         self.indicator_var = Var(within=Binary)
 
@@ -107,7 +97,7 @@ class Disjunct(Block):
         kwargs.setdefault('ctype', Disjunct)
         Block.__init__(self, *args, **kwargs)
 
-    def _default(self, idx):
+    def _getitem_when_not_present(self, idx):
         return self._data.setdefault(idx, _DisjunctData(self))
 
 

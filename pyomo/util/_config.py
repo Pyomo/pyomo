@@ -8,19 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['DeveloperError']
-
-
-import logging
-from os.path import abspath, dirname, join, normpath
-pyomo_base = normpath(join(dirname(abspath(__file__)), '..', '..', '..'))
-
-from pyutilib.misc import LogHandler
-
-logger = logging.getLogger('pyomo.util')
-logger.setLevel( logging.WARNING )
-logger.addHandler( LogHandler(pyomo_base, verbosity=lambda: logger.isEnabledFor(logging.DEBUG)) )
-
 
 class DeveloperError(NotImplementedError):
     """

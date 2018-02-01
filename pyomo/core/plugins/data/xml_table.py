@@ -81,7 +81,7 @@ class XMLTable(TableData):
         if self.options.set is None and self.options.param is None:
             raise IOError("Unspecified model component")
         root = ET.Element('table')
-        table = self.get_table()
+        table = self._get_table()
         labels = table[0]
         for i in range(len(labels)):
             labels[i] = str(labels[i])
