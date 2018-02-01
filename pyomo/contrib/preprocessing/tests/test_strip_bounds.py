@@ -22,7 +22,7 @@ class TestStripBounds(unittest.TestCase):
         m.v4 = Var(domain=Binary)
         m.v5 = Var(domain=Integers, bounds=(15, 16))
 
-        xfrm = TransformationFactory('core.strip_var_bounds')
+        xfrm = TransformationFactory('contrib.strip_var_bounds')
         xfrm.apply_to(m, reversible=True)
         # At this point, component maps for reversion already exist.
         with self.assertRaises(RuntimeError):
@@ -38,7 +38,7 @@ class TestStripBounds(unittest.TestCase):
         m.v4 = Var(domain=Binary)
         m.v5 = Var(domain=Integers, bounds=(15, 16))
 
-        xfrm = TransformationFactory('core.strip_var_bounds')
+        xfrm = TransformationFactory('contrib.strip_var_bounds')
         xfrm.apply_to(m, reversible=True)
         self.assertEqual(m.v0.bounds, (None, None))
         self.assertEqual(m.v1.bounds, (None, None))
@@ -77,7 +77,7 @@ class TestStripBounds(unittest.TestCase):
         m.v4 = Var(domain=Binary)
         m.v5 = Var(domain=Integers, bounds=(15, 16))
 
-        xfrm = TransformationFactory('core.strip_var_bounds')
+        xfrm = TransformationFactory('contrib.strip_var_bounds')
         xfrm.apply_to(m, strip_domains=False, reversible=True)
         self.assertEqual(m.v0.bounds, (None, None))
         self.assertEqual(m.v1.bounds, (0, None))
