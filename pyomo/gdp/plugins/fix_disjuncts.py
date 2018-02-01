@@ -24,13 +24,16 @@ from pyomo.gdp.disjunct import (Disjunct, Disjunction, _DisjunctData,
 from pyomo.util.plugin import alias
 from six import itervalues
 
-__author__ = "Qi Chen <https://github.com/qtothec>"
-
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.gdp.fix_disjuncts')
 
 
 class GDP_Disjunct_Fixer(Transformation):
-    """Fix disjuncts to Blocks."""
+    """Fix disjuncts to their current logical values.
+
+    This reclassifies all disjuncts as ctype Block and deactivates the
+    constraints and disjunctions within inactive disjuncts.
+
+    """
 
     def __init__(self, *args, **kwargs):
         self.integer_tolerance = kwargs.pop('int_tol', 1E-6)
