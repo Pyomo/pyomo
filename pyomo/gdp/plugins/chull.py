@@ -485,7 +485,7 @@ class ConvexHull_Transformation(Transformation):
                                 "bounded in order to use the chull "
                                 "transformation! Missing bound for %s."
                                 % (var.name))
-            if valeu(lb) > 0:
+            if value(lb) > 0:
                 var.setlb(0)
             if value(ub) < 0:
                 var.setub(0)
@@ -493,13 +493,12 @@ class ConvexHull_Transformation(Transformation):
             # naming conflicts are possible here since this is a bunch
             # of variables from different blocks coming together, so we
             # get a unique name
-            localVarName = unique_component_name(
-                relaxationBlock, var.local_name)
+            conName = unique_component_name(
+                relaxationBlock, var.local_name+"_bounds")
             bigmConstraint = Constraint(transBlock.lbub)
-            relaxationBlock.add_component(
-                localVarName + "_bounds", bigmConstraint)
-            bigmConstraint.add('lb', obj.indicator_var*lb <= disaggregatedVar)
-            bigmConstraint.add('ub', disaggregatedVar <= obj.indicator_var*ub)
+            relaxationBlock.add_component(conName, bigmConstraint)
+            bigmConstraint.add('lb', obj.indicator_var*lb <= var)
+            bigmConstraint.add('ub', var <= obj.indicator_var*ub)
             chull['bigmConstraints'][var] = bigmConstraint
             relaxationBlockInfo['boundConstraintToSrcVar'][bigmConstraint] = var
 
@@ -507,6 +506,8 @@ class ConvexHull_Transformation(Transformation):
                                   iteritems(chull['disaggregatedVars']))
         zero_substitute_map = dict((id(v), NumericConstant(0)) for v, newV in
                                    iteritems(chull['disaggregatedVars']))
+        zero_substitute_map.update((id(v), NumericConstant(0))
+                                   for v in localVars)
 
         # Transform each component within this disjunct
         self._transform_block_components(obj, obj, infodict, var_substitute_map,
