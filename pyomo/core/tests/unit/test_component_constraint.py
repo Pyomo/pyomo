@@ -1045,6 +1045,13 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cE.slack, -5)
         self.assertEqual(cE.lslack, -5)
         self.assertEqual(cE.uslack, 5)
+        x.value = None
+        with self.assertRaises(ValueError):
+            cE.body()
+        self.assertEqual(cE.body(exception=False), None)
+        self.assertEqual(cE.slack, None)
+        self.assertEqual(cE.lslack, None)
+        self.assertEqual(cE.uslack, None)
 
         # lower finite
         cL = constraint(lb=L, body=x)
@@ -1063,6 +1070,13 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cL.slack, -1)
         self.assertEqual(cL.lslack, -1)
         self.assertEqual(cL.uslack, float('inf'))
+        x.value = None
+        with self.assertRaises(ValueError):
+            cL.body()
+        self.assertEqual(cL.body(exception=False), None)
+        self.assertEqual(cL.slack, None)
+        self.assertEqual(cL.lslack, None)
+        self.assertEqual(cL.uslack, None)
 
         # lower unbounded
         cL = constraint(lb=float('-inf'), body=x)
@@ -1081,6 +1095,13 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cL.slack, float('inf'))
         self.assertEqual(cL.lslack, float('inf'))
         self.assertEqual(cL.uslack, float('inf'))
+        x.value = None
+        with self.assertRaises(ValueError):
+            cL.body()
+        self.assertEqual(cL.body(exception=False), None)
+        self.assertEqual(cL.slack, None)
+        self.assertEqual(cL.lslack, None)
+        self.assertEqual(cL.uslack, None)
 
         # upper finite
         cU = constraint(body=x, ub=U)
@@ -1099,6 +1120,13 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cU.slack, 5)
         self.assertEqual(cU.lslack, float('inf'))
         self.assertEqual(cU.uslack, 5)
+        x.value = None
+        with self.assertRaises(ValueError):
+            cU.body()
+        self.assertEqual(cU.body(exception=False), None)
+        self.assertEqual(cU.slack, None)
+        self.assertEqual(cU.lslack, None)
+        self.assertEqual(cU.uslack, None)
 
         # upper unbounded
         cU = constraint(body=x, ub=float('inf'))
@@ -1117,6 +1145,13 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cU.slack, float('inf'))
         self.assertEqual(cU.lslack, float('inf'))
         self.assertEqual(cU.uslack, float('inf'))
+        x.value = None
+        with self.assertRaises(ValueError):
+            cU.body()
+        self.assertEqual(cU.body(exception=False), None)
+        self.assertEqual(cU.slack, None)
+        self.assertEqual(cU.lslack, None)
+        self.assertEqual(cU.uslack, None)
 
         # range finite
         cR = constraint(lb=L, body=x, ub=U)
@@ -1135,6 +1170,13 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cR.slack, -1)
         self.assertEqual(cR.lslack, -1)
         self.assertEqual(cR.uslack, 5)
+        x.value = None
+        with self.assertRaises(ValueError):
+            cR.body()
+        self.assertEqual(cR.body(exception=False), None)
+        self.assertEqual(cR.slack, None)
+        self.assertEqual(cR.lslack, None)
+        self.assertEqual(cR.uslack, None)
 
         # range unbounded (None)
         cR = constraint(body=x)
@@ -1153,6 +1195,13 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cR.slack, float('inf'))
         self.assertEqual(cR.lslack, float('inf'))
         self.assertEqual(cR.uslack, float('inf'))
+        x.value = None
+        with self.assertRaises(ValueError):
+            cR.body()
+        self.assertEqual(cR.body(exception=False), None)
+        self.assertEqual(cR.slack, None)
+        self.assertEqual(cR.lslack, None)
+        self.assertEqual(cR.uslack, None)
 
         # range unbounded
         cR = constraint(body=x, lb=float('-inf'), ub=float('inf'))
@@ -1171,6 +1220,13 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cR.slack, float('inf'))
         self.assertEqual(cR.lslack, float('inf'))
         self.assertEqual(cR.uslack, float('inf'))
+        x.value = None
+        with self.assertRaises(ValueError):
+            cR.body()
+        self.assertEqual(cR.body(exception=False), None)
+        self.assertEqual(cR.slack, None)
+        self.assertEqual(cR.lslack, None)
+        self.assertEqual(cR.uslack, None)
 
         # range finite (parameter)
         cR = constraint(body=x,
@@ -1191,6 +1247,40 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cR.slack, -1)
         self.assertEqual(cR.lslack, -1)
         self.assertEqual(cR.uslack, 5)
+        x.value = None
+        with self.assertRaises(ValueError):
+            cR.body()
+        self.assertEqual(cR.body(exception=False), None)
+        self.assertEqual(cR.slack, None)
+        self.assertEqual(cR.lslack, None)
+        self.assertEqual(cR.uslack, None)
+
+        # range unbounded (parameter)
+        cR = constraint(body=x,
+                        lb=parameter(float('-inf')),
+                        ub=parameter(float('inf')))
+        x.value = 4
+        self.assertEqual(cR.body(), 4)
+        self.assertEqual(cR.slack, float('inf'))
+        self.assertEqual(cR.lslack, float('inf'))
+        self.assertEqual(cR.uslack, float('inf'))
+        x.value = 6
+        self.assertEqual(cR.body(), 6)
+        self.assertEqual(cR.slack, float('inf'))
+        self.assertEqual(cR.lslack, float('inf'))
+        self.assertEqual(cR.uslack, float('inf'))
+        x.value = 0
+        self.assertEqual(cR.body(), 0)
+        self.assertEqual(cR.slack, float('inf'))
+        self.assertEqual(cR.lslack, float('inf'))
+        self.assertEqual(cR.uslack, float('inf'))
+        x.value = None
+        with self.assertRaises(ValueError):
+            cR.body()
+        self.assertEqual(cR.body(exception=False), None)
+        self.assertEqual(cR.slack, None)
+        self.assertEqual(cR.lslack, None)
+        self.assertEqual(cR.uslack, None)
 
     def test_expr(self):
 

@@ -394,7 +394,7 @@ def find_candidate(scenario_instance_factory,
 
             with ExtensiveFormAlgorithm(xhat_ph,
                                         options._ef_options,
-                                        prefix="ef_") as ef:
+                                        options_prefix="ef_") as ef:
 
                 ef.build_ef()
                 print("Solving the xhat extensive form.")
@@ -548,7 +548,7 @@ def run_conf(scenario_instance_factory,
             print("")
             gk_ef = ExtensiveFormAlgorithm(gk_ph,
                                            options._ef_options,
-                                           prefix="ef_")
+                                           options_prefix="ef_")
             gk_ef.build_ef()
             print("Solving the xstar extensive form.")
             # Instance preprocessing is managed within the

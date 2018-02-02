@@ -812,6 +812,11 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(x.slack, -5)
         self.assertEqual(x.lslack, -5)
         self.assertEqual(x.uslack, 5)
+        x.value = None
+        self.assertEqual(x.value, None)
+        self.assertEqual(x.slack, None)
+        self.assertEqual(x.lslack, None)
+        self.assertEqual(x.uslack, None)
 
         # lower finite
         x.bounds = L, None
@@ -830,6 +835,11 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(x.slack, -1)
         self.assertEqual(x.lslack, -1)
         self.assertEqual(x.uslack, float('inf'))
+        x.value = None
+        self.assertEqual(x.value, None)
+        self.assertEqual(x.slack, None)
+        self.assertEqual(x.lslack, None)
+        self.assertEqual(x.uslack, None)
 
         # lower unbounded
         x.bounds = float('-inf'), None
@@ -848,6 +858,11 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(x.slack, float('inf'))
         self.assertEqual(x.lslack, float('inf'))
         self.assertEqual(x.uslack, float('inf'))
+        x.value = None
+        self.assertEqual(x.value, None)
+        self.assertEqual(x.slack, None)
+        self.assertEqual(x.lslack, None)
+        self.assertEqual(x.uslack, None)
 
         # upper finite
         x.bounds = None, U
@@ -866,6 +881,11 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(x.slack, 5)
         self.assertEqual(x.lslack, float('inf'))
         self.assertEqual(x.uslack, 5)
+        x.value = None
+        self.assertEqual(x.value, None)
+        self.assertEqual(x.slack, None)
+        self.assertEqual(x.lslack, None)
+        self.assertEqual(x.uslack, None)
 
         # upper unbounded
         x.bounds = None, float('inf')
@@ -884,6 +904,11 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(x.slack, float('inf'))
         self.assertEqual(x.lslack, float('inf'))
         self.assertEqual(x.uslack, float('inf'))
+        x.value = None
+        self.assertEqual(x.value, None)
+        self.assertEqual(x.slack, None)
+        self.assertEqual(x.lslack, None)
+        self.assertEqual(x.uslack, None)
 
         # range finite
         x.bounds = L, U
@@ -902,6 +927,11 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(x.slack, -1)
         self.assertEqual(x.lslack, -1)
         self.assertEqual(x.uslack, 5)
+        x.value = None
+        self.assertEqual(x.value, None)
+        self.assertEqual(x.slack, None)
+        self.assertEqual(x.lslack, None)
+        self.assertEqual(x.uslack, None)
 
         # range unbounded (None)
         x.bounds = None, None
@@ -920,6 +950,11 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(x.slack, float('inf'))
         self.assertEqual(x.lslack, float('inf'))
         self.assertEqual(x.uslack, float('inf'))
+        x.value = None
+        self.assertEqual(x.value, None)
+        self.assertEqual(x.slack, None)
+        self.assertEqual(x.lslack, None)
+        self.assertEqual(x.uslack, None)
 
         # range unbounded
         x.bounds = float('-inf'), float('inf')
@@ -938,6 +973,11 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(x.slack, float('inf'))
         self.assertEqual(x.lslack, float('inf'))
         self.assertEqual(x.uslack, float('inf'))
+        x.value = None
+        self.assertEqual(x.value, None)
+        self.assertEqual(x.slack, None)
+        self.assertEqual(x.lslack, None)
+        self.assertEqual(x.uslack, None)
 
         # range finite (parameter)
         x.bounds = parameter(L), parameter(U)
@@ -956,7 +996,34 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(x.slack, -1)
         self.assertEqual(x.lslack, -1)
         self.assertEqual(x.uslack, 5)
+        x.value = None
+        self.assertEqual(x.value, None)
+        self.assertEqual(x.slack, None)
+        self.assertEqual(x.lslack, None)
+        self.assertEqual(x.uslack, None)
 
+        # range unbounded (parameter)
+        x.bounds = parameter(float('-inf')), parameter(float('inf'))
+        x.value = 4
+        self.assertEqual(x.value, 4)
+        self.assertEqual(x.slack, float('inf'))
+        self.assertEqual(x.lslack, float('inf'))
+        self.assertEqual(x.uslack, float('inf'))
+        x.value = 6
+        self.assertEqual(x.value, 6)
+        self.assertEqual(x.slack, float('inf'))
+        self.assertEqual(x.lslack, float('inf'))
+        self.assertEqual(x.uslack, float('inf'))
+        x.value = 0
+        self.assertEqual(x.value, 0)
+        self.assertEqual(x.slack, float('inf'))
+        self.assertEqual(x.lslack, float('inf'))
+        self.assertEqual(x.uslack, float('inf'))
+        x.value = None
+        self.assertEqual(x.value, None)
+        self.assertEqual(x.slack, None)
+        self.assertEqual(x.lslack, None)
+        self.assertEqual(x.uslack, None)
 
 class _variable_subclass(variable):
     pass
