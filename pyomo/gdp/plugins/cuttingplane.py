@@ -172,7 +172,8 @@ class CuttingPlane_Transformation(Transformation):
         # this will hold the solution to rbigm each time we solve it. We add it
         # to the transformation block so that we don't have to worry about name
         # conflicts.
-        transBlock_rChull.xstar = Param(range(len(v_map)), mutable=True)
+        transBlock_rChull.xstar = Param(range(len(v_map)), mutable=True,
+                                        default=None)
 
         obj_expr = 0
         for cuid, v, i in itervalues(v_map):
