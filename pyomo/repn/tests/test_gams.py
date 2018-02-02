@@ -15,6 +15,8 @@
 
 import pyutilib.th as unittest
 from pyomo.repn.plugins.gams_writer import replace_power
+from pyomo.environ import (ConcreteModel, Block, Var, Connector, Constraint,
+                           Objective)
 
 
 class GAMSTests(unittest.TestCase):
@@ -42,6 +44,21 @@ class GAMSTests(unittest.TestCase):
         line6 = "log( abc**2.0 )**4.5"
         self.assertTrue(replace_power(line6) == line6)
 
+    def test_gams_connector_in_active_constraint(self):
+        """Test connector in active constraint for GAMS writer."""
+        m = ConcreteModel()
+        m.b1 = Block()
+        m.b2 = Block()
+        m.b1.x = Var()
+        m.b2.x = Var()
+        m.b1.c = Connector()
+        m.b1.c.add(m.b1.x)
+        m.b2.c = Connector()
+        m.b2.c.add(m.b2.x)
+        m.c = Constraint(expr=m.b1.c == m.b2.c)
+        m.o = Objective(expr=m.b1.x)
+        with self.assertRaises(TypeError):
+            m.write('testgmsfile.gms')
 
 
 if __name__ == "__main__":

@@ -197,6 +197,15 @@ class ConvexHull_Transformation(Transformation):
         if _HACK_transform_whole_instance:
             HACK_GDP_Disjunct_Reclassifier().apply_to(instance)
 
+    def _contained_in(self, var, block):
+        "Return True if a var is in the subtree rooted at block"
+        while var is not None:
+            if var.parent_component() is block:
+                return True
+            var = var.parent_block()
+            if var is block:
+                return True
+        return False
 
     def _transformBlock(self, obj, transBlock):
         for i in sorted(iterkeys(obj)):
@@ -306,31 +315,54 @@ class ConvexHull_Transformation(Transformation):
 
         # We first go through and collect all the variables that we
         # are going to disaggregate.
-        varSet_tmp = ComponentSet()
-        varSet = []
+        varOrder_set = ComponentSet()
+        varOrder = []
+        varsByDisjunct = ComponentMap()
         for disjunct in obj.disjuncts:
+            disjunctVars = varsByDisjunct[disjunct] = ComponentSet()
             for cons in disjunct.component_data_objects(
                     Constraint,
                     active = True,
                     sort=SortComponents.deterministic,
                     descend_into=Block):
-                # we aren't going to disaggregate fixed
-                # variables. This means there is trouble if they are
-                # unfixed later...
+                # we aren't going to disaggregate fixed variables. This
+                # means there is trouble if they are unfixed later...
                 for var in identify_variables(cons.body, include_fixed=False):
                     # Note the use of a list so that we will eventually
                     # disaggregate the vars in a deterministic order
                     # (the order that we found them)
-                    if var not in varSet_tmp:
-                        varSet.append(var)
-                        varSet_tmp.add(var)
+                    disjunctVars.add(var)
+                    if var not in varOrder_set:
+                        varOrder.append(var)
+                        varOrder_set.add(var)
+
+        # We will only disaggregate variables that
+        #  1) appear in multiple disjuncts, or
+        #  2) are not contained in this disjunct, or
+        #  3) are not themselves disaggregated variables
+        varSet = []
+        localVars = ComponentMap((d,[]) for d in obj.disjuncts)
+        for var in varOrder:
+            disjuncts = [d for d in varsByDisjunct if var in varsByDisjunct[d]]
+            if len(disjuncts) > 1:
+                varSet.append(var)
+            elif self._contained_in(var, disjuncts[0]):
+                localVars[disjuncts[0]].append(var)
+            elif self._contained_in(var, transBlock):
+                # There is nothing to do here: these are already
+                # disaggregated vars that can/will be forced to 0 when
+                # their disjunct is not active.
+                pass
+            else:
+                varSet.append(var)
 
         # Now that we know who we need to disaggregate, we will do it
         # while we also transform the disjuncts.
         or_expr = 0
         for disjunct in obj.disjuncts:
             or_expr += disjunct.indicator_var
-            self._transform_disjunct(disjunct, transBlock, varSet)
+            self._transform_disjunct(disjunct, transBlock, varSet,
+                                     localVars[disjunct])
         orConstraint.add(index, (or_expr, 1))
 
         for i, var in enumerate(varSet):
@@ -351,7 +383,7 @@ class ConvexHull_Transformation(Transformation):
                 var == disaggregatedExpr)
 
 
-    def _transform_disjunct(self, obj, transBlock, varSet):
+    def _transform_disjunct(self, obj, transBlock, varSet, localVars):
         if hasattr(obj, "_gdp_transformation_info"):
             infodict = obj._gdp_transformation_info
             # If the user has something with our name that is not a dict, we
@@ -374,7 +406,7 @@ class ConvexHull_Transformation(Transformation):
                 else:
                     raise GDP_Error(
                         "The disjunct %s is deactivated, but the "
-                        "indicator_var is fixed to %. This makes no sense."
+                        "indicator_var is fixed to %s. This makes no sense."
                         % ( obj.name, value(obj.indicator_var) ))
             if not infodict.get('relaxed', False):
                 raise GDP_Error(
@@ -387,7 +419,8 @@ class ConvexHull_Transformation(Transformation):
             # we've transformed it (with CHull), so don't do it again.
             return
 
-        # add reference to original disjunct to info dict on transformation block
+        # add reference to original disjunct to info dict on
+        # transformation block
         relaxedDisjuncts = transBlock.relaxedDisjuncts
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
         relaxationBlockInfo = relaxationBlock._gdp_transformation_info = {
@@ -415,16 +448,6 @@ class ConvexHull_Transformation(Transformation):
         # add the disaggregated variables and their bigm constraints
         # to the relaxationBlock
         for var in varSet:
-            disaggregatedVar = Var(within=Reals)
-            # naming conflicts are possible here since this is a bunch
-            # of variables from different blocks coming together, so we
-            # get a unique name
-            disaggregatedVarName = unique_component_name(obj, var.local_name)
-            relaxationBlock.add_component(
-                disaggregatedVarName, disaggregatedVar)
-            chull['disaggregatedVars'][var] = disaggregatedVar
-            relaxationBlockInfo['srcVars'][disaggregatedVar] = var
-
             lb = var.lb
             ub = var.ub
             if lb is None or ub is None:
@@ -432,6 +455,20 @@ class ConvexHull_Transformation(Transformation):
                                 "bounded in order to use the chull "
                                 "transformation! Missing bound for %s."
                                 % (var.name))
+
+            disaggregatedVar = Var(within=Reals,
+                                   bounds=(min(0, lb), max(0, ub)),
+                                   initialize=var.value)
+            # naming conflicts are possible here since this is a bunch
+            # of variables from different blocks coming together, so we
+            # get a unique name
+            disaggregatedVarName = unique_component_name(
+                relaxationBlock, var.local_name)
+            relaxationBlock.add_component(
+                disaggregatedVarName, disaggregatedVar)
+            chull['disaggregatedVars'][var] = disaggregatedVar
+            relaxationBlockInfo['srcVars'][disaggregatedVar] = var
+
             bigmConstraint = Constraint(transBlock.lbub)
             relaxationBlock.add_component(
                 disaggregatedVarName + "_bounds", bigmConstraint)
@@ -440,10 +477,37 @@ class ConvexHull_Transformation(Transformation):
             chull['bigmConstraints'][var] = bigmConstraint
             relaxationBlockInfo['boundConstraintToSrcVar'][bigmConstraint] = var
 
+        for var in localVars:
+            lb = var.lb
+            ub = var.ub
+            if lb is None or ub is None:
+                raise GDP_Error("Variables that appear in disjuncts must be "
+                                "bounded in order to use the chull "
+                                "transformation! Missing bound for %s."
+                                % (var.name))
+            if value(lb) > 0:
+                var.setlb(0)
+            if value(ub) < 0:
+                var.setub(0)
+
+            # naming conflicts are possible here since this is a bunch
+            # of variables from different blocks coming together, so we
+            # get a unique name
+            conName = unique_component_name(
+                relaxationBlock, var.local_name+"_bounds")
+            bigmConstraint = Constraint(transBlock.lbub)
+            relaxationBlock.add_component(conName, bigmConstraint)
+            bigmConstraint.add('lb', obj.indicator_var*lb <= var)
+            bigmConstraint.add('ub', var <= obj.indicator_var*ub)
+            chull['bigmConstraints'][var] = bigmConstraint
+            relaxationBlockInfo['boundConstraintToSrcVar'][bigmConstraint] = var
+
         var_substitute_map = dict((id(v), newV) for v, newV in
                                   iteritems(chull['disaggregatedVars']))
         zero_substitute_map = dict((id(v), NumericConstant(0)) for v, newV in
                                    iteritems(chull['disaggregatedVars']))
+        zero_substitute_map.update((id(v), NumericConstant(0))
+                                   for v in localVars)
 
         # Transform each component within this disjunct
         self._transform_block_components(obj, obj, infodict, var_substitute_map,
@@ -556,7 +620,13 @@ class ConvexHull_Transformation(Transformation):
         name = unique_component_name(relaxationBlock, obj.name)
 
         if obj.is_indexed():
-            newConstraint = Constraint(obj.index_set(), transBlock.lbub)
+            try:
+                newConstraint = Constraint(obj.index_set(), transBlock.lbub)
+            except:
+                # The original constraint may have been indexed by a
+                # non-concrete set (like an Any).  We will give up on
+                # strict index verification and just blindly proceed.
+                newConstraint = Constraint(Any)
         else:
             newConstraint = Constraint(transBlock.lbub)
         relaxationBlock.add_component(name, newConstraint)

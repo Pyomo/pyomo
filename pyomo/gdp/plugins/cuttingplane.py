@@ -15,7 +15,10 @@ Implements a general cutting plane-based reformulation for linear and
 convex GDPs.
 """
 from __future__ import division
-from collections import OrderedDict
+try:
+    from collections import OrderedDict
+except:
+    from ordereddict import OrderedDict
 
 from pyomo.util.modeling import unique_component_name
 from pyomo.core import *
@@ -26,6 +29,7 @@ from pyomo.core.base import Transformation
 
 from six import iterkeys, itervalues
 
+import math
 import logging
 logger = logging.getLogger('pyomo.gdp.cuttingplane')
 
@@ -149,8 +153,9 @@ class CuttingPlane_Transformation(Transformation):
             # decide whether or not to keep going: check absolute difference
             # close to 0, relative difference further from 0.
             obj_diff = prev_obj - rBigm_objVal
-            improving = abs(obj_diff) > epsilon if abs(obj_diff) < 1 else \
-                        abs(obj_diff/prev_obj) > epsilon
+            improving = math.isinf(obj_diff) or \
+                        ( abs(obj_diff) > epsilon if abs(obj_diff) < 1 else
+                          abs(obj_diff/prev_obj) > epsilon )
 
             prev_obj = rBigm_objVal
             iteration += 1
@@ -172,8 +177,8 @@ class CuttingPlane_Transformation(Transformation):
         # this will hold the solution to rbigm each time we solve it. We add it
         # to the transformation block so that we don't have to worry about name
         # conflicts.
-        transBlock_rChull.xstar = Param(range(len(v_map)), mutable=True,
-                                        default=None)
+        transBlock_rChull.xstar = Param(
+            range(len(v_map)), mutable=True, default=None )
 
         obj_expr = 0
         for cuid, v, i in itervalues(v_map):

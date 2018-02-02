@@ -112,12 +112,12 @@ class TwoTermDisj(unittest.TestCase):
             self.assertIsInstance(x.domain, RealSet)
             self.assertIsInstance(y.domain, RealSet)
             # they don't have bounds
-            self.assertIsNone(w.lb)
-            self.assertIsNone(w.ub)
-            self.assertIsNone(x.lb)
-            self.assertIsNone(x.ub)
-            self.assertIsNone(y.lb)
-            self.assertIsNone(y.ub)
+            self.assertEqual(w.lb, 0)
+            self.assertEqual(w.ub, 7)
+            self.assertEqual(x.lb, 0)
+            self.assertEqual(x.ub, 8)
+            self.assertEqual(y.lb, -10)
+            self.assertEqual(y.ub, 0)
 
     def check_furman_et_al_denominator(self, expr, ind_var):
         self.assertEqual(expr._const, EPS)
@@ -268,7 +268,7 @@ class TwoTermDisj(unittest.TestCase):
             self.check_bound_constraints(disjBlock[i].x_bounds, disjBlock[i].x,
                                          m.d[i].indicator_var, 1, 8)
             self.check_bound_constraints(disjBlock[i].y_bounds, disjBlock[i].y,
-                                         m.d[i].indicator_var, 3, 10)
+                                         m.d[i].indicator_var, -10, -3)
 
     def test_xor_constraint(self):
         m = models.makeTwoTermDisj_Nonlinear()
@@ -465,6 +465,39 @@ class TwoTermDisj(unittest.TestCase):
 
     def test_indexed_constraints_in_disjunct(self):
         m = models.makeThreeTermDisj_IndexedConstraints()
+
+        TransformationFactory('gdp.chull').apply_to(m)
+        transBlock = m._pyomo_gdp_chull_relaxation
+
+        # 2 blocks: the original Disjunct and the transformation block
+        self.assertEqual(
+            len(list(m.component_objects(Block, descend_into=False))), 2)
+        self.assertEqual(
+            len(list(m.component_objects(Disjunct))), 0)
+
+        # Each relaxed disjunct should have 3 vars, but i "d[i].c"
+        # Constraints
+        for i in [1,2,3]:
+            relaxed = transBlock.relaxedDisjuncts[i-1]
+            self.assertEqual(len(list(relaxed.component_objects(Var))), 3)
+            self.assertEqual(len(list(relaxed.component_data_objects(Var))), 3)
+            self.assertEqual(
+                len(list(relaxed.component_objects(Constraint))), 4)
+            self.assertEqual(
+                len(list(relaxed.component_data_objects(Constraint))), 3*2+i)
+            self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)
+
+    def test_virtual_indexed_constraints_in_disjunct(self):
+        m = ConcreteModel()
+        m.I = [1,2,3]
+        m.x = Var(m.I, bounds=(0,10))
+        def d_rule(d,j):
+            m = d.model()
+            d.c = Constraint(Any)
+            for k in range(j):
+                d.c[k+1] = m.x[k+1] >= k+1
+        m.d = Disjunct(m.I, rule=d_rule)
+        m.disjunction = Disjunction(expr=[m.d[i] for i in m.I])
 
         TransformationFactory('gdp.chull').apply_to(m)
         transBlock = m._pyomo_gdp_chull_relaxation

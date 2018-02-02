@@ -201,13 +201,11 @@ if has_numpy and has_scipy:
             return variable_order
 
         def _generate_model(self):
-            variable_order = self._generate_base_model()
+            x = self._generate_base_model()
             model = self.model
             A, lb, ub, eq_index = self._get_dense_data()
             model.Amatrix = pmo.matrix_constraint(
-                A, lb=lb, ub=ub,
-                variable_order=variable_order,
-                sparse=False)
+                A, lb=lb, ub=ub, x=x, sparse=False)
             for i in eq_index:
                 assert model.Amatrix[i].lb == \
                     model.Amatrix[i].ub
@@ -219,13 +217,11 @@ if has_numpy and has_scipy:
             LP_compiled_dense_kernel):
 
         def _generate_model(self):
-            variable_order = self._generate_base_model()
+            x = self._generate_base_model()
             model = self.model
             A, lb, ub, eq_index = self._get_dense_data()
             model.Amatrix = pmo.matrix_constraint(
-                A, lb=lb, ub=ub,
-                variable_order=variable_order,
-                sparse=True)
+                A, lb=lb, ub=ub, x=x, sparse=True)
             for i in eq_index:
                 assert model.Amatrix[i].lb == \
                     model.Amatrix[i].ub

@@ -67,9 +67,11 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
         for disjunct_component in disjunct_generator:
             for disjunct in itervalues(disjunct_component._data):
                 if disjunct.active:
-                    logger.error("""Reclassifying an active Disjunct as a Block.
-This is generally as error as it indicates that the model was not
-completely relaxed before applying the gdp.reclassify transformation""")
+                    logger.error("""
+                    Reclassifying active Disjunct "%s" as a Block.  This
+                    is generally an error as it indicates that the model
+                    was not completely relaxed before applying the
+                    gdp.reclassify transformation""" % (disjunct.name,))
 
                 # Deactivate all constraints.  Note that we only need to
                 # descent into blocks: we will catch disjuncts in the outer
