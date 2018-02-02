@@ -341,13 +341,13 @@ class ConvexHull_Transformation(Transformation):
         #  2) are not contained in this disjunct, or
         #  3) are not themselves disaggregated variables
         varSet = []
-        localVars = []
+        localVars = ComponentMap((d,[]) for d in obj.disjuncts)
         for var in varOrder:
             disjuncts = [d for d in varsByDisjunct if var in varsByDisjunct[d]]
             if len(disjuncts) > 1:
                 varSet.append(var)
             elif self._contained_in(var, disjuncts[0]):
-                localVars.append((disjuncts[0], var))
+                localVars[disjuncts[0]].append(var)
             elif self._contained_in(var, transBlock):
                 # There is nothing to do here: these are already
                 # disaggregated vars that can/will be forced to 0 when
@@ -361,7 +361,8 @@ class ConvexHull_Transformation(Transformation):
         or_expr = 0
         for disjunct in obj.disjuncts:
             or_expr += disjunct.indicator_var
-            self._transform_disjunct(disjunct, transBlock, varSet, localVars)
+            self._transform_disjunct(disjunct, transBlock, varSet,
+                                     localVars[disjunct])
         orConstraint.add(index, (or_expr, 1))
 
         for i, var in enumerate(varSet):
@@ -471,6 +472,32 @@ class ConvexHull_Transformation(Transformation):
             bigmConstraint = Constraint(transBlock.lbub)
             relaxationBlock.add_component(
                 disaggregatedVarName + "_bounds", bigmConstraint)
+            bigmConstraint.add('lb', obj.indicator_var*lb <= disaggregatedVar)
+            bigmConstraint.add('ub', disaggregatedVar <= obj.indicator_var*ub)
+            chull['bigmConstraints'][var] = bigmConstraint
+            relaxationBlockInfo['boundConstraintToSrcVar'][bigmConstraint] = var
+
+        for var in localVars:
+            lb = var.lb
+            ub = var.ub
+            if lb is None or ub is None:
+                raise GDP_Error("Variables that appear in disjuncts must be "
+                                "bounded in order to use the chull "
+                                "transformation! Missing bound for %s."
+                                % (var.name))
+            if valeu(lb) > 0:
+                var.setlb(0)
+            if value(ub) < 0:
+                var.setub(0)
+
+            # naming conflicts are possible here since this is a bunch
+            # of variables from different blocks coming together, so we
+            # get a unique name
+            localVarName = unique_component_name(
+                relaxationBlock, var.local_name)
+            bigmConstraint = Constraint(transBlock.lbub)
+            relaxationBlock.add_component(
+                localVarName + "_bounds", bigmConstraint)
             bigmConstraint.add('lb', obj.indicator_var*lb <= disaggregatedVar)
             bigmConstraint.add('ub', disaggregatedVar <= obj.indicator_var*ub)
             chull['bigmConstraints'][var] = bigmConstraint
