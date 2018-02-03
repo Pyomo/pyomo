@@ -5123,7 +5123,22 @@ class TestMultiArgumentExpressions(unittest.TestCase):
             OUT.write("\n")
         display(m.con, ostream=OUT)
 
-        reference="""1.0  <=  v[1.0]  <=  1.0
+        if EXPR._using_chained_inequality:
+            reference="""v[1.0]  ==  1.0
+4.0  <=  v[2.0]  <=  16.0
+9.0  <=  v[3.0]  <=  81.0
+16.0  <=  v[4.0]  <=  256.0
+25.0  <=  v[5.0]  <=  625.0
+con : Size=5
+    Key : Lower : Body : Upper
+    1.0 :   1.0 : None :   1.0
+    2.0 :   4.0 : None :  16.0
+    3.0 :   9.0 : None :  81.0
+    4.0 :  16.0 : None : 256.0
+    5.0 :  25.0 : None : 625.0
+"""
+        else:
+            reference="""1.0  <=  v[1.0]  <=  1.0
 4.0  <=  v[2.0]  <=  16.0
 9.0  <=  v[3.0]  <=  81.0
 16.0  <=  v[4.0]  <=  256.0
