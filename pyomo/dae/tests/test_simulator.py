@@ -50,6 +50,10 @@ except ImportError:
     casadi_available = False
 
 try:
+    import platform
+    if platform.python_implementation() == "PyPy":
+        # The scipy is importable into PyPy, but ODE integrators don't work. (2/18)
+        raise ImportError
     import scipy 
     scipy_available = True
 except ImportError:

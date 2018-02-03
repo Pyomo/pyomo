@@ -34,6 +34,10 @@ except ImportError:
 # Check integrator availability
 scipy_available = True
 try:
+    import platform
+    if platform.python_implementation() == "PyPy":
+        # The scipy is importable into PyPy, but ODE integrators don't work. (2/18)
+        raise ImportError
     import scipy.integrate as scipy
 except ImportError:
     scipy_available = False
