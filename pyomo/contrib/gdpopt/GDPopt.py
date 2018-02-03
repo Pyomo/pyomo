@@ -1212,7 +1212,7 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
                 logger.info('Adding GBD feasibility cut.')
                 self._add_gbd_cut(solve_data, nlp_feasible=False)
             # Add an integer cut to exclude this discrete option
-            self._add_int_cut()
+            self._add_int_cut(solve_data)
         elif subprob_terminate_cond is tc.maxIterations:
             # TODO try something else? Reinitialize with different initial
             # value?
