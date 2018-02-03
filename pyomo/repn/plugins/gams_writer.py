@@ -313,6 +313,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         linear = True
         linear_degree = set([0,1])
 
+        model_ctypes = model.collect_ctypes(active=True)
         if False:
             #
             # WEH - Disabling this check.  For now, we're allowing
@@ -323,7 +324,6 @@ class ProblemWriter_gams(AbstractProblemWriter):
             valid_ctypes = set([
                 Block, Constraint, Expression, Objective, Param,
                 Set, RangeSet, Var, Suffix, Connector ])
-            model_ctypes = model.collect_ctypes(active=True)
             if not model_ctypes.issubset(valid_ctypes):
                 invalids = [t.__name__ for t in (model_ctypes - valid_ctypes)]
                 raise RuntimeError(
@@ -352,7 +352,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
 
             # HACK: Temporary check for Connectors in active constriants.
             if has_Connectors:
-                _check_for_connectors(con)
+                raise RuntimeError("Cannot handle connectors right now.")
+                #_check_for_connectors(con)
 
             con_body = as_numeric(con.body)
             if skip_trivial_constraints and con_body.is_fixed():
