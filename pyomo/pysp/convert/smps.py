@@ -476,7 +476,7 @@ def _convert_external_setup_without_cleanup(
     objective_object = scenario._instance_objective
     assert objective_object is not None
     objective_block = objective_object.parent_block()
-    objective_repn = canonical_repn_cache[id(objective_block)][objective_object]
+    objective_repn = repn_cache[id(objective_block)][objective_object]
 
     #
     # Create column (variable) ordering maps for LP/MPS files
@@ -543,7 +543,7 @@ def _convert_external_setup_without_cleanup(
             lines = []
             for id_ in sorted(rootnode._variable_ids):
                 var = st_symbol_map.bySymbol[id_]
-                if not var.is_expression():
+                if not var.is_expression_type():
                     lp_label = symbol_map.byObject[id(var)]
                     lines.append("%s %s\n" % (lp_label, id_))
             f.writelines(lines)
@@ -1828,7 +1828,7 @@ def convert_embedded(output_directory,
                 #       into it right now. It also seems like this is an edge case
                 #       that is hard to reproduce because _ConstraintData moves
                 #       this stuff out of the body when it is build (so it won't
-                #       show up in the body canonical repn)
+                #       show up in the body repn)
                 for param in sp._collect_mutable_parameters(constraint_repn.constant).values():
                     if param in sp.stochastic_data:
                         raise ValueError(
