@@ -5124,7 +5124,7 @@ class TestMultiArgumentExpressions(unittest.TestCase):
         display(m.con, ostream=OUT)
 
         if EXPR._using_chained_inequality:
-            reference="""v[1.0]  ==  1.0
+            reference="""1.0  <=  v[1.0]  <=  1.0
 4.0  <=  v[2.0]  <=  16.0
 9.0  <=  v[3.0]  <=  81.0
 16.0  <=  v[4.0]  <=  256.0
