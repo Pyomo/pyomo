@@ -3,11 +3,11 @@ import textwrap
 
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.suffix import Suffix
+from pyomo.core.expr.numvalue import value
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.repn.canonical_repn import generate_canonical_repn
+from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.util.plugin import alias
 
 
@@ -29,11 +29,11 @@ def _build_equality_set(m):
         # Check to make sure the constraint is of form v1 - v2 == 0
         if (value(constr.lower) == 0 and value(constr.upper) == 0 and
                 constr.body.polynomial_degree() == 1):
-            repn = generate_canonical_repn(constr.body)
+            repn = generate_standard_repn(constr.body)
             # only take the variables with nonzero coefficients
-            vars_ = [v for i, v in enumerate(repn.variables) if repn.linear[i]]
+            vars_ = [v for i, v in enumerate(repn.linear_vars) if repn.linear_coefs[i]]
             if (len(vars_) == 2 and
-                    sorted(l for l in repn.linear if l) == [-1, 1]):
+                    sorted(l for l in repn.linear_coefs if l) == [-1, 1]):
                 # this is an a == b constraint.
                 v1 = vars_[0]
                 v2 = vars_[1]
@@ -54,11 +54,11 @@ def _detect_fixed_variables(m):
                                            active=True,
                                            descend_into=True):
         if constr.equality and constr.body.polynomial_degree() == 1:
-            repn = generate_canonical_repn(constr.body)
-            if len(repn.variables) == 1 and repn.linear[0]:
-                var = repn.variables[0]
-                coef = float(repn.linear[0])
-                const = repn.constant if repn.constant is not None else 0
+            repn = generate_standard_repn(constr.body)
+            if len(repn.linear_vars) == 1 and repn.linear_coefs[0]:
+                var = repn.linear_vars[0]
+                coef = float(repn.linear_coefs[0])
+                const = repn.constant
                 var_val = (value(constr.lower) - value(const)) / coef
                 var.fix(var_val)
                 new_fixed_vars.add(var)
