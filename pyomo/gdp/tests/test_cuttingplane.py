@@ -68,8 +68,8 @@ class TwoTermDisj(unittest.TestCase):
         # the cuts are on it
         cuts = transBlock.cuts
         self.assertIsInstance(cuts, Constraint)
-        # this one's tiny, so we've just added one cut
-        self.assertEqual(len(cuts), 1)
+        # this one adds 4 cuts
+        self.assertEqual(len(cuts), 4)
 
     @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
     def test_cut_constraint(self):

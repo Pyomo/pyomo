@@ -29,6 +29,7 @@ from pyomo.core.base import Transformation
 
 from six import iterkeys, itervalues
 
+import math
 import logging
 logger = logging.getLogger('pyomo.gdp.cuttingplane')
 
@@ -152,8 +153,9 @@ class CuttingPlane_Transformation(Transformation):
             # decide whether or not to keep going: check absolute difference
             # close to 0, relative difference further from 0.
             obj_diff = prev_obj - rBigm_objVal
-            improving = abs(obj_diff) > epsilon if abs(obj_diff) < 1 else \
-                        abs(obj_diff/prev_obj) > epsilon
+            improving = math.isinf(obj_diff) or \
+                        ( abs(obj_diff) > epsilon if abs(obj_diff) < 1 else
+                          abs(obj_diff/prev_obj) > epsilon )
 
             prev_obj = rBigm_objVal
             iteration += 1
