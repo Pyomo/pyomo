@@ -63,7 +63,7 @@ class Test_matrix_constraint(unittest.TestCase):
         ctuple = matrix_constraint(A,
                                    lb=1,
                                    ub=2,
-                                   variable_order=vlist)
+                                   x=vlist)
         pyomo.core.kernel.pprint(ctuple)
         b = block()
         b.c = ctuple
@@ -87,7 +87,7 @@ class Test_matrix_constraint(unittest.TestCase):
         vlist = create_variable_list(3)
         ctuple = matrix_constraint(
             numpy.array([[0,0,0],[0,0,0]]),
-            variable_order=vlist)
+            x=vlist)
         self.assertTrue((ctuple.lb == -numpy.inf).all())
         self.assertTrue((ctuple.ub == numpy.inf).all())
         self.assertTrue((ctuple.equality == False).all())
@@ -112,7 +112,7 @@ class Test_matrix_constraint(unittest.TestCase):
     def test_init(self):
         vlist = create_variable_list(3, value=1.0)
         ctuple = matrix_constraint(numpy.zeros((3,3)),
-                                   variable_order=vlist)
+                                   x=vlist)
         self.assertEqual(len(ctuple), 3)
         self.assertTrue(ctuple.parent is None)
         self.assertEqual(ctuple.ctype, Constraint)
@@ -135,7 +135,7 @@ class Test_matrix_constraint(unittest.TestCase):
         ctuple = matrix_constraint(A,
                                    lb=0,
                                    ub=2,
-                                   variable_order=vlist)
+                                   x=vlist)
         self.assertEqual(len(ctuple), 2)
         self.assertTrue((ctuple.lb == 0).all())
         self.assertTrue((ctuple.ub == 2).all())
@@ -150,7 +150,7 @@ class Test_matrix_constraint(unittest.TestCase):
 
         ctuple = matrix_constraint(A,
                                    rhs=1,
-                                   variable_order=vlist)
+                                   x=vlist)
         self.assertEqual(len(ctuple), 2)
         self.assertTrue((ctuple.lb == 1).all())
         self.assertTrue((ctuple.ub == 1).all())
@@ -169,13 +169,13 @@ class Test_matrix_constraint(unittest.TestCase):
             matrix_constraint(A,
                               lb=0,
                               rhs=0,
-                              variable_order=vlist)
+                              x=vlist)
         # can't use both ub and rhs
         with self.assertRaises(ValueError):
             matrix_constraint(A,
                               ub=0,
                               rhs=0,
-                              variable_order=vlist)
+                              x=vlist)
 
     def test_type(self):
         A = numpy.ones((2,3))
@@ -238,34 +238,34 @@ class Test_matrix_constraint(unittest.TestCase):
         for i, c in enumerate(ctuple):
             self.assertEqual(c.index, i)
 
-    def test_variable_order(self):
+    def test_x(self):
         A = numpy.ones((4,5))
         ctuple = matrix_constraint(A)
-        self.assertEqual(ctuple.variable_order, None)
+        self.assertEqual(ctuple.x, None)
         for c in ctuple:
             with self.assertRaises(ValueError):
                 list(c.terms)
         vlist = create_variable_list(5)
-        ctuple.variable_order = vlist
-        self.assertEqual(len(ctuple.variable_order), 5)
-        self.assertEqual(len(ctuple.variable_order), len(vlist))
-        self.assertIsNot(ctuple.variable_order, len(vlist))
-        for i, v in enumerate(ctuple.variable_order):
+        ctuple.x = vlist
+        self.assertEqual(len(ctuple.x), 5)
+        self.assertEqual(len(ctuple.x), len(vlist))
+        self.assertIsNot(ctuple.x, len(vlist))
+        for i, v in enumerate(ctuple.x):
             self.assertIs(v, vlist[i])
 
-        ctuple = matrix_constraint(A, variable_order=vlist)
-        self.assertEqual(len(ctuple.variable_order), 5)
-        self.assertEqual(len(ctuple.variable_order), len(vlist))
-        self.assertIsNot(ctuple.variable_order, len(vlist))
-        for i, v in enumerate(ctuple.variable_order):
+        ctuple = matrix_constraint(A, x=vlist)
+        self.assertEqual(len(ctuple.x), 5)
+        self.assertEqual(len(ctuple.x), len(vlist))
+        self.assertIsNot(ctuple.x, len(vlist))
+        for i, v in enumerate(ctuple.x):
             self.assertIs(v, vlist[i])
 
         vlist = create_variable_list(4)
         with self.assertRaises(ValueError):
-            ctuple = matrix_constraint(A, variable_order=vlist)
+            ctuple = matrix_constraint(A, x=vlist)
         ctuple = matrix_constraint(A)
         with self.assertRaises(ValueError):
-            ctuple.variable_order = vlist
+            ctuple.x = vlist
 
     def test_bad_shape(self):
         A = numpy.array([[1,2,3],[1,2,3]])
@@ -716,14 +716,14 @@ class Test_matrix_constraint(unittest.TestCase):
         vlist[1].value = 0
         vlist[2].value = 3
         A = numpy.ones((3,3))
-        ctuple = matrix_constraint(A, variable_order=vlist)
+        ctuple = matrix_constraint(A, x=vlist)
         self.assertTrue((ctuple() == 4).all())
         self.assertEqual(ctuple[0](), 4)
         self.assertEqual(ctuple[1](), 4)
         self.assertEqual(ctuple[2](), 4)
         A[:,0] = 0
         A[:,2] = 2
-        ctuple = matrix_constraint(A, variable_order=vlist)
+        ctuple = matrix_constraint(A, x=vlist)
         vlist[2].value = 4
         self.assertTrue((ctuple() == 8).all())
         self.assertEqual(ctuple[0](), 8)
@@ -731,7 +731,7 @@ class Test_matrix_constraint(unittest.TestCase):
         self.assertEqual(ctuple[2](), 8)
 
         A = numpy.random.rand(4,3)
-        ctuple = matrix_constraint(A, variable_order=vlist)
+        ctuple = matrix_constraint(A, x=vlist)
         vlist[1].value = 2
         cvals = numpy.array([ctuple[0](),
                              ctuple[1](),
@@ -752,7 +752,7 @@ class Test_matrix_constraint(unittest.TestCase):
                 c(exception=True)
             self.assertIs(c(exception=False), None)
 
-        ctuple.variable_order = None
+        ctuple.x = None
         with self.assertRaises(ValueError):
             ctuple()
         with self.assertRaises(ValueError):
@@ -773,14 +773,14 @@ class Test_matrix_constraint(unittest.TestCase):
         vlist[1].value = 0
         vlist[2].value = 3
         A = numpy.ones((3,3))
-        ctuple = matrix_constraint(A, variable_order=vlist)
+        ctuple = matrix_constraint(A, x=vlist)
         self.assertTrue((ctuple() == 4).all())
         self.assertEqual(ctuple[0](), 4)
         self.assertEqual(ctuple[1](), 4)
         self.assertEqual(ctuple[2](), 4)
         A[:,0] = 0
         A[:,2] = 2
-        ctuple = matrix_constraint(A, variable_order=vlist)
+        ctuple = matrix_constraint(A, x=vlist)
         vlist[2].value = 4
         self.assertTrue((ctuple() == 8).all())
         self.assertEqual(ctuple[0](), 8)
@@ -788,7 +788,7 @@ class Test_matrix_constraint(unittest.TestCase):
         self.assertEqual(ctuple[2](), 8)
 
         A = numpy.random.rand(4,3)
-        ctuple = matrix_constraint(A, variable_order=vlist)
+        ctuple = matrix_constraint(A, x=vlist)
         vlist[1].value = 2
         cvals = numpy.array([ctuple[0](),
                              ctuple[1](),
@@ -802,7 +802,7 @@ class Test_matrix_constraint(unittest.TestCase):
         U = 5
         A = numpy.array([[1]])
 
-        cE = matrix_constraint(A, variable_order=[x],
+        cE = matrix_constraint(A, x=[x],
                                rhs=L)
         x.value = 4
         self.assertEqual(cE[0].body(), 4)
@@ -841,7 +841,7 @@ class Test_matrix_constraint(unittest.TestCase):
         self.assertEqual(cE.lslack, None)
         self.assertEqual(cE.uslack, None)
 
-        cE = matrix_constraint(A, variable_order=[x],
+        cE = matrix_constraint(A, x=[x],
                                rhs=U)
         x.value = 4
         self.assertEqual(cE[0].body(), 4)
@@ -868,7 +868,7 @@ class Test_matrix_constraint(unittest.TestCase):
         self.assertEqual(cE.lslack[0], -5)
         self.assertEqual(cE.uslack[0], 5)
 
-        cL = matrix_constraint(A, variable_order=[x],
+        cL = matrix_constraint(A, x=[x],
                                lb=L)
         x.value = 4
         self.assertEqual(cL[0].body(), 4)
@@ -895,7 +895,7 @@ class Test_matrix_constraint(unittest.TestCase):
         self.assertEqual(cL.lslack[0], -1)
         self.assertEqual(cL.uslack[0], float('inf'))
 
-        cL = matrix_constraint(A, variable_order=[x],
+        cL = matrix_constraint(A, x=[x],
                                lb=float('-inf'))
         x.value = 4
         self.assertEqual(cL[0].body(), 4)
@@ -922,7 +922,7 @@ class Test_matrix_constraint(unittest.TestCase):
         self.assertEqual(cL.lslack[0], float('inf'))
         self.assertEqual(cL.uslack[0], float('inf'))
 
-        cU = matrix_constraint(A, variable_order=[x],
+        cU = matrix_constraint(A, x=[x],
                                ub=U)
         x.value = 4
         self.assertEqual(cU[0].body(), 4)
@@ -949,7 +949,7 @@ class Test_matrix_constraint(unittest.TestCase):
         self.assertEqual(cU.lslack[0], float('inf'))
         self.assertEqual(cU.uslack[0], 5)
 
-        cU = matrix_constraint(A, variable_order=[x],
+        cU = matrix_constraint(A, x=[x],
                                ub=float('inf'))
         x.value = 4
         self.assertEqual(cU[0].body(), 4)
@@ -976,7 +976,7 @@ class Test_matrix_constraint(unittest.TestCase):
         self.assertEqual(cU.lslack[0], float('inf'))
         self.assertEqual(cU.uslack[0], float('inf'))
 
-        cR = matrix_constraint(A, variable_order=[x],
+        cR = matrix_constraint(A, x=[x],
                                lb=L, ub=U)
         x.value = 4
         self.assertEqual(cR[0].body(), 4)
@@ -1003,7 +1003,7 @@ class Test_matrix_constraint(unittest.TestCase):
         self.assertEqual(cR.lslack[0], -1)
         self.assertEqual(cR.uslack[0], 5)
 
-        cR = matrix_constraint(A, variable_order=[x])
+        cR = matrix_constraint(A, x=[x])
         x.value = 4
         self.assertEqual(cR[0].body(), 4)
         self.assertEqual(cR[0].slack, float('inf'))
@@ -1029,7 +1029,7 @@ class Test_matrix_constraint(unittest.TestCase):
         self.assertEqual(cR.lslack[0], float('inf'))
         self.assertEqual(cR.uslack[0], float('inf'))
 
-        cR = matrix_constraint(A, variable_order=[x],
+        cR = matrix_constraint(A, x=[x],
                                lb=float('-inf'),
                                ub=float('inf'))
         x.value = 4
@@ -1060,7 +1060,7 @@ class Test_matrix_constraint(unittest.TestCase):
     def test_canonical_form_sparse(self):
         A = numpy.array([[0, 2]])
         vlist = create_variable_list(2)
-        ctuple = matrix_constraint(A, variable_order=vlist)
+        ctuple = matrix_constraint(A, x=vlist)
         self.assertEqual(ctuple.sparse, True)
         terms = list(ctuple[0].terms)
         vs,cs = zip(*terms)
@@ -1087,7 +1087,7 @@ class Test_matrix_constraint(unittest.TestCase):
     def test_canonical_form_dense(self):
         A = numpy.array([[0, 2]])
         vlist = create_variable_list(2)
-        ctuple = matrix_constraint(A, variable_order=vlist,
+        ctuple = matrix_constraint(A, x=vlist,
                                    sparse=False)
         self.assertEqual(ctuple.sparse, False)
         terms = list(ctuple[0].terms)

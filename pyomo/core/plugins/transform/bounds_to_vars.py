@@ -83,8 +83,10 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
                     # within its implied bounds, as the constraint we are
                     # deactivating is not an invalid constraint, but rather we
                     # are moving its implied bound directly onto the variable.
-                    if var.has_lb() and var.value < var.lb:
+                    if (var.has_lb() and var.value is not None
+                            and var.value < var.lb):
                         var.set_value(var.lb)
-                    if var.has_ub() and var.value > var.ub:
+                    if (var.has_ub() and var.value is not None
+                            and var.value > var.ub):
                         var.set_value(var.ub)
 

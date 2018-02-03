@@ -22,7 +22,7 @@ from pyomo.core.expr.numvalue import is_fixed, value, as_numeric, native_types, 
 from pyomo.core.base import (
     SymbolMap, AlphaNumericTextLabeler, NumericLabeler,
     Block, Constraint, Expression, Objective, Var, Set, RangeSet, Param,
-    minimize, Suffix, SortComponents)
+    minimize, Suffix, SortComponents, Connector)
 
 from pyomo.core.base.component import ComponentData
 from pyomo.opt import ProblemFormat
@@ -322,15 +322,20 @@ class ProblemWriter_gams(AbstractProblemWriter):
             # how to deal with, plus Suffix if solving
             valid_ctypes = set([
                 Block, Constraint, Expression, Objective, Param,
-                Set, RangeSet, Var, Suffix ])
+                Set, RangeSet, Var, Suffix, Connector ])
             model_ctypes = model.collect_ctypes(active=True)
-            print(model_ctypes)
             if not model_ctypes.issubset(valid_ctypes):
                 invalids = [t.__name__ for t in (model_ctypes - valid_ctypes)]
                 raise RuntimeError(
                     "Unallowable component(s) %s.\nThe GAMS writer cannot "
                     "export models with this component type" %
                     ", ".join(invalids))
+
+        # HACK: Temporary check for Connectors in active constriants.
+        # This should be removed after the writer is moved to an
+        # explicit GAMS-specific expression walker for generating the
+        # constraint strings.
+        has_Connectors = Connector in model_ctypes
 
         # Walk through the model and generate the constraint definition
         # for all active constraints.  Any Vars / Expressions that are
@@ -344,6 +349,10 @@ class ProblemWriter_gams(AbstractProblemWriter):
                (not con.has_ub()):
                 assert not con.equality
                 continue # non-binding, so skip
+
+            # HACK: Temporary check for Connectors in active constriants.
+            if has_Connectors:
+                _check_for_connectors(con)
 
             con_body = as_numeric(con.body)
             if skip_trivial_constraints and con_body.is_fixed():
