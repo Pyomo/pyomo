@@ -22,22 +22,17 @@ Questions: Please make a post at StackOverflow and/or contact Qi Chen
 
 """
 import logging
-import sys
 from copy import deepcopy
 from math import copysign, fabs
-from bunch import Bunch
 
 from six import iteritems
 
 import pyomo.util.plugin
 from pyomo.core.base import expr as EXPR
 from pyomo.core.base import (Block, Constraint, ConstraintList, Expression,
-                             Objective, RangeSet, Set, Suffix,
-                             TransformationFactory, Var, maximize, minimize,
-                             value)
+                             Objective, Set, Suffix, TransformationFactory,
+                             Var, maximize, minimize, value)
 from pyomo.core.base.block import generate_cuid_names
-from pyomo.core.base.expr_common import clone_expression
-from pyomo.core.base.numvalue import NumericConstant
 from pyomo.core.base.symbolic import differentiate
 from pyomo.core.kernel import (ComponentMap, ComponentSet, NonNegativeReals,
                                Reals)
@@ -46,7 +41,6 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory, SolverStatus
 from pyomo.opt.base import IOptSolver
 from pyomo.opt.results import ProblemSense, SolverResults
-from pyomo.repn.canonical_repn import generate_canonical_repn
 
 logger = logging.getLogger('pyomo.contrib.gdpopt')
 
@@ -109,7 +103,7 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
                 the nonlinear subproblem
 
         """
-        solve_data = Bunch()
+        solve_data = GDPoptSolveData()
         solve_data.bound_tolerance = kwds.pop('tol', 1E-6)
         solve_data.iteration_limit = kwds.pop('iterlim', 30)
         solve_data.decomposition_strategy = kwds.pop('strategy', 'LOA')
@@ -961,8 +955,9 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
         getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
 
         # Solve
-        results = solve_data.mip_solver.solve(m, load_solutions=False,
-                                        **solve_data.mip_solver_kwargs)
+        results = solve_data.mip_solver.solve(
+            m, load_solutions=False,
+            **solve_data.mip_solver_kwargs)
         master_terminate_cond = results.solver.termination_condition
         if master_terminate_cond is tc.infeasibleOrUnbounded:
             # Linear solvers will sometimes tell me that the problem is
@@ -971,8 +966,9 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
             old_options = deepcopy(solve_data.mip_solver.options)
             # This solver option is specific to Gurobi.
             solve_data.mip_solver.options['DualReductions'] = 0
-            results = solve_data.mip_solver.solve(m, load_solutions=False,
-                                            **solve_data.mip_solver_kwargs)
+            results = solve_data.mip_solver.solve(
+                m, load_solutions=False,
+                **solve_data.mip_solver_kwargs)
             master_terminate_cond = results.solver.termination_condition
             solve_data.mip_solver.options.update(old_options)
 
@@ -1144,8 +1140,9 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
         solve_data.subproblem_presolve(m, solve_data)
 
         # Solve the NLP
-        results = solve_data.nlp_solver.solve(m, load_solutions=False,
-                                        **solve_data.nlp_solver_kwargs)
+        results = solve_data.nlp_solver.solve(
+            m, load_solutions=False,
+            **solve_data.nlp_solver_kwargs)
         solve_data.solve_results = results
 
         solnFeasible = False
@@ -1462,3 +1459,8 @@ class _DoNothing(object):
         def _do_nothing(*args, **kwargs):
             pass
         return _do_nothing
+
+
+class GDPoptSolveData(object):
+    """Data container to hold solve-instance data."""
+    pass
