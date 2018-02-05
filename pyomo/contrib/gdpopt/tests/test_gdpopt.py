@@ -18,8 +18,8 @@ class TestGDPopt(unittest.TestCase):
     """Tests for the GDPopt solver plugin."""
 
     @unittest.skipIf(not subsolvers_available,
-                     "Required subsolvers {} are not available"
-                     .format(required_solvers))
+                     "Required subsolvers %s are not available"
+                     % (required_solvers,))
     def test_LOA(self):
         """Test logic-based outer approximation."""
         with SolverFactory('gdpopt') as opt:

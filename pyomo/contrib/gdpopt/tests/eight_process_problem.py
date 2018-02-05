@@ -162,8 +162,7 @@ class EightProcessFlowsheet(ConcreteModel):
 
         """Profit (objective) function definition"""
         m.profit = Objective(expr=sum(
-            getattr(m, 'use_unit{}'
-                    .format(unit)).indicator_var * CF[unit]
+            getattr(m, 'use_unit%s' % (unit,)).indicator_var * CF[unit]
             for unit in m.units) +
             sum(m.flow[stream] * CV[stream]
                 for stream in m.streams) + CONSTANT,
