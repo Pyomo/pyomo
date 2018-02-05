@@ -13,7 +13,7 @@ import pyutilib.th as unittest
 from pyomo.environ import *
 from pyomo.core.base import expr_common, expr as EXPR
 from pyomo.gdp import *
-import testing_models as models
+import pyomo.gdp.tests.models as models
 
 import random
 from six import iteritems, iterkeys
