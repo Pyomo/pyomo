@@ -264,9 +264,10 @@ def makeNestedDisjunctions():
         expr=[m.simpledisjunct, m.disjunct[0], m.disjunct[1]])
     return m
 
-def makeNestedDisjuncts():
+def makeNestedDisjunctions_FlatDisjuncts():
     m = ConcreteModel()
     m.x = Var(bounds=(0,2))
+    m.obj = Objective(expr=m.x)
     m.d1 = Disjunct()
     m.d1.c = Constraint(expr=m.x >= 1)
     m.d2 = Disjunct()
@@ -279,9 +280,10 @@ def makeNestedDisjuncts():
     m.d1.disj = Disjunction(expr=[m.d3, m.d4])
     return m
 
-def makeNestedDisjunctAsContainer():
+def makeNestedDisjunctions_NestedDisjuncts():
     m = ConcreteModel()
     m.x = Var(bounds=(0, 2))
+    m.obj = Objective(expr=m.x)
     m.d1 = Disjunct()
     m.d1.c = Constraint(expr=m.x >= 1)
     m.d2 = Disjunct()
@@ -291,7 +293,7 @@ def makeNestedDisjunctAsContainer():
     m.d1.d4 = Disjunct()
     m.d1.d4.c = Constraint(expr=m.x >= 1.3)
     m.disj = Disjunction(expr=[m.d1, m.d2])
-    m.disj2 = Disjunction(expr=[m.d1.d3, m.d1.d4])
+    m.d1.disj2 = Disjunction(expr=[m.d1.d3, m.d1.d4])
     return m
 
 def makeDisjunctInMultipleDisjunctions():

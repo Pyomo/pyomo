@@ -15,6 +15,10 @@ from pyomo.core.base import expr_common, expr as EXPR
 from pyomo.gdp import *
 import pyomo.gdp.tests.models as models
 
+import pyomo.opt
+linear_solvers = pyomo.opt.check_available_solvers(
+    'glpk','cbc','gurobi','cplex')
+
 import random
 from six import iteritems, iterkeys
 
@@ -590,25 +594,78 @@ class DisaggregatedVarNamingConflict(unittest.TestCase):
 
 class NestedDisjunction(unittest.TestCase):
 
-    def test_deactivated_disjunct_relaxes_nested_disjunction(self):
-        m = models.makeNestedDisjuncts()
+    def test_deactivated_disjunct_leaves_nested_disjuncts_active(self):
+        m = models.makeNestedDisjunctions_FlatDisjuncts()
         m.d1.deactivate()
-
-        TransformationFactory('gdp.chull').apply_to(m)
+        # Specifying 'targets' prevents the HACK_GDP_Disjunct_Reclassifier
+        # transformation of Disjuncts to Blocks
+        TransformationFactory('gdp.chull').apply_to(m, targets=[m])
 
         self.assertFalse(m.d1.active)
         self.assertTrue(m.d1.indicator_var.fixed)
-        self.assertFalse(m.d1.indicator_var.value)
+        self.assertEqual(m.d1.indicator_var.value, 0)
 
-    def test_deactivation_container_still_active(self):
-        m = models.makeNestedDisjunctAsContainer()
+        self.assertFalse(m.d2.active)
+        self.assertFalse(m.d2.indicator_var.fixed)
+
+        self.assertTrue(m.d3.active)
+        self.assertFalse(m.d3.indicator_var.fixed)
+
+        self.assertTrue(m.d4.active)
+        self.assertFalse(m.d4.indicator_var.fixed)
+
+        m = models.makeNestedDisjunctions_NestedDisjuncts()
         m.d1.deactivate()
+        # Specifying 'targets' prevents the HACK_GDP_Disjunct_Reclassifier
+        # transformation of Disjuncts to Blocks
+        TransformationFactory('gdp.chull').apply_to(m, targets=[m])
+
+        self.assertFalse(m.d1.active)
+        self.assertTrue(m.d1.indicator_var.fixed)
+        self.assertEqual(m.d1.indicator_var.value, 0)
+
+        self.assertFalse(m.d2.active)
+        self.assertFalse(m.d2.indicator_var.fixed)
+
+        self.assertTrue(m.d1.d3.active)
+        self.assertFalse(m.d1.d3.indicator_var.fixed)
+
+        self.assertTrue(m.d1.d4.active)
+        self.assertFalse(m.d1.d4.indicator_var.fixed)
+
+    @unittest.skipIf(not linear_solvers, "No linear solver available")
+    def test_relaxation_feasibility(self):
+        m = models.makeNestedDisjunctions_FlatDisjuncts()
         TransformationFactory('gdp.chull').apply_to(m)
 
-        self.assertFalse(m.d1.indicator_var.value)
-        
-        self.assertFalse(m.d1.d3.indicator_var.fixed)
-        self.assertFalse(m.d1.d4.indicator_var.fixed)
+        solver = SolverFactory(linear_solvers[0])
+
+        cases = [
+            (1,1,1,1,None),
+            (0,0,0,0,None),
+            (1,0,0,0,None),
+            (0,1,0,0,1.1),
+            (0,0,1,0,None),
+            (0,0,0,1,None),
+            (1,1,0,0,None),
+            (1,0,1,0,1.2),
+            (1,0,0,1,1.3),
+            (1,0,1,1,None),
+            ]
+        for case in cases:
+            m.d1.indicator_var.fix(case[0])
+            m.d2.indicator_var.fix(case[1])
+            m.d3.indicator_var.fix(case[2])
+            m.d4.indicator_var.fix(case[3])
+            results = solver.solve(m)
+            print case, results.solver
+            if case[4] is None:
+                self.assertEqual(results.solver.termination_condition,
+                                 pyomo.opt.TerminationCondition.infeasible)
+            else:
+                self.assertEqual(results.solver.termination_condition,
+                                 pyomo.opt.TerminationCondition.optimal)
+                self.assertEqual(value(m.obj), case[4])
 
 # TODO (based on coverage):
 
