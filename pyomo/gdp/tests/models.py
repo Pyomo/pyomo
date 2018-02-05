@@ -20,7 +20,7 @@ def makeTwoTermDisj_Nonlinear():
     m = ConcreteModel()
     m.w = Var(bounds=(2,7))
     m.x = Var(bounds=(1, 8))
-    m.y = Var(bounds=(3, 10))
+    m.y = Var(bounds=(-10, -3))
     def d_rule(disjunct, flag):
         m = disjunct.model()
         if flag:
