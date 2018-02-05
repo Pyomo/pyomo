@@ -107,7 +107,7 @@ class GDP_Disjunct_Fixer(Transformation):
 
         # Process the disjuncts associatd with the disjunction that have not
         # already been transformed.
-        for disj in disjunction.disjuncts - self._transformedDisjuncts:
+        for disj in ComponentSet(disjunction.disjuncts) - self._transformedDisjuncts:
             self._transformDisjunctData(disj)
         # Update the set of transformed disjuncts with those from this
         # disjunction
