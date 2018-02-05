@@ -1,4 +1,4 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 """Decomposition solver for Generalized Disjunctive Programming (GDP) problems.
 
 The GDPopt (Generalized Disjunctive Programming optimizer) solver applies a
@@ -1248,7 +1248,7 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
             if constr.equality:
                 if fabs(value(constr.lower) -
                         value(constr.body)) >= constr_tol:
-                    logger.info('%s: %s ≠ %s' % (
+                    logger.info('%s: %s != %s' % (
                         constr.name, value(constr.body), value(constr.lower)))
                     return False
             if constr.lower is not None:
