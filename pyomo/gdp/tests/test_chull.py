@@ -13,6 +13,11 @@ import pyutilib.th as unittest
 from pyomo.environ import *
 from pyomo.core.base import expr_common, expr as EXPR
 from pyomo.gdp import *
+import pyomo.gdp.tests.models as models
+
+import pyomo.opt
+linear_solvers = pyomo.opt.check_available_solvers(
+    'glpk','cbc','gurobi','cplex')
 
 import random
 from six import iteritems, iterkeys
@@ -32,27 +37,8 @@ class TwoTermDisj(unittest.TestCase):
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
 
-    @staticmethod
-    def makeModel():
-        m = ConcreteModel()
-        m.w = Var(bounds=(2,7))
-        m.x = Var(bounds=(1, 8))
-        m.y = Var(bounds=(-10, -3))
-        def d_rule(disjunct, flag):
-            m = disjunct.model()
-            if flag:
-                disjunct.c1 = Constraint(expr=m.x >= 2)
-                disjunct.c2 = Constraint(expr=m.w == 3)
-            else:
-                disjunct.c = Constraint(expr=m.x + m.y**2 <= 14)
-        m.d = Disjunct([0,1], rule=d_rule)
-        def disj_rule(m):
-            return [m.d[0], m.d[1]]
-        m.disjunction = Disjunction(rule=disj_rule)
-        return m
-
     def test_transformation_block(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_Nonlinear()
         TransformationFactory('gdp.chull').apply_to(m)
 
         transBlock = m._pyomo_gdp_chull_relaxation
@@ -66,7 +52,7 @@ class TwoTermDisj(unittest.TestCase):
         self.assertEqual(len(disjBlock), 2)
 
     def test_transformation_block_name_collision(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_Nonlinear()
         # add block with the name we are about to try to use
         m._pyomo_gdp_chull_relaxation = Block(Any)
         TransformationFactory('gdp.chull').apply_to(m)
@@ -87,7 +73,7 @@ class TwoTermDisj(unittest.TestCase):
         self.assertEqual(len(m._pyomo_gdp_chull_relaxation), 0)
 
     def test_info_dict_name_collision(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_Nonlinear()
         # we never have a way to know if the dictionary we made was ours. But we
         # should yell if there is a non-dictionary component of the same name.
         m._gdp_transformation_info = Block()
@@ -100,7 +86,7 @@ class TwoTermDisj(unittest.TestCase):
             m)
 
     def test_indicator_vars_still_active(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_Nonlinear()
         TransformationFactory('gdp.chull').apply_to(m)
 
         self.assertIsInstance(m.d[0].indicator_var, Var)
@@ -111,7 +97,7 @@ class TwoTermDisj(unittest.TestCase):
         self.assertTrue(m.d[1].indicator_var.is_binary())
 
     def test_disaggregated_vars(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_Nonlinear()
         TransformationFactory('gdp.chull').apply_to(m)
 
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
@@ -145,7 +131,7 @@ class TwoTermDisj(unittest.TestCase):
         self.assertIs(expr._args[0], ind_var)
 
     def test_transformed_constraint_nonlinear(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_Nonlinear()
         TransformationFactory('gdp.chull').apply_to(m)
 
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
@@ -209,7 +195,7 @@ class TwoTermDisj(unittest.TestCase):
         self.assertIs(thirdterm, m.d[0].indicator_var)
 
     def test_transformed_constraints_linear(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_Nonlinear()
         TransformationFactory('gdp.chull').apply_to(m)
 
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
@@ -274,7 +260,7 @@ class TwoTermDisj(unittest.TestCase):
         self.assertIs(varub.body._args[1], indvar)
 
     def test_disaggregatedVar_bounds(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_Nonlinear()
         TransformationFactory('gdp.chull').apply_to(m)
 
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
@@ -289,7 +275,7 @@ class TwoTermDisj(unittest.TestCase):
                                          m.d[i].indicator_var, -10, -3)
 
     def test_xor_constraint(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_Nonlinear()
         TransformationFactory('gdp.chull').apply_to(m)
 
         xorC = m._gdp_chull_relaxation_disjunction_xor
@@ -307,7 +293,7 @@ class TwoTermDisj(unittest.TestCase):
         self.assertEqual(xorC.body._coef[1], 1)
 
     def test_error_for_or(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_Nonlinear()
         m.disjunction.xor = False
 
         self.assertRaisesRegexp(
@@ -330,7 +316,7 @@ class TwoTermDisj(unittest.TestCase):
         self.assertIs(cons.body._args[2], disvar2)
 
     def test_disaggregation_constraint(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_Nonlinear()
         TransformationFactory('gdp.chull').apply_to(m)
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
 
@@ -346,7 +332,7 @@ class TwoTermDisj(unittest.TestCase):
                                              disjBlock[1].y)
 
     def test_original_disjuncts_deactivated(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_Nonlinear()
         TransformationFactory('gdp.chull').apply_to(m, targets=(m,))
 
         self.assertFalse(m.d.active)
@@ -357,7 +343,7 @@ class TwoTermDisj(unittest.TestCase):
         self.assertFalse(m.d[1].c2.active)
 
     def test_transformed_disjunct_mappings(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_Nonlinear()
         TransformationFactory('gdp.chull').apply_to(m)
 
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
@@ -387,7 +373,7 @@ class TwoTermDisj(unittest.TestCase):
             self.assertIsInstance(relaxedConstraints, ComponentMap)
 
     def test_transformed_constraint_mappings(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_Nonlinear()
         TransformationFactory('gdp.chull').apply_to(m)
 
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
@@ -423,7 +409,7 @@ class TwoTermDisj(unittest.TestCase):
         self.assertIs(transConsdict[orig2], trans2)
 
     def test_disaggregatedVar_mappings(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_Nonlinear()
         TransformationFactory('gdp.chull').apply_to(m)
 
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
@@ -444,7 +430,7 @@ class TwoTermDisj(unittest.TestCase):
                 self.assertIs(disVars[orig], disagg)
 
     def test_bigMConstraint_mappings(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_Nonlinear()
         TransformationFactory('gdp.chull').apply_to(m)
 
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
@@ -469,7 +455,7 @@ class TwoTermDisj(unittest.TestCase):
         pass
 
     def test_unbounded_var_error(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_Nonlinear()
         # no bounds
         m.w.setlb(None)
         m.w.setub(None)
@@ -482,17 +468,7 @@ class TwoTermDisj(unittest.TestCase):
             m)
 
     def test_indexed_constraints_in_disjunct(self):
-        m = ConcreteModel()
-        m.I = [1,2,3]
-        m.x = Var(m.I, bounds=(0,10))
-        def c_rule(b,i):
-            m = b.model()
-            return m.x[i] >= i
-        def d_rule(d,j):
-            m = d.model()
-            d.c = Constraint(m.I[:j], rule=c_rule)
-        m.d = Disjunct(m.I, rule=d_rule)
-        m.disjunction = Disjunction(expr=[m.d[i] for i in m.I])
+        m = models.makeThreeTermDisj_IndexedConstraints()
 
         TransformationFactory('gdp.chull').apply_to(m)
         transBlock = m._pyomo_gdp_chull_relaxation
@@ -550,26 +526,9 @@ class TwoTermDisj(unittest.TestCase):
 
 
 class IndexedDisjunction(unittest.TestCase):
-    @staticmethod
-    def makeModel():
-        m = ConcreteModel()
-        m.A = Set(initialize=[1,2,3])
-        m.B = Set(initialize=['a','b'])
-        m.x = Var(m.A, bounds=(-10, 10))
-        def disjunct_rule(d, i, k):
-            m = d.model()
-            if k == 'a':
-                d.cons_a = Constraint(expr=m.x[i] >= 5)
-            if k == 'b':
-                d.cons_b = Constraint(expr=m.x[i] <= 0)
-        m.disjunct = Disjunct(m.A, m.B, rule=disjunct_rule)
-        def disj_rule(m, i):
-            return [m.disjunct[i, k] for k in m.B]
-        m.disjunction = Disjunction(m.A, rule=disj_rule)
-        return m
 
     def test_disaggregation_constraints(self):
-        m = self.makeModel()
+        m = models.makeTwoTermIndexedDisjunction()
         TransformationFactory('gdp.chull').apply_to(m)
 
         disaggregationCons = m._gdp_chull_relaxation_disjunction_disaggregation
@@ -633,9 +592,83 @@ class DisaggregatedVarNamingConflict(unittest.TestCase):
         # don't know how to keep them unique at the moment. When I do, I also
         # need to test that the indices are actually what we expect.
 
-# TODO
-# class NestedDisjunction(unittest.TestCase):
-#     @staticmethod
-#     def makeModel():
+class NestedDisjunction(unittest.TestCase):
 
+    def test_deactivated_disjunct_leaves_nested_disjuncts_active(self):
+        m = models.makeNestedDisjunctions_FlatDisjuncts()
+        m.d1.deactivate()
+        # Specifying 'targets' prevents the HACK_GDP_Disjunct_Reclassifier
+        # transformation of Disjuncts to Blocks
+        TransformationFactory('gdp.chull').apply_to(m, targets=[m])
 
+        self.assertFalse(m.d1.active)
+        self.assertTrue(m.d1.indicator_var.fixed)
+        self.assertEqual(m.d1.indicator_var.value, 0)
+
+        self.assertFalse(m.d2.active)
+        self.assertFalse(m.d2.indicator_var.fixed)
+
+        self.assertTrue(m.d3.active)
+        self.assertFalse(m.d3.indicator_var.fixed)
+
+        self.assertTrue(m.d4.active)
+        self.assertFalse(m.d4.indicator_var.fixed)
+
+        m = models.makeNestedDisjunctions_NestedDisjuncts()
+        m.d1.deactivate()
+        # Specifying 'targets' prevents the HACK_GDP_Disjunct_Reclassifier
+        # transformation of Disjuncts to Blocks
+        TransformationFactory('gdp.chull').apply_to(m, targets=[m])
+
+        self.assertFalse(m.d1.active)
+        self.assertTrue(m.d1.indicator_var.fixed)
+        self.assertEqual(m.d1.indicator_var.value, 0)
+
+        self.assertFalse(m.d2.active)
+        self.assertFalse(m.d2.indicator_var.fixed)
+
+        self.assertTrue(m.d1.d3.active)
+        self.assertFalse(m.d1.d3.indicator_var.fixed)
+
+        self.assertTrue(m.d1.d4.active)
+        self.assertFalse(m.d1.d4.indicator_var.fixed)
+
+    @unittest.skipIf(not linear_solvers, "No linear solver available")
+    def test_relaxation_feasibility(self):
+        m = models.makeNestedDisjunctions_FlatDisjuncts()
+        TransformationFactory('gdp.chull').apply_to(m)
+
+        solver = SolverFactory(linear_solvers[0])
+
+        cases = [
+            (1,1,1,1,None),
+            (0,0,0,0,None),
+            (1,0,0,0,None),
+            (0,1,0,0,1.1),
+            (0,0,1,0,None),
+            (0,0,0,1,None),
+            (1,1,0,0,None),
+            (1,0,1,0,1.2),
+            (1,0,0,1,1.3),
+            (1,0,1,1,None),
+            ]
+        for case in cases:
+            m.d1.indicator_var.fix(case[0])
+            m.d2.indicator_var.fix(case[1])
+            m.d3.indicator_var.fix(case[2])
+            m.d4.indicator_var.fix(case[3])
+            results = solver.solve(m)
+            print case, results.solver
+            if case[4] is None:
+                self.assertEqual(results.solver.termination_condition,
+                                 pyomo.opt.TerminationCondition.infeasible)
+            else:
+                self.assertEqual(results.solver.termination_condition,
+                                 pyomo.opt.TerminationCondition.optimal)
+                self.assertEqual(value(m.obj), case[4])
+
+# TODO (based on coverage):
+
+# test targets of all flavors
+# test container deactivation
+# test something with multiple indices

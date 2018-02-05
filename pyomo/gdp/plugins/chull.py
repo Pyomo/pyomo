@@ -368,6 +368,13 @@ class ConvexHull_Transformation(Transformation):
         for i, var in enumerate(varSet):
             disaggregatedExpr = 0
             for disjunct in obj.disjuncts:
+                if 'chull' not in disjunct._gdp_transformation_info:
+                    if not disjunct.indicator_var.is_fixed() \
+                            or value(disjunct.indicator_var) != 0:
+                        raise RuntimeError(
+                            "GDP chull: disjunct was not relaxed, but "
+                            "does not appear to be correctly deactivated.")
+                    continue
                 disaggregatedVar = disjunct._gdp_transformation_info['chull'][
                     'disaggregatedVars'][var]
                 disaggregatedExpr += disaggregatedVar
