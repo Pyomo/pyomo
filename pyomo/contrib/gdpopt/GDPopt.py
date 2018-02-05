@@ -1248,29 +1248,29 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
             if constr.equality:
                 if fabs(value(constr.lower) -
                         value(constr.body)) >= constr_tol:
-                    logger.info('{}: {} ≠ {}'.format(
+                    logger.info('%s: %s ≠ %s' % (
                         constr.name, value(constr.body), value(constr.lower)))
                     return False
             if constr.lower is not None:
                 if value(constr.lower) - value(constr.body) >= constr_tol:
-                    logger.info('{}: {} < {}'.format(
+                    logger.info('%s: %s < %s' % (
                         constr.name, value(constr.body), value(constr.lower)))
                     return False
             if constr.upper is not None:
                 if value(constr.body) - value(constr.upper) >= constr_tol:
-                    logger.info('{}: {} > {}'.format(
+                    logger.info('%s: %s > %s' % (
                         constr.name, value(constr.body), value(constr.upper)))
                     return False
         for var in m.component_data_objects(
                 ctype=Var, descend_into=(Block, Disjunct)):
             if var.lb is not None:
                 if value(var.lb) - value(var) >= var_tol:
-                    logger.info('{}: {} < {}'.format(
+                    logger.info('%s: %s < %s' % (
                         var.name, value(var), value(var.lb)))
                     return False
             if var.ub is not None:
                 if value(var) - value(var.ub) >= var_tol:
-                    logger.info('{}: {} > {}'.format(
+                    logger.info('%s: %s > %s' % (
                         var.name, value(var), value(var.ub)))
                     return False
         return True
@@ -1365,7 +1365,7 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
         # check to make sure that binary variables are all 0 or 1
         for v in binary_vars:
             if fabs(v.value - 1) > int_tol and fabs(value(v)) > int_tol:
-                raise ValueError('Binary {} = {} is not 0 or 1'.format(
+                raise ValueError('Binary %s = %s is not 0 or 1' % (
                     v.name, value(v)))
 
         if not binary_vars:
