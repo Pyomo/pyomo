@@ -10,8 +10,10 @@
 
 
 import pyutilib.th as unittest
+from pyutilib.misc import setup_redirect, reset_redirect
 from pyomo.environ import *
-import sys, os, shutil
+from six import StringIO
+import contextlib, sys, os, shutil
 from tempfile import mkdtemp
 
 
@@ -187,22 +189,82 @@ class GAMSLogfileTests(unittest.TestCase):
     def test_no_tee_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
             opt.solve(self.m, tee=False)
-            self.assertFalse(os.path.exists(self.logfile))
+        self._check_logfile(exists=False)
 
     def test_tee_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
             opt.solve(self.m, tee=True)
-            self.assertFalse(os.path.exists(self.logfile))
+        self._check_logfile(exists=False)
 
     def test_logfile_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
             opt.solve(self.m, logfile=self.logfile)
-            self.assertTrue(os.path.exists(self.logfile))
+        self._check_logfile(exists=True)
 
     def test_tee_and_logfile_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
             opt.solve(self.m, logfile=self.logfile, tee=True)
-            self.assertTrue(os.path.exists(self.logfile))
+        self._check_logfile(exists=True)
+
+    def test_no_tee_py(self):
+        with SolverFactory("gams", solver_io="python") as opt:
+            with redirected_stdout() as output:
+                opt.solve(self.m, tee=False)
+        self.assertFalse(output.getvalue())
+        self._check_logfile(exists=False)
+
+    def test_tee_py(self):
+        with SolverFactory("gams", solver_io="python") as opt:
+            with redirected_stdout() as output:
+                opt.solve(self.m, tee=True)
+        self.assertTrue(output.getvalue())
+        self._check_logfile(exists=False)
+
+    def test_logfile_py(self):
+        with SolverFactory("gams", solver_io="python") as opt:
+            with redirected_stdout() as output:
+                opt.solve(self.m, logfile=self.logfile)
+        self._check_logfile(exists=True)
+        self.assertFalse(output.getvalue())
+
+    def test_tee_and_logfile_py(self):
+        with SolverFactory("gams", solver_io="python") as opt:
+            with redirected_stdout() as output:
+                opt.solve(self.m, logfile=self.logfile, tee=True)
+        self.assertTrue(output.getvalue())
+        self._check_logfile(exists=True, expected=output.getvalue())
+
+    def _check_logfile(self, exists=True, expected=None):
+        """Check for logfiles existence and contents.
+
+        exists=True:
+            Whether to check if the logfile exists or doesn't exist.
+        expected=None:
+            Optionally check that the logfiles contents is equal to this value.
+
+        """
+        if not exists:
+            self.assertFalse(os.path.exists(self.logfile))
+            return
+
+        self.assertTrue(os.path.exists(self.logfile))
+        with open(self.logfile) as f:
+            logfile_contents = f.read()
+        self.assertTrue(logfile_contents)
+        if expected:
+            self.assertEqual(logfile_contents, expected)
+
+
+
+@contextlib.contextmanager
+def redirected_stdout():
+    """Temporarily redirect stdout into a string buffer."""
+    output = StringIO()
+    try:
+        setup_redirect(output)
+        yield output
+    finally:
+        reset_redirect()
 
 
 if __name__ == "__main__":
