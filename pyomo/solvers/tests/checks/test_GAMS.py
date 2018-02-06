@@ -184,12 +184,12 @@ class GAMSLogfileTests(unittest.TestCase):
         """Clean up temporary directory after tests are over."""
         shutil.rmtree(self.tmpdir)
 
-    def test_tee_gms(self):
+    def test_no_tee_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
             opt.solve(self.m, tee=False)
             self.assertFalse(os.path.exists(self.logfile))
 
-    def test_no_tee_gms(self):
+    def test_tee_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
             opt.solve(self.m, tee=True)
             self.assertFalse(os.path.exists(self.logfile))
