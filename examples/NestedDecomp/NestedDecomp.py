@@ -1,4 +1,6 @@
 __author__ = "Cristiana L. Lara"
+# Nested Decomposition description at:
+# http://www.optimization-online.org/DB_FILE/2017/08/6162.pdf
 
 import time
 start_time = time.time()
@@ -50,21 +52,21 @@ for iter_ in m.iter:
 #        m.ngo_th_par.display()
 
         #Store feasible results
-        for (i,r,ss,s) in m.i_r*m.ss*m.s:
-            m.P_result[i,r,t,ss,s,iter_] = m.Bl[t].P[i,r,ss,s].value
-        for (r,ss,s) in m.r*m.ss*m.s:
-            m.cu_result[r,t,ss,s,iter_] =  m.Bl[t].cu[r,ss,s].value
+        for (i,r,d,s) in m.i_r*m.d*m.s:
+            m.P_result[i,r,t,d,s,iter_] = m.Bl[t].P[i,r,d,s].value
+        for (r,d,s) in m.r*m.d*m.s:
+            m.cu_result[r,t,d,s,iter_] =  m.Bl[t].cu[r,d,s].value
         m.RES_def_result[t,iter_] = m.Bl[t].RES_def.value
-        for (r,r_,ss,s) in m.r*m.r*m.ss*m.s:
+        for (r,r_,d,s) in m.r*m.r*m.d*m.s:
             if r_ != r:
-                m.P_flow_result[r,r_,t,ss,s,iter_] = m.Bl[t].P_flow[r,r_,ss,s].value
-        for (th,r,ss,s) in m.i_r*m.ss*m.s:
+                m.P_flow_result[r,r_,t,d,s,iter_] = m.Bl[t].P_flow[r,r_,d,s].value
+        for (th,r,d,s) in m.i_r*m.d*m.s:
                 if th in m.th:
-                    m.Q_spin_result[th,r,t,ss,s,iter_] = m.Bl[t].Q_spin[th,r,ss,s].value
-                    m.Q_Qstart_result[th,r,t,ss,s,iter_] = m.Bl[t].Q_Qstart[th,r,ss,s].value
-                    m.u_result[th,r,t,ss,s,iter_] = m.Bl[t].u[th,r,ss,s].value
-                    m.su_result[th,r,t,ss,s,iter_] = m.Bl[t].su[th,r,ss,s].value
-                    m.sd_result[th,r,t,ss,s,iter_] = m.Bl[t].sd[th,r,ss,s].value
+                    m.Q_spin_result[th,r,t,d,s,iter_] = m.Bl[t].Q_spin[th,r,d,s].value
+                    m.Q_Qstart_result[th,r,t,d,s,iter_] = m.Bl[t].Q_Qstart[th,r,d,s].value
+                    m.u_result[th,r,t,d,s,iter_] = m.Bl[t].u[th,r,d,s].value
+                    m.su_result[th,r,t,d,s,iter_] = m.Bl[t].su[th,r,d,s].value
+                    m.sd_result[th,r,t,d,s,iter_] = m.Bl[t].sd[th,r,d,s].value
         for (rn,r) in m.i_r:
             if rn in m.rn:
                 m.ngo_rn_result[rn,r,t,iter_] = m.Bl[t].ngo_rn[rn,r].value

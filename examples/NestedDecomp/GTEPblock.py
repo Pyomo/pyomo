@@ -2,6 +2,7 @@
 # IDAES project
 # author: Cristiana L. Lara
 # date: 10/09/2017
+# Model available at http://www.optimization-online.org/DB_FILE/2017/08/6162.pdf
 
 __author__ = "Cristiana L. Lara"
 
@@ -57,9 +58,9 @@ m.tnew = Set(within=m.new,
  	    initialize=['nuc-st-new', 'coal-igcc-new','coal-igcc-ccs-new',
 		'ng-cc-new','ng-cc-ccs-new', 'ng-ct-new'], ordered=True)
 
-m.t = RangeSet(30)
+m.t = RangeSet(5)
 
-m.ss = Set(initialize=['spring', 'summer', 'fall', 'winter'], ordered=True)
+m.d = Set(initialize=['spring', 'summer', 'fall', 'winter'], ordered=True)
 m.s = Set(initialize=['1:00','2:00','3:00','4:00','5:00','6:00','7:00','8:00',
                       '9:00','10:00','11:00','12:00','13:00','14:00','15:00',
                       '16:00','17:00','18:00','19:00','20:00','21:00','22:00',
@@ -72,10 +73,10 @@ m.k = Set(within=m.iter, dimen=1, ordered=True)
 
 ####################Import parameters###########################################
 
-m.L = Param(m.r,m.t,m.ss,m.s, default=0, initialize=L)
-m.n_ss = Param(m.ss, default=0, initialize=n_ss)
+m.L = Param(m.r,m.t,m.d,m.s, default=0, initialize=L)
+m.n_d = Param(m.d, default=0, initialize=n_ss)
 m.L_max = Param(m.t, default=0, initialize=L_max)
-m.cf = Param(m.i, m.r, m.t, m.ss, m.s, default=0, initialize=cf)
+m.cf = Param(m.i, m.r, m.t, m.d, m.s, default=0, initialize=cf)
 m.Qg_np = Param(m.i, m.r, default=0, initialize=Qg_np)
 m.Ng_old = Param(m.i, m.r, default=0, initialize=Ng_old)
 m.Ng_max = Param(m.i, m.r, default=0, initialize=Ng_max)
@@ -135,13 +136,13 @@ m.cost_t=Param(m.t,m.iter, default=0, initialize=0, mutable=True)
 ################ Block of Equations per time period ############################
 def planning_block_rule(b,t):
 	# Declaration of bounds
-	def bound_P(_b,i,r,ss,s):
+	def bound_P(_b,i,r,d,s):
 		if i in m.old:
 			return (0, m.Qg_np[i,r]*m.Ng_old[i,r])
 		else:
 			return (0, m.Qg_np[i,r]*m.Ng_max[i,r])
 
-	def bound_Pflow(_b,r,r_,ss,s):
+	def bound_Pflow(_b,r,r_,d,s):
 	    if r_ != r:
 	        return (0, t_up[r,r_])
 	    else:
@@ -195,19 +196,19 @@ def planning_block_rule(b,t):
 		else:
 			return (0, m.Ng_max[th,r])
 
-	def bound_UC(_b,th,r,ss,s):
+	def bound_UC(_b,th,r,d,s):
 		if th in m.told:
 			return (0, m.Ng_old[th,r])
 		else:
 			return (0, m.Ng_max[th,r])
 
 	# Declaration of Local Variables
-	b.P = Var(m.i, m.r, m.ss, m.s, within=NonNegativeReals, bounds=bound_P)
-	b.cu = Var(m.r, m.ss, m.s, within=NonNegativeReals)
+	b.P = Var(m.i, m.r, m.d, m.s, within=NonNegativeReals, bounds=bound_P)
+	b.cu = Var(m.r, m.d, m.s, within=NonNegativeReals)
 	b.RES_def = Var(within=NonNegativeReals)
-	b.P_flow = Var(m.r, m.r, m.ss, m.s, within=NonNegativeReals)
-	b.Q_spin = Var(m.th, m.r, m.ss, m.s, within=NonNegativeReals)
-	b.Q_Qstart = Var(m.th, m.r, m.ss, m.s, within=NonNegativeReals)
+	b.P_flow = Var(m.r, m.r, m.d, m.s, within=NonNegativeReals)
+	b.Q_spin = Var(m.th, m.r, m.d, m.s, within=NonNegativeReals)
+	b.Q_Qstart = Var(m.th, m.r, m.d, m.s, within=NonNegativeReals)
 	b.ngr_rn = Var(m.rn, m.r, bounds=bound_r_rn, domain= NonNegativeReals)
 	for rnew, r  in  m.rnew * m.r :
 	    if t == 1:
@@ -236,14 +237,14 @@ def planning_block_rule(b,t):
 	    else:
 	        b.nge_th[tnew,r].unfix()
 
-	b.u = Var(m.th, m.r, m.ss, m.s, bounds=bound_UC, domain=NonNegativeIntegers)
-	b.su = Var(m.th, m.r, m.ss, m.s, bounds=bound_UC, domain=NonNegativeIntegers)
-	b.sd = Var(m.th, m.r, m.ss, m.s, bounds=bound_UC, domain=NonNegativeIntegers)
-	for th,r,ss,s in m.th*m.r*m.ss*m.s:
+	b.u = Var(m.th, m.r, m.d, m.s, bounds=bound_UC, domain=NonNegativeIntegers)
+	b.su = Var(m.th, m.r, m.d, m.s, bounds=bound_UC, domain=NonNegativeIntegers)
+	b.sd = Var(m.th, m.r, m.d, m.s, bounds=bound_UC, domain=NonNegativeIntegers)
+	for th,r,d,s in m.th*m.r*m.d*m.s:
 	    if m.s.ord(s) == 1:
-	        b.sd[th,r,ss,s].fix(0.0)
+	        b.sd[th,r,d,s].fix(0.0)
 	    else:
-	        b.sd[th,r,ss,s].unfix()
+	        b.sd[th,r,d,s].unfix()
 
 	b.alphafut = Var(within=Reals) #cost-to-go function
 
@@ -274,18 +275,18 @@ def planning_block_rule(b,t):
 	#Objective function
 	def obj_rule(_b):
 		return m.if_[t]*\
-			(sum(m.n_ss[ss]*m.hs* \
+			(sum(m.n_d[d]*m.hs* \
             	sum((m.VOC[i,t] + m.hr[i,r]*m.P_fuel[i,t] + m.EF_CO2[i]
-					*m.tx_CO2[t]*m.hr[i,r])*_b.P[i,r,ss,s] for i,r in m.i_r) \
-                for ss in m.ss for s in m.s) \
+					*m.tx_CO2[t]*m.hr[i,r])*_b.P[i,r,d,s] for i,r in m.i_r) \
+                for d in m.d for s in m.s) \
 			+ sum(m.FOC[rn,t]*m.Qg_np[rn,r]*_b.ngo_rn[rn,r] \
 			    for rn,r in m.i_r if rn in m.rn) \
 			+ sum(m.FOC[th,t]*m.Qg_np[th,r]*_b.ngo_th[th,r] \
 			    for th,r in m.i_r if th in m.th) \
-			+ sum(m.n_ss[ss]*m.hs*_b.su[th,r,ss,s]*m.Qg_np[th,r] \
-			      *(m.f_start[th]*m.P_fuel[th,t] + m.f_start[th]*m.EF_CO2[th] \
+			+ sum(m.n_d[d]*m.hs*_b.su[th,r,d,s]*m.Qg_np[th,r] \
+				*(m.f_start[th]*m.P_fuel[th,t] + m.f_start[th]*m.EF_CO2[th] \
                 	*m.tx_CO2[t] + m.C_start[th]) \
-                for th,r in m.i_r if th in m.th for ss in m.ss for s in m.s) \
+                for th,r in m.i_r if th in m.th for d in m.d for s in m.s) \
 			+ sum(m.DIC[rnew,t]*m.CCm[rnew]*m.Qg_np[rnew,r]*_b.ngb_rn[rnew,r] \
 			    for rnew,r in m.i_r if rnew in m.rnew) \
 			+ sum(m.DIC[tnew,t]*m.CCm[tnew]*m.Qg_np[tnew,r]*_b.ngb_th[tnew,r] \
@@ -295,17 +296,17 @@ def planning_block_rule(b,t):
 			+ sum(m.DIC[th,t]*m.LEC[th]*m.Qg_np[th,r]*_b.nge_th[th,r] \
 			    for th,r in m.i_r if th in m.th) \
 			+ m.PEN[t]*_b.RES_def \
-			+ m.PENc*sum(_b.cu[r,ss,s] \
-				for r in m.r for ss in m.ss for s in m.s))  \
+			+ m.PENc*sum(_b.cu[r,d,s] \
+				for r in m.r for d in m.d for s in m.s))  \
 			* 10**(-9)\
 			+ _b.alphafut
 	b.obj = Objective(rule=obj_rule, sense=minimize)
 
 	# Investment Constraints
 	def min_RN_req(_b):
-		return sum(m.n_ss[ss]*m.hs*sum(_b.P[rn,r,ss,s]-_b.cu[r,ss,s] \
+		return sum(m.n_d[d]*m.hs*sum(_b.P[rn,r,d,s]-_b.cu[r,d,s] \
 		                       			for rn,r in m.i_r if rn in m.rn) \
-                   for ss in m.ss for s in m.s)\
+                   for d in m.d for s in m.s)\
 				   + _b.RES_def >= m.RES_min[t]*m.ED[t]
 	b.min_RN_req = Constraint(rule=min_RN_req)
 
@@ -327,78 +328,78 @@ def planning_block_rule(b,t):
 	b.inst_TH_UB = Constraint(m.tnew, rule=inst_TH_UB)
 
 	#Operating Constraints
-	def en_bal(_b,r,ss,s):
-		return sum(_b.P[i,r,ss,s] for i in m.i if (i,r) in m.i_r) \
-             + sum(_b.P_flow[r_,r,ss,s]*(1-m.t_loss[r,r_]*m.dist[r,r_])-\
-			 _b.P_flow[r,r_,ss,s] for r_ in m.r if r_ != r)\
-			 == m.L[r,t,ss,s] + _b.cu[r,ss,s]
-	b.en_bal = Constraint(m.r, m.ss, m.s, rule=en_bal)
+	def en_bal(_b,r,d,s):
+		return sum(_b.P[i,r,d,s] for i in m.i if (i,r) in m.i_r) \
+             + sum(_b.P_flow[r_,r,d,s]*(1-m.t_loss[r,r_]*m.dist[r,r_])-\
+			 _b.P_flow[r,r_,d,s] for r_ in m.r if r_ != r)\
+			 == m.L[r,t,d,s] + _b.cu[r,d,s]
+	b.en_bal = Constraint(m.r, m.d, m.s, rule=en_bal)
 
-	def capfactor(_b,rn,r,ss,s):
+	def capfactor(_b,rn,r,d,s):
 		if (rn,r) in m.i_r and rn in m.rn:
-			return _b.P[rn,r,ss,s] == m.Qg_np[rn,r]*m.cf[rn,r,t,ss,s] \
+			return _b.P[rn,r,d,s] == m.Qg_np[rn,r]*m.cf[rn,r,t,d,s] \
 				*_b.ngo_rn[rn,r]
 		return Constraint.Skip
-	b.capfactor = Constraint(m.rn, m.r, m.ss, m.s, rule=capfactor)
+	b.capfactor = Constraint(m.rn, m.r, m.d, m.s, rule=capfactor)
 
-	def min_output(_b,th,r,ss,s):
+	def min_output(_b,th,r,d,s):
 		if (th,r) in m.i_r and th in m.th:
-			return _b.u[th,r,ss,s]*m.Pg_min[th]*m.Qg_np[th,r] <= _b.P[th,r,ss,s]
+			return _b.u[th,r,d,s]*m.Pg_min[th]*m.Qg_np[th,r] <= _b.P[th,r,d,s]
 		return Constraint.Skip
-	b.min_output = Constraint(m.th,m.r,m.ss,m.s, rule=min_output)
+	b.min_output = Constraint(m.th,m.r,m.d,m.s, rule=min_output)
 
-	def max_output(_b,th,r,ss,s):
+	def max_output(_b,th,r,d,s):
 		if (th,r) in m.i_r and th in m.th:
-			return _b.u[th,r,ss,s]*m.Qg_np[th,r] >= _b.P[th,r,ss,s] \
-			+ _b.Q_spin[th,r,ss,s]
+			return _b.u[th,r,d,s]*m.Qg_np[th,r] >= _b.P[th,r,d,s] \
+												+ _b.Q_spin[th,r,d,s]
 		return Constraint.Skip
-	b.max_output = Constraint(m.th,m.r,m.ss,m.s, rule=max_output)
+	b.max_output = Constraint(m.th,m.r,m.d,m.s, rule=max_output)
 
-	def unit_commit1(_b,th,r,ss,s,s_):
+	def unit_commit1(_b,th,r,d,s,s_):
 		if (th,r) in m.i_r and th in m.th and (m.s.ord(s_) == m.s.ord(s)-1):
-			return _b.u[th,r,ss,s] == _b.u[th,r,ss,s_] + _b.su[th,r,ss,s] \
-									- _b.sd[th,r,ss,s]
+			return _b.u[th,r,d,s] == _b.u[th,r,d,s_] + _b.su[th,r,d,s] \
+									- _b.sd[th,r,d,s]
 		return Constraint.Skip
-	b.unit_commit1 = Constraint(m.th,m.r,m.ss,m.s,m.s, rule=unit_commit1)
+	b.unit_commit1 = Constraint(m.th,m.r,m.d,m.s,m.s, rule=unit_commit1)
 
-	def ramp_up(_b,th,r,ss,s,s_):
+	def ramp_up(_b,th,r,d,s,s_):
 		if (th,r) in m.i_r and th in m.th and (m.s.ord(s_) == m.s.ord(s)-1):
-			return _b.P[th,r,ss,s]-_b.P[th,r,ss,s_] <= m.Ru_max[th]*m.hs* \
-				m.Qg_np[th,r]*(_b.u[th,r,ss,s]-_b.su[th,r,ss,s]) + \
-				max(m.Pg_min[th],m.Ru_max[th]*m.hs)*m.Qg_np[th,r]*_b.su[th,r,ss,s]
+			return _b.P[th,r,d,s]-_b.P[th,r,d,s_] <= m.Ru_max[th]*m.hs* \
+				m.Qg_np[th,r]*(_b.u[th,r,d,s]-_b.su[th,r,d,s]) + \
+				max(m.Pg_min[th],m.Ru_max[th]*m.hs)*m.Qg_np[th,r]*_b.su[th,r,d,s]
 		return Constraint.Skip
-	b.ramp_up = Constraint(m.th,m.r,m.ss,m.s,m.s, rule=ramp_up)
+	b.ramp_up = Constraint(m.th,m.r,m.d,m.s,m.s, rule=ramp_up)
 
-	def ramp_down(_b,th,r,ss,s,s_):
+	def ramp_down(_b,th,r,d,s,s_):
 		if (th,r) in m.i_r and th in m.th and (m.s.ord(s_) == m.s.ord(s)-1):
-			return _b.P[th,r,ss,s_]-_b.P[th,r,ss,s] <= m.Rd_max[th]*m.hs* \
-				m.Qg_np[th,r]*(_b.u[th,r,ss,s]-_b.su[th,r,ss,s]) + \
-				max(m.Pg_min[th],m.Rd_max[th]*m.hs)*m.Qg_np[th,r]*_b.sd[th,r,ss,s]
+			return _b.P[th,r,d,s_]-_b.P[th,r,d,s] <= m.Rd_max[th]*m.hs* \
+				m.Qg_np[th,r]*(_b.u[th,r,d,s]-_b.su[th,r,d,s]) + \
+				max(m.Pg_min[th],m.Rd_max[th]*m.hs)*m.Qg_np[th,r]*_b.sd[th,r,d,s]
 		return Constraint.Skip
-	b.ramp_down = Constraint(m.th,m.r,m.ss,m.s,m.s, rule=ramp_down)
+	b.ramp_down = Constraint(m.th,m.r,m.d,m.s,m.s, rule=ramp_down)
 
-	def total_op_reserve(_b,r,ss,s):
-		return sum(_b.Q_spin[th,r,ss,s]+_b.Q_Qstart[th,r,ss,s] for th in m.th) \
-			>= 0.075*m.L[r,t,ss,s]
-	b.total_op_reserve = Constraint(m.r,m.ss,m.s, rule=total_op_reserve)
+	def total_op_reserve(_b,r,d,s):
+		return sum(_b.Q_spin[th,r,d,s]+_b.Q_Qstart[th,r,d,s] for th in m.th) \
+			>= 0.075*m.L[r,t,d,s]
+	b.total_op_reserve = Constraint(m.r,m.d,m.s, rule=total_op_reserve)
 
-	def total_spin_reserve(_b,r,ss,s):
-		return sum(_b.Q_spin[th,r,ss,s] for th in m.th) >= 0.015*m.L[r,t,ss,s]
-	b.total_spin_reserve = Constraint(m.r,m.ss,m.s, rule=total_spin_reserve)
+	def total_spin_reserve(_b,r,d,s):
+		return sum(_b.Q_spin[th,r,d,s] for th in m.th) >= 0.015*m.L[r,t,d,s]
+	b.total_spin_reserve = Constraint(m.r,m.d,m.s, rule=total_spin_reserve)
 
-	def reserve_cap_1(_b,th,r,ss,s):
+	def reserve_cap_1(_b,th,r,d,s):
 		if (th,r) in m.i_r and th in m.th:
-			return _b.Q_spin[th,r,ss,s] <= _b.u[th,r,ss,s]*m.Qg_np[th,r]*\
+			return _b.Q_spin[th,r,d,s] <= _b.u[th,r,d,s]*m.Qg_np[th,r]*\
 				m.frac_spin[th]
 		return Constraint.Skip
-	b.reserve_cap_1 = Constraint(m.th,m.r,m.ss,m.s, rule=reserve_cap_1)
+	b.reserve_cap_1 = Constraint(m.th,m.r,m.d,m.s, rule=reserve_cap_1)
 
-	def reserve_cap_2(_b,th,r,ss,s):
+	def reserve_cap_2(_b,th,r,d,s):
 		if (th,r) in m.i_r and th in m.th:
-			return _b.Q_Qstart[th,r,ss,s] <= (_b.ngo_th[th,r] - _b.u[th,r,ss,s])\
+			return _b.Q_Qstart[th,r,d,s] <= (_b.ngo_th[th,r] - _b.u[th,r,d,s])\
 				* m.Qg_np[th,r] * m.frac_Qstart[th]
 		return Constraint.Skip
-	b.reserve_cap_2 = Constraint(m.th, m.r, m.ss, m.s, rule=reserve_cap_2)
+	b.reserve_cap_2 = Constraint(m.th, m.r, m.d, m.s, rule=reserve_cap_2)
 
 	def logic_RN_1(_b,rn,r):
 		if (rn,r) in m.i_r and rn in m.rn:
@@ -446,11 +447,11 @@ def planning_block_rule(b,t):
 		return Constraint.Skip
 	b.logic_TOld_2 = Constraint(m.told, m.r, rule=logic_TOld_2)
 
-	def logic_3(_b,th,r,ss,s):
+	def logic_3(_b,th,r,d,s):
 		if (th,r) in m.i_r and th in m.th:
-			return _b.u[th,r,ss,s] <= _b.ngo_th[th,r]
+			return _b.u[th,r,d,s] <= _b.ngo_th[th,r]
 		return Constraint.Skip
-	b.logic_3 = Constraint(m.th,m.r,m.ss,m.s, rule=logic_3)
+	b.logic_3 = Constraint(m.th,m.r,m.d,m.s, rule=logic_3)
 
 	#linking equalities
 	def link_equal1(_b,rn,r):
@@ -487,16 +488,16 @@ m.Bl = Block(m.t, rule=planning_block_rule)
 ################################################################################
 
 #Parameters to store results
-m.P_result = Param(m.i, m.r, m.t, m.ss, m.s, m.iter, default=0, initialize=0, \
+m.P_result = Param(m.i, m.r, m.t, m.d, m.s, m.iter, default=0, initialize=0, \
     mutable=True)
-m.cu_result = Param(m.r, m.t, m.ss, m.s, m.iter, default=0, initialize=0,\
+m.cu_result = Param(m.r, m.t, m.d, m.s, m.iter, default=0, initialize=0,\
     mutable=True)
 m.RES_def_result = Param(m.t, m.iter, default=0, initialize=0, mutable=True)
-m.P_flow_result = Param(m.r, m.r, m.t, m.ss, m.s, m.iter, default=0,   \
+m.P_flow_result = Param(m.r, m.r, m.t, m.d, m.s, m.iter, default=0,   \
     initialize=0, mutable=True)
-m.Q_spin_result = Param(m.th, m.r, m.t, m.ss, m.s, m.iter, default=0, \
+m.Q_spin_result = Param(m.th, m.r, m.t, m.d, m.s, m.iter, default=0, \
     initialize=0, mutable=True)
-m.Q_Qstart_result = Param(m.th, m.r, m.t, m.ss, m.s, m.iter, default=0, \
+m.Q_Qstart_result = Param(m.th, m.r, m.t, m.d, m.s, m.iter, default=0, \
     initialize=0, mutable=True)
 m.ngo_rn_result = Param(m.rn, m.r, m.t, m.iter, default=0, initialize=0, \
     mutable=True)
@@ -514,11 +515,11 @@ m.ngr_th_result = Param(m.th, m.r, m.t, m.iter, default=0, initialize=0, \
     mutable=True)
 m.nge_th_result = Param(m.th, m.r, m.t, m.iter, default=0, initialize=0, \
     mutable=True)
-m.u_result = Param(m.th, m.r, m.t, m.ss, m.s, m.iter, default=0, initialize=0,\
+m.u_result = Param(m.th, m.r, m.t, m.d, m.s, m.iter, default=0, initialize=0,\
     mutable=True)
-m.su_result = Param(m.th, m.r, m.t, m.ss, m.s, m.iter, default=0, initialize=0,\
+m.su_result = Param(m.th, m.r, m.t, m.d, m.s, m.iter, default=0, initialize=0,\
     mutable=True)
-m.sd_result = Param(m.th, m.r, m.t, m.ss, m.s, m.iter, default=0, initialize=0,\
+m.sd_result = Param(m.th, m.r, m.t, m.d, m.s, m.iter, default=0, initialize=0,\
     mutable=True)
 
 m.gs = Set(initialize=['coal', 'NG', 'nuc', 'solar','wind'], ordered=True)
@@ -532,16 +533,16 @@ def post_process():
 	m.fixOp = Expression(m.iter, rule=fixOp)
 
 	def varOp(m,iter_):
-		return sum(m.if_[t]*sum(m.n_ss[ss]*m.hs*m.VOC[i,t]\
-                *m.P_result[i,r,t,ss,s,iter_] for i,r in m.i_r \
-                for ss in m.ss for s in m.s) for t in m.t)*10**(-9)
+		return sum(m.if_[t]*sum(m.n_d[d]*m.hs*m.VOC[i,t]\
+                *m.P_result[i,r,t,d,s,iter_] for i,r in m.i_r \
+                for d in m.d for s in m.s) for t in m.t)*10**(-9)
 	m.varOp = Expression(m.iter, rule=varOp)
 
 	def start(m,iter_):
-		return sum(m.if_[t]*sum(m.n_ss[ss]*m.hs*m.su_result[th,r,t,ss,s,iter_]\
+		return sum(m.if_[t]*sum(m.n_d[d]*m.hs*m.su_result[th,r,t,d,s,iter_]\
                 *m.Qg_np[th,r]*(m.f_start[th]*m.P_fuel[th,t]+m.f_start[th]\
                 *m.EF_CO2[th]*m.tx_CO2[t]+m.C_start[th]) \
-                for th,r in m.i_r if th in m.th for ss in m.ss for s in m.s) \
+                for th,r in m.i_r if th in m.th for d in m.d for s in m.s) \
                 for t in m.t)*10**(-9)
 	m.start = Expression(m.iter, rule=start)
 
@@ -560,8 +561,8 @@ def post_process():
 	m.ext = Expression(m.iter, rule=ext)
 
 	def fuel(m,iter_):
-		return sum(m.if_[t]*sum(m.n_ss[ss]*m.hs*m.hr[i,r]*m.P_fuel[i,t]*\
-            m.P_result[i,r,t,ss,s,iter_] for i,r in m.i_r for ss in m.ss \
+		return sum(m.if_[t]*sum(m.n_d[d]*m.hs*m.hr[i,r]*m.P_fuel[i,t]*\
+            m.P_result[i,r,t,d,s,iter_] for i,r in m.i_r for d in m.d \
             for s in m.s)for t in m.t)*10**(-9)
 	m.fuel = Expression(m.iter, rule=fuel)
 
