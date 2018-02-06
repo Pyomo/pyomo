@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.base.PyomoModel import Model
+from pyomo.core.base.block import Block, _BlockData
 from pyomo.core.kernel.component_block import IBlockStorage
 from pyomo.opt.base.solvers import OptSolver
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
@@ -170,9 +171,9 @@ class DirectOrPersistentSolver(OptSolver):
 
     """ This method should be implemented by subclasses."""
     def _set_instance(self, model, kwds={}):
-        if not isinstance(model, (Model, IBlockStorage)):
+        if not isinstance(model, (Model, IBlockStorage, Block, _BlockData)):
             msg = "The problem instance supplied to the {0} plugin " \
-                  "'_presolve' method must be of type 'Model'".format(type(self))
+                  "'_presolve' method must be a Model or a Block".format(type(self))
             raise ValueError(msg)
         self._pyomo_model = model
         self._symbolic_solver_labels = kwds.pop('symbolic_solver_labels', self._symbolic_solver_labels)
