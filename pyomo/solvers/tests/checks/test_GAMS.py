@@ -165,14 +165,7 @@ class GAMSTests(unittest.TestCase):
 
             shutil.rmtree(tmpdir)
 
-
-@unittest.skipIf(not gamsgms_available, "The 'gams' executable is not available")
-class GAMSLogfileTests(unittest.TestCase):
-    """Test class for testing permultations of tee and logfile options.
-
-    The tests build a simple model and solve it using the different options.
-    """
-
+class GAMSLogfileTestBase(unittest.TestCase):
     def setUp(self):
         """Set up model and temporary directory."""
         m = ConcreteModel()
@@ -186,62 +179,6 @@ class GAMSLogfileTests(unittest.TestCase):
     def tearDown(self):
         """Clean up temporary directory after tests are over."""
         shutil.rmtree(self.tmpdir)
-
-    def test_no_tee_gms(self):
-        with SolverFactory("gams", solver_io="gms") as opt:
-            with redirected_subprocess_call() as output:
-                opt.solve(self.m, tee=False)
-        self.assertFalse(output.getvalue())
-        self._check_logfile(exists=False)
-
-    def test_tee_gms(self):
-        with SolverFactory("gams", solver_io="gms") as opt:
-            with redirected_subprocess_call() as output:
-                opt.solve(self.m, tee=True)
-        self.assertTrue(output.getvalue())
-        self._check_logfile(exists=False)
-
-    def test_logfile_gms(self):
-        with SolverFactory("gams", solver_io="gms") as opt:
-            with redirected_subprocess_call() as output:
-                opt.solve(self.m, logfile=self.logfile)
-        self.assertFalse(output.getvalue())
-        self._check_logfile(exists=True)
-
-    def test_tee_and_logfile_gms(self):
-        with SolverFactory("gams", solver_io="gms") as opt:
-            with redirected_subprocess_call() as output:
-                opt.solve(self.m, logfile=self.logfile, tee=True)
-        self.assertTrue(output.getvalue())
-        self._check_logfile(exists=True, expected=output.getvalue())
-
-    def test_no_tee_py(self):
-        with SolverFactory("gams", solver_io="python") as opt:
-            with redirected_stdout() as output:
-                opt.solve(self.m, tee=False)
-        self.assertFalse(output.getvalue())
-        self._check_logfile(exists=False)
-
-    def test_tee_py(self):
-        with SolverFactory("gams", solver_io="python") as opt:
-            with redirected_stdout() as output:
-                opt.solve(self.m, tee=True)
-        self.assertTrue(output.getvalue())
-        self._check_logfile(exists=False)
-
-    def test_logfile_py(self):
-        with SolverFactory("gams", solver_io="python") as opt:
-            with redirected_stdout() as output:
-                opt.solve(self.m, logfile=self.logfile)
-        self._check_logfile(exists=True)
-        self.assertFalse(output.getvalue())
-
-    def test_tee_and_logfile_py(self):
-        with SolverFactory("gams", solver_io="python") as opt:
-            with redirected_stdout() as output:
-                opt.solve(self.m, logfile=self.logfile, tee=True)
-        self.assertTrue(output.getvalue())
-        self._check_logfile(exists=True, expected=output.getvalue())
 
     def _check_logfile(self, exists=True, expected=None):
         """Check for logfiles existence and contents.
@@ -262,6 +199,82 @@ class GAMSLogfileTests(unittest.TestCase):
         self.assertTrue(logfile_contents)
         if expected:
             self.assertEqual(logfile_contents, expected)
+
+
+@unittest.skipIf(not gamsgms_available, "The 'gams' executable is not available")
+class GAMSLogfileGmsTests(GAMSLogfileTestBase):
+    """Test class for testing permultations of tee and logfile options.
+
+    The tests build a simple model and solve it using the different options
+    using the gams command directly.
+
+    """
+
+    def test_no_tee(self):
+        with SolverFactory("gams", solver_io="gms") as opt:
+            with redirected_subprocess_call() as output:
+                opt.solve(self.m, tee=False)
+        self.assertFalse(output.getvalue())
+        self._check_logfile(exists=False)
+
+    def test_tee(self):
+        with SolverFactory("gams", solver_io="gms") as opt:
+            with redirected_subprocess_call() as output:
+                opt.solve(self.m, tee=True)
+        self.assertTrue(output.getvalue())
+        self._check_logfile(exists=False)
+
+    def test_logfile(self):
+        with SolverFactory("gams", solver_io="gms") as opt:
+            with redirected_subprocess_call() as output:
+                opt.solve(self.m, logfile=self.logfile)
+        self.assertFalse(output.getvalue())
+        self._check_logfile(exists=True)
+
+    def test_tee_and_logfile(self):
+        with SolverFactory("gams", solver_io="gms") as opt:
+            with redirected_subprocess_call() as output:
+                opt.solve(self.m, logfile=self.logfile, tee=True)
+        self.assertTrue(output.getvalue())
+        self._check_logfile(exists=True, expected=output.getvalue())
+
+
+@unittest.skipIf(not gamspy_available, "The 'gams' python bindings are not available")
+class GAMSLogfilePyTests(GAMSLogfileTestBase):
+    """Test class for testing permultations of tee and logfile options.
+
+    The tests build a simple model and solve it using the different options
+    using the python gams bindings.
+
+    """
+
+    def test_no_tee(self):
+        with SolverFactory("gams", solver_io="python") as opt:
+            with redirected_stdout() as output:
+                opt.solve(self.m, tee=False)
+        self.assertFalse(output.getvalue())
+        self._check_logfile(exists=False)
+
+    def test_tee(self):
+        with SolverFactory("gams", solver_io="python") as opt:
+            with redirected_stdout() as output:
+                opt.solve(self.m, tee=True)
+        self.assertTrue(output.getvalue())
+        self._check_logfile(exists=False)
+
+    def test_logfile(self):
+        with SolverFactory("gams", solver_io="python") as opt:
+            with redirected_stdout() as output:
+                opt.solve(self.m, logfile=self.logfile)
+        self._check_logfile(exists=True)
+        self.assertFalse(output.getvalue())
+
+    def test_tee_and_logfile(self):
+        with SolverFactory("gams", solver_io="python") as opt:
+            with redirected_stdout() as output:
+                opt.solve(self.m, logfile=self.logfile, tee=True)
+        self.assertTrue(output.getvalue())
+        self._check_logfile(exists=True, expected=output.getvalue())
 
 
 @contextlib.contextmanager
