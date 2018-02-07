@@ -740,7 +740,9 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         exe = self.executable()
         command = [exe, output_filename, 'o=' + lst_filename]
-        if not tee and not logfile:
+        if tee and not logfile:
+            pass  # default behaviour of gams is to print to console
+        elif not tee and not logfile:
             command.append("lo=0")
         elif not tee and logfile:
             command.append("lo=2")
