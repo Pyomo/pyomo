@@ -23,17 +23,20 @@ from pyomo.core import expr as EXPR
 import pyomo.core.base.var
 
 
-def prod(factors):
+def prod(terms):
     """
-    A utility function to compute the product of a list of factors.
+    A utility function to compute the product of a list of terms.
+
+    .. note::
+        Should this function be capitalized to be consistent with Sum()?
 
     Args:
-        factors (list): A list of terms that are multiplied together.
+        terms (list): A list of terms that are multiplied together.
 
     Returns:
         The value of the product, which may be a Pyomo expression object.
     """
-    return reduce(operator.mul, factors, 1)
+    return reduce(operator.mul, terms, 1)
 
 Prod = prod
 
@@ -46,20 +49,27 @@ def Sum(args, start=0, linear=None):
     function, but this function generates a more compact Pyomo
     expression.
 
+    .. note::
+        Is there a better name for this function?  Sum() and sum() are very similar, which could make it 
+        difficult to see whether this function is being used.  But that similarity means that changes
+        from standard Python expressions are quite similar.
+
     Args:
         args: A generator for terms in the sum.
-        start: A value that is initializes the sum.  This value may be
-            any Python object, which allow the user to define the type
-            that contains the sum that is generated. Defaults to zero.
-        linear: If :attr:`start` is zero, then this value indicates whether 
-            the terms in the sum
-            are linear.  Otherwise, this option is ignored.
-    
-            If the value is :const:`False`, then the terms are treated
-            as nonlinears, and if :const:`True`, then the terms
-            are treated as linear.  Default is :const:`None`, which 
-            indicates that the first term in the :attr:`args` is used
-            to determine this value.
+
+        start: A value that is initializes the sum.  If
+            this value is not a numeric constant, then the += 
+            operator is used to add terms to this object.
+            Defaults to zero.
+
+        linear: If :attr:`start` is not a numeric constant, then this 
+            option is ignored.  Otherwise, this value indicates
+            whether the terms in the sum are linear.  If the value
+            is :const:`False`, then the terms are
+            treated as nonlinear, and if :const:`True`, then
+            the terms are treated as linear.  Default is
+            :const:`None`, which indicates that the first term
+            in the :attr:`args` is used to determine this value.
 
     Returns:
         The value of the sum, which may be a Pyomo expression object.
@@ -215,7 +225,7 @@ def sequence(*args):
     """
     sequence([start,] stop[, step]) -> generator for a list of integers
 
-    Return a generator that creates a list containing an arithmetic
+    Return a generator that containing an arithmetic
     progression of integers.  
        sequence(i, j) returns [i, i+1, i+2, ..., j]; 
        start defaults to 1.  
@@ -234,6 +244,7 @@ def sequence(*args):
 
 
 def xsequence(*args):
-    print("WARNING: The xsequence function is deprecated.  Use the sequence function, which returns a generator.") 
+    from pyomo.util.deprecation import deprecation_warning
+    deprecation_arning("The xsequence function is deprecated.  Use the sequence() function, which returns a generator.")  # Remove in Pyomo 6.0
     return sequence(*args)
 

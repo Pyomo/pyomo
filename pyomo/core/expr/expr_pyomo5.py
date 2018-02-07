@@ -65,7 +65,7 @@ __all__ = (
 '_SumExpression',               # This should not be referenced, except perhaps while testing code
 '_MutableViewSumExpression',    # This should not be referenced, except perhaps while testing code
 '_MutableLinearExpression',     # This should not be referenced, except perhaps while testing code
-'_decompose_terms',             # This should not be referenced, except perhaps while testing code
+'_decompose_linear_terms',      # This should not be referenced, except perhaps while testing code
 '_chainedInequality',           # This should not be referenced, except perhaps while testing code
 '_using_chained_inequality',           # This should not be referenced, except perhaps while testing code
 '_generate_sum_expression',                 # Only used within pyomo.core.expr
@@ -749,7 +749,7 @@ class _CloneVisitor(ExpressionValueVisitor):
 
 
 def clone_expression(expr, memo=None, clone_leaves=True):
-    """Function used to clone an expression.
+    """A function that is used to clone an expression.
 
     Cloning is roughly equivalent to calling ``copy.deepcopy``.
     However, the :attr:`clone_leaves` argument can be used to 
@@ -1143,7 +1143,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
 
 def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_values=False, standardize=False):
     """
-    Return the polynomial degree of the expression.
+    Return a string representation of an expression.
 
     Args:
         expr: The root node of an expression tree.
@@ -1162,15 +1162,13 @@ def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_va
             Default is :const:`False`.
 
     Returns:
-        A non-negative integer that is the polynomial
-        degree if the expression is polynomial, or :const:`None` otherwise.
+        A string representation for the expression.
     """
     verbose = common.TO_STRING_VERBOSE if verbose is None else verbose
     #
-    # Standardize the output of expressions by constructing
-    # a standard representation and then create a string.
-    #
-    # Note: We do not standardize the rep
+    # Standardize the output of expressions if requested (when verbose=False).
+    # This involves constructing a standard representation and then creating 
+    # a string.
     #
     if standardize and not verbose:
         from pyomo.repn import generate_standard_repn
@@ -2660,7 +2658,7 @@ class LinearExpression(ExpressionBase):
                 self.constant = self.constant + omult * _other
             #
             # WEH - These seem like uncommon cases, so I think we should defer processing them
-            #       until _decompose_terms
+            #       until _decompose_linear_terms
             #
             #elif _other.__class__ is _MutableLinearExpression:
             #    self.constant = self.constant + omult * _other.constant
@@ -2669,14 +2667,14 @@ class LinearExpression(ExpressionBase):
             #        self.linear_vars.append(v)
             #elif _other.__class__ is ViewSumExpression or _other.__class__ is _MutableViewSumExpression:
             #    for e in _other._args_:
-            #        for c,v in _decompose_terms(e, multiplier=omult):
+            #        for c,v in _decompose_linear_terms(e, multiplier=omult):
             #            if v is None:
             #                self.constant += c
             #            else:
             #                self.linear_coefs.append(c)
             #                self.linear_vars.append(v)
             else:
-                for c,v in _decompose_terms(_other, multiplier=omult):
+                for c,v in _decompose_linear_terms(_other, multiplier=omult):
                     if v is None:
                         self.constant += c
                     else:
@@ -2695,7 +2693,7 @@ class LinearExpression(ExpressionBase):
                 #
                 c_ = self.constant
                 self.constant = 0
-                for c,v in _decompose_terms(_other):
+                for c,v in _decompose_linear_terms(_other):
                     if v is None:
                         self.constant = c*c_
                     else:
@@ -2753,20 +2751,21 @@ class _MutableLinearExpression(LinearExpression):
 
 def decompose_term(expr):
     """
-    A generator function that yields tuples the linear terms
-    in an expression.
+    A function that returns a tuple consisting of (1) a flag indicated
+    whether the expression is linear, and (2) a list of tuples that 
+    represents the terms in the linear expression.
 
     Args:
         expr (expression): The root node of an expression tree
 
     Returns:
-        A tuple: ``(flag, list)``.  If :attr:`flag` is :const:`False`, then
-            a nonlinear term has been found, and :const:`list` is :const:`None`.
-            Otherwise, :const:`list` is a list of tuples: ``(coef, value)``.
-            If :attr:`value` is :const:`None`, then this
-            represents a constant term with value :attr:`coef`.  Otherwise,
-            :attr:`value` is a variable object, and :attr:`coef` is the
-            numeric coefficient.
+        A tuple with the form ``(flag, list)``.  If :attr:`flag` is :const:`False`, then
+        a nonlinear term has been found, and :const:`list` is :const:`None`.
+        Otherwise, :const:`list` is a list of tuples: ``(coef, value)``.
+        If :attr:`value` is :const:`None`, then this
+        represents a constant term with value :attr:`coef`.  Otherwise,
+        :attr:`value` is a variable object, and :attr:`coef` is the
+        numeric coefficient.
     """
     if expr.__class__ in nonpyomo_leaf_types or not expr.is_potentially_variable():
         return True, [(expr,None)]
@@ -2774,7 +2773,7 @@ def decompose_term(expr):
         return True, [(1,expr)]
     else:
         try:
-            terms = [t_ for t_ in _decompose_terms(expr)]
+            terms = [t_ for t_ in _decompose_linear_terms(expr)]
             return True, terms
         except LinearDecompositionError:
             return False, None
@@ -2785,14 +2784,31 @@ class LinearDecompositionError(Exception):
         super(LinearDecompositionError, self).__init__(message)
 
 
-def _decompose_terms(expr, multiplier=1):
+def _decompose_linear_terms(expr, multiplier=1):
+    """
+    A generator function that yields tuples for the linear terms
+    in an expression.  If nonlinear terms are encountered, this function 
+    raises the :class:`LinearDecompositionError` exception.
+
+    Args:
+        expr (expression): The root node of an expression tree
+
+    Yields:
+        Tuples: ``(coef, value)``.  If :attr:`value` is :const:`None`,
+        then this represents a constant term with value :attr:`coef`.
+        Otherwise, :attr:`value` is a variable object, and :attr:`coef`
+        is the numeric coefficient.
+
+    Raises:
+        :class:`LinearDecompositionError` if a nonlinear term is encountered.
+    """
     if expr.__class__ in native_numeric_types or not expr.is_potentially_variable():
         yield (multiplier*expr,None)
     elif expr.is_variable_type():
         yield (multiplier,expr)
     elif expr.__class__ is ProductExpression:
         if expr._args_[0].__class__ in native_numeric_types or not expr._args_[0].is_potentially_variable():
-            for term in _decompose_terms(expr._args_[1], multiplier*expr._args_[0]):
+            for term in _decompose_linear_terms(expr._args_[1], multiplier*expr._args_[0]):
                 yield term
         else:
             raise LinearDecompositionError("Quadratic terms exist in a product expression.")
@@ -2803,10 +2819,10 @@ def _decompose_terms(expr, multiplier=1):
         raise LinearDecompositionError("Unexpected nonlinear term")
     elif expr.__class__ is ViewSumExpression or expr.__class__ is _MutableViewSumExpression:
         for arg in expr.args:
-            for term in _decompose_terms(arg, multiplier):
+            for term in _decompose_linear_terms(arg, multiplier):
                 yield term
     elif expr.__class__ is NegationExpression:
-        for term in  _decompose_terms(expr._args_[0], -multiplier):
+        for term in  _decompose_linear_terms(expr._args_[0], -multiplier):
             yield term
     elif expr.__class__ is LinearExpression or expr.__class__ is _MutableLinearExpression:
         if expr.constant.__class__ in native_numeric_types and not isclose(expr.constant,0):
