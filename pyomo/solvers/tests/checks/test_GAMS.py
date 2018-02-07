@@ -10,12 +10,13 @@
 
 
 import pyutilib.th as unittest
+import pyutilib.subprocess
 from pyutilib.misc import setup_redirect, reset_redirect
 from pyomo.environ import *
 from six import StringIO
 import contextlib, sys, os, shutil
 from tempfile import mkdtemp
-
+import subprocess
 
 opt_py = SolverFactory('gams', solver_io='python')
 gamspy_available = opt_py.available(exception_flag=False)
@@ -188,23 +189,31 @@ class GAMSLogfileTests(unittest.TestCase):
 
     def test_no_tee_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
-            opt.solve(self.m, tee=False)
+            with redirected_subprocess_call() as output:
+                opt.solve(self.m, tee=False)
+        self.assertFalse(output.getvalue())
         self._check_logfile(exists=False)
 
     def test_tee_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
-            opt.solve(self.m, tee=True)
+            with redirected_subprocess_call() as output:
+                opt.solve(self.m, tee=True)
+        self.assertTrue(output.getvalue())
         self._check_logfile(exists=False)
 
     def test_logfile_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
-            opt.solve(self.m, logfile=self.logfile)
+            with redirected_subprocess_call() as output:
+                opt.solve(self.m, logfile=self.logfile)
+        self.assertFalse(output.getvalue())
         self._check_logfile(exists=True)
 
     def test_tee_and_logfile_gms(self):
         with SolverFactory("gams", solver_io="gms") as opt:
-            opt.solve(self.m, logfile=self.logfile, tee=True)
-        self._check_logfile(exists=True)
+            with redirected_subprocess_call() as output:
+                opt.solve(self.m, logfile=self.logfile, tee=True)
+        self.assertTrue(output.getvalue())
+        self._check_logfile(exists=True, expected=output.getvalue())
 
     def test_no_tee_py(self):
         with SolverFactory("gams", solver_io="python") as opt:
@@ -255,7 +264,6 @@ class GAMSLogfileTests(unittest.TestCase):
             self.assertEqual(logfile_contents, expected)
 
 
-
 @contextlib.contextmanager
 def redirected_stdout():
     """Temporarily redirect stdout into a string buffer."""
@@ -265,6 +273,24 @@ def redirected_stdout():
         yield output
     finally:
         reset_redirect()
+
+
+@contextlib.contextmanager
+def redirected_subprocess_call():
+    """Temporarily redirect subprocess calls stdout into a string buffer."""
+    output = StringIO()
+    old_call = subprocess.call
+
+    def call(*args, **kwargs):
+        returncode, out = pyutilib.subprocess.run(*args, **kwargs)
+        output.write(out)
+        return returncode
+
+    try:
+        subprocess.call = call
+        yield output
+    finally:
+        subprocess.call = old_call
 
 
 if __name__ == "__main__":
