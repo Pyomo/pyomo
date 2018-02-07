@@ -44,7 +44,7 @@ from pyomo.opt.results import ProblemSense, SolverResults
 
 logger = logging.getLogger('pyomo.contrib.gdpopt')
 
-__version__ = (0, 0, 1)
+__version__ = (0, 1, 0)
 
 
 class GDPoptSolver(pyomo.util.plugin.Plugin):
@@ -1402,46 +1402,6 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
         else:
             logger.info('Adding feasible integer cut')
             GDPopt.feasible_integer_cuts.add(expr=int_cut)
-
-    def _detect_nonlinear_vars(self, m):
-        """Identify the variables that participate in nonlinear terms."""
-        nonlinear_variables = []
-        # This is a workaround because Var is not hashable, and I do not want
-        # duplicates in nonlinear_variables.
-        seen = set()
-
-        nonlinear_constraints = (
-            c for c in m.component_data_objects(
-                ctype=Constraint, active=True, descend_into=(Block, Disjunct))
-            if c.body.polynomial_degree() not in (0, 1))
-
-        for constr in nonlinear_constraints:
-            if isinstance(constr.body, EXPR._SumExpression):
-                # go through each term and check to see if the term is
-                # nonlinear
-                for expr in constr.body._args:
-                    # Check to see if the expression is nonlinear
-                    if expr.polynomial_degree() not in (0, 1):
-                        # collect variables
-                        for var in EXPR.identify_variables(
-                                expr, include_fixed=False):
-                            if id(var) not in seen:
-                                seen.add(id(var))
-                                nonlinear_variables.append(var)
-            # if the root expression object is not a summation, then something
-            # else is the cause of the nonlinearity. Collect all participating
-            # variables.
-            else:
-                # collect variables
-                for var in EXPR.identify_variables(constr.body,
-                                                   include_fixed=False):
-                    if id(var) not in seen:
-                        seen.add(id(var))
-                        nonlinear_variables.append(var)
-        nonlinear_variable_IDs = set(
-            id(v) for v in nonlinear_variables)
-
-        return nonlinear_variables, nonlinear_variable_IDs
 
 
 class _DoNothing(object):
