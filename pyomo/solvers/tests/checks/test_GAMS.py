@@ -181,7 +181,7 @@ class GAMSLogfileTestBase(unittest.TestCase):
         """Clean up temporary directory after tests are over."""
         shutil.rmtree(self.tmpdir)
 
-    def _check_logfile(self, exists=True, expected=None):
+    def _check_logfile(self, exists=True):
         """Check for logfiles existence and contents.
 
         exists=True:
@@ -197,20 +197,18 @@ class GAMSLogfileTestBase(unittest.TestCase):
         self.assertTrue(os.path.exists(self.logfile))
         with open(self.logfile) as f:
             logfile_contents = f.read()
-        if expected:
-            self.assertEqual(logfile_contents, expected)
-        else:
-            self.assertIn(self.characteristic_output_string, logfile_contents)
+        self.assertIn(self.characteristic_output_string, logfile_contents)
 
-    def _check_stdout(self, output_string, exists=True, expected=None, check_jobstart=False):
-        if check_jobstart:
-            self.assertIn("*** Logging to standard output\n--- Job ? Start",
-                          output_string)
+    def _check_stdout(self, output_string, exists=True):
         if exists:
             # Starting Compilation is outputted by the solver itself which in this
             # case should be printed to stdout and captured
             self.assertIn(self.characteristic_output_string, output_string)
         else:
+            # Note that we do not check that the output string is completely
+            # empty as certain platforms (like linux) output other lines to
+            # stdout where as windows for example does not. We instead just
+            # check that the characteristic string is missing.
             self.assertNotIn(self.characteristic_output_string, output_string)
 
 
@@ -227,28 +225,28 @@ class GAMSLogfileGmsTests(GAMSLogfileTestBase):
         with SolverFactory("gams", solver_io="gms") as opt:
             with redirected_subprocess_run() as output:
                 opt.solve(self.m, tee=False)
-        self._check_stdout(output.getvalue(), exists=False, check_jobstart=True)
+        self._check_stdout(output.getvalue(), exists=False)
         self._check_logfile(exists=False)
 
     def test_tee(self):
         with SolverFactory("gams", solver_io="gms") as opt:
             with redirected_subprocess_run() as output:
                 opt.solve(self.m, tee=True)
-        self._check_stdout(output.getvalue(), exists=True, check_jobstart=True)
+        self._check_stdout(output.getvalue(), exists=True)
         self._check_logfile(exists=False)
 
     def test_logfile(self):
         with SolverFactory("gams", solver_io="gms") as opt:
             with redirected_subprocess_run() as output:
                 opt.solve(self.m, logfile=self.logfile)
-        self._check_stdout(output.getvalue(), exists=False, check_jobstart=True)
+        self._check_stdout(output.getvalue(), exists=False)
         self._check_logfile(exists=True)
 
     def test_tee_and_logfile(self):
         with SolverFactory("gams", solver_io="gms") as opt:
             with redirected_subprocess_run() as output:
                 opt.solve(self.m, logfile=self.logfile, tee=True)
-        self._check_stdout(output.getvalue(), exists=True, check_jobstart=True)
+        self._check_stdout(output.getvalue(), exists=True)
         self._check_logfile(exists=True)
 
 
