@@ -1075,26 +1075,29 @@ class OutputStream:
 
     def __enter__(self):
         """Enter context of output stream and open logfile if given."""
-        if self.logfile:
+        if self.logfile is not None:
             self.logfile_buffer = open(self.logfile, 'a')
         return self
 
     def __exit__(self, *args, **kwargs):
         """Enter context of output stream and close logfile if necessary."""
-        if self.logfile_buffer:
+        if self.logfile_buffer is not None:
             self.logfile_buffer.close()
         self.logfile_buffer = None
 
     def write(self, message):
         """Write messages to all streams."""
-        if self.tee:
+        if self.tee is not None:
             self.tee.write(message)
-        if self.logfile_buffer:
+        if self.logfile_buffer is not None:
             self.logfile_buffer.write(message)
 
     def flush(self):
         """Needed for python3 compatibility."""
-        pass
+        if self.tee is not None:
+            self.tee.flush()
+        if self.logfile_buffer is not None:
+            self.logfile_buffer.flush()
 
 
 def check_expr_evaluation(model, symbolMap, solver_io):
