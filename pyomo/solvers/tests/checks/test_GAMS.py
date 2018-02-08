@@ -176,6 +176,7 @@ class GAMSLogfileTestBase(unittest.TestCase):
         self.tmpdir = mkdtemp()
         self.logfile = os.path.join(self.tmpdir, 'logfile.log')
         self.characteristic_output_string = "Starting compilation"
+
     def tearDown(self):
         """Clean up temporary directory after tests are over."""
         shutil.rmtree(self.tmpdir)
@@ -280,7 +281,6 @@ class GAMSLogfilePyTests(GAMSLogfileTestBase):
                 opt.solve(self.m, logfile=self.logfile)
         self._check_stdout(output.getvalue(), exists=False)
         self._check_logfile(exists=True)
-        self.assertFalse(output.getvalue())
 
     def test_tee_and_logfile(self):
         with SolverFactory("gams", solver_io="python") as opt:
