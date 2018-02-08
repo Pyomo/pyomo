@@ -21,6 +21,7 @@ from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPe
 from pyomo.core.kernel.numvalue import value
 import pyomo.core.kernel
 from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
@@ -40,8 +41,10 @@ class GurobiDirect(DirectSolver):
     def __init__(self, **kwds):
         kwds['type'] = 'gurobi_direct'
         DirectSolver.__init__(self, **kwds)
-        self._pyomo_var_to_solver_var_map = _IDReverseAccessIDDict()
-        self._pyomo_con_to_solver_con_map = _IDReverseAccessIDDict()
+        self._pyomo_var_to_solver_var_map = ComponentMap()
+        self._solver_var_to_pyomo_var_map = ComponentMap()
+        self._pyomo_con_to_solver_con_map = dict()
+        self._solver_con_to_pyomo_con_map = ComponentMap()
         self._init()
 
     def _init(self):
@@ -196,6 +199,7 @@ class GurobiDirect(DirectSolver):
         gurobipy_var = self._solver_model.addVar(lb=lb, ub=ub, vtype=vtype, name=varname)
 
         self._pyomo_var_to_solver_var_map[var] = gurobipy_var
+        self._solver_var_to_pyomo_var_map[gurobipy_var] = var
         self._referenced_variables[var] = 0
 
         if var.is_fixed():
@@ -205,8 +209,10 @@ class GurobiDirect(DirectSolver):
     def _set_instance(self, model, kwds={}):
         self._range_constraints = set()
         DirectOrPersistentSolver._set_instance(self, model, kwds)
-        self._pyomo_con_to_solver_con_map = _IDReverseAccessIDDict()
-        self._pyomo_var_to_solver_var_map = _IDReverseAccessIDDict()
+        self._pyomo_con_to_solver_con_map = dict()
+        self._solver_con_to_pyomo_con_map = ComponentMap()
+        self._pyomo_var_to_solver_var_map = ComponentMap()
+        self._solver_var_to_pyomo_var_map = ComponentMap()
         try:
             if model.name is not None:
                 self._solver_model = self._gurobipy.Model(model.name)
@@ -279,6 +285,7 @@ class GurobiDirect(DirectSolver):
             self._referenced_variables[var] += 1
         self._vars_referenced_by_con[con] = referenced_vars
         self._pyomo_con_to_solver_con_map[con] = gurobipy_con
+        self._solver_con_to_pyomo_con_map[gurobipy_con] = con
 
     def _add_sos_constraint(self, con):
         if not con.active:
@@ -313,6 +320,7 @@ class GurobiDirect(DirectSolver):
 
         gurobipy_con = self._solver_model.addSOS(sos_type, gurobi_vars, weights)
         self._pyomo_con_to_solver_con_map[con] = gurobipy_con
+        self._solver_con_to_pyomo_con_map[gurobipy_con] = con
 
     def _gurobi_vtype_from_var(self, var):
         """
@@ -548,7 +556,7 @@ class GurobiDirect(DirectSolver):
                 var_vals = self._solver_model.getAttr("X", gurobi_vars)
                 names = self._solver_model.getAttr("VarName", gurobi_vars)
                 for gurobi_var, val, name in zip(gurobi_vars, var_vals, names):
-                    pyomo_var = self._pyomo_var_to_solver_var_map.reverse_getitem(gurobi_var)
+                    pyomo_var = self._solver_var_to_pyomo_var_map[gurobi_var]
                     if self._referenced_variables[pyomo_var] > 0:
                         pyomo_var.stale = False
                         soln_variables[name] = {"Value": val}
@@ -556,7 +564,7 @@ class GurobiDirect(DirectSolver):
                 if extract_reduced_costs:
                     vals = self._solver_model.getAttr("Rc", gurobi_vars)
                     for gurobi_var, val, name in zip(gurobi_vars, vals, names):
-                        pyomo_var = self._pyomo_var_to_solver_var_map.reverse_getitem(gurobi_var)
+                        pyomo_var = self._solver_var_to_pyomo_var_map[gurobi_var]
                         if self._referenced_variables[pyomo_var] > 0:
                             soln_variables[name]["Rc"] = val
 
@@ -584,7 +592,7 @@ class GurobiDirect(DirectSolver):
                     gurobi_range_con_vars = set(self._solver_model.getVars()) - set(self._pyomo_var_to_solver_var_map.values())
                     vals = self._solver_model.getAttr("Slack", gurobi_cons)
                     for gurobi_con, val, name in zip(gurobi_cons, vals, con_names):
-                        pyomo_con = self._pyomo_con_to_solver_con_map.reverse_getitem(gurobi_con)
+                        pyomo_con = self._solver_con_to_pyomo_con_map[gurobi_con]
                         if pyomo_con in self._range_constraints:
                             lin_expr = self._solver_model.getRow(gurobi_con)
                             for i in reversed(range(lin_expr.size())):
@@ -667,6 +675,7 @@ class GurobiDirect(DirectSolver):
         if not hasattr(self._pyomo_model, 'dual'):
             self._pyomo_model.dual = Suffix(direction=Suffix.IMPORT)
         con_map = self._pyomo_con_to_solver_con_map
+        reverse_con_map = self._solver_con_to_pyomo_con_map
         dual = self._pyomo_model.dual
 
         if cons_to_load is None:
@@ -683,17 +692,18 @@ class GurobiDirect(DirectSolver):
             quadratic_vals = self._solver_model.getAttr("QCPi", quadratic_cons_to_load)
 
         for gurobi_con, val in zip(linear_cons_to_load, linear_vals):
-            pyomo_con = con_map.reverse_getitem(gurobi_con)
+            pyomo_con = reverse_con_map[gurobi_con]
             dual[pyomo_con] = val
         if self._version_major >= 5:
             for gurobi_con, val in zip(quadratic_cons_to_load, quadratic_vals):
-                pyomo_con = con_map.reverse_getitem(gurobi_con)
+                pyomo_con = reverse_con_map[gurobi_con]
                 dual[pyomo_con] = val
 
     def _load_slacks(self, cons_to_load=None):
         if not hasattr(self._pyomo_model, 'slack'):
             self._pyomo_model.slack = Suffix(direction=Suffix.IMPORT)
         con_map = self._pyomo_con_to_solver_con_map
+        reverse_con_map = self._solver_con_to_pyomo_con_map
         slack = self._pyomo_model.slack
 
         gurobi_range_con_vars = set(self._solver_model.getVars()) - set(self._pyomo_var_to_solver_var_map.values())
@@ -712,7 +722,7 @@ class GurobiDirect(DirectSolver):
             quadratic_vals = self._solver_model.getAttr("QCSlack", quadratic_cons_to_load)
 
         for gurobi_con, val in zip(linear_cons_to_load, linear_vals):
-            pyomo_con = con_map.reverse_getitem(gurobi_con)
+            pyomo_con = reverse_con_map[gurobi_con]
             if pyomo_con in self._range_constraints:
                 lin_expr = self._solver_model.getRow(gurobi_con)
                 for i in reversed(range(lin_expr.size())):
@@ -729,7 +739,7 @@ class GurobiDirect(DirectSolver):
                 slack[pyomo_con] = val
         if self._version_major >= 5:
             for gurobi_con, val in zip(quadratic_cons_to_load, quadratic_vals):
-                pyomo_con = con_map.reverse_getitem(gurobi_con)
+                pyomo_con = reverse_con_map[gurobi_con]
                 slack[pyomo_con] = val
 
     def load_duals(self, cons_to_load=None):

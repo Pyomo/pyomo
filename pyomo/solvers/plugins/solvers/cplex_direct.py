@@ -239,6 +239,7 @@ class CPLEXDirect(DirectSolver):
         self._solver_model.variables.add(lb=[lb], ub=[ub], types=[vtype], names=[varname])
 
         self._pyomo_var_to_solver_var_map[var] = varname
+        self._solver_var_to_pyomo_var_map[varname] = var
         self._pyomo_var_to_ndx_map[var] = self._ndx_count
         self._ndx_count += 1
         self._referenced_variables[var] = 0
@@ -338,6 +339,7 @@ class CPLEXDirect(DirectSolver):
             self._referenced_variables[var] += 1
         self._vars_referenced_by_con[con] = referenced_vars
         self._pyomo_con_to_solver_con_map[con] = conname
+        self._solver_con_to_pyomo_con_map[conname] = con
 
     def _add_sos_constraint(self, con):
         if not con.active:
@@ -372,6 +374,7 @@ class CPLEXDirect(DirectSolver):
 
         self._solver_model.SOS.add(type=sos_type, SOS=[cplex_vars, weights], name=conname)
         self._pyomo_con_to_solver_con_map[con] = conname
+        self._solver_con_to_pyomo_con_map[conname] = con
 
     def _cplex_vtype_from_var(self, var):
         """
@@ -582,7 +585,7 @@ class CPLEXDirect(DirectSolver):
                 var_names = list(set(var_names).intersection(set(self._pyomo_var_to_solver_var_map.values())))
                 var_vals = self._solver_model.solution.get_values(var_names)
                 for i, name in enumerate(var_names):
-                    pyomo_var = self._pyomo_var_to_solver_var_map.reverse_getitem(name)
+                    pyomo_var = self._solver_var_to_pyomo_var_map[name]
                     if self._referenced_variables[pyomo_var] > 0:
                         pyomo_var.stale = False
                         soln_variables[name] = {"Value":var_vals[i]}
@@ -590,7 +593,7 @@ class CPLEXDirect(DirectSolver):
                 if extract_reduced_costs:
                     reduced_costs = self._solver_model.solution.get_reduced_costs(var_names)
                     for i, name in enumerate(var_names):
-                        pyomo_var = self._pyomo_var_to_solver_var_map.reverse_getitem(name)
+                        pyomo_var = self._solver_var_to_pyomo_var_map[name]
                         if self._referenced_variables[pyomo_var] > 0:
                             soln_variables[name]["Rc"] = reduced_costs[i]
 
@@ -613,7 +616,7 @@ class CPLEXDirect(DirectSolver):
                     linear_slacks = self._solver_model.solution.get_linear_slacks()
                     qudratic_slacks = self._solver_model.solution.get_quadratic_slacks()
                     for i, con_name in enumerate(self._solver_model.linear_constraints.get_names()):
-                        pyomo_con = self._pyomo_con_to_solver_con_map.reverse_getitem(con_name)
+                        pyomo_con = self._solver_con_to_pyomo_con_map[con_name]
                         if pyomo_con in self._range_constraints:
                             R_ = self._solver_model.linear_constraints.get_range_values(con_name)
                             if R_ == 0:
@@ -698,6 +701,7 @@ class CPLEXDirect(DirectSolver):
         if not hasattr(self._pyomo_model, 'dual'):
             self._pyomo_model.dual = Suffix(direction=Suffix.IMPORT)
         con_map = self._pyomo_con_to_solver_con_map
+        reverse_con_map = self._solver_con_to_pyomo_con_map
         dual = self._pyomo_model.dual
 
         if cons_to_load is None:
@@ -709,13 +713,14 @@ class CPLEXDirect(DirectSolver):
             vals = self._solver_model.solution.get_dual_values(linear_cons_to_load)
 
         for i, cplex_con in enumerate(linear_cons_to_load):
-            pyomo_con = con_map.reverse_getitem(cplex_con)
+            pyomo_con = reverse_con_map[cplex_con]
             dual[pyomo_con] = vals[i]
 
     def _load_slacks(self, cons_to_load=None):
         if not hasattr(self._pyomo_model, 'slack'):
             self._pyomo_model.slack = Suffix(direction=Suffix.IMPORT)
         con_map = self._pyomo_con_to_solver_con_map
+        reverse_con_map = self._solver_con_to_pyomo_con_map
         slack = self._pyomo_model.slack
 
         if cons_to_load is None:
@@ -731,7 +736,7 @@ class CPLEXDirect(DirectSolver):
             quadratic_vals = self._solver_model.solution.get_quadratic_slacks(quadratic_cons_to_load)
 
         for i, cplex_con in enumerate(linear_cons_to_load):
-            pyomo_con = con_map.reverse_getitem(cplex_con)
+            pyomo_con = reverse_con_map[cplex_con]
             if pyomo_con in self._range_constraints:
                 R_ = self._solver_model.linear_constraints.get_range_values(cplex_con)
                 if R_ == 0:
@@ -747,7 +752,7 @@ class CPLEXDirect(DirectSolver):
                 slack[pyomo_con] = linear_vals[i]
 
         for i, cplex_con in enumerate(quadratic_cons_to_load):
-            pyomo_con = con_map.reverse_getitem(cplex_con)
+            pyomo_con = reverse_con_map[cplex_con]
             slack[pyomo_con] = quadratic_vals[i]
 
     def load_duals(self, cons_to_load=None):
