@@ -17,7 +17,7 @@ from pyomo.util.plugin import alias
 from pyomo.core.kernel.numvalue import is_fixed
 from pyomo.repn import generate_canonical_repn, LinearCanonicalRepn, canonical_degree
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
-from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver, _IDReverseAccessIDDict
+from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
 from pyomo.core.kernel.numvalue import value
 import pyomo.core.kernel
 from pyomo.core.kernel.component_set import ComponentSet
