@@ -741,7 +741,10 @@ class GAMSShell(pyomo.util.plugin.Plugin):
         exe = self.executable()
         command = [exe, output_filename, 'o=' + lst_filename]
         if tee and not logfile:
-            pass  # default behaviour of gams is to print to console
+            # default behaviour of gams is to print to console, for
+            # compatability with windows and *nix we want to explicitly log to
+            # stdout (see https://www.gams.com/latest/docs/UG_GamsCall.html)
+            command.append("lo=3")
         elif not tee and not logfile:
             command.append("lo=0")
         elif not tee and logfile:
