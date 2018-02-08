@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -175,7 +175,7 @@ class GAMSLogfileTestBase(unittest.TestCase):
         self.m = m
         self.tmpdir = mkdtemp()
         self.logfile = os.path.join(self.tmpdir, 'logfile.log')
-
+        self.characteristic_output_string = "Starting compilation"
     def tearDown(self):
         """Clean up temporary directory after tests are over."""
         shutil.rmtree(self.tmpdir)
@@ -196,9 +196,21 @@ class GAMSLogfileTestBase(unittest.TestCase):
         self.assertTrue(os.path.exists(self.logfile))
         with open(self.logfile) as f:
             logfile_contents = f.read()
-        self.assertTrue(logfile_contents)
         if expected:
             self.assertEqual(logfile_contents, expected)
+        else:
+            self.assertIn(self.characteristic_output_string, logfile_contents)
+
+    def _check_stdout(self, output_string, exists=True, expected=None, check_jobstart=False):
+        if check_jobstart:
+            self.assertIn("*** Logging to standard output\n--- Job ? Start",
+                          output_string)
+        if exists:
+            # Starting Compilation is outputted by the solver itself which in this
+            # case should be printed to stdout and captured
+            self.assertIn(self.characteristic_output_string, output_string)
+        else:
+            self.assertNotIn(self.characteristic_output_string, output_string)
 
 
 @unittest.skipIf(not gamsgms_available, "The 'gams' executable is not available")
@@ -212,31 +224,31 @@ class GAMSLogfileGmsTests(GAMSLogfileTestBase):
 
     def test_no_tee(self):
         with SolverFactory("gams", solver_io="gms") as opt:
-            with redirected_subprocess_call() as output:
+            with redirected_subprocess_run() as output:
                 opt.solve(self.m, tee=False)
-        self.assertFalse(output.getvalue())
+        self._check_stdout(output.getvalue(), exists=False, check_jobstart=True)
         self._check_logfile(exists=False)
 
     def test_tee(self):
         with SolverFactory("gams", solver_io="gms") as opt:
-            with redirected_subprocess_call() as output:
+            with redirected_subprocess_run() as output:
                 opt.solve(self.m, tee=True)
-        self.assertTrue(output.getvalue())
+        self._check_stdout(output.getvalue(), exists=True, check_jobstart=True)
         self._check_logfile(exists=False)
 
     def test_logfile(self):
         with SolverFactory("gams", solver_io="gms") as opt:
-            with redirected_subprocess_call() as output:
+            with redirected_subprocess_run() as output:
                 opt.solve(self.m, logfile=self.logfile)
-        self.assertFalse(output.getvalue())
+        self._check_stdout(output.getvalue(), exists=False, check_jobstart=True)
         self._check_logfile(exists=True)
 
     def test_tee_and_logfile(self):
         with SolverFactory("gams", solver_io="gms") as opt:
-            with redirected_subprocess_call() as output:
+            with redirected_subprocess_run() as output:
                 opt.solve(self.m, logfile=self.logfile, tee=True)
-        self.assertTrue(output.getvalue())
-        self._check_logfile(exists=True, expected=output.getvalue())
+        self._check_stdout(output.getvalue(), exists=True, check_jobstart=True)
+        self._check_logfile(exists=True)
 
 
 @unittest.skipIf(not gamspy_available, "The 'gams' python bindings are not available")
@@ -252,20 +264,21 @@ class GAMSLogfilePyTests(GAMSLogfileTestBase):
         with SolverFactory("gams", solver_io="python") as opt:
             with redirected_stdout() as output:
                 opt.solve(self.m, tee=False)
-        self.assertFalse(output.getvalue())
+        self._check_stdout(output.getvalue(), exists=False)
         self._check_logfile(exists=False)
 
     def test_tee(self):
         with SolverFactory("gams", solver_io="python") as opt:
             with redirected_stdout() as output:
                 opt.solve(self.m, tee=True)
-        self.assertTrue(output.getvalue())
+        self._check_stdout(output.getvalue(), exists=True)
         self._check_logfile(exists=False)
 
     def test_logfile(self):
         with SolverFactory("gams", solver_io="python") as opt:
             with redirected_stdout() as output:
                 opt.solve(self.m, logfile=self.logfile)
+        self._check_stdout(output.getvalue(), exists=False)
         self._check_logfile(exists=True)
         self.assertFalse(output.getvalue())
 
@@ -273,8 +286,8 @@ class GAMSLogfilePyTests(GAMSLogfileTestBase):
         with SolverFactory("gams", solver_io="python") as opt:
             with redirected_stdout() as output:
                 opt.solve(self.m, logfile=self.logfile, tee=True)
-        self.assertTrue(output.getvalue())
-        self._check_logfile(exists=True, expected=output.getvalue())
+        self._check_stdout(output.getvalue(), exists=True)
+        self._check_logfile(exists=True)
 
 
 @contextlib.contextmanager
@@ -289,21 +302,29 @@ def redirected_stdout():
 
 
 @contextlib.contextmanager
-def redirected_subprocess_call():
+def redirected_subprocess_run():
     """Temporarily redirect subprocess calls stdout into a string buffer."""
     output = StringIO()
-    old_call = subprocess.call
+    old_call = pyutilib.subprocess.run_command
 
-    def call(*args, **kwargs):
-        returncode, out = pyutilib.subprocess.run(*args, **kwargs)
-        output.write(out)
-        return returncode
+    def run(*args, **kwargs):
+        returncode, out = old_call(*args, **kwargs)
+        output.write("\n".join(
+            [
+                s for s in out.splitlines()
+                if not s.startswith("*** Could not write to console: /dev/tty")
+            ]
+        ))
+        output
+        return returncode, out
 
     try:
-        subprocess.call = call
+        pyutilib.subprocess.run_command = run
+        pyutilib.subprocess.run = run
         yield output
     finally:
-        subprocess.call = old_call
+        pyutilib.subprocess.run_command = old_call
+        pyutilib.subprocess.run = old_call
 
 
 if __name__ == "__main__":

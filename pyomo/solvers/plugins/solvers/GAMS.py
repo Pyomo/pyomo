@@ -10,7 +10,7 @@
 
 from six import StringIO, iteritems, itervalues
 from tempfile import mkdtemp
-import os, sys, subprocess, math, logging, shutil, time
+import os, sys, math, logging, shutil, time
 
 from pyomo.core.base import (Constraint, Suffix, Var, value,
                              Expression, Objective)
@@ -752,7 +752,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
             command.append("lf=" + str(logfile))
 
         try:
-            rc = subprocess.call(command)
+            rc, _ = pyutilib.subprocess.run(command)
 
             if keepfiles:
                 print("\nGAMS WORKING DIRECTORY: %s\n" % tmpdir)
