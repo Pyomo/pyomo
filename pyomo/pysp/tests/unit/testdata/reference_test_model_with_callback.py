@@ -16,7 +16,7 @@ def c_rule(model):
     return model.x >= model.p
 model.c = Constraint(rule=c_rule)
 
-def pysp_instance_creation_callback(scenario_tree, scenario_name, node_names):
+def pysp_instance_creation_callback(scenario_name, node_names):
     instance = model.create_instance()
     if scenario_name == "s1":
         instance.p.value = 1.0
