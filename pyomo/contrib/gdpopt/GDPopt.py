@@ -138,7 +138,7 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
 
         # Verify that decomposition strategy chosen is one of the supported
         # strategies
-        valid_strategies = ['LOA', 'LGBD']
+        valid_strategies = ['LOA']
         if solve_data.decomposition_strategy not in valid_strategies:
             raise ValueError('Unrecognized decomposition strategy %s. '
                              'Valid strategies include: %s'
