@@ -69,7 +69,6 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
             if tmp_ndx > ndx:
                 self._pyomo_var_to_ndx_map[tmp_var] -= 1
         self._ndx_count -= 1
-        del self._solver_var_to_pyomo_var_map[solver_var]
         del self._pyomo_var_to_ndx_map[pyomo_var]
         self._solver_model.variables.delete(solver_var)
 

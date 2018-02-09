@@ -212,6 +212,7 @@ class PersistentSolver(DirectOrPersistentSolver):
             self._referenced_variables[var] -= 1
         del self._vars_referenced_by_con[con]
         del self._pyomo_con_to_solver_con_map[con]
+        del self._solver_con_to_pyomo_con_map[solver_con]
 
     def remove_sos_constraint(self, con):
         """
@@ -233,6 +234,7 @@ class PersistentSolver(DirectOrPersistentSolver):
             self._referenced_variables[var] -= 1
         del self._vars_referenced_by_con[con]
         del self._pyomo_con_to_solver_con_map[con]
+        del self._solver_con_to_pyomo_con_map[solver_con]
 
     def remove_var(self, var):
         """
@@ -255,6 +257,7 @@ class PersistentSolver(DirectOrPersistentSolver):
         self._labeler.remove_obj(var)
         del self._referenced_variables[var]
         del self._pyomo_var_to_solver_var_map[var]
+        del self._solver_var_to_pyomo_var_map[solver_var]
 
     """ This method should be implemented by subclasses."""
     def update_var(self, var):
