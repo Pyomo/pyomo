@@ -1861,6 +1861,81 @@ class Test_linear_constraint(unittest.TestCase):
         self.assertEqual(repn.linear, (1,))
         self.assertEqual(repn.constant, 0)
 
+    def test_canonical_form(self):
+        v = variable()
+        e = expression()
+        p = parameter(value=1)
+
+        c = linear_constraint()
+
+        #
+        # compute_values = True
+        #
+
+        c.terms = [(v,p)]
+        repn = c.canonical_form()
+        self.assertEqual(len(repn.variables), 1)
+        self.assertIs(repn.variables[0], v)
+        self.assertEqual(repn.linear, (1,))
+        self.assertEqual(repn.constant, 0)
+
+        v.fix(2)
+        repn = c.canonical_form()
+        self.assertEqual(len(repn.variables), 0)
+        self.assertEqual(len(repn.linear), 0)
+        self.assertEqual(repn.constant, 2)
+
+        v.free()
+        e.expr = v
+        c.terms = [(e,p)]
+        repn = c.canonical_form()
+        self.assertEqual(len(repn.variables), 1)
+        self.assertIs(repn.variables[0], v)
+        self.assertEqual(repn.linear, (1,))
+        self.assertEqual(repn.constant, 0)
+
+        v.fix(2)
+        repn = c.canonical_form()
+        self.assertEqual(len(repn.variables), 0)
+        self.assertEqual(len(repn.linear), 0)
+        self.assertEqual(repn.constant, 2)
+
+        #
+        # compute_values = False
+        #
+
+        v.free()
+        c.terms = [(v,p)]
+        repn = c.canonical_form(compute_values=False)
+        self.assertEqual(len(repn.variables), 1)
+        self.assertIs(repn.variables[0], v)
+        self.assertEqual(len(repn.linear), 1)
+        self.assertIs(repn.linear[0], p)
+        self.assertEqual(repn.linear[0](), 1)
+        self.assertEqual(repn.constant, 0)
+
+        v.fix(2)
+        repn = c.canonical_form(compute_values=False)
+        self.assertEqual(len(repn.variables), 0)
+        self.assertEqual(len(repn.linear), 0)
+        self.assertEqual(repn.constant(), 2)
+
+        v.free()
+        e.expr = v
+        c.terms = [(e,p)]
+        repn = c.canonical_form(compute_values=False)
+        self.assertEqual(len(repn.variables), 1)
+        self.assertIs(repn.variables[0], v)
+        self.assertEqual(len(repn.linear), 1)
+        self.assertIs(repn.linear[0], p)
+        self.assertEqual(repn.linear[0](), 1)
+        self.assertEqual(repn.constant, 0)
+
+        v.fix(2)
+        repn = c.canonical_form(compute_values=False)
+        self.assertEqual(len(repn.variables), 0)
+        self.assertEqual(len(repn.linear), 0)
+        self.assertEqual(repn.constant(), 2)
 
 class Test_constraint_dict(_TestActiveComponentDictBase,
                            unittest.TestCase):

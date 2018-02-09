@@ -820,20 +820,22 @@ class linear_constraint(_MutableBoundsConstraintMixin,
     # _linear_canonical_form flag is True
     #
 
-    def canonical_form(self):
+    def canonical_form(self, compute_values=True):
         from pyomo.repn.canonical_repn import \
             coopr3_CompiledLinearCanonicalRepn
         variables = []
         coefficients = []
         constant = 0
         for v, c in self.terms:
+            if compute_values:
+                c = value(c)
             if v.is_expression():
                 v = v.expr
             if not v.fixed:
                 variables.append(v)
                 coefficients.append(c)
             else:
-                constant += value(c) * v()
+                constant += c * v()
         repn = coopr3_CompiledLinearCanonicalRepn()
         repn.variables = tuple(variables)
         repn.linear = tuple(coefficients)
