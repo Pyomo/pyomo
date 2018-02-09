@@ -16,19 +16,28 @@ else:
 import pyomo.core.base.symbolic
 
 
+@unittest.skipIf(not subsolvers_available,
+                 "Required subsolvers %s are not available"
+                 % (required_solvers,))
+@unittest.skipIf(not pyomo.core.base.symbolic.differentiate_available,
+                 "Symbolic differentiation is not available")
 class TestGDPopt(unittest.TestCase):
     """Tests for the GDPopt solver plugin."""
 
-    @unittest.skipIf(not subsolvers_available,
-                     "Required subsolvers %s are not available"
-                     % (required_solvers,))
-    @unittest.skipIf(not pyomo.core.base.symbolic.differentiate_available,
-                     "Symbolic differentiation is not available")
     def test_LOA(self):
         """Test logic-based outer approximation."""
         with SolverFactory('gdpopt') as opt:
             model = build_eight_process_flowsheet()
             opt.solve(model, strategy='LOA', mip='cbc')
+
+            self.assertTrue(fabs(value(model.profit.expr) - 68) <= 1E-2)
+
+    def test_LOA_maxBinary(self):
+        """Test logic-based OA with max_binary initialization."""
+        with SolverFactory('gdpopt') as opt:
+            model = build_eight_process_flowsheet()
+            opt.solve(model, strategy='LOA', init_strategy='max_binary',
+                      mip='cbc')
 
             self.assertTrue(fabs(value(model.profit.expr) - 68) <= 1E-2)
 
