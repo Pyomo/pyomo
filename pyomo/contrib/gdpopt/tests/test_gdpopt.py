@@ -13,6 +13,8 @@ if all(SolverFactory(s).available() for s in required_solvers):
 else:
     subsolvers_available = False
 
+import pyomo.core.base.symbolic
+
 
 class TestGDPopt(unittest.TestCase):
     """Tests for the GDPopt solver plugin."""
@@ -20,6 +22,8 @@ class TestGDPopt(unittest.TestCase):
     @unittest.skipIf(not subsolvers_available,
                      "Required subsolvers %s are not available"
                      % (required_solvers,))
+    @unittest.skipIf(not pyomo.core.base.symbolic.differentiate_available,
+                     "Symbolic differentiation is not available")
     def test_LOA(self):
         """Test logic-based outer approximation."""
         with SolverFactory('gdpopt') as opt:
