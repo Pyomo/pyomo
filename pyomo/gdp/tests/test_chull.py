@@ -658,7 +658,7 @@ class NestedDisjunction(unittest.TestCase):
             m.d3.indicator_var.fix(case[2])
             m.d4.indicator_var.fix(case[3])
             results = solver.solve(m)
-            print case, results.solver
+            print(case, results.solver)
             if case[4] is None:
                 self.assertEqual(results.solver.termination_condition,
                                  pyomo.opt.TerminationCondition.infeasible)
