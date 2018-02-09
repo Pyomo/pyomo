@@ -10,7 +10,7 @@
 
 from six import StringIO, iteritems, itervalues
 from tempfile import mkdtemp
-import os, sys, subprocess, math, logging, shutil, time
+import os, sys, math, logging, shutil, time
 
 from pyomo.core.base import (Constraint, Suffix, Var, value,
                              Expression, Objective)
@@ -136,6 +136,8 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
 
         tee=False:
             Output GAMS log to stdout.
+        logfile=None:
+            Optionally a logfile can be written.
         load_solutions=True:
             Optionally skip loading solution into model, in which case
             the results object will contain the solution data.
@@ -192,6 +194,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
 
         load_solutions = kwds.pop("load_solutions", True)
         tee            = kwds.pop("tee", False)
+        logfile        = kwds.pop("logfile", None)
         keepfiles      = kwds.pop("keepfiles", False)
         tmpdir         = kwds.pop("tmpdir", None)
         report_timing  = kwds.pop("report_timing", False)
@@ -250,7 +253,8 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         t1 = ws.add_job_from_string(output_file.getvalue())
 
         try:
-            t1.run(output=sys.stdout if tee else None)
+            with OutputStream(tee=tee, logfile=logfile) as output_stream:
+                t1.run(output=output_stream)
         except GamsExceptionExecution as e:
             try:
                 if e.rc == 3:
@@ -617,6 +621,8 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         tee=False:
             Output GAMS log to stdout.
+        logfile=None:
+            Optionally a logfile can be written.
         load_solutions=True:
             Optionally skip loading solution into model, in which case
             the results object will contain the solution data.
@@ -667,6 +673,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         load_solutions = kwds.pop("load_solutions", True)
         tee            = kwds.pop("tee", False)
+        logfile        = kwds.pop("logfile", None)
         keepfiles      = kwds.pop("keepfiles", False)
         tmpdir         = kwds.pop("tmpdir", None)
         report_timing  = kwds.pop("report_timing", False)
@@ -731,11 +738,22 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         exe = self.executable()
         command = [exe, output_filename, 'o=' + lst_filename]
-        if not tee:
+        if tee and not logfile:
+            # default behaviour of gams is to print to console, for
+            # compatability with windows and *nix we want to explicitly log to
+            # stdout (see https://www.gams.com/latest/docs/UG_GamsCall.html)
+            command.append("lo=3")
+        elif not tee and not logfile:
             command.append("lo=0")
+        elif not tee and logfile:
+            command.append("lo=2")
+        elif tee and logfile:
+            command.append("lo=4")
+        if logfile:
+            command.append("lf=" + str(logfile))
 
         try:
-            rc = subprocess.call(command)
+            rc, _ = pyutilib.subprocess.run(command)
 
             if keepfiles:
                 print("\nGAMS WORKING DIRECTORY: %s\n" % tmpdir)
@@ -1035,6 +1053,52 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                   (postsolve_completion_time - initial_time))
 
         return results
+
+
+class OutputStream:
+    """Output stream object for simultaneously writing to multiple streams.
+
+    tee=False:
+        If set writing to this stream will write to stdout.
+    logfile=None:
+        Optionally a logfile can be written.
+
+    """
+
+    def __init__(self, tee=False, logfile=None):
+        """Initialize output stream object."""
+        if tee:
+            self.tee = sys.stdout
+        else:
+            self.tee = None
+        self.logfile = logfile
+        self.logfile_buffer = None
+
+    def __enter__(self):
+        """Enter context of output stream and open logfile if given."""
+        if self.logfile is not None:
+            self.logfile_buffer = open(self.logfile, 'a')
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        """Enter context of output stream and close logfile if necessary."""
+        if self.logfile_buffer is not None:
+            self.logfile_buffer.close()
+        self.logfile_buffer = None
+
+    def write(self, message):
+        """Write messages to all streams."""
+        if self.tee is not None:
+            self.tee.write(message)
+        if self.logfile_buffer is not None:
+            self.logfile_buffer.write(message)
+
+    def flush(self):
+        """Needed for python3 compatibility."""
+        if self.tee is not None:
+            self.tee.flush()
+        if self.logfile_buffer is not None:
+            self.logfile_buffer.flush()
 
 
 def check_expr_evaluation(model, symbolMap, solver_io):
