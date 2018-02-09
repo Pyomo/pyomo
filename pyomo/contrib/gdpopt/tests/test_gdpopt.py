@@ -7,7 +7,7 @@ from pyomo.contrib.gdpopt.tests.eight_process_problem import \
     build_eight_process_flowsheet
 from pyomo.environ import SolverFactory, value
 
-required_solvers = ('ipopt', 'gurobi')
+required_solvers = ('ipopt', 'cbc')
 if all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = True
 else:
@@ -24,7 +24,7 @@ class TestGDPopt(unittest.TestCase):
         """Test logic-based outer approximation."""
         with SolverFactory('gdpopt') as opt:
             model = build_eight_process_flowsheet()
-            opt.solve(model, strategy='LOA')
+            opt.solve(model, strategy='LOA', mip='cbc')
 
             self.assertTrue(fabs(value(model.profit.expr) - 68) <= 1E-2)
 
