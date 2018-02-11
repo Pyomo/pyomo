@@ -36,7 +36,10 @@ def prod(terms):
     Returns:
         The value of the product, which may be a Pyomo expression object.
     """
-    return reduce(operator.mul, terms, 1)
+    ans = 1
+    for term in terms:
+        ans *= term
+    return ans
 
 Prod = prod
 
@@ -183,7 +186,14 @@ def summation(*args, **kwds):
         index = iarg.index_set()
 
     start = kwds.get("start", 0)
-    nvars = sum(1 if isinstance(arg,pyomo.core.base.var.Var) else 0 for arg in args)
+    vars_ = []
+    params_ = []
+    for arg in args:
+        if isinstance(arg, pyomo.core.base.var.Var):
+            vars_.append(arg)
+        else:
+            params_.append(arg)
+    nvars = len(vars_)
 
     num_index = range(0,nargs)
     if ndenom == 0:
@@ -192,16 +202,37 @@ def summation(*args, **kwds):
         #
         if start.__class__ in native_numeric_types:
             if nvars == 1:
-                with EXPR.linear_expression as expr:
-                    expr += start
-                    Sum((prod(args[j][i] for j in num_index) for i in index), expr)
+                v = vars_[0]
+                if len(params_) == 0:
+                    with EXPR.linear_expression as expr:
+                        expr += start
+                        for i in index:
+                            expr += v[i]
+                elif len(params_) == 1:    
+                    p = params_[0]
+                    with EXPR.linear_expression as expr:
+                        expr += start
+                        for i in index:
+                            expr += p[i]*v[i]
+                else:
+                    with EXPR.linear_expression as expr:
+                        expr += start
+                        for i in index:
+                            term = 1
+                            for j in params_:
+                                term *= params_[j][i]
+                            expr += term * v[i]
                 return expr
-            #elif nvars == 2:
-            #    with EXPR.quadratic_expression as expr:
-            #        expr += start
-            #        Sum((prod(args[j][i] for j in num_index) for i in index), expr)
-            #    return expr
-            return Sum((prod(args[j][i] for j in num_index) for i in index), start)
+            #
+            with EXPR.nonlinear_expression as expr:
+                expr += start
+                for i in index:
+                    term = 1
+                    for j in num_index:
+                        term *= args[j][i]
+                    expr += term
+            return expr
+        #
         return Sum((prod(args[j][i] for j in num_index) for i in index), start)
     elif nargs == 0:
         #
@@ -245,6 +276,6 @@ def sequence(*args):
 
 def xsequence(*args):
     from pyomo.util.deprecation import deprecation_warning
-    deprecation_arning("The xsequence function is deprecated.  Use the sequence() function, which returns a generator.")  # Remove in Pyomo 6.0
+    deprecation_warning("The xsequence function is deprecated.  Use the sequence() function, which returns a generator.")  # Remove in Pyomo 6.0
     return sequence(*args)
 
