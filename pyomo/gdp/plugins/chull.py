@@ -479,8 +479,12 @@ class ConvexHull_Transformation(Transformation):
             bigmConstraint = Constraint(transBlock.lbub)
             relaxationBlock.add_component(
                 disaggregatedVarName + "_bounds", bigmConstraint)
-            bigmConstraint.add('lb', obj.indicator_var*lb <= disaggregatedVar)
-            bigmConstraint.add('ub', disaggregatedVar <= obj.indicator_var*ub)
+            if lb:
+                bigmConstraint.add(
+                    'lb', obj.indicator_var*lb <= disaggregatedVar)
+            if ub:
+                bigmConstraint.add(
+                    'ub', disaggregatedVar <= obj.indicator_var*ub)
             chull['bigmConstraints'][var] = bigmConstraint
             relaxationBlockInfo['boundConstraintToSrcVar'][bigmConstraint] = var
 
