@@ -316,8 +316,12 @@ class Disjunction(ActiveIndexedComponent):
         if not self.is_indexed():
             if self._init_rule is not None:
                 expr = self._init_rule(_self_parent)
-            else:
+            elif self._init_expr is not None:
                 expr = self._init_expr
+            else:
+                timer.report()
+                return
+
             if expr is None:
                 raise ValueError( _rule_returned_none_error % (self.name,) )
             if expr is Disjunction.Skip:
@@ -325,12 +329,12 @@ class Disjunction(ActiveIndexedComponent):
                 return
             self._data[None] = self
             self._setitem_when_not_present( None, expr )
-        else:
-            if self._init_expr is not None:
-                raise IndexError(
-                    "Disjunction '%s': Cannot initialize multiple indices "
-                    "of a disjunction with a single disjunction list" %
-                    (self.name,) )
+        elif self._init_expr is not None:
+            raise IndexError(
+                "Disjunction '%s': Cannot initialize multiple indices "
+                "of a disjunction with a single disjunction list" %
+                (self.name,) )
+        elif self._init_rule is not None:
             _init_rule = self._init_rule
             for ndx in self._index:
                 try:
