@@ -80,7 +80,7 @@ NL_Mode_GrossmannLee = 2
 #
 NL_Mode_FurmanSawayaGrossmann = 3
 
-EPS = 1e-2
+EPS = 1e-4
 
 class ConvexHull_Transformation(Transformation):
 
