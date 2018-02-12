@@ -12,7 +12,6 @@
 import re
 
 from gurobipy import *
-from six.moves import zip
 
 GUROBI_VERSION = gurobi.version()
 
