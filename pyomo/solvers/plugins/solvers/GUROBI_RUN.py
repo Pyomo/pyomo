@@ -19,9 +19,8 @@ are available!
 from gurobipy import *
 import sys
 if sys.version_info[0] < 3:
-    from itertools import izip
-    zip = izip
-
+    from itertools import izip as zip
+    
 
 GUROBI_VERSION = gurobi.version()
 
