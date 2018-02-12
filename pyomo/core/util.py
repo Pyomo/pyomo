@@ -98,17 +98,19 @@ def Sum(args, start=0, linear=None):
             # Right now Pyomo5 expressions can only handle single linear
             # terms.
             #
+            # Also, we treat linear expressions as nonlinear if the constant
+            # term is not a native numeric type.  Otherwise, large summation
+            # objects are created for the constant term.
+            #
             if linear:
                 nvar=0
                 for term in terms:
                     c,v = term
                     if not v is None:
                         nvar += 1
-                #
-                # NOTE: We treat constants as nonlinear since we want to 
-                # simply keep them in a sum
-                #
-                if nvar == 0 or nvar > 1:
+                    elif not c.__class__ in native_numeric_types:
+                        linear = False
+                if nvar > 1:
                     linear = False
             start = start+first
         if linear:
