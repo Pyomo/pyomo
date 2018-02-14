@@ -13,6 +13,34 @@ from pyomo.core.kernel.numvalue import native_types
 import pyomo.core.base.expr as EXPR
 import pyomo.core.base.expr_coopr3 as coopr3
 
+from pyomo.opt import TerminationCondition, SolverStatus
+
+_acceptable_termination_conditions = set([
+    TerminationCondition.optimal,
+    TerminationCondition.globallyOptimal,
+    TerminationCondition.locallyOptimal,
+])
+_infeasible_termination_conditions = set([
+    TerminationCondition.infeasible,
+    TerminationCondition.invalidProblem,
+])
+
+
+class NORMAL(object): pass
+class INFEASIBLE(object): pass
+class NONOPTIMAL(object): pass
+
+def verify_successful_solve(results):
+    status = results.solver.status
+    term = results.solver.termination_condition
+
+    if status == SolverStatus.ok and term in _acceptable_termination_conditions:
+        return NORMAL
+    elif term in _infeasible_termination_conditions:
+        return INFEASIBLE
+    else:
+        return NONOPTIMAL
+
 
 def clone_without_expression_components(expr, substitute):
     ans = [EXPR.clone_expression(expr, substitute=substitute)]
