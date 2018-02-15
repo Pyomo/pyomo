@@ -753,7 +753,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
             command.append("lf=" + str(logfile))
 
         try:
-            rc, _ = pyutilib.subprocess.run(command)
+            rc, _ = pyutilib.subprocess.run(command, tee=tee)
 
             if keepfiles:
                 print("\nGAMS WORKING DIRECTORY: %s\n" % tmpdir)
