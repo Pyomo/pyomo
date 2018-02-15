@@ -25,7 +25,7 @@ from six import iteritems, iterkeys
 # DEBUG
 from nose.tools import set_trace
 
-EPS = 1e-2
+EPS = pyomo.gdp.plugins.chull.EPS
 
 class TwoTermDisj(unittest.TestCase):
     # make sure that we are using coopr3 expressions...
@@ -45,7 +45,7 @@ class TwoTermDisj(unittest.TestCase):
         self.assertIsInstance(transBlock, Block)
         lbub = transBlock.lbub
         self.assertIsInstance(lbub, Set)
-        self.assertEqual(lbub, ['lb', 'ub'])
+        self.assertEqual(lbub, ['lb', 'ub', 'eq'])
 
         disjBlock = transBlock.relaxedDisjuncts
         self.assertIsInstance(disjBlock, Block)
@@ -215,26 +215,39 @@ class TwoTermDisj(unittest.TestCase):
         self.assertIs(cons.body._args[1], disjBlock[1].x)
 
         c2 = disjBlock[1].component("d[1].c2")
-        # has both lb and ub
-        self.assertEqual(len(c2), 2)
-        conslb = c2['lb']
-        self.assertIsNone(conslb.lower)
-        self.assertEqual(conslb.upper, 0)
-        self.assertEqual(len(conslb.body._args), 2)
-        self.assertEqual(len(conslb.body._coef), 2)
-        self.assertEqual(conslb.body._coef[0], 3)
-        self.assertIs(conslb.body._args[0], m.d[1].indicator_var)
-        self.assertEqual(conslb.body._coef[1], -1)
-        self.assertIs(conslb.body._args[1], disjBlock[1].w)
-        consub = c2['ub']
-        self.assertIsNone(consub.lower)
-        self.assertEqual(consub.upper, 0)
-        self.assertEqual(len(consub.body._args), 2)
-        self.assertEqual(len(consub.body._coef), 2)
-        self.assertEqual(consub.body._coef[0], 1)
-        self.assertIs(consub.body._args[0], disjBlock[1].w)
-        self.assertEqual(consub.body._coef[1], -3)
-        self.assertIs(consub.body._args[1], m.d[1].indicator_var)
+        # 'eq' is preserved
+        self.assertEqual(len(c2), 1)
+        cons = c2['eq']
+        self.assertEqual(cons.lower, 0)
+        self.assertEqual(cons.upper, 0)
+        self.assertEqual(len(cons.body._args), 2)
+        self.assertEqual(len(cons.body._coef), 2)
+        self.assertEqual(cons.body._coef[0], 1)
+        self.assertIs(cons.body._args[0], disjBlock[1].w)
+        self.assertEqual(cons.body._coef[1], -3)
+        self.assertIs(cons.body._args[1], m.d[1].indicator_var)
+
+        c3 = disjBlock[1].component("d[1].c3")
+        # bounded inequality is split
+        self.assertEqual(len(c3), 2)
+        cons = c3['lb']
+        self.assertIsNone(cons.lower)
+        self.assertEqual(cons.upper, 0)
+        self.assertEqual(len(cons.body._args), 2)
+        self.assertEqual(len(cons.body._coef), 2)
+        self.assertEqual(cons.body._coef[0], 1)
+        self.assertIs(cons.body._args[0], m.d[1].indicator_var)
+        self.assertEqual(cons.body._coef[1], -1)
+        self.assertIs(cons.body._args[1], disjBlock[1].x)
+        cons = c3['ub']
+        self.assertIsNone(cons.lower)
+        self.assertEqual(cons.upper, 0)
+        self.assertEqual(len(cons.body._args), 2)
+        self.assertEqual(len(cons.body._coef), 2)
+        self.assertEqual(cons.body._coef[0], 1)
+        self.assertIs(cons.body._args[0], disjBlock[1].x)
+        self.assertEqual(cons.body._coef[1], -3)
+        self.assertIs(cons.body._args[1], m.d[1].indicator_var)
 
     def check_bound_constraints(self, cons, disvar, indvar, lb, ub):
         self.assertIsInstance(cons, Constraint)
@@ -395,8 +408,8 @@ class TwoTermDisj(unittest.TestCase):
         transConsdict = m.d[1]._gdp_transformation_info['chull'][
             'relaxedConstraints']
 
-        self.assertEqual(len(srcConsdict), 2)
-        self.assertEqual(len(transConsdict), 2)
+        self.assertEqual(len(srcConsdict), 3)
+        self.assertEqual(len(transConsdict), 3)
         # first constraint
         orig1 = m.d[1].c1
         trans1 = disjBlock[1].component("d[1].c1")
@@ -407,6 +420,11 @@ class TwoTermDisj(unittest.TestCase):
         trans2 = disjBlock[1].component("d[1].c2")
         self.assertIs(srcConsdict[trans2], orig2)
         self.assertIs(transConsdict[orig2], trans2)
+        # third constraint
+        orig3 = m.d[1].c3
+        trans3 = disjBlock[1].component("d[1].c3")
+        self.assertIs(srcConsdict[trans3], orig3)
+        self.assertIs(transConsdict[orig3], trans3)
 
     def test_disaggregatedVar_mappings(self):
         m = models.makeTwoTermDisj_Nonlinear()
@@ -487,14 +505,15 @@ class TwoTermDisj(unittest.TestCase):
             self.assertEqual(len(list(relaxed.component_data_objects(Var))), 3)
             self.assertEqual(
                 len(list(relaxed.component_objects(Constraint))), 4)
+            # Note: m.x LB == 0, so only 3 bounds constriants (not 6)
             self.assertEqual(
-                len(list(relaxed.component_data_objects(Constraint))), 3*2+i)
+                len(list(relaxed.component_data_objects(Constraint))), 3+i)
             self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)
 
     def test_virtual_indexed_constraints_in_disjunct(self):
         m = ConcreteModel()
         m.I = [1,2,3]
-        m.x = Var(m.I, bounds=(0,10))
+        m.x = Var(m.I, bounds=(-1,10))
         def d_rule(d,j):
             m = d.model()
             d.c = Constraint(Any)
