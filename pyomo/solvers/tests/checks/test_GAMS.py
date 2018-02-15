@@ -11,7 +11,7 @@
 
 import pyutilib.th as unittest
 import pyutilib.subprocess
-from pyutilib.misc import setup_redirect, reset_redirect
+from pyutilib.misc import capture_output
 from pyomo.environ import *
 from six import StringIO
 import contextlib, sys, os, shutil
@@ -223,28 +223,28 @@ class GAMSLogfileGmsTests(GAMSLogfileTestBase):
 
     def test_no_tee(self):
         with SolverFactory("gams", solver_io="gms") as opt:
-            with redirected_subprocess_run() as output:
+            with capture_output() as output:
                 opt.solve(self.m, tee=False)
         self._check_stdout(output.getvalue(), exists=False)
         self._check_logfile(exists=False)
 
     def test_tee(self):
         with SolverFactory("gams", solver_io="gms") as opt:
-            with redirected_subprocess_run() as output:
+            with capture_output() as output:
                 opt.solve(self.m, tee=True)
         self._check_stdout(output.getvalue(), exists=True)
         self._check_logfile(exists=False)
 
     def test_logfile(self):
         with SolverFactory("gams", solver_io="gms") as opt:
-            with redirected_subprocess_run() as output:
+            with capture_output() as output:
                 opt.solve(self.m, logfile=self.logfile)
         self._check_stdout(output.getvalue(), exists=False)
         self._check_logfile(exists=True)
 
     def test_tee_and_logfile(self):
         with SolverFactory("gams", solver_io="gms") as opt:
-            with redirected_subprocess_run() as output:
+            with capture_output() as output:
                 opt.solve(self.m, logfile=self.logfile, tee=True)
         self._check_stdout(output.getvalue(), exists=True)
         self._check_logfile(exists=True)
@@ -261,68 +261,32 @@ class GAMSLogfilePyTests(GAMSLogfileTestBase):
 
     def test_no_tee(self):
         with SolverFactory("gams", solver_io="python") as opt:
-            with redirected_stdout() as output:
+            with capture_output() as output:
                 opt.solve(self.m, tee=False)
         self._check_stdout(output.getvalue(), exists=False)
         self._check_logfile(exists=False)
 
     def test_tee(self):
         with SolverFactory("gams", solver_io="python") as opt:
-            with redirected_stdout() as output:
+            with capture_output() as output:
                 opt.solve(self.m, tee=True)
         self._check_stdout(output.getvalue(), exists=True)
         self._check_logfile(exists=False)
 
     def test_logfile(self):
         with SolverFactory("gams", solver_io="python") as opt:
-            with redirected_stdout() as output:
+            with capture_output() as output:
                 opt.solve(self.m, logfile=self.logfile)
         self._check_stdout(output.getvalue(), exists=False)
         self._check_logfile(exists=True)
 
     def test_tee_and_logfile(self):
         with SolverFactory("gams", solver_io="python") as opt:
-            with redirected_stdout() as output:
+            with capture_output() as output:
                 opt.solve(self.m, logfile=self.logfile, tee=True)
         self._check_stdout(output.getvalue(), exists=True)
         self._check_logfile(exists=True)
 
-
-@contextlib.contextmanager
-def redirected_stdout():
-    """Temporarily redirect stdout into a string buffer."""
-    output = StringIO()
-    try:
-        setup_redirect(output)
-        yield output
-    finally:
-        reset_redirect()
-
-
-@contextlib.contextmanager
-def redirected_subprocess_run():
-    """Temporarily redirect subprocess calls stdout into a string buffer."""
-    output = StringIO()
-    old_call = pyutilib.subprocess.run_command
-
-    def run(*args, **kwargs):
-        returncode, out = old_call(*args, **kwargs)
-        output.write("\n".join(
-            [
-                s for s in out.splitlines()
-                if not s.startswith("*** Could not write to console: /dev/tty")
-            ]
-        ))
-        output
-        return returncode, out
-
-    try:
-        pyutilib.subprocess.run_command = run
-        pyutilib.subprocess.run = run
-        yield output
-    finally:
-        pyutilib.subprocess.run_command = old_call
-        pyutilib.subprocess.run = old_call
 
 
 if __name__ == "__main__":
