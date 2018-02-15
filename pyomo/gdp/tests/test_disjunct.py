@@ -13,6 +13,8 @@ import pyutilib.th as unittest
 from pyomo.core import ConcreteModel, Var, Constraint
 from pyomo.gdp import Disjunction, Disjunct
 
+from six import iterkeys
+
 class TestDisjunction(unittest.TestCase):
     def test_empty_disjunction(self):
         m = ConcreteModel()
@@ -40,7 +42,9 @@ class TestDisjunction(unittest.TestCase):
         m.d = Disjunction(expr=[m.x<=0, m.y>=1])
         self.assertEqual(len(m.component_map(Disjunction)), 1)
         self.assertEqual(len(m.component_map(Disjunct)), 1)
-        self.assertEqual(m.component_map(Disjunct).keys()[0][:2], "d_")
+
+        implicit_disjuncts = list(iterkeys(m.component_map(Disjunct)))
+        self.assertEqual(implicit_disjuncts[0][:2], "d_")
         disjuncts = m.d.disjuncts
         self.assertEqual(len(disjuncts), 2)
         self.assertIs(disjuncts[0].parent_block(), m)
@@ -54,7 +58,8 @@ class TestDisjunction(unittest.TestCase):
         m.e = Disjunction(expr=[m.y<=0, m.x>=1])
         self.assertEqual(len(m.component_map(Disjunction)), 2)
         self.assertEqual(len(m.component_map(Disjunct)), 2)
-        self.assertEqual(m.component_map(Disjunct).keys()[1][:2], "e_")
+        implicit_disjuncts = list(iterkeys(m.component_map(Disjunct)))
+        self.assertEqual(implicit_disjuncts[1][:2], "e_")
         disjuncts = m.e.disjuncts
         self.assertEqual(len(disjuncts), 2)
         self.assertIs(disjuncts[0].parent_block(), m)
