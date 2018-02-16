@@ -23,6 +23,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             print('\n Solving problem with selected strategy')
             opt.solve(model, strategy='ECP', init_strategy = 'initial_binary', mip = 'glpk')
+            model.pprint()
     
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)

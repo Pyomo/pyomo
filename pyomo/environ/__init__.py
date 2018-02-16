@@ -41,7 +41,8 @@ _packages = [
 # These packages are under development, or they may be omitted in a
 # Pyomo installation; silently ignore any import errors.
 #
-_optional_packages = set([])
+_optional_packages = set([
+    'pyomo.contrib.mindtpy'])
 
 
 def _import_packages():

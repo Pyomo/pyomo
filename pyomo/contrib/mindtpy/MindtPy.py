@@ -14,9 +14,10 @@ research group of Ignacio Grossmann.
 
 For nonconvex problems, the bounds self.LB and self.UB may not be rigorous.
 
-Questions: David Bernal <https://github.com/bernalde>
+Questions: Please make a post at StackOverflow and/or David Bernal <https://github.com/bernalde>
 
 """
+import logging
 from copy import deepcopy
 from math import copysign
 from pprint import pprint
@@ -40,6 +41,8 @@ from pyomo.core.base import TransformationFactory
 from pyomo.core.base import ComponentMap
 
 from six.moves import range
+
+logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 __version__ = (0, 0, 1)
 
@@ -126,9 +129,23 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         self.subproblem_postfeasible = kwds.pop('subprob_postfeas',
                                                 _DoNothing())
         self.load_solutions = kwds.pop('load_solutions', True)
+        self.tee = kwds.pop('tee', False)
+
+        if self.tee:
+            old_logger_level = logger.getEffectiveLevel()
+            logger.setLevel(logging.INFO)
+
         if kwds:
             print("Unrecognized arguments passed to MindtPy solver:")
             pprint(kwds)
+
+        valid_strategies = ['OA','PSC','GBD','ECP']
+        if self.decomposition_strategy not in valid_strategies:
+            raise ValueError('Unrecognized decomposition strategy %s. '
+                             'Valid strategies include: %s'
+                             % (solve_data.decomposition_strategy,
+                                valid_strategies))
+
 
         # If decomposition strategy is a hybrid, set the initial strategy
         if self.decomposition_strategy == 'hPSC':
@@ -139,7 +156,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         # When generating cuts, small duals multiplied by expressions can cause
         # problems. Exclude all duals smaller in absolue value than the
         # following.
-        self.small_dual_tolerance = 1E-5
+        self.small_dual_tolerance = 1E-8
         self.integer_tolerance = 1E-5
 
         # Modify in place decides whether to run the algorithm on a copy of the
@@ -371,7 +388,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             if self._decomposition_strategy == 'OA':
                 self.initialization_strategy = 'rNLP'
             else:
-                self.initialization_strategy = 'max_binary'
+                self.initialization_strategy = 'initial_binary'
 
         # Do the initialization
         if self.initialization_strategy == 'rNLP':
@@ -507,7 +524,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
                 print('MindtPy exiting on bound convergence. '
                       'LB: {} + (tol {}) >= UB: {}'.format(
                           self.LB, self.bound_tolerance, self.UB) + '\n')
-                res.solver.termination_condition = optimal
+                # res.solver.termination_condition = tc.optimal
                 break
             # Check iteration limit
             if self.mip_iter >= self.iteration_limit:
