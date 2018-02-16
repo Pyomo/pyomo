@@ -3,7 +3,7 @@
 Re-implementation of Quesada example 2 MINLP test problem in Pyomo
 Author: David Bernal <https://github.com/bernalde>.
 
-The expected optimal solution value is -3.5026.
+The expected optimal solution value is -5.512.
 
 Ref:
     Quesada, Ignacio, and Ignacio E. Grossmann.

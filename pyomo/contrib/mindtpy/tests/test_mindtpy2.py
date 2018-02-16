@@ -3,7 +3,7 @@ from math import fabs
 
 import pyutilib.th as unittest
 
-from pyomo.contrib.mindtpy.tests.MINLP_simple import SimpleMINLP
+from pyomo.contrib.mindtpy.tests.MINLP3_simple import SimpleMINLP
 
 from pyomo.environ import SolverFactory, value
 
@@ -52,7 +52,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
             print('\n Solving problem with Generalized Benders Decomposition')
-            opt.solve(model, strategy='GBD', init_strategy = 'rNLP')
+            opt.solve(model, strategy='GBD', init_strategy = 'initial_binary')
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
