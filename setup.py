@@ -51,6 +51,7 @@ if sys.version_info < (2, 7):
 
 from setuptools import setup
 try:
+    #raise IOError
     import platform
     if not platform.python_implementation() == "CPython":
         raise RuntimeError()
@@ -59,9 +60,11 @@ try:
     # files to users.  But this is fine for evaluating the utility of Cython
     #
     import shutil
-    shutil.copyfile("pyomo/core/expr/expr_pyomo5.py","pyomo/core/expr/expr_pyomo5.pyx")
     from Cython.Build import cythonize
-    ext_modules = cythonize("pyomo/core/expr/expr_pyomo5.pyx")
+    files = ["pyomo/core/expr/expr_pyomo5.pyx", "pyomo/core/util.pyx", "pyomo/repn/standard_repn.pyx"]
+    for f in files:
+        shutil.copyfile(f[:-1], f)
+    ext_modules = cythonize(files)
 except:
     ext_modules = []
 
