@@ -61,7 +61,7 @@ try:
     #
     import shutil
     from Cython.Build import cythonize
-    files = ["pyomo/core/expr/expr_pyomo5.pyx", "pyomo/core/util.pyx", "pyomo/repn/standard_repn.pyx"]
+    files = ["pyomo/core/expr/expr_pyomo5.pyx", "pyomo/core/expr/numvalue.pyx", "pyomo/core/util.pyx", "pyomo/repn/standard_repn.pyx"]
     for f in files:
         shutil.copyfile(f[:-1], f)
     ext_modules = cythonize(files)
