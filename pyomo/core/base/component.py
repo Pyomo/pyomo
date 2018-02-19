@@ -128,6 +128,7 @@ class _ComponentBase(object):
                 ans = memo[id(self)] = self
                 return ans
 
+        paranoid = memo.get('__paranoid__', False)
         ans = memo[id(self)] = self.__class__.__new__(self.__class__)
         # We can't do the "obvious", since this is a (partially)
         # slot-ized class and the __dict__ structure is
@@ -150,17 +151,35 @@ class _ComponentBase(object):
         # attribute to prevent infinite recursion.
         state = self.__getstate__()
         try:
+            if paranoid:
+                saved_memo = dict(memo)
             new_state = deepcopy(state, memo)
         except:
+            if paranoid:
+                memo = dict(saved_memo)
             new_state = {}
             for k,v in iteritems(state):
                 try:
+                    if paranoid:
+                        saved_memo = dict(memo)
                     new_state[k] = deepcopy(v, memo)
                 except:
+                    if paranoid:
+                        memo = dict(saved_memo)
                     logger.error(
                         "Unable to clone Pyomo component attribute.\n"
                         "Component '%s' contains an uncopyable field '%s' (%s)"
                         % ( self.name, k, type(v) ))
+                    if '__paranoid__' not in memo:
+                        logger.warning("""
+                            Uncopyable field encountered when deep
+                            copying outside the scope of Block.clone().
+                            There is a distinct possibility that the new
+                            copy is not complete.  To avoid this
+                            situation, either use Block.clone() or set
+                            'paranoid' mode by adding '__paranoid__' ==
+                            True to the memo before calling
+                            copy.deepcopy.""")
         ans.__setstate__(new_state)
         return ans
 
