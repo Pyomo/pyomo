@@ -15,6 +15,7 @@ import six
 from weakref import ref as weakref_ref
 import sys
 from copy import deepcopy
+from pickle import PickleError
 
 import pyomo.util
 from pyomo.core.base.misc import tabular_writer
@@ -128,7 +129,25 @@ class _ComponentBase(object):
                 ans = memo[id(self)] = self
                 return ans
 
-        paranoid = memo.get('__paranoid__', False)
+        #
+        # There is a particularly subtle bug with 'uncopyable'
+        # attributes: if the exception is thrown while copying a complex
+        # data structure, we can be in a state where objects have been
+        # created and assigned to the memo in the try block, but they
+        # haven't had their state set yet.  When the exception moves us
+        # into the except block, we need to effectively "undo" those
+        # partially copied classes.  The only way is to restore the memo
+        # to the state it was in before we started.  Right now, our
+        # solution is to make a (shallow) copy of the memo before each
+        # operation and restoring it in the case of exception.
+        # Unfortunately that is a lot of usually unnecessary work.
+        # Since *most* classes are copyable, we will avoid that
+        # "paranoia" unless the naive clone generated an error - in
+        # which case Block.clone() will switch over to the more
+        # "paranoid" mode.
+        #
+        paranoid = memo.get('__paranoid__', None)
+
         ans = memo[id(self)] = self.__class__.__new__(self.__class__)
         # We can't do the "obvious", since this is a (partially)
         # slot-ized class and the __dict__ structure is
@@ -156,7 +175,13 @@ class _ComponentBase(object):
             new_state = deepcopy(state, memo)
         except:
             if paranoid:
-                memo = dict(saved_memo)
+                # Note: memo is intentionally pass-by-reference.  We
+                # need to clear and reset the object we were handed (and
+                # not overwrite it)
+                memo.clear()
+                memo.update(saved_memo)
+            elif paranoid is not None:
+                raise PickleError()
             new_state = {}
             for k,v in iteritems(state):
                 try:
@@ -165,12 +190,9 @@ class _ComponentBase(object):
                     new_state[k] = deepcopy(v, memo)
                 except:
                     if paranoid:
-                        memo = dict(saved_memo)
-                    logger.error(
-                        "Unable to clone Pyomo component attribute.\n"
-                        "Component '%s' contains an uncopyable field '%s' (%s)"
-                        % ( self.name, k, type(v) ))
-                    if '__paranoid__' not in memo:
+                        memo.clear()
+                        memo.update(saved_memo)
+                    elif paranoid is None:
                         logger.warning("""
                             Uncopyable field encountered when deep
                             copying outside the scope of Block.clone().
@@ -180,6 +202,10 @@ class _ComponentBase(object):
                             'paranoid' mode by adding '__paranoid__' ==
                             True to the memo before calling
                             copy.deepcopy.""")
+                    logger.error(
+                        "Unable to clone Pyomo component attribute.\n"
+                        "Component '%s' contains an uncopyable field '%s' (%s)"
+                        % ( self.name, k, type(v) ))
         ans.__setstate__(new_state)
         return ans
 
