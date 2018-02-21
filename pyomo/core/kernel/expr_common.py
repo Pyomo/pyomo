@@ -35,6 +35,8 @@ else:
     mode = _default_mode = Mode.pyomo4_trees
 
 def clone_expression(exp, substitute=None):
+    # Note that setting the __block_scope__ will prevent any cComponents
+    # encountered in the tree from being copied.
     memo = {'__block_scope__': { id(None): False }}
     if substitute:
         memo.update(substitute)
