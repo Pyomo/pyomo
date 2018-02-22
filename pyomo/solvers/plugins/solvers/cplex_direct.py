@@ -108,7 +108,11 @@ class CPLEXDirect(DirectSolver):
         if self._keepfiles:
             print("Solver log file: "+self._log_file)
 
-        if len(self._solver_model.objective.get_quadratic()) != 0:
+        obj_repn = generate_canonical_repn(self._objective.expr)
+        obj_degree = canonical_degree(obj_repn)
+        if obj_degree > 2:
+            raise DegreeError('CPLEXDirect does not support expressions of degree {0}.'.format(obj_degree))
+        elif obj_degree == 2:
             quadratic_objective = True
         else:
             quadratic_objective = False
