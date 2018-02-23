@@ -547,23 +547,11 @@ class CPLEXDirect(DirectSolver):
             soln.gap = None
 
         self.results.problem.name = gprob.get_problem_name()
-        stats = gprob.get_stats()
         assert gprob.indicator_constraints.get_num() == 0
         self.results.problem.number_of_constraints = (gprob.linear_constraints.get_num() +
                                                       gprob.quadratic_constraints.get_num() +
                                                       gprob.SOS.get_num())
         self.results.problem.number_of_nonzeros = None
-        self.results.problem.num_linear_nz = stats.num_linear_nz
-        self.results.problem.num_quadratic_linear_nz = stats.num_quadratic_linear_nz
-        self.results.problem.num_quadratic_nz = stats.num_quadratic_nz
-        self.results.problem.num_indicator_nz = stats.num_indicator_nz
-        self.results.problem.num_indicator_rhs_nz = stats.num_indicator_rhs_nz
-        self.results.problem.num_lazy_nnz = stats.num_lazy_nnz
-        self.results.problem.num_lazy_rhs_nnz = stats.num_lazy_rhs_nnz
-        self.results.problem.num_linear_objective_nz = stats.num_linear_objective_nz
-        self.results.problem.num_quadratic_objective_nz = stats.num_quadratic_objective_nz
-        self.results.problem.num_linear_rhs_nz = stats.num_linear_rhs_nz
-        self.results.problem.num_quadratic_rhs_nz = stats.num_quadratic_rhs_nz
         self.results.problem.number_of_variables = gprob.variables.get_num()
         self.results.problem.number_of_binary_variables = gprob.variables.get_num_binary()
         self.results.problem.number_of_integer_variables = gprob.variables.get_num_integer()
