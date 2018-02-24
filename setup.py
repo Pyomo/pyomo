@@ -50,23 +50,34 @@ if sys.version_info < (2, 7):
     requires.append('ordereddict')
 
 from setuptools import setup
-try:
-    #raise IOError
-    import platform
-    if not platform.python_implementation() == "CPython":
-        raise RuntimeError()
-    #
-    # Note: The Cython developers recommend that you destribute C source
-    # files to users.  But this is fine for evaluating the utility of Cython
-    #
-    import shutil
-    from Cython.Build import cythonize
-    files = ["pyomo/core/expr/expr_pyomo5.pyx", "pyomo/core/expr/numvalue.pyx", "pyomo/core/util.pyx", "pyomo/repn/standard_repn.pyx"]
-    for f in files:
-        shutil.copyfile(f[:-1], f)
-    ext_modules = cythonize(files)
-except:
-    ext_modules = []
+import sys
+
+if 'develop' in sys.argv:
+    using_cython = False
+else:
+    using_cython = True
+if '--with-cython' in sys.argv:
+    using_cython = True
+    sys.argv.remove('--with-cython')
+
+ext_modules = []
+if using_cython:
+    try:
+        import platform
+        if not platform.python_implementation() == "CPython":
+            raise RuntimeError()
+        from Cython.Build import cythonize
+        #
+        # Note: The Cython developers recommend that you destribute C source
+        # files to users.  But this is fine for evaluating the utility of Cython
+        #
+        import shutil
+        files = ["pyomo/core/expr/expr_pyomo5.pyx", "pyomo/core/expr/numvalue.pyx", "pyomo/core/util.pyx", "pyomo/repn/standard_repn.pyx"]
+        for f in files:
+            shutil.copyfile(f[:-1], f)
+        ext_modules = cythonize(files)
+    except:
+        using_cython = False
 
 packages = _find_packages('pyomo')
 
