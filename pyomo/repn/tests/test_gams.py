@@ -57,7 +57,7 @@ class GAMSTests(unittest.TestCase):
         m.b2.c.add(m.b2.x)
         m.c = Constraint(expr=m.b1.c == m.b2.c)
         m.o = Objective(expr=m.b1.x)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(RuntimeError):
             m.write('testgmsfile.gms')
 
 
