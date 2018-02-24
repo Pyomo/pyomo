@@ -40,7 +40,6 @@ from pyomo.core.base.param import _ParamData
 from pyomo.core.base.numvalue import (NumericConstant,
                                       native_numeric_types,
                                       is_fixed)
-from pyomo.core.util import Sum
 from pyomo.core.kernel.component_expression import IIdentityExpression, expression, noclone
 from pyomo.core.kernel.component_variable import IVariable
 from pyomo.core.kernel.component_objective import objective

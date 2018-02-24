@@ -15,7 +15,6 @@ from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import NumericValue, native_numeric_types, as_numeric
 from pyomo.core.base.plugin import register_component
 from pyomo.core.base.template_expr import IndexTemplate, _GetItemIndexer
-from pyomo.core import Sum
 
 from six import iterkeys, itervalues
 
