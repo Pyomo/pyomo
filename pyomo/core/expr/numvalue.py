@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ('value', 'is_constant', 'is_fixed', 'is_variable_type', 'potentially_variable', 'update_KnownConstants', 'as_numeric', 'NumericValue', 'NumericConstant', 'ZeroConstant', 'native_numeric_types', 'native_types')
+__all__ = ('value', 'is_constant', 'is_fixed', 'is_variable_type', 'potentially_variable', 'update_KnownConstants', 'as_numeric', 'NumericValue', 'NumericConstant', 'ZeroConstant', 'native_numeric_types', 'native_types', 'polynomial_degree')
 
 import sys
 import logging
@@ -271,6 +271,20 @@ def potentially_variable(obj):
     except AttributeError:
         pass
     return as_numeric(obj).is_potentially_variable()
+
+def polynomial_degree(obj):
+    """
+    A utility function that returns an integer 
+    that indicates the polynomial degree for an
+    object. boolean indicating
+    """
+    if obj.__class__ in native_types:
+        return 0
+    try:
+        return obj.polynomial_degree()
+    except AttributeError:
+        pass
+    return as_numeric(obj).polynomial_degree()
 
 # It is very common to have only a few constants in a model, but those
 # constants get repeated many times.  KnownConstants lets us re-use /
