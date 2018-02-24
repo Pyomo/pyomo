@@ -741,10 +741,6 @@ def _collect_linear_sum(exp, multiplier, idMap, compute_values, verbose, quadrat
     return ans
 
 
-#def _collect_linear_term(exp, multiplier, idMap, compute_values, verbose, quadratic):
-#    return _collect_var(exp._args_[1], multiplier*exp._args_[0], idMap, compute_values, verbose, quadratic)
-
-
 _repn_collectors = {
     EXPR.ViewSumExpression                      : _collect_sum,
     EXPR.ProductExpression                      : _collect_prod,
@@ -798,6 +794,7 @@ def _collect_standard_repn(exp, multiplier, idMap,
             return _collect_identity(exp, multiplier, idMap, compute_values, verbose, quadratic)
         raise ValueError( "Unexpected expression (type %s)" % type(exp).__name__)
 
+
 def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None):
     #
     # Call recursive logic
@@ -807,7 +804,6 @@ def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False
     # Create the final object here from 'ans'
     #
     repn.constant = ans.constant
-
     #
     # Create a list (tuple) of the variables and coefficients
     #
