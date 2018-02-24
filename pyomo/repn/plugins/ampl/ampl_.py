@@ -1032,7 +1032,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     elif (L > U):
                         msg = 'Constraint {0}: lower bound greater than upper' \
                             ' bound ({1} > {2})'
-                        raise ValueError(msg.format(con_ID, str(L), str(U)))
+                        raise ValueError(msg.format(constraint_data.name,
+                                                    str(L), str(U)))
                     else:
                         constraint_bounds_dict[con_ID] = \
                             "0 %r %r\n" % (L-offset, U-offset)

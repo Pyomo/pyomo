@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.base.PyomoModel import Model
+from pyomo.core.base.block import Block, _BlockData
 from pyomo.core.kernel.component_block import IBlockStorage
 from pyomo.opt.base.solvers import OptSolver
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
@@ -19,6 +20,7 @@ from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt.base.formats import ResultsFormat
 from pyutilib.misc import Options
+from collections import MutableMapping
 
 
 class DirectOrPersistentSolver(OptSolver):
@@ -56,9 +58,11 @@ class DirectOrPersistentSolver(OptSolver):
         """The labeler for creating names for the solver model components."""
 
         self._pyomo_var_to_solver_var_map = ComponentMap()
+        self._solver_var_to_pyomo_var_map = dict()
         """A dictionary mapping pyomo Var's to the solver variables."""
 
-        self._pyomo_con_to_solver_con_map = ComponentMap()
+        self._pyomo_con_to_solver_con_map = dict()
+        self._solver_con_to_pyomo_con_map = dict()
         """A dictionary mapping pyomo constraints to solver constraints."""
 
         self._vars_referenced_by_con = ComponentMap()
@@ -169,9 +173,9 @@ class DirectOrPersistentSolver(OptSolver):
 
     """ This method should be implemented by subclasses."""
     def _set_instance(self, model, kwds={}):
-        if not isinstance(model, (Model, IBlockStorage)):
+        if not isinstance(model, (Model, IBlockStorage, Block, _BlockData)):
             msg = "The problem instance supplied to the {0} plugin " \
-                  "'_presolve' method must be of type 'Model'".format(type(self))
+                  "'_presolve' method must be a Model or a Block".format(type(self))
             raise ValueError(msg)
         self._pyomo_model = model
         self._symbolic_solver_labels = kwds.pop('symbolic_solver_labels', self._symbolic_solver_labels)
@@ -179,7 +183,9 @@ class DirectOrPersistentSolver(OptSolver):
         self._output_fixed_variable_bounds = kwds.pop('output_fixed_variable_bounds',
                                                       self._output_fixed_variable_bounds)
         self._pyomo_var_to_solver_var_map = ComponentMap()
-        self._pyomo_con_to_solver_con_map = ComponentMap()
+        self._solver_var_to_pyomo_var_map = dict()
+        self._pyomo_con_to_solver_con_map = dict()
+        self._solver_con_to_pyomo_con_map = dict()
         self._vars_referenced_by_con = ComponentMap()
         self._vars_referenced_by_obj = ComponentSet()
         self._referenced_variables = ComponentMap()
