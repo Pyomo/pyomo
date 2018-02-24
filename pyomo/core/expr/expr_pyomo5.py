@@ -217,7 +217,6 @@ class mutable_sum_context(object):
         return self.e
 
     def __exit__(self, *args):
-        pass
         if self.e.__class__ == _MutableViewSumExpression:
             self.e.__class__ = ViewSumExpression
 
