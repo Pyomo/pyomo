@@ -50,7 +50,7 @@ class RemoveZeroTerms(IsomorphicTransformation):
 
             # reconstitute the constraint, including only variable terms with
             # nonzero coefficients
-            constr_body = Sum(repn.linear_coefs[i] * repn.linear_vars[i]
+            constr_body = quicksum(repn.linear_coefs[i] * repn.linear_vars[i]
                               for i in nonzero_vars_indx) + const
             if constr.equality:
                 constr.set_value(constr_body == constr.upper)

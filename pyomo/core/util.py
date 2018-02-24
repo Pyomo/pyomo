@@ -12,7 +12,7 @@
 # Utility functions
 #
 
-__all__ = ['summation', 'dot_product', 'sequence', 'prod', 'Prod', 'Sum']
+__all__ = ['summation', 'dot_product', 'sequence', 'prod', 'quicksum']
 
 from six.moves import xrange
 from functools import reduce
@@ -27,9 +27,6 @@ def prod(terms):
     """
     A utility function to compute the product of a list of terms.
 
-    .. note::
-        Should this function be capitalized to be consistent with Sum()?
-
     Args:
         terms (list): A list of terms that are multiplied together.
 
@@ -41,19 +38,17 @@ def prod(terms):
         ans *= term
     return ans
 
-Prod = prod
 
-
-def Sum(args, start=0, linear=None):
+def quicksum(args, start=0, linear=None):
     """
     A utility function to compute a sum of Pyomo expressions.
 
-    The behavior of :func:`Sum` is similar to the builtin :func:`sum`
+    The behavior of :func:`quicksum` is similar to the builtin :func:`sum`
     function, but this function generates a more compact Pyomo
     expression.
 
     .. note::
-        Is there a better name for this function?  Sum() and sum() are very similar, which could make it 
+        Is there a better name for this function?  quicksum() and sum() are very similar, which could make it 
         difficult to see whether this function is being used.  But that similarity means that changes
         from standard Python expressions are quite similar.
 
@@ -235,19 +230,19 @@ def summation(*args, **kwds):
                     expr += term
             return expr
         #
-        return Sum((prod(args[j][i] for j in num_index) for i in index), start)
+        return quicksum((prod(args[j][i] for j in num_index) for i in index), start)
     elif nargs == 0:
         #
         # Sum of reciprocals
         #
         denom_index = range(0,ndenom)
-        return Sum((1/prod(denom[j][i] for j in denom_index) for i in index), start)
+        return quicksum((1/prod(denom[j][i] for j in denom_index) for i in index), start)
     else:
         #
         # Sum of fractions
         #
         denom_index = range(0,ndenom)
-        return Sum((prod(args[j][i] for j in num_index)/prod(denom[j][i] for j in denom_index) for i in index), start)
+        return quicksum((prod(args[j][i] for j in num_index)/prod(denom[j][i] for j in denom_index) for i in index), start)
 
 
 #: An alias for :func:`summation <pyomo.core.expr.util>`

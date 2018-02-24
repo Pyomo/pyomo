@@ -2372,18 +2372,18 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         model.a = Var(A)
         model.p = Param(A, initialize=2, mutable=True)
 
-        expr = Sum(i*model.a[i] for i in A)
+        expr = quicksum(i*model.a[i] for i in A)
         self.assertEqual("sum(a[1], prod(2, a[2]), prod(3, a[3]), prod(4, a[4]))", str(expr))
 
-        expr = Sum((i-2)*model.a[i] for i in A)
+        expr = quicksum((i-2)*model.a[i] for i in A)
         self.assertEqual("sum(prod(-2, a[0]), prod(-1, a[1]), a[3], prod(2, a[4]))", str(expr))
 
-        expr = Sum(model.a[i] for i in A)
+        expr = quicksum(model.a[i] for i in A)
         self.assertEqual("sum(a[0], a[1], a[2], a[3], a[4])", str(expr))
 
         model.p[1].value = 0
         model.p[3].value = 3
-        expr = Sum(model.p[i]*model.a[i] if i != 3 else model.p[i] for i in A)
+        expr = quicksum(model.p[i]*model.a[i] if i != 3 else model.p[i] for i in A)
         self.assertEqual("sum(3, prod(2, a[0]), prod(2, a[2]), prod(2, a[4]))", EXPR.expression_to_string(expr, compute_values=True))
         self.assertEqual("sum(p[3], prod(p[0], a[0]), prod(p[1], a[1]), prod(p[2], a[2]), prod(p[4], a[4]))", EXPR.expression_to_string(expr, compute_values=False))
 
@@ -2555,27 +2555,27 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         model.a = Var(A)
         model.p = Param(A, initialize=2, mutable=True)
 
-        expr = Sum(i*model.a[i] for i in A) + 3
+        expr = quicksum(i*model.a[i] for i in A) + 3
         self.assertEqual("3 + a[1] + 2*a[2] + 3*a[3] + 4*a[4]", str(expr))
         self.assertEqual("a[1] + 2*a[2] + 3*a[3] + 4*a[4] + 3", EXPR.expression_to_string(expr, compute_values=True))
 
-        expr = Sum((i-2)*model.a[i] for i in A) + 3
+        expr = quicksum((i-2)*model.a[i] for i in A) + 3
         self.assertEqual("3 - 2*a[0] - a[1] + a[3] + 2*a[4]", str(expr))
         self.assertEqual("- 2.0*a[0] - a[1] + a[3] + 2*a[4] + 3", EXPR.expression_to_string(expr, compute_values=True))
 
-        expr = Sum(model.a[i] for i in A) + 3
+        expr = quicksum(model.a[i] for i in A) + 3
         self.assertEqual("3 + a[0] + a[1] + a[2] + a[3] + a[4]", str(expr))
 
-        expr = Sum(model.p[i]*model.a[i] for i in A)
+        expr = quicksum(model.p[i]*model.a[i] for i in A)
         self.assertEqual("2*a[0] + 2*a[1] + 2*a[2] + 2*a[3] + 2*a[4]", EXPR.expression_to_string(expr, compute_values=True))
         self.assertEqual("p[0]*a[0] + p[1]*a[1] + p[2]*a[2] + p[3]*a[3] + p[4]*a[4]", EXPR.expression_to_string(expr, compute_values=False))
         self.assertEqual("p[0]*a[0] + p[1]*a[1] + p[2]*a[2] + p[3]*a[3] + p[4]*a[4]", str(expr))
 
         model.p[1].value = 0
         model.p[3].value = 3
-        expr = Sum(model.p[i]*model.a[i] if i != 3 else model.p[i] for i in A)
+        expr = quicksum(model.p[i]*model.a[i] if i != 3 else model.p[i] for i in A)
         self.assertEqual("3 + 2*a[0] + 2*a[2] + 2*a[4]", EXPR.expression_to_string(expr, compute_values=True))
-        expr = Sum(model.p[i]*model.a[i] if i != 3 else -3 for i in A)
+        expr = quicksum(model.p[i]*model.a[i] if i != 3 else -3 for i in A)
         self.assertEqual("-3 + p[0]*a[0] + p[1]*a[1] + p[2]*a[2] + p[4]*a[4]", EXPR.expression_to_string(expr, compute_values=False))
         
     def test_negation(self):
@@ -2850,7 +2850,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         M.p = Param(range(3), initialize=2)
         M.q = Param(range(3), initialize=3, mutable=True)
 
-        e = M.x*M.y + summation(M.p, M.a) + Sum(M.q[i]*M.a[i] for i in M.a) / M.x
+        e = M.x*M.y + summation(M.p, M.a) + quicksum(M.q[i]*M.a[i] for i in M.a) / M.x
         self.assertEqual(str(e), "2*a[0] + 2*a[1] + 2*a[2] + x*y + (q[0]*a[0] + q[1]*a[1] + q[2]*a[2])*(1/x)")
         self.assertEqual(e.to_string(), "x*y + 2*a[0] + 2*a[1] + 2*a[2] + (q[0]*a[0] + q[1]*a[1] + q[2]*a[2])*(1/x)")
         self.assertEqual(e.to_string(compute_values=True), "x*y + 2*a[0] + 2*a[1] + 2*a[2] + (3*a[0] + 3*a[1] + 3*a[2])*(1/x)")
@@ -3537,16 +3537,16 @@ class TestPolynomialDegree(unittest.TestCase):
         A = range(5)
         m.v = Var(A)
 
-        e = Sum(m.v[i] for i in A)
+        e = quicksum(m.v[i] for i in A)
         self.assertEqual(e.polynomial_degree(), 1) 
 
-        e = Sum(i*m.v[i] for i in A)
+        e = quicksum(i*m.v[i] for i in A)
         self.assertEqual(e.polynomial_degree(), 1) 
 
-        e = Sum(1 for i in A)
+        e = quicksum(1 for i in A)
         self.assertEqual(polynomial_degree(e), 0) 
 
-        e = Sum((1 for i in A), linear=True)
+        e = quicksum((1 for i in A), linear=True)
         self.assertTrue(e.__class__ in native_numeric_types)
 
     def test_relational_ops(self):
@@ -3919,43 +3919,43 @@ class TestSumExpression(unittest.TestCase):
         self.m = None
 
     def test_summation1(self):
-        e = Sum((self.m.a[i] for i in self.m.a), linear=False)
+        e = quicksum((self.m.a[i] for i in self.m.a), linear=False)
         self.assertEqual( e(), 25 )
         self.assertIs(type(e), EXPR.ViewSumExpression)
         self.assertEqual( id(self.m.a[1]), id(e.arg(0)) )
         self.assertEqual( id(self.m.a[2]), id(e.arg(1)) )
         self.assertEqual(e.size(), 6)
         #
-        e = Sum(self.m.a[i] for i in self.m.a)
+        e = quicksum(self.m.a[i] for i in self.m.a)
         self.assertEqual( e(), 25 )
         self.assertIs(type(e), EXPR.LinearExpression)
 
     def test_summation2(self):
-        e = Sum((self.m.p[i]*self.m.a[i] for i in self.m.a), linear=False)
+        e = quicksum((self.m.p[i]*self.m.a[i] for i in self.m.a), linear=False)
         self.assertEqual( e(), 25 )
         self.assertIs(type(e), EXPR.ViewSumExpression)
         self.assertEqual( id(self.m.a[1]), id(e.arg(0).arg(1)) )
         self.assertEqual( id(self.m.a[2]), id(e.arg(1).arg(1)) )
         self.assertEqual(e.size(), 16)
         #
-        e = Sum(self.m.p[i]*self.m.a[i] for i in self.m.a)
+        e = quicksum(self.m.p[i]*self.m.a[i] for i in self.m.a)
         self.assertEqual( e(), 25 )
         self.assertIs(type(e), EXPR.LinearExpression)
 
     def test_summation3(self):
-        e = Sum((self.m.q[i]*self.m.a[i] for i in self.m.a), linear=False)
+        e = quicksum((self.m.q[i]*self.m.a[i] for i in self.m.a), linear=False)
         self.assertEqual( e(), 75 )
         self.assertIs(type(e), EXPR.ViewSumExpression)
         self.assertEqual( id(self.m.a[1]), id(e.arg(0).arg(1)) )
         self.assertEqual( id(self.m.a[2]), id(e.arg(1).arg(1)) )
         self.assertEqual(e.size(), 16)
         #
-        e = Sum(self.m.q[i]*self.m.a[i] for i in self.m.a)
+        e = quicksum(self.m.q[i]*self.m.a[i] for i in self.m.a)
         self.assertEqual( e(), 75 )
         self.assertIs(type(e), EXPR.LinearExpression)
 
     def test_summation4(self):
-        e = Sum(self.m.a[i]*self.m.b[i] for i in self.m.a)
+        e = quicksum(self.m.a[i]*self.m.b[i] for i in self.m.a)
         self.assertEqual( e(), 250 )
         self.assertIs(type(e), EXPR.ViewSumExpression)
         self.assertEqual( id(self.m.a[1]), id(e.arg(0).arg(0)) )
@@ -3963,31 +3963,31 @@ class TestSumExpression(unittest.TestCase):
         self.assertEqual(e.size(), 16)
 
     def test_summation5(self):
-        e = Sum(self.m.b[i]/self.m.a[i] for i in self.m.a)
+        e = quicksum(self.m.b[i]/self.m.a[i] for i in self.m.a)
         self.assertEqual( e(), 10 )
         self.assertIs(type(e), EXPR.ViewSumExpression)
         self.assertEqual(e.size(), 21)
 
     def test_summation6(self):
-        e = Sum((self.m.a[i]/self.m.p[i] for i in self.m.a), linear=False)
+        e = quicksum((self.m.a[i]/self.m.p[i] for i in self.m.a), linear=False)
         self.assertEqual( e(), 25 )
         self.assertIs(type(e), EXPR.ViewSumExpression)
         self.assertEqual( id(self.m.a[1]), id(e.arg(0).arg(1)) )
         self.assertEqual( id(self.m.a[2]), id(e.arg(1).arg(1)) )
         self.assertEqual(e.size(), 21)
         #
-        e = Sum(self.m.a[i]/self.m.p[i] for i in self.m.a)
+        e = quicksum(self.m.a[i]/self.m.p[i] for i in self.m.a)
         self.assertEqual( e(), 25 )
         self.assertIs(type(e), EXPR.LinearExpression)
 
     def test_summation7(self):
-        e = Sum((self.m.p[i]*self.m.q[i] for i in self.m.I), linear=False)
+        e = quicksum((self.m.p[i]*self.m.q[i] for i in self.m.I), linear=False)
         self.assertEqual( e(), 15 )
         self.assertIs(type(e), EXPR.ViewSumExpression)
         self.assertEqual( e.nargs(), 5)
         self.assertEqual(e.size(), 16)
         #
-        e = Sum(self.m.p[i]*self.m.q[i] for i in self.m.I)
+        e = quicksum(self.m.p[i]*self.m.q[i] for i in self.m.I)
         self.assertEqual( e(), 15 )
         self.assertIs(type(e), EXPR.ViewSumExpression)
 
@@ -4118,7 +4118,7 @@ class TestCloneExpression(unittest.TestCase):
 
         with EXPR.clone_counter:
             start = EXPR.clone_counter.count
-            expr1 = Sum(self.m.a[i] for i in self.m.a)
+            expr1 = quicksum(self.m.a[i] for i in self.m.a)
             expr2 = copy.deepcopy(expr1)
             self.assertEqual( expr1(), 25 )
             self.assertEqual( expr2(), 25 )
@@ -4482,7 +4482,7 @@ class TestIsFixedIsConstant(unittest.TestCase):
         A = range(5)
         m.v = Var(A)
 
-        e = Sum(m.v[i] for i in A)
+        e = quicksum(m.v[i] for i in A)
         self.assertEqual(e.is_fixed(), False)
         for i in A:
             m.v[i].fixed = True
@@ -5545,7 +5545,7 @@ class Test_pickle(unittest.TestCase):
         M = ConcreteModel()
         A = range(5)
         M.v = Var(A)
-        e = Sum(M.v[i] for i in M.v)
+        e = quicksum(M.v[i] for i in M.v)
         s = pickle.dumps(e)
         e_ = pickle.loads(s)
         flag, terms = EXPR.decompose_term(e_)
