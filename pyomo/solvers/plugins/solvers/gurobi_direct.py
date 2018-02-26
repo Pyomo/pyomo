@@ -73,27 +73,31 @@ class GurobiDirect(DirectSolver):
 
         self._range_constraints = set()
 
-        if self._version_major < 5:
-            self._max_constraint_degree = 1
-        else:
-            self._max_constraint_degree = 2
         self._max_obj_degree = 2
+        self._max_constraint_degree = 2
 
         # Note: Undefined capabilites default to None
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
-        if self._version_major < 5:
-            self._capabilities.quadratic_constraint = False
-        else:
-            self._capabilities.quadratic_constraint = True
+        self._capabilities.quadratic_constraint = True
         self._capabilities.integer = True
         self._capabilities.sos1 = True
         self._capabilities.sos2 = True
 
+        # fix for compatibility with pre-5.0 Gurobi
+        if self._python_api_exists and \
+           (self._version_major < 5):
+            self._max_constraint_degree = 1
+            self._capabilities.quadratic_constraint = False
+
     def _apply_solver(self):
         if not self._save_results:
-            for block in self._pyomo_model.block_data_objects(descend_into=True, active=True):
-                for var in block.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=False, active=True, sort=False):
+            for block in self._pyomo_model.block_data_objects(descend_into=True,
+                                                              active=True):
+                for var in block.component_data_objects(ctype=pyomo.core.base.var.Var,
+                                                        descend_into=False,
+                                                        active=True,
+                                                        sort=False):
                     var.stale = True
         if self._tee:
             self._solver_model.setParam('OutputFlag', 1)
