@@ -649,6 +649,18 @@ class OptSolver(Plugin):
                     assert len(getattr(_model, "._symbol_maps")) == 1
                     delattr(_model, "._symbol_maps")
                     del result._smap_id
+
+                    if self._load_solutions and \
+                       (len(result.solution) == 0):
+                        raise ValueError(
+                            "No solution is available. Try calling "
+                            "solve with the 'load_solutions' keyword "
+                            "set to False. Then, check the statuses "
+                            "on the results object before attempting "
+                            "to load the solution (if one is available). "
+                            "Additionally, one can call solve with the "
+                            "'tee' keyword set to True to view the solver "
+                            "output.")
                 else:
                     if self._load_solutions:
                         _model.solutions.load_from(
