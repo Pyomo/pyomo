@@ -84,10 +84,10 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
         ----------
         var: Var
         """
-        if var.is_indexed():
-            for child_var in var.values():
-                self.compile_var(child_var)
-            return
+        #if var.is_indexed():
+        #    for child_var in var.values():
+        #        self.compile_var(child_var)
+        #    return
         if var not in self._pyomo_var_to_solver_var_map:
             raise ValueError('The Var provided to compile_var needs to be added first: {0}'.format(var))
         cplex_var = self._pyomo_var_to_solver_var_map[var]

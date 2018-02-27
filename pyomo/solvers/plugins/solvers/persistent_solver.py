@@ -89,10 +89,10 @@ class PersistentSolver(DirectOrPersistentSolver):
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_block.')
-        if block.is_indexed():
-            for sub_block in block.values():
-                self._add_block(block)
-            return
+        #if block.is_indexed():
+        #    for sub_block in block.values():
+        #        self._add_block(block)
+        #    return
         self._add_block(block)
 
     def set_objective(self, obj):
@@ -118,11 +118,11 @@ class PersistentSolver(DirectOrPersistentSolver):
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_constraint.')
-        if con.is_indexed():
-            for child_con in con.values():
-                self._add_constraint(child_con)
-        else:
-            self._add_constraint(con)
+        #if con.is_indexed():
+        #    for child_con in con.values():
+        #        self._add_constraint(child_con)
+        #else:
+        self._add_constraint(con)
 
     def add_var(self, var):
         """
@@ -134,11 +134,11 @@ class PersistentSolver(DirectOrPersistentSolver):
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_var.')
-        if var.is_indexed():
-            for child_var in var.values():
-                self._add_var(child_var)
-        else:
-            self._add_var(var)
+        #if var.is_indexed():
+        #    for child_var in var.values():
+        #        self._add_var(child_var)
+        #else:
+        self._add_var(var)
 
     def add_sos_constraint(self, con):
         """
@@ -150,11 +150,11 @@ class PersistentSolver(DirectOrPersistentSolver):
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_sos_constraint.')
-        if con.is_indexed():
-            for child_con in con.values():
-                self._add_sos_constraint(child_con)
-        else:
-            self._add_sos_constraint(con)
+        #if con.is_indexed():
+        #    for child_con in con.values():
+        #        self._add_sos_constraint(child_con)
+        #else:
+        self._add_sos_constraint(con)
 
     """ This method should be implemented by subclasses."""
     def _remove_constraint(self, solver_con):
@@ -178,10 +178,10 @@ class PersistentSolver(DirectOrPersistentSolver):
         ----------
         block: Block
         """
-        if block.is_indexed():
-            for sub_block in block.values():
-                self.remove_block(sub_block)
-            return
+        #if block.is_indexed():
+        #    for sub_block in block.values():
+        #        self.remove_block(sub_block)
+        #    return
         for sub_block in block.block_data_objects(descend_into=True, active=True):
             for con in sub_block.component_data_objects(ctype=Constraint, descend_into=False, active=True):
                 self.remove_constraint(con)
@@ -200,10 +200,10 @@ class PersistentSolver(DirectOrPersistentSolver):
         ----------
         con: Constraint
         """
-        if con.is_indexed():
-            for child_con in con.values():
-                self.remove_constraint(child_con)
-            return
+        #if con.is_indexed():
+        #    for child_con in con.values():
+        #        self.remove_constraint(child_con)
+        #    return
         solver_con = self._pyomo_con_to_solver_con_map[con]
         self._remove_constraint(solver_con)
         self._symbol_map.removeSymbol(con)
@@ -222,10 +222,10 @@ class PersistentSolver(DirectOrPersistentSolver):
         ----------
         con: SOSConstraint
         """
-        if con.is_indexed():
-            for child_con in con.values():
-                self.remove_sos_constraint(child_con)
-            return
+        #if con.is_indexed():
+        #    for child_con in con.values():
+        #        self.remove_sos_constraint(child_con)
+        #    return
         solver_con = self._pyomo_con_to_solver_con_map[con]
         self._remove_sos_constraint(solver_con)
         self._symbol_map.removeSymbol(con)
@@ -244,10 +244,10 @@ class PersistentSolver(DirectOrPersistentSolver):
         ----------
         var: Var
         """
-        if var.is_indexed():
-            for child_var in var.values():
-                self.remove_var(child_var)
-            return
+        #if var.is_indexed():
+        #    for child_var in var.values():
+        #        self.remove_var(child_var)
+        #    return
         if self._referenced_variables[var] != 0:
             raise ValueError('Cannot remove Var {0} because it is still referenced by the '.format(var) +
                              'objective or one or more constraints')
