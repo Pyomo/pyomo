@@ -93,12 +93,12 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
         try:
             model.setParam(key, value)
         except TypeError:
-            # note, that we place the exception handling for
-            # checking the cast of value to a float in
-            # another function so that we can simply call
-            # raise here instead of except TypeError as e /
-            # with raise e, because the latter does not
-            # preserve the Gurobi stack trace
+            # we place the exception handling for checking
+            # the cast of value to a float in another
+            # function so that we can simply call raise here
+            # instead of except TypeError as e / raise e,
+            # because the latter does not preserve the
+            # Gurobi stack trace
             if not _is_numeric(value):
                 raise
             model.setParam(key, float(value))

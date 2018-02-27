@@ -137,11 +137,11 @@ class GurobiDirect(DirectSolver):
             try:
                 self._solver_model.setParam(key, option)
             except TypeError:
-                # note, that we place the exception handling
-                # for checking the cast of option to a float
-                # in another function so that we can simply
+                # we place the exception handling for
+                # checking the cast of option to a float in
+                # another function so that we can simply
                 # call raise here instead of except
-                # TypeError as e / with raise e, because the
+                # TypeError as e / raise e, because the
                 # latter does not preserve the Gurobi stack
                 # trace
                 if not _is_numeric(option):
