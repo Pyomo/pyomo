@@ -124,7 +124,14 @@ class GurobiDirect(DirectSolver):
         #  'LogFile', 'PreCrush', 'PreDepRow', 'PreMIQPMethod', 'PrePasses', 'Presolve',
         #  'ResultFile', 'ImproveStartTime', 'ImproveStartGap', 'Threads', 'Dummy', 'OutputFlag']
         for key, option in self.options.items():
-            self._solver_model.setParam(key, option)
+            # When options come from the pyomo command, all
+            # values are string types, so we try to cast
+            # them to a numeric value in the event that
+            # setting the parameter fails.
+            try:
+                self._solver_model.setParam(key, option)
+            except TypeError:
+                self._solver_model.setParam(key, float(option))
 
         if self._version_major >= 5:
             for suffix in self._suffixes:

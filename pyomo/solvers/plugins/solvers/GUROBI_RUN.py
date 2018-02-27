@@ -20,7 +20,6 @@ from gurobipy import *
 import sys
 if sys.version_info[0] < 3:
     from itertools import izip as zip
-    
 
 GUROBI_VERSION = gurobi.version()
 
@@ -80,7 +79,15 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     # key is specified, so you have to stare at the
     # output to see if it was accepted.
     for key, value in options.items():
-        model.setParam(key, value)
+        # When options come from the pyomo command, all
+        # values are string types, so we try to cast
+        # them to a numeric value in the event that
+        # setting the parameter fails.
+        try:
+            model.setParam(key, value)
+        except TypeError:
+            model.setParam(key, float(value))
+
 
     if 'relax_integrality' in options:
         for v in model.getVars():

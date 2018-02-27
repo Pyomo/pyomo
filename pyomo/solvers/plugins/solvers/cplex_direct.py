@@ -150,7 +150,14 @@ class CPLEXDirect(DirectSolver):
             key_pieces = key.split('_')
             for key_piece in key_pieces:
                 opt_cmd = getattr(opt_cmd, key_piece)
-            opt_cmd.set(option)
+            # When options come from the pyomo command, all
+            # values are string types, so we try to cast
+            # them to a numeric value in the event that
+            # setting the parameter fails.
+            try:
+                opt_cmd.set(option)
+            except self._cplex.exceptions.CplexError:
+                opt_cmd.set(float(option))
 
         t0 = time.time()
         self._solver_model.solve()
