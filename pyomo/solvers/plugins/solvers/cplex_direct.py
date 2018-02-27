@@ -44,6 +44,12 @@ class _CplexExpr(object):
         self.q_variables2 = []
         self.q_coefficients = []
 
+def _is_numeric(x):
+    try:
+        float(x)
+    except ValueError:
+        return False
+    return True
 
 class CPLEXDirect(DirectSolver):
     alias('cplex_direct', doc='Direct python interface to CPLEX')
@@ -157,13 +163,17 @@ class CPLEXDirect(DirectSolver):
             # setting the parameter fails.
             try:
                 opt_cmd.set(option)
-            except self._cplex.exceptions.CplexError as e:
-                try:
-                    option = float(option)
-                except ValueError:
-                    # raise the original exception
-                    raise e
-                opt_cmd.set(option)
+            except self._cplex.exceptions.CplexError:
+                # note, that we place the exception handling
+                # for checking the cast of option to a float
+                # in another function so that we can simply
+                # call raise here instead of except
+                # TypeError as e / with raise e, because the
+                # latter does not preserve the Cplex stack
+                # trace
+                if not _is_numeric(option):
+                    raise
+                opt_cmd.set(float(option))
 
         t0 = time.time()
         self._solver_model.solve()

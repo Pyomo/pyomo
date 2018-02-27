@@ -34,6 +34,12 @@ logger = logging.getLogger('pyomo.solvers')
 class DegreeError(ValueError):
     pass
 
+def _is_numeric(x):
+    try:
+        float(x)
+    except ValueError:
+        return False
+    return True
 
 class GurobiDirect(DirectSolver):
     alias('gurobi_direct', doc='Direct python interface to Gurobi')
@@ -130,13 +136,17 @@ class GurobiDirect(DirectSolver):
             # setting the parameter fails.
             try:
                 self._solver_model.setParam(key, option)
-            except TypeError as e:
-                try:
-                    option = float(option)
-                except ValueError:
-                    # raise the original exception
-                    raise e
-                self._solver_model.setParam(key, option)
+            except TypeError:
+                # note, that we place the exception handling
+                # for checking the cast of option to a float
+                # in another function so that we can simply
+                # call raise here instead of except
+                # TypeError as e / with raise e, because the
+                # latter does not preserve the Gurobi stack
+                # trace
+                if not _is_numeric(option):
+                    raise
+                self._solver_model.setParam(key, float(option))
 
         if self._version_major >= 5:
             for suffix in self._suffixes:

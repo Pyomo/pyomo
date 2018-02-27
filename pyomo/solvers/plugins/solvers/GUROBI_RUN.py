@@ -29,6 +29,13 @@ GUROBI_VERSION = gurobi.version()
 #       rather, print an error message and return - the caller will know to look
 #       in the logs in case of a failure.
 
+def _is_numeric(x):
+    try:
+        float(x)
+    except ValueError:
+        return False
+    return True
+
 def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes):
 
     # figure out what suffixes we need to extract.
@@ -85,13 +92,16 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
         # setting the parameter fails.
         try:
             model.setParam(key, value)
-        except TypeError as e:
-            try:
-                value = float(value)
-            except ValueError:
-                # raise the original exception
-                raise e
-            model.setParam(key, value)
+        except TypeError:
+            # note, that we place the exception handling for
+            # checking the cast of value to a float in
+            # another function so that we can simply call
+            # raise here instead of except TypeError as e /
+            # with raise e, because the latter does not
+            # preserve the Gurobi stack trace
+            if not _is_numeric(value):
+                raise
+            model.setParam(key, float(value))
 
 
     if 'relax_integrality' in options:
