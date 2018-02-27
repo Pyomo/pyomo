@@ -34,6 +34,12 @@ logger = logging.getLogger('pyomo.solvers')
 class DegreeError(ValueError):
     pass
 
+def _is_numeric(x):
+    try:
+        float(x)
+    except ValueError:
+        return False
+    return True
 
 class GurobiDirect(DirectSolver):
     alias('gurobi_direct', doc='Direct python interface to Gurobi')
@@ -124,7 +130,23 @@ class GurobiDirect(DirectSolver):
         #  'LogFile', 'PreCrush', 'PreDepRow', 'PreMIQPMethod', 'PrePasses', 'Presolve',
         #  'ResultFile', 'ImproveStartTime', 'ImproveStartGap', 'Threads', 'Dummy', 'OutputFlag']
         for key, option in self.options.items():
-            self._solver_model.setParam(key, option)
+            # When options come from the pyomo command, all
+            # values are string types, so we try to cast
+            # them to a numeric value in the event that
+            # setting the parameter fails.
+            try:
+                self._solver_model.setParam(key, option)
+            except TypeError:
+                # we place the exception handling for
+                # checking the cast of option to a float in
+                # another function so that we can simply
+                # call raise here instead of except
+                # TypeError as e / raise e, because the
+                # latter does not preserve the Gurobi stack
+                # trace
+                if not _is_numeric(option):
+                    raise
+                self._solver_model.setParam(key, float(option))
 
         if self._version_major >= 5:
             for suffix in self._suffixes:
