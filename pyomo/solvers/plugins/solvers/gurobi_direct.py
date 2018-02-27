@@ -130,8 +130,13 @@ class GurobiDirect(DirectSolver):
             # setting the parameter fails.
             try:
                 self._solver_model.setParam(key, option)
-            except TypeError:
-                self._solver_model.setParam(key, float(option))
+            except TypeError as e:
+                try:
+                    option = float(option)
+                except ValueError:
+                    # raise the original exception
+                    raise e
+                self._solver_model.setParam(key, option)
 
         if self._version_major >= 5:
             for suffix in self._suffixes:

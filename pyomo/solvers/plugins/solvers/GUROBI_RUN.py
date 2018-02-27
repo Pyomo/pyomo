@@ -85,8 +85,13 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
         # setting the parameter fails.
         try:
             model.setParam(key, value)
-        except TypeError:
-            model.setParam(key, float(value))
+        except TypeError as e:
+            try:
+                value = float(value)
+            except ValueError:
+                # raise the original exception
+                raise e
+            model.setParam(key, value)
 
 
     if 'relax_integrality' in options:

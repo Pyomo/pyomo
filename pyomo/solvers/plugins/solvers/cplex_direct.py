@@ -157,8 +157,13 @@ class CPLEXDirect(DirectSolver):
             # setting the parameter fails.
             try:
                 opt_cmd.set(option)
-            except self._cplex.exceptions.CplexError:
-                opt_cmd.set(float(option))
+            except self._cplex.exceptions.CplexError as e:
+                try:
+                    option = float(option)
+                except ValueError:
+                    # raise the original exception
+                    raise e
+                opt_cmd.set(option)
 
         t0 = time.time()
         self._solver_model.solve()
