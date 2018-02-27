@@ -11,7 +11,16 @@
 
 import re
 
+
+"""
+This script is run using the Gurobi/system python. Do not assume any third party packages
+are available!
+"""
 from gurobipy import *
+import sys
+if sys.version_info[0] < 3:
+    from itertools import izip as zip
+    
 
 GUROBI_VERSION = gurobi.version()
 
@@ -258,25 +267,39 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
         solnfile.write('objective: %s\n' % str(obj_value))
         solnfile.write('gap: 0.0\n')
 
-        for var in vars:
-            solnfile.write('var: %s : %s\n' % (str(var.getAttr(GRB.Attr.VarName)), str(var.getAttr(GRB.Attr.X))))
+        vals = model.getAttr("X", vars)
+        names = model.getAttr("VarName", vars)
+        for val, name in zip(vals, names):
+            solnfile.write('var: %s : %s\n' % (str(name), str(val)))
 
         if (is_discrete is False) and (extract_reduced_costs is True):
-            for var in vars:
-                solnfile.write('varrc: %s : %s\n' % (str(var.getAttr(GRB.Attr.VarName)), str(var.getAttr(GRB.Attr.RC))))
+            vals = model.getAttr("Rc", vars)
+            for val, name in zip(vals, names):
+                solnfile.write('varrc: %s : %s\n' % (str(name), str(val)))
+
+        if extract_duals or extract_slacks:
+            con_names = model.getAttr("ConstrName", cons)
+            if GUROBI_VERSION[0] >= 5:
+                qcon_names = model.getAttr("QCName", qcons)
 
         if (is_discrete is False) and (extract_duals is True):
-            for con in cons:
+            vals = model.getAttr("Pi", cons)
+            for val, name in zip(vals, con_names):
                # Pi attributes in Gurobi are the constraint duals
-                solnfile.write("constraintdual: %s : %s\n" % (str(con.getAttr(GRB.Attr.ConstrName)), str(con.getAttr(GRB.Attr.Pi))))
-            for con in qcons:
-                # QCPI attributes in Gurobi are the constraint duals
-                solnfile.write("constraintdual: %s : %s\n" % (str(con.getAttr(GRB.Attr.QCName)), str(con.getAttr(GRB.Attr.QCPi))))
+                solnfile.write("constraintdual: %s : %s\n" % (str(name), str(val)))
+            if GUROBI_VERSION[0] >= 5:
+                vals = model.getAttr("QCPi", qcons)
+                for val, name in zip(vals, qcon_names):
+                    # QCPI attributes in Gurobi are the constraint duals
+                    solnfile.write("constraintdual: %s : %s\n" % (str(name), str(val)))
 
         if (extract_slacks is True):
-            for con in cons:
-                solnfile.write("constraintslack: %s : %s\n" % (con.getAttr(GRB.Attr.ConstrName), str(con.getAttr(GRB.Attr.Slack))))
-            for con in qcons:
-                solnfile.write("constraintslack: %s : %s\n" % (con.getAttr(GRB.Attr.QCName), str(con.getAttr(GRB.Attr.QCSlack))))
+            vals = model.getAttr("Slack", cons)
+            for val, name in zip(vals, con_names):
+                solnfile.write("constraintslack: %s : %s\n" % (str(name), str(val)))
+            if GUROBI_VERSION[0] >= 5:
+                vals = model.getAttr("QCSlack", qcons)
+                for val, name in zip(vals, qcon_names):
+                    solnfile.write("constraintslack: %s : %s\n" % (str(name), str(val)))
 
     solnfile.close()
