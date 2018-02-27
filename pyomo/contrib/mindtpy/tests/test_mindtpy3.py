@@ -3,11 +3,14 @@ from math import fabs
 
 import pyutilib.th as unittest
 
-from pyomo.contrib.mindtpy.tests.batchdes import *
+from pyomo.contrib.mindtpy.tests.fo9 import *
+
+# from pyomo.contrib.mindtpy.tests.eight_process_problem import EightProcessFlowsheet
+# model = EightProcessFlowsheet()
 
 from pyomo.environ import SolverFactory, value
 
-required_solvers = ('ipopt', 'gurobi')
+required_solvers = ('ipopt', 'cplex')
 if all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = True
 else:
@@ -22,8 +25,14 @@ class TestMindtPy(unittest.TestCase):
         """Test the MindtPy implementation."""
         with SolverFactory('mindtpy') as opt:
             print('\n Solving problem with selected strategy')
-            opt.solve(model, strategy='ECP', init_strategy = 'initial_binary', mip = 'glpk')
-            model.pprint()
+
+            opt.solve(model
+                , strategy='OA'
+                , init_strategy = 'inintial_binary'
+                , mip = 'cplex'
+                , iterlim = 13
+                )
+            # model.pprint()
     
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
