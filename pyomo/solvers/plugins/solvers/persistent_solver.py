@@ -89,6 +89,9 @@ class PersistentSolver(DirectOrPersistentSolver):
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_block.')
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
         #if block.is_indexed():
         #    for sub_block in block.values():
         #        self._add_block(block)
@@ -118,6 +121,9 @@ class PersistentSolver(DirectOrPersistentSolver):
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_constraint.')
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
         #if con.is_indexed():
         #    for child_con in con.values():
         #        self._add_constraint(child_con)
@@ -134,6 +140,9 @@ class PersistentSolver(DirectOrPersistentSolver):
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_var.')
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
         #if var.is_indexed():
         #    for child_var in var.values():
         #        self._add_var(child_var)
@@ -150,6 +159,9 @@ class PersistentSolver(DirectOrPersistentSolver):
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_sos_constraint.')
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
         #if con.is_indexed():
         #    for child_con in con.values():
         #        self._add_sos_constraint(child_con)
@@ -178,6 +190,9 @@ class PersistentSolver(DirectOrPersistentSolver):
         ----------
         block: Block
         """
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
         #if block.is_indexed():
         #    for sub_block in block.values():
         #        self.remove_block(sub_block)
@@ -200,6 +215,9 @@ class PersistentSolver(DirectOrPersistentSolver):
         ----------
         con: Constraint
         """
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
         #if con.is_indexed():
         #    for child_con in con.values():
         #        self.remove_constraint(child_con)
@@ -222,6 +240,9 @@ class PersistentSolver(DirectOrPersistentSolver):
         ----------
         con: SOSConstraint
         """
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
         #if con.is_indexed():
         #    for child_con in con.values():
         #        self.remove_sos_constraint(child_con)
@@ -244,6 +265,9 @@ class PersistentSolver(DirectOrPersistentSolver):
         ----------
         var: Var
         """
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
         #if var.is_indexed():
         #    for child_var in var.values():
         #        self.remove_var(child_var)

@@ -102,6 +102,9 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         ----------
         var: Var
         """
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
         #if var.is_indexed():
         #    for child_var in var.values():
         #        self.update_var(child_var)
