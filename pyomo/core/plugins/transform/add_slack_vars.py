@@ -22,7 +22,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
     """
 
     alias('core.add_slack_variables', \
-          doc="Create a model where we had slack variables to every constraint "
+          doc="Create a model where we add slack variables to every constraint "
           "and add new objective penalizing the sum of the slacks")
 
     def __init__(self, **kwds):

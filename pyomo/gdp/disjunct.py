@@ -38,9 +38,18 @@ class GDP_Error(Exception):
     """Exception raised while processing GDP Models"""
 
 
-# THe following should eventually be promoted so that all
+# The following should eventually be promoted so that all
 # IndexedComponents can use it
 class _Initializer(object):
+    """A simple function to process an argument to a Component constructor.
+
+    This checks the incoming initializer type and maps it to a static
+    identifier so that when constructing indexed Components we can avoid
+    a series of isinstance calls.  Eventually this concept should be
+    promoted to pyomo.core so that all Components can leverage a
+    standardized approach to processing "flexible" arguments (POD data,
+    rules, dicts, generators, etc)."""
+
     value = 0
     deferred_value = 1
     function = 2
@@ -57,7 +66,7 @@ class _Initializer(object):
         elif hasattr(arg, '__getitem__'):
             return (_Initializer.dict_like, arg)
         else:
-            # Hopefully this thing is castable to teh type that is desired
+            # Hopefully this thing is castable to the type that is desired
             return (_Initializer.deferred_value, arg)
 
 
