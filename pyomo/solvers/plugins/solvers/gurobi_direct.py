@@ -519,7 +519,8 @@ class GurobiDirect(DirectSolver):
             soln.status = SolutionStatus.stoppedByLimit
         else:
             self.results.solver.status = SolverStatus.error
-            self.results.solver.termination_message = "Unknown return code from GUROBI."
+            self.results.solver.termination_message = \
+                ("Unknown return code from GUROBI ("+str(status)+")")
             self.results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
 
