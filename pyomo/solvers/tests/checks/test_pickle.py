@@ -45,14 +45,13 @@ def create_test_method(model, solver, io,
         model_class.generate_model(test_case.testcase.import_suffixes)
         model_class.warmstart_model()
 
-        load_solutions = True
+        load_solutions = not model_class.solve_should_fail
         opt, status = model_class.solve(solver,
                                         io,
                                         test_case.testcase.io_options,
                                         test_case.testcase.options,
                                         symbolic_labels,
                                         load_solutions)
-
         m = pickle.loads(pickle.dumps(model_class.model))
 
         #
