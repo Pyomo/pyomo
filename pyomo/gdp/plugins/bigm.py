@@ -115,6 +115,7 @@ class BigM_Transformation(Transformation):
             Constraint:  self._xform_constraint,
             Var:         False,
             Connector:   False,
+            Expression:  False,
             Suffix:      False,
             Param:       False,
             Set:         False,

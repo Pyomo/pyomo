@@ -95,6 +95,7 @@ class ConvexHull_Transformation(Transformation):
             Constraint : self._xform_constraint,
             Var :        False,
             Connector :  False,
+            Expression : False,
             Param :      False,
             Set :        False,
             Suffix :     False,
