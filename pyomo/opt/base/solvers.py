@@ -640,7 +640,6 @@ class OptSolver(Plugin):
                             self._default_variable_value
                         if self._load_solutions:
                             _model.load_solution(result.solution(0))
-                            result.solution.clear()
                     else:
                         assert len(result.solution) == 0
                     # see the hack in the write method
