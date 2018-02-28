@@ -15,12 +15,12 @@ import textwrap
 
 from pyutilib.misc.config import ConfigBlock, ConfigValue
 
-from pyomo.core import (Block, Connector, Constraint, Param, Set, Suffix, Var,
-                        value)
+from pyomo.core import (
+    Block, Connector, Constraint, Param, Set, Suffix, Var,
+    Expression, SortComponents, TraversalStrategy, Any, value
+)
 from pyomo.core.base import Transformation
-from pyomo.core.base.block import SortComponents, TraversalStrategy
 from pyomo.core.base.component import ComponentUID, ActiveComponent
-from pyomo.core.base.set_types import Any
 from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier

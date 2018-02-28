@@ -13,15 +13,17 @@ import logging
 
 from pyomo.util.modeling import unique_component_name
 from pyomo.util.plugin import alias
-from pyomo.core import *
+from pyomo.core import (
+    Block, Connector, Constraint, Param, Set, Suffix, Var,
+    Expression, SortComponents, TraversalStrategy,
+    Any, Reals, NumericConstant, value
+)
 from pyomo.core.base import expr as EXPR, Transformation
-from pyomo.core.base.block import SortComponents
 from pyomo.core.base.component import ComponentUID, ActiveComponent
-from pyomo.core.base import _ExpressionData
 from pyomo.core.base.var import _VarData
-from pyomo.repn import generate_canonical_repn, LinearCanonicalRepn
 from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.core.base.expr import identify_variables
+from pyomo.repn import generate_canonical_repn, LinearCanonicalRepn
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import clone_without_expression_components
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
