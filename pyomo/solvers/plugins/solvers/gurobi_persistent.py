@@ -94,13 +94,15 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         GurobiDirect._warm_start(self)
 
     def update_var(self, var):
-        """
-        Update a variable in the solver's model. This will update bounds, fix/unfix the variable as needed, and update
-        the variable type.
+        """Update a single variable in the solver's model.
+
+        This will update bounds, fix/unfix the variable as needed, and
+        update the variable type.
 
         Parameters
         ----------
-        var: Var
+        var: Var (scalar Var or single _VarData)
+
         """
         # see PR #366 for discussion about handling indexed
         # objects and keeping compatibility with the

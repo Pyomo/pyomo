@@ -80,12 +80,14 @@ class PersistentSolver(DirectOrPersistentSolver):
         return self._set_instance(model, kwds)
 
     def add_block(self, block):
-        """
-        Add a Pyomo Block to the solver's model. This will keep any existing model components intact.
+        """Add a single Pyomo Block to the solver's model.
+
+        This will keep any existing model components intact.
 
         Parameters
         ----------
-        block: Block
+        block: Block (scalar Block or single _BlockData)
+
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_block.')
@@ -112,12 +114,14 @@ class PersistentSolver(DirectOrPersistentSolver):
         return self._set_objective(obj)
 
     def add_constraint(self, con):
-        """
-        Add a constraint to the solver's model. This will keep any existing model components intact.
+        """Add a single constraint to the solver's model.
+
+        This will keep any existing model components intact.
 
         Parameters
         ----------
-        con: Constraint
+        con: Constraint (scalar Constraint or single _ConstraintData)
+
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_constraint.')
@@ -131,12 +135,14 @@ class PersistentSolver(DirectOrPersistentSolver):
         self._add_constraint(con)
 
     def add_var(self, var):
-        """
-        Add a variable to the solver's model. This will keep any existing model components intact.
+        """Add a single variable to the solver's model.
+
+        This will keep any existing model components intact.
 
         Parameters
         ----------
         var: Var
+
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_var.')
@@ -150,12 +156,14 @@ class PersistentSolver(DirectOrPersistentSolver):
         self._add_var(var)
 
     def add_sos_constraint(self, con):
-        """
-        Add an SOS constraint to the solver's model (if supported). This will keep any existing model components intact.
+        """Add a single SOS constraint to the solver's model (if supported).
+
+        This will keep any existing model components intact.
 
         Parameters
         ----------
         con: SOSConstraint
+
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_sos_constraint.')
@@ -181,14 +189,16 @@ class PersistentSolver(DirectOrPersistentSolver):
         raise NotImplementedError('This method should be implemented by subclasses.')
 
     def remove_block(self, block):
-        """
-        Remove a block from the solver's model. This will keep any other model components intact.
+        """Remove a single block from the solver's model.
+
+        This will keep any other model components intact.
 
         WARNING: Users must call remove_block BEFORE modifying the block.
 
         Parameters
         ----------
-        block: Block
+        block: Block (scalar Block or a single _BlockData)
+
         """
         # see PR #366 for discussion about handling indexed
         # objects and keeping compatibility with the
@@ -208,12 +218,14 @@ class PersistentSolver(DirectOrPersistentSolver):
             self.remove_var(var)
 
     def remove_constraint(self, con):
-        """
-        Remove a constraint from the solver's model. This will keep any other model components intact.
+        """Remove a single constraint from the solver's model.
+
+        This will keep any other model components intact.
 
         Parameters
         ----------
-        con: Constraint
+        con: Constraint (scalar Constraint or single _ConstraintData)
+
         """
         # see PR #366 for discussion about handling indexed
         # objects and keeping compatibility with the
@@ -233,12 +245,14 @@ class PersistentSolver(DirectOrPersistentSolver):
         del self._solver_con_to_pyomo_con_map[solver_con]
 
     def remove_sos_constraint(self, con):
-        """
-        Remove an SOS constraint from the solver's model. This will keep any other model components intact.
+        """Remove a single SOS constraint from the solver's model.
+
+        This will keep any other model components intact.
 
         Parameters
         ----------
         con: SOSConstraint
+
         """
         # see PR #366 for discussion about handling indexed
         # objects and keeping compatibility with the
@@ -258,12 +272,14 @@ class PersistentSolver(DirectOrPersistentSolver):
         del self._solver_con_to_pyomo_con_map[solver_con]
 
     def remove_var(self, var):
-        """
-        Remove a variable from the solver's model. This will keep any other model components intact.
+        """Remove a single variable from the solver's model.
+
+        This will keep any other model components intact.
 
         Parameters
         ----------
-        var: Var
+        var: Var (scalar Var or single _VarData)
+
         """
         # see PR #366 for discussion about handling indexed
         # objects and keeping compatibility with the
