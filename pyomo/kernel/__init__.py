@@ -9,10 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.environ
-from pyomo.version import version_info
-v = None
-__version__ = '.'.join(str(v) for v in version_info[:3])
-del v
+from pyomo.version import version_info, __version__
 
 from pyomo.core.kernel import *
 
