@@ -42,16 +42,16 @@ def linear(flag):
         with EXPR.linear_expression as expr:
             expr=sum((model.x[i] for i in model.A), expr)
     elif flag == 20:
-        expr=Sum(model.x[i] for i in model.A)
+        expr=quicksum(model.x[i] for i in model.A)
 
     elif flag == 1:
         expr = summation(model.p, model.x)
     elif flag == 6:
-        expr=Sum((model.p[i]*model.x[i] for i in model.A), linear=False)
+        expr=quicksum((model.p[i]*model.x[i] for i in model.A), linear=False)
     elif flag == 16:
-        expr=Sum((model.p[i]*model.x[i] for i in model.A), linear=True)
+        expr=quicksum((model.p[i]*model.x[i] for i in model.A), linear=True)
     elif flag == 26:
-        expr=Sum(model.p[i]*model.x[i] for i in model.A)
+        expr=quicksum(model.p[i]*model.x[i] for i in model.A)
 
     elif flag == 2:
         expr=sum(model.p[i]*model.x[i] for i in model.A)
@@ -104,7 +104,7 @@ def linear(flag):
             for i in model.A:
                 expr += model.p[i] * (1 + model.x[i])
     elif flag == 27:
-        expr = Sum(model.p[i]*(1 + model.x[i]) for i in model.A)
+        expr = quicksum(model.p[i]*(1 + model.x[i]) for i in model.A)
 
     elif flag == 8:
         expr=0
@@ -112,7 +112,7 @@ def linear(flag):
             expr += (model.x[i]+model.x[i])
     elif flag == 18:
         # This will assume a nonlinear sum
-        expr = Sum((model.x[i] + model.x[i]) for i in model.A)
+        expr = quicksum((model.x[i] + model.x[i]) for i in model.A)
 
     elif flag == 9:
         expr=0
@@ -120,15 +120,15 @@ def linear(flag):
             expr += model.p[i]*(model.x[i]+model.x[i])
     elif flag == 19:
         # This will assume a nonlinear sum
-        expr = Sum(model.p[i]*(model.x[i] + model.x[i]) for i in model.A)
+        expr = quicksum(model.p[i]*(model.x[i] + model.x[i]) for i in model.A)
 
     elif flag == -9:
-        expr = Sum(sin(model.x[i]) for i in model.A)
+        expr = quicksum(sin(model.x[i]) for i in model.A)
 
     if coopr3 or pyomo4:
-        generate_ampl_repn(expr)
+        repn = generate_ampl_repn(expr)
     else:
-        generate_standard_repn(EXPR.compress_expression(expr), quadratic=False)
+        repn = generate_standard_repn(EXPR.compress_expression(expr), quadratic=False)
 
 if coopr3:
     import pyomo.core.kernel.expr_coopr3 as COOPR3
