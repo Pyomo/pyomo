@@ -507,9 +507,21 @@ class GurobiDirect(DirectSolver):
                                                       "solution is available."
             self.results.solver.termination_condition = TerminationCondition.other
             soln.status = SolutionStatus.feasible
+        # note that USER_OBJ_LIMIT was added in Gurobi 7.0, so it may not be present
+        elif (status is not None) and \
+             (status == getattr(grb,'USER_OBJ_LIMIT',None)):
+            self.results.solver.status = SolverStatus.aborted
+            self.results.solver.termination_message = "User specified an objective limit " \
+                                                      "(a bound on either the best objective " \
+                                                      "or the best bound), and that limit has " \
+                                                      "been reached. Solution is available."
+            self.results.solver.termination_condition = TerminationCondition.other
+            soln.status = SolutionStatus.stoppedByLimit
         else:
             self.results.solver.status = SolverStatus.error
-            self.results.solver.termination_message = "Unknown return code from GUROBI."
+            self.results.solver.termination_message = \
+                ("Unhandled Gurobi solve status "
+                 "("+str(status)+")")
             self.results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
 
