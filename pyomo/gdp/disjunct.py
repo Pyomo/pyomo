@@ -290,9 +290,9 @@ class Disjunction(ActiveIndexedComponent):
             for key in init_set:
                 self._data[key].xor = val
         elif self._init_xor[0] == _Initializer.deferred_value: # Param data
-            val = self._init_xor[1]
+            val = bool(value( self._init_xor[1] ))
             for key in init_set:
-                self._data[key].xor = bool(value(val))
+                self._data[key].xor = val
         elif self._init_xor[0] == _Initializer.function: # rule
             fcn = self._init_xor[1]
             for key in init_set:
