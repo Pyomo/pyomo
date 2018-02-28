@@ -34,7 +34,6 @@ def create_test_method(model, solver, io,
 
     # Ignore expected failures?
     is_expected_failure = False
-    #is_expected_failure = test_case.status == 'expected failure'
 
     def pickle_test(self):
 
@@ -45,7 +44,9 @@ def create_test_method(model, solver, io,
         model_class.generate_model(test_case.testcase.import_suffixes)
         model_class.warmstart_model()
 
-        load_solutions = not model_class.solve_should_fail
+        load_solutions = (not model_class.solve_should_fail) and \
+                         (test_case.status != 'expected failure')
+
         opt, status = model_class.solve(solver,
                                         io,
                                         test_case.testcase.io_options,
