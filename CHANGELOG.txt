@@ -6,6 +6,25 @@ Pyomo CHANGELOG
 Pyomo 5.4
 -------------------------------------------------------------------------------
 
+- Updated gdp.chull to handle named expressions (#318)
+- Fixed Disjunction to support declaration without expr or rule (#241)
+- Misc Gurobi and Cplex fixes (#368)
+- Fix to gurobi_direct initialization when gurobipy is not available. (#363)
+- Fixes to persistent solvers (#361)
+- Fix to cplex 12.6 error management. (#357)
+- Fix intermittent "unclonable" component error (#356)
+- Fix GAMS interface ignoring `tee` (#351)
+- Remove duplicated 'Key' for Expression.display() (#349)
+- removing import from GUROBI_RUN.py (#344)
+- Add logfile option to GAMS solver (#302)
+- Improvements for Gurobi/Cplex Interfaces (#331)
+- GDPopt solver initial implementation (#337)
+- Fixed to update IndexedVar domain display (#5)
+- Reorganize the API documentation (#333)
+- Transformation to strip bounds from model (#220)
+- Adding transformation to propagate equality-linked fixed variables (#192)
+- Fixing Python 3.x compatibility for Sets (#305)
+- Fix so that GAMS writer can safely ignore Connector objects (#310)
 - Faster solution parsing for CBC (#311)
 - Reworked pyomo.contrib and added the pyomo.contrib.example package (#299)
 - Fixes for Python 2.6 compatibility in third-party packages
