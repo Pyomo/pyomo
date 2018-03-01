@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -116,6 +116,7 @@ def create_test_method(model, solver, io,
 
     return pickle_test
 
+cls = None
 
 #
 # Create test driver classes for each test model
@@ -154,7 +155,6 @@ for key, value in test_scenarios(lambda c: c.test_pickling):
 # Reset the cls variable, since it contains a unittest.TestCase subclass.
 # This prevents this class from being processed twice!
 cls = None
-
 
 if __name__ == "__main__":
     unittest.main()
