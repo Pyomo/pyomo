@@ -32,7 +32,7 @@ _cleanup_expected_failures = True
 
 
 #
-# A function that function that returns a function that gets
+# A function that returns a function that gets
 # added to a test class.
 #
 def create_test_method(model,
