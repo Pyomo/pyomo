@@ -794,16 +794,19 @@ class ProblemWriter_nl(AbstractProblemWriter):
         all_blocks_list = list(model.block_data_objects(active=True, sort=sorter))
 
         # create a deterministic var labeling
-        cntr = 0
-        for block in all_blocks_list:
-            vars_counter = tuple(enumerate(
-                block.component_data_objects(Var,
-                                             active=True,
-                                             sort=sorter,
-                                             descend_into=False),
-                cntr))
-            cntr += len(vars_counter)
-            Vars_dict.update(vars_counter)
+        Vars_dict = dict( enumerate( model.component_data_objects(
+                    Var, sort=sorter) ) )
+        cntr = len(Vars_dict)
+        # cntr = 0
+        # for block in all_blocks_list:
+        #     vars_counter = tuple(enumerate(
+        #         block.component_data_objects(Var,
+        #                                      active=True,
+        #                                      sort=sorter,
+        #                                      descend_into=False),
+        #         cntr))
+        #     cntr += len(vars_counter)
+        #     Vars_dict.update(vars_counter)
         self._varID_map = dict((id(val),key) for key,val in iteritems(Vars_dict))
         self_varID_map = self._varID_map
         # Use to label the rest of the components (which we will not encounter twice)
@@ -1029,7 +1032,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     elif (L > U):
                         msg = 'Constraint {0}: lower bound greater than upper' \
                             ' bound ({1} > {2})'
-                        raise ValueError(msg.format(con_ID, str(L), str(U)))
+                        raise ValueError(msg.format(constraint_data.name,
+                                                    str(L), str(U)))
                     else:
                         constraint_bounds_dict[con_ID] = \
                             "0 %r %r\n" % (L-offset, U-offset)

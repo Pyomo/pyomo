@@ -1803,12 +1803,28 @@ class TestBlock(unittest.TestCase):
         m.b.bad2 = foo()
         m.b.c = Constraint(expr=m.x**2 + m.y[1] + m.b.x**2 + m.b.y[1] <= 10)
 
+        # Check the paranoid warning
+        OUTPUT = StringIO()
+        with LoggingIntercept(OUTPUT, 'pyomo.core'):
+            nb = deepcopy(m.b)
+        # without the scope, the whole model is cloned!
+        self.assertIn("'unknown' contains an uncopyable field 'bad1'",
+                      OUTPUT.getvalue())
+        self.assertIn("'b' contains an uncopyable field 'bad2'",
+                      OUTPUT.getvalue())
+        self.assertIn("'__paranoid__'", OUTPUT.getvalue())
+        self.assertTrue(hasattr(m.b, 'bad2'))
+        self.assertFalse(hasattr(nb, 'bad2'))
+
         # Simple tests for the subblock
         OUTPUT = StringIO()
         with LoggingIntercept(OUTPUT, 'pyomo.core'):
             nb = m.b.clone()
-        self.assertIn("Component 'b' contains an uncopyable field 'bad2'",
+        self.assertNotIn("'unknown' contains an uncopyable field 'bad1'",
+                         OUTPUT.getvalue())
+        self.assertIn("'b' contains an uncopyable field 'bad2'",
                       OUTPUT.getvalue())
+        self.assertNotIn("'__paranoid__'", OUTPUT.getvalue())
         self.assertTrue(hasattr(m.b, 'bad2'))
         self.assertFalse(hasattr(nb, 'bad2'))
 
@@ -1816,10 +1832,11 @@ class TestBlock(unittest.TestCase):
         OUTPUT = StringIO()
         with LoggingIntercept(OUTPUT, 'pyomo.core'):
             n = m.clone()
-        self.assertIn("Component 'unknown' contains an uncopyable field 'bad1'",
+        self.assertIn("'unknown' contains an uncopyable field 'bad1'",
                       OUTPUT.getvalue())
-        self.assertIn("Component 'b' contains an uncopyable field 'bad2'",
+        self.assertIn("'b' contains an uncopyable field 'bad2'",
                       OUTPUT.getvalue())
+        self.assertNotIn("'__paranoid__'", OUTPUT.getvalue())
         self.assertTrue(hasattr(m, 'bad1'))
         self.assertFalse(hasattr(n, 'bad1'))
         self.assertTrue(hasattr(m.b, 'bad2'))
