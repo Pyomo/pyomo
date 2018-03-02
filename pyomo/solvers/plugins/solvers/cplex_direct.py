@@ -44,6 +44,12 @@ class _CplexExpr(object):
         self.q_variables2 = []
         self.q_coefficients = []
 
+def _is_numeric(x):
+    try:
+        float(x)
+    except ValueError:
+        return False
+    return True
 
 class CPLEXDirect(DirectSolver):
     alias('cplex_direct', doc='Direct python interface to CPLEX')
@@ -110,7 +116,8 @@ class CPLEXDirect(DirectSolver):
 
         obj_degree = self._objective.expr.polynomial_degree()
         if obj_degree is None or obj_degree > 2:
-            raise DegreeError('CPLEXDirect does not support expressions of degree {0}.'.format(obj_degree))
+            raise DegreeError('CPLEXDirect does not support expressions of degree {0}.'\
+                              .format(obj_degree))
         elif obj_degree == 2:
             quadratic_objective = True
         else:
@@ -150,7 +157,23 @@ class CPLEXDirect(DirectSolver):
             key_pieces = key.split('_')
             for key_piece in key_pieces:
                 opt_cmd = getattr(opt_cmd, key_piece)
-            opt_cmd.set(option)
+            # When options come from the pyomo command, all
+            # values are string types, so we try to cast
+            # them to a numeric value in the event that
+            # setting the parameter fails.
+            try:
+                opt_cmd.set(option)
+            except self._cplex.exceptions.CplexError:
+                # we place the exception handling for
+                # checking the cast of option to a float in
+                # another function so that we can simply
+                # call raise here instead of except
+                # TypeError as e / raise e, because the
+                # latter does not preserve the Cplex stack
+                # trace
+                if not _is_numeric(option):
+                    raise
+                opt_cmd.set(float(option))
 
         t0 = time.time()
         self._solver_model.solve()
@@ -457,10 +480,12 @@ class CPLEXDirect(DirectSolver):
             if not flag:
                 raise RuntimeError("***The cplex_direct solver plugin cannot extract solution suffix="+suffix)
 
-        gprob = self._solver_model
-        status = gprob.solution.get_status()
+        cpxprob = self._solver_model
+        status = cpxprob.solution.get_status()
 
-        if gprob.get_problem_type() in [gprob.problem_type.MILP, gprob.problem_type.MIQP, gprob.problem_type.MIQCP]:
+        if cpxprob.get_problem_type() in [cpxprob.problem_type.MILP,
+                                          cpxprob.problem_type.MIQP,
+                                          cpxprob.problem_type.MIQCP]:
             if extract_reduced_costs:
                 logger.warning("Cannot get reduced costs for MIP.")
             if extract_duals:
@@ -471,22 +496,23 @@ class CPLEXDirect(DirectSolver):
         self.results = SolverResults()
         soln = Solution()
 
-        self.results.solver.name = ("CPLEX {0}".format(gprob.get_version()))
+        self.results.solver.name = ("CPLEX {0}".format(cpxprob.get_version()))
         self.results.solver.wallclock_time = self._wallclock_time
 
         if status in [1, 101, 102]:
             self.results.solver.status = SolverStatus.ok
             self.results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
-        elif status in [2, 118]:
+        elif status in [2, 40, 118, 133, 134]:
             self.results.solver.status = SolverStatus.warning
             self.results.solver.termination_condition = TerminationCondition.unbounded
             soln.status = SolutionStatus.unbounded
-        elif status in [4, 119]:
+        elif status in [4, 119, 134]:
             # Note: status of 4 means infeasible or unbounded
             #       and 119 means MIP infeasible or unbounded
             self.results.solver.status = SolverStatus.warning
-            self.results.solver.termination_condition = TerminationCondition.infeasibleOrUnbounded
+            self.results.solver.termination_condition = \
+                TerminationCondition.infeasibleOrUnbounded
             soln.status = SolutionStatus.unsure
         elif status in [3, 103]:
             self.results.solver.status = SolverStatus.warning
@@ -496,7 +522,7 @@ class CPLEXDirect(DirectSolver):
             self.results.solver.status = SolverStatus.aborted
             self.results.solver.termination_condition = TerminationCondition.maxIterations
             soln.status = SolutionStatus.stoppedByLimit
-        elif status in [11, 25]:
+        elif status in [11, 25, 107, 131]:
             self.results.solver.status = SolverStatus.aborted
             self.results.solver.termination_condition = TerminationCondition.maxTimeLimit
             soln.status = SolutionStatus.stoppedByLimit
@@ -505,61 +531,65 @@ class CPLEXDirect(DirectSolver):
             self.results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
 
-        if gprob.objective.get_sense() == gprob.objective.sense.minimize:
+        if cpxprob.objective.get_sense() == cpxprob.objective.sense.minimize:
             self.results.problem.sense = pyomo.core.kernel.minimize
-        elif gprob.objective.get_sense() == gprob.objective.sense.maximize:
+        elif cpxprob.objective.get_sense() == cpxprob.objective.sense.maximize:
             self.results.problem.sense = pyomo.core.kernel.maximize
         else:
-            raise RuntimeError('Unrecognized cplex objective sense: {0}'.format(gprob.objective.get_sense()))
+            raise RuntimeError('Unrecognized cplex objective sense: {0}'.\
+                               format(cpxprob.objective.get_sense()))
 
         self.results.problem.upper_bound = None
         self.results.problem.lower_bound = None
-        if (gprob.variables.get_num_binary() + gprob.variables.get_num_integer()) == 0:
+        if (cpxprob.variables.get_num_binary() + cpxprob.variables.get_num_integer()) == 0:
             try:
-                self.results.problem.upper_bound = gprob.solution.get_objective_value()
-                self.results.problem.lower_bound = gprob.solution.get_objective_value()
+                self.results.problem.upper_bound = cpxprob.solution.get_objective_value()
+                self.results.problem.lower_bound = cpxprob.solution.get_objective_value()
             except self._cplex.exceptions.CplexError:
                 pass
-        elif gprob.objective.get_sense() == gprob.objective.sense.minimize:
+        elif cpxprob.objective.get_sense() == cpxprob.objective.sense.minimize:
             try:
-                self.results.problem.upper_bound = gprob.solution.get_objective_value()
-            except self._cplex.exceptions.CplexError:
-                pass
-            try:
-                self.results.problem.lower_bound = gprob.solution.MIP.get_best_objective()
-            except self._cplex.exceptions.CplexError:
-                pass
-        elif gprob.objective.get_sense() == gprob.objective.sense.maximize:
-            try:
-                self.results.problem.upper_bound = gprob.solution.MIP.get_best_objective()
+                self.results.problem.upper_bound = cpxprob.solution.get_objective_value()
             except self._cplex.exceptions.CplexError:
                 pass
             try:
-                self.results.problem.lower_bound = gprob.solution.get_objective_value()
+                self.results.problem.lower_bound = cpxprob.solution.MIP.get_best_objective()
+            except self._cplex.exceptions.CplexError:
+                pass
+        elif cpxprob.objective.get_sense() == cpxprob.objective.sense.maximize:
+            try:
+                self.results.problem.upper_bound = cpxprob.solution.MIP.get_best_objective()
+            except self._cplex.exceptions.CplexError:
+                pass
+            try:
+                self.results.problem.lower_bound = cpxprob.solution.get_objective_value()
             except self._cplex.exceptions.CplexError:
                 pass
         else:
-            raise RuntimeError('Unrecognized cplex objective sense: {0}'.format(gprob.objective.get_sense()))
+            raise RuntimeError('Unrecognized cplex objective sense: {0}'.\
+                               format(cpxprob.objective.get_sense()))
 
         try:
             soln.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
         except TypeError:
             soln.gap = None
 
-        self.results.problem.name = gprob.get_problem_name()
-        assert gprob.indicator_constraints.get_num() == 0
-        self.results.problem.number_of_constraints = (gprob.linear_constraints.get_num() +
-                                                      gprob.quadratic_constraints.get_num() +
-                                                      gprob.SOS.get_num())
+        self.results.problem.name = cpxprob.get_problem_name()
+        assert cpxprob.indicator_constraints.get_num() == 0
+        self.results.problem.number_of_constraints = \
+            (cpxprob.linear_constraints.get_num() +
+             cpxprob.quadratic_constraints.get_num() +
+             cpxprob.SOS.get_num())
         self.results.problem.number_of_nonzeros = None
-        self.results.problem.number_of_variables = gprob.variables.get_num()
-        self.results.problem.number_of_binary_variables = gprob.variables.get_num_binary()
-        self.results.problem.number_of_integer_variables = gprob.variables.get_num_integer()
-        assert gprob.variables.get_num_semiinteger() == 0
-        assert gprob.variables.get_num_semicontinuous() == 0
-        self.results.problem.number_of_continuous_variables = (gprob.variables.get_num() -
-                                                               gprob.variables.get_num_binary() -
-                                                               gprob.variables.get_num_integer())
+        self.results.problem.number_of_variables = cpxprob.variables.get_num()
+        self.results.problem.number_of_binary_variables = cpxprob.variables.get_num_binary()
+        self.results.problem.number_of_integer_variables = cpxprob.variables.get_num_integer()
+        assert cpxprob.variables.get_num_semiinteger() == 0
+        assert cpxprob.variables.get_num_semicontinuous() == 0
+        self.results.problem.number_of_continuous_variables = \
+            (cpxprob.variables.get_num() -
+             cpxprob.variables.get_num_binary() -
+             cpxprob.variables.get_num_integer())
         self.results.problem.number_of_objectives = 1
 
         # only try to get objective and variable values if a solution exists
@@ -568,7 +598,7 @@ class CPLEXDirect(DirectSolver):
             This code in this if statement is only needed for backwards compatability. It is more efficient to set
             _save_results to False and use load_vars, load_duals, etc.
             """
-            if gprob.solution.get_solution_type() > 0:
+            if cpxprob.solution.get_solution_type() > 0:
                 soln_variables = soln.variable
                 soln_constraints = soln.constraint
 
@@ -624,7 +654,7 @@ class CPLEXDirect(DirectSolver):
                     for i, con_name in enumerate(self._solver_model.quadratic_constraints.get_names()):
                         soln_constraints[con_name]["Slack"] = qudratic_slacks[i]
         elif self._load_solutions:
-            if gprob.solution.get_solution_type() > 0:
+            if cpxprob.solution.get_solution_type() > 0:
                 self._load_vars()
 
                 if extract_reduced_costs:
