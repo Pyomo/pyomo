@@ -14,10 +14,9 @@ research group of Ignacio Grossmann.
 
 For nonconvex problems, the bounds self.LB and self.UB may not be rigorous.
 
-Questions: Please make a post at StackOverflow and/or David Bernal <https://github.com/bernalde>
+Questions: David Bernal <https://github.com/bernalde>
 
 """
-import logging
 from copy import deepcopy
 from math import copysign
 from pprint import pprint
@@ -41,8 +40,6 @@ from pyomo.core.base import TransformationFactory
 from pyomo.core.base import ComponentMap
 
 from six.moves import range
-
-logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 __version__ = (0, 0, 1)
 
@@ -112,7 +109,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
 
         """
         self.bound_tolerance = kwds.pop('tol', 1E-5)
-        self.iteration_limit = kwds.pop('iterlim', 30)
+        self.iteration_limit = kwds.pop('iterlim', 10) # ERASE
         self.decomposition_strategy = kwds.pop('strategy', 'OA')
         self.initialization_strategy = kwds.pop('init_strategy', None)
         self.integer_cuts = kwds.pop('int_cuts', 1)
@@ -129,23 +126,9 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         self.subproblem_postfeasible = kwds.pop('subprob_postfeas',
                                                 _DoNothing())
         self.load_solutions = kwds.pop('load_solutions', True)
-        self.tee = kwds.pop('tee', False)
-
-        if self.tee:
-            old_logger_level = logger.getEffectiveLevel()
-            logger.setLevel(logging.INFO)
-
         if kwds:
             print("Unrecognized arguments passed to MindtPy solver:")
             pprint(kwds)
-
-        valid_strategies = ['OA','PSC','GBD','ECP']
-        if self.decomposition_strategy not in valid_strategies:
-            raise ValueError('Unrecognized decomposition strategy %s. '
-                             'Valid strategies include: %s'
-                             % (solve_data.decomposition_strategy,
-                                valid_strategies))
-
 
         # If decomposition strategy is a hybrid, set the initial strategy
         if self.decomposition_strategy == 'hPSC':
@@ -156,9 +139,8 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         # When generating cuts, small duals multiplied by expressions can cause
         # problems. Exclude all duals smaller in absolue value than the
         # following.
-        self.small_dual_tolerance = 1E-8
+        self.small_dual_tolerance = 1E-5
         self.integer_tolerance = 1E-5
-        self.initial_feas = 1
 
         # Modify in place decides whether to run the algorithm on a copy of the
         # originally model passed to the solver, or whether to manipulate the
@@ -205,12 +187,10 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         # constraints. Do not leave the constraints on by default.
         lin = m.MindtPy_linear_cuts = Block()
         lin.deactivate()
-
         # Create a model block in which to store the generated feasibility slack
         # constraints. Do not leave the constraints on by default.
         feas = m.MindtPy_feas = Block()
         feas.deactivate()
-        feas.feas_constraints = ConstraintList(doc='Feasibility Problem Constraints')
 
         # Integer cuts exclude particular discrete decisions
         lin.integer_cuts = ConstraintList(doc='integer cuts')
@@ -236,11 +216,6 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
                 ctype=Constraint, active=True, descend_into=True)
             if v.body.polynomial_degree() not in (0, 1)]
 
-        # Build list of  constraints
-        self.constraints = [
-            v for v in m.component_data_objects(
-                ctype=Constraint, active=True, descend_into=True)]
-
         # Set up iteration counters
         self.nlp_iter = 0
         self.mip_iter = 0
@@ -254,8 +229,6 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
 
         # Create an integer index set over the nonlinear constraints
         lin.nl_constraint_set = RangeSet(len(self.nonlinear_constraints))
-        # Create an integer index set over the constraints
-        feas.constraint_set = RangeSet(len(self.constraints))
         # Mapping Constraint -> integer index
         self.nl_map = {}
         # Mapping integer index -> Constraint
@@ -266,24 +239,13 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             self.nl_map[c] = n
             self.nl_inverse_map[n] = c
 
-        # Mapping Constraint -> integer index
-        self.feas_map = {}
-        # Mapping integer index -> Constraint
-        self.feas_inverse_map = {}
-        # Generate the two maps. These maps may be helpful for later
-        # interpreting indices on the slack variables or generated cuts.
-        for c, n in zip(self.constraints, feas.constraint_set):
-            self.feas_map[c] = n
-            self.feas_inverse_map[n] = c
-
-
         # Create slack variables for OA cuts
         lin.slack_vars = Var(lin.nlp_iters, lin.nl_constraint_set,
                              domain=NonNegativeReals,
                              bounds=(0, self.max_slack), initialize=0)
         # Create slack variables for feasibility problem
-        feas.slack_var = Var(feas.constraint_set,
-                              domain=NonNegativeReals, initialize=1)
+        feas.slack_vars = Var(lin.nl_constraint_set,
+                              domain=NonNegativeReals, initialize=0)
 
         # set up bounds
         self.LB = float('-inf')
@@ -375,6 +337,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         """
         m = self.m
         self.feas_constr_map = {}
+        self.m.mindtpy_feas.feas_constraints = ConstraintList(doc='Feasibility Problem Constraints')
         if (self._decomposition_strategy == 'OA' or
                 self.decomposition_strategy == 'hPSC'):
             if not hasattr(m, 'dual'):  # Set up dual value reporting
@@ -417,7 +380,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             if self._decomposition_strategy == 'OA':
                 self.initialization_strategy = 'rNLP'
             else:
-                self.initialization_strategy = 'initial_binary'
+                self.initialization_strategy = 'max_binary'
 
         # Do the initialization
         if self.initialization_strategy == 'rNLP':
@@ -523,6 +486,8 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
 
         This should be done for initializing the ECP method.
 
+        Also for FeasPump.
+
         """
         m = self.m
         self.mip_iter += 1
@@ -553,7 +518,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
                 print('MindtPy exiting on bound convergence. '
                       'LB: {} + (tol {}) >= UB: {}'.format(
                           self.LB, self.bound_tolerance, self.UB) + '\n')
-                # res.solver.termination_condition = tc.optimal
+                res.solver.termination_condition = optimal
                 break
             # Check iteration limit
             if self.mip_iter >= self.iteration_limit:
@@ -637,7 +602,6 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             sense=self.obj.sense)
         getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
         getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
-        # m.pprint() #print oa master problem for debugging
         results = self.mip_solver.solve(m, load_solutions=False,
                                         **self.mip_solver_kwargs)
         master_terminate_cond = results.solver.termination_condition
@@ -693,6 +657,20 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
 
         # Call the MILP post-solve callback
         self.master_postsolve(m, self)
+
+    # def _solve_FP_master(self):
+    #     m = self.m
+    #     self.mip_iter += 1
+    #     feas_sol = 0
+    #     print('MILP {}: Solve master problem.'.format(self.mip_iter))
+    #     # Set up MILP
+    #     for c in self.nonlinear_constraints:
+    #         c.deactivate()
+    #     m.MindtPy_linear_cuts.activate()
+    #     results = self.mip_solver.solve(m, load_solutions=False, 
+    #                                     **self.mip_solver_kwargs)
+    #     self.obj.deactivate()
+
 
 
     def _solve_ECP_master(self):
@@ -782,7 +760,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         m.MindtPy_linear_cuts.activate()
         getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
         getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
-        # m.pprint() #print psc master problem for debugging
+        # m.pprint() #ERASE
         results = self.mip_solver.solve(m, load_solutions=False,
                                         **self.mip_solver_kwargs)
         for c in self.nonlinear_constraints:
@@ -828,7 +806,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         # Call the MILP post-solve callback
         self.master_postsolve(m, self)
 
-    def _solve_GBD_master(self, leave_linear_active=True):
+    def _solve_GBD_master(self, leave_linear_active=False):
         m = self.m
         self.mip_iter += 1
         print('MILP {}: Solve master problem.'.format(self.mip_iter))
@@ -849,7 +827,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         #m.MindtPy_objective_expr.activate() # This activation will be deleted
         getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
         getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
-        # m.pprint() #print gbd master problem for debugging
+        # m.pprint() #ERASE
         results = self.mip_solver.solve(m, load_solutions=False,
                                         **self.mip_solver_kwargs)
         master_terminate_cond = results.solver.termination_condition
@@ -949,7 +927,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         t = TransformationFactory('core.deactivate_trivial_constraints')
         t.apply_to(m,tmp=True,ignore_infeasible=True)
         # Solve the NLP
-        # m.pprint() # print nlp problem for debugging
+        # m.pprint() # ERASE
         results = self.nlp_solver.solve(m, load_solutions=False,
                                         **self.nlp_solver_kwargs)
         t.revert(m)
@@ -1006,7 +984,6 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
                  sign_adjust*(rhs - value(c.body)))
             for var in m.component_data_objects(ctype=Var,
                                                 descend_into=True):
-                
                 if self._decomposition_strategy == 'PSC' or self._decomposition_strategy == 'GBD':
                     m.ipopt_zL_out[var] = 0
                     m.ipopt_zU_out[var] = 0
@@ -1014,7 +991,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
                         m.ipopt_zL_out[var] = 1
                     elif var.lb is not None and abs(value(var) - var.lb) < self.bound_tolerance:
                         m.ipopt_zU_out[var] = -1
-            # m.pprint() #print infeasible nlp problem for debugging
+            # m.pprint() #ERASE
             if self._decomposition_strategy == 'PSC':
                 print('Adding PSC feasibility cut.')
                 self._add_psc_cut(nlp_feasible=False)
@@ -1023,9 +1000,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
                 self._add_gbd_cut(nlp_feasible=False)
             elif self._decomposition_strategy == 'OA':
                 print('Solving feasibility problem')
-                if self.initial_feas == 1:
-                    self._add_feas_slacks()
-                    self.initial_feas = 0
+                self._add_feas_slacks()
                 self._solve_NLP_feas()
                 self._add_oa_cut()
             # Add an integer cut to exclude this discrete option
@@ -1045,25 +1020,23 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         self.subproblem_postsolve(m, self)
 
     def _solve_NLP_feas(self):
-        m = self.m
-        m.MindtPy_objective.deactivate()
-        for constr in m.component_data_objects(
-                ctype=Constraint, active=True, descend_into=True):
-            constr.deactivate()
-        m.MindtPy_feas.activate()
-        m.del_component('MindtPy_feas_obj')
-        m.MindtPy_feas_obj = Objective(expr= sum(s for s in m.MindtPy_feas.slack_var[...]), sense=minimize)
-        for v in self.binary_vars:
-            if value(v) > 0.5:
-                v.fix(1)
-            else:
-                v.fix(0)
-        # m.pprint()  #print nlp feasibility problem for debugging
+        fcuts.slack_vars = Var(domain=NonNegativeReals, initialize=0)
+        #so many objectives are activated and deactivated; which one do I deactivate when?
+        m.MindtPy_objective_expr.deactivate()
+        m.main_obj.deactivate()
+        m.MindtPy_feas_value = Var(domain=NonNegativeReals, initialize=0)
+        self.obj = m.Mindtpy_feas_obj = Objective(expr= sum(s for s in fcuts.slack_vars), sense=minimize)
+        
         feas_soln = self.nlp_solver.solve(m, load_solutions=False, **self.nlp_solver_kwargs)
+        
+        if self.value(m.Mindtpy_feas_obj.expr) = 0;
+            raise ValueError(
+                'Problem is not infeasible, check NLP solver')
         subprob_terminate_cond = feas_soln.solver.termination_condition
         if subprob_terminate_cond is tc.optimal:
             m.solutions.load_from(feas_soln)
         elif subprob_terminate_cond is tc.infeasible:
+            # TODO fail? try something else? this should never happen
             raise ValueError('Feasibility NLP infeasible. '
                              'This should never happen.')
         else:
@@ -1071,29 +1044,12 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
                 'MindtPy unable to handle feasibility NLP termination condition '
                 'of {}'.format(subprob_terminate_cond))
 
-        for v in self.binary_vars:
-            v.unfix()
-
-
-        m.MindtPy_feas.deactivate()
-        m.MindtPy_feas_obj.deactivate()
-        # m.MindtPy_objective_expr.activate()
-        m.MindtPy_objective.activate()
-
-
-        for constr in m.component_data_objects(
-                ctype=Constraint, descend_into=True):
-            constr.activate()
-            rhs = ((0 if constr.upper is None else constr.upper) +
-            (0 if constr.lower is None else constr.lower))
-            sign_adjust = 1 if value(constr.upper) is None else -1
-            m.dual[constr] = sign_adjust*max(0,
-             sign_adjust*(rhs - value(constr.body)))
-        
-        if value(m.MindtPy_feas_obj.expr) == 0:
-            raise ValueError(
-                'Problem is not infeasible, check NLP solver')
-
+        fcuts.slack_vars.deactivate()
+        m.Mindtpy_feas_value.deactivate()
+        m.Mindtpy_feas_obj.deactivate()
+        m.MindtPy_objective_expr.activate()
+        m.main_obj.activate()
+        #where do we go from here? back to solve milp?
 
     def _solve_LP_subproblem(self):
         m = self.m
@@ -1167,14 +1123,14 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
     def _add_feas_slacks(self):
         m = self.m
         # generate new constraints
-        for constr in m.component_data_objects(
-                ctype=Constraint, active=True, descend_into=True):
+        # TODO some kind of special handling if the dual is phenomenally small?
+        for constr in self.nonlinear_constraints:
             rhs = ((0 if constr.upper is None else constr.upper) +
             (0 if constr.lower is None else constr.lower))
-            c = m.MindtPy_feas.feas_constraints.add(constr.body - rhs
-                <= m.MindtPy_feas.slack_var[self.feas_map[constr]])
-            self.feas_constr_map[constr, self.nlp_iter] = c
 
+            c = m.MindtPy_feas.feas_constraints.add(constr.body - rhs +
+                m.MindtPy_feas.slack_vars[self.nl_map[constr]] <= 0)
+            self.feas_constr_map[constr, self.nlp_iter] = c
 
     def _add_ecp_cut(self):
         m = self.m

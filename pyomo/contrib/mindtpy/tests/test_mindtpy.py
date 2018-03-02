@@ -31,7 +31,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
             print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA', init_strategy = 'rNLP')
+            opt.solve(model, strategy='OA', init_strategy = 'rNLP', mip = 'cbc')
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -43,7 +43,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
             print('\n Solving problem with Partial Surrogate Cuts')
-            opt.solve(model, strategy='PSC', init_strategy = 'rNLP')
+            opt.solve(model, strategy='PSC', init_strategy = 'rNLP', mip = 'cbc')
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -55,7 +55,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
             print('\n Solving problem with Generalized Benders Decomposition')
-            opt.solve(model, strategy='GBD', init_strategy = 'rNLP')
+            opt.solve(model, strategy='GBD', init_strategy = 'rNLP', mip = 'cbc')
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -66,7 +66,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
             print('\n Solving problem with Extended Cutting Planes')
-            opt.solve(model, strategy='ECP', init_strategy = 'rNLP')
+            opt.solve(model, strategy='ECP', init_strategy = 'rNLP', mip = 'cbc')
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
