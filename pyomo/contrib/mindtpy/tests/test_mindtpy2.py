@@ -3,7 +3,7 @@ from math import fabs
 
 import pyutilib.th as unittest
 
-from pyomo.contrib.mindtpy.tests.MINLP3_simple import SimpleMINLP
+from pyomo.contrib.mindtpy.tests.MINLP2_simple import SimpleMINLP
 
 from pyomo.environ import SolverFactory, value
 
