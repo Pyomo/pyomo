@@ -18,7 +18,7 @@ from pyomo.core import *
 from pyomo.dae import *
 from pyomo.dae.misc import generate_finite_elements
 from pyomo.dae.misc import generate_colloc_points
-from pyomo.dae.misc import update_contset_indexed_component
+from pyomo.dae.misc import expand_components
 from pyomo.dae.misc import create_partial_expression
 from pyomo.dae.misc import add_discretization_equations
 from pyomo.dae.misc import add_continuity_equations
@@ -407,8 +407,9 @@ class Collocation_Discretization_Transformation(Transformation):
         elif self._scheme_name == 'LAGRANGE-LEGENDRE':
             self._get_legendre_constants(currentds)
 
-        for block in instance.block_data_objects(active=True):
-            self._transformBlock(block, currentds)
+        # for block in instance.block_data_objects(active=True):
+        #     self._transformBlock(block, currentds)
+        self._transformBlock(instance, currentds)
 
         return instance
 
@@ -440,8 +441,9 @@ class Collocation_Discretization_Transformation(Transformation):
                 disc_info['afinal'] = self._afinal[currentds]
                 disc_info['scheme'] = self._scheme_name
 
-        for c in itervalues(block.component_map()):
-            update_contset_indexed_component(c)
+        # for c in itervalues(block.component_map()):
+        #     update_contset_indexed_component(c)
+        expand_components(block)
 
         for d in itervalues(block.component_map(DerivativeVar)):
             dsets = d.get_continuousset_list()
