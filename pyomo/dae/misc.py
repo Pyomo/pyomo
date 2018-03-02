@@ -10,11 +10,15 @@
 
 import logging
 
-from pyomo.core import *
+from pyomo.core import Suffix, Var, Constraint, Piecewise, Block
+from pyomo.core import Expression, Param
 from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.block import _BlockData, IndexedBlock
-from pyomo.dae import *
+from pyomo.dae import ContinuousSet, DerivativeVar, DAE_Error
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_list import ComponentList
+from pyomo.core.base.block import SortComponents
 
 from six import iterkeys, itervalues, iteritems
 
@@ -99,10 +103,54 @@ def generate_colloc_points(ds, tau):
     ds._sort()
 
 
-def update_contset_indexed_component(comp):
+def expand_components(block):
     """
-    Update any model components which are indexed by a ContinuousSet
-    that has changed
+    Loop over block components and try expanding them. If expansion fails
+    then save the component and try again later. This function has some
+    built-in robustness for block-hierarchical models with circular
+    references but will not work for all cases.
+    """
+
+    expansion_map = ComponentMap()
+    redo_expansion = list()
+
+    # Identify components that need to be expanded and try expanding them
+    for c in block.component_objects(descend_into=True,
+                                     sort=SortComponents.declOrder):
+        try:
+            update_contset_indexed_component(c, expansion_map)
+        except AttributeError:
+            redo_expansion.append(c)
+
+    print('Completed first discretization pass')
+
+    N = len(redo_expansion)
+    print('Number of components to re-expand: ', N)
+    while N:
+        print(redo_expansion)
+        for i in range(N):
+            c = redo_expansion.pop()
+            print('Re-expanding component ', str(c))
+            expansion_map[c](c)
+            # try:
+            #     expansion_map[c](c)
+            # except AttributeError:
+            #     redo_expansion.append(c)
+        print(redo_expansion)
+        if len(redo_expansion) == N:
+            raise DAE_Error("Unable to fully discretize %s. Possible "
+                            "circular references detected between components "
+                            "%s. Reformulate your model to remove circular "
+                            "references or apply a discretization "
+                            "transformation before linking blocks together."
+                            %(block, str(redo_expansion)))
+        N = len(redo_expansion)
+
+
+def update_contset_indexed_component(comp, expansion_map):
+    """
+    Update any model components which are indexed by a ContinuousSet that
+    has changed
     """
 
     # This implemenation will *NOT* check for or update
@@ -137,17 +185,23 @@ def update_contset_indexed_component(comp):
 
     for s in indexset:
         if s.type() == ContinuousSet and s.get_changed():
+            print('Expanding component ', str(comp))
             if isinstance(comp, Var):  # Don't use the type() method here
                 # because we want to catch DerivativeVar components as well
                 # as Var components
+                expansion_map[comp] = _update_var
                 _update_var(comp)
             elif comp.type() == Constraint:
+                expansion_map[comp] = _update_constraint
                 _update_constraint(comp)
             elif comp.type() == Expression:
+                expansion_map[comp] = _update_expression
                 _update_expression(comp)
             elif isinstance(comp, Piecewise):
+                expansion_map[comp] =_update_piecewise
                 _update_piecewise(comp)
-            elif comp.type() == Block: 
+            elif comp.type() == Block:
+                expansion_map[comp] = _update_block
                 _update_block(comp)    
             else:
                 raise TypeError(
