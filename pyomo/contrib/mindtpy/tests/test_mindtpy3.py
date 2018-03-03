@@ -31,6 +31,7 @@ class TestMindtPy(unittest.TestCase):
                 , init_strategy = 'inintial_binary'
                 , mip = 'cplex'
                 , iterlim = 13
+                # , mip_kwargs = {'threads':4}
                 )
             # model.pprint()
     
