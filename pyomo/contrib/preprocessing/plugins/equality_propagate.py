@@ -4,19 +4,11 @@ import textwrap
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.suffix import Suffix
 from pyomo.core.kernel.component_set import ComponentSet
-<<<<<<< HEAD:pyomo/core/plugins/transform/equality_propagate.py
-=======
 from pyomo.core.kernel.component_map import ComponentMap
->>>>>>> 705b2a0594ddb94312698a460aec28018199f615:pyomo/contrib/preprocessing/plugins/equality_propagate.py
 from pyomo.core.kernel.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.canonical_repn import generate_canonical_repn
 from pyomo.util.plugin import alias
-<<<<<<< HEAD:pyomo/core/plugins/transform/equality_propagate.py
-
-__author__ = "Qi Chen <https://github.com/qtothec>"
-=======
->>>>>>> 705b2a0594ddb94312698a460aec28018199f615:pyomo/contrib/preprocessing/plugins/equality_propagate.py
 
 
 def _build_equality_set(m):
@@ -84,11 +76,7 @@ class FixedVarPropagator(IsomorphicTransformation):
 
     """
 
-<<<<<<< HEAD:pyomo/core/plugins/transform/equality_propagate.py
-    alias('core.propagate_fixed_vars',
-=======
     alias('contrib.propagate_fixed_vars',
->>>>>>> 705b2a0594ddb94312698a460aec28018199f615:pyomo/contrib/preprocessing/plugins/equality_propagate.py
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self):
@@ -162,11 +150,8 @@ class VarBoundPropagator(IsomorphicTransformation):
 
     """
 
-<<<<<<< HEAD:pyomo/core/plugins/transform/equality_propagate.py
-    alias('core.propagate_eq_var_bounds',
-=======
+
     alias('contrib.propagate_eq_var_bounds',
->>>>>>> 705b2a0594ddb94312698a460aec28018199f615:pyomo/contrib/preprocessing/plugins/equality_propagate.py
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self):
