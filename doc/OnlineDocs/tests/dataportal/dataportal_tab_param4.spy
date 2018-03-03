@@ -1,0 +1,7 @@
+model = AbstractModel()
+data = DataPortal()
+model.A = Set(initialize=['A1','A2','A3'])
+model.x = Param(model.A)
+model.w = Param(model.A)
+data.load(filename='XW.tab', param=(model.x,model.w))
+instance = model.create_instance(data)

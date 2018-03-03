@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -15,12 +15,11 @@ import logging
 from weakref import ref as weakref_ref
 
 from pyomo.util.timing import ConstructionTimer
-from pyomo.core.base.component import (ComponentData,
-                                       register_component)
+from pyomo.core.base.plugin import register_component
+from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import (
     IndexedComponent,
-    UnindexedComponent_set,
-    normalize_index, )
+    UnindexedComponent_set, )
 from pyomo.core.base.misc import (apply_indexed_rule,
                                   tabular_writer)
 from pyomo.core.base.numvalue import (NumericValue,
@@ -174,7 +173,7 @@ class _GeneralExpressionDataImpl(_ExpressionData):
 
     __slots__ = ()
 
-    def __init__(self, expr):
+    def __init__(self, expr=None):
         self._expr = as_numeric(expr) if (expr is not None) else None
         if safe_mode:
             self._parent_expr = None
@@ -255,7 +254,7 @@ class _GeneralExpressionData(_GeneralExpressionDataImpl,
 
     __slots__ = _GeneralExpressionDataImpl.__expression_slots__
 
-    def __init__(self, expr, component=None):
+    def __init__(self, expr=None, component=None):
         _GeneralExpressionDataImpl.__init__(self, expr)
         # Inlining ComponentData.__init__
         self._component = weakref_ref(component) if (component is not None) \
@@ -272,6 +271,7 @@ class Expression(IndexedComponent):
         rule        A rule function used to initialize this object.
     """
 
+    _ComponentDataClass = _GeneralExpressionData
     NoConstraint    = (1000,)
     Skip            = (1000,)
 
@@ -330,9 +330,9 @@ class Expression(IndexedComponent):
             ostream,
             prefix+tab,
             ((k,v) for k,v in iteritems(self._data)),
-            ( "Key","Value" ),
+            ( "Value", ),
             lambda k, v: \
-               [k, "Undefined" if v.expr is None else v()])
+               ["Undefined" if v.expr is None else v()])
 
     #
     # A utility to extract all index-value pairs defining this
@@ -361,29 +361,12 @@ class Expression(IndexedComponent):
         for index, new_value in iteritems(new_values):
             self._data[index].set_value(new_value)
 
-    def _default(self, index):
-        raise KeyError(str(index))
-
-    def __setitem__(self, ndx, val):
-        #
-        # Get the expression data object
-        #
-        exprdata = None
-        if ndx in self._data:
-            exprdata = self._data[ndx]
-        else:
-            _ndx = normalize_index(ndx)
-            if _ndx in self._data:
-                exprdata = self._data[_ndx]
-        if exprdata is None:
-            raise KeyError(
-                "Cannot set the value of Expression '%s' with "
-                "invalid index '%s'"
-                % (self.name, str(ndx)))
-        #
-        # Set the value
-        #
-        exprdata.set_value(val)
+    def _getitem_when_not_present(self, index):
+        # TBD: Is this desired behavior?  I can see implicitly setting
+        # an Expression if it was not originally defined, but I am less
+        # convinced that implicitly creating an Expression (like what
+        # works with a Var) makes sense.  [JDS 25 Nov 17]
+        return self._setitem_when_not_present(index, None)
 
     def construct(self, data=None):
         """ Apply the rule to construct values in this set """
@@ -440,7 +423,7 @@ class Expression(IndexedComponent):
 class SimpleExpression(_GeneralExpressionData, Expression):
 
     def __init__(self, *args, **kwds):
-        _GeneralExpressionData.__init__(self, None, component=self)
+        _GeneralExpressionData.__init__(self, expr=None, component=self)
         Expression.__init__(self, *args, **kwds)
 
     #

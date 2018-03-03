@@ -19,6 +19,7 @@ import pyomo.core.plugins.transform.linear_dual
 import pyomo.core.plugins.transform.radix_linearization
 import pyomo.core.plugins.transform.discrete_vars
 # import pyomo.core.plugins.transform.util
+<<<<<<< HEAD
 import pyomo.core.plugins.transform.zero_sum_propagator
 import pyomo.core.plugins.transform.bounds_to_vars
 import pyomo.core.plugins.transform.equality_propagate
@@ -28,3 +29,8 @@ import pyomo.core.plugins.transform.init_vars
 import pyomo.core.plugins.transform.remove_zero_terms
 import pyomo.core.plugins.transform.add_slack_vars
 import pyomo.core.plugins.transform.strip_bounds
+=======
+import pyomo.core.plugins.transform.add_slack_vars
+import pyomo.core.plugins.transform.zero_sum_propagator
+import pyomo.core.plugins.transform.bounds_to_vars
+>>>>>>> 705b2a0594ddb94312698a460aec28018199f615

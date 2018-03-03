@@ -347,6 +347,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
             # Fill in the body of the equation
             body_string_buffer = StringIO()
 
+            if constraint_data.body is None:
+                continue
             as_numeric(constraint_data.body).to_string(
                 ostream=body_string_buffer,
                 verbose=False)

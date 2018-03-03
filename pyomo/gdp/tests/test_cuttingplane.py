@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import pyutilib.th as unittest
 
 from pyomo.environ import *
@@ -58,8 +68,8 @@ class TwoTermDisj(unittest.TestCase):
         # the cuts are on it
         cuts = transBlock.cuts
         self.assertIsInstance(cuts, Constraint)
-        # this one's tiny, so we've just added one cut
-        self.assertEqual(len(cuts), 1)
+        # this one adds 4 cuts
+        self.assertEqual(len(cuts), 4)
 
     @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
     def test_cut_constraint(self):

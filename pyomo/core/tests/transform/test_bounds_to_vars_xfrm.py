@@ -17,11 +17,13 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
         m.v3 = Var(initialize=3)
         m.v4 = Var(initialize=4)
         m.v5 = Var(initialize=5)
+        m.v6 = Var()
         m.c1 = Constraint(expr=m.v1 == 2)
         m.c2 = Constraint(expr=m.v2 >= -2)
         m.c3 = Constraint(expr=m.v3 <= 5)
         m.c4 = Constraint(expr=m.v4 <= m.v5)
         m.v5.fix()
+        m.c6 = Constraint(expr=m.v6 >= 2)
 
         m2 = TransformationFactory(
             'core.constraints_to_var_bounds').create_using(m)
@@ -38,6 +40,10 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
 
         self.assertEquals(value(m2.v4.ub), 5)
         self.assertFalse(m2.v4.has_lb())
+
+        self.assertEquals(value(m2.v6.lb), 2)
+        self.assertFalse(m2.v6.has_ub())
+        self.assertEqual(value(m2.v6, exception=False), None)
 
         del m2  # to keep from accidentally using it below
 

@@ -1,0 +1,9 @@
+from pyomo.environ import *
+
+model = AbstractModel()
+
+model.A = Set(dimen=3)
+
+instance = model.create_instance('set2a.dat')
+
+print(sorted(list(instance.A.data())))

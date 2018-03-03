@@ -42,6 +42,40 @@ def _get_bound(exp):
         return value(exp)
     raise ValueError("non-fixed bound or weight: " + str(exp))
 
+
+# HACK: Temporary check for Connectors in active constriants.
+# This should be removed after the writer is moved to an
+# explicit GAMS-specific expression walker for generating the
+# constraint strings.
+import pyomo.core.base.expr_coopr3 as coopr3
+from pyomo.core.kernel.numvalue import native_types
+from pyomo.core.base.connector import _ConnectorData
+def _check_for_connectors(con):
+    _stack = [ ([con.body], 0, 1) ]
+    while _stack:
+        _argList, _idx, _len = _stack.pop()
+        while _idx < _len:
+            _sub = _argList[_idx]
+            _idx += 1
+            if type(_sub) in native_types:
+                pass
+            elif _sub.is_expression():
+                _stack.append(( _argList, _idx, _len ))
+                if type(_sub) is coopr3._ProductExpression:
+                    if _sub._denominator:
+                        _stack.append(
+                            (_sub._denominator, 0, len(_sub._denominator)) )
+                    _argList = _sub._numerator
+                else:
+                    _argList = _sub._args
+                _idx = 0
+                _len = len(_argList)
+            elif isinstance(_sub, _ConnectorData):
+                raise TypeError(
+                    "Constraint '%s' body contains unexpanded connectors"
+                    % (con.name,))
+
+
 class ProblemWriter_gams(AbstractProblemWriter):
     pyomo.util.plugin.alias('gams', 'Generate the corresponding GAMS file')
 
@@ -252,6 +286,12 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 "export models with this component type" %
                 ", ".join(invalids))
 
+        # HACK: Temporary check for Connectors in active constriants.
+        # This should be removed after the writer is moved to an
+        # explicit GAMS-specific expression walker for generating the
+        # constraint strings.
+        has_Connectors = Connector in model_ctypes
+
         # Walk through the model and generate the constraint definition
         # for all active constraints.  Any Vars / Expressions that are
         # encountered will be added to the var_list due to the labeler
@@ -264,6 +304,10 @@ class ProblemWriter_gams(AbstractProblemWriter):
                (not con.has_ub()):
                 assert not con.equality
                 continue # non-binding, so skip
+
+            # HACK: Temporary check for Connectors in active constriants.
+            if has_Connectors:
+                _check_for_connectors(con)
 
             con_body = as_numeric(con.body)
             if skip_trivial_constraints and con_body.is_fixed():
@@ -344,8 +388,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
             if '**' in line:
                 # Investigate power functions for an integer exponent, in which
                 # case replace with power(x, int) function to improve domain
-                # issues. Skip first term since it's always "con_name.."
-                line = replace_power(line) + ';'
+                # issues.
+                line = replace_power(line)
             if len(line) > 80000:
                 line = split_long_line(line)
             output_file.write(line + "\n")
@@ -538,8 +582,7 @@ class Categorizer(object):
 def split_terms(line):
     """
     Take line from GAMS model file and return list of terms split by space
-    but grouping together parentheses-bound expressions. Assumes lines end
-    with space followed by semicolon.
+    but grouping together parentheses-bound expressions.
     """
     terms = []
     begin = 0
@@ -564,10 +607,9 @@ def split_terms(line):
                     terms.append(line[begin:i])
                 terms.append(line[i])
                 begin = i + 1
-    if begin < len(line) - 1:
+    assert inparens == 0, "Missing close parenthesis in line '%s'" % line
+    if begin < len(line):
         terms.append(line[begin:len(line)])
-    if terms[-1][-1] == ';':
-        terms[-1] = terms[-1][:-1]
     return terms
 
 
@@ -589,6 +631,7 @@ def split_args(term):
             assert i > begin, "Invalid syntax around '**' operator"
             args.append(term[begin:i])
             begin = i + 2
+    assert inparens == 0, "Missing close parenthesis in term '%s'" % term
     args.append(term[begin:len(term)])
     return args
 
@@ -600,10 +643,13 @@ def replace_power(line):
             args = split_args(term)
             for i in xrange(len(args)):
                 if '**' in args[i]:
-                    assert args[i][0] == '(' and args[i][-1] == ')',\
-                        "Assume arg is a parenthesis-bound expression"
-                    arg = args[i][1:-1]
-                    args[i] = '( %s)' % replace_power(arg)
+                    first_paren = args[i].find('(')
+                    assert ((first_paren != -1) and (args[i][-1] == ')')), (
+                        "Assumed arg '%s' was a parenthesis-bound expression "
+                        "or function" % args[i])
+                    arg = args[i][first_paren + 1:-1]
+                    args[i] = '%s( %s )' % (args[i][:first_paren],
+                                            replace_power(arg))
             try:
                 if float(args[-1]) == int(float(args[-1])):
                     term = ''
@@ -616,7 +662,8 @@ def replace_power(line):
                     term += arg + '**'
                 term += args[-1]
         new_line += term + ' '
-    return new_line
+    # Remove trailing space
+    return new_line[:-1]
 
 
 def split_long_line(line):

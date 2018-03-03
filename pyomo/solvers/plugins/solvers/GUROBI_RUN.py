@@ -11,7 +11,15 @@
 
 import re
 
+
+"""
+This script is run using the Gurobi/system python. Do not assume any third party packages
+are available!
+"""
 from gurobipy import *
+import sys
+if sys.version_info[0] < 3:
+    from itertools import izip as zip
 
 GUROBI_VERSION = gurobi.version()
 
@@ -20,6 +28,13 @@ GUROBI_VERSION = gurobi.version()
 #       throw an exception that is expected to be handled by Pyomo - it won't be.
 #       rather, print an error message and return - the caller will know to look
 #       in the logs in case of a failure.
+
+def _is_numeric(x):
+    try:
+        float(x)
+    except ValueError:
+        return False
+    return True
 
 def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes):
 
@@ -71,7 +86,23 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     # key is specified, so you have to stare at the
     # output to see if it was accepted.
     for key, value in options.items():
-        model.setParam(key, value)
+        # When options come from the pyomo command, all
+        # values are string types, so we try to cast
+        # them to a numeric value in the event that
+        # setting the parameter fails.
+        try:
+            model.setParam(key, value)
+        except TypeError:
+            # we place the exception handling for checking
+            # the cast of value to a float in another
+            # function so that we can simply call raise here
+            # instead of except TypeError as e / raise e,
+            # because the latter does not preserve the
+            # Gurobi stack trace
+            if not _is_numeric(value):
+                raise
+            model.setParam(key, float(value))
+
 
     if 'relax_integrality' in options:
         for v in model.getVars():
@@ -155,10 +186,20 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
         message = 'Unable to satisfy optimality tolerances; a sub-optimal solution is available.'
         term_cond = 'other'
         solution_status = 'feasible'
+    # note that USER_OBJ_LIMIT was added in Gurobi 7.0, so it may not be present
+    elif (solver_status is not None) and \
+         (solver_status == getattr(GRB,'USER_OBJ_LIMIT',None)):
+        status = 'aborted'
+        message = "User specified an objective limit " \
+                  "(a bound on either the best objective " \
+                  "or the best bound), and that limit has " \
+                  "been reached. Solution is available."
+        term_cond = 'other'
+        solution_status = 'stoppedByLimit'
     else:
-        print(solver_status)
         status = 'error'
-        message = 'Unknown return code from GUROBI model.getAttr(GRB.Attr.Status) call'
+        message = ("Unhandled Gurobi solve status "
+                   "("+str(solver_status)+")")
         term_cond = 'error'
         solution_status = 'error'
     assert solution_status is not None
@@ -258,25 +299,39 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
         solnfile.write('objective: %s\n' % str(obj_value))
         solnfile.write('gap: 0.0\n')
 
-        for var in vars:
-            solnfile.write('var: %s : %s\n' % (str(var.getAttr(GRB.Attr.VarName)), str(var.getAttr(GRB.Attr.X))))
+        vals = model.getAttr("X", vars)
+        names = model.getAttr("VarName", vars)
+        for val, name in zip(vals, names):
+            solnfile.write('var: %s : %s\n' % (str(name), str(val)))
 
         if (is_discrete is False) and (extract_reduced_costs is True):
-            for var in vars:
-                solnfile.write('varrc: %s : %s\n' % (str(var.getAttr(GRB.Attr.VarName)), str(var.getAttr(GRB.Attr.RC))))
+            vals = model.getAttr("Rc", vars)
+            for val, name in zip(vals, names):
+                solnfile.write('varrc: %s : %s\n' % (str(name), str(val)))
+
+        if extract_duals or extract_slacks:
+            con_names = model.getAttr("ConstrName", cons)
+            if GUROBI_VERSION[0] >= 5:
+                qcon_names = model.getAttr("QCName", qcons)
 
         if (is_discrete is False) and (extract_duals is True):
-            for con in cons:
+            vals = model.getAttr("Pi", cons)
+            for val, name in zip(vals, con_names):
                # Pi attributes in Gurobi are the constraint duals
-                solnfile.write("constraintdual: %s : %s\n" % (str(con.getAttr(GRB.Attr.ConstrName)), str(con.getAttr(GRB.Attr.Pi))))
-            for con in qcons:
-                # QCPI attributes in Gurobi are the constraint duals
-                solnfile.write("constraintdual: %s : %s\n" % (str(con.getAttr(GRB.Attr.QCName)), str(con.getAttr(GRB.Attr.QCPi))))
+                solnfile.write("constraintdual: %s : %s\n" % (str(name), str(val)))
+            if GUROBI_VERSION[0] >= 5:
+                vals = model.getAttr("QCPi", qcons)
+                for val, name in zip(vals, qcon_names):
+                    # QCPI attributes in Gurobi are the constraint duals
+                    solnfile.write("constraintdual: %s : %s\n" % (str(name), str(val)))
 
         if (extract_slacks is True):
-            for con in cons:
-                solnfile.write("constraintslack: %s : %s\n" % (con.getAttr(GRB.Attr.ConstrName), str(con.getAttr(GRB.Attr.Slack))))
-            for con in qcons:
-                solnfile.write("constraintslack: %s : %s\n" % (con.getAttr(GRB.Attr.QCName), str(con.getAttr(GRB.Attr.QCSlack))))
+            vals = model.getAttr("Slack", cons)
+            for val, name in zip(vals, con_names):
+                solnfile.write("constraintslack: %s : %s\n" % (str(name), str(val)))
+            if GUROBI_VERSION[0] >= 5:
+                vals = model.getAttr("QCSlack", qcons)
+                for val, name in zip(vals, qcon_names):
+                    solnfile.write("constraintslack: %s : %s\n" % (str(name), str(val)))
 
     solnfile.close()

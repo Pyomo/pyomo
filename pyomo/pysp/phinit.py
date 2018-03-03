@@ -205,6 +205,11 @@ def construct_ph_options_parser(usage_string):
       dest="max_iterations",
       type=int,
       default=100)
+    phOpts.add_argument('--or-convergers',
+      help="Terminate when any one of the convergence criterion is satisfied. Defaults to False, i.e., and",
+      action="store_true",
+      dest="or_convergers",
+      default=False)
     phOpts.add_argument('--termdiff-threshold',
       help="The convergence threshold used in the term-diff and normalized term-diff convergence criteria. Default is 0.0001.",
       action="store",
@@ -242,6 +247,11 @@ def construct_ph_options_parser(usage_string):
       action="store_true",
       dest="enable_primal_dual_residual_convergence",
       default=False)
+    phOpts.add_argument('--enable-inner-outer-convergence',
+      help="Terminate PH based on bounds using abs(inner-outer); i.e., *not* relative. Note: setting this does not affect bound computation options. Default is False.",
+      action="store_true",
+      dest="enable_inner_outer_convergence",
+      default=False)
     phOpts.add_argument('--outer-bound-convergence-threshold',
       help="The convergence threshold used in the outer bound convergerence criterion. Default is None, indicating unassigned",
       action="store",
@@ -254,6 +264,12 @@ def construct_ph_options_parser(usage_string):
       dest="primal_dual_residual_convergence_threshold",
       type=float,
       default=0.0001)
+    phOpts.add_argument('--inner-outer-convergence-threshold',
+      help="The convergence threshold used in the inner-outer convergerence criterion. Default is 0.001.",
+      action="store",
+      dest="inner_outer_convergence_threshold",
+      type=float,
+      default=0.001)
     phOpts.add_argument('--linearize-nonbinary-penalty-terms',
       help="Approximate the PH quadratic term for non-binary variables with a piece-wise linear function, using the supplied number of equal-length pieces from each bound to the average",
       action="store",
@@ -388,8 +404,27 @@ def construct_ph_options_parser(usage_string):
       dest="shutdown_pyro_workers",
       default=False)
 
-    ef_options = ExtensiveFormAlgorithm.register_options(prefix="ef_")
+    # the following does *not* work, in that the initialize_argparse fails - options conflict.
+    ef_options = ExtensiveFormAlgorithm.register_options(options_prefix="ef_")
+
+
+    #### Note: besides the line
+    #### 'ef_options.initialize_argparse(parser)',
+    #### all of the hacks below can be removed
+    #### by having PH do its options registration
+    #### with the PySPConfigBlock functionality.
+    #### This is tedious, and I will find time to do it
+    #### in the future
+    # the automated registration of the deprecated version
+    # of this option has a bad interaction with the PH
+    # registered version
+    tmp = ef_options.get("ef_shutdown_pyro")
+    del ef_options.ef_shutdown_pyro
     ef_options.initialize_argparse(parser)
+    # disables a warning
+    ef_options.declare("ef_shutdown_pyro", tmp)
+    ###################
+
     # temporary hack
     parser._ef_options = ef_options
     postprocessOpts.add_argument('--ef-output-file',
@@ -601,11 +636,9 @@ def GenerateScenarioTreeForPH(options,
     #
     # validate the tree prior to doing anything serious
     #
-    if not scenario_tree.validate():
-        raise RuntimeError("Scenario tree is invalid")
-    else:
-        if options.verbose:
-            print("Scenario tree is valid!")
+    scenario_tree.validate()
+    if options.verbose:
+        print("Scenario tree is valid!")
 
     if options.solver_manager_type != "phpyro":
 
@@ -1108,7 +1141,15 @@ def run_ph(options, ph):
         finally:
             ph._solver_manager = ph_solver_manager
 
+
         ef_options = options._ef_options
+
+        ### can remove these lines when the hack added to
+        ### options registration is removed for this
+        ### particular option
+        _orig_domain = ef_options.get("ef_shutdown_pyro")._domain
+        ef_options.get("ef_shutdown_pyro")._domain = bool
+
         # Have any matching ef options that are not explicitly
         # set by the user inherit from the "PH" values on the
         # argparse object. The user has the option of overriding
@@ -1117,15 +1158,21 @@ def run_ph(options, ph):
         ExtensiveFormAlgorithm.update_options_from_argparse(
             ef_options,
             options,
-            prefix="ef_",
-            srcprefix="",
+            options_prefix="ef_",
+            source_options_prefix="",
             skip_userset=True,
             error_if_missing=False)
+
+        ### can remove this line when the hack added to
+        ### options registration is removed for this
+        ### particular option
+        ef_options.get("ef_shutdown_pyro")._domain = _orig_domain
+
 
         if _OLD_OUTPUT:
             print("Creating extensive form for remainder problem")
 
-        ef = ExtensiveFormAlgorithm(ph, ef_options, prefix="ef_")
+        ef = ExtensiveFormAlgorithm(ph, ef_options, options_prefix="ef_")
         ef.build_ef()
 
         # set the value of each non-converged, non-final-stage

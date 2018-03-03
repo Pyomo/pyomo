@@ -31,6 +31,9 @@ from pyomo.environ import *
 
 from six import iteritems
 
+#DEBUG
+from nose.tools import set_trace
+
 try:
     import yaml
     yaml_available=True
@@ -145,8 +148,8 @@ class CommonTests:
         self.pyomo( join(exdir,'jobshop.py'), join(exdir,'jobshop-small.dat'),
                     preprocess='bigm' )
         # ESJ: TODO: Right now the indicator variables have names they won't
-        # have when they don't have to be reclassified. So I think this LP file will
-        # need to change again.
+        # have when they don't have to be reclassified. So I think this LP file
+        # will need to change again.
         self.check( 'jobshop_small', 'bigm' )
 
     def test_bigm_jobshop_large(self):
@@ -157,6 +160,14 @@ class CommonTests:
         # ESJ: TODO: this LP file also will need to change with the
         # indicator variable change.
         self.check( 'jobshop_large', 'bigm' )
+
+    # def test_bigm_constrained_layout(self):
+    #     self.problem='test_bigm_constrained_layout'
+    #     # Run the constrained layout example with the bigm transformation
+    #     self.pyomo( join(exdir,'ConstrainedLayout.py'), 
+    #                 join(exdir,'ConstrainedLayout_BigM.dat'), 
+    #                 preprocess='bigm', solver='cplex')
+    #     self.check( 'constrained_layout', 'bigm')
 
     def test_chull_jobshop_small(self):
         self.problem='test_chull_jobshop_small'
@@ -172,6 +183,7 @@ class CommonTests:
                     preprocess='chull')
         self.check( 'jobshop_large', 'chull' )
 
+    @unittest.skip("cutting plane LP file tests are too fragile")
     @unittest.skipIf('gurobi' not in solvers, 'Gurobi solver not available')
     def test_cuttingplane_jobshop_small(self):
         self.problem='test_cuttingplane_jobshop_small'
@@ -179,6 +191,7 @@ class CommonTests:
                     preprocess='cuttingplane')
         self.check( 'jobshop_small', 'cuttingplane' )
 
+    @unittest.skip("cutting plane LP file tests are too fragile")
     @unittest.skipIf('gurobi' not in solvers, 'Gurobi solver not available')
     def test_cuttingplane_jobshop_large(self):
         self.problem='test_cuttingplane_jobshop_large'

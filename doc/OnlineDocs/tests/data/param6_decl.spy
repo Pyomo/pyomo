@@ -1,0 +1,4 @@
+model.A = Set(dimen=2)
+model.B = Param(model.A)
+model.C = Param(model.A)
+model.D = Param(model.A)

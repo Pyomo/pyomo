@@ -91,9 +91,9 @@ class _RunBendersTesterBase(object):
         if not testing_solvers[self.solver_name, self.solver_io]:
             self.skipTest("%s (interface=%s) is not available"
                           % (self.solver_name, self.solver_io))
-        options['--solver'] = self.solver_name
+        options['--subproblem-solver'] = self.solver_name
         options['--master-solver'] = self.solver_name
-        options['--solver-io'] = self.solver_io
+        options['--subproblem-solver-io'] = self.solver_io
         options['--master-solver-io'] = self.solver_io
         options['--model-location'] = self.model_location
         if self.scenario_tree_location is not None:
@@ -246,20 +246,6 @@ def create_test_classes(basename,
     @unittest.skipIf(not (using_pyro3 or using_pyro4),
                      "Pyro or Pyro4 is not available")
     @unittest.category('parallel')
-    class TestRunBenders_Pyro_MultipleWorkers(_base,
-                                              _RunBendersPyroTesterBase):
-        def setUp(self):
-            _RunBendersPyroTesterBase.setUp(self)
-        def _setup(self, options, servers=None):
-            _RunBendersPyroTesterBase._setup(self, options, servers=servers)
-            options['--pyro-multiple-scenariotreeserver-workers'] = None
-    class_names.append(TestRunBenders_Pyro_MultipleWorkers.__name__ + "_"+class_append_name)
-    globals()[class_names[-1]] = type(
-        class_names[-1], (TestRunBenders_Pyro_MultipleWorkers, unittest.TestCase), {})
-
-    @unittest.skipIf(not (using_pyro3 or using_pyro4),
-                     "Pyro or Pyro4 is not available")
-    @unittest.category('parallel')
     class TestRunBenders_Pyro_HandshakeAtStartup(_base,
                                                  _RunBendersPyroTesterBase):
         def setUp(self):
@@ -270,24 +256,6 @@ def create_test_classes(basename,
     class_names.append(TestRunBenders_Pyro_HandshakeAtStartup.__name__ + "_"+class_append_name)
     globals()[class_names[-1]] = type(
         class_names[-1], (TestRunBenders_Pyro_HandshakeAtStartup, unittest.TestCase), {})
-
-    @unittest.skipIf(not (using_pyro3 or using_pyro4),
-                     "Pyro or Pyro4 is not available")
-    @unittest.category('parallel')
-    class TestRunBenders_Pyro_HandshakeAtStartup_MultipleWorkers(
-            _base,
-            _RunBendersPyroTesterBase):
-        def setUp(self):
-            _RunBendersPyroTesterBase.setUp(self)
-        def _setup(self, options, servers=None):
-            _RunBendersPyroTesterBase._setup(self, options, servers=servers)
-            options['--pyro-handshake-at-startup'] = None
-            options['--pyro-multiple-scenariotreeserver-workers'] = None
-    class_names.append(TestRunBenders_Pyro_HandshakeAtStartup_MultipleWorkers.__name__ + "_"+class_append_name)
-    globals()[class_names[-1]] = type(
-        class_names[-1],
-        (TestRunBenders_Pyro_HandshakeAtStartup_MultipleWorkers, unittest.TestCase),
-        {})
 
     return tuple(globals()[name] for name in class_names)
 

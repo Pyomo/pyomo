@@ -1,8 +1,3 @@
-"""Collection of GDP-related hacks.
-
-Hacks for dealing with the fact that solver writers may sometimes fail to
-detect variables inside of Disjuncts or deactivated Blocks.
-"""
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
@@ -12,6 +7,12 @@ detect variables inside of Disjuncts or deactivated Blocks.
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
+"""Collection of GDP-related hacks.
+
+Hacks for dealing with the fact that solver writers may sometimes fail to
+detect variables inside of Disjuncts or deactivated Blocks.
+"""
 
 import logging
 import textwrap
@@ -66,9 +67,11 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
         for disjunct_component in disjunct_generator:
             for disjunct in itervalues(disjunct_component._data):
                 if disjunct.active:
-                    logger.error("""Reclassifying active Disjunct %s as a Block.
-This is generally as error as it indicates that the model was not
-completely relaxed before applying the gdp.reclassify transformation""" % disjunct.name)
+                    logger.error("""
+                    Reclassifying active Disjunct "%s" as a Block.  This
+                    is generally an error as it indicates that the model
+                    was not completely relaxed before applying the
+                    gdp.reclassify transformation""" % (disjunct.name,))
 
                 # Deactivate all constraints.  Note that we only need to
                 # descent into blocks: we will catch disjuncts in the outer
@@ -81,4 +84,4 @@ completely relaxed before applying the gdp.reclassify transformation""" % disjun
             # Reclassify this disjunct as a block
             disjunct_component.parent_block().reclassify_component_type(
                 disjunct_component, Block)
-            disjunct_component.activate()
+            disjunct_component._activate_without_unfixing_indicator()

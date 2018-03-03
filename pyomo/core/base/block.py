@@ -18,19 +18,20 @@ import weakref
 import logging
 from inspect import isclass
 from operator import itemgetter, attrgetter
-from six import iteritems, itervalues, StringIO, string_types, \
+from six import iteritems, iterkeys, itervalues, StringIO, string_types, \
     advance_iterator, PY3
 
 from pyomo.util.timing import ConstructionTimer
 from pyomo.core.base.plugin import *  # register_component, ModelComponentFactory
 from pyomo.core.base.component import Component, ActiveComponentData, \
-    ComponentUID, register_component
+    ComponentUID
 from pyomo.core.base.sets import Set,  _SetDataBase
 from pyomo.core.base.var import Var
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.suffix import ComponentMap
 from pyomo.core.base.indexed_component import IndexedComponent, \
     ActiveIndexedComponent, UnindexedComponent_set
+import collections
 
 from pyomo.opt.base import ProblemFormat, guess_format
 from pyomo.opt import WriterFactory
@@ -444,7 +445,7 @@ class _BlockData(ActiveComponentData):
         PseudoMap.values = PseudoMap.itervalues
         PseudoMap.items = PseudoMap.iteritems
 
-    def __init__(self, owner):
+    def __init__(self, component):
         #
         # BLOCK DATA ELEMENTS
         #
@@ -478,7 +479,7 @@ class _BlockData(ActiveComponentData):
         # marking entries as None and just periodically rebuild the list
         # as opposed to maintaining the list without any holes).
         #
-        ActiveComponentData.__init__(self, owner)
+        ActiveComponentData.__init__(self, component)
         # Note: call super() here to bypass the Block __setattr__
         #   _ctypes:      { ctype -> [1st idx, last idx, count] }
         #   _decl:        { name -> idx }
@@ -555,6 +556,8 @@ class _BlockData(ActiveComponentData):
                 # The value is a component, so we replace the component in the
                 # block.
                 #
+                if self._decl_order[self._decl[name]][0] is val:
+                    return
                 logger.warning(
                     "Implicitly replacing the Component attribute "
                     "%s (type=%s) on block %s with a new Component (type=%s)."
@@ -668,6 +671,16 @@ class _BlockData(ActiveComponentData):
             # method.
             #
             super(_BlockData, self).__delattr__(name)
+
+    def set_value(self, val):
+        for k in list(getattr(self, '_decl', {})):
+            self.del_component(k)
+        self._ctypes = {}
+        self._decl = {}
+        self._decl_order = []
+        if val:
+            for k in sorted(iterkeys(val)):
+                self.add_component(k,val[k])
 
     def _add_temporary_set(self, val):
         """TODO: This method has known issues (see tickets) and needs to be
@@ -1110,9 +1123,22 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # NonNegativeReals, etc) that are not "owned" by any blocks and
         # should be preserved as singletons.
         #
-        new_block = copy.deepcopy(
-            self, {'__block_scope__': {id(self): True, id(None): False}})
-        new_block._parent = None
+        save_parent, self._parent = self._parent, None
+        try:
+            new_block = copy.deepcopy(
+                self, {
+                    '__block_scope__': {id(self): True, id(None): False},
+                    '__paranoid__': False,
+                    })
+        except:
+            new_block = copy.deepcopy(
+                self, {
+                    '__block_scope__': {id(self): True, id(None): False},
+                    '__paranoid__': True,
+                    })
+        finally:
+            self._parent = save_parent
+
         return new_block
 
     def contains_component(self, ctype):
@@ -1634,6 +1660,12 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             format = ProblemFormat.cpxlp
         if (filename is not None) and (format is None):
             format = guess_format(filename)
+            if format is None:
+                raise ValueError(
+                    "Could not infer file format from file name '%s'.\n"
+                    "Either provide a name with a recognized extension "
+                    "or specify the format using the 'format' argument."
+                    % filename)
         problem_writer = WriterFactory(format)
         if problem_writer is None:
             raise ValueError(
@@ -1680,6 +1712,8 @@ class Block(ActiveIndexedComponent):
     is deferred.
     """
 
+    _ComponentDataClass = _BlockData
+
     def __new__(cls, *args, **kwds):
         if cls != Block:
             return super(Block, cls).__new__(cls)
@@ -1702,8 +1736,8 @@ class Block(ActiveIndexedComponent):
             # picks up any construction rule that the user may provide)
             self.construct()
 
-    def _default(self, idx):
-        return self._data.setdefault(idx, _BlockData(self))
+    def _getitem_when_not_present(self, idx):
+        return self._setitem_when_not_present(idx, None)
 
     def find_component(self, label_or_component):
         """
@@ -1759,7 +1793,7 @@ class Block(ActiveIndexedComponent):
             if data is not None and idx in data:
                 _BlockConstruction.data[id(_block)] = data[idx]
             obj = apply_indexed_rule(
-                None, self._rule, _block, idx, self._options)
+                self, self._rule, _block, idx, self._options)
             if id(_block) in _BlockConstruction.data:
                 del _BlockConstruction.data[id(_block)]
 
@@ -1790,20 +1824,27 @@ class Block(ActiveIndexedComponent):
             return
         if ostream is None:
             ostream = sys.stdout
-        subblock = self._parent is not None and self.parent_block() is not None
 
+        subblock = self._parent is not None and self.parent_block() is not None
         if subblock:
             super(Block, self).pprint(ostream=ostream, verbose=verbose,
                                       prefix=prefix)
 
         if not len(self):
             return
+        if not self.is_indexed():
+            _BlockData.pprint(self, ostream=ostream, verbose=verbose,
+                              prefix=prefix+'    ' if subblock else prefix)
+            return
 
+        # Note: all indexed blocks must be sub-blocks (if they aren't
+        # then you will run into problems constructing them as there is
+        # nowhere to put (or find) the indexing set!).
+        prefix += '    '
         for key in sorted(self):
             b = self[key]
-            if subblock and self.is_indexed():
-                ostream.write("%s%s : Active=%s\n" %
-                              (prefix, b.name, b.active))
+            ostream.write("%s%s : Active=%s\n" %
+                          (prefix, b.name, b.active))
             _BlockData.pprint(b, ostream=ostream, verbose=verbose,
                               prefix=prefix + '    ' if subblock else prefix)
 
@@ -1832,7 +1873,7 @@ class Block(ActiveIndexedComponent):
 class SimpleBlock(_BlockData, Block):
 
     def __init__(self, *args, **kwds):
-        _BlockData.__init__(self, self)
+        _BlockData.__init__(self, component=self)
         Block.__init__(self, *args, **kwds)
         self._data[None] = self
 
@@ -1873,7 +1914,7 @@ def generate_cuid_names(block,
             any parent containers (such as blocks) that
             prefix the components requested even though the
             parent ctype may not match the input ctype.
-        descend_into (bool or iterable of component types):
+        descend_into (bool, component type, or iterable of component types):
             Indicates whether or not the function should descend
             into subblocks. Default is True.
             Example usage: descend_into=(Block, Disjunct)
@@ -1895,14 +1936,19 @@ def generate_cuid_names(block,
     # subblocks
     if descend_into is True:
         descend_ctype = (Block,)
-    elif type(descend_into) in (tuple, list, set):
+    elif descend_into is False:
+        descend_ctype = False
+    elif type(descend_into) == type:
+        descend_ctype = (descend_into,)
+    elif isinstance(descend_into, collections.Iterable):
+        for i in descend_into:
+            assert type(i) == type
         descend_ctype = tuple(descend_into)
-    elif descend_into:
-        descend_ctype = descend_into
     else:
-        # If descend_into is False or None, we do not set descend_ctype because
-        # it is unused in the following code.
-        pass
+        raise ValueError('Unrecognized value passed to descend_into: %s. '
+                         'We support True, False, types, or '
+                         'iterables of types.'
+                         % descend_into)
 
     if type(ctype) in (tuple, list, set):
         ctypes = tuple(ctype)

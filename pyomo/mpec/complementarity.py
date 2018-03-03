@@ -15,6 +15,7 @@ from collections import namedtuple
 
 from pyomo.util.timing import ConstructionTimer
 from pyomo.core import *
+from pyomo.core.base.plugin import register_component
 from pyomo.core.base.numvalue import ZeroConstant, _sub
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.block import _BlockData
@@ -287,7 +288,7 @@ class SimpleComplementarity(_ComplementarityData, Complementarity):
 
 class IndexedComplementarity(Complementarity):
 
-    def _default(self, idx):
+    def _getitem_when_not_present(self, idx):
         return self._data.setdefault(idx, _ComplementarityData(self))
 
 

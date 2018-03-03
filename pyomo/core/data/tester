@@ -5,5 +5,5 @@ import parse_datacmds
 
 parse_datacmds.debugging=True
 debug=int(sys.argv[2])
-print parse_datacmds.parse_data_commands(filename=sys.argv[1], debug=debug)
+print(parse_datacmds.parse_data_commands(filename=sys.argv[1], debug=debug))
 

@@ -1,0 +1,16 @@
+from pyomo.environ import *
+import numpy
+
+model = ConcreteModel()
+
+model.a = Param(initialize=1.1)
+
+# Initialize with a dictionary
+model.b = Param([1,2,3], initialize={1:1, 2:2, 3:3})
+
+# Initialize with a function that returns native Python data
+def c(model):
+    return {1:1, 2:2, 3:3}
+model.c = Param([1,2,3], initialize=c)
+
+model.pprint(verbose=True)

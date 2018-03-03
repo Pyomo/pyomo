@@ -73,12 +73,16 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
                                           if var.ub is not None
                                           else newbound)
                     constr.deactivate()
-                    # Sometimes deactivating the constraint will remove the
+                    # Sometimes deactivating the constraint will remove a
                     # variable from all active constraints, so that it won't be
                     # updated during the optimization. Therefore, we need to
                     # shift the value of var as necessary in order to keep it
-                    # within the constraints.
-                    if var.has_lb() and var.value < var.lb:
+                    # within its implied bounds, as the constraint we are
+                    # deactivating is not an invalid constraint, but rather we
+                    # are moving its implied bound directly onto the variable.
+                    if (var.has_lb() and var.value is not None
+                            and var.value < var.lb):
                         var.set_value(var.lb)
-                    if var.has_ub() and var.value > var.ub:
+                    if (var.has_ub() and var.value is not None
+                            and var.value > var.ub):
                         var.set_value(var.ub)

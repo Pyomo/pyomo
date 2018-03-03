@@ -26,9 +26,12 @@
 # SetIO                 Testing Set IO formats
 #
 
+import copy
 import itertools
 import os
 from os.path import abspath, dirname
+from six import StringIO, iterkeys
+
 currdir = dirname(abspath(__file__))+os.sep
 
 from pyutilib.misc import flatten_tuple as pyutilib_misc_flatten_tuple
@@ -2566,6 +2569,78 @@ class TestMisc(PyomoModel):
         for item in self.instance.C:
             tmp.append(item)
         self.assertEqual(len(tmp),9)
+
+
+class TestSetsInPython3(unittest.TestCase):
+    def test_pprint_mixed(self):
+        # In Python3, sorting a mixed string fails.  We have added a
+        # fallback more "robust" sorter, and this exercises that code
+        m = ConcreteModel()
+        m.Z = Set(initialize=['A','C'])
+        m.A = Set(m.Z, initialize={'A':[1,2,3,'A']})
+        buf = StringIO()
+        m.pprint(ostream=buf)
+        self.assertEqual("""2 Set Declarations
+    A : Dim=1, Dimen=1, Size=4, Domain=None, ArraySize=1, Ordered=False, Bounds=None
+        Key : Members
+          A : [1, 2, 3, 'A']
+    Z : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=None
+        ['A', 'C']
+
+2 Declarations: Z A
+""", buf.getvalue())
+
+    def test_initialize_and_clone_from_dict_keys(self):
+        # In Python3, initializing a dictionary from keys() returns a
+        # dict_keys object (NOT a generator).  This tests that various
+        # ways of initializing a set from a dict all work.
+        #
+        # While deepcopying a model is generally not supported, this is
+        # an easy way to ensure that this simple model is cleanly
+        # clonable.
+        ref = """1 Set Declarations
+    INDEX : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 5)
+        [1, 3, 5]
+
+1 Param Declarations
+    p : Size=3, Index=INDEX, Domain=Any, Default=None, Mutable=False
+        Key : Value
+          1 :     2
+          3 :     4
+          5 :     6
+
+2 Declarations: INDEX p
+"""
+        #
+        # keys()
+        #
+        m = ConcreteModel()
+        v = {1:2,3:4,5:6}
+        m.INDEX = Set(initialize=v.keys())
+        m.p = Param(m.INDEX, initialize=v)
+        buf = StringIO()
+        m.pprint(ostream=buf)
+        self.assertEqual(ref, buf.getvalue())
+        #
+        m2 = copy.deepcopy(m)
+        buf = StringIO()
+        m2.pprint(ostream=buf)
+        self.assertEqual(ref, buf.getvalue())
+        #
+        # six.iterkeys()
+        #
+        m = ConcreteModel()
+        v = {1:2,3:4,5:6}
+        m.INDEX = Set(initialize=iterkeys(v))
+        m.p = Param(m.INDEX, initialize=v)
+        buf = StringIO()
+        m.pprint(ostream=buf)
+        self.assertEqual(ref, buf.getvalue())
+        #
+        m2 = copy.deepcopy(m)
+        buf = StringIO()
+        m2.pprint(ostream=buf)
+        self.assertEqual(ref, buf.getvalue())
 
 
 class TestSetIO(PyomoModel):

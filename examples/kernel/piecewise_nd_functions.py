@@ -39,7 +39,7 @@ m.real.g = pmo.constraint(m.z == g(m.x, m.y))
 
 m.approx = pmo.block()
 
-tri = pmo.component_piecewise.util.generate_delaunay([m.x, m.y], num=25)
+tri = pmo.piecewise_util.generate_delaunay([m.x, m.y], num=25)
 pw_xarray, pw_yarray = np.transpose(tri.points)
 
 fvals = f(pw_xarray, pw_yarray, package=np)
