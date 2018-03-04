@@ -386,6 +386,7 @@ class Results(object):
 #@profile
 def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
     ans = Results()
+    nonl = []
     varkeys = idMap[None]
 
     for e_ in itertools.islice(exp._args_, exp.nargs()):
@@ -443,13 +444,15 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
             # Add returned from recursion
             #
             ans.constant += res_.constant
-            ans.nonl += res_.nonl
+            nonl.append(res_.nonl)
             for i in res_.linear:
                 ans.linear[i] = ans.linear.get(i,0) + res_.linear[i]
             if quadratic:
                 for i in res_.quadratic:
                     ans.quadratic[i] = ans.quadratic.get(i, 0) + res_.quadratic[i]
 
+    if len(nonl) > 0:
+        ans.nonl = EXPR.ViewSumExpression(nonl)
     return ans
 
 #@profile
@@ -476,10 +479,16 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
             return _collect_standard_repn(exp._args_[1], multiplier*exp._args_[0], idMap, 
                                   compute_values, verbose, quadratic)
 
+    #
+    # Collect LHS
+    #
     lhs = _collect_standard_repn(exp._args_[0], 1, idMap, 
                                   compute_values, verbose, quadratic)
     lhs_nonl_None = isclose_const(lhs.nonl,0)
-
+    #
+    # LHS is potentially variable, but it turns out to be a constant
+    # because the variables were fixed.
+    #
     if lhs_nonl_None and len(lhs.linear) == 0 and len(lhs.quadratic) == 0:
         if isclose(lhs.constant,0):
             return Results()
@@ -493,6 +502,9 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
             return _collect_standard_repn(exp._args_[1], multiplier*lhs.constant, idMap, 
                                   compute_values, verbose, quadratic)
 
+    #
+    # Collect RHS
+    #
     if exp._args_[1].__class__ in native_numeric_types:
         rhs = Results(constant=exp._args_[1])
     elif not exp._args_[1].is_potentially_variable():
@@ -504,11 +516,19 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
         rhs = _collect_standard_repn(exp._args_[1], 1, idMap, 
                                   compute_values, verbose, quadratic)
     rhs_nonl_None = isclose_const(rhs.nonl,0)
+    #
+    # If RHS is zero, then return an empty results
+    #
     if rhs_nonl_None and len(rhs.linear) == 0 and len(rhs.quadratic) == 0 and isclose(rhs.constant,0):
         return Results()
-
+    #
+    # If either the LHS or RHS are nonlinear, then simply return the nonlinear expression
+    #
     if not lhs_nonl_None or not rhs_nonl_None:
         return Results(nonl=multiplier*exp)
+    #
+    # If not collecting quadratic terms and both terms are linear, then simply return the nonlinear expression
+    #
     if not quadratic and len(lhs.linear) > 0 and len(rhs.linear) > 0:
         # NOTE: We treat a product of linear terms as nonlinear unless quadratic==2
         return Results(nonl=multiplier*exp)
@@ -541,15 +561,16 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
                     ans.quadratic[lkey,rkey] = multiplier*lcoef*rcoef
                 else:
                     ans.quadratic[rkey,lkey] = multiplier*lcoef*rcoef
-        el_linear = multiplier*sum(coef*idMap[key] for key, coef in six.iteritems(lhs.linear))
-        er_linear = multiplier*sum(coef*idMap[key] for key, coef in six.iteritems(rhs.linear))
-        el_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in six.iteritems(lhs.quadratic))
-        er_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in six.iteritems(rhs.quadratic))
+        el_linear = multiplier*quicksum((coef*idMap[key] for key, coef in six.iteritems(lhs.linear)), linear=True)
+        er_linear = multiplier*quicksum((coef*idMap[key] for key, coef in six.iteritems(rhs.linear)), linear=True)
+        el_quadratic = multiplier*quicksum((coef*idMap[key[0]]*idMap[key[1]] for key, coef in six.iteritems(lhs.quadratic)), linear=False)
+        er_quadratic = multiplier*quicksum((coef*idMap[key[0]]*idMap[key[1]] for key, coef in six.iteritems(rhs.quadratic)), linear=False)
         ans.nonl += el_linear*er_quadratic + el_quadratic*er_linear
     elif len(lhs.linear) + len(rhs.linear) > 1:
-        el_linear = multiplier*sum(coef*idMap[key] for key, coef in six.iteritems(lhs.linear))
-        er_linear = multiplier*sum(coef*idMap[key] for key, coef in six.iteritems(rhs.linear))
-        ans.nonl += el_linear*er_linear
+        return Results(nonl=multiplier*exp)
+        #el_linear = multiplier*sum(coef*idMap[key] for key, coef in six.iteritems(lhs.linear))
+        #er_linear = multiplier*sum(coef*idMap[key] for key, coef in six.iteritems(rhs.linear))
+        #ans.nonl += el_linear*er_linear
 
     return ans
 
