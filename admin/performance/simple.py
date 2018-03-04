@@ -33,6 +33,7 @@ model = ConcreteModel()
 model.A = RangeSet(N)
 model.p = Param(model.A, default=2)
 model.x = Var(model.A, initialize=2)
+model.y = Var(model.A, initialize=3)
 
 
 def linear(flag):
@@ -118,12 +119,21 @@ def linear(flag):
         expr=0
         for i in model.A:
             expr += model.p[i]*(model.x[i]+model.x[i])
+
     elif flag == 19:
         # This will assume a nonlinear sum
         expr = quicksum(model.p[i]*(model.x[i] + model.x[i]) for i in model.A)
 
     elif flag == -9:
         expr = quicksum(sin(model.x[i]) for i in model.A)
+
+    elif flag == 30:
+        expr=0
+        for i in model.A:
+            expr += model.x[i]*model.y[i]
+
+    elif flag == -30:
+        expr= quicksum(model.x[i]*model.y[i] for i in model.A)
 
     if coopr3 or pyomo4:
         repn = generate_ampl_repn(expr)
@@ -148,7 +158,7 @@ if not (coopr3 or pyomo4):
     #print("REFCOUNT: "+str(PYOMO5._getrefcount_available))
     #import cProfile
     #cProfile.run("linear(7)", "stats.7")
-    for i in (0,10,20,2,12,22,3,13,4,14,5,15,6,16,26,7,17,27,8,18,9,19,-9):
+    for i in (0,10,20,2,12,22,3,13,4,14,5,15,6,16,26,7,17,27,8,18,9,19,-9,30,-30):
     #for i in (6,16,26):
         print((i,timeit.timeit('linear(%d)' % i, "from __main__ import linear", number=1)))
 
