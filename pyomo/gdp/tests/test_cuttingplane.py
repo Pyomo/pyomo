@@ -14,18 +14,41 @@ from pyomo.environ import *
 from pyomo.gdp import *
 from pyomo.core.base import expr_common, expr as EXPR
 import pyomo.opt
+import pyomo.gdp.tests.models as models
 
 import random
 from six import StringIO
 
 from nose.tools import set_trace
-from pyomo.opt import SolverFactory
 
 solvers = pyomo.opt.check_available_solvers('gurobi')
 
 # TODO:
 #     - test that deactivated objectives on the model don't get used by the
 #       transformation
+
+# TODO: I'm not sure what to do with this at the moment. I don't know what I
+# want to happen. As the code currently stands, two cuts get added. But they are
+# numerically dissatisfying versions of 0 <= 0. So maybe that isn't desired
+# behavior?
+# class OneVarDisj(unittest.TestCase):
+#     @staticmethod
+#     def makeModel():
+#         m = ConcreteModel()
+#         m.x = Var(bounds=(0, 10))
+#         m.disj1 = Disjunct()
+#         m.disj1.xTrue = Constraint(expr=m.x==1)
+#         m.disj2 = Disjunct()
+#         m.disj2.xFalse = Constraint(expr=m.x==0)
+#         m.disjunction = Disjunction(expr=[m.disj1, m.disj2])
+#         m.obj = Objective(expr=m.x)
+#         return m
+
+#     def test_cut_constraints(self):
+#         m = self.makeModel()
+
+#         TransformationFactory('gdp.cuttingplane').apply_to(m)
+#         set_trace()
 
 class TwoTermDisj(unittest.TestCase):
     def setUp(self):
@@ -35,31 +58,10 @@ class TwoTermDisj(unittest.TestCase):
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
-    
-    @staticmethod
-    def makeModel():
-        m = ConcreteModel()
-        m.x = Var(bounds=(0,5))
-        m.y = Var(bounds=(0,5))
-        def d_rule(disjunct, flag):
-            m = disjunct.model()
-            if flag:
-                disjunct.c1 = Constraint(expr=1 <= m.x <= 2)
-                disjunct.c2 = Constraint(expr=3 <= m.y <= 4)
-            else:
-                disjunct.c1 = Constraint(expr=3 <= m.x <= 4)
-                disjunct.c2 = Constraint(expr=1 <= m.y <= 2)
-        m.d = Disjunct([0,1], rule=d_rule)
-        def disj_rule(m):
-            return [m.d[0], m.d[1]]
-        m.disjunction = Disjunction(rule=disj_rule)
-
-        m.obj = Objective(expr=m.x + 2*m.y)
-        return m
 
     @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
     def test_transformation_block(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_boxes()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
         # we created the block
@@ -73,7 +75,7 @@ class TwoTermDisj(unittest.TestCase):
 
     @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
     def test_cut_constraint(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_boxes()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
         cut = m._pyomo_gdp_cuttingplane_relaxation.cuts[0]
@@ -116,7 +118,7 @@ class TwoTermDisj(unittest.TestCase):
 
     @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
     def test_create_using(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_boxes()
 
         # TODO: this is duplicate code with other transformation tests
         modelcopy = TransformationFactory('gdp.cuttingplane').create_using(m)
@@ -133,7 +135,7 @@ class TwoTermDisj(unittest.TestCase):
 
     @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
     def test_active_objective_err(self):
-        m = self.makeModel()
+        m = models.makeTwoTermDisj_boxes()
         m.obj.deactivate()
         self.assertRaisesRegexp(
             GDP_Error,
@@ -142,3 +144,39 @@ class TwoTermDisj(unittest.TestCase):
             TransformationFactory('gdp.cuttingplane').apply_to,
             m
         )
+
+class Grossmann_TestCases(unittest.TestCase):
+    @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
+    def test_cuts_valid(self):
+        m = models.grossmann_oneDisj()
+        TransformationFactory('gdp.cuttingplane').apply_to(m)
+
+        # Constraint 1
+        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        cut1_expr = cuts[0].body
+        # we first check that the first cut is tight at the upper righthand
+        # corners of the two regions:
+        m.x.fix(2)
+        m.y.fix(10)
+        m.disjunct1.indicator_var.fix(1)
+        m.disjunct2.indicator_var.fix(0)
+        self.assertAlmostEqual(value(cut1_expr), 0)
+
+        m.x.fix(10)
+        m.y.fix(3)
+        m.disjunct1.indicator_var.fix(0)
+        m.disjunct2.indicator_var.fix(1)
+        self.assertAlmostEqual(value(cut1_expr), 0)
+
+        # now we check that the second cut is tight for the top region:
+        cut2_expr = cuts[1].body
+        m.x.fix(2)
+        m.y.fix(10)
+        m.disjunct1.indicator_var.fix(1)
+        m.disjunct2.indicator_var.fix(0)
+        self.assertAlmostEqual(value(cut2_expr), 0)
+
+        m.x.fix(0)
+        self.assertAlmostEqual(value(cut2_expr), 0)
+
+        
