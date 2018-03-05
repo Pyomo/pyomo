@@ -222,7 +222,7 @@ class mutable_sum_context(object):
 
 #: A context manager object for nonlinear expressions.
 #: This is an instance of the :class:`mutable_sum_contex <pyomo.core.expr.current.mutable_sum_context>` context manager.
-#: Different instances of this context manger are not necessary.
+#: Different instances of this context manager are not necessary, unless these context managers are nested.
 nonlinear_expression = mutable_sum_context()
 
 
@@ -254,7 +254,7 @@ class mutable_linear_context(object):
 
 #: A context manager object for linear expressions.
 #: This is an instance of the :class:`mutable_linear_contex <pyomo.core.expr.current.mutable_lienar_context>` context manager.
-#: Different instances of this context manger are not necessary.
+#: Different instances of this context manager are not necessary unless these context managers are nested.
 linear_expression = mutable_linear_context()
 
 
