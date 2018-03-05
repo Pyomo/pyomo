@@ -19,7 +19,7 @@ from functools import reduce
 import operator
 from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.expr.expr_pyomo5 import decompose_term
-from pyomo.core import expr as EXPR
+from pyomo.core.expr import current as EXPR
 import pyomo.core.base.var
 
 
@@ -109,7 +109,7 @@ def quicksum(args, start=0, linear=None):
                     linear = False
             start = start+first
         if linear:
-            with EXPR.linear_expression as e:
+            with EXPR.mutable_linear_context() as e:
                 e += start
                 for arg in args:
                     e += arg
@@ -118,7 +118,7 @@ def quicksum(args, start=0, linear=None):
                 return e.constant
             return e
         else:
-            with EXPR.nonlinear_expression as e:
+            with EXPR.mutable_sum_context() as e:
                 e += start
                 for arg in args:
                     e += arg
@@ -201,18 +201,18 @@ def summation(*args, **kwds):
             if nvars == 1:
                 v = vars_[0]
                 if len(params_) == 0:
-                    with EXPR.linear_expression as expr:
+                    with EXPR.mutable_linear_context() as expr:
                         expr += start
                         for i in index:
                             expr += v[i]
                 elif len(params_) == 1:    
                     p = params_[0]
-                    with EXPR.linear_expression as expr:
+                    with EXPR.mutable_linear_context() as expr:
                         expr += start
                         for i in index:
                             expr += p[i]*v[i]
                 else:
-                    with EXPR.linear_expression as expr:
+                    with EXPR.mutable_linear_context() as expr:
                         expr += start
                         for i in index:
                             term = 1
@@ -221,7 +221,7 @@ def summation(*args, **kwds):
                             expr += term * v[i]
                 return expr
             #
-            with EXPR.nonlinear_expression as expr:
+            with EXPR.mutable_sum_context() as expr:
                 expr += start
                 for i in index:
                     term = 1
