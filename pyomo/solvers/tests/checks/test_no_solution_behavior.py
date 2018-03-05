@@ -20,6 +20,10 @@ import pyutilib.th as unittest
 
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.testcases import test_scenarios
+from pyomo.util.log import LoggingIntercept
+
+import six
+from six import StringIO
 
 # The test directory
 thisDir = os.path.dirname(os.path.abspath( __file__ ))
@@ -52,13 +56,23 @@ def create_test_method(model,
         # solve
         load_solutions = True
         symbolic_labels = False
-        opt, results = model_class.solve(
-            solver,
-            io,
-            test_case.testcase.io_options,
-            test_case.testcase.options,
-            symbolic_labels,
-            load_solutions)
+        out = StringIO()
+        with LoggingIntercept(out, 'pyomo.solvers'):
+            with LoggingIntercept(out, 'pyomo.opt'):
+                opt, results = model_class.solve(
+                    solver,
+                    io,
+                    test_case.testcase.io_options,
+                    test_case.testcase.options,
+                    symbolic_labels,
+                    load_solutions)
+        if len(results.solution) == 0:
+            self.assertIn("No solution is available",
+                          out.getvalue())
+        else:
+            # Note ASL solvers might still return a solution
+            # file with garbage values in it for a failed solve
+            self.assertEqual(len(results.solution), 1)
 
     # Skip this test if the status is 'skip'
     if test_case.status == 'skip':
@@ -96,11 +110,14 @@ for key, value in test_scenarios():
     model, solver, io = key
     if model in driver:
         cls = driver[model]
-
-        test_name = "test_"+solver+"_"+io
-        test_method = create_test_method(model, solver, io, value)
-        if test_method is not None:
-            setattr(cls, test_name, test_method)
+        # TODO: expand these tests to cover ASL models once
+        #       a change in load_solutions behavior is
+        #       propagated into that framework.
+        if "_kernel" in cls.__name__:
+            test_name = "test_"+solver+"_"+io
+            test_method = create_test_method(model, solver, io, value)
+            if test_method is not None:
+                setattr(cls, test_name, test_method)
 
 # Reset the cls variable, since it contains a unittest.TestCase subclass.
 # This prevents this class from being processed twice!

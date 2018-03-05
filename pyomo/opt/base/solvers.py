@@ -648,7 +648,6 @@ class OptSolver(Plugin):
                     assert len(getattr(_model, "._symbol_maps")) == 1
                     delattr(_model, "._symbol_maps")
                     del result._smap_id
-
                     if self._load_solutions and \
                        (len(result.solution) == 0):
                         logger.error("No solution is available")
@@ -666,7 +665,8 @@ class OptSolver(Plugin):
             postsolve_completion_time = time.time()
 
             if self._report_timing:
-                print("      %6.2f seconds required for postsolve" % (postsolve_completion_time - solve_completion_time))
+                print("      %6.2f seconds required for postsolve"
+                      % (postsolve_completion_time - solve_completion_time))
 
         finally:
             #
