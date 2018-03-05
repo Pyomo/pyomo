@@ -444,7 +444,8 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
             # Add returned from recursion
             #
             ans.constant += res_.constant
-            nonl.append(res_.nonl)
+            if not res_.nonl is 0:
+                nonl.append(res_.nonl)
             for i in res_.linear:
                 ans.linear[i] = ans.linear.get(i,0) + res_.linear[i]
             if quadratic:
