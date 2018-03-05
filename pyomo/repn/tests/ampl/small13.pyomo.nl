@@ -9,22 +9,16 @@ g3 1 1 0	# problem unknown
  0 0	# max name lengths: constraints, variables
  0 0 0 0 0	# common exprs: b,c,o,c1,o1
 C0
-o54
-1
 o5
 v0
 n3
 C1
-o54
-1
 o2
 n10
 o5
 v0
 n3
 C2
-o54
-1
 o2
 n0.1
 o5

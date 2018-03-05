@@ -444,7 +444,7 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
             # Add returned from recursion
             #
             ans.constant += res_.constant
-            if not res_.nonl is 0:
+            if not isclose_const(res_.nonl,0):
                 nonl.append(res_.nonl)
             for i in res_.linear:
                 ans.linear[i] = ans.linear.get(i,0) + res_.linear[i]
@@ -452,8 +452,10 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
                 for i in res_.quadratic:
                     ans.quadratic[i] = ans.quadratic.get(i, 0) + res_.quadratic[i]
 
-    if len(nonl) > 0:
+    if len(nonl) > 1:
         ans.nonl = EXPR.ViewSumExpression(nonl)
+    elif len(nonl) == 1:
+        ans.nonl = nonl[0]
     return ans
 
 #@profile
@@ -562,10 +564,11 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
                     ans.quadratic[lkey,rkey] = multiplier*lcoef*rcoef
                 else:
                     ans.quadratic[rkey,lkey] = multiplier*lcoef*rcoef
-        el_linear = multiplier*sum((coef*idMap[key] for key, coef in six.iteritems(lhs.linear)), linear=True)
-        er_linear = multiplier*sum((coef*idMap[key] for key, coef in six.iteritems(rhs.linear)), linear=True)
-        el_quadratic = multiplier*sum((coef*idMap[key[0]]*idMap[key[1]] for key, coef in six.iteritems(lhs.quadratic)), linear=False)
-        er_quadratic = multiplier*sum((coef*idMap[key[0]]*idMap[key[1]] for key, coef in six.iteritems(rhs.quadratic)), linear=False)
+        # TODO - Use quicksum here?
+        el_linear = multiplier*sum(coef*idMap[key] for key, coef in six.iteritems(lhs.linear))
+        er_linear = multiplier*sum(coef*idMap[key] for key, coef in six.iteritems(rhs.linear))
+        el_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in six.iteritems(lhs.quadratic))
+        er_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in six.iteritems(rhs.quadratic))
         ans.nonl += el_linear*er_quadratic + el_quadratic*er_linear
     elif len(lhs.linear) + len(rhs.linear) > 1:
         return Results(nonl=multiplier*exp)
