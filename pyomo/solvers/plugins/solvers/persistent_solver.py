@@ -80,19 +80,24 @@ class PersistentSolver(DirectOrPersistentSolver):
         return self._set_instance(model, kwds)
 
     def add_block(self, block):
-        """
-        Add a Pyomo Block to the solver's model. This will keep any existing model components intact.
+        """Add a single Pyomo Block to the solver's model.
+
+        This will keep any existing model components intact.
 
         Parameters
         ----------
-        block: Block
+        block: Block (scalar Block or single _BlockData)
+
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_block.')
-        if block.is_indexed():
-            for sub_block in block.values():
-                self._add_block(block)
-            return
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
+        #if block.is_indexed():
+        #    for sub_block in block.values():
+        #        self._add_block(block)
+        #    return
         self._add_block(block)
 
     def set_objective(self, obj):
@@ -109,52 +114,67 @@ class PersistentSolver(DirectOrPersistentSolver):
         return self._set_objective(obj)
 
     def add_constraint(self, con):
-        """
-        Add a constraint to the solver's model. This will keep any existing model components intact.
+        """Add a single constraint to the solver's model.
+
+        This will keep any existing model components intact.
 
         Parameters
         ----------
-        con: Constraint
+        con: Constraint (scalar Constraint or single _ConstraintData)
+
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_constraint.')
-        if con.is_indexed():
-            for child_con in con.values():
-                self._add_constraint(child_con)
-        else:
-            self._add_constraint(con)
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
+        #if con.is_indexed():
+        #    for child_con in con.values():
+        #        self._add_constraint(child_con)
+        #else:
+        self._add_constraint(con)
 
     def add_var(self, var):
-        """
-        Add a variable to the solver's model. This will keep any existing model components intact.
+        """Add a single variable to the solver's model.
+
+        This will keep any existing model components intact.
 
         Parameters
         ----------
         var: Var
+
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_var.')
-        if var.is_indexed():
-            for child_var in var.values():
-                self._add_var(child_var)
-        else:
-            self._add_var(var)
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
+        #if var.is_indexed():
+        #    for child_var in var.values():
+        #        self._add_var(child_var)
+        #else:
+        self._add_var(var)
 
     def add_sos_constraint(self, con):
-        """
-        Add an SOS constraint to the solver's model (if supported). This will keep any existing model components intact.
+        """Add a single SOS constraint to the solver's model (if supported).
+
+        This will keep any existing model components intact.
 
         Parameters
         ----------
         con: SOSConstraint
+
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_sos_constraint.')
-        if con.is_indexed():
-            for child_con in con.values():
-                self._add_sos_constraint(child_con)
-        else:
-            self._add_sos_constraint(con)
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
+        #if con.is_indexed():
+        #    for child_con in con.values():
+        #        self._add_sos_constraint(child_con)
+        #else:
+        self._add_sos_constraint(con)
 
     """ This method should be implemented by subclasses."""
     def _remove_constraint(self, solver_con):
@@ -169,19 +189,24 @@ class PersistentSolver(DirectOrPersistentSolver):
         raise NotImplementedError('This method should be implemented by subclasses.')
 
     def remove_block(self, block):
-        """
-        Remove a block from the solver's model. This will keep any other model components intact.
+        """Remove a single block from the solver's model.
+
+        This will keep any other model components intact.
 
         WARNING: Users must call remove_block BEFORE modifying the block.
 
         Parameters
         ----------
-        block: Block
+        block: Block (scalar Block or a single _BlockData)
+
         """
-        if block.is_indexed():
-            for sub_block in block.values():
-                self.remove_block(sub_block)
-            return
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
+        #if block.is_indexed():
+        #    for sub_block in block.values():
+        #        self.remove_block(sub_block)
+        #    return
         for sub_block in block.block_data_objects(descend_into=True, active=True):
             for con in sub_block.component_data_objects(ctype=Constraint, descend_into=False, active=True):
                 self.remove_constraint(con)
@@ -193,17 +218,22 @@ class PersistentSolver(DirectOrPersistentSolver):
             self.remove_var(var)
 
     def remove_constraint(self, con):
-        """
-        Remove a constraint from the solver's model. This will keep any other model components intact.
+        """Remove a single constraint from the solver's model.
+
+        This will keep any other model components intact.
 
         Parameters
         ----------
-        con: Constraint
+        con: Constraint (scalar Constraint or single _ConstraintData)
+
         """
-        if con.is_indexed():
-            for child_con in con.values():
-                self.remove_constraint(child_con)
-            return
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
+        #if con.is_indexed():
+        #    for child_con in con.values():
+        #        self.remove_constraint(child_con)
+        #    return
         solver_con = self._pyomo_con_to_solver_con_map[con]
         self._remove_constraint(solver_con)
         self._symbol_map.removeSymbol(con)
@@ -215,17 +245,22 @@ class PersistentSolver(DirectOrPersistentSolver):
         del self._solver_con_to_pyomo_con_map[solver_con]
 
     def remove_sos_constraint(self, con):
-        """
-        Remove an SOS constraint from the solver's model. This will keep any other model components intact.
+        """Remove a single SOS constraint from the solver's model.
+
+        This will keep any other model components intact.
 
         Parameters
         ----------
         con: SOSConstraint
+
         """
-        if con.is_indexed():
-            for child_con in con.values():
-                self.remove_sos_constraint(child_con)
-            return
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
+        #if con.is_indexed():
+        #    for child_con in con.values():
+        #        self.remove_sos_constraint(child_con)
+        #    return
         solver_con = self._pyomo_con_to_solver_con_map[con]
         self._remove_sos_constraint(solver_con)
         self._symbol_map.removeSymbol(con)
@@ -237,17 +272,22 @@ class PersistentSolver(DirectOrPersistentSolver):
         del self._solver_con_to_pyomo_con_map[solver_con]
 
     def remove_var(self, var):
-        """
-        Remove a variable from the solver's model. This will keep any other model components intact.
+        """Remove a single variable from the solver's model.
+
+        This will keep any other model components intact.
 
         Parameters
         ----------
-        var: Var
+        var: Var (scalar Var or single _VarData)
+
         """
-        if var.is_indexed():
-            for child_var in var.values():
-                self.remove_var(child_var)
-            return
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
+        #if var.is_indexed():
+        #    for child_var in var.values():
+        #        self.remove_var(child_var)
+        #    return
         if self._referenced_variables[var] != 0:
             raise ValueError('Cannot remove Var {0} because it is still referenced by the '.format(var) +
                              'objective or one or more constraints')

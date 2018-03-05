@@ -20,7 +20,6 @@ from gurobipy import *
 import sys
 if sys.version_info[0] < 3:
     from itertools import izip as zip
-    
 
 GUROBI_VERSION = gurobi.version()
 
@@ -29,6 +28,13 @@ GUROBI_VERSION = gurobi.version()
 #       throw an exception that is expected to be handled by Pyomo - it won't be.
 #       rather, print an error message and return - the caller will know to look
 #       in the logs in case of a failure.
+
+def _is_numeric(x):
+    try:
+        float(x)
+    except ValueError:
+        return False
+    return True
 
 def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes):
 
@@ -80,7 +86,23 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     # key is specified, so you have to stare at the
     # output to see if it was accepted.
     for key, value in options.items():
-        model.setParam(key, value)
+        # When options come from the pyomo command, all
+        # values are string types, so we try to cast
+        # them to a numeric value in the event that
+        # setting the parameter fails.
+        try:
+            model.setParam(key, value)
+        except TypeError:
+            # we place the exception handling for checking
+            # the cast of value to a float in another
+            # function so that we can simply call raise here
+            # instead of except TypeError as e / raise e,
+            # because the latter does not preserve the
+            # Gurobi stack trace
+            if not _is_numeric(value):
+                raise
+            model.setParam(key, float(value))
+
 
     if 'relax_integrality' in options:
         for v in model.getVars():
@@ -164,10 +186,20 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
         message = 'Unable to satisfy optimality tolerances; a sub-optimal solution is available.'
         term_cond = 'other'
         solution_status = 'feasible'
+    # note that USER_OBJ_LIMIT was added in Gurobi 7.0, so it may not be present
+    elif (solver_status is not None) and \
+         (solver_status == getattr(GRB,'USER_OBJ_LIMIT',None)):
+        status = 'aborted'
+        message = "User specified an objective limit " \
+                  "(a bound on either the best objective " \
+                  "or the best bound), and that limit has " \
+                  "been reached. Solution is available."
+        term_cond = 'other'
+        solution_status = 'stoppedByLimit'
     else:
-        print(solver_status)
         status = 'error'
-        message = 'Unknown return code from GUROBI model.getAttr(GRB.Attr.Status) call'
+        message = ("Unhandled Gurobi solve status "
+                   "("+str(solver_status)+")")
         term_cond = 'error'
         solution_status = 'error'
     assert solution_status is not None
