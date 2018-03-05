@@ -561,10 +561,10 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
                     ans.quadratic[lkey,rkey] = multiplier*lcoef*rcoef
                 else:
                     ans.quadratic[rkey,lkey] = multiplier*lcoef*rcoef
-        el_linear = multiplier*quicksum((coef*idMap[key] for key, coef in six.iteritems(lhs.linear)), linear=True)
-        er_linear = multiplier*quicksum((coef*idMap[key] for key, coef in six.iteritems(rhs.linear)), linear=True)
-        el_quadratic = multiplier*quicksum((coef*idMap[key[0]]*idMap[key[1]] for key, coef in six.iteritems(lhs.quadratic)), linear=False)
-        er_quadratic = multiplier*quicksum((coef*idMap[key[0]]*idMap[key[1]] for key, coef in six.iteritems(rhs.quadratic)), linear=False)
+        el_linear = multiplier*sum((coef*idMap[key] for key, coef in six.iteritems(lhs.linear)), linear=True)
+        er_linear = multiplier*sum((coef*idMap[key] for key, coef in six.iteritems(rhs.linear)), linear=True)
+        el_quadratic = multiplier*sum((coef*idMap[key[0]]*idMap[key[1]] for key, coef in six.iteritems(lhs.quadratic)), linear=False)
+        er_quadratic = multiplier*sum((coef*idMap[key[0]]*idMap[key[1]] for key, coef in six.iteritems(rhs.quadratic)), linear=False)
         ans.nonl += el_linear*er_quadratic + el_quadratic*er_linear
     elif len(lhs.linear) + len(rhs.linear) > 1:
         return Results(nonl=multiplier*exp)
