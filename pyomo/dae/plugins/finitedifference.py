@@ -183,9 +183,7 @@ class Finite_Difference_Transformation(Transformation):
                              "using the 'scheme' keyword. Valid schemes are "
                              "'BACKWARD', 'CENTRAL', and 'FORWARD'" %
                              tmpscheme)
-        #
-        # for block in instance.block_data_objects(active=True):
-        #     self._transformBlock(block, currentds)
+
         self._transformBlock(instance, currentds)
 
         return instance
@@ -216,10 +214,6 @@ class Finite_Difference_Transformation(Transformation):
         # if they haven't then the model components need not be updated
         # or even iterated through
         expand_components(block)
-        # for c in block.component_objects(descend_into=True, active=True,
-        #             descent_order=TraversalStrategy
-        #                     .PostfixDepthFirstSearch):
-        #     update_contset_indexed_component(c)
 
         for d in block.component_objects(DerivativeVar, descend_into=True):
             dsets = d.get_continuousset_list()
