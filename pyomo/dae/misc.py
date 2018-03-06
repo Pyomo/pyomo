@@ -17,7 +17,6 @@ from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.block import _BlockData, IndexedBlock
 from pyomo.dae import ContinuousSet, DerivativeVar, DAE_Error
 from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_list import ComponentList
 from pyomo.core.base.block import SortComponents
 
 from six import iterkeys, itervalues, iteritems
@@ -111,8 +110,22 @@ def expand_components(block):
     references but will not work for all cases.
     """
 
+    # Used to map components to the functions used to expand them so that
+    # the update_contset_indexed_component function logic only has to be
+    # called once even in the case where we have to re-try expanding
+    # components due to circular references
     expansion_map = ComponentMap()
     redo_expansion = list()
+
+    # Record the missing BlockData before expanding components. This is for
+    # the case where a ContinuousSet indexed Block is used in a Constraint.
+    # If the Constraint is expanded before the Block then the missing
+    # BlockData will be added to the indexed Block but will not be
+    # constructed correctly.
+    for blk in block.component_objects(Block, descend_into=True):
+        missing_idx = set(blk._index) - set(iterkeys(blk._data))
+        if missing_idx:
+            blk._dae_missing_idx = missing_idx
 
     # Identify components that need to be expanded and try expanding them
     for c in block.component_objects(descend_into=True,
@@ -122,21 +135,14 @@ def expand_components(block):
         except AttributeError:
             redo_expansion.append(c)
 
-    print('Completed first discretization pass')
-
     N = len(redo_expansion)
-    print('Number of components to re-expand: ', N)
     while N:
-        print(redo_expansion)
         for i in range(N):
             c = redo_expansion.pop()
-            print('Re-expanding component ', str(c))
-            expansion_map[c](c)
-            # try:
-            #     expansion_map[c](c)
-            # except AttributeError:
-            #     redo_expansion.append(c)
-        print(redo_expansion)
+            try:
+                expansion_map[c](c)
+            except AttributeError:
+                redo_expansion.append(c)
         if len(redo_expansion) == N:
             raise DAE_Error("Unable to fully discretize %s. Possible "
                             "circular references detected between components "
@@ -185,7 +191,6 @@ def update_contset_indexed_component(comp, expansion_map):
 
     for s in indexset:
         if s.type() == ContinuousSet and s.get_changed():
-            print('Expanding component ', str(comp))
             if isinstance(comp, Var):  # Don't use the type() method here
                 # because we want to catch DerivativeVar components as well
                 # as Var components
@@ -278,10 +283,10 @@ def _update_block(blk):
                                              '__func__',
                                              IndexedBlock.construct):
         # check for custom update function
-        try:
+        if hasattr(blk, 'update_after_discretization'):
             blk.update_after_discretization()
             return
-        except AttributeError:
+        else:
             logger.warning(
                 'DAE(misc): Attempting to apply a discretization '
                 'transformation to the Block-derived component "%s". The '
@@ -294,7 +299,7 @@ def _update_block(blk):
                 'construct()' % blk.name)
 
     # Code taken from the construct() method of Block
-    missing_idx = set(blk._index) - set(iterkeys(blk._data))
+    missing_idx = getattr(blk, '_dae_missing_idx', set([]))
     for idx in list(missing_idx):
         _block = blk[idx]
         obj = apply_indexed_rule(
@@ -310,6 +315,10 @@ def _update_block(blk):
             for name, val in iteritems(obj.__dict__):
                 if not hasattr(_block, name) and not hasattr(blk, name):
                     super(_BlockData, _block).__setattr__(name, val)
+
+    # Remove book-keeping data after Block is discretized
+    if hasattr(blk, '_dae_missing_idx'):
+        del blk._dae_missing_idx
 
 
 def _update_piecewise(pw):

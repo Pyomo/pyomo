@@ -22,6 +22,7 @@ from pyomo.environ import *
 from pyomo.util.log import LoggingIntercept
 from pyomo.dae import *
 from pyomo.dae.misc import *
+from pyomo.core.kernel.component_map import ComponentMap
 
 currdir = dirname(abspath(__file__)) + os.sep
 
@@ -191,12 +192,14 @@ class TestDaeMisc(unittest.TestCase):
         m.v4 = Var(m.s, initialize=7, dense=True)
         m.v5 = Var(m.t2, dense=True)
 
+        expansion_map = ComponentMap()
+
         generate_finite_elements(m.t, 5)
-        update_contset_indexed_component(m.v1)
-        update_contset_indexed_component(m.v2)
-        update_contset_indexed_component(m.v3)
-        update_contset_indexed_component(m.v4)
-        update_contset_indexed_component(m.v5)
+        update_contset_indexed_component(m.v1, expansion_map)
+        update_contset_indexed_component(m.v2, expansion_map)
+        update_contset_indexed_component(m.v3, expansion_map)
+        update_contset_indexed_component(m.v4, expansion_map)
+        update_contset_indexed_component(m.v5, expansion_map)
 
         self.assertTrue(len(m.v1) == 6)
         self.assertTrue(len(m.v2) == 6)
@@ -236,12 +239,14 @@ class TestDaeMisc(unittest.TestCase):
         m.v4 = Var(m.s, m.t2, initialize=7, dense=True)
         m.v5 = Var(m.s2)
 
+        expansion_map = ComponentMap()
+
         generate_finite_elements(m.t, 5)
-        update_contset_indexed_component(m.v1)
-        update_contset_indexed_component(m.v2)
-        update_contset_indexed_component(m.v3)
-        update_contset_indexed_component(m.v4)
-        update_contset_indexed_component(m.v5)
+        update_contset_indexed_component(m.v1, expansion_map)
+        update_contset_indexed_component(m.v2, expansion_map)
+        update_contset_indexed_component(m.v3, expansion_map)
+        update_contset_indexed_component(m.v4, expansion_map)
+        update_contset_indexed_component(m.v5, expansion_map)
 
         self.assertTrue(len(m.v1) == 18)
         self.assertTrue(len(m.v2) == 54)
@@ -280,11 +285,13 @@ class TestDaeMisc(unittest.TestCase):
             return sum(m.v[i] for i in m.t) >= 0
         m.con2 = Constraint(rule=_con2)
 
+        expansion_map = ComponentMap()
+
         generate_finite_elements(m.t, 5)
-        update_contset_indexed_component(m.v)
-        update_contset_indexed_component(m.p)
-        update_contset_indexed_component(m.con1)
-        update_contset_indexed_component(m.con2)
+        update_contset_indexed_component(m.v, expansion_map)
+        update_contset_indexed_component(m.p, expansion_map)
+        update_contset_indexed_component(m.con1, expansion_map)
+        update_contset_indexed_component(m.con2, expansion_map)
 
         self.assertTrue(len(m.con1) == 6)
         self.assertEqual(m.con1[2](), 15)
@@ -319,14 +326,16 @@ class TestDaeMisc(unittest.TestCase):
             return m.v1[i, ti] - m.v3[ti2, j, k] * m.p1[i, ti] <= 20
         m.con3 = Constraint(m.s1, m.t, m.t2, m.s2, rule=_con3)
 
+        expansion_map = ComponentMap()
+
         generate_finite_elements(m.t, 5)
-        update_contset_indexed_component(m.p1)
-        update_contset_indexed_component(m.v1)
-        update_contset_indexed_component(m.v2)
-        update_contset_indexed_component(m.v3)
-        update_contset_indexed_component(m.con1)
-        update_contset_indexed_component(m.con2)
-        update_contset_indexed_component(m.con3)
+        update_contset_indexed_component(m.p1, expansion_map)
+        update_contset_indexed_component(m.v1, expansion_map)
+        update_contset_indexed_component(m.v2, expansion_map)
+        update_contset_indexed_component(m.v3, expansion_map)
+        update_contset_indexed_component(m.con1, expansion_map)
+        update_contset_indexed_component(m.con2, expansion_map)
+        update_contset_indexed_component(m.con3, expansion_map)
         
         self.assertTrue(len(m.con1) == 18)
         self.assertTrue(len(m.con2) == 12)
@@ -369,11 +378,13 @@ class TestDaeMisc(unittest.TestCase):
             return sum(m.v[i] for i in m.t)
         m.con2 = Expression(rule=_con2)
 
+        expansion_map = ComponentMap()
+
         generate_finite_elements(m.t, 5)
-        update_contset_indexed_component(m.v)
-        update_contset_indexed_component(m.p)
-        update_contset_indexed_component(m.con1)
-        update_contset_indexed_component(m.con2)
+        update_contset_indexed_component(m.v, expansion_map)
+        update_contset_indexed_component(m.p, expansion_map)
+        update_contset_indexed_component(m.con1, expansion_map)
+        update_contset_indexed_component(m.con2, expansion_map)
 
         self.assertTrue(len(m.con1) == 6)
         self.assertEqual(m.con1[2](), 15)
@@ -408,14 +419,16 @@ class TestDaeMisc(unittest.TestCase):
             return m.v1[i, ti] - m.v3[ti2, j, k] * m.p1[i, ti]
         m.con3 = Expression(m.s1, m.t, m.t2, m.s2, rule=_con3)
 
+        expansion_map = ComponentMap()
+
         generate_finite_elements(m.t, 5)
-        update_contset_indexed_component(m.p1)
-        update_contset_indexed_component(m.v1)
-        update_contset_indexed_component(m.v2)
-        update_contset_indexed_component(m.v3)
-        update_contset_indexed_component(m.con1)
-        update_contset_indexed_component(m.con2)
-        update_contset_indexed_component(m.con3)
+        update_contset_indexed_component(m.p1, expansion_map)
+        update_contset_indexed_component(m.v1, expansion_map)
+        update_contset_indexed_component(m.v2, expansion_map)
+        update_contset_indexed_component(m.v3, expansion_map)
+        update_contset_indexed_component(m.con1, expansion_map)
+        update_contset_indexed_component(m.con2, expansion_map)
+        update_contset_indexed_component(m.con3, expansion_map)
 
         self.assertTrue(len(m.con1) == 18)
         self.assertTrue(len(m.con2) == 12)
@@ -464,8 +477,14 @@ class TestDaeMisc(unittest.TestCase):
      
         self.assertTrue(len(model.blk), 2)
 
+        expansion_map = ComponentMap()
+
         generate_finite_elements(model.t, 5)
-        update_contset_indexed_component(model.blk)
+
+        missing_idx = set(model.blk._index) - set(iterkeys(model.blk._data))
+        model.blk._dae_missing_idx = missing_idx
+
+        update_contset_indexed_component(model.blk, expansion_map)
 
         self.assertEqual(len(model.blk), 6)
         self.assertEqual(len(model.blk[10].con1), 2)
@@ -508,11 +527,17 @@ class TestDaeMisc(unittest.TestCase):
             b.con2 = Expression(m.s2, m.t, rule=_con2)
     
         model.blk = Block(model.t, model.s1, rule=_block_rule)
-        
+
+        expansion_map = ComponentMap()
+
         self.assertTrue(len(model.blk), 6)
 
         generate_finite_elements(model.t, 5)
-        update_contset_indexed_component(model.blk)
+
+        missing_idx = set(model.blk._index) - set(iterkeys(model.blk._data))
+        model.blk._dae_missing_idx = missing_idx
+
+        update_contset_indexed_component(model.blk, expansion_map)
 
         self.assertEqual(len(model.blk), 18)
         self.assertEqual(len(model.blk[10, 'C'].con1), 6)
@@ -557,11 +582,17 @@ class TestDaeMisc(unittest.TestCase):
             return b
     
         model.blk = Block(model.t, rule=_block_rule)
+
+        expansion_map = ComponentMap()
      
         self.assertTrue(len(model.blk), 2)
 
         generate_finite_elements(model.t, 5)
-        update_contset_indexed_component(model.blk)
+
+        missing_idx = set(model.blk._index) - set(iterkeys(model.blk._data))
+        model.blk._dae_missing_idx = missing_idx
+
+        update_contset_indexed_component(model.blk, expansion_map)
 
         self.assertEqual(len(model.blk), 6)
         self.assertEqual(len(model.blk[10].con1), 2)
@@ -606,11 +637,17 @@ class TestDaeMisc(unittest.TestCase):
             return b
     
         model.blk = Block(model.t, model.s1, rule=_block_rule)
-        
+
+        expansion_map = ComponentMap()
+
         self.assertTrue(len(model.blk), 6)
 
         generate_finite_elements(model.t, 5)
-        update_contset_indexed_component(model.blk)
+
+        missing_idx = set(model.blk._index) - set(iterkeys(model.blk._data))
+        model.blk._dae_missing_idx = missing_idx
+
+        update_contset_indexed_component(model.blk, expansion_map)
 
         self.assertEqual(len(model.blk), 18)
         self.assertEqual(len(model.blk[10, 'C'].con1), 6)
@@ -646,8 +683,10 @@ class TestDaeMisc(unittest.TestCase):
         
         self.assertEqual(len(model.fx), 2)
 
+        expansion_map = ComponentMap()
+
         generate_finite_elements(model.t, 5)
-        update_contset_indexed_component(model.fx)
+        update_contset_indexed_component(model.fx, expansion_map)
 
         self.assertEqual(len(model.fx), 6)
         self.assertEqual(len(model.fx[2].SOS2_constraint), 3)
@@ -673,8 +712,10 @@ class TestDaeMisc(unittest.TestCase):
         
         self.assertEqual(len(model.fx), 6)
 
+        expansion_map = ComponentMap()
+
         generate_finite_elements(model.t, 5)
-        update_contset_indexed_component(model.fx)
+        update_contset_indexed_component(model.fx, expansion_map)
 
         self.assertEqual(len(model.fx), 18)
         self.assertEqual(len(model.fx['A', 2].SOS2_constraint), 3)
@@ -691,10 +732,12 @@ class TestDaeMisc(unittest.TestCase):
             return sum(m.v[i] for i in m.s)
         m.obj = Objective(rule=_obj)
 
+        expansion_map = ComponentMap
+
         generate_finite_elements(m.t, 5)
-        update_contset_indexed_component(m.junk)
-        update_contset_indexed_component(m.s)
-        update_contset_indexed_component(m.obj)
+        update_contset_indexed_component(m.junk, expansion_map)
+        update_contset_indexed_component(m.s, expansion_map)
+        update_contset_indexed_component(m.obj, expansion_map)
 
     # test unsupported components indexed by a single ContinuousSet
     def test_update_contset_indexed_component_unsupported_single(self):
@@ -702,9 +745,10 @@ class TestDaeMisc(unittest.TestCase):
         m.t = ContinuousSet(bounds=(0, 10))
         m.s = Set(m.t)
         generate_finite_elements(m.t, 5)
+        expansion_map = ComponentMap()
 
         try:
-            update_contset_indexed_component(m.s)
+            update_contset_indexed_component(m.s, expansion_map)
             self.fail("Expected TypeError because Set is not a component "
                       "that supports indexing by a ContinuousSet")
 
@@ -718,9 +762,10 @@ class TestDaeMisc(unittest.TestCase):
         m.i = Set(initialize=[1, 2, 3])
         m.s = Set(m.i, m.t)
         generate_finite_elements(m.t, 5)
+        expansion_map = ComponentMap()
 
         try:
-            update_contset_indexed_component(m.s)
+            update_contset_indexed_component(m.s, expansion_map)
             self.fail("Expected TypeError because Set is not a component "
                       "that supports indexing by a ContinuousSet")
 
@@ -742,8 +787,9 @@ class TestDaeMisc(unittest.TestCase):
             b.p1 = Param(m.t, default=_init)
             b.v1 = Var(m.t, initialize=5)
         m.foo = Foo(m.t, rule=_block_rule)
+
         generate_finite_elements(m.t, 5)
-        update_contset_indexed_component(m.foo)
+        expand_components(m)
 
         self.assertEqual(len(m.foo), 6)
         self.assertEqual(len(m.foo[0].p1), 6)
@@ -771,7 +817,7 @@ class TestDaeMisc(unittest.TestCase):
 
         OUTPUT = StringIO()
         with LoggingIntercept(OUTPUT, 'pyomo.core'):
-            update_contset_indexed_component(m.foo)
+            expand_components(m)
         self.assertIn('transformation to the Block-derived component', 
                       OUTPUT.getvalue())
         self.assertEqual(len(m.foo), 6)
@@ -799,12 +845,13 @@ class TestDaeMisc(unittest.TestCase):
             b.p1 = Param(m.t, default=_init)
             b.v1 = Var(m.t, initialize=5)
         m.foo = Foo(m.t, rule=_block_rule)
+
         generate_finite_elements(m.t, 5)
-        update_contset_indexed_component(m.foo)
+        expand_components(m)
 
         self.assertTrue(m.foo.updated)
         self.assertEqual(len(m.foo), 2)
-        self.assertEqual(len(m.foo[0].v1), 2)
+        self.assertEqual(len(m.foo[0].v1), 6)
 
     def test_update_block_derived2(self):
         class Foo(Block):
@@ -822,8 +869,9 @@ class TestDaeMisc(unittest.TestCase):
             b.p1 = Param(m.t, default=_init)
             b.v1 = Var(m.t, initialize=5)
         m.foo = Foo(m.t, m.s, rule=_block_rule)
+
         generate_finite_elements(m.t, 5)
-        update_contset_indexed_component(m.foo)
+        expand_components(m)
 
         self.assertEqual(len(m.foo), 18)
         self.assertEqual(len(m.foo[0, 1].p1), 6)
@@ -848,11 +896,12 @@ class TestDaeMisc(unittest.TestCase):
             b.p1 = Param(m.t, default=_init)
             b.v1 = Var(m.t, initialize=5)
         m.foo = Foo(m.t, m.s, rule=_block_rule)
+
         generate_finite_elements(m.t, 5)
 
         OUTPUT = StringIO()
         with LoggingIntercept(OUTPUT, 'pyomo.core'):
-            update_contset_indexed_component(m.foo)
+            expand_components(m)
         self.assertIn('transformation to the Block-derived component', 
                       OUTPUT.getvalue())
         self.assertEqual(len(m.foo), 18)
@@ -881,12 +930,13 @@ class TestDaeMisc(unittest.TestCase):
             b.p1 = Param(m.t, default=_init)
             b.v1 = Var(m.t, initialize=5)
         m.foo = Foo(m.t, m.s, rule=_block_rule)
+
         generate_finite_elements(m.t, 5)
-        update_contset_indexed_component(m.foo)
+        expand_components(m)
 
         self.assertTrue(m.foo.updated)
         self.assertEqual(len(m.foo), 6)
-        self.assertEqual(len(m.foo[0, 1].v1), 2)
+        self.assertEqual(len(m.foo[0, 1].v1), 6)
         
     # test add_equality_constraints method
     # def test_add_equality_constraints(self):
