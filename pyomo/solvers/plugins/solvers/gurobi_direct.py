@@ -34,6 +34,12 @@ logger = logging.getLogger('pyomo.solvers')
 class DegreeError(ValueError):
     pass
 
+def _is_numeric(x):
+    try:
+        float(x)
+    except ValueError:
+        return False
+    return True
 
 class GurobiDirect(DirectSolver):
     alias('gurobi_direct', doc='Direct python interface to Gurobi')
@@ -73,27 +79,31 @@ class GurobiDirect(DirectSolver):
 
         self._range_constraints = set()
 
-        if self._version_major < 5:
-            self._max_constraint_degree = 1
-        else:
-            self._max_constraint_degree = 2
         self._max_obj_degree = 2
+        self._max_constraint_degree = 2
 
         # Note: Undefined capabilites default to None
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
-        if self._version_major < 5:
-            self._capabilities.quadratic_constraint = False
-        else:
-            self._capabilities.quadratic_constraint = True
+        self._capabilities.quadratic_constraint = True
         self._capabilities.integer = True
         self._capabilities.sos1 = True
         self._capabilities.sos2 = True
 
+        # fix for compatibility with pre-5.0 Gurobi
+        if self._python_api_exists and \
+           (self._version_major < 5):
+            self._max_constraint_degree = 1
+            self._capabilities.quadratic_constraint = False
+
     def _apply_solver(self):
         if not self._save_results:
-            for block in self._pyomo_model.block_data_objects(descend_into=True, active=True):
-                for var in block.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=False, active=True, sort=False):
+            for block in self._pyomo_model.block_data_objects(descend_into=True,
+                                                              active=True):
+                for var in block.component_data_objects(ctype=pyomo.core.base.var.Var,
+                                                        descend_into=False,
+                                                        active=True,
+                                                        sort=False):
                     var.stale = True
         if self._tee:
             self._solver_model.setParam('OutputFlag', 1)
@@ -120,7 +130,23 @@ class GurobiDirect(DirectSolver):
         #  'LogFile', 'PreCrush', 'PreDepRow', 'PreMIQPMethod', 'PrePasses', 'Presolve',
         #  'ResultFile', 'ImproveStartTime', 'ImproveStartGap', 'Threads', 'Dummy', 'OutputFlag']
         for key, option in self.options.items():
-            self._solver_model.setParam(key, option)
+            # When options come from the pyomo command, all
+            # values are string types, so we try to cast
+            # them to a numeric value in the event that
+            # setting the parameter fails.
+            try:
+                self._solver_model.setParam(key, option)
+            except TypeError:
+                # we place the exception handling for
+                # checking the cast of option to a float in
+                # another function so that we can simply
+                # call raise here instead of except
+                # TypeError as e / raise e, because the
+                # latter does not preserve the Gurobi stack
+                # trace
+                if not _is_numeric(option):
+                    raise
+                self._solver_model.setParam(key, float(option))
 
         if self._version_major >= 5:
             for suffix in self._suffixes:
@@ -481,9 +507,21 @@ class GurobiDirect(DirectSolver):
                                                       "solution is available."
             self.results.solver.termination_condition = TerminationCondition.other
             soln.status = SolutionStatus.feasible
+        # note that USER_OBJ_LIMIT was added in Gurobi 7.0, so it may not be present
+        elif (status is not None) and \
+             (status == getattr(grb,'USER_OBJ_LIMIT',None)):
+            self.results.solver.status = SolverStatus.aborted
+            self.results.solver.termination_message = "User specified an objective limit " \
+                                                      "(a bound on either the best objective " \
+                                                      "or the best bound), and that limit has " \
+                                                      "been reached. Solution is available."
+            self.results.solver.termination_condition = TerminationCondition.other
+            soln.status = SolutionStatus.stoppedByLimit
         else:
             self.results.solver.status = SolverStatus.error
-            self.results.solver.termination_message = "Unknown return code from GUROBI."
+            self.results.solver.termination_message = \
+                ("Unhandled Gurobi solve status "
+                 "("+str(status)+")")
             self.results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
 

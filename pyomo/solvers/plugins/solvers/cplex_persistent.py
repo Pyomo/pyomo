@@ -76,18 +76,23 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
         CPLEXDirect._warm_start(self)
 
     def update_var(self, var):
-        """
-        Update a variable in the solver's model. This will update bounds, fix/unfix the variable as needed, and update
-        the variable type.
+        """Update a single variable in the solver's model.
+
+        This will update bounds, fix/unfix the variable as needed, and
+        update the variable type.
 
         Parameters
         ----------
-        var: Var
+        var: Var (scalar Var or single _VarData)
+
         """
-        if var.is_indexed():
-            for child_var in var.values():
-                self.compile_var(child_var)
-            return
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
+        #if var.is_indexed():
+        #    for child_var in var.values():
+        #        self.compile_var(child_var)
+        #    return
         if var not in self._pyomo_var_to_solver_var_map:
             raise ValueError('The Var provided to compile_var needs to be added first: {0}'.format(var))
         cplex_var = self._pyomo_var_to_solver_var_map[var]
