@@ -452,10 +452,11 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
                 for i in res_.quadratic:
                     ans.quadratic[i] = ans.quadratic.get(i, 0) + res_.quadratic[i]
 
-    if len(nonl) > 1:
-        ans.nonl = EXPR.ViewSumExpression(nonl)
-    elif len(nonl) == 1:
-        ans.nonl = nonl[0]
+    if len(nonl) > 0:
+        if len(nonl) == 1:
+            ans.nonl = nonl[0]
+        else:
+            ans.nonl = EXPR.ViewSumExpression(nonl)
     return ans
 
 #@profile
