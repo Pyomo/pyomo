@@ -461,14 +461,14 @@ class Collocation_Discretization_Transformation(Transformation):
                     if self._scheme_name == 'LAGRANGE-LEGENDRE':
                         # Add continuity equations to DerivativeVar's parent
                         #  block
-                        add_continuity_equations(block, d, i, loc)
+                        add_continuity_equations(d.parent_block(), d, i, loc)
 
             # Reclassify DerivativeVar if all indexing ContinuousSets have
             # been discretized. Add discretization equations to the
             # DerivativeVar's parent block.
             if d.is_fully_discretized():
                 add_discretization_equations(d.parent_block(), d)
-                block.reclassify_component_type(d, Var)
+                d.parent_block().reclassify_component_type(d, Var)
 
         # Reclassify Integrals if all ContinuousSets have been discretized
         if block_fully_discretized(block):
@@ -476,7 +476,7 @@ class Collocation_Discretization_Transformation(Transformation):
             if block.contains_component(Integral):
                 for i in block.component_objects(Integral, descend_into=True):
                     i.reconstruct()
-                    block.reclassify_component_type(i, Expression)
+                    i.parent_block().reclassify_component_type(i, Expression)
                 # If a model contains integrals they are most likely to appear
                 # in the objective function which will need to be reconstructed
                 # after the model is discretized.

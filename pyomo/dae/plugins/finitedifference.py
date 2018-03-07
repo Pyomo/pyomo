@@ -245,7 +245,7 @@ class Finite_Difference_Transformation(Transformation):
             if block.contains_component(Integral):
                 for i in block.component_objects(Integral, descend_into=True):
                     i.reconstruct()
-                    i.parent_block.reclassify_component_type(i, Expression)
+                    i.parent_block().reclassify_component_type(i, Expression)
                 # If a model contains integrals they are most likely to
                 # appear in the objective function which will need to be
                 # reconstructed after the model is discretized.
