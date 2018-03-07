@@ -237,7 +237,7 @@ class Finite_Difference_Transformation(Transformation):
             # DerivativeVar's parent block.
             if d.is_fully_discretized():
                 add_discretization_equations(d.parent_block(), d)
-                block.reclassify_component_type(d, Var)
+                d.parent_block().reclassify_component_type(d, Var)
 
         # Reclassify Integrals if all ContinuousSets have been discretized
         if block_fully_discretized(block):
@@ -245,7 +245,7 @@ class Finite_Difference_Transformation(Transformation):
             if block.contains_component(Integral):
                 for i in block.component_objects(Integral, descend_into=True):
                     i.reconstruct()
-                    block.reclassify_component_type(i, Expression)
+                    i.parent_block.reclassify_component_type(i, Expression)
                 # If a model contains integrals they are most likely to
                 # appear in the objective function which will need to be
                 # reconstructed after the model is discretized.
