@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 import logging
-from six import itervalues
 
 from pyomo.core.base.plugin import alias
 from pyomo.core.base import Transformation
@@ -234,20 +233,22 @@ class Finite_Difference_Transformation(Transformation):
                     d.set_derivative_expression(newexpr)
 
             # Reclassify DerivativeVar if all indexing ContinuousSets have
-            # been discretized
+            # been discretized. Add discretization equations to the
+            # DerivativeVar's parent block.
             if d.is_fully_discretized():
-                add_discretization_equations(block, d)
+                add_discretization_equations(d.parent_block(), d)
                 block.reclassify_component_type(d, Var)
 
         # Reclassify Integrals if all ContinuousSets have been discretized
         if block_fully_discretized(block):
 
             if block.contains_component(Integral):
-                for i in itervalues(block.component_map(Integral)):
+                for i in block.component_objects(Integral, descend_into=True):
                     i.reconstruct()
                     block.reclassify_component_type(i, Expression)
                 # If a model contains integrals they are most likely to
                 # appear in the objective function which will need to be
                 # reconstructed after the model is discretized.
-                for k in itervalues(block.component_map(Objective)):
+                for k in block.component_objects(Objective, descend_into=True):
+                    # TODO: check this, reconstruct might not work
                     k.reconstruct()
