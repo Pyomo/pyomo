@@ -606,8 +606,37 @@ class ScenarioTreeInstanceFactory(object):
             if self._model_callback is not None:
 
                 assert self._model_object is None
-                scenario_instance = self._model_callback(scenario_name,
-                                                         node_name_list)
+                try:
+                    _scenario_tree_arg = None
+                    # new callback signature
+                    if (self._scenario_tree_filename is not None) and \
+                       self._scenario_tree_filename.endswith('.dat'):
+                        # we started with a .dat file, so
+                        # send the PySP scenario tree
+                        _scenario_tree_arg = scenario_tree
+                    elif self._scenario_tree_model is not None:
+                        # We started from a Pyomo
+                        # scenario tree model instance, or a
+                        # networkx tree.
+                        _scenario_tree_arg = self._scenario_tree_model
+                    else:
+                        # send the PySP scenario tree
+                        _scenario_tree_arg = scenario_tree
+                    scenario_instance = self._model_callback(_scenario_tree_arg,
+                                                             scenario_name,
+                                                             node_name_list)
+                except TypeError:
+                    # old callback signature
+                    # TODO:
+                    #logger.warning(
+                    #    "DEPRECATED: The 'pysp_instance_creation_callback' function "
+                    #    "signature has changed. An additional argument should be "
+                    #    "added to the beginning of the arguments list that will be "
+                    #    "set to the user provided scenario tree object when called "
+                    #    "by PySP (e.g., a Pyomo scenario tree model instance, "
+                    #    "a networkx tree, or a PySP ScenarioTree object.")
+                    scenario_instance = self._model_callback(scenario_name,
+                                                             node_name_list)
 
             elif self._model_object is not None:
 
