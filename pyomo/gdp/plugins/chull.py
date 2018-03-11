@@ -139,6 +139,8 @@ class ConvexHull_Transformation(Transformation):
         else:
             _HACK_transform_whole_instance = False
         for _t in targets:
+            if not isinstance(_t, ComponentUID):
+                _t = ComponentUID(_t)
             t = _t.find_component(instance)
             if t is None:
                 raise GDP_Error(
