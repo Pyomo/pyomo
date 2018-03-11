@@ -175,8 +175,6 @@ class BigM_Transformation(Transformation):
             if t is None:
                 raise GDP_Error(
                     "Target %s is not a component on the instance!" % _t)
-            if not t.active:
-                continue
 
             if t.type() is Disjunction:
                 if t.parent_component() is t:
@@ -513,7 +511,6 @@ class BigM_Transformation(Transformation):
             c = obj[i]
             if not c.active:
                 continue
-            c.deactivate()
 
             # first, we see if an M value was specified in the arguments.
             # (This returns None if not)

@@ -143,8 +143,6 @@ class ConvexHull_Transformation(Transformation):
             if t is None:
                 raise GDP_Error(
                     "Target %s is not a component on the instance!" % _t)
-            if not t.active:
-                continue
 
             if t.type() is Disjunction:
                 if t.parent_component() is t:
@@ -657,7 +655,6 @@ class ConvexHull_Transformation(Transformation):
             c = obj[i]
             if not c.active:
                 continue
-            c.deactivate()
 
             NL = c.body.polynomial_degree() not in (0,1)
 
