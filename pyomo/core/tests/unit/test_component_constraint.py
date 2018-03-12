@@ -1583,6 +1583,14 @@ class Test_linear_constraint(unittest.TestCase):
         self.assertEqual(c.body(), 6)
         self.assertEqual(c(), 6)
 
+        c.terms = ()
+        self.assertEqual(c.lb, 1)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(c.rhs, 1)
+        self.assertEqual(c.body, 0)
+        self.assertEqual(c(), 0)
+        self.assertEqual(tuple(c.terms), ())
+
     def test_type(self):
         c = linear_constraint([],[])
         self.assertTrue(isinstance(c, ICategorizedObject))
