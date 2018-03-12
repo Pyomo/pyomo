@@ -322,22 +322,34 @@ class ConvexHull_Transformation(Transformation):
         varOrder = []
         varsByDisjunct = ComponentMap()
         for disjunct in obj.disjuncts:
-            disjunctVars = varsByDisjunct[disjunct] = ComponentSet()
-            for cons in disjunct.component_data_objects(
-                    Constraint,
-                    active = True,
-                    sort=SortComponents.deterministic,
-                    descend_into=Block):
-                # we aren't going to disaggregate fixed variables. This
-                # means there is trouble if they are unfixed later...
-                for var in identify_variables(cons.body, include_fixed=False):
-                    # Note the use of a list so that we will eventually
-                    # disaggregate the vars in a deterministic order
-                    # (the order that we found them)
-                    disjunctVars.add(var)
-                    if var not in varOrder_set:
-                        varOrder.append(var)
-                        varOrder_set.add(var)
+            # This is crazy, but if the disjunct has been previously
+            # relaxed, the disjunct *could* be deactivated.
+            not_active = not disjunct.active
+            if not_active:
+                disjunct._activate_without_unfixing_indicator()
+            try:
+                disjunctVars = varsByDisjunct[disjunct] = ComponentSet()
+                for cons in disjunct.component_data_objects(
+                        Constraint,
+                        active = True,
+                        sort=SortComponents.deterministic,
+                        descend_into=Block):
+                    # we aren't going to disaggregate fixed
+                    # variables. This means there is trouble if they are
+                    # unfixed later...
+                    for var in identify_variables(
+                            cons.body, include_fixed=False):
+                        # Note the use of a list so that we will
+                        # eventually disaggregate the vars in a
+                        # deterministic order (the order that we found
+                        # them)
+                        disjunctVars.add(var)
+                        if var not in varOrder_set:
+                            varOrder.append(var)
+                            varOrder_set.add(var)
+            finally:
+                if not_active:
+                    disjunct._deactivate_without_fixing_indicator()
 
         # We will only disaggregate variables that
         #  1) appear in multiple disjuncts, or

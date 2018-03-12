@@ -389,6 +389,14 @@ class BigM_Transformation(Transformation):
            disjParent not in transBlock.disjContainers:
             transBlock.disjContainers.add(disjParent)
 
+        # This is crazy, but if the disjunction has been previously
+        # relaxed, the disjunct *could* be deactivated.  This is a big
+        # deal for CHull, as it uses the component_objects /
+        # component_data_objects generators.  For BigM, that is OK,
+        # because we never use those generators with active=True.  I am
+        # only noting it here for the future when someone (me?) is
+        # comparing the two relaxations.
+        #
         # Transform each component within this disjunct
         self._transform_block_components(obj, obj, infodict, bigM, suffix_list)
 
