@@ -1880,30 +1880,30 @@ class Test_linear_constraint(unittest.TestCase):
 
         c.terms = [(v,p)]
         repn = c.canonical_form()
-        self.assertEqual(len(repn.variables), 1)
-        self.assertIs(repn.variables[0], v)
-        self.assertEqual(repn.linear, (1,))
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], v)
+        self.assertEqual(repn.linear_coefs, (1,))
         self.assertEqual(repn.constant, 0)
 
         v.fix(2)
         repn = c.canonical_form()
-        self.assertEqual(len(repn.variables), 0)
-        self.assertEqual(len(repn.linear), 0)
+        self.assertEqual(len(repn.linear_vars), 0)
+        self.assertEqual(len(repn.linear_coefs), 0)
         self.assertEqual(repn.constant, 2)
 
         v.free()
         e.expr = v
         c.terms = [(e,p)]
         repn = c.canonical_form()
-        self.assertEqual(len(repn.variables), 1)
-        self.assertIs(repn.variables[0], v)
-        self.assertEqual(repn.linear, (1,))
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], v)
+        self.assertEqual(repn.linear_coefs, (1,))
         self.assertEqual(repn.constant, 0)
 
         v.fix(2)
         repn = c.canonical_form()
-        self.assertEqual(len(repn.variables), 0)
-        self.assertEqual(len(repn.linear), 0)
+        self.assertEqual(len(repn.linear_vars), 0)
+        self.assertEqual(len(repn.linear_coefs), 0)
         self.assertEqual(repn.constant, 2)
 
         #
@@ -1913,34 +1913,34 @@ class Test_linear_constraint(unittest.TestCase):
         v.free()
         c.terms = [(v,p)]
         repn = c.canonical_form(compute_values=False)
-        self.assertEqual(len(repn.variables), 1)
-        self.assertIs(repn.variables[0], v)
-        self.assertEqual(len(repn.linear), 1)
-        self.assertIs(repn.linear[0], p)
-        self.assertEqual(repn.linear[0](), 1)
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], v)
+        self.assertEqual(len(repn.linear_coefs), 1)
+        self.assertIs(repn.linear_coefs[0], p)
+        self.assertEqual(repn.linear_coefs[0](), 1)
         self.assertEqual(repn.constant, 0)
 
         v.fix(2)
         repn = c.canonical_form(compute_values=False)
-        self.assertEqual(len(repn.variables), 0)
-        self.assertEqual(len(repn.linear), 0)
+        self.assertEqual(len(repn.linear_vars), 0)
+        self.assertEqual(len(repn.linear_coefs), 0)
         self.assertEqual(repn.constant(), 2)
 
         v.free()
         e.expr = v
         c.terms = [(e,p)]
         repn = c.canonical_form(compute_values=False)
-        self.assertEqual(len(repn.variables), 1)
-        self.assertIs(repn.variables[0], v)
-        self.assertEqual(len(repn.linear), 1)
-        self.assertIs(repn.linear[0], p)
-        self.assertEqual(repn.linear[0](), 1)
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], v)
+        self.assertEqual(len(repn.linear_coefs), 1)
+        self.assertIs(repn.linear_coefs[0], p)
+        self.assertEqual(repn.linear_coefs[0](), 1)
         self.assertEqual(repn.constant, 0)
 
         v.fix(2)
         repn = c.canonical_form(compute_values=False)
-        self.assertEqual(len(repn.variables), 0)
-        self.assertEqual(len(repn.linear), 0)
+        self.assertEqual(len(repn.linear_vars), 0)
+        self.assertEqual(len(repn.linear_coefs), 0)
         self.assertEqual(repn.constant(), 2)
 
 class Test_constraint_dict(_TestActiveComponentDictBase,
