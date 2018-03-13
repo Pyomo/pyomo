@@ -159,6 +159,59 @@ class TestSimple(unittest.TestCase):
         baseline = { None:5, id(m.a) : 1 }
         self.assertEqual(baseline, repn_to_dict(rep))
 
+    def test_paramsum(self):
+        # a + 5
+        m = ConcreteModel()
+        m.a = Var()
+        m.p = Param(mutable=True, default=5)
+        e = m.a + m.p
+ 
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep.linear_vars) == 1)
+        self.assertTrue(len(rep.linear_coefs) == 1)
+        self.assertTrue(len(rep.quadratic_vars) == 0)
+        self.assertTrue(len(rep.quadratic_coefs) == 0)
+        self.assertTrue(rep.nonlinear_expr is None)
+        self.assertTrue(len(rep.nonlinear_vars) == 0)
+        baseline = { None:5, id(m.a) : 1 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+        # 5 + a
+        m = ConcreteModel()
+        m.a = Var()
+        m.p = Param(mutable=True, default=5)
+        e = m.p + m.a
+ 
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep.linear_vars) == 1)
+        self.assertTrue(len(rep.linear_coefs) == 1)
+        self.assertTrue(len(rep.quadratic_vars) == 0)
+        self.assertTrue(len(rep.quadratic_coefs) == 0)
+        self.assertTrue(rep.nonlinear_expr is None)
+        self.assertTrue(len(rep.nonlinear_vars) == 0)
+        baseline = { None:5, id(m.a) : 1 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+    def test_paramprod(self):
+        # p*a
+        m = ConcreteModel()
+        m.a = Var()
+        m.p = Param(mutable=True, default=5)
+        e = m.p*m.a
+ 
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep.linear_vars) == 1)
+        self.assertTrue(len(rep.linear_coefs) == 1)
+        self.assertTrue(len(rep.quadratic_vars) == 0)
+        self.assertTrue(len(rep.quadratic_coefs) == 0)
+        self.assertTrue(rep.nonlinear_expr is None)
+        self.assertTrue(len(rep.nonlinear_vars) == 0)
+        baseline = { id(m.a) : 5 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+
     def test_nestedSum(self):
         #
         # Check the structure of nested sums
