@@ -2909,9 +2909,15 @@ def _generate_sum_expression(etype, _self, _other):
     if etype == _neg:
         if _self.__class__ in native_numeric_types:
             return - _self
+        elif _self.__class__ is TermExpression:
+            tmp = _self._args_[0]
+            if tmp.__class__ in native_numeric_types:
+                return TermExpression((-tmp, _self._args_[1]))
+            else:
+                return TermExpression((NPV_NegationExpression((tmp,)), _self._args_[1]))
+        elif _self.__class__ is NegationExpression:
+            return _self._args_[0]
         elif _self.is_potentially_variable():
-            if _self.__class__ is NegationExpression:
-                return _self._args_[0]
             return NegationExpression((_self,))
         else:
             if _self.__class__ is NPV_NegationExpression:
@@ -2979,23 +2985,28 @@ def _generate_sum_expression(etype, _self, _other):
             elif isclose(_other, 0):
                 return _self
             if _self.is_potentially_variable():
-                #return _LinearViewSumExpression((_self, -_other))
                 return ViewSumExpression([_self, -_other])
             return NPV_SumExpression((_self, -_other))
         elif _self.__class__ in native_numeric_types:
             if isclose(_self, 0):
-                if _other.is_potentially_variable():
+                if _other.__class__ is TermExpression:
+                    tmp = _other._args_[0]
+                    if tmp.__class__ in native_numeric_types:
+                        return TermExpression((-tmp, _other._args_[1]))
+                    return TermExpression((NPV_NegationExpression((_other._args_[0],)), _other._args_[1]))
+                elif _other.is_potentially_variable():
                     return NegationExpression((_other,))
                 return NPV_NegationExpression((_other,))
-            if _other.is_potentially_variable():    
-                #return _LinearViewSumExpression((_self, NegationExpression((_other,))))
+            elif _other.__class__ is TermExpression:
+                return ViewSumExpression([_self, TermExpression((-_other._args_[0], _other._args_[1]))])
+            elif _other.is_potentially_variable():    
                 return ViewSumExpression([_self, NegationExpression((_other,))])
             return NPV_SumExpression((_self, NPV_NegationExpression((_other,))))
+        elif _other.__class__ is TermExpression:
+            return ViewSumExpression([_self, TermExpression((-_other._args_[0], _other._args_[1]))])
         elif _other.is_potentially_variable():    
-            #return _LinearViewSumExpression((_self, NegationExpression((_other,))))
             return ViewSumExpression([_self, NegationExpression((_other,))])
         elif _self.is_potentially_variable():
-            #return _LinearViewSumExpression((_self, NPV_NegationExpression((_other,))))
             return ViewSumExpression([_self, NPV_NegationExpression((_other,))])
         else:
             return NPV_SumExpression((_self, NPV_NegationExpression((_other,))))
