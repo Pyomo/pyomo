@@ -1747,7 +1747,7 @@ class PowExpression(ExpressionBase):
         # too frequently (and in particular, a**2)
         l,r = result
         if isclose(r, 0):
-            if isclose(l, 0):
+            if l is not None and isclose(l, 0):
                 return 0
             # NOTE: use value before int() so that we don't
             #       run into the disabled __int__ method on
