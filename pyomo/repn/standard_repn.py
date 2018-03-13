@@ -721,6 +721,12 @@ def _collect_nonl(exp, multiplier, idMap, compute_values, verbose, quadratic):
 def _collect_negation(exp, multiplier, idMap, compute_values, verbose, quadratic):
     return _collect_standard_repn(exp._args_[0], -1*multiplier, idMap, compute_values, verbose, quadratic)
 
+def _collect_const(exp, multiplier, idMap, compute_values, verbose, quadratic):
+    if compute_values:
+        return Results(constant=value(exp))
+    else:
+        return Results(constant=exp)
+
 def _collect_identity(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if exp._args_[0].__class__ in native_numeric_types:
         return Results(constant=exp._args_[0])
@@ -827,6 +833,7 @@ _repn_collectors = {
     #param.SimpleParam       : _collect_linear_const,
     #param.Param             : _collect_linear_const,
     #parameter               : _collect_linear_const,
+    NumericConstant                             : _collect_const,
     _GeneralVarData                             : _collect_var,
     SimpleVar                                   : _collect_var,
     Var                                         : _collect_var,
@@ -1209,7 +1216,6 @@ def _collect_linear_standard_repn(exp, multiplier, idMap, compute_values, verbos
         raise ValueError( "Unexpected expression (type %s)" % type(exp).__name__)
 
 def _generate_linear_standard_repn(expr, idMap=None, compute_values=True, verbose=False, repn=None):
-    #import pdb; pdb.set_trace()
     coef = {None:0}
     #
     # Call recursive logic
