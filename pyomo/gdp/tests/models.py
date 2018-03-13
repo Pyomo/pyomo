@@ -151,7 +151,7 @@ def makeThreeTermIndexedDisj():
         elif flag==1:
             disjunct.c = Constraint(expr=m.a[s] >= 5)
         else:
-            disjunct.c = Constraint(expr=2<=m.a[s] <= 4)
+            disjunct.c = Constraint(expr=inequality(2, m.a[s], 4))
     m.disjunct = Disjunct([0,1,2], m.s, rule=d_rule)
     def disj_rule(m, s):
         return [m.disjunct[0, s], m.disjunct[1, s], m.disjunct[2,s]]
