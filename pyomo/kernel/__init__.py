@@ -104,8 +104,5 @@ del component_sos
 del component_suffix
 del component_matrix_constraint
 del util
-del expr
-del expr_common
-del expr_coopr3
-del expr_pyomo4
+#del expr_common
 del pyomo
