@@ -16,7 +16,7 @@ from math import fabs
 from pyomo.core.base import Transformation
 from pyomo.core.base.block import Block, _BlockData
 from pyomo.core.base.constraint import Constraint
-from pyomo.core.kernel.numvalue import value
+from pyomo.core.expr.numvalue import value
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import GDP_Error
 from pyomo.gdp.disjunct import (Disjunct, Disjunction, _DisjunctData,

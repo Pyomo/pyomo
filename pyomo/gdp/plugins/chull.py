@@ -22,7 +22,7 @@ from pyomo.core.base import _ExpressionData
 from pyomo.core.base.var import _VarData
 from pyomo.repn import generate_standard_repn
 from pyomo.core.kernel import ComponentMap, ComponentSet
-from pyomo.core.base.expr import identify_variables
+import pyomo.core.expr.current as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import clone_without_expression_components
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
@@ -328,7 +328,7 @@ class ConvexHull_Transformation(Transformation):
                     descend_into=Block):
                 # we aren't going to disaggregate fixed variables. This
                 # means there is trouble if they are unfixed later...
-                for var in identify_variables(cons.body, include_fixed=False):
+                for var in EXPR.identify_variables(cons.body, include_fixed=False):
                     # Note the use of a list so that we will eventually
                     # disaggregate the vars in a deterministic order
                     # (the order that we found them)
@@ -702,7 +702,7 @@ class ConvexHull_Transformation(Transformation):
                 if NL:
                     newConsExpr = expr == c.lower*y
                 else:
-                    v = list(identify_variables(expr))
+                    v = list(EXPR.identify_variables(expr))
                     if len(v) == 1 and not c.lower:
                         # Setting a variable to 0 in a disjunct is
                         # *very* common.  We should recognize that in

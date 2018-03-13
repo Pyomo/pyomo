@@ -24,7 +24,7 @@ from pyomo.core.base.set_types import Any
 from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
-from pyomo.repn import LinearCanonicalRepn, generate_canonical_repn
+from pyomo.repn import generate_standard_repn
 from pyomo.util.modeling import unique_component_name
 from pyomo.util.plugin import alias
 from six import iterkeys, iteritems
