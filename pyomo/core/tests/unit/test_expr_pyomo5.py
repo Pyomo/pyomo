@@ -2748,8 +2748,6 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
             "abs(- 2**(2*(1/(2*(1 - ((a + 1 - 1)*a*(1/a))**b + 1)))))",
             str(expr) )
 
-    # TODO - resolve this test failure
-    #@unittest.expectedFailure
     def test_large_expression(self):
         #
         # Diff against a large model
