@@ -447,10 +447,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
         elif exp.is_expression_type():
             #
+            # Identify NPV expressions
+            #
+            if not exp.is_potentially_variable():
+                OUTPUT.write(self._op_string[NumericConstant] % (value(exp)))
+            #
             # We are assuming that _Constant_* expression objects
             # have been preprocessed to form constant values.
             #
-            if exp.__class__ is EXPR.ViewSumExpression:
+            elif exp.__class__ is EXPR.ViewSumExpression:
                 nary_sum_str, binary_sum_str, coef_term_str = \
                     self._op_string[EXPR._SumExpression]
                 n = exp.nargs()
@@ -473,36 +478,37 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     for child_exp in vargs:
                         self._print_nonlinear_terms_NL(child_exp)
                 
-            elif exp_type is EXPR._SumExpression or \
-                 exp_type is EXPR.NPV_SumExpression:
+            elif exp_type is EXPR._SumExpression:
                 nary_sum_str, binary_sum_str, coef_term_str = self._op_string[EXPR._SumExpression]
                 OUTPUT.write(binary_sum_str)
                 self._print_nonlinear_terms_NL(exp.arg(0))
                 self._print_nonlinear_terms_NL(exp.arg(1))
 
-            elif exp_type is EXPR.ProductExpression or \
-                 exp_type is EXPR.NPV_ProductExpression:
+            elif exp_type is EXPR.TermExpression:
+                prod_str = self._op_string[EXPR.ProductExpression]
+                OUTPUT.write(prod_str)
+                self._print_nonlinear_terms_NL(value(exp.arg(0)))
+                self._print_nonlinear_terms_NL(exp.arg(1))
+
+            elif exp_type is EXPR.ProductExpression:
                 prod_str = self._op_string[EXPR.ProductExpression]
                 OUTPUT.write(prod_str)
                 self._print_nonlinear_terms_NL(exp.arg(0))
                 self._print_nonlinear_terms_NL(exp.arg(1))
 
-            elif exp_type is EXPR.ReciprocalExpression or \
-                 exp_type is EXPR.NPV_ReciprocalExpression:
+            elif exp_type is EXPR.ReciprocalExpression:
                 assert exp.nargs() == 1
                 div_str = self._op_string[EXPR.ReciprocalExpression]
                 OUTPUT.write(div_str)
                 self._print_nonlinear_terms_NL(1.0)
                 self._print_nonlinear_terms_NL(exp.arg(0))
 
-            elif exp_type is EXPR.NegationExpression or \
-                 exp_type is EXPR.NPV_NegationExpression:
+            elif exp_type is EXPR.NegationExpression:
                 assert exp.nargs() == 1
                 OUTPUT.write(self._op_string[EXPR.NegationExpression])
                 self._print_nonlinear_terms_NL(exp.arg(0))
 
-            elif exp_type is EXPR.ExternalFunctionExpression or \
-                 exp_type is EXPR.NPV_ExternalFunctionExpression:
+            elif exp_type is EXPR.ExternalFunctionExpression:
                 fun_str, string_arg_str = \
                     self._op_string[EXPR.ExternalFunctionExpression]
                 if not self._symbolic_solver_labels:
@@ -521,8 +527,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     else:
                         self._print_nonlinear_terms_NL(arg)
 
-            elif exp_type is EXPR.PowExpression or \
-                 exp_type is EXPR.NPV_PowExpression:
+            elif exp_type is EXPR.PowExpression:
                 intr_expr_str = self._op_string.get(exp.name)
                 OUTPUT.write(intr_expr_str)
                 self._print_nonlinear_terms_NL(exp.arg(0))

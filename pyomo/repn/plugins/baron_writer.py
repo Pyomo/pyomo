@@ -75,6 +75,8 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
 
         if node.__class__ is EXPR.ProductExpression:
             return "{0} * {1}".format(tmp[0], tmp[1])
+        elif node.__class__ is EXPR.TermExpression:
+            return "{0} * {1}".format(tmp[0], tmp[1])
         elif node.__class__ is EXPR.PowExpression:
             return "{0} ^ {1}".format(tmp[0], tmp[1])
         else:
