@@ -39,6 +39,7 @@ __all__ = (
 'RangedExpression',
 'InequalityExpression',
 'ProductExpression',
+'TermExpression',
 'PowExpression',
 'ExternalFunctionExpression',
 'GetItemExpression',
@@ -1837,6 +1838,10 @@ class NPV_ProductExpression(ProductExpression):
         return False
 
 
+class TermExpression(ProductExpression):
+    __slots__ = ()
+
+
 class ReciprocalExpression(ExpressionBase):
     """
     Reciprocal expressions::
@@ -2805,6 +2810,9 @@ def _decompose_linear_terms(expr, multiplier=1):
         yield (multiplier*expr,None)
     elif expr.is_variable_type():
         yield (multiplier,expr)
+    elif expr.__class__ is TermExpression:
+        for term in _decompose_linear_terms(expr._args_[1], multiplier*expr._args_[0]):
+            yield term
     elif expr.__class__ is ProductExpression:
         if expr._args_[0].__class__ in native_numeric_types or not expr._args_[0].is_potentially_variable():
             for term in _decompose_linear_terms(expr._args_[1], multiplier*expr._args_[0]):
@@ -3048,7 +3056,15 @@ def _generate_mul_expression(etype, _self, _other):
                 return 0
             elif _other == 1:
                 return _self
-            if _self.is_potentially_variable():
+            if _self.is_variable_type():
+                return TermExpression((_other, _self))
+            elif _self.__class__ is TermExpression:
+                tmp = _self._args_[0]
+                if tmp.__class__ in native_numeric_types:
+                    return TermExpression((_other*tmp, _self._args_[1]))
+                else:
+                    return TermExpression((NPV_ProductExpression((_other,tmp)), _self._args_[1]))
+            elif _self.is_potentially_variable():
                 return ProductExpression((_other, _self))
             return NPV_ProductExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
@@ -3056,7 +3072,15 @@ def _generate_mul_expression(etype, _self, _other):
                 return 0
             elif _self == 1:
                 return _other
-            if _other.is_potentially_variable():
+            if _other.is_variable_type():
+                return TermExpression((_self, _other))
+            elif _other.__class__ is TermExpression:
+                tmp = _other._args_[0]
+                if tmp.__class__ in native_numeric_types:
+                    return TermExpression((_self*tmp, _other._args_[1]))
+                else:
+                    return TermExpression((NPV_ProductExpression((_self,tmp)), _other._args_[1]))
+            elif _other.is_potentially_variable():
                 return ProductExpression((_self, _other))
             return NPV_ProductExpression((_self, _other))
         elif _other.is_potentially_variable():
@@ -3077,7 +3101,11 @@ def _generate_mul_expression(etype, _self, _other):
                 raise ZeroDivisionError()
             elif _self.__class__ in native_numeric_types:
                 return _self / _other
-            if _self.is_potentially_variable():
+            if _self.is_variable_type():
+                return TermExpression((1/_other, _self))
+            elif _self.__class__ is TermExpression:
+                return TermExpression((_self._args_[0]/_other, _self._args_[1]))
+            elif _self.is_potentially_variable():
                 return ProductExpression((1/_other, _self))
             return NPV_ProductExpression((1/_other, _self))
         elif _self.__class__ in native_numeric_types:
