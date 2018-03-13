@@ -414,8 +414,7 @@ class _GeneralConstraintData(_ConstraintData):
                     self._body = arg1
                 else:
                     self._lower = self._upper = ZeroConstant
-                    self._body = arg0
-                    self._body -= arg1
+                    self._body = arg0 - arg1
             #
             # Form inequality expression
             #
@@ -515,8 +514,7 @@ class _GeneralConstraintData(_ConstraintData):
                     self._body = expr.arg(1)
                 else:
                     self._lower = self._upper = ZeroConstant
-                    self._body = expr.arg(0)
-                    self._body -= expr.arg(1)
+                    self._body = expr.arg(0) - expr.arg(1)
 
             elif _expr_type is EXPR.InequalityExpression:
                 if expr._strict:
