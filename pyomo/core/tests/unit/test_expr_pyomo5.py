@@ -1149,8 +1149,9 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(type(e), EXPR.ViewSumExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.b)
-        self.assertIs(e.arg(1).arg(0), e1)
-        self.assertEqual(e.size(), 6)
+        self.assertIs(e.arg(1).arg(0), -5)
+        self.assertIs(e.arg(1).arg(1), m.a)
+        self.assertEqual(e.size(), 5)
 
         #            -
         #          /   \
@@ -1178,8 +1179,9 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e.arg(0), m.b)
         self.assertIs(type(e.arg(1)), EXPR.NegationExpression)
         self.assertIs(e.arg(1).arg(0), m.c)
-        self.assertIs(e.arg(2).arg(0), e1)
-        self.assertEqual(e.size(), 8)
+        self.assertIs(e.arg(2).arg(0), -5)
+        self.assertIs(e.arg(2).arg(1), m.a)
+        self.assertEqual(e.size(), 7)
 
 
 class TestGenerate_ProductExpression(unittest.TestCase):
