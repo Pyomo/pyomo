@@ -628,7 +628,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e.nargs(), 3)
         self.assertIs(e.arg(0), m.a)
         self.assertIs(e.arg(1), m.b)
-        self.assertIs(type(e.arg(2)), EXPR.ProductExpression)
+        self.assertIs(type(e.arg(2)), EXPR.TermExpression)
         self.assertEqual(id(e.arg(-1)), id(e.arg(2)))
 
     def test_constSum(self):
@@ -1221,7 +1221,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         #   / \
         #  a   5
         e = m.a * 5
-        self.assertIs(type(e), EXPR.ProductExpression)
+        self.assertIs(type(e), EXPR.TermExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertEqual(e.arg(0), 5)
         self.assertIs(e.arg(1), m.a)
@@ -1238,7 +1238,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         #   / \
         #  5   a
         e = 5 * m.a
-        self.assertIs(type(e), EXPR.ProductExpression)
+        self.assertIs(type(e), EXPR.TermExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), 5)
         self.assertIs(e.arg(1), m.a)
@@ -1553,7 +1553,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         #   / \
         #  a   5
         e = m.a / 5
-        self.assertIs(type(e), EXPR.ProductExpression)
+        self.assertIs(type(e), EXPR.TermExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertAlmostEqual(e.arg(0), 0.2)
         self.assertIs(e.arg(1), m.a)
@@ -5760,14 +5760,14 @@ class TestExpressionSpecialMethods1(unittest.TestCase):
         M.e.expr = 3
         M.e *= M.v
         self.assertEqual(M.e.nargs(), 1)
-        self.assertEqual(type(M.e.arg(0)), EXPR.ProductExpression)
+        self.assertEqual(type(M.e.arg(0)), EXPR.TermExpression)
         self.assertTrue(type(M.e.arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(M.e.arg(0).arg(1).is_variable_type())
 
         M.E[0].expr = 3
         M.E[0] *= M.v
         self.assertEqual(M.E[0].nargs(), 1)
-        self.assertEqual(type(M.E[0].arg(0)), EXPR.ProductExpression)
+        self.assertEqual(type(M.E[0].arg(0)), EXPR.TermExpression)
         self.assertTrue(type(M.E[0].arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(M.E[0].arg(0).arg(1).is_variable_type())
 
@@ -5849,7 +5849,7 @@ class TestExpressionSpecialMethods2(unittest.TestCase):
         e.expr = 3
         e *= M.v
         self.assertEqual(e.nargs(), 1)
-        self.assertEqual(type(e.arg(0)), EXPR.ProductExpression)
+        self.assertEqual(type(e.arg(0)), EXPR.TermExpression)
         self.assertTrue(type(e.arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(e.arg(0).arg(1).is_variable_type())
 
