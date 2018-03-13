@@ -357,12 +357,35 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         elif not expr.is_expression_type():
             raise ValueError("Unexpected expression type: "+str(expr))
 
+        """
         return _generate_standard_repn(expr, 
                                 idMap=idMap,
                                 compute_values=compute_values,
                                 verbose=verbose,
                                 quadratic=quadratic,
                                 repn=repn)
+        """
+        degree = expr.polynomial_degree()
+
+        if False and degree == 1:
+            return _generate_linear_standard_repn(expr, 
+                                idMap=idMap,
+                                compute_values=compute_values,
+                                verbose=verbose,
+                                repn=repn)
+        else:
+            return _generate_standard_repn(expr, 
+                                idMap=idMap,
+                                compute_values=compute_values,
+                                verbose=verbose,
+                                quadratic=quadratic,
+                                repn=repn)
+
+##-----------------------------------------------------------------------
+##
+## Logic for _generate_standard_repn
+##
+##-----------------------------------------------------------------------
 
 class Results(object):
     __slot__ = ('const', 'nonl', 'linear', 'quadratic')
@@ -848,7 +871,7 @@ def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False
         repn.quadratic_vars = tuple((idMap[key[0]],idMap[key[1]]) for key in keys)
         repn.quadratic_coefs = tuple(ans.quadratic[key] for key in keys)
 
-    if not isclose_const(ans.nonl,0):
+    if ans.nonl is not None and not isclose_const(ans.nonl,0):
         repn.nonlinear_expr = ans.nonl
         repn.nonlinear_vars = []
         for v_ in EXPR.identify_variables(repn.nonlinear_expr, include_fixed=False):
@@ -870,11 +893,315 @@ def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False
     return repn
 
 
+##-----------------------------------------------------------------------
 ##
+## Logic for _generate_linear_standard_repn
 ##
-## Define the compute_standard_repn function
+##-----------------------------------------------------------------------
+
+def _linear_collect_sum(exp, multiplier, idMap, compute_values, verbose, coef):
+    varkeys = idMap[None]
+
+    for e_ in itertools.islice(exp._args_, exp.nargs()):
+        if e_.__class__ in native_numeric_types:
+            coef[None] += multiplier*e_
+
+        elif e_.is_variable_type():
+            if e_.fixed:
+                if compute_values:
+                    coef[None] += multiplier*e_.value
+                else:
+                    coef[None] += multiplier*e_
+            else:
+                id_ = id(e_)
+                if id_ in varkeys:
+                    key = varkeys[id_]
+                else:
+                    key = len(idMap) - 1
+                    varkeys[id_] = key
+                    idMap[key] = e_
+                if key in coef:
+                    coef[key] += multiplier
+                else:
+                    coef[key] = multiplier
+
+        elif not e_.is_potentially_variable():
+            if compute_values:
+                coef[None] += multiplier * value(e_)
+            else:
+                coef[None] += multiplier * e_
+
+        elif e_.__class__ is EXPR.NegationExpression:
+            arg = e_._args_[0]
+            if arg.is_variable_type():
+                if arg.fixed:
+                    if compute_values:
+                        coef[None] -= multiplier*arg.value
+                    else:
+                        coef[None] -= multiplier*arg
+                else:
+                    id_ = id(arg)
+                    if id_ in varkeys:
+                        key = varkeys[id_]
+                    else:
+                        key = len(idMap) - 1
+                        varkeys[id_] = key
+                        idMap[key] = arg
+                    if key in coef:
+                        coef[key] -= multiplier
+                    else:
+                        coef[key] = -1 * multiplier
+            else:
+                _collect_linear_standard_repn(arg, -1*multiplier, idMap, compute_values, verbose, coef)
+
+        elif e_.__class__ is EXPR.ProductExpression and e_._args_[1].is_variable_type() and (e_._args_[0].__class__ in native_numeric_types or not e_._args_[0].is_potentially_variable()):
+            if compute_values:
+                lhs = value(e_._args_[0])
+            else:
+                lhs = e_._args_[0]
+            if e_._args_[1].fixed:
+                if compute_values:
+                    coef[None] += multiplier*lhs*value(e_._args_[1])
+                else:
+                    coef[None] += multiplier*lhs*e_._args_[1]
+            else:
+                id_ = id(e_._args_[1])
+                if id_ in varkeys:
+                    key = varkeys[id_]
+                else:
+                    key = len(idMap) - 1
+                    varkeys[id_] = key
+                    idMap[key] = e_._args_[1]
+                if key in coef:
+                    coef[key] += multiplier*lhs
+                else:
+                    coef[key] = multiplier*lhs
+
+        else:
+            _collect_linear_standard_repn(e_, multiplier, idMap, compute_values, verbose, coef)
+
+def _linear_collect_linear(exp, multiplier, idMap, compute_values, verbose, coef):
+    varkeys = idMap[None]
+
+    if compute_values:
+        coef[None] += multiplier*value(exp.constant)
+    else:
+        coef[None] += multiplier*exp.constant
+
+    for c,v in zip(exp.linear_coefs, exp.linear_vars):
+        if v.fixed:
+            if compute_values:
+                coef[None] += multiplier*v.value
+            else:
+                coef[None] += multiplier*v
+        else:
+            id_ = id(v)
+            if id_ in varkeys:
+                key = varkeys[id_]
+            else:
+                key = len(idMap) - 1
+                varkeys[id_] = key
+                idMap[key] = v
+            if compute_values:
+                if key in coef:
+                    coef[key] += multiplier*value(c)
+                else:
+                    coef[key] = multiplier*value(c)
+            else:
+                if key in coef:
+                    coef[key] += multiplier*c
+                else:
+                    coef[key] = multiplier*c
+
+def _linear_collect_prod(exp, multiplier, idMap, compute_values, verbose, coef):
+    #
+    # LHS is a numeric value
+    #
+    if exp._args_[0].__class__ in native_numeric_types:
+        if isclose_default(exp._args_[0],0):
+            return
+        _collect_linear_standard_repn(exp._args_[1], multiplier * exp._args_[0], idMap,
+                                  compute_values, verbose, coef)
+    #
+    # LHS is a non-variable expression
+    #
+    elif not exp._args_[0].is_potentially_variable():
+        if compute_values:
+            val = value(exp._args_[0])
+            if isclose_default(val,0):
+                return
+            _collect_linear_standard_repn(exp._args_[1], multiplier * val, idMap,
+                                  compute_values, verbose, coef)
+        else:
+            _collect_linear_standard_repn(exp._args_[1], multiplier*exp._args_[0], idMap,
+                                  compute_values, verbose, coef)
+    #
+    # The LHS should never be variable
+    #
+    elif exp._args_[0].is_fixed():
+        if compute_values:
+            val = value(exp._args_[0])
+            if isclose_default(val,0):
+                return
+            _collect_linear_standard_repn(exp._args_[1], multiplier * val, idMap,
+                                  compute_values, verbose, coef)
+        else:
+            _collect_linear_standard_repn(exp._args_[1], multiplier*exp._args_[0], idMap,
+                                  compute_values, verbose, coef)
+    else:
+        if compute_values:
+            val = value(exp._args_[1])
+            if isclose_default(val,0):
+                return
+            _collect_linear_standard_repn(exp._args_[0], multiplier * val, idMap,
+                                  compute_values, verbose, coef)
+        else:
+            _collect_linear_standard_repn(exp._args_[0], multiplier*exp._args_[1], idMap,
+                                  compute_values, verbose, coef)
+
+def _linear_collect_var(exp, multiplier, idMap, compute_values, verbose, coef):
+    if exp.fixed:
+        if compute_values:
+            coef[None] += multiplier*value(exp)
+        else:
+            coef[None] += multiplier*exp
+    else:
+        id_ = id(exp)
+        if id_ in idMap[None]:
+            key = idMap[None][id_]
+        else:
+            key = len(idMap) - 1
+            idMap[None][id_] = key
+            idMap[key] = exp
+        if key in coef:
+            coef[key] += multiplier
+        else:
+            coef[key] = multiplier
+
+def _linear_collect_negation(exp, multiplier, idMap, compute_values, verbose, coef):
+    _collect_linear_standard_repn(exp._args_[0], -1*multiplier, idMap, compute_values, verbose, coef)
+
+def _linear_collect_identity(exp, multiplier, idMap, compute_values, verbose, coef):
+    arg = exp._args_[0]
+    if arg.__class__ in native_numeric_types:
+        coef[None] += arg
+    elif not arg.is_potentially_variable():
+        if compute_values:
+            coef[None] += value(arg)
+        else:
+            coef[None] += arg
+    else:
+        _collect_linear_standard_repn(exp.expr, multiplier, idMap, compute_values, verbose, coef)
+
+def _linear_collect_branching_expr(exp, multiplier, idMap, compute_values, verbose, coef):
+    if exp._if.__class__ in native_numeric_types:
+        if_val = exp._if
+    else:
+        # If this value is not constant, then the expression is nonlinear.
+        if_val = value(exp._if)
+    if if_val:
+        _collect_linear_standard_repn(exp._then, multiplier, idMap, compute_values, verbose, coef)
+    else:
+        _collect_linear_standard_repn(exp._else, multiplier, idMap, compute_values, verbose, coef)
+
+def _linear_collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
+    if exp._args_[1].__class__ in native_numeric_types:
+        exponent = exp._args_[1]
+    else:
+        # If this value is not constant, then the expression is nonlinear.
+        exponent = value(exp._args_[1])
+
+    if exponent == 0:
+        ceof[None] += multiplier
+    else: #exponent == 1
+        _collect_linear_standard_repn(exp._args_[0], multiplier, idMap, compute_values, verbose, coef)
+
+
+_linear_repn_collectors = {
+    EXPR.ViewSumExpression                      : _linear_collect_sum,
+    EXPR.ProductExpression                      : _linear_collect_prod,
+    EXPR.PowExpression                          : _linear_collect_pow,
+    #EXPR.ReciprocalExpression                   : _linear_collect_reciprocal,
+    EXPR.Expr_if                                : _linear_collect_branching_expr,
+    #EXPR.UnaryFunctionExpression                : _linear_collect_nonl,
+    #EXPR.AbsExpression                          : _linear_collect_nonl,
+    EXPR.NegationExpression                     : _linear_collect_negation,
+    EXPR.LinearExpression                       : _linear_collect_linear,
+    #EXPR.InequalityExpression                   : _linear_collect_comparison,
+    #EXPR.RangedExpression                       : _linear_collect_comparison,
+    #EXPR.EqualityExpression                     : _linear_collect_comparison,
+    #EXPR.ExternalFunctionExpression             : _linear_collect_external_fn,
+    ##EXPR.LinearViewSumExpression               : _collect_linear_sum,
+    ##_ConnectorData          : _collect_linear_connector,
+    ##SimpleConnector         : _collect_linear_connector,
+    ##param._ParamData        : _collect_linear_const,
+    ##param.SimpleParam       : _collect_linear_const,
+    ##param.Param             : _collect_linear_const,
+    ##parameter               : _collect_linear_const,
+    _GeneralVarData                             : _linear_collect_var,
+    SimpleVar                                   : _linear_collect_var,
+    Var                                         : _linear_collect_var,
+    variable                                    : _linear_collect_var,
+    IVariable                                   : _linear_collect_var,
+    _GeneralExpressionData                      : _linear_collect_identity,
+    SimpleExpression                            : _linear_collect_identity,
+    expression                                  : _linear_collect_identity,
+    noclone                                     : _linear_collect_identity,
+    _ExpressionData                             : _linear_collect_identity,
+    Expression                                  : _linear_collect_identity,
+    _GeneralObjectiveData                       : _linear_collect_identity,
+    SimpleObjective                             : _linear_collect_identity,
+    objective                                   : _linear_collect_identity,
+    }
+
+
+def _collect_linear_standard_repn(exp, multiplier, idMap, compute_values, verbose, coefs):
+    try:
+        return _linear_repn_collectors[exp.__class__](exp, multiplier, idMap, compute_values, verbose, coefs)
+    except KeyError:
+        #
+        # These are types that might be extended using duck typing.
+        #
+        if exp.is_variable_type():
+            return _linear_collect_var(exp, multiplier, idMap, compute_values, verbose, coefs)
+        if exp.is_named_expression_type():
+            return _linear_collect_identity(exp, multiplier, idMap, compute_values, verbose, coefs)
+        raise ValueError( "Unexpected expression (type %s)" % type(exp).__name__)
+
+def _generate_linear_standard_repn(expr, idMap=None, compute_values=True, verbose=False, repn=None):
+    #import pdb; pdb.set_trace()
+    coef = {None:0}
+    #
+    # Call recursive logic
+    #
+    ans = _collect_linear_standard_repn(expr, 1, idMap, compute_values, verbose, coef)
+    #
+    # Create the final object here from 'ans'
+    #
+    repn.constant = coef[None]
+    del coef[None]
+    #
+    # Create a list (tuple) of the variables and coefficients
+    #
+    # If we compute the values of constants, then we can skip terms with zero
+    # coefficients
+    #
+    if compute_values:
+        keys = list(key for key in coef if not isclose(coef[key],0))
+    else:
+        keys = list(coef.keys())
+    repn.linear_vars = tuple(idMap[key] for key in keys)
+    repn.linear_coefs = tuple(coef[key] for key in keys)
+
+    return repn
+
+
+
+##-----------------------------------------------------------------------
 ##
+## Functions to preprocess blocks
 ##
+##-----------------------------------------------------------------------
 
 
 def preprocess_block_objectives(block, idMap=None):
