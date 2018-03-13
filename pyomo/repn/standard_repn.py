@@ -357,17 +357,9 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         elif not expr.is_expression_type():
             raise ValueError("Unexpected expression type: "+str(expr))
 
-        """
-        return _generate_standard_repn(expr, 
-                                idMap=idMap,
-                                compute_values=compute_values,
-                                verbose=verbose,
-                                quadratic=quadratic,
-                                repn=repn)
-        """
         degree = expr.polynomial_degree()
 
-        if False and degree == 1:
+        if degree == 1:
             return _generate_linear_standard_repn(expr, 
                                 idMap=idMap,
                                 compute_values=compute_values,
@@ -438,7 +430,7 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
                 ans.constant += multiplier * value(e_)
             else:
                 ans.constant += multiplier * e_
-        elif e_.__class__ is EXPR.ProductExpression and e_._args_[1].is_variable_type() and (e_._args_[0].__class__ in native_numeric_types or not e_._args_[0].is_potentially_variable()):
+        elif e_.__class__ is EXPR.TermExpression:
             if compute_values:
                 lhs = value(e_._args_[0])
             else:
@@ -483,6 +475,29 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
     return ans
 
 #@profile
+def _collect_term(exp, multiplier, idMap, compute_values, verbose, quadratic):
+    #
+    # LHS is a numeric value
+    #
+    if exp._args_[0].__class__ in native_numeric_types:
+        if isclose_default(exp._args_[0],0):
+            return Results()
+        return _collect_standard_repn(exp._args_[1], multiplier * exp._args_[0], idMap, 
+                                  compute_values, verbose, quadratic)
+    #
+    # LHS is a non-variable expression
+    #
+    else:
+        if compute_values:
+            val = value(exp._args_[0])
+            if isclose_default(val,0):
+                return Results()
+            return _collect_standard_repn(exp._args_[1], multiplier * val, idMap, 
+                                  compute_values, verbose, quadratic)
+        else:
+            return _collect_standard_repn(exp._args_[1], multiplier*exp._args_[0], idMap, 
+                                  compute_values, verbose, quadratic)
+
 def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     # LHS is a numeric value
@@ -793,6 +808,7 @@ def _collect_linear_sum(exp, multiplier, idMap, compute_values, verbose, quadrat
 _repn_collectors = {
     EXPR.ViewSumExpression                      : _collect_sum,
     EXPR.ProductExpression                      : _collect_prod,
+    EXPR.TermExpression                         : _collect_term,
     EXPR.PowExpression                          : _collect_pow,
     EXPR.ReciprocalExpression                   : _collect_reciprocal,
     EXPR.Expr_if                                : _collect_branching_expr,
@@ -954,7 +970,7 @@ def _linear_collect_sum(exp, multiplier, idMap, compute_values, verbose, coef):
             else:
                 _collect_linear_standard_repn(arg, -1*multiplier, idMap, compute_values, verbose, coef)
 
-        elif e_.__class__ is EXPR.ProductExpression and e_._args_[1].is_variable_type() and (e_._args_[0].__class__ in native_numeric_types or not e_._args_[0].is_potentially_variable()):
+        elif e_.__class__ is EXPR.TermExpression:
             if compute_values:
                 lhs = value(e_._args_[0])
             else:
@@ -1012,6 +1028,29 @@ def _linear_collect_linear(exp, multiplier, idMap, compute_values, verbose, coef
                     coef[key] += multiplier*c
                 else:
                     coef[key] = multiplier*c
+
+def _linear_collect_term(exp, multiplier, idMap, compute_values, verbose, coef):
+    #
+    # LHS is a numeric value
+    #
+    if exp._args_[0].__class__ in native_numeric_types:
+        if isclose_default(exp._args_[0],0):
+            return
+        _collect_linear_standard_repn(exp._args_[1], multiplier * exp._args_[0], idMap,
+                                  compute_values, verbose, coef)
+    #
+    # LHS is a non-variable expression
+    #
+    else:
+        if compute_values:
+            val = value(exp._args_[0])
+            if isclose_default(val,0):
+                return
+            _collect_linear_standard_repn(exp._args_[1], multiplier * val, idMap,
+                                  compute_values, verbose, coef)
+        else:
+            _collect_linear_standard_repn(exp._args_[1], multiplier*exp._args_[0], idMap,
+                                  compute_values, verbose, coef)
 
 def _linear_collect_prod(exp, multiplier, idMap, compute_values, verbose, coef):
     #
@@ -1120,6 +1159,7 @@ def _linear_collect_pow(exp, multiplier, idMap, compute_values, verbose, quadrat
 _linear_repn_collectors = {
     EXPR.ViewSumExpression                      : _linear_collect_sum,
     EXPR.ProductExpression                      : _linear_collect_prod,
+    EXPR.TermExpression                         : _linear_collect_term,
     EXPR.PowExpression                          : _linear_collect_pow,
     #EXPR.ReciprocalExpression                   : _linear_collect_reciprocal,
     EXPR.Expr_if                                : _linear_collect_branching_expr,
