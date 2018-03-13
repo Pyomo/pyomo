@@ -769,7 +769,13 @@ class linear_constraint(_MutableBoundsConstraintMixin,
     def terms(self, terms):
         """Set the terms in the body of this constraint
         using an iterable of (variable, coefficient) tuples"""
-        self._variables, self._coefficients = zip(*terms)
+        transpose = tuple(zip(*terms))
+        if len(transpose) == 2:
+            self._variables, self._coefficients = transpose
+        else:
+            assert transpose == ()
+            self._variables = ()
+            self._coefficients = ()
 
     #
     # Override a the default __call__ method on IConstraint
@@ -800,20 +806,22 @@ class linear_constraint(_MutableBoundsConstraintMixin,
     # _linear_canonical_form flag is True
     #
 
-    def canonical_form(self):
+    def canonical_form(self, compute_values=True):
         from pyomo.repn.standard_repn import \
             StandardRepn
         variables = []
         coefficients = []
         constant = 0
         for v, c in self.terms:
+            if compute_values:
+                c = value(c)
             if v.is_expression_type():
                 v = v.expr
             if not v.fixed:
                 variables.append(v)
                 coefficients.append(c)
             else:
-                constant += value(c) * v()
+                constant += c * v()
         repn = StandardRepn()
         repn.linear_vars = tuple(variables)
         repn.linear_coefs = tuple(coefficients)

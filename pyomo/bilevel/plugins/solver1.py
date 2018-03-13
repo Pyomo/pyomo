@@ -51,7 +51,7 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
             gdp_xfrm = TransformationFactory("gdp.bilinear")
             gdp_xfrm.apply_to(self._instance)
             mip_xfrm = TransformationFactory("gdp.bigm")
-            mip_xfrm.apply_to(self._instance, default_bigM=self.options.get('bigM',100000))
+            mip_xfrm.apply_to(self._instance, bigM=self.options.get('bigM',100000))
         #
         # Solve with a specified solver
         #

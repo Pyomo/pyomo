@@ -40,6 +40,11 @@ def complements(a, b):
 class _ComplementarityData(_BlockData):
 
     def _canonical_expression(self, e):
+        # Note: as the complimentarity component maintains references to
+        # the original expression (e), it is NOT safe or valid to bypass
+        # the clone checks: bypassing the check can result in corrupting
+        # the original expressions and will result in mind-boggling
+        # pprint output.
         e_ = None
         if e.__class__ is EXPR.EqualityExpression:
             if e.arg(1).is_fixed():

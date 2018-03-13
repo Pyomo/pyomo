@@ -92,9 +92,22 @@ class IBlockStorage(IComponent,
         block will be deepcopied, otherwise a reference to
         the original component is retained.
         """
-        new_block = copy.deepcopy(
-            self, {'__block_scope__': {id(self):True, id(None):False}} )
-        new_block._parent = None
+        save_parent, self._parent = self._parent, None
+        try:
+            new_block = copy.deepcopy(
+                self, {
+                    '__block_scope__': {id(self): True, id(None): False},
+                    '__paranoid__': False,
+                    })
+        except:
+            new_block = copy.deepcopy(
+                self, {
+                    '__block_scope__': {id(self): True, id(None): False},
+                    '__paranoid__': True,
+                    })
+        finally:
+            self._parent = save_parent
+
         return new_block
 
     @abc.abstractmethod

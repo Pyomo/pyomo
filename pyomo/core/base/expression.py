@@ -385,9 +385,9 @@ class Expression(IndexedComponent):
             ostream,
             prefix+tab,
             ((k,v) for k,v in iteritems(self._data)),
-            ( "Key","Value" ),
+            ( "Value", ),
             lambda k, v: \
-               [k, "Undefined" if v.expr is None else v()])
+               ["Undefined" if v.expr is None else v()])
 
     #
     # A utility to extract all index-value pairs defining this

@@ -429,6 +429,16 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     (vardata,create_symbol_func(symbol_map,
                                                 vardata,
                                                 labeler)))
+        #
+        # WEH - TODO:  See if this is faster
+        #
+        #all_blocks = list( model.block_data_objects(
+        #        active=True, sort=sortOrder) )
+        #variable_list = list( model.component_data_objects(
+        #        Var, sort=sortOrder) )
+        #variable_label_pairs = list(
+        #    (vardata, create_symbol_func(symbol_map, vardata, labeler))
+        #    for vardata in variable_list )
 
         variable_symbol_map.addSymbols(variable_label_pairs)
 

@@ -556,12 +556,19 @@ class ProblemWriter_bar(AbstractProblemWriter):
         #for block in all_blocks_list:
         #    tmp = active_components_data_var[id(block)] = \
         #          list(obj for obj in block.component_data_objects(Var,
-        #                                                           active=True,
         #                                                           sort=sorter,
         #                                                           descend_into=False))
-            #create_symbols_func(symbol_map, tmp, labeler)
+        #    create_symbols_func(symbol_map, tmp, labeler)
+
+            # GAH: Not sure this is necessary, and also it would break for
+            #      non-mutable indexed params so I am commenting out for now.
+            #for param_data in active_components_data(block, Param, sort=sorter):
+                #instead of checking if param_data._mutable:
+                #if not param_data.is_constant():
+                #    create_symbol_func(symbol_map, param_data, labeler)
 
         #symbol_map_variable_ids = set(symbol_map.byObject.keys())
+        #object_symbol_dictionary = symbol_map.byObject
 
         #
         # Go through the objectives and constraints and generate

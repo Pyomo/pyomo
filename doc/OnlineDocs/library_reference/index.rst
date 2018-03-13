@@ -21,10 +21,12 @@ documentation describes *Beta* functionality.
 
 .. toctree::
    :maxdepth: 1
+
    kernel/index.rst
 
 Finally, Pyomo includes a number of third-party extensions:
 
 .. toctree::
    :maxdepth: 1
+
    contrib.rst

@@ -1,0 +1,101 @@
+# -*- coding: UTF-8 -*-
+"""Tests disjunct fixing."""
+import pyutilib.th as unittest
+from pyomo.environ import (Block,
+                           Constraint, ConcreteModel, TransformationFactory,
+                           RangeSet, NonNegativeReals)
+from pyomo.gdp import Disjunct, Disjunction, GDP_Error
+
+
+class TestFixDisjuncts(unittest.TestCase):
+    """Tests fixing of disjuncts."""
+
+    def test_fix_disjunct(self):
+        """Test for deactivation of trivial constraints."""
+        m = ConcreteModel()
+        m.d1 = Disjunct()
+        m.d2 = Disjunct()
+        m.d2.c = Constraint()
+        m.d = Disjunction(expr=[m.d1, m.d2])
+        m.d1.indicator_var.set_value(1)
+        m.d2.indicator_var.set_value(0)
+
+        TransformationFactory('gdp.fix_disjuncts').apply_to(m)
+        self.assertTrue(m.d1.indicator_var.fixed)
+        self.assertTrue(m.d1.active)
+        self.assertTrue(m.d2.indicator_var.fixed)
+        self.assertTrue(m.d2.active)  # HACK for vars in deactivated blocks
+        self.assertEqual(m.d1.type(), Block)
+        self.assertEqual(m.d2.type(), Block)
+        self.assertFalse(m.d2.c.active)
+
+    def test_unallowable_type(self):
+        m = ConcreteModel()
+        m.c = Constraint()
+        with self.assertRaises(GDP_Error):
+            TransformationFactory('gdp.fix_disjuncts').apply_to(m.c)
+
+    def test_inactive_target(self):
+        m = ConcreteModel()
+        m.b = Block()
+        m.b.deactivate()
+        TransformationFactory('gdp.fix_disjuncts').apply_to(m.b)
+
+    def test_indexed_target(self):
+        m = ConcreteModel()
+        m.s = RangeSet(2)
+        m.b = Block(m.s)
+        m.b[1].bb = Block()
+        TransformationFactory('gdp.fix_disjuncts').apply_to(m.b)
+
+    def test_disjunction_target(self):
+        m = ConcreteModel()
+        m.d1 = Disjunct()
+        m.d2 = Disjunct()
+        m.d = Disjunction(expr=[m.d1, m.d2])
+        m.d1.indicator_var.set_value(1)
+        m.d2.indicator_var.set_value(0)
+
+        TransformationFactory('gdp.fix_disjuncts').apply_to(m.d)
+        self.assertTrue(m.d1.indicator_var.fixed)
+        self.assertTrue(m.d1.active)
+        self.assertTrue(m.d2.indicator_var.fixed)
+        self.assertTrue(m.d2.active)  # HACK for vars in deactivated blocks
+        self.assertEqual(m.d1.type(), Block)
+        self.assertEqual(m.d2.type(), Block)
+
+    def test_xor_not_sum_to_1(self):
+        m = ConcreteModel()
+        m.d1 = Disjunct()
+        m.d2 = Disjunct()
+        m.d = Disjunction(expr=[m.d1, m.d2], xor=True)
+        m.d1.indicator_var.set_value(1)
+        m.d2.indicator_var.set_value(1)
+        with self.assertRaises(GDP_Error):
+            TransformationFactory('gdp.fix_disjuncts').apply_to(m)
+
+    def test_disjunction_not_sum_to_1(self):
+        m = ConcreteModel()
+        m.d1 = Disjunct()
+        m.d2 = Disjunct()
+        m.d = Disjunction(expr=[m.d1, m.d2], xor=False)
+        m.d1.indicator_var.set_value(0)
+        m.d2.indicator_var.set_value(0)
+        with self.assertRaises(GDP_Error):
+            TransformationFactory('gdp.fix_disjuncts').apply_to(m)
+
+    def test_disjunct_not_binary(self):
+        m = ConcreteModel()
+        m.d1 = Disjunct()
+        m.d2 = Disjunct()
+        m.d = Disjunction(expr=[m.d1, m.d2])
+        m.d1.indicator_var.domain = NonNegativeReals
+        m.d2.indicator_var.domain = NonNegativeReals
+        m.d1.indicator_var.set_value(0.5)
+        m.d2.indicator_var.set_value(0.5)
+        with self.assertRaises(ValueError):
+            TransformationFactory('gdp.fix_disjuncts').apply_to(m)
+
+
+if __name__ == '__main__':
+    unittest.main()

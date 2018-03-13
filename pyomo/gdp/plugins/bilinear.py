@@ -19,7 +19,7 @@ from pyomo.core.base.var import _VarData
 from pyomo.gdp import *
 from pyomo.repn import generate_standard_repn
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.gdp')
 
 
 class Bilinear_Transformation(Transformation):
