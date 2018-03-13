@@ -216,7 +216,7 @@ class _DisjunctionData(ActiveComponentData):
             # The user was lazy and gave us a single constraint expression
             try:
                 isexpr = e.is_expression()
-            except AttribureError:
+            except AttributeError:
                 isexpr = False
             if isexpr and e.is_relational():
                 comp = self.parent_component()
