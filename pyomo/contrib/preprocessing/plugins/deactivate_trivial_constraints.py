@@ -1,4 +1,4 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 """Transformation to deactivate trivial constraints."""
 import textwrap
 from math import fabs
@@ -42,6 +42,7 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
         tmp = kwargs.pop('tmp', False)
         ignore_infeasible = kwargs.pop('ignore_infeasible', False)
         tol = kwargs.pop('tolerance', 1E-13)
+        trivial = kwargs.pop('return_trivial', [])
         if tmp and not hasattr(instance, '_tmp_trivial_deactivated_constrs'):
             instance._tmp_trivial_deactivated_constrs = ComponentSet()
 
@@ -85,6 +86,7 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
             # Constraint is not infeasible. Deactivate it.
             if tmp:
                 instance._tmp_trivial_deactivated_constrs.add(constr)
+            trivial.append(constr)
             constr.deactivate()
 
     def revert(self, instance):
