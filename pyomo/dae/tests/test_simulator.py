@@ -909,7 +909,7 @@ class TestExpressionCheckers(unittest.TestCase):
         self.assertIs(type(temp[1]), EXPR.ProductExpression)
 
         self.assertIs(type(temp[1].arg(1).arg(0)), EXPR.GetItemExpression)
-        self.assertIs(m.y, temp[1].arg(1).arg(1).arg(0).arg(1))
+        self.assertIs(m.y, temp[1].arg(1).arg(1).arg(1))
         self.assertIs(m.z, temp[1].arg(1).arg(2))
 
         e = 2 + 5 * m.y - m.z == m.v[t]
