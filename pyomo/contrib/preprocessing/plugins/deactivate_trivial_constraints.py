@@ -37,7 +37,9 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
                 reversion of the transformation
             ignore_infeasible: True to skip over trivial constraints that are
                 infeasible instead of raising a ValueError.
-            tol: tolerance on constraint violations
+            return_trivial: a list to which the deactivated trivial
+                constraints are appended (side effect)
+            tolerance: tolerance on constraint violations
         """
         tmp = kwargs.pop('tmp', False)
         ignore_infeasible = kwargs.pop('ignore_infeasible', False)
