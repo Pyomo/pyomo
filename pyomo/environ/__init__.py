@@ -44,6 +44,7 @@ _packages = [
 _optional_packages = set([
     'pyomo.contrib.example',
     'pyomo.contrib.preprocessing',
+    'pyomo.contrib.mindtpy',
     'pyomo.contrib.gdpopt'])
 
 
