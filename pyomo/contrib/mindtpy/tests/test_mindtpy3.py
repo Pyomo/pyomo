@@ -25,13 +25,13 @@ class TestMindtPy(unittest.TestCase):
         """Test the MindtPy implementation."""
         with SolverFactory('mindtpy') as opt:
             print('\n Solving problem with selected strategy')
-
+            mip_options = {'threads':4}
             opt.solve(model
                 , strategy='OA'
                 , init_strategy = 'inintial_binary'
                 , mip = 'cplex'
                 , iterlim = 13
-                # , mip_kwargs = {'threads':4}
+                , mip_kwargs = mip_options
                 )
             # model.pprint()
     

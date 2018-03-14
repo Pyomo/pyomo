@@ -37,7 +37,7 @@ from pyomo.opt.base import IOptSolver
 from pyomo.repn.canonical_repn import generate_canonical_repn
 from pyomo.opt.results import ProblemSense, SolverResults
 
-from pyomo.core.base import TransformationFactory
+from pyomo.core import TransformationFactory
 from pyomo.core.base import ComponentMap
 
 from six.moves import range
@@ -441,7 +441,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             v.domain = NonNegativeReals
             v.setlb(0)
             v.setub(1)
-        results = self.nlp_solver.solve(self.m, **self.nlp_solver_kwargs)
+        results = self.nlp_solver.solve(self.m, options=self.nlp_solver_kwargs)
         for v in self.binary_vars:
             v.domain = Binary
         subprob_terminate_cond = results.solver.termination_condition
@@ -490,7 +490,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             expr=sum(v for v in self.binary_vars), sense=maximize)
         getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
         getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
-        results = self.mip_solver.solve(m, **self.mip_solver_kwargs)
+        results = self.mip_solver.solve(m, options=self.mip_solver_kwargs)
         getattr(m, 'ipopt_zL_out', _DoNothing()).activate()
         getattr(m, 'ipopt_zU_out', _DoNothing()).activate()
         m.del_component(m.MindtPy_max_binary_obj)
@@ -636,7 +636,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
         # m.pprint() #print oa master problem for debugging
         results = self.mip_solver.solve(m, load_solutions=False,
-                                        **self.mip_solver_kwargs)
+                                        options=self.mip_solver_kwargs)
         master_terminate_cond = results.solver.termination_condition
         if master_terminate_cond is tc.infeasibleOrUnbounded:
             # Linear solvers will sometimes tell me that it's infeasible or
@@ -647,7 +647,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             # This solver option is specific to Gurobi.
             self.mip_solver.options['DualReductions'] = 0
             results = self.mip_solver.solve(m, load_solutions=False,
-                                            **self.mip_solver_kwargs)
+                                            options=self.mip_solver_kwargs)
             master_terminate_cond = results.solver.termination_condition
             self.mip_solver.options.update(old_options)
         self.obj.activate()
@@ -702,7 +702,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             c.deactivate()
         m.MindtPy_linear_cuts.activate()
         results = self.mip_solver.solve(m, load_solutions=False,
-                                        **self.mip_solver_kwargs)
+                                        options=self.mip_solver_kwargs)
         master_terminate_cond = results.solver.termination_condition
         if master_terminate_cond is tc.infeasibleOrUnbounded:
             # Linear solvers will sometimes tell that it's infeasible or
@@ -713,7 +713,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             # This solver option is specific to Gurobi.
             self.mip_solver.options['DualReductions'] = 0
             results = self.mip_solver.solve(m, load_solutions=False,
-                                            **self.mip_solver_kwargs)
+                                            options=self.mip_solver_kwargs)
             master_terminate_cond = results.solver.termination_condition
             self.mip_solver.options.update(old_options)
         for c in self.nonlinear_constraints:
@@ -781,7 +781,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
         # m.pprint() #print psc master problem for debugging
         results = self.mip_solver.solve(m, load_solutions=False,
-                                        **self.mip_solver_kwargs)
+                                        options=self.mip_solver_kwargs)
         for c in self.nonlinear_constraints:
             c.activate()
         m.MindtPy_linear_cuts.deactivate()
@@ -848,7 +848,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
         # m.pprint() #print gbd master problem for debugging
         results = self.mip_solver.solve(m, load_solutions=False,
-                                        **self.mip_solver_kwargs)
+                                        options=self.mip_solver_kwargs)
         master_terminate_cond = results.solver.termination_condition
         if master_terminate_cond is tc.infeasibleOrUnbounded:
             # Linear solvers will sometimes tell me that it is infeasible or
@@ -858,7 +858,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             # This solver option is specific to Gurobi.
             self.mip_solver.options['DualReductions'] = 0
             results = self.mip_solver.solve(m, load_solutions=False,
-                                            **self.mip_solver_kwargs)
+                                            options=self.mip_solver_kwargs)
             master_terminate_cond = results.solver.termination_condition
             self.mip_solver.options.update(old_options)
         if not leave_linear_active:
@@ -940,12 +940,12 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             m.tmp_duals[c] = sign_adjust*max(0,
                                              sign_adjust*(rhs - value(c.body)))
             # TODO check sign_adjust
-        t = TransformationFactory('core.deactivate_trivial_constraints')
+        t = TransformationFactory('contrib.deactivate_trivial_constraints')
         t.apply_to(m, tmp=True, ignore_infeasible=True)
         # Solve the NLP
         # m.pprint() # print nlp problem for debugging
         results = self.nlp_solver.solve(m, load_solutions=False,
-                                        **self.nlp_solver_kwargs)
+                                        options=self.nlp_solver_kwargs)
         t.revert(m)
         for v in self.binary_vars:
             v.unfix()
@@ -1055,7 +1055,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
                 v.fix(0)
         # m.pprint()  #print nlp feasibility problem for debugging
         feas_soln = self.nlp_solver.solve(
-            m, load_solutions=False, **self.nlp_solver_kwargs)
+            m, load_solutions=False, options=self.nlp_solver_kwargs)
         subprob_terminate_cond = feas_soln.solver.termination_condition
         if subprob_terminate_cond is tc.optimal:
             m.solutions.load_from(feas_soln)
@@ -1101,7 +1101,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             c.deactivate()
         m.MindtPy_linear_cuts.activate()
         results = self.mip_solver.solve(m, load_solutions=False,
-                                        **self.mip_solver_kwargs)
+                                        options=self.mip_solver_kwargs)
         for v in self.binary_vars:
             v.domain = Binary
         for c in self.nonlinear_constraints:
