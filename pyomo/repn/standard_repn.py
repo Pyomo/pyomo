@@ -681,7 +681,7 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
             exponent = exp._args_[1]
     else:
         res = _collect_standard_repn(exp._args_[1], 1, idMap, compute_values, verbose, quadratic)
-        if not isclose_const(res.nonl,0) or len(res.linear) > 0 or len(res.quadratic) > 0:
+        if not isclose_const(res.nonl,0) or len(res.linear) > 0 or (quadratic and len(res.quadratic) > 0):
             # The exponent is variable, so this is a nonlinear expression
             return Results(nonl=multiplier*exp)
         exponent = res.constant
@@ -733,7 +733,7 @@ def _collect_branching_expr(exp, multiplier, idMap, compute_values, verbose, qua
             return Results(nonl=multiplier*exp)
     else:
         res = _collect_standard_repn(exp._if, 1, idMap, compute_values, verbose, quadratic)
-        if not isclose_const(res.nonl,0) or len(res.linear) > 0 or len(res.quadratic) > 0:
+        if not isclose_const(res.nonl,0) or len(res.linear) > 0 or (quadratic and len(res.quadratic) > 0):
             return Results(nonl=multiplier*exp)
         else:
             if_val = res.constant
@@ -744,7 +744,7 @@ def _collect_branching_expr(exp, multiplier, idMap, compute_values, verbose, qua
 
 def _collect_nonl(exp, multiplier, idMap, compute_values, verbose, quadratic):
     res = _collect_standard_repn(exp._args_[0], 1, idMap, compute_values, verbose, quadratic)
-    if not isclose_const(res.nonl,0) or len(res.linear) > 0 or len(res.quadratic) > 0:
+    if not isclose_const(res.nonl,0) or len(res.linear) > 0 or (quadratic and len(res.quadratic) > 0):
         return Results(nonl=multiplier*exp)
     return Results(constant=multiplier*exp._apply_operation([res.constant]))
 
