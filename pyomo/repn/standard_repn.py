@@ -898,10 +898,16 @@ def _collect_standard_repn(exp, multiplier, idMap,
 
 
 def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None):
-    #
-    # Call recursive logic
-    #
-    ans = _collect_standard_repn(expr, 1, idMap, compute_values, verbose, quadratic)
+    if expr.__class__ is EXPR.ViewSumExpression:
+        #
+        # This is the common case, so start collecting the sum
+        #
+        ans = _collect_sum(expr, 1, idMap, compute_values, verbose, quadratic)
+    else:
+        #
+        # Call generic recursive logic
+        #
+        ans = _collect_standard_repn(expr, 1, idMap, compute_values, verbose, quadratic)
     #
     # Create the final object here from 'ans'
     #
