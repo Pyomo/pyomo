@@ -2811,8 +2811,7 @@ def _decompose_linear_terms(expr, multiplier=1):
     elif expr.is_variable_type():
         yield (multiplier,expr)
     elif expr.__class__ is TermExpression:
-        for term in _decompose_linear_terms(expr._args_[1], multiplier*expr._args_[0]):
-            yield term
+        yield (multiplier*expr._args_[0], expr._args_[1])
     elif expr.__class__ is ProductExpression:
         if expr._args_[0].__class__ in native_numeric_types or not expr._args_[0].is_potentially_variable():
             for term in _decompose_linear_terms(expr._args_[1], multiplier*expr._args_[0]):
