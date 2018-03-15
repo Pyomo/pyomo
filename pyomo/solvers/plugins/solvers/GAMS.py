@@ -457,7 +457,9 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
 
         if extract_dual:
             for c in model.component_data_objects(Constraint, active=True):
-                if c.body.is_fixed():
+                if c.body.is_fixed() or \
+                   (not (c.has_lb() or c.has_ub())):
+                    # the constraint was not sent to GAMS
                     continue
                 sym = symbolMap.getSymbol(c)
                 if c.equality:
@@ -972,7 +974,9 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         if extract_dual:
             for c in model.component_data_objects(Constraint, active=True):
-                if c.body.is_fixed():
+                if (c.body.is_fixed()) or \
+                   (not (c.has_lb() or c.has_ub())):
+                    # the constraint was not sent to GAMS
                     continue
                 sym = symbolMap.getSymbol(c)
                 if c.equality:
