@@ -283,8 +283,10 @@ class CPLEXDirect(DirectSolver):
             self._solver_model = self._cplex.Cplex()
         except Exception:
             e = sys.exc_info()[1]
-            msg = ('Unable to create CPLEX model. Have you installed the Python bindings for CPLEX?\n\n\t' +
-                   'Error message: {0}'.format(e))
+            msg = ("Unable to create CPLEX model. "
+                   "Have you installed the Python "
+                   "bindings for CPLEX?\n\n\t"+
+                   "Error message: {0}".format(e))
             raise Exception(msg)
 
         self._add_block(model)
@@ -293,12 +295,15 @@ class CPLEXDirect(DirectSolver):
             if n_ref != 0:
                 if var.fixed:
                     if not self._output_fixed_variable_bounds:
-                        raise ValueError("Encountered a fixed variable (%s) inside an active objective "
-                                         "or constraint expression on model %s, which is usually indicative of "
-                                         "a preprocessing error. Use the IO-option 'output_fixed_variable_bounds=True' "
-                                         "to suppress this error and fix the variable by overwriting its bounds in "
-                                         "the Gurobi instance."
-                                         % (var.name, self._pyomo_model.name,))
+                        raise ValueError(
+                            "Encountered a fixed variable (%s) inside "
+                            "an active objective or constraint "
+                            "expression on model %s, which is usually "
+                            "indicative of a preprocessing error. Use "
+                            "the IO-option 'output_fixed_variable_bounds=True' "
+                            "to suppress this error and fix the variable "
+                            "by overwriting its bounds in the CPLEX instance."
+                            % (var.name, self._pyomo_model.name,))
 
     def _add_constraint(self, con):
         if not con.active:
@@ -311,19 +316,26 @@ class CPLEXDirect(DirectSolver):
         conname = self._symbol_map.getSymbol(con, self._labeler)
 
         if con._linear_canonical_form:
-            cplex_expr, referenced_vars = self._get_expr_from_pyomo_repn(con.canonical_form(),
-                                                                         self._max_constraint_degree)
+            cplex_expr, referenced_vars = self._get_expr_from_pyomo_repn(
+                con.canonical_form(),
+                self._max_constraint_degree)
         elif isinstance(con, LinearCanonicalRepn):
-            cplex_expr, referenced_vars = self._get_expr_from_pyomo_repn(con, self._max_constraint_degree)
+            cplex_expr, referenced_vars = self._get_expr_from_pyomo_repn(
+                con,
+                self._max_constraint_degree)
         else:
-            cplex_expr, referenced_vars = self._get_expr_from_pyomo_expr(con.body, self._max_constraint_degree)
+            cplex_expr, referenced_vars = self._get_expr_from_pyomo_expr(
+                con.body,
+                self._max_constraint_degree)
 
         if con.has_lb():
             if not is_fixed(con.lower):
-                raise ValueError('Lower bound of constraint {0} is not constant.'.format(con))
+                raise ValueError("Lower bound of constraint {0} "
+                                 "is not constant.".format(con))
         if con.has_ub():
             if not is_fixed(con.upper):
-                raise ValueError('Upper bound of constraint {0} is not constant.'.format(con))
+                raise ValueError("Upper bound of constraint {0} "
+                                 "is not constant.".format(con))
 
         if con.equality:
             my_sense = 'E'
@@ -345,21 +357,31 @@ class CPLEXDirect(DirectSolver):
             my_rhs = [value(con.upper) - cplex_expr.offset]
             my_range = []
         else:
-            raise ValueError('Constraint does not have a lower or an upper bound: {0} \n'.format(con))
+            raise ValueError("Constraint does not have a lower "
+                             "or an upper bound: {0} \n".format(con))
 
         if len(cplex_expr.q_coefficients) == 0:
-            self._solver_model.linear_constraints.add(lin_expr=[[cplex_expr.variables, cplex_expr.coefficients]],
-                                                      senses=my_sense, rhs=my_rhs, range_values=my_range,
-                                                      names=[conname])
+            self._solver_model.linear_constraints.add(
+                lin_expr=[[cplex_expr.variables,
+                           cplex_expr.coefficients]],
+                senses=my_sense,
+                rhs=my_rhs,
+                range_values=my_range,
+                names=[conname])
         else:
             if my_sense == 'R':
-                raise ValueError('The CPLEXDirect interface does not support quadratic ' +
-                                 'range constraints: {0}'.format(con))
-            self._solver_model.quadratic_constraints.add(lin_expr=[cplex_expr.variables, cplex_expr.coefficients],
-                                                         quad_expr=[cplex_expr.q_variables1,
-                                                                    cplex_expr.q_variables2,
-                                                                    cplex_expr.q_coefficients],
-                                                         sense=my_sense, rhs=my_rhs[0], name=conname)
+                raise ValueError("The CPLEXDirect interface does not "
+                                 "support quadratic range constraints: "
+                                 "{0}".format(con))
+            self._solver_model.quadratic_constraints.add(
+                lin_expr=[cplex_expr.variables,
+                          cplex_expr.coefficients],
+                quad_expr=[cplex_expr.q_variables1,
+                           cplex_expr.q_variables2,
+                           cplex_expr.q_coefficients],
+                sense=my_sense,
+                rhs=my_rhs[0],
+                name=conname)
 
         for var in referenced_vars:
             self._referenced_variables[var] += 1
@@ -378,7 +400,8 @@ class CPLEXDirect(DirectSolver):
         elif level == 2:
             sos_type = self._solver_model.SOS.type.SOS2
         else:
-            raise ValueError('Solver does not support SOS level {0} constraints'.format(level))
+            raise ValueError("Solver does not support SOS "
+                             "level {0} constraints".format(level))
 
         cplex_vars = []
         weights = []
