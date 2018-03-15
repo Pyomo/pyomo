@@ -1191,7 +1191,7 @@ def _linear_collect_branching_expr(exp, multiplier, idMap, compute_values, verbo
     else:
         _collect_linear_standard_repn(exp._else, multiplier, idMap, compute_values, verbose, coef)
 
-def _linear_collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
+def _linear_collect_pow(exp, multiplier, idMap, compute_values, verbose, coef):
     if exp._args_[1].__class__ in native_numeric_types:
         exponent = exp._args_[1]
     else:
@@ -1199,7 +1199,7 @@ def _linear_collect_pow(exp, multiplier, idMap, compute_values, verbose, quadrat
         exponent = value(exp._args_[1])
 
     if exponent == 0:
-        ceof[None] += multiplier
+        coef[None] += multiplier
     else: #exponent == 1
         _collect_linear_standard_repn(exp._args_[0], multiplier, idMap, compute_values, verbose, coef)
 
