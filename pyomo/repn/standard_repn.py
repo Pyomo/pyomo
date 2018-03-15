@@ -436,7 +436,28 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
     varkeys = idMap[None]
 
     for e_ in itertools.islice(exp._args_, exp.nargs()):
-        if e_.__class__ in native_numeric_types:
+        if e_.__class__ is EXPR.TermExpression:
+            lhs, v = e_._args_
+            if compute_values and not lhs.__class__ in native_numeric_types:
+                lhs = value(lhs)
+            if v.fixed:
+                if compute_values:
+                    ans.constant += multiplier*lhs*value(v)
+                else:
+                    ans.constant += multiplier*lhs*v
+            else:
+                id_ = id(v)
+                if id_ in varkeys:
+                    key = varkeys[id_]
+                else:
+                    key = len(idMap) - 1
+                    varkeys[id_] = key
+                    idMap[key] = v
+                if key in ans.linear:
+                    ans.linear[key] += multiplier*lhs
+                else:
+                    ans.linear[key] = multiplier*lhs
+        elif e_.__class__ in native_numeric_types:
             ans.constant += multiplier*e_
         elif e_.is_variable_type():
             if e_.fixed:
@@ -461,27 +482,6 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
                 ans.constant += multiplier * value(e_)
             else:
                 ans.constant += multiplier * e_
-        elif e_.__class__ is EXPR.TermExpression:
-            lhs = e_._args_[0]
-            if compute_values and not lhs.__class__ in native_numeric_types:
-                lhs = value(lhs)
-            if e_._args_[1].fixed:
-                if compute_values:
-                    ans.constant += multiplier*lhs*value(e_._args_[1])
-                else:
-                    ans.constant += multiplier*lhs*e_._args_[1]
-            else:
-                id_ = id(e_._args_[1])
-                if id_ in varkeys:
-                    key = varkeys[id_]
-                else:
-                    key = len(idMap) - 1
-                    varkeys[id_] = key
-                    idMap[key] = e_._args_[1]
-                if key in ans.linear:
-                    ans.linear[key] += multiplier*lhs
-                else:
-                    ans.linear[key] = multiplier*lhs
         else:
             res_ = _collect_standard_repn(e_, multiplier, idMap, 
                                       compute_values, verbose, quadratic)
