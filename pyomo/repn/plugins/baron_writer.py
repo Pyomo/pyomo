@@ -16,6 +16,7 @@ import logging
 import itertools
 from six import iteritems, StringIO, iterkeys
 from six.moves import xrange
+from math import isclose
 
 import pyomo.util.plugin
 from pyomo.opt import ProblemFormat
@@ -76,7 +77,10 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
         if node.__class__ is EXPR.ProductExpression:
             return "{0} * {1}".format(tmp[0], tmp[1])
         elif node.__class__ is EXPR.TermExpression:
-            return "{0} * {1}".format(tmp[0], tmp[1])
+            if tmp[0] == '-1':
+                return EXPR.NegationExpression._to_string(None, [tmp[1]], None, self.smap, True)
+            else:
+                return "{0} * {1}".format(tmp[0], tmp[1])
         elif node.__class__ is EXPR.PowExpression:
             return "{0} ^ {1}".format(tmp[0], tmp[1])
         else:

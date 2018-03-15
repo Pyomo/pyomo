@@ -561,7 +561,7 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     # LHS is potentially variable, but it turns out to be a constant
     # because the variables were fixed.
     #
-    if lhs_nonl_None and len(lhs.linear) == 0 and len(lhs.quadratic) == 0:
+    if lhs_nonl_None and len(lhs.linear) == 0 and (not quadratic or len(lhs.quadratic) == 0):
         if isclose(lhs.constant,0):
             return Results()
         if compute_values:
@@ -591,7 +591,7 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     # If RHS is zero, then return an empty results
     #
-    if rhs_nonl_None and len(rhs.linear) == 0 and len(rhs.quadratic) == 0 and isclose(rhs.constant,0):
+    if rhs_nonl_None and len(rhs.linear) == 0 and (not quadratic or len(rhs.quadratic) == 0) and isclose(rhs.constant,0):
         return Results()
     #
     # If either the LHS or RHS are nonlinear, then simply return the nonlinear expression
@@ -715,7 +715,7 @@ def _collect_reciprocal(exp, multiplier, idMap, compute_values, verbose, quadrat
             denom = 1.0 * exp._args_[0]
     else:
         res =_collect_standard_repn(exp._args_[0], 1, idMap, compute_values, verbose, quadratic)
-        if not isclose_const(res.nonl,0) or len(res.linear) > 0 or len(res.quadratic) > 0:
+        if not isclose_const(res.nonl,0) or len(res.linear) > 0 or (quadratic and len(res.quadratic) > 0):
             return Results(nonl=multiplier*exp)
         else:
             denom = 1.0*res.constant
@@ -909,28 +909,25 @@ def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False
     #
     # Create a list (tuple) of the variables and coefficients
     #
-    # If we compute the values of constants, then we can skip terms with zero
-    # coefficients
-    #
-    if compute_values:
-        v = []
-        c = []
-        for key in ans.linear:
-            if isclose(ans.linear[key],0):
-                continue
-            v.append(idMap[key])
-            c.append(ans.linear[key])
-        repn.linear_vars = tuple(v)
-        repn.linear_coefs = tuple(c)
-    else:
-        keys = list(ans.linear.keys())
-        repn.linear_vars = tuple(idMap[key] for key in keys)
-        repn.linear_coefs = tuple(ans.linear[key] for key in keys)
+    v = []
+    c = []
+    for key in ans.linear:
+        v.append(idMap[key])
+        c.append(ans.linear[key])
+    repn.linear_vars = tuple(v)
+    repn.linear_coefs = tuple(c)
 
     if quadratic:
         keys = list(key for key in ans.quadratic if not isclose(ans.quadratic[key],0))
         repn.quadratic_vars = tuple((idMap[key[0]],idMap[key[1]]) for key in keys)
         repn.quadratic_coefs = tuple(ans.quadratic[key] for key in keys)
+        v = []
+        c = []
+        for key in ans.quadratic:
+            v.append((idMap[key[0]], idMap[key[1]]))
+            c.append(ans.quadratic[key])
+        repn.quadratic_vars = tuple(v)
+        repn.quadratic_coefs = tuple(c)
 
     if ans.nonl is not None and not isclose_const(ans.nonl,0):
         repn.nonlinear_expr = ans.nonl
