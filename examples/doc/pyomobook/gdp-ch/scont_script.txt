@@ -16,7 +16,7 @@ Solver:
       Number of bounded subproblems: 7
       Number of created subproblems: 7
   Error rc: 0
-  Time: 0.0269069671631
+  Time: 0.0198199748993
 Solution: 
 - number of solutions: 0
   number of solutions displayed: 0
@@ -39,9 +39,86 @@ Model unknown
     c : Size=1
         Key  : Lower : Body : Upper
         None :   7.0 :  7.0 :  None
+    _gdp_bigm_relaxation_D_xor : Size=3
+        Key : Lower : Body : Upper
+          0 :   1.0 :  1.0 :   1.0
+          1 :   1.0 :  1.0 :   1.0
+          2 :   1.0 :  1.0 :   1.0
 
   Blocks:
-    Block _gdp_relax_bigm
+    Block d[0,0]
+    
+      Variables:
+        indicator_var : Size=1, Index=None
+            Key  : Lower : Value : Upper : Fixed : Stale : Domain
+            None :     0 :   0.0 :     1 : False : False : Binary
+    
+      Objectives:
+        None
+    
+      Constraints:
+        None
+    Block d[0,1]
+    
+      Variables:
+        indicator_var : Size=1, Index=None
+            Key  : Lower : Value : Upper : Fixed : Stale : Domain
+            None :     0 :   1.0 :     1 : False : False : Binary
+    
+      Objectives:
+        None
+    
+      Constraints:
+        None
+    Block d[1,0]
+    
+      Variables:
+        indicator_var : Size=1, Index=None
+            Key  : Lower : Value : Upper : Fixed : Stale : Domain
+            None :     0 :   1.0 :     1 : False : False : Binary
+    
+      Objectives:
+        None
+    
+      Constraints:
+        None
+    Block d[1,1]
+    
+      Variables:
+        indicator_var : Size=1, Index=None
+            Key  : Lower : Value : Upper : Fixed : Stale : Domain
+            None :     0 :   0.0 :     1 : False : False : Binary
+    
+      Objectives:
+        None
+    
+      Constraints:
+        None
+    Block d[2,0]
+    
+      Variables:
+        indicator_var : Size=1, Index=None
+            Key  : Lower : Value : Upper : Fixed : Stale : Domain
+            None :     0 :   0.0 :     1 : False : False : Binary
+    
+      Objectives:
+        None
+    
+      Constraints:
+        None
+    Block d[2,1]
+    
+      Variables:
+        indicator_var : Size=1, Index=None
+            Key  : Lower : Value : Upper : Fixed : Stale : Domain
+            None :     0 :   1.0 :     1 : False : False : Binary
+    
+      Objectives:
+        None
+    
+      Constraints:
+        None
+    Block _pyomo_gdp_bigm_relaxation
     
       Variables:
         None
@@ -50,112 +127,84 @@ Model unknown
         None
     
       Constraints:
-        D : Size=3
-            Key : Lower : Body : Upper
-              0 :   1.0 :  1.0 :   1.0
-              1 :   1.0 :  1.0 :   1.0
-              2 :   1.0 :  1.0 :   1.0
+        None
     
       Blocks:
-        Block _gdp_relax_bigm.d[0,0]
+        Block _pyomo_gdp_bigm_relaxation.relaxedDisjuncts[0]
         
           Variables:
-            indicator_var : Size=1, Index=None
-                Key  : Lower : Value : Upper : Fixed : Stale : Domain
-                None :     0 :   0.0 :     1 : False : False : Binary
+            None
         
           Objectives:
             None
         
           Constraints:
-            c_lo : Size=1
-                Key  : Lower : Body : Upper
-                None :   0.0 :  2.0 :  None
-            c_hi : Size=1
-                Key  : Lower : Body  : Upper
-                None :  None : -18.0 :   0.0
-        Block _gdp_relax_bigm.d[0,1]
+            d[0,0].c : Size=2
+                Key : Lower : Body  : Upper
+                 lb :   0.0 :   2.0 :  None
+                 ub :  None : -18.0 :   0.0
+        Block _pyomo_gdp_bigm_relaxation.relaxedDisjuncts[1]
         
           Variables:
-            indicator_var : Size=1, Index=None
-                Key  : Lower : Value : Upper : Fixed : Stale : Domain
-                None :     0 :   1.0 :     1 : False : False : Binary
+            None
         
           Objectives:
             None
         
           Constraints:
-            c_lo : Size=1
-                Key  : Lower : Body : Upper
-                None :   1.0 :  2.0 :  None
-            c_hi : Size=1
-                Key  : Lower : Body : Upper
-                None :  None :  2.0 :   2.0
-        Block _gdp_relax_bigm.d[1,0]
+            d[0,1].c : Size=2
+                Key : Lower : Body : Upper
+                 lb :   1.0 :  2.0 :  None
+                 ub :  None :  2.0 :   2.0
+        Block _pyomo_gdp_bigm_relaxation.relaxedDisjuncts[2]
         
           Variables:
-            indicator_var : Size=1, Index=None
-                Key  : Lower : Value : Upper : Fixed : Stale : Domain
-                None :     0 :   1.0 :     1 : False : False : Binary
+            None
         
           Objectives:
             None
         
           Constraints:
-            c_lo : Size=1
-                Key  : Lower : Body : Upper
-                None :   0.0 :  0.0 :  None
-            c_hi : Size=1
-                Key  : Lower : Body : Upper
-                None :  None :  0.0 :   0.0
-        Block _gdp_relax_bigm.d[1,1]
+            d[1,0].c : Size=2
+                Key : Lower : Body : Upper
+                 lb :   0.0 :  0.0 :  None
+                 ub :  None :  0.0 :   0.0
+        Block _pyomo_gdp_bigm_relaxation.relaxedDisjuncts[3]
         
           Variables:
-            indicator_var : Size=1, Index=None
-                Key  : Lower : Value : Upper : Fixed : Stale : Domain
-                None :     0 :   0.0 :     1 : False : False : Binary
+            None
         
           Objectives:
             None
         
           Constraints:
-            c_lo : Size=1
-                Key  : Lower : Body : Upper
-                None :   2.0 :  2.0 :  None
-            c_hi : Size=1
-                Key  : Lower : Body  : Upper
-                None :  None : -16.0 :   4.0
-        Block _gdp_relax_bigm.d[2,0]
+            d[1,1].c : Size=2
+                Key : Lower : Body  : Upper
+                 lb :   2.0 :   2.0 :  None
+                 ub :  None : -16.0 :   4.0
+        Block _pyomo_gdp_bigm_relaxation.relaxedDisjuncts[4]
         
           Variables:
-            indicator_var : Size=1, Index=None
-                Key  : Lower : Value : Upper : Fixed : Stale : Domain
-                None :     0 :   0.0 :     1 : False : False : Binary
+            None
         
           Objectives:
             None
         
           Constraints:
-            c_lo : Size=1
-                Key  : Lower : Body : Upper
-                None :   0.0 :  5.0 :  None
-            c_hi : Size=1
-                Key  : Lower : Body  : Upper
-                None :  None : -15.0 :   0.0
-        Block _gdp_relax_bigm.d[2,1]
+            d[2,0].c : Size=2
+                Key : Lower : Body  : Upper
+                 lb :   0.0 :   5.0 :  None
+                 ub :  None : -15.0 :   0.0
+        Block _pyomo_gdp_bigm_relaxation.relaxedDisjuncts[5]
         
           Variables:
-            indicator_var : Size=1, Index=None
-                Key  : Lower : Value : Upper : Fixed : Stale : Domain
-                None :     0 :   1.0 :     1 : False : False : Binary
+            None
         
           Objectives:
             None
         
           Constraints:
-            c_lo : Size=1
-                Key  : Lower : Body : Upper
-                None :   3.0 :  5.0 :  None
-            c_hi : Size=1
-                Key  : Lower : Body : Upper
-                None :  None :  5.0 :   6.0
+            d[2,1].c : Size=2
+                Key : Lower : Body : Upper
+                 lb :   3.0 :  5.0 :  None
+                 ub :  None :  5.0 :   6.0

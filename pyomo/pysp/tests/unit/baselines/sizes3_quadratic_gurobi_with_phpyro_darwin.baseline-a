@@ -1,5 +1,3 @@
-Importing module=/Users/ghackebeil/Projects/Pyomo/pyomo/examples/pysp/sizes/models/ReferenceModel.py
-Module successfully loaded
 Importing module=/Users/ghackebeil/Projects/Pyomo/pyomo/examples/pysp/sizes/config/rhosetter.py
 Module successfully loaded
 Client assigned dispatcher with URI=PYRO::PyUtilibServer.dispatcher.7c788ec5-81ac-4073-9191-30523cb7ca91@127.0.0.1:52733

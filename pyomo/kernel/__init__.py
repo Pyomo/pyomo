@@ -2,15 +2,16 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
 import pyomo.environ
+from pyomo.version import version_info, __version__
+
 from pyomo.core.kernel import *
-import pyomo.core.kernel as kernel
 
 # set up the Block ctype
 from pyomo.core.base import Block
@@ -80,3 +81,31 @@ del SOSConstraint
 from pyomo.core.base import Suffix
 suffix._ctype = Suffix
 del Suffix
+
+#
+# Now cleanup the namespace a bit
+#
+import pyomo.core.kernel.component_piecewise.util as \
+    piecewise_util
+del component_interface
+del component_map
+del component_set
+del component_dict
+del component_tuple
+del component_list
+del component_block
+del component_variable
+del component_constraint
+del component_objective
+del component_expression
+del component_parameter
+del component_piecewise
+del component_sos
+del component_suffix
+del component_matrix_constraint
+del util
+del expr
+del expr_common
+del expr_coopr3
+del expr_pyomo4
+del pyomo
