@@ -2915,8 +2915,8 @@ def _generate_sum_expression(etype, _self, _other):
                 return TermExpression((-tmp, _self._args_[1]))
             else:
                 return TermExpression((NPV_NegationExpression((tmp,)), _self._args_[1]))
-        elif _self.__class__ is NegationExpression:
-            return _self._args_[0]
+        elif _self.is_variable_type():
+            return TermExpression((-1, _self))
         elif _self.is_potentially_variable():
             return NegationExpression((_self,))
         else:
@@ -2994,16 +2994,22 @@ def _generate_sum_expression(etype, _self, _other):
                     if tmp.__class__ in native_numeric_types:
                         return TermExpression((-tmp, _other._args_[1]))
                     return TermExpression((NPV_NegationExpression((_other._args_[0],)), _other._args_[1]))
+                elif _other.is_variable_type():
+                    return TermExpression((-1, _other))
                 elif _other.is_potentially_variable():
                     return NegationExpression((_other,))
                 return NPV_NegationExpression((_other,))
             elif _other.__class__ is TermExpression:
                 return ViewSumExpression([_self, TermExpression((-_other._args_[0], _other._args_[1]))])
+            elif _other.is_variable_type():
+                return ViewSumExpression([_self, TermExpression((-1,_other))])
             elif _other.is_potentially_variable():    
                 return ViewSumExpression([_self, NegationExpression((_other,))])
             return NPV_SumExpression((_self, NPV_NegationExpression((_other,))))
         elif _other.__class__ is TermExpression:
             return ViewSumExpression([_self, TermExpression((-_other._args_[0], _other._args_[1]))])
+        elif _other.is_variable_type():
+            return ViewSumExpression([_self, TermExpression((-1,_other))])
         elif _other.is_potentially_variable():    
             return ViewSumExpression([_self, NegationExpression((_other,))])
         elif _self.is_potentially_variable():

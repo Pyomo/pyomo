@@ -891,8 +891,9 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(type(e), EXPR.ViewSumExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.a)
-        self.assertIs(type(e.arg(1)), EXPR.NegationExpression)
-        self.assertIs(e.arg(1).arg(0), m.b)
+        self.assertIs(type(e.arg(1)), EXPR.TermExpression)
+        self.assertEqual(e.arg(1).arg(0), -1)
+        self.assertIs(e.arg(1).arg(1), m.b)
 
     def test_constDiff(self):
         #
@@ -918,9 +919,10 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(type(e), EXPR.ViewSumExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), 5)
-        self.assertIs(type(e.arg(1)), EXPR.NegationExpression)
-        self.assertIs(e.arg(1).arg(0), m.a)
-        self.assertEqual(e.size(), 4)
+        self.assertIs(type(e.arg(1)), EXPR.TermExpression)
+        self.assertIs(e.arg(1).arg(0), -1)
+        self.assertIs(e.arg(1).arg(1), m.a)
+        self.assertEqual(e.size(), 5)
 
     def test_paramDiff(self):
         #
@@ -948,9 +950,10 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(type(e), EXPR.ViewSumExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.p)
-        self.assertIs(type(e.arg(1)), EXPR.NegationExpression)
-        self.assertIs(e.arg(1).arg(0), m.a)
-        self.assertEqual(e.size(), 4)
+        self.assertIs(type(e.arg(1)), EXPR.TermExpression)
+        self.assertEqual(e.arg(1).arg(0), -1)
+        self.assertIs(e.arg(1).arg(1), m.a)
+        self.assertEqual(e.size(), 5)
 
     def test_constparamDiff(self):
         #
@@ -971,9 +974,10 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #     / \
         #  m.p   a
         e = m.p - m.a
-        self.assertIs(type(e), EXPR.NegationExpression)
-        self.assertEqual(e.nargs(), 1)
-        self.assertIs(e.arg(0), m.a)
+        self.assertIs(type(e), EXPR.TermExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertEqual(e.arg(0), -1)
+        self.assertIs(e.arg(1), m.a)
 
     def test_nestedDiff(self):
         #
@@ -994,10 +998,11 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e = e1 - 5
         self.assertIs(type(e), EXPR.ViewSumExpression)
         self.assertIs(e.arg(0), m.a)
-        self.assertIs(e.arg(1).__class__, EXPR.NegationExpression)
-        self.assertIs(e.arg(1).arg(0), m.b)
+        self.assertIs(e.arg(1).__class__, EXPR.TermExpression)
+        self.assertIs(e.arg(1).arg(0), -1)
+        self.assertIs(e.arg(1).arg(1), m.b)
         self.assertIs(e.arg(2), -5)
-        self.assertEqual(e.size(), 5)
+        self.assertEqual(e.size(), 6)
 
         #       -
         #      / \
@@ -1010,7 +1015,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e.arg(0), 5)
         self.assertIs(type(e.arg(1)), EXPR.NegationExpression)
         self.assertIs(e.arg(1).arg(0), e1)
-        self.assertEqual(e.size(), 7)
+        self.assertEqual(e.size(), 8)
 
         #       -
         #      / \
@@ -1021,11 +1026,13 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e = e1 - m.c
         self.assertIs(type(e), EXPR.ViewSumExpression)
         self.assertIs(e.arg(0), m.a)
-        self.assertIs(e.arg(1).__class__, EXPR.NegationExpression)
-        self.assertIs(e.arg(1).arg(0), m.b)
-        self.assertIs(type(e.arg(2)), EXPR.NegationExpression)
-        self.assertIs(e.arg(2).arg(0), m.c)
-        self.assertEqual(e.size(), 6)
+        self.assertIs(e.arg(1).__class__, EXPR.TermExpression)
+        self.assertEqual(e.arg(1).arg(0), -1)
+        self.assertIs(e.arg(1).arg(1), m.b)
+        self.assertIs(type(e.arg(2)), EXPR.TermExpression)
+        self.assertEqual(e.arg(2).arg(0), -1)
+        self.assertIs(e.arg(2).arg(1), m.c)
+        self.assertEqual(e.size(), 8)
 
         #       -
         #      / \
@@ -1038,7 +1045,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e.arg(0), m.c)
         self.assertIs(type(e.arg(1)), EXPR.NegationExpression)
         self.assertIs(e.arg(1).arg(0), e1)
-        self.assertEqual(e.size(), 7)
+        self.assertEqual(e.size(), 8)
 
         #            -
         #          /   \
@@ -1050,9 +1057,9 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e = e1 - e2
         self.assertIs(type(e), EXPR.ViewSumExpression)
         self.assertIs(e.arg(0), m.a)
-        self.assertIs(e.arg(1).arg(0), m.b)
+        self.assertIs(e.arg(1).arg(1), m.b)
         self.assertIs(e.arg(2).arg(0), e2)
-        self.assertEqual(e.size(), 9)
+        self.assertEqual(e.size(), 11)
 
     def test_negation_param(self):
         #
@@ -1076,17 +1083,6 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e = - e
         self.assertTrue(isinstance(e, Param))
 
-    def test_negation_var(self):
-        #
-        # Check logic for negations with var
-        #
-        m = AbstractModel()
-        m.p = Var()
-        e = - m.p
-        self.assertIs(type(e), EXPR.NegationExpression)
-        e = - e
-        self.assertTrue(isinstance(e, Var))
-
     def test_trivialDiff(self):
         #
         # Check that subtracting zero doesn't change the expression
@@ -1102,9 +1098,10 @@ class TestGenerate_SumExpression(unittest.TestCase):
 
         # 0 - a
         e = 0 - m.a
-        self.assertIs(type(e), EXPR.NegationExpression)
-        self.assertEqual(e.nargs(), 1)
-        self.assertIs(e.arg(0), m.a)
+        self.assertIs(type(e), EXPR.TermExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertEqual(e.arg(0), -1)
+        self.assertIs(e.arg(1), m.a)
 
         # p - 0
         e = m.p - 0
@@ -1135,9 +1132,10 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e = e1 - m.b
         self.assertIs(type(e), EXPR.ViewSumExpression)
         self.assertIs(e.arg(0), e1)
-        self.assertIs(type(e.arg(1)), EXPR.NegationExpression)
-        self.assertIs(e.arg(1).arg(0), m.b)
-        self.assertEqual(e.size(), 6)
+        self.assertIs(type(e.arg(1)), EXPR.TermExpression)
+        self.assertEqual(e.arg(1).arg(0), -1)
+        self.assertIs(e.arg(1).arg(1), m.b)
+        self.assertEqual(e.size(), 7)
 
         #       -
         #      / \
@@ -1165,7 +1163,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e.arg(0), e1)
         self.assertIs(type(e.arg(1)), EXPR.NegationExpression)
         self.assertIs(e.arg(1).arg(0), e2)
-        self.assertEqual(e.size(), 9)
+        self.assertEqual(e.size(), 10)
 
         #            -
         #          /   \
@@ -1177,11 +1175,12 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e = e2 - e1
         self.assertIs(type(e), EXPR.ViewSumExpression)
         self.assertIs(e.arg(0), m.b)
-        self.assertIs(type(e.arg(1)), EXPR.NegationExpression)
-        self.assertIs(e.arg(1).arg(0), m.c)
+        self.assertIs(type(e.arg(1)), EXPR.TermExpression)
+        self.assertEqual(e.arg(1).arg(0), -1)
+        self.assertIs(e.arg(1).arg(1), m.c)
         self.assertIs(e.arg(2).arg(0), -5)
         self.assertIs(e.arg(2).arg(1), m.a)
-        self.assertEqual(e.size(), 7)
+        self.assertEqual(e.size(), 8)
 
 
 class TestGenerate_ProductExpression(unittest.TestCase):
@@ -2905,8 +2904,8 @@ class TestInplaceExpressionGeneration(unittest.TestCase):
 
         x = 0
         x -= m.a
-        self.assertIs(type(x), EXPR.NegationExpression)
-        self.assertEqual(x.nargs(), 1)
+        self.assertIs(type(x), EXPR.TermExpression)
+        self.assertEqual(x.nargs(), 2)
 
         x -= m.a
         self.assertIs(type(x), EXPR.ViewSumExpression)
@@ -3045,9 +3044,10 @@ class TestGeneralExpressionGeneration(unittest.TestCase):
         m.b = Var()
 
         e = -m.a
-        self.assertIs(type(e), EXPR.NegationExpression)
-        self.assertEqual(e.nargs(), 1)
-        self.assertIs(e.arg(0), m.a)
+        self.assertIs(type(e), EXPR.TermExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(e.arg(0), -1)
+        self.assertIs(e.arg(1), m.a)
 
         e1 = m.a - m.b
         e = -e1
@@ -5742,16 +5742,16 @@ class TestExpressionSpecialMethods1(unittest.TestCase):
         self.assertEqual(M.e.nargs(), 1)
         self.assertEqual(type(M.e.arg(0)), EXPR.ViewSumExpression)
         self.assertTrue(type(M.e.arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(type(M.e.arg(0).arg(1)) is EXPR.NegationExpression)
-        self.assertTrue(M.e.arg(0).arg(1).arg(0).is_variable_type())
+        self.assertTrue(type(M.e.arg(0).arg(1)) is EXPR.TermExpression)
+        self.assertTrue(M.e.arg(0).arg(1).arg(1).is_variable_type())
 
         M.E[0].expr = 3
         M.E[0] -= M.v
         self.assertEqual(M.E[0].nargs(), 1)
         self.assertEqual(type(M.E[0].arg(0)), EXPR.ViewSumExpression)
         self.assertTrue(type(M.E[0].arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(type(M.E[0].arg(0).arg(1)) is EXPR.NegationExpression)
-        self.assertTrue(M.E[0].arg(0).arg(1).arg(0).is_variable_type())
+        self.assertTrue(type(M.E[0].arg(0).arg(1)) is EXPR.TermExpression)
+        self.assertTrue(M.E[0].arg(0).arg(1).arg(1).is_variable_type())
 
     def test_imul(self):
         M = ConcreteModel()
@@ -5840,8 +5840,9 @@ class TestExpressionSpecialMethods2(unittest.TestCase):
         self.assertEqual(e.nargs(), 1)
         self.assertEqual(type(e.arg(0)), EXPR.ViewSumExpression)
         self.assertTrue(type(e.arg(0).arg(0)) in native_numeric_types)
-        self.assertTrue(type(e.arg(0).arg(1)) is EXPR.NegationExpression)
-        self.assertTrue(e.arg(0).arg(1).arg(0).is_variable_type())
+        self.assertTrue(type(e.arg(0).arg(1)) is EXPR.TermExpression)
+        self.assertEqual(e.arg(0).arg(1).arg(0), -1)
+        self.assertTrue(e.arg(0).arg(1).arg(1).is_variable_type())
 
     def test_imul(self):
         M = ConcreteModel()
