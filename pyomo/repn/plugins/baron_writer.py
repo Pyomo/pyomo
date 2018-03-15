@@ -16,7 +16,7 @@ import logging
 import itertools
 from six import iteritems, StringIO, iterkeys
 from six.moves import xrange
-from math import isclose
+from pyutilib.math import isclose
 
 import pyomo.util.plugin
 from pyomo.opt import ProblemFormat
