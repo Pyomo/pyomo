@@ -16,6 +16,6 @@ Getting Started
    DataInput.rst
    BuildAction.rst
    PyomoCommand.rst
-   
+   pysp.rst
    
    
