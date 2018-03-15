@@ -265,9 +265,24 @@ to a solver and then be deleted.
 #@profile
 def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None):
     #
+    # Use a custom Results object
+    #
+    global Results
+    if quadratic:
+        Results = ResultsWithQuadratics
+    else:
+        Results = ResultsWithoutQuadratics
+    #
     # Use a custom isclose function
     #
-    with isclose_context(compute_values):
+    global isclose
+    if compute_values:
+        isclose = isclose_default
+    else:
+        isclose = isclose_const
+
+    #with isclose_context(compute_values):
+    if True:
         #
         # Setup
         #
@@ -357,9 +372,9 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         elif not expr.is_expression_type():
             raise ValueError("Unexpected expression type: "+str(expr))
 
-        degree = expr.polynomial_degree()
+        #degree = expr.polynomial_degree()
 
-        if degree == 1:
+        if False and degree == 1:
             return _generate_linear_standard_repn(expr, 
                                 idMap=idMap,
                                 compute_values=compute_values,
@@ -379,7 +394,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
 ##
 ##-----------------------------------------------------------------------
 
-class Results(object):
+class ResultsWithQuadratics(object):
     __slot__ = ('const', 'nonl', 'linear', 'quadratic')
 
     def __init__(self, constant=0, nonl=0, linear=None, quadratic=None):
@@ -396,6 +411,22 @@ class Results(object):
 
     def __str__(self):
         return "Const:\t%f\nLinear:\t%s\nQuadratic:\t%s\nNonlinear:\t%s" % (self.constant, str(self.linear), str(self.quadratic), str(self.nonl))
+
+class ResultsWithoutQuadratics(object):
+    __slot__ = ('const', 'nonl', 'linear')
+
+    def __init__(self, constant=0, nonl=0, linear=None):
+        self.constant = constant
+        self.nonl = nonl
+        if linear is None:
+            self.linear = {}
+        else:
+            self.linear = linear
+
+    def __str__(self):
+        return "Const:\t%f\nLinear:\t%s\nNonlinear:\t%s" % (self.constant, str(self.linear), str(self.nonl))
+
+Results = ResultsWithQuadratics
 
 
 #@profile
@@ -431,10 +462,9 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
             else:
                 ans.constant += multiplier * e_
         elif e_.__class__ is EXPR.TermExpression:
-            if compute_values:
-                lhs = value(e_._args_[0])
-            else:
-                lhs = e_._args_[0]
+            lhs = e_._args_[0]
+            if compute_values and not lhs.__class__ in native_numeric_types:
+                lhs = value(lhs)
             if e_._args_[1].fixed:
                 if compute_values:
                     ans.constant += multiplier*lhs*value(e_._args_[1])
@@ -883,11 +913,19 @@ def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False
     # coefficients
     #
     if compute_values:
-        keys = list(key for key in ans.linear if not isclose(ans.linear[key],0))
+        v = []
+        c = []
+        for key in ans.linear:
+            if isclose(ans.linear[key],0):
+                continue
+            v.append(idMap[key])
+            c.append(ans.linear[key])
+        repn.linear_vars = tuple(v)
+        repn.linear_coefs = tuple(c)
     else:
         keys = list(ans.linear.keys())
-    repn.linear_vars = tuple(idMap[key] for key in keys)
-    repn.linear_coefs = tuple(ans.linear[key] for key in keys)
+        repn.linear_vars = tuple(idMap[key] for key in keys)
+        repn.linear_coefs = tuple(ans.linear[key] for key in keys)
 
     if quadratic:
         keys = list(key for key in ans.quadratic if not isclose(ans.quadratic[key],0))
