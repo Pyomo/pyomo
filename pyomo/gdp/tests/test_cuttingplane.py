@@ -70,8 +70,8 @@ class TwoTermDisj(unittest.TestCase):
         # the cuts are on it
         cuts = transBlock.cuts
         self.assertIsInstance(cuts, Constraint)
-        # this one adds 4 cuts
-        self.assertEqual(len(cuts), 4)
+        # this one adds 2 cuts
+        self.assertEqual(len(cuts), 2)
 
     @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
     def test_cut_constraint(self):
@@ -151,8 +151,13 @@ class Grossmann_TestCases(unittest.TestCase):
         m = models.grossmann_oneDisj()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
+        SolverFactory('gurobi').solve(m)
+        self.assertEqual(m.x.value, 2)
+        self.assertEqual(m.y.value, 10)
+
         # Constraint 1
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        self.assertEqual(len(cuts), 2)
         cut1_expr = cuts[0].body
         # we first check that the first cut is tight at the upper righthand
         # corners of the two regions:
@@ -160,13 +165,13 @@ class Grossmann_TestCases(unittest.TestCase):
         m.y.fix(10)
         m.disjunct1.indicator_var.fix(1)
         m.disjunct2.indicator_var.fix(0)
-        self.assertAlmostEqual(value(cut1_expr), 0)
+        self.assertGreaterEqual(value(cut1_expr), 0)
 
         m.x.fix(10)
         m.y.fix(3)
         m.disjunct1.indicator_var.fix(0)
         m.disjunct2.indicator_var.fix(1)
-        self.assertAlmostEqual(value(cut1_expr), 0)
+        self.assertGreaterEqual(value(cut1_expr), 0)
 
         # now we check that the second cut is tight for the top region:
         cut2_expr = cuts[1].body
@@ -174,9 +179,34 @@ class Grossmann_TestCases(unittest.TestCase):
         m.y.fix(10)
         m.disjunct1.indicator_var.fix(1)
         m.disjunct2.indicator_var.fix(0)
-        self.assertAlmostEqual(value(cut2_expr), 0)
+        self.assertGreaterEqual(value(cut2_expr), 0)
 
         m.x.fix(0)
-        self.assertAlmostEqual(value(cut2_expr), 0)
+        self.assertGreaterEqual(value(cut2_expr), 0)
 
-        
+    @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
+    def test_constraint_tolerances_arent_evil(self):
+        m = models.to_break_constraint_tolerances()
+
+        # solve with bigm to check the actual optimal solution
+        m1 = TransformationFactory('gdp.bigm').create_using(m)
+        SolverFactory('gurobi').solve(m1)
+        self.assertEqual(m1.x.value, 2)
+        self.assertEqual(m1.y.value, 127)
+
+        TransformationFactory('gdp.cuttingplane').apply_to(m)
+
+        SolverFactory('gurobi').solve(m)
+        self.assertEqual(m.x.value, 2)
+        self.assertEqual(m.y.value, 127)
+
+        m.x.fix(2)
+        m.y.fix(127)
+
+        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        self.assertEqual(len(cuts), 2)
+        cut1_expr = cuts[0].body
+        cut2_expr = cuts[1].body
+
+        self.assertGreaterEqual(value(cut1_expr), 0)
+        self.assertGreaterEqual(value(cut2_expr), 0)

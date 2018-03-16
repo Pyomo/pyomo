@@ -87,13 +87,12 @@ def makeTwoTermDisj_boxes():
         else:
             disjunct.c1 = Constraint(expr=3 <= m.x <= 4)
             disjunct.c2 = Constraint(expr=1 <= m.y <= 2)
-            m.d = Disjunct([0,1], rule=d_rule)
-            def disj_rule(m):
-                return [m.d[0], m.d[1]]
-                m.disjunction = Disjunction(rule=disj_rule)
-
-        m.obj = Objective(expr=m.x + 2*m.y)
-        return m
+    m.d = Disjunct([0,1], rule=d_rule)
+    def disj_rule(m):
+        return [m.d[0], m.d[1]]
+    m.disjunction = Disjunction(rule=disj_rule)
+    m.obj = Objective(expr=m.x + 2*m.y)
+    return m
 
 def makeThreeTermDisj_IndexedConstraints():
     m = ConcreteModel()
@@ -377,6 +376,24 @@ def grossmann_oneDisj():
 
     m.disjunct2 = Disjunct()
     m.disjunct2.constraintx = Constraint(expr=8 <= m.x <= 10)
+    m.disjunct2.constrainty = Constraint(expr=0 <= m.y <= 3)
+
+    m.disjunction = Disjunction(expr=[m.disjunct1, m.disjunct2])
+
+    m.objective = Objective(expr=m.x + 2*m.y, sense=maximize)
+
+    return m
+
+def to_break_constraint_tolerances():
+    m = ConcreteModel()
+    m.x = Var(bounds=(0, 130))
+    m.y = Var(bounds=(0, 130))
+    m.disjunct1 = Disjunct()
+    m.disjunct1.constraintx = Constraint(expr=0 <= m.x <= 2)
+    m.disjunct1.constrainty = Constraint(expr=117 <= m.y <= 127)
+
+    m.disjunct2 = Disjunct()
+    m.disjunct2.constraintx = Constraint(expr=118 <= m.x <= 120)
     m.disjunct2.constrainty = Constraint(expr=0 <= m.y <= 3)
 
     m.disjunction = Disjunction(expr=[m.disjunct1, m.disjunct2])
