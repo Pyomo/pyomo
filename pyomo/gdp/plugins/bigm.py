@@ -137,7 +137,7 @@ class BigM_Transformation(Transformation):
         return suffix_list
 
     def _apply_to(self, instance, targets=None, **kwds):
-        config = self.CONFIG().set_value(kwds.pop('options', {}))
+        config = self.CONFIG(kwds.pop('options', {}))
 
         # For now, we're not accepting options. We will let args override
         # suffixes and estimate as a last resort. More specific args/suffixes
@@ -194,7 +194,6 @@ class BigM_Transformation(Transformation):
                     "Target %s was not a Block, Disjunct, or Disjunction. "
                     "It was of type %s and can't be transformed."
                     % (t.name, type(t)))
-
         # Go through our dictionary of indexed things and deactivate
         # the containers that don't have any active guys inside of
         # them. So the invalid component logic will tell us if we
