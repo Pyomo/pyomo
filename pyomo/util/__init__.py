@@ -11,4 +11,4 @@
 import pyomo.util.log
 from pyomo.util._task import pyomo_api, PyomoAPIData, PyomoAPIFactory
 from pyomo.util._command import pyomo_command, get_pyomo_commands
-from pyomo.util._config import *
+from pyomo.util.errors import DeveloperError
