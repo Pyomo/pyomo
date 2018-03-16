@@ -305,17 +305,26 @@ class GurobiDirect(DirectSolver):
                                  "is not constant.".format(con))
 
         if con.equality:
-            gurobipy_con = self._solver_model.addConstr(lhs=gurobi_expr, sense=self._gurobipy.GRB.EQUAL,
-                                                        rhs=value(con.lower), name=conname)
-        elif con.has_lb() and (value(con.lower) > -float('inf')) and con.has_ub() and (value(con.upper) < float('inf')):
-            gurobipy_con = self._solver_model.addRange(gurobi_expr, value(con.lower), value(con.upper), name=conname)
+            gurobipy_con = self._solver_model.addConstr(lhs=gurobi_expr,
+                                                        sense=self._gurobipy.GRB.EQUAL,
+                                                        rhs=value(con.lower),
+                                                        name=conname)
+        elif con.has_lb() and con.has_ub():
+            gurobipy_con = self._solver_model.addRange(gurobi_expr,
+                                                       value(con.lower),
+                                                       value(con.upper),
+                                                       name=conname)
             self._range_constraints.add(con)
-        elif con.has_lb() and (value(con.lower) > -float('inf')):
-            gurobipy_con = self._solver_model.addConstr(lhs=gurobi_expr, sense=self._gurobipy.GRB.GREATER_EQUAL,
-                                                        rhs=value(con.lower), name=conname)
-        elif con.has_ub() and (value(con.upper) < float('inf')):
-            gurobipy_con = self._solver_model.addConstr(lhs=gurobi_expr, sense=self._gurobipy.GRB.LESS_EQUAL,
-                                                        rhs=value(con.upper), name=conname)
+        elif con.has_lb():
+            gurobipy_con = self._solver_model.addConstr(lhs=gurobi_expr,
+                                                        sense=self._gurobipy.GRB.GREATER_EQUAL,
+                                                        rhs=value(con.lower),
+                                                        name=conname)
+        elif con.has_ub():
+            gurobipy_con = self._solver_model.addConstr(lhs=gurobi_expr,
+                                                        sense=self._gurobipy.GRB.LESS_EQUAL,
+                                                        rhs=value(con.upper),
+                                                        name=conname)
         else:
             raise ValueError("Constraint does not have a lower "
                              "or an upper bound: {0} \n".format(con))

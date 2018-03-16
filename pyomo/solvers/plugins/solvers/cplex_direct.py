@@ -341,18 +341,18 @@ class CPLEXDirect(DirectSolver):
             my_sense = 'E'
             my_rhs = [value(con.lower) - cplex_expr.offset]
             my_range = []
-        elif con.has_lb() and (value(con.lower) > -float('inf')) and con.has_ub() and (value(con.upper) < float('inf')):
+        elif con.has_lb() and con.has_ub():
             my_sense = 'R'
             lb = value(con.lower)
             ub = value(con.upper)
             my_rhs = [ub - cplex_expr.offset]
             my_range = [lb - ub]
             self._range_constraints.add(con)
-        elif con.has_lb() and (value(con.lower) > -float('inf')):
+        elif con.has_lb():
             my_sense = 'G'
             my_rhs = [value(con.lower) - cplex_expr.offset]
             my_range = []
-        elif con.has_ub() and (value(con.upper) < float('inf')):
+        elif con.has_ub():
             my_sense = 'L'
             my_rhs = [value(con.upper) - cplex_expr.offset]
             my_range = []
