@@ -351,9 +351,10 @@ class TwoTermDisj(unittest.TestCase):
         self.assertFalse(m.d.active)
         self.assertFalse(m.d[0].active)
         self.assertFalse(m.d[1].active)
-        self.assertFalse(m.d[0].c.active)
-        self.assertFalse(m.d[1].c1.active)
-        self.assertFalse(m.d[1].c2.active)
+        # COnstraints aren't deactived: only disjuncts
+        self.assertTrue(m.d[0].c.active)
+        self.assertTrue(m.d[1].c1.active)
+        self.assertTrue(m.d[1].c2.active)
 
     def test_transformed_disjunct_mappings(self):
         m = models.makeTwoTermDisj_Nonlinear()
