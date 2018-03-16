@@ -214,6 +214,10 @@ class DirectOrPersistentSolver(OptSolver):
                     descend_into=False,
                     active=True,
                     sort=True):
+                if (not con.has_lb()) and \
+                   (not con.has_ub()):
+                    assert not con.equality
+                    continue  # non-binding, so skip
                 self._add_constraint(con)
 
             for con in sub_block.component_data_objects(
