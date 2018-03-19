@@ -896,6 +896,10 @@ This has resulted in the conversion of the source to dense form.
             default = "(function)"
         else:
             default = str(self._default_val)
+        if self._mutable or not self.is_indexed():
+            dataGen = lambda k, v: [ v._value, ]
+        else:
+            dataGen = lambda k, v: [ v, ]
         return ( [("Size", len(self)),
                   ("Index", self._index if self.is_indexed() else None),
                   ("Domain", self.domain.name),
@@ -904,8 +908,7 @@ This has resulted in the conversion of the source to dense form.
                   ],
                  self.sparse_iteritems(),
                  ("Value",),
-                 lambda k, v: [ value(v)
-                                ]
+                 dataGen,
                  )
 
 

@@ -1263,6 +1263,35 @@ class MiscParamTests(unittest.TestCase):
         #except ValueError:
             #pass
 
+    def test_nonnumeric(self):
+        m = ConcreteModel()
+        m.p = Param(mutable=True)
+        m.p = 'hi'
+        buf = StringIO()
+        m.p.pprint(ostream=buf)
+        self.assertEqual(
+            buf.getvalue().strip(),
+            """
+p : Size=1, Index=None, Domain=Any, Default=None, Mutable=True
+    Key  : Value
+    None :    hi
+            """.strip())
+        m.q = Param(Any, mutable=True)
+        m.q[1] = None
+        m.q[2]
+        m.q['a'] = 'b'
+        buf = StringIO()
+        m.q.pprint()
+        m.q.pprint(ostream=buf)
+        self.assertEqual(
+            buf.getvalue().strip(),
+            """
+q : Size=3, Index=Any, Domain=Any, Default=None, Mutable=True
+    Key : Value
+      1 : None
+      2 : <class 'pyomo.core.base.param._NotValid'>
+      a : b
+            """.strip())
 
 def createNonIndexedParamMethod(func, init_xy, new_xy, tol=1e-10):
 
