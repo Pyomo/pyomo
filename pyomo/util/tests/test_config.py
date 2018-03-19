@@ -211,6 +211,8 @@ class TestConfig(unittest.TestCase):
 
     def test_Path(self):
         def norm(x):
+            if cwd[1] == ':' and x[0] == '/':
+                x = cwd[:2] + x
             return x.replace('/',os.path.sep)
         cwd = os.getcwd() + os.path.sep
         c = ConfigBlock()
