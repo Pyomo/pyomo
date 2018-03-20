@@ -17,6 +17,7 @@ from pyomo.core.kernel.component_block import IBlockStorage
 from pyomo.core import Suffix, Var, Constraint, Objective
 from pyomo.opt import ProblemFormat, SolverFactory, TerminationCondition
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
+from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 
 thisDir = dirname(abspath( __file__ ))
 
@@ -54,6 +55,7 @@ class _BaseTestModel(object):
         self.disable_suffix_tests = False
         self.test_suffixes = []
         self.diff_tol = 1e-4
+        self.solve_should_fail = False
 
     def add_results(self, filename):
         """ Add results file """
@@ -99,13 +101,11 @@ class _BaseTestModel(object):
             if isinstance(opt, PersistentSolver):
                 opt.set_instance(self.model, symbolic_solver_labels=symbolic_labels)
                 if opt.warm_start_capable():
-                    results = opt.solve(symbolic_solver_labels=symbolic_labels,
-                                        warmstart=True,
+                    results = opt.solve(warmstart=True,
                                         load_solutions=load_solutions,
                                         **io_options)
                 else:
-                    results = opt.solve(symbolic_solver_labels=symbolic_labels,
-                                        load_solutions=load_solutions,
+                    results = opt.solve(load_solutions=load_solutions,
                                         **io_options)
             else:
                 if opt.warm_start_capable():

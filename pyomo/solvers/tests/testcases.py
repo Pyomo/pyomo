@@ -42,7 +42,7 @@ ExpectedFailures['cplex', 'python', 'QCP_simple'] =\
     (lambda v: v <= _trunk_version,
     "Cplex does not report duals of quadratic constraints.")
 
-ExpectedFailures['_cplex_persistent', 'python', 'QCP_simple'] =\
+ExpectedFailures['cplex_persistent', 'python', 'QCP_simple'] =\
     (lambda v: v <= _trunk_version,
     "Cplex does not report duals of quadratic constraints.")
 

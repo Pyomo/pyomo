@@ -18,7 +18,7 @@ import weakref
 import logging
 from inspect import isclass
 from operator import itemgetter, attrgetter
-from six import iteritems, itervalues, StringIO, string_types, \
+from six import iteritems, iterkeys, itervalues, StringIO, string_types, \
     advance_iterator, PY3
 
 from pyomo.util.timing import ConstructionTimer
@@ -673,8 +673,8 @@ class _BlockData(ActiveComponentData):
             super(_BlockData, self).__delattr__(name)
 
     def set_value(self, val):
-        for k,v in iteritems(getattr(self, '_decl', {})):
-            super(_BlockData, self).__delattr__(k)
+        for k in list(getattr(self, '_decl', {})):
+            self.del_component(k)
         self._ctypes = {}
         self._decl = {}
         self._decl_order = []
@@ -1123,9 +1123,22 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # NonNegativeReals, etc) that are not "owned" by any blocks and
         # should be preserved as singletons.
         #
-        new_block = copy.deepcopy(
-            self, {'__block_scope__': {id(self): True, id(None): False}})
-        new_block._parent = None
+        save_parent, self._parent = self._parent, None
+        try:
+            new_block = copy.deepcopy(
+                self, {
+                    '__block_scope__': {id(self): True, id(None): False},
+                    '__paranoid__': False,
+                    })
+        except:
+            new_block = copy.deepcopy(
+                self, {
+                    '__block_scope__': {id(self): True, id(None): False},
+                    '__paranoid__': True,
+                    })
+        finally:
+            self._parent = save_parent
+
         return new_block
 
     def contains_component(self, ctype):
@@ -1780,7 +1793,7 @@ class Block(ActiveIndexedComponent):
             if data is not None and idx in data:
                 _BlockConstruction.data[id(_block)] = data[idx]
             obj = apply_indexed_rule(
-                None, self._rule, _block, idx, self._options)
+                self, self._rule, _block, idx, self._options)
             if id(_block) in _BlockConstruction.data:
                 del _BlockConstruction.data[id(_block)]
 

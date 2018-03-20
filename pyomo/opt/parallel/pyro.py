@@ -166,7 +166,6 @@ class PyroAsynchronousActionManager(AsynchronousActionManager):
 
         dispatcher_name = self._get_dispatcher_name(queue_name)
         task_data = self._get_task_data(ah, *args, **kwds)
-
         task = pyutilib.pyro.Task(data=task_data,
                                   id=ah.id,
                                   generateResponse=generate_response)

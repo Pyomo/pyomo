@@ -1,0 +1,56 @@
+* Source:     Pyomo MPS Writer
+* Format:     Free MPS
+*
+NAME unknown
+OBJSENSE
+ MIN
+ROWS
+ N  obj
+ E  c_e_d1_
+ E  c_e_d2_
+ E  c_e_s1_
+ E  c_e_s2_
+ E  c_e_ONE_VAR_CONSTANT
+COLUMNS
+     x1 obj 4
+     x1 c_e_s1_ -1
+     x2 obj 2
+     x2 c_e_s2_ -1
+     u1 obj 10
+     u1 c_e_d1_ 1
+     u2 obj 10
+     u2 c_e_d2_ 1
+     v1 obj 0.20000000000000001
+     v1 c_e_s1_ 1
+     v2 obj 0.20000000000000001
+     v2 c_e_s2_ 1
+     w11 obj -8
+     w11 c_e_d1_ 1
+     w11 c_e_s1_ 1
+     w12 obj -4
+     w12 c_e_d2_ 1
+     w12 c_e_s1_ 1
+     w22 obj -4
+     w22 c_e_d2_ 1
+     w22 c_e_s2_ 1
+     ONE_VAR_CONSTANT obj 0
+     ONE_VAR_CONSTANT c_e_ONE_VAR_CONSTANT 1
+RHS
+     RHS c_e_d1_ 0
+     RHS c_e_d2_ 0
+     RHS c_e_s1_ 0
+     RHS c_e_s2_ 0
+     RHS c_e_ONE_VAR_CONSTANT 1
+BOUNDS
+ LO BOUND x1 0
+ UP BOUND x1 217
+ LO BOUND x2 0
+ UP BOUND x2 217
+ LO BOUND u1 0
+ LO BOUND u2 0
+ LO BOUND v1 0
+ LO BOUND v2 0
+ LO BOUND w11 0
+ LO BOUND w12 0
+ LO BOUND w22 0
+ENDATA

@@ -55,14 +55,14 @@ def apply_indexed_rule(obj, rule, model, index, options=None):
         if options is None:
             if index.__class__ is tuple:
                 return rule(model, *index)
-            elif index is None:
+            elif index is None and not obj.is_indexed():
                 return rule(model)
             else:
                 return rule(model, index)
         else:
             if index.__class__ is tuple:
                 return rule(model, *index, **options)
-            elif index is None:
+            elif index is None and not obj.is_indexed():
                 return rule(model, **options)
             else:
                 return rule(model, index, **options)
@@ -78,14 +78,14 @@ def apply_indexed_rule(obj, rule, model, index, options=None):
             if options is None:
                 if index.__class__ is tuple:
                     return rule(model, *index)
-                elif index is None:
+                elif index is None and not obj.is_indexed():
                     return rule(model)
                 else:
                     return rule(model, index)
             else:
                 if index.__class__ is tuple:
                     return rule(model, *index, **options)
-                elif index is None:
+                elif index is None and not obj.is_indexed():
                     return rule(model, **options)
                 else:
                     return rule(model, index, **options)

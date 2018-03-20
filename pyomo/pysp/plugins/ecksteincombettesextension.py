@@ -209,15 +209,12 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
             for tree_node in scenario._node_list[:-1]:
                 tree_node_zs = tree_node._z
                 for variable_id in tree_node._standard_variable_ids:
-                        var_values = scenario._x[tree_node._name]
-                        varval = var_values[variable_id]
-                        weight_values = scenario._w[tree_node._name]
-                        if varval is not None:
-                            this_sub_phi_term = scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
-                            cumulative_sub_phi += this_sub_phi_term
-                            
-                        else:
-                            foobar # HEY! Fix this!
+                    var_values = scenario._x[tree_node._name]
+                    varval = var_values[variable_id]
+                    weight_values = scenario._w[tree_node._name]
+                    if not scenario.is_variable_stale(tree_node, variable_id):
+                        this_sub_phi_term = scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
+                        cumulative_sub_phi += this_sub_phi_term
 
             with open(self._JName,"a") as f:
                 f.write(", %10f" % (cumulative_sub_phi))
@@ -347,11 +344,9 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                     var_values = scenario._x[tree_node._name]
                     varval = var_values[variable_id]
                     weight_values = scenario._w[tree_node._name]
-                    if varval is not None:
+                    if not scenario.is_variable_stale(tree_node, variable_id):
                         this_sub_phi_term = scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
                         cumulative_sub_phi += this_sub_phi_term
-                    else:
-                        foobar # HEY! Fix this!
 
             with open(self._JName,"a") as f:
                 f.write(", %10f" % (cumulative_sub_phi))

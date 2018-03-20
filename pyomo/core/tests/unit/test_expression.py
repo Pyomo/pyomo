@@ -10,10 +10,12 @@
 
 import copy
 
-import pyutilib.th as unittest
-from pyomo.environ import *
 from six import StringIO
 
+import pyutilib.th as unittest
+from pyutilib.misc.redirect_io import capture_output
+
+from pyomo.environ import *
 from pyomo.core.base.expression import _GeneralExpressionData
 
 class TestExpressionData(unittest.TestCase):
@@ -332,17 +334,63 @@ class TestExpression(unittest.TestCase):
     def test_display(self):
         model = ConcreteModel()
         model.e = Expression()
-        model.e.display()
+        with capture_output() as out:
+            model.e.display()
+        self.assertEqual(out.getvalue().strip(), """
+e : Size=1
+    Key  : Value
+    None : Undefined
+        """.strip())
+
         model.e.set_value(1.0)
-        model.e.display()
+        with capture_output() as out:
+            model.e.display()
+        self.assertEqual(out.getvalue().strip(), """
+e : Size=1
+    Key  : Value
+    None :   1.0
+        """.strip())
+
         out = StringIO()
-        model.e.display(ostream=out)
+        with capture_output() as no_out:
+            model.e.display(ostream=out)
+        self.assertEqual(no_out.getvalue(), "")
+        self.assertEqual(out.getvalue().strip(), """
+e : Size=1
+    Key  : Value
+    None :   1.0
+        """.strip())
+
         model.E = Expression([1,2])
-        model.E.display()
+        with capture_output() as out:
+            model.E.display()
+        self.assertEqual(out.getvalue().strip(), """
+E : Size=2
+    Key : Value
+      1 : Undefined
+      2 : Undefined
+        """.strip())
+
         model.E[1].set_value(1.0)
-        model.E.display()
+        with capture_output() as out:
+            model.E.display()
+        self.assertEqual(out.getvalue().strip(), """
+E : Size=2
+    Key : Value
+      1 :       1.0
+      2 : Undefined
+        """.strip())
+
         out = StringIO()
-        model.E.display(ostream=out)
+        with capture_output() as no_out:
+            model.E.display(ostream=out)
+        self.assertEqual(no_out.getvalue(), "")
+        self.assertEqual(out.getvalue().strip(), """
+E : Size=2
+    Key : Value
+      1 :       1.0
+      2 : Undefined
+        """.strip())
 
     def test_extract_values_store_values(self):
         model = ConcreteModel()
