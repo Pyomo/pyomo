@@ -52,7 +52,7 @@ sp_options = ScenarioTreeManagerFactory.register_options()
 #
 # General options for the scenario tree manager
 #
-sp_options.scenario_tree_manager = "pyro"
+sp_options.scenario_tree_manager = "serial"
 # using absolute paths so we can automate testing
 # of this example
 examplesdir = os.path.dirname(

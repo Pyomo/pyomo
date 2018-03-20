@@ -60,6 +60,7 @@ from pyomo.pysp.phutils import (create_block_symbol_maps,
                                 canonical_preprocess_block_constraints,
                                 ampl_preprocess_block_objectives,
                                 ampl_preprocess_block_constraints,
+                                extract_solve_times,
                                 _OLD_OUTPUT)
 from pyomo.pysp.util.misc import load_external_module
 from pyomo.pysp import phsolverserverutils
@@ -290,7 +291,7 @@ class _PHBase(object):
         # maps scenario name to the corresponding model instance
         self._instances = {}
 
-        # the scenario instance factory, which was used to construct 
+        # the scenario instance factory, which was used to construct
         # the above instances.
         self._scenario_instance_factory = None
 
@@ -311,7 +312,7 @@ class _PHBase(object):
         self._solution_status = {}
 
         # maps scenario name (or bundle name, in the case of bundling)
-        # to the last wall clock solve time (as reported by the solver 
+        # to the last wall clock solve time (as reported by the solver
         # plugin) for the corresponding sub-problem.
         self._solve_times = {}
 
@@ -1211,7 +1212,7 @@ class ProgressiveHedging(_PHBase):
     def is_converged(self):
         return (self._or_convergers and any(converger.isConverged(self) for converger in self._convergers)) or \
                (not self._or_convergers and all(converger.isConverged(self) for converger in self._convergers))
-    
+
     def set_dual_mode(self):
 
         self._dual_mode = True
@@ -1234,12 +1235,12 @@ class ProgressiveHedging(_PHBase):
 
             return
 
-        if isinstance(self._solver_manager, 
+        if isinstance(self._solver_manager,
                       pyomo.solvers.plugins.smanager.\
                       phpyro.SolverManager_PHPyro):
 
             phsolverserverutils.release_phsolverservers(self)
-        
+
         for object_name, object_solver in iteritems(self._solver_map):
             object_solver.deactivate()
         self._solver_map.clear()
@@ -2425,7 +2426,7 @@ class ProgressiveHedging(_PHBase):
             if self._scenario_tree.contains_bundles():
                 self._form_bundle_binding_instances()
 
-            # if we are dealing with persistent solver interfaces, 
+            # if we are dealing with persistent solver interfaces,
             # we need to initialize the instances.
             if isinstance(self._solver_map[next(iterkeys(self._solver_map))], PersistentSolver):
                 if self._scenario_tree.contains_bundles():
@@ -2726,7 +2727,10 @@ class ProgressiveHedging(_PHBase):
     #
     #
 
-    def queue_subproblems(self, subproblems=None, warmstart=False, exception_on_failure=False):
+    def queue_subproblems(self,
+                          subproblems=None,
+                          warmstart=False,
+                          exception_on_failure=False):
 
         # TODO: Does this import need to be delayed because
         #       it is in a plugins subdirectory
@@ -2754,7 +2758,7 @@ class ProgressiveHedging(_PHBase):
                 for scenario in self._scenario_tree._scenarios:
                     subproblems.append(scenario._name)
 
-        # Preprocess the scenario instances before solving if 
+        # Preprocess the scenario instances before solving if
         # we are not using phpyro
         if not isinstance(self._solver_manager,
                           pyomo.solvers.plugins.smanager.\
@@ -2817,7 +2821,7 @@ class ProgressiveHedging(_PHBase):
         # scenario/bundles/serial/phpyro
         if isinstance(self._solver_manager,
                       pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-            solver_options = self._scenario_solver_options            
+            solver_options = self._scenario_solver_options
             if self._mipgap is not None:
                 solver_options["mipgap"] = float(self._mipgap)
             common_solve_kwds['solver_options'] = solver_options
@@ -2865,13 +2869,13 @@ class ProgressiveHedging(_PHBase):
                         print("Solver manager queuing instance=%s"
                               % (scenario_bundle._name))
 
-                    warmstart_bundle_solve = warmstart and bundle_solver.warm_start_capable()
+                    if bundle_solver.warm_start_capable():
+                        common_solve_kwds['warmstart'] = warmstart
 
                     new_action_handle = \
-                        self._solver_manager.queue(    
+                        self._solver_manager.queue(
                                 self._bundle_binding_instance_map[scenario_bundle._name],
                                 opt=bundle_solver,
-                                warmstart=warmstart_bundle_solve,
                                 **common_solve_kwds)
 
                 bundle_action_handle_map[scenario_bundle._name] = new_action_handle
@@ -2913,21 +2917,20 @@ class ProgressiveHedging(_PHBase):
                         print("Solver manager queuing instance=%s"
                               % (scenario._name))
 
-                    warmstart_scenario_solve = warmstart and scenario_solver.warm_start_capable()
+                    if scenario_solver.warm_start_capable():
+                        common_solve_kwds['warmstart'] = warmstart
 
                     if self._extensions_suffix_list is not None:
                         new_action_handle = \
                             self._solver_manager.queue(
                                 instance,
                                 opt=scenario_solver,
-                                warmstart=warmstart_scenario_solve,
                                 suffixes=self._extensions_suffix_list,
                                 **common_solve_kwds)
                     else:
                         new_action_handle = \
                             self._solver_manager.queue(instance,
                                                        opt=scenario_solver,
-                                                       warmstart=warmstart_scenario_solve,
                                                        **common_solve_kwds)
 
                 scenario_action_handle_map[scenario._name] = new_action_handle
@@ -3023,11 +3026,11 @@ class ProgressiveHedging(_PHBase):
                     self._solution_status[bundle_name] = \
                         getattr(SolutionStatus, auxilliary_values["solution_status"])
 
-                    if "wallclock_time" in auxilliary_values:
+                    if auxilliary_values["solve_time"] is not None:
                         self._solve_times[bundle_name] = \
-                            auxilliary_values["wallclock_time"]
+                            auxilliary_values["solve_time"]
 
-                    if "pyomo_solve_time" in auxilliary_values:
+                    if auxilliary_values["pyomo_solve_time"] is not None:
                         self._pyomo_solve_times[bundle_name] = \
                             auxilliary_values["pyomo_solve_time"]
 
@@ -3085,14 +3088,8 @@ class ProgressiveHedging(_PHBase):
 
                     self._solution_status[bundle_name] = solution0.status
 
-                    if hasattr(bundle_results.solver,"wallclock_time"):
-                        solve_time = bundle_results.solver.wallclock_time
-                        self._solve_times[bundle_name] = \
-                            float(bundle_results.solver.wallclock_time)
-
-                    if hasattr(bundle_results,"pyomo_solve_time"):
-                        self._pyomo_solve_times[bundle_name] = \
-                            bundle_results.pyomo_solve_time
+                    self._solve_times[bundle_name], self._pyomo_solve_times[bundle_name] = \
+                        extract_solve_times(bundle_results)
 
                     scenario_bundle = \
                         self._scenario_tree._scenario_bundle_map[bundle_name]
@@ -3176,18 +3173,18 @@ class ProgressiveHedging(_PHBase):
                     self._solution_status[scenario_name] = \
                         getattr(SolutionStatus, auxilliary_values["solution_status"])
 
-                    if "wallclock_time" in auxilliary_values:
+                    if auxilliary_values["solve_time"] is not None:
                         self._solve_times[scenario_name] = \
-                            auxilliary_values["wallclock_time"]
+                            auxilliary_values["solve_time"]
 
-                    if "pyomo_solve_time" in auxilliary_values:
+                    if auxilliary_values["pyomo_solve_time"] is not None:
                         self._pyomo_solve_times[scenario_name] = \
                             auxilliary_values["pyomo_solve_time"]
 
                     end_time = time.time()
 
                     if self._output_times:
-                        result_load_times.append(end_time-start_time)                        
+                        result_load_times.append(end_time-start_time)
 
                 else:
 
@@ -3244,20 +3241,13 @@ class ProgressiveHedging(_PHBase):
 
                     self._solution_status[scenario_name] = solution0.status
 
-                    if hasattr(results.solver,"wallclock_time") and \
-                       (not isinstance(results.solver.wallclock_time, UndefinedData)) and \
-                       (results.solver.wallclock_time is not None):
-                        self._solve_times[scenario_name] = \
-                            float(results.solver.wallclock_time)
-
-                    if hasattr(results,"pyomo_solve_time"):
-                        self._pyomo_solve_times[scenario_name] = \
-                            results.pyomo_solve_time
+                    self._solve_times[scenario_name], self._pyomo_solve_times[scenario_name] = \
+                        extract_solve_times(results)
 
                     end_time = time.time()
 
                     if self._output_times:
-                        result_load_times.append(end_time-start_time)                                                      
+                        result_load_times.append(end_time-start_time)
 
                 if self._verbose:
                     print("Successfully loaded solution for scenario=%s "
@@ -3273,7 +3263,7 @@ class ProgressiveHedging(_PHBase):
                   % (min(result_load_times),
                      mean,
                      max(result_load_times),
-                     std_dev))                    
+                     std_dev))
 
         return subproblems, failures
 
@@ -3812,7 +3802,8 @@ class ProgressiveHedging(_PHBase):
                 plugin.asynchronous_pre_scenario_queue(self, scenario._name)
 
         # queue up the solves for all scenario sub-problems - iteration 0 is special.
-        action_handle_scenario_map_updates, a, b, c = self.queue_subproblems(subproblems=subproblems_to_queue, warmstart=not self._disable_warmstarts)
+        action_handle_scenario_map_updates, a, b, c = self.queue_subproblems(subproblems=subproblems_to_queue,
+                                                                             warmstart=not self._disable_warmstarts)
         action_handle_scenario_map.update(action_handle_scenario_map_updates)
 
         print("Entering PH asynchronous processing loop")
@@ -3988,7 +3979,8 @@ class ProgressiveHedging(_PHBase):
                         plugin.asynchronous_pre_scenario_queue(self, scenario_name)
 
                     # queue stuff!
-                    action_handle_scenario_map_updates, a, b, c = self.queue_subproblems(subproblems=[scenario_name], warmstart=not self._disable_warmstarts)
+                    action_handle_scenario_map_updates, a, b, c = self.queue_subproblems(subproblems=[scenario_name],
+                                                                                         warmstart=not self._disable_warmstarts)
                     action_handle_scenario_map.update(action_handle_scenario_map_updates)
 
                     number_subproblems_queued = len(subproblems_to_queue)
@@ -4134,9 +4126,9 @@ class ProgressiveHedging(_PHBase):
             expected_cost = self._scenario_tree.findRootNode().computeExpectedNodeCost()
             if not _OLD_OUTPUT: print("Expected Cost=%14.4f" % (expected_cost))
             self._cost_history[self._current_iteration] = expected_cost
-            
+
             if self.is_converged():
-               
+
                 if not _OLD_OUTPUT: print("Caching results for new incumbent solution")
                 self.cacheSolutions(self._incumbent_cache_id)
                 self._best_incumbent_key = self._current_iteration
@@ -4337,7 +4329,7 @@ class ProgressiveHedging(_PHBase):
                 self._cost_history[self._current_iteration] = expected_cost
 
                 if self.is_converged():
-                    
+
                     if (len(self._incumbent_cost_history) == 0) or \
                        ((self._objective_sense == minimize) and \
                         (expected_cost < min(self._incumbent_cost_history.values()))) or \

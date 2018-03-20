@@ -1123,7 +1123,14 @@ def run_ph(options, ph):
             pyomo.pysp.phsolverserverutils.\
                 warmstart_scenario_instances(ph)
 
-            ph._preprocess_scenario_instances()
+            # no point in doing advanced preprocessing for the single
+            # ef solve that is about to occur.
+            for instance in ph._instances.values():
+                for block in instance.block_data_objects(active=True):
+                    block._gen_obj_ampl_repn = True
+                    block._gen_con_ampl_repn = True
+                    block._gen_obj_canonical_repn = True
+                    block._gen_con_canonical_repn = True
 
         ph_solver_manager = ph._solver_manager
         ph._solver_manager = None
