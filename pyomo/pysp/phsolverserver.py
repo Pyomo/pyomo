@@ -602,6 +602,8 @@ class _PHSolverServer(_PHBase):
                 'symbolic_solver_labels':self._symbolic_solver_labels,
                 'output_fixed_variable_bounds':self._write_fixed_variables,
                 'suffixes':self._solver_suffixes}
+        if object_solver.warm_start_capable():
+            common_solve_kwds['warmstart'] = self._warmstart
 
         stages_to_load = None
         if not TransmitType.TransmitAllStages(variable_transmission):
@@ -619,10 +621,7 @@ class _PHSolverServer(_PHBase):
 
             solve_start_time = time.time()
 
-            warmstart_bundle_solve = self._warmstart and object_solver.warm_start_capable()
-            
             results = object_solver.solve(bundle_ef_instance,
-                                          warmstart=warmstart_bundle_solve,
                                           **common_solve_kwds)
 
             pyomo_solve_time = time.time() - solve_start_time
@@ -701,10 +700,7 @@ class _PHSolverServer(_PHBase):
 
             solve_start_time = time.time()
 
-            warmstart_scenario_solve = self._warmstart and object_solver.warm_start_capable()
-
             results = object_solver.solve(scenario_instance,
-                                          warmstart=warmstart_scenario_solve,
                                           **common_solve_kwds)
 
             pyomo_solve_time = time.time() - solve_start_time

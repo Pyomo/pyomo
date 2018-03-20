@@ -2868,13 +2868,13 @@ class ProgressiveHedging(_PHBase):
                         print("Solver manager queuing instance=%s"
                               % (scenario_bundle._name))
 
-                    warmstart_bundle_solve = warmstart and bundle_solver.warm_start_capable()
+                    if bundle_solver.warm_start_capable():
+                        common_solve_kwds['warmstart'] = warmstart
 
                     new_action_handle = \
-                        self._solver_manager.queue(    
+                        self._solver_manager.queue(
                                 self._bundle_binding_instance_map[scenario_bundle._name],
                                 opt=bundle_solver,
-                                warmstart=warmstart_bundle_solve,
                                 **common_solve_kwds)
 
                 bundle_action_handle_map[scenario_bundle._name] = new_action_handle
@@ -2916,21 +2916,20 @@ class ProgressiveHedging(_PHBase):
                         print("Solver manager queuing instance=%s"
                               % (scenario._name))
 
-                    warmstart_scenario_solve = warmstart and scenario_solver.warm_start_capable()
+                    if scenario_solver.warm_start_capable():
+                        common_solve_kwds['warmstart'] = warmstart
 
                     if self._extensions_suffix_list is not None:
                         new_action_handle = \
                             self._solver_manager.queue(
                                 instance,
                                 opt=scenario_solver,
-                                warmstart=warmstart_scenario_solve,
                                 suffixes=self._extensions_suffix_list,
                                 **common_solve_kwds)
                     else:
                         new_action_handle = \
                             self._solver_manager.queue(instance,
                                                        opt=scenario_solver,
-                                                       warmstart=warmstart_scenario_solve,
                                                        **common_solve_kwds)
 
                 scenario_action_handle_map[scenario._name] = new_action_handle
