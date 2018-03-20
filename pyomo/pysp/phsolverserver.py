@@ -423,17 +423,21 @@ class _PHSolverServer(_PHBase):
         if self._verbose:
             print("Setting instance for persistent solver interface")
 
+        # TODO: the symbolic solver label option is not propagated presently 
+        #       from PH to ph solver servers until the solve() method is invoked.
+        #       making the default "False", as largely labels take memory and
+        #       one can debug in the interim with a non-persistent solver.
         if isinstance(object_solver, PersistentSolver):
             if self._scenario_tree.contains_bundles():
                 object_solver.set_instance(
                     self._bundle_binding_instance_map[object_name],
-                    symbolic_solver_labels=True, #FIXME
-                    output_fixed_variable_bounds=self._write_fixed_variables) # FIXME - AS WITH ABOVE
+                    symbolic_solver_labels=False,
+                    output_fixed_variable_bounds=self._write_fixed_variables) 
             else:
                 object_solver.set_instance(
                     self._scenario_tree.get_scenario(object_name).instance,
-                    symbolic_solver_labels=True, # FIXME
-                    output_fixed_variable_bounds=self._write_fixed_variables) # FIXME - AS WITH ABOVE
+                    symbolic_solver_labels=False, 
+                    output_fixed_variable_bounds=self._write_fixed_variables) 
 
         # Delay any preprocessing of the scenario instances
         # until we are inside the solve method. This gives users a

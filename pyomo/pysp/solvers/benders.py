@@ -664,7 +664,7 @@ class BendersAlgorithm(PySPConfiguredObject):
             solver_io=self.get_option("master_solver_io"))
         if isinstance(self._master_solver, PersistentSolver):
             raise TypeError("BendersAlgorithm does not yet support "
-                            "PersistenSolver types for the master problem")
+                            "PersistentSolver types for the master problem")
         if len(self.get_option("master_solver_options")):
             if type(self.get_option("master_solver_options")) is tuple:
                 self._master_solver.set_options(
