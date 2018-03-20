@@ -215,7 +215,7 @@ class _DisjunctionData(ActiveComponentData):
                 continue
             # The user was lazy and gave us a single constraint expression
             try:
-                isexpr = e.is_expression()
+                isexpr = e.is_expression_type()
             except AttributeError:
                 isexpr = False
             if isexpr and e.is_relational():
