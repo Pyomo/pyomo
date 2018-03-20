@@ -372,16 +372,21 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         elif not expr.is_expression_type():
             raise ValueError("Unexpected expression type: "+str(expr))
 
+        #
+        # WEH - Checking the polynomial degree didn't
+        #       turn out to be a win.  But I'm leaving this
+        #       in as a comment for now, since we're not
+        #       done tuning this code.
+        #
         #degree = expr.polynomial_degree()
-
-        if False and degree == 1:
-            return _generate_linear_standard_repn(expr, 
-                                idMap=idMap,
-                                compute_values=compute_values,
-                                verbose=verbose,
-                                repn=repn)
-        else:
-            return _generate_standard_repn(expr, 
+        #if degree == 1:
+        #    return _generate_linear_standard_repn(expr, 
+        #                        idMap=idMap,
+        #                        compute_values=compute_values,
+        #                        verbose=verbose,
+        #                        repn=repn)
+        #else:
+        return _generate_standard_repn(expr, 
                                 idMap=idMap,
                                 compute_values=compute_values,
                                 verbose=verbose,
@@ -957,6 +962,11 @@ def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False
     return repn
 
 
+"""
+WEH - This code assumes the expression is linear and fills in a dictionary.
+      This avoids creating temporary Results objects, but in practice that's
+      not a big win.  Hence, this is deprecated.
+
 ##-----------------------------------------------------------------------
 ##
 ## Logic for _generate_linear_standard_repn
@@ -1281,7 +1291,7 @@ def _generate_linear_standard_repn(expr, idMap=None, compute_values=True, verbos
     repn.linear_coefs = tuple(coef[key] for key in keys)
 
     return repn
-
+"""
 
 
 ##-----------------------------------------------------------------------
