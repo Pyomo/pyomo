@@ -1,0 +1,5 @@
+TIME piecewise
+PERIODS IMPLICIT
+    x o TIME1
+    fx c_u_cL_second_stage_ TIME2
+ENDATA

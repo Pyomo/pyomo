@@ -21,7 +21,7 @@ import traceback
 import base64
 try:
     import cPickle as pickle
-except:
+except:                                           #pragma:nocover
     import pickle
 try:
     import dill
@@ -36,7 +36,7 @@ from pyutilib.pyro import (TaskWorker,
                            shutdown_pyro_components,
                            TaskProcessingError,
                            using_pyro4)
-if using_pyro4:
+if using_pyro4:                                    #pragma:nocover
     import Pyro4
 
 from pyomo.util import pyomo_command

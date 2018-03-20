@@ -94,18 +94,23 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         GurobiDirect._warm_start(self)
 
     def update_var(self, var):
-        """
-        Update a variable in the solver's model. This will update bounds, fix/unfix the variable as needed, and update
-        the variable type.
+        """Update a single variable in the solver's model.
+
+        This will update bounds, fix/unfix the variable as needed, and
+        update the variable type.
 
         Parameters
         ----------
-        var: Var
+        var: Var (scalar Var or single _VarData)
+
         """
-        if var.is_indexed():
-            for child_var in var.values():
-                self.update_var(child_var)
-            return
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
+        #if var.is_indexed():
+        #    for child_var in var.values():
+        #        self.update_var(child_var)
+        #    return
         if var not in self._pyomo_var_to_solver_var_map:
             raise ValueError('The Var provided to update_var needs to be added first: {0}'.format(var))
         gurobipy_var = self._pyomo_var_to_solver_var_map[var]
@@ -114,13 +119,12 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             lb = var.value
             ub = var.value
         else:
-            lb = value(var.lb)
-            ub = value(var.ub)
-        if lb is None:
             lb = -self._gurobipy.GRB.INFINITY
-        if ub is None:
             ub = self._gurobipy.GRB.INFINITY
-
+            if var.has_lb():
+                lb = value(var.lb)
+            if var.has_ub():
+                ub = value(var.ub)
         gurobipy_var.setAttr('lb', lb)
         gurobipy_var.setAttr('ub', ub)
         gurobipy_var.setAttr('vtype', vtype)

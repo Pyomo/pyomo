@@ -31,6 +31,9 @@ from pyomo.core.kernel import expr as EXPR
 import six
 from six.moves import zip
 
+_pos_inf = float('inf')
+_neg_inf = float('-inf')
+
 class IConstraint(IComponent, _ActiveComponentMixin):
     """The interface for constraints"""
     __slots__ = ()
@@ -89,10 +92,12 @@ class IConstraint(IComponent, _ActiveComponentMixin):
         body = self(exception=False)
         if body is None:
             return None
-        elif self.lb is None:
-            return float('inf')
+        lb = self.lb
+        if lb is None:
+            lb = _neg_inf
         else:
-            return body - value(self.lb)
+            lb = value(lb)
+        return body - lb
 
     @property
     def uslack(self):
@@ -104,10 +109,12 @@ class IConstraint(IComponent, _ActiveComponentMixin):
         body = self(exception=False)
         if body is None:
             return None
-        elif self.ub is None:
-            return float('inf')
+        ub = self.ub
+        if ub is None:
+            ub = _pos_inf
         else:
-            return value(self.ub) - body
+            ub = value(ub)
+        return ub - body
 
     @property
     def slack(self):
@@ -119,13 +126,7 @@ class IConstraint(IComponent, _ActiveComponentMixin):
         body = self(exception=False)
         if body is None:
             return None
-        elif self.lb is None:
-            return self.uslack
-        elif self.ub is None:
-            return self.lslack
-        lslack = self.lslack
-        uslack = self.uslack
-        return min(lslack, uslack)
+        return min(self.lslack, self.uslack)
 
     @property
     def expr(self):
@@ -711,9 +712,9 @@ class linear_constraint(_MutableBoundsConstraintMixin,
         >>> x = pmo.variable()
         >>> y = pmo.variable()
         >>> # An upper bound constraint
-        >>> c = pmo.constraint(variables=[x,y], coefficients=[1,2], ub=1)
+        >>> c = pmo.linear_constraint(variables=[x,y], coefficients=[1,2], ub=1)
         >>> # (equivalent form)
-        >>> c = pmo.constraint(terms=[(x,1), (y,2)], ub=1)
+        >>> c = pmo.linear_constraint(terms=[(x,1), (y,2)], ub=1)
         >>> # (equivalent form using a general constraint)
         >>> c = pmo.constraint(x + 2*y <= 1)
     """
@@ -788,7 +789,13 @@ class linear_constraint(_MutableBoundsConstraintMixin,
     def terms(self, terms):
         """Set the terms in the body of this constraint
         using an iterable of (variable, coefficient) tuples"""
-        self._variables, self._coefficients = zip(*terms)
+        transpose = tuple(zip(*terms))
+        if len(transpose) == 2:
+            self._variables, self._coefficients = transpose
+        else:
+            assert transpose == ()
+            self._variables = ()
+            self._coefficients = ()
 
     #
     # Override a the default __call__ method on IConstraint
@@ -819,20 +826,22 @@ class linear_constraint(_MutableBoundsConstraintMixin,
     # _linear_canonical_form flag is True
     #
 
-    def canonical_form(self):
+    def canonical_form(self, compute_values=True):
         from pyomo.repn.canonical_repn import \
             coopr3_CompiledLinearCanonicalRepn
         variables = []
         coefficients = []
         constant = 0
         for v, c in self.terms:
+            if compute_values:
+                c = value(c)
             if v.is_expression():
                 v = v.expr
             if not v.fixed:
                 variables.append(v)
                 coefficients.append(c)
             else:
-                constant += value(c) * v()
+                constant += c * v()
         repn = coopr3_CompiledLinearCanonicalRepn()
         repn.variables = tuple(variables)
         repn.linear = tuple(coefficients)

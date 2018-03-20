@@ -65,8 +65,6 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
             options = PySPConfigBlock()
 
         safe_declare_common_option(options,
-                                   "disable_advanced_preprocessing")
-        safe_declare_common_option(options,
                                    "preprocess_fixed_variables")
         safe_declare_common_option(options,
                                    "symbolic_solver_labels")
@@ -105,8 +103,8 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
 
     def add_scenario(self, scenario, scenario_instance, scenario_solver):
 
-        assert scenario._name not in self._scenario_instance
-        assert scenario._name not in self._scenario_to_bundle_map
+        assert scenario.name not in self._scenario_instance
+        assert scenario.name not in self._scenario_to_bundle_map
 
         self._scenario_instance[scenario._name] = scenario_instance
         self._scenario_solver[scenario._name] = scenario_solver
@@ -118,41 +116,44 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
         self.all_constraints_updated[scenario._name] = True
         self.constraints_updated_list[scenario._name] = []
 
-        self.objective_updated[scenario._name] = True
-        self.all_constraints_updated[scenario._name] = True
-
-        if not self.get_option("disable_advanced_preprocessing"):
-            scenario_instance = self._scenario_instance[scenario._name]
-            for block in scenario_instance.block_data_objects(active=True):
-                block._gen_obj_ampl_repn = False
-                block._gen_con_ampl_repn = False
-                block._gen_obj_canonical_repn = False
-                block._gen_con_canonical_repn = False
+        scenario_instance = self._scenario_instance[scenario._name]
+        assert scenario_instance is not None
+        for block in scenario_instance.block_data_objects(active=True):
+            assert not hasattr(block, "_gen_obj_ampl_repn")
+            assert not hasattr(block, "_gen_con_ampl_repn")
+            assert not hasattr(block, "_gen_obj_canonical_repn")
+            assert not hasattr(block, "_gen_con_canonical_repn")
+            block._gen_obj_ampl_repn = False
+            block._gen_con_ampl_repn = False
+            block._gen_obj_canonical_repn = False
+            block._gen_con_canonical_repn = False
 
     def remove_scenario(self, scenario):
 
-        assert scenario._name in self._scenario_instance
-        assert scenario._name not in self._scenario_to_bundle_map
+        assert scenario.name in self._scenario_instance
+        assert scenario.name not in self._scenario_to_bundle_map
 
-        if self.get_option("disable_advanced_preprocessing"):
-            scenario_instance = self._scenario_instance[scenario_name]
-            for block in scenario_instance.block_data_objects(active=True):
-                block._gen_obj_ampl_repn = False
-                block._gen_con_ampl_repn = False
-                block._gen_obj_canonical_repn = False
-                block._gen_con_canonical_repn = False
+        scenario_instance = self._scenario_instance[scenario.name]
+        assert scenario_instance is not None
+        for block in scenario_instance.block_data_objects(active=True):
+            assert not block._gen_obj_ampl_repn
+            assert not block._gen_con_ampl_repn
+            assert not block._gen_obj_canonical_repn
+            assert not block._gen_con_canonical_repn
+            del block._gen_obj_ampl_repn
+            del block._gen_con_ampl_repn
+            del block._gen_obj_canonical_repn
+            del block._gen_con_canonical_repn
 
         del self._scenario_instance[scenario._name]
         del self._scenario_solver[scenario._name]
+        del self._scenario_objective[scenario._name]
 
         del self.fixed_variables[scenario._name]
         del self.freed_variables[scenario._name]
         del self.objective_updated[scenario._name]
         del self.all_constraints_updated[scenario._name]
         del self.constraints_updated_list[scenario._name]
-
-        del self.objective_updated[scenario._name]
-        del self.all_constraints_updated[scenario._name]
 
     def add_bundle(self, bundle, bundle_instance, bundle_solver):
 
@@ -175,7 +176,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
         for scenario_name in self._bundle_scenarios[bundle._name]:
             assert scenario_name in self._scenario_instance
             assert scenario_name in self._scenario_to_bundle_map
-            self._scenario_to_bundle_map[scenario_name] = bundle._name
+            del self._scenario_to_bundle_map[scenario_name]
 
         del self._bundle_instances[bundle._name]
         del self._bundle_solvers[bundle._name]
@@ -509,8 +510,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
     def get_solver_keywords(self):
 
         kwds = {}
-        if not self.get_option("disable_advanced_preprocessing"):
-            if not self.get_option("preprocess_fixed_variables"):
-                kwds['output_fixed_variable_bounds'] = True
+        if not self.get_option("preprocess_fixed_variables"):
+            kwds['output_fixed_variable_bounds'] = True
 
         return kwds

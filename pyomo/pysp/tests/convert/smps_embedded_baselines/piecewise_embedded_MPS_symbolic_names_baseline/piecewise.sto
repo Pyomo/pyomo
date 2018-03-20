@@ -1,0 +1,12 @@
+STOCH piecewise
+INDEP         DISCRETE
+    ONE_VAR_CONSTANT    o    0    0.33333333333333331
+    ONE_VAR_CONSTANT    o    1    0.33333333333333331
+    ONE_VAR_CONSTANT    o    2    0.33333333333333331
+    RHS    c_u_cL_second_stage_    0    0.33333333333333331
+    RHS    c_u_cL_second_stage_    1    0.33333333333333331
+    RHS    c_u_cL_second_stage_    2    0.33333333333333331
+    r    c_l_c_second_stage_    0    0.33333333333333331
+    r    c_l_c_second_stage_    1    0.33333333333333331
+    r    c_l_c_second_stage_    2    0.33333333333333331
+ENDATA
