@@ -200,54 +200,78 @@ class DirectOrPersistentSolver(OptSolver):
             self._labeler = NumericLabeler('x')
 
     def _add_block(self, block):
-        for var in block.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=True,
-                                                active=True, sort=True):
+        for var in block.component_data_objects(
+                ctype=pyomo.core.base.var.Var,
+                descend_into=True,
+                active=True,
+                sort=True):
             self._add_var(var)
 
-        for sub_block in block.block_data_objects(descend_into=True, active=True):
-            for con in sub_block.component_data_objects(ctype=pyomo.core.base.constraint.Constraint,
-                                                        descend_into=False, active=True, sort=True):
+        for sub_block in block.block_data_objects(descend_into=True,
+                                                  active=True):
+            for con in sub_block.component_data_objects(
+                    ctype=pyomo.core.base.constraint.Constraint,
+                    descend_into=False,
+                    active=True,
+                    sort=True):
+                if (not con.has_lb()) and \
+                   (not con.has_ub()):
+                    assert not con.equality
+                    continue  # non-binding, so skip
                 self._add_constraint(con)
 
-            for con in sub_block.component_data_objects(ctype=pyomo.core.base.sos.SOSConstraint,
-                                                        descend_into=False, active=True, sort=True):
+            for con in sub_block.component_data_objects(
+                    ctype=pyomo.core.base.sos.SOSConstraint,
+                    descend_into=False,
+                    active=True,
+                    sort=True):
                 self._add_sos_constraint(con)
 
             obj_counter = 0
-            for obj in sub_block.component_data_objects(ctype=pyomo.core.base.objective.Objective, descend_into=False,
-                                                        active=True):
+            for obj in sub_block.component_data_objects(
+                    ctype=pyomo.core.base.objective.Objective,
+                    descend_into=False,
+                    active=True):
                 obj_counter += 1
                 if obj_counter > 1:
-                    raise ValueError('Solver interface does not support multiple objectives.')
+                    raise ValueError("Solver interface does not "
+                                     "support multiple objectives.")
                 self._set_objective(obj)
 
     """ This method should be implemented by subclasses."""
     def _set_objective(self, obj):
-        raise NotImplementedError('This method should be implemented by subclasses')
+        raise NotImplementedError("This method should be implemented "
+                                  "by subclasses")
 
     """ This method should be implemented by subclasses."""
     def _add_constraint(self, con):
-        raise NotImplementedError('This method should be implemented by subclasses')
+        raise NotImplementedError("This method should be implemented "
+                                  "by subclasses")
 
     """ This method should be implemented by subclasses."""
     def _add_sos_constraint(self, con):
-        raise NotImplementedError('This method should be implemented by subclasses')
+        raise NotImplementedError("This method should be implemented "
+                                  "by subclasses")
 
     """ This method should be implemented by subclasses."""
     def _add_var(self, var):
-        raise NotImplementedError('This method should be implemented by subclasses')
+        raise NotImplementedError("This method should be implemented "
+                                  "by subclasses")
 
     """ This method should be implemented by subclasses."""
     def _get_expr_from_pyomo_repn(self, repn, max_degree=None):
-        raise NotImplementedError('This method should be implemented by subclasses')
+        raise NotImplementedError("This method should be implemented "
+                                  "by subclasses")
 
     """ This method should be implemented by subclasses."""
     def _get_expr_from_pyomo_expr(self, expr, max_degree=None):
-        raise NotImplementedError('This method should be implemented by subclasses')
+        raise NotImplementedError("This method should be implemented "
+                                  "by subclasses")
 
     """ This method should be implemented by subclasses."""
     def _load_vars(self, vars_to_load):
-        raise NotImplementedError('This method should be implemented by subclasses')
+        raise NotImplementedError("This method should be implemented "
+                                  "by subclasses")
 
     def load_vars(self, vars_to_load=None):
         """
