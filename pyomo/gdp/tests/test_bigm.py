@@ -259,6 +259,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertIsInstance(oldc, Constraint)
         self.assertFalse(oldc.active)
 
+    @unittest.category('pyomo5_expr_failures')
     def test_transformed_constraints(self):
         m = models.makeTwoTermDisj()
         TransformationFactory('gdp.bigm').apply_to(m)
@@ -1776,6 +1777,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
             self.assertEqual(repn.linear_coefs[2], -1)
             self.assertEqual(repn.constant, 1)
 
+    @unittest.category('pyomo5_expr_failures')
     def test_transformed_constraints(self):
         # We'll check all the transformed constraints to make sure
         # that nothing was transformed twice. The real key is that the

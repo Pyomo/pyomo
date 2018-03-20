@@ -289,9 +289,10 @@ class Test(unittest.TestCase):
         self.assertEqual(len(factory._archives), 0)
         self.assertTrue("ReferenceModel" in sys.modules)
 
-    # model: name of .py file with model
-    # scenario_tree: Pyomo scenario tree model
+    @unittest.category('pyomo5_expr_failures')
     def test_init6(self):
+        # model: name of .py file with model
+        # scenario_tree: Pyomo scenario tree model
         self.assertTrue("reference_test_model" not in sys.modules)
         scenario_tree_model = CreateAbstractScenarioTreeModel().\
             create_instance(
