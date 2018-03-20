@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -78,9 +78,9 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
     def __init__(self, *args, **kwds):
 
         super(ScenarioTreePreprocessor, self).__init__(*args, **kwds)
-        self._scenario_solver = {}
-        self._scenario_instance = {}
-        self._scenario_objective = {}
+        self._scenario_solvers = {}
+        self._scenario_instances = {}
+        self._scenario_objectives = {}
 
         #
         # Bundle related objects
@@ -103,12 +103,12 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
 
     def add_scenario(self, scenario, scenario_instance, scenario_solver):
 
-        assert scenario.name not in self._scenario_instance
+        assert scenario.name not in self._scenario_instances
         assert scenario.name not in self._scenario_to_bundle_map
 
-        self._scenario_instance[scenario._name] = scenario_instance
-        self._scenario_solver[scenario._name] = scenario_solver
-        self._scenario_objective[scenario._name] = scenario._instance_objective
+        self._scenario_instances[scenario._name] = scenario_instance
+        self._scenario_solvers[scenario._name] = scenario_solver
+        self._scenario_objectives[scenario._name] = scenario._instance_objective
 
         self.fixed_variables[scenario._name] = []
         self.freed_variables[scenario._name] = []
@@ -116,7 +116,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
         self.all_constraints_updated[scenario._name] = True
         self.constraints_updated_list[scenario._name] = []
 
-        scenario_instance = self._scenario_instance[scenario._name]
+        scenario_instance = self._scenario_instances[scenario._name]
         assert scenario_instance is not None
         for block in scenario_instance.block_data_objects(active=True):
             assert not hasattr(block, "_gen_obj_ampl_repn")
@@ -130,10 +130,10 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
 
     def remove_scenario(self, scenario):
 
-        assert scenario.name in self._scenario_instance
+        assert scenario.name in self._scenario_instances
         assert scenario.name not in self._scenario_to_bundle_map
 
-        scenario_instance = self._scenario_instance[scenario.name]
+        scenario_instance = self._scenario_instances[scenario.name]
         assert scenario_instance is not None
         for block in scenario_instance.block_data_objects(active=True):
             assert not block._gen_obj_ampl_repn
@@ -145,9 +145,9 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
             del block._gen_obj_canonical_repn
             del block._gen_con_canonical_repn
 
-        del self._scenario_instance[scenario._name]
-        del self._scenario_solver[scenario._name]
-        del self._scenario_objective[scenario._name]
+        del self._scenario_instances[scenario._name]
+        del self._scenario_solvers[scenario._name]
+        del self._scenario_objectives[scenario._name]
 
         del self.fixed_variables[scenario._name]
         del self.freed_variables[scenario._name]
@@ -165,7 +165,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
         self._bundle_first_preprocess[bundle._name] = True
 
         for scenario_name in self._bundle_scenarios[bundle._name]:
-            assert scenario_name in self._scenario_instance
+            assert scenario_name in self._scenario_instances
             assert scenario_name not in self._scenario_to_bundle_map
             self._scenario_to_bundle_map[scenario_name] = bundle._name
 
@@ -174,7 +174,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
         assert bundle._name in self._bundle_instances
 
         for scenario_name in self._bundle_scenarios[bundle._name]:
-            assert scenario_name in self._scenario_instance
+            assert scenario_name in self._scenario_instances
             assert scenario_name in self._scenario_to_bundle_map
             del self._scenario_to_bundle_map[scenario_name]
 
@@ -241,7 +241,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
         start_time = time.time()
 
         if scenarios is None:
-            scenarios = self._scenario_instance.keys()
+            scenarios = self._scenario_instances.keys()
 
         if self.get_option("verbose"):
             print("Preprocessing %s scenarios" % len(scenarios))
@@ -256,7 +256,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
         for scenario_name in scenarios:
 
             self._preprocess_scenario(scenario_name,
-                                      self._scenario_solver[scenario_name])
+                                      self._scenario_solvers[scenario_name])
 
             # We've preprocessed the instance, reset the relevant flags
             self.clear_update_flags(scenario_name)
@@ -361,15 +361,15 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
         from pyomo.solvers.plugins.solvers.persistent_solver import \
             PersistentSolver
 
-        assert scenario_name in self._scenario_instance
-        scenario_objective_active = self._scenario_objective[scenario_name].active
+        assert scenario_name in self._scenario_instances
+        scenario_objective_active = self._scenario_objectives[scenario_name].active
         # because the preprocessor will skip the scenario objective if it is
         # part of a bundle and not active
-        self._scenario_objective[scenario_name].activate()
+        self._scenario_objectives[scenario_name].activate()
         def _cleanup():
             if not scenario_objective_active:
-                self._scenario_objective[scenario_name].deactivate()
-        scenario_instance = self._scenario_instance[scenario_name]
+                self._scenario_objectives[scenario_name].deactivate()
+        scenario_instance = self._scenario_instances[scenario_name]
         instance_fixed_variables = self.fixed_variables[scenario_name]
         instance_freed_variables = self.freed_variables[scenario_name]
         instance_all_constraints_updated = \
@@ -379,6 +379,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
         instance_objective_updated = self.objective_updated[scenario_name]
 
         persistent_solver_in_use = isinstance(solver, PersistentSolver)
+        reset_persistent = False
         if (not instance_objective_updated) and \
            (not instance_fixed_variables) and \
            (not instance_freed_variables) and \
@@ -395,22 +396,38 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
             _cleanup()
             return
 
-        if (instance_fixed_variables or instance_freed_variables) and \
-           self.get_option("preprocess_fixed_variables"):
+        if instance_fixed_variables or instance_freed_variables:
 
-            if self.get_option("verbose"):
-                print("Running full preprocessing for scenario %s"
-                      % (scenario_name))
+            if persistent_solver_in_use:
+                if solver.has_instance():
+                    if self.get_option("verbose"):
+                        print("Compiling fixed status updates in persistent solver "
+                              "for scenario %s" % (scenario_name))
 
-            if solver.problem_format() == ProblemFormat.nl:
-                ampl_expression_preprocessor({}, model=scenario_instance)
+                    # it can be the case that the solver plugin no longer has an
+                    # instance compiled, depending on what state the solver plugin
+                    # is in relative to the instance.  if this is the case, just
+                    # don't compile the variable bounds.
+                    if solver.has_instance():
+                        variables_to_change = \
+                            instance_fixed_variables + instance_freed_variables
+                        for var in variables_to_change:
+                            solver.update_var(var)
             else:
-                canonical_expression_preprocessor({}, model=scenario_instance)
+                if self.get_option("preprocess_fixed_variables"):
+                    if self.get_option("verbose"):
+                        print("Running full preprocessing for scenario %s "
+                              "due to fixing of variables"
+                              % (scenario_name))
 
-            # We've preprocessed the entire instance, no point in checking
-            # anything else
-            _cleanup()
-            return
+                    if solver.problem_format() == ProblemFormat.nl:
+                        ampl_expression_preprocessor({}, model=scenario_instance)
+                    else:
+                        canonical_expression_preprocessor({}, model=scenario_instance)
+                    # We've preprocessed the entire instance, no point in checking
+                    # anything else
+                    _cleanup()
+                    return
 
         if instance_objective_updated:
 
@@ -418,102 +435,125 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
                 print("Preprocessing objective for scenario %s"
                       % (scenario_name))
 
-            # if only the objective changed, there is minimal work to do.
-            if solver.problem_format() == ProblemFormat.nl:
-                ampl_preprocess_block_objectives(scenario_instance)
+            if persistent_solver_in_use:
+                if solver.has_instance():
+                    obj_count = 0
+                    for obj in scenario_instance.component_data_objects(
+                            ctype=Objective,
+                            descend_into=True,
+                            active=True):
+                        obj_count += 1
+                        if obj_count > 1:
+                            raise RuntimeError("Persistent solver interface only "
+                                               "supports a single active objective.")
+                        solver.set_objective(obj)
             else:
-                canonical_preprocess_block_objectives(scenario_instance)
-
-            if persistent_solver_in_use and solver.has_instance():
-                obj_count = 0
-                for obj in scenario_instance.component_data_objects(ctype=Objective,
-                                                                    descend_into=True,
-                                                                    active=True):
-                    obj_count += 1
-                    if obj_count > 1:
-                        raise RuntimeError("Persistent solver interface only "
-                                           "supports a single active objective.")
-                    solver.set_objective(obj)
-
-        if (instance_fixed_variables or instance_freed_variables) and \
-           (persistent_solver_in_use):
-
-            if self.get_option("verbose"):
-                print("Compiling fixed status updates in persistent solver "
-                      "for scenario %s" % (scenario_name))
-
-            # it can be the case that the solver plugin no longer has an
-            # instance compiled, depending on what state the solver plugin
-            # is in relative to the instance.  if this is the case, just
-            # don't compile the variable bounds.
-            if solver.has_instance():
-                variables_to_change = \
-                    instance_fixed_variables + instance_freed_variables
-                for var in variables_to_change:
-                    solver.update_var(var)
+                # if only the objective changed, there is minimal work to do.
+                if solver.problem_format() == ProblemFormat.nl:
+                    ampl_preprocess_block_objectives(scenario_instance)
+                else:
+                    canonical_preprocess_block_objectives(scenario_instance)
 
         if instance_all_constraints_updated:
 
-            if self.get_option("verbose"):
-                print("Preprocessing all constraints for scenario %s"
-                      % (scenario_name))
-
-            if solver.problem_format() == ProblemFormat.nl:
-                idMap = {}
-                for block in scenario_instance.block_data_objects(
-                        active=True,
-                        descend_into=True):
-                    ampl_preprocess_block_constraints(block, idMap=idMap)
+            if persistent_solver_in_use:
+                if solver.has_instance():
+                    if self.get_option("verbose"):
+                        print("Recompiling instance for scenario %s "
+                              "due to all constraints being updated"
+                              % (scenario_name))
+                    reset_persistent = True
             else:
-                idMap = {}
-                for block in scenario_instance.block_data_objects(
-                        active=True,
-                        descend_into=True):
-                    canonical_preprocess_block_constraints(block, idMap=idMap)
+                if self.get_option("verbose"):
+                    print("Running full preprocessing for scenario %s "
+                          "due to all constraints being updated"
+                          % (scenario_name))
+
+                if solver.problem_format() == ProblemFormat.nl:
+                    ampl_expression_preprocessor({}, model=scenario_instance)
+                else:
+                    canonical_expression_preprocessor({}, model=scenario_instance)
+                # We've preprocessed the entire instance, no point in checking
+                # anything else
+                _cleanup()
+                return
 
         elif len(instance_constraints_updated_list) > 0:
 
-            # TODO
-            assert not persistent_solver_in_use
-
-            if self.get_option("verbose"):
-                print("Preprocessing constraint list (size=%s) for "
-                      "scenario %s" % (len(instance_constraints_updated_list),
-                                       scenario_name))
-
-            idMap = {}
-            repn_name = None
-            repn_func = None
-            if solver.problem_format() == ProblemFormat.nl:
-                repn_name = "_ampl_repn"
-                repn_func = generate_ampl_repn
+            if persistent_solver_in_use:
+                if solver.has_instance():
+                    if self.get_option("verbose"):
+                        print("Compiling constraint list (size=%s) for "
+                              "scenario %s" % (scenario_name))
+                    for con in instance_constraints_updated_list:
+                        if (not con.has_lb()) and \
+                           (not con.has_ub()):
+                            assert not con.equality
+                            continue  # non-binding, so skip
+                        solver.remove_constraint(con)
+                        solver.add_constraint(con)
             else:
-                repn_name = "_canonical_repn"
-                repn_func = generate_canonical_repn
+                if self.get_option("verbose"):
+                    print("Preprocessing constraint list (size=%s) for "
+                          "scenario %s" % (len(instance_constraints_updated_list),
+                                           scenario_name))
+                idMap = {}
+                repn_name = None
+                repn_func = None
+                if solver.problem_format() == ProblemFormat.nl:
+                    repn_name = "_ampl_repn"
+                    repn_func = generate_ampl_repn
+                else:
+                    repn_name = "_canonical_repn"
+                    repn_func = generate_canonical_repn
 
-            for constraint_data in instance_constraints_updated_list:
-                if isinstance(constraint_data, LinearCanonicalRepn):
-                    continue
-                block = constraint_data.parent_block()
-                # Get/Create the ComponentMap for the repn storage
-                if not hasattr(block, repn_name):
-                    setattr(block, repn_name, ComponentMap())
-                getattr(block, repn_name)[constraint_data] = \
-                    repn_func(constraint_data.body, idMap=idMap)
+                for constraint_data in instance_constraints_updated_list:
+                    if isinstance(constraint_data, LinearCanonicalRepn):
+                        continue
+                    block = constraint_data.parent_block()
+                    # Get/Create the ComponentMap for the repn storage
+                    if not hasattr(block, repn_name):
+                        setattr(block, repn_name, ComponentMap())
+                    getattr(block, repn_name)[constraint_data] = \
+                        repn_func(constraint_data.body, idMap=idMap)
 
         if persistent_solver_in_use and \
-           (not solver.has_instance()):
+           ((not solver.has_instance()) or \
+            reset_persistent):
              solver.set_instance(
                  scenario_instance,
-                 symbolic_solver_labels=self.get_option("symbolic_solver_labels"),
-                 output_fixed_variable_bounds=not self.get_option("preprocess_fixed_variables"))
+                 symbolic_solver_labels=\
+                     self.get_option("symbolic_solver_labels"),
+                 output_fixed_variable_bounds=\
+                     not self.get_option("preprocess_fixed_variables"))
 
         _cleanup()
 
-    def get_solver_keywords(self):
+    def modify_scenario_solver_keywords(self, scenario_name, kwds):
+        # TODO: Does this import need to be delayed because
+        #       it is in a plugins subdirectory
+        from pyomo.solvers.plugins.solvers.persistent_solver import \
+            PersistentSolver
 
-        kwds = {}
-        if not self.get_option("preprocess_fixed_variables"):
-            kwds['output_fixed_variable_bounds'] = True
+        solver = self._scenario_solvers[scenario_name]
+        if isinstance(solver, PersistentSolver):
+            # these were applied when set_instance was called
+            kwds.pop("output_fixed_variable_bounds",None)
+            kwds.pop("symbolic_solver_labels",None)
+
+        return kwds
+
+    def modify_bundle_solver_keywords(self, bundle_name, kwds):
+        # TODO: Does this import need to be delayed because
+        #       it is in a plugins subdirectory
+        from pyomo.solvers.plugins.solvers.persistent_solver import \
+            PersistentSolver
+
+        solver = self._bundle_solvers[bundle_name]
+
+        if isinstance(solver, PersistentSolver):
+            # these were applied when set_instance was called
+            kwds.pop("output_fixed_variable_bounds",None)
+            kwds.pop("symbolic_solver_labels",None)
 
         return kwds
