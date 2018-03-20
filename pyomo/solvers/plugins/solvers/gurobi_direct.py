@@ -167,11 +167,14 @@ class GurobiDirect(DirectSolver):
         if (degree is None) or (degree > max_degree):
             raise DegreeError('GurobiDirect does not support expressions of degree {0}.'.format(degree))
 
-        new_expr = repn.constant
-
-        for i,v in enumerate(repn.linear_vars):
-            new_expr += repn.linear_coefs[i] * self._pyomo_var_to_solver_var_map[v]
-            referenced_vars.add(v)
+        if len(repn.linear_vars) > 0:
+            list(map(referenced_vars.add, repn.linear_vars))
+            new_expr = self._gurobipy.LinExpr(repn.linear_coefs, [self._pyomo_var_to_solver_var_map[i] for i in repn.linear_vars])
+        else:
+            new_expr = 0
+            #for i,v in enumerate(repn.linear_vars):
+            #    new_expr += repn.linear_coefs[i] * self._pyomo_var_to_solver_var_map[v]
+            #    referenced_vars.add(v)
 
         for i,v in enumerate(repn.quadratic_vars):
             x,y = v
@@ -179,6 +182,8 @@ class GurobiDirect(DirectSolver):
             referenced_vars.add(x)
             referenced_vars.add(y)
         
+        new_expr += repn.constant
+
         return new_expr, referenced_vars
 
     def _get_expr_from_pyomo_expr(self, expr, max_degree=2):
