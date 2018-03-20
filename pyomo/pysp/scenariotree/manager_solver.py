@@ -564,7 +564,7 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
             if isinstance(solver, PersistentSolver) and \
                self.get_option("disable_advanced_preprocessing"):
                 raise ValueError("Advanced preprocessing can not be disabled "
-                                 "when peristent solvers are used")
+                                 "when persistent solvers are used")
             if self._preprocessor is not None:
                 self._preprocessor.add_scenario(scenario,
                                                 scenario._instance,
@@ -576,7 +576,7 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
             if isinstance(solver, PersistentSolver) and \
                self.get_option("disable_advanced_preprocessing"):
                 raise ValueError("Advanced preprocessing can not be disabled "
-                                 "when peristent solvers are used")
+                                 "when persistent solvers are used")
             bundle_instance = \
                 self.manager._bundle_binding_instance_map[bundle.name]
             if self._preprocessor is not None:
@@ -705,7 +705,6 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
                 solve_kwds = modify_kwds_func(object_name, dict(common_kwds))
             else:
                 solve_kwds = common_kwds
-
             opt = solver_dict[object_name]
             instance = instance_dict[object_name]
             if (not self.get_option("disable_warmstart")) and \
@@ -983,7 +982,9 @@ def ScenarioTreeManagerSolverFactory(sp, *args, **kwds):
         >>>    results = manager.solve_subproblems()
         >>> results.pprint()
 
-        Note that asynchronous solves should be completed before the manager solver is closed; otherwise the results are undefined.
+        Note that asynchronous solves should be completed
+        before the manager solver is closed; otherwise the
+        results are undefined.
 
         >>> with ScenarioTreeManagerSolverFactory(sp) as manager:
         >>>    job = manager.solve_subproblems(async=True)
