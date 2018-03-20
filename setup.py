@@ -94,7 +94,6 @@ setup(name='Pyomo',
         'Topic :: Software Development :: Libraries :: Python Modules' ],
       packages=packages,
       keywords=['optimization'],
-      namespace_packages=['pyomo'],
       install_requires=requires,
       entry_points="""
         [console_scripts]

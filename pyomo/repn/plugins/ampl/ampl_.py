@@ -948,6 +948,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     else:
                         ampl_repn = block_ampl_repn[constraint_data]
 
+                if (not constraint_data.has_lb()) and \
+                   (not constraint_data.has_ub()):
+                    assert not constraint_data.equality
+                    continue  # non-binding, so skip
+
                 ### GAH: Even if this is fixed, it is still useful to
                 ###      write out these types of constraints
                 ###      (trivial) as a feasibility check for fixed

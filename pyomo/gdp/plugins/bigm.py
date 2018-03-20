@@ -13,7 +13,7 @@
 import logging
 import textwrap
 
-from pyutilib.misc.config import ConfigBlock, ConfigValue
+from pyomo.util.config import ConfigBlock, ConfigValue
 
 from pyomo.core import (
     Block, Connector, Constraint, Param, Set, Suffix, Var,
