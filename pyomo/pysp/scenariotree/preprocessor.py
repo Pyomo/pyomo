@@ -426,10 +426,13 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
 
             if persistent_solver_in_use and solver.has_instance():
                 obj_count = 0
-                for obj in scenario_instance.component_data_objects(ctype=Objective, descend_into=True, active=True):
+                for obj in scenario_instance.component_data_objects(ctype=Objective,
+                                                                    descend_into=True,
+                                                                    active=True):
                     obj_count += 1
                     if obj_count > 1:
-                        raise RuntimeError('Persistent solver interface only supports a single active objective.')
+                        raise RuntimeError("Persistent solver interface only "
+                                           "supports a single active objective.")
                     solver.set_objective(obj)
 
         if (instance_fixed_variables or instance_freed_variables) and \
