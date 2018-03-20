@@ -12,4 +12,5 @@ status = solver.solve(model)
 # @:xfrm
 
 print(status)
-model.display()
+import verify_scont
+verify_scont.verify_model(model)
