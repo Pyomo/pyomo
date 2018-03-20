@@ -297,19 +297,24 @@ class TestConfig(unittest.TestCase):
         try:
             Path.SuppressPathExpansion = True
             c.d = "/a/b/c"
-            self.assertTrue(os.path.sep in c.d)
+            self.assertTrue('/' in c.d)
+            self.assertTrue('\\' not in c.d)
             self.assertEqual(c.d, '/a/b/c')
             c.d = "a/b/c"
-            self.assertTrue(os.path.sep in c.d)
+            self.assertTrue('/' in c.d)
+            self.assertTrue('\\' not in c.d)
             self.assertEqual(c.d, 'a/b/c')
             c.d = "${CWD}/a/b/c"
-            self.assertTrue(os.path.sep in c.d)
+            self.assertTrue('/' in c.d)
+            self.assertTrue('\\' not in c.d)
             self.assertEqual(c.d, "${CWD}/a/b/c")
         finally:
             Path.SuppressPathExpansion = False
 
     def test_PathList(self):
         def norm(x):
+            if cwd[1] == ':' and x[0] == '/':
+                x = cwd[:2] + x
             return x.replace('/',os.path.sep)
         cwd = os.getcwd() + os.path.sep
         c = ConfigBlock()
@@ -323,10 +328,10 @@ class TestConfig(unittest.TestCase):
 
         c.a = ["a/b/c", "/a/b/c", "${CWD}/a/b/c"]
         self.assertEqual(len(c.a), 3)
-        self.assertTrue(os.path.sep in c.a[1])
-        self.assertEqual(c.a[1], norm('/a/b/c'))
         self.assertTrue(os.path.sep in c.a[0])
         self.assertEqual(c.a[0], norm(cwd+'a/b/c'))
+        self.assertTrue(os.path.sep in c.a[1])
+        self.assertEqual(c.a[1], norm('/a/b/c'))
         self.assertTrue(os.path.sep in c.a[2])
         self.assertEqual(c.a[2], norm(cwd+'a/b/c'))
 
