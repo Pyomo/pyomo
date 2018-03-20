@@ -38,7 +38,8 @@ from pyomo.pysp.phsolverserverutils import (TransmitType,
 from pyomo.pysp.ph import _PHBase
 from pyomo.pysp.phutils import (reset_nonconverged_variables,
                                 reset_stage_cost_variables,
-                                find_active_objective)
+                                find_active_objective,
+                                extract_solve_times)
 from pyomo.pysp.util.misc import launch_command
 
 from six import iterkeys, iteritems
@@ -782,27 +783,10 @@ class _PHSolverServer(_PHBase):
                (solution0.gap is not None):
                 auxilliary_values["gap"] = solution0.gap
 
-            # if the solver plugin doesn't populate the user_time or
-            # the wallclock_time field, they will default to the type 
-            # UndefinedData - defined in pyomo.opt.results
-            if hasattr(results.solver,"user_time") and \
-               (not isinstance(results.solver.user_time, UndefinedData)) and \
-               (results.solver.user_time is not None):
-                auxilliary_values["user_time"] = \
-                    float(results.solver.user_time)
-
-            if hasattr(results.solver,"wallclock_time") and \
-               (not isinstance(results.solver.wallclock_time, UndefinedData)) and \
-               (results.solver.wallclock_time is not None):
-                auxilliary_values["wallclock_time"] = \
-                    float(results.solver.wallclock_time)
+            auxilliary_values["solve_time"], auxilliary_values["pyomo_solve_time"] = \
+                extract_solve_times(results, default=None)
 
             auxilliary_values['solution_status'] = solution0.status.key
-
-            # add in the pyomo solve time, which is defined as
-            # the time consumed by the solve() method invocation
-            # on whatever solver plugin is being used.
-            auxilliary_values["pyomo_solve_time"] = pyomo_solve_time
 
             solve_method_result = (variable_values, suffix_values, auxilliary_values)
 

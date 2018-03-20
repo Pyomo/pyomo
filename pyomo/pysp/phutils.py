@@ -28,6 +28,8 @@ from pyomo.repn.compute_ampl_repn import preprocess_block_constraints \
     as ampl_preprocess_block_constraints
 from pyomo.repn.compute_ampl_repn import preprocess_constraint \
     as ampl_preprocess_constraint
+from pyomo.opt import (UndefinedData,
+                       undefined)
 
 from six import iteritems, itervalues, string_types
 from six.moves import xrange
@@ -38,6 +40,34 @@ ampl_expression_preprocessor = \
     pyomo.util.PyomoAPIFactory("pyomo.repn.compute_ampl_repn")
 
 _OLD_OUTPUT = True
+
+def extract_solve_times(results, default=undefined):
+    solve_time = default
+    pyomo_solve_time = default
+    # if the solver plugin doesn't populate the
+    # user_time field, it is by default of type
+    # UndefinedData - defined in pyomo.opt.results
+    if hasattr(results.solver,"user_time") and \
+       (not isinstance(results.solver.user_time,
+                       UndefinedData)) and \
+       (results.solver.user_time is not None):
+        # the solve time might be a string, or might
+        # not be - we eventually would like more
+        # consistency on this front from the solver
+        # plugins.
+        solve_time = float(results.solver.user_time)
+    elif hasattr(results.solver,"wallclock_time") and \
+         (not isinstance(results.solver.wallclock_time,
+                         UndefinedData))and \
+         (results.solver.wallclock_time is not None):
+        solve_time = float(results.solver.wallclock_time)
+    elif hasattr(results.solver,"time"):
+        solve_time = float(results.solver.time)
+
+    if hasattr(results,"pyomo_solve_time"):
+        pyomo_solve_time = results.pyomo_solve_time
+
+    return solve_time, pyomo_solve_time
 
 class BasicSymbolMap(object):
 

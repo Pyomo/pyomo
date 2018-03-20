@@ -60,6 +60,7 @@ from pyomo.pysp.phutils import (create_block_symbol_maps,
                                 canonical_preprocess_block_constraints,
                                 ampl_preprocess_block_objectives,
                                 ampl_preprocess_block_constraints,
+                                extract_solve_times,
                                 _OLD_OUTPUT)
 from pyomo.pysp.util.misc import load_external_module
 from pyomo.pysp import phsolverserverutils
@@ -3025,11 +3026,11 @@ class ProgressiveHedging(_PHBase):
                     self._solution_status[bundle_name] = \
                         getattr(SolutionStatus, auxilliary_values["solution_status"])
 
-                    if "wallclock_time" in auxilliary_values:
+                    if auxilliary_values["solve_time"] is not None:
                         self._solve_times[bundle_name] = \
-                            auxilliary_values["wallclock_time"]
+                            auxilliary_values["solve_time"]
 
-                    if "pyomo_solve_time" in auxilliary_values:
+                    if auxilliary_values["pyomo_solve_time"] is not None:
                         self._pyomo_solve_times[bundle_name] = \
                             auxilliary_values["pyomo_solve_time"]
 
@@ -3087,15 +3088,8 @@ class ProgressiveHedging(_PHBase):
 
                     self._solution_status[bundle_name] = solution0.status
 
-                    if hasattr(bundle_results.solver,"wallclock_time") and \
-                       (not isinstance(bundle_results.solver.wallclock_time, UndefinedData)) and \
-                       (bundle_results.solver.wallclock_time is not None):
-                        self._solve_times[bundle_name] = \
-                            float(bundle_results.solver.wallclock_time)
-
-                    if hasattr(bundle_results,"pyomo_solve_time"):
-                        self._pyomo_solve_times[bundle_name] = \
-                            bundle_results.pyomo_solve_time
+                    self._solve_times[bundle_name], self._pyomo_solve_times[bundle_name] = \
+                        extract_solve_times(bundle_results)
 
                     scenario_bundle = \
                         self._scenario_tree._scenario_bundle_map[bundle_name]
@@ -3179,11 +3173,11 @@ class ProgressiveHedging(_PHBase):
                     self._solution_status[scenario_name] = \
                         getattr(SolutionStatus, auxilliary_values["solution_status"])
 
-                    if "wallclock_time" in auxilliary_values:
+                    if auxilliary_values["solve_time"] is not None:
                         self._solve_times[scenario_name] = \
-                            auxilliary_values["wallclock_time"]
+                            auxilliary_values["solve_time"]
 
-                    if "pyomo_solve_time" in auxilliary_values:
+                    if auxilliary_values["pyomo_solve_time"] is not None:
                         self._pyomo_solve_times[scenario_name] = \
                             auxilliary_values["pyomo_solve_time"]
 
@@ -3247,15 +3241,8 @@ class ProgressiveHedging(_PHBase):
 
                     self._solution_status[scenario_name] = solution0.status
 
-                    if hasattr(results.solver,"wallclock_time") and \
-                       (not isinstance(results.solver.wallclock_time, UndefinedData)) and \
-                       (results.solver.wallclock_time is not None):
-                        self._solve_times[scenario_name] = \
-                            float(results.solver.wallclock_time)
-
-                    if hasattr(results,"pyomo_solve_time"):
-                        self._pyomo_solve_times[scenario_name] = \
-                            results.pyomo_solve_time
+                    self._solve_times[scenario_name], self._pyomo_solve_times[scenario_name] = \
+                        extract_solve_times(results)
 
                     end_time = time.time()
 
