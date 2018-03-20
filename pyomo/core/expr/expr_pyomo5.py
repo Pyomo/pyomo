@@ -1858,7 +1858,7 @@ class ReciprocalExpression(ExpressionBase):
         return ReciprocalExpression.PRECEDENCE
 
     def _compute_polynomial_degree(self, result):
-        if result[0] is 0:
+        if result[0] == 0:
             return 0
         return None
 
@@ -2481,7 +2481,7 @@ class UnaryFunctionExpression(ExpressionBase):
             return '{0}({1})'.format(self._name, values[0])
 
     def _compute_polynomial_degree(self, result):
-        if result[0] is 0:
+        if result[0] == 0:
             return 0
         else:
             return None
