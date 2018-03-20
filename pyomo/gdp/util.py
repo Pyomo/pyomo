@@ -8,10 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.expr.numvalue import native_types
-
 import pyomo.core.expr.current as EXPR
-from pyomo.core.expr.numvalue import nonpyomo_leaf_types
+from pyomo.core.expr.numvalue import nonpyomo_leaf_types, native_numeric_types
 from copy import deepcopy
 
 from pyomo.opt import TerminationCondition, SolverStatus
@@ -52,6 +50,12 @@ class _CloneVisitor(EXPR.ExpressionValueVisitor):
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
+        if node.__class__ is EXPR.TermExpression and not values[1].is_variable_type():
+            #
+            # Turn a TermExpression whose variable has been replaced by a constant into
+            # a simple constant expression.
+            #
+            return values[0] * values[1]
         return node.construct_node( tuple(values), self.memo )
 
     def visiting_potential_leaf(self, node):
@@ -117,35 +121,3 @@ def clone_without_expression_components(expr, memo=None, clone_leaves=True, subs
     visitor = _CloneVisitor(clone_leaves=clone_leaves, memo=memo, substitute=substitute)
     return visitor.dfs_postorder_stack(expr)
 
-
-
-def Xclone_without_expression_components(expr, substitute):
-    ans = [EXPR.clone_expression(expr, substitute=substitute)]
-    _stack = [ (ans, 0, 1) ]
-    while _stack:
-        _argList, _idx, _len = _stack.pop()
-        while _idx < _len:
-            _sub = _argList[_idx]
-            _idx += 1
-            if type(_sub) in native_types:
-                pass
-            elif _sub.is_expression():
-                _stack.append(( _argList, _idx, _len ))
-                if not isinstance(_sub, EXPR._ExpressionBase):
-                    _argList[_idx-1] = EXPR.clone_expression(
-                        _sub._args[0], substitute=substitute )
-                elif type(_sub) is coopr3._ProductExpression:
-                    if _sub._denominator:
-                        _stack.append(
-                            (_sub._denominator, 0, len(_sub._denominator)) )
-                    _argList = _sub._numerator
-                else:
-                    _argList = _sub._args
-                    # HACK: As we may have to replace arguments, if the
-                    # _args is a tuple, then we will convert it to a
-                    # list.
-                    if type(_argList) is tuple:
-                        _argList = _sub._args = list(_argList)
-                _idx = 0
-                _len = len(_argList)
-    return ans[0]
