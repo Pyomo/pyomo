@@ -78,7 +78,9 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
             return "{0} * {1}".format(tmp[0], tmp[1])
         elif node.__class__ is EXPR.TermExpression:
             if tmp[0] == '-1':
-                return EXPR.NegationExpression._to_string(None, [tmp[1]], None, self.smap, True)
+                # It seems dumb to construct a temporary NegationExpression object
+                # Should we copy the logic from that function here?
+                return EXPR.NegationExpression._to_string(EXPR.NegationExpression((None,)), [tmp[1]], None, self.smap, True)
             else:
                 return "{0} * {1}".format(tmp[0], tmp[1])
         elif node.__class__ is EXPR.PowExpression:
