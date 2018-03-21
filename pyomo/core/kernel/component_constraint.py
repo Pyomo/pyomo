@@ -11,11 +11,11 @@
 import pyutilib.math
 
 from pyomo.core.expr.numvalue import (ZeroConstant,
-                                        is_constant,
-                                        as_numeric,
-                                        potentially_variable,
-                                        value,
-                                        _sub)
+                                      is_constant,
+                                      as_numeric,
+                                      potentially_variable,
+                                      value,
+                                      _sub)
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.component_interface import \
     (IComponent,

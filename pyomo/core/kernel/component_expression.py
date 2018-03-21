@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -21,12 +21,12 @@ from pyomo.core.kernel.component_tuple import ComponentTuple
 from pyomo.core.kernel.component_list import ComponentList
 
 from pyomo.core.expr.numvalue import (NumericValue,
-                                        is_fixed,
-                                        is_constant,
-                                        is_variable_type,
-                                        potentially_variable,
-                                        value,
-                                        as_numeric)
+                                      is_fixed,
+                                      is_constant,
+                                      is_variable_type,
+                                      potentially_variable,
+                                      value,
+                                      as_numeric)
 
 import six
 
@@ -69,7 +69,8 @@ class IIdentityExpression(NumericValue):
         return is_constant(self._expr)
 
     def is_variable_type(self):
-        """A boolean indicating whether this expression is a variable object."""
+        """A boolean indicating whether this expression is a
+        variable object."""
         return is_variable_type(self._expr)
 
     def is_fixed(self):
@@ -90,7 +91,7 @@ class IIdentityExpression(NumericValue):
         Binary addition
 
         This method is called when Python processes the statement::
-        
+
             self += other
         """
         self.expr += other
@@ -123,7 +124,7 @@ class IIdentityExpression(NumericValue):
         Binary division
 
         This method is called when Python processes the statement::
-        
+
             self /= other
         """
         self.expr /= other
@@ -134,7 +135,7 @@ class IIdentityExpression(NumericValue):
         Binary division (when __future__.division is in effect)
 
         This method is called when Python processes the statement::
-        
+
             self /= other
         """
         self.expr /= other
@@ -145,7 +146,7 @@ class IIdentityExpression(NumericValue):
         Binary power
 
         This method is called when Python processes the statement::
-        
+
             self **= other
         """
         self.expr **= other
@@ -218,9 +219,9 @@ class IIdentityExpression(NumericValue):
 
     def construct_node(self, values, memo=None):
         """
-        Construct an expression after constructing the 
+        Construct an expression after constructing the
         contained expression.
-   
+
         This class provides a consistent interface for constructing a
         node, which is used in tree visitor scripts.
         """
