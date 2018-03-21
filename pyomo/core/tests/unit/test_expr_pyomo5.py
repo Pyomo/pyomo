@@ -979,6 +979,29 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(e.arg(0), -1)
         self.assertIs(e.arg(1), m.a)
 
+    def test_termDiff(self):
+        #
+        # Check the structure of a simple difference with a term
+        #
+        m = ConcreteModel()
+        m.a = Var()
+
+        #
+        #   -
+        #  / \
+        # 5   *
+        #    / \
+        #   2   a
+        #
+
+        e = 5 - 2*m.a
+
+        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertEqual(e.arg(0), 5)
+        self.assertIs(type(e.arg(1)), EXPR.TermExpression)
+        self.assertEqual(e.arg(1).arg(0), -2)
+        self.assertIs(e.arg(1).arg(1), m.a)
+
     def test_nestedDiff(self):
         #
         # Check the structure of nested differences
@@ -1083,6 +1106,27 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e = - e
         self.assertTrue(isinstance(e, Param))
 
+    def test_negation_terms(self):
+        #
+        # Check logic for negations with mutable params
+        #
+        m = AbstractModel()
+        m.v = Var()
+        m.p = Param(mutable=True, initialize=1.0)
+        e = - m.p*m.v
+        self.assertIs(type(e), EXPR.TermExpression)
+        self.assertIs(type(e.arg(0)), EXPR.NPV_NegationExpression)
+        e = - e
+        self.assertIs(type(e), EXPR.TermExpression)
+        self.assertIs(type(e.arg(0)), EXPR.NPV_NegationExpression)
+        #
+        e = - 5*m.v
+        self.assertIs(type(e), EXPR.TermExpression)
+        self.assertEqual(e.arg(0), -5)
+        e = - e
+        self.assertIs(type(e), EXPR.TermExpression)
+        self.assertEqual(e.arg(0), 5)
+
     def test_trivialDiff(self):
         #
         # Check that subtracting zero doesn't change the expression
@@ -1113,6 +1157,25 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(type(e), EXPR.NPV_NegationExpression)
         self.assertEqual(e.nargs(), 1)
         self.assertIs(e.arg(0), m.p)
+
+        # 0 - 5*a
+        e = 0 - 5*m.a
+        self.assertIs(type(e), EXPR.TermExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertEqual(e.arg(0), -5)
+
+        # 0 - p*a
+        e = 0 - m.p*m.a
+        self.assertIs(type(e), EXPR.TermExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(type(e.arg(0)), EXPR.NPV_NegationExpression)
+        self.assertIs(e.arg(0).arg(0), m.p)
+
+        # 0 - a*a
+        e = 0 - m.a*m.a
+        self.assertIs(type(e), EXPR.NegationExpression)
+        self.assertEqual(e.nargs(), 1)
+        self.assertIs(type(e.arg(0)), EXPR.ProductExpression)
 
     def test_sumOf_nestedTrivialProduct2(self):
         #
@@ -1182,6 +1245,79 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e.arg(2).arg(1), m.a)
         self.assertEqual(e.size(), 8)
 
+    def test_sumOf_nestedTrivialProduct2(self):
+        #
+        # Check the structure of sum of products
+        #
+        m = AbstractModel()
+        m.a = Var()
+        m.b = Var()
+        m.c = Var()
+        m.p = Param(initialize=5, mutable=True)
+
+        #       -
+        #      / \
+        #     *   b
+        #    / \
+        #   a   5
+        e1 = m.a * m.p
+        e = e1 - m.b
+        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(e.arg(0), e1)
+        self.assertIs(type(e.arg(1)), EXPR.TermExpression)
+        self.assertEqual(e.arg(1).arg(0), -1)
+        self.assertIs(e.arg(1).arg(1), m.b)
+        self.assertEqual(e.size(), 7)
+
+        #       -
+        #      / \
+        #     b   *
+        #        / \
+        #       a   5
+        e1 = m.a * m.p
+        e = m.b - e1
+        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(e.arg(0), m.b)
+        self.assertIs(type(e.arg(1)), EXPR.TermExpression)
+        self.assertIs(type(e.arg(1).arg(0)), EXPR.NPV_NegationExpression)
+        self.assertIs(e.arg(1).arg(0).arg(0), m.p)
+        self.assertIs(e.arg(1).arg(1), m.a)
+        self.assertEqual(e.size(), 6)
+
+        #            -
+        #          /   \
+        #         *     -
+        #        / \   / \
+        #       a   5 b   c
+        e1 = m.a * m.p
+        e2 = m.b - m.c
+        e = e1 - e2
+        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(e.arg(0), e1)
+        self.assertIs(type(e.arg(1)), EXPR.NegationExpression)
+        self.assertIs(e.arg(1).arg(0), e2)
+        self.assertEqual(e.size(), 10)
+
+        #            -
+        #          /   \
+        #         -     *
+        #        / \   / \
+        #       b   c a   5
+        e1 = m.a * m.p
+        e2 = m.b - m.c
+        e = e2 - e1
+        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(e.arg(0), m.b)
+        self.assertIs(type(e.arg(1)), EXPR.TermExpression)
+        self.assertEqual(e.arg(1).arg(0), -1)
+        self.assertIs(e.arg(1).arg(1), m.c)
+        self.assertIs(type(e.arg(2)), EXPR.TermExpression)
+        self.assertIs(type(e.arg(2).arg(0)), EXPR.NPV_NegationExpression)
+        self.assertIs(e.arg(2).arg(0).arg(0), m.p)
+        self.assertIs(e.arg(2).arg(1), m.a)
+        self.assertEqual(e.size(), 9)
+
 
 class TestGenerate_ProductExpression(unittest.TestCase):
 
@@ -1202,14 +1338,6 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e.arg(0), m.a)
         self.assertIs(e.arg(1), m.b)
         self.assertEqual(e.size(), 3)
-        #
-        #e_ = EXPR.compress_expression(e, dive=True, multiprod=True)
-        #self.assertIs(type(e_), EXPR.MultiProdExpression)
-        #self.assertEqual(e_.nargs(), 3)
-        #self.assertEqual(e_.arg(0), 1)
-        #self.assertIs(e_.arg(1), m.a)
-        #self.assertIs(e_.arg(2), m.b)
-        #self.assertEqual(e_.size(), 4)
 
     def test_constProduct(self):
         #
@@ -1227,13 +1355,6 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertEqual(e.arg(0), 5)
         self.assertIs(e.arg(1), m.a)
         self.assertEqual(e.size(), 3)
-        #
-        #e_ = EXPR.compress_expression(e, dive=True, multiprod=True)
-        #self.assertIs(type(e_), EXPR.MultiProdExpression)
-        #self.assertEqual(e_.nargs(), 2)
-        #self.assertEqual(e_.arg(0), 5)
-        #self.assertIs(e_.arg(1), m.a)
-        #self.assertEqual(e_.size(), 3)
 
         #    *
         #   / \
@@ -1244,13 +1365,6 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e.arg(0), 5)
         self.assertIs(e.arg(1), m.a)
         self.assertEqual(e.size(), 3)
-        #
-        #e_ = EXPR.compress_expression(e, dive=True, multiprod=True)
-        #self.assertIs(type(e_), EXPR.MultiProdExpression)
-        #self.assertEqual(e_.nargs(), 2)
-        #self.assertEqual(e_.arg(0), 5)
-        #self.assertIs(e_.arg(1), m.a)
-        #self.assertEqual(e_.size(), 3)
 
     def test_nestedProduct(self):
         #
@@ -1276,14 +1390,6 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e.arg(1).arg(0), m.a)
         self.assertIs(e.arg(1).arg(1), m.b)
         self.assertEqual(e.size(), 5)
-        #
-        #e_ = EXPR.compress_expression(e, dive=True, multiprod=True)
-        #self.assertIs(type(e_), EXPR.MultiProdExpression)
-        #self.assertEqual(e_.nargs(), 3)
-        #self.assertEqual(e_.arg(0), 5)
-        #self.assertIs(e_.arg(1), m.a)
-        #self.assertIs(e_.arg(2), m.b)
-        #self.assertEqual(e_.size(), 4)
 
         #       *
         #      / \
@@ -1299,14 +1405,6 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e.arg(1).arg(0), m.a)
         self.assertIs(e.arg(1).arg(1), m.b)
         self.assertEqual(e.size(), 5)
-        #
-        #e_ = EXPR.compress_expression(e, dive=True, multiprod=True)
-        #self.assertIs(type(e_), EXPR.MultiProdExpression)
-        #self.assertEqual(e_.nargs(), 3)
-        #self.assertEqual(e_.arg(0), 5)
-        #self.assertIs(e_.arg(1), m.a)
-        #self.assertIs(e_.arg(2), m.b)
-        #self.assertEqual(e_.size(), 4)
 
         #       *
         #      / \
@@ -1322,15 +1420,6 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e.arg(0).arg(0), m.a)
         self.assertIs(e.arg(0).arg(1), m.b)
         self.assertEqual(e.size(), 5)
-        #
-        #e_ = EXPR.compress_expression(e, dive=True, multiprod=True)
-        #self.assertIs(type(e_), EXPR.MultiProdExpression)
-        #self.assertEqual(e_.nargs(), 4)
-        #self.assertEqual(e_.arg(0), 1)
-        #self.assertIs(e_.arg(1), m.a)
-        #self.assertIs(e_.arg(2), m.b)
-        #self.assertIs(e_.arg(3), m.c)
-        #self.assertEqual(e_.size(), 5)
 
         #       *
         #      / \
@@ -1346,15 +1435,6 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e.arg(1).arg(0), m.a)
         self.assertIs(e.arg(1).arg(1), m.b)
         self.assertEqual(e.size(), 5)
-        #
-        #e_ = EXPR.compress_expression(e, dive=True, multiprod=True)
-        #self.assertIs(type(e_), EXPR.MultiProdExpression)
-        #self.assertEqual(e_.nargs(), 4)
-        #self.assertEqual(e_.arg(0), 1)
-        #self.assertIs(e_.arg(1), m.c)
-        #self.assertIs(e_.arg(2), m.a)
-        #self.assertIs(e_.arg(3), m.b)
-        #self.assertEqual(e_.size(), 5)
 
         #            *
         #          /   \
@@ -1373,16 +1453,6 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e.arg(1).arg(0), m.c)
         self.assertIs(e.arg(1).arg(1), m.d)
         self.assertEqual(e.size(), 7)
-        #
-        #e_ = EXPR.compress_expression(e, dive=True, multiprod=True)
-        #self.assertIs(type(e_), EXPR.MultiProdExpression)
-        #self.assertEqual(e_.nargs(), 5)
-        #self.assertEqual(e_.arg(0), 1)
-        #self.assertIs(e_.arg(1), m.a)
-        #self.assertIs(e_.arg(2), m.b)
-        #self.assertIs(e_.arg(3), m.c)
-        #self.assertIs(e_.arg(4), m.d)
-        #self.assertEqual(e_.size(), 6)
 
     def test_nestedProduct2(self):
         #
@@ -1463,6 +1533,120 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e.arg(1).arg(0).arg(1), m.b)
         self.assertEqual(e.size(), 11)
 
+    def test_nestedProduct3(self):
+        #
+        # Check the structure of nested products
+        #
+        m = AbstractModel()
+        m.a = Param(mutable=True)
+        m.b = Var()
+        m.c = Var()
+        m.d = Var()
+
+        #       *
+        #      / \
+        #     *   5
+        #    / \
+        #   3   b
+        e1 = 3 * m.b
+        e = e1 * 5
+        self.assertIs(type(e), EXPR.TermExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertEqual(e.arg(0), 15)
+        self.assertIs(e.arg(1), m.b)
+        self.assertEqual(e.size(), 3)
+
+        #       *
+        #      / \
+        #     *   5
+        #    / \
+        #   a   b
+        e1 = m.a * m.b
+        e = e1 * 5
+        self.assertIs(type(e), EXPR.TermExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(type(e.arg(0)), EXPR.NPV_ProductExpression)
+        self.assertEqual(e.arg(0).arg(0), 5)
+        self.assertIs(e.arg(0).arg(1), m.a)
+        self.assertIs(e.arg(1), m.b)
+        self.assertEqual(e.size(), 5)
+
+        #       *
+        #      / \
+        #     5   *
+        #        / \
+        #       3   b
+        e1 = 3 * m.b
+        e = 5 * e1
+        self.assertIs(type(e), EXPR.TermExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertEqual(e.arg(0), 15)
+        self.assertIs(e.arg(1), m.b)
+        self.assertEqual(e.size(), 3)
+
+        #       *
+        #      / \
+        #     5   *
+        #        / \
+        #       a   b
+        e1 = m.a * m.b
+        e = 5 * e1
+        self.assertIs(type(e), EXPR.TermExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(type(e.arg(0)), EXPR.NPV_ProductExpression)
+        self.assertEqual(e.arg(0).arg(0), 5)
+        self.assertIs(e.arg(0).arg(1), m.a)
+        self.assertIs(e.arg(1), m.b)
+        self.assertEqual(e.size(), 5)
+
+        #       *
+        #      / \
+        #     *   c
+        #    / \
+        #   a   b
+        e1 = m.a * m.b
+        e = e1 * m.c
+        self.assertIs(type(e), EXPR.ProductExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(e.arg(1), m.c)
+        self.assertIs(type(e.arg(0)), EXPR.TermExpression)
+        self.assertIs(e.arg(0).arg(0), m.a)
+        self.assertIs(e.arg(0).arg(1), m.b)
+        self.assertEqual(e.size(), 5)
+
+        #       *
+        #      / \
+        #     c   *
+        #        / \
+        #       a   b
+        e1 = m.a * m.b
+        e = m.c * e1
+        self.assertIs(type(e), EXPR.ProductExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(e.arg(0), m.c)
+        self.assertIs(type(e.arg(1)), EXPR.TermExpression)
+        self.assertIs(e.arg(1).arg(0), m.a)
+        self.assertIs(e.arg(1).arg(1), m.b)
+        self.assertEqual(e.size(), 5)
+
+        #            *
+        #          /   \
+        #         *     *
+        #        / \   / \
+        #       a   b c   d
+        e1 = m.a * m.b
+        e2 = m.c * m.d
+        e = e1 * e2
+        self.assertIs(type(e), EXPR.ProductExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(type(e.arg(0)), EXPR.TermExpression)
+        self.assertIs(type(e.arg(1)), EXPR.ProductExpression)
+        self.assertIs(e.arg(0).arg(0), m.a)
+        self.assertIs(e.arg(0).arg(1), m.b)
+        self.assertIs(e.arg(1).arg(0), m.c)
+        self.assertIs(e.arg(1).arg(1), m.d)
+        self.assertEqual(e.size(), 7)
+
 
     def test_trivialProduct(self):
         #
@@ -1533,15 +1717,6 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(e.arg(1)), EXPR.ReciprocalExpression)
         self.assertIs(e.arg(1).arg(0), m.b)
         self.assertEqual(e.size(), 4)
-        #
-        #e_ = EXPR.compress_expression(e, dive=True, multiprod=True)
-        #self.assertIs(type(e_), EXPR.MultiProdExpression)
-        #self.assertEqual(e_.nargs(), 3)
-        #self.assertEqual(e_._nnum, 2)
-        #self.assertEqual(e_.arg(0), 1)
-        #self.assertIs(e_.arg(1), m.a)
-        #self.assertIs(e_.arg(2), m.b)
-        #self.assertEqual(e_.size(), 4)
 
     def test_constDivision(self):
         #
@@ -1559,14 +1734,6 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertAlmostEqual(e.arg(0), 0.2)
         self.assertIs(e.arg(1), m.a)
         self.assertEqual(e.size(), 3)
-        #
-        #e_ = EXPR.compress_expression(e, dive=True, multiprod=True)
-        #self.assertIs(type(e_), EXPR.MultiProdExpression)
-        #self.assertEqual(e_.nargs(), 2)
-        #self.assertEqual(e_._nnum, 2)
-        #self.assertEqual(e_.arg(0), 0.2)
-        #self.assertIs(e_.arg(1), m.a)
-        #self.assertEqual(e_.size(), 3)
 
         #    /
         #   / \
@@ -1578,14 +1745,6 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(e.arg(1)), EXPR.ReciprocalExpression)
         self.assertIs(e.arg(1).arg(0), m.a)
         self.assertEqual(e.size(), 4)
-        #
-        #e_ = EXPR.compress_expression(e, dive=True, multiprod=True)
-        #self.assertIs(type(e_), EXPR.MultiProdExpression)
-        #self.assertEqual(e_.nargs(), 2)
-        #self.assertEqual(e_._nnum, 1)
-        #self.assertEqual(e_.arg(0), 5)
-        #self.assertIs(e_.arg(1), m.a)
-        #self.assertEqual(e_.size(), 3)
 
     def test_nestedDivision(self):
         #
@@ -1596,6 +1755,19 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         m.b = Var()
         m.c = Var()
         m.d = Var()
+
+        #       /
+        #      / \
+        #     *   5
+        #    / \
+        #   3   b
+        e1 = 3 * m.b
+        e = e1 / 5
+        self.assertIs(type(e), EXPR.TermExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertEqual(e.arg(0), 3./5)
+        self.assertIs(e.arg(1), m.b)
+        self.assertEqual(e.size(), 3)
 
         #       /
         #      / \
@@ -1612,15 +1784,6 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(e.arg(1).arg(1)), EXPR.ReciprocalExpression)
         self.assertIs(e.arg(1).arg(1).arg(0), m.b)
         self.assertEqual(e.size(), 6)
-        #
-        #e_ = EXPR.compress_expression(e, dive=True, multiprod=True)
-        #self.assertIs(type(e_), EXPR.MultiProdExpression)
-        #self.assertEqual(e_.nargs(), 3)
-        #self.assertEqual(e_._nnum, 2)
-        #self.assertEqual(e_.arg(0), 0.2)
-        #self.assertIs(e_.arg(1), m.a)
-        #self.assertIs(e_.arg(2), m.b)
-        #self.assertEqual(e_.size(), 4)
 
         #       /
         #      / \
@@ -1637,15 +1800,6 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e.arg(1).arg(0).arg(0), m.a)
         self.assertIs(e.arg(1).arg(0).arg(1).arg(0), m.b)
         self.assertEqual(e.size(), 7)
-        #
-        #e_ = EXPR.compress_expression(e, dive=True, multiprod=True)
-        #self.assertIs(type(e_), EXPR.MultiProdExpression)
-        #self.assertEqual(e_.nargs(), 3)
-        #self.assertEqual(e_._nnum, 2)
-        #self.assertEqual(e_.arg(0), 5)
-        #self.assertIs(e_.arg(1), m.b)
-        #self.assertIs(e_.arg(2), m.a)
-        #self.assertEqual(e_.size(), 4)
 
         #       /
         #      / \
@@ -1663,16 +1817,6 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(e.arg(0).arg(1)), EXPR.ReciprocalExpression)
         self.assertIs(e.arg(0).arg(1).arg(0), m.b)
         self.assertEqual(e.size(), 7)
-        #
-        #e_ = EXPR.compress_expression(e, dive=True, multiprod=True)
-        #self.assertIs(type(e_), EXPR.MultiProdExpression)
-        #self.assertEqual(e_.nargs(), 4)
-        #self.assertEqual(e_._nnum, 2)
-        #self.assertEqual(e_.arg(0), 1)
-        #self.assertIs(e_.arg(1), m.a)
-        #self.assertIs(e_.arg(2), m.b)
-        #self.assertIs(e_.arg(3), m.c)
-        #self.assertEqual(e_.size(), 5)
 
         #       /
         #      / \
@@ -1688,16 +1832,6 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e.arg(1).arg(0).arg(0), m.a)
         self.assertIs(e.arg(1).arg(0).arg(1).arg(0), m.b)
         self.assertEqual(e.size(), 7)
-        #
-        #e_ = EXPR.compress_expression(e, dive=True, multiprod=True)
-        #self.assertIs(type(e_), EXPR.MultiProdExpression)
-        #self.assertEqual(e_.nargs(), 4)
-        #self.assertEqual(e_._nnum, 3)
-        #self.assertEqual(e_.arg(0), 1)
-        #self.assertIs(e_.arg(1), m.c)
-        #self.assertIs(e_.arg(2), m.b)
-        #self.assertIs(e_.arg(3), m.a)
-        #self.assertEqual(e_.size(), 5)
 
         #            /
         #          /   \
@@ -1716,17 +1850,6 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e.arg(1).arg(0).arg(0), m.c)
         self.assertIs(e.arg(1).arg(0).arg(1).arg(0), m.d)
         self.assertEqual(e.size(), 10)
-        #
-        #e_ = EXPR.compress_expression(e, dive=True, multiprod=True)
-        #self.assertIs(type(e_), EXPR.MultiProdExpression)
-        #self.assertEqual(e_.nargs(), 5)
-        #self.assertEqual(e_._nnum, 3)
-        #self.assertEqual(e_.arg(0), 1)
-        #self.assertIs(e_.arg(1), m.a)
-        #self.assertIs(e_.arg(2), m.d)
-        #self.assertIs(e_.arg(3), m.b)
-        #self.assertIs(e_.arg(4), m.c)
-        #self.assertEqual(e_.size(), 6)
 
     def test_trivialDivision(self):
         #
