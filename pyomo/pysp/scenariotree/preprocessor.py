@@ -128,7 +128,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
         assert scenario._name in self._scenario_instance
         assert scenario._name not in self._scenario_to_bundle_map
 
-        scenario_instance = self._scenario_instance[scenario_name]
+        scenario_instance = self._scenario_instance[scenario._name]
         assert scenario_instance is not None
         for block in scenario_instance.block_data_objects(active=True):
             assert not block._gen_obj_repn
