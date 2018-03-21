@@ -188,7 +188,8 @@ class _MutableBoundsConstraintMixin(object):
                 "The lb property can not be set "
                 "when the equality property is True.")
         if lb is not None:
-            if potentially_variable(lb):
+            tmp = as_numeric(lb)
+            if tmp.is_potentially_variable():
                 raise ValueError(
                     "Constraint lower bounds must be "
                     "expressions restricted to data.")
@@ -205,7 +206,8 @@ class _MutableBoundsConstraintMixin(object):
                 "The ub property can not be set "
                 "when the equality property is True.")
         if ub is not None:
-            if potentially_variable(ub):
+            tmp = as_numeric(ub)
+            if tmp.is_potentially_variable():
                 raise ValueError(
                     "Constraint lower bounds must be "
                     "expressions restricted to data.")
@@ -229,7 +231,8 @@ class _MutableBoundsConstraintMixin(object):
                 "Constraint right-hand side can not "
                 "be assigned a value of None.")
         else:
-            if potentially_variable(rhs):
+            tmp = as_numeric(rhs)
+            if tmp.is_potentially_variable():
                 raise ValueError(
                     "Constraint right-hand side must be "
                     "expressions restricted to data.")
@@ -599,28 +602,6 @@ class constraint(_MutableBoundsConstraintMixin,
                 self.lb = expr.arg(0)
                 self.body  = expr.arg(1)
                 self.ub = expr.arg(2)
-
-        #
-        # Replace numeric bound values with a NumericConstant object,
-        # and reset the values to 'None' if they are 'infinite'
-        #
-        if (self.lb is not None) and is_constant(self.lb):
-            val = self.lb()
-            if not pyutilib.math.is_finite(val):
-                if val > 0:
-                    raise ValueError(
-                        "Constraint '%s' created with a +Inf lower "
-                        "bound." % (self.name))
-                self.lb = None
-
-        if (self.ub is not None) and is_constant(self.ub):
-            val = self.ub()
-            if not pyutilib.math.is_finite(val):
-                if val < 0:
-                    raise ValueError(
-                        "Constraint '%s' created with a -Inf upper "
-                        "bound." % (self.name))
-                self.ub = None
 
         #
         # Error check, to ensure that we don't have an equality

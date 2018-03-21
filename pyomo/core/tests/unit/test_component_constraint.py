@@ -480,52 +480,52 @@ class Test_constraint(unittest.TestCase):
         c = constraint()
         x = variable(value=0.5)
         c.expr = (0, x, 1)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 0.5)
-        self.assertEqual(c.ub(), 1)
+        self.assertEqual(c.ub, 1)
         x.value = 2
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 2)
-        self.assertEqual(c.ub(), 1)
+        self.assertEqual(c.ub, 1)
 
         # ensure the variable is not moved into the upper or
         # lower bound expression (this used to be a bug)
         x.fix(0.5)
         c.expr = (0, x, 1)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 0.5)
-        self.assertEqual(c.ub(), 1)
+        self.assertEqual(c.ub, 1)
         x.value = 2
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 2)
-        self.assertEqual(c.ub(), 1)
+        self.assertEqual(c.ub, 1)
 
         x.free()
         x.value = 1
         c.expr = (0 == x)
         self.assertEqual(c.equality, True)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 1)
-        self.assertEqual(c.ub(), 0)
+        self.assertEqual(c.ub, 0)
         c.expr = (x == 0)
         self.assertEqual(c.equality, True)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 1)
-        self.assertEqual(c.ub(), 0)
+        self.assertEqual(c.ub, 0)
 
         # ensure the variable is not moved into the upper or
         # lower bound expression (this used to be a bug)
         x.fix()
         c.expr = (0 == x)
         self.assertEqual(c.equality, True)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 1)
-        self.assertEqual(c.ub(), 0)
+        self.assertEqual(c.ub, 0)
         c.expr = (x == 0)
         self.assertEqual(c.equality, True)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 1)
-        self.assertEqual(c.ub(), 0)
+        self.assertEqual(c.ub, 0)
 
         # ensure the variable is not moved into the upper or
         # lower bound expression (this used to be a bug)
@@ -533,16 +533,16 @@ class Test_constraint(unittest.TestCase):
         c.expr = (0 == x)
         x.fix()
         self.assertEqual(c.equality, True)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 1)
-        self.assertEqual(c.ub(), 0)
+        self.assertEqual(c.ub, 0)
         x.free()
         c.expr = (x == 0)
         x.fix()
         self.assertEqual(c.equality, True)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 1)
-        self.assertEqual(c.ub(), 0)
+        self.assertEqual(c.ub, 0)
 
     def test_data_bounds(self):
         c = constraint()
@@ -759,11 +759,18 @@ class Test_constraint(unittest.TestCase):
 
     def test_tuple_construct_inf_equality(self):
         x = variable()
-        with self.assertRaises(ValueError):
-            constraint((x, float('inf')))
-
-        with self.assertRaises(ValueError):
-            constraint((float('inf'), x))
+        c = constraint((x, float('inf')))
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(c.rhs, float('inf'))
+        self.assertIs(c.body, x)
+        c = constraint((float('inf'), x))
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(c.rhs, float('inf'))
+        self.assertIs(c.body, x)
 
     def test_tuple_construct_1sided_inequality(self):
         y = variable()
@@ -771,11 +778,11 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.equality, False)
         self.assertIs(c.lb, None)
         self.assertIs(c.body, y)
-        self.assertEqual(c.ub(), 1)
+        self.assertEqual(c.ub, 1)
 
         c = constraint((0, y, None))
         self.assertEqual(c.equality, False)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertIs   (c.body, y)
         self.assertIs(c.ub, None)
 
@@ -783,15 +790,15 @@ class Test_constraint(unittest.TestCase):
         y = variable()
         c = constraint((float('-inf'), y, 1))
         self.assertEqual(c.equality, False)
-        self.assertIs(c.lb, None)
+        self.assertEqual(c.lb, float('-inf'))
         self.assertIs(c.body, y)
-        self.assertEqual(c.ub(), 1)
+        self.assertEqual(c.ub, 1)
 
         c = constraint((0, y, float('inf')))
         self.assertEqual(c.equality, False)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertIs(c.body, y)
-        self.assertIs(c.ub, None)
+        self.assertEqual(c.ub, float('inf'))
 
     def test_tuple_construct_unbounded_inequality(self):
         y = variable()
@@ -803,9 +810,9 @@ class Test_constraint(unittest.TestCase):
 
         c = constraint((float('-inf'), y, float('inf')))
         self.assertEqual(c.equality, False)
-        self.assertIs(c.lb, None)
+        self.assertEqual(c.lb, float('-inf'))
         self.assertIs(c.body, y)
-        self.assertIs(c.ub, None)
+        self.assertEqual(c.ub, float('inf'))
 
     def test_tuple_construct_invalid_1sided_inequality(self):
         x = variable()
@@ -821,11 +828,11 @@ class Test_constraint(unittest.TestCase):
         y = variable()
         c = constraint((0, y, 1))
         self.assertEqual(c.equality, False)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertIs(c.body, y)
-        self.assertEqual(c.ub(), 1)
+        self.assertEqual(c.ub, 1)
 
-    def test_tuple_construct_invalid_2sided_inequality(self):
+    def test_construct_invalid_2sided_inequality(self):
         x = variable()
         y = variable()
         z = variable()
@@ -834,6 +841,16 @@ class Test_constraint(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             constraint((0, y, z))
+
+    def test_tuple_construct_invalid_2sided_inequality(self):
+        x = variable()
+        y = variable()
+        z = variable()
+        with self.assertRaises(ValueError):
+            constraint(EXPR.RangedExpression((x,y,1),(False,False)))
+
+        with self.assertRaises(ValueError):
+            constraint(EXPR.RangedExpression((0,y,z),(False,False)))
 
     def test_expr_construct_equality(self):
         x = variable(value=1)
@@ -859,10 +876,18 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.ub(), 0)
 
         c = constraint()
-        with self.assertRaises(ValueError):
-            c.expr = (x == float('inf'))
-        with self.assertRaises(ValueError):
-            c.expr = (float('inf') == x)
+        c.expr = (x == float('inf'))
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(c.rhs, float('inf'))
+        self.assertIs(c.body, x)
+        c.expr = (float('inf') == x)
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(c.rhs, float('inf'))
+        self.assertIs(c.body, x)
 
     def test_strict_inequality_failure(self):
         x = variable()
@@ -902,11 +927,18 @@ class Test_constraint(unittest.TestCase):
 
     def test_expr_construct_inf_equality(self):
         x = variable()
-        with self.assertRaises(ValueError):
-            constraint(x == float('inf'))
-
-        with self.assertRaises(ValueError):
-            constraint(float('inf') == x)
+        c = constraint(x == float('inf'))
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(c.rhs, float('inf'))
+        self.assertIs(c.body, x)
+        c = constraint(float('inf') == x)
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(c.rhs, float('inf'))
+        self.assertIs(c.body, x)
 
     def test_expr_construct_1sided_inequality(self):
         y = variable()
@@ -940,17 +972,17 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.equality, False)
         self.assertIs(c.lb, None)
         self.assertIs(c.body, y)
-        self.assertIs(c.ub, None)
+        self.assertEqual(c.ub, float('inf'))
 
         c = constraint(float('-inf') <= y)
         self.assertEqual(c.equality, False)
-        self.assertIs(c.lb, None)
+        self.assertEqual(c.lb, float('-inf'))
         self.assertIs(c.body, y)
         self.assertIs(c.ub, None)
 
         c = constraint(y >= float('-inf'))
         self.assertEqual(c.equality, False)
-        self.assertIs(c.lb, None)
+        self.assertEqual(c.lb, float('-inf'))
         self.assertIs(c.body, y)
         self.assertIs(c.ub, None)
 
@@ -958,44 +990,53 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.equality, False)
         self.assertIs(c.lb, None)
         self.assertIs(c.body, y)
-        self.assertIs(c.ub, None)
+        self.assertEqual(c.ub, float('inf'))
 
-    def test_expr_construct_invalid_unbounded_inequality(self):
+    def test_expr_construct_unbounded_inequality(self):
         y = variable()
-        with self.assertRaises(ValueError):
-            constraint(y <= float('-inf'))
-
-        with self.assertRaises(ValueError):
-            constraint(float('inf') <= y)
-
-        with self.assertRaises(ValueError):
-            constraint(y >= float('inf'))
-
-        with self.assertRaises(ValueError):
-            constraint(float('-inf') >= y)
+        c = constraint(y <= float('-inf'))
+        self.assertEqual(c.equality, False)
+        self.assertIs(c.lb, None)
+        self.assertEqual(c.ub, float('-inf'))
+        self.assertIs(c.body, y)
+        c = constraint(float('inf') <= y)
+        self.assertEqual(c.equality, False)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertIs(c.ub, None)
+        self.assertIs(c.body, y)
+        c = constraint(y >= float('inf'))
+        self.assertEqual(c.equality, False)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertIs(c.ub, None)
+        self.assertIs(c.body, y)
+        c = constraint(float('-inf') >= y)
+        self.assertEqual(c.equality, False)
+        self.assertIs(c.lb, None)
+        self.assertEqual(c.ub, float('-inf'))
+        self.assertIs(c.body, y)
 
     def test_expr_invalid_double_sided_inequality(self):
         x = variable()
         y = variable()
         c = constraint()
         c.expr = (0, x - y, 1)
-        self.assertEqual(c.lb(), 0)
-        self.assertEqual(c.ub(), 1)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(c.ub, 1)
         self.assertEqual(c.equality, False)
         with self.assertRaises(ValueError):
             c.expr = (x, x - y, 1)
-        self.assertEqual(c.lb(), 0)
-        self.assertEqual(c.ub(), 1)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(c.ub, 1)
         self.assertEqual(c.equality, False)
         with self.assertRaises(ValueError):
             c.expr = (0, x - y, y)
-        self.assertEqual(c.lb(), 0)
-        self.assertEqual(c.ub(), 1)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(c.ub, 1)
         self.assertEqual(c.equality, False)
         with self.assertRaises(ValueError):
             c.expr = (1, x - y, x)
-        self.assertEqual(c.lb(), 0)
-        self.assertEqual(c.ub(), 1)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(c.ub, 1)
         self.assertEqual(c.equality, False)
         with self.assertRaises(ValueError):
             c.expr = (y, x-y, 0)
@@ -1004,22 +1045,59 @@ class Test_constraint(unittest.TestCase):
         c = constraint()
         v = variable()
         c.expr = (v == 1)
-        with self.assertRaises(ValueError):
-            c.expr = (v == float('inf'))
-        with self.assertRaises(ValueError):
-            c.expr = (v, float('inf'))
-        with self.assertRaises(ValueError):
-            c.expr = (float('inf') == v)
-        with self.assertRaises(ValueError):
-            c.expr = (float('inf'), v)
-        with self.assertRaises(ValueError):
-            c.expr = (v == float('-inf'))
-        with self.assertRaises(ValueError):
-            c.expr = (v, float('-inf'))
-        with self.assertRaises(ValueError):
-            c.expr = (float('-inf') == v)
-        with self.assertRaises(ValueError):
-            c.expr = (float('-inf'), v)
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, 1)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(c.rhs, 1)
+        self.assertIs(c.body, v)
+        c.expr = (v == float('inf'))
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(c.rhs, float('inf'))
+        self.assertIs(c.body, v)
+        c.expr = (v, float('inf'))
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(c.rhs, float('inf'))
+        self.assertIs(c.body, v)
+        c.expr = (float('inf') == v)
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(c.rhs, float('inf'))
+        self.assertIs(c.body, v)
+        c.expr = (float('inf'), v)
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(c.rhs, float('inf'))
+        self.assertIs(c.body, v)
+        c.expr = (v == float('-inf'))
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(c.ub, float('-inf'))
+        self.assertEqual(c.rhs, float('-inf'))
+        self.assertIs(c.body, v)
+        c.expr = (v, float('-inf'))
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(c.ub, float('-inf'))
+        self.assertEqual(c.rhs, float('-inf'))
+        self.assertIs(c.body, v)
+        c.expr = (float('-inf') == v)
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(c.ub, float('-inf'))
+        self.assertEqual(c.rhs, float('-inf'))
+        self.assertIs(c.body, v)
+        c.expr = (float('-inf'), v)
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(c.ub, float('-inf'))
+        self.assertEqual(c.rhs, float('-inf'))
+        self.assertIs(c.body, v)
 
     def test_equality_nonnumeric(self):
         c = constraint()
@@ -1321,15 +1399,15 @@ class Test_constraint(unittest.TestCase):
         c.expr = (0, x, 2)
         self.assertEqual(c(), 1)
         self.assertEqual(c.body(), 1)
-        self.assertEqual(c.lb(), 0)
-        self.assertEqual(c.ub(), 2)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(c.ub, 2)
         self.assertEqual(c.equality, False)
 
         c.expr = (-2, x, 0)
         self.assertEqual(c(), 1)
         self.assertEqual(c.body(), 1)
-        self.assertEqual(c.lb(), -2)
-        self.assertEqual(c.ub(), 0)
+        self.assertEqual(c.lb, -2)
+        self.assertEqual(c.ub, 0)
         self.assertEqual(c.equality, False)
 
     def test_expr_getter(self):
@@ -1354,9 +1432,9 @@ class Test_constraint(unittest.TestCase):
 
         c.expr = (0, v, 1)
         self.assertIsNot(c.expr, None)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertIs(c.body, v)
-        self.assertEqual(c.ub(), 1)
+        self.assertEqual(c.ub, 1)
         self.assertEqual(c.equality, False)
 
         c.expr = v == 1
