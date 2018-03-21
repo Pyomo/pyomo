@@ -426,7 +426,7 @@ class constraint(_MutableBoundsConstraintMixin,
             return
 
         _expr_type = expr.__class__
-        if _expr_type is tuple: # or expr_type is list:
+        if _expr_type is tuple:
             #
             # Form equality expression
             #
@@ -531,7 +531,8 @@ class constraint(_MutableBoundsConstraintMixin,
         # user did ( var < 1 > 0 ) (which also results in a non-None
         # chainedInequality value)
         #
-        if EXPR._using_chained_inequality and EXPR._chainedInequality.prev is not None:
+        if EXPR._using_chained_inequality and \
+           (EXPR._chainedInequality.prev is not None):
             raise TypeError(EXPR._chainedInequality.error_message())
         #
         # Process relational expressions
@@ -807,21 +808,27 @@ class linear_constraint(_MutableBoundsConstraintMixin,
     #
 
     def canonical_form(self, compute_values=True):
+        """Build a canonical representation of the body of
+        this constraints"""
         from pyomo.repn.standard_repn import \
             StandardRepn
         variables = []
         coefficients = []
         constant = 0
         for v, c in self.terms:
-            if compute_values:
-                c = value(c)
             if v.is_expression_type():
                 v = v.expr
             if not v.fixed:
                 variables.append(v)
-                coefficients.append(c)
+                if compute_values:
+                    coefficients.append(value(c))
+                else:
+                    coefficients.append(c)
             else:
-                constant += c * v()
+                if compute_values:
+                    constant += value(c) * v()
+                else:
+                    constant += c * v
         repn = StandardRepn()
         repn.linear_vars = tuple(variables)
         repn.linear_coefs = tuple(coefficients)

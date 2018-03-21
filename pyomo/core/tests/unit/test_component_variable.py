@@ -73,6 +73,14 @@ class Test_variable(unittest.TestCase):
         self.assertIs(lb, None)
         self.assertIs(ub, None)
 
+    def test_polynomial_degree(self):
+        v = variable()
+        self.assertEqual(v.polynomial_degree(), 1)
+        v.fix(0)
+        self.assertEqual(v.polynomial_degree(), 0)
+        v.free()
+        self.assertEqual(v.polynomial_degree(), 1)
+
     def test_ctype(self):
         v = variable()
         self.assertIs(v.ctype, Var)

@@ -215,17 +215,29 @@ class _MatrixConstraintData(IConstraint,
     # _linear_canonical_form flag is True
     #
 
-    def canonical_form(self):
+    def canonical_form(self, compute_values=True):
+        """Build a canonical representation of the body of
+        this constraints"""
         from pyomo.repn.standard_repn import StandardRepn
         variables = []
         coefficients = []
         constant = 0
         for v, c in self.terms:
+            if compute_values:
+                c = value(c)
             if not v.fixed:
                 variables.append(v)
-                coefficients.append(c)
+                if compute_values:
+                    # we call float to get rid of the numpy type
+                    coefficients.append(float(c))
+                else:
+                    coefficients.append(c)
             else:
-                constant += value(c) * v()
+                if compute_values:
+                    # we call float to get rid of the numpy type
+                    constant += float(c) * v()
+                else:
+                    constant += c * v
         repn = StandardRepn()
         repn.linear_vars = tuple(variables)
         repn.linear_coefs = tuple(coefficients)

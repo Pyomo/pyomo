@@ -1083,6 +1083,10 @@ class Test_matrix_constraint(unittest.TestCase):
         self.assertEqual(repn.linear_vars, ())
         self.assertEqual(repn.linear_coefs, ())
         self.assertEqual(repn.constant, 4)
+        repn = ctuple[0].canonical_form(compute_values=False)
+        self.assertEqual(repn.linear_vars, ())
+        self.assertEqual(repn.linear_coefs, ())
+        self.assertEqual(repn.constant(), 4)
 
     def test_canonical_form_dense(self):
         A = numpy.array([[0, 2]])
@@ -1114,6 +1118,10 @@ class Test_matrix_constraint(unittest.TestCase):
         self.assertEqual(repn.linear_vars, ())
         self.assertEqual(repn.linear_coefs, ())
         self.assertEqual(repn.constant, 4)
+        repn = ctuple[0].canonical_form(compute_values=False)
+        self.assertEqual(repn.linear_vars, ())
+        self.assertEqual(repn.linear_coefs, ())
+        self.assertEqual(repn.constant(), 4)
 
     def test_preorder_visit(self):
         # test that we can use the advanced preorder_visit
