@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -108,7 +108,7 @@ from pyomo.core.expr.expr_common import \
      _unary, _radd, _rsub, _rmul,
      _rdiv, _rpow, _iadd, _isub,
      _imul, _idiv, _ipow, _lt, _le,
-     _eq) 
+     _eq)
 from pyomo.core.expr import expr_common as common
 
 
@@ -201,7 +201,7 @@ class clone_counter_context(object):
         return clone_counter_context._count
 
 #: A clone counter context manager object that simplifies the
-#: use of this context manager.  Specifically, different 
+#: use of this context manager.  Specifically, different
 #: instances of this context manger are not necessary.
 clone_counter = clone_counter_context()
 
@@ -245,7 +245,7 @@ class mutable_linear_context(object):
 
     def __exit__(self, *args):
         """
-        The context is changed to the 
+        The context is changed to the
         :class:`LinearExpression <pyomo.core.expr.current.LinearExpression>`
         class to transform the context into a nonmutable
         form.
@@ -306,11 +306,11 @@ class SimpleExpressionVisitor(object):
 
     def xbfs(self, node):
         """
-        Breadth-first search of an expression tree, 
+        Breadth-first search of an expression tree,
         except that leaf nodes are immediately visited.
 
         Note:
-            This method has the same functionality as the 
+            This method has the same functionality as the
             PyUtilib :class:`SimpleVisitor.xbfs <pyutilib.misc.visitor.SimpleVisitor.xbfs>`
             method.  The difference is that this method
             is tailored to efficiently walk Pyomo expression trees.
@@ -337,11 +337,11 @@ class SimpleExpressionVisitor(object):
 
     def xbfs_yield_leaves(self, node):
         """
-        Breadth-first search of an expression tree, except that 
+        Breadth-first search of an expression tree, except that
         leaf nodes are immediately visited.
 
         Note:
-            This method has the same functionality as the 
+            This method has the same functionality as the
             PyUtilib :class:`SimpleVisitor.xbfs_yield_leaves <pyutilib.misc.visitor.SimpleVisitor.xbfs_yield_leaves>`
             method.  The difference is that this method
             is tailored to efficiently walk Pyomo expression trees.
@@ -409,7 +409,7 @@ class ExpressionValueVisitor(object):
         pass
 
     def visiting_potential_leaf(self, node):    #pragma: no cover
-        """ 
+        """
         Visit a node and return its value if it is a leaf.
 
         Note:
@@ -421,7 +421,7 @@ class ExpressionValueVisitor(object):
 
         Returns:
             A tuple: ``(flag, value)``.   If ``flag`` is False,
-            then the node is not a leaf and ``value`` is :const:`None`.  
+            then the node is not a leaf and ``value`` is :const:`None`.
             Otherwise, ``value`` is the computed value for this node.
         """
         raise RuntimeError("The visiting_potential_leaf method needs to be defined.")
@@ -451,7 +451,7 @@ class ExpressionValueVisitor(object):
         implementation.
 
         Note:
-            This method has the same functionality as the 
+            This method has the same functionality as the
             PyUtilib :class:`ValueVisitor.dfs_postorder_stack <pyutilib.misc.visitor.ValueVisitor.dfs_postorder_stack>`
             method.  The difference is that this method
             is tailored to efficiently walk Pyomo expression trees.
@@ -534,7 +534,7 @@ class ExpressionReplacementVisitor(object):
         replacement of sub-trees in a pyomo expression tree.
 
         Args:
-            memo (dict): A dictionary mapping object ids to 
+            memo (dict): A dictionary mapping object ids to
                 objects.  This dictionary has the same semantics as
                 the memo object used with ``copy.deepcopy``.  Defaults
                 to None, which indicates that no user-defined
@@ -556,7 +556,7 @@ class ExpressionReplacementVisitor(object):
         Args:
             node: The node that will be cloned.
             values (list): The list of child nodes that have been
-                cloned.  These values are used to define the 
+                cloned.  These values are used to define the
                 cloned node.
 
         Returns:
@@ -565,7 +565,7 @@ class ExpressionReplacementVisitor(object):
         return node
 
     def visiting_potential_leaf(self, node):    #pragma: no cover
-        """ 
+        """
         Visit a node and return a cloned node if it is a leaf.
 
         Note:
@@ -577,7 +577,7 @@ class ExpressionReplacementVisitor(object):
 
         Returns:
             A tuple: ``(flag, value)``.   If ``flag`` is False,
-            then the node is not a leaf and ``value`` is :const:`None`.  
+            then the node is not a leaf and ``value`` is :const:`None`.
             Otherwise, ``value`` is a cloned node.
         """
         raise RuntimeError("The visiting_potential_leaf method needs to be defined.")
@@ -618,7 +618,7 @@ class ExpressionReplacementVisitor(object):
         to replace all subsequent parent nodes in the tree.
 
         Note:
-            This method has the same functionality as the 
+            This method has the same functionality as the
             PyUtilib :class:`ValueVisitor.dfs_postorder_stack <pyutilib.misc.visitor.ValueVisitor.dfs_postorder_stack>`
             method that is tailored to support the
             replacement of sub-trees in a Pyomo expression tree.
@@ -717,7 +717,7 @@ class _CloneVisitor(ExpressionValueVisitor):
         return node.construct_node( tuple(values), self.memo )
 
     def visiting_potential_leaf(self, node):
-        """ 
+        """
         Visiting a potential leaf.
 
         Return True if the node is not expanded.
@@ -739,7 +739,7 @@ class _CloneVisitor(ExpressionValueVisitor):
 
         if not self.clone_leaves and node.is_named_expression_type():
             #
-            # If we are not cloning leaves, then 
+            # If we are not cloning leaves, then
             # we don't copy the expression tree for a
             # named expression.
             #
@@ -752,28 +752,28 @@ def clone_expression(expr, memo=None, clone_leaves=True):
     """A function that is used to clone an expression.
 
     Cloning is roughly equivalent to calling ``copy.deepcopy``.
-    However, the :attr:`clone_leaves` argument can be used to 
+    However, the :attr:`clone_leaves` argument can be used to
     clone only interior (i.e. non-leaf) nodes in the expression
     tree.   Note that named expression objects are treated as
     leaves when :attr:`clone_leaves` is :const:`True`, and hence
     those subexpressions are not cloned.
 
-    This function uses a non-recursive 
-    logic, which makes it more scalable than the logic in 
+    This function uses a non-recursive
+    logic, which makes it more scalable than the logic in
     ``copy.deepcopy``.
 
     Args:
         expr: The expression that will be cloned.
-        memo (dict): A dictionary mapping object ids to 
+        memo (dict): A dictionary mapping object ids to
             objects.  This dictionary has the same semantics as
             the memo object used with ``copy.deepcopy``.  Defaults
             to None, which indicates that no user-defined
             dictionary is used.
         clone_leaves (bool): If True, then leaves are
-            cloned along with the rest of the expression. 
+            cloned along with the rest of the expression.
             Defaults to :const:`True`.
-   
-    Returns: 
+
+    Returns:
         The cloned expression.
     """
     clone_counter_context._count += 1
@@ -808,13 +808,12 @@ def _sizeof_expression(expr):
         expr: The root node of an expression tree.
 
     Returns:
-        A non-negative integer that is the number of 
+        A non-negative integer that is the number of
         interior and leaf nodes in the expression tree.
     """
     visitor = _SizeVisitor()
     return visitor.xbfs(expr)
-    
- 
+
 # =====================================================
 #  evaluate_expression
 # =====================================================
@@ -826,7 +825,7 @@ class _EvaluationVisitor(ExpressionValueVisitor):
         return node._apply_operation(values)
 
     def visiting_potential_leaf(self, node):
-        """ 
+        """
         Visiting a potential leaf.
 
         Return True if the node is not expanded.
@@ -849,10 +848,10 @@ def evaluate_expression(exp, exception=True):
 
     Args:
         expr: The root node of an expression tree.
-        exception (bool): A flag that indicates whether 
+        exception (bool): A flag that indicates whether
             exceptions are raised.  If this flag is
             :const:`False`, then an exception that
-            occurs while evaluating the expression 
+            occurs while evaluating the expression
             is caught and the return value is :const:`None`.
             Default is :const:`True`.
 
@@ -887,7 +886,7 @@ class _ComponentVisitor(SimpleExpressionVisitor):
             self.types = types
         else:
             self.types = set(types)
-        
+
     def visit(self, node):
         if node.__class__ in self.types:
             if id(node) in self.seen:
@@ -903,7 +902,7 @@ def identify_components(expr, component_types):
 
     Args:
         expr: The root node of an expression tree.
-        component_types (set or list): A set of class 
+        component_types (set or list): A set of class
             types that will be matched during the search.
 
     Yields:
@@ -927,7 +926,7 @@ class _VariableVisitor(SimpleExpressionVisitor):
 
     def __init__(self):
         self.seen = set()
-        
+
     def visit(self, node):
         if node.__class__ in nonpyomo_leaf_types:
             return
@@ -941,7 +940,7 @@ class _VariableVisitor(SimpleExpressionVisitor):
 
 def identify_variables(expr, include_fixed=True):
     """
-    A generator that yields a sequence of variables 
+    A generator that yields a sequence of variables
     in an expression tree.
 
     Args:
@@ -971,7 +970,7 @@ class _MutableParamVisitor(SimpleExpressionVisitor):
 
     def __init__(self):
         self.seen = set()
-        
+
     def visit(self, node):
         if node.__class__ in nonpyomo_leaf_types:
             return
@@ -1011,7 +1010,7 @@ class _PolyDegreeVisitor(ExpressionValueVisitor):
         return node._compute_polynomial_degree(values)
 
     def visiting_potential_leaf(self, node):
-        """ 
+        """
         Visiting a potential leaf.
 
         Return True if the node is not expanded.
@@ -1046,7 +1045,7 @@ def _polynomial_degree(node):
 
 class _IsFixedVisitor(ExpressionValueVisitor):
     """
-    NOTE: This doesn't check if combiner logic is 
+    NOTE: This doesn't check if combiner logic is
     all or any and short-circuit the test.  It's
     not clear that that is an important optimization.
     """
@@ -1056,7 +1055,7 @@ class _IsFixedVisitor(ExpressionValueVisitor):
         return node._is_fixed(values)
 
     def visiting_potential_leaf(self, node):
-        """ 
+        """
         Visiting a potential leaf.
 
         Return True if the node is not expanded.
@@ -1119,7 +1118,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
         return node._to_string(tmp, self.verbose, self.smap, self.compute_values)
 
     def visiting_potential_leaf(self, node):
-        """ 
+        """
         Visiting a potential leaf.
 
         Return True if the node is not expanded.
@@ -1154,7 +1153,7 @@ def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_va
             variables in the expression.
         smap:  If specified, this :class:`SymbolMap <pyomo.core.expr.symbol_map.SymbolMap>` is
             used to cache labels.
-        compute_values (bool): If :const:`True`, then 
+        compute_values (bool): If :const:`True`, then
             parameters and fixed variables are evaluated before the
             expression string is generated.  Default is :const:`False`.
         standardize (bool): If :const:`True` and :attr:`verbose` is :const:`False`, then the
@@ -1167,7 +1166,7 @@ def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_va
     verbose = common.TO_STRING_VERBOSE if verbose is None else verbose
     #
     # Standardize the output of expressions if requested (when verbose=False).
-    # This involves constructing a standard representation and then creating 
+    # This involves constructing a standard representation and then creating
     # a string.
     #
     if standardize and not verbose:
@@ -1191,8 +1190,8 @@ def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_va
                 expr = repn.to_expression()
         except:     #pragma: no cover
             #
-            # Generation of the standard repn will fail if the 
-            # expression is uninitialized.  Hence, we default to 
+            # Generation of the standard repn will fail if the
+            # expression is uninitialized.  Hence, we default to
             # using the non-standardized form.
             #
             # It might be smarter to raise errors for specific issues (e.g. uninitialized parameters).
@@ -1240,10 +1239,10 @@ class ExpressionBase(NumericValue):
     def nargs(self):
         """
         Returns the number of child nodes.
-        
+
         By default, Pyomo expressions represent binary operations
         with two arguments.
-    
+
         Note:
             This function does not simply compute the length of
             :attr:`_args_` because some expression classes use
@@ -1268,7 +1267,7 @@ class ExpressionBase(NumericValue):
         if i >= self.nargs():
             raise KeyError("Invalid index for expression argument: %d" % i)
         if i < 0:
-            return self._args_[self.nargs()+i]    
+            return self._args_[self.nargs()+i]
         return self._args_[i]
 
     @property
@@ -1342,15 +1341,15 @@ class ExpressionBase(NumericValue):
         Return a string representation of the expression tree.
 
         Args:
-            verbose (bool): If :const:`True`, then the the string 
+            verbose (bool): If :const:`True`, then the the string
                 representation consists of nested functions.  Otherwise,
                 the string representation is an algebraic equation.
                 Defaults to :const:`False`.
-            labeler: An object that generates string labels for 
+            labeler: An object that generates string labels for
                 variables in the expression tree.  Defaults to :const:`None`.
             smap:  If specified, this :class:`SymbolMap <pyomo.core.expr.symbol_map.SymbolMap>` is
                 used to cache labels for variables.
-            compute_values (bool): If :const:`True`, then 
+            compute_values (bool): If :const:`True`, then
                 parameters and fixed variables are evaluated before the
                 expression string is generated.  Default is :const:`False`.
 
@@ -1374,13 +1373,13 @@ class ExpressionBase(NumericValue):
         Args:
             values (list): The string representations of the children of this
                 node.
-            verbose (bool): If :const:`True`, then the the string 
+            verbose (bool): If :const:`True`, then the the string
                 representation consists of nested functions.  Otherwise,
                 the string representation is an algebraic equation.
             smap:  If specified, this :class:`SymbolMap
                 <pyomo.core.expr.symbol_map.SymbolMap>` is
                 used to cache labels for variables.
-            compute_values (bool): If :const:`True`, then 
+            compute_values (bool): If :const:`True`, then
                 parameters and fixed variables are evaluated before the
                 expression string is generated.
 
@@ -1410,12 +1409,14 @@ class ExpressionBase(NumericValue):
         Return a clone of the expression tree.
 
         Note:
-            This method does not clone the leaves of the tree,
-            which are numeric constants and variables.  It only 
-            clones the interior nodes, and expression leaf nodes
-            like :class:`_MutableLinearExpression <pyomo.core.expr.current._MutableLinearExpression>`.  However, named expressions are treated 
-            like leaves, and they are not cloned.
-            
+            This method does not clone the leaves of the
+            tree, which are numeric constants and variables.
+            It only clones the interior nodes, and
+            expression leaf nodes like
+            :class:`_MutableLinearExpression<pyomo.core.expr.current._MutableLinearExpression>`.
+            However, named expressions are treated like
+            leaves, and they are not cloned.
+
         Args:
             substitute (dict): a dictionary that maps object ids to clone
                 objects generated earlier during the cloning process.
@@ -1442,8 +1443,8 @@ class ExpressionBase(NumericValue):
 
     def construct_node(self, args, memo):
         """
-        Construct a node using given arguments. 
-   
+        Construct a node using given arguments.
+
         This class provides a consistent interface for constructing a
         node, which is used in tree visitor scripts.  In the simplest
         case, this simply returns::
@@ -1532,7 +1533,7 @@ class ExpressionBase(NumericValue):
 
         This method returns :const:`False` for this class, and it
         is included in other classes within Pyomo that are not named
-        expressions, which allows for a check for named expressions 
+        expressions, which allows for a check for named expressions
         without evaluating the class type.
 
         Returns:
@@ -1683,7 +1684,7 @@ class ExternalFunctionExpression(ExpressionBase):
         model.f = ExternalFunction(library='foo.so', function='bar')
         expr = model.f(model.a)
 
-    Args: 
+    Args:
         args (tuple): children of this node
         fcn: a class that defines this external function
     """
@@ -1709,7 +1710,7 @@ class ExternalFunctionExpression(ExpressionBase):
         return self._fcn.getname(*args, **kwds)
 
     def _compute_polynomial_degree(self, result):
-        # If the expression is constant, then 
+        # If the expression is constant, then
         # this is detected earlier.  Hence, we can safely
         # return None.
         return None
@@ -1957,7 +1958,7 @@ class RangedExpression(_LinearOperatorExpression):
 
     def _to_string(self, values, verbose, smap, compute_values):
         return "{0}  {1}  {2}  {3}  {4}".format(values[0], '<' if self._strict[0] else '<=', values[1], '<' if self._strict[1] else '<=', values[2])
-        
+
     def is_constant(self):
         return (self._args_[0].__class__ in native_numeric_types or self._args_[0].is_constant()) and \
                (self._args_[1].__class__ in native_numeric_types or self._args_[1].is_constant()) and \
@@ -2006,7 +2007,9 @@ class InequalityExpression(_LinearOperatorExpression):
 
     def __nonzero__(self):
         if _using_chained_inequality and not self.is_constant():    #pragma: no cover
-            deprecation_warning("Chained inequalities are deprecated.  Use the inequality() function to express ranged inequality expressions.")     # Remove in Pyomo 6.0
+            deprecation_warning("Chained inequalities are deprecated. "
+                                "Use the inequality() function to "
+                                "express ranged inequality expressions.")     # Remove in Pyomo 6.0
             _chainedInequality.call_info = traceback.extract_stack(limit=2)[-2]
             _chainedInequality.prev = self
             return True
@@ -2031,7 +2034,7 @@ class InequalityExpression(_LinearOperatorExpression):
     def _to_string(self, values, verbose, smap, compute_values):
         if len(values) == 2:
             return "{0}  {1}  {2}".format(values[0], '<' if self._strict else '<=', values[1])
-        
+
     def is_constant(self):
         return (self._args_[0].__class__ in native_numeric_types or self._args_[0].is_constant()) and \
                (self._args_[1].__class__ in native_numeric_types or self._args_[1].is_constant())
@@ -2063,8 +2066,8 @@ def inequality(lower=None, body=None, upper=None, strict=False):
         2 <= model.x <= 3
 
     .. note:: This ranged inequality syntax is deprecated in Pyomo.
-        This function provides a mechanism for expressing ranged inequalities
-	    without chained inequalities.
+        This function provides a mechanism for expressing
+        ranged inequalities without chained inequalities.
 
     Args:
         lower: an expression defines a lower bound
@@ -2127,7 +2130,7 @@ class EqualityExpression(_LinearOperatorExpression):
 
     def _to_string(self, values, verbose, smap, compute_values):
         return "{0}  ==  {1}".format(values[0], values[1])
-        
+
     def is_constant(self):
         return self._args_[0].is_constant() and self._args_[1].is_constant()
 
@@ -2219,10 +2222,11 @@ class ViewSumExpression(_SumExpression):
 
     def is_constant(self):
         #
-        # In most normal contexts, a ViewSumExpression is non-constant.  When
-        # Forming expressions, constant parameters are turned into numbers, which
-        # are simply added.  Mutable parameters, variables and expressions are 
-        # not constant.
+        # In most normal contexts, a ViewSumExpression is
+        # non-constant.  When Forming expressions, constant
+        # parameters are turned into numbers, which are
+        # simply added.  Mutable parameters, variables and
+        # expressions are not constant.
         #
         return False
 
@@ -2260,7 +2264,7 @@ class _MutableViewSumExpression(ViewSumExpression):
     """
     A mutable ViewSumExpression
 
-    The :func:`add` method is slightly different in that it 
+    The :func:`add` method is slightly different in that it
     does not create a new sum expression, but modifies the
     :attr:`_args_` data in place.
     """
@@ -2318,14 +2322,14 @@ class GetItemExpression(ExpressionBase):
                 if not x.__class__ in nonpyomo_leaf_types and x.is_potentially_variable():
                     return True
         return False
-        
+
     def is_fixed(self):
         if any(self._args_):
             for x in itervalues(self._base):
                 if not x.__class__ in nonpyomo_leaf_types and not x.is_fixed():
                     return False
         return True
-        
+
     def _is_fixed(self, values):
         from pyomo.core.base import Var # TODO
         from pyomo.core.kernel.component_variable import IVariable # TODO
@@ -2417,10 +2421,13 @@ class Expr_if(ExpressionBase):
             else:
                 return (self._else.__class__ in native_numeric_types or self._else.is_constant())
         else:
-            return (self._then.__class__ in native_numeric_types or self._then.is_constant()) and (self._else.__class__ in native_numeric_types or self._else.is_constant())
+            return (self._then.__class__ in native_numeric_types or self._then.is_constant()) and \
+                (self._else.__class__ in native_numeric_types or self._else.is_constant())
 
     def is_potentially_variable(self):
-        return (not self._if.__class__ in native_numeric_types and self._if.is_potentially_variable()) or (not self._then.__class__ in native_numeric_types and self._then.is_potentially_variable()) or (not self._else.__class__ in native_numeric_types and self._else.is_potentially_variable())
+        return ((not self._if.__class__ in native_numeric_types) and self._if.is_potentially_variable()) or \
+            ((not self._then.__class__ in native_numeric_types) and self._then.is_potentially_variable()) or \
+            ((not self._else.__class__ in native_numeric_types) and self._else.is_potentially_variable())
 
     def _compute_polynomial_degree(self, result):
         _if, _then, _else = result
@@ -2432,7 +2439,8 @@ class Expr_if(ExpressionBase):
         return None
 
     def _to_string(self, values, verbose, smap, compute_values):
-        return '{0}( ( {1} ), then=( {2} ), else=( {3} ) )'.format(self.getname(), self._if, self._then, self._else)
+        return '{0}( ( {1} ), then=( {2} ), else=( {3} ) )'.\
+            format(self.getname(), self._if, self._then, self._else)
 
     def _apply_operation(self, result):
         _if, _then, _else = result
@@ -2597,7 +2605,7 @@ class LinearExpression(ExpressionBase):
                     v_ = smap.getSymbol(v)
                 else:
                     v_ = str(v)
-                if c.__class__ in native_numeric_types or compute_values: 
+                if c.__class__ in native_numeric_types or compute_values:
                     c_ = value(c)
                     if isclose(c_,1):
                         tmp.append(str(v_))
@@ -2613,7 +2621,7 @@ class LinearExpression(ExpressionBase):
                 v_ = smap.getSymbol(v)
             else:
                 v_ = str(v)
-            if c.__class__ in native_numeric_types or compute_values: 
+            if c.__class__ in native_numeric_types or compute_values:
                 c_ = value(c)
                 if isclose(c_,1):
                    tmp.append(" + %s" % v_)
@@ -2731,7 +2739,7 @@ class LinearExpression(ExpressionBase):
             if self.is_potentially_variable():
                 raise ValueError("Unallowed operation on linear expression: division with a variable RHS")
             return _other / self.constant
-            
+
         elif etype == _neg:
             self.constant *= -1
             for i,c in enumerate(self.linear_coefs):
@@ -2756,7 +2764,7 @@ class _MutableLinearExpression(LinearExpression):
 def decompose_term(expr):
     """
     A function that returns a tuple consisting of (1) a flag indicated
-    whether the expression is linear, and (2) a list of tuples that 
+    whether the expression is linear, and (2) a list of tuples that
     represents the terms in the linear expression.
 
     Args:
@@ -2791,7 +2799,7 @@ class LinearDecompositionError(Exception):
 def _decompose_linear_terms(expr, multiplier=1):
     """
     A generator function that yields tuples for the linear terms
-    in an expression.  If nonlinear terms are encountered, this function 
+    in an expression.  If nonlinear terms are encountered, this function
     raises the :class:`LinearDecompositionError` exception.
 
     Args:
@@ -2821,7 +2829,7 @@ def _decompose_linear_terms(expr, multiplier=1):
     elif expr.__class__ is ReciprocalExpression:
         # The argument is potentially variable, so this represents a nonlinear term
         #
-        # NOTE: We're ignoring possible simplifications 
+        # NOTE: We're ignoring possible simplifications
         raise LinearDecompositionError("Unexpected nonlinear term")
     elif expr.__class__ is ViewSumExpression or expr.__class__ is _MutableViewSumExpression:
         for arg in expr.args:
@@ -3002,14 +3010,14 @@ def _generate_sum_expression(etype, _self, _other):
                 return ViewSumExpression([_self, TermExpression((-_other._args_[0], _other._args_[1]))])
             elif _other.is_variable_type():
                 return ViewSumExpression([_self, TermExpression((-1,_other))])
-            elif _other.is_potentially_variable():    
+            elif _other.is_potentially_variable():
                 return ViewSumExpression([_self, NegationExpression((_other,))])
             return NPV_SumExpression((_self, NPV_NegationExpression((_other,))))
         elif _other.__class__ is TermExpression:
             return ViewSumExpression([_self, TermExpression((-_other._args_[0], _other._args_[1]))])
         elif _other.is_variable_type():
             return ViewSumExpression([_self, TermExpression((-1,_other))])
-        elif _other.is_potentially_variable():    
+        elif _other.is_potentially_variable():
             return ViewSumExpression([_self, NegationExpression((_other,))])
         elif _self.is_potentially_variable():
             return ViewSumExpression([_self, NPV_NegationExpression((_other,))])
@@ -3017,7 +3025,6 @@ def _generate_sum_expression(etype, _self, _other):
             return NPV_SumExpression((_self, NPV_NegationExpression((_other,))))
 
     raise RuntimeError("Unknown expression type '%s'" % etype)      #pragma: no cover
-        
 
 #@profile
 def _generate_mul_expression(etype, _self, _other):
