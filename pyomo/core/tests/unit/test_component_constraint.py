@@ -715,20 +715,32 @@ class Test_constraint(unittest.TestCase):
         c = constraint(expr=x == p + 1)
         self.assertEqual(c.equality, True)
 
-        c = constraint(expr=inequality(p, x, p))
-        self.assertTrue(c.ub is p)
-        # GH: Not sure if we are supposed to detect equality
-        #     in this situation. I would rather us not, for
-        #     the sake of making the code less complicated.
-        #     Either way, I am not going to test for it here.
-        #self.assertEqual(c.equality, <blah>)
-
         c = constraint(expr=(x, p))
         self.assertTrue(c.ub is p)
+        self.assertTrue(c.lb is p)
+        self.assertTrue(c.rhs is p)
+        self.assertIs(c.body, x)
         self.assertEqual(c.equality, True)
 
         c = constraint(expr=(p, x))
         self.assertTrue(c.ub is p)
+        self.assertTrue(c.lb is p)
+        self.assertTrue(c.rhs is p)
+        self.assertIs(c.body, x)
+        self.assertEqual(c.equality, True)
+
+        c = constraint(expr=EXPR.EqualityExpression((p, x)))
+        self.assertTrue(c.ub is p)
+        self.assertTrue(c.lb is p)
+        self.assertTrue(c.rhs is p)
+        self.assertIs(c.body, x)
+        self.assertEqual(c.equality, True)
+
+        c = constraint(expr=EXPR.EqualityExpression((x, p)))
+        self.assertTrue(c.ub is p)
+        self.assertTrue(c.lb is p)
+        self.assertTrue(c.rhs is p)
+        self.assertIs(c.body, x)
         self.assertEqual(c.equality, True)
 
     def test_tuple_construct_equality(self):
@@ -859,11 +871,34 @@ class Test_constraint(unittest.TestCase):
         with self.assertRaises(ValueError):
             c.expr = (x < 0)
         with self.assertRaises(ValueError):
+            c.expr = EXPR.inequality(body=x,upper=0,strict=True)
+        c.expr = (x <= 0)
+        c.expr = EXPR.inequality(body=x,upper=0,strict=False)
+        with self.assertRaises(ValueError):
             c.expr = (x > 0)
+        with self.assertRaises(ValueError):
+            c.expr = EXPR.inequality(body=x,lower=0,strict=True)
+        c.expr = (x >= 0)
+        c.expr = EXPR.inequality(body=x,lower=0,strict=False)
         with self.assertRaises(ValueError):
             c.expr = (x < y)
         with self.assertRaises(ValueError):
+            c.expr = EXPR.inequality(body=x,upper=y,strict=True)
+        c.expr = (x <= y)
+        c.expr = EXPR.inequality(body=x,upper=y,strict=False)
+        with self.assertRaises(ValueError):
             c.expr = (x > y)
+        with self.assertRaises(ValueError):
+            c.expr = EXPR.inequality(body=x,lower=y,strict=True)
+        c.expr = (x >= y)
+        c.expr = EXPR.inequality(body=x,lower=y,strict=False)
+        with self.assertRaises(ValueError):
+            c.expr = EXPR.RangedExpression((0,x,1),(True,True))
+        with self.assertRaises(ValueError):
+            c.expr = EXPR.RangedExpression((0,x,1),(False,True))
+        with self.assertRaises(ValueError):
+            c.expr = EXPR.RangedExpression((0,x,1),(True,False))
+        c.expr = EXPR.RangedExpression((0,x,1),(False,False))
 
     def test_expr_construct_inf_equality(self):
         x = variable()

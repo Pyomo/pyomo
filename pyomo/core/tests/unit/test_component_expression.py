@@ -44,6 +44,55 @@ except:
 
 class Test_noclone(unittest.TestCase):
 
+    def test_iadd(self):
+        e = expression()
+        e.expr = 1
+        e += 1
+        self.assertEqual(e.expr, 2)
+
+    def test_isub(self):
+        e = expression()
+        e.expr = 1
+        e -= 1
+        self.assertEqual(e.expr, 0)
+
+    def test_imul(self):
+        e = expression()
+        e.expr = 1
+        e *= 2
+        self.assertEqual(e.expr, 2)
+
+    def test_idiv(self):
+        e = expression()
+        e.expr = 1
+        if six.PY3:
+            e /= 2
+            self.assertEqual(e.expr, 0.5)
+        else:
+            e /= 2
+            self.assertEqual(e.expr, 0)
+        e.expr = 1.0
+        e /= 2.0
+        self.assertEqual(e.expr, 0.5)
+
+    def test_ipow(self):
+        e = expression()
+        e.expr = 2
+        e **= 3
+        self.assertEqual(e.expr, 8)
+
+    def test_is_named_expression_type(self):
+        e = expression()
+        self.assertEqual(e.is_named_expression_type(), True)
+
+    def test_arg(self):
+        e = expression()
+        self.assertEqual(e.arg(0), None)
+        e.expr = 1
+        self.assertEqual(e.arg(0), 1)
+        with self.assertRaises(KeyError):
+            e.arg(1)
+
     def test_init_non_NumericValue(self):
         types = [None, 1, 1.1, True, ""]
         if numpy_available:

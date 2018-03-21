@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -188,8 +188,7 @@ class _MutableBoundsConstraintMixin(object):
                 "The lb property can not be set "
                 "when the equality property is True.")
         if lb is not None:
-            tmp = as_numeric(lb)
-            if tmp.is_potentially_variable():
+            if potentially_variable(lb):
                 raise ValueError(
                     "Constraint lower bounds must be "
                     "expressions restricted to data.")
@@ -206,8 +205,7 @@ class _MutableBoundsConstraintMixin(object):
                 "The ub property can not be set "
                 "when the equality property is True.")
         if ub is not None:
-            tmp = as_numeric(ub)
-            if tmp.is_potentially_variable():
+            if potentially_variable(ub):
                 raise ValueError(
                     "Constraint lower bounds must be "
                     "expressions restricted to data.")
@@ -231,8 +229,7 @@ class _MutableBoundsConstraintMixin(object):
                 "Constraint right-hand side can not "
                 "be assigned a value of None.")
         else:
-            tmp = as_numeric(rhs)
-            if tmp.is_potentially_variable():
+            if potentially_variable(rhs):
                 raise ValueError(
                     "Constraint right-hand side must be "
                     "expressions restricted to data.")
@@ -440,10 +437,10 @@ class constraint(_MutableBoundsConstraintMixin,
 
                 # assigning to the rhs property
                 # will set the equality flag to True
-                if arg1 is None or (not arg1.is_potentially_variable()):
+                if (arg1 is None) or (not arg1.is_potentially_variable()):
                     self.rhs = arg1
                     self.body = arg0
-                elif arg0 is None or (not arg0.is_potentially_variable()):
+                elif (arg0 is None) or (not arg0.is_potentially_variable()):
                     self.rhs = arg0
                     self.body = arg1
                 else:
@@ -457,8 +454,7 @@ class constraint(_MutableBoundsConstraintMixin,
             elif len(expr) == 3:
                 arg0 = expr[0]
                 if arg0 is not None:
-                    arg0 = as_numeric(arg0)
-                    if arg0.is_potentially_variable():
+                    if potentially_variable(arg0):
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the lower "
@@ -472,8 +468,7 @@ class constraint(_MutableBoundsConstraintMixin,
 
                 arg2 = expr[2]
                 if arg2 is not None:
-                    arg2 = as_numeric(arg2)
-                    if arg2.is_potentially_variable():
+                    if potentially_variable(arg2):
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the upper "
@@ -542,10 +537,10 @@ class constraint(_MutableBoundsConstraintMixin,
             if _expr_type is EXPR.EqualityExpression:
                 # assigning to the rhs property
                 # will set the equality flag to True
-                if not expr.arg(1).is_potentially_variable():
+                if not potentially_variable(expr.arg(1)):
                     self.rhs = expr.arg(1)
                     self.body = expr.arg(0)
-                elif not expr.arg(0).is_potentially_variable():
+                elif not potentially_variable(expr.arg(0)):
                     self.rhs = expr.arg(0)
                     self.body = expr.arg(1)
                 else:
@@ -561,12 +556,11 @@ class constraint(_MutableBoundsConstraintMixin,
                         " constraints must be formulated using "
                         "using '<=', '>=', or '=='."
                         % (self.name))
-
-                if not expr.arg(1).is_potentially_variable():
+                if not potentially_variable(expr.arg(1)):
                     self.lb = None
                     self.body  = expr.arg(0)
                     self.ub = expr.arg(1)
-                elif not expr.arg(0).is_potentially_variable():
+                elif not potentially_variable(expr.arg(0)):
                     self.lb = expr.arg(0)
                     self.body  = expr.arg(1)
                     self.ub = None
@@ -585,7 +579,7 @@ class constraint(_MutableBoundsConstraintMixin,
                         "using '<=', '>=', or '=='."
                         % (self.name))
 
-                if expr.arg(0).is_potentially_variable():
+                if potentially_variable(expr.arg(0)):
                     raise ValueError(
                         "Constraint '%s' found a double-sided "
                         "inequality expression (lower <= "
@@ -593,7 +587,7 @@ class constraint(_MutableBoundsConstraintMixin,
                         "bound was not data or an expression "
                         "restricted to storage of data."
                         % (self.name))
-                if expr.arg(2).is_potentially_variable():
+                if potentially_variable(expr.arg(2)):
                     raise ValueError(
                         "Constraint '%s' found a double-sided "\
                         "inequality expression (lower <= "

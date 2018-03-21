@@ -223,19 +223,14 @@ class _MatrixConstraintData(IConstraint,
         coefficients = []
         constant = 0
         for v, c in self.terms:
-            if compute_values:
-                c = value(c)
+            # we call float to get rid of the numpy type
+            c = float(c)
             if not v.fixed:
                 variables.append(v)
-                if compute_values:
-                    # we call float to get rid of the numpy type
-                    coefficients.append(float(c))
-                else:
-                    coefficients.append(c)
+                coefficients.append(c)
             else:
                 if compute_values:
-                    # we call float to get rid of the numpy type
-                    constant += float(c) * v()
+                    constant += c * v()
                 else:
                     constant += c * v
         repn = StandardRepn()
