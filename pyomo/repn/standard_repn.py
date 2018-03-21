@@ -212,39 +212,53 @@ class StandardRepn(object):
     def is_nonlinear(self):
         return not (self.nonlinear_expr is None and len(self.quadratic_coefs) == 0)
 
-    def to_expression(self):
+    def to_expression(self, sort=True):
+        #
+        # When an standard representation is created, the ordering of the
+        # linear and quadratic terms may not be preserved.  Hence, the
+        # sorting option ensures that an expression generated from a
+        # standard representation has a consistent order.
         #
         # TODO: Should this replace non-mutable parameters with constants?
         #
         expr = self.constant
-        for i,v in enumerate(self.linear_vars):
-            if self.linear_coefs[i].__class__ in native_numeric_types:
-                val = self.linear_coefs[i]
-                if isclose_const(val, 1.0):
-                    expr += self.linear_vars[i]
-                elif isclose_const(val, -1.0):
-                    expr -= self.linear_vars[i]
-                elif val < 0.0:
-                    expr -= - self.linear_coefs[i]*self.linear_vars[i]
+
+        lvars = [(i,v) for i,v in enumerate(self.linear_vars)]
+        if sort:
+            lvars = sorted(lvars, key=lambda x: str(x[1]))
+        for i,v in lvars:
+            c = self.linear_coefs[i]
+            if c.__class__ in native_numeric_types:
+                if isclose_const(c, 1.0):
+                    expr += v
+                elif isclose_const(c, -1.0):
+                    expr -= v
+                elif c < 0.0:
+                    expr -= - c*v
                 else:
-                    expr += self.linear_coefs[i]*self.linear_vars[i]
+                    expr += c*v
             else:
-                expr += self.linear_coefs[i]*self.linear_vars[i]
-        for i,v in enumerate(self.quadratic_vars):
-            if id(self.quadratic_vars[i][0]) == id(self.quadratic_vars[i][1]):
-                term = self.quadratic_vars[i][0]**2
+                expr += c*v
+
+        qvars = [(i,v) for i,v in enumerate(self.quadratic_vars)]
+        if sort:
+            qvars = sorted(qvars, key=lambda x: (str(x[1][0]), str(x[1][1])))
+        for i,v in qvars:
+            if id(v[0]) == id(v[1]):
+                term = v[0]**2
             else:
-                term = self.quadratic_vars[i][0]*self.quadratic_vars[i][1]
-            if self.quadratic_coefs[i].__class__ in native_numeric_types:
-                val = self.quadratic_coefs[i]
-                if isclose_const(val, 1.0):
+                term = v[0]*v[1]
+            c = self.quadratic_coefs[i]
+            if c.__class__ in native_numeric_types:
+                if isclose_const(c, 1.0):
                     expr += term
-                elif isclose_const(val, -1.0):
+                elif isclose_const(c, -1.0):
                     expr -= term
                 else:
-                    expr += self.quadratic_coefs[i]*term
+                    expr += c*term
             else:
-                expr += self.quadratic_coefs[i]*term
+                expr += c*term
+
         if not self.nonlinear_expr is None:
             expr += self.nonlinear_expr
         return expr
