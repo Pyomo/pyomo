@@ -701,15 +701,23 @@ class CPLEXDirect(DirectSolver):
         return True
 
     def _warm_start(self):
-        var_names = []
-        var_values = []
-        for pyomo_var, cplex_var in self._pyomo_var_to_solver_var_map.items():
-            if pyomo_var.value is not None:
-                var_names.append(cplex_var)
-                var_values.append(value(pyomo_var))
+        # here warm start means MIP start, which we can not add
+        # if the problem type is not discrete
+        cpxprob = self._solver_model
+        if cpxprob.get_problem_type() in [cpxprob.problem_type.MILP,
+                                          cpxprob.problem_type.MIQP,
+                                          cpxprob.problem_type.MIQCP]:
+            var_names = []
+            var_values = []
+            for pyomo_var, cplex_var in self._pyomo_var_to_solver_var_map.items():
+                if pyomo_var.value is not None:
+                    var_names.append(cplex_var)
+                    var_values.append(value(pyomo_var))
 
-        if len(var_names):
-            self._solver_model.MIP_starts.add([var_names, var_values], self._solver_model.MIP_starts.effort_level.auto)
+            if len(var_names):
+                self._solver_model.MIP_starts.add(
+                    [var_names, var_values],
+                    self._solver_model.MIP_starts.effort_level.auto)
 
     def _load_vars(self, vars_to_load=None):
         var_map = self._pyomo_var_to_solver_var_map
