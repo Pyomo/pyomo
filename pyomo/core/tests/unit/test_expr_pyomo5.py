@@ -2535,11 +2535,11 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
 
         expr = 5 + model.a + model.a
         self.assertIs(type(expr), EXPR.ViewSumExpression)
-        self.assertEqual("5 + 2*a", str(expr))
+        self.assertEqual("5 + a + a", str(expr))
 
         expr += 5
         self.assertIs(type(expr), EXPR.ViewSumExpression)
-        self.assertEqual("10 + 2*a", str(expr))
+        self.assertEqual("5 + a + a + 5", str(expr))
 
         expr = 2 + model.p
         self.assertEqual("2 + p", str(expr))
@@ -2557,15 +2557,15 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         model.p = Param(A, initialize=2, mutable=True)
 
         expr = quicksum(i*model.a[i] for i in A) + 3
-        self.assertEqual("3 + a[1] + 2*a[2] + 3*a[3] + 4*a[4]", str(expr))
+        self.assertEqual("a[1] + 2*a[2] + 3*a[3] + 4*a[4] + 3", str(expr))
         self.assertEqual("a[1] + 2*a[2] + 3*a[3] + 4*a[4] + 3", EXPR.expression_to_string(expr, compute_values=True))
 
         expr = quicksum((i-2)*model.a[i] for i in A) + 3
-        self.assertEqual("3 - 2*a[0] - a[1] + a[3] + 2*a[4]", str(expr))
+        self.assertEqual("- 2.0*a[0] - a[1] + a[3] + 2*a[4] + 3", str(expr))
         self.assertEqual("- 2.0*a[0] - a[1] + a[3] + 2*a[4] + 3", EXPR.expression_to_string(expr, compute_values=True))
 
         expr = quicksum(model.a[i] for i in A) + 3
-        self.assertEqual("3 + a[0] + a[1] + a[2] + a[3] + a[4]", str(expr))
+        self.assertEqual("a[0] + a[1] + a[2] + a[3] + a[4] + 3", str(expr))
 
         expr = quicksum(model.p[i]*model.a[i] for i in A)
         self.assertEqual("2*a[0] + 2*a[1] + 2*a[2] + 2*a[3] + 2*a[4]", EXPR.expression_to_string(expr, compute_values=True))
@@ -2601,7 +2601,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         model.b = Var()
 
         expr = 5 * model.a * model.a
-        self.assertEqual("5*a**2", str(expr))
+        self.assertEqual("5*a*a", str(expr))
 
         # This returns an integer, which has no pprint().
         #expr = expr*0
@@ -2647,10 +2647,10 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         self.assertEqual( "5.0  <=  a  <  10.0", str(expr) )
 
         expr = 5 <= model.a + 5
-        self.assertEqual( "5.0  <=  5 + a", str(expr) )
+        self.assertEqual( "5.0  <=  a + 5", str(expr) )
 
         expr = expr < 10
-        self.assertEqual( "5.0  <=  5 + a  <  10.0", str(expr) )
+        self.assertEqual( "5.0  <=  a + 5  <  10.0", str(expr) )
 
     def test_equality(self):
         #
@@ -2675,10 +2675,10 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         self.assertEqual( "a  ==  10.0", str(expr) )
 
         expr = 5 == model.a + 5
-        self.assertEqual( "5 + a  ==  5.0", str(expr) )
+        self.assertEqual( "a + 5  ==  5.0", str(expr) )
 
         expr = model.a + 5 == 5
-        self.assertEqual( "5 + a  ==  5.0", str(expr) )
+        self.assertEqual( "a + 5  ==  5.0", str(expr) )
 
 
     def test_linear(self):
@@ -2695,15 +2695,15 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
 
         expr = m.x - m.p*m.y + 5
         self.assertIs(type(expr), EXPR.ViewSumExpression)
-        self.assertEqual( "5 + x - p*y", str(expr) )
+        self.assertEqual( "x - p*y + 5", str(expr) )
 
         expr = m.x - m.p*m.y - 5
         self.assertIs(type(expr), EXPR.ViewSumExpression)
-        self.assertEqual( "-5 + x - p*y", str(expr) )
+        self.assertEqual( "x - p*y - 5", str(expr) )
 
         expr = m.x - m.p*m.y - 5 + m.p
         self.assertIs(type(expr), EXPR.ViewSumExpression)
-        self.assertEqual( "-5 + p + x - p*y", str(expr) )
+        self.assertEqual( "x - p*y - 5 + p", str(expr) )
 
     def test_expr_if(self):
         m = ConcreteModel()
@@ -2850,7 +2850,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         M.q = Param(range(3), initialize=3, mutable=True)
 
         e = M.x*M.y + summation(M.p, M.a) + quicksum(M.q[i]*M.a[i] for i in M.a) / M.x
-        self.assertEqual(str(e), "2*a[0] + 2*a[1] + 2*a[2] + x*y + (q[0]*a[0] + q[1]*a[1] + q[2]*a[2])*(1/x)")
+        self.assertEqual(str(e), "x*y + 2*a[0] + 2*a[1] + 2*a[2] + (q[0]*a[0] + q[1]*a[1] + q[2]*a[2])*(1/x)")
         self.assertEqual(e.to_string(), "x*y + 2*a[0] + 2*a[1] + 2*a[2] + (q[0]*a[0] + q[1]*a[1] + q[2]*a[2])*(1/x)")
         self.assertEqual(e.to_string(compute_values=True), "x*y + 2*a[0] + 2*a[1] + 2*a[2] + (3*a[0] + 3*a[1] + 3*a[2])*(1/x)")
 
@@ -6000,8 +6000,8 @@ class WalkerTests(unittest.TestCase):
         e = sin(M.x) + M.x*M.y + 3
         walker = ReplacementWalkerTest(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertEqual("3 + x*y + sin(x)", str(e))
-        self.assertEqual("3 + w[1]*w[2] + sin(w[1])", str(f))
+        self.assertEqual("sin(x) + x*y + 3", str(e))
+        self.assertEqual("sin(w[1]) + w[1]*w[2] + 3", str(f))
 
     def test_replacement_walker2(self):
         M = ConcreteModel()
@@ -6023,8 +6023,8 @@ class WalkerTests(unittest.TestCase):
         e = sin(M.x) + M.x*M.y + 3 <= 0
         walker = ReplacementWalkerTest(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertEqual("3 + x*y + sin(x)  <=  0.0", str(e))
-        self.assertEqual("3 + w[1]*w[2] + sin(w[1])  <=  0.0", str(f))
+        self.assertEqual("sin(x) + x*y + 3  <=  0.0", str(e))
+        self.assertEqual("sin(w[1]) + w[1]*w[2] + 3  <=  0.0", str(f))
 
     def test_replacement_walker4(self):
         M = ConcreteModel()
@@ -6035,8 +6035,8 @@ class WalkerTests(unittest.TestCase):
         e = inequality(0, sin(M.x) + M.x*M.y + 3, 1)
         walker = ReplacementWalkerTest(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertEqual("0  <=  3 + x*y + sin(x)  <=  1", str(e))
-        self.assertEqual("0  <=  3 + w[1]*w[2] + sin(w[1])  <=  1", str(f))
+        self.assertEqual("0  <=  sin(x) + x*y + 3  <=  1", str(e))
+        self.assertEqual("0  <=  sin(w[1]) + w[1]*w[2] + 3  <=  1", str(f))
 
     def test_identify_components(self):
         M = ConcreteModel()

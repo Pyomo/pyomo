@@ -1335,7 +1335,7 @@ class ExpressionBase(NumericValue):
         Returns:
             A string.
         """
-        return expression_to_string(self, standardize=True)
+        return expression_to_string(self, standardize=False)
 
     def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         """

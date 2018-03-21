@@ -765,14 +765,14 @@ E : Size=2, Index=E_index
 
         output = \
 """\
-1 + 3*x**2 + x*x*x
+(x + 2)*x**2 + (x**2 + 1)
 e : Size=1, Index=None
     Key  : Expression
-    None : 2 + x
+    None : x + 2
 E : Size=2, Index=E_index
     Key : Expression
-      1 : 1 + x**2
-      2 : 1 + x**2
+      1 : x**2 + 1
+      2 : x**2 + 1
 """
         out = StringIO()
         out.write(str(expr)+"\n")
@@ -790,14 +790,14 @@ E : Size=2, Index=E_index
         #
         output = \
 """\
-2.0 + x**2
+x**2 + 2.0
 e : Size=1, Index=None
     Key  : Expression
     None :        1.0
 E : Size=2, Index=E_index
     Key : Expression
       1 : 2.0
-      2 : 1 + x**2
+      2 : x**2 + 1
 """
         out = StringIO()
         out.write(str(expr)+"\n")
@@ -818,7 +818,7 @@ e : Size=1, Index=None
 E : Size=2, Index=E_index
     Key : Expression
       1 : Undefined
-      2 : 1 + x**2
+      2 : x**2 + 1
 """
         out = StringIO()
         out.write(str(expr)+"\n")
