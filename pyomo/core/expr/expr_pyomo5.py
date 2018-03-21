@@ -149,7 +149,7 @@ if _using_chained_inequality:               #pragma: no cover
             if value(expression <= 5):
         """ % args
 
-else:
+else:                               #pragma: no cover
     _chainedInequality = None
 
 
@@ -3099,8 +3099,14 @@ def _generate_mul_expression(etype, _self, _other):
             elif _other.is_potentially_variable():
                 return ProductExpression((_self, _other))
             return NPV_ProductExpression((_self, _other))
+        elif _other.is_variable_type():
+            if _self.is_potentially_variable():
+                return ProductExpression((_self, _other))
+            return TermExpression((_self, _other))
         elif _other.is_potentially_variable():
             return ProductExpression((_self, _other))
+        elif _self.is_variable_type():
+            return TermExpression((_other, _self))
         elif _self.is_potentially_variable():
             return ProductExpression((_other, _self))
         else:
