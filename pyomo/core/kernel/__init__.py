@@ -63,6 +63,12 @@ from pyomo.core.kernel.component_suffix import (suffix,
                                                 import_suffix_generator,
                                                 local_suffix_generator,
                                                 suffix_generator)
+import pyomo.core.kernel.component_block
+from pyomo.core.kernel.component_block import (block,
+                                               block_tuple,
+                                               block_list,
+                                               block_dict,
+                                               tiny_block)
 import pyomo.core.kernel.component_piecewise
 import pyomo.core.kernel.component_piecewise.util
 import pyomo.core.kernel.component_piecewise.transforms
@@ -97,11 +103,12 @@ from pyomo.core.kernel.util import pprint
 # interface into the code below:
 #
 
-#
+
 #
 # Ducktyping to work with a few solver interfaces
+# Ideally, everything below here could be deleted one day
 #
-from pyomo.core.kernel.component_block import _block_base, block, block_tuple, block_list, block_dict, tiny_block
+from pyomo.core.kernel.component_block import _block_base
 
 # This is ugly and bad (keys are local names
 # so they can overwrite each other). Not sure
