@@ -816,7 +816,7 @@ class TestDaeMisc(unittest.TestCase):
         generate_finite_elements(m.t, 5)
 
         OUTPUT = StringIO()
-        with LoggingIntercept(OUTPUT, 'pyomo.core'):
+        with LoggingIntercept(OUTPUT, 'pyomo.dae'):
             expand_components(m)
         self.assertIn('transformation to the Block-derived component', 
                       OUTPUT.getvalue())
@@ -900,7 +900,7 @@ class TestDaeMisc(unittest.TestCase):
         generate_finite_elements(m.t, 5)
 
         OUTPUT = StringIO()
-        with LoggingIntercept(OUTPUT, 'pyomo.core'):
+        with LoggingIntercept(OUTPUT, 'pyomo.dae'):
             expand_components(m)
         self.assertIn('transformation to the Block-derived component', 
                       OUTPUT.getvalue())
