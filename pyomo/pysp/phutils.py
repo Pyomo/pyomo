@@ -28,6 +28,8 @@ from pyomo.repn.compute_ampl_repn import preprocess_block_constraints \
     as ampl_preprocess_block_constraints
 from pyomo.repn.compute_ampl_repn import preprocess_constraint \
     as ampl_preprocess_constraint
+from pyomo.opt import (UndefinedData,
+                       undefined)
 
 from six import iteritems, itervalues, string_types
 from six.moves import xrange
@@ -38,6 +40,34 @@ ampl_expression_preprocessor = \
     pyomo.util.PyomoAPIFactory("pyomo.repn.compute_ampl_repn")
 
 _OLD_OUTPUT = True
+
+def extract_solve_times(results, default=undefined):
+    solve_time = default
+    pyomo_solve_time = default
+    # if the solver plugin doesn't populate the
+    # user_time field, it is by default of type
+    # UndefinedData - defined in pyomo.opt.results
+    if hasattr(results.solver,"user_time") and \
+       (not isinstance(results.solver.user_time,
+                       UndefinedData)) and \
+       (results.solver.user_time is not None):
+        # the solve time might be a string, or might
+        # not be - we eventually would like more
+        # consistency on this front from the solver
+        # plugins.
+        solve_time = float(results.solver.user_time)
+    elif hasattr(results.solver,"wallclock_time") and \
+         (not isinstance(results.solver.wallclock_time,
+                         UndefinedData))and \
+         (results.solver.wallclock_time is not None):
+        solve_time = float(results.solver.wallclock_time)
+    elif hasattr(results.solver,"time"):
+        solve_time = float(results.solver.time)
+
+    if hasattr(results,"pyomo_solve_time"):
+        pyomo_solve_time = results.pyomo_solve_time
+
+    return solve_time, pyomo_solve_time
 
 class BasicSymbolMap(object):
 
@@ -654,6 +684,36 @@ def create_nodal_ph_parameters(scenario_tree):
             new_blend_parameter.store_values(1)
             tree_node._blend.update(dict.fromkeys(tree_node._blend,1))
 
+#
+# Extracts an active objective from the instance (top-level only).
+# Works with index objectives that may have all but one index
+# deactivated. safety_checks=True asserts that exactly ONE active objective
+# is found on the top-level instance.
+#
+
+def find_active_objective(instance, safety_checks=False):
+
+    if safety_checks is False:
+        for objective_data in instance.component_data_objects(Objective,
+                                                              active=True,
+                                                              descend_into=True):
+            # Return the first active objective encountered
+            return objective_data
+    else:
+        objectives = []
+        for objective_data in instance.component_data_objects(Objective,
+                                                              active=True,
+                                                              descend_into=True):
+            objectives.append(objective_data)
+        if len(objectives) > 1:
+            names = [o.name for o in objectives]
+            raise AssertionError("More than one active objective was "
+                                 "found on instance %s: %s"
+                                 % (instance.name, names))
+        if len(objectives) > 0:
+            return objectives[0]
+    return None
+
 def preprocess_scenario_instance(scenario_instance,
                                  instance_variables_fixed,
                                  instance_variables_freed,
@@ -663,12 +723,14 @@ def preprocess_scenario_instance(scenario_instance,
                                  instance_objective_modified,
                                  preprocess_fixed_variables,
                                  solver):
+
     # TODO: Does this import need to be delayed because
     #       it is in a plugins subdirectory
     from pyomo.solvers.plugins.solvers.persistent_solver import \
         PersistentSolver
 
     persistent_solver_in_use = isinstance(solver, PersistentSolver)
+
     if (not instance_objective_modified) and \
        (not instance_variables_fixed) and \
        (not instance_variables_freed) and \
@@ -687,16 +749,18 @@ def preprocess_scenario_instance(scenario_instance,
         if solver.problem_format() == ProblemFormat.nl:
             ampl_preprocess_block_objectives(scenario_instance)
         else:
-
             canonical_preprocess_block_objectives(scenario_instance)
 
-        if persistent_solver_in_use and solver.has_instance():
-            obj_count = 0
-            for obj in scenario_instance.component_data_objects(ctype=Objective, descend_into=True, active=True):
-                obj_count += 1
-                if obj_count > 1:
-                    raise RuntimeError('Persistent solver interface only supports a single objective.')
-                solver.set_objective(obj)
+        if persistent_solver_in_use:
+            active_objective_datas = []
+            for active_objective_data in scenario_instance.component_data_objects(Objective,
+                                                                                  active=True,
+                                                                                  descend_into=True):
+                active_objective_datas.append(active_objective_data)
+            if len(active_objective_datas) > 1:
+                raise RuntimeError("Multiple active objectives identified for scenario=%s" % scenario_instance._name)
+            elif len(active_objective_datas) == 1:
+                solver.set_objective(active_objective_datas[0])
 
     if (instance_variables_fixed or instance_variables_freed) and \
        (preprocess_fixed_variables):
@@ -735,7 +799,8 @@ def preprocess_scenario_instance(scenario_instance,
                                                               descend_into=True):
                 canonical_preprocess_block_constraints(block,
                                                        idMap=idMap)
-
+    # TBD: Should this be an an if below - both user and ph constraints
+    #      could be modified at the same time, no?
     elif instance_ph_constraints_modified:
 
         # only pre-process the piecewise constraints
@@ -754,37 +819,29 @@ def preprocess_scenario_instance(scenario_instance,
                     getattr(scenario_instance, constraint_name),
                     idMap=idMap)
 
-#
-# Extracts an active objective from the instance (top-level only).
-# Works with index objectives that may have all but one index
-# deactivated. safety_checks=True asserts that exactly ONE active objective
-# is found on the top-level instance.
-#
+# TBD: doesn't do much now... - SHOULD PROPAGATE FLAGS FROM _preprocess_scenario_instances...
 
-def find_active_objective(instance, safety_checks=False):
+def preprocess_bundle_instance(bundle_instance,
+                               solver):
 
-    if safety_checks is False:
-        for objective_data in instance.component_data_objects(Objective,
-                                                              active=True,
-                                                              descend_into=True):
-            # Return the first active objective encountered
-            return objective_data
-    else:
-        objectives = []
-        for objective_data in instance.component_data_objects(Objective,
-                                                              active=True,
-                                                              descend_into=True):
-            objectives.append(objective_data)
-        if len(objectives) > 1:
-            names = [o.name for o in objectives]
-            raise AssertionError("More than one active objective was "
-                                 "found on instance %s: %s"
-                                 % (instance.name, names))
-        if len(objectives) > 0:
-            return objectives[0]
-    return None
+    # TODO: Does this import need to be delayed because
+    #       it is in a plugins subdirectory
+    from pyomo.solvers.plugins.solvers.persistent_solver import \
+        PersistentSolver
+
+    persistent_solver_in_use = isinstance(solver, PersistentSolver)
+
+    if persistent_solver_in_use:
+        active_objective_datas = []
+        for active_objective_data in bundle_instance.component_data_objects(Objective,
+                                                                              active=True,
+                                                                              descend_into=True):
+            active_objective_datas.append(active_objective_data)
+        if len(active_objective_datas) > 1:
+            raise RuntimeError("Multiple active objectives identified for bundle=%s" % bundle_instance._name)
+        elif len(active_objective_datas) == 1:
+            solver.set_objective(active_objective_datas[0])
 
 def reset_ph_plugins(ph):
     for ph_plugin in ph._ph_plugins:
-        print("THIS PLUGIN=",ph_plugin)
         ph_plugin.reset(ph)
