@@ -247,7 +247,7 @@ class IVariable(IComponent, NumericValue):
         return False
 
     def is_variable_type(self):
-        """Returns :const:`FTruealse` because this is a
+        """Returns :const:`True` because this is a
         variable object."""
         return True
 
