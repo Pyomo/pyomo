@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -37,7 +37,7 @@ def display(obj, ostream=None):
         logger.error(
             "Error trying to display values for object of type %s:\n\t%s"
             % (type(obj), err) )
-        raise 
+        raise
 
 
 def create_name(name, ndx):
@@ -129,7 +129,7 @@ class _robust_sort_keyfcn(object):
             # If this is not a type we have seen before, determine what
             # to use for the second value in the tuple.
             try:
-                # 1: Check if the type is comparable 
+                # 1: Check if the type is comparable
                 val < val
                 self._typemap[_type] = lambda x:x
             except:
@@ -217,7 +217,7 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
         tmp = _width[-1]
         _width[-1] = 0
         ostream.write(prefix
-                      + " : ".join( "%%-%ds" % _width[i] % x 
+                      + " : ".join( "%%-%ds" % _width[i] % x
                                     for i,x in enumerate(header) )
                       + "\n")
         _width[-1] = tmp
