@@ -789,7 +789,13 @@ class linear_constraint(_MutableBoundsConstraintMixin,
     def terms(self, terms):
         """Set the terms in the body of this constraint
         using an iterable of (variable, coefficient) tuples"""
-        self._variables, self._coefficients = zip(*terms)
+        transpose = tuple(zip(*terms))
+        if len(transpose) == 2:
+            self._variables, self._coefficients = transpose
+        else:
+            assert transpose == ()
+            self._variables = ()
+            self._coefficients = ()
 
     #
     # Override a the default __call__ method on IConstraint

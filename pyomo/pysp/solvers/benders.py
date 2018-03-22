@@ -110,7 +110,7 @@ def EXTERNAL_activate_fix_constraints(manager,
     fix_constraint.activate()
     if manager.preprocessor is not None:
         preprocess_constraints_list = \
-            manager.preprocessor.constraints_updated_list[scenario.name]
+            manager.preprocessor.constraints_added_list[scenario.name]
         for constraint_data in fix_constraint.values():
             preprocess_constraints_list.append(constraint_data)
 
@@ -122,6 +122,11 @@ def EXTERNAL_deactivate_fix_constraints(manager,
         "PYSP_BENDERS_FIX_XHAT_CONSTRAINT")
     fix_constraint.deactivate()
     # no need to flag the preprocessor
+    if manager.preprocessor is not None:
+        preprocess_constraints_list = \
+            manager.preprocessor.constraints_removed_list[scenario.name]
+        for constraint_data in fix_constraint.values():
+            preprocess_constraints_list.append(constraint_data)
 
 def EXTERNAL_cleanup_from_benders(manager,
                                   scenario):
@@ -658,8 +663,8 @@ class BendersAlgorithm(PySPConfiguredObject):
             self.get_option("master_solver"),
             solver_io=self.get_option("master_solver_io"))
         if isinstance(self._master_solver, PersistentSolver):
-            raise TypeError("BendersAlgorithm does not support "
-                            "PersistenSolver types")
+            raise TypeError("BendersAlgorithm does not yet support "
+                            "PersistentSolver types for the master problem")
         if len(self.get_option("master_solver_options")):
             if type(self.get_option("master_solver_options")) is tuple:
                 self._master_solver.set_options(

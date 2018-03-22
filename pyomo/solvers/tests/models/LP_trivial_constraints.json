@@ -34,6 +34,10 @@
     "slack": 0.0, 
     "value": 1.0
   }, 
+  "d": {
+    "dual": null, 
+    "value": -2.0
+  }, 
   "obj": {
     "value": -5.0
   }, 

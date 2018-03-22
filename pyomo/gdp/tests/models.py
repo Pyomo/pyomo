@@ -26,6 +26,7 @@ def makeTwoTermDisj_Nonlinear():
         if flag:
             disjunct.c1 = Constraint(expr=m.x >= 2)
             disjunct.c2 = Constraint(expr=m.w == 3)
+            disjunct.c3 = Constraint(expr=(1, m.x, 3))
         else:
             disjunct.c = Constraint(expr=m.x + m.y**2 <= 14)
     m.d = Disjunct([0,1], rule=d_rule)

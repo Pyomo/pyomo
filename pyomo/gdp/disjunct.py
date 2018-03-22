@@ -20,13 +20,6 @@ from pyomo.core.base.component import (
     ActiveComponent, ActiveComponentData, ComponentData
 )
 from pyomo.core.base.numvalue import native_types
-#=======
-#from pyomo.core import *
-#from pyomo.core.base.plugin import register_component
-#from pyomo.core.base.constraint import (SimpleConstraint,
-#                                        IndexedConstraint,
-#                                        _GeneralConstraintData)
-#>>>>>>> master
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
@@ -45,9 +38,18 @@ class GDP_Error(Exception):
     """Exception raised while processing GDP Models"""
 
 
-# THe following should eventually be promoted so that all
+# The following should eventually be promoted so that all
 # IndexedComponents can use it
 class _Initializer(object):
+    """A simple function to process an argument to a Component constructor.
+
+    This checks the incoming initializer type and maps it to a static
+    identifier so that when constructing indexed Components we can avoid
+    a series of isinstance calls.  Eventually this concept should be
+    promoted to pyomo.core so that all Components can leverage a
+    standardized approach to processing "flexible" arguments (POD data,
+    rules, dicts, generators, etc)."""
+
     value = 0
     deferred_value = 1
     function = 2
@@ -64,7 +66,7 @@ class _Initializer(object):
         elif hasattr(arg, '__getitem__'):
             return (_Initializer.dict_like, arg)
         else:
-            # Hopefully this thing is castable to teh type that is desired
+            # Hopefully this thing is castable to the type that is desired
             return (_Initializer.deferred_value, arg)
 
 
@@ -297,9 +299,9 @@ class Disjunction(ActiveIndexedComponent):
             for key in init_set:
                 self._data[key].xor = val
         elif self._init_xor[0] == _Initializer.deferred_value: # Param data
-            val = self._init_xor[1]
+            val = bool(value( self._init_xor[1] ))
             for key in init_set:
-                self._data[key].xor = bool(value(val))
+                self._data[key].xor = val
         elif self._init_xor[0] == _Initializer.function: # rule
             fcn = self._init_xor[1]
             for key in init_set:
@@ -323,8 +325,12 @@ class Disjunction(ActiveIndexedComponent):
         if not self.is_indexed():
             if self._init_rule is not None:
                 expr = self._init_rule(_self_parent)
-            else:
+            elif self._init_expr is not None:
                 expr = self._init_expr
+            else:
+                timer.report()
+                return
+
             if expr is None:
                 raise ValueError( _rule_returned_none_error % (self.name,) )
             if expr is Disjunction.Skip:
@@ -332,12 +338,12 @@ class Disjunction(ActiveIndexedComponent):
                 return
             self._data[None] = self
             self._setitem_when_not_present( None, expr )
-        else:
-            if self._init_expr is not None:
-                raise IndexError(
-                    "Disjunction '%s': Cannot initialize multiple indices "
-                    "of a disjunction with a single disjunction list" %
-                    (self.name,) )
+        elif self._init_expr is not None:
+            raise IndexError(
+                "Disjunction '%s': Cannot initialize multiple indices "
+                "of a disjunction with a single disjunction list" %
+                (self.name,) )
+        elif self._init_rule is not None:
             _init_rule = self._init_rule
             for ndx in self._index:
                 try:

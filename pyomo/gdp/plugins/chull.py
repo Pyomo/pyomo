@@ -80,7 +80,7 @@ NL_Mode_GrossmannLee = 2
 #
 NL_Mode_FurmanSawayaGrossmann = 3
 
-EPS = 1e-2
+EPS = 1e-4
 
 class ConvexHull_Transformation(Transformation):
 
@@ -127,7 +127,7 @@ class ConvexHull_Transformation(Transformation):
         transBlock = Block()
         instance.add_component(transBlockName, transBlock)
         transBlock.relaxedDisjuncts = Block(Any)
-        transBlock.lbub = Set(initialize = ['lb','ub'])
+        transBlock.lbub = Set(initialize = ['lb','ub','eq'])
         transBlock.disjContainers = ComponentSet()
 
         if targets is None:
@@ -479,8 +479,12 @@ class ConvexHull_Transformation(Transformation):
             bigmConstraint = Constraint(transBlock.lbub)
             relaxationBlock.add_component(
                 disaggregatedVarName + "_bounds", bigmConstraint)
-            bigmConstraint.add('lb', obj.indicator_var*lb <= disaggregatedVar)
-            bigmConstraint.add('ub', disaggregatedVar <= obj.indicator_var*ub)
+            if lb:
+                bigmConstraint.add(
+                    'lb', obj.indicator_var*lb <= disaggregatedVar)
+            if ub:
+                bigmConstraint.add(
+                    'ub', disaggregatedVar <= obj.indicator_var*ub)
             chull['bigmConstraints'][var] = bigmConstraint
             relaxationBlockInfo['boundConstraintToSrcVar'][bigmConstraint] = var
 
@@ -693,6 +697,25 @@ class ConvexHull_Transformation(Transformation):
                 expr = clone_without_expression_components(
                     c.body, substitute=var_substitute_map)
 
+            if c.equality:
+                if NL:
+                    newConsExpr = expr == c.lower*y
+                else:
+                    v = list(identify_variables(expr))
+                    if len(v) == 1 and not c.lower:
+                        # Setting a variable to 0 in a disjunct is
+                        # *very* common.  We should recognize that in
+                        # that structure, the disaggregated variable
+                        # will also be fixed to 0.
+                        v[0].fix(0)
+                        continue
+                    newConsExpr = expr - (1-y)*h_0 == c.lower*y
+
+                if obj.is_indexed():
+                    newConstraint.add((i, 'eq'), newConsExpr)
+                else:
+                    newConstraint.add('eq', newConsExpr)
+                continue
 
             if c.lower is not None:
                 # TODO: At the moment there is no reason for this to be in both

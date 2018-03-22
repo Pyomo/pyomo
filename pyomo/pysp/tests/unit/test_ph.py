@@ -67,7 +67,10 @@ def _remove(filename):
         pass
 
 def filter_time_and_data_dirs(line):
-    return ("seconds" in line) or \
+    return ("Constructing solvers of type=" in line) or \
+           ("Constructing solver type=" in line) or \
+           ("Async buffer length=" in line) or \
+           ("seconds" in line) or \
            ("starting at" in line) or \
            ("solve ends" in line) or \
            line.startswith("Output file written to") or \

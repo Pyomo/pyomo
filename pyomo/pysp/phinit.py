@@ -507,10 +507,15 @@ def construct_ph_options_parser(usage_string):
       action="store_true",
       dest="report_rhos_each_iteration",
       default=False)
-    outputOpts.add_argument('--report-rhos-first-iterations',
+    outputOpts.add_argument('--report-rhos-first-iteration',
       help="Report rhos prior to PH iteration 1. Enabled if --verbose is enabled. Default is False.",
       action="store_true",
       dest="report_rhos_first_iteration",
+      default=False)
+    outputOpts.add_argument('--report-subproblem-objectives',
+      help="Always report PH subproblem objective and related statistics after each iteration. Enabled if --verbose is enabled. Default is False.",
+      action="store_true",
+      dest="report_subproblem_objectives",
       default=False)
     outputOpts.add_argument('--report-for-zero-variable-values',
       help="Report statistics (variables and weights) for all variables, not just those with values differing from 0. Default is False.",
@@ -1118,7 +1123,14 @@ def run_ph(options, ph):
             pyomo.pysp.phsolverserverutils.\
                 warmstart_scenario_instances(ph)
 
-            ph._preprocess_scenario_instances()
+            # no point in doing advanced preprocessing for the single
+            # ef solve that is about to occur.
+            for instance in ph._instances.values():
+                for block in instance.block_data_objects(active=True):
+                    block._gen_obj_ampl_repn = True
+                    block._gen_con_ampl_repn = True
+                    block._gen_obj_canonical_repn = True
+                    block._gen_con_canonical_repn = True
 
         ph_solver_manager = ph._solver_manager
         ph._solver_manager = None

@@ -21,11 +21,17 @@ except:
     from ordereddict import OrderedDict
 
 from pyomo.util.modeling import unique_component_name
-from pyomo.core import *
-from pyomo.gdp import *
-from pyomo.opt import SolverFactory
 from pyomo.util.plugin import alias
-from pyomo.core.base import Transformation
+from pyomo.core import (
+    Any, Block, Constraint, Objective, Param, Var, SortComponents,
+    Transformation, TransformationFactory, value
+)
+from pyomo.opt import SolverFactory
+
+from pyomo.gdp import Disjunct, Disjunction
+from pyomo.gdp.util import (
+    verify_successful_solve, NORMAL, INFEASIBLE, NONOPTIMAL
+)
 
 from six import iterkeys, itervalues
 
@@ -60,13 +66,25 @@ class CuttingPlane_Transformation(Transformation):
             logger.warning("GDP(CuttingPlanes): unrecognized options:\n%s"
                         % ( '\n'.join(iterkeys(options)), ))
 
+        instance_rBigM, instance_rCHull, var_info, transBlockName \
+            = self._setup_subproblems(instance, bigM)
+
+        self._generate_cuttingplanes(
+            instance, instance_rBigM, instance_rCHull, var_info, transBlockName)
+
+
+    def _setup_subproblems(self, instance, bigM):
         # create transformation block
-        transBlock = self._add_relaxation_block(
+        transBlockName, transBlock = self._add_relaxation_block(
             instance,
             '_pyomo_gdp_cuttingplane_relaxation')
-        # we need to later find the transformation block on transformed versions
-        # of this instance, so we are going to grab the cuid here.
-        transBlockCUID = ComponentUID(transBlock)
+
+        # We store a list of all vars so that we can efficiently
+        # generate maps among the subproblems
+        transBlock.all_vars = list(v for v in instance.component_data_objects(
+            Var,
+            descend_into=(Block, Disjunct),
+            sort=SortComponents.deterministic) if not v.is_fixed())
 
         # we'll store all the cuts we add together
         transBlock.cuts = Constraint(Any)
@@ -82,24 +100,64 @@ class CuttingPlane_Transformation(Transformation):
         # cuts).
         reclassify = TransformationFactory('gdp.reclassify')
 
-        instance_rChull = chullRelaxation.create_using(instance)
+        #
+        # Generalte the CHull relaxation (used for the separation
+        # problem to generate cutting planes
+        #
+        instance_rCHull = chullRelaxation.create_using(instance)
         # This relies on relaxIntegrality relaxing variables on deactivated
         # blocks, which should be fine.
-        reclassify.apply_to(instance_rChull)
-        relaxIntegrality.apply_to(instance_rChull)
+        reclassify.apply_to(instance_rCHull)
+        relaxIntegrality.apply_to(instance_rCHull)
 
+        #
+        # Reformulate the instance using the BigM relaxation (this will
+        # be the final instance returned to the user)
+        #
         bigMRelaxation.apply_to(instance, bigM=bigM)
         reclassify.apply_to(instance)
-        instance_rBigm = relaxIntegrality.create_using(instance)
 
-        self._cuttingplanes_transformation(instance, instance_rBigm,
-                                           instance_rChull, transBlock,
-                                           transBlockCUID)
+        #
+        # Generate the continuous relaxation of the BigM transformation
+        #
+        instance_rBigM = relaxIntegrality.create_using(instance)
+
+        #
+        # Add the xstar parameter for the CHull problem
+        #
+        transBlock_rCHull = instance_rCHull.component(transBlockName)
+        #
+        # this will hold the solution to rbigm each time we solve it. We
+        # add it to the transformation block so that we don't have to
+        # worry about name conflicts.
+        transBlock_rCHull.xstar = Param(
+            range(len(transBlock.all_vars)), mutable=True, default=None)
+
+        transBlock_rBigM = instance_rBigM.component(transBlockName)
+
+        #
+        # Generate the mapping between the variables on all the
+        # instances and the xstar parameter
+        #
+        var_info = tuple(
+            (v,
+             transBlock_rBigM.all_vars[i],
+             transBlock_rCHull.all_vars[i],
+             transBlock_rCHull.xstar[i])
+            for i,v in enumerate(transBlock.all_vars))
+
+        #
+        # Add the separation objective to the chull subproblem
+        #
+        self._add_separation_objective(var_info, transBlock_rCHull)
+
+        return instance_rBigM, instance_rCHull, var_info, transBlockName
 
 
-    def _cuttingplanes_transformation(self, instance, instance_rBigm,
-                                      instance_rChull, transBlock,
-                                      transBlockCUID):
+    def _generate_cuttingplanes(
+            self, instance, instance_rBigM, instance_rCHull,
+            var_info, transBlockName):
+
         opt = SolverFactory(SOLVER)
 
         improving = True
@@ -107,49 +165,42 @@ class CuttingPlane_Transformation(Transformation):
         epsilon = 0.01
         cuts = None
 
-        transBlock_rChull = transBlockCUID.find_component(instance_rChull)
-        transBlock_rBigm = transBlockCUID.find_component(instance_rBigm)
+        transBlock = instance.component(transBlockName)
+        transBlock_rBigM = instance_rBigM.component(transBlockName)
 
-        for o in instance_rChull.component_data_objects(Objective):
-            o.deactivate()
-
-        # build map of components and their cuids. (I need cuids because I need
-        # to be able to find the same component on the convex hull instance
-        # later.)
-        v_map = OrderedDict()
-        for v in instance_rBigm.component_data_objects(
-            Var,
-            descend_into=(Block, Disjunct),
-            sort=SortComponents.deterministic,
-            ):
-            v_map[id(v)] = (ComponentUID(v), v, len(v_map))
-
-        self._add_separation_objective(v_map, instance_rChull, transBlock_rChull)
-
-        # We try to grab the first active objective. If there is more than one,
-        # the writer will yell when we try to solve below. If there are 0, we
-        # will yell here.
-        rBigM_obj = next(instance_rBigm.component_data_objects(
-            Objective,
-            active=True), None)
+        # We try to grab the first active objective. If there is more
+        # than one, the writer will yell when we try to solve below. If
+        # there are 0, we will yell here.
+        rBigM_obj = next(instance_rBigM.component_data_objects(
+            Objective, active=True), None)
         if rBigM_obj is None:
             raise GDP_Error("Cannot apply cutting planes transformation "
                             "without an active objective in the model!")
 
         while (improving):
-            # solve rBigm, solution is xstar
-            opt.solve(instance_rBigm, tee=stream_solvers)
-            rBigm_objVal = value(rBigM_obj)
+            # solve rBigM, solution is xstar
+            results = opt.solve(instance_rBigM, tee=stream_solvers)
+            if verify_successful_solve(results) is not NORMAL:
+                logger.warning("GDP.cuttingplane: Relaxed BigM subproblem "
+                               "did not solve normally. Stopping cutting "
+                               "plane generation.\n\n%s" % (results,))
+                return
+
+            rBigM_objVal = value(rBigM_obj)
+            logger.warning("gdp.cuttingplane: rBigM objective = %s"
+                           % (rBigM_objVal,))
 
             # copy over xstar
-            for cuid, v, i in itervalues(v_map):
-                transBlock_rChull.xstar[i] = value(v)
+            for x_bigm, x_rbigm, x_chull, x_star in var_info:
+                x_star.value = x_rbigm.value
+                # initialize the X values
+                x_chull.value = x_rbigm.value
 
             # compare objectives: check absolute difference close to 0, relative
             # difference further from 0.
             obj_diff = prev_obj - rBigm_objVal
             improving = math.isinf(obj_diff) or \
-                        ( abs(obj_diff) > epsilon if abs(obj_diff) < 1 else
+                        ( abs(obj_diff) > epsilon if abs(rBigM_objVal) < 1 else
                           abs(obj_diff/prev_obj) > epsilon )
             if improving and cuts is not None:
                 transBlock.cuts.add(len(transBlock.cuts), cuts['bigm'] >= 0)
@@ -175,26 +226,22 @@ class CuttingPlane_Transformation(Transformation):
             '_pyomo_gdp_cuttingplane_relaxation')
         transBlock = Block()
         instance.add_component(transBlockName, transBlock)
-        return transBlock
+        return transBlockName, transBlock
 
 
-    def _add_separation_objective(self, v_map, instance_rChull,
-                                  transBlock_rChull):
-        # this will hold the solution to rbigm each time we solve it. We add it
-        # to the transformation block so that we don't have to worry about name
-        # conflicts.
-        transBlock_rChull.xstar = Param(
-            range(len(v_map)), mutable=True, default=None )
+    def _add_separation_objective(self, var_info, transBlock_rCHull):
+        # Deactivate any/all other objectives
+        for o in transBlock_rCHull.model().component_data_objects(Objective):
+            o.deactivate()
 
         obj_expr = 0
-        for cuid, v, i in itervalues(v_map):
-            x_star = transBlock_rChull.xstar[i]
-            x = cuid.find_component(instance_rChull)
-            obj_expr += (x - x_star)**2
+        for x_bigm, x_rbigm, x_chull, x_star in var_info:
+            obj_expr += (x_chull - x_star)**2
         # add separation objective to transformation block
-        transBlock_rChull.separation_objective = Objective(expr=obj_expr)
+        transBlock_rCHull.separation_objective = Objective(expr=obj_expr)
 
-
+    # TODO: ick, so you need to manually merge some changes about how this
+    # function worked.
     def _create_cuts(self, v_map, instance, instance_rChull, transBlock_rChull):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             logger.debug("Creating cut %s." % str(iteration))
