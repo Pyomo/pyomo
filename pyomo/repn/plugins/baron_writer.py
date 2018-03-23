@@ -316,7 +316,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 else:
                     assert var_data.value is not None
                     vstring_to_bar_dict[variable_string] = \
-                        (' %.17r ' % (var_data.value))
+                        (' %'+self._precision_string+' ' % (var_data.value))
 
             for param_data in mutable_param_gen(block):
                 param_stream = StringIO()
@@ -325,7 +325,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
                 param_string = ' '+param_string+' '
                 pstring_to_bar_dict[param_string] = \
-                    (' %.17r ' % (param_data()))
+                    (' %'+self._precision_string+' ' % (param_data()))
 
         # Equation Definition
         string_template = '%'+self._precision_string
