@@ -123,7 +123,6 @@ setup(name='Pyomo',
         'Topic :: Software Development :: Libraries :: Python Modules' ],
       packages=packages,
       keywords=['optimization'],
-      namespace_packages=['pyomo'],
       install_requires=requires,
       ext_modules = ext_modules,
       entry_points="""

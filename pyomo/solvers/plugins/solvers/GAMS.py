@@ -457,7 +457,9 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
 
         if extract_dual:
             for c in model.component_data_objects(Constraint, active=True):
-                if c.body.is_fixed():
+                if c.body.is_fixed() or \
+                   (not (c.has_lb() or c.has_ub())):
+                    # the constraint was not sent to GAMS
                     continue
                 sym = symbolMap.getSymbol(c)
                 if c.equality:
@@ -512,7 +514,6 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                     self._default_variable_value
                 if load_solutions:
                     model.load_solution(results.solution(0))
-                    results.solution.clear()
             else:
                 assert len(results.solution) == 0
             # see the hack in the write method
@@ -521,6 +522,9 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
             assert len(getattr(model, "._symbol_maps")) == 1
             delattr(model, "._symbol_maps")
             del results._smap_id
+            if load_solutions and \
+               (len(results.solution) == 0):
+                logger.error("No solution is available")
         else:
             if load_solutions:
                 model.solutions.load_from(results)
@@ -972,7 +976,9 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         if extract_dual:
             for c in model.component_data_objects(Constraint, active=True):
-                if c.body.is_fixed():
+                if (c.body.is_fixed()) or \
+                   (not (c.has_lb() or c.has_ub())):
+                    # the constraint was not sent to GAMS
                     continue
                 sym = symbolMap.getSymbol(c)
                 if c.equality:
@@ -1027,7 +1033,6 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                     self._default_variable_value
                 if load_solutions:
                     model.load_solution(results.solution(0))
-                    results.solution.clear()
             else:
                 assert len(results.solution) == 0
             # see the hack in the write method
@@ -1036,6 +1041,9 @@ class GAMSShell(pyomo.util.plugin.Plugin):
             assert len(getattr(model, "._symbol_maps")) == 1
             delattr(model, "._symbol_maps")
             del results._smap_id
+            if load_solutions and \
+               (len(results.solution) == 0):
+                logger.error("No solution is available")
         else:
             if load_solutions:
                 model.solutions.load_from(results)
