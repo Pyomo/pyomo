@@ -795,8 +795,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
                 if gen_obj_repn:
                     repn = generate_standard_repn(active_objective.expr, quadratic=False)
-                    #print(active_objective.expr)
-                    #print(repn)
                     block_repn[active_objective] = repn
                 else:
                     repn = block_repn[active_objective]
@@ -1806,15 +1804,3 @@ class ProblemWriter_nl(AbstractProblemWriter):
             for e in _errors:
                 logger.error(e)
             err.args = err.args + tuple(_errors)
-
-
-# Switch from Python to C generate_repn function when possible
-#try:
-#    py_generate_repn = generate_repn
-#    from cAmpl import generate_repn
-#except ImportError:
-#    del py_generate_repn
-
-# Alternative: import C implementation under another name for testing
-#from cAmpl import generate_repn as cgar
-#__all__.append('cgar')
