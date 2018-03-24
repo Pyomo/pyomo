@@ -302,8 +302,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
         vstring_to_var_dict = {}
         vstring_to_bar_dict = {}
         pstring_to_bar_dict = {}
+        _val_template = ' %'+self._precision_string+' '
         for block in all_blocks_list:
-
             for var_data in active_components_data_var[id(block)]:
                 variable_stream = StringIO()
                 var_data.to_string(ostream=variable_stream, verbose=False)
@@ -316,7 +316,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 else:
                     assert var_data.value is not None
                     vstring_to_bar_dict[variable_string] = \
-                        (' %.17r ' % (var_data.value))
+                        (_val_template % (var_data.value,))
 
             for param_data in mutable_param_gen(block):
                 param_stream = StringIO()
@@ -325,7 +325,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
                 param_string = ' '+param_string+' '
                 pstring_to_bar_dict[param_string] = \
-                    (' %.17r ' % (param_data()))
+                    (_val_template % (param_data(),))
 
         # Equation Definition
         string_template = '%'+self._precision_string
