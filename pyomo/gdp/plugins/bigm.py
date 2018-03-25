@@ -31,7 +31,6 @@ from six import iterkeys, iteritems
 
 logger = logging.getLogger('pyomo.gdp.bigm')
 
-
 def _to_dict(val):
     if val is None:
         return val
@@ -76,7 +75,7 @@ class BigM_Transformation(Transformation):
             'relaxedConstraints': ComponentMap(constraint: relaxed_constraint)
         }
 
-    In addition, any block or disjunct containind a relaxed disjunction
+    In addition, any block or disjunct containing a relaxed disjunction
     will have a "_gdp_transformation_info" dict with the following
     entry:
 
