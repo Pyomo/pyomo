@@ -152,8 +152,8 @@ class Grossmann_TestCases(unittest.TestCase):
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
         SolverFactory('gurobi').solve(m)
-        self.assertEqual(m.x.value, 2)
-        self.assertEqual(m.y.value, 10)
+        self.assertAlmostEqual(m.x.value, 2)
+        self.assertAlmostEqual(m.y.value, 10)
 
         # Constraint 1
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
@@ -204,9 +204,7 @@ class Grossmann_TestCases(unittest.TestCase):
         m.y.fix(127)
 
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
-        self.assertEqual(len(cuts), 2)
+        self.assertEqual(len(cuts), 1)
         cut1_expr = cuts[0].body
-        cut2_expr = cuts[1].body
 
         self.assertGreaterEqual(value(cut1_expr), 0)
-        self.assertGreaterEqual(value(cut2_expr), 0)

@@ -28,7 +28,7 @@ from pyomo.core import (
 )
 from pyomo.opt import SolverFactory
 
-from pyomo.gdp import Disjunct, Disjunction
+from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
     verify_successful_solve, NORMAL, INFEASIBLE, NONOPTIMAL
 )
@@ -101,7 +101,7 @@ class CuttingPlane_Transformation(Transformation):
         reclassify = TransformationFactory('gdp.reclassify')
 
         #
-        # Generalte the CHull relaxation (used for the separation
+        # Generate the CHull relaxation (used for the separation
         # problem to generate cutting planes
         #
         instance_rCHull = chullRelaxation.create_using(instance)
@@ -198,24 +198,26 @@ class CuttingPlane_Transformation(Transformation):
 
             # compare objectives: check absolute difference close to 0, relative
             # difference further from 0.
-            obj_diff = prev_obj - rBigm_objVal
+            obj_diff = prev_obj - rBigM_objVal
             improving = math.isinf(obj_diff) or \
                         ( abs(obj_diff) > epsilon if abs(rBigM_objVal) < 1 else
                           abs(obj_diff/prev_obj) > epsilon )
             if improving and cuts is not None:
-                transBlock.cuts.add(len(transBlock.cuts), cuts['bigm'] >= 0)
+                cut_number = len(transBlock.cuts)
+                logger.warning("GDP.cuttingplane: Adding cut %s to BM model." 
+                               % (cut_number,))
+                transBlock.cuts.add(cut_number, cuts['bigm'] >= 0)
 
             # solve separation problem to get xhat.
-            opt.solve(instance_rChull, tee=stream_solvers)
+            opt.solve(instance_rCHull, tee=stream_solvers)
 
-            cuts = self._create_cuts(v_map, instance, instance_rChull,
-                                     transBlock_rChull)
+            cuts = self._create_cuts(var_info, transBlock, transBlock_rBigM)
             
             # add cut to rBigm
-            transBlock_rBigm.cuts.add(
-                len(transBlock_rBigm.cuts), cuts['rBigm'] >= 0)
+            transBlock_rBigM.cuts.add(
+                len(transBlock_rBigM.cuts), cuts['rBigM'] >= 0)
             
-            prev_obj = rBigm_objVal
+            prev_obj = rBigM_objVal
 
 
     def _add_relaxation_block(self, instance, name):
@@ -240,20 +242,18 @@ class CuttingPlane_Transformation(Transformation):
         # add separation objective to transformation block
         transBlock_rCHull.separation_objective = Objective(expr=obj_expr)
 
-    # TODO: ick, so you need to manually merge some changes about how this
-    # function worked.
-    def _create_cuts(self, v_map, instance, instance_rChull, transBlock_rChull):
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
-            logger.debug("Creating cut %s." % str(iteration))
+    
+    def _create_cuts(self, var_info, transBlock, transBlock_rBigm):
+        cut_number = len(transBlock.cuts)
+        logger.warning("gdp.cuttingplane: Creating (but not yet adding) cut %s."
+                       % (cut_number,))
 
         cutexpr_bigm = 0
-        cutexpr_rBigm = 0
-        for cuid, v, i in itervalues(v_map):
-            xhat = cuid.find_component(instance_rChull).value
-            xstar = transBlock_rChull.xstar[i].value
-            x_bigm = cuid.find_component(instance)
-            x_rBigm = v
-            cutexpr_bigm += (xhat - xstar)*(x_bigm - xhat)
-            cutexpr_rBigm += (xhat - xstar)*(x_rBigm - xhat)
+        cutexpr_rBigM = 0
+        for x_bigm, x_rbigm, x_chull, x_star in var_info:
+            cutexpr_bigm += (
+                x_chull.value - x_star.value)*(x_bigm - x_chull.value)
+            cutexpr_rBigM += (
+                x_chull.value - x_star.value)*(x_rbigm - x_chull.value)
 
-        return({'bigm': cutexpr_bigm, 'rBigm': cutexpr_rBigm})
+        return({'bigm': cutexpr_bigm, 'rBigM': cutexpr_rBigM})
