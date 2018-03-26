@@ -937,63 +937,65 @@ class TestDaeMisc(unittest.TestCase):
         self.assertTrue(m.foo.updated)
         self.assertEqual(len(m.foo), 6)
         self.assertEqual(len(m.foo[0, 1].v1), 6)
-        
-    # test add_equality_constraints method
-    # def test_add_equality_constraints(self):
-    #     m = ConcreteModel()
-    #     m.t = DifferentialSet(initialize=[1, 2, 3, 4, 5])
-    #     m.s = Set(initialize=[1, 2])
-    #     m.v = Var(m.t)
-    #     m.v2 = Var(m.s, m.t, initialize=2)
-        
-    #     def _vdot(m, i):
-    #         return m.v[i]**2
-    #     m.vdot = Differential(dv=m.v, rule=_vdot)
 
-    #     def _vdot2(m, i, j):
-    #         return m.v2[i, j]**2
-    #     m.vdot2 = Differential(dv=m.v2, rule=_vdot2)
+    def test_hierarchical_blocks(self):
+        m = ConcreteModel()
 
-    #     self.assertTrue(len(m.vdot._cons)==0)
-    #     add_equality_constraints(m.vdot)
-    #     self.assertTrue(len(m.vdot._cons)==4)
-    #     m.vdot._lhs_var[2] = 3
-    #     m.v[2] = 3
-    #     self.assertEqual(m.vdot._cons[1](), -6)
+        m.b = Block()
+        m.b.t = ContinuousSet(bounds=(0, 10))
 
-    #     add_equality_constraints(m.vdot2)
-    #     self.assertTrue(len(m.vdot2._cons)==8)
-    #     m.vdot2._lhs_var[1, 2] = 3
-    #     self.assertEqual(m.vdot2._cons[1](), -1)
+        m.b.c = Block()
 
-    # test add_equality_constraints method with invalid 
-    # Differential rules
-    # def test_bad_add_equality_constraint(self):
-    #     m = ConcreteModel()
-    #     m.t = DifferentialSet(initialize=[1, 2, 3])
-    #     m.v = Var(m.t)
+        def _d_rule(d, t):
+            m = d.model()
+            d.x = Var()
+            return d
 
-    #     def _vdot1(m, i, j):
-    #         return m.v[i, j]**2
-    #     m.vdot1 = Differential(dv=m.v, rule=_vdot1)
+        m.b.c.d = Block(m.b.t, rule=_d_rule)
 
-    #     def _vdot2(m, i):
-    #         return m.v[i] == 3
-    #     m.vdot2 = Differential(dv=m.v, rule=_vdot2)
-    #
-    #     try:
-    #         add_equality_constraints(m.vdot1)
-    #         self.fail("Expected TypeError because the rule supplied to the "
-    #                   "differential had the wrong number of arguments")
-    #     except TypeError:
-    #         pass
-    #
-    #     try:
-    #         add_equality_constraints(m.vdot2)
-    #         self.fail("Expected TypeError because the rule supplied to the "
-    #                   "differential returns an invalid expression")
-    #     except TypeError:
-    #         pass
+        m.b.y = Var(m.b.t)
+
+        def _con_rule(b, t):
+            return b.y[t] <= b.c.d[t].x
+
+        m.b.con = Constraint(m.b.t, rule=_con_rule)
+
+        generate_finite_elements(m.b.t, 5)
+        expand_components(m)
+
+        self.assertTrue(len(m.b.c.d), 6)
+        self.assertTrue(len(m.b.con), 6)
+        self.assertTrue(len(m.b.y), 6)
+
+    def test_hierarchical_blocks2(self):
+        m = ConcreteModel()
+
+        m.b = Block()
+        m.b.t = ContinuousSet(bounds=(0, 10))
+
+        m.b.c = Block()
+
+        def _d_rule(d, t):
+            m = d.model()
+            d.x = Var()
+            return d
+
+        m.b.c.d = Block(m.b.t, rule=_d_rule)
+
+        m.b.y = Var(m.b.t)
+
+        def _con_rule(b, t):
+            return b.y[t] <= b.c.d[t].x
+
+        m.b.con = Constraint(m.b.t, rule=_con_rule)
+
+        generate_finite_elements(m.b.t, 5)
+        expand_components(m)
+
+        self.assertTrue(len(m.b.c.d), 6)
+        self.assertTrue(len(m.b.con), 6)
+        self.assertTrue(len(m.b.y), 6)
+
 
 if __name__ == "__main__":
     unittest.main()
