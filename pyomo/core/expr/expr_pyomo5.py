@@ -361,7 +361,7 @@ class SimpleExpressionVisitor(object):
             ans = self.visit(node)
             if not ans is None:
                 yield ans
-            raise StopIteration
+            return
         #
         # Iterate through the tree.
         #
