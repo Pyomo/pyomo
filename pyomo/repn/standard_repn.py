@@ -940,8 +940,9 @@ def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False
     v = []
     c = []
     for key in ans.linear:
-        v.append(idMap[key])
-        c.append(ans.linear[key])
+        if not isclose_const(ans.linear[key],0.0):
+            v.append(idMap[key])
+            c.append(ans.linear[key])
     repn.linear_vars = tuple(v)
     repn.linear_coefs = tuple(c)
 

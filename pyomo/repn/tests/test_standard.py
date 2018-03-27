@@ -467,13 +467,13 @@ class TestSimple(unittest.TestCase):
 
         rep = generate_standard_repn(e)
         #
-        self.assertEqual(len(rep.linear_vars), 1)
-        self.assertTrue(len(rep.linear_coefs) == 1)
+        self.assertEqual(len(rep.linear_vars), 0)
+        self.assertTrue(len(rep.linear_coefs) == 0)
         self.assertTrue(len(rep.quadratic_vars) == 0)
         self.assertTrue(len(rep.quadratic_coefs) == 0)
         self.assertTrue(rep.nonlinear_expr is None)
         self.assertTrue(len(rep.nonlinear_vars) == 0)
-        baseline = { id(m.a):0 }
+        baseline = { }
         self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_constDiff(self):
