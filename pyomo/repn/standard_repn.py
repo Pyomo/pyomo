@@ -710,19 +710,22 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
     elif exponent == 1:
         return _collect_standard_repn(exp._args_[0], multiplier, idMap, compute_values, verbose, quadratic)
     # If the exponent is >= 2, then this is a nonlinear expression
-    if exponent == 2 and quadratic:
-        # NOTE: We treat a product of linear terms as nonlinear unless quadratic==2
-        res =_collect_standard_repn(exp._args_[0], 1, idMap, compute_values, verbose, quadratic)
-        if not isclose_const(res.nonl,0) or len(res.quadratic) > 0:
-            return Results(nonl=multiplier*exp)
-        ans = Results()
-        if not isclose(res.constant,0):
-            ans.constant = multiplier*res.constant*res.constant
+    if exponent == 2:
+        if quadratic:
+            # NOTE: We treat a product of linear terms as nonlinear unless quadratic==2
+            res =_collect_standard_repn(exp._args_[0], 1, idMap, compute_values, verbose, quadratic)
+            if not isclose_const(res.nonl,0) or len(res.quadratic) > 0:
+                return Results(nonl=multiplier*exp)
+            ans = Results()
+            if not isclose(res.constant,0):
+                ans.constant = multiplier*res.constant*res.constant
+                for key, coef in six.iteritems(res.linear):
+                    ans.linear[key] = 2*multiplier*coef*res.constant
             for key, coef in six.iteritems(res.linear):
-                ans.linear[key] = 2*multiplier*coef*res.constant
-        for key, coef in six.iteritems(res.linear):
-            ans.quadratic[key,key] = multiplier*coef
-        return ans
+                ans.quadratic[key,key] = multiplier*coef
+            return ans
+        elif compute_values and exp._args_[0].is_fixed():
+            return Results(constant=multiplier*value(exp._args_[0])**2)
         
     return Results(nonl=multiplier*exp)
 
