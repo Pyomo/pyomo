@@ -24,29 +24,32 @@ EQUATIONS
 
 VARIABLES
 	GAMS_OBJECTIVE
-	x1;
+	x1
+	x2;
 
 c1.. log(x1) =e= 0.0 ;
 c2.. log10(x1) =e= 0.0 ;
-c3.. sin(x1) =e= 0.0 ;
-c4.. cos(x1) =e= 0.0 ;
-c5.. tan(x1) =e= 0.0 ;
-c6.. sinh(x1) =e= 0.0 ;
-c7.. cosh(x1) =e= 0.0 ;
-c8.. tanh(x1) =e= 0.0 ;
-c9.. asin(x1) =e= 0.0 ;
-c10.. acos(x1) =e= 0.0 ;
-c11.. atan(x1) =e= 0.0 ;
-c12.. asinh(x1) =e= 0.0 ;
-c13.. acosh(x1) =e= 0.0 ;
-c14.. atanh(x1) =e= 0.0 ;
-c15.. exp(x1) =e= 0.0 ;
-c16.. sqrt(x1) =e= 0.0 ;
-c17.. ceil(x1) =e= 0.0 ;
-c18.. floor(x1) =e= 0.0 ;
-c19.. abs(x1) =e= 0.0 ;
-c20.. GAMS_OBJECTIVE =e= x1 ;
+c3.. sin(x2) =e= 0.0 ;
+c4.. cos(x2) =e= 1.0 ;
+c5.. tan(x2) =e= 0.0 ;
+c6.. sinh(x2) =e= 0.0 ;
+c7.. cosh(x2) =e= 1.0 ;
+c8.. tanh(x2) =e= 0.0 ;
+c9.. asin(x2) =e= 0.0 ;
+c10.. acos(x2) =e= 1.5707963267948966 ;
+c11.. atan(x2) =e= 0.0 ;
+c12.. asinh(x2) =e= 0.0 ;
+c13.. acosh(0.18393972058572117*(7.3890560989306495 + x1)) =e= 0.0 ;
+c14.. atanh(x2) =e= 0.0 ;
+c15.. exp(x2) =e= 1.0 ;
+c16.. sqrt(x1) =e= 1.0 ;
+c17.. ceil(x1) =e= 1.0 ;
+c18.. floor(x1) =e= 1.0 ;
+c19.. abs(x1) =e= 1.0 ;
+c20.. GAMS_OBJECTIVE =e= x1 + x2 ;
 
+x1.l = 1;
+x2.l = 0;
 
 MODEL GAMS_MODEL /all/ ;
 SOLVE GAMS_MODEL USING nlp minimizing GAMS_OBJECTIVE;
