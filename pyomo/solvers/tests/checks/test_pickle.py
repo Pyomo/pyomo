@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -25,7 +25,7 @@ from pyomo.solvers.tests.testcases import test_scenarios
 
 
 #
-# A function that function that returns a function that gets
+# A function that returns a function that gets
 # added to a test class.
 #
 def create_test_method(model, solver, io,
@@ -34,7 +34,6 @@ def create_test_method(model, solver, io,
 
     # Ignore expected failures?
     is_expected_failure = False
-    #is_expected_failure = test_case.status == 'expected failure'
 
     def pickle_test(self):
 
@@ -45,14 +44,15 @@ def create_test_method(model, solver, io,
         model_class.generate_model(test_case.testcase.import_suffixes)
         model_class.warmstart_model()
 
-        load_solutions = True
+        load_solutions = (not model_class.solve_should_fail) and \
+                         (test_case.status != 'expected failure')
+
         opt, status = model_class.solve(solver,
                                         io,
                                         test_case.testcase.io_options,
                                         test_case.testcase.options,
                                         symbolic_labels,
                                         load_solutions)
-
         m = pickle.loads(pickle.dumps(model_class.model))
 
         #
@@ -116,6 +116,7 @@ def create_test_method(model, solver, io,
 
     return pickle_test
 
+cls = None
 
 #
 # Create test driver classes for each test model
@@ -154,7 +155,6 @@ for key, value in test_scenarios(lambda c: c.test_pickling):
 # Reset the cls variable, since it contains a unittest.TestCase subclass.
 # This prevents this class from being processed twice!
 cls = None
-
 
 if __name__ == "__main__":
     unittest.main()

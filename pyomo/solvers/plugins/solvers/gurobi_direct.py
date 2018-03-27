@@ -246,8 +246,10 @@ class GurobiDirect(DirectSolver):
                 self._solver_model = self._gurobipy.Model()
         except Exception:
             e = sys.exc_info()[1]
-            msg = ('Unable to create Gurobi model. Have you installed the Python bindings for Gurboi?\n\n\t' +
-                   'Error message: {0}'.format(e))
+            msg = ("Unable to create Gurobi model. "
+                   "Have you installed the Python "
+                   "bindings for Gurboi?\n\n\t"+
+                   "Error message: {0}".format(e))
             raise Exception(msg)
 
         self._add_block(model)
@@ -256,12 +258,15 @@ class GurobiDirect(DirectSolver):
             if n_ref != 0:
                 if var.fixed:
                     if not self._output_fixed_variable_bounds:
-                        raise ValueError("Encountered a fixed variable (%s) inside an active objective "
-                                         "or constraint expression on model %s, which is usually indicative of "
-                                         "a preprocessing error. Use the IO-option 'output_fixed_variable_bounds=True' "
-                                         "to suppress this error and fix the variable by overwriting its bounds in "
-                                         "the Gurobi instance."
-                                         % (var.name, self._pyomo_model.name,))
+                        raise ValueError(
+                            "Encountered a fixed variable (%s) inside "
+                            "an active objective or constraint "
+                            "expression on model %s, which is usually "
+                            "indicative of a preprocessing error. Use "
+                            "the IO-option 'output_fixed_variable_bounds=True' "
+                            "to suppress this error and fix the variable "
+                            "by overwriting its bounds in the Gurobi instance."
+                            % (var.name, self._pyomo_model.name,))
 
     def _add_block(self, block):
         DirectOrPersistentSolver._add_block(self, block)
@@ -278,34 +283,51 @@ class GurobiDirect(DirectSolver):
         conname = self._symbol_map.getSymbol(con, self._labeler)
 
         if con._linear_canonical_form:
-            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_repn(con.canonical_form(),
-                                                                          self._max_constraint_degree)
+            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_repn(
+                con.canonical_form(),
+                self._max_constraint_degree)
         elif isinstance(con, LinearCanonicalRepn):
-            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_repn(con, self._max_constraint_degree)
+            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_repn(
+                con,
+                self._max_constraint_degree)
         else:
-            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(con.body, self._max_constraint_degree)
+            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(
+                con.body,
+                self._max_constraint_degree)
 
         if con.has_lb():
             if not is_fixed(con.lower):
-                raise ValueError('Lower bound of constraint {0} is not constant.'.format(con))
+                raise ValueError("Lower bound of constraint {0} "
+                                 "is not constant.".format(con))
         if con.has_ub():
             if not is_fixed(con.upper):
-                raise ValueError('Upper bound of constraint {0} is not constant.'.format(con))
+                raise ValueError("Upper bound of constraint {0} "
+                                 "is not constant.".format(con))
 
         if con.equality:
-            gurobipy_con = self._solver_model.addConstr(lhs=gurobi_expr, sense=self._gurobipy.GRB.EQUAL,
-                                                        rhs=value(con.lower), name=conname)
-        elif con.has_lb() and (value(con.lower) > -float('inf')) and con.has_ub() and (value(con.upper) < float('inf')):
-            gurobipy_con = self._solver_model.addRange(gurobi_expr, value(con.lower), value(con.upper), name=conname)
+            gurobipy_con = self._solver_model.addConstr(lhs=gurobi_expr,
+                                                        sense=self._gurobipy.GRB.EQUAL,
+                                                        rhs=value(con.lower),
+                                                        name=conname)
+        elif con.has_lb() and con.has_ub():
+            gurobipy_con = self._solver_model.addRange(gurobi_expr,
+                                                       value(con.lower),
+                                                       value(con.upper),
+                                                       name=conname)
             self._range_constraints.add(con)
-        elif con.has_lb() and (value(con.lower) > -float('inf')):
-            gurobipy_con = self._solver_model.addConstr(lhs=gurobi_expr, sense=self._gurobipy.GRB.GREATER_EQUAL,
-                                                        rhs=value(con.lower), name=conname)
-        elif con.has_ub() and (value(con.upper) < float('inf')):
-            gurobipy_con = self._solver_model.addConstr(lhs=gurobi_expr, sense=self._gurobipy.GRB.LESS_EQUAL,
-                                                        rhs=value(con.upper), name=conname)
+        elif con.has_lb():
+            gurobipy_con = self._solver_model.addConstr(lhs=gurobi_expr,
+                                                        sense=self._gurobipy.GRB.GREATER_EQUAL,
+                                                        rhs=value(con.lower),
+                                                        name=conname)
+        elif con.has_ub():
+            gurobipy_con = self._solver_model.addConstr(lhs=gurobi_expr,
+                                                        sense=self._gurobipy.GRB.LESS_EQUAL,
+                                                        rhs=value(con.upper),
+                                                        name=conname)
         else:
-            raise ValueError('Constraint does not have a lower or an upper bound: {0} \n'.format(con))
+            raise ValueError("Constraint does not have a lower "
+                             "or an upper bound: {0} \n".format(con))
 
         for var in referenced_vars:
             self._referenced_variables[var] += 1
@@ -324,7 +346,8 @@ class GurobiDirect(DirectSolver):
         elif level == 2:
             sos_type = self._gurobipy.GRB.SOS_TYPE2
         else:
-            raise ValueError('Solver does not support SOS level {0} constraints'.format(level))
+            raise ValueError("Solver does not support SOS "
+                             "level {0} constraints".format(level))
 
         gurobi_vars = []
         weights = []

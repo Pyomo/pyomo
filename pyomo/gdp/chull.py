@@ -31,7 +31,6 @@ class ConvexHull_Transformation_PyomoScript_Plugin(Plugin):
         # Not sure why the ModifyInstance callback started passing the
         # model along with the instance.  We will ignore it.
         model = kwds.pop('model', None)
-        print kwds
         xform = TransformationFactory('gdp.chull')
         return xform.apply_to(instance, **kwds)
 
