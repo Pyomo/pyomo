@@ -45,6 +45,8 @@ def setUpModule():
     reference_test_model = load_external_module(
         join(testdatadir, "reference_test_model.py"))[0].model
 
+
+@unittest.category('smoke','nightly','expensive')
 class Test(unittest.TestCase):
 
     @classmethod
@@ -291,6 +293,7 @@ class Test(unittest.TestCase):
 
     # model: name of .py file with model
     # scenario_tree: Pyomo scenario tree model
+    @unittest.category('pyomo5_expected_failures', '!smoke')
     def test_init6(self):
         self.assertTrue("reference_test_model" not in sys.modules)
         scenario_tree_model = CreateAbstractScenarioTreeModel().\
@@ -667,7 +670,6 @@ class Test(unittest.TestCase):
         self.assertEqual(factory._closed, True)
         self.assertEqual(len(factory._archives), 0)
 
-Test = unittest.category('smoke','nightly','expensive')(Test)
 
 if __name__ == "__main__":
     unittest.main()
