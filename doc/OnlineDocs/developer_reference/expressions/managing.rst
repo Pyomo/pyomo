@@ -491,7 +491,7 @@ a dictionary, :attr:`scale`, that maps variable ID to model parameter.  For exam
     for i in M.x:
       scale[id(M.x[i])] = M.p[i]
 
-    e = Sum(M.x[i] for i in M.x)
+    e = quicksum(M.x[i] for i in M.x)
     f = scale_expression(e,scale)
     print(f)
     # p[0]*x[0] + p[1]*x[1] + p[2]*x[2] + p[3]*x[3] + p[4]*x[4]

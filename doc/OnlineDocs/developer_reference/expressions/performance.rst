@@ -83,7 +83,7 @@ create expressions:
 :func:`prod <pyomo.core.util.prod>` 
     A function to compute a product of Pyomo expressions.
 
-:func:`Sum <pyomo.core.util.Sum>` 
+:func:`quicksum <pyomo.core.util.quicksum>` 
     A function to efficiently compute a sum of Pyomo expressions.
 
 :func:`summation <pyomo.core.util.summation>`
@@ -112,10 +112,10 @@ together.  For example:
     # The product M.z*(M.x[0] + ... + M.x[4])
     prod(sum(M.x), M.z)
 
-Sum
-~~~
+quicksum
+~~~~~~~~
 
-The behavior of the :func:`Sum <pyomo.core.util.Sum>` function is
+The behavior of the :func:`quicksum <pyomo.core.util.quicksum>` function is
 similar to the builtin :func:`sum` function, but this function often
 generates a more compact Pyomo expression. Its main argument is a
 variable length argument list, :attr:`args`, which represents
@@ -124,7 +124,7 @@ customized based on the :attr:`start` and :attr:`linear` arguments.
 
 The :attr:`start` defines the initial value for summation, which
 defaults to zero.  If this value is not a numeric value, then the
-:func:`Sum <pyomo.core.util.Sum>` sets the initial value to
+:func:`quicksum <pyomo.core.util.quicksum>` sets the initial value to
 :attr:`start` and executes a simple loop to sum the terms.  This
 allows the sum to be stored in an object that is passed into
 the function. (See the example using a context manager below.)
@@ -136,11 +136,11 @@ determines how the sum is processed:
 * If :attr:`linear` is :const:`False`, then the terms in :attr:`args` are assumed to be linear.
 * If :attr:`linear` is :const:`None`, the first term in :attr:`args` is analyze to determine whether the terms are linear or nonlinear.
 
-This allows the :func:`Sum <pyomo.core.util.Sum>` function to
+This allows the :func:`quicksum <pyomo.core.util.quicksum>` function to
 customize the expression representation used, and specifically a
 more compact representation is used for linear polynomials.
 
-Altogether, the :func:`Sum <pyomo.core.util.Sum>` function is generally 
+Altogether, the :func:`quicksum <pyomo.core.util.quicksum>` function is generally 
 faster than the builtin :func:`sum` function, and it generates a more
 compact representation for linear polynomials.
 
@@ -157,7 +157,7 @@ compact representation for linear polynomials.
         M = ConcreteModel()
         M.x = Var(range(5))
 
-        Sum(M.x[i]**2 if i > 0 else M.x[i] for i in range(5))
+        quicksum(M.x[i]**2 if i > 0 else M.x[i] for i in range(5))
 
     The first term created by the generator is linear, but the
     subsequent terms are nonlinear.  Pyomo does not gracefully
@@ -172,7 +172,7 @@ a generalized dot product.  The :attr:`args` argument contains one
 or more generators that are used to create terms in the summation.
 If the :attr:`args` argument contains a single generator, then its
 sequence of terms are summed together; the sum is equivalent to
-calling :func:`Sum <pyomo.core.util.Sum>`.  If two or more generators are
+calling :func:`quicksum <pyomo.core.util.quicksum>`.  If two or more generators are
 provided, then the result is the summation of their terms multiplied
 together.  For example:
 
@@ -197,7 +197,7 @@ the denominator.  For example:
 
 .. doctest::
 
-    #Sum the product of x_i/y_i
+    # Sum the product of x_i/y_i
     summation(M.x, denom=M.y)
 
     # Sum the product of 1/(x_i*y_i)
@@ -253,7 +253,7 @@ singled-threaded applications, these objects can be safely used to
 construct different expressions with different context declarations.
 
 Finally, note that these context managers can be passed into the :attr:`start`
-method for the :func:`Sum <pyomo.core.util.Sum>` function.  For example:
+method for the :func:`quicksum <pyomo.core.util.quicksum>` function.  For example:
 
 .. doctest::
 
@@ -262,8 +262,8 @@ method for the :func:`Sum <pyomo.core.util.Sum>` function.  For example:
     M.y = Var(range(5))
 
     with linear_expression as e:
-        Sum(M.x, start=e)
-        Sum(M.y, start=e)
+        quicksum(M.x, start=e)
+        quicksum(M.y, start=e)
 
 This sum contains terms for ``M.x[i]`` and ``M.y[i]``.  The syntax
 in this example is not intuitive because the sum is being stored
@@ -272,8 +272,8 @@ in ``e``.
 .. note::
 
     We do not generally expect users or developers to use these
-    context managers.  They are used by the :func:`Sum
-    <pyomo.core.util.Sum>` and :func:`summation
+    context managers.  They are used by the :func:`quicksum
+    <pyomo.core.util.quicksum>` and :func:`summation
     <pyomo.core.util.summation>` functions to accelerate expression
     generation, and there are few cases where the direct use of
     these context managers would provide additional utility to users
