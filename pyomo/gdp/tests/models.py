@@ -414,6 +414,6 @@ def grossmann_twoDisj():
     m.disjunct4.constraintx = Constraint(expr=9 <= m.x <= 11)
     m.disjunct4.constrainty = Constraint(expr=2 <= m.y <= 3.5)
 
-    m.disjunction2 = Disjunction(expr=[m.disjunt3, m.disjunct4])
+    m.disjunction2 = Disjunction(expr=[m.disjunct3, m.disjunct4])
     
     return m
