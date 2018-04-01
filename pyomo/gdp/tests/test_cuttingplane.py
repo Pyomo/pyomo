@@ -21,34 +21,33 @@ from six import StringIO
 
 from nose.tools import set_trace
 
+solver = 'cplex'
 solvers = pyomo.opt.check_available_solvers('gurobi')
 
 # TODO:
 #     - test that deactivated objectives on the model don't get used by the
 #       transformation
 
-# TODO: I'm not sure what to do with this at the moment. I don't know what I
-# want to happen. As the code currently stands, two cuts get added. But they are
-# numerically dissatisfying versions of 0 <= 0. So maybe that isn't desired
-# behavior?
-# class OneVarDisj(unittest.TestCase):
-#     @staticmethod
-#     def makeModel():
-#         m = ConcreteModel()
-#         m.x = Var(bounds=(0, 10))
-#         m.disj1 = Disjunct()
-#         m.disj1.xTrue = Constraint(expr=m.x==1)
-#         m.disj2 = Disjunct()
-#         m.disj2.xFalse = Constraint(expr=m.x==0)
-#         m.disjunction = Disjunction(expr=[m.disj1, m.disj2])
-#         m.obj = Objective(expr=m.x)
-#         return m
+class OneVarDisj(unittest.TestCase):
+    @staticmethod
+    def makeModel():
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 10))
+        m.disj1 = Disjunct()
+        m.disj1.xTrue = Constraint(expr=m.x==1)
+        m.disj2 = Disjunct()
+        m.disj2.xFalse = Constraint(expr=m.x==0)
+        m.disjunction = Disjunction(expr=[m.disj1, m.disj2])
+        m.obj = Objective(expr=m.x)
+        return m
 
-#     def test_cut_constraints(self):
-#         m = self.makeModel()
+    # there are no useful cuts here, and so we don't add them!
+    def test_no_cuts_added(self):
+        m = self.makeModel()
 
-#         TransformationFactory('gdp.cuttingplane').apply_to(m)
-#         set_trace()
+        TransformationFactory('gdp.cuttingplane').apply_to(m)
+        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        self.assertEqual(len(cuts), 0)
 
 class TwoTermDisj(unittest.TestCase):
     def setUp(self):
@@ -151,7 +150,7 @@ class Grossmann_TestCases(unittest.TestCase):
         m = models.grossmann_oneDisj()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
-        SolverFactory('gurobi').solve(m)
+        SolverFactory(solver).solve(m)
         self.assertAlmostEqual(m.x.value, 2)
         self.assertAlmostEqual(m.y.value, 10)
 
@@ -185,20 +184,20 @@ class Grossmann_TestCases(unittest.TestCase):
         self.assertGreaterEqual(value(cut2_expr), 0)
 
     @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
-    def test_constraint_tolerances_arent_evil(self):
+    def test_cuts_dont_cut_off_optimal(self):
         m = models.to_break_constraint_tolerances()
 
         # solve with bigm to check the actual optimal solution
         m1 = TransformationFactory('gdp.bigm').create_using(m)
-        SolverFactory('gurobi').solve(m1)
-        self.assertEqual(m1.x.value, 2)
-        self.assertEqual(m1.y.value, 127)
+        SolverFactory(solver).solve(m1)
+        self.assertAlmostEqual(m1.x.value, 2)
+        self.assertAlmostEqual(m1.y.value, 127)
 
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
-        SolverFactory('gurobi').solve(m)
-        self.assertEqual(m.x.value, 2)
-        self.assertEqual(m.y.value, 127)
+        SolverFactory(solver).solve(m)
+        self.assertAlmostEqual(m.x.value, 2)
+        self.assertAlmostEqual(m.y.value, 127)
 
         m.x.fix(2)
         m.y.fix(127)
@@ -208,3 +207,44 @@ class Grossmann_TestCases(unittest.TestCase):
         cut1_expr = cuts[0].body
 
         self.assertGreaterEqual(value(cut1_expr), 0)
+
+    @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
+    def test_2disj_cuts_valid_for_optimal(self):
+        m = models.grossmann_twoDisj()
+        
+        TransformationFactory('gdp.cuttingplane').apply_to(m)
+
+        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        self.assertEqual(len(cuts), 1)
+
+        m.x.fix(2)
+        m.y.fix(8)
+        m.disjunct1.indicator_var.fix(1)
+        m.disjunct3.indicator_var.fix(1)
+        m.disjunct2.indicator_var.fix(0)
+        m.disjunct4.indicator_var.fix(0)
+
+        cut = cuts[0].body
+        self.assertGreaterEqual(value(cut), 0)
+
+    @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
+    def test_2disj_cuts_valid_elsewhere(self):
+        # I'm doing this test to see if it is cutting into the the feasible
+        # region somewhere other than the optimal value... That is, if the angle
+        # is off enough to cause problems.
+        m = models.grossmann_twoDisj()
+        
+        TransformationFactory('gdp.cuttingplane').apply_to(m)
+
+        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        self.assertEqual(len(cuts), 1)
+
+        m.x.fix(10)
+        m.y.fix(3)
+        m.disjunct1.indicator_var.fix(0)
+        m.disjunct3.indicator_var.fix(0)
+        m.disjunct2.indicator_var.fix(1)
+        m.disjunct4.indicator_var.fix(1)
+
+        cut = cuts[0].body
+        self.assertGreaterEqual(value(cut), 0)
