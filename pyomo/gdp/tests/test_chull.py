@@ -25,7 +25,7 @@ from six import iteritems, iterkeys
 # DEBUG
 from nose.tools import set_trace
 
-EPS = pyomo.gdp.plugins.chull.EPS
+EPS = TransformationFactory('gdp.chull').CONFIG.EPS
 
 class TwoTermDisj(unittest.TestCase):
     # make sure that we are using coopr3 expressions...
