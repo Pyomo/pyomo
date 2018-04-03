@@ -1,8 +1,7 @@
-
-from helper import *
-from param import *
-from numpy.linalg import norm
 import numpy as np
+from numpy.linalg import norm
+from pyomo.contrib.trustregion.helper import *
+from pyomo.contrib.trustregion.param import *
 
 class IterLog:
 	        # # Todo: Include the following in high printlevel

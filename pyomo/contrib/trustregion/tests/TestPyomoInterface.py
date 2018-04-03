@@ -4,7 +4,7 @@ import pyutilib.th as unittest
 
 from pyomo.core.base.expr import identify_variables
 from pyomo.environ import *
-from PyomoInterface import *
+from pyomo.contrib.trustregion.PyomoInterface import *
 
 class TestPyomoInterfaceInitialization(unittest.TestCase):
     def setUp(self):

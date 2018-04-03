@@ -1,4 +1,4 @@
-from param import *
+from pyomo.contrib.trustregion.param import *
 
 
 class FilterElement:

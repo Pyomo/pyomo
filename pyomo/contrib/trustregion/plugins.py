@@ -1,14 +1,12 @@
-import pyomo.util.plugin
-from pyomo.contrib.trustregion.TRF import TRF
-from pyomo.contrib.trustregion.param import param
+from pyomo.util import plugin
 from pyomo.opt.base import IOptSolver
-
-
+from pyomo.contrib.trustregion.TRF import TRF
+import pyomo.contrib.trustregion.param as param
 
 def load():
     pass
 
-class TrustRegionSolver(pyomo.util.plugin.Plugin):
+class TrustRegionSolver(plugin.Plugin):
     """
     A trust region filter method for black box / glass box optimizaiton 
     Solves nonlinear optimization problems containing external function calls
@@ -21,9 +19,11 @@ class TrustRegionSolver(pyomo.util.plugin.Plugin):
     """ 
 	#	+ param.CONFIG.generte_yaml_template()
 
-    pyomo.util.plugin.implements(IOptSolver)
-    pyomo.util.plugin.alias('trustregion',
-                            doc='Trust region filter method for black box/glass box optimization')
+    plugin.implements(IOptSolver)
+    plugin.alias(
+        'trustregion',
+        doc='Trust region filter method for black box/glass box optimization'
+    )
 
     def available(self, exception_flag=True):
         """Check if solver is available.

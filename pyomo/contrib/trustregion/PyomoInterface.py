@@ -1,14 +1,14 @@
-from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
+import numpy as np
 from pyutilib.math import infinity
 from pyutilib.services import TempfileManager
-from readgjh import *
-from helper import *
-import numpy as np
+from pyomo.util.modeling import randint, unique_component_name
 from pyomo.core import Block, Var, Param, Set, VarList, ConstraintList, Constraint, Objective, RangeSet, value, ConcreteModel, Reals, sqrt, minimize, maximize
 from pyomo.core.base import expr_coopr3, expr as EXPR
 from pyomo.core.base.var import _VarData
 from pyomo.core.base.numvalue import native_types
-from pyomo.util.modeling import randint, unique_component_name 
+from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
+from pyomo.contrib.trustregion.readgjh import *
+from pyomo.contrib.trustregion.helper import *
 
 
 class ROMType:

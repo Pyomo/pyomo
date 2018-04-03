@@ -3,9 +3,9 @@
 
 import numpy as np
 from math import pow
-from param import *
 from numpy import inf
 from numpy.linalg import norm
+from pyomo.contrib.trustregion.param import *
 from pyomo.contrib.trustregion.filterMethod import FilterElement, Filter
 from pyomo.contrib.trustregion.helper import cloneXYZ, packXYZ, minIgnoreNone, maxIgnoreNone
 from pyomo.contrib.trustregion.Logger import IterLog, Logger
