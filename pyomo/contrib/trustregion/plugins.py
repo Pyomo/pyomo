@@ -39,7 +39,8 @@ class TrustRegionSolver(plugin.Plugin):
         return __version__
 
     def solve(self, model, eflist, **kwds):
-        config = param.CONFIG(kwds)
-        return TRF(model, eflist, config)
+        assert not kwds
+        #config = param.CONFIG(kwds)
+        return TRF(model, eflist)#, config)
 
 
