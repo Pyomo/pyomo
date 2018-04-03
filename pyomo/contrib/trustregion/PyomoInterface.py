@@ -36,8 +36,6 @@ class PyomoInterface:
     solver_io = 'nl'
     stream_solver = False # True prints solver output to screen
     keepfiles = False  # True prints intermediate file names (.nl,.sol,...)
-    opt = SolverFactory(solver, solver_io=solver_io)
-    opt.options['halt_on_ampl_error yes']
     countDx = -1
     romtype = ROMType.linear
     
@@ -403,9 +401,11 @@ class PyomoInterface:
 
     def solveModel(self, x, y, z):
         model = self.model
-        self.opt.options['max_iter'] = 5000
+        opt = SolverFactory(self.solver, solver_io=self.solver_io)
+        opt.options['halt_on_ampl_error'] = 'yes'
+        opt.options['max_iter'] = 5000
         
-        results = self.opt.solve(
+        results = opt.solve(
             model, keepfiles=self.keepfiles, tee=self.stream_solver)
 
         if ((results.solver.status == SolverStatus.ok)
@@ -533,8 +533,10 @@ class PyomoInterface:
         gfnorm = sqrt(sum(x[1]**2 for x in g))
 
 
-        self.opt.options['max_iter'] = 5000
-        results = self.opt.solve(
+        opt = SolverFactory(self.solver, solver_io=self.solver_io)
+        opt.options['halt_on_ampl_error'] = 'yes'
+        opt.options['max_iter'] = 5000
+        results = opt.solve(
             l, keepfiles=self.keepfiles, tee=self.stream_solver)
 
         if ((results.solver.status == SolverStatus.ok)
