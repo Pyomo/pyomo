@@ -82,8 +82,8 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
             # descent into blocks: we will catch disjuncts in the outer
             # loop.
             #
-            # Note that we defer this until AFTER re reactivate the
-            # block, as we the component_objects generator will not
+            # Note that we defer this until AFTER we reactivate the
+            # block, as the component_objects generator will not
             # return anything when active=True and the block is
             # deactivated.
             for disjunct in itervalues(disjunct_component._data):
