@@ -79,7 +79,7 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
             disjunct_component._activate_without_unfixing_indicator()
 
             # Deactivate all constraints.  Note that we only need to
-            # descent into blocks: we will catch disjuncts in the outer
+            # descend into blocks: we will catch disjuncts in the outer
             # loop.
             #
             # Note that we defer this until AFTER we reactivate the

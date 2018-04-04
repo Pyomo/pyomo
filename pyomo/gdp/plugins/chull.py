@@ -42,7 +42,7 @@ class ConvexHull_Transformation(Transformation):
     """Relax disjunctive model by forming the convex hull.
 
     Relaxes a disjunctive model into an algebraic model by forming the
-    conves hull of each disjunction.
+    convex hull of each disjunction.
 
     This transformation accepts the following keyword arguments:
 
@@ -69,7 +69,7 @@ class ConvexHull_Transformation(Transformation):
             'bigmConstraints': ComponentMap(disaggregated var: bigM constraint),
         }
 
-    In addition, any block or disjunct containind a relaxed disjunction
+    In addition, any block or disjunct containing a relaxed disjunction
     will have a "_gdp_transformation_info" dict with the following
     entry:
 

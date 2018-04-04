@@ -68,7 +68,7 @@ class TestDisjunction(unittest.TestCase):
         self.assertEqual(len(disjuncts[0].parent_component().name), 13)
         self.assertEqual(disjuncts[0].name[:12], "e_disjuncts_")
 
-        # Test that the implicit disjuncts acn be lists/tuples
+        # Test that the implicit disjuncts can be lists/tuples/generators
         def _gen():
             yield m.y<=4
             yield m.x>=5
