@@ -58,9 +58,9 @@ class ProblemWriterUtils(pyomo.opt.AbstractProblemWriter):
         #
         if isinstance(exp,EXPR.ExpressionBase):
             #
-            # SumExpression
+            # Sum
             #
-            if isinstance(exp,expr._SumExpression):
+            if isinstance(exp,expr.SumExpressionBase):
                 self._Collect1(exp._args[0])
                 self._Collect1(exp._args[1])
             #
@@ -127,7 +127,7 @@ class ProblemWriterUtils(pyomo.opt.AbstractProblemWriter):
                 #
                 # Sum
                 #
-            if isinstance(exp,expr._SumExpression):
+            if isinstance(exp,expr.SumExpressionBase):
                 for i in xrange(len(exp._args)):
                     x = self._Collect2(exp._args[i], x, scale)
             #

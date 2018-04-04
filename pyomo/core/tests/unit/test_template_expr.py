@@ -96,7 +96,7 @@ class ExpressionObjectTester(object):
         self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIs(e._base, m.x)
         self.assertEqual(e.nargs(), 1)
-        self.assertTrue(isinstance(e.arg(0), EXPR._SumExpression))
+        self.assertTrue(isinstance(e.arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(0), t)
         self.assertIs(e.arg(0).arg(1), m.P[5])
 
@@ -108,10 +108,10 @@ class ExpressionObjectTester(object):
         self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIs(e._base, m.x)
         self.assertEqual(e.nargs(), 1)
-        self.assertTrue(isinstance(e.arg(0), EXPR._SumExpression))
+        self.assertTrue(isinstance(e.arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(0), t)
         self.assertIs(type(e.arg(0).arg(1)), EXPR.GetItemExpression)
-        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR._SumExpression))
+        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
 
 
@@ -131,51 +131,51 @@ class ExpressionObjectTester(object):
         t = IndexTemplate(m.I)
 
         E = m.x[t+m.P[t+1]] + m.P[1]
-        self.assertTrue(isinstance(E, EXPR._SumExpression))
+        self.assertTrue(isinstance(E, EXPR.SumExpressionBase))
         e = E.arg(0)
         self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIs(e._base, m.x)
         self.assertEqual(e.nargs(), 1)
-        self.assertTrue(isinstance(e.arg(0), EXPR._SumExpression))
+        self.assertTrue(isinstance(e.arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(0), t)
         self.assertIs(type(e.arg(0).arg(1)), EXPR.GetItemExpression)
-        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR._SumExpression))
+        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
 
         E = m.P[1] + m.x[t+m.P[t+1]]
-        self.assertTrue(isinstance(E, EXPR._SumExpression))
+        self.assertTrue(isinstance(E, EXPR.SumExpressionBase))
         e = E.arg(1)
         self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIs(e._base, m.x)
         self.assertEqual(e.nargs(), 1)
-        self.assertTrue(isinstance(e.arg(0), EXPR._SumExpression))
+        self.assertTrue(isinstance(e.arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(0), t)
         self.assertIs(type(e.arg(0).arg(1)), EXPR.GetItemExpression)
-        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR._SumExpression))
+        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
 
         E = m.x[t+m.P[t+1]] + 1
-        self.assertTrue(isinstance(E, EXPR._SumExpression))
+        self.assertTrue(isinstance(E, EXPR.SumExpressionBase))
         e = E.arg(0)
         self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIs(e._base, m.x)
         self.assertEqual(e.nargs(), 1)
-        self.assertTrue(isinstance(e.arg(0), EXPR._SumExpression))
+        self.assertTrue(isinstance(e.arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(0), t)
         self.assertIs(type(e.arg(0).arg(1)), EXPR.GetItemExpression)
-        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR._SumExpression))
+        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
 
         E = 1 + m.x[t+m.P[t+1]]
-        self.assertTrue(isinstance(E, EXPR._SumExpression))
+        self.assertTrue(isinstance(E, EXPR.SumExpressionBase))
         e = E.arg(E.nargs()-1)
         self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIs(e._base, m.x)
         self.assertEqual(e.nargs(), 1)
-        self.assertTrue(isinstance(e.arg(0), EXPR._SumExpression))
+        self.assertTrue(isinstance(e.arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(0), t)
         self.assertIs(type(e.arg(0).arg(1)), EXPR.GetItemExpression)
-        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR._SumExpression))
+        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
 
 
@@ -185,74 +185,74 @@ class ExpressionObjectTester(object):
 
         E_base = m.x[t+m.P[t+1]] + m.P[1]
         E = E_base.clone()
-        self.assertTrue(isinstance(E, EXPR._SumExpression))
+        self.assertTrue(isinstance(E, EXPR.SumExpressionBase))
         e = E.arg(0)
         self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIsNot(e, E_base.arg(0))
         self.assertIs(e._base, m.x)
         self.assertEqual(e.nargs(), 1)
-        self.assertTrue(isinstance(e.arg(0), EXPR._SumExpression))
+        self.assertTrue(isinstance(e.arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(0), t)
         self.assertIs(type(e.arg(0).arg(1)), EXPR.GetItemExpression)
         self.assertIs(type(e.arg(0).arg(1)),
                       type(E_base.arg(0).arg(0).arg(1)))
         self.assertIsNot(e.arg(0).arg(1),
                          E_base.arg(0).arg(0).arg(1))
-        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR._SumExpression))
+        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
 
         E_base = m.P[1] + m.x[t+m.P[t+1]]
         E = E_base.clone()
-        self.assertTrue(isinstance(E, EXPR._SumExpression))
+        self.assertTrue(isinstance(E, EXPR.SumExpressionBase))
         e = E.arg(1)
         self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIsNot(e, E_base.arg(0))
         self.assertIs(e._base, m.x)
         self.assertEqual(e.nargs(), 1)
-        self.assertTrue(isinstance(e.arg(0), EXPR._SumExpression))
+        self.assertTrue(isinstance(e.arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(0), t)
         self.assertIs(type(e.arg(0).arg(1)), EXPR.GetItemExpression)
         self.assertIs(type(e.arg(0).arg(1)),
                       type(E_base.arg(1).arg(0).arg(1)))
         self.assertIsNot(e.arg(0).arg(1),
                          E_base.arg(1).arg(0).arg(1))
-        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR._SumExpression))
+        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
 
         E_base = m.x[t+m.P[t+1]] + 1
         E = E_base.clone()
-        self.assertTrue(isinstance(E, EXPR._SumExpression))
+        self.assertTrue(isinstance(E, EXPR.SumExpressionBase))
         e = E.arg(0)
         self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIsNot(e, E_base.arg(0))
         self.assertIs(e._base, m.x)
         self.assertEqual(e.nargs(), 1)
-        self.assertTrue(isinstance(e.arg(0), EXPR._SumExpression))
+        self.assertTrue(isinstance(e.arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(0), t)
         self.assertIs(type(e.arg(0).arg(1)), EXPR.GetItemExpression)
         self.assertIs(type(e.arg(0).arg(1)),
                       type(E_base.arg(0).arg(0).arg(1)))
         self.assertIsNot(e.arg(0).arg(1),
                          E_base.arg(0).arg(0).arg(1))
-        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR._SumExpression))
+        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
 
         E_base = 1 + m.x[t+m.P[t+1]]
         E = E_base.clone()
-        self.assertTrue(isinstance(E, EXPR._SumExpression))
+        self.assertTrue(isinstance(E, EXPR.SumExpressionBase))
         e = E.arg(-1)
         self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIsNot(e, E_base.arg(0))
         self.assertIs(e._base, m.x)
         self.assertEqual(e.nargs(), 1)
-        self.assertTrue(isinstance(e.arg(0), EXPR._SumExpression))
+        self.assertTrue(isinstance(e.arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(0), t)
         self.assertIs(type(e.arg(0).arg(1)), EXPR.GetItemExpression)
         self.assertIs(type(e.arg(0).arg(1)),
                       type(E_base.arg(-1).arg(0).arg(1)))
         self.assertIsNot(e.arg(0).arg(1),
                          E_base.arg(-1).arg(0).arg(1))
-        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR._SumExpression))
+        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
 
 

@@ -465,10 +465,10 @@ class TestSimulator(unittest.TestCase):
             isinstance(mysim._rhsdict[_GetItemIndexer(m.dw2[3, t])], Param))
         self.assertTrue(
             isinstance(mysim._rhsdict[_GetItemIndexer(m.dw3[0, t, 1])],
-                       EXPR.ViewSumExpression))
+                       EXPR.SumExpression))
         self.assertTrue(
             isinstance(mysim._rhsdict[_GetItemIndexer(m.dw3[1, t, 3])],
-                       EXPR.ViewSumExpression))
+                       EXPR.SumExpression))
         self.assertEqual(
             mysim._rhsdict[_GetItemIndexer(m.dw1[t, 1])].name, 'w1[{t},1]')
         self.assertEqual(
@@ -559,10 +559,10 @@ class TestSimulator(unittest.TestCase):
             mysim._rhsdict[_GetItemIndexer(m.dw2[2, 2, t])], Param))
         self.assertTrue(isinstance(
             mysim._rhsdict[_GetItemIndexer(m.dw3[0, t, 1, 1])],
-            EXPR.ViewSumExpression))
+            EXPR.SumExpression))
         self.assertTrue(isinstance(
             mysim._rhsdict[_GetItemIndexer(m.dw3[1, t, 2, 2])],
-            EXPR.ViewSumExpression))
+            EXPR.SumExpression))
         self.assertEqual(mysim._rhsdict[_GetItemIndexer(m.dw1[t, 1, 1])].name,
                          'w1[{t},1,1]')
         self.assertEqual(mysim._rhsdict[_GetItemIndexer(m.dw1[t, 2, 2])].name,
@@ -877,7 +877,7 @@ class TestExpressionCheckers(unittest.TestCase):
         temp = _check_productexpression(e, 1)
         self.assertIsNone(temp)
 
-    # Testing the checker for ViewSumExpressions
+    # Testing the checker for SumExpressions
     def test_check_viewsumexpression(self):
 
         m = self.m 
@@ -890,7 +890,7 @@ class TestExpressionCheckers(unittest.TestCase):
         e = m.dv[t] + m.y + m.z == m.v[t]
         temp = _check_viewsumexpression(e, 0)
         self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(type(temp[1]), EXPR.ViewSumExpression)
+        self.assertIs(type(temp[1]), EXPR.SumExpression)
         self.assertIs(type(temp[1].arg(0)), EXPR.GetItemExpression)
         self.assertIs(type(temp[1].arg(1)), EXPR.MonomialTermExpression)
         self.assertEqual(-1, temp[1].arg(1).arg(0))
@@ -902,7 +902,7 @@ class TestExpressionCheckers(unittest.TestCase):
         e = m.v[t] == m.y + m.dv[t] + m.z
         temp = _check_viewsumexpression(e, 1)
         self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(type(temp[1]), EXPR.ViewSumExpression)
+        self.assertIs(type(temp[1]), EXPR.SumExpression)
         self.assertIs(type(temp[1].arg(0)), EXPR.GetItemExpression)
         self.assertIs(type(temp[1].arg(1)), EXPR.MonomialTermExpression)
         self.assertIs(m.y, temp[1].arg(1).arg(1))

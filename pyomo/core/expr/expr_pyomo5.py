@@ -47,7 +47,7 @@ __all__ = (
 'LinearExpression',
 'ReciprocalExpression',
 'NegationExpression',
-'ViewSumExpression',
+'SumExpression',
 'UnaryFunctionExpression',
 'AbsExpression',
 'compress_expression',
@@ -63,8 +63,8 @@ __all__ = (
 'ExpressionValueVisitor',
 'ExpressionReplacementVisitor',
 'LinearDecompositionError',
-'_SumExpression',               # This should not be referenced, except perhaps while testing code
-'_MutableViewSumExpression',    # This should not be referenced, except perhaps while testing code
+'SumExpressionBase',
+'_MutableSumExpression',    # This should not be referenced, except perhaps while testing code
 '_MutableLinearExpression',     # This should not be referenced, except perhaps while testing code
 '_decompose_linear_terms',      # This should not be referenced, except perhaps while testing code
 '_chainedInequality',           # This should not be referenced, except perhaps while testing code
@@ -214,12 +214,12 @@ class mutable_sum_context(object):
     """
 
     def __enter__(self):
-        self.e = _MutableViewSumExpression([])
+        self.e = _MutableSumExpression([])
         return self.e
 
     def __exit__(self, *args):
-        if self.e.__class__ == _MutableViewSumExpression:
-            self.e.__class__ = ViewSumExpression
+        if self.e.__class__ == _MutableSumExpression:
+            self.e.__class__ = SumExpression
 
 #: A context manager object for nonlinear expressions.
 #: This is an instance of the :class:`mutable_sum_contex <pyomo.core.expr.current.mutable_sum_context>` context manager.
@@ -1230,6 +1230,10 @@ class ExpressionBase(NumericValue):
         args (list or tuple): Children of this node.
     """
 
+    # Previously, we used _args to define expression class arguments.
+    # Here, we use _args_ to force errors for code that was referencing this
+    # data.  There are now accessor methods, so in most cases users
+    # and developers should not directly access the _args_ data values.
     __slots__ =  ('_args_',)
     PRECEDENCE = 0
 
@@ -2138,16 +2142,31 @@ class EqualityExpression(_LinearOperatorExpression):
         return self._args_[0].is_potentially_variable() or self._args_[1].is_potentially_variable()
 
 
-class _SumExpression(_LinearOperatorExpression):
+class SumExpressionBase(_LinearOperatorExpression):
     """
-    An object that defines a simple summation of expressions
+    A base class for simple summation of expressions
+
+    The class hierarchy for summation is different than for other 
+    expression types.  For example, ProductExpression defines 
+    the class for representing binary products, and sub-classes are
+    specializations of that class.
+
+    By contrast, the SumExpressionBase is not directly used to 
+    represent expressions.  Rather, this base class provides 
+    commonly used methods and data.  The reason is that some
+    subclasses of SumExpressionBase are binary while others
+    are n-ary.
+
+    Thus, developers will need to treat checks for summation
+    classes differently, depending on whether the binary/n-ary 
+    operations are different.
     """
 
     __slots__ = ()
     PRECEDENCE = 6
 
     def _precedence(self):
-        return _SumExpression.PRECEDENCE
+        return SumExpressionBase.PRECEDENCE
 
     def _apply_operation(self, result):
         l_, r_ = result
@@ -2164,14 +2183,14 @@ class _SumExpression(_LinearOperatorExpression):
         return 'sum'
 
 
-class NPV_SumExpression(_SumExpression):
+class NPV_SumExpression(SumExpressionBase):
     __slots__ = ()
 
     def is_potentially_variable(self):
         return False
 
 
-class ViewSumExpression(_SumExpression):
+class SumExpression(SumExpressionBase):
     """
     Sum expression::
 
@@ -2191,11 +2210,11 @@ class ViewSumExpression(_SumExpression):
     def add(self, new_arg):
         if new_arg.__class__ in native_numeric_types and new_arg == 0:
             return self
-        # Clone 'self', because ViewSumExpression are immutable
+        # Clone 'self', because SumExpression are immutable
         self._shared_args = True
         self = self.__class__(self._args_)
         #
-        if new_arg.__class__ is ViewSumExpression or new_arg.__class__ is _MutableViewSumExpression:
+        if new_arg.__class__ is SumExpression or new_arg.__class__ is _MutableSumExpression:
             self._args_.extend( islice(new_arg._args_, new_arg._nargs) )
         elif not new_arg is None:
             self._args_.append(new_arg)
@@ -2206,7 +2225,7 @@ class ViewSumExpression(_SumExpression):
         return self._nargs
 
     def _precedence(self):
-        return ViewSumExpression.PRECEDENCE
+        return SumExpression.PRECEDENCE
 
     def _apply_operation(self, result):
         return sum(result)
@@ -2215,14 +2234,14 @@ class ViewSumExpression(_SumExpression):
         return self.__class__(list(args))
 
     def __getstate__(self):
-        state = super(ViewSumExpression, self).__getstate__()
-        for i in ViewSumExpression.__slots__:
+        state = super(SumExpression, self).__getstate__()
+        for i in SumExpression.__slots__:
             state[i] = getattr(self, i)
         return state
 
     def is_constant(self):
         #
-        # In most normal contexts, a ViewSumExpression is
+        # In most normal contexts, a SumExpression is
         # non-constant.  When Forming expressions, constant
         # parameters are turned into numbers, which are
         # simply added.  Mutable parameters, variables and
@@ -2260,9 +2279,9 @@ class ViewSumExpression(_SumExpression):
         return ''.join(tmp)
 
 
-class _MutableViewSumExpression(ViewSumExpression):
+class _MutableSumExpression(SumExpression):
     """
-    A mutable ViewSumExpression
+    A mutable SumExpression
 
     The :func:`add` method is slightly different in that it
     does not create a new sum expression, but modifies the
@@ -2274,11 +2293,11 @@ class _MutableViewSumExpression(ViewSumExpression):
     def add(self, new_arg):
         if new_arg.__class__ in native_numeric_types and new_arg == 0:
             return self
-        # Do not clone 'self', because _MutableViewSumExpression are mutable
+        # Do not clone 'self', because _MutableSumExpression are mutable
         #self._shared_args = True
         #self = self.__class__(list(self.args))
         #
-        if new_arg.__class__ is ViewSumExpression or new_arg.__class__ is _MutableViewSumExpression:
+        if new_arg.__class__ is SumExpression or new_arg.__class__ is _MutableSumExpression:
             self._args_.extend( islice(new_arg._args_, new_arg._nargs) )
         elif not new_arg is None:
             self._args_.append(new_arg)
@@ -2677,7 +2696,7 @@ class LinearExpression(ExpressionBase):
             #    for c,v in zip(_other.linear_coefs, _other.linear_vars):
             #        self.linear_coefs.append(omult*c)
             #        self.linear_vars.append(v)
-            #elif _other.__class__ is ViewSumExpression or _other.__class__ is _MutableViewSumExpression:
+            #elif _other.__class__ is SumExpression or _other.__class__ is _MutableSumExpression:
             #    for e in _other._args_:
             #        for c,v in _decompose_linear_terms(e, multiplier=omult):
             #            if v is None:
@@ -2831,7 +2850,7 @@ def _decompose_linear_terms(expr, multiplier=1):
         #
         # NOTE: We're ignoring possible simplifications
         raise LinearDecompositionError("Unexpected nonlinear term")
-    elif expr.__class__ is ViewSumExpression or expr.__class__ is _MutableViewSumExpression:
+    elif expr.__class__ is SumExpression or expr.__class__ is _MutableSumExpression:
         for arg in expr.args:
             for term in _decompose_linear_terms(arg, multiplier):
                 yield term
@@ -2849,7 +2868,7 @@ def _decompose_linear_terms(expr, multiplier=1):
 
 
 def _process_arg(obj):
-    #if False and obj.__class__ is ViewSumExpression or obj.__class__ is _MutableViewSumExpression:
+    #if False and obj.__class__ is SumExpression or obj.__class__ is _MutableSumExpression:
     #    if ignore_entangled_expressions.detangle[-1] and obj._is_owned:
             #
             # If the viewsum expression is owned, then we need to
@@ -2948,11 +2967,11 @@ def _generate_sum_expression(etype, _self, _other):
         #
         # x + y
         #
-        if (_self.__class__ is ViewSumExpression and not _self._shared_args) or \
-           _self.__class__ is _MutableViewSumExpression:
+        if (_self.__class__ is SumExpression and not _self._shared_args) or \
+           _self.__class__ is _MutableSumExpression:
             return _self.add(_other)
-        elif (_other.__class__ is ViewSumExpression and not _other._shared_args) or \
-            _other.__class__ is _MutableViewSumExpression:
+        elif (_other.__class__ is SumExpression and not _other._shared_args) or \
+            _other.__class__ is _MutableSumExpression:
             return _other.add(_self)
         elif _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
@@ -2960,22 +2979,22 @@ def _generate_sum_expression(etype, _self, _other):
             elif _other == 0:
                 return _self
             if _self.is_potentially_variable():
-                return ViewSumExpression([_self, _other])
+                return SumExpression([_self, _other])
             return NPV_SumExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
             if _self == 0:
                 return _other
             if _other.is_potentially_variable():
-                #return _LinearViewSumExpression((_self, _other))
-                return ViewSumExpression([_self, _other])
+                #return _LinearSumExpression((_self, _other))
+                return SumExpression([_self, _other])
             return NPV_SumExpression((_self, _other))
         elif _other.is_potentially_variable():
-            #return _LinearViewSumExpression((_self, _other))
-            return ViewSumExpression([_self, _other])
+            #return _LinearSumExpression((_self, _other))
+            return SumExpression([_self, _other])
         elif _self.is_potentially_variable():
-            #return _LinearViewSumExpression((_other, _self))
-            #return ViewSumExpression([_other, _self])
-            return ViewSumExpression([_self, _other])
+            #return _LinearSumExpression((_other, _self))
+            #return SumExpression([_other, _self])
+            return SumExpression([_self, _other])
         else:
             return NPV_SumExpression((_self, _other))
 
@@ -2983,8 +3002,8 @@ def _generate_sum_expression(etype, _self, _other):
         #
         # x - y
         #
-        if (_self.__class__ is ViewSumExpression and not _self._shared_args) or \
-           _self.__class__ is _MutableViewSumExpression:
+        if (_self.__class__ is SumExpression and not _self._shared_args) or \
+           _self.__class__ is _MutableSumExpression:
             return _self.add(-_other)
         elif _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
@@ -2992,7 +3011,7 @@ def _generate_sum_expression(etype, _self, _other):
             elif _other == 0:
                 return _self
             if _self.is_potentially_variable():
-                return ViewSumExpression([_self, -_other])
+                return SumExpression([_self, -_other])
             return NPV_SumExpression((_self, -_other))
         elif _self.__class__ in native_numeric_types:
             if _self == 0:
@@ -3007,20 +3026,20 @@ def _generate_sum_expression(etype, _self, _other):
                     return NegationExpression((_other,))
                 return NPV_NegationExpression((_other,))
             elif _other.__class__ is MonomialTermExpression:
-                return ViewSumExpression([_self, MonomialTermExpression((-_other._args_[0], _other._args_[1]))])
+                return SumExpression([_self, MonomialTermExpression((-_other._args_[0], _other._args_[1]))])
             elif _other.is_variable_type():
-                return ViewSumExpression([_self, MonomialTermExpression((-1,_other))])
+                return SumExpression([_self, MonomialTermExpression((-1,_other))])
             elif _other.is_potentially_variable():
-                return ViewSumExpression([_self, NegationExpression((_other,))])
+                return SumExpression([_self, NegationExpression((_other,))])
             return NPV_SumExpression((_self, NPV_NegationExpression((_other,))))
         elif _other.__class__ is MonomialTermExpression:
-            return ViewSumExpression([_self, MonomialTermExpression((-_other._args_[0], _other._args_[1]))])
+            return SumExpression([_self, MonomialTermExpression((-_other._args_[0], _other._args_[1]))])
         elif _other.is_variable_type():
-            return ViewSumExpression([_self, MonomialTermExpression((-1,_other))])
+            return SumExpression([_self, MonomialTermExpression((-1,_other))])
         elif _other.is_potentially_variable():
-            return ViewSumExpression([_self, NegationExpression((_other,))])
+            return SumExpression([_self, NegationExpression((_other,))])
         elif _self.is_potentially_variable():
-            return ViewSumExpression([_self, NPV_NegationExpression((_other,))])
+            return SumExpression([_self, NPV_NegationExpression((_other,))])
         else:
             return NPV_SumExpression((_self, NPV_NegationExpression((_other,))))
 

@@ -610,7 +610,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         m.b = Var()
         e = m.a + m.b
         #
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.a)
         self.assertIs(e.arg(1), m.b)
@@ -637,7 +637,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         m.a = Var()
         e = m.a + 5
         #
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.a)
         self.assertIs(e.arg(1), 5)
@@ -645,7 +645,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
 
         e = 5 + m.a
         #
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), 5)
         self.assertIs(e.arg(1), m.a)
@@ -655,7 +655,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #
         # Check the structure of nested sums
         #
-        expectedType = EXPR.ViewSumExpression
+        expectedType = EXPR.SumExpression
 
         m = AbstractModel()
         m.a = Var()
@@ -716,7 +716,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e1 = m.a + m.b
         e = m.c + e1
         #
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual(e.nargs(), 3)
         self.assertIs(e.arg(0), m.a)
         self.assertIs(e.arg(1), m.b)
@@ -744,7 +744,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #
         # Check the structure of nested sums
         #
-        expectedType = EXPR.ViewSumExpression
+        expectedType = EXPR.SumExpression
 
         m = AbstractModel()
         m.a = Var()
@@ -823,7 +823,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e1 = m.a * 5
         e = e1 + m.b
         #
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0).arg(0), 5)
         self.assertIs(e.arg(0).arg(1), m.a)
@@ -837,7 +837,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #       a   5
         e = m.b + e1
         #
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.b)
         self.assertIs(e.arg(1).arg(0), 5)
@@ -852,7 +852,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e2 = m.b + m.c
         e = e1 + e2
         #
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual(e.nargs(), 3)
         self.assertIs(e.arg(0), m.b)
         self.assertIs(e.arg(1), m.c)
@@ -868,7 +868,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e2 = m.b + m.c
         e = e2 + e1
 
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual(e.nargs(), 3)
         self.assertIs(e.arg(0), m.b)
         self.assertIs(e.arg(1), m.c)
@@ -888,7 +888,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #   / \
         #  a   b
         e = m.a - m.b
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.a)
         self.assertIs(type(e.arg(1)), EXPR.MonomialTermExpression)
@@ -906,7 +906,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #   / \
         #  a   5
         e = m.a - 5
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.a)
         self.assertEqual(e.arg(1), -5)
@@ -916,7 +916,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #   / \
         #  5   a
         e = 5 - m.a
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), 5)
         self.assertIs(type(e.arg(1)), EXPR.MonomialTermExpression)
@@ -936,7 +936,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #   / \
         #  a   p
         e = m.a - m.p
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.a)
         self.assertIs(type(e.arg(1)), EXPR.NPV_NegationExpression)
@@ -947,7 +947,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #     / \
         #  m.p   a
         e = m.p - m.a
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.p)
         self.assertIs(type(e.arg(1)), EXPR.MonomialTermExpression)
@@ -996,7 +996,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
 
         e = 5 - 2*m.a
 
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual(e.arg(0), 5)
         self.assertIs(type(e.arg(1)), EXPR.MonomialTermExpression)
         self.assertEqual(e.arg(1).arg(0), -2)
@@ -1019,7 +1019,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #   a   b
         e1 = m.a - m.b
         e = e1 - 5
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertIs(e.arg(0), m.a)
         self.assertIs(e.arg(1).__class__, EXPR.MonomialTermExpression)
         self.assertIs(e.arg(1).arg(0), -1)
@@ -1034,7 +1034,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #       a   b
         e1 = m.a - m.b
         e = 5 - e1
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertIs(e.arg(0), 5)
         self.assertIs(type(e.arg(1)), EXPR.NegationExpression)
         self.assertIs(e.arg(1).arg(0), e1)
@@ -1047,7 +1047,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #   a   b
         e1 = m.a - m.b
         e = e1 - m.c
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertIs(e.arg(0), m.a)
         self.assertIs(e.arg(1).__class__, EXPR.MonomialTermExpression)
         self.assertEqual(e.arg(1).arg(0), -1)
@@ -1064,7 +1064,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #       a   b
         e1 = m.a - m.b
         e = m.c - e1
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertIs(e.arg(0), m.c)
         self.assertIs(type(e.arg(1)), EXPR.NegationExpression)
         self.assertIs(e.arg(1).arg(0), e1)
@@ -1078,7 +1078,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e1 = m.a - m.b
         e2 = m.c - m.d
         e = e1 - e2
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertIs(e.arg(0), m.a)
         self.assertIs(e.arg(1).arg(1), m.b)
         self.assertIs(e.arg(2).arg(0), e2)
@@ -1193,7 +1193,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #   a   5
         e1 = m.a * 5
         e = e1 - m.b
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertIs(e.arg(0), e1)
         self.assertIs(type(e.arg(1)), EXPR.MonomialTermExpression)
         self.assertEqual(e.arg(1).arg(0), -1)
@@ -1207,7 +1207,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #       a   5
         e1 = m.a * 5
         e = m.b - e1
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.b)
         self.assertIs(e.arg(1).arg(0), -5)
@@ -1222,7 +1222,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e1 = m.a * 5
         e2 = m.b - m.c
         e = e1 - e2
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertIs(e.arg(0), e1)
         self.assertIs(type(e.arg(1)), EXPR.NegationExpression)
         self.assertIs(e.arg(1).arg(0), e2)
@@ -1236,7 +1236,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e1 = m.a * 5
         e2 = m.b - m.c
         e = e2 - e1
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertIs(e.arg(0), m.b)
         self.assertIs(type(e.arg(1)), EXPR.MonomialTermExpression)
         self.assertEqual(e.arg(1).arg(0), -1)
@@ -1262,7 +1262,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #   a   5
         e1 = m.a * m.p
         e = e1 - m.b
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertIs(e.arg(0), e1)
         self.assertIs(type(e.arg(1)), EXPR.MonomialTermExpression)
         self.assertEqual(e.arg(1).arg(0), -1)
@@ -1276,7 +1276,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #       a   5
         e1 = m.a * m.p
         e = m.b - e1
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.b)
         self.assertIs(type(e.arg(1)), EXPR.MonomialTermExpression)
@@ -1293,7 +1293,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e1 = m.a * m.p
         e2 = m.b - m.c
         e = e1 - e2
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertIs(e.arg(0), e1)
         self.assertIs(type(e.arg(1)), EXPR.NegationExpression)
         self.assertIs(e.arg(1).arg(0), e2)
@@ -1307,7 +1307,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e1 = m.a * m.p
         e2 = m.b - m.c
         e = e2 - e1
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertIs(e.arg(0), m.b)
         self.assertIs(type(e.arg(1)), EXPR.MonomialTermExpression)
         self.assertEqual(e.arg(1).arg(0), -1)
@@ -1482,13 +1482,13 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(e), EXPR.ProductExpression)
         self.assertEqual(e.nargs(), 2)
 
-        self.assertIs(type(e.arg(0)), EXPR.ViewSumExpression)
+        self.assertIs(type(e.arg(0)), EXPR.SumExpression)
         self.assertIs(e.arg(0).nargs(), 3)
         self.assertIs(e.arg(0).arg(0), m.a)
         self.assertIs(e.arg(0).arg(1), m.b)
         self.assertIs(e.arg(0).arg(2), m.c)
 
-        self.assertIs(type(e.arg(1)), EXPR.ViewSumExpression)
+        self.assertIs(type(e.arg(1)), EXPR.SumExpression)
         self.assertIs(e.arg(1).nargs(), 2)
         self.assertIs(e.arg(1).arg(1), m.d)
         self.assertEqual(e.size(), 10)
@@ -1518,7 +1518,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e.arg(0).nargs(), 2)
         self.assertIs(e.arg(0).arg(0), m.c)
 
-        self.assertIs(type(e.arg(0).arg(1)), EXPR.ViewSumExpression)
+        self.assertIs(type(e.arg(0).arg(1)), EXPR.SumExpression)
         self.assertIs(e.arg(0).arg(1).nargs(), 2)
         self.assertIs(e.arg(0).arg(1).arg(0), m.a)
         self.assertIs(e.arg(0).arg(1).arg(1), m.b)
@@ -1527,7 +1527,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e.arg(1).nargs(), 2)
         self.assertIs(e.arg(1).arg(1), m.d)
 
-        self.assertIs(type(e.arg(1).arg(0)), EXPR.ViewSumExpression)
+        self.assertIs(type(e.arg(1).arg(0)), EXPR.SumExpression)
         self.assertIs(e.arg(1).arg(0).nargs(), 2)
         self.assertIs(e.arg(1).arg(0).arg(0), m.a)
         self.assertIs(e.arg(1).arg(0).arg(1), m.b)
@@ -2657,11 +2657,11 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         model.p = Param(mutable=True)
 
         expr = 5 + model.a + model.a
-        self.assertIs(type(expr), EXPR.ViewSumExpression)
+        self.assertIs(type(expr), EXPR.SumExpression)
         self.assertEqual("5 + a + a", str(expr))
 
         expr += 5
-        self.assertIs(type(expr), EXPR.ViewSumExpression)
+        self.assertIs(type(expr), EXPR.SumExpression)
         self.assertEqual("5 + a + a + 5", str(expr))
 
         expr = 2 + model.p
@@ -2817,15 +2817,15 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         self.assertEqual( "x - p*y", str(expr) )
 
         expr = m.x - m.p*m.y + 5
-        self.assertIs(type(expr), EXPR.ViewSumExpression)
+        self.assertIs(type(expr), EXPR.SumExpression)
         self.assertEqual( "x - p*y + 5", str(expr) )
 
         expr = m.x - m.p*m.y - 5
-        self.assertIs(type(expr), EXPR.ViewSumExpression)
+        self.assertIs(type(expr), EXPR.SumExpression)
         self.assertEqual( "x - p*y - 5", str(expr) )
 
         expr = m.x - m.p*m.y - 5 + m.p
-        self.assertIs(type(expr), EXPR.ViewSumExpression)
+        self.assertIs(type(expr), EXPR.SumExpression)
         self.assertEqual( "x - p*y - 5 + p", str(expr) )
 
     def test_expr_if(self):
@@ -3010,11 +3010,11 @@ class TestInplaceExpressionGeneration(unittest.TestCase):
         self.assertIs(type(x), type(m.a))
 
         x += m.a
-        self.assertIs(type(x), EXPR.ViewSumExpression)
+        self.assertIs(type(x), EXPR.SumExpression)
         self.assertEqual(x.nargs(), 2)
 
         x += m.b
-        self.assertIs(type(x), EXPR.ViewSumExpression)
+        self.assertIs(type(x), EXPR.SumExpression)
         self.assertEqual(x.nargs(), 3)
 
 
@@ -3031,15 +3031,15 @@ class TestInplaceExpressionGeneration(unittest.TestCase):
         self.assertEqual(x.nargs(), 2)
 
         x -= m.a
-        self.assertIs(type(x), EXPR.ViewSumExpression)
+        self.assertIs(type(x), EXPR.SumExpression)
         self.assertEqual(x.nargs(), 2)
 
         x -= m.a
-        self.assertIs(type(x), EXPR.ViewSumExpression)
+        self.assertIs(type(x), EXPR.SumExpression)
         self.assertEqual(x.nargs(), 3)
 
         x -= m.b
-        self.assertIs(type(x), EXPR.ViewSumExpression)
+        self.assertIs(type(x), EXPR.SumExpression)
         self.assertEqual(x.nargs(), 4)
 
     def test_imul(self):
@@ -3176,7 +3176,7 @@ class TestGeneralExpressionGeneration(unittest.TestCase):
         e = -e1
         self.assertIs(type(e), EXPR.NegationExpression)
         self.assertIs(e.arg(0), e1)
-        self.assertIs(type(e.arg(0)), EXPR.ViewSumExpression)
+        self.assertIs(type(e.arg(0)), EXPR.SumExpression)
 
         e1 = m.a * m.b
         e = -e1
@@ -3990,7 +3990,7 @@ class TestSummationExpression(unittest.TestCase):
     def test_summation4(self):
         e = sum_product(self.m.a, self.m.b)
         self.assertEqual( e(), 250 )
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual( id(self.m.a[1]), id(e.arg(0).arg(0)) )
         self.assertEqual( id(self.m.a[2]), id(e.arg(1).arg(0)) )
         self.assertEqual(e.size(), 16)
@@ -3998,7 +3998,7 @@ class TestSummationExpression(unittest.TestCase):
     def test_summation5(self):
         e = sum_product(self.m.b, denom=self.m.a)
         self.assertEqual( e(), 10 )
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual(e.size(), 21)
 
     def test_summation6(self):
@@ -4012,7 +4012,7 @@ class TestSummationExpression(unittest.TestCase):
     def test_summation7(self):
         e = sum_product(self.m.p, self.m.q, index=self.m.I)
         self.assertEqual( e(), 15 )
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual( e.nargs(), 5)
         self.assertEqual(e.size(), 16)
 
@@ -4021,7 +4021,7 @@ class TestSummationExpression(unittest.TestCase):
         e2 = sum_product(self.m.b)
         e = e1+e2
         self.assertEqual( e(), 75 )
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual( e.nargs(), 2)
         self.assertEqual(e.size(), 3)
 
@@ -4044,7 +4044,7 @@ class TestSumExpression(unittest.TestCase):
     def test_summation1(self):
         e = quicksum((self.m.a[i] for i in self.m.a), linear=False)
         self.assertEqual( e(), 25 )
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual( id(self.m.a[1]), id(e.arg(0)) )
         self.assertEqual( id(self.m.a[2]), id(e.arg(1)) )
         self.assertEqual(e.size(), 6)
@@ -4056,7 +4056,7 @@ class TestSumExpression(unittest.TestCase):
     def test_summation2(self):
         e = quicksum((self.m.p[i]*self.m.a[i] for i in self.m.a), linear=False)
         self.assertEqual( e(), 25 )
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual( id(self.m.a[1]), id(e.arg(0).arg(1)) )
         self.assertEqual( id(self.m.a[2]), id(e.arg(1).arg(1)) )
         self.assertEqual(e.size(), 16)
@@ -4068,7 +4068,7 @@ class TestSumExpression(unittest.TestCase):
     def test_summation3(self):
         e = quicksum((self.m.q[i]*self.m.a[i] for i in self.m.a), linear=False)
         self.assertEqual( e(), 75 )
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual( id(self.m.a[1]), id(e.arg(0).arg(1)) )
         self.assertEqual( id(self.m.a[2]), id(e.arg(1).arg(1)) )
         self.assertEqual(e.size(), 16)
@@ -4080,7 +4080,7 @@ class TestSumExpression(unittest.TestCase):
     def test_summation4(self):
         e = quicksum(self.m.a[i]*self.m.b[i] for i in self.m.a)
         self.assertEqual( e(), 250 )
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual( id(self.m.a[1]), id(e.arg(0).arg(0)) )
         self.assertEqual( id(self.m.a[2]), id(e.arg(1).arg(0)) )
         self.assertEqual(e.size(), 16)
@@ -4088,13 +4088,13 @@ class TestSumExpression(unittest.TestCase):
     def test_summation5(self):
         e = quicksum(self.m.b[i]/self.m.a[i] for i in self.m.a)
         self.assertEqual( e(), 10 )
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual(e.size(), 21)
 
     def test_summation6(self):
         e = quicksum((self.m.a[i]/self.m.p[i] for i in self.m.a), linear=False)
         self.assertEqual( e(), 25 )
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual( id(self.m.a[1]), id(e.arg(0).arg(1)) )
         self.assertEqual( id(self.m.a[2]), id(e.arg(1).arg(1)) )
         self.assertEqual(e.size(), 21)
@@ -4106,13 +4106,13 @@ class TestSumExpression(unittest.TestCase):
     def test_summation7(self):
         e = quicksum((self.m.p[i]*self.m.q[i] for i in self.m.I), linear=False)
         self.assertEqual( e(), 15 )
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
         self.assertEqual( e.nargs(), 5)
         self.assertEqual(e.size(), 16)
         #
         e = quicksum(self.m.p[i]*self.m.q[i] for i in self.m.I)
         self.assertEqual( e(), 15 )
-        self.assertIs(type(e), EXPR.ViewSumExpression)
+        self.assertIs(type(e), EXPR.SumExpression)
 
 
 class TestCloneExpression(unittest.TestCase):
@@ -4967,7 +4967,7 @@ class TestIsFixedIsConstant(unittest.TestCase):
         m = self.instance
 
         expr = m.a + m.b
-        self.assertIs(type(expr), EXPR.ViewSumExpression)
+        self.assertIs(type(expr), EXPR.SumExpression)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
         self.assertEqual(expr.is_potentially_variable(), True)
@@ -5317,15 +5317,15 @@ class TestLinearExpression(unittest.TestCase):
 
         with linear_expression as e:
             e += m.v[0]*m.v[1]
-            self.assertIs(e.__class__, EXPR.ViewSumExpression)
+            self.assertIs(e.__class__, EXPR.SumExpression)
 
         with linear_expression as e:
             e = e + m.v[0]*m.v[1]
-            self.assertIs(e.__class__, EXPR.ViewSumExpression)
+            self.assertIs(e.__class__, EXPR.SumExpression)
 
         with linear_expression as e:
             e = m.v[0]*m.v[1] + e
-            self.assertIs(e.__class__, EXPR.ViewSumExpression)
+            self.assertIs(e.__class__, EXPR.SumExpression)
 
     def test_mul_other(self):
         m = ConcreteModel()
@@ -5452,9 +5452,9 @@ class TestNonlinearExpression(unittest.TestCase):
 
         with nonlinear_expression as e:
             e_ = 2 + m.v[0]
-            self.assertIs(e_.__class__, EXPR.ViewSumExpression)
+            self.assertIs(e_.__class__, EXPR.SumExpression)
             e += e_
-            self.assertIs(e.__class__, EXPR._MutableViewSumExpression)
+            self.assertIs(e.__class__, EXPR._MutableSumExpression)
             self.assertEqual(e.nargs(), 2)
 
 
@@ -5530,13 +5530,13 @@ class TestLinearDecomp(unittest.TestCase):
         M.v = Var()
         M.w = Var()
         M.q = Param(initialize=2)
-        e = EXPR.ViewSumExpression([2])
+        e = EXPR.SumExpression([2])
         self.assertEqual(list(EXPR._decompose_linear_terms(e)), [(2,None)])
-        e = EXPR.ViewSumExpression([2,M.v])
+        e = EXPR.SumExpression([2,M.v])
         self.assertEqual(list(EXPR._decompose_linear_terms(e)), [(2,None), (1,M.v)])
-        e = EXPR.ViewSumExpression([2,M.q+M.v])
+        e = EXPR.SumExpression([2,M.q+M.v])
         self.assertEqual(list(EXPR._decompose_linear_terms(e)), [(2,None), (2,None), (1,M.v)])
-        e = EXPR.ViewSumExpression([2,M.q+M.v,M.w])
+        e = EXPR.SumExpression([2,M.q+M.v,M.w])
         self.assertEqual(list(EXPR._decompose_linear_terms(e)), [(2,None), (2,None), (1,M.v), (1,M.w)])
         
 
@@ -5604,13 +5604,13 @@ class Test_decompose_linear_terms(unittest.TestCase):
         M.v = Var()
         M.w = Var()
         M.q = Param(initialize=3)
-        e = EXPR.ViewSumExpression([2])
+        e = EXPR.SumExpression([2])
         self.assertEqual(EXPR.decompose_term(e), (True, [(2,None)]))
-        e = EXPR.ViewSumExpression([2,M.v])
+        e = EXPR.SumExpression([2,M.v])
         self.assertEqual(EXPR.decompose_term(e), (True, [(2,None), (1,M.v)]))
-        e = EXPR.ViewSumExpression([2,M.q+M.v])
+        e = EXPR.SumExpression([2,M.q+M.v])
         self.assertEqual(EXPR.decompose_term(e), (True, [(2,None), (3,None), (1,M.v)]))
-        e = EXPR.ViewSumExpression([2,M.q+M.v,M.w])
+        e = EXPR.SumExpression([2,M.q+M.v,M.w])
         self.assertEqual(EXPR.decompose_term(e), (True, [(2,None), (3,None), (1,M.v), (1,M.w)]))
 
     def test_linear(self):
@@ -5721,7 +5721,7 @@ class Test_pickle(unittest.TestCase):
         M.v = Var()
         M.w = Var()
         M.q = Param(initialize=3)
-        e = EXPR.ViewSumExpression([2,M.q+M.v,M.w])
+        e = EXPR.SumExpression([2,M.q+M.v,M.w])
         s = pickle.dumps(e)
         e_ = pickle.loads(s)
         flag, terms = EXPR.decompose_term(e_)
@@ -5843,14 +5843,14 @@ class TestExpressionSpecialMethods1(unittest.TestCase):
         M.e.expr = 3
         M.e += M.v
         self.assertEqual(M.e.nargs(), 1)
-        self.assertEqual(type(M.e.arg(0)), EXPR.ViewSumExpression)
+        self.assertEqual(type(M.e.arg(0)), EXPR.SumExpression)
         self.assertTrue(type(M.e.arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(M.e.arg(0).arg(1).is_variable_type())
 
         M.E[0].expr = 3
         M.E[0] += M.v
         self.assertEqual(M.E[0].nargs(), 1)
-        self.assertEqual(type(M.E[0].arg(0)), EXPR.ViewSumExpression)
+        self.assertEqual(type(M.E[0].arg(0)), EXPR.SumExpression)
         self.assertTrue(type(M.E[0].arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(M.E[0].arg(0).arg(1).is_variable_type())
 
@@ -5863,7 +5863,7 @@ class TestExpressionSpecialMethods1(unittest.TestCase):
         M.e.expr = 3
         M.e -= M.v
         self.assertEqual(M.e.nargs(), 1)
-        self.assertEqual(type(M.e.arg(0)), EXPR.ViewSumExpression)
+        self.assertEqual(type(M.e.arg(0)), EXPR.SumExpression)
         self.assertTrue(type(M.e.arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(type(M.e.arg(0).arg(1)) is EXPR.MonomialTermExpression)
         self.assertTrue(M.e.arg(0).arg(1).arg(1).is_variable_type())
@@ -5871,7 +5871,7 @@ class TestExpressionSpecialMethods1(unittest.TestCase):
         M.E[0].expr = 3
         M.E[0] -= M.v
         self.assertEqual(M.E[0].nargs(), 1)
-        self.assertEqual(type(M.E[0].arg(0)), EXPR.ViewSumExpression)
+        self.assertEqual(type(M.E[0].arg(0)), EXPR.SumExpression)
         self.assertTrue(type(M.E[0].arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(type(M.E[0].arg(0).arg(1)) is EXPR.MonomialTermExpression)
         self.assertTrue(M.E[0].arg(0).arg(1).arg(1).is_variable_type())
@@ -5949,7 +5949,7 @@ class TestExpressionSpecialMethods2(unittest.TestCase):
         e.expr = 3
         e += M.v
         self.assertEqual(e.nargs(), 1)
-        self.assertEqual(type(e.arg(0)), EXPR.ViewSumExpression)
+        self.assertEqual(type(e.arg(0)), EXPR.SumExpression)
         self.assertTrue(type(e.arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(e.arg(0).arg(1).is_variable_type())
 
@@ -5961,7 +5961,7 @@ class TestExpressionSpecialMethods2(unittest.TestCase):
         e.expr = 3
         e -= M.v
         self.assertEqual(e.nargs(), 1)
-        self.assertEqual(type(e.arg(0)), EXPR.ViewSumExpression)
+        self.assertEqual(type(e.arg(0)), EXPR.SumExpression)
         self.assertTrue(type(e.arg(0).arg(0)) in native_numeric_types)
         self.assertTrue(type(e.arg(0).arg(1)) is EXPR.MonomialTermExpression)
         self.assertEqual(e.arg(0).arg(1).arg(0), -1)

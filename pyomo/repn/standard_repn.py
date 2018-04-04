@@ -502,7 +502,7 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
         if len(nonl) == 1:
             ans.nonl = nonl[0]
         else:
-            ans.nonl = EXPR.ViewSumExpression(nonl)
+            ans.nonl = EXPR.SumExpression(nonl)
     return ans
 
 #@profile
@@ -847,7 +847,7 @@ def _collect_linear_sum(exp, multiplier, idMap, compute_values, verbose, quadrat
 
 
 _repn_collectors = {
-    EXPR.ViewSumExpression                      : _collect_sum,
+    EXPR.SumExpression                      : _collect_sum,
     EXPR.ProductExpression                      : _collect_prod,
     EXPR.MonomialTermExpression                         : _collect_term,
     EXPR.PowExpression                          : _collect_pow,
@@ -861,7 +861,7 @@ _repn_collectors = {
     EXPR.RangedExpression                       : _collect_comparison,
     EXPR.EqualityExpression                     : _collect_comparison,
     EXPR.ExternalFunctionExpression             : _collect_external_fn,
-    #EXPR.LinearViewSumExpression               : _collect_linear_sum,
+    #EXPR.LinearSumExpression               : _collect_linear_sum,
     #_ConnectorData          : _collect_linear_connector,
     #SimpleConnector         : _collect_linear_connector,
     #param._ParamData        : _collect_linear_const,
@@ -903,7 +903,7 @@ def _collect_standard_repn(exp, multiplier, idMap,
 
 
 def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None):
-    if expr.__class__ is EXPR.ViewSumExpression:
+    if expr.__class__ is EXPR.SumExpression:
         #
         # This is the common case, so start collecting the sum
         #
@@ -1216,7 +1216,7 @@ def _linear_collect_pow(exp, multiplier, idMap, compute_values, verbose, coef):
 
 
 _linear_repn_collectors = {
-    EXPR.ViewSumExpression                      : _linear_collect_sum,
+    EXPR.SumExpression                          : _linear_collect_sum,
     EXPR.ProductExpression                      : _linear_collect_prod,
     EXPR.MonomialTermExpression                 : _linear_collect_term,
     EXPR.PowExpression                          : _linear_collect_pow,
@@ -1230,7 +1230,7 @@ _linear_repn_collectors = {
     #EXPR.RangedExpression                       : _linear_collect_comparison,
     #EXPR.EqualityExpression                     : _linear_collect_comparison,
     #EXPR.ExternalFunctionExpression             : _linear_collect_external_fn,
-    ##EXPR.LinearViewSumExpression               : _collect_linear_sum,
+    ##EXPR.LinearSumExpression               : _collect_linear_sum,
     ##_ConnectorData          : _collect_linear_connector,
     ##SimpleConnector         : _collect_linear_connector,
     ##param._ParamData        : _collect_linear_const,

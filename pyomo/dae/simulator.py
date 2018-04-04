@@ -156,7 +156,7 @@ def _check_negationexpression(expr, i):
 def _check_sumexpression(expr, i):
     """
     Accepts an equality expression and an index value. Checks the
-    SumExpression at expr.arg(i) to see if it contains a
+    Sum expression at expr.arg(i) to see if it contains a
     :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>`. If so, return the
     GetItemExpression for the
     :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>` and the RHS. If not,
@@ -190,7 +190,7 @@ def _check_sumexpression(expr, i):
 def _check_viewsumexpression(expr, i):
     """
     Accepts an equality expression and an index value. Checks the
-    SumExpression at expr.arg(i) to see if it contains a
+    Sum expression at expr.arg(i) to see if it contains a
     :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>`. If so, return the
     GetItemExpression for the
     :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>` and the RHS. If not,
@@ -553,12 +553,12 @@ class Simulator:
                 # Case 5: m.dxdt[t] + sum(ELSE) = RHS
                 # or CONSTANT + m.dxdt[t] = RHS
                 if args is None:
-                    if type(tempexp.arg(0)) is EXPR.ViewSumExpression:
+                    if type(tempexp.arg(0)) is EXPR.SumExpression:
                         args = _check_viewsumexpression(tempexp, 0)
 
                 # Case 6: RHS = m.dxdt[t] + sum(ELSE)
                 if args is None:
-                    if type(tempexp.arg(1)) is EXPR.ViewSumExpression:
+                    if type(tempexp.arg(1)) is EXPR.SumExpression:
                         args = _check_viewsumexpression(tempexp, 1)
 
                 # Case 7: RHS = m.p*m.dxdt[t] + CONSTANT

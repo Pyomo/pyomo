@@ -140,19 +140,19 @@ def _build_op_template():
     _op_template[NumericConstant] = "n%r{C}\n"
     _op_comment[NumericConstant] = ""
 
-    _op_template[EXPR._SumExpression] = (
+    _op_template[EXPR.SumExpressionBase] = (
         "o54{C}\n%d\n", # nary +
         "o0{C}\n",      # +
         "o2\n" + _op_template[NumericConstant] ) # * coef
-    _op_comment[EXPR._SumExpression] = ("\t#sumlist", # nary +
+    _op_comment[EXPR.SumExpressionBase] = ("\t#sumlist", # nary +
                                         "\t#+",       # +
                                         _op_comment[NumericConstant]) # * coef
     if _using_pyomo5_trees:
         _op_template[EXPR.NegationExpression] = "o16{C}\n"
         _op_comment[EXPR.NegationExpression] = "\t#-"
     elif _using_pyomo4_trees:
-        _op_template[EXPR._LinearExpression] = _op_template[EXPR._SumExpression]
-        _op_comment[EXPR._LinearExpression] = _op_comment[EXPR._SumExpression]
+        _op_template[EXPR._LinearExpression] = _op_template[EXPR.SumExpressionBase]
+        _op_comment[EXPR._LinearExpression] = _op_comment[EXPR.SumExpressionBase]
 
         _op_template[EXPR._NegationExpression] = "o16{C}\n"
         _op_comment[EXPR._NegationExpression] = "\t#-"
@@ -419,7 +419,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             # be a list of tuples where [0] is the coeff and [1] is
             # the expr to write
             nary_sum_str, binary_sum_str, coef_term_str = \
-                self._op_string[EXPR._SumExpression]
+                self._op_string[EXPR.SumExpressionBase]
             n = len(exp)
             if n > 2:
                 OUTPUT.write(nary_sum_str % (n))
@@ -455,9 +455,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
             # We are assuming that _Constant_* expression objects
             # have been preprocessed to form constant values.
             #
-            elif exp.__class__ is EXPR.ViewSumExpression:
+            elif exp.__class__ is EXPR.SumExpression:
                 nary_sum_str, binary_sum_str, coef_term_str = \
-                    self._op_string[EXPR._SumExpression]
+                    self._op_string[EXPR.SumExpressionBase]
                 n = exp.nargs()
                 const = 0
                 vargs = []
@@ -478,8 +478,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     for child_exp in vargs:
                         self._print_nonlinear_terms_NL(child_exp)
                 
-            elif exp_type is EXPR._SumExpression:
-                nary_sum_str, binary_sum_str, coef_term_str = self._op_string[EXPR._SumExpression]
+            elif exp_type is EXPR.SumExpressionBase:
+                nary_sum_str, binary_sum_str, coef_term_str = self._op_string[EXPR.SumExpressionBase]
                 OUTPUT.write(binary_sum_str)
                 self._print_nonlinear_terms_NL(exp.arg(0))
                 self._print_nonlinear_terms_NL(exp.arg(1))
@@ -1541,7 +1541,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                              % (wrapped_repn.repn.constant))
             else:
                 if wrapped_repn.repn.constant != 0:
-                    _, binary_sum_str, _ = self._op_string[EXPR._SumExpression]
+                    _, binary_sum_str, _ = self._op_string[EXPR.SumExpressionBase]
                     OUTPUT.write(binary_sum_str)
                     OUTPUT.write(self._op_string[NumericConstant]
                                  % (wrapped_repn.repn.constant))
