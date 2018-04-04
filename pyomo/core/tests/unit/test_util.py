@@ -115,8 +115,36 @@ class Test(unittest.TestCase):
         OUTPUT.close()
         self.assertFileEqualsBaseline(currdir+"test_expr5.out",currdir+"test_expr5.txt")
 
-    def test_prod(self):
+    def test_prod1(self):
         self.assertEqual(prod([1,2,3,5]),30)
+
+    def test_prod2(self):
+        model = ConcreteModel()
+        model.A = Set(initialize=[1,2,3], doc='set A')
+        model.x = Var(model.A)
+        expr = prod(model.x[i] for i in model.x)
+        baseline = "x[1]*x[2]*x[3]"
+        self.assertEqual( str(expr), baseline )
+        expr = prod(model.x)
+        self.assertEqual( expr, 6)
+
+    def test_sum1(self):
+        self.assertEqual(quicksum([1,2,3,5]),11)
+
+    def test_sum2(self):
+        model = ConcreteModel()
+        model.A = Set(initialize=[1,2,3], doc='set A')
+        model.x = Var(model.A)
+        expr = quicksum(model.x[i] for i in model.x)
+        baseline = "x[1] + x[2] + x[3]"
+        self.assertEqual( str(expr), baseline )
+
+    def test_sum3(self):
+        model = ConcreteModel()
+        model.A = Set(initialize=[1,2,3], doc='set A')
+        model.x = Var(model.A)
+        expr = quicksum(model.x)
+        self.assertEqual( expr, 6)
 
     def test_summation_error1(self):
         try:

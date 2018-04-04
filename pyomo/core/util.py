@@ -82,7 +82,14 @@ def quicksum(args, start=0, linear=None):
             #
             # Get the first term, which we will test for linearity
             #
-            first = next(args, None)
+            try:
+                first = next(args, None)
+            except:
+                try:
+                    args = args.__iter__()
+                    first = next(args, None)
+                except:
+                    raise RuntimeError("The argument to quicksum() is not iterable!")
             if first is None:
                 return start
             #
