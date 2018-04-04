@@ -54,6 +54,43 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
     pyomo.util.plugin.alias('gdpopt',
                             doc='The GDPopt decomposition-based GDP solver')
 
+    CONFIG = ConfigBlock("GDPopt")
+    CONFIG.declare("bound_tolerance", ConfigValue(
+        default=1E-6, domain=NonNegativeFloat,
+        description="Tolerance for bound convergence."
+    ))
+    CONFIG.declare("iterlim", ConfigValue(
+        default=30, domain=NonNegativeInt,
+        description="Iteration limit."
+    ))
+    CONFIG.declare("strategy", ConfigValue(
+        default="LOA", domain=In(["LOA"]),
+        description="Decomposition strategy to use."
+    ))
+    CONFIG.declare("init_strategy", ConfigValue(
+        default="set_covering", domain=In(["set_covering"]),
+        description="Initialization strategy to use."
+        doc="""Selects the initialization strategy to use when generating
+        the initial cuts to construct the master problem."""
+    ))
+    CONFIG.declare("custom_init_disjuncts", ConfigList(
+        #domain=ComponentSet of Disjuncts,
+        default=None,
+        description="List of disjunct sets to use for initialization."
+    ))
+    CONFIG.declare("max_slack", ConfigValue(
+        default=1000, domain=NonNegativeFloat,
+        description="Upper bound on slack variables for OA"
+    ))
+    CONFIG.declare("OA_penalty", ConfigValue(
+        default=1000, domain=NonNegativeFloat,
+        description="Penalty multiplication term for slack variables on the "
+        "objective value."
+    ))
+    CONFIG.declare("nlp", ConfigValue(default="ipopt"))
+    # TODO how do I do this?
+    CONFIG.declare("nlp_options", ConfigBlock())
+
     def available(self, exception_flag=True):
         """Check if solver is available.
 
