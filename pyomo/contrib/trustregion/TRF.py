@@ -16,18 +16,18 @@ from pyomo.contrib.trustregion.PyomoInterface import PyomoInterface, ROMType
 def TRF(m,eflist):
     """
     The main function of the Trust Region Filter algorithm
-    
+
     m is a PyomoModel containing ExternalFunction() objects
     Model requirements: m is a nonlinear program, with exactly one active objective function.
-    
-    eflist is a list of ExternalFunction objects that should be treated with the 
-    trust region 
+
+    eflist is a list of ExternalFunction objects that should be treated with the
+    trust region
 
 
     Return:
-    model is solved, variables are at optimal solution or other exit condition. 
-    model is left in reformulated form, with some new variables introduced 
-    in a block named "tR" TODO: reverse the transformation. 
+    model is solved, variables are at optimal solution or other exit condition.
+    model is left in reformulated form, with some new variables introduced
+    in a block named "tR" TODO: reverse the transformation.
     """
 
 
@@ -77,11 +77,11 @@ def TRF(m,eflist):
                 problem.romtype = ROMType.linear
             else:
                 problem.romtype = DEFAULT_ROMTYPE
-            
+
             romParam, yr = problem.buildROM(x, sampleRadius)
             #print romParam
             #print sampleRadius
-            
+
 
 
         # Criticality Check
@@ -106,14 +106,14 @@ def TRF(m,eflist):
                 break
             else:
                 subopt_flag = True
-        else: 
+        else:
             # This condition holds for iteration 0, which will declare the boolean subopt_flag
             subopt_flag = False
 
 
         # New criticality phase
         if not sampleregion_yn:
-            sampleRadius = trustRadius/2.0  
+            sampleRadius = trustRadius/2.0
             if sampleRadius > chik * CRITICALITY_CHECK:
                 sampleRadius = sampleRadius/10.0
             trustRadius = sampleRadius*2
@@ -130,8 +130,8 @@ def TRF(m,eflist):
             flag, obj = problem.compatibilityCheck(
                 x, y, z, xk, yk, zk, romParam, radius, COMPAT_PENALTY)
         except:
-    	   print "Compatibility check failed, unknown error"
-    	   raise
+            print "Compatibility check failed, unknown error"
+            raise
 
         if not flag:
             raise Exception("Compatibility check fails!\n")
@@ -161,14 +161,14 @@ def TRF(m,eflist):
 
         else:
 
-            # Solve TRSP_k 
+            # Solve TRSP_k
             flag, obj = problem.TRSPk(x, y, z, xk, yk, zk, romParam, trustRadius)
             if not flag:
                 raise Exception("TRSPk fails!\n")
 
             # Filter
             yr = problem.evaluateDx(x)
-             
+
             stepNorm = norm(packXYZ(x-xk,y-yk,z-zk),inf)
             logger.setCurIter(stepNorm=stepNorm)
 

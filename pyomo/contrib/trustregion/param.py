@@ -7,15 +7,15 @@
 # CONFIG = ConfigBlock('Trust Region')
 
 # CONFIG.declare('trust radius', ConfigValue(
-# 	default=1,
-# 	domain=_positiveFloat,
-# 	description='short description',
-# 	doc='long documentation'))
+#     default=1,
+#     domain=_positiveFloat,
+#     description='short description',
+#     doc='long documentation'))
 # CONFIG.declare('sample region', ConfigValue(
-# 	default=True,
-# 	domain=bool,
-# 	description='short description',
-# 	doc='long documentation'))
+#     default=True,
+#     domain=bool,
+#     description='short description',
+#     doc='long documentation'))
 
 
 # Initialization
@@ -23,9 +23,9 @@ TRUST_RADIUS = 1
 SAMPLEREGION_YN = True
 
 if SAMPLEREGION_YN:
-	SAMPLE_RADIUS = 0.1
+    SAMPLE_RADIUS = 0.1
 else:
-	SAMPLE_RADIUS = TRUST_RADIUS/2
+    SAMPLE_RADIUS = TRUST_RADIUS/2
 
 RADIUS_MAX = 1000*TRUST_RADIUS
 

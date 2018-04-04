@@ -8,16 +8,16 @@ def load():
 
 class TrustRegionSolver(plugin.Plugin):
     """
-    A trust region filter method for black box / glass box optimizaiton 
+    A trust region filter method for black box / glass box optimizaiton
     Solves nonlinear optimization problems containing external function calls
-    through automatic construction of reduced models (ROM), also known as 
-    surrogate models. 
+    through automatic construction of reduced models (ROM), also known as
+    surrogate models.
     Currently implements linear and quadratic reduced models.
     See Eason, Biegler (2016) AIChE Journal for more details
 
     Arguments:
-    """ 
-	#	+ param.CONFIG.generte_yaml_template()
+    """
+    #    + param.CONFIG.generte_yaml_template()
 
     plugin.implements(IOptSolver)
     plugin.alias(

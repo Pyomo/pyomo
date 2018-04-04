@@ -15,7 +15,7 @@ class TestPyomoInterfaceInitialization(unittest.TestCase):
         m.x = Var(range(2))
         for i in range(2):
             m.x[i] = 2.0
-        m.obj = Objective(expr= (m.z[0]-1.0)**2 + (m.z[0]-m.z[1])**2 + (m.z[2]-1.0)**2 + (m.x[0]-1.0)**4 + (m.x[1]-1.0)**6) 
+        m.obj = Objective(expr= (m.z[0]-1.0)**2 + (m.z[0]-m.z[1])**2 + (m.z[2]-1.0)**2 + (m.x[0]-1.0)**4 + (m.x[1]-1.0)**6)
         m.c2 = Constraint(expr=m.z[2]**4 * m.z[1]**2 + m.z[1] == 8+sqrt(2.0))
         self.m = m
 

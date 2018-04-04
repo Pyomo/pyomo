@@ -17,13 +17,13 @@ class ROMType:
 
 class PyomoInterface:
     '''
-    Initialize with a pyomo model m. 
+    Initialize with a pyomo model m.
     This is used in TRF.py, same requirements for m apply
 
     m is reformulated into form for use in TRF algorithm
 
     Specified ExternalFunction() objects are replaced with new variables
-    All new attributes (including these variables) are stored on block 
+    All new attributes (including these variables) are stored on block
     "tR"
 
 
@@ -38,7 +38,7 @@ class PyomoInterface:
     keepfiles = False  # True prints intermediate file names (.nl,.sol,...)
     countDx = -1
     romtype = ROMType.linear
-    
+
     def __init__(self, m, eflist):
 
         self.model = m;
@@ -58,17 +58,17 @@ class PyomoInterface:
     def substituteEF(self,expr,trf,efSet):
     # Substitute out an External Function
     #
-    # Arguments: 
+    # Arguments:
     # expr : a pyomo expression. We will search this expression tree
     # trf : a pyomo block. We will add tear variables y on this block
     # efSet: the (pyomo) set of external functions for which we will use TRF method
-    # 
-    # This function returns an expression after removing any ExternalFunction 
-    # in the set efSet from the expression tree expr. New variables are declared on 
-    # the trf block and replace the external function. 
+    #
+    # This function returns an expression after removing any ExternalFunction
+    # in the set efSet from the expression tree expr. New variables are declared on
+    # the trf block and replace the external function.
 
     ## Recursive calls of external function won't work, but won't raise an exception!!!!!!!
-                 
+
         stack = [(None, [expr], 0, 1)]
         while stack:
             _node, _args, _idx, _len = stack.pop()
@@ -97,12 +97,12 @@ class PyomoInterface:
                                 ans.append(_arg)
                             else:
                                 raise Exception("We do not support a black box with duplicate input arguments\n")
-                        else:       
+                        else:
                             #TODO: Support constants and paramters here!
                             raise Exception("We do not support a black box with constant or parameter inputs\n")
 
                     trf.exfn_xvars.append(ans)
-                    
+
                     if type(_args) is list:
                         # This covers the special case of _ProductExpression's numerator/denominator
                         _args[_idx-1] = _y
@@ -132,7 +132,7 @@ class PyomoInterface:
         #
         # Arguments:
         # model : pyomo model containing ExternalFunctions
-        # eflist : a list of the external functions that will be 
+        # eflist : a list of the external functions that will be
         #   handled with TRF method rather than calls to compiled code
 
         efSet = set([id(x) for x in eflist])
@@ -155,8 +155,8 @@ class PyomoInterface:
         TRF.conset = ConstraintList()
         TRF.external_fcns = []
         TRF.exfn_xvars = []
-        
-        # TODO: Copy constraints onto block so that transformation can be reversed. 
+
+        # TODO: Copy constraints onto block so that transformation can be reversed.
 
         for con in model.component_data_objects(Constraint,active=True):
             con.set_value((con.lower, self.substituteEF(con.body,TRF,efSet), con.upper))
@@ -165,14 +165,14 @@ class PyomoInterface:
             ## Assume only one ative objective function here
             self.objective=obj
 
-        
+
         if self.objective.sense == maximize:
             self.objective.expr = -1* self.objective.expr
             self.objective.sense = minimize
 
 
 
-        # xvars and zvars are lists of x and z varibles as in the paper 
+        # xvars and zvars are lists of x and z varibles as in the paper
         TRF.xvars = []
         TRF.zvars = []
         seenVar = Set()
@@ -180,7 +180,7 @@ class PyomoInterface:
             for var in varss:
                 if id(var) not in seenVar:
                     seenVar.add(id(var))
-                    TRF.xvars.append(var)   
+                    TRF.xvars.append(var)
 
         for var in allVariables:
             if id(var) not in seenVar:
@@ -202,9 +202,9 @@ class PyomoInterface:
 
         return TRF
 
-    # TODO: 
+    # TODO:
     # def reverseTransform(self):
-    #     # After solving the problem, return the 
+    #     # After solving the problem, return the
     #     # model back to the original form, and delete
     #     # all add-on structures
     #     for conobj in self.TRF.changed_objects:
@@ -295,7 +295,7 @@ class PyomoInterface:
             self.TRF.zvarlo.append(z.lb)
             self.TRF.zvarup.append(z.ub)
 
-    
+
     def setParam(self,x0=None,y0=None,z0=None,rom_params=None, penaltyComp = None):
         if x0 is not None:
             for i in range(self.lx):
@@ -320,7 +320,7 @@ class PyomoInterface:
                         self.TRF.pqrom[i,j] = rom_params[i][j]
 
         # if penaltyComp is not None:
-        #     self.TRF.ppenaltyComp.set_value(penaltyComp) 
+        #     self.TRF.ppenaltyComp.set_value(penaltyComp)
 
     def setVarValue(self, x=None, y=None, z=None):
         if x is not None:
@@ -356,7 +356,7 @@ class PyomoInterface:
 
 
     def evaluateDx(self,x):
-        # This is messy, currently redundant with 
+        # This is messy, currently redundant with
         # some lines in buildROM()
         self.countDx += 1
         ans = []
@@ -404,7 +404,7 @@ class PyomoInterface:
         opt = SolverFactory(self.solver, solver_io=self.solver_io)
         opt.options['halt_on_ampl_error'] = 'yes'
         opt.options['max_iter'] = 5000
-        
+
         results = opt.solve(
             model, keepfiles=self.keepfiles, tee=self.stream_solver)
 
@@ -420,12 +420,12 @@ class PyomoInterface:
 
             for obj in model.component_data_objects(Objective,active=True):
                 return True, obj()
-            
+
         else:
             print "Waring: solver Status: " + str(results.solver.status)
             print "And Termination Conditions: " + str(results.solver.termination_condition)
             return False, 0
-            
+
     def TRSPk(self, x, y, z, x0, y0, z0, rom_params, radius):
 
         if(len(x) != self.lx or len(y) != self.ly or len(z) != self.lz or

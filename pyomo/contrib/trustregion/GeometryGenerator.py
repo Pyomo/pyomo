@@ -17,7 +17,7 @@ for lx in range(16,MAX_LX):
     for i in range(0,NUM_ROM_SEEDS):
         pset = np.random.multivariate_normal(x1,np.eye(lx),dim-1)
         for j in range(dim-1):
-            pset[j] = pset[j]/np.linalg.norm(pset[j]) 
+            pset[j] = pset[j]/np.linalg.norm(pset[j])
         pset = np.append(pset,[x1],axis=0)
         mat = []
         for p in pset:
