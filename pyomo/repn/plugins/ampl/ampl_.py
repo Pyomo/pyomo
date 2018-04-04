@@ -118,8 +118,8 @@ def _build_op_template():
         _op_template[opname] = _intrinsic_function_operators[opname]+"{C}\n"
         _op_comment[opname] = "\t#"+opname
 
-    _op_template[EXPR.Expr_if] = "o35{C}\n"
-    _op_comment[EXPR.Expr_if] = "\t#if"
+    _op_template[EXPR.Expr_ifExpression] = "o35{C}\n"
+    _op_comment[EXPR.Expr_ifExpression] = "\t#if"
 
     _op_template[EXPR.InequalityExpression] = ("o21{C}\n", # and
                                                 "o22{C}\n", # <
@@ -544,8 +544,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                     % (exp.name))
                 self._print_nonlinear_terms_NL(exp.arg(0))
 
-            elif exp_type is EXPR.Expr_if:
-                OUTPUT.write(self._op_string[EXPR.Expr_if])
+            elif exp_type is EXPR.Expr_ifExpression:
+                OUTPUT.write(self._op_string[EXPR.Expr_ifExpression])
                 self._print_nonlinear_terms_NL(exp._if)
                 self._print_nonlinear_terms_NL(exp._then)
                 self._print_nonlinear_terms_NL(exp._else)
