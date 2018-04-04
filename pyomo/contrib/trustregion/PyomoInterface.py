@@ -234,7 +234,7 @@ class PyomoInterface:
         self.TRF.py0 = Param(self.TRF.ind_ly,mutable=True,default=0)
         self.TRF.pz0 = Param(self.TRF.ind_lz,mutable=True,default=0)
         self.TRF.plrom = Param(self.TRF.ind_ly,range(self.lx+1),mutable=True,default=0)
-        self.TRF.pqrom = Param(self.TRF.ind_ly,range((self.lx*self.lx+self.lx*3)/2 + 1),mutable=True,default=0)
+        self.TRF.pqrom = Param(self.TRF.ind_ly,range(int((self.lx*self.lx+self.lx*3)/2. + 1)),mutable=True,default=0)
         self.TRF.ppenaltyComp = Param(mutable=True,default=0)
 
 
@@ -422,8 +422,8 @@ class PyomoInterface:
                 return True, obj()
 
         else:
-            print "Waring: solver Status: " + str(results.solver.status)
-            print "And Termination Conditions: " + str(results.solver.termination_condition)
+            print("Waring: solver Status: " + str(results.solver.status))
+            print("And Termination Conditions: " + str(results.solver.termination_condition))
             return False, 0
 
     def TRSPk(self, x, y, z, x0, y0, z0, rom_params, radius):
@@ -479,7 +479,7 @@ class PyomoInterface:
             l.v[i].setub(1.0)
         if worstcase:
             if M.all() == 0.0:
-                print 'WARNING: worstcase criticality was requested but Jacobian error bound is zero'
+                print('WARNING: worstcase criticality was requested but Jacobian error bound is zero')
             l.t = Var(range(0, self.ly), domain=Reals)
             for i in range(0, self.ly):
                 l.t[i].setlb(-M[i])
@@ -547,8 +547,8 @@ class PyomoInterface:
             else:
                 return True, abs(l.obj())
         else:
-            print "Waring: Crticality check fails with solver Status: " + str(results.solver.status)
-            print "And Termination Conditions: " + str(results.solver.termination_condition)
+            print("Waring: Crticality check fails with solver Status: " + str(results.solver.status))
+            print("And Termination Conditions: " + str(results.solver.termination_condition))
             return False, infinity
 
 

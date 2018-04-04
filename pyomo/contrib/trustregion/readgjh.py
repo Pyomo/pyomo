@@ -16,7 +16,7 @@ def readgjh():
 
         flag = flag+1
         if flag > 1:
-            print "**** WARNING **** More than one gjh file in current directory"
+            print("**** WARNING **** More than one gjh file in current directory")
 
         f = open(file,"r")
 
@@ -57,7 +57,7 @@ def readgjh():
 
         flag = flag +1
         if flag > 1:
-            print "**** WARNING **** More than one .col file in current directory"
+            print("**** WARNING **** More than one .col file in current directory")
 
         f = open(file,"r")
         data = f.read()
@@ -70,7 +70,7 @@ def readgjh():
 
         flag = flag +1
         if flag > 1:
-            print "**** WARNING **** More than one .row file in current directory"
+            print("**** WARNING **** More than one .row file in current directory")
 
         f = open(file,"r")
         data = f.read()

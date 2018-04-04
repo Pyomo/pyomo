@@ -54,11 +54,11 @@ def TRF(m,eflist):
     while True:
         if(iteration>=0):
             logger.printIteration(iteration)
-            #print xk
+            #print(xk)
         # increment iteration counter
         iteration = iteration + 1
         if(iteration > MAXIT):
-            print "EXIT: Maxmium iterations\n"
+            print("EXIT: Maxmium iterations\n")
             break
 
         ######  Why is this here ###########
@@ -79,8 +79,8 @@ def TRF(m,eflist):
                 problem.romtype = DEFAULT_ROMTYPE
 
             romParam, yr = problem.buildROM(x, sampleRadius)
-            #print romParam
-            #print sampleRadius
+            #print(romParam)
+            #print(sampleRadius)
 
 
 
@@ -95,14 +95,14 @@ def TRF(m,eflist):
 
         # Check for Termination
         if thetak < EP_I and chik < EP_CHI and sampleRadius < EP_DELT:
-            print "EXIT: OPTIMAL SOLUTION FOUND"
+            print("EXIT: OPTIMAL SOLUTION FOUND")
             break
 
         # If trust region very small and no progress is being made, terminate
         # The following condition must hold for two consecutive iterations.
         if trustRadius <= DELTMIN and thetak < EP_I:
             if subopt_flag:
-                print "EXIT: FEASIBLE SOLUTION FOUND "
+                print("EXIT: FEASIBLE SOLUTION FOUND ")
                 break
             else:
                 subopt_flag = True
@@ -130,7 +130,7 @@ def TRF(m,eflist):
             flag, obj = problem.compatibilityCheck(
                 x, y, z, xk, yk, zk, romParam, radius, COMPAT_PENALTY)
         except:
-            print "Compatibility check failed, unknown error"
+            print("Compatibility check failed, unknown error")
             raise
 
         if not flag:

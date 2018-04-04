@@ -34,10 +34,10 @@ for lx in range(16,MAX_LX):
             psetOpt = pset
             matOpt = mat
     if(condOpt == MAX_CONDITION):
-        print "Warning: lx = %d failed in initialization!\n" % lx
+        print("Warning: lx = %d failed in initialization!\n" % lx)
     else:
         np.savetxt('QradROMGeo/geo%d.out'% lx, psetOpt)
-        print "Condition number: lx = %d is %f\n" % (lx,condOpt)
+        print("Condition number: lx = %d is %f\n" % (lx,condOpt))
 
 
 

@@ -9,8 +9,8 @@ class IterLog:
     #         printmodel(romParam[i],problem.lx,problem.romtype)
     #
     # # Include the following in medium printlevel
-    # print "romtype = ", problem.romtype
-    # print romParam
+    # print("romtype = ", problem.romtype)
+    # print(romParam)
     # stepNorm
 
     def __init__(self, iteration,xk,yk,zk):
@@ -46,27 +46,27 @@ class IterLog:
         """
         TODO: set a PrintLevel param to control the print level.
         """
-        print "\n**************************************"
-        print "Iteration %d:" % self.iteration
+        print("\n**************************************")
+        print("Iteration %d:" % self.iteration)
         if PRINT_VARS:
-            print packXYZ(self.xk, self.yk, self.zk)
-        print "thetak = %e" % self.thetak
-        print "objk = %e" % self.objk
-        print "trustRadius = %e" % self.trustRadius
-        print "sampleRadius = %f" % self.sampleRadius
-        print "stepNorm = %f" % self.stepNorm
-        print "chi = %e" % self.chik
+            print(packXYZ(self.xk, self.yk, self.zk))
+        print("thetak = %e" % self.thetak)
+        print("objk = %e" % self.objk)
+        print("trustRadius = %e" % self.trustRadius)
+        print("sampleRadius = %f" % self.sampleRadius)
+        print("stepNorm = %f" % self.stepNorm)
+        print("chi = %e" % self.chik)
         if self.fStep:
-            print "f-type step"
+            print("f-type step")
         if self.thetaStep:
-            print "theta-type step"
+            print("theta-type step")
         if self.rejected:
-            print "step rejected"
+            print("step rejected")
         if self.restoration:
-            print "RESTORATION"
+            print("RESTORATION")
         if self.criticality:
-            print "criticality test update"
-        print "**************************************\n"
+            print("criticality test update")
+        print("**************************************\n")
 
 
 class Logger:
@@ -83,4 +83,4 @@ class Logger:
     def printVectors(self):
         for x in self.iters:
             dis = norm(packXYZ(x.xk-self.iterlog.xk,x.yk-self.iterlog.yk,x.zk-self.iterlog.zk),np.inf)
-            print str(x.iteration)+"\t"+str(x.thetak)+"\t"+str(x.objk)+"\t"+str(x.chik)+"\t"+str(x.trustRadius)+"\t"+str(x.sampleRadius)+"\t"+str(x.stepNorm)+"\t"+str(dis)
+            print(str(x.iteration)+"\t"+str(x.thetak)+"\t"+str(x.objk)+"\t"+str(x.chik)+"\t"+str(x.trustRadius)+"\t"+str(x.sampleRadius)+"\t"+str(x.stepNorm)+"\t"+str(dis))
