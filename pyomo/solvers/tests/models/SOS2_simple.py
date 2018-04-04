@@ -50,9 +50,9 @@ class SOS2_simple(_BaseTestModel):
         model.c1.add((0.0, model.lmbda[2], 1.0))
         model.c1.add(0.0 <= model.lmbda[3])
         model.c2 = SOSConstraint(var=model.lmbda, index=[1,2,3], sos=2)
-        model.c3 = Constraint(expr=summation(model.lmbda) == 1)
-        model.c4 = Constraint(expr=model.f==summation(model.fi,model.lmbda))
-        model.c5 = Constraint(expr=model.x==summation(model.xi,model.lmbda))
+        model.c3 = Constraint(expr=sum_product(model.lmbda) == 1)
+        model.c4 = Constraint(expr=model.f==sum_product(model.fi,model.lmbda))
+        model.c5 = Constraint(expr=model.x==sum_product(model.xi,model.lmbda))
         model.x = 2.75
         model.x.fixed = True
 

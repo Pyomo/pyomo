@@ -29,13 +29,13 @@ def pipe_rule(pipe, i):
 
 def node_rule(node, i):
     def _mass_balance(node, flows):
-        return node.model().demands[i] == summation(flows)
+        return node.model().demands[i] == sum_product(flows)
 
     node.flow = VarList()
     node.pressure = Var( within=NonNegativeReals )
     node.port = Connector()
     #node.port.add(node.flow,
-    #              aggregate=lambda n,v: n.model().demands[id] == summation(v))
+    #              aggregate=lambda n,v: n.model().demands[id] == sum_product(v))
     node.port.add( node.flow, aggregate=_mass_balance )
     node.port.add( node.pressure )
 

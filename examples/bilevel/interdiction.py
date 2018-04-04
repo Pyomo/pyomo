@@ -74,7 +74,7 @@ def o_rule(model):
 model.o = Objective(rule=o_rule, sense=maximize)
 # Limit the total interdiction cost
 def interdictions_rule(model):
-    return summation(model.r, model.x) <= model.Gamma
+    return sum_product(model.r, model.x) <= model.Gamma
 model.interdictions = Constraint()
 
 # Create a submodel.  The argument indicates the upper-level 

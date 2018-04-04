@@ -46,7 +46,7 @@ def linear(flag):
         expr=quicksum(model.x[i] for i in model.A)
 
     elif flag == 1:
-        expr = summation(model.p, model.x)
+        expr = sum_product(model.p, model.x)
     elif flag == 6:
         expr=quicksum((model.p[i]*model.x[i] for i in model.A), linear=False)
     elif flag == 16:

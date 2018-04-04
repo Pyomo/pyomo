@@ -183,7 +183,7 @@ class Test(unittest.TestCase):
         model.A = RangeSet(1,4)
         model.x = Var(model.A, bounds=(-1,1))
         def obj_rule(model):
-            return summation(model.x)
+            return sum_product(model.x)
         model.obj = Objective(rule=obj_rule)
         model.write()
 
@@ -192,7 +192,7 @@ class Test(unittest.TestCase):
         model.A = RangeSet(1,4)
         model.x = Var(model.A, bounds=(-1,1))
         def obj_rule(model):
-            return summation(model.x)
+            return sum_product(model.x)
         model.obj = Objective(rule=obj_rule)
         def c_rule(model):
             return (1, model.x[1]+model.x[2], 2)
@@ -206,7 +206,7 @@ class Test(unittest.TestCase):
         model.w=Param(model.J, default=4)
         model.x=Var(model.J, initialize=3)
         def obj_rule(instance):
-            return summation(instance.w, instance.x)
+            return sum_product(instance.w, instance.x)
         model.obj = Objective(rule=obj_rule)
         self.assertEqual( value(model.obj), 48 )
 
@@ -216,7 +216,7 @@ class Test(unittest.TestCase):
         model.A = RangeSet(1,4)
         model.x = Var(model.A, bounds=(-1,1))
         def obj_rule(model):
-            return summation(model.x)
+            return sum_product(model.x)
         model.obj = Objective(rule=obj_rule)
         def c_rule(model):
             expr = 0
@@ -292,7 +292,7 @@ class Test(unittest.TestCase):
         model.A = RangeSet(1,4)
         model.x = Var(model.A, bounds=(-1,1))
         def obj_rule(model):
-            return summation(model.x)
+            return sum_product(model.x)
         model.obj = Objective(rule=obj_rule)
         def c_rule(model):
             expr = 0
@@ -321,7 +321,7 @@ class Test(unittest.TestCase):
         model.b.A = RangeSet(1,4)
         model.b.x = Var(model.b.A, bounds=(-1,1))
         def obj_rule(block):
-            return summation(block.x)
+            return sum_product(block.x)
         model.b.obj = Objective(rule=obj_rule)
         def c_rule(model):
             expr = model.y
@@ -349,7 +349,7 @@ class Test(unittest.TestCase):
         model.B = Set(initialize=['A B', 'C,D', 'E'])
         model.x = Var(model.A, model.B, bounds=(-1,1))
         def obj_rule(model):
-            return summation(model.x)
+            return sum_product(model.x)
         model.obj = Objective(rule=obj_rule)
         def c_rule(model):
             expr = model.y
@@ -371,7 +371,7 @@ class Test(unittest.TestCase):
         model = ConcreteModel()
         model.x = Var([1,2])
         def obj_rule(model, i):
-            return summation(model.x)
+            return sum_product(model.x)
         model.obj = Objective([1,2], rule=obj_rule)
         def c_rule(model, i):
             expr = 0
@@ -388,7 +388,7 @@ class Test(unittest.TestCase):
         #
         model.x = Var([1,2])
         def obj_rule(model, i):
-            return summation(model.x)
+            return sum_product(model.x)
         model.y = VarList()
         model.y.add()
         model.y.add()
@@ -416,7 +416,7 @@ class Test(unittest.TestCase):
         model = ConcreteModel()
         model.x = Var([1,2])
         def obj_rule(model, i):
-            return summation(model.x)
+            return sum_product(model.x)
         model.obj = Objective([1,2], rule=obj_rule)
         def c_rule(model, i):
             expr = 0
@@ -443,7 +443,7 @@ class Test(unittest.TestCase):
         model.A = RangeSet(1,4)
         model.b = Block()
         model.b.x = Var(model.A, bounds=(-1,1))
-        model.b.obj = Objective(expr=summation(model.b.x))
+        model.b.obj = Objective(expr=sum_product(model.b.x))
         model.c = Constraint(expr=model.b.x[1] >= 0)
         opt = SolverFactory('glpk')
         self.assertEqual(len(model.solutions), 0)
@@ -468,7 +468,7 @@ class Test(unittest.TestCase):
         model.A = RangeSet(1,4)
         model.b = Block()
         model.b.x = Var(model.A, bounds=(-1,1))
-        model.b.obj = Objective(expr=summation(model.b.x))
+        model.b.obj = Objective(expr=sum_product(model.b.x))
         model.c = Constraint(expr=model.b.x[1] >= 0)
         opt = SolverFactory('glpk')
         self.assertEqual(len(model.solutions), 0)
@@ -531,7 +531,7 @@ class Test(unittest.TestCase):
         model.A = RangeSet(1,4)
         model.b = Block()
         model.b.x = Var(model.A, bounds=(-1,1))
-        model.b.obj = Objective(expr=summation(model.b.x))
+        model.b.obj = Objective(expr=sum_product(model.b.x))
         model.c = Constraint(expr=model.b.x[1] >= 0)
         opt = SolverFactory('glpk')
         results = opt.solve(model, symbolic_solver_labels=True)
@@ -555,7 +555,7 @@ class Test(unittest.TestCase):
         tmodel.A = RangeSet(1,4)
         tmodel.b = Block()
         tmodel.b.x = Var(tmodel.A, bounds=(-1,1))
-        tmodel.b.obj = Objective(expr=summation(tmodel.b.x))
+        tmodel.b.obj = Objective(expr=sum_product(tmodel.b.x))
         tmodel.c = Constraint(expr=tmodel.b.x[1] >= 0)
         self.assertEqual(len(tmodel.solutions), 0)
         tmodel.solutions.load_from(results)
@@ -569,7 +569,7 @@ class Test(unittest.TestCase):
         model.A = RangeSet(1,4)
         model.b = Block()
         model.b.x = Var(model.A, bounds=(-1,1))
-        model.b.obj = Objective(expr=summation(model.b.x))
+        model.b.obj = Objective(expr=sum_product(model.b.x))
         model.c = Constraint(expr=model.b.x[1] >= 0)
         opt = SolverFactory('glpk')
         results = opt.solve(model, symbolic_solver_labels=False)
@@ -593,7 +593,7 @@ class Test(unittest.TestCase):
         tmodel.A = RangeSet(1,4)
         tmodel.b = Block()
         tmodel.b.x = Var(tmodel.A, bounds=(-1,1))
-        tmodel.b.obj = Objective(expr=summation(tmodel.b.x))
+        tmodel.b.obj = Objective(expr=sum_product(tmodel.b.x))
         tmodel.c = Constraint(expr=tmodel.b.x[1] >= 0)
         self.assertEqual(len(tmodel.solutions), 0)
         tmodel.solutions.load_from(results)
@@ -606,7 +606,7 @@ class Test(unittest.TestCase):
         model.A = RangeSet(1,4)
         model.b = Block()
         model.b.x = Var(model.A, bounds=(-1,1))
-        model.b.obj = Objective(expr=summation(model.b.x))
+        model.b.obj = Objective(expr=sum_product(model.b.x))
         model.c = Constraint(expr=model.b.x[1] >= 0)
         opt = SolverFactory('glpk')
         results = opt.solve(model)
@@ -640,7 +640,7 @@ class Test(unittest.TestCase):
         tmodel.A = RangeSet(1,3)
         tmodel.b = Block()
         tmodel.b.x = Var(tmodel.A, bounds=(-1,1))
-        tmodel.b.obj = Objective(expr=summation(tmodel.b.x))
+        tmodel.b.obj = Objective(expr=sum_product(tmodel.b.x))
         tmodel.c = Constraint(expr=tmodel.b.x[1] >= 0)
         self.assertEqual(len(tmodel.solutions), 0)
         tmodel.solutions.load_from(results, ignore_invalid_labels=True)
@@ -653,7 +653,7 @@ class Test(unittest.TestCase):
         model.A = RangeSet(1,4)
         model.b = Block()
         model.b.x = Var(model.A, bounds=(-1,1))
-        model.b.obj = Objective(expr=summation(model.b.x))
+        model.b.obj = Objective(expr=sum_product(model.b.x))
         model.c = Constraint(expr=model.b.x[1] >= 0)
         opt = SolverFactory('glpk')
         results = opt.solve(model)
@@ -682,7 +682,7 @@ class Test(unittest.TestCase):
         tmodel.A = RangeSet(1,4)
         tmodel.b = Block()
         tmodel.b.x = Var(tmodel.A, bounds=(-1,1))
-        tmodel.b.obj = Objective(expr=summation(tmodel.b.x))
+        tmodel.b.obj = Objective(expr=sum_product(tmodel.b.x))
         tmodel.c = Constraint(expr=tmodel.b.x[1] >= 0)
         self.assertEqual(len(tmodel.solutions), 0)
         tmodel.solutions.load_from(results)
@@ -701,7 +701,7 @@ class Test(unittest.TestCase):
         model.A = RangeSet(1,4)
         model.b = Block()
         model.b.x = Var(model.A, bounds=(-1,1))
-        model.b.obj = Objective(expr=summation(model.b.x))
+        model.b.obj = Objective(expr=sum_product(model.b.x))
         model.c = Constraint(expr=model.b.x[1] >= 0)
         opt = SolverFactory('glpk')
         results = opt.solve(model, load_solutions=False)
@@ -725,7 +725,7 @@ class Test(unittest.TestCase):
         model.A = RangeSet(1,4)
         model.b = Block()
         model.b.x = Var(model.A, bounds=(-1,1))
-        model.b.obj = Objective(expr=summation(model.b.x))
+        model.b.obj = Objective(expr=sum_product(model.b.x))
         model.c = Constraint(expr=model.b.x[1] >= 0)
 
         smanager = SolverManager_Serial()

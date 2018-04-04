@@ -66,7 +66,7 @@ class Test(unittest.TestCase):
         m.p = Param(m.A, initialize=p_init)
         m.x = Var(m.A, bounds=(-1,1))
         def obj_rule(model):
-            return summation(model.p, model.x)
+            return sum_product(model.p, model.x)
         m.obj = Objective(rule=obj_rule)
         i = m.create_instance()
 
@@ -89,7 +89,7 @@ class Test(unittest.TestCase):
             return 2*i
         m.p = Param(m.A, initialize=p_init)
         m.x = Var(m.A, bounds=(-1,1))
-        m.obj = Objective(expr=summation(m.p, m.x))
+        m.obj = Objective(expr=sum_product(m.p, m.x))
         rep = generate_canonical_repn(m.obj[None].expr)
         # rep should only have variables and linear terms
         self.assertTrue(rep.variables != None)
@@ -230,7 +230,7 @@ class Test(unittest.TestCase):
             return 2*i
         m.p = Param(m.A, initialize=p_init)
         m.x = Var(m.A, bounds=(-1,1))
-        expr = summation(m.p, m.x)/2.0
+        expr = sum_product(m.p, m.x)/2.0
         rep = generate_canonical_repn(expr)
 
         # rep should only have only variables and linear terms
@@ -253,7 +253,7 @@ class Test(unittest.TestCase):
         m.x = Var(m.A, bounds=(-1,1))
         m.y = Var(initialize=2.0)
         m.y.fixed = True
-        expr = summation(m.p, m.x)/m.y
+        expr = sum_product(m.p, m.x)/m.y
         rep = generate_canonical_repn(expr)
 
         # rep should only have variables and linear terms
@@ -277,7 +277,7 @@ class Test(unittest.TestCase):
         m.x = Var(m.A, bounds=(-1,1))
         m.y = Var(initialize=1.0)
         m.y.fixed = True
-        expr = summation(m.p, m.x)/(m.y+1)
+        expr = sum_product(m.p, m.x)/(m.y+1)
         rep = generate_canonical_repn(expr)
 
         # rep should only have variable and a linear component
@@ -292,7 +292,7 @@ class Test(unittest.TestCase):
         self.assertEqual(baseline,
                          linear_repn_to_dict(rep))
 
-    def test_expr_rational_summation(self):
+    def test_expr_rational_sum_product(self):
         m = ConcreteModel()
         m.A = RangeSet(1,3)
         def p_init(model, i):
@@ -300,7 +300,7 @@ class Test(unittest.TestCase):
         m.p = Param(m.A, initialize=p_init)
         m.x = Var(m.A, bounds=(-1,1))
         m.y = Var(initialize=1.0)
-        expr = summation(m.p, m.x)/(1+m.y)
+        expr = sum_product(m.p, m.x)/(1+m.y)
 
         rep = generate_canonical_repn(expr)
         # rep should only have [-1,None]
@@ -658,7 +658,7 @@ class Test_pyomo5(Test):
         pass
 
     @unittest.skipIf(True, "Pyomo5 does not recognize rational expressions.")
-    def test_expr_rational_summation(self):
+    def test_expr_rational_sum_product(self):
         pass
 
     @unittest.skipIf(True, "Pyomo5 does not recognize rational expressions.")

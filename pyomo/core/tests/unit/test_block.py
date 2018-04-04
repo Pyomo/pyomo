@@ -1956,7 +1956,7 @@ class TestBlock(unittest.TestCase):
         model.A = RangeSet(1,4)
         model.x = Var(model.A, bounds=(-1,1))
         def obj_rule(model):
-            return summation(model.x)
+            return sum_product(model.x)
         model.obj = Objective(rule=obj_rule)
         def c_rule(model):
             expr = 0
@@ -2018,7 +2018,7 @@ class TestBlock(unittest.TestCase):
         model.A = RangeSet(1,4)
         model.x = Var(model.A, bounds=(-1,1))
         def obj_rule(model):
-            return summation(model.x)
+            return sum_product(model.x)
         model.obj = Objective(rule=obj_rule)
         def c_rule(model):
             expr = 0
@@ -2047,7 +2047,7 @@ class TestBlock(unittest.TestCase):
         model.b.A = RangeSet(1,4)
         model.b.x = Var(model.b.A, bounds=(-1,1))
         def obj_rule(block):
-            return summation(block.x)
+            return sum_product(block.x)
         model.b.obj = Objective(rule=obj_rule)
         def c_rule(model):
             expr = model.y
@@ -2075,7 +2075,7 @@ class TestBlock(unittest.TestCase):
         model.B = Set(initialize=['A B', 'C,D', 'E'])
         model.x = Var(model.A, model.B, bounds=(-1,1))
         def obj_rule(model):
-            return summation(model.x)
+            return sum_product(model.x)
         model.obj = Objective(rule=obj_rule)
         def c_rule(model):
             expr = model.y

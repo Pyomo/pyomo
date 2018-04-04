@@ -2972,7 +2972,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         M.p = Param(range(3), initialize=2)
         M.q = Param(range(3), initialize=3, mutable=True)
 
-        e = M.x*M.y + summation(M.p, M.a) + quicksum(M.q[i]*M.a[i] for i in M.a) / M.x
+        e = M.x*M.y + sum_product(M.p, M.a) + quicksum(M.q[i]*M.a[i] for i in M.a) / M.x
         self.assertEqual(str(e), "x*y + 2*a[0] + 2*a[1] + 2*a[2] + (q[0]*a[0] + q[1]*a[1] + q[2]*a[2])*(1/x)")
         self.assertEqual(e.to_string(), "x*y + 2*a[0] + 2*a[1] + 2*a[2] + (q[0]*a[0] + q[1]*a[1] + q[2]*a[2])*(1/x)")
         self.assertEqual(e.to_string(compute_values=True), "x*y + 2*a[0] + 2*a[1] + 2*a[2] + (3*a[0] + 3*a[1] + 3*a[2])*(1/x)")
@@ -3964,7 +3964,7 @@ class TestSummationExpression(unittest.TestCase):
         self.m = None
 
     def test_summation1(self):
-        e = summation(self.m.a)
+        e = sum_product(self.m.a)
         self.assertEqual( e(), 25 )
         self.assertIs(type(e), EXPR.LinearExpression)
         self.assertEqual( id(self.m.a[1]), id(e.linear_vars[0]) )
@@ -3972,7 +3972,7 @@ class TestSummationExpression(unittest.TestCase):
         self.assertEqual(e.size(), 1)
 
     def test_summation2(self):
-        e = summation(self.m.p, self.m.a)
+        e = sum_product(self.m.p, self.m.a)
         self.assertEqual( e(), 25 )
         self.assertIs(type(e), EXPR.LinearExpression)
         self.assertEqual( id(self.m.a[1]), id(e.linear_vars[0]) )
@@ -3980,7 +3980,7 @@ class TestSummationExpression(unittest.TestCase):
         self.assertEqual(e.size(), 1)
 
     def test_summation3(self):
-        e = summation(self.m.q, self.m.a)
+        e = sum_product(self.m.q, self.m.a)
         self.assertEqual( e(), 75 )
         self.assertIs(type(e), EXPR.LinearExpression)
         self.assertEqual( id(self.m.a[1]), id(e.linear_vars[0]) )
@@ -3988,7 +3988,7 @@ class TestSummationExpression(unittest.TestCase):
         self.assertEqual(e.size(), 1)
 
     def test_summation4(self):
-        e = summation(self.m.a, self.m.b)
+        e = sum_product(self.m.a, self.m.b)
         self.assertEqual( e(), 250 )
         self.assertIs(type(e), EXPR.ViewSumExpression)
         self.assertEqual( id(self.m.a[1]), id(e.arg(0).arg(0)) )
@@ -3996,13 +3996,13 @@ class TestSummationExpression(unittest.TestCase):
         self.assertEqual(e.size(), 16)
 
     def test_summation5(self):
-        e = summation(self.m.b, denom=self.m.a)
+        e = sum_product(self.m.b, denom=self.m.a)
         self.assertEqual( e(), 10 )
         self.assertIs(type(e), EXPR.ViewSumExpression)
         self.assertEqual(e.size(), 21)
 
     def test_summation6(self):
-        e = summation(self.m.a, denom=self.m.p)
+        e = sum_product(self.m.a, denom=self.m.p)
         self.assertEqual( e(), 25 )
         self.assertIs(type(e), EXPR.LinearExpression)
         #self.assertEqual( id(self.m.a[1]), id(e.arg(0).arg(0)) )
@@ -4010,15 +4010,15 @@ class TestSummationExpression(unittest.TestCase):
         #self.assertEqual(e.size(), 21)
 
     def test_summation7(self):
-        e = summation(self.m.p, self.m.q, index=self.m.I)
+        e = sum_product(self.m.p, self.m.q, index=self.m.I)
         self.assertEqual( e(), 15 )
         self.assertIs(type(e), EXPR.ViewSumExpression)
         self.assertEqual( e.nargs(), 5)
         self.assertEqual(e.size(), 16)
 
     def test_summation_compression(self):
-        e1 = summation(self.m.a)
-        e2 = summation(self.m.b)
+        e1 = sum_product(self.m.a)
+        e2 = sum_product(self.m.b)
         e = e1+e2
         self.assertEqual( e(), 75 )
         self.assertIs(type(e), EXPR.ViewSumExpression)

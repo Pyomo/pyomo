@@ -466,14 +466,14 @@ class _GeneralConstraintData(_ConstraintData):
                         "Constraint '%s' does not have a proper "
                         "value. Found '%s'\nExpecting a tuple or "
                         "equation. Examples:"
-                        "\n   summation(model.costs) == model.income"
+                        "\n   sum_product(model.costs) == model.income"
                         "\n   (0, model.price[item], 50)"
                         % (self.name, str(expr)))
             except AttributeError:
                 msg = ("Constraint '%s' does not have a proper "
                        "value. Found '%s'\nExpecting a tuple or "
                        "equation. Examples:"
-                       "\n   summation(model.costs) == model.income"
+                       "\n   sum_product(model.costs) == model.income"
                        "\n   (0, model.price[item], 50)"
                        % (self.name, str(expr)))
                 if type(expr) is bool:

@@ -12,7 +12,7 @@
 # Utility functions
 #
 
-__all__ = ['summation', 'dot_product', 'sequence', 'prod', 'quicksum']
+__all__ = ['sum_product', 'summation', 'dot_product', 'sequence', 'prod', 'quicksum']
 
 from six.moves import xrange
 from functools import reduce
@@ -136,7 +136,7 @@ def quicksum(args, start=0, linear=None):
     return e
 
 
-def summation(*args, **kwds):
+def sum_product(*args, **kwds):
     """
     A utility function to compute a generalized dot product.  
 
@@ -166,7 +166,7 @@ def summation(*args, **kwds):
     ndenom = len(denom)
 
     if nargs == 0 and ndenom == 0:
-        raise ValueError("The summation() command requires at least an " + \
+        raise ValueError("The sum_product() command requires at least an " + \
               "argument or a denominator term")
 
     if 'index' in kwds:
@@ -175,11 +175,11 @@ def summation(*args, **kwds):
         if nargs > 0:
             iarg=args[-1]
             if not isinstance(iarg,pyomo.core.base.var.Var) and not isinstance(iarg, pyomo.core.base.expression.Expression):
-                raise ValueError("Error executing summation(): The last argument value must be a variable or expression object if no 'index' option is specified")
+                raise ValueError("Error executing sum_product(): The last argument value must be a variable or expression object if no 'index' option is specified")
         else:
             iarg=denom[-1]
             if not isinstance(iarg,pyomo.core.base.var.Var) and not isinstance(iarg, pyomo.core.base.expression.Expression):
-                raise ValueError("Error executing summation(): The last denom argument value must be a variable or expression object if no 'index' option is specified")
+                raise ValueError("Error executing sum_product(): The last denom argument value must be a variable or expression object if no 'index' option is specified")
         index = iarg.index_set()
 
     start = kwds.get("start", 0)
@@ -245,8 +245,11 @@ def summation(*args, **kwds):
         return quicksum((prod(args[j][i] for j in num_index)/prod(denom[j][i] for j in denom_index) for i in index), start)
 
 
-#: An alias for :func:`summation <pyomo.core.expr.util>`
-dot_product = summation
+#: An alias for :func:`sum_product <pyomo.core.expr.util>`
+dot_product = sum_product
+
+#: An alias for :func:`sum_product <pyomo.core.expr.util>`
+summation = sum_product
 
 
 def sequence(*args):

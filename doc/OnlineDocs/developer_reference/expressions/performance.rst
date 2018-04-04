@@ -86,7 +86,7 @@ create expressions:
 :func:`quicksum <pyomo.core.util.quicksum>` 
     A function to efficiently compute a sum of Pyomo expressions.
 
-:func:`summation <pyomo.core.util.summation>`
+:func:`sum_product <pyomo.core.util.sum_product>`
     A function that computes a generalized dot product.
 
 prod
@@ -164,10 +164,10 @@ compact representation for linear polynomials.
     process these nonlinear terms, so the user must specify the
     correct value for :attr:`linear`.
 
-summation
-~~~~~~~~~
+sum_product
+~~~~~~~~~~~
 
-The :func:`summation <pyomo.core.util.summation>` function supports
+The :func:`sum_product <pyomo.core.util.sum_product>` function supports
 a generalized dot product.  The :attr:`args` argument contains one
 or more generators that are used to create terms in the summation.
 If the :attr:`args` argument contains a single generator, then its
@@ -184,13 +184,13 @@ together.  For example:
     M.y = Var(range(10))
 
     # Sum the elements of x
-    summation(M.x)
+    sum_product(M.x)
 
     # Sum the product of elements in x and y
-    summation(M.x, M.y)
+    sum_product(M.x, M.y)
 
     # Sum the product of elements in x and y, over the index set z
-    summation(M.x, M.y, index=M.z)
+    sum_product(M.x, M.y, index=M.z)
 
 The :attr:`denom` argument specifies generators whose terms are in 
 the denominator.  For example:
@@ -198,17 +198,17 @@ the denominator.  For example:
 .. doctest::
 
     # Sum the product of x_i/y_i
-    summation(M.x, denom=M.y)
+    sum_product(M.x, denom=M.y)
 
     # Sum the product of 1/(x_i*y_i)
-    summation(denom=(M.x, M.y))
+    sum_product(denom=(M.x, M.y))
 
-The terms summed by this function are explicitly specified, so :func:`summation <pyomo.core.util.summation>` can identify whether the resulting expression
+The terms summed by this function are explicitly specified, so :func:`sum_product <pyomo.core.util.sum_product>` can identify whether the resulting expression
 is linear, quadratic or nonlinear.  Consequently, this function is
 typically faster than simple loops, and it generates compact representations
 of expressions..
 
-Finally, note that the :func:`dot_product <pyomo.core.util.dot_product>` function is an alias for :func:`summation <pyomo.core.util.summation>`.
+Finally, note that the :func:`dot_product <pyomo.core.util.dot_product>` function is an alias for :func:`sum_product <pyomo.core.util.sum_product>`.
 
 Context Managers
 ----------------
@@ -273,8 +273,8 @@ in ``e``.
 
     We do not generally expect users or developers to use these
     context managers.  They are used by the :func:`quicksum
-    <pyomo.core.util.quicksum>` and :func:`summation
-    <pyomo.core.util.summation>` functions to accelerate expression
+    <pyomo.core.util.quicksum>` and :func:`sum_product
+    <pyomo.core.util.sum_product>` functions to accelerate expression
     generation, and there are few cases where the direct use of
     these context managers would provide additional utility to users
     and developers.

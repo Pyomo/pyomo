@@ -393,7 +393,7 @@ def linear(N, flag):
                     #
                     if flag == 1:
                         start = time.time()
-                        expr = summation(model.p, model.x)
+                        expr = sum_product(model.p, model.x)
                         stop = time.time()
                     elif flag == 2:
                         start = time.time()
@@ -504,7 +504,7 @@ def simple_linear(N, flag):
                     #
                     if flag == 1:
                         start = time.time()
-                        expr = summation(model.p, model.x)
+                        expr = sum_product(model.p, model.x)
                         stop = time.time()
                     elif flag == 2:
                         start = time.time()
@@ -618,7 +618,7 @@ def nested_linear(N, flag):
                     start = time.time()
                     #
                     if flag == 1:
-                        expr = 2* summation(model.p, model.x)
+                        expr = 2* sum_product(model.p, model.x)
                     elif flag == 2:
                         expr= 2 * sum(model.p[i]*model.x[i] for i in model.A)
                     elif flag == 3:
@@ -694,7 +694,7 @@ def constant(N, flag):
                     start = time.time()
                     #
                     if flag == 1:
-                        expr = summation(model.p, model.q, index=model.A)
+                        expr = sum_product(model.p, model.q, index=model.A)
                     elif flag == 2:
                         expr=sum(model.p[i]*model.q[i] for i in model.A)
                     elif flag == 3:
@@ -754,7 +754,7 @@ def bilinear(N, flag):
                     start = time.time()
                     #
                     if flag == 1:
-                        expr = summation(model.p, model.x, model.y)
+                        expr = sum_product(model.p, model.x, model.y)
                     elif flag == 2:
                         expr=sum(model.p[i]*model.x[i]*model.y[i] for i in model.A)
                     elif flag == 3:

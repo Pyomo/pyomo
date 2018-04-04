@@ -547,7 +547,7 @@ E : Size=2
         model.x = Var([1,2,3],initialize=1.0)
 
         model.ec = Expression([1,2,3],initialize=1.0)
-        model.obj = Objective(expr=1.0+summation(model.ec, index=[1,2,3]))
+        model.obj = Objective(expr=1.0+sum_product(model.ec, index=[1,2,3]))
         self.assertEqual(model.obj.expr(),4.0)
         model.ec[1].set_value(2.0)
         self.assertEqual(model.obj.expr(),5.0)
@@ -613,7 +613,7 @@ E : Size=2
     def test_init_abstract_indexed(self):
         model = AbstractModel()
         model.ec = Expression([1,2,3],initialize=1.0)
-        model.obj = Objective(rule=lambda m: 1.0+summation(m.ec,index=[1,2,3]))
+        model.obj = Objective(rule=lambda m: 1.0+sum_product(m.ec,index=[1,2,3]))
         inst = model.create_instance()
         self.assertEqual(inst.obj.expr(),4.0)
         inst.ec[1].set_value(2.0)

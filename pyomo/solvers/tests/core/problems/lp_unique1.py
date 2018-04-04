@@ -33,7 +33,7 @@ model.A = Param(model.M, model.N)
 model.x = Var(model.N, within=NonNegativeReals)
 model.y = Var(model.M, within=NonNegativeReals)
 
-model.cost = Objective(expr=summation(model.c, model.x))
+model.cost = Objective(expr=sum_product(model.c, model.x))
 
 def primalcon_rule(model, i):
     return sum(model.A[i,j]*model.x[j] for j in model.N) >= model.b[i]

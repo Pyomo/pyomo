@@ -39,7 +39,7 @@ class SOS1_simple(_BaseTestModel):
         model.c1 = Constraint(expr=model.a <= model.y[2])
         model.c2 = Constraint(expr=(2.0, model.x, 10.0))
         model.c3 = SOSConstraint(var=model.y, index=[1,2], sos=1)
-        model.c4 = Constraint(expr=summation(model.y) == 1)
+        model.c4 = Constraint(expr=sum_product(model.y) == 1)
 
         # Make an empty SOSConstraint
         model.c5 = SOSConstraint(var=model.y, index=[1,2], sos=1)

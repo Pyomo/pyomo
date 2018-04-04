@@ -64,7 +64,7 @@ class DualPHModel(object):
         model.del_component('beta')
         model.beta = Var(model.cuts,within=NonNegativeReals)
         model.del_component('beta_sum_one')
-        model.beta_sum_one = Constraint(expr=summation(model.beta)==1)
+        model.beta_sum_one = Constraint(expr=sum_product(model.beta)==1)
         model.del_component('obj')
         model.obj = Objective(expr=sum(self._alphas[i]*model.beta[i] for i in model.cuts))
 

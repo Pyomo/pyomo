@@ -26,7 +26,7 @@ def create_instance(scenario_name):
     model.StageCost = Expression([1,2])
     model.StageCost.add(1, model.fx)
     model.StageCost.add(2, -model.fz + model.r - cnt)
-    model.o = Objective(expr=summation(model.StageCost))
+    model.o = Objective(expr=sum_product(model.StageCost))
 
     model.ZERO = Param(initialize=0, mutable=True)
     if cnt == 0:
