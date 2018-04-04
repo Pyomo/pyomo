@@ -25,7 +25,7 @@ from six import iteritems, iterkeys
 # DEBUG
 from nose.tools import set_trace
 
-EPS = pyomo.gdp.plugins.chull.EPS
+EPS = TransformationFactory('gdp.chull').CONFIG.EPS
 
 class TwoTermDisj(unittest.TestCase):
     # make sure that we are using coopr3 expressions...
@@ -351,9 +351,10 @@ class TwoTermDisj(unittest.TestCase):
         self.assertFalse(m.d.active)
         self.assertFalse(m.d[0].active)
         self.assertFalse(m.d[1].active)
-        self.assertFalse(m.d[0].c.active)
-        self.assertFalse(m.d[1].c1.active)
-        self.assertFalse(m.d[1].c2.active)
+        # COnstraints aren't deactived: only disjuncts
+        self.assertTrue(m.d[0].c.active)
+        self.assertTrue(m.d[1].c1.active)
+        self.assertTrue(m.d[1].c2.active)
 
     def test_transformed_disjunct_mappings(self):
         m = models.makeTwoTermDisj_Nonlinear()
@@ -685,6 +686,113 @@ class NestedDisjunction(unittest.TestCase):
                 self.assertEqual(results.solver.termination_condition,
                                  pyomo.opt.TerminationCondition.optimal)
                 self.assertEqual(value(m.obj), case[4])
+
+
+class TestSpecialCases(unittest.TestCase):
+    def test_warn_for_untransformed(self):
+        m = models.makeDisjunctionsOnIndexedBlock()
+        def innerdisj_rule(d, flag):
+            m = d.model()
+            if flag:
+                d.c = Constraint(expr=m.a[1] <= 2)
+            else:
+                d.c = Constraint(expr=m.a[1] >= 65)
+        m.disjunct1[1,1].innerdisjunct = Disjunct([0,1], rule=innerdisj_rule)
+        m.disjunct1[1,1].innerdisjunction = Disjunction([0],
+            rule=lambda a,i: [m.disjunct1[1,1].innerdisjunct[0],
+                              m.disjunct1[1,1].innerdisjunct[1]])
+        # This test relies on the order that the component objects of
+        # the disjunct get considered. In this case, the disjunct
+        # causes the error, but in another world, it could be the
+        # disjunction, which is also active.
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Found active disjunct disjunct1\[1,1\].innerdisjunct\[0\] "
+            "in disjunct disjunct1\[1,1\]!.*",
+            TransformationFactory('gdp.chull').create_using,
+            m,
+            targets=[ComponentUID(m.disjunction1[1])])
+        #
+        # we will make that disjunction come first now...
+        #
+        tmp = m.disjunct1[1,1].innerdisjunct
+        m.disjunct1[1,1].del_component(tmp)
+        m.disjunct1[1,1].add_component('innerdisjunct', tmp)
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Found untransformed disjunction disjunct1\[1,1\]."
+            "innerdisjunction\[0\] in disjunct disjunct1\[1,1\]!.*",
+            TransformationFactory('gdp.chull').create_using,
+            m,
+            targets=[ComponentUID(m.disjunction1[1])])
+        # Deactivating the disjunction will allow us to get past it back
+        # to the Disjunct (after we realize there are no active
+        # DisjunctionData within the active Disjunction)
+        m.disjunct1[1,1].innerdisjunction[0].deactivate()
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Found active disjunct disjunct1\[1,1\].innerdisjunct\[0\] "
+            "in disjunct disjunct1\[1,1\]!.*",
+            TransformationFactory('gdp.chull').create_using,
+            m,
+            targets=[ComponentUID(m.disjunction1[1])])
+
+    def test_local_vars(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(5,100))
+        m.y = Var(bounds=(0,100))
+        m.d1 = Disjunct()
+        m.d1.c = Constraint(expr=m.y >= m.x)
+        m.d2 = Disjunct()
+        m.d2.z = Var()
+        m.d2.c = Constraint(expr=m.y >= m.d2.z)
+        m.disj = Disjunction(expr=[m.d1, m.d2])
+
+        self.assertRaisesRegexp(
+            GDP_Error,
+            ".*Missing bound for d2.z.*",
+            TransformationFactory('gdp.chull').create_using,
+            m)
+        m.d2.z.setlb(7)
+        self.assertRaisesRegexp(
+            GDP_Error,
+            ".*Missing bound for d2.z.*",
+            TransformationFactory('gdp.chull').create_using,
+            m)
+        m.d2.z.setub(9)
+
+        i = TransformationFactory('gdp.chull').create_using(m)
+        rd = i._pyomo_gdp_chull_relaxation.relaxedDisjuncts[1]
+        self.assertEqual(sorted(rd.component_map(Var)), ['x','y'])
+        self.assertEqual(len(rd.component_map(Constraint)), 4)
+        self.assertEqual(i.d2.z.bounds, (0,9))
+        self.assertEqual(len(rd.z_bounds), 2)
+        self.assertEqual(rd.z_bounds['lb'].lower, None)
+        self.assertEqual(rd.z_bounds['lb'].upper, 0)
+        self.assertEqual(rd.z_bounds['ub'].lower, None)
+        self.assertEqual(rd.z_bounds['ub'].upper, 0)
+        i.d2.indicator_var = 1
+        i.d2.z = 2
+        self.assertEqual(rd.z_bounds['lb'].body(), 5)
+        self.assertEqual(rd.z_bounds['ub'].body(), -7)
+
+        m.d2.z.setlb(-9)
+        m.d2.z.setub(-7)
+        i = TransformationFactory('gdp.chull').create_using(m)
+        rd = i._pyomo_gdp_chull_relaxation.relaxedDisjuncts[1]
+        self.assertEqual(sorted(rd.component_map(Var)), ['x','y'])
+        self.assertEqual(len(rd.component_map(Constraint)), 4)
+        self.assertEqual(i.d2.z.bounds, (-9,0))
+        self.assertEqual(len(rd.z_bounds), 2)
+        self.assertEqual(rd.z_bounds['lb'].lower, None)
+        self.assertEqual(rd.z_bounds['lb'].upper, 0)
+        self.assertEqual(rd.z_bounds['ub'].lower, None)
+        self.assertEqual(rd.z_bounds['ub'].upper, 0)
+        i.d2.indicator_var = 1
+        i.d2.z = 2
+        self.assertEqual(rd.z_bounds['lb'].body(), -11)
+        self.assertEqual(rd.z_bounds['ub'].body(), 9)
+
 
 # TODO (based on coverage):
 
