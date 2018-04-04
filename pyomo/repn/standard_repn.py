@@ -847,12 +847,12 @@ def _collect_linear_sum(exp, multiplier, idMap, compute_values, verbose, quadrat
 
 
 _repn_collectors = {
-    EXPR.SumExpression                      : _collect_sum,
+    EXPR.SumExpression                          : _collect_sum,
     EXPR.ProductExpression                      : _collect_prod,
-    EXPR.MonomialTermExpression                         : _collect_term,
+    EXPR.MonomialTermExpression                 : _collect_term,
     EXPR.PowExpression                          : _collect_pow,
     EXPR.ReciprocalExpression                   : _collect_reciprocal,
-    EXPR.Expr_if                                : _collect_branching_expr,
+    EXPR.Expr_ifExpression                      : _collect_branching_expr,
     EXPR.UnaryFunctionExpression                : _collect_nonl,
     EXPR.AbsExpression                          : _collect_nonl,
     EXPR.NegationExpression                     : _collect_negation,
@@ -1221,7 +1221,7 @@ _linear_repn_collectors = {
     EXPR.MonomialTermExpression                 : _linear_collect_term,
     EXPR.PowExpression                          : _linear_collect_pow,
     #EXPR.ReciprocalExpression                   : _linear_collect_reciprocal,
-    EXPR.Expr_if                                : _linear_collect_branching_expr,
+    EXPR.Expr_ifExpression                      : _linear_collect_branching_expr,
     #EXPR.UnaryFunctionExpression                : _linear_collect_nonl,
     #EXPR.AbsExpression                          : _linear_collect_nonl,
     EXPR.NegationExpression                     : _linear_collect_negation,
