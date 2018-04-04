@@ -1747,8 +1747,8 @@ class PowExpression(ExpressionBase):
         # call this a non-polynomial expression, these exceptions occur
         # too frequently (and in particular, a**2)
         l,r = result
-        if isclose(r, 0):
-            if l is not None and isclose(l, 0):
+        if r == 0:
+            if l == 0:
                 return 0
             # NOTE: use value before int() so that we don't
             #       run into the disabled __int__ method on
@@ -1767,7 +1767,7 @@ class PowExpression(ExpressionBase):
         assert(len(args) == 2)
         if not args[1]:
             return False
-        return args[0] or isclose(value(self._args_[1]), 0)
+        return args[0] or value(self._args_[1]) == 0
 
     def _precedence(self):
         return PowExpression.PRECEDENCE
@@ -2189,7 +2189,7 @@ class ViewSumExpression(_SumExpression):
         self._nargs = len(self._args_)
 
     def add(self, new_arg):
-        if new_arg.__class__ in native_numeric_types and isclose(new_arg,0):
+        if new_arg.__class__ in native_numeric_types and new_arg == 0:
             return self
         # Clone 'self', because ViewSumExpression are immutable
         self._shared_args = True
@@ -2272,7 +2272,7 @@ class _MutableViewSumExpression(ViewSumExpression):
     __slots__ = ()
 
     def add(self, new_arg):
-        if new_arg.__class__ in native_numeric_types and isclose(new_arg,0):
+        if new_arg.__class__ in native_numeric_types and new_arg == 0:
             return self
         # Do not clone 'self', because _MutableViewSumExpression are mutable
         #self._shared_args = True
@@ -2715,7 +2715,7 @@ class LinearExpression(ExpressionBase):
             else:
                 multiplier = _other
 
-            if multiplier.__class__ in native_numeric_types and isclose(multiplier, 0.0):
+            if multiplier.__class__ in native_numeric_types and multiplier == 0:
                 self.constant = 0
                 self.linear_vars = []
                 self.linear_coefs = []
@@ -2839,7 +2839,7 @@ def _decompose_linear_terms(expr, multiplier=1):
         for term in  _decompose_linear_terms(expr._args_[0], -multiplier):
             yield term
     elif expr.__class__ is LinearExpression or expr.__class__ is _MutableLinearExpression:
-        if expr.constant.__class__ in native_numeric_types and not isclose(expr.constant,0):
+        if expr.constant.__class__ in native_numeric_types and expr.constant != 0:
             yield (multiplier*expr.constant,None)
         if len(expr.linear_coefs) > 0:
             for c,v in zip(expr.linear_coefs, expr.linear_vars):
@@ -2957,13 +2957,13 @@ def _generate_sum_expression(etype, _self, _other):
         elif _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
                 return _self + _other
-            elif _other == 0:   #isclose(_other, 0):
+            elif _other == 0:
                 return _self
             if _self.is_potentially_variable():
                 return ViewSumExpression([_self, _other])
             return NPV_SumExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
-            if _self == 0:      #isclose(_self, 0):
+            if _self == 0:
                 return _other
             if _other.is_potentially_variable():
                 #return _LinearViewSumExpression((_self, _other))
@@ -2989,13 +2989,13 @@ def _generate_sum_expression(etype, _self, _other):
         elif _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
                 return _self - _other
-            elif isclose(_other, 0):
+            elif _other == 0:
                 return _self
             if _self.is_potentially_variable():
                 return ViewSumExpression([_self, -_other])
             return NPV_SumExpression((_self, -_other))
         elif _self.__class__ in native_numeric_types:
-            if isclose(_self, 0):
+            if _self == 0:
                 if _other.__class__ is TermExpression:
                     tmp = _other._args_[0]
                     if tmp.__class__ in native_numeric_types:
@@ -3075,7 +3075,7 @@ def _generate_mul_expression(etype, _self, _other):
         if _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
                 return _self * _other
-            elif _other == 0:   # isclose(_other, 0)
+            elif _other == 0:
                 return 0
             elif _other == 1:
                 return _self
@@ -3091,7 +3091,7 @@ def _generate_mul_expression(etype, _self, _other):
                 return ProductExpression((_other, _self))
             return NPV_ProductExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
-            if _self == 0:  # isclose(_self, 0)
+            if _self == 0:
                 return 0
             elif _self == 1:
                 return _other
@@ -3138,7 +3138,7 @@ def _generate_mul_expression(etype, _self, _other):
                 return ProductExpression((1/_other, _self))
             return NPV_ProductExpression((1/_other, _self))
         elif _self.__class__ in native_numeric_types:
-            if isclose(_self, 0):
+            if _self == 0:
                 return 0
             elif _self == 1:
                 if _other.is_potentially_variable():
