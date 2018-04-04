@@ -268,7 +268,7 @@ class Test(unittest.TestCase):
         pickle_str = pickle.dumps(model)
         tmodel = pickle.loads(pickle_str)
         instance=tmodel.create_instance()
-        expr = dot_product(instance.x,instance.B,instance.y)
+        expr = sum_product(instance.x,instance.B,instance.y)
         if _using_pyomo5_trees:
             baseline = "B[1]*x[1]*y[1] + B[2]*x[2]*y[2] + B[3]*x[3]*y[3]"
         else:
@@ -288,7 +288,7 @@ class Test(unittest.TestCase):
         tmp=model.create_instance()
         pickle_str = pickle.dumps(tmp)
         instance = pickle.loads(pickle_str)
-        expr = dot_product(instance.x,instance.B,instance.y)
+        expr = sum_product(instance.x,instance.B,instance.y)
         if _using_pyomo5_trees:
             baseline = "B[1]*x[1]*y[1] + B[2]*x[2]*y[2] + B[3]*x[3]*y[3]"
         else:

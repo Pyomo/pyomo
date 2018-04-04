@@ -36,10 +36,10 @@ class Test(unittest.TestCase):
         model.x = Var(model.A)
         model.y = Var(model.A)
         instance=model.create_instance()
-        expr = dot_product(instance.B,instance.y)
+        expr = sum_product(instance.B,instance.y)
         baseline = "B[1]*y[1] + B[2]*y[2] + B[3]*y[3]"
         self.assertEqual( str(expr), baseline )
-        expr = dot_product(instance.C,instance.y)
+        expr = sum_product(instance.C,instance.y)
         self.assertEqual( str(expr), "100*y[1] + 200*y[2] + 300*y[3]" )
 
     def test_expr1(self):
@@ -50,10 +50,10 @@ class Test(unittest.TestCase):
         model.x = Var(model.A)
         model.y = Var(model.A)
         instance=model.create_instance()
-        expr = dot_product(instance.x,instance.B,instance.y)
+        expr = sum_product(instance.x,instance.B,instance.y)
         baseline = "B[1]*x[1]*y[1] + B[2]*x[2]*y[2] + B[3]*x[3]*y[3]"
         self.assertEqual( str(expr), baseline )
-        expr = dot_product(instance.x,instance.C,instance.y)
+        expr = sum_product(instance.x,instance.C,instance.y)
         self.assertEqual( str(expr), "100*x[1]*y[1] + 200*x[2]*y[2] + 300*x[3]*y[3]" )
 
     def test_expr2(self):
@@ -64,10 +64,10 @@ class Test(unittest.TestCase):
         model.x = Var(model.A)
         model.y = Var(model.A)
         instance=model.create_instance()
-        expr = dot_product(instance.x,instance.B,instance.y, index=[1,3])
+        expr = sum_product(instance.x,instance.B,instance.y, index=[1,3])
         baseline = "B[1]*x[1]*y[1] + B[3]*x[3]*y[3]"
         self.assertEqual( str(expr), baseline )
-        expr = dot_product(instance.x,instance.C,instance.y, index=[1,3])
+        expr = sum_product(instance.x,instance.C,instance.y, index=[1,3])
         self.assertEqual( str(expr), "100*x[1]*y[1] + 300*x[3]*y[3]" )
 
     def test_expr3(self):
@@ -78,10 +78,10 @@ class Test(unittest.TestCase):
         model.x = Var(model.A)
         model.y = Var(model.A)
         instance=model.create_instance()
-        expr = dot_product(instance.x,instance.B,denom=instance.y, index=[1,3])
+        expr = sum_product(instance.x,instance.B,denom=instance.y, index=[1,3])
         baseline = "B[1]*x[1]*(1/y[1]) + B[3]*x[3]*(1/y[3])"
         self.assertEqual( str(expr), baseline )
-        expr = dot_product(instance.x,instance.C,denom=instance.y, index=[1,3])
+        expr = sum_product(instance.x,instance.C,denom=instance.y, index=[1,3])
         self.assertEqual( str(expr), "100*x[1]*(1/y[1]) + 300*x[3]*(1/y[3])" )
 
     def test_expr4(self):
@@ -91,7 +91,7 @@ class Test(unittest.TestCase):
         model.x = Var(model.A)
         model.y = Var(model.A)
         instance=model.create_instance()
-        expr = dot_product(denom=[instance.y,instance.x])
+        expr = sum_product(denom=[instance.y,instance.x])
         baseline = "(1/(y[1]*x[1])) + (1/(y[2]*x[2])) + (1/(y[3]*x[3]))"
         self.assertEqual( str(expr), baseline )
 
@@ -120,7 +120,7 @@ class Test(unittest.TestCase):
 
     def test_summation_error1(self):
         try:
-            dot_product()
+            sum_product()
             self.fail("Expected ValueError")
         except ValueError:
             pass
@@ -132,7 +132,7 @@ class Test(unittest.TestCase):
         model.x = Var(model.A)
         instance=model.create_instance()
         try:
-            expr = dot_product(instance.x,instance.B)
+            expr = sum_product(instance.x,instance.B)
             self.fail("Expected ValueError")
         except ValueError:
             pass
@@ -144,7 +144,7 @@ class Test(unittest.TestCase):
         model.x = Var(model.A)
         instance=model.create_instance()
         try:
-            expr = dot_product(denom=(instance.x,instance.B))
+            expr = sum_product(denom=(instance.x,instance.B))
             self.fail("Expected ValueError")
         except ValueError:
             pass
