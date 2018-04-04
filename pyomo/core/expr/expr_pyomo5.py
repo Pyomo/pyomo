@@ -43,7 +43,7 @@ __all__ = (
 'PowExpression',
 'ExternalFunctionExpression',
 'GetItemExpression',
-'Expr_if',
+'Expr_ifExpression',
 'LinearExpression',
 'ReciprocalExpression',
 'NegationExpression',
@@ -2384,7 +2384,7 @@ class GetItemExpression(ExpressionBase):
         return self._base.__getitem__(tuple(value(i) for i in self._args_))
 
 
-class Expr_if(ExpressionBase):
+class Expr_ifExpression(ExpressionBase):
     """
     A logical if-then-else expression::
 
@@ -2415,8 +2415,8 @@ class Expr_if(ExpressionBase):
         return 3
 
     def __getstate__(self):
-        state = super(Expr_if, self).__getstate__()
-        for i in Expr_if.__slots__:
+        state = super(Expr_ifExpression, self).__getstate__()
+        for i in Expr_ifExpression.__slots__:
             state[i] = getattr(self, i)
         return state
 

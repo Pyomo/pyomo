@@ -3076,7 +3076,7 @@ class TestSimple(unittest.TestCase):
         m.c = Var()
         m.q = Param(default=1)
 
-        e = EXPR.Expr_if(IF_=True, THEN_=m.a, ELSE_=m.b)
+        e = EXPR.Expr_if(IF=True, THEN=m.a, ELSE=m.b)
 
         rep = generate_standard_repn(e)
         #
@@ -3103,7 +3103,7 @@ class TestSimple(unittest.TestCase):
         #       ExprIf
         #      /  |   \
         #  False  a    b
-        e = EXPR.Expr_if(IF_=False, THEN_=m.a, ELSE_=m.b)
+        e = EXPR.Expr_if(IF=False, THEN=m.a, ELSE=m.b)
 
         rep = generate_standard_repn(e)
         #
@@ -3130,7 +3130,7 @@ class TestSimple(unittest.TestCase):
         #       ExprIf
         #      /  |   \
         #     c   a    b
-        e = EXPR.Expr_if(IF_=m.c, THEN_=m.a, ELSE_=m.b)
+        e = EXPR.Expr_if(IF=m.c, THEN=m.a, ELSE=m.b)
 
         rep = generate_standard_repn(e)
         #
@@ -3162,7 +3162,7 @@ class TestSimple(unittest.TestCase):
         #       ExprIf
         #      /  |   \
         #  bool  a    b
-        e = EXPR.Expr_if(IF_=m.q, THEN_=m.a, ELSE_=m.b)
+        e = EXPR.Expr_if(IF=m.q, THEN=m.a, ELSE=m.b)
 
         rep = generate_standard_repn(e)
         #
@@ -3189,7 +3189,7 @@ class TestSimple(unittest.TestCase):
         #       ExprIf
         #      /  |   \
         #     c   a    b
-        e = EXPR.Expr_if(IF_=m.c, THEN_=m.a, ELSE_=m.b)
+        e = EXPR.Expr_if(IF=m.c, THEN=m.a, ELSE=m.b)
         m.c.fixed = True
         m.c.set_value(0)
 

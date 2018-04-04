@@ -55,6 +55,9 @@ numvalue._generate_other_expression = _generate_other_expression
 numvalue._generate_relational_expression = _generate_relational_expression
 
 
+def Expr_if(IF=None, THEN=None, ELSE=None):
+    return Expr_ifExpression(IF_=IF, THEN_=THEN, ELSE_=ELSE)
+
 #
 # Common intrinsic functions
 #

@@ -2832,9 +2832,9 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         m = ConcreteModel()
         m.a = Var()
         m.b = Var()
-        expr = EXPR.Expr_if(IF_=m.a + m.b < 20, THEN_=m.a, ELSE_=m.b)
+        expr = EXPR.Expr_if(IF=m.a + m.b < 20, THEN=m.a, ELSE=m.b)
         self.assertEqual("Expr_if( ( a + b  <  20.0 ), then=( a ), else=( b ) )", str(expr))
-        expr = EXPR.Expr_if(IF_=m.a + m.b < 20, THEN_=1, ELSE_=m.b)
+        expr = EXPR.Expr_if(IF=m.a + m.b < 20, THEN=1, ELSE=m.b)
         self.assertEqual("Expr_if( ( a + b  <  20.0 ), then=( 1 ), else=( b ) )", str(expr))
 
     def test_getitem(self):
@@ -4449,7 +4449,7 @@ class TestCloneExpression(unittest.TestCase):
         with EXPR.clone_counter:
             start = EXPR.clone_counter.count
             #
-            expr1 = EXPR.Expr_if(IF_=self.m.a + self.m.b < 20, THEN_=self.m.a, ELSE_=self.m.b)
+            expr1 = EXPR.Expr_if(IF=self.m.a + self.m.b < 20, THEN=self.m.a, ELSE=self.m.b)
             expr2 = expr1.clone()
             self.assertNotEqual(id(expr1), id(expr2))
             self.assertEqual(expr1(), value(self.m.a))
