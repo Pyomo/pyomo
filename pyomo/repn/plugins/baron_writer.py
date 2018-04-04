@@ -76,7 +76,7 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
 
         if node.__class__ is EXPR.ProductExpression:
             return "{0} * {1}".format(tmp[0], tmp[1])
-        elif node.__class__ is EXPR.TermExpression:
+        elif node.__class__ is EXPR.MonomialTermExpression:
             if tmp[0] == '-1':
                 # It seems dumb to construct a temporary NegationExpression object
                 # Should we copy the logic from that function here?

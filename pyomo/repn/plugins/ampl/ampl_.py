@@ -484,7 +484,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 self._print_nonlinear_terms_NL(exp.arg(0))
                 self._print_nonlinear_terms_NL(exp.arg(1))
 
-            elif exp_type is EXPR.TermExpression:
+            elif exp_type is EXPR.MonomialTermExpression:
                 prod_str = self._op_string[EXPR.ProductExpression]
                 OUTPUT.write(prod_str)
                 self._print_nonlinear_terms_NL(value(exp.arg(0)))

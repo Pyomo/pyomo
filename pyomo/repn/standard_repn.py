@@ -437,7 +437,7 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
     varkeys = idMap[None]
 
     for e_ in itertools.islice(exp._args_, exp.nargs()):
-        if e_.__class__ is EXPR.TermExpression:
+        if e_.__class__ is EXPR.MonomialTermExpression:
             lhs, v = e_._args_
             if compute_values and not lhs.__class__ in native_numeric_types:
                 lhs = value(lhs)
@@ -849,7 +849,7 @@ def _collect_linear_sum(exp, multiplier, idMap, compute_values, verbose, quadrat
 _repn_collectors = {
     EXPR.ViewSumExpression                      : _collect_sum,
     EXPR.ProductExpression                      : _collect_prod,
-    EXPR.TermExpression                         : _collect_term,
+    EXPR.MonomialTermExpression                         : _collect_term,
     EXPR.PowExpression                          : _collect_pow,
     EXPR.ReciprocalExpression                   : _collect_reciprocal,
     EXPR.Expr_if                                : _collect_branching_expr,
@@ -1029,7 +1029,7 @@ def _linear_collect_sum(exp, multiplier, idMap, compute_values, verbose, coef):
             else:
                 _collect_linear_standard_repn(arg, -1*multiplier, idMap, compute_values, verbose, coef)
 
-        elif e_.__class__ is EXPR.TermExpression:
+        elif e_.__class__ is EXPR.MonomialTermExpression:
             if compute_values:
                 lhs = value(e_._args_[0])
             else:
@@ -1218,7 +1218,7 @@ def _linear_collect_pow(exp, multiplier, idMap, compute_values, verbose, coef):
 _linear_repn_collectors = {
     EXPR.ViewSumExpression                      : _linear_collect_sum,
     EXPR.ProductExpression                      : _linear_collect_prod,
-    EXPR.TermExpression                         : _linear_collect_term,
+    EXPR.MonomialTermExpression                 : _linear_collect_term,
     EXPR.PowExpression                          : _linear_collect_pow,
     #EXPR.ReciprocalExpression                   : _linear_collect_reciprocal,
     EXPR.Expr_if                                : _linear_collect_branching_expr,

@@ -50,9 +50,9 @@ class _CloneVisitor(EXPR.ExpressionValueVisitor):
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
-        if node.__class__ is EXPR.TermExpression and not values[1].is_variable_type():
+        if node.__class__ is EXPR.MonomialTermExpression and not values[1].is_variable_type():
             #
-            # Turn a TermExpression whose variable has been replaced by a constant into
+            # Turn a MonomialTermExpression whose variable has been replaced by a constant into
             # a simple constant expression.
             #
             return values[0] * values[1]

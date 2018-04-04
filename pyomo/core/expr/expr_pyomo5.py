@@ -39,7 +39,7 @@ __all__ = (
 'RangedExpression',
 'InequalityExpression',
 'ProductExpression',
-'TermExpression',
+'MonomialTermExpression',
 'PowExpression',
 'ExternalFunctionExpression',
 'GetItemExpression',
@@ -1839,7 +1839,7 @@ class NPV_ProductExpression(ProductExpression):
         return False
 
 
-class TermExpression(ProductExpression):
+class MonomialTermExpression(ProductExpression):
     __slots__ = ()
 
 
@@ -2818,7 +2818,7 @@ def _decompose_linear_terms(expr, multiplier=1):
         yield (multiplier*expr,None)
     elif expr.is_variable_type():
         yield (multiplier,expr)
-    elif expr.__class__ is TermExpression:
+    elif expr.__class__ is MonomialTermExpression:
         yield (multiplier*expr._args_[0], expr._args_[1])
     elif expr.__class__ is ProductExpression:
         if expr._args_[0].__class__ in native_numeric_types or not expr._args_[0].is_potentially_variable():
@@ -2916,14 +2916,14 @@ def _generate_sum_expression(etype, _self, _other):
     if etype == _neg:
         if _self.__class__ in native_numeric_types:
             return - _self
-        elif _self.__class__ is TermExpression:
+        elif _self.__class__ is MonomialTermExpression:
             tmp = _self._args_[0]
             if tmp.__class__ in native_numeric_types:
-                return TermExpression((-tmp, _self._args_[1]))
+                return MonomialTermExpression((-tmp, _self._args_[1]))
             else:
-                return TermExpression((NPV_NegationExpression((tmp,)), _self._args_[1]))
+                return MonomialTermExpression((NPV_NegationExpression((tmp,)), _self._args_[1]))
         elif _self.is_variable_type():
-            return TermExpression((-1, _self))
+            return MonomialTermExpression((-1, _self))
         elif _self.is_potentially_variable():
             return NegationExpression((_self,))
         else:
@@ -2996,27 +2996,27 @@ def _generate_sum_expression(etype, _self, _other):
             return NPV_SumExpression((_self, -_other))
         elif _self.__class__ in native_numeric_types:
             if _self == 0:
-                if _other.__class__ is TermExpression:
+                if _other.__class__ is MonomialTermExpression:
                     tmp = _other._args_[0]
                     if tmp.__class__ in native_numeric_types:
-                        return TermExpression((-tmp, _other._args_[1]))
-                    return TermExpression((NPV_NegationExpression((_other._args_[0],)), _other._args_[1]))
+                        return MonomialTermExpression((-tmp, _other._args_[1]))
+                    return MonomialTermExpression((NPV_NegationExpression((_other._args_[0],)), _other._args_[1]))
                 elif _other.is_variable_type():
-                    return TermExpression((-1, _other))
+                    return MonomialTermExpression((-1, _other))
                 elif _other.is_potentially_variable():
                     return NegationExpression((_other,))
                 return NPV_NegationExpression((_other,))
-            elif _other.__class__ is TermExpression:
-                return ViewSumExpression([_self, TermExpression((-_other._args_[0], _other._args_[1]))])
+            elif _other.__class__ is MonomialTermExpression:
+                return ViewSumExpression([_self, MonomialTermExpression((-_other._args_[0], _other._args_[1]))])
             elif _other.is_variable_type():
-                return ViewSumExpression([_self, TermExpression((-1,_other))])
+                return ViewSumExpression([_self, MonomialTermExpression((-1,_other))])
             elif _other.is_potentially_variable():
                 return ViewSumExpression([_self, NegationExpression((_other,))])
             return NPV_SumExpression((_self, NPV_NegationExpression((_other,))))
-        elif _other.__class__ is TermExpression:
-            return ViewSumExpression([_self, TermExpression((-_other._args_[0], _other._args_[1]))])
+        elif _other.__class__ is MonomialTermExpression:
+            return ViewSumExpression([_self, MonomialTermExpression((-_other._args_[0], _other._args_[1]))])
         elif _other.is_variable_type():
-            return ViewSumExpression([_self, TermExpression((-1,_other))])
+            return ViewSumExpression([_self, MonomialTermExpression((-1,_other))])
         elif _other.is_potentially_variable():
             return ViewSumExpression([_self, NegationExpression((_other,))])
         elif _self.is_potentially_variable():
@@ -3080,13 +3080,13 @@ def _generate_mul_expression(etype, _self, _other):
             elif _other == 1:
                 return _self
             if _self.is_variable_type():
-                return TermExpression((_other, _self))
-            elif _self.__class__ is TermExpression:
+                return MonomialTermExpression((_other, _self))
+            elif _self.__class__ is MonomialTermExpression:
                 tmp = _self._args_[0]
                 if tmp.__class__ in native_numeric_types:
-                    return TermExpression((_other*tmp, _self._args_[1]))
+                    return MonomialTermExpression((_other*tmp, _self._args_[1]))
                 else:
-                    return TermExpression((NPV_ProductExpression((_other,tmp)), _self._args_[1]))
+                    return MonomialTermExpression((NPV_ProductExpression((_other,tmp)), _self._args_[1]))
             elif _self.is_potentially_variable():
                 return ProductExpression((_other, _self))
             return NPV_ProductExpression((_self, _other))
@@ -3096,24 +3096,24 @@ def _generate_mul_expression(etype, _self, _other):
             elif _self == 1:
                 return _other
             if _other.is_variable_type():
-                return TermExpression((_self, _other))
-            elif _other.__class__ is TermExpression:
+                return MonomialTermExpression((_self, _other))
+            elif _other.__class__ is MonomialTermExpression:
                 tmp = _other._args_[0]
                 if tmp.__class__ in native_numeric_types:
-                    return TermExpression((_self*tmp, _other._args_[1]))
+                    return MonomialTermExpression((_self*tmp, _other._args_[1]))
                 else:
-                    return TermExpression((NPV_ProductExpression((_self,tmp)), _other._args_[1]))
+                    return MonomialTermExpression((NPV_ProductExpression((_self,tmp)), _other._args_[1]))
             elif _other.is_potentially_variable():
                 return ProductExpression((_self, _other))
             return NPV_ProductExpression((_self, _other))
         elif _other.is_variable_type():
             if _self.is_potentially_variable():
                 return ProductExpression((_self, _other))
-            return TermExpression((_self, _other))
+            return MonomialTermExpression((_self, _other))
         elif _other.is_potentially_variable():
             return ProductExpression((_self, _other))
         elif _self.is_variable_type():
-            return TermExpression((_other, _self))
+            return MonomialTermExpression((_other, _self))
         elif _self.is_potentially_variable():
             return ProductExpression((_other, _self))
         else:
@@ -3131,9 +3131,9 @@ def _generate_mul_expression(etype, _self, _other):
             elif _self.__class__ in native_numeric_types:
                 return _self / _other
             if _self.is_variable_type():
-                return TermExpression((1/_other, _self))
-            elif _self.__class__ is TermExpression:
-                return TermExpression((_self._args_[0]/_other, _self._args_[1]))
+                return MonomialTermExpression((1/_other, _self))
+            elif _self.__class__ is MonomialTermExpression:
+                return MonomialTermExpression((_self._args_[0]/_other, _self._args_[1]))
             elif _self.is_potentially_variable():
                 return ProductExpression((1/_other, _self))
             return NPV_ProductExpression((1/_other, _self))

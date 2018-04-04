@@ -618,7 +618,7 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(rep.linear_coefs[0] is m.p[0])
         self.assertTrue(rep.linear_coefs[1] is m.p[1])
-        self.assertTrue(type(rep.constant) is EXPR.TermExpression)
+        self.assertTrue(type(rep.constant) is EXPR.MonomialTermExpression)
 
     def test_linear_sum5(self):
         #
@@ -667,7 +667,7 @@ class TestSimple(unittest.TestCase):
         self.assertEqual(baseline, repn_to_dict(rep))
         #
         self.assertTrue(rep.linear_coefs[0].is_expression_type())
-        self.assertTrue(type(rep.constant) is EXPR.TermExpression)
+        self.assertTrue(type(rep.constant) is EXPR.MonomialTermExpression)
 
     def test_linear_sum6(self):
         #

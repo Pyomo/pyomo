@@ -79,7 +79,7 @@ class TestAddSlacks(unittest.TestCase):
         self.assertEqual(cons.body.nargs(), 2)
 
         self.assertIs(cons.body.arg(0), m.x)
-        self.assertIs(cons.body.arg(1).__class__, EXPR.TermExpression)
+        self.assertIs(cons.body.arg(1).__class__, EXPR.MonomialTermExpression)
         self.assertEqual(cons.body.arg(1).arg(0), -1)
         self.assertIs(cons.body.arg(1).arg(1), transBlock._slack_minus_rule1)
         
@@ -121,7 +121,7 @@ class TestAddSlacks(unittest.TestCase):
 
         self.assertIs(cons.body.arg(0), m.y)
         self.assertIs(cons.body.arg(1), transBlock._slack_plus_rule2)
-        self.assertIs(cons.body.arg(2).__class__, EXPR.TermExpression)
+        self.assertIs(cons.body.arg(2).__class__, EXPR.MonomialTermExpression)
         self.assertEqual(cons.body.arg(2).arg(0), -1)
         self.assertIs(cons.body.arg(2).arg(1), transBlock._slack_minus_rule2)
 
@@ -295,7 +295,7 @@ class TestAddSlacks(unittest.TestCase):
         self.assertIs(c.body.arg(1).arg(0), -2)
         self.assertIs(c.body.arg(1).arg(1), m.y)
         self.assertIs(c.body.arg(2), transBlock._slack_plus_rule4)
-        self.assertIs(c.body.arg(3).__class__, EXPR.TermExpression)
+        self.assertIs(c.body.arg(3).__class__, EXPR.MonomialTermExpression)
         self.assertEqual(c.body.arg(3).arg(0), -1)
         self.assertIs(c.body.arg(3).arg(1), transBlock._slack_minus_rule4)
 
@@ -313,7 +313,7 @@ class TestAddSlacks(unittest.TestCase):
         self.assertEqual(c.upper, 9)
         self.assertEqual(c.body.nargs(), 2)
         self.assertEqual(c.body.arg(0), 6)
-        self.assertIs(c.body.arg(1).__class__, EXPR.TermExpression)
+        self.assertIs(c.body.arg(1).__class__, EXPR.MonomialTermExpression)
         self.assertEqual(c.body.arg(1).arg(0), -1)
         self.assertIs(c.body.arg(1).arg(1), transBlock._slack_minus_rule4)
        
