@@ -72,37 +72,14 @@ def isclose_const(a, b, rel_tol=1e-9, abs_tol=0.0):
             a = value(a)
         else:
             return False
-    # Copied from pyutilib.math after here
-    diff = math.fabs(a-b)
-    if diff <= rel_tol*max(math.fabs(a),math.fabs(b)):
-        return True
-    if diff <= abs_tol:
-        return True
-    return False
+    # Copied from pyutilib.math.isclose
+    return abs(a-b) <= max( rel_tol * max(abs(a), abs(b)), abs_tol )
 
 #
 # The global isclose() function used below.  This is either isclose_default
 # (defined in pyutilib) or isclose_const
 #
 isclose = isclose_default
-
-#
-# A context manager that makes sure we set/reset the
-# isclose() function.
-#
-class isclose_context(object):
-
-    def __init__(self, compute_values):
-        self.compute_values = compute_values
-
-    def __enter__(self):
-        if not self.compute_values:
-            global isclose
-            isclose = isclose_const
-
-    def __exit__(self, *args):
-        global isclose
-        isclose = isclose_default
 
 
 class StandardRepn(object):
@@ -121,7 +98,7 @@ class StandardRepn(object):
                  'nonlinear_expr',    # Nonlinear expression
                  'nonlinear_vars')    # Variables that appear in the nonlinear expression
 
-    def __init__(self, expr=None):
+    def __init__(self):
         self.constant = 0
         self.linear_vars = tuple()
         self.linear_coefs = tuple()
@@ -129,8 +106,6 @@ class StandardRepn(object):
         self.quadratic_coefs = tuple()
         self.nonlinear_expr = None
         self.nonlinear_vars = tuple()
-        if not expr is None:
-            generate_standard_repn(expr, repn=self)
 
     def __getstate__(self):
         """
@@ -159,7 +134,7 @@ class StandardRepn(object):
     #
     # Generate a string representation of the expression
     #
-    def __str__(self):
+    def __str__(self):          #pragma: nocover
         output = StringIO()
         output.write("\n")
         output.write("constant:       "+str(self.constant)+"\n")
@@ -295,7 +270,6 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
     else:
         isclose = isclose_const
 
-    #with isclose_context(compute_values):
     if True:
         #
         # Setup
@@ -337,26 +311,31 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             else:
                 C_ = expr.constant
             if compute_values:
-                v_ = []
-                c_ = []
+                linear_coefs = {}
                 for c,v in zip(expr.linear_coefs, expr.linear_vars):
-                    if v.fixed:
-                        if c.__class__ in native_numeric_types:
-                            C_ += c*v.value
-                        elif c.is_expression_type():
-                            C_ += EXPR.evaluate_expression(c)*v.value
-                        else:
-                            C_ += value(c)*v.value
+                    if c.__class__ in native_numeric_types:
+                        cval = c
+                    elif c.is_expression_type():
+                        cval = EXPR.evaluate_expression(c)
                     else:
-                        if c.__class__ in native_numeric_types:
-                            c_.append( c )
-                        elif c.is_expression_type():
-                            c_.append( EXPR.evaluate_expression(c) )
+                        cval = value(c)
+                    if v.fixed:
+                        C_ += cval * v.value
+                    else:
+                        id_ = id(v)
+                        if not id_ in idMap[None]:
+                            key = len(idMap) - 1
+                            idMap[None][id_] = key
+                            idMap[key] = v
                         else:
-                            c_.append( value(c) )
-                        v_.append( v )
-                repn.linear_coefs = tuple(c_)
-                repn.linear_vars = tuple(v_)
+                            key = idMap[None][id_]
+                        if key in linear_coefs:
+                            linear_coefs[key] += cval
+                        else:
+                            linear_coefs[key] = cval
+                keys = list(linear_coefs.keys())
+                repn.linear_vars = tuple(idMap[key] for key in keys)
+                repn.linear_coefs = tuple(linear_coefs[key] for key in keys)
             else:
                 linear_coefs = {}
                 for c,v in zip(expr.linear_coefs, expr.linear_vars):
@@ -383,7 +362,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         #
         # Unknown expression object
         #
-        elif not expr.is_expression_type():
+        elif not expr.is_expression_type():         #pragma: nocover
             raise ValueError("Unexpected expression type: "+str(expr))
 
         #
@@ -419,16 +398,18 @@ class ResultsWithQuadratics(object):
     def __init__(self, constant=0, nonl=0, linear=None, quadratic=None):
         self.constant = constant
         self.nonl = nonl
-        if linear is None:
-            self.linear = {}
-        else:
-            self.linear = linear
-        if quadratic is None:
-            self.quadratic = {}
-        else:
-            self.quadratic = quadratic
+        self.linear = {}
+        #if linear is None:
+        #    self.linear = {}
+        #else:
+        #    self.linear = linear
+        self.quadratic = {}
+        #if quadratic is None:
+        #    self.quadratic = {}
+        #else:
+        #    self.quadratic = quadratic
 
-    def __str__(self):
+    def __str__(self):          #pragma: nocover
         return "Const:\t%f\nLinear:\t%s\nQuadratic:\t%s\nNonlinear:\t%s" % (self.constant, str(self.linear), str(self.quadratic), str(self.nonl))
 
 class ResultsWithoutQuadratics(object):
@@ -437,12 +418,13 @@ class ResultsWithoutQuadratics(object):
     def __init__(self, constant=0, nonl=0, linear=None):
         self.constant = constant
         self.nonl = nonl
-        if linear is None:
-            self.linear = {}
-        else:
-            self.linear = linear
+        self.linear = {}
+        #if linear is None:
+        #    self.linear = {}
+        #else:
+        #    self.linear = linear
 
-    def __str__(self):
+    def __str__(self):          #pragma: nocover
         return "Const:\t%f\nLinear:\t%s\nNonlinear:\t%s" % (self.constant, str(self.linear), str(self.nonl))
 
 Results = ResultsWithQuadratics
