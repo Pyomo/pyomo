@@ -2839,7 +2839,7 @@ def _decompose_linear_terms(expr, multiplier=1):
         for term in  _decompose_linear_terms(expr._args_[0], -multiplier):
             yield term
     elif expr.__class__ is LinearExpression or expr.__class__ is _MutableLinearExpression:
-        if expr.constant.__class__ in native_numeric_types and expr.constant != 0:
+        if not (expr.constant.__class__ in native_numeric_types and expr.constant == 0):
             yield (multiplier*expr.constant,None)
         if len(expr.linear_coefs) > 0:
             for c,v in zip(expr.linear_coefs, expr.linear_vars):
