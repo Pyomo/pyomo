@@ -684,6 +684,8 @@ class ExpressionReplacementVisitor(object):
             ans = self.visit(_obj, _result[1:])
             if _result[0] and id(ans) == id(_obj):
                 ans = self.construct_node(_obj, _result[1:])
+            if _result[0] and ans.__class__ is MonomialTermExpression:
+                ans.__class__ = ProductExpression
             if _stack:
                 if _result[0]:
                     _stack[-1][-1][0] = True

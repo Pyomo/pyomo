@@ -6094,7 +6094,7 @@ class TestNumValueDuckTyping(unittest.TestCase):
 #
 # Replace all variables with new variables from a varlist
 #
-class ReplacementWalkerTest(EXPR.ExpressionReplacementVisitor):
+class ReplacementWalkerTest1(EXPR.ExpressionReplacementVisitor):
 
     def __init__(self, model):
         EXPR.ExpressionReplacementVisitor.__init__(self)
@@ -6121,7 +6121,7 @@ class WalkerTests(unittest.TestCase):
         M.w = VarList()
 
         e = sin(M.x) + M.x*M.y + 3
-        walker = ReplacementWalkerTest(M)
+        walker = ReplacementWalkerTest1(M)
         f = walker.dfs_postorder_stack(e)
         self.assertEqual("sin(x) + x*y + 3", str(e))
         self.assertEqual("sin(w[1]) + w[1]*w[2] + 3", str(f))
@@ -6132,7 +6132,7 @@ class WalkerTests(unittest.TestCase):
         M.w = VarList()
 
         e = M.x
-        walker = ReplacementWalkerTest(M)
+        walker = ReplacementWalkerTest1(M)
         f = walker.dfs_postorder_stack(e)
         self.assertEqual("x", str(e))
         self.assertEqual("w[1]", str(f))
@@ -6144,7 +6144,7 @@ class WalkerTests(unittest.TestCase):
         M.w = VarList()
 
         e = sin(M.x) + M.x*M.y + 3 <= 0
-        walker = ReplacementWalkerTest(M)
+        walker = ReplacementWalkerTest1(M)
         f = walker.dfs_postorder_stack(e)
         self.assertEqual("sin(x) + x*y + 3  <=  0.0", str(e))
         self.assertEqual("sin(w[1]) + w[1]*w[2] + 3  <=  0.0", str(f))
@@ -6156,7 +6156,7 @@ class WalkerTests(unittest.TestCase):
         M.w = VarList()
 
         e = inequality(0, sin(M.x) + M.x*M.y + 3, 1)
-        walker = ReplacementWalkerTest(M)
+        walker = ReplacementWalkerTest1(M)
         f = walker.dfs_postorder_stack(e)
         self.assertEqual("0  <=  sin(x) + x*y + 3  <=  1", str(e))
         self.assertEqual("0  <=  sin(w[1]) + w[1]*w[2] + 3  <=  1", str(f))
@@ -6197,6 +6197,77 @@ class WalkerTests(unittest.TestCase):
         M.w = 2
         M.w.fixed = True
         self.assertEqual("sin(x) + x*2 + 3", EXPR.expression_to_string(e, compute_values=True))
+
+#
+# Replace all variables with a product expression
+#
+class ReplacementWalkerTest2(EXPR.ExpressionReplacementVisitor):
+
+    def __init__(self, model):
+        EXPR.ExpressionReplacementVisitor.__init__(self)
+        self.model = model
+
+    def visiting_potential_leaf(self, node):
+        if node.__class__ in nonpyomo_leaf_types or\
+           not node.is_potentially_variable():
+            return True, node
+
+        if node.is_variable_type():
+            if id(node) in self.memo:
+                return True, self.memo[id(node)]
+            self.memo[id(node)] = 2 * self.model.w.add()
+            return True, self.memo[id(node)]
+        return False, None
+
+
+class WalkerTests2(unittest.TestCase):
+
+    def test_replacement_walker1(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.y = Var()
+        M.w = VarList()
+
+        e = sin(M.x) + M.x*M.y + 3
+        walker = ReplacementWalkerTest2(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("sin(x) + x*y + 3", str(e))
+        self.assertEqual("sin(2*w[1]) + 2*w[1]*2*w[2] + 3", str(f))
+
+    def test_replacement_walker2(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.w = VarList()
+
+        e = M.x
+        walker = ReplacementWalkerTest2(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("x", str(e))
+        self.assertEqual("2*w[1]", str(f))
+
+    def test_replacement_walker3(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.y = Var()
+        M.w = VarList()
+
+        e = sin(M.x) + M.x*M.y + 3 <= 0
+        walker = ReplacementWalkerTest2(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("sin(x) + x*y + 3  <=  0.0", str(e))
+        self.assertEqual("sin(2*w[1]) + 2*w[1]*2*w[2] + 3  <=  0.0", str(f))
+
+    def test_replacement_walker4(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.y = Var()
+        M.w = VarList()
+
+        e = inequality(0, sin(M.x) + M.x*M.y + 3, 1)
+        walker = ReplacementWalkerTest2(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("0  <=  sin(x) + x*y + 3  <=  1", str(e))
+        self.assertEqual("0  <=  sin(2*w[1]) + 2*w[1]*2*w[2] + 3  <=  1", str(f))
 
 if __name__ == "__main__":
     unittest.main()
