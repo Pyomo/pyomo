@@ -1,10 +1,10 @@
 import gzip
+import io
 import os
 import platform
 import ssl
 import stat
 import sys
-from six import StringIO
 from six.moves.urllib.request import urlopen
 
 urlmap = {
@@ -27,11 +27,16 @@ def get_gjh(fname=None, insecure=False):
             "ERROR: cannot infer the correct url for platform '%s'" % platform)
 
     with open(fname, 'wb') as FILE:
-        ctx = ssl.create_default_context()
-        if insecure:
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
-        gzipped_file = StringIO(urlopen(url, context=ctx).read())
+        try:
+            ctx = ssl.create_default_context()
+            if insecure:
+                ctx.check_hostname = False
+                ctx.verify_mode = ssl.CERT_NONE
+            fetch = urlopen(url, context=ctx)
+        except AttributeError:
+            # Revert to pre-2.7.9 syntax
+            fetch = urlopen(url)
+        gzipped_file = io.BytesIO(fetch.read())
         FILE.write(gzip.GzipFile(fileobj=gzipped_file).read())
     mode = os.stat(fname).st_mode
     os.chmod(fname, mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
