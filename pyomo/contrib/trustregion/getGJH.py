@@ -32,7 +32,9 @@ def get_gjh(fname=None, insecure=False):
             "ERROR: cannot infer the correct url for platform '%s'" % platform)
 
     if fname is None:
-        fname = 'gjh'+exemap[system]
+        fname = '.'
+    elif os.path.isdir(fname):
+        fname = os.path.join(fname, 'gjh'+exemap[system])
 
     with open(fname, 'wb') as FILE:
         try:
@@ -57,8 +59,6 @@ if __name__ == '__main__':
         insecure = False
     if len(sys.argv) > 1:
         fname = sys.argv.pop(1)
-        if os.path.isdir(fname):
-            fname = os.path.join(fname, 'gjh'+exemap[system])
     else:
         fname = None
     if len(sys.argv) > 1:
