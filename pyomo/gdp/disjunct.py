@@ -212,7 +212,7 @@ class _DisjunctionData(ActiveComponentData):
     def set_value(self, expr):
         for e in expr:
             # The user gave us a proper Disjunct block
-            if isinstance(e, _DisjunctData):
+            if e.type() == Disjunct:
                 self.disjuncts.append(e)
                 continue
             # The user was lazy and gave us a single constraint
