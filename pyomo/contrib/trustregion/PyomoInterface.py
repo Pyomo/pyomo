@@ -11,8 +11,6 @@ from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
 from pyomo.contrib.trustregion.readgjh import *
 from pyomo.contrib.trustregion.helper import *
 
-GEO_DIR = os.path.join(os.path.dirname(__file__), 'QradROMGeo')
-
 class ROMType:
     linear = 0
     quadratic = 1
@@ -55,6 +53,8 @@ class PyomoInterface:
         self.createCompCheckObjective()
         self.cacheBound()
 
+        self.geoM = None
+        self.pset = None
 
 
     def substituteEF(self,expr,trf,efSet):
@@ -557,22 +557,9 @@ class PyomoInterface:
 
 
     ####################### Build ROM ####################
-    geoM = None
-    pset = None
 
     def initialQuad(self, lx):
-        psetOpt = np.loadtxt(os.path.join(GEO_DIR, 'geo%d.out'%lx))
-        mat = []
-        for p in psetOpt:
-            basisValue = [1]
-            for i1 in range(0, lx):
-                basisValue.append(p[i1])
-            for i1 in range(0, lx):
-                for i2 in range(i1, lx):
-                    basisValue.append(p[i1]*p[i2])
-            mat.append(basisValue)
-        self.geoM = np.matrix(mat)
-        self.pset = psetOpt
+        _, self.pset, self.geoM = generate_quadratic_rom_geometry(lx)
 
     def buildROM(self, x, radius_base):
         """
