@@ -4,6 +4,7 @@ import pyutilib.th as unittest
 
 from pyomo.core.base.expr import identify_variables
 from pyomo.environ import *
+from pyomo.opt import check_available_solvers
 from pyomo.contrib.trustregion.PyomoInterface import *
 
 class TestPyomoInterfaceInitialization(unittest.TestCase):
@@ -98,8 +99,33 @@ class TestPyomoInterfaceInitialization(unittest.TestCase):
         self.assertEqual(len(list(identify_variables(m.c2.body))),2)
         self.assertEqual(len(list(identify_variables(m.c3.body))),3)
 
+    @unittest.skipIf(not check_available_solvers('ipopt'),
+                     "The 'ipopt' solver is not available")
+    @unittest.skipIf(not check_available_solvers('gjh'),
+                     "The 'gjh' solver is not available")
+    def test_execute_TRF(self):
+        m = ConcreteModel()
+        m.z = Var(range(3), domain=Reals, initialize=2.)
+        m.x = Var(range(2), initialize=2.)
+        m.x[1] = 1.0
 
+        def blackbox(a,b):
+            return sin(a-b)
+        bb = ExternalFunction(blackbox)
 
+        m.obj = Objective(
+            expr=(m.z[0]-1.0)**2 + (m.z[0]-m.z[1])**2 + (m.z[2]-1.0)**2 \
+            + (m.x[0]-1.0)**4 + (m.x[1]-1.0)**6 # + m.bb(m.x[0],m.x[1])
+        )
+        m.c1 = Constraint(
+            expr=m.x[0] * m.z[0]**2 + bb(m.x[0],m.x[1]) == 2*sqrt(2.0))
+        m.c2 = Constraint(expr=m.z[2]**4 * m.z[1]**2 + m.z[1] == 8+sqrt(2.0))
+
+        SolverFactory('trustregion').solve(m, [bb])
+
+        self.assertAlmostEqual(value(m.obj), 0.277044789315, places=4)
+        self.assertAlmostEqual(value(m.x[0]), 1.32193855369, places=4)
+        self.assertAlmostEqual(value(m.x[1]), 0.628744699822, places=4)
 
 
 if __name__ == '__main__':

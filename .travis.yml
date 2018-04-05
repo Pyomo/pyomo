@@ -134,6 +134,10 @@ install:
   #
   - python setup.py develop
   #
+  # Fetch additional solvers
+  #
+  - python pyomo/contrib/trustregion/getGJH.py "$HOME/miniconda/bin"
+  #
   # Verify that the Python interpreter hasn't changed (occasionally conda
   # installers will change the installed Python!!)
   #
