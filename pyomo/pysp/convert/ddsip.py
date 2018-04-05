@@ -32,6 +32,7 @@ from pyomo.pysp.annotations import (locate_annotations,
                                     StochasticVariableBoundsAnnotation)
 from pyomo.pysp.convert.smps import (map_variable_stages,
                                      map_constraint_stages,
+                                     build_repns,
                                      _safe_remove_file,
                                      _no_negative_zero,
                                      _deterministic_check_value,
@@ -88,6 +89,12 @@ def _convert_external_setup(worker, scenario, *args, **kwds):
         raise
     finally:
         for block, block_cached_attrs in cached_attrs:
+            if hasattr(block, "_gen_obj_repn"):
+                del block._gen_obj_repn
+            if hasattr(block, "_gen_con_repn"):
+                del block._gen_con_repn
+            if hasattr(block, "_repn"):
+                del block._repn
             for name in block_cached_attrs:
                 setattr(block, name, block_cached_attrs[name])
 
@@ -211,10 +218,21 @@ def _convert_external_setup_without_cleanup(
                StochasticConstraintBodyAnnotation.__name__,
                StochasticObjectiveAnnotation.__name__))
 
+    assert not hasattr(reference_model, "_repn")
+    repn_cache = build_repns(reference_model)
+    assert hasattr(reference_model, "_repn")
+    assert not reference_model._gen_obj_repn
+    assert not reference_model._gen_con_repn
+    # compute values
+    for block_repns in repn_cache.values():
+        for repn in block_repns.values():
+            repn.constant = value(repn.constant)
+            repn.linear_coefs = [value(c) for c in repn.linear_coefs]
+            repn.quadratic_coefs = [value(c) for c in repn.quadratic_coefs]
+
     #
     # Write the LP file once to obtain the symbol map
     #
-    assert not hasattr(reference_model, "_repn")
     output_filename = os.path.join(output_directory,
                                    scenario.name+".lp.setup")
     with WriterFactory("lp") as writer:
@@ -225,7 +243,6 @@ def _convert_external_setup_without_cleanup(
                                           lambda x: True,
                                           io_options)
         assert output_fname == output_filename
-    assert hasattr(reference_model, "_repn")
     _safe_remove_file(output_filename)
 
     StageToVariableMap = map_variable_stages(
@@ -255,16 +272,6 @@ def _convert_external_setup_without_cleanup(
     assert len(scenario_tree.stages) == 2
     firststage = scenario_tree.stages[0]
     secondstage = scenario_tree.stages[1]
-
-    # disable these as they do not need to be regenerated and
-    # we will be modifiying them
-    repn_cache = {}
-    for block in reference_model.block_data_objects(
-            active=True,
-            descend_into=True):
-        repn_cache[id(block)] = block._repn
-        block._gen_obj_repn = False
-        block._gen_con_repn = False
 
     #
     # Make sure the objective references all first stage variables.
@@ -561,7 +568,7 @@ def _convert_external_setup_without_cleanup(
                         assert not var.fixed
                         var_coef = None
                         for i, (_var, coef) in enumerate(zip(constraint_repn.linear_vars,
-                                                            constraint_repn.linear_coefs)):
+                                                             constraint_repn.linear_coefs)):
                             if _var is var:
                                 var_coef = coef
                                 # We are going to rewrite with core problem file
@@ -634,7 +641,7 @@ def _convert_external_setup_without_cleanup(
                     assert isinstance(var, _VarData)
                     var_coef = None
                     for i, (_var, coef) in enumerate(zip(objective_repn.linear_vars,
-                                                        objective_repn.linear_coefs)):
+                                                         objective_repn.linear_coefs)):
                         if _var is var:
                             var_coef = coef
                             # We are going to rewrite the core problem file

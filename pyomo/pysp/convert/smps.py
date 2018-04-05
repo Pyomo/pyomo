@@ -24,6 +24,7 @@ from pyomo.core.base.numvalue import value
 from pyomo.core.base.block import (Block,
                                    _BlockData,
                                    SortComponents)
+from pyomo.core.base.objective import Objective
 from pyomo.core.base.var import Var, _VarData
 from pyomo.core.base.constraint import Constraint, _ConstraintData
 from pyomo.core.base.sos import SOSConstraint
@@ -247,6 +248,40 @@ def map_variable_stages(scenario,
 
     return StageToVariableMap
 
+def build_repns(model):
+    """Compiles expressions in a way that reduces the chance
+    of throwing out 0*var terms. Also activate flags that
+    disable regeneration by a solver plugin."""
+    repn_cache = {}
+    for block in model.block_data_objects(
+            active=True,
+            descend_into=True):
+        block._gen_obj_repn = False
+        block._gen_con_repn = False
+        repn_cache[id(block)] = block._repn = ComponentMap()
+        for objective_object in block.component_data_objects(
+                Objective,
+                active=True,
+                descend_into=False):
+            repn = generate_standard_repn(objective_object.expr,
+                                          compute_values=False)
+            block._repn[objective_object] = repn
+
+        for constraint_data in block.component_data_objects(
+                Constraint,
+                active=True,
+                descend_into=False):
+
+            if constraint_data._linear_canonical_form:
+                repn = constraint_data.canonical_form(compute_values=False)
+            else:
+                repn = generate_standard_repn(constraint_data.body,
+                                              compute_values=False)
+
+            block._repn[constraint_data] = repn
+
+    return repn_cache
+
 def _convert_external_setup(worker, scenario, *args, **kwds):
     reference_model = scenario._instance
     #
@@ -283,6 +318,12 @@ def _convert_external_setup(worker, scenario, *args, **kwds):
         raise
     finally:
         for block, block_cached_attrs in cached_attrs:
+            if hasattr(block, "_gen_obj_repn"):
+                del block._gen_obj_repn
+            if hasattr(block, "_gen_con_repn"):
+                del block._gen_con_repn
+            if hasattr(block, "_repn"):
+                del block._repn
             for name in block_cached_attrs:
                 setattr(block, name, block_cached_attrs[name])
 
@@ -408,10 +449,21 @@ def _convert_external_setup_without_cleanup(
                StochasticConstraintBodyAnnotation.__name__,
                StochasticObjectiveAnnotation.__name__))
 
+    assert not hasattr(reference_model, "_repn")
+    repn_cache = build_repns(reference_model)
+    assert hasattr(reference_model, "_repn")
+    assert not reference_model._gen_obj_repn
+    assert not reference_model._gen_con_repn
+    # compute values
+    for block_repns in repn_cache.values():
+        for repn in block_repns.values():
+            repn.constant = value(repn.constant)
+            repn.linear_coefs = [value(c) for c in repn.linear_coefs]
+            repn.quadratic_coefs = [value(c) for c in repn.quadratic_coefs]
+
     #
     # Write the LP/MPS file once to obtain the symbol map
     #
-    assert not hasattr(reference_model, "_repn")
     with WriterFactory(file_format) as writer:
         output_filename = \
             os.path.join(output_directory,
@@ -423,7 +475,6 @@ def _convert_external_setup_without_cleanup(
                                           lambda x: True,
                                           io_options)
         assert output_fname == output_filename
-    assert hasattr(reference_model, "_repn")
 
     StageToVariableMap = map_variable_stages(
         scenario,
@@ -452,16 +503,6 @@ def _convert_external_setup_without_cleanup(
     assert len(scenario_tree.stages) == 2
     firststage = scenario_tree.stages[0]
     secondstage = scenario_tree.stages[1]
-
-    # disable these as they do not need to be regenerated and
-    # we will be modifiying them
-    repn_cache = {}
-    for block in reference_model.block_data_objects(
-            active=True,
-            descend_into=True):
-        repn_cache[id(block)] = block._repn
-        block._gen_obj_repn = False
-        block._gen_con_repn = False
 
     #
     # Make sure the objective references all first stage variables.
@@ -733,11 +774,12 @@ def _convert_external_setup_without_cleanup(
 
                     constraint_repn = \
                         repn_cache[id(con.parent_block())][con]
+
                     if not constraint_repn.is_linear():
                         raise RuntimeError("Only linear constraints are "
                                            "accepted for conversion to SMPS format. "
                                            "Constraint %s is not linear."
-                                           % (con.name))
+                                           % (constraint_data.name))
 
                     body_constant = constraint_repn.constant
                     # We are going to rewrite the core problem file
@@ -837,11 +879,12 @@ def _convert_external_setup_without_cleanup(
 
                     constraint_repn = \
                         repn_cache[id(con.parent_block())][con]
+
                     if not constraint_repn.is_linear():
                         raise RuntimeError("Only linear constraints are "
                                            "accepted for conversion to SMPS format. "
                                            "Constraint %s is not linear."
-                                           % (con.name))
+                                           % (constraint_data.name))
 
                     assert len(constraint_repn.linear_vars) > 0
                     if var_list is None:
@@ -858,7 +901,7 @@ def _convert_external_setup_without_cleanup(
                         assert not var.fixed
                         var_coef = None
                         for i, (_var, coef) in enumerate(zip(constraint_repn.linear_vars,
-                                                            constraint_repn.linear_coefs)):
+                                                             constraint_repn.linear_coefs)):
                             if _var is var:
                                 var_coef = coef
                                 # We are going to rewrite with core problem file
@@ -1391,6 +1434,7 @@ def convert_external(output_directory,
 
     return input_files
 
+
 def convert_embedded(output_directory,
                      basename,
                      sp,
@@ -1419,6 +1463,61 @@ def convert_embedded(output_directory,
                          "can not be converted into an embedded "
                          "SMPS representation")
 
+    #
+    # We will be tweaking the repn objects on objectives
+    # and constraints, so cache anything related to this here so
+    # that this function does not have any side effects on the
+    # instance after returning
+    #
+    reference_model = sp.reference_model
+    cached_attrs = []
+    for block in reference_model.block_data_objects(
+            active=True,
+            descend_into=True):
+        block_cached_attrs = {}
+        if hasattr(block, "_gen_obj_repn"):
+            block_cached_attrs["_gen_obj_repn"] = \
+                block._gen_obj_repn
+            del block._gen_obj_repn
+        if hasattr(block, "_gen_con_repn"):
+            block_cached_attrs["_gen_con_repn"] = \
+                block._gen_con_repn
+            del block._gen_con_repn
+        if hasattr(block, "_repn"):
+            block_cached_attrs["_repn"] = \
+                block._repn
+            del block._repn
+        cached_attrs.append((block, block_cached_attrs))
+
+    try:
+        return _convert_embedded(output_directory,
+                                 basename,
+                                 sp,
+                                 core_format,
+                                 io_options,
+                                 enforce_derived_nonanticipativity)
+    except:
+        logger.error("Failed to complete embedded SMPS conversion")
+        raise
+    finally:
+        for block, block_cached_attrs in cached_attrs:
+            if hasattr(block, "_gen_obj_repn"):
+                del block._gen_obj_repn
+            if hasattr(block, "_gen_con_repn"):
+                del block._gen_con_repn
+            if hasattr(block, "_repn"):
+                del block._repn
+            for name in block_cached_attrs:
+                setattr(block, name, block_cached_attrs[name])
+
+def _convert_embedded(output_directory,
+                      basename,
+                      sp,
+                      core_format,
+                      io_options,
+                      enforce_derived_nonanticipativity):
+
+    reference_model = sp.reference_model
     #
     # Reinterpret the stage-ness of variables on the sp by
     # pushing derived first-stage variables into the second
@@ -1465,7 +1564,7 @@ def convert_embedded(output_directory,
     first_stage_constraint_ids = set()
     second_stage_constraints = []
     second_stage_constraint_ids = set()
-    for con in sp.reference_model.component_data_objects(
+    for con in reference_model.component_data_objects(
             Constraint,
             active=True,
             descend_into=True):
@@ -1518,6 +1617,22 @@ def convert_embedded(output_directory,
         param_vals_orig[paramdata] = paramdata._value
         paramdata.value = 0
 
+    assert not hasattr(reference_model, "_repn")
+    repn_cache = build_repns(reference_model)
+    assert hasattr(reference_model, "_repn")
+    assert not reference_model._gen_obj_repn
+    assert not reference_model._gen_con_repn
+    symbolic_repn_data = {}
+    # compute values before the write, but cache the original symbolic data
+    for block_repns in repn_cache.values():
+        for repn in block_repns.values():
+            symbolic_repn_data[repn] = (repn.constant,
+                                        repn.linear_coefs,
+                                        repn.quadratic_coefs)
+            repn.constant = value(repn.constant)
+            repn.linear_coefs = [value(c) for c in repn.linear_coefs]
+            repn.quadratic_coefs = [value(c) for c in repn.quadratic_coefs]
+
     input_files = {}
     #
     # Write the ordered LP/MPS file
@@ -1534,7 +1649,7 @@ def convert_embedded(output_directory,
         io_options['column_order'] = column_order
         io_options['row_order'] = row_order
         io_options['force_objective_constant'] = True
-        output_fname, symbol_map = writer(sp.reference_model,
+        output_fname, symbol_map = writer(reference_model,
                                           output_filename,
                                           lambda x: True,
                                           io_options)
@@ -1549,14 +1664,15 @@ def convert_embedded(output_directory,
                 lines.append("%s %s\n" % (lp_label, id_))
             f.writelines(sorted(lines))
 
-    repn_cache = {}
-    for block in sp.reference_model.block_data_objects(
-            active=True,
-            descend_into=True):
-        repn_cache[id(block)] = block._repn
+    # reset repns to symbolic form
+    for repn in symbolic_repn_data:
+        (repn.constant,
+         repn.linear_coefs,
+         repn.quadratic_coefs) = symbolic_repn_data[repn]
+    del symbolic_repn_data
 
-    # Reset stochastic parameter to their
-    # original setting values
+    # Reset stochastic parameters to their
+    # original values
     for paramdata, orig_val in param_vals_orig.items():
         paramdata._value = orig_val
     del param_vals_orig
@@ -1687,7 +1803,7 @@ def convert_embedded(output_directory,
             # extract the location of Param objects in the
             # constant or variable coefficient
             objective_repn = generate_standard_repn(sp.objective.expr,
-                                                     compute_values=False)
+                                                    compute_values=False)
             if not objective_repn.is_linear():
                 raise ValueError(
                     "Cannot output embedded SP representation for component "
@@ -1804,7 +1920,7 @@ def convert_embedded(output_directory,
             # extract the location of Param objects in the
             # constant or variable coefficient
             constraint_repn = generate_standard_repn(con.body,
-                                                      compute_values=False)
+                                                     compute_values=False)
             if not constraint_repn.is_linear():
                 raise ValueError(
                     "Cannot output embedded SP representation for component "
