@@ -4,17 +4,13 @@
 # This is an auto geometry generator for quadratic ROM
 import numpy as np
 
-MAX_CONDITION=10000
-NUM_ROM_SEEDS=5000
-MAX_LX = 24
-
-for lx in range(16,MAX_LX):
-    dim =  (lx*lx+lx*3)/2 + 1
+def generate_quadratic_rom_geometry(lx, NUM_SEEDS=5000):
+    dim = int((lx*lx+lx*3)/2 + 1)
     x1 = np.zeros(lx)
-    condOpt = MAX_CONDITION
+    condOpt = np.inf
     psetOpt = None
     matOpt = None
-    for i in range(0,NUM_ROM_SEEDS):
+    for i in range(0,NUM_SEEDS):
         pset = np.random.multivariate_normal(x1,np.eye(lx),dim-1)
         for j in range(dim-1):
             pset[j] = pset[j]/np.linalg.norm(pset[j])
@@ -33,12 +29,13 @@ for lx in range(16,MAX_LX):
             condOpt = cond
             psetOpt = pset
             matOpt = mat
-    if(condOpt == MAX_CONDITION):
+    if(psetOpt is None):
         print("Warning: lx = %d failed in initialization!\n" % lx)
-    else:
-        np.savetxt('QradROMGeo/geo%d.out'% lx, psetOpt)
-        print("Condition number: lx = %d is %f\n" % (lx,condOpt))
+    return psetOpt, condOpt
 
-
-
-
+if __name__ == '__main__':
+    for lx in range(1,24):
+        psetOpt, condOpt = generate_quadratic_rom_geometry(lx, 10000*lx)
+        if psetOpt is not None:
+            np.savetxt('QradROMGeo/geo%d.out'% lx, psetOpt)
+            print("Condition number: lx = %d is %f\n" % (lx,condOpt))

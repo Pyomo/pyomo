@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from pyutilib.math import infinity
 from pyutilib.services import TempfileManager
@@ -10,6 +11,7 @@ from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
 from pyomo.contrib.trustregion.readgjh import *
 from pyomo.contrib.trustregion.helper import *
 
+GEO_DIR = os.path.join(os.path.dirname(__file__), 'QradROMGeo')
 
 class ROMType:
     linear = 0
@@ -559,7 +561,7 @@ class PyomoInterface:
     pset = None
 
     def initialQuad(self, lx):
-        psetOpt = np.loadtxt('QradROMGeo/geo%d.out'% lx)
+        psetOpt = np.loadtxt(os.path.join(GEO_DIR, 'geo%d.out'%lx))
         mat = []
         for p in psetOpt:
             basisValue = [1]
