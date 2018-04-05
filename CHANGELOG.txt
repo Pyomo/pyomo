@@ -3,6 +3,30 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 5.4.4
+-------------------------------------------------------------------------------
+
+- GDP updates (#410)
+  - add support for implicit declaration of multi-constraint Disjuncts
+  - switch to using ConfigBlocks for chull, bigm relaxations
+- Fix for discretizing block hierarchical models with
+  circular references (#406, #353)
+- Fix formatting for small numbers in Baron file writer (#405)
+- Allow retrieving a mutable Param even when no initial or
+  default value is specified (#393)
+- Python3 fix for Set.pprint
+- Adding support in PySP for new persistent solver API (#397)
+- Fixing bug in Eckstein-Combettes PySP-PH extension for
+  handling unused model variables (#396)
+- Make handling of trivially non-binding constraints consistent across
+  the various solver interfaces (#392)
+- Fix to pprint for Params that store non-numeric values
+- Removing use of namespace_packages in setup.py
+- Modifying transformation that detects trivial constraints
+  to maintain a list of the constraints that were
+  deactivated (#385)
+
+-------------------------------------------------------------------------------
 Pyomo 5.4.3
 -------------------------------------------------------------------------------
 
