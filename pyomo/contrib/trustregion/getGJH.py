@@ -33,7 +33,7 @@ def get_gjh(fname=None, insecure=False):
 
     if fname is None:
         fname = '.'
-    elif os.path.isdir(fname):
+    if os.path.isdir(fname):
         fname = os.path.join(fname, 'gjh'+exemap[system])
 
     with open(fname, 'wb') as FILE:
