@@ -8,6 +8,9 @@ from pyomo.core.base import expr_coopr3, expr as EXPR
 from pyomo.core.base.var import _VarData
 from pyomo.core.base.numvalue import native_types
 from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
+from pyomo.contrib.trustregion.GeometryGenerator import (
+    generate_quadratic_rom_geometry
+)
 from pyomo.contrib.trustregion.readgjh import *
 from pyomo.contrib.trustregion.helper import *
 
