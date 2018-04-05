@@ -7,17 +7,22 @@ import stat
 import sys
 from six.moves.urllib.request import urlopen
 
+# These URLs were retrieved from
+#     https://ampl.com/resources/hooking-your-solver-to-ampl/
 urlmap = {
     'linux':   'https://ampl.com/netlib/ampl/student/linux/gjh.gz',
     'windows': 'https://ampl.com/netlib/ampl/student/mswin/gjh.exe.gz',
     'cygwin':  'https://ampl.com/netlib/ampl/student/mswin/gjh.exe.gz',
     'darwin':  'https://ampl.com/netlib/ampl/student/macosx/x86_32/gjh.gz',
 }
+exemap = {
+    'linux':   '',
+    'windows': '.exe',
+    'cygwin':  '.exe',
+    'darwin':  '',
+}
 
 def get_gjh(fname=None, insecure=False):
-    if fname is None:
-        fname = 'gjh'
-
     system = platform.system().lower()
     for c in '.-_':
         system = system.split(c)[0]
@@ -25,6 +30,9 @@ def get_gjh(fname=None, insecure=False):
     if url is None:
         raise RuntimeError(
             "ERROR: cannot infer the correct url for platform '%s'" % platform)
+
+    if fname is None:
+        fname = 'gjh'+exemap[system]
 
     with open(fname, 'wb') as FILE:
         try:
@@ -50,7 +58,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         fname = sys.argv.pop(1)
         if os.path.isdir(fname):
-            fname = os.path.join(fname, 'gjh')
+            fname = os.path.join(fname, 'gjh'+exemap[system])
     else:
         fname = None
     if len(sys.argv) > 1:
