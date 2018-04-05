@@ -20,7 +20,7 @@ Listening for work from dispatcher...
 Attempting to find Pyro dispatcher object...
 Dispatcher Object URI: PYRO://134.253.194.1:7768/86fdc2011d4821230b4f10cbb5cca2072b
 This is client 7500@snotra.sandia.gov
-Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/sizes/config/rhosetter.py
+Importing module=/Users/ghackebeil/Projects/Pyomo/pyomo/examples/pysp/sizes/config/rhosetter.py
 Module successfully loaded
 Initializing PH
 

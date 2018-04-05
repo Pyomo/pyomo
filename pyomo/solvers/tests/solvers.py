@@ -117,8 +117,8 @@ def test_solver_cases(*args):
         # CPLEX PERSISTENT
         #
 
-        _test_solver_cases['_cplex_persistent', 'python'] = initialize(
-            name='_cplex_persistent',
+        _test_solver_cases['cplex_persistent', 'python'] = initialize(
+            name='cplex_persistent',
             io='python',
             capabilities=_cplex_capabilities,
             import_suffixes=['slack','dual','rc'])
@@ -181,6 +181,16 @@ def test_solver_cases(*args):
             io='python',
             capabilities=_gurobi_capabilities,
             import_suffixes=['slack','dual','rc'])
+
+        #
+        # Gurobi PERSISTENT
+        #
+
+        _test_solver_cases['gurobi_persistent', 'python'] = initialize(
+            name='gurobi_persistent',
+            io='python',
+            capabilities=_gurobi_capabilities,
+            import_suffixes=['slack', 'dual', 'rc'])
 
         #
         # GLPK

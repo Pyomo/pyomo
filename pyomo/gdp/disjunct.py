@@ -15,18 +15,13 @@ from weakref import ref as weakref_ref
 
 from pyomo.util.modeling import unique_component_name
 from pyomo.util.timing import ConstructionTimer
-from pyomo.core import register_component, Binary, Block, Var, Constraint, Any
+from pyomo.core import (
+    register_component, Binary, Block, Var, ConstraintList, Any
+)
 from pyomo.core.base.component import (
     ActiveComponent, ActiveComponentData, ComponentData
 )
 from pyomo.core.base.numvalue import native_types
-#=======
-#from pyomo.core import *
-#from pyomo.core.base.plugin import register_component
-#from pyomo.core.base.constraint import (SimpleConstraint,
-#                                        IndexedConstraint,
-#                                        _GeneralConstraintData)
-#>>>>>>> master
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
@@ -45,9 +40,18 @@ class GDP_Error(Exception):
     """Exception raised while processing GDP Models"""
 
 
-# THe following should eventually be promoted so that all
+# The following should eventually be promoted so that all
 # IndexedComponents can use it
 class _Initializer(object):
+    """A simple function to process an argument to a Component constructor.
+
+    This checks the incoming initializer type and maps it to a static
+    identifier so that when constructing indexed Components we can avoid
+    a series of isinstance calls.  Eventually this concept should be
+    promoted to pyomo.core so that all Components can leverage a
+    standardized approach to processing "flexible" arguments (POD data,
+    rules, dicts, generators, etc)."""
+
     value = 0
     deferred_value = 1
     function = 2
@@ -64,7 +68,7 @@ class _Initializer(object):
         elif hasattr(arg, '__getitem__'):
             return (_Initializer.dict_like, arg)
         else:
-            # Hopefully this thing is castable to teh type that is desired
+            # Hopefully this thing is castable to the type that is desired
             return (_Initializer.deferred_value, arg)
 
 
@@ -208,36 +212,48 @@ class _DisjunctionData(ActiveComponentData):
     def set_value(self, expr):
         for e in expr:
             # The user gave us a proper Disjunct block
-            if isinstance(e, _DisjunctData):
+            if hasattr(e, 'type') and e.type() == Disjunct:
                 self.disjuncts.append(e)
                 continue
-            # The user was lazy and gave us a single constraint expression
-            try:
-                isexpr = e.is_expression()
-            except AttribureError:
-                isexpr = False
-            if isexpr and e.is_relational():
-                comp = self.parent_component()
-                if comp._autodisjuncts is None:
-                    b = self.parent_block()
-                    comp._autodisjuncts = Disjunct(Any)
-                    b.add_component(
-                        unique_component_name(b, comp.local_name),
-                        comp._autodisjuncts )
-                    # TODO: I am not at all sure why we need to
-                    # explicitly construct this block - that should
-                    # happen automatically.
-                    comp._autodisjuncts.construct()
-                disjunct = comp._autodisjuncts[len(comp._autodisjuncts)]
-                disjunct.constraint = Constraint(expr=e)
-                self.disjuncts.append(disjunct)
-                continue
-            #
-            # Anything else is an error
-            raise ValueError(
-                "Unexpected term for Disjunction %s.\n"
-                "\tExpected a Disjunct object or relational expression, "
-                "but got %s" % (self.name, type(e)) )
+            # The user was lazy and gave us a single constraint
+            # expression or an iterable of expressions
+            expressions = []
+            if hasattr(e, '__iter__'):
+                e_iter = e
+            else:
+                e_iter = [e]
+            for _tmpe in e_iter:
+                try:
+                    isexpr = _tmpe.is_expression()
+                except AttributeError:
+                    isexpr = False
+                if not isexpr or not _tmpe.is_relational():
+                    msg = "\n\tin %s" % (type(e),) if e_iter is e else ""
+                    raise ValueError(
+                        "Unexpected term for Disjunction %s.\n"
+                        "\tExpected a Disjunct object, relational expression, "
+                        "or iterable of\n"
+                        "\trelational expressions but got %s%s"
+                        % (self.name, type(_tmpe), msg) )
+                else:
+                    expressions.append(_tmpe)
+
+            comp = self.parent_component()
+            if comp._autodisjuncts is None:
+                b = self.parent_block()
+                comp._autodisjuncts = Disjunct(Any)
+                b.add_component(
+                    unique_component_name(b, comp.local_name + "_disjuncts"),
+                    comp._autodisjuncts )
+                # TODO: I am not at all sure why we need to
+                # explicitly construct this block - that should
+                # happen automatically.
+                comp._autodisjuncts.construct()
+            disjunct = comp._autodisjuncts[len(comp._autodisjuncts)]
+            disjunct.constraint = c = ConstraintList()
+            for e in expressions:
+                c.add(e)
+            self.disjuncts.append(disjunct)
 
 
 class Disjunction(ActiveIndexedComponent):
@@ -297,9 +313,9 @@ class Disjunction(ActiveIndexedComponent):
             for key in init_set:
                 self._data[key].xor = val
         elif self._init_xor[0] == _Initializer.deferred_value: # Param data
-            val = self._init_xor[1]
+            val = bool(value( self._init_xor[1] ))
             for key in init_set:
-                self._data[key].xor = bool(value(val))
+                self._data[key].xor = val
         elif self._init_xor[0] == _Initializer.function: # rule
             fcn = self._init_xor[1]
             for key in init_set:
@@ -323,8 +339,12 @@ class Disjunction(ActiveIndexedComponent):
         if not self.is_indexed():
             if self._init_rule is not None:
                 expr = self._init_rule(_self_parent)
-            else:
+            elif self._init_expr is not None:
                 expr = self._init_expr
+            else:
+                timer.report()
+                return
+
             if expr is None:
                 raise ValueError( _rule_returned_none_error % (self.name,) )
             if expr is Disjunction.Skip:
@@ -332,12 +352,12 @@ class Disjunction(ActiveIndexedComponent):
                 return
             self._data[None] = self
             self._setitem_when_not_present( None, expr )
-        else:
-            if self._init_expr is not None:
-                raise IndexError(
-                    "Disjunction '%s': Cannot initialize multiple indices "
-                    "of a disjunction with a single disjunction list" %
-                    (self.name,) )
+        elif self._init_expr is not None:
+            raise IndexError(
+                "Disjunction '%s': Cannot initialize multiple indices "
+                "of a disjunction with a single disjunction list" %
+                (self.name,) )
+        elif self._init_rule is not None:
             _init_rule = self._init_rule
             for ndx in self._index:
                 try:

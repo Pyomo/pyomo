@@ -948,6 +948,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     else:
                         ampl_repn = block_ampl_repn[constraint_data]
 
+                if (not constraint_data.has_lb()) and \
+                   (not constraint_data.has_ub()):
+                    assert not constraint_data.equality
+                    continue  # non-binding, so skip
+
                 ### GAH: Even if this is fixed, it is still useful to
                 ###      write out these types of constraints
                 ###      (trivial) as a feasibility check for fixed
@@ -1032,7 +1037,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     elif (L > U):
                         msg = 'Constraint {0}: lower bound greater than upper' \
                             ' bound ({1} > {2})'
-                        raise ValueError(msg.format(con_ID, str(L), str(U)))
+                        raise ValueError(msg.format(constraint_data.name,
+                                                    str(L), str(U)))
                     else:
                         constraint_bounds_dict[con_ID] = \
                             "0 %r %r\n" % (L-offset, U-offset)

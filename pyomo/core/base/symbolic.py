@@ -56,6 +56,10 @@ try:
 except ImportError: #pragma:nocover
     _sympy_available = False
 
+# A "public" attribute indicating that differentiate() can be called
+# ... this provides a bit of future-proofing for alternative approaches
+# to symbolic differentiation.
+differentiate_available = _sympy_available
 
 class NondifferentiableError(ValueError):
     """A Pyomo-specific ValueError raised for non-differentiable expressions"""

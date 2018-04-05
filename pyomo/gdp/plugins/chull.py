@@ -10,20 +10,24 @@
 
 import weakref
 import logging
+import textwrap
 
+import pyomo.util.config as cfg
 from pyomo.util.modeling import unique_component_name
 from pyomo.util.plugin import alias
-from pyomo.core import *
+from pyomo.core import (
+    Block, Connector, Constraint, Param, Set, Suffix, Var,
+    Expression, SortComponents, TraversalStrategy,
+    Any, Reals, NumericConstant, value
+)
 from pyomo.core.base import expr as EXPR, Transformation
-from pyomo.core.base.block import SortComponents
-from pyomo.core.base.component import ComponentUID, ActiveComponent
-from pyomo.core.base import _ExpressionData
+from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.var import _VarData
-from pyomo.repn import generate_canonical_repn, LinearCanonicalRepn
 from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.core.base.expr import identify_variables
+from pyomo.repn import generate_canonical_repn, LinearCanonicalRepn
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import clone_without_expression_components
+from pyomo.gdp.util import clone_without_expression_components, target_list
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 
 from six import iteritems, iterkeys
@@ -33,59 +37,126 @@ from nose.tools import set_trace
 
 logger = logging.getLogger('pyomo.gdp.chull')
 
-# NL_Mode_LeeGrossmann is the original NL convex hull from Lee &
-# Grossmann (2000), which substitutes nonlinear constraints
-#
-#     h_ik(x) <= 0
-#
-# with
-#
-#     x_k = sum( nu_ik )
-#     y_ik * h_ik( nu_ik/y_ik ) <= 0
-#
-# [1] Lee, S., & Grossmann, I. E. (2000). New algorithms for nonlinear
-# generalized disjunctive programming.  Computers and Chemical
-# Engineering, 24, 2125-2141
-#
-NL_Mode_LeeGrossmann = 1
-#
-# NL_Mode_GrossmannLee is an updated formulation from Grossmann & Lee
-# (2003), which substitutes nonlinear constraints
-#
-#     h_ik(x) <= 0
-#
-# with
-#
-#     x_k = sum( nu_ik )
-#     (y_ik + eps) * h_ik( nu_ik/(y_ik + eps) ) <= 0
-#
-# [2] Grossmann, I. E., & Lee, S. (2003). Generalized disjunctive
-# programming: Nonlinear convex hull relaxation and algorithms.
-# Computational Optimization and Applications, 26, 83-100.
-#
-NL_Mode_GrossmannLee = 2
-#
-# NL_Mode_FurmanSawayaGrossmann is an improved relaxation that avoids
-# numerical issues from the Lee & Grossmann formulation by using:
-#
-#     x_k = sum( nu_ik )
-#     ((1-eps)*y_ik + eps) * h_ik( nu_ik/((1-eps)*y_ik + eps) ) \
-#        - eps * h_ki(0) * ( 1-y_ik ) <= 0
-#
-# [3] Furman, K., Sawaya, N., and Grossmann, I.  A computationally
-# useful algebraic representation of nonlinear disjunctive convex sets
-# using the perspective function.  Optimization Online (2016).
-#
-# http://www.optimization-online.org/DB_HTML/2016/07/5544.html.
-#
-NL_Mode_FurmanSawayaGrossmann = 3
-
-EPS = 1e-2
 
 class ConvexHull_Transformation(Transformation):
+    """Relax disjunctive model by forming the convex hull.
 
-    alias('gdp.chull', doc="Relaxes a disjunctive model into an algebraic "
-          "model by forming the convex hull relaxation of each disjunction.")
+    Relaxes a disjunctive model into an algebraic model by forming the
+    convex hull of each disjunction.
+
+    This transformation accepts the following keyword arguments:
+
+    Parameters
+    ----------
+    perspective_function : str
+        The perspective function used for the disaggregated variables.
+        Must be one of 'FurmanSawayaGrossmann' (default),
+        'LeeGrossmann', or 'GrossmannLee'
+    EPS : float
+        The value to use for epsilon [default: 1e-4]
+    targets : (block, disjunction, ComponentUID or list of those types)
+        The targets to transform. This can be a block, disjunction, or a
+        list of blocks and Disjunctions [default: the instance]
+
+    After transformation, every transformed disjunct will have a
+    "_gdp_transformation_info" dict containing 2 entries:
+
+        'relaxed': True,
+        'chull': {
+            'relaxationBlock': <block>,
+            'relaxedConstraints': ComponentMap(constraint: relaxed_constraint)
+            'disaggregatedVars': ComponentMap(var: list of disaggregated vars),
+            'bigmConstraints': ComponentMap(disaggregated var: bigM constraint),
+        }
+
+    In addition, any block or disjunct containing a relaxed disjunction
+    will have a "_gdp_transformation_info" dict with the following
+    entry:
+
+        'disjunction_or_constraint': <constraint>
+
+    Finally, the transformation will create a new Block with a unique
+    name beginning "_pyomo_gdp_chull_relaxation".  That Block will
+    contain an indexed Block named "relaxedDisjuncts", which will hold
+    the relaxed disjuncts.  This block is indexed by an integer
+    indicating the order in which the disjuncts were relaxed.  Each
+    block will have a "_gdp_transformation_info" dict with the following
+    entries:
+
+        'src': <source disjunct>
+        'srcVars': ComponentMap(disaggregated var: original var),
+        'srcConstraints': ComponentMap(relaxed_constraint: constraint)
+        'boundConstraintToSrcVar': ComponentMap(bigm_constraint: orig_var),
+
+    """
+
+    alias('gdp.chull', doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
+
+
+    CONFIG = cfg.ConfigBlock('gdp.chull')
+    CONFIG.declare('targets', cfg.ConfigValue(
+        default=None,
+        domain=target_list,
+        description="target or list of targets that will be relaxed",
+        doc="""
+
+        This specifies the target or list of targets to relax as either a
+        component, ComponentUID, or string that can be passed to a
+        ComponentUID; or an iterable of these types.  If None (default),
+        the entire model is transformed."""
+    ))
+    CONFIG.declare('perspective function', cfg.ConfigValue(
+        default='FurmanSawayaGrossmann',
+        domain=cfg.In(['FurmanSawayaGrossmann','LeeGrossmann','GrossmannLee']),
+        description='perspective function used for variable disaggregation',
+        doc="""
+        The perspective function used for variable disaggregation
+
+        "LeeGrossmann" is the original NL convex hull from Lee &
+        Grossmann (2000) [1]_, which substitutes nonlinear constraints
+
+            h_ik(x) <= 0
+
+        with
+
+            x_k = sum( nu_ik )
+            y_ik * h_ik( nu_ik/y_ik ) <= 0
+
+        "GrossmannLee" is an updated formulation from Grossmann &
+        Lee (2003) [2]_, which avoids divide-by-0 errors by using:
+
+            x_k = sum( nu_ik )
+            (y_ik + eps) * h_ik( nu_ik/(y_ik + eps) ) <= 0
+
+        "FurmanSawayaGrossmann" (default) is an improved relaxation [3]_
+        that is exact at 0 and 1 while avoiding numerical issues from
+        the Lee & Grossmann formulation by using:
+
+            x_k = sum( nu_ik )
+            ((1-eps)*y_ik + eps) * h_ik( nu_ik/((1-eps)*y_ik + eps) ) \
+                - eps * h_ki(0) * ( 1-y_ik ) <= 0
+
+        References
+        ----------
+        .. [1] Lee, S., & Grossmann, I. E. (2000). New algorithms for
+           nonlinear generalized disjunctive programming.  Computers and
+           Chemical Engineering, 24, 2125-2141
+
+        .. [2] Grossmann, I. E., & Lee, S. (2003). Generalized disjunctive
+           programming: Nonlinear convex hull relaxation and algorithms.
+           Computational Optimization and Applications, 26, 83-100.
+
+        .. [3] Furman, K., Sawaya, N., and Grossmann, I.  A computationally
+           useful algebraic representation of nonlinear disjunctive convex
+           sets using the perspective function.  Optimization Online
+           (2016). http://www.optimization-online.org/DB_HTML/2016/07/5544.html.
+        """
+    ))
+    CONFIG.declare('EPS', cfg.ConfigValue(
+        default=1e-4,
+        domain=cfg.PositiveFloat,
+        description="Epsilon value to use in perspective function",
+    ))
 
     def __init__(self):
         super(ConvexHull_Transformation, self).__init__()
@@ -93,6 +164,7 @@ class ConvexHull_Transformation(Transformation):
             Constraint : self._xform_constraint,
             Var :        False,
             Connector :  False,
+            Expression : False,
             Param :      False,
             Set :        False,
             Suffix :     False,
@@ -101,24 +173,10 @@ class ConvexHull_Transformation(Transformation):
             Block:       self._transform_block_on_disjunct,
             }
 
-        #self._mode = NL_Mode_LeeGrossmann
-        #self._mode = NL_Mode_GrossmannLee
-        self._mode = NL_Mode_FurmanSawayaGrossmann
-
 
     def _apply_to(self, instance, **kwds):
-        options = kwds.pop('options', {})
-        targets = kwds.pop('targets', None)
-        self._mode = kwds.pop('nl_mode', NL_Mode_FurmanSawayaGrossmann)
-
-        if kwds:
-            logger.warning("GDP(CHull): unrecognized keyword arguments:\n\t%s"
-                           % ( '\n\t'.join(iterkeys(kwds)), ))
-
-        # We don't accept any options at the moment.
-        if options:
-            logger.warning("GDP(CHull): unrecognized options:\n%s"
-                        % ( '\n'.join(iterkeys(options)), ))
+        self._config = self.CONFIG(kwds.pop('options', {}))
+        self._config.set_value(kwds)
 
         # make a transformation block
         transBlockName = unique_component_name(
@@ -127,9 +185,10 @@ class ConvexHull_Transformation(Transformation):
         transBlock = Block()
         instance.add_component(transBlockName, transBlock)
         transBlock.relaxedDisjuncts = Block(Any)
-        transBlock.lbub = Set(initialize = ['lb','ub'])
+        transBlock.lbub = Set(initialize = ['lb','ub','eq'])
         transBlock.disjContainers = ComponentSet()
 
+        targets = self._config.targets
         if targets is None:
             targets = ( instance, )
             _HACK_transform_whole_instance = True
@@ -140,8 +199,6 @@ class ConvexHull_Transformation(Transformation):
             if t is None:
                 raise GDP_Error(
                     "Target %s is not a component on the instance!" % _t)
-            if not t.active:
-                continue
 
             if t.type() is Disjunction:
                 if t.parent_component() is t:
@@ -197,6 +254,15 @@ class ConvexHull_Transformation(Transformation):
         if _HACK_transform_whole_instance:
             HACK_GDP_Disjunct_Reclassifier().apply_to(instance)
 
+    def _contained_in(self, var, block):
+        "Return True if a var is in the subtree rooted at block"
+        while var is not None:
+            if var.parent_component() is block:
+                return True
+            var = var.parent_block()
+            if var is block:
+                return True
+        return False
 
     def _transformBlock(self, obj, transBlock):
         for i in sorted(iterkeys(obj)):
@@ -306,36 +372,78 @@ class ConvexHull_Transformation(Transformation):
 
         # We first go through and collect all the variables that we
         # are going to disaggregate.
-        varSet_tmp = ComponentSet()
-        varSet = []
+        varOrder_set = ComponentSet()
+        varOrder = []
+        varsByDisjunct = ComponentMap()
         for disjunct in obj.disjuncts:
-            for cons in disjunct.component_data_objects(
-                    Constraint,
-                    active = True,
-                    sort=SortComponents.deterministic,
-                    descend_into=Block):
-                # we aren't going to disaggregate fixed
-                # variables. This means there is trouble if they are
-                # unfixed later...
-                for var in identify_variables(cons.body, include_fixed=False):
-                    # Note the use of a list so that we will eventually
-                    # disaggregate the vars in a deterministic order
-                    # (the order that we found them)
-                    if var not in varSet_tmp:
-                        varSet.append(var)
-                        varSet_tmp.add(var)
+            # This is crazy, but if the disjunct has been previously
+            # relaxed, the disjunct *could* be deactivated.
+            not_active = not disjunct.active
+            if not_active:
+                disjunct._activate_without_unfixing_indicator()
+            try:
+                disjunctVars = varsByDisjunct[disjunct] = ComponentSet()
+                for cons in disjunct.component_data_objects(
+                        Constraint,
+                        active = True,
+                        sort=SortComponents.deterministic,
+                        descend_into=Block):
+                    # we aren't going to disaggregate fixed
+                    # variables. This means there is trouble if they are
+                    # unfixed later...
+                    for var in identify_variables(
+                            cons.body, include_fixed=False):
+                        # Note the use of a list so that we will
+                        # eventually disaggregate the vars in a
+                        # deterministic order (the order that we found
+                        # them)
+                        disjunctVars.add(var)
+                        if var not in varOrder_set:
+                            varOrder.append(var)
+                            varOrder_set.add(var)
+            finally:
+                if not_active:
+                    disjunct._deactivate_without_fixing_indicator()
+
+        # We will only disaggregate variables that
+        #  1) appear in multiple disjuncts, or
+        #  2) are not contained in this disjunct, or
+        #  3) are not themselves disaggregated variables
+        varSet = []
+        localVars = ComponentMap((d,[]) for d in obj.disjuncts)
+        for var in varOrder:
+            disjuncts = [d for d in varsByDisjunct if var in varsByDisjunct[d]]
+            if len(disjuncts) > 1:
+                varSet.append(var)
+            elif self._contained_in(var, disjuncts[0]):
+                localVars[disjuncts[0]].append(var)
+            elif self._contained_in(var, transBlock):
+                # There is nothing to do here: these are already
+                # disaggregated vars that can/will be forced to 0 when
+                # their disjunct is not active.
+                pass
+            else:
+                varSet.append(var)
 
         # Now that we know who we need to disaggregate, we will do it
         # while we also transform the disjuncts.
         or_expr = 0
         for disjunct in obj.disjuncts:
             or_expr += disjunct.indicator_var
-            self._transform_disjunct(disjunct, transBlock, varSet)
+            self._transform_disjunct(disjunct, transBlock, varSet,
+                                     localVars[disjunct])
         orConstraint.add(index, (or_expr, 1))
 
         for i, var in enumerate(varSet):
             disaggregatedExpr = 0
             for disjunct in obj.disjuncts:
+                if 'chull' not in disjunct._gdp_transformation_info:
+                    if not disjunct.indicator_var.is_fixed() \
+                            or value(disjunct.indicator_var) != 0:
+                        raise RuntimeError(
+                            "GDP chull: disjunct was not relaxed, but "
+                            "does not appear to be correctly deactivated.")
+                    continue
                 disaggregatedVar = disjunct._gdp_transformation_info['chull'][
                     'disaggregatedVars'][var]
                 disaggregatedExpr += disaggregatedVar
@@ -351,7 +459,7 @@ class ConvexHull_Transformation(Transformation):
                 var == disaggregatedExpr)
 
 
-    def _transform_disjunct(self, obj, transBlock, varSet):
+    def _transform_disjunct(self, obj, transBlock, varSet, localVars):
         if hasattr(obj, "_gdp_transformation_info"):
             infodict = obj._gdp_transformation_info
             # If the user has something with our name that is not a dict, we
@@ -374,7 +482,7 @@ class ConvexHull_Transformation(Transformation):
                 else:
                     raise GDP_Error(
                         "The disjunct %s is deactivated, but the "
-                        "indicator_var is fixed to %. This makes no sense."
+                        "indicator_var is fixed to %s. This makes no sense."
                         % ( obj.name, value(obj.indicator_var) ))
             if not infodict.get('relaxed', False):
                 raise GDP_Error(
@@ -387,7 +495,8 @@ class ConvexHull_Transformation(Transformation):
             # we've transformed it (with CHull), so don't do it again.
             return
 
-        # add reference to original disjunct to info dict on transformation block
+        # add reference to original disjunct to info dict on
+        # transformation block
         relaxedDisjuncts = transBlock.relaxedDisjuncts
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
         relaxationBlockInfo = relaxationBlock._gdp_transformation_info = {
@@ -424,7 +533,8 @@ class ConvexHull_Transformation(Transformation):
                                 % (var.name))
 
             disaggregatedVar = Var(within=Reals,
-                                   bounds=(min(0, lb), max(0, ub)))
+                                   bounds=(min(0, lb), max(0, ub)),
+                                   initialize=var.value)
             # naming conflicts are possible here since this is a bunch
             # of variables from different blocks coming together, so we
             # get a unique name
@@ -438,8 +548,37 @@ class ConvexHull_Transformation(Transformation):
             bigmConstraint = Constraint(transBlock.lbub)
             relaxationBlock.add_component(
                 disaggregatedVarName + "_bounds", bigmConstraint)
-            bigmConstraint.add('lb', obj.indicator_var*lb <= disaggregatedVar)
-            bigmConstraint.add('ub', disaggregatedVar <= obj.indicator_var*ub)
+            if lb:
+                bigmConstraint.add(
+                    'lb', obj.indicator_var*lb <= disaggregatedVar)
+            if ub:
+                bigmConstraint.add(
+                    'ub', disaggregatedVar <= obj.indicator_var*ub)
+            chull['bigmConstraints'][var] = bigmConstraint
+            relaxationBlockInfo['boundConstraintToSrcVar'][bigmConstraint] = var
+
+        for var in localVars:
+            lb = var.lb
+            ub = var.ub
+            if lb is None or ub is None:
+                raise GDP_Error("Variables that appear in disjuncts must be "
+                                "bounded in order to use the chull "
+                                "transformation! Missing bound for %s."
+                                % (var.name))
+            if value(lb) > 0:
+                var.setlb(0)
+            if value(ub) < 0:
+                var.setub(0)
+
+            # naming conflicts are possible here since this is a bunch
+            # of variables from different blocks coming together, so we
+            # get a unique name
+            conName = unique_component_name(
+                relaxationBlock, var.local_name+"_bounds")
+            bigmConstraint = Constraint(transBlock.lbub)
+            relaxationBlock.add_component(conName, bigmConstraint)
+            bigmConstraint.add('lb', obj.indicator_var*lb <= var)
+            bigmConstraint.add('ub', var <= obj.indicator_var*ub)
             chull['bigmConstraints'][var] = bigmConstraint
             relaxationBlockInfo['boundConstraintToSrcVar'][bigmConstraint] = var
 
@@ -447,6 +586,8 @@ class ConvexHull_Transformation(Transformation):
                                   iteritems(chull['disaggregatedVars']))
         zero_substitute_map = dict((id(v), NumericConstant(0)) for v, newV in
                                    iteritems(chull['disaggregatedVars']))
+        zero_substitute_map.update((id(v), NumericConstant(0))
+                                   for v in localVars)
 
         # Transform each component within this disjunct
         self._transform_block_components(obj, obj, infodict, var_substitute_map,
@@ -582,20 +723,21 @@ class ConvexHull_Transformation(Transformation):
             c = obj[i]
             if not c.active:
                 continue
-            c.deactivate()
 
             NL = c.body.polynomial_degree() not in (0,1)
+            EPS = self._config.EPS
+            mode = self._config.perspective_function
 
             # We need to evaluate the expression at the origin *before*
             # we substitute the expression variables with the
             # disaggregated variables
-            if not NL or self._mode == NL_Mode_FurmanSawayaGrossmann:
+            if not NL or mode == "FurmanSawayaGrossmann":
                 h_0 = clone_without_expression_components(
                     c.body, substitute=zero_substitute_map)
 
             y = disjunct.indicator_var
             if NL:
-                if self._mode == NL_Mode_LeeGrossmann:
+                if mode == "LeeGrossmann":
                     sub_expr = clone_without_expression_components(
                         c.body,
                         substitute=dict(
@@ -603,7 +745,7 @@ class ConvexHull_Transformation(Transformation):
                             for var, subs in iteritems(var_substitute_map) )
                     )
                     expr = sub_expr * y
-                elif self._mode == NL_Mode_GrossmannLee:
+                elif mode == "GrossmannLee":
                     sub_expr = clone_without_expression_components(
                         c.body,
                         substitute=dict(
@@ -611,7 +753,7 @@ class ConvexHull_Transformation(Transformation):
                             for var, subs in iteritems(var_substitute_map) )
                     )
                     expr = (y + EPS) * sub_expr
-                elif self._mode == NL_Mode_FurmanSawayaGrossmann:
+                elif mode == "FurmanSawayaGrossmann":
                     sub_expr = clone_without_expression_components(
                         c.body,
                         substitute=dict(
@@ -625,6 +767,25 @@ class ConvexHull_Transformation(Transformation):
                 expr = clone_without_expression_components(
                     c.body, substitute=var_substitute_map)
 
+            if c.equality:
+                if NL:
+                    newConsExpr = expr == c.lower*y
+                else:
+                    v = list(identify_variables(expr))
+                    if len(v) == 1 and not c.lower:
+                        # Setting a variable to 0 in a disjunct is
+                        # *very* common.  We should recognize that in
+                        # that structure, the disaggregated variable
+                        # will also be fixed to 0.
+                        v[0].fix(0)
+                        continue
+                    newConsExpr = expr - (1-y)*h_0 == c.lower*y
+
+                if obj.is_indexed():
+                    newConstraint.add((i, 'eq'), newConsExpr)
+                else:
+                    newConstraint.add('eq', newConsExpr)
+                continue
 
             if c.lower is not None:
                 # TODO: At the moment there is no reason for this to be in both

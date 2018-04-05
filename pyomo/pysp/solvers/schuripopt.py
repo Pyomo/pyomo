@@ -550,6 +550,9 @@ def runschuripopt(options):
             output_solver_log=options.output_solver_log,
             keep_solver_files=options.keep_solver_files,
             symbolic_solver_labels=options.symbolic_solver_labels)
+        xhat = results.xhat
+        del results.xhat
+        print("")
         print(results)
 
         if options.output_scenario_tree_solution:

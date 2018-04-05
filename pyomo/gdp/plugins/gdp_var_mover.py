@@ -67,19 +67,27 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
         for disjunct_component in disjunct_generator:
             for disjunct in itervalues(disjunct_component._data):
                 if disjunct.active:
-                    logger.error("""Reclassifying an active Disjunct as a Block.
-This is generally as error as it indicates that the model was not
-completely relaxed before applying the gdp.reclassify transformation""")
-
-                # Deactivate all constraints.  Note that we only need to
-                # descent into blocks: we will catch disjuncts in the outer
-                # loop.
-                cons_in_disjunct = disjunct.component_objects(
-                    Constraint, descend_into=Block, active=True)
-                for con in cons_in_disjunct:
-                    con.deactivate()
+                    logger.error("""
+                    Reclassifying active Disjunct "%s" as a Block.  This
+                    is generally an error as it indicates that the model
+                    was not completely relaxed before applying the
+                    gdp.reclassify transformation""" % (disjunct.name,))
 
             # Reclassify this disjunct as a block
             disjunct_component.parent_block().reclassify_component_type(
                 disjunct_component, Block)
             disjunct_component._activate_without_unfixing_indicator()
+
+            # Deactivate all constraints.  Note that we only need to
+            # descend into blocks: we will catch disjuncts in the outer
+            # loop.
+            #
+            # Note that we defer this until AFTER we reactivate the
+            # block, as the component_objects generator will not
+            # return anything when active=True and the block is
+            # deactivated.
+            for disjunct in itervalues(disjunct_component._data):
+                cons_in_disjunct = disjunct.component_objects(
+                    Constraint, descend_into=Block, active=True)
+                for con in cons_in_disjunct:
+                    con.deactivate()

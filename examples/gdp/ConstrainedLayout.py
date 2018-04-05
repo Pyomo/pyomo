@@ -52,7 +52,7 @@ def min_y_coord_init(model, i):
 model.YCoordLB = Param(model.BOXES, initialize=min_y_coord_init)
 
 # Cost associated with the distance between box i and j
-model.DistCost = Param(model.BOXES, model.BOXES, default=0)
+model.DistCost = Param(model.BoxPairs, default=0)
 
 model.BoxRelations = Set(initialize=['LeftOf', 'RightOf', 'Above', 'Below'])
 
@@ -66,8 +66,8 @@ def get_y_bounds(model, i):
     return (model.YCoordLB[i], model.YCoordUB[i])
 model.yCoord = Var(model.BOXES, bounds=get_y_bounds)
 
-model.horizDist = Var(model.BOXES, model.BOXES, within=NonNegativeReals)
-model.vertDist = Var(model.BOXES, model.BOXES, within=NonNegativeReals)
+model.horizDist = Var(model.BoxPairs, within=NonNegativeReals)
+model.vertDist = Var(model.BoxPairs, within=NonNegativeReals)
 
 
 ## Constraints #########
@@ -75,7 +75,7 @@ model.vertDist = Var(model.BOXES, model.BOXES, within=NonNegativeReals)
 # Objective: Minimize relative distance
 def rel_dist_rule(model):
     return sum(model.DistCost[i,j] * (model.horizDist[i,j] + model.vertDist[i,j])
-               for i in model.BOXES for j in model.BOXES)
+               for (i,j) in model.BoxPairs)
 model.rel_dist = Objective(rule=rel_dist_rule)
 
 
