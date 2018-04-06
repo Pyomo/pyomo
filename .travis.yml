@@ -103,7 +103,7 @@ install:
   - if [ "${TRAVIS_PYTHON_VERSION}" != "2.6" -a -z "${EXTRAS}" ]; then
        bash ./.travis_install_gams_api.sh;
     fi
-  - export PATH=${PATH}:$PWD/gams24.8_linux_x64_64_sfx;
+  - export PATH="$PATH:$PWD/gams24.8_linux_x64_64_sfx"
 
   #
   # Install Pyomo extras
@@ -139,9 +139,10 @@ install:
   - mkdir $PWD/bin
   - export PATH="$PWD/bin:$PATH"
   - python pyomo/contrib/trustregion/getGJH.py $PWD/bin
-  - ls -ald $PWD
+  - ls -al $PWD
   - ls -al $PWD/bin
   - which gjh
+  - echo $PATH
   - gjh -v
   #
   # Verify that the Python interpreter hasn't changed (occasionally conda
