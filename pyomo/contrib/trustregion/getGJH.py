@@ -48,7 +48,10 @@ def get_gjh(fname=None, insecure=False):
             # Revert to pre-2.7.9 syntax
             fetch = urlopen(url)
         gzipped_file = io.BytesIO(fetch.read())
-        FILE.write(gzip.GzipFile(fileobj=gzipped_file).read())
+        print("  ...downloaded %s bytes" % (len(gzipped_file.getvalue()),))
+        raw_file = gzip.GzipFile(fileobj=gzipped_file).read()
+        FILE.write(raw_file)
+        print("  ...wrote %s bytes" % (len(raw_file),))
     mode = os.stat(fname).st_mode
     os.chmod(fname, mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
