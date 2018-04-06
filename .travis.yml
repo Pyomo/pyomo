@@ -38,6 +38,8 @@ matrix:
 install:
   - sudo apt-get update --quiet
   - sudo apt-get install gfortran
+  # Needed to run 32-bit applications (GJH):
+  - sudo apt-get install ia32-libs
   #
   # Setup miniconda and activate the testenv environment
   #
@@ -139,13 +141,6 @@ install:
   - mkdir $PWD/bin
   - export PATH="$PWD/bin:$PATH"
   - python pyomo/contrib/trustregion/getGJH.py $PWD/bin
-  - ls -al $PWD
-  - ls -al $PWD/bin
-  - which gjh
-  - echo $PATH
-  - file $PWD/bin/gjh
-  - md5sum $PWD/bin/gjh
-  - $PWD/bin/gjh -v
   - gjh -v
   #
   # Verify that the Python interpreter hasn't changed (occasionally conda
