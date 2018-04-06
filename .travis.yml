@@ -139,6 +139,7 @@ install:
   - mkdir $PWD/bin
   - export PATH="$PWD/bin:$PATH"
   - python pyomo/contrib/trustregion/getGJH.py $PWD/bin
+  - ls -l $PWD/bin
   - gjh -v
   #
   # Verify that the Python interpreter hasn't changed (occasionally conda
