@@ -1,5 +1,5 @@
 
-import os, glob
+import os, glob, six
 
 # build obj gradient and constraint Jacobian
 # from a gjh file written by the ASL gjh 'solver'
@@ -41,7 +41,11 @@ def readgjh():
         while data[0] != ';':
             if data[0] == '[':
                 # Jacobian row index
-                row = int(filter(str.isdigit,data)) - 1  # subtract 1 to index from 0
+                #
+                # The following replaces int(filter(str.isdigit,data)),
+                # which only works in 2.x
+                data_as_int = int(''.join(six.moves.filter(str.isdigit, data)))
+                row = data_as_int - 1  # subtract 1 to index from 0
                 data = f.readline()
 
             entry = [row, int(data.split()[0]) - 1, float(data.split()[1])]  # subtract 1 to index from 0
