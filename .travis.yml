@@ -36,10 +36,11 @@ matrix:
 
 
 install:
+  - sudo dpkg --add-architecture i386
   - sudo apt-get update --quiet
   - sudo apt-get install gfortran
   # Needed to run 32-bit applications (GJH):
-  - sudo apt-get install ia32-libs
+  - sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386
   #
   # Setup miniconda and activate the testenv environment
   #
