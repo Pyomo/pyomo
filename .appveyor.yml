@@ -112,7 +112,7 @@ install:
   - "mkdir %cd%\\bin"
   - "SET PATH=%cd%\\bin;%PATH%"
   - "python pyomo\\contrib\\trustregion\\getGJH.py %cd%\\bin"
-  - "gjh"
+  - "gjh -v"
   #
   # Verify the python version
   - python --version
