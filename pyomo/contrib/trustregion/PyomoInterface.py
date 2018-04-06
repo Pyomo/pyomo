@@ -598,7 +598,7 @@ class PyomoInterface:
             if self.geoM is None:
                 self.initialQuad(self.lx)
 
-            dim =  (self.lx*self.lx+self.lx*3)/2 + 1
+            dim = int((self.lx*self.lx+self.lx*3)/2. + 1)
             rhs=[]
             radius = radius_base #*np.array(scale)
             for p in self.pset[:-1]:
