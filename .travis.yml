@@ -136,15 +136,16 @@ install:
   #
   # Fetch additional solvers
   #
-  - mkdir $PWD/bin
-  - export PATH="$PWD/bin:$PATH"
-  - python pyomo/contrib/trustregion/getGJH.py $PWD/bin
+  - mkdir $PWD/tpl
+  - export PATH="$PWD/tpl:$PATH"
+  - python pyomo/contrib/trustregion/getGJH.py $PWD/tpl
   - ls -al $PWD
-  - ls -al $PWD/bin
+  - ls -al $PWD/tpl
   - which gjh
   - echo $PATH
-  - file $PWD/gjh
-  - $PWD/gjh -v
+  - file $PWD/tpl/gjh
+  - $PWD/tpl/gjh -v
+  - gjh -v
   #
   # Verify that the Python interpreter hasn't changed (occasionally conda
   # installers will change the installed Python!!)
