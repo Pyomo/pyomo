@@ -36,6 +36,7 @@ def get_gjh(fname=None, insecure=False):
     if os.path.isdir(fname):
         fname = os.path.join(fname, 'gjh'+exemap[system])
 
+    print("Fetching GJH from %s and installing it to %s" % (url, fname))
     with open(fname, 'wb') as FILE:
         try:
             ctx = ssl.create_default_context()

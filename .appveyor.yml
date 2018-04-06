@@ -109,8 +109,10 @@ install:
   #
   # Fetch additional solvers
   #
-  - "python pyomo\\contrib\\trustregion\\getGJH.py %cd%\\bin"
+  - "mkdir %cd%\\bin"
   - "SET PATH=%cd%\\bin;%PATH%"
+  - "python pyomo\\contrib\\trustregion\\getGJH.py %cd%\\bin"
+  - "gjh"
   #
   # Verify the python version
   - python --version

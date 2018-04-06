@@ -136,7 +136,10 @@ install:
   #
   # Fetch additional solvers
   #
-  - python pyomo/contrib/trustregion/getGJH.py "$HOME/miniconda/bin"
+  - mkdir $PWD/bin
+  - export PATH="$PWD/bin:$PATH"
+  - python pyomo/contrib/trustregion/getGJH.py $PWD/bin
+  - gjh
   #
   # Verify that the Python interpreter hasn't changed (occasionally conda
   # installers will change the installed Python!!)
