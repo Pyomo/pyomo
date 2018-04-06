@@ -143,7 +143,8 @@ install:
   - ls -al $PWD/bin
   - which gjh
   - echo $PATH
-  - gjh -v
+  - file $PWD/gjh
+  - $PWD/gjh -v
   #
   # Verify that the Python interpreter hasn't changed (occasionally conda
   # installers will change the installed Python!!)
