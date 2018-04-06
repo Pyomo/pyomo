@@ -44,7 +44,8 @@ _packages = [
 _optional_packages = set([
     'pyomo.contrib.example',
     'pyomo.contrib.preprocessing',
-    'pyomo.contrib.gdpopt'])
+    'pyomo.contrib.gdpopt',
+    'pyomo.contrib.gdp_bounds'])
 
 
 def _import_packages():
