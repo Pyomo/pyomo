@@ -56,7 +56,7 @@ logger = logging.getLogger('pyomo.pysp')
 def _convert_external_setup(worker, scenario, *args, **kwds):
     reference_model = scenario._instance
     #
-    # We will be tweaking the canonical_repn objects on objectives
+    # We will be tweaking the standard_repn objects on objectives
     # and constraints, so cache anything related to this here so
     # that this function does not have any side effects on the
     # instance after returning

@@ -56,10 +56,8 @@ from pyomo.pysp.phutils import (create_block_symbol_maps,
                                 preprocess_scenario_instance,
                                 preprocess_bundle_instance,
                                 find_active_objective,
-                                canonical_preprocess_block_objectives,
-                                canonical_preprocess_block_constraints,
-                                ampl_preprocess_block_objectives,
-                                ampl_preprocess_block_constraints,
+                                preprocess_block_objectives,
+                                preprocess_block_constraints,
                                 extract_solve_times,
                                 _OLD_OUTPUT)
 from pyomo.pysp.util.misc import load_external_module
@@ -439,20 +437,18 @@ class _PHBase(object):
             self._problem_states.objective_updated[scenario._name] = True
             self._problem_states.user_constraints_updated[scenario._name] = True
 
-            # IMPT: disable canonical representation construction
+            # IMPT: disable standard representation construction
             #       for solvers.  this is a hack, in that we
             #       need to address encodings and the like at a
             #       more general level.
             # We will take care of these manually within
             # _preprocess_scenario_instance This will also
-            # prevent regenerating the ampl_repn/canonical_repn when forming
+            # prevent regenerating the standard_repn when forming
             # the bundle_ef's
 
             for block in scenario_instance.block_data_objects(active=True):
-                block._gen_obj_ampl_repn = False
-                block._gen_con_ampl_repn = False
-                block._gen_obj_canonical_repn = False
-                block._gen_con_canonical_repn = False
+                block._gen_obj_repn = False
+                block._gen_con_repn = False
 
             self._instances[scenario._name] = scenario_instance
 
@@ -671,18 +667,11 @@ class _PHBase(object):
                     (scenario._probability / scenario_bundle._probability) * \
                     weight_expression_component
 
-            if self._solver_map[next(iterkeys(self._solver_map))].problem_format == ProblemFormat.nl:
-                var_id_map = {}
-                ampl_preprocess_block_objectives(bundle_ef_instance,
-                                                 var_id_map)
-                ampl_preprocess_block_constraints(bundle_ef_instance,
-                                                  var_id_map)
-            else:
-                var_id_map = {}
-                canonical_preprocess_block_objectives(bundle_ef_instance,
-                                                      var_id_map)
-                canonical_preprocess_block_constraints(bundle_ef_instance,
-                                                       var_id_map)
+            var_id_map = {}
+            preprocess_block_objectives(bundle_ef_instance,
+                                        idMap=var_id_map)
+            preprocess_block_constraints(bundle_ef_instance,
+                                         idMap=var_id_map)
 
         end_time = time.time()
 
@@ -1022,25 +1011,17 @@ class _PHBase(object):
                     self._problem_states.clear_freed_variables(scenario_name)
 
                 # TBD - much of this can be done in preprocess_bundle_instance
-                if bundle_solver.problem_format == ProblemFormat.nl:
-                    var_id_map = {}
-                    if preprocess_bundle_objective:
-                        ampl_preprocess_block_objectives(bundle_ef_instance,
-                                                         var_id_map)
-                    if preprocess_bundle_constraints:
-                        ampl_preprocess_block_constraints(bundle_ef_instance,
-                                                          var_id_map)
-                else:
-                    var_id_map = {}
-                    if preprocess_bundle_objective:
-                        canonical_preprocess_block_objectives(bundle_ef_instance,
-                                                              var_id_map)
-                    if preprocess_bundle_constraints:
-                        canonical_preprocess_block_constraints(bundle_ef_instance,
-                                                               var_id_map)
+                var_id_map = {}
+                if preprocess_bundle_objective:
+                    preprocess_block_objectives(bundle_ef_instance,
+                                                idMap=var_id_map)
+                if preprocess_bundle_constraints:
+                    preprocess_block_constraints(bundle_ef_instance,
+                                                 idMap=var_id_map)
 
                 if preprocess_bundle_objective:
-                    preprocess_bundle_instance(bundle_ef_instance, bundle_solver)
+                    preprocess_bundle_instance(bundle_ef_instance,
+                                               bundle_solver)
 
         end_time = time.time()
 
@@ -1621,13 +1602,9 @@ class ProgressiveHedging(_PHBase):
             self._problem_states.clear_ph_variables(instance_name)
 
             for block in instance.block_data_objects(active=True):
-                if hasattr(instance, "_gen_obj_ampl_repn"):
-                    del instance._gen_obj_ampl_repn
-                if hasattr(instance, "_gen_con_ampl_repn"):
-                    del instance._gen_con_ampl_repn
-                if hasattr(instance, "_gen_obj_canonical_repn"):
+                if hasattr(instance, "_gen_obj_repn"):
                     del instance._gen_obj_canonical_repn
-                if hasattr(instance, "_gen_con_canonical_repn"):
+                if hasattr(instance, "_gen_con_repn"):
                     del instance._gen_con_canonical_repn
 
             if hasattr(instance, "_PHInstanceSymbolMaps"):

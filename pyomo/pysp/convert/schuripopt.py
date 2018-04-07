@@ -91,8 +91,8 @@ def _write_bundle_nl(worker,
     block_attrs = []
     for block in bundle_instance.block_data_objects(active=True):
         attrs = []
-        for attr_name in ("_gen_obj_ampl_repn",
-                          "_gen_con_ampl_repn"):
+        for attr_name in ("_gen_obj_repn",
+                          "_gen_con_repn"):
             if hasattr(block, attr_name):
                 attrs.append((attr_name, getattr(block, attr_name)))
                 setattr(block, attr_name, True)
@@ -166,8 +166,8 @@ def _write_scenario_nl(worker,
     block_attrs = []
     for block in instance.block_data_objects(active=True):
         attrs = []
-        for attr_name in ("_gen_obj_ampl_repn",
-                          "_gen_con_ampl_repn"):
+        for attr_name in ("_gen_obj_repn",
+                          "_gen_con_repn"):
             if hasattr(block, attr_name):
                 attrs.append((attr_name, getattr(block, attr_name)))
                 setattr(block, attr_name, True)
