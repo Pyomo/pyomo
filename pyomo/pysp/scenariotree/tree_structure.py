@@ -1259,9 +1259,11 @@ class Scenario(object):
 
         else:
             if repn is None:
-                repn = generate_standard_repn(constraintdata.body)
+                repn = generate_standard_repn(constraintdata.body, quadratic=False)
 
             vardata_list = repn.linear_vars
+            if len(repn.nonlinear_vars):
+                vardata_list += repn.nonlinear_vars
 
         for var_data in vardata_list:
 

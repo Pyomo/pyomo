@@ -15,7 +15,7 @@ from pyomo.opt import ProblemFormat
 
 from pyomo.repn.standard_repn import (preprocess_block_objectives,
                                       preprocess_block_constraints,
-                                      preprocess_constraint_data)
+                                      preprocess_constraint)
 from pyomo.opt import (UndefinedData,
                        undefined)
 
@@ -793,7 +793,7 @@ def preprocess_scenario_instance(scenario_instance,
         # only pre-process the piecewise constraints
         idMap = {}
         for constraint_name in instance_ph_constraints:
-            preprocess_constraint_data(
+            preprocess_constraint(
                 scenario_instance,
                 getattr(scenario_instance, constraint_name),
                 idMap=idMap)

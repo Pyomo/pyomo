@@ -477,7 +477,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     OUTPUT.write(nary_sum_str % (n))
                     for child_exp in vargs:
                         self._print_nonlinear_terms_NL(child_exp)
-                
+
             elif exp_type is EXPR.SumExpressionBase:
                 nary_sum_str, binary_sum_str, coef_term_str = self._op_string[EXPR.SumExpressionBase]
                 OUTPUT.write(binary_sum_str)
@@ -891,16 +891,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 else:
                     if gen_con_repn:
                         repn = generate_standard_repn(constraint_data.body, quadratic=False)
-                        #print(constraint_data.body)
-                        #print(repn)
                         block_repn[constraint_data] = repn
                     else:
                         repn = block_repn[constraint_data]
-
-                #print("HERE")
-                #print((str(constraint_data.lower), str(constraint_data.body), str(constraint_data.upper)))
-                #print(repn)
-                #print(repn.is_fixed())
 
                 if (not constraint_data.has_lb()) and \
                    (not constraint_data.has_ub()):

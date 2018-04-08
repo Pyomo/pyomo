@@ -1603,9 +1603,9 @@ class ProgressiveHedging(_PHBase):
 
             for block in instance.block_data_objects(active=True):
                 if hasattr(instance, "_gen_obj_repn"):
-                    del instance._gen_obj_canonical_repn
+                    del instance._gen_obj_repn
                 if hasattr(instance, "_gen_con_repn"):
-                    del instance._gen_con_canonical_repn
+                    del instance._gen_con_repn
 
             if hasattr(instance, "_PHInstanceSymbolMaps"):
                 del instance._PHInstanceSymbolMaps

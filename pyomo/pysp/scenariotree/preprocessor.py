@@ -541,9 +541,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
                 for list_ in (instance_constraints_updated_list,
                               instance_constraints_added_list):
                     for constraint_data in list_:
-                        if isinstance(constraint_data, LinearCanonicalRepn):
-                            continue
-                        if constraint_data._linear_canonical_form:
+                        if getattr(constraint_data, "_linear_canonical_form", False):
                             continue
                         preprocess_constraint_data(scenario_instance,
                                                    constraint_data,

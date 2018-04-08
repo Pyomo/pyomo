@@ -31,16 +31,10 @@ from pyomo.pysp import phextension
 from pyomo.solvers.plugins.smanager.phpyro import SolverManager_PHPyro
 from pyomo.util.plugin import SingletonPlugin, implements
 
-from pyomo.repn.standard_repn import (
-    preprocess_block_constraints as ampl_preprocess_block_constraints,
-    preprocess_block_objectives as ampl_preprocess_block_objectives,
-)
-from pyomo.repn.standard_repn import (
-    preprocess_block_constraints as canonical_preprocess_block_constraints,
-    preprocess_block_objectives as canonical_preprocess_block_objectives,
-)
+from pyomo.repn.standard_repn import (preprocess_block_constraints
+                                      preprocess_block_objectives)
 from pyomo.pysp.phsolverserverutils import (
-    InvocationType, 
+    InvocationType,
     transmit_external_function_invocation,
     transmit_external_function_invocation_to_worker )
 from pyomo.pysp.convergence import NormalizedTermDiffConvergence
@@ -173,11 +167,8 @@ def get_modified_instance( ph, scenario_tree, scenario_or_bundle, **options):
     if FALLBACK_ON_BRUTE_FORCE_PREPROCESS:
         model.preprocess()
     else:
-        if ph._solver.problem_format() == ProblemFormat.nl:
-            ampl_preprocess_block_constraints(b)
-        else:
-            _map = {}
-            canonical_preprocess_block_constraints(b, _map)
+        _map = {}
+        preprocess_block_constraints(b, idMap=_map)
 
     # Note: we wait to deactivate the objective until after we
     # preprocess so that the obective is correctly processed.
@@ -217,12 +208,9 @@ def get_dual_values(solver, model):
         if FALLBACK_ON_BRUTE_FORCE_PREPROCESS:
             model.preprocess()
         else:
-            if solver.problem_format() == ProblemFormat.nl:
-                ampl_preprocess_block_constraints(model._interscenario_plugin)
-            else:
-                _map = {}
-                canonical_preprocess_block_constraints(
-                    model._interscenario_plugin, _map )
+            _map = {}
+            preprocess_block_constraints(
+                model._interscenario_plugin, idMap=_map)
 
         #SOLVE
         results = solver.solve(model, warmstart=True)
@@ -295,13 +283,9 @@ def solve_separation_problem(solver, model, fallback):
     if FALLBACK_ON_BRUTE_FORCE_PREPROCESS:
         model.preprocess()
     else:
-        if solver.problem_format() == ProblemFormat.nl:
-            ampl_preprocess_block_objectives(_block)
-            ampl_preprocess_block_constraints(_block)
-        else:
-            _map = {}
-            canonical_preprocess_block_objectives(_block,_map)
-            canonical_preprocess_block_constraints(_block,_map)
+        _map = {}
+        preprocess_block_objectives(_block, idMap=_map)
+        preprocess_block_constraints(_block, idMap=_map)
 
     #SOLVE
     output_buffer = StringIO()
@@ -369,11 +353,8 @@ def solve_separation_problem(solver, model, fallback):
     if FALLBACK_ON_BRUTE_FORCE_PREPROCESS:
         pass
     else:
-        if solver.problem_format() == ProblemFormat.nl:
-            ampl_preprocess_block_objectives(_block)
-        else:
-            _map = {}
-            canonical_preprocess_block_objectives(_block,_map)
+        _map = {}
+        preprocess_block_objectives(_block, idMap=_map)
     return ans
 
 
@@ -424,11 +405,8 @@ def add_new_cuts( ph, scenario_tree, scenario_or_bundle,
     if FALLBACK_ON_BRUTE_FORCE_PREPROCESS:
         m.preprocess()
     else:
-        if ph._solver.problem_format() == ProblemFormat.nl:
-            ampl_preprocess_block_constraints(_block)
-        else:
-            _map = {}
-            canonical_preprocess_block_constraints(_block,_map)
+        _map = {}
+        preprocess_block_constraints(_block, idMap=_map)
 
     if resolve:
         results = ph._solver.solve(m, warmstart=True)
@@ -501,18 +479,15 @@ def solve_fixed_scenario_solutions(
         for var_id, var_value in iteritems(var_values):
             _param[var_id] = var_value
 
-        # TODO: We only need to update the CanonicalRepn for the binding
+        # TODO: We only need to update the StandardRepn for the binding
         # constraints ... so we could save a LOT of time by not
         # preprocessing the whole model.
         #
         if FALLBACK_ON_BRUTE_FORCE_PREPROCESS:
             model.preprocess()
         else:
-            if ph._solver.problem_format() == ProblemFormat.nl:
-                ampl_preprocess_block_constraints(_block)
-            else:
-                var_id_map = {}
-                canonical_preprocess_block_constraints(_block, var_id_map)
+            var_id_map = {}
+            preprocess_block_constraints(_block, idMap=var_id_map)
 
         toc("preprocessed scenario %s" % ( scenario_or_bundle._name, ))
         output_buffer = StringIO()
@@ -562,8 +537,8 @@ def solve_fixed_scenario_solutions(
                 if cut == '????':
                     if ph._solver.problem_format() != ProblemFormat.nl:
                         model.preprocess()
-                        #ampl_preprocess_block_objectives(_block)
-                        #ampl_preprocess_block_constraints(_block)
+                        #preprocess_block_objectives(_block)
+                        #preprocess_block_constraints(_block)
                     cut = solve_separation_problem(ipopt, model, False)
             else:
                 cut = "X  "
