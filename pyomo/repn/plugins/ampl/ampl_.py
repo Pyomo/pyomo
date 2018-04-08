@@ -408,6 +408,57 @@ class ProblemWriter_nl(AbstractProblemWriter):
         self._op_string = None
         return filename, symbol_map
 
+    def _print_quad_term(self, v1, v2):
+        OUTPUT = self._OUTPUT
+        if v1 is not v2:
+            prod_str = self._op_string[EXPR.ProductExpression]
+            OUTPUT.write(prod_str)
+            self._print_nonlinear_terms_NL(v1)
+            self._print_nonlinear_terms_NL(v2)
+        else:
+            intr_expr_str = self._op_string['pow']
+            OUTPUT.write(intr_expr_str)
+            self._print_nonlinear_terms_NL(v1)
+            OUTPUT.write(self._op_string[NumericConstant] % (2))
+
+    def _print_standard_quadratic_NL(self,
+                                     quadratic_vars,
+                                     quadratic_coefs):
+        OUTPUT = self._OUTPUT
+        nary_sum_str, binary_sum_str, coef_term_str = \
+            self._op_string[EXPR.SumExpressionBase]
+        assert len(quadratic_vars) == len(quadratic_coefs)
+        if len(quadratic_vars) == 1:
+            pass
+        else:
+            if len(quadratic_vars) == 2:
+                OUTPUT.write(binary_sum_str)
+            else:
+                assert len(quadratic_vars) > 2
+                OUTPUT.write(nary_sum_str % (len(quadratic_vars)))
+            # now we need to do a sort to ensure deterministic output
+            # as the compiled quadratic representation does not preserve
+            # any ordering
+            old_quadratic_vars = quadratic_vars
+            old_quadratic_coefs = quadratic_coefs
+            self_varID_map = self._varID_map
+            quadratic_vars = []
+            quadratic_coefs = []
+            for (i, (v1, v2)) in sorted(enumerate(old_quadratic_vars),
+                                        key=lambda x: (self_varID_map[id(x[1][0])],
+                                                       self_varID_map[id(x[1][1])])):
+                quadratic_coefs.append(old_quadratic_coefs[i])
+                if self_varID_map[id(v1)] <= self_varID_map[id(v2)]:
+                    quadratic_vars.append((v1,v2))
+                else:
+                    quadratic_vars.append((v2,v1))
+        for i in range(len(quadratic_vars)):
+            coef = quadratic_coefs[i]
+            v1, v2 = quadratic_vars[i]
+            if coef != 1:
+                OUTPUT.write(coef_term_str % (coef))
+            self._print_quad_term(v1, v2)
+
     def _print_nonlinear_terms_NL(self, exp):
         OUTPUT = self._OUTPUT
         exp_type = type(exp)
@@ -479,7 +530,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         self._print_nonlinear_terms_NL(child_exp)
 
             elif exp_type is EXPR.SumExpressionBase:
-                nary_sum_str, binary_sum_str, coef_term_str = self._op_string[EXPR.SumExpressionBase]
+                nary_sum_str, binary_sum_str, coef_term_str = \
+                    self._op_string[EXPR.SumExpressionBase]
                 OUTPUT.write(binary_sum_str)
                 self._print_nonlinear_terms_NL(exp.arg(0))
                 self._print_nonlinear_terms_NL(exp.arg(1))
@@ -528,7 +580,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         self._print_nonlinear_terms_NL(arg)
 
             elif exp_type is EXPR.PowExpression:
-                intr_expr_str = self._op_string.get(exp.name)
+                intr_expr_str = self._op_string['pow']
                 OUTPUT.write(intr_expr_str)
                 self._print_nonlinear_terms_NL(exp.arg(0))
                 self._print_nonlinear_terms_NL(exp.arg(1))
@@ -794,20 +846,40 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         max_rowname_len = len(objname)
 
                 if gen_obj_repn:
-                    repn = generate_standard_repn(active_objective.expr, quadratic=False)
+                    repn = generate_standard_repn(active_objective.expr,
+                                                  quadratic=False)
                     block_repn[active_objective] = repn
+                    linear_vars = repn.linear_vars
+                    nonlinear_vars = repn.nonlinear_vars
                 else:
                     repn = block_repn[active_objective]
+                    linear_vars = repn.linear_vars
+                    # By default, the NL writer generates
+                    # StandardRepn objects without the more
+                    # expense quadratic processing, but
+                    # there is no guarantee of this if we
+                    # are using a cached repn object, so we
+                    # must check for the quadratic form.
+                    if repn.is_nonlinear() and (repn.nonlinear_expr is None):
+                        assert repn.is_quadratic()
+                        assert len(repn.quadratic_vars) > 0
+                        nonlinear_vars = {}
+                        for v1, v2 in repn.quadratic_vars:
+                            nonlinear_vars[id(v1)] = v1
+                            nonlinear_vars[id(v2)] = v2
+                        nonlinear_vars = nonlinear_vars.values()
+                    else:
+                        nonlinear_vars = repn.nonlinear_vars
 
                 try:
                     wrapped_repn = RepnWrapper(
                         repn,
-                        list(self_varID_map[id(var)] for var in repn.linear_vars),
-                        list(self_varID_map[id(var)] for var in repn.nonlinear_vars))
+                        list(self_varID_map[id(var)] for var in linear_vars),
+                        list(self_varID_map[id(var)] for var in nonlinear_vars))
                 except KeyError as err:
                     self._symbolMapKeyError(err, model, self_varID_map,
-                                            repn.linear_vars +
-                                            repn.nonlinear_vars)
+                                            list(linear_vars) +
+                                            list(nonlinear_vars))
                     raise
 
                 LinearVars.update(wrapped_repn.linear_vars)
@@ -876,29 +948,46 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                                                 sort=sorter,
                                                                 descend_into=False):
 
+                if (not constraint_data.has_lb()) and \
+                   (not constraint_data.has_ub()):
+                    assert not constraint_data.equality
+                    continue  # non-binding, so skip
+
                 if symbolic_solver_labels:
                     conname = name_labeler(constraint_data)
                     if len(conname) > max_rowname_len:
                         max_rowname_len = len(conname)
 
                 if constraint_data._linear_canonical_form:
-                    canonical_repn = constraint_data.canonical_form()
-                    repn = StandardRepn()
-                    repn.nonlinear_vars = tuple()
-                    repn.linear_vars = canonical_repn.linear_vars
-                    repn.linear_coefs = canonical_repn.linear_coefs
-                    repn.constant = canonical_repn.constant
+                    repn = constraint_data.canonical_form()
+                    linear_vars = repn.linear_vars
+                    nonlinear_vars = repn.nonlinear_vars
                 else:
                     if gen_con_repn:
-                        repn = generate_standard_repn(constraint_data.body, quadratic=False)
+                        repn = generate_standard_repn(constraint_data.body,
+                                                      quadratic=False)
                         block_repn[constraint_data] = repn
+                        linear_vars = repn.linear_vars
+                        nonlinear_vars = repn.nonlinear_vars
                     else:
                         repn = block_repn[constraint_data]
-
-                if (not constraint_data.has_lb()) and \
-                   (not constraint_data.has_ub()):
-                    assert not constraint_data.equality
-                    continue  # non-binding, so skip
+                        linear_vars = repn.linear_vars
+                        # By default, the NL writer generates
+                        # StandardRepn objects without the more
+                        # expense quadratic processing, but
+                        # there is no guarantee of this if we
+                        # are using a cached repn object, so we
+                        # must check for the quadratic form.
+                        if repn.is_nonlinear() and (repn.nonlinear_expr is None):
+                            assert repn.is_quadratic()
+                            assert len(repn.quadratic_vars) > 0
+                            nonlinear_vars = {}
+                            for v1, v2 in repn.quadratic_vars:
+                                nonlinear_vars[id(v1)] = v1
+                                nonlinear_vars[id(v2)] = v2
+                            nonlinear_vars = nonlinear_vars.values()
+                        else:
+                            nonlinear_vars = repn.nonlinear_vars
 
                 ### GAH: Even if this is fixed, it is still useful to
                 ###      write out these types of constraints
@@ -912,12 +1001,12 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 try:
                     wrapped_repn = RepnWrapper(
                         repn,
-                        list(self_varID_map[id(var)] for var in repn.linear_vars),
-                        list(self_varID_map[id(var)] for var in repn.nonlinear_vars))
+                        list(self_varID_map[id(var)] for var in linear_vars),
+                        list(self_varID_map[id(var)] for var in nonlinear_vars))
                 except KeyError as err:
                     self._symbolMapKeyError(err, model, self_varID_map,
-                                            repn.linear_vars +
-                                            repn.nonlinear_vars)
+                                            list(linear_vars) +
+                                            list(nonlinear_vars))
                     raise
 
                 if repn.is_nonlinear():
@@ -1489,7 +1578,16 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 OUTPUT.write("\t#%s" % (lbl))
                 rowf.write(lbl+"\n")
             OUTPUT.write("\n")
-            self._print_nonlinear_terms_NL(wrapped_repn.repn.nonlinear_expr)
+
+            if wrapped_repn.repn.nonlinear_expr is not None:
+                assert not wrapped_repn.repn.is_quadratic()
+                self._print_nonlinear_terms_NL(
+                    wrapped_repn.repn.nonlinear_expr)
+            else:
+                assert wrapped_repn.repn.is_quadratic()
+                self._print_standard_quadratic_NL(
+                    wrapped_repn.repn.quadratic_vars,
+                    wrapped_repn.repn.quadratic_coefs)
 
             for var_ID in set(wrapped_repn.linear_vars).union(
                     wrapped_repn.nonlinear_vars):
@@ -1538,7 +1636,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     OUTPUT.write(binary_sum_str)
                     OUTPUT.write(self._op_string[NumericConstant]
                                  % (wrapped_repn.repn.constant))
-                self._print_nonlinear_terms_NL(wrapped_repn.repn.nonlinear_expr)
+                if wrapped_repn.repn.nonlinear_expr is not None:
+                    assert not wrapped_repn.repn.is_quadratic()
+                    self._print_nonlinear_terms_NL(
+                        wrapped_repn.repn.nonlinear_expr)
+                else:
+                    assert wrapped_repn.repn.is_quadratic()
+                    self._print_standard_quadratic_NL(
+                        wrapped_repn.repn.quadratic_vars,
+                        wrapped_repn.repn.quadratic_coefs)
 
         if symbolic_solver_labels:
             rowf.close()
