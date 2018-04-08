@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -20,7 +20,7 @@ from pyutilib.misc.timing import tic, toc
 from pyomo.core import (
     minimize, value, TransformationFactory,
     ComponentUID, Block, Constraint, ConstraintList,
-    Param, Var, VarList, Set, Objective, Suffix, 
+    Param, Var, VarList, Set, Objective, Suffix,
     Binary, Boolean,
     Integers, PositiveIntegers, NonPositiveIntegers,
     NegativeIntegers, NonNegativeIntegers, IntegerInterval,
@@ -103,7 +103,7 @@ def get_modified_instance( ph, scenario_tree, scenario_or_bundle, **options):
     b.abs_int_vars = VarList(within=NonNegativeIntegers)
     b.abs_binary_vars = VarList(within=Binary)
 
-    # Note: the var_ids are on the ORIGINAL scenario models 
+    # Note: the var_ids are on the ORIGINAL scenario models
     rootNode = scenario_tree.findRootNode()
     var_ids = list(iterkeys(rootNode._variable_datas))
 
@@ -226,7 +226,7 @@ def get_dual_values(solver, model):
 
         #SOLVE
         results = solver.solve(model, warmstart=True)
-        ss = results.solver.status 
+        ss = results.solver.status
         tc = results.solver.termination_condition
         #self.timeInSolver += results['Solver'][0]['Time']
         if ss == SolverStatus.ok and tc in _acceptable_termination_conditions:
@@ -254,14 +254,14 @@ def get_dual_values(solver, model):
             xfrm.apply(model, inplace=True, undo=True)
         else:
             xfrm.apply_to(model, undo=True)
-        
+
     else:
         # return the duals
         for varid in model._interscenario_plugin.STAGE1VAR:
             duals[varid] = model.dual[_con[varid]]
 
     return duals
-    
+
 get_dual_values.discrete_stage2_vars = {}
 
 
@@ -316,7 +316,7 @@ def solve_separation_problem(solver, model, fallback):
     finally:
         pyutilib.misc.reset_redirect()
 
-    ss = results.solver.status 
+    ss = results.solver.status
     tc = results.solver.termination_condition
     #self.timeInSolver += results['Solver'][0]['Time']
     if ss == SolverStatus.ok and tc in _acceptable_termination_conditions:
@@ -392,7 +392,7 @@ def add_new_cuts( ph, scenario_tree, scenario_or_bundle,
         expr = sum(
             2 * (_sep*(1-cut_scale))
               * (_src[i]() - (_par+_sep*(1-cut_scale)))
-            for i, (_sep, _par) in iteritems(cut) 
+            for i, (_sep, _par) in iteritems(cut)
             if abs(_sep) > epsilon*max(1,_par)
         )
         if expr is not 0:
@@ -432,7 +432,7 @@ def add_new_cuts( ph, scenario_tree, scenario_or_bundle,
 
     if resolve:
         results = ph._solver.solve(m, warmstart=True)
-        ss = results.solver.status 
+        ss = results.solver.status
         tc = results.solver.termination_condition
         #self.timeInSolver += results['Solver'][0]['Time']
         if ss == SolverStatus.ok and tc in _acceptable_termination_conditions:
@@ -451,8 +451,8 @@ def add_new_cuts( ph, scenario_tree, scenario_or_bundle,
             return None
 
 
-def solve_fixed_scenario_solutions( 
-        ph, scenario_tree, scenario_or_bundle, 
+def solve_fixed_scenario_solutions(
+        ph, scenario_tree, scenario_or_bundle,
         scenario_solutions, **model_options ):
 
     model = get_modified_instance(
@@ -529,7 +529,7 @@ def solve_fixed_scenario_solutions(
         toc("solved solution from scenario set %s on scenario %s" %
             ( scenario_name_list, scenario_or_bundle._name, ))
 
-        ss = results.solver.status 
+        ss = results.solver.status
         tc = results.solver.termination_condition
         #self.timeInSolver += results['Solver'][0]['Time']
         if ss == SolverStatus.ok and tc in _acceptable_termination_conditions:
@@ -569,7 +569,7 @@ def solve_fixed_scenario_solutions(
                 cut = "X  "
             cutlist.append( cut )
             toc("solved separation problem for solution from scenario set "
-                "%s on scenario %s" % 
+                "%s on scenario %s" %
                 ( scenario_name_list, scenario_or_bundle._name, ))
         else:
             state = 2 #'NONOPTIMAL'
@@ -595,7 +595,7 @@ def solve_fixed_scenario_solutions(
 
 class InterScenarioPlugin(SingletonPlugin):
 
-    implements(phextension.IPHExtension) 
+    implements(phextension.IPHExtension)
 
     def __init__(self):
         self.enableRhoUpdates = True
@@ -745,7 +745,7 @@ class InterScenarioPlugin(SingletonPlugin):
                 _min = rootNode._minimums[_id]
                 if rho < self.epsilon and _max - _min > self.epsilon:
                     print( "InterScenario plugin: triggered by variable "
-                           "divergence with rho==0 (%s: %s; [%s, %s])" 
+                           "divergence with rho==0 (%s: %s; [%s, %s])"
                            % (_id, rho, _max, _min))
                     run = True
                     break
@@ -803,10 +803,10 @@ class InterScenarioPlugin(SingletonPlugin):
                     ','.join(soln[1])
                 ))
 
-        scenarioCosts = [ ph._scenario_tree.get_scenario(x)._cost 
+        scenarioCosts = [ ph._scenario_tree.get_scenario(x)._cost
                           for s in self.unique_scenario_solutions
                           for x in s[1] ]
-        scenarioProb =  [ ph._scenario_tree.get_scenario(x)._probability 
+        scenarioProb =  [ ph._scenario_tree.get_scenario(x)._probability
                           for s in self.unique_scenario_solutions
                           for x in s[1] ]
         _avg = sum( scenarioProb[i]*c for i,c in enumerate(scenarioCosts) )
@@ -831,7 +831,7 @@ class InterScenarioPlugin(SingletonPlugin):
         #cutCount = len(self.feasibility_cuts)
         if self.enableFeasibilityCuts:
             self.feasibility_cuts = cuts
-        cutCount = sum( sum( 1 for x in c if type(x) is tuple 
+        cutCount = sum( sum( 1 for x in c if type(x) is tuple
                              and  x[0]>self.cutThreshold_minDiff )
                         for c in cuts )
         subProblemCount = sum(len(c) for c in cuts)
@@ -846,7 +846,7 @@ class InterScenarioPlugin(SingletonPlugin):
             # Tell ph that we may have a good opter bound
             ph._update_reported_bounds(outer=self.average_solution)
 
-            if ( cutCount > self.recutThreshold*(subProblemCount-len(cuts)) 
+            if ( cutCount > self.recutThreshold*(subProblemCount-len(cuts))
                  and ( _del_avg is None or
                        _del_avg > self.iteration0RecutBoundImprovement )):
                 # Bypass RHO updates and check for more cuts
@@ -989,7 +989,7 @@ class InterScenarioPlugin(SingletonPlugin):
     def _distribute_cuts(self, ph, resolve=False):
         totalCuts = 0
         cutObj = sorted( c[0] for x in self.feasibility_cuts for c in x
-                         if type(c) is tuple 
+                         if type(c) is tuple
                          and c[0] > self.cutThreshold_minDiff )
         if cutObj:
             allCutThreshold = cutObj[
@@ -1087,12 +1087,11 @@ class InterScenarioPlugin(SingletonPlugin):
                     continue
                 for scenario in get_scenarios(problem):
                     scenario._cost = ans[1]
-                    assert( sorted(ans[0]) == 
+                    assert( sorted(ans[0]) ==
                             sorted(scenario._x[rootNode._name]) )
                     scenario._x[rootNode._name] = ans[0] #[_vid] = _vval
             ph.update_variable_statistics()
 
-    
     def _compute_objective(self, partial_obj_values, probability):
         obj_values = []
         for soln_id in xrange(len( self.unique_scenario_solutions )):
@@ -1221,7 +1220,7 @@ class InterScenarioPlugin(SingletonPlugin):
             self.x_deviation = dict(
                 ( v,
                   max(s[0][v] for s in self.unique_scenario_solutions)
-                  - min(s[0][v] for s in self.unique_scenario_solutions) ) 
+                  - min(s[0][v] for s in self.unique_scenario_solutions) )
                 for v in xbar )
 
         max_dual = dict((v,0.) for v in xbar)
@@ -1323,7 +1322,7 @@ class InterScenarioPlugin(SingletonPlugin):
             loginfo[k] = \
                 "%4d: %6.1f [%7.1f, %7.1f] %7.1f;  " \
                 "%6.1f [%6.1f, %6.1f] %6.1f;  RHO %7.2f : %%7.2f" % (
-                k, 
+                k,
                 d_avg, d_min, d_max, d_stdev,
                 x_avg, x_min, x_max, x_stdev,
                 weighted_rho[k] )
