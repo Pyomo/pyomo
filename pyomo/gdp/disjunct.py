@@ -15,7 +15,9 @@ from weakref import ref as weakref_ref
 
 from pyomo.util.modeling import unique_component_name
 from pyomo.util.timing import ConstructionTimer
-from pyomo.core import register_component, Binary, Block, Var, Constraint, Any
+from pyomo.core import (
+    register_component, Binary, Block, Var, ConstraintList, Any
+)
 from pyomo.core.base.component import (
     ActiveComponent, ActiveComponentData, ComponentData
 )
@@ -210,36 +212,48 @@ class _DisjunctionData(ActiveComponentData):
     def set_value(self, expr):
         for e in expr:
             # The user gave us a proper Disjunct block
-            if isinstance(e, _DisjunctData):
+            if hasattr(e, 'type') and e.type() == Disjunct:
                 self.disjuncts.append(e)
                 continue
-            # The user was lazy and gave us a single constraint expression
-            try:
-                isexpr = e.is_expression()
-            except AttribureError:
-                isexpr = False
-            if isexpr and e.is_relational():
-                comp = self.parent_component()
-                if comp._autodisjuncts is None:
-                    b = self.parent_block()
-                    comp._autodisjuncts = Disjunct(Any)
-                    b.add_component(
-                        unique_component_name(b, comp.local_name),
-                        comp._autodisjuncts )
-                    # TODO: I am not at all sure why we need to
-                    # explicitly construct this block - that should
-                    # happen automatically.
-                    comp._autodisjuncts.construct()
-                disjunct = comp._autodisjuncts[len(comp._autodisjuncts)]
-                disjunct.constraint = Constraint(expr=e)
-                self.disjuncts.append(disjunct)
-                continue
-            #
-            # Anything else is an error
-            raise ValueError(
-                "Unexpected term for Disjunction %s.\n"
-                "\tExpected a Disjunct object or relational expression, "
-                "but got %s" % (self.name, type(e)) )
+            # The user was lazy and gave us a single constraint
+            # expression or an iterable of expressions
+            expressions = []
+            if hasattr(e, '__iter__'):
+                e_iter = e
+            else:
+                e_iter = [e]
+            for _tmpe in e_iter:
+                try:
+                    isexpr = _tmpe.is_expression()
+                except AttributeError:
+                    isexpr = False
+                if not isexpr or not _tmpe.is_relational():
+                    msg = "\n\tin %s" % (type(e),) if e_iter is e else ""
+                    raise ValueError(
+                        "Unexpected term for Disjunction %s.\n"
+                        "\tExpected a Disjunct object, relational expression, "
+                        "or iterable of\n"
+                        "\trelational expressions but got %s%s"
+                        % (self.name, type(_tmpe), msg) )
+                else:
+                    expressions.append(_tmpe)
+
+            comp = self.parent_component()
+            if comp._autodisjuncts is None:
+                b = self.parent_block()
+                comp._autodisjuncts = Disjunct(Any)
+                b.add_component(
+                    unique_component_name(b, comp.local_name + "_disjuncts"),
+                    comp._autodisjuncts )
+                # TODO: I am not at all sure why we need to
+                # explicitly construct this block - that should
+                # happen automatically.
+                comp._autodisjuncts.construct()
+            disjunct = comp._autodisjuncts[len(comp._autodisjuncts)]
+            disjunct.constraint = c = ConstraintList()
+            for e in expressions:
+                c.add(e)
+            self.disjuncts.append(disjunct)
 
 
 class Disjunction(ActiveIndexedComponent):
