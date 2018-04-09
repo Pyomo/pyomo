@@ -418,7 +418,7 @@ class ScenarioTreeInstanceFactory(object):
                      scenario_tree_model,
                      scenario_tree_callback) = \
                         _find_scenariotree_or_callback(
-                            self._model_module)
+                            self._model_filename)
                 else:
                     (self._scenario_tree_module,
                      scenario_tree_object,
@@ -433,7 +433,7 @@ class ScenarioTreeInstanceFactory(object):
                     if isinstance(obj, ScenarioTree):
                         self._scenario_tree = obj
                     else:
-                        assert isinstance(model, (_BlockData, Block)) or \
+                        assert isinstance(obj, (_BlockData, Block)) or \
                             (has_networkx and \
                              isinstance(obj, networkx.DiGraph))
                         self._scenario_tree_model = obj
