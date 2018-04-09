@@ -20,6 +20,8 @@ from pyutilib.misc.redirect_io import capture_output
 from pyomo.environ import *
 from pyomo.core.base.expression import _GeneralExpressionData
 
+import six
+
 class TestExpressionData(unittest.TestCase):
 
     def test_exprdata_get_set(self):
@@ -868,6 +870,110 @@ E : Size=2, Index=E_index
         model.C = model.A | model.B
         model.x = Expression(model.C)
 
+    def test_iadd(self):
+        # make sure simple for loops that look like they
+        # create a new expression do not modify the named
+        # expression
+        m = ConcreteModel()
+        e = m.e = Expression(expr=1.0)
+        expr = 0.0
+        for v in [1.0,e]:
+            expr += v
+        self.assertEqual(e.expr, 1)
+        self.assertEqual(expr(), 2)
+        expr = 0.0
+        for v in [e,1.0]:
+            expr += v
+        self.assertEqual(e.expr, 1)
+        self.assertEqual(expr(), 2)
+
+    def test_isub(self):
+        # make sure simple for loops that look like they
+        # create a new expression do not modify the named
+        # expression
+        m = ConcreteModel()
+        e = m.e = Expression(expr=1.0)
+        expr = 0.0
+        for v in [1.0,e]:
+            expr -= v
+        self.assertEqual(e.expr, 1)
+        self.assertEqual(expr(), -2)
+        expr = 0.0
+        for v in [e,1.0]:
+            expr -= v
+        self.assertEqual(e.expr, 1)
+        self.assertEqual(expr(), -2)
+
+    def test_imul(self):
+        # make sure simple for loops that look like they
+        # create a new expression do not modify the named
+        # expression
+        m = ConcreteModel()
+        e = m.e = Expression(expr=3.0)
+        expr = 1.0
+        for v in [2.0,e]:
+            expr *= v
+        self.assertEqual(e.expr, 3)
+        self.assertEqual(expr(), 6)
+        expr = 1.0
+        for v in [e,2.0]:
+            expr *= v
+        self.assertEqual(e.expr, 3)
+        self.assertEqual(expr(), 6)
+
+    def test_idiv(self):
+        # make sure simple for loops that look like they
+        # create a new expression do not modify the named
+        # expression
+        # floating point division
+        m = ConcreteModel()
+        e = m.e = Expression(expr=3.0)
+        expr = e
+        for v in [2.0,1.0]:
+            expr /= v
+        self.assertEqual(e.expr, 3)
+        self.assertEqual(expr(), 1.5)
+        expr = e
+        for v in [1.0,2.0]:
+            expr /= v
+        self.assertEqual(e.expr, 3)
+        self.assertEqual(expr(), 1.5)
+        # built-in division
+        m = ConcreteModel()
+        e = m.e = Expression(expr=3.0)
+        expr = e
+        for v in [2,1]:
+            expr /= v
+        self.assertEqual(e.expr, 3)
+        if six.PY3:
+            self.assertEqual(expr(), 1.5)
+        else:
+            self.assertEqual(expr(), 1)
+        expr = e
+        for v in [1,2]:
+            expr /= v
+        self.assertEqual(e.expr, 3)
+        if six.PY3:
+            self.assertEqual(expr(), 1.5)
+        else:
+            self.assertEqual(expr(), 1)
+
+    def test_ipow(self):
+        # make sure simple for loops that look like they
+        # create a new expression do not modify the named
+        # expression
+        m = ConcreteModel()
+        e = m.e = Expression(expr=3.0)
+        expr = e
+        for v in [2.0,1.0]:
+            expr **= v
+        self.assertEqual(e.expr, 3)
+        self.assertEqual(expr(), 9)
+        expr = e
+        for v in [1.0,2.0]:
+            expr **= v
+        self.assertEqual(e.expr, 3)
+        self.assertEqual(expr(), 9)
 
 if __name__ == "__main__":
     unittest.main()

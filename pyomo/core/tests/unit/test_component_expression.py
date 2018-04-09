@@ -44,43 +44,6 @@ except:
 
 class Test_noclone(unittest.TestCase):
 
-    def test_iadd(self):
-        e = expression()
-        e.expr = 1
-        e += 1
-        self.assertEqual(e.expr, 2)
-
-    def test_isub(self):
-        e = expression()
-        e.expr = 1
-        e -= 1
-        self.assertEqual(e.expr, 0)
-
-    def test_imul(self):
-        e = expression()
-        e.expr = 1
-        e *= 2
-        self.assertEqual(e.expr, 2)
-
-    def test_idiv(self):
-        e = expression()
-        e.expr = 1
-        if six.PY3:
-            e /= 2
-            self.assertEqual(e.expr, 0.5)
-        else:
-            e /= 2
-            self.assertEqual(e.expr, 0)
-        e.expr = 1.0
-        e /= 2.0
-        self.assertEqual(e.expr, 0.5)
-
-    def test_ipow(self):
-        e = expression()
-        e.expr = 2
-        e **= 3
-        self.assertEqual(e.expr, 8)
-
     def test_is_named_expression_type(self):
         e = expression()
         self.assertEqual(e.is_named_expression_type(), True)
@@ -302,7 +265,6 @@ class Test_noclone(unittest.TestCase):
         del b.e
         del b.p
 
-
 class _Test_expression_base(object):
 
     _ctype_factory = None
@@ -480,6 +442,105 @@ class _Test_expression_base(object):
         self.assertEqual(e.to_string(verbose=True), "e{pow(p, 2)}")
         del b.e
         del b.p
+
+    def test_iadd(self):
+        # make sure simple for loops that look like they
+        # create a new expression do not modify the named
+        # expression
+        e = self._ctype_factory(1.0)
+        expr = 0.0
+        for v in [1.0,e]:
+            expr += v
+        self.assertEqual(e.expr, 1)
+        self.assertEqual(expr(), 2)
+        expr = 0.0
+        for v in [e,1.0]:
+            expr += v
+        self.assertEqual(e.expr, 1)
+        self.assertEqual(expr(), 2)
+
+    def test_isub(self):
+        # make sure simple for loops that look like they
+        # create a new expression do not modify the named
+        # expression
+        e = self._ctype_factory(1.0)
+        expr = 0.0
+        for v in [1.0,e]:
+            expr -= v
+        self.assertEqual(e.expr, 1)
+        self.assertEqual(expr(), -2)
+        expr = 0.0
+        for v in [e,1.0]:
+            expr -= v
+        self.assertEqual(e.expr, 1)
+        self.assertEqual(expr(), -2)
+
+    def test_imul(self):
+        # make sure simple for loops that look like they
+        # create a new expression do not modify the named
+        # expression
+        e = self._ctype_factory(3.0)
+        expr = 1.0
+        for v in [2.0,e]:
+            expr *= v
+        self.assertEqual(e.expr, 3)
+        self.assertEqual(expr(), 6)
+        expr = 1.0
+        for v in [e,2.0]:
+            expr *= v
+        self.assertEqual(e.expr, 3)
+        self.assertEqual(expr(), 6)
+
+    def test_idiv(self):
+        # make sure simple for loops that look like they
+        # create a new expression do not modify the named
+        # expression
+        # floating point division
+        e = self._ctype_factory(3.0)
+        expr = e
+        for v in [2.0,1.0]:
+            expr /= v
+        self.assertEqual(e.expr, 3)
+        self.assertEqual(expr(), 1.5)
+        expr = e
+        for v in [1.0,2.0]:
+            expr /= v
+        self.assertEqual(e.expr, 3)
+        self.assertEqual(expr(), 1.5)
+        # built-in division
+        e = self._ctype_factory(3)
+        expr = e
+        for v in [2,1]:
+            expr /= v
+        self.assertEqual(e.expr, 3)
+        if six.PY3:
+            self.assertEqual(expr(), 1.5)
+        else:
+            self.assertEqual(expr(), 1)
+        expr = e
+        for v in [1,2]:
+            expr /= v
+        self.assertEqual(e.expr, 3)
+        if six.PY3:
+            self.assertEqual(expr(), 1.5)
+        else:
+            self.assertEqual(expr(), 1)
+
+    def test_ipow(self):
+        # make sure simple for loops that look like they
+        # create a new expression do not modify the named
+        # expression
+        e = self._ctype_factory(3.0)
+        expr = e
+        for v in [2.0,1.0]:
+            expr **= v
+        self.assertEqual(e.expr, 3)
+        self.assertEqual(expr(), 9)
+        expr = e
+        for v in [1.0,2.0]:
+            expr **= v
+        self.assertEqual(e.expr, 3)
+        self.assertEqual(expr(), 9)
 
 class Test_expression(_Test_expression_base,
                       unittest.TestCase):
