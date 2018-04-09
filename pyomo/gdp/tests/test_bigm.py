@@ -2153,9 +2153,11 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertIsInstance(disjBlock, Block)
         self.assertEqual(len(disjBlock), 2)
         self.assertEqual(len(disjBlock[0].component_map()), 1)
-        self.assertEqual(len(disjBlock[1].component_map()), 3)
+        self.assertEqual(len(disjBlock[1].component_map()), 4)
         self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
+        self.assertIsInstance(disjBlock[1].component("evil[1].bb[1].c"),
+                              Constraint)
         self.assertIsInstance(
             disjBlock[1].component("evil[1].b.c_4"), Constraint)
         self.assertIsInstance(
@@ -2174,9 +2176,11 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertIsInstance(disjBlock, Block)
         self.assertEqual(len(disjBlock), 2)
         self.assertEqual(len(disjBlock[0].component_map()), 1)
-        self.assertEqual(len(disjBlock[1].component_map()), 2)
+        self.assertEqual(len(disjBlock[1].component_map()), 3)
         self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
+        self.assertIsInstance(disjBlock[1].component("evil[1].bb[1].c"),
+                              Constraint)
         self.assertIsInstance(
             disjBlock[1].component("evil[1].b.c_4"), Constraint)
 
@@ -2192,9 +2196,11 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertIsInstance(disjBlock, Block)
         self.assertEqual(len(disjBlock), 2)
         self.assertEqual(len(disjBlock[0].component_map()), 1)
-        self.assertEqual(len(disjBlock[1].component_map()), 2)
+        self.assertEqual(len(disjBlock[1].component_map()), 3)
         self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
+        self.assertIsInstance(disjBlock[1].component("evil[1].bb[1].c"),
+                              Constraint)
         self.assertIsInstance(
             disjBlock[1].component("evil[1].b.c_4"), Constraint)
 

@@ -228,6 +228,8 @@ def makeTwoTermDisj_BlockOnDisj():
             d.add_component('b.c', Constraint(expr=m.y >= 9))
             d.b.anotherblock = Block()
             d.b.anotherblock.c = Constraint(expr=m.y >= 11)
+            d.bb = Block([1])
+            d.bb[1].c = Constraint(expr=m.x == 0)
         else:
             d.c = Constraint(expr=m.x >= 80)
     m.evil = Disjunct([0,1], rule=disj_rule)
