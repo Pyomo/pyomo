@@ -107,6 +107,13 @@ install:
   - "python -m pip install git+https://github.com/PyUtilib/pyutilib"
   - "python setup.py develop"
   #
+  # Fetch additional solvers
+  #
+  - "mkdir %cd%\\bin"
+  - "SET PATH=%cd%\\bin;%PATH%"
+  - "python pyomo\\contrib\\trustregion\\getGJH.py %cd%\\bin"
+  - "gjh -v"
+  #
   # Verify the python version
   - python --version
 
