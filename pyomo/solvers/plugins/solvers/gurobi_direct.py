@@ -148,12 +148,30 @@ class GurobiDirect(DirectSolver):
                     raise
                 self._solver_model.setParam(key, float(option))
 
+        binary_vars = ComponentSet()
+        integer_vars = ComponentSet()
+        if 'relax_integrality' in self.options:
+            if self.options['relax_integrality']:
+                for v in self._solver_model.getVars():
+                    if v.vtype == self._gurobipy.GRB.BINARY:
+                        binary_vars.add(v)
+                        v.vtype = self._gurobipy.GRB.CONTINUOUS
+                    elif v.vtype == self._gurobipy.GRB.INTEGER:
+                        integer_vars.add(v)
+                        v.vtype = self._gurobipy.GRB.CONTINUOUS
+                self._solver_model.update()
+
         if self._version_major >= 5:
             for suffix in self._suffixes:
                 if re.match(suffix, "dual"):
                     self._solver_model.setParam(self._gurobipy.GRB.Param.QCPDual, 1)
 
         self._solver_model.optimize()
+
+        for v in binary_vars:
+            v.vtype = self._gurobipy.GRB.BINARY
+        for v in integer_vars:
+            v.vtype = self._gurobipy.GRB.INTEGER
 
         self._solver_model.setParam('LogFile', 'default')
 
