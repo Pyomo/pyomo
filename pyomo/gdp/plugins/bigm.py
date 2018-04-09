@@ -492,8 +492,9 @@ class BigM_Transformation(Transformation):
         # directly.  (We are passing the disjunct through so that when
         # we find constraints, _xform_constraint will have access to
         # the correct indicator variable.
-        self._transform_block_components(
-            block, disjunct, infodict, bigMargs, suffix_list)
+        for i in sorted(iterkeys(block)):
+            self._transform_block_components(
+                block[i], disjunct, infodict, bigMargs, suffix_list)
 
     def _xform_constraint(self, obj, disjunct, infodict,
                           bigMargs, suffix_list):
