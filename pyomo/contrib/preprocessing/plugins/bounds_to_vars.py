@@ -20,7 +20,7 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
 
     """
 
-    alias('core.constraints_to_var_bounds',
+    alias('contrib.constraints_to_var_bounds',
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self, *args, **kwargs):
