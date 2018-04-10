@@ -2192,24 +2192,29 @@ class TestGenerate_RangedExpression(unittest.TestCase):
         #    / \
         #   0   a
         e = inequality(0, m.a, 0)
-        self.assertIs(type(e), EXPR.EqualityExpression)
-        self.assertEqual(e.nargs(), 2)
-        self.assertIs(e.arg(0), m.a)
-        self.assertEqual(e.arg(1), 0)
+        self.assertIs(type(e), EXPR.RangedExpression)
+        self.assertEqual(e.nargs(), 3)
+        self.assertIs(e.arg(2), 0)
+        self.assertIs(e.arg(1), m.a)
+        self.assertIs(e.arg(0), 0)
+        #self.assertEqual(len(e._strict), 2)
+        self.assertEqual(e._strict[0], False)
+        self.assertEqual(e._strict[1], False)
 
         #       <
         #      / \
         #     <  0
         #    / \
         #   0   a
-        try:
-            inequality(0, m.a, 0, True)
-            self.fail("expected construction of invalid compound inequality: "
-                      "an equality expression with strict inequalities.")
-        except ValueError as e:
-            self.assertIn(
-                "Invalid equality expression with strict inequalities.",
-                re.sub('\s+',' ',str(e)) )
+        e = inequality(0, m.a, 0, True)
+        self.assertIs(type(e), EXPR.RangedExpression)
+        self.assertEqual(e.nargs(), 3)
+        self.assertIs(e.arg(2), 0)
+        self.assertIs(e.arg(1), m.a)
+        self.assertIs(e.arg(0), 0)
+        #self.assertEqual(len(e._strict), 2)
+        self.assertEqual(e._strict[0], True)
+        self.assertEqual(e._strict[1], True)
 
     def test_val1(self):
         m = ConcreteModel()

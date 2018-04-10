@@ -2051,7 +2051,6 @@ class InequalityExpression(_LinearOperatorExpression):
                (self._args_[1].__class__ not in native_numeric_types and \
                 self._args_[1].is_potentially_variable())
 
-
 def inequality(lower=None, body=None, upper=None, strict=False):
     """
     A utility function that can be used to declare inequality and
@@ -2098,13 +2097,7 @@ def inequality(lower=None, body=None, upper=None, strict=False):
         return InequalityExpression((lower, upper), strict)
     if upper is None:
         return InequalityExpression((lower, body), strict)
-    if id(lower) == id(upper):
-        if strict:
-            raise ValueError("Invalid equality expression with strict inequalities.")
-        return EqualityExpression((body, lower))
     return RangedExpression((lower, body, upper), (strict, strict))
-
-
 
 class EqualityExpression(_LinearOperatorExpression):
     """
