@@ -124,6 +124,16 @@ This set admits any hashable object as a member.
 	 2 :   0.0 :     v[1] + v[2] :   0.0 :   True
 	 8 :   0.0 : x[2] - z * y[2] :   0.0 :   True
 
+The following illustrates how to use `Any` with Blocks.
+
+.. doctest::
+
+   >>> m.b = pe.Block(pe.Any)
+   >>> m.b['1'].x = pe.Var()
+   >>> m.b['1'].y = pe.Var()
+   >>> m.b['1'].c = pe.Constraint(expr=m.b['foo1'].x >= 5*m.b['foo1'].y
+   >>> m.b[1].x = pe.Var()
+
 Pyomo Command
 -------------
 
