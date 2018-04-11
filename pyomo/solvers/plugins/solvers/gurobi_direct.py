@@ -175,7 +175,7 @@ class GurobiDirect(DirectSolver):
 
         for i,v in enumerate(repn.quadratic_vars):
             x,y = v
-            new_expr += repn.linear_coefs[i] * self._pyomo_var_to_solver_var_map[x] * self._pyomo_var_to_solver_var_map[v]
+            new_expr += repn.quadratic_coefs[i] * self._pyomo_var_to_solver_var_map[x] * self._pyomo_var_to_solver_var_map[y]
             referenced_vars.add(x)
             referenced_vars.add(y)
 
