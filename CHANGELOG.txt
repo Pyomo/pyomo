@@ -8,10 +8,15 @@ Pyomo 5.4.4
 
 - Move preprocessing transformations to contrib (#426)
   - Moves bounds_to_vars and propagate_zero_sum into contrib.preprocessing and
-  changes their alias to contrib.bounds_to_vars and contrib.propagate_zero_sum.
-- GDP updates (#410)
-  - add support for implicit declaration of multi-constraint Disjuncts
-  - switch to using ConfigBlocks for chull, bigm relaxations
+    changes aliases to contrib.bounds_to_vars and contrib.propagate_zero_sum.
+- Fixing AMPLFUNC environment variable management for "derived ASL
+  solvers (ipopt, conopt, scipampl) (#423)
+- Fixing atypical methods in PySP for generating a scenario tree and
+  associated instances (#422, #424)
+- GDP updates
+  - add support for implicit declaration of multi-constraint Disjuncts (#410)
+  - switch to using ConfigBlocks for chull, bigm relaxations (#410)
+  - fix for Big-M with disjuncts containing indexed blocks (#421)
 - Fix for discretizing block hierarchical models with
   circular references (#406, #353)
 - Fix formatting for small numbers in Baron file writer (#405)
@@ -28,6 +33,7 @@ Pyomo 5.4.4
 - Modifying transformation that detects trivial constraints
   to maintain a list of the constraints that were
   deactivated (#385)
+- Documentation updates (#425)
 
 -------------------------------------------------------------------------------
 Pyomo 5.4.3
