@@ -26,7 +26,7 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
         m.c6 = Constraint(expr=m.v6 >= 2)
 
         m2 = TransformationFactory(
-            'core.constraints_to_var_bounds').create_using(m)
+            'contrib.constraints_to_var_bounds').create_using(m)
         self.assertEquals(value(m2.v1.lb), 2)
         self.assertEquals(value(m2.v1.ub), 2)
         # at this point in time, do not expect for v1 to be fixed
@@ -47,7 +47,7 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
 
         del m2  # to keep from accidentally using it below
 
-        TransformationFactory('core.constraints_to_var_bounds').apply_to(m)
+        TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
         self.assertEquals(value(m.v1.lb), 2)
         self.assertEquals(value(m.v1.ub), 2)
         # at this point in time, do not expect for v1 to be fixed
@@ -71,7 +71,7 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
         m.c = Constraint(expr=m.x * m.y == m.z)
         m.z.fix(0)
         m.y.fix(0)
-        TransformationFactory('core.constraints_to_var_bounds').apply_to(m)
+        TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
         self.assertEqual(m.c.body.polynomial_degree(), 1)
         self.assertFalse(m.c.active)
         self.assertFalse(m.x.has_lb())
