@@ -113,6 +113,7 @@ install:
   - "SET PATH=%cd%\\bin;%PATH%"
   - "python pyomo\\contrib\\trustregion\\getGJH.py %cd%\\bin"
   - "gjh -v"
+  - "python pyomo\\util\\getGSL.py %cd%\\bin"
   #
   # Verify the python version
   - python --version
