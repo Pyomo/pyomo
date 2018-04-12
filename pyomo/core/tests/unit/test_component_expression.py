@@ -507,24 +507,19 @@ class _Test_expression_base(object):
             expr /= v
         self.assertEqual(e.expr, 3)
         self.assertEqual(expr(), 1.5)
-        # built-in division
+        # note that integer division does not occur within
+        # Pyomo expressions
         e = self._ctype_factory(3)
         expr = e
         for v in [2,1]:
             expr /= v
         self.assertEqual(e.expr, 3)
-        if six.PY3:
-            self.assertEqual(expr(), 1.5)
-        else:
-            self.assertEqual(expr(), 1)
+        self.assertEqual(expr(), 1.5)
         expr = e
         for v in [1,2]:
             expr /= v
         self.assertEqual(e.expr, 3)
-        if six.PY3:
-            self.assertEqual(expr(), 1.5)
-        else:
-            self.assertEqual(expr(), 1)
+        self.assertEqual(expr(), 1.5)
 
     def test_ipow(self):
         # make sure simple for loops that look like they
