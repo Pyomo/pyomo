@@ -292,10 +292,6 @@ class CPLEXDirect(DirectSolver):
             cplex_expr, referenced_vars = self._get_expr_from_pyomo_repn(
                 con.canonical_form(),
                 self._max_constraint_degree)
-        elif isinstance(con, LinearCanonicalRepn):
-            cplex_expr, referenced_vars = self._get_expr_from_pyomo_repn(
-                con,
-                self._max_constraint_degree)
         else:
             cplex_expr, referenced_vars = self._get_expr_from_pyomo_expr(
                 con.body,
