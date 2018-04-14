@@ -1,5 +1,5 @@
-Stochastic Programming
-======================
+MPEC
+====
 
 TODO
 

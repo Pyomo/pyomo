@@ -1429,4 +1429,5 @@ description of how to use this functionality.
 
 .. rubric:: References
 
-.. [BirgeLouveauxBook]
+.. [BirgeLouveauxBook] J.R. Birge and F. Louveaux. Introduction to Stochastic Programming. Springer. 1997.
+

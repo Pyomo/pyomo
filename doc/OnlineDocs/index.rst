@@ -12,6 +12,7 @@ with a diverse set of optimization capabilities.
 .. toctree::
    :maxdepth: 1
 
+   citing-pyomo.rst
    getting_started/index.rst
    tutorial/index.rst
    data/index.rst
