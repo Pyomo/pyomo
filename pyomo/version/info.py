@@ -16,8 +16,8 @@ _init_url="$URL$"
 major=5
 minor=5
 micro=0
-releaselevel='invalid'
-#releaselevel='final'
+#releaselevel='invalid'
+releaselevel='final'
 serial=0
 
 if releaselevel == 'final':
