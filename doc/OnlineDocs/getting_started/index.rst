@@ -16,6 +16,9 @@ Getting Started
    DataInput.rst
    BuildAction.rst
    PyomoCommand.rst
+   pyro.rst
    pysp.rst
+   suffixes.rst
+   scripts.rst
    
    
