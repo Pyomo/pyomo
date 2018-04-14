@@ -14,15 +14,16 @@ with a diverse set of optimization capabilities.
 
    getting_started/index.rst
    tutorial/index.rst
-   core_components/index.rst
    data/index.rst
-   scripting/index.rst
    modeling_extensions/index.rst
    solvers/persistent_solvers.rst
    library_reference/index.rst
-   problem_reference/index.rst
    pyomo_contrib.rst
    bibliography.rst
+..
+   core_components/index.rst
+   scripting/index.rst
+   problem_reference/index.rst
 
 
 Indices and Tables
