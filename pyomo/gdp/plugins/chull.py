@@ -396,7 +396,7 @@ class ConvexHull_Transformation(Transformation):
                     # we aren't going to disaggregate fixed
                     # variables. This means there is trouble if they are
                     # unfixed later...
-                    for var in identify_variables(
+                    for var in EXPR.identify_variables(
                             cons.body, include_fixed=False):
                         # Note the use of a list so that we will
                         # eventually disaggregate the vars in a
