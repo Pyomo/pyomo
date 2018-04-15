@@ -515,6 +515,10 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
                 "%s is an abstract class for subclassing" % self.__class__)
 
         super(_ScenarioTreeManagerSolverWorker, self).__init__(*args, **kwds)
+        # TODO: Does this import need to be delayed because
+        #       it is in a plugins subdirectory?
+        from pyomo.solvers.plugins.solvers.persistent_solver import \
+            PersistentSolver
 
         assert self.manager is not None
 
@@ -557,6 +561,10 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
             solver = self._scenario_solvers[scenario.name] = \
                 SolverFactory(self.get_option("solver"),
                               solver_io=self.get_option("solver_io"))
+            if isinstance(solver, PersistentSolver) and \
+               self.get_option("disable_advanced_preprocessing"):
+                raise ValueError("Advanced preprocessing can not be disabled "
+                                 "when persistent solvers are used")
             if self._preprocessor is not None:
                 self._preprocessor.add_scenario(scenario,
                                                 scenario._instance,
@@ -565,6 +573,10 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
             solver = self._bundle_solvers[bundle.name] = \
                 SolverFactory(self.get_option("solver"),
                               solver_io=self.get_option("solver_io"))
+            if isinstance(solver, PersistentSolver) and \
+               self.get_option("disable_advanced_preprocessing"):
+                raise ValueError("Advanced preprocessing can not be disabled "
+                                 "when persistent solvers are used")
             bundle_instance = \
                 self.manager._bundle_binding_instance_map[bundle.name]
             if self._preprocessor is not None:
@@ -627,6 +639,7 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
 
         solver_dict = None
         instance_dict = None
+        modify_kwds_func = None
         if object_type == 'bundles':
             if objects is None:
                 objects = self.manager.scenario_tree._scenario_bundle_map
@@ -640,6 +653,7 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
                         _instance_objective.deactivate()
             if self.preprocessor is not None:
                 self.preprocessor.preprocess_bundles(bundles=objects)
+                modify_kwds_func = self.preprocessor.modify_bundle_solver_keywords
         else:
             if objects is None:
                 objects = self.manager.scenario_tree._scenario_map
@@ -651,6 +665,7 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
                         _instance_objective.activate()
             if self.preprocessor is not None:
                 self.preprocessor.preprocess_scenarios(scenarios=objects)
+                modify_kwds_func = self.preprocessor.modify_scenario_solver_keywords
         assert solver_dict is not None
         assert instance_dict is not None
 
@@ -663,10 +678,6 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
         # we always manually load solutions, so we can
         # control error reporting and such
         common_kwds['load_solutions'] = False
-
-        # Load preprocessor related io_options
-        if self.preprocessor is not None:
-            common_kwds.update(self.preprocessor.get_solver_keywords())
 
         # Load solver options
         solver_options = {}
@@ -689,6 +700,11 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
         action_handle_data = {}
         for object_name in objects:
 
+            if modify_kwds_func is not None:
+                # be sure to modify a copy of the kwds
+                solve_kwds = modify_kwds_func(object_name, dict(common_kwds))
+            else:
+                solve_kwds = common_kwds
             opt = solver_dict[object_name]
             instance = instance_dict[object_name]
             if (not self.get_option("disable_warmstart")) and \
@@ -698,12 +714,12 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
                     self._solver_manager.queue(instance,
                                                opt=opt,
                                                warmstart=True,
-                                               **common_kwds)
+                                               **solve_kwds)
             else:
                 new_action_handle = \
                     self._solver_manager.queue(instance,
                                                opt=opt,
-                                               **common_kwds)
+                                               **solve_kwds)
 
             action_handle_data[new_action_handle] = object_name
 
@@ -966,7 +982,9 @@ def ScenarioTreeManagerSolverFactory(sp, *args, **kwds):
         >>>    results = manager.solve_subproblems()
         >>> results.pprint()
 
-        Note that asynchronous solves should be completed before the manager solver is closed; otherwise the results are undefined.
+        Note that asynchronous solves should be completed
+        before the manager solver is closed; otherwise the
+        results are undefined.
 
         >>> with ScenarioTreeManagerSolverFactory(sp) as manager:
         >>>    job = manager.solve_subproblems(async=True)

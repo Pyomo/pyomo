@@ -1,6 +1,4 @@
-Importing module=/Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/sizes/models/ReferenceModel.py
-Module successfully loaded
-Importing module=/Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/sizes/config/rhosetter.py
+Importing module=/Users/ghackebeil/Projects/Pyomo/pyomo/examples/pysp/sizes/config/rhosetter.py
 Module successfully loaded
 Client assigned dispatcher with URI=PYRO://127.0.0.1:51869/7f000001976e21e2e891354c8619feecf0
 Initializing PH

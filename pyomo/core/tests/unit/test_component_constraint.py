@@ -1003,6 +1003,7 @@ class Test_constraint(unittest.TestCase):
         L = 1
         U = 5
 
+        # equality
         cE = constraint(rhs=L, body=x)
         x.value = 4
         self.assertEqual(cE.body(), 4)
@@ -1027,6 +1028,7 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cE.lslack, None)
         self.assertEqual(cE.uslack, None)
 
+        # equality
         cE = constraint(rhs=U, body=x)
         x.value = 4
         self.assertEqual(cE.body(), 4)
@@ -1043,7 +1045,15 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cE.slack, -5)
         self.assertEqual(cE.lslack, -5)
         self.assertEqual(cE.uslack, 5)
+        x.value = None
+        with self.assertRaises(ValueError):
+            cE.body()
+        self.assertEqual(cE.body(exception=False), None)
+        self.assertEqual(cE.slack, None)
+        self.assertEqual(cE.lslack, None)
+        self.assertEqual(cE.uslack, None)
 
+        # lower finite
         cL = constraint(lb=L, body=x)
         x.value = 4
         self.assertEqual(cL.body(), 4)
@@ -1060,7 +1070,15 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cL.slack, -1)
         self.assertEqual(cL.lslack, -1)
         self.assertEqual(cL.uslack, float('inf'))
+        x.value = None
+        with self.assertRaises(ValueError):
+            cL.body()
+        self.assertEqual(cL.body(exception=False), None)
+        self.assertEqual(cL.slack, None)
+        self.assertEqual(cL.lslack, None)
+        self.assertEqual(cL.uslack, None)
 
+        # lower unbounded
         cL = constraint(lb=float('-inf'), body=x)
         x.value = 4
         self.assertEqual(cL.body(), 4)
@@ -1077,7 +1095,15 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cL.slack, float('inf'))
         self.assertEqual(cL.lslack, float('inf'))
         self.assertEqual(cL.uslack, float('inf'))
+        x.value = None
+        with self.assertRaises(ValueError):
+            cL.body()
+        self.assertEqual(cL.body(exception=False), None)
+        self.assertEqual(cL.slack, None)
+        self.assertEqual(cL.lslack, None)
+        self.assertEqual(cL.uslack, None)
 
+        # upper finite
         cU = constraint(body=x, ub=U)
         x.value = 4
         self.assertEqual(cU.body(), 4)
@@ -1094,7 +1120,15 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cU.slack, 5)
         self.assertEqual(cU.lslack, float('inf'))
         self.assertEqual(cU.uslack, 5)
+        x.value = None
+        with self.assertRaises(ValueError):
+            cU.body()
+        self.assertEqual(cU.body(exception=False), None)
+        self.assertEqual(cU.slack, None)
+        self.assertEqual(cU.lslack, None)
+        self.assertEqual(cU.uslack, None)
 
+        # upper unbounded
         cU = constraint(body=x, ub=float('inf'))
         x.value = 4
         self.assertEqual(cU.body(), 4)
@@ -1111,7 +1145,15 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cU.slack, float('inf'))
         self.assertEqual(cU.lslack, float('inf'))
         self.assertEqual(cU.uslack, float('inf'))
+        x.value = None
+        with self.assertRaises(ValueError):
+            cU.body()
+        self.assertEqual(cU.body(exception=False), None)
+        self.assertEqual(cU.slack, None)
+        self.assertEqual(cU.lslack, None)
+        self.assertEqual(cU.uslack, None)
 
+        # range finite
         cR = constraint(lb=L, body=x, ub=U)
         x.value = 4
         self.assertEqual(cR.body(), 4)
@@ -1128,7 +1170,15 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cR.slack, -1)
         self.assertEqual(cR.lslack, -1)
         self.assertEqual(cR.uslack, 5)
+        x.value = None
+        with self.assertRaises(ValueError):
+            cR.body()
+        self.assertEqual(cR.body(exception=False), None)
+        self.assertEqual(cR.slack, None)
+        self.assertEqual(cR.lslack, None)
+        self.assertEqual(cR.uslack, None)
 
+        # range unbounded (None)
         cR = constraint(body=x)
         x.value = 4
         self.assertEqual(cR.body(), 4)
@@ -1145,7 +1195,15 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cR.slack, float('inf'))
         self.assertEqual(cR.lslack, float('inf'))
         self.assertEqual(cR.uslack, float('inf'))
+        x.value = None
+        with self.assertRaises(ValueError):
+            cR.body()
+        self.assertEqual(cR.body(exception=False), None)
+        self.assertEqual(cR.slack, None)
+        self.assertEqual(cR.lslack, None)
+        self.assertEqual(cR.uslack, None)
 
+        # range unbounded
         cR = constraint(body=x, lb=float('-inf'), ub=float('inf'))
         x.value = 4
         self.assertEqual(cR.body(), 4)
@@ -1162,6 +1220,67 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cR.slack, float('inf'))
         self.assertEqual(cR.lslack, float('inf'))
         self.assertEqual(cR.uslack, float('inf'))
+        x.value = None
+        with self.assertRaises(ValueError):
+            cR.body()
+        self.assertEqual(cR.body(exception=False), None)
+        self.assertEqual(cR.slack, None)
+        self.assertEqual(cR.lslack, None)
+        self.assertEqual(cR.uslack, None)
+
+        # range finite (parameter)
+        cR = constraint(body=x,
+                        lb=parameter(L),
+                        ub=parameter(U))
+        x.value = 4
+        self.assertEqual(cR.body(), 4)
+        self.assertEqual(cR.slack, 1)
+        self.assertEqual(cR.lslack, 3)
+        self.assertEqual(cR.uslack, 1)
+        x.value = 6
+        self.assertEqual(cR.body(), 6)
+        self.assertEqual(cR.slack, -1)
+        self.assertEqual(cR.lslack, 5)
+        self.assertEqual(cR.uslack, -1)
+        x.value = 0
+        self.assertEqual(cR.body(), 0)
+        self.assertEqual(cR.slack, -1)
+        self.assertEqual(cR.lslack, -1)
+        self.assertEqual(cR.uslack, 5)
+        x.value = None
+        with self.assertRaises(ValueError):
+            cR.body()
+        self.assertEqual(cR.body(exception=False), None)
+        self.assertEqual(cR.slack, None)
+        self.assertEqual(cR.lslack, None)
+        self.assertEqual(cR.uslack, None)
+
+        # range unbounded (parameter)
+        cR = constraint(body=x,
+                        lb=parameter(float('-inf')),
+                        ub=parameter(float('inf')))
+        x.value = 4
+        self.assertEqual(cR.body(), 4)
+        self.assertEqual(cR.slack, float('inf'))
+        self.assertEqual(cR.lslack, float('inf'))
+        self.assertEqual(cR.uslack, float('inf'))
+        x.value = 6
+        self.assertEqual(cR.body(), 6)
+        self.assertEqual(cR.slack, float('inf'))
+        self.assertEqual(cR.lslack, float('inf'))
+        self.assertEqual(cR.uslack, float('inf'))
+        x.value = 0
+        self.assertEqual(cR.body(), 0)
+        self.assertEqual(cR.slack, float('inf'))
+        self.assertEqual(cR.lslack, float('inf'))
+        self.assertEqual(cR.uslack, float('inf'))
+        x.value = None
+        with self.assertRaises(ValueError):
+            cR.body()
+        self.assertEqual(cR.body(exception=False), None)
+        self.assertEqual(cR.slack, None)
+        self.assertEqual(cR.lslack, None)
+        self.assertEqual(cR.uslack, None)
 
     def test_expr(self):
 
@@ -1464,6 +1583,14 @@ class Test_linear_constraint(unittest.TestCase):
         self.assertEqual(c.body(), 6)
         self.assertEqual(c(), 6)
 
+        c.terms = ()
+        self.assertEqual(c.lb, 1)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(c.rhs, 1)
+        self.assertEqual(c.body, 0)
+        self.assertEqual(c(), 0)
+        self.assertEqual(tuple(c.terms), ())
+
     def test_type(self):
         c = linear_constraint([],[])
         self.assertTrue(isinstance(c, ICategorizedObject))
@@ -1742,6 +1869,81 @@ class Test_linear_constraint(unittest.TestCase):
         self.assertEqual(repn.linear, (1,))
         self.assertEqual(repn.constant, 0)
 
+    def test_canonical_form(self):
+        v = variable()
+        e = expression()
+        p = parameter(value=1)
+
+        c = linear_constraint()
+
+        #
+        # compute_values = True
+        #
+
+        c.terms = [(v,p)]
+        repn = c.canonical_form()
+        self.assertEqual(len(repn.variables), 1)
+        self.assertIs(repn.variables[0], v)
+        self.assertEqual(repn.linear, (1,))
+        self.assertEqual(repn.constant, 0)
+
+        v.fix(2)
+        repn = c.canonical_form()
+        self.assertEqual(len(repn.variables), 0)
+        self.assertEqual(len(repn.linear), 0)
+        self.assertEqual(repn.constant, 2)
+
+        v.free()
+        e.expr = v
+        c.terms = [(e,p)]
+        repn = c.canonical_form()
+        self.assertEqual(len(repn.variables), 1)
+        self.assertIs(repn.variables[0], v)
+        self.assertEqual(repn.linear, (1,))
+        self.assertEqual(repn.constant, 0)
+
+        v.fix(2)
+        repn = c.canonical_form()
+        self.assertEqual(len(repn.variables), 0)
+        self.assertEqual(len(repn.linear), 0)
+        self.assertEqual(repn.constant, 2)
+
+        #
+        # compute_values = False
+        #
+
+        v.free()
+        c.terms = [(v,p)]
+        repn = c.canonical_form(compute_values=False)
+        self.assertEqual(len(repn.variables), 1)
+        self.assertIs(repn.variables[0], v)
+        self.assertEqual(len(repn.linear), 1)
+        self.assertIs(repn.linear[0], p)
+        self.assertEqual(repn.linear[0](), 1)
+        self.assertEqual(repn.constant, 0)
+
+        v.fix(2)
+        repn = c.canonical_form(compute_values=False)
+        self.assertEqual(len(repn.variables), 0)
+        self.assertEqual(len(repn.linear), 0)
+        self.assertEqual(repn.constant(), 2)
+
+        v.free()
+        e.expr = v
+        c.terms = [(e,p)]
+        repn = c.canonical_form(compute_values=False)
+        self.assertEqual(len(repn.variables), 1)
+        self.assertIs(repn.variables[0], v)
+        self.assertEqual(len(repn.linear), 1)
+        self.assertIs(repn.linear[0], p)
+        self.assertEqual(repn.linear[0](), 1)
+        self.assertEqual(repn.constant, 0)
+
+        v.fix(2)
+        repn = c.canonical_form(compute_values=False)
+        self.assertEqual(len(repn.variables), 0)
+        self.assertEqual(len(repn.linear), 0)
+        self.assertEqual(repn.constant(), 2)
 
 class Test_constraint_dict(_TestActiveComponentDictBase,
                            unittest.TestCase):

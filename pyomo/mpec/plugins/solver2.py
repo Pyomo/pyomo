@@ -39,7 +39,7 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
         xfrm.apply_to(self._instance)
 
         xfrm = TransformationFactory('gdp.bigm')
-        xfrm.apply_to(self._instance, default_bigM=self.options.get('bigM',10**6))
+        xfrm.apply_to(self._instance, bigM=self.options.get('bigM',10**6))
         #
         # Solve with a specified solver
         #

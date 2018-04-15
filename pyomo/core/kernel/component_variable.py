@@ -29,6 +29,9 @@ from pyomo.core.kernel.set_types import (RealSet,
 import six
 from six.moves import xrange
 
+_pos_inf = float('inf')
+_neg_inf = float('-inf')
+
 def _extract_domain_type_and_bounds(domain_type,
                                     domain,
                                     lb, ub):
@@ -136,14 +139,54 @@ class IVariable(IComponent, NumericValue):
         :const:`None` or negative infinity"""
         lb = self.lb
         return (lb is not None) and \
-            (value(lb) != float('-inf'))
+            (value(lb) != _neg_inf)
 
     def has_ub(self):
         """Returns :const:`False` when the upper bound is
         :const:`None` or positive infinity"""
         ub = self.ub
         return (ub is not None) and \
-            (value(ub) != float('inf'))
+            (value(ub) != _pos_inf)
+
+    @property
+    def lslack(self):
+        """Lower slack (value - lb). Returns :const:`None` if
+        the variable value is :const:`None`."""
+        val = self.value
+        if val is None:
+            return None
+        lb = self.lb
+        if lb is None:
+            lb = _neg_inf
+        else:
+            lb = value(lb)
+        return val - lb
+
+    @property
+    def uslack(self):
+        """Upper slack (ub - value). Returns :const:`None` if
+        the variable value is :const:`None`."""
+        val = self.value
+        if val is None:
+            return None
+        ub = self.ub
+        if ub is None:
+            ub = _pos_inf
+        else:
+            ub = value(ub)
+        return ub - val
+
+    @property
+    def slack(self):
+        """min(lslack, uslack). Returns :const:`None` if
+        the variable value is :const:`None`."""
+        # this method is written so that constraint
+        # types that build the body expression on the
+        # fly do not have to here
+        val = self.value
+        if val is None:
+            return None
+        return min(self.lslack, self.uslack)
 
     #
     # Convenience methods mainly used by the solver

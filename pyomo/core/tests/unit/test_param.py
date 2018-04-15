@@ -414,7 +414,8 @@ class ParamTester(object):
             # nothing to test
             return
         idx = list(set(self.data) - set(self.sparse_data))[0]
-        expectException = self.instance.A._default_val is _NotValid
+        expectException = self.instance.A._default_val is _NotValid \
+                          and not self.instance.A._mutable
         try:
             test = self.instance.A[idx]
             if expectException:
@@ -814,7 +815,7 @@ class ScalarTester(ParamTester):
         if self.sparse_data.get(None,0) is _NotValid or \
            self.data.get(None,_NotValid) is _NotValid: #not self.sparse_data:
             self.assertRaisesRegexp(
-                ValueError, ".*undefined and no default value",
+                ValueError, ".*currently set to an invalid value",
                 self.instance.A.__call__ )
         else:
             self.assertEqual(self.instance.A(), self.data[None])
@@ -1201,7 +1202,6 @@ class MiscParamTests(unittest.TestCase):
         self.assertEqual( inst.p[1,0], 1.0 )
         self.assertRaises( KeyError, inst.p.__getitem__, (0, 0) )
 
-
     def test_get_set(self):
         model=AbstractModel()
         model.a = Param(initialize=2, mutable=True)
@@ -1263,6 +1263,35 @@ class MiscParamTests(unittest.TestCase):
         #except ValueError:
             #pass
 
+    def test_nonnumeric(self):
+        m = ConcreteModel()
+        m.p = Param(mutable=True)
+        m.p = 'hi'
+        buf = StringIO()
+        m.p.pprint(ostream=buf)
+        self.assertEqual(
+            buf.getvalue().strip(),
+            """
+p : Size=1, Index=None, Domain=Any, Default=None, Mutable=True
+    Key  : Value
+    None :    hi
+            """.strip())
+        m.q = Param(Any, mutable=True)
+        m.q[1] = None
+        m.q[2]
+        m.q['a'] = 'b'
+        buf = StringIO()
+        m.q.pprint()
+        m.q.pprint(ostream=buf)
+        self.assertEqual(
+            buf.getvalue().strip(),
+            """
+q : Size=3, Index=Any, Domain=Any, Default=None, Mutable=True
+    Key : Value
+      1 : None
+      2 : <class 'pyomo.core.base.param._NotValid'>
+      a : b
+            """.strip())
 
 def createNonIndexedParamMethod(func, init_xy, new_xy, tol=1e-10):
 
@@ -1766,7 +1795,7 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         self.assertEqual(3.0, value(model.CON2[None].lower))
         self.assertEqual(3.0, value(model.CON3[None].lower))
 
-    def test_getting_value_does_not_insert(self):
+    def test_getting_value_may_insert(self):
         # This test is from the discussion of github#300
         m = ConcreteModel()
         m.p = Param(mutable=True)
@@ -1775,19 +1804,25 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         m.p.value = None
         self.assertTrue(None in m.p)
 
-        m.q = Param(mutable=True)
+        m.q = Param()
         self.assertFalse(None in m.q)
         # an attempted read
         with self.assertRaises(ValueError):
             m.q.value
         self.assertFalse(None in m.q)
 
+        m.qm = Param(mutable=True)
+        self.assertFalse(None in m.qm)
+        # an attempted read
+        with self.assertRaises(ValueError):
+            m.qm.value
+        self.assertTrue(None in m.qm)
+
         m.r = Param([1], mutable=True)
         self.assertFalse(1 in m.r)
         # an attempted read
-        with self.assertRaises(ValueError):
-            m.r[1]
-        self.assertFalse(1 in m.r)
+        m.r[1]
+        self.assertTrue(1 in m.r)
 
     def test_using_None_in_params(self):
         # These are tests for use cases from github#300
