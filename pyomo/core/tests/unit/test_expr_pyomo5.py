@@ -1507,7 +1507,6 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         e2 = m.c * e1
         e3 = e1 * m.d
         e = e2 * e3
-        #_e = EXPR.compress_expression(e)
         #
         self.assertEqual(e.size(), 11)
         #

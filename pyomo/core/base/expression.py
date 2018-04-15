@@ -154,7 +154,7 @@ class _GeneralExpressionDataImpl(_ExpressionData):
     __slots__ = ()
 
     def __init__(self, expr=None):
-        self._expr = EXPR.compress_expression(as_numeric(expr)) if (expr is not None) else None
+        self._expr = as_numeric(expr) if (expr is not None) else None
         self._is_owned = True
 
     def construct_node(self, values, memo=None):
@@ -209,7 +209,7 @@ class _GeneralExpressionDataImpl(_ExpressionData):
 
     def set_value(self, expr):
         """Set the expression on this expression."""
-        self._expr = EXPR.compress_expression(as_numeric(expr)) if (expr is not None) else None
+        self._expr = as_numeric(expr) if (expr is not None) else None
 
     def is_constant(self):
         """A boolean indicating whether this expression is constant."""

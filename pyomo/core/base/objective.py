@@ -545,7 +545,7 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
         if self._check_skip_add(None, expr) is None:
             del self[None]
             return None
-        return _GeneralObjectiveData.set_value(self, EXPR.compress_expression(expr))
+        return _GeneralObjectiveData.set_value(self, expr)
 
     def set_sense(self, sense):
         """Set the sense (direction) of this objective."""

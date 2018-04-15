@@ -50,7 +50,6 @@ __all__ = (
 'SumExpression',
 'UnaryFunctionExpression',
 'AbsExpression',
-'compress_expression',
 'NPV_NegationExpression',
 'NPV_ExternalFunctionExpression',
 'NPV_PowExpression',
@@ -168,14 +167,6 @@ def initialize_expression_data():
     global TemplateExpressionError
     from pyomo.core.base.param import _ParamData, SimpleParam
     from pyomo.core.base.template_expr import TemplateExpressionError
-
-
-def compress_expression(expr):
-    """
-    Deprecated function that was used to compress deep Pyomo5
-    expression trees.
-    """
-    return expr
 
 
 class clone_counter_context(object):
