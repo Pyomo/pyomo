@@ -705,7 +705,5 @@ class Test(unittest.TestCase):
         self.assertEqual(len(factory._archives), 0)
         self.assertTrue("both_callbacks" in sys.modules)
 
-Test = unittest.category('smoke','nightly','expensive')(Test)
-
 if __name__ == "__main__":
     unittest.main()
