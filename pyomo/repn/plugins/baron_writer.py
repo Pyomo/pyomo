@@ -354,33 +354,38 @@ class ProblemWriter_bar(AbstractProblemWriter):
                     for param_data in param_data_iter:
                         yield param_data
 
-        vstring_to_var_dict = {}
-        vstring_to_bar_dict = {}
-        pstring_to_bar_dict = {}
-        _val_template = ' %'+self._precision_string+' '
-        for block in all_blocks_list:
-            for var_data in active_components_data_var[id(block)]:
-                variable_stream = StringIO()
-                var_data.to_string(ostream=variable_stream, verbose=False)
-                variable_string = variable_stream.getvalue()
-                variable_string = ' '+variable_string+' '
-                vstring_to_var_dict[variable_string] = var_data
-                if output_fixed_variable_bounds or (not var_data.fixed):
-                    vstring_to_bar_dict[variable_string] = \
-                        ' '+object_symbol_dictionary[id(var_data)]+' '
-                else:
-                    assert var_data.value is not None
-                    vstring_to_bar_dict[variable_string] = \
-                        (_val_template % (var_data.value,))
+        if False:
+            #
+            # This was part of a merge from master that caused
+            # test failures.  But commenting this out didn't cause additional failures!?!
+            #
+            vstring_to_var_dict = {}
+            vstring_to_bar_dict = {}
+            pstring_to_bar_dict = {}
+            _val_template = ' %'+self._precision_string+' '
+            for block in all_blocks_list:
+                for var_data in active_components_data_var[id(block)]:
+                    variable_stream = StringIO()
+                    var_data.to_string(ostream=variable_stream, verbose=False)
+                    variable_string = variable_stream.getvalue()
+                    variable_string = ' '+variable_string+' '
+                    vstring_to_var_dict[variable_string] = var_data
+                    if output_fixed_variable_bounds or (not var_data.fixed):
+                        vstring_to_bar_dict[variable_string] = \
+                            ' '+object_symbol_dictionary[id(var_data)]+' '
+                    else:
+                        assert var_data.value is not None
+                        vstring_to_bar_dict[variable_string] = \
+                            (_val_template % (var_data.value,))
 
-            for param_data in mutable_param_gen(block):
-                param_stream = StringIO()
-                param_data.to_string(ostream=param_stream, verbose=False)
-                param_string = param_stream.getvalue()
+                for param_data in mutable_param_gen(block):
+                    param_stream = StringIO()
+                    param_data.to_string(ostream=param_stream, verbose=False)
+                    param_string = param_stream.getvalue()
 
-                param_string = ' '+param_string+' '
-                pstring_to_bar_dict[param_string] = \
-                    (_val_template % (param_data(),))
+                    param_string = ' '+param_string+' '
+                    pstring_to_bar_dict[param_string] = \
+                        (_val_template % (param_data(),))
 
         # Equation Definition
         string_template = '%'+self._precision_string
