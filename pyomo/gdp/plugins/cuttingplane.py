@@ -28,7 +28,7 @@ from pyomo.core import (
 )
 from pyomo.opt import SolverFactory
 
-from pyomo.gdp import Disjunct, Disjunction
+from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
     verify_successful_solve, NORMAL, INFEASIBLE, NONOPTIMAL
 )

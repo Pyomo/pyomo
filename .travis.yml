@@ -36,8 +36,11 @@ matrix:
 
 
 install:
+  - sudo dpkg --add-architecture i386
   - sudo apt-get update --quiet
   - sudo apt-get install gfortran
+  # Needed to run 32-bit applications (GJH):
+  - sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386
   #
   # Setup miniconda and activate the testenv environment
   #
@@ -103,7 +106,7 @@ install:
   - if [ "${TRAVIS_PYTHON_VERSION}" != "2.6" -a -z "${EXTRAS}" ]; then
        bash ./.travis_install_gams_api.sh;
     fi
-  - export PATH=${PATH}:$PWD/gams24.8_linux_x64_64_sfx;
+  - export PATH="$PATH:$PWD/gams24.8_linux_x64_64_sfx"
 
   #
   # Install Pyomo extras
@@ -133,6 +136,14 @@ install:
   # Install this package
   #
   - python setup.py develop
+  #
+  # Fetch additional solvers
+  #
+  - mkdir $PWD/bin
+  - export PATH="$PWD/bin:$PATH"
+  - python pyomo/contrib/trustregion/getGJH.py $PWD/bin
+  - gjh -v
+  - python pyomo/util/getGSL.py $PWD/bin
   #
   # Verify that the Python interpreter hasn't changed (occasionally conda
   # installers will change the installed Python!!)

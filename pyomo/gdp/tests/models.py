@@ -162,29 +162,34 @@ def makeTwoTermDisjOnBlock():
     m = ConcreteModel()
     m.b = Block()
     m.a = Var(bounds=(0,5))
-    def d_rule(disjunct, flag):
+
+    # On a whim, verify that the decorator notation works
+    @m.b.Disjunct([0,1])
+    def disjunct(disjunct, flag):
         m = disjunct.model()
         if flag:
             disjunct.c = Constraint(expr=m.a<=3)
         else:
             disjunct.c = Constraint(expr=m.a==0)
-    m.b.disjunct = Disjunct([0,1], rule=d_rule)
-    def disj_rule(m):
+
+    @m.b.Disjunction()
+    def disjunction(m):
         return [m.disjunct[0], m.disjunct[1]]
-    m.b.disjunction = Disjunction(rule=disj_rule)
+
     return m
 
 def makeDisjunctionsOnIndexedBlock():
     m = ConcreteModel()
     m.s = Set(initialize=[1,2])
     m.a = Var(m.s, bounds=(0, 70))
-    def disjunct1_rule(disjunct, s, flag):
+    @m.Disjunct(m.s, [0,1])
+    def disjunct1(disjunct, s, flag):
         m = disjunct.model()
         if not flag:
             disjunct.c = Constraint(expr=m.a[s] == 0)
         else:
             disjunct.c = Constraint(expr=m.a[s] >= 7)
-    m.disjunct1 = Disjunct(m.s, [0,1], rule=disjunct1_rule)
+
     def disjunction1_rule(m, s):
         return [m.disjunct1[s, flag] for flag in [0,1]]
     m.disjunction1 = Disjunction(m.s, rule=disjunction1_rule)
@@ -197,17 +202,18 @@ def makeDisjunctionsOnIndexedBlock():
         else:
             disjunct.c = Constraint(expr=m.b[0].x >= 0)
     m.b[0].disjunct = Disjunct([0,1], rule=disjunct2_rule)
-    m.b[0].disjunction = Disjunction(expr=[m.b[0].disjunct[0],
-                                           m.b[0].disjunct[1]])
+
+    def disjunction(b,i):
+        return [b.disjunct[0], b.disjunct[1]]
+    m.b[0].disjunction = Disjunction([0], rule=disjunction)
+
     m.b[1].y = Var(bounds=(-3, 3))
-    def disjunct3_rule(disjunct, flag):
-        if not flag:
-            disjunct.c = Constraint(expr=m.b[1].y <= 0)
-        else:
-            disjunct.c = Constraint(expr=m.b[1].y >= 0)
-    m.b[1].disjunct = Disjunct([0,1], rule=disjunct3_rule)
-    m.b[1].disjunction = Disjunction(expr=[m.b[1].disjunct[0],
-                                           m.b[1].disjunct[1]])
+    m.b[1].disjunct0 = Disjunct()
+    m.b[1].disjunct0.c = Constraint(expr=m.b[1].y <= 0)
+    m.b[1].disjunct1 = Disjunct()
+    m.b[1].disjunct1.c = Constraint(expr=m.b[1].y >= 0)
+    m.b[1].disjunction = Disjunction(
+        expr=[m.b[1].disjunct0, m.b[1].disjunct1])
     return m
 
 def makeTwoTermDisj_BlockOnDisj():
@@ -222,6 +228,8 @@ def makeTwoTermDisj_BlockOnDisj():
             d.add_component('b.c', Constraint(expr=m.y >= 9))
             d.b.anotherblock = Block()
             d.b.anotherblock.c = Constraint(expr=m.y >= 11)
+            d.bb = Block([1])
+            d.bb[1].c = Constraint(expr=m.x == 0)
         else:
             d.c = Constraint(expr=m.x >= 80)
     m.evil = Disjunct([0,1], rule=disj_rule)
@@ -243,8 +251,9 @@ def makeNestedDisjunctions():
                 else:
                     disjunct.c = Constraint(expr=m.z==0)
             disjunct.innerdisjunct = Disjunct([0,1], rule=innerdisj_rule)
-            disjunct.innerdisjunction = Disjunction(
-                expr=[disjunct.innerdisjunct[0], disjunct.innerdisjunct[1]])
+            @disjunct.Disjunction([0])
+            def innerdisjunction(b, i):
+                return [b.innerdisjunct[0], b.innerdisjunct[1]]
             disjunct.c = Constraint(expr=m.a <= 2)
         else:
             disjunct.c = Constraint(expr=m.x==2)
@@ -252,14 +261,17 @@ def makeNestedDisjunctions():
     # I want a SimpleDisjunct with a disjunction in it too
     def simpledisj_rule(disjunct):
         m = disjunct.model()
-        def inner_disj_rule(disjunct, flag):
-            if flag:
-                disjunct.c = Constraint(expr=m.x >= 4)
-            else:
-                disjunct.c = Constraint(expr=m.x <= 2)
-        disjunct.innerdisjunct = Disjunct([0,1], rule=inner_disj_rule)
+
+        @disjunct.Disjunct()
+        def innerdisjunct0(disjunct):
+            disjunct.c = Constraint(expr=m.x <= 2)
+
+        @disjunct.Disjunct()
+        def innerdisjunct1(disjunct):
+            disjunct.c = Constraint(expr=m.x >= 4)
+
         disjunct.innerdisjunction = Disjunction(
-            expr=[disjunct.innerdisjunct[0], disjunct.innerdisjunct[1]])
+            expr=[disjunct.innerdisjunct0, disjunct.innerdisjunct1])
     m.simpledisjunct = Disjunct(rule=simpledisj_rule)
     m.disjunction = Disjunction(
         expr=[m.simpledisjunct, m.disjunct[0], m.disjunct[1]])

@@ -110,6 +110,16 @@ class CONOPT(SystemCallSolver):
         # Define command line
         #
         env=os.environ.copy()
+        #
+        # Merge the PYOMO_AMPLFUNC (externals defined within
+        # Pyomo/Pyomo) with any user-specified external function
+        # libraries
+        #
+        if 'PYOMO_AMPLFUNC' in env:
+            if 'AMPLFUNC' in env:
+                env['AMPLFUNC'] += "\n" + env['PYOMO_AMPLFUNC']
+            else:
+                env['AMPLFUNC'] = env['PYOMO_AMPLFUNC']
 
         cmd = [executable, problem_files[0], '-AMPL']
         if self._timer:

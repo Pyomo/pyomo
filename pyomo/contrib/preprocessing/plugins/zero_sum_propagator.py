@@ -19,7 +19,7 @@ class ZeroSumPropagator(IsomorphicTransformation):
 
     """
 
-    alias('core.propagate_zero_sum',
+    alias('contrib.propagate_zero_sum',
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self):

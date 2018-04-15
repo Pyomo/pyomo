@@ -26,9 +26,9 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
         m.c6 = Constraint(expr=m.v6 >= 2)
 
         m2 = TransformationFactory(
-            'core.constraints_to_var_bounds').create_using(m)
-        self.assertEqual(value(m2.v1.lb), 2)
-        self.assertEqual(value(m2.v1.ub), 2)
+            'contrib.constraints_to_var_bounds').create_using(m)
+        self.assertEquals(value(m2.v1.lb), 2)
+        self.assertEquals(value(m2.v1.ub), 2)
         # at this point in time, do not expect for v1 to be fixed
         self.assertFalse(m2.v1.fixed)
 
@@ -47,9 +47,15 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
 
         del m2  # to keep from accidentally using it below
 
+<<<<<<< HEAD:pyomo/core/tests/transform/test_bounds_to_vars_xfrm.py
         TransformationFactory('core.constraints_to_var_bounds').apply_to(m)
         self.assertEqual(value(m.v1.lb), 2)
         self.assertEqual(value(m.v1.ub), 2)
+=======
+        TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
+        self.assertEquals(value(m.v1.lb), 2)
+        self.assertEquals(value(m.v1.ub), 2)
+>>>>>>> master:pyomo/contrib/preprocessing/tests/test_bounds_to_vars_xfrm.py
         # at this point in time, do not expect for v1 to be fixed
         self.assertFalse(m.v1.fixed)
 
@@ -71,8 +77,12 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
         m.c = Constraint(expr=m.x * m.y == m.z)
         m.z.fix(0)
         m.y.fix(0)
+<<<<<<< HEAD:pyomo/core/tests/transform/test_bounds_to_vars_xfrm.py
         self.assertTrue(m.c.active)
         TransformationFactory('core.constraints_to_var_bounds').apply_to(m)
+=======
+        TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
+>>>>>>> master:pyomo/contrib/preprocessing/tests/test_bounds_to_vars_xfrm.py
         self.assertEqual(m.c.body.polynomial_degree(), 1)
         self.assertTrue(m.c.active)
         self.assertFalse(m.x.has_lb())

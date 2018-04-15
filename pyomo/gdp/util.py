@@ -8,10 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from six import string_types
+
 import pyomo.core.expr.current as EXPR
 from pyomo.core.expr.numvalue import nonpyomo_leaf_types, native_numeric_types
 from copy import deepcopy
 
+from pyomo.core.base.component import _ComponentBase, ComponentUID
 from pyomo.opt import TerminationCondition, SolverStatus
 
 _acceptable_termination_conditions = set([
@@ -121,3 +124,27 @@ def clone_without_expression_components(expr, memo=None, clone_leaves=True, subs
     visitor = _CloneVisitor(clone_leaves=clone_leaves, memo=memo, substitute=substitute)
     return visitor.dfs_postorder_stack(expr)
 
+
+
+def target_list(x):
+    if isinstance(x, ComponentUID):
+        return [ x ]
+    elif isinstance(x, (_ComponentBase, string_types)):
+        return [ ComponentUID(x) ]
+    elif hasattr(x, '__iter__'):
+        ans = []
+        for i in x:
+            if isinstance(i, ComponentUID):
+                ans.append(i)
+            elif isinstance(i, (_ComponentBase, string_types)):
+                ans.append(ComponentUID(i))
+            else:
+                raise ValueError(
+                    "Expected ComponentUID, Component, Component name, "
+                    "or list of these.\n\tReceived %s" % (type(i),))
+
+        return ans
+    else:
+        raise ValueError(
+            "Expected ComponentUID, Component, Component name, "
+            "or list of these.\n\tReceived %s" % (type(x),))
