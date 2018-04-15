@@ -227,7 +227,7 @@ class _DisjunctionData(ActiveComponentData):
                     isexpr = _tmpe.is_expression_type()
                 except AttributeError:
                     isexpr = False
-                if not isexpr or not _tmpe.is_relational_type():
+                if not isexpr or not _tmpe.is_relational():
                     msg = "\n\tin %s" % (type(e),) if e_iter is e else ""
                     raise ValueError(
                         "Unexpected term for Disjunction %s.\n"
