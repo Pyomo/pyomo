@@ -57,30 +57,27 @@ class ExternalFunction(Component):
 
     def __call__(self, *args):
         args_ = []
-        for i in range(len(args)):
-            if type(args[i]) is types.GeneratorType:
-                args_.extend(val for val in args[i])
+        for arg in args:
+            if type(arg) is types.GeneratorType:
+                args_.extend(val for val in arg)
             else:
-                args_.append(args[i])
+                args_.append(arg)
         #
         # Loop and do two thing:
         #   1. Wrap non-numeric arguments
         #   2. See if we have a potentially variable argument
         #
         pv = False
-        for i in range(len(args_)):
+        for i,arg in enumerate(args_):
             try:
                 # Q: Is there a better way to test if a value is an object
                 #    not in native_types and not a standard expression type?
-                if args_[i].__class__ in native_types or args_[i].is_expression_type():
+                if arg.__class__ in native_types or arg.is_expression_type():
                     pass
-                if not args_[i].__class__ in native_types and args_[i].is_potentially_variable():
+                if not arg.__class__ in native_types and arg.is_potentially_variable():
                     pv = True
-            #except ValueError:
-            #    if not args_[i].__class__ in native_types and args_[i].is_potentially_variable():
-            #        pv = True
             except AttributeError:    
-                args_[i] = NonNumericValue(args_[i])
+                args_[i] = NonNumericValue(arg)
         #
         if pv:
             return EXPR.ExternalFunctionExpression(args_, self)
