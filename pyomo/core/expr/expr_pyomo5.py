@@ -2030,6 +2030,7 @@ class InequalityExpression(_LinearOperatorExpression):
                (self._args_[1].__class__ not in native_numeric_types and \
                 self._args_[1].is_potentially_variable())
 
+
 def inequality(lower=None, body=None, upper=None, strict=False):
     """
     A utility function that can be used to declare inequality and
@@ -2043,7 +2044,7 @@ def inequality(lower=None, body=None, upper=None, strict=False):
 
     The expression::
 
-        inequality(2, model.x, 2)
+        inequality(2, model.x, 3)
 
     is equivalent to the expression::
 
