@@ -2894,6 +2894,35 @@ class TestSimple(unittest.TestCase):
         baseline = { id(rep.linear_vars[0]):1 }
         self.assertEqual(baseline, repn_to_dict(rep))
 
+    def test_pow2(self):
+        #       ^
+        #      / \
+        #     a   2
+        m = ConcreteModel()
+        m.a = Var(initialize=2)
+        m.p = Param(default=3)
+        m.a.fixed = True
+
+        e = m.p*m.a**2
+
+        rep = generate_standard_repn(e, compute_values=False, quadratic=False)
+        #
+        self.assertTrue( rep.is_fixed() )
+        self.assertEqual( rep.polynomial_degree(), 0 )
+        self.assertTrue( rep.is_constant() )
+        self.assertTrue( rep.is_linear() )
+        self.assertFalse( rep.is_quadratic() )
+        self.assertFalse( rep.is_nonlinear() )
+        #
+        self.assertTrue(len(rep.linear_vars) == 0)
+        self.assertTrue(len(rep.linear_coefs) == 0)
+        self.assertTrue(len(rep.quadratic_vars) == 0)
+        self.assertTrue(len(rep.quadratic_coefs) == 0)
+        self.assertTrue(rep.nonlinear_expr is None)
+        self.assertTrue(len(rep.nonlinear_vars) == 0)
+        baseline = { None:12 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+
     def test_abs(self):
         #      abs
         #      / 
