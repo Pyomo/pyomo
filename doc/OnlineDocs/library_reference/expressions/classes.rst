@@ -75,7 +75,7 @@ Other Public Classes
     :undoc-members:
     :private-members:
 
-.. autoclass:: pyomo.core.expr.current.ViewSumExpression
+.. autoclass:: pyomo.core.expr.current.SumExpression
     :members:
     :show-inheritance:
     :undoc-members:
@@ -87,7 +87,7 @@ Other Public Classes
     :undoc-members:
     :private-members:
 
-.. autoclass:: pyomo.core.expr.current.Expr_if
+.. autoclass:: pyomo.core.expr.current.Expr_ifExpression
     :members:
     :show-inheritance:
     :undoc-members:

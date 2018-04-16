@@ -26,7 +26,7 @@ describes the standard operators in Python and their associated Pyomo expression
 ========== ============= =============================================================================
 Operation  Python Syntax Pyomo Class
 ========== ============= =============================================================================
-sum        ``x + y``     :class:`ViewSumExpression <pyomo.core.expr.current.ViewSumExpression>`
+sum        ``x + y``     :class:`SumExpression <pyomo.core.expr.current.SumExpression>`
 product    ``x * y``     :class:`ProductExpression <pyomo.core.expr.current.ProductExpression>`
 negation   ``- x``       :class:`NegationExpression <pyomo.core.expr.current.NegationExpression>`
 reciprocal ``1 / x``     :class:`ReciprocalExpression <pyomo.core.expr.current.ReciprocalExpression>`
@@ -154,17 +154,17 @@ class.  Thus, developers need to treat this class differently when
 walking an expression tree (e.g. when developing a problem
 transformation).
 
-ViewSum Expressions
-~~~~~~~~~~~~~~~~~~~
+Sum Expressions
+~~~~~~~~~~~~~~~
 
 Pyomo does not have a binary sum expression class.  Instead,
-it has an ``n``-ary summation class, :class:`ViewSumExpression
-<pyomo.core.expr.current.ViewSumExpression>`.  This expression class
+it has an ``n``-ary summation class, :class:`SumExpression
+<pyomo.core.expr.current.SumExpression>`.  This expression class
 treats sums as ``n``-ary sums for efficiency reasons;  many large
 optimization models contain large sums. But note tht this class
 maintains the immutability property described above.  This class
-shares an underlying list of arguments with other :class:`ViewSumExpression
-<pyomo.core.expr.current.ViewSumExpression>` objects. A particular
+shares an underlying list of arguments with other :class:`SumExpression
+<pyomo.core.expr.current.SumExpression>` objects. A particular
 object owns the first ``n`` arguments in the shared list, but
 different objects may have different values of ``n``.
 
@@ -185,7 +185,7 @@ model transformations, developers may be able to limit the use of
 expressions to avoid these side-effects.  The following mutable private classes
 are available in Pyomo:
 
-:class:`_MutableViewSumExpression <pyomo.core.expr.current._MutableViewSumExpression>` 
+:class:`_MutableSumExpression <pyomo.core.expr.current._MutableSumExpression>` 
     This class
     is used in the :data:`nonlinear_expression <pyomo.core.expr.current.nonlinear_expression>` context manager to
     efficiently combine sums of nonlinear terms.
