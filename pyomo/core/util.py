@@ -116,7 +116,7 @@ def quicksum(args, start=0, linear=None):
                     linear = False
             start = start+first
         if linear:
-            with EXPR.mutable_linear_context() as e:
+            with EXPR.linear_expression() as e:
                 e += start
                 for arg in args:
                     e += arg
@@ -125,7 +125,7 @@ def quicksum(args, start=0, linear=None):
                 return e.constant
             return e
         else:
-            with EXPR.mutable_sum_context() as e:
+            with EXPR.nonlinear_expression() as e:
                 e += start
                 for arg in args:
                     e += arg
@@ -208,18 +208,18 @@ def sum_product(*args, **kwds):
             if nvars == 1:
                 v = vars_[0]
                 if len(params_) == 0:
-                    with EXPR.mutable_linear_context() as expr:
+                    with EXPR.linear_expression() as expr:
                         expr += start
                         for i in index:
                             expr += v[i]
                 elif len(params_) == 1:    
                     p = params_[0]
-                    with EXPR.mutable_linear_context() as expr:
+                    with EXPR.linear_expression() as expr:
                         expr += start
                         for i in index:
                             expr += p[i]*v[i]
                 else:
-                    with EXPR.mutable_linear_context() as expr:
+                    with EXPR.linear_expression() as expr:
                         expr += start
                         for i in index:
                             term = 1
@@ -228,7 +228,7 @@ def sum_product(*args, **kwds):
                             expr += term * v[i]
                 return expr
             #
-            with EXPR.mutable_sum_context() as expr:
+            with EXPR.nonlinear_expression() as expr:
                 expr += start
                 for i in index:
                     term = 1
