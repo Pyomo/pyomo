@@ -4615,7 +4615,7 @@ class TestIsFixedIsConstant(unittest.TestCase):
             m.v[i].fixed = True
         self.assertEqual(e.is_fixed(), True)
 
-        with linear_expression as e:
+        with linear_expression() as e:
             e += 1
         self.assertEqual(len(e.linear_vars), 0)
         self.assertEqual(e.is_fixed(), True)
@@ -5290,7 +5290,7 @@ class TestLinearExpression(unittest.TestCase):
         m.v = Var(range(5))
         m.p = Param(mutable=True, initialize=2)
 
-        with linear_expression as e:
+        with linear_expression() as e:
             e = e + 2
             self.assertIs(e.__class__, EXPR._MutableLinearExpression)
             e = e + m.p*(1+m.v[0])
@@ -5319,15 +5319,15 @@ class TestLinearExpression(unittest.TestCase):
             e = m.v[0] - e
             self.assertIs(e.__class__, EXPR._MutableLinearExpression)
 
-        with linear_expression as e:
+        with linear_expression() as e:
             e += m.v[0]*m.v[1]
             self.assertIs(e.__class__, EXPR.SumExpression)
 
-        with linear_expression as e:
+        with linear_expression() as e:
             e = e + m.v[0]*m.v[1]
             self.assertIs(e.__class__, EXPR.SumExpression)
 
-        with linear_expression as e:
+        with linear_expression() as e:
             e = m.v[0]*m.v[1] + e
             self.assertIs(e.__class__, EXPR.SumExpression)
 
@@ -5336,7 +5336,7 @@ class TestLinearExpression(unittest.TestCase):
         m.v = Var(range(5), initialize=1)
         m.p = Param(initialize=2, mutable=True)
 
-        with linear_expression as e:
+        with linear_expression() as e:
             e += 1
             e = 2 * e
             self.assertEqual("2", str(e))
@@ -5350,35 +5350,35 @@ class TestLinearExpression(unittest.TestCase):
             except ValueError:
                 pass
 
-        with linear_expression as e:
+        with linear_expression() as e:
             e += 1
             e = e * m.p
             self.assertEqual("p", str(e))
             self.assertIs(e.__class__, EXPR._MutableLinearExpression)
 
-        with linear_expression as e:
+        with linear_expression() as e:
             e += 1
             e = e * 0
             self.assertEqual(e.constant, 0)
             self.assertIs(e.__class__, EXPR._MutableLinearExpression)
 
-        with linear_expression as e:
+        with linear_expression() as e:
             e += m.v[0]
             e = e * 2
             self.assertEqual("2*v[0]", str(e))
             self.assertIs(e.__class__, EXPR._MutableLinearExpression)
 
-        with linear_expression as e:
+        with linear_expression() as e:
             e += 1
             e *= m.v[0]*m.v[1]
             self.assertIs(e.__class__, EXPR.ProductExpression)
 
-        with linear_expression as e:
+        with linear_expression() as e:
             e += 1
             e = e * (m.v[0]*m.v[1])
             self.assertIs(e.__class__, EXPR.ProductExpression)
 
-        with linear_expression as e:
+        with linear_expression() as e:
             e += 1
             e = (m.v[0]*m.v[1]) * e
             self.assertIs(e.__class__, EXPR.ProductExpression)
@@ -5388,19 +5388,19 @@ class TestLinearExpression(unittest.TestCase):
         m.v = Var(range(5), initialize=1)
         m.p = Param(initialize=2, mutable=True)
 
-        with linear_expression as e:
+        with linear_expression() as e:
             e += m.v[0]
             e /= 2
             self.assertEqual("0.5*v[0]", str(e))
             self.assertIs(e.__class__, EXPR._MutableLinearExpression)
 
-        with linear_expression as e:
+        with linear_expression() as e:
             e += m.v[0]
             e /= m.p
             self.assertEqual("(1/p)*v[0]", str(e))
             self.assertIs(e.__class__, EXPR._MutableLinearExpression)
 
-        with linear_expression as e:
+        with linear_expression() as e:
             e += 1
             try:
                 e /= m.v[0]
@@ -5413,7 +5413,7 @@ class TestLinearExpression(unittest.TestCase):
         m.v = Var(range(5), initialize=1)
         m.p = Param(initialize=2, mutable=True)
 
-        with linear_expression as e:
+        with linear_expression() as e:
             e += m.v[0]
             try:
                 e = 1 / e
@@ -5421,7 +5421,7 @@ class TestLinearExpression(unittest.TestCase):
             except:
                 pass
 
-        with linear_expression as e:
+        with linear_expression() as e:
             e += 1
             e = 1 / e
             self.assertEqual("1.0",str(e))
@@ -5430,7 +5430,7 @@ class TestLinearExpression(unittest.TestCase):
         m = ConcreteModel()
         m.v = Var(range(5))
 
-        with linear_expression as e:
+        with linear_expression() as e:
             e = 2 - e
             self.assertIs(e.__class__, EXPR._MutableLinearExpression)
             e = - e
@@ -5440,7 +5440,7 @@ class TestLinearExpression(unittest.TestCase):
         m = ConcreteModel()
         m.v = Var(range(5))
 
-        with linear_expression as e:
+        with linear_expression() as e:
             e = 2**e
             self.assertIs(e.__class__, EXPR.NPV_PowExpression)
             e = m.v[0] + m.v[1]
@@ -5454,7 +5454,7 @@ class TestNonlinearExpression(unittest.TestCase):
         m = ConcreteModel()
         m.v = Var(range(5))
 
-        with nonlinear_expression as e:
+        with nonlinear_expression() as e:
             e_ = 2 + m.v[0]
             self.assertIs(e_.__class__, EXPR.SumExpression)
             e += e_
@@ -5621,7 +5621,7 @@ class Test_decompose_linear_terms(unittest.TestCase):
         M = ConcreteModel()
         M.v = Var()
         M.w = Var()
-        with linear_expression as e:
+        with linear_expression() as e:
             e += 2
             #
             # When the linear expression is constant, then it will be
@@ -5743,7 +5743,7 @@ class Test_pickle(unittest.TestCase):
         M = ConcreteModel()
         M.v = Var()
         M.w = Var()
-        with linear_expression as e:
+        with linear_expression() as e:
             e += 2
             #
             # When the linear expression is constant, then it will be
