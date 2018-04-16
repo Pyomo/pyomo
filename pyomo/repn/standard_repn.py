@@ -754,7 +754,10 @@ def _collect_nonl(exp, multiplier, idMap, compute_values, verbose, quadratic):
     res = _collect_standard_repn(exp._args_[0], 1, idMap, compute_values, verbose, quadratic)
     if not (res.nonl.__class__ in native_numeric_types and res.nonl == 0) or len(res.linear) > 0 or (quadratic and len(res.quadratic) > 0):
         return Results(nonl=multiplier*exp)
-    return Results(constant=multiplier*exp._apply_operation([res.constant]))
+    if compute_values:
+        return Results(constant=multiplier*exp._apply_operation([res.constant]))
+    else:
+        return Results(constant=multiplier*exp)
 
 def _collect_negation(exp, multiplier, idMap, compute_values, verbose, quadratic):
     return _collect_standard_repn(exp._args_[0], -1*multiplier, idMap, compute_values, verbose, quadratic)
