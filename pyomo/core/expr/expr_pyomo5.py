@@ -15,7 +15,7 @@ _using_chained_inequality = True
 #
 # These symbols are part of pyomo.core.expr
 #
-__public__ = ['linear_expression', 'nonlinear_expression', 'inequality']
+_public = ['linear_expression', 'nonlinear_expression', 'inequality']
 #
 # These symbols are part of pyomo.core.expr.current
 #
@@ -23,8 +23,6 @@ __all__ = (
 'linear_expression',
 'nonlinear_expression',
 'inequality',
-'mutable_sum_context',
-'mutable_linear_context',
 'decompose_term',
 'clone_counter',
 'clone_counter_context',
@@ -197,7 +195,7 @@ class clone_counter_context(object):
 clone_counter = clone_counter_context()
 
 
-class mutable_sum_context(object):
+class nonlinear_expression(object):
     """ Context manager for mutable sums.
 
     This context manager is used to compute a sum while
@@ -212,13 +210,8 @@ class mutable_sum_context(object):
         if self.e.__class__ == _MutableSumExpression:
             self.e.__class__ = SumExpression
 
-#: A context manager object for nonlinear expressions.
-#: This is an instance of the :class:`mutable_sum_contex <pyomo.core.expr.current.mutable_sum_context>` context manager.
-#: Different instances of this context manager are not necessary, unless these context managers are nested.
-nonlinear_expression = mutable_sum_context()
 
-
-class mutable_linear_context(object):
+class linear_expression(object):
     """ Context manager for mutable linear sums.
 
     This context manager is used to compute a linear sum while
@@ -243,11 +236,6 @@ class mutable_linear_context(object):
         """
         if self.e.__class__ == _MutableLinearExpression:
             self.e.__class__ = LinearExpression
-
-#: A context manager object for linear expressions.
-#: This is an instance of the :class:`mutable_linear_contex <pyomo.core.expr.current.mutable_lienar_context>` context manager.
-#: Different instances of this context manager are not necessary unless these context managers are nested.
-linear_expression = mutable_linear_context()
 
 
 #-------------------------------------------------------
