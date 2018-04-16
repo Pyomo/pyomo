@@ -11,6 +11,8 @@ matrix:
     #
     - python: '2.7'
       env:                             CATEGORY="nightly"  EXTRAS="yes"  KEY_JOB="yes"
+    - python: '3.4'
+      env:                             CATEGORY="nightly"  EXTRAS="yes"
     - python: '3.5'
       env:                             CATEGORY="nightly"  EXTRAS="yes"
     - python: '3.6'
