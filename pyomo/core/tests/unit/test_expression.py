@@ -119,6 +119,11 @@ class TestExpressionData(unittest.TestCase):
         self.assertTrue(id(model.ec) in [id(e) for e in model.obj.expr.args])
         inst = model.clone()
         self.assertEqual(inst.obj.expr(),5.0)
+        if not id(inst.ec) in [id(e) for e in inst.obj.expr.args]:
+            print("BUG?")
+            print(id(inst.ec))
+            print(inst.obj.expr.__class__)
+            print([id(e) for e in inst.obj.expr.args])
         self.assertTrue(id(inst.ec) in [id(e) for e in inst.obj.expr.args])
         self.assertNotEqual(id(model.ec), id(inst.ec))
         self.assertFalse(id(inst.ec) in [id(e) for e in model.obj.expr.args])
