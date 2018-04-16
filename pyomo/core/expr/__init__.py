@@ -18,8 +18,8 @@
 __all__ = []
 
 from pyomo.core.expr import current
-__all__.extend(current.__public__)
-for obj in current.__public__:
+__all__.extend(current._public)
+for obj in current._public:
     globals()[obj] = getattr(current, obj)
 
 from pyomo.core.expr import numvalue
