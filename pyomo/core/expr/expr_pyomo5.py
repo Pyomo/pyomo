@@ -996,7 +996,7 @@ def identify_mutable_parameters(expr):
 #  _polynomial_degree
 # =====================================================
 
-class _PolyDegreeVisitor(ExpressionValueVisitor):
+class _PolynomialDegreeVisitor(ExpressionValueVisitor):
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
@@ -1028,7 +1028,7 @@ def _polynomial_degree(node):
         A non-negative integer that is the polynomial
         degree if the expression is polynomial, or :const:`None` otherwise.
     """
-    visitor = _PolyDegreeVisitor()
+    visitor = _PolynomialDegreeVisitor()
     return visitor.dfs_postorder_stack(node)
 
 
@@ -1578,8 +1578,8 @@ class ExpressionBase(NumericValue):
         Compute the polynomial degree of this expression given
         the degree values of its children.
 
-        This method is called by the :class:`_PolyDegreeVisitor
-        <pyomo.core.expr.current._PolyDegreeVisitor>` class.  It can
+        This method is called by the :class:`_PolynomialDegreeVisitor
+        <pyomo.core.expr.current._PolynomialDegreeVisitor>` class.  It can
         be over-written by expression classes to customize this
         logic.
 
