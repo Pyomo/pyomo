@@ -2411,8 +2411,8 @@ class TestGenerate_ChainedRelationalExpression(unittest.TestCase):
         else:
             self.assertRaises(TypeError, m.a.__lt__, m.x)
             self.assertRaises(TypeError, m.a.__gt__, m.x)
-            self.assertRaises(ValueError, e.__lt__, m.c)
-            self.assertRaises(ValueError, e.__gt__, m.c)
+            self.assertRaises(TypeError, e.__lt__, m.c)
+            self.assertRaises(TypeError, e.__gt__, m.c)
             self.assertRaises(TypeError, e.__lt__, m.a < m.b)
             self.assertRaises(TypeError, m.a.__lt__, e1)
             self.assertRaises(TypeError, m.a.__gt__, e1)
