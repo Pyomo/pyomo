@@ -41,7 +41,7 @@ class VarmapVisitor(EXPR.ExpressionReplacementVisitor):
                 return True, node
 
         if isinstance(node, EXPR.LinearExpression):
-            with EXPR.nonlinear_expression as expr:
+            with EXPR.nonlinear_expression() as expr:
                 for c, v in zip(node.linear_coefs, node.linear_vars):
                     if hasattr(v, 'local_name'):
                         expr += c * self.varmap.get(v.local_name)
