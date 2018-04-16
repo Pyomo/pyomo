@@ -44,7 +44,7 @@ class RemoveZeroTerms(IsomorphicTransformation):
             # get the index of all nonzero coefficient variables
             nonzero_vars_indx = [
                 i for i, _ in enumerate(repn.linear_vars)
-                if not isclose(repn.linear_coefs[i],0)
+                if not repn.linear_coefs[i] == 0
             ]
             const = repn.constant
 
