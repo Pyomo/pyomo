@@ -35,6 +35,18 @@ environment:
       CATEGORY: "nightly"
       EXTRAS: YES
 
+    - PYTHON_VERSION: 3.4
+      #PYTHON: "C:\\Python34"
+      PYTHON: "C:\\Miniconda3-x64"
+      CATEGORY: "nightly"
+      EXTRAS: YES
+
+    - PYTHON_VERSION: 3.5
+      #PYTHON: "C:\\Python35"
+      PYTHON: "C:\\Miniconda35-x64"
+      CATEGORY: "nightly"
+      EXTRAS: YES
+
     - PYTHON_VERSION: 3.6
       #PYTHON: "C:\\Python36"
       PYTHON: "C:\\Miniconda36-x64"
