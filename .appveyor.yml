@@ -14,10 +14,10 @@ environment:
 
     # Removing testing of 3.4, as it inexplicably runs >10x slower than
     # other Python versions and regularly times out (60 minutes)
-    #- PYTHON_VERSION: 3.4
-    #  #PYTHON: "C:\\Python34"
-    #  PYTHON: "C:\\Miniconda3-x64"
-    #  CATEGORY: "nightly"
+    - PYTHON_VERSION: 3.4
+      #PYTHON: "C:\\Python34"
+      PYTHON: "C:\\Miniconda3-x64"
+      CATEGORY: "nightly"
 
     - PYTHON_VERSION: 3.5
       #PYTHON: "C:\\Python35"
@@ -42,15 +42,6 @@ environment:
       EXTRAS: YES
 
 
-    ##- PYTHON: "C:\\Python33"
-    #- PYTHON: "C:\\Python34"
-    #- PYTHON: "C:\\Python27-x64"
-    ##- PYTHON: "C:\\Python33-x64"
-    ##  DISTUTILS_USE_SDK: "1"
-    #- PYTHON: "C:\\Python34-x64"
-    #  DISTUTILS_USE_SDK: "1"
-    #- PYTHON: "C:\\Python35-x64"
-
 install:
   # We need wheel installed to build wheels
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PYTHON%\\Library\\bin;%PATH%"
@@ -65,7 +56,6 @@ install:
   - SET CONDA_INSTALL=conda install -q -y
   - "SET ANACONDA=%CONDA_INSTALL% -c anaconda"
   - "SET CONDAFORGE=%CONDA_INSTALL% -c conda-forge --no-update-dependencies"
-  - "SET CACHEMEORG=%CONDA_INSTALL% -c cachemeorg --no-update-dependencies"
   #
   # Update conda, then force it to NOT update itself again
   #
@@ -93,12 +83,12 @@ install:
   #
   # Install pyomo.extras
   #
-  - "IF DEFINED EXTRAS (%CONDAFORGE% pyomo.extras)"
+  - "IF DEFINED EXTRAS (%CONDAFORGE% numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill)"
   #
   - "%CONDAFORGE% glpk"
   - "glpsol -v"
   # NOTE: conda-forge doesn't build ipopt for Windows....
-  - "%CACHEMEORG% ipopt_bin"
+  - "%CONDAFORGE% ipopt"
   - "ipopt -v"
   #
   # Clone but don't install pyomo-model-libraries
