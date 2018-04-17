@@ -48,7 +48,10 @@ def solve(self, model, **kwds):
     return incumbent
 
 def deactivate_disjunctions(self,model):
-    for d in model.component_data_objects(ctype = Disjunction)
+    for d in model.component_data_objects(ctype = Disjunction,active = True):
+        for y in Disjunction.component_data_objects(ctype = Disjunction, active = True):
+            y.deactivate()
+
 
 
 def validate_model(self,model):
