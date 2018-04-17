@@ -111,8 +111,11 @@ install:
   #
   # Install Pyomo extras
   #
+  # NOTE: We explicitly install all of the packages in pyomo.extras, since these this
+  # package is not kept up-to-date with Python 3.4
+  #
   - if [ -n "${EXTRAS}" ]; then
-       conda install -q -y -c conda-forge --no-update-dependencies pyomo.extras;
+        conda install -q -y -c conda-forge --no-update-dependencies numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill
     fi
 
   #
