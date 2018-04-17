@@ -1,0 +1,45 @@
+import logging
+from copy import deepcopy
+from math import copysign, fabs
+
+from six import iteritems
+
+import pyomo.util.plugin
+from pyomo.core.base import expr as EXPR
+from pyomo.core.base import (Block, Constraint, ConstraintList, Expression,
+                             Objective, Set, Suffix, TransformationFactory,
+                             Var, maximize, minimize, value)
+from pyomo.core.base.block import generate_cuid_names
+from pyomo.core.base.symbolic import differentiate
+from pyomo.core.kernel import (ComponentMap, ComponentSet, NonNegativeReals,
+                               Reals)
+from pyomo.gdp import Disjunct, Disjunction
+from pyomo.opt import TerminationCondition as tc
+from pyomo.opt import SolutionStatus, SolverFactory, SolverStatus
+from pyomo.opt.base import IOptSolver
+from pyomo.opt.results import ProblemSense, SolverResults
+
+import heapq
+
+def solve(self, model, **kwds):
+    heap = []
+    root = model.clone()
+    incumbent = root
+    deactivate(all disjunctions)
+    #Solve root as MINLP subproblems
+    #See fix_disjuncts.py
+    minlp_solve(root) #some epsilon
+    heapq.heappush(h,(root.obj,root))
+    while len(h)>0:
+        current = heapq.heappop(h)[1]
+        if(len(inactive_disjunctions) == ): #TO BEGIN WITH
+            incumbent = current
+            break
+        disjunction = inactive_disjunctions[0]
+        activate(disjunction)
+        for each clause in disjunction:
+            new = current.clone()
+            set clause True and fix
+            minlp_solve(new)
+            heapq.heappush(h,(new.obj,new))
+    return incumbent
