@@ -25,7 +25,10 @@ def solve(self, model, **kwds):
     heap = []
     root = model.clone()
     incumbent = root
+    initial_inactive_disjunctions = model.component_data_objects(
+        ctype = Disjunction, active=false):
     deactivate(all disjunctions)
+    num_inactive disjunct
     #Solve root as MINLP subproblems
     #See fix_disjuncts.py
     minlp_solve(root) #some epsilon
@@ -43,3 +46,14 @@ def solve(self, model, **kwds):
             minlp_solve(new)
             heapq.heappush(h,(new.obj,new))
     return incumbent
+
+def deactivate_disjunctions(self,model):
+    for d in model.component_data_objects(ctype = Disjunction)
+
+
+def validate_model(self,model):
+    for d in model.component_data_objects(
+        ctype = Disjunction, active=True):
+        if(not d.xor):
+            raise ValueError('GDPlbb unable to handle '
+                            'non-exclusive disjunctions')
