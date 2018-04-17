@@ -16,7 +16,7 @@ environment:
     # other Python versions and regularly times out (60 minutes)
     - PYTHON_VERSION: 3.4
       #PYTHON: "C:\\Python34"
-      PYTHON: "C:\\Miniconda3-x64"
+      PYTHON: "C:\\Miniconda34-x64"
       CATEGORY: "nightly"
 
     - PYTHON_VERSION: 3.5
@@ -37,7 +37,7 @@ environment:
 
     - PYTHON_VERSION: 3.4
       #PYTHON: "C:\\Python34"
-      PYTHON: "C:\\Miniconda3-x64"
+      PYTHON: "C:\\Miniconda34-x64"
       CATEGORY: "nightly"
       EXTRAS: YES
 
