@@ -27,12 +27,11 @@ class TestMindtPy(unittest.TestCase):
             print('\n Solving problem with selected strategy')
             mip_options = {'threads':4}
             opt.solve(model
-                , strategy='OA'
-                , init_strategy = 'inintial_binary'
-                , mip = 'cplex'
-                , iterlim = 13
-                , mip_kwargs = mip_options
-                )
+                , decomposition_strategy='OA'
+                , init_strategy = 'initial_binary'
+                , mip_solver = 'cplex'
+                , iteration_limit = 13
+                , mip_solver_kwargs = mip_options)
             # model.pprint()
     
             # self.assertIs(results.solver.termination_condition,
