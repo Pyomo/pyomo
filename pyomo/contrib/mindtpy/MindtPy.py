@@ -114,7 +114,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         domain=_positiveInt,
         description='Iterations limit',
         doc='Number of maximum iterations in the decomposition methods'))
-    CONFIG.declare('decomposition_strategy', ConfigValue(
+    CONFIG.declare('strategy', ConfigValue(
         default='OA',
         domain=_In(['OA', 'GBD', 'ECP', 'PSC']),
         description='Decomposition strategy',
@@ -271,7 +271,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
 
         # self.bound_tolerance = kwds.pop('tol', 1E-5)
         # self.iteration_limit = kwds.pop('iterlim', 30)
-        # self.decomposition_strategy = kwds.pop('strategy', 'OA')
+        # self.strategy = kwds.pop('strategy', 'OA')
         # self.initialization_strategy = kwds.pop('init_strategy', None)
         # self.integer_cuts = kwds.pop('int_cuts', 1)
         # self.max_slack = kwds.pop('max_slack', 1000)
@@ -298,17 +298,17 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         #     pprint(kwds)
 
         valid_strategies = ['OA', 'PSC', 'GBD', 'ECP']
-        if config.decomposition_strategy not in valid_strategies:
+        if config.strategy not in valid_strategies:
             raise ValueError('Unrecognized decomposition strategy %s. '
                              'Valid strategies include: %s'
-                             % (solve_data.decomposition_strategy,
+                             % (solve_data.strategy,
                                 valid_strategies))
 
         # If decomposition strategy is a hybrid, set the initial strategy
-        if config.decomposition_strategy == 'hPSC':
-            config.decomposition_strategy = 'PSC'
+        if config.strategy == 'hPSC':
+            config.strategy = 'PSC'
         else:
-            config.decomposition_strategy = config.decomposition_strategy
+            config.strategy = config.strategy
 
         # When generating cuts, small duals multiplied by expressions can cause
         # problems. Exclude all duals smaller in absolue value than the
@@ -339,7 +339,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         res = self.results = SolverResults()
         res.problem.name = m.name
         res.problem.number_of_nonzeros = None  # TODO
-        res.solver.name = 'MindtPy' + str(config.decomposition_strategy)
+        res.solver.name = 'MindtPy' + str(config.strategy)
         # TODO work on termination condition and message
         res.solver.termination_condition = None
         res.solver.message = None
@@ -532,8 +532,8 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         m = self.m
         config = self.CONFIG()
         self.feas_constr_map = {}
-        if (config.decomposition_strategy == 'OA' or
-                self.decomposition_strategy == 'hPSC'):
+        if (config.strategy == 'OA' or
+                self.strategy == 'hPSC'):
             if not hasattr(m, 'dual'):  # Set up dual value reporting
                 m.dual = Suffix(direction=Suffix.IMPORT)
             # Map Constraint, nlp_iter -> generated OA Constraint
@@ -541,7 +541,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             self._calc_jacobians()  # preload jacobians
             self.m.MindtPy_linear_cuts.oa_cuts = ConstraintList(
                 doc='Outer approximation cuts')
-        if config.decomposition_strategy == 'ECP':
+        if config.strategy == 'ECP':
             if not hasattr(m, 'dual'):  # Set up dual value reporting
                 m.dual = Suffix(direction=Suffix.IMPORT)
             # Map Constraint, nlp_iter -> generated ECP Constraint
@@ -549,7 +549,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             self._calc_jacobians()  # preload jacobians
             self.m.MindtPy_linear_cuts.ecp_cuts = ConstraintList(
                 doc='Extended Cutting Planes')
-        if config.decomposition_strategy == 'PSC':
+        if config.strategy == 'PSC':
             if not hasattr(m, 'dual'):  # Set up dual value reporting
                 m.dual = Suffix(direction=Suffix.IMPORT)
             if not hasattr(m, 'ipopt_zL_out'):
@@ -559,7 +559,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             self._detect_nonlinear_vars()
             self.m.MindtPy_linear_cuts.psc_cuts = ConstraintList(
                 doc='Partial surrogate cuts')
-        if config.decomposition_strategy == 'GBD':
+        if config.strategy == 'GBD':
             if not hasattr(m, 'dual'):
                 m.dual = Suffix(direction=Suffix.IMPORT)
             if not hasattr(m, 'ipopt_zL_out'):
@@ -571,7 +571,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
 
         # Set default initialization_strategy
         if config.init_strategy is None:
-            if config.decomposition_strategy == 'OA':
+            if config.strategy == 'OA':
                 config.init_strategy = 'rNLP'
             else:
                 config.init_strategy = 'initial_binary'
@@ -581,13 +581,13 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             self._init_rNLP()
         elif config.init_strategy == 'max_binary':
             self._init_max_binaries()
-            if config.decomposition_strategy == 'ECP':
+            if config.strategy == 'ECP':
                 self._add_ecp_cut()
             else:
                 self._solve_NLP_subproblem()
         elif config.init_strategy == 'initial_binary':
             self._init_initial_binaries()
-            if config.decomposition_strategy == 'ECP':
+            if config.strategy == 'ECP':
                 self._add_ecp_cut()
             else:
                 self._solve_NLP_subproblem()
@@ -614,13 +614,13 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             print('NLP {}: OBJ: {}  LB: {}  UB: {}'
                   .format(self.nlp_iter, value(self.obj.expr), self.LB,
                           self.UB))
-            if config.decomposition_strategy == 'OA':
+            if config.strategy == 'OA':
                 self._add_oa_cut()
-            elif config.decomposition_strategy == 'PSC':
+            elif config.strategy == 'PSC':
                 self._add_psc_cut()
-            elif config.decomposition_strategy == 'GBD':
+            elif config.strategy == 'GBD':
                 self._add_gbd_cut()
-            elif config.decomposition_strategy == 'ECP':
+            elif config.strategy == 'ECP':
                 self._add_ecp_cut()
                 self._add_objective_linearization()
         elif subprob_terminate_cond is tc.infeasible:
@@ -722,13 +722,13 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
                 break
             self.mip_subiter = 0
             # solve MILP master problem
-            if config.decomposition_strategy == 'OA':
+            if config.strategy == 'OA':
                 self._solve_OA_master()
-            elif config.decomposition_strategy == 'PSC':
+            elif config.strategy == 'PSC':
                 self._solve_PSC_master()
-            elif config.decomposition_strategy == 'GBD':
+            elif config.strategy == 'GBD':
                 self._solve_GBD_master()
-            elif config.decomposition_strategy == 'ECP':
+            elif config.strategy == 'ECP':
                 self._solve_ECP_master()
             # Check bound convergence
             if self.LB + config.bound_tolerance >= self.UB:
@@ -736,7 +736,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
                       'LB: {} + (tol {}) >= UB: {}'.format(
                           self.LB, config.bound_tolerance, self.UB))
                 break
-            elif config.decomposition_strategy == 'ECP':
+            elif config.strategy == 'ECP':
                 # Add ECP cut
                 self._add_ecp_cut()
             else:
@@ -769,11 +769,11 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
                     making_progress = True
                     break
             if not making_progress and (
-                    self.decomposition_strategy == 'hPSC' and
-                    self._decomposition_strategy == 'PSC'):
+                    self.strategy == 'hPSC' and
+                    self.strategy == 'PSC'):
                 print('Not making enough progress for {} iterations. '
                       'Switching to OA.'.format(max_nonimprove_iter))
-                self._decomposition_strategy = 'OA'
+                self.strategy = 'OA'
 
     def _solve_OA_master(self):
         config = self.CONFIG()
@@ -1132,11 +1132,11 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             if self.solution_improved:
                 self.best_solution_found = m.clone()
             # Add the linear cut
-            if config.decomposition_strategy == 'OA':
+            if config.strategy == 'OA':
                 self._add_oa_cut()
-            elif config.decomposition_strategy == 'PSC':
+            elif config.strategy == 'PSC':
                 self._add_psc_cut()
-            elif config.decomposition_strategy == 'GBD':
+            elif config.strategy == 'GBD':
                 self._add_gbd_cut()
 
             # This adds an integer cut to the feasible_integer_cuts
@@ -1164,7 +1164,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             for var in m.component_data_objects(ctype=Var,
                                                 descend_into=True):
 
-                if self._decomposition_strategy == 'PSC' or self._decomposition_strategy == 'GBD':
+                if self.strategy == 'PSC' or self.strategy == 'GBD':
                     m.ipopt_zL_out[var] = 0
                     m.ipopt_zU_out[var] = 0
                     if var.ub is not None and abs(var.ub - value(var)) < self.bound_tolerance:
@@ -1172,13 +1172,13 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
                     elif var.lb is not None and abs(value(var) - var.lb) < self.bound_tolerance:
                         m.ipopt_zU_out[var] = -1
             # m.pprint() #print infeasible nlp problem for debugging
-            if self._decomposition_strategy == 'PSC':
+            if self.strategy == 'PSC':
                 print('Adding PSC feasibility cut.')
                 self._add_psc_cut(nlp_feasible=False)
-            elif self._decomposition_strategy == 'GBD':
+            elif self.strategy == 'GBD':
                 print('Adding GBD feasibility cut.')
                 self._add_gbd_cut(nlp_feasible=False)
-            elif self._decomposition_strategy == 'OA':
+            elif self.strategy == 'OA':
                 print('Solving feasibility problem')
                 if self.initial_feas == 1:
                     self._add_feas_slacks()

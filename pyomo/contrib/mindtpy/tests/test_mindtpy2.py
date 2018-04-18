@@ -30,7 +30,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
             print('\n Solving problem with Outer Approximation')
-            opt.solve(model, decomposition_strategy='OA', init_strategy = 'initial_binary')
+            opt.solve(model, strategy='OA', init_strategy = 'initial_binary')
     
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -41,7 +41,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
             print('\n Solving problem with Partial Surrogate Cuts')
-            opt.solve(model, decomposition_strategy='PSC', init_strategy = 'initial_binary')
+            opt.solve(model, strategy='PSC', init_strategy = 'initial_binary')
     
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -52,7 +52,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
             print('\n Solving problem with Generalized Benders Decomposition')
-            opt.solve(model, decomposition_strategy='GBD', init_strategy = 'initial_binary')
+            opt.solve(model, strategy='GBD', init_strategy = 'initial_binary')
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -63,7 +63,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
             print('\n Solving problem with Extended Cutting Planes')
-            opt.solve(model, decomposition_strategy='ECP', init_strategy = 'initial_binary',
+            opt.solve(model, strategy='ECP', init_strategy = 'initial_binary',
             ECP_tolerance=1E-4)
     
             # self.assertIs(results.solver.termination_condition,
