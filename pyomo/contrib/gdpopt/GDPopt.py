@@ -538,13 +538,13 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
         # Remove zero terms in linear expressions
         TransformationFactory('contrib.remove_zero_terms').apply_to(m)
         # Remove terms in equal to zero summations
-        TransformationFactory('core.propagate_zero_sum').apply_to(m)
+        TransformationFactory('contrib.propagate_zero_sum').apply_to(m)
         # Transform bound constraints
-        TransformationFactory('core.constraints_to_var_bounds').apply_to(m)
+        TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
         # Detect fixed variables
         TransformationFactory('contrib.detect_fixed_vars').apply_to(m)
         # Remove terms in equal to zero summations
-        TransformationFactory('core.propagate_zero_sum').apply_to(m)
+        TransformationFactory('contrib.propagate_zero_sum').apply_to(m)
         # Remove trivial constraints
         TransformationFactory(
             'contrib.deactivate_trivial_constraints').apply_to(m)
@@ -741,13 +741,13 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
         # Remove zero terms in linear expressions
         TransformationFactory('contrib.remove_zero_terms').apply_to(m)
         # Remove terms in equal to zero summations
-        TransformationFactory('core.propagate_zero_sum').apply_to(m)
+        TransformationFactory('contrib.propagate_zero_sum').apply_to(m)
         # Transform bound constraints
-        TransformationFactory('core.constraints_to_var_bounds').apply_to(m)
+        TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
         # Detect fixed variables
         TransformationFactory('contrib.detect_fixed_vars').apply_to(m)
         # Remove terms in equal to zero summations
-        TransformationFactory('core.propagate_zero_sum').apply_to(m)
+        TransformationFactory('contrib.propagate_zero_sum').apply_to(m)
         # Remove trivial constraints
         TransformationFactory(
             'contrib.deactivate_trivial_constraints').apply_to(m)
@@ -940,13 +940,13 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
         # Remove zero terms in linear expressions
         TransformationFactory('contrib.remove_zero_terms').apply_to(m)
         # Remove terms in equal to zero summations
-        TransformationFactory('core.propagate_zero_sum').apply_to(m)
+        TransformationFactory('contrib.propagate_zero_sum').apply_to(m)
         # Transform bound constraints
-        TransformationFactory('core.constraints_to_var_bounds').apply_to(m)
+        TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
         # Detect fixed variables
         TransformationFactory('contrib.detect_fixed_vars').apply_to(m)
         # Remove terms in equal to zero summations
-        TransformationFactory('core.propagate_zero_sum').apply_to(m)
+        TransformationFactory('contrib.propagate_zero_sum').apply_to(m)
         # Remove trivial constraints
         TransformationFactory(
             'contrib.deactivate_trivial_constraints').apply_to(m)
@@ -1107,13 +1107,13 @@ class GDPoptSolver(pyomo.util.plugin.Plugin):
         # Remove zero terms in linear expressions
         TransformationFactory('contrib.remove_zero_terms').apply_to(m)
         # Remove terms in equal to zero summations
-        TransformationFactory('core.propagate_zero_sum').apply_to(m)
+        TransformationFactory('contrib.propagate_zero_sum').apply_to(m)
         # Transform bound constraints
-        TransformationFactory('core.constraints_to_var_bounds').apply_to(m)
+        TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
         # Detect fixed variables
         TransformationFactory('contrib.detect_fixed_vars').apply_to(m)
         # Remove terms in equal to zero summations
-        TransformationFactory('core.propagate_zero_sum').apply_to(m)
+        TransformationFactory('contrib.propagate_zero_sum').apply_to(m)
         # Remove trivial constraints
         TransformationFactory(
             'contrib.deactivate_trivial_constraints').apply_to(m)
