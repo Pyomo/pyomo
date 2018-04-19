@@ -39,6 +39,15 @@ import math
 import logging
 logger = logging.getLogger('pyomo.gdp.cuttingplane')
 
+# for numerically safe cuts:
+# (NOTE that this is system-specific... (ick))
+import ctypes
+FE_TONEAREST = 0x0000
+FE_DOWNWARD = 0x0400
+FE_UPWARD = 0x0800
+FE_TOWARDZERO = 0x0c00
+libm = ctypes.CDLL('libm.so.6')
+
 # DEBUG
 from nose.tools import set_trace
 
@@ -159,6 +168,8 @@ class CuttingPlane_Transformation(Transformation):
             var_info, transBlockName):
 
         opt = SolverFactory(SOLVER)
+        # TODO: testing this with cplex...
+        # opt.options['emphasis numerical'] = 'y'
 
         improving = True
         prev_obj = float("inf")
@@ -206,16 +217,17 @@ class CuttingPlane_Transformation(Transformation):
                 cut_number = len(transBlock.cuts)
                 logger.warning("GDP.cuttingplane: Adding cut %s to BM model." 
                                % (cut_number,))
-                transBlock.cuts.add(cut_number, cuts['bigm'] >= 0)
+                transBlock.cuts.add(cut_number, 
+                                    cuts['bigm'][0] >= cuts['bigm'][1])
 
             # solve separation problem to get xhat.
             opt.solve(instance_rCHull, tee=stream_solvers)
 
-            cuts = self._create_cuts(var_info, transBlock, transBlock_rBigM)
+            cuts = self._create_safe_cuts(var_info, transBlock, transBlock_rBigM)
             
             # add cut to rBigm
             transBlock_rBigM.cuts.add(
-                len(transBlock_rBigM.cuts), cuts['rBigM'] >= 0)
+                len(transBlock_rBigM.cuts), cuts['rBigM'][0] >= cuts['rBigM'][1])
             
             prev_obj = rBigM_objVal
 
@@ -257,3 +269,23 @@ class CuttingPlane_Transformation(Transformation):
                 x_chull.value - x_star.value)*(x_rbigm - x_chull.value)
 
         return({'bigm': cutexpr_bigm, 'rBigM': cutexpr_rBigM})
+
+    def _create_safe_cuts(self, var_info, transBlock, transBlock_rBigm):
+        cut_number = len(transBlock.cuts)
+        logger.warning("gdp.cuttingplane: Creating (but not yet adding)"
+                       " 'safe' cut %s." % (cut_number,))
+        cutexpr_bigm_LHS = 0
+        cutexpr_rBigM_LHS = 0
+        RHS = 0
+        original_rounding = libm.fegetround()
+        libm.fesetround(FE_UPWARD)
+        for x_bigm, x_rbigm, x_chull, x_star in var_info:
+            coef = x_chull.value - x_star.value
+            cutexpr_bigm_LHS += coef*x_bigm
+            cutexpr_rBigM_LHS += coef*x_rbigm
+        libm.fesetround(FE_DOWNWARD)
+        for x_bigm, x_rbigm, x_chull, x_star in var_info:
+            RHS += x_chull.value**2 - x_star.value*x_chull.value
+        libm.fesetround(original_rounding)
+        return({'bigm': (cutexpr_bigm_LHS, RHS), 
+                'rBigM': (cutexpr_rBigM_LHS, RHS)})
