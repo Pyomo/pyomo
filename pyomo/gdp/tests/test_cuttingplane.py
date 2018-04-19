@@ -164,19 +164,13 @@ class Grossmann_TestCases(unittest.TestCase):
         m.y.fix(10)
         m.disjunct1.indicator_var.fix(1)
         m.disjunct2.indicator_var.fix(0)
-        set_trace()
-        # self.assertGreaterEqual(value(cut1_expr), 0) 
-        #self.assertGreaterEqual(value(cut1_expr), cuts[0].lower.value)
-        lb = cuts[0].lower.value
-        self.assertAlmostEqual(value(cut1_expr), lb)
+        self.assertGreaterEqual(value(cut1_expr), 0) 
 
         m.x.fix(10)
         m.y.fix(3)
         m.disjunct1.indicator_var.fix(0)
         m.disjunct2.indicator_var.fix(1)
-        #self.assertGreaterEqual(value(cut1_expr), 0)
-        #self.assertGreaterEqual(value(cut1_expr), cuts[0].lower.value)
-        self.assertAlmostEqual(value(cut1_expr), lb)
+        self.assertGreaterEqual(value(cut1_expr), 0)
 
         # now we check that the second cut is tight for the top region:
         cut2_expr = cuts[1].body
@@ -184,16 +178,10 @@ class Grossmann_TestCases(unittest.TestCase):
         m.y.fix(10)
         m.disjunct1.indicator_var.fix(1)
         m.disjunct2.indicator_var.fix(0)
-        #self.assertGreaterEqual(value(cut2_expr), 0)
-        lb = cuts[1].lower.value
-        #self.assertGreaterEqaul(value(cut2_expr), cuts[1].lower.value)
-        self.assertAlmostEqual(value(cut2_expr), lb)
-        
+        self.assertGreaterEqual(value(cut2_expr), 0)
 
         m.x.fix(0)
-        #self.assertGreaterEqual(value(cut2_expr), 0)
-        #self.assertGreaterEqual(value(cut2_expr), cuts[1].lower.value)
-        self.assertAlmostEqual(value(cut2_expr), lb)
+        self.assertGreaterEqual(value(cut2_expr), 0)
 
     @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
     def test_cuts_dont_cut_off_optimal(self):
