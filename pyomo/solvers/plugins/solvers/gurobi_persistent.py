@@ -68,37 +68,6 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             self._solver_model.update()
             self._solver_model.remove(solver_var)
 
-    def add_var(self, var):
-        """
-        Add a variable to the solver's model. This will keep any existing model components intact.
-
-        Parameters
-        ----------
-        var: Var
-            The variable to add to the solver's model.
-        """
-        PersistentSolver.add_var(self, var)
-
-    def add_constraint(self, con):
-        """
-        Add a constraint to the solver's model. This will keep any existing model components intact.
-
-        Parameters
-        ----------
-        con: Constraint
-        """
-        PersistentSolver.add_constraint(self, con)
-
-    def add_sos_constraint(self, con):
-        """
-        Add an SOS constraint to the solver's model (if supported). This will keep any existing model components intact.
-
-        Parameters
-        ----------
-        con: SOSConstraint
-        """
-        PersistentSolver.add_sos_constraint(self, con)
-
     def _warm_start(self):
         GurobiDirect._warm_start(self)
 
