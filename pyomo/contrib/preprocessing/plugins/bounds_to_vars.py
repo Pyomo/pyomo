@@ -3,7 +3,6 @@
 from __future__ import division
 import textwrap
 
-from pyutilib.math.util import isclose
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
@@ -50,9 +49,23 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
                     var = repn.linear_vars[0]
                     const = repn.constant
                     coef = float(repn.linear_coefs[0])
-                    if isclose(coef,0):
-                        # If a value is nearly zero, we ignore it so we don't divide by a 
-                        # small value.
+                    if coef == 0:
+                        # If a value is zero, we ignore it so we don't
+                        # raise a divide-by-dero exception.  We can
+                        # safely deactivate this constraint as long as
+                        # the constant is within the constraint bounds.
+                        if constr.upper is not None \
+                           and (value(constr.upper) - const) < 0:
+                            # This constraint is trivially infeasible.
+                            # We need to leave it in the model so that
+                            # the writer complains.
+                            continue
+                        if constr.lower is not None \
+                           and (value(constr.lower) - const) > 0:
+                            # This constraint is trivially infeasible.
+                            # We need to leave it in the model so that
+                            # the writer complains.
+                            continue
                         pass
                     else:
                         if constr.upper is not None:
