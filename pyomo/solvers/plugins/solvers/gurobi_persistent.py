@@ -48,13 +48,25 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             self.set_instance(self._pyomo_model, **kwds)
 
     def _remove_constraint(self, solver_con):
-        self._solver_model.remove(solver_con)
+        try:
+            self._solver_model.remove(solver_con)
+        except self._gurobipy.GurobiError:
+            self._solver_model.update()
+            self._solver_model.remove(solver_con)
 
     def _remove_sos_constraint(self, solver_sos_con):
-        self._solver_model.remove(solver_sos_con)
+        try:
+            self._solver_model.remove(solver_sos_con)
+        except self._gurobipy.GurobiError:
+            self._solver_model.update()
+            self._solver_model.remove(solver_sos_con)
 
     def _remove_var(self, solver_var):
-        self._solver_model.remove(solver_var)
+        try:
+            self._solver_model.remove(solver_var)
+        except self._gurobipy.GurobiError:
+            self._solver_model.update()
+            self._solver_model.remove(solver_var)
 
     def add_var(self, var):
         """
@@ -66,7 +78,6 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             The variable to add to the solver's model.
         """
         PersistentSolver.add_var(self, var)
-        self._solver_model.update()
 
     def add_constraint(self, con):
         """
@@ -77,7 +88,6 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         con: Constraint
         """
         PersistentSolver.add_constraint(self, con)
-        self._solver_model.update()
 
     def add_sos_constraint(self, con):
         """
@@ -88,7 +98,6 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         con: SOSConstraint
         """
         PersistentSolver.add_sos_constraint(self, con)
-        self._solver_model.update()
 
     def _warm_start(self):
         GurobiDirect._warm_start(self)
