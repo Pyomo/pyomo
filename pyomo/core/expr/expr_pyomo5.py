@@ -2311,10 +2311,13 @@ class GetItemExpression(ExpressionBase):
         return self._base.getname(*args, **kwds)
 
     def is_potentially_variable(self):
-        if any(arg.is_potentially_variable() for arg in self._args_ if not arg.__class__ in nonpyomo_leaf_types):
-            for x in itervalues(self._base):
-                if not x.__class__ in nonpyomo_leaf_types and x.is_potentially_variable():
-                    return True
+        if any(arg.is_potentially_variable() for arg in self._args_
+               if arg.__class__ not in nonpyomo_leaf_types):
+            return True
+        for x in itervalues(self._base):
+            if x.__class__ not in nonpyomo_leaf_types \
+               and x.is_potentially_variable():
+                return True
         return False
 
     def is_fixed(self):

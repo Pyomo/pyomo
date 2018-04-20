@@ -24,9 +24,18 @@ class TemplateExpressionError(ValueError):
 
 
 class IndexTemplate(NumericValue):
-    """This class can be used to create "template expressions"
+    """A "placeholder" for an index value in template expressions.
+
+    This class is a placeholder for an index value within a template
+    expression.  That is, given the expression template for "m.x[i]",
+    where `m.z` is indexed by `m.I`, the expression tree becomes:
+
+    _GetItem:
+       - m.x
+       - IndexTemplate(_set=m.I, _value=None)
 
     Constructor Arguments:
+       _set: the Set from which this IndexTemplate can take values
     """
 
     __slots__ = ('_set', '_value')
@@ -90,8 +99,13 @@ class IndexTemplate(NumericValue):
         return False
 
     def is_potentially_variable(self):
-        """Returns True because this is a variable."""
-        return True
+        """Returns False because index values cannot be variables.
+
+        The IndexTemplate represents a placeholder for an index value
+        for an IndexedComponent, and at the moment, Pyomo does not
+        support variable indirection.
+        """
+        return False
 
     def __str__(self):
         return self.getname()
