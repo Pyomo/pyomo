@@ -50,21 +50,21 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
     def _remove_constraint(self, solver_con):
         try:
             self._solver_model.remove(solver_con)
-        except self._gurobipy.GurobiError:
+        except (self._gurobipy.GurobiError, AttributeError):
             self._solver_model.update()
             self._solver_model.remove(solver_con)
 
     def _remove_sos_constraint(self, solver_sos_con):
         try:
             self._solver_model.remove(solver_sos_con)
-        except self._gurobipy.GurobiError:
+        except (self._gurobipy.GurobiError, AttributeError):
             self._solver_model.update()
             self._solver_model.remove(solver_sos_con)
 
     def _remove_var(self, solver_var):
         try:
             self._solver_model.remove(solver_var)
-        except self._gurobipy.GurobiError:
+        except (self._gurobipy.GurobiError, AttributeError):
             self._solver_model.update()
             self._solver_model.remove(solver_var)
 
