@@ -16,10 +16,6 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
     Looks for constraints of form k*v + c1 <= c2. Changes bound on v to match
     (c2 - c1)/k if it results in a tighter bound. Also does the same thing for
     lower bounds.
-
-    .. note::
-        If one element of a bilinear term is fixed to zero, then this 
-        transformation ignores that constraint.
     """
 
     alias('contrib.constraints_to_var_bounds',
@@ -45,50 +41,55 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
             # Check if the constraint is k * x + c1 <= c2 or c2 <= k * x + c1
             repn = generate_standard_repn(constr.body)
             if repn.is_linear():
-                if len(repn.linear_vars) == 1:
+                if len(repn.linear_vars) == 0:
+                    var = None
+                    const = repn.constant
+                    coef = 0
+                elif len(repn.linear_vars) == 1:
                     var = repn.linear_vars[0]
                     const = repn.constant
                     coef = float(repn.linear_coefs[0])
-                    if coef == 0:
-                        # If a value is zero, we ignore it so we don't
-                        # raise a divide-by-dero exception.  We can
-                        # safely deactivate this constraint as long as
-                        # the constant is within the constraint bounds.
-                        if constr.upper is not None \
-                           and (value(constr.upper) - const) < 0:
-                            # This constraint is trivially infeasible.
-                            # We need to leave it in the model so that
-                            # the writer complains.
-                            continue
-                        if constr.lower is not None \
-                           and (value(constr.lower) - const) > 0:
-                            # This constraint is trivially infeasible.
-                            # We need to leave it in the model so that
-                            # the writer complains.
-                            continue
-                        pass
-                    else:
-                        if constr.upper is not None:
-                            newbound = (value(constr.upper) - const) / coef
-                            if coef > 0:
-                                var.setub(min(var.ub, newbound)
-                                          if var.ub is not None
-                                          else newbound)
-                            elif coef < 0:
-                                var.setlb(max(var.lb, newbound)
-                                          if var.lb is not None
-                                          else newbound)
-                        if constr.lower is not None:
-                            newbound = (value(constr.lower) - const) / coef
-                            if coef > 0:
-                                var.setlb(max(var.lb, newbound)
-                                          if var.lb is not None
-                                          else newbound)
-                            elif coef < 0:
-                                var.setub(min(var.ub, newbound)
-                                          if var.ub is not None
-                                          else newbound)
-                    constr.deactivate()
+                else:
+                    continue
+                if coef == 0:
+                    # If a value is zero, we ignore it so we don't
+                    # raise a divide-by-dero exception.  We can
+                    # safely deactivate this constraint as long as
+                    # the constant is within the constraint bounds.
+                    if constr.upper is not None \
+                       and (value(constr.upper) - const) < 0:
+                        # This constraint is trivially infeasible.
+                        # We need to leave it in the model so that
+                        # the writer complains.
+                        continue
+                    if constr.lower is not None \
+                       and (value(constr.lower) - const) > 0:
+                        # This constraint is trivially infeasible.
+                        # We need to leave it in the model so that
+                        # the writer complains.
+                        continue
+                else:
+                    if constr.upper is not None:
+                        newbound = (value(constr.upper) - const) / coef
+                        if coef > 0:
+                            var.setub(min(var.ub, newbound)
+                                      if var.ub is not None
+                                      else newbound)
+                        elif coef < 0:
+                            var.setlb(max(var.lb, newbound)
+                                      if var.lb is not None
+                                      else newbound)
+                    if constr.lower is not None:
+                        newbound = (value(constr.lower) - const) / coef
+                        if coef > 0:
+                            var.setlb(max(var.lb, newbound)
+                                      if var.lb is not None
+                                      else newbound)
+                        elif coef < 0:
+                            var.setub(min(var.ub, newbound)
+                                      if var.ub is not None
+                                      else newbound)
+
                     # Sometimes deactivating the constraint will remove a
                     # variable from all active constraints, so that it won't be
                     # updated during the optimization. Therefore, we need to
@@ -97,9 +98,10 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
                     # deactivating is not an invalid constraint, but rather we
                     # are moving its implied bound directly onto the variable.
                     if (var.has_lb() and var.value is not None
-                            and var.value < var.lb):
+                        and var.value < var.lb):
                         var.set_value(var.lb)
                     if (var.has_ub() and var.value is not None
-                            and var.value > var.ub):
+                        and var.value > var.ub):
                         var.set_value(var.ub)
 
+                constr.deactivate()
