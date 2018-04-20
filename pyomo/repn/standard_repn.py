@@ -929,16 +929,33 @@ def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False
     v = []
     c = []
     for key in ans.linear:
-        if not isclose_const(ans.linear[key],0.0):
-            v.append(idMap[key])
-            c.append(ans.linear[key])
+        val = ans.linear[key]
+        if val.__class__ in native_numeric_types:
+            if val == 0:
+                continue
+        elif val.is_constant():
+            if value(val) == 0:
+                continue
+        v.append(idMap[key])
+        c.append(ans.linear[key])
     repn.linear_vars = tuple(v)
     repn.linear_coefs = tuple(c)
 
     if quadratic:
-        keys = list(key for key in ans.quadratic if not isclose(ans.quadratic[key],0))
-        repn.quadratic_vars = tuple((idMap[key[0]],idMap[key[1]]) for key in keys)
-        repn.quadratic_coefs = tuple(ans.quadratic[key] for key in keys)
+        repn.quadratic_vars = []
+        repn.quadratic_coefs = []
+        for key in ans.quadratic:
+            val = ans.quadratic[key]
+            if val.__class__ in native_numeric_types:
+                if val == 0:
+                    continue
+            elif val.is_constant():
+                if value(val) == 0:
+                    continue
+            repn.quadratic_vars.append( (idMap[key[0]],idMap[key[1]]) )
+            repn.quadratic_coefs.append( val )
+        repn.quadratic_vars = tuple(repn.quadratic_vars)
+        repn.quadratic_coefs = tuple(repn.quadratic_coefs)
         v = []
         c = []
         for key in ans.quadratic:
