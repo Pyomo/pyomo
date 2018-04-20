@@ -93,4 +93,7 @@ _PG.pop_env()
 # Expose the symbols from pyomo.core
 #
 from pyomo.core import *
-from pyomo.opt import SolverFactory, SolverManagerFactory, UnknownSolver, TerminationCondition
+from pyomo.opt import (
+    SolverFactory, SolverManagerFactory, UnknownSolver,
+    TerminationCondition, SolverStatus,
+)
