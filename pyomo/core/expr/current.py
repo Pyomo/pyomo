@@ -56,6 +56,9 @@ numvalue._generate_relational_expression = _generate_relational_expression
 
 
 def Expr_if(IF=None, THEN=None, ELSE=None):
+    """
+    Function used to construct a logical conditional expression.
+    """
     return Expr_ifExpression(IF_=IF, THEN_=THEN, ELSE_=ELSE)
 
 #
