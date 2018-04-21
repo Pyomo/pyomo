@@ -2140,6 +2140,13 @@ class SumExpressionBase(_LinearOperatorExpression):
     def _precedence(self):
         return SumExpressionBase.PRECEDENCE
 
+    def getname(self, *args, **kwds):
+        return 'sum'
+
+
+class NPV_SumExpression(SumExpressionBase):
+    __slots__ = ()
+
     def _apply_operation(self, result):
         l_, r_ = result
         return l_ + r_
@@ -2150,13 +2157,6 @@ class SumExpressionBase(_LinearOperatorExpression):
         if values[1][0] == '-':
             return "{0} {1}".format(values[0],values[1])
         return "{0} + {1}".format(values[0],values[1])
-
-    def getname(self, *args, **kwds):
-        return 'sum'
-
-
-class NPV_SumExpression(SumExpressionBase):
-    __slots__ = ()
 
     def is_potentially_variable(self):
         return False
