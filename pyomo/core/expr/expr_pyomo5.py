@@ -1556,8 +1556,7 @@ class ExpressionBase(NumericValue):
             A non-negative integer that is the polynomial
             degree if the expression is polynomial, or :const:`None` otherwise.
         """
-        visitor = _PolynomialDegreeVisitor()
-        return visitor.dfs_postorder_stack(self)
+        return _PolynomialDegreeVisitor().dfs_postorder_stack(self)
 
     def _compute_polynomial_degree(self, values):                          #pragma: no cover
         """
