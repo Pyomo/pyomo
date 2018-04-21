@@ -1574,7 +1574,26 @@ class TestPHExpensive(unittest.TestCase):
                 baseline_dir+"sizes10_quadratic_twobundles_gurobi.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance_relaxed)
-
+    # dlw, Feb 2018; just checking for a stack trace (no baseline)
+    def test_sorgw_sizes3_cplex(self):
+        if not solver['cplex','lp']:
+            self.skipTest("The 'cplex' executable is not available")
+        sizes_example_dir = pysp_examples_dir + "sizes"
+        model_dir = sizes_example_dir + os.sep + "models"
+        instance_dir = sizes_example_dir + os.sep + "SIZES3"
+        argstring = "runph --traceback -r 100.0 --solver=cplex --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+                    " --max-iterations=5 --user-defined-extension=pyomo.pysp.plugins.sorgw"
+        print("Testing command: " + argstring)
+        log_output_file = this_test_file_directory+"sorgw_sizes3_cplex.out"
+        pyutilib.misc.setup_redirect(log_output_file)
+        args = argstring.split()
+        pyomo.pysp.phinit.main(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        os.remove(log_output_file)
+        # these files should be here if all is OK
+        os.remove(this_test_file_directory+"winterest.ssv")
+        os.remove(this_test_file_directory+"wsummary.ssv")
+    #
     def test_quadratic_networkflow1ef10_cplex(self):
         if not solver['cplex','lp']:
             self.skipTest("The 'cplex' executable is not available")
