@@ -74,8 +74,8 @@ install:
   # Somehow, the update stalls for Python 3.4, so we're disabling it for now.
   #
   - conda config --set always_yes yes
-  #- conda update -q -y -c anaconda conda
-  #- conda config --set auto_update_conda false
+  - conda update -q -y conda
+  - conda config --set auto_update_conda false
   #
   - "%CONDAFORGE% setuptools pip"
   - "IF %PYTHON_VERSION%==2.6 (python -m pip install ordereddict)"
