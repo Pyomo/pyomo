@@ -366,10 +366,6 @@ class Component(_ComponentBase):
         self._constructed = False
         self.construct(data=data)
 
-    def is_expression_type(self):
-        """Components are not expressions except for a few cases"""
-        return False
-
     def valid_model_component(self):
         """Return True if this can be used as a model component."""
         return True

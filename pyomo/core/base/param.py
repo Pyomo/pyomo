@@ -145,6 +145,10 @@ class _ParamData(ComponentData, NumericValue):
         """
         return False
 
+    def is_expression_type(self):
+        """Returns False because this is not an expression"""
+        return False
+
     def is_potentially_variable(self):
         """
         Returns False because this object can never reference variables.
@@ -241,6 +245,10 @@ class Param(IndexedComponent):
         if self._default_val is _NotValid:
             return self._data.__iter__()
         return self._index.__iter__()
+
+    def is_expression_type(self):
+        """Returns False because this is not an expression"""
+        return False
 
     #
     # These are "sparse equivalent" access / iteration methods that
