@@ -1553,11 +1553,11 @@ class ExpressionBase(NumericValue):
         Return the polynomial degree of the expression.
 
         Returns:
-            A nonnegative integer that is the polynomial degree of
-            the expression, if the expression is polynomial.  And
-            :const:`None` otherwise.
+            A non-negative integer that is the polynomial
+            degree if the expression is polynomial, or :const:`None` otherwise.
         """
-        return _polynomial_degree(self)
+        visitor = _PolynomialDegreeVisitor()
+        return visitor.dfs_postorder_stack(self)
 
     def _compute_polynomial_degree(self, values):                          #pragma: no cover
         """
