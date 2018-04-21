@@ -6,7 +6,8 @@ Pyomo CHANGELOG
 Current Development
 -------------------------------------------------------------------------------
 
-- None
+- Wrap Vars in value() for assignment to numpy vectors (#436)
+- Adding TerminationCondition and SolverStatus to pyomo.environ (#429)
 
 -------------------------------------------------------------------------------
 Pyomo 5.5
