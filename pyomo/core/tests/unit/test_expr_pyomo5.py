@@ -5850,7 +5850,7 @@ class TestNamedExpressionDuckTyping(unittest.TestCase):
         self.assertTrue(hasattr(obj, '_precedence'))
         self.assertTrue(hasattr(obj, '_to_string'))
         self.assertTrue(hasattr(obj, 'clone'))
-        self.assertTrue(hasattr(obj, 'construct_node'))
+        self.assertTrue(hasattr(obj, 'create_node_with_local_data'))
         self.assertTrue(hasattr(obj, 'is_constant'))
         self.assertTrue(hasattr(obj, 'is_fixed'))
         self.assertTrue(hasattr(obj, '_is_fixed'))

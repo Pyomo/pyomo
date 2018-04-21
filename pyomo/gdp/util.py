@@ -59,7 +59,7 @@ class _CloneVisitor(EXPR.ExpressionValueVisitor):
             # a simple constant expression.
             #
             return values[0] * values[1]
-        return node.construct_node( tuple(values), self.memo )
+        return node.create_node_with_local_data( tuple(values), self.memo )
 
     def visiting_potential_leaf(self, node):
         """ 

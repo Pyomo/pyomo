@@ -582,9 +582,9 @@ class ExpressionReplacementVisitor(object):
 
     def construct_node(self, node, values):
         """
-        Call the expression construct_node() method.
+        Call the expression create_node_with_local_data() method.
         """
-        return node.construct_node( tuple(values), self.memo )
+        return node.create_node_with_local_data( tuple(values), self.memo )
 
     def dfs_postorder_stack(self, node):
         """
@@ -695,7 +695,7 @@ class _CloneVisitor(ExpressionValueVisitor):
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
-        return node.construct_node( tuple(values), self.memo )
+        return node.create_node_with_local_data( tuple(values), self.memo )
 
     def visiting_potential_leaf(self, node):
         """
@@ -1426,7 +1426,7 @@ class ExpressionBase(NumericValue):
         """
         return clone_expression(self, memo=memo, clone_leaves=True)
 
-    def construct_node(self, args, memo):
+    def create_node_with_local_data(self, args, memo):
         """
         Construct a node using given arguments.
 
@@ -1434,12 +1434,10 @@ class ExpressionBase(NumericValue):
         node, which is used in tree visitor scripts.  In the simplest
         case, this simply returns::
 
-            self.__class__(args))
+            self.__class__(args)
 
-        But in general this constructs a copy of the current
-        expression object using local data as well as arguments
-        that represent the child nodes.   Thus, this method can be viewed
-        as a node-level clone method.
+        But in general this creates an expression object using local
+        data as well as arguments that represent the child nodes.
 
         Args:
             args (list): A list of child nodes for the new expression
@@ -1682,7 +1680,7 @@ class ExternalFunctionExpression(ExpressionBase):
     def nargs(self):
         return len(self._args_)
 
-    def construct_node(self, args, memo):
+    def create_node_with_local_data(self, args, memo):
         return self.__class__(args, self._fcn)
 
     def __getstate__(self):
@@ -1909,7 +1907,7 @@ class RangedExpression(_LinearOperatorExpression):
     def nargs(self):
         return 3
 
-    def construct_node(self, args, memo):
+    def create_node_with_local_data(self, args, memo):
         return self.__class__(args, self._strict)
 
     def __getstate__(self):
@@ -1981,7 +1979,7 @@ class InequalityExpression(_LinearOperatorExpression):
     def nargs(self):
         return 2
 
-    def construct_node(self, args, memo):
+    def create_node_with_local_data(self, args, memo):
         return self.__class__(args, self._strict)
 
     def __getstate__(self):
@@ -2205,7 +2203,7 @@ class SumExpression(SumExpressionBase):
     def _apply_operation(self, result):
         return sum(result)
 
-    def construct_node(self, args, memo):
+    def create_node_with_local_data(self, args, memo):
         return self.__class__(list(args))
 
     def __getstate__(self):
@@ -2298,7 +2296,7 @@ class GetItemExpression(ExpressionBase):
     def nargs(self):
         return len(self._args_)
 
-    def construct_node(self, args, memo):
+    def create_node_with_local_data(self, args, memo):
         return self.__class__(args, self._base)
 
     def __getstate__(self):
@@ -2462,7 +2460,7 @@ class UnaryFunctionExpression(ExpressionBase):
     def nargs(self):
         return 1
 
-    def construct_node(self, args, memo):
+    def create_node_with_local_data(self, args, memo):
         return self.__class__(args, self._name, self._fcn)
 
     def __getstate__(self):
@@ -2513,7 +2511,7 @@ class AbsExpression(UnaryFunctionExpression):
     def __init__(self, arg):
         super(AbsExpression, self).__init__(arg, 'abs', abs)
 
-    def construct_node(self, args, memo):
+    def create_node_with_local_data(self, args, memo):
         return self.__class__(args)
 
 
@@ -2556,9 +2554,9 @@ class LinearExpression(ExpressionBase):
         return state
 
     def __deepcopy__(self, memo):
-        return self.construct_node(None, memo)
+        return self.create_node_with_local_data(None, memo)
 
-    def construct_node(self, args, memo):
+    def create_node_with_local_data(self, args, memo):
         repn = self.__class__()
         repn.constant = deepcopy(self.constant, memo=memo)
         repn.linear_coefs = deepcopy(self.linear_coefs, memo=memo)

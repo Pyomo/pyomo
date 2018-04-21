@@ -157,7 +157,7 @@ class _GeneralExpressionDataImpl(_ExpressionData):
         self._expr = as_numeric(expr) if (expr is not None) else None
         self._is_owned = True
 
-    def construct_node(self, values, memo=None):
+    def create_node_with_local_data(self, values, memo=None):
         """
         Construct a simple expression after constructing the 
         contained expression.
