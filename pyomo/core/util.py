@@ -47,11 +47,6 @@ def quicksum(args, start=0, linear=None):
     function, but this function generates a more compact Pyomo
     expression.
 
-    .. note::
-        Is there a better name for this function?  quicksum() and sum() are very similar, which could make it 
-        difficult to see whether this function is being used.  But that similarity means that changes
-        from standard Python expressions are quite similar.
-
     Args:
         args: A generator for terms in the sum.
 
