@@ -2809,6 +2809,9 @@ def _decompose_linear_terms(expr, multiplier=1):
         if expr._args_[0].__class__ in native_numeric_types or not expr._args_[0].is_potentially_variable():
             for term in _decompose_linear_terms(expr._args_[1], multiplier*expr._args_[0]):
                 yield term
+        elif expr._args_[1].__class__ in native_numeric_types or not expr._args_[1].is_potentially_variable():
+            for term in _decompose_linear_terms(expr._args_[0], multiplier*expr._args_[1]):
+                yield term
         else:
             raise LinearDecompositionError("Quadratic terms exist in a product expression.")
     elif expr.__class__ is ReciprocalExpression:
@@ -3073,7 +3076,7 @@ def _generate_mul_expression(etype, _self, _other):
                 else:
                     return MonomialTermExpression((NPV_ProductExpression((_other,tmp)), _self._args_[1]))
             elif _self.is_potentially_variable():
-                return ProductExpression((_other, _self))
+                return ProductExpression((_self, _other))
             return NPV_ProductExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
             if _self == 0:
@@ -3100,7 +3103,7 @@ def _generate_mul_expression(etype, _self, _other):
         elif _self.is_variable_type():
             return MonomialTermExpression((_other, _self))
         elif _self.is_potentially_variable():
-            return ProductExpression((_other, _self))
+            return ProductExpression((_self, _other))
         else:
             return NPV_ProductExpression((_self, _other))
 
@@ -3120,8 +3123,8 @@ def _generate_mul_expression(etype, _self, _other):
             elif _self.__class__ is MonomialTermExpression:
                 return MonomialTermExpression((_self._args_[0]/_other, _self._args_[1]))
             elif _self.is_potentially_variable():
-                return ProductExpression((1/_other, _self))
-            return NPV_ProductExpression((1/_other, _self))
+                return ProductExpression((_self, 1/_other))
+            return NPV_ProductExpression((_self, 1/_other))
         elif _self.__class__ in native_numeric_types:
             if _self == 0:
                 return 0
@@ -3135,7 +3138,9 @@ def _generate_mul_expression(etype, _self, _other):
         elif _other.is_potentially_variable():
             return ProductExpression((_self, ReciprocalExpression((_other,))))
         elif _self.is_potentially_variable():
-            return ProductExpression((NPV_ReciprocalExpression((_other,)), _self))
+            if _self.is_variable_type():
+                return MonomialTermExpression((NPV_ReciprocalExpression((_other,)), _self))
+            return ProductExpression((_self, NPV_ReciprocalExpression((_other,))))
         else:
             return NPV_ProductExpression((_self, NPV_ReciprocalExpression((_other,))))
 

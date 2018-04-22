@@ -12,7 +12,7 @@ VARIABLES
 
 c1.. power(x1, 3) - x1 =e= 0.0 ;
 c2.. 10*(power(x1, 3) - x1) =e= 0.0 ;
-c3.. 0.1*(power(x1, 3) - x1) =e= 0.0 ;
+c3.. (power(x1, 3) - x1)*0.1 =e= 0.0 ;
 c4.. GAMS_OBJECTIVE =e= x1 ;
 
 x1.l = 0.5;

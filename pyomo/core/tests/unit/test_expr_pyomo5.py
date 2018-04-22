@@ -1385,10 +1385,10 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         e = e1 * 5
         self.assertIs(type(e), EXPR.ProductExpression)
         self.assertEqual(e.nargs(), 2)
-        self.assertEqual(e.arg(0), 5)
-        self.assertIs(type(e.arg(1)), EXPR.ProductExpression)
-        self.assertIs(e.arg(1).arg(0), m.a)
-        self.assertIs(e.arg(1).arg(1), m.b)
+        self.assertEqual(e.arg(1), 5)
+        self.assertIs(type(e.arg(0)), EXPR.ProductExpression)
+        self.assertIs(e.arg(0).arg(0), m.a)
+        self.assertIs(e.arg(0).arg(1), m.b)
         self.assertEqual(e.size(), 5)
 
         #       *
@@ -1777,11 +1777,11 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         e = e1 / 5
         self.assertIs(type(e), EXPR.ProductExpression)
         self.assertEqual(e.nargs(), 2)
-        self.assertEqual(e.arg(0), 1./5)
-        self.assertIs(type(e.arg(1)), EXPR.ProductExpression)
-        self.assertIs(e.arg(1).arg(0), m.a)
-        self.assertIs(type(e.arg(1).arg(1)), EXPR.ReciprocalExpression)
-        self.assertIs(e.arg(1).arg(1).arg(0), m.b)
+        self.assertEqual(e.arg(1), 1./5)
+        self.assertIs(type(e.arg(0)), EXPR.ProductExpression)
+        self.assertIs(e.arg(0).arg(0), m.a)
+        self.assertIs(type(e.arg(0).arg(1)), EXPR.ReciprocalExpression)
+        self.assertIs(e.arg(0).arg(1).arg(0), m.b)
         self.assertEqual(e.size(), 6)
 
         #       /
@@ -2540,7 +2540,7 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
                           str(expr) )
 
         expr = 5 * model.a / model.a / 2
-        self.assertEqual( "prod(0.5, prod(prod(5, a), recip(a)))",
+        self.assertEqual( "prod(prod(prod(5, a), recip(a)), 0.5)",
                           str(expr) )
 
     def test_other(self):
@@ -2749,7 +2749,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
                           str(expr) )
 
         expr = 5 * model.a / model.a / 2
-        self.assertEqual( "0.5*5*a*(1/a)",
+        self.assertEqual( "5*a*(1/a)*0.5",
                           str(expr) )
 
         expr = model.a * model.b

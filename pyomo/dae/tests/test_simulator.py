@@ -830,15 +830,15 @@ class TestExpressionCheckers(unittest.TestCase):
         temp = _check_productexpression(e, 0)
         self.assertIs(m.dv, temp[0]._base)
         self.assertIs(type(temp[1]), EXPR.ProductExpression)
-        self.assertIs(m.mp, temp[1].arg(0).arg(0))      # Reciprocal
-        self.assertIs(e.arg(1), temp[1].arg(1))
+        self.assertIs(m.mp, temp[1].arg(1).arg(0))      # Reciprocal
+        self.assertIs(e.arg(1), temp[1].arg(0))
 
         e = m.v[t] == m.mp * m.dv[t]
         temp = _check_productexpression(e, 1)
         self.assertIs(m.dv, temp[0]._base)
         self.assertIs(type(temp[1]), EXPR.ProductExpression)
-        self.assertIs(m.mp, temp[1].arg(0).arg(0))      # Reciprocal
-        self.assertIs(e.arg(0), temp[1].arg(1))
+        self.assertIs(m.mp, temp[1].arg(1).arg(0))      # Reciprocal
+        self.assertIs(e.arg(0), temp[1].arg(0))
 
         # Check multiplication by var
         e = m.y * m.dv[t] / m.z == m.v[t]
@@ -914,9 +914,9 @@ class TestExpressionCheckers(unittest.TestCase):
         self.assertIs(m.dv, temp[0]._base)
         self.assertIs(type(temp[1]), EXPR.ProductExpression)
 
-        self.assertIs(type(temp[1].arg(1).arg(0)), EXPR.GetItemExpression)
-        self.assertIs(m.y, temp[1].arg(1).arg(1).arg(1))
-        self.assertIs(m.z, temp[1].arg(1).arg(2).arg(1))
+        self.assertIs(type(temp[1].arg(0).arg(0)), EXPR.GetItemExpression)
+        self.assertIs(m.y, temp[1].arg(0).arg(1).arg(1))
+        self.assertIs(m.z, temp[1].arg(0).arg(2).arg(1))
 
         e = 2 + 5 * m.y - m.z == m.v[t]
         temp = _check_viewsumexpression(e, 0)

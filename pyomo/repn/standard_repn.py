@@ -539,6 +539,14 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
         return _collect_standard_repn(exp._args_[1], multiplier * exp._args_[0], idMap, 
                                   compute_values, verbose, quadratic)
     #
+    # RHS is a numeric value
+    #
+    if exp._args_[1].__class__ in native_numeric_types:
+        if exp._args_[1] == 0:
+            return Results()
+        return _collect_standard_repn(exp._args_[0], multiplier * exp._args_[1], idMap, 
+                                  compute_values, verbose, quadratic)
+    #
     # LHS is a non-variable expression
     #
     elif not exp._args_[0].is_potentially_variable():
