@@ -22,6 +22,10 @@ Pyomo is a Python-based open-source software package that supports a diverse set
 
 Pyomo is available under the BSD License.
 
+Pyomo is currently tested with the following Python implementations:
+
+* CPython: 2.6, 2.7, 3.4, 3.5, 3.6
+
 ### Installation
 
 #### PyPI [![PyPI](https://img.shields.io/pypi/v/pyomo.svg?maxAge=2592000)]()
