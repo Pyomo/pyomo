@@ -23,24 +23,7 @@ mimics the Python operations used to construct an expression.  The
 :data:`verbose` flag can be set to :const:`True` to generate a
 string representation that is a nested functional form.  For example:
 
-.. doctest::
-
-    from pyomo.environ import *
-    from pyomo.core.expr import current as EXPR
-
-    M = ConcreteModel()
-    M.x = Var()
-
-    e = sin(M.x) + 2*M.x
-    print(EXPR.expression_to_string(e))
-    #sin(x) + 2*x
-    print(EXPR.expression_to_string(e, verbose=True))
-    #sum(sin(x), prod(2, x))
-    
-.. testoutput::
-
-    sin(x) + 2*x
-    sum(sin(x), prod(2, x))
+.. literalinclude:: ../../tests/expr/managing_ex1.spy
 
 Labeler and Symbol Map
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -52,22 +35,7 @@ defines a variety of labelers in the `pyomo.core.base.label` module.  For exampl
 :class:`NumericLabeler` defines a functor that can be used to sequentially generate
 simple labels with a prefix followed by the variable count:
 
-.. doctest::
-
-    from pyomo.environ import *
-    from pyomo.core.expr import current as EXPR
-
-    M = ConcreteModel()
-    M.x = Var()
-    M.y = Var()
-
-    e = sin(M.x) + 2*M.y
-    print(EXPR.expression_to_string(e, labeler=NumericLabeler('x'))
-    # sin(x1) + 2*x2
-
-.. testoutput::
-
-    sin(x1) + 2*x2
+.. literalinclude:: ../../tests/expr/managing_ex2.spy
 
 The :data:`smap` option is used to specify a symbol map object
 (:class:`SymbolMap <pyomo.core.expr.symbol_map.SymbolMap>`), which
@@ -97,22 +65,7 @@ is processed to identify polynomial terms, and the string representation
 consists of the constant and linear terms followed by
 an expression that contains other nonlinear terms.  For example:
 
-.. doctest::
-
-    from pyomo.environ import *
-    from pyomo.core.expr import current as EXPR
-
-    M = ConcreteModel()
-    M.x = Var()
-    M.y = Var()
-
-    e = sin(M.x) + 2*M.y + M.x*M.y - 3
-    print(EXPR.expression_to_string(e, standardize=True)
-    # -3 + 2*y + sin(x) + x*y
-
-.. testoutput::
-
-    -3 + 2*y + sin(x) + x*y
+.. literalinclude:: ../../tests/expr/managing_ex3.spy
 
 Other Ways to Generate String Representations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -145,20 +98,7 @@ function is executed.
 
 For example:
 
-.. doctest::
-
-    from pyomo.environ import *
-    from pyomo.core.expr import current as EXPR
-
-    M = ConcreteModel()
-    M.x = Var()
-
-    with EXPR.current.clone_counter:
-        start = pyomo.core.expr.current.clone_counter.count
-        e1 = sin(M.x)
-        e2 = e1.clone()
-        total = pyomo.core.expr.current.clone_counter.count - start
-        assert(total == 1)
+.. literalinclude:: ../../tests/expr/managing_ex4.spy
 
 Evaluating Expressions
 ----------------------
@@ -168,37 +108,19 @@ the expression have a value.  The :func:`value <pyomo.core.expr.value>`
 function can be used to walk the expression tree and compute the
 value of an expression.  For example:
 
-.. doctest::
-
-    from pyomo.environ import *
-    import math
-
-    M = ConcreteModel()
-    M.x = Var()
-    M.x.value = math.pi/2.0
-    val = value(M.x)
-    assert(math.isclose(val,0.0))
+.. literalinclude:: ../../tests/expr/managing_ex5.spy
 
 Additionally, expressions define the :func:`__call__` method, so the
 following is another way to compute the value of an expression:
 
-.. doctest::
+.. literalinclude:: ../../tests/expr/managing_ex6.spy
 
-    val = M.x()
-    assert(math.isclose(val,0.0))
+If a parameter or variable is undefined, then the :func:`value
+<pyomo.core.expr.value>` function and :func:`__call__` method will
+raise an exception.  This exception can be suppressed using the
+:attr:`exception` option.  For example:
 
-If a parameter or variable is undefined, then the :func:`value <pyomo.core.expr.value>` function and :func:`__call__` method will raise an exception.  This 
-exception can be suppressed using the :attr:`exception` option.  For example:
-
-.. doctest::
-
-    from pyomo.environ import *
-    import math
-
-    M = ConcreteModel()
-    M.x = Var()
-    val = value(M.x, exception=False)
-    assert(val is None)
+.. literalinclude:: ../../tests/expr/managing_ex7.spy
 
 This option is useful in contexts where adding a try block is inconvenient 
 in your modeling script.
@@ -222,18 +144,7 @@ functions that support this functionality.  First, the
 function is a generator function that walks the expression tree and yields all 
 nodes whose type is in a specified set of node types.  For example:
 
-.. doctest::
-
-    from pyomo.environ import *
-    from pyomo.core.expr import current as EXPR
-
-    M = ConcreteModel()
-    M.x = Var()
-    M.p = Param(mutable=True)
-
-    e = M.p+M.x
-    s = set([type(M.p)])
-    assert(list(EXPR.identify_components(e, s)), [M.p])
+.. literalinclude:: ../../tests/expr/managing_ex8.spy
 
 The :func:`identify_variables <pyomo.core.expr.current.identify_variables>`
 function is a generator function that yields all nodes that are
@@ -242,21 +153,7 @@ but this set of variable types does not need to be specified by the user.
 However, the :attr:`include_fixed` flag can be specified to omit fixed
 variables.  For example:
 
-.. doctest::
-
-    from pyomo.environ import *
-    from pyomo.core.expr import current as EXPR
-
-    M = ConcreteModel()
-    M.x = Var()
-    M.y = Var()
-
-    e = M.x+M.y
-    M.y.value = 1
-    M.y.fixed = True
-
-    assert(set(EXPR.identify_variables(e)), set([M.x, M.y]))
-    assert(set(EXPR.identify_variables(e, include_fixed=False)), set([M.x]))
+.. literalinclude:: ../../tests/expr/managing_ex9.spy
 
 Walking an Expression Tree with a Visitor Class
 -----------------------------------------------
@@ -341,35 +238,14 @@ In this example, we describe an visitor class that counts the number
 of nodes in an expression (including leaf nodes).  Consider the following
 class:
 
-.. doctest::
-
-    class SizeofVisitor(SimpleExpressionVisitor):
-
-        def __init__(self):
-            self.counter = 0
-
-        def visit(self, node):
-            self.counter += 1
-
-        def finalize(self):
-            return self.counter
+.. literalinclude:: ../../tests/expr/managing_visitor1.spy
 
 The class constructor creates a counter, and the :func:`visit` method 
 increments this counter for every node that is visited.  The :func:`finalize`
 method returns the value of this counter after the tree has been walked.  The
 following function illustrates this use of this visitor class:
 
-.. doctest::
-
-    def sizeof_expression(expr):
-        #
-        # Create the visitor object
-        #
-        visitor = SizeofVisitor()
-        #
-        # Compute the value using the :func:`xbfs` search method.
-        #
-        return visitor.xbfs(expr)
+.. literalinclude:: ../../tests/expr/managing_visitor2.spy
 
 
 ExpressionValueVisitor Example
@@ -379,46 +255,14 @@ In this example, we describe an visitor class that clones the
 expression tree (including leaf nodes).  Consider the following
 class:
 
-.. doctest::
-
-    class CloneVisitor(ExpressionValueVisitor):
-
-        def __init__(self):
-            self.memo = {'__block_scope__': { id(None): False }}
-
-        def visit(self, node, values):
-            #
-            # Clone the interior node
-            #
-            return node.construct_clone(tuple(values), self.memo)
-
-        def visiting_potential_leaf(self, node):
-            #
-            # Clone leaf nodes in the expression tree
-            #
-            if node.__class__ in native_numeric_types or\
-               node.__class__ not in pyomo5_expression_types:\
-                return True, copy.deepcopy(node, self.memo)
-
-            return False, None
+.. literalinclude:: ../../tests/expr/managing_visitor3.spy
 
 The :func:`visit` method creates a new expression node with children
 specified by :attr:`values`.  The :func:`visiting_potential_leaf`
 method performs a :func:`deepcopy` on leaf nodes, which are native
 Python types or non-expression objects.
 
-.. doctest::
-
-    def clone_expression(expr):
-        #
-        # Create the visitor object
-        #
-        visitor = CloneVisitor()
-        #
-        # Clone the expression using the :func:`dfs_postorder_stack` 
-        # search method.
-        #
-        return visitor.dfs_postorder_stack(expr)
+.. literalinclude:: ../../tests/expr/managing_visitor4.spy
 
 
 ExpressionReplacementVisitor Example
@@ -429,34 +273,7 @@ variables with scaled variables, using a mutable parameter that
 can be modified later.  the following
 class:
 
-.. doctest::
-
-    from pyomo.environ import *
-    from pyomo.core.expr import current as EXPR
-
-    class ScalingVisitor(EXPR.ExpressionReplacementVisitor):
-
-        def __init__(self, scale):
-            super(ScalingVisitor, self).__init__()
-            self.scale = scale
-
-        def visiting_potential_leaf(self, node):
-            #
-            # Clone leaf nodes in the expression tree
-            #
-            if node.__class__ in EXPR.pyomo5_variable_types:
-                return True, self.scale[id(node)]*node
-
-            if isinstance(node, EXPR._LinearExpression):
-                node_ = copy.deepcopy(node)
-                node_.constant = node.constant
-                node_.linear_vars = copy.copy(node.linear_vars)
-                node_.linear_coefs = []
-                for i,v in enumerate(node.linear_vars):
-                    node_.linear_coefs.append( node.linear_coefs[i]*self.scale[id(v)] )
-                return True, node_
-
-            return False, None
+.. literalinclude:: ../../tests/expr/managing_visitor5.spy
 
 No :func:`visit` method needs to be defined.  The
 :func:`visiting_potential_leaf` function identifies variable nodes
@@ -465,37 +282,9 @@ The :class:`_LinearExpression` class has a different representation
 that embeds variables.  Hence, this class must be handled 
 in a separate condition that explicitly transforms this sub-expression.
 
-.. doctest::
-
-    def scale_expression(expr, scale):
-        #
-        # Create the visitor object
-        #
-        visitor = ScalingVisitor(scale)
-        #
-        # Scale the expression using the :func:`dfs_postorder_stack` 
-        # search method.
-        #
-        return visitor.dfs_postorder_stack(expr)
+.. literalinclude:: ../../tests/expr/managing_visitor6.spy
 
 The :func:`scale_expression` function is called with an expression and 
 a dictionary, :attr:`scale`, that maps variable ID to model parameter.  For example:
 
-.. doctest::
-
-    M = ConcreteModel()
-    M.x = Var(range(5))
-    M.p = Param(range(5), mutable=True)
-
-    scale={}
-    for i in M.x:
-      scale[id(M.x[i])] = M.p[i]
-
-    e = quicksum(M.x[i] for i in M.x)
-    f = scale_expression(e,scale)
-    print(f)
-    # p[0]*x[0] + p[1]*x[1] + p[2]*x[2] + p[3]*x[3] + p[4]*x[4]
-
-.. testoutput::
-
-    p[0]*x[0] + p[1]*x[1] + p[2]*x[2] + p[3]*x[3] + p[4]*x[4]
+.. literalinclude:: ../../tests/expr/managing_visitor7.spy

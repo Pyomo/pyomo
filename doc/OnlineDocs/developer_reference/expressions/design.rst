@@ -6,16 +6,16 @@ Design Details
 ==============
 
 .. warning::
-    Unfortunately, Pyomo expression trees are not composed of Python
-    objects from a single class hierarchy.  There are fundamental
-    design constraints (referenced below) that impact the form of
-    Pyomo expression trees.
+    Pyomo expression trees are not composed of Python
+    objects from a single class hierarchy.  Consequently, Pyomo
+    relies on duck typing to ensure that valid expression trees are 
+    created.
 
-Most Pyomo expression trees have the following form:
+Most Pyomo expression trees have the following form
 
-#. Interior nodes are objects that inherit from the :class:`ExpressionBase <pyomo.core.expr.current.ExpressionBase>` class.
+1. Interior nodes are objects that inherit from the :class:`ExpressionBase <pyomo.core.expr.current.ExpressionBase>` class.  These objects typically have one or more child nodes.  Linear expression nodes do not have child nodes, but they are treated as interior nodes in the expression tree because they references other leaf nodes.
 
-#. Leaf nodes are numeric values, parameter components and variable components, which represent the *inputs* to the expresion.
+2. Leaf nodes are numeric values, parameter components and variable components, which represent the *inputs* to the expresion.
 
 Expression Classes
 ------------------
@@ -30,7 +30,7 @@ sum        ``x + y``     :class:`SumExpression <pyomo.core.expr.current.SumExpre
 product    ``x * y``     :class:`ProductExpression <pyomo.core.expr.current.ProductExpression>`
 negation   ``- x``       :class:`NegationExpression <pyomo.core.expr.current.NegationExpression>`
 reciprocal ``1 / x``     :class:`ReciprocalExpression <pyomo.core.expr.current.ReciprocalExpression>`
-power      ``x ** y``    :class:`PowerExpression <pyomo.core.expr.current.PowerExpression>`
+power      ``x ** y``    :class:`PowExpression <pyomo.core.expr.current.PowExpression>`
 inequality ``x <= y``    :class:`InequalityExpression <pyomo.core.expr.current.InequalityExpression>`
 equality   ``x == y``    :class:`EqualityExpression <pyomo.core.expr.current.EqualityExpression>`
 ========== ============= =============================================================================
@@ -42,7 +42,7 @@ logical relationships, which are summarized in the following table:
 Operation            Example                                Pyomo Class
 ==================== ====================================   ========================================================================================
 exernal function     ``myfunc(x,y,z)``                      :class:`ExternalFunctionExpression <pyomo.core.expr.current.ExternalFunctionExpression>`
-logical if-then-else ``Expr_if(IF_=x, THEN_=y, ELSE_=z)``   :class:`Expr_if <pyomo.core.expr.current.Expr_if>`
+logical if-then-else ``Expr_if(IF=x, THEN=y, ELSE=z)``      :class:`Expr_ifExpression <pyomo.core.expr.current.Expr_ifExpression>`
 intrinsic function   ``sin(x)``                             :class:`UnaryFunctionExpression <pyomo.core.expr.current.UnaryFunctionExpression>`
 absolute function    ``abs(x)``                             :class:`AbsExpression <pyomo.core.expr.current.AbsExpression>`
 ==================== ====================================   ========================================================================================
@@ -71,17 +71,12 @@ Expression trees can be categorized in four different ways:
 * potentially variable expressions - expressions that contain variables, which may be fixed.
 * fixed expressions - expressions that contain variables, all of which are fixed.
 
-These three categories are illustrated with the following example::
+These three categories are illustrated with the following example:
 
-    m = ConcreteModel()
-    m.p = Param(default=10, mutable=False)
-    m.q = Param(default=10, mutable=True)
-    m.x = Var()
-    m.y = Var(initialize=1)
-    m.y.fixed = True
+.. literalinclude:: ../../tests/expr/design_categories.spy
 
-The following table describes four diffrent simple expressions,
-which consist of a single model component, and it shows how they
+The following table describes four different simple expressions
+that consist of a single model component, and it shows how they
 are categorized:
 
 ======================== ===== ===== ===== =====
@@ -103,22 +98,16 @@ potentially variability.
 Special Expression Classes
 --------------------------
 
-The following classes are *exceptions* to some of the design principles describe above.
+The following classes are *exceptions* to the design principles describe above.
 
 Named Expressions
 ~~~~~~~~~~~~~~~~~
 
-Pyomo includes several classes that *named expressions*, which allow for flexible changes to 
-an expression after it has been constructed.  For example, consider the expression ``f`` defined
-with the :class:`Expression <pyomo.core.base.Expression>` component::
+Named expressions allow for changes to an expression after it has
+been constructed.  For example, consider the expression ``f`` defined
+with the :class:`Expression <pyomo.core.base.Expression>` component:
 
-    M = ConcreteModel()
-    M.v = Var()
-    M.w = Var()
-
-    M.e = Expression(expr=2*M.v)
-    f = M.e + 3                     # f == 2*v + 3
-    M.e += M.w                      # f == 2*v + 3 + w
+.. literalinclude:: ../../tests/expr/design_named_expression.spy
 
 Although ``f`` is an immutable expression, whose definition is
 fixed, a sub-expressions is the named expression ``M.e``.  Named
@@ -129,12 +118,11 @@ the named expression.
 
 .. note::
 
-    The named expression classes are not implemented as
-    sub-classes of :class:`ExpressionBase
-    <pyomo.core.expr.current.ExpressionBase>`.  This reflects design
-    constraints related to the fact that these are modeling components
-    that belong to class hierarchies other than the expression class
-    hierarchy, and Pyomo uses code optimizations that prohibit
+    The named expression classes are not implemented as sub-classes
+    of :class:`ExpressionBase <pyomo.core.expr.current.ExpressionBase>`.
+    This reflects design constraints related to the fact that these
+    are modeling components that belong to class hierarchies other
+    than the expression class hierarchy, and Pyomo's design prohibits
     the use of multiple inheritance for these classes.
 
 Linear Expressions
@@ -169,7 +157,7 @@ object owns the first ``n`` arguments in the shared list, but
 different objects may have different values of ``n``.
 
 This class acts like a normal immutable expression class, and the
-API described above works fine.  But direct access to the shared
+API described above works normally.  But direct access to the shared
 list could have unexpected results.
 
 Mutable Expressions
@@ -226,4 +214,55 @@ The following classes are valid leaf nodes:
     and parameters in a linear expression, so in that sense it does
     not represent a leaf node in the tree.
 
+
+
+Context Managers
+----------------
+
+Pyomo defines several context managers that can be used to declare
+the form of expressions, and to define a mutable expression object that
+efficiently manages sums.
+
+The :data:`linear_expression <pyomo.core.expr.current.linear_expression>` 
+object is a context manager that can be used to declare a linear sum.  For
+example, consider the following two loops:
+
+.. literalinclude:: ../../tests/expr/design_cm1.spy
+
+The first apparent difference in these loops is that the value of
+``s`` is explicitly initialized while ``e`` is initialized when the
+context manager is entered.  However, a more fundamental difference
+is that the expression representation for ``s`` differs from ``e``.
+Each term added to ``s`` results in a new, immutable expression.
+By contrast, the context manager creates a mutable expression
+representation for ``e``.  This difference allows for both (a) a
+more efficient processing of each sum, and (b) a more compact
+representation for the expression.
+
+The difference between :data:`linear_expression
+<pyomo.core.expr.current.linear_expression>` and
+:data:`nonlinear_expression <pyomo.core.expr.current.nonlinear_expression>`
+is the underlying representation that each supports.  Note that
+both of these are instances of context manager classes.  In
+singled-threaded applications, these objects can be safely used to
+construct different expressions with different context declarations.
+
+Finally, note that these context managers can be passed into the :attr:`start`
+method for the :func:`quicksum <pyomo.core.util.quicksum>` function.  For example:
+
+.. literalinclude:: ../../tests/expr/design_cm2.spy
+
+This sum contains terms for ``M.x[i]`` and ``M.y[i]``.  The syntax
+in this example is not intuitive because the sum is being stored
+in ``e``.
+
+.. note::
+
+    We do not generally expect users or developers to use these
+    context managers.  They are used by the :func:`quicksum
+    <pyomo.core.util.quicksum>` and :func:`sum_product
+    <pyomo.core.util.sum_product>` functions to accelerate expression
+    generation, and there are few cases where the direct use of
+    these context managers would provide additional utility to users
+    and developers.
 

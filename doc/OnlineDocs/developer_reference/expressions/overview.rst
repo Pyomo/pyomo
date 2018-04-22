@@ -5,13 +5,13 @@
 Design Overview
 ===============
 
-Introduction
-------------
+Historical Comparison
+---------------------
 
-This document describes the "Pyomo5" expressions, which will be
-introduced in a Pyomo 5.x release.  The main differences between
-"Pyomo5" expressions and the previous expression system, called
-"Coopr3", are:
+This document describes the "Pyomo5" expressions, which were
+introduced in Pyomo 5.6.  The main differences between "Pyomo5"
+expressions and the previous expression system, called "Coopr3",
+are:
 
 * Pyomo5 supports both CPython and PyPy implementations of Python,
   while Coopr3 only supports CPython.
@@ -21,14 +21,14 @@ introduced in a Pyomo 5.x release.  The main differences between
   language standard.  Hence, this implementation is not guaranteed
   to run on other implementations of Python.
 
-  Pyomo5 does not rely on reference counting.  We have confirmed
-  that it runs in PyPy, and in the future this should allow Pyomo
-  to support other Python implementations (e.g. Jython).
+  Pyomo5 does not rely on reference counting, and it has been tested
+  with PyPy.  In the future, this should allow Pyomo to support
+  other Python implementations (e.g. Jython).
 
   |p|
 
 * Pyomo5 expression objects are immutable, while Coopr3 expression
-  objects are immutable.
+  objects are mutable.
 
   This difference relates to how expression objects are managed
   in Pyomo.  Once created, Pyomo5 expression objects cannot be
@@ -50,38 +50,13 @@ introduced in a Pyomo 5.x release.  The main differences between
     example, the following two loops had dramatically different
     runtime:
 
-    .. doctest::
-        
-        >> from pyomo.environ import *
-        >> M = ConcreteModel()
-        >> M.x = Var(range(100))
-
-        This loop is fast.
-        >> e = 0
-        >> for i in range(100):
-            e = e + M.x[i]
-
-        This loop is slow.
-        >> e = 0
-        >> for i in range(100):
-            e = M.x[i] + e
+     .. literalinclude:: ../../tests/expr/overview_example1.spy
 
   * Coopr3 eliminates side effects by automatically cloning sub-expressions.
     Unfortunately, this can easily lead to unexpected cloning in models, which 
     can dramatically slow down Pyomo model generation.  For example:
      
-     .. doctest::
-        
-        >> from pyomo.environ import *
-        >> M = ConcreteModel()
-        >> M.p = Param(initialize=3)
-        >> M.q = 1/M.p
-        >> M.x = Var(range(100))
-
-        The value M.q is cloned every time it is used.
-        >> e = 0
-        >> for i in range(100):
-            e = e + M.x[i]*M.q
+     .. literalinclude:: ../../tests/expr/overview_example2.spy
 
   * Coopr3 leverages recursion in many operations, including expression
     cloning.  Even simple non-linear expressions can result in deep
@@ -92,14 +67,14 @@ introduced in a Pyomo 5.x release.  The main differences between
 
   * The immutable representation used in Pyomo5 requires more memory allocations
     than Coopr3 in simple loops.  Hence, a pure-Python execution of Pyomo5
-    is about 25% slower than Coopr3 for model construction.  But when Cython is used
+    can be 10% slower than Coopr3 for model construction.  But when Cython is used
     to optimize the execution of Pyomo5 expression generation, the 
     runtimes for Pyomo5 and Coopr3 are about the same.  (In principle,
     Cython would improve the runtime of Coopr3 as well, but the limitations
     noted above motivated a new expression system in any case.)
 
-Expression Entanglement
------------------------
+Expression Entanglement and Mutability
+--------------------------------------
 
 Pyomo fundamentally relies on the use of magic methods in Python
 to generate expression trees, which means that Pyomo has very limited
@@ -107,13 +82,7 @@ control for how expressions are managed in Python.  For example:
 
 * Python variables can point to the same expression tree
 
-    .. doctest::
-
-       >>> from pyomo.environ import *
-       >>> M = ConcreteModel()
-       >>> M.v = Var()
-
-       >>> e = f = 2*M.v
+    .. literalinclude:: ../../tests/expr/overview_tree1.spy
 
   This is illustrated as follows:
 
@@ -133,14 +102,7 @@ control for how expressions are managed in Python.  For example:
 
 * A variable can point to a sub-tree that another variable points to
 
-    .. doctest::
-
-       >>> from pyomo.environ import *
-       >>> M = ConcreteModel()
-       >>> M.v = Var()
-
-       >>> e = 2*M.v
-       >>> f = e + 3
+    .. literalinclude:: ../../tests/expr/overview_tree2.spy
 
   This is illustrated as follows:
 
@@ -162,15 +124,7 @@ control for how expressions are managed in Python.  For example:
 
 * Two expression trees can point to the same sub-tree
 
-    .. doctest::
-
-       >>> from pyomo.environ import *
-       >>> M = ConcreteModel()
-       >>> M.v = Var()
-
-       >>> e = 2*M.v
-       >>> f = e + 3
-       >>> g = e + 4
+    .. literalinclude:: ../../tests/expr/overview_tree3.spy
 
   This is illustrated as follows:
 
@@ -215,17 +169,7 @@ between expressions, we do not consider those expressions entangled.
 Expression entanglement is problematic because shared expressions complicate
 the expected behavior when sub-expressions are changed.  Consider the following example:
 
-.. doctest::
-
-   >>> from pyomo.environ import *
-   >>> M = ConcreteModel()
-   >>> M.v = Var()
-   >>> M.w = Var()
-
-   >>> e = 2*M.v
-   >>> f = e + 3
-
-   >>  e += M.w
+.. literalinclude:: ../../tests/expr/overview_tree4.spy
 
 What is the value of ``e`` after ``M.w`` is added to it?  What is the
 value of ``f``?  The answers to these questions are not immediately
@@ -293,24 +237,14 @@ cloning the expression ``e`` before added ``M.w``, resulting in the following:
 
 This example also illustrates that leaves may be shared between expressions.
 
-Entangled Expression Components
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Mutable Expression Components
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There is one important exception to the entanglement property
 described above.  The ``Expression`` component is treated as a
 mutable expression when shared between expressions.  For example:
 
-.. doctest::
-
-   >>> from pyomo.environ import *
-   >>> M = ConcreteModel()
-   >>> M.v = Var()
-   >>> M.w = Var()
-
-   >>> M.e = Expression(expr=2*M.v)
-   >>> f = M.e + 3
-
-   >>  M.e += M.w
+.. literalinclude:: ../../tests/expr/overview_tree5.spy
 
 Here, the expression ``M.e`` is a so-called *named expression* that
 the user has declared.  Named expressions are explicitly intended

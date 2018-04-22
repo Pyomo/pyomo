@@ -1,0 +1,13 @@
+M = ConcreteModel()
+M.x = Var(range(5))
+M.p = Param(range(5), mutable=True)
+
+scale={}
+for i in M.x:
+  scale[id(M.x[i])] = M.p[i]
+
+e = quicksum(M.x[i] for i in M.x)
+f = scale_expression(e,scale)
+
+# p[0]*x[0] + p[1]*x[1] + p[2]*x[2] + p[3]*x[3] + p[4]*x[4]
+print(f)
