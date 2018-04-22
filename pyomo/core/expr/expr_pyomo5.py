@@ -25,7 +25,6 @@ __all__ = (
 'inequality',
 'decompose_term',
 'clone_counter',
-'clone_counter_context',
 'clone_expression',
 'evaluate_expression',
 'identify_components',
@@ -167,7 +166,7 @@ def initialize_expression_data():
     from pyomo.core.base.template_expr import TemplateExpressionError
 
 
-class clone_counter_context(object):
+class clone_counter(object):
     """ Context manager for counting cloning events.
 
     This context manager counts the number of times that the
@@ -187,12 +186,7 @@ class clone_counter_context(object):
     def count(self):
         """A property that returns the clone count value.
         """
-        return clone_counter_context._count
-
-#: A clone counter context manager object that simplifies the
-#: use of this context manager.  Specifically, different
-#: instances of this context manger are not necessary.
-clone_counter = clone_counter_context()
+        return clone_counter._count
 
 
 class nonlinear_expression(object):
@@ -757,7 +751,7 @@ def clone_expression(expr, memo=None, clone_leaves=True):
     Returns:
         The cloned expression.
     """
-    clone_counter_context._count += 1
+    clone_counter._count += 1
     if not memo:
         memo = {'__block_scope__': { id(None): False }}
     #

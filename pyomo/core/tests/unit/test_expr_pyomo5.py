@@ -4133,15 +4133,15 @@ class TestCloneExpression(unittest.TestCase):
         self.m = None
 
     def test_numeric(self):
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             e_ = 1
             e = EXPR.clone_expression(e_)
             self.assertEqual(id(e), id(e_))
             e = EXPR.clone_expression(self.m.p)
             self.assertEqual(id(e), id(self.m.p))
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 2)
         
     def test_Expression(self):
@@ -4154,8 +4154,8 @@ class TestCloneExpression(unittest.TestCase):
         m.e = Expression(expr=3*m.a)
         m.E = Expression([0,1], initialize={0:3*m.a, 1:4*m.b})
 
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             expr1 = m.e + m.E[1] 
             expr2 = expr1.clone()
             self.assertEqual( expr1(), 11 )
@@ -4165,7 +4165,7 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual( id(expr1.arg(0)), id(expr2.arg(0)) )
             self.assertEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
 
     def test_ExpressionX(self):
@@ -4178,8 +4178,8 @@ class TestCloneExpression(unittest.TestCase):
         m.e = Expression(expr=3*m.a)
         m.E = Expression([0,1], initialize={0:3*m.a, 1:4*m.b})
 
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             expr1 = m.e + m.E[1] 
             expr2 = copy.deepcopy(expr1)
             self.assertEqual( expr1(), 11 )
@@ -4189,12 +4189,12 @@ class TestCloneExpression(unittest.TestCase):
             self.assertNotEqual( id(expr1.arg(0)), id(expr2.arg(0)) )
             self.assertNotEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
 
     def test_SumExpression(self):
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             expr1 = self.m.a + self.m.b
             expr2 = expr1.clone()
             self.assertEqual( expr1(), 15 )
@@ -4211,12 +4211,12 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             self.assertEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
             
     def test_SumExpressionX(self):
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             expr1 = self.m.a + self.m.b
             expr2 = copy.deepcopy(expr1)
             self.assertEqual( expr1(), 15 )
@@ -4234,7 +4234,7 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             self.assertEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
             
     def test_SumExpressionY(self):
@@ -4243,8 +4243,8 @@ class TestCloneExpression(unittest.TestCase):
         self.m.a = Var(A, initialize=5)
         self.m.b = Var(initialize=10)
 
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             expr1 = quicksum(self.m.a[i] for i in self.m.a)
             expr2 = copy.deepcopy(expr1)
             self.assertEqual( expr1(), 25 )
@@ -4259,12 +4259,12 @@ class TestCloneExpression(unittest.TestCase):
             self.assertNotEqual( id(expr1),        id(expr2) )
             self.assertNotEqual( id(expr1._args_), id(expr2._args_) )
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 0)
             
     def test_ProductExpression_mult(self):
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             #
             expr1 = self.m.a * self.m.b
             expr2 = expr1.clone()
@@ -4297,12 +4297,12 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual( id(expr1.arg(0)), id(expr2.arg(0)) )
             self.assertNotEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 2)
 
     def test_ProductExpression_div(self):
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             #
             expr1 = self.m.a / self.m.b
             expr2 = expr1.clone()
@@ -4335,12 +4335,12 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual( id(expr1.arg(0)), id(expr2.arg(0)) )
             self.assertNotEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 2)
 
     def test_sumOfExpressions(self):
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             #
             expr1 = self.m.a * self.m.b + self.m.a * self.m.a
             expr2 = expr1.clone()
@@ -4364,12 +4364,12 @@ class TestCloneExpression(unittest.TestCase):
             self.assertNotEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             self.assertNotEqual(id(expr1.arg(1)), id(expr2.arg(1)))
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
 
     def test_productOfExpressions(self):
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             #
             expr1 = (self.m.a + self.m.b) * (self.m.a + self.m.a)
             expr2 = expr1.clone()
@@ -4407,12 +4407,12 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1.nargs(), 2)
             self.assertEqual(expr2.nargs(), 2)
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
 
     def test_productOfExpressions_div(self):
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             #
             expr1 = (self.m.a + self.m.b) / (self.m.a + self.m.a)
             expr2 = expr1.clone()
@@ -4446,12 +4446,12 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1.nargs(), 2)
             self.assertEqual(expr2.nargs(), 2)
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
 
     def test_Expr_if(self):
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             #
             expr1 = EXPR.Expr_if(IF=self.m.a + self.m.b < 20, THEN=self.m.a, ELSE=self.m.b)
             expr2 = expr1.clone()
@@ -4465,13 +4465,13 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1._then(), expr2._then())
             self.assertEqual(expr1._else(), expr2._else())
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
 
     def test_getitem(self):
         # Testing cloning of the abs() function
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             #
             m = ConcreteModel()
             m.I = RangeSet(1,9)
@@ -4483,13 +4483,13 @@ class TestCloneExpression(unittest.TestCase):
             e_ = e.clone()
             self.assertEqual("x({I} + P({I} + 1)) + 3", str(e_))
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
 
     def test_other(self):
         # Testing cloning of the abs() function
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             #
             model = ConcreteModel()
             model.a = Var()
@@ -4502,13 +4502,13 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(type(e_.arg(2)), type(e.arg(2)))
             self.assertEqual(type(e_.arg(3)), type(e.arg(3)))
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
 
     def test_abs(self):
         # Testing cloning of the abs() function
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             #
             expr1 = abs(self.m.a)
             expr2 = expr1.clone()
@@ -4517,13 +4517,13 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr2(), value(self.m.a))
             self.assertEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
 
     def test_sin(self):
         # Testing cloning of intrinsic functions
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             #
             expr1 = sin(self.m.a)
             expr2 = expr1.clone()
@@ -4532,7 +4532,7 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr2(), math.sin(value(self.m.a)))
             self.assertEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
 
 
