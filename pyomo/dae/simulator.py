@@ -152,41 +152,6 @@ def _check_negationexpression(expr, i):
     return None
 
 
-
-def _check_sumexpression(expr, i):
-    """
-    Accepts an equality expression and an index value. Checks the
-    Sum expression at expr.arg(i) to see if it contains a
-    :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>`. If so, return the
-    GetItemExpression for the
-    :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>` and the RHS. If not,
-    return None.
-    """
-    sumexp = expr.arg(i)
-    items = list(sumexp.args)
-    coefs = sumexp._coef
-    dv = None
-    dvcoef = 1
-
-    for idx, item in enumerate(items):
-        if type(item) is EXPR.GetItemExpression and \
-           type(item._base) is DerivativeVar:
-            dv = item
-            dvcoef = coefs[idx]
-            items = items[0:idx] + items[idx + 1:]
-            coefs = coefs[0:idx] + coefs[idx + 1:]
-            break
-
-    if dv is not None:
-        RHS = expr.arg(i - 1)
-        for idx, item in enumerate(items):
-            RHS -= coefs[idx] * item
-        RHS = RHS / dvcoef
-        return [dv, RHS]
-
-    return None
-
-
 def _check_viewsumexpression(expr, i):
     """
     Accepts an equality expression and an index value. Checks the
