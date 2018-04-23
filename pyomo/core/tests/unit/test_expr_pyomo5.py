@@ -4190,7 +4190,7 @@ class TestCloneExpression(unittest.TestCase):
             self.assertNotEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             #
             total = counter.count - start
-            self.assertEqual(total, 1)
+            self.assertEqual(total, 0)
 
     def test_SumExpression(self):
         with EXPR.clone_counter() as counter:
@@ -4223,19 +4223,18 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual( expr2(), 15 )
             self.assertNotEqual( id(expr1),       id(expr2) )
             self.assertNotEqual( id(expr1._args_), id(expr2._args_) )
-            # WEH - Why does this next test make sense?
-            self.assertEqual( id(expr1.arg(0)), id(expr2.arg(0)) )
-            self.assertEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
+            self.assertNotEqual( id(expr1.arg(0)), id(expr2.arg(0)) )
+            self.assertNotEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             expr1 += self.m.b
             self.assertEqual( expr1(), 25 )
             self.assertEqual( expr2(), 15 )
             self.assertNotEqual( id(expr1),       id(expr2) )
             self.assertNotEqual( id(expr1._args_), id(expr2._args_) )
-            self.assertEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
-            self.assertEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
+            self.assertNotEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
+            self.assertNotEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             #
             total = counter.count - start
-            self.assertEqual(total, 1)
+            self.assertEqual(total, 0)
             
     def test_SumExpressionY(self):
         self.m = ConcreteModel()

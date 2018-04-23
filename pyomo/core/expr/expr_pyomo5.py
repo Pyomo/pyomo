@@ -1405,7 +1405,7 @@ class ExpressionBase(NumericValue):
         """
         return clone_expression(self, memo=substitute, clone_leaves=False)
 
-    def __deepcopy__(self, memo):
+    def X__deepcopy__(self, memo):
         """
         Return a clone of the expression tree.
 
@@ -2546,7 +2546,7 @@ class LinearExpression(ExpressionBase):
            state[i] = getattr(self,i)
         return state
 
-    def __deepcopy__(self, memo):
+    def X__deepcopy__(self, memo):
         return self.create_node_with_local_data(None, memo)
 
     def create_node_with_local_data(self, args, memo):
