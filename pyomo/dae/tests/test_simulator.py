@@ -21,18 +21,13 @@ from pyomo.dae.simulator import (
     Simulator, 
     _check_getitemexpression, 
     _check_productexpression,
+    _check_negationexpression,
     _check_viewsumexpression, 
     substitute_pyomo2casadi,
-    #substitute_getitem_with_casadi_sym,
-    #substitute_intrinsic_function_with_casadi,
-    #substitute_intrinsic_function)
 )
 from pyomo.core.base.template_expr import (
     IndexTemplate, 
     _GetItemIndexer,
-    #substitute_template_expression, 
-    #substitute_getitem_with_param,
-    #substitute_template_with_value,
 )
 
 import os
@@ -52,7 +47,7 @@ except ImportError:
 try:
     import platform
     if platform.python_implementation() == "PyPy":
-        # The scipy is importable into PyPy, but ODE integrators don't work. (2/18)
+        # Scipy is importable into PyPy, but ODE integrators don't work. (2/18)
         raise ImportError
     import scipy 
     scipy_available = True
@@ -286,6 +281,73 @@ class TestSimulator(unittest.TestCase):
     # Testing various cases of separable differential equations to ensure
     # the simulator generates the correct RHS expression
     @unittest.skipIf(not scipy_available, "Scipy is not available")
+    def test_separable_diffeq_case5(self):
+
+        m = self.m
+        m.w = Var(m.t, m.s)
+        m.dw = DerivativeVar(m.w)
+        m.p = Param(initialize=5)
+        m.mp = Param(initialize=5, mutable=True)
+        m.y = Var()
+        
+        t = IndexTemplate(m.t)
+
+        def _deqv(m, i):
+            return m.dv[i] + m.y == m.v[i]**2 + m.v[i]
+        m.deqv = Constraint(m.t, rule=_deqv)
+
+        def _deqw(m, i, j):
+            return m.y + m.dw[i, j] == m.w[i, j]**2 + m.w[i, j]
+        m.deqw = Constraint(m.t, m.s, rule=_deqw)
+
+        mysim = Simulator(m)
+
+        self.assertEqual(len(mysim._diffvars), 4)
+        self.assertEqual(mysim._diffvars[0], _GetItemIndexer(m.v[t]))
+        self.assertEqual(mysim._diffvars[1], _GetItemIndexer(m.w[t, 1]))
+        self.assertEqual(mysim._diffvars[2], _GetItemIndexer(m.w[t, 2]))
+        self.assertEqual(len(mysim._derivlist), 4)
+        self.assertEqual(mysim._derivlist[0], _GetItemIndexer(m.dv[t]))
+        self.assertEqual(mysim._derivlist[1], _GetItemIndexer(m.dw[t, 1]))
+        self.assertEqual(mysim._derivlist[2], _GetItemIndexer(m.dw[t, 2]))
+        self.assertEqual(len(mysim._rhsdict), 4)
+        m.del_component('deqv')
+        m.del_component('deqw')
+        m.del_component('deqv_index')
+        m.del_component('deqw_index')
+
+        def _deqv(m, i):
+            return m.mp + m.dv[i] == m.v[i]**2 + m.v[i]
+        m.deqv = Constraint(m.t, rule=_deqv)
+
+        def _deqw(m, i, j):
+            return m.dw[i, j] + m.p == m.w[i, j]**2 + m.w[i, j]
+        m.deqw = Constraint(m.t, m.s, rule=_deqw)
+
+        mysim = Simulator(m)
+
+        self.assertEqual(len(mysim._diffvars), 4)
+        self.assertEqual(mysim._diffvars[0], _GetItemIndexer(m.v[t]))
+        self.assertEqual(mysim._diffvars[1], _GetItemIndexer(m.w[t, 1]))
+        self.assertEqual(mysim._diffvars[2], _GetItemIndexer(m.w[t, 2]))
+        self.assertEqual(len(mysim._derivlist), 4)
+        self.assertEqual(mysim._derivlist[0], _GetItemIndexer(m.dv[t]))
+        self.assertEqual(mysim._derivlist[1], _GetItemIndexer(m.dw[t, 1]))
+        self.assertEqual(mysim._derivlist[2], _GetItemIndexer(m.dw[t, 2]))
+        self.assertEqual(len(mysim._rhsdict), 4)
+        m.del_component('deqv')
+        m.del_component('deqw')
+        m.del_component('deqv_index')
+        m.del_component('deqw_index')
+        m.del_component('w')
+        m.del_component('dw')
+        m.del_component('p')
+        m.del_component('mp')
+        m.del_component('y')
+
+    # Testing various cases of separable differential equations to ensure
+    # the simulator generates the correct RHS expression
+    @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_separable_diffeq_case6(self):
 
         m = self.m
@@ -349,6 +411,82 @@ class TestSimulator(unittest.TestCase):
         m.del_component('p')
         m.del_component('mp')
         m.del_component('y')
+
+    # Testing various cases of separable differential equations to ensure
+    # the simulator generates the correct RHS expression
+    @unittest.skipIf(not scipy_available, "Scipy is not available")
+    def test_separable_diffeq_case8(self):
+
+        m = self.m
+        m.w = Var(m.t, m.s)
+        m.dw = DerivativeVar(m.w)
+        m.p = Param(initialize=5)
+        m.mp = Param(initialize=5, mutable=True)
+        m.y = Var()
+        
+        t = IndexTemplate(m.t)
+
+        def _deqv(m, i):
+            return -m.dv[i] == m.v[i]**2 + m.v[i]
+        m.deqv = Constraint(m.t, rule=_deqv)
+
+        def _deqw(m, i, j):
+            return -m.dw[i, j] == m.w[i, j]**2 + m.w[i, j]
+        m.deqw = Constraint(m.t, m.s, rule=_deqw)
+
+        mysim = Simulator(m)
+
+        self.assertEqual(len(mysim._diffvars), 4)
+        self.assertEqual(mysim._diffvars[0], _GetItemIndexer(m.v[t]))
+        self.assertEqual(mysim._diffvars[1], _GetItemIndexer(m.w[t, 1]))
+        self.assertEqual(mysim._diffvars[2], _GetItemIndexer(m.w[t, 2]))
+        self.assertEqual(len(mysim._derivlist), 4)
+        self.assertEqual(mysim._derivlist[0], _GetItemIndexer(m.dv[t]))
+        self.assertEqual(mysim._derivlist[1], _GetItemIndexer(m.dw[t, 1]))
+        self.assertEqual(mysim._derivlist[2], _GetItemIndexer(m.dw[t, 2]))
+        self.assertEqual(len(mysim._rhsdict), 4)
+        m.del_component('deqv')
+        m.del_component('deqw')
+        m.del_component('deqv_index')
+        m.del_component('deqw_index')
+
+    # Testing various cases of separable differential equations to ensure
+    # the simulator generates the correct RHS expression
+    @unittest.skipIf(not scipy_available, "Scipy is not available")
+    def test_separable_diffeq_case9(self):
+
+        m = self.m
+        m.w = Var(m.t, m.s)
+        m.dw = DerivativeVar(m.w)
+        m.p = Param(initialize=5)
+        m.mp = Param(initialize=5, mutable=True)
+        m.y = Var()
+        
+        t = IndexTemplate(m.t)
+
+        def _deqv(m, i):
+            return m.v[i]**2 + m.v[i] == -m.dv[i]
+        m.deqv = Constraint(m.t, rule=_deqv)
+
+        def _deqw(m, i, j):
+            return m.w[i, j]**2 + m.w[i, j] == -m.dw[i, j]
+        m.deqw = Constraint(m.t, m.s, rule=_deqw)
+
+        mysim = Simulator(m)
+
+        self.assertEqual(len(mysim._diffvars), 4)
+        self.assertEqual(mysim._diffvars[0], _GetItemIndexer(m.v[t]))
+        self.assertEqual(mysim._diffvars[1], _GetItemIndexer(m.w[t, 1]))
+        self.assertEqual(mysim._diffvars[2], _GetItemIndexer(m.w[t, 2]))
+        self.assertEqual(len(mysim._derivlist), 4)
+        self.assertEqual(mysim._derivlist[0], _GetItemIndexer(m.dv[t]))
+        self.assertEqual(mysim._derivlist[1], _GetItemIndexer(m.dw[t, 1]))
+        self.assertEqual(mysim._derivlist[2], _GetItemIndexer(m.dw[t, 2]))
+        self.assertEqual(len(mysim._rhsdict), 4)
+        m.del_component('deqv')
+        m.del_component('deqw')
+        m.del_component('deqv_index')
+        m.del_component('deqw_index')
 
     # Testing Simulator construction on differential variables with a
     # single index
@@ -876,6 +1014,37 @@ class TestExpressionCheckers(unittest.TestCase):
         self.assertIsNone(temp)
         temp = _check_productexpression(e, 1)
         self.assertIsNone(temp)
+
+    # Testing the checker for NegationExpressions
+    def test_check_negationexpression(self):
+
+        m = self.m
+        t = IndexTemplate(m.t)
+
+        e = -m.dv[t] == m.v[t]
+        temp = _check_negationexpression(e, 0)
+        self.assertIs(e.arg(0).arg(0), temp[0])
+        self.assertIs(e.arg(1), temp[1].arg(0))
+        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.v, temp[1].arg(0)._base)
+        temp = _check_negationexpression(e, 1)
+        self.assertIsNone(temp)
+
+        e = m.v[t] == -m.dv[t]
+        temp = _check_negationexpression(e, 1)
+        self.assertIs(e.arg(0), temp[1].arg(0))
+        self.assertIs(e.arg(1).arg(0), temp[0])
+        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.v, temp[1].arg(0)._base)
+        temp = _check_negationexpression(e, 0)
+        self.assertIsNone(temp)
+
+        e = -m.v[t] == -m.v[t]
+        temp = _check_negationexpression(e, 0)
+        self.assertIsNone(temp)
+        temp = _check_negationexpression(e, 1)
+        self.assertIsNone(temp)
+
 
     # Testing the checker for SumExpressions
     def test_check_viewsumexpression(self):
