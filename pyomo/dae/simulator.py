@@ -573,7 +573,7 @@ class Simulator:
 
                 # Case 9: RHS = - dxdt[t]
                 if args is None:
-                    if type(tempexp.arg(0)) is EXPR.NegationExpression:
+                    if type(tempexp.arg(1)) is EXPR.NegationExpression:
                         args = _check_negationexpression(tempexp, 1)
 
 
