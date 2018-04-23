@@ -138,7 +138,7 @@ def _check_negationexpression(expr, i):
     if type(arg) is EXPR.GetItemExpression and type(arg._base) is DerivativeVar:
         return [arg, - expr.arg(1-i)]
 
-    if type(arg) is _ProductExpression:
+    if type(arg) is EXPR.ProductExpression:
         lhs = arg.arg(0)
         rhs = arg.arg(1)
 
