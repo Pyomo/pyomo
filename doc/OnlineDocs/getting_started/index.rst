@@ -6,7 +6,7 @@ Installation
 
 Pyomo currently supports the following versions of Python:
 
-* CPython: 2.7, 3.5, 3.6
+* CPython: 2.7, 3.4, 3.5, 3.6
 
 
 Using CONDA
@@ -33,7 +33,7 @@ Pyomo also has conditional dependencies on a variety of third-party Python packa
 Optimization solvers are not installed with Pyomo, but some open source optimization solvers can be installed with conda as well:
 
 .. bash::
-    conda install -c conda-forge pyomo.solvers
+    conda install -c conda-forge ipopt coin-cbc glpk
 
 
 Using PIP
@@ -45,10 +45,6 @@ the following in a shell:
 
 .. bash::
     pip install pyomo
-
-However, *pip* does not support the robust installation of conditional
-dependencies (i.e. the third-party Python packages or the solvers
-that Pyomo may use).
 
 
 A Simple Example
