@@ -71,7 +71,7 @@ install:
   #
   # Update conda, then force it to NOT update itself again
   #
-  # Somehow, the update stalls for Python 3.4, so we're disabling it for now.
+  # Somehow, the update from anaconda stalls for Python 3.4. So we're not specifying the channel here.
   #
   - conda config --set always_yes yes
   - conda update -q -y conda
