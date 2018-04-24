@@ -20,43 +20,52 @@ from pyomo.opt.base import IOptSolver
 from pyomo.opt.results import ProblemSense, SolverResults
 
 import heapq
+class GDPlbbSolver(pyomo.util.plugin.Plugin):
+    """A branch and bound-based GDP solver."""
 
-def solve(self, model, **kwds):
-    heap = []
-    root = model.clone()
-    incumbent = root
-    initial_inactive_disjunctions = model.component_data_objects(
-        ctype = Disjunction, active=false):
-    deactivate(all disjunctions)
-    num_inactive disjunct
-    #Solve root as MINLP subproblems
-    #See fix_disjuncts.py
-    minlp_solve(root) #some epsilon
-    heapq.heappush(h,(root.obj,root))
-    while len(h)>0:
-        current = heapq.heappop(h)[1]
-        if(len(inactive_disjunctions) == ): #TO BEGIN WITH
-            incumbent = current
-            break
-        disjunction = inactive_disjunctions[0]
-        activate(disjunction)
-        for each clause in disjunction:
-            new = current.clone()
-            set clause True and fix
-            minlp_solve(new)
-            heapq.heappush(h,(new.obj,new))
-    return incumbent
-
-def deactivate_disjunctions(self,model):
-    for d in model.component_data_objects(ctype = Disjunction,active = True):
-        for y in Disjunction.component_data_objects(ctype = Disjunction, active = True):
-            y.deactivate()
+    pyomo.util.plugin.implements(IOptSolver)
+    pyomo.util.plugin.alias('gdplbb',
+                            doc='The GDPlbb logic-based Branch and Bound GDP solver')
 
 
+    def solve(self, model, **kwds):
+        heap = []
+        root = model.clone()
+        incumbent = root
+        initial_inactive_disjunctions = model.component_data_objects(
+            ctype = Disjunction, active=false): #ComponentSet() from contrib preprocessing plugins equality propogate
 
-def validate_model(self,model):
-    for d in model.component_data_objects(
-        ctype = Disjunction, active=True):
-        if(not d.xor):
-            raise ValueError('GDPlbb unable to handle '
-                            'non-exclusive disjunctions')
+        deactivate(all disjunctions)
+        num_inactive disjunct
+        #Solve root as MINLP subproblems
+        #See fix_disjuncts.py
+        minlp_solve(root) #some epsilon
+        heapq.heappush(h,(root.obj,root))
+        while len(h)>0:
+            current = heapq.heappop(h)[1]
+            if(len(inactive_disjunctions) == ): #TO BEGIN WITH
+                incumbent = current
+                break
+            disjunction = inactive_disjunctions[0]
+            activate(disjunction)
+            for each clause in disjunction:
+                new = current.clone()
+                set clause True and fix
+                ##convert to MINLP
+                minlp_solve(new)
+                heapq.heappush(h,(new.obj,new))
+        return incumbent
+
+    def deactivate_disjunctions(self,model):
+        for d in model.component_data_objects(ctype = Disjunction,active = True):
+            #deactivate disjunctions
+
+
+
+
+    def validate_model(self,model):
+        for d in model.component_data_objects(
+            ctype = Disjunction, active=True):
+            if(not d.xor):
+                raise ValueError('GDPlbb unable to handle '
+                                'non-exclusive disjunctions')
