@@ -70,8 +70,10 @@ install:
   #
   # Update conda, then force it to NOT update itself again
   #
+  # Somehow, the update from anaconda stalls for Python 3.4. So we're not specifying the channel here.
+  #
   - conda config --set always_yes yes
-  - conda update -q -y -c anaconda conda
+  - conda update -q -y conda
   - conda config --set auto_update_conda false
   #
   - "%CONDAFORGE% setuptools pip"
