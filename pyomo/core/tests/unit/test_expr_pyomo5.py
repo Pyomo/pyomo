@@ -30,6 +30,7 @@ from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel import expression, expression_dict, variable, expression, objective
 from pyomo.core.expr.numvalue import potentially_variable, native_types, nonpyomo_leaf_types
 from pyomo.core.base.var import SimpleVar
+from pyomo.core.base.param import _ParamData, SimpleParam
 from pyomo.core.base.label import *
 from pyomo.core.base.template_expr import IndexTemplate
 
@@ -5990,6 +5991,25 @@ class WalkerTests(unittest.TestCase):
         self.assertEqual("0  <=  sin(x) + x*y + 3  <=  1", str(e))
         self.assertEqual("0  <=  sin(w[1]) + w[1]*w[2] + 3  <=  1", str(f))
 
+    def test_replacement_walker0(self):
+        M = ConcreteModel()
+        M.x = Var(range(3))
+        M.w = VarList()
+        M.z = Param(range(3), mutable=True)
+
+        e = sum_product(M.z, M.x)
+        self.assertIs(type(e), EXPR.LinearExpression)
+        walker = ReplacementWalkerTest1(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("z[0]*x[0] + z[1]*x[1] + z[2]*x[2]", str(e))
+        self.assertEqual("z[0]*w[1] + z[1]*w[2] + z[2]*w[3]", str(f))
+
+        e = 2*sum_product(M.z, M.x)
+        walker = ReplacementWalkerTest1(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("2*(z[0]*x[0] + z[1]*x[1] + z[2]*x[2])", str(e))
+        self.assertEqual("2*(z[0]*w[4] + z[1]*w[5] + z[2]*w[6])", str(f))
+
     def test_identify_components(self):
         M = ConcreteModel()
         M.x = Var()
@@ -6097,6 +6117,180 @@ class WalkerTests2(unittest.TestCase):
         f = walker.dfs_postorder_stack(e)
         self.assertEqual("0  <=  sin(x) + x*y + 3  <=  1", str(e))
         self.assertEqual("0  <=  sin(2*w[1]) + 2*w[1]*2*w[2] + 3  <=  1", str(f))
+
+    def test_replacement_walker5(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.w = VarList()
+        M.z = Param(mutable=True)
+
+        e = M.z*M.x
+        walker = ReplacementWalkerTest2(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertTrue(e.__class__ is EXPR.MonomialTermExpression)
+        self.assertTrue(f.__class__ is EXPR.ProductExpression)
+        self.assertEqual("z*x", str(e))
+        self.assertEqual("z*2*w[1]", str(f))
+
+    def test_replacement_walker0(self):
+        M = ConcreteModel()
+        M.x = Var(range(3))
+        M.w = VarList()
+        M.z = Param(range(3), mutable=True)
+
+        e = sum_product(M.z, M.x)
+        self.assertIs(type(e), EXPR.LinearExpression)
+        walker = ReplacementWalkerTest2(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("z[0]*x[0] + z[1]*x[1] + z[2]*x[2]", str(e))
+        self.assertEqual("z[0]*2*w[1] + z[1]*2*w[2] + z[2]*2*w[3]", str(f))
+
+        e = 2*sum_product(M.z, M.x)
+        walker = ReplacementWalkerTest2(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("2*(z[0]*x[0] + z[1]*x[1] + z[2]*x[2])", str(e))
+        self.assertEqual("2*(z[0]*2*w[4] + z[1]*2*w[5] + z[2]*2*w[6])", str(f))
+
+#
+# Replace all mutable parameters with variables
+#
+class ReplacementWalkerTest3(EXPR.ExpressionReplacementVisitor):
+
+    def __init__(self, model):
+        EXPR.ExpressionReplacementVisitor.__init__(self)
+        self.model = model
+
+    def visiting_potential_leaf(self, node):
+        if node.__class__ in (_ParamData, SimpleParam):
+            if id(node) in self.memo:
+                return True, self.memo[id(node)]
+            self.memo[id(node)] = 2*self.model.w.add()
+            return True, self.memo[id(node)]
+
+        if node.__class__ in nonpyomo_leaf_types or \
+            node.is_constant() or \
+            node.is_variable_type():
+            return True, node
+
+        return False, None
+
+
+class WalkerTests3(unittest.TestCase):
+
+    def test_replacement_walker1(self):
+        M = ConcreteModel()
+        M.x = Param(mutable=True)
+        M.y = Var()
+        M.w = VarList()
+
+        e = sin(M.x) + M.x*M.y + 3
+        walker = ReplacementWalkerTest3(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("sin(x) + x*y + 3", str(e))
+        self.assertEqual("sin(2*w[1]) + 2*w[1]*y + 3", str(f))
+
+    def test_replacement_walker2(self):
+        M = ConcreteModel()
+        M.x = Param(mutable=True)
+        M.w = VarList()
+
+        e = M.x
+        walker = ReplacementWalkerTest3(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("x", str(e))
+        self.assertEqual("2*w[1]", str(f))
+
+    def test_replacement_walker3(self):
+        M = ConcreteModel()
+        M.x = Param(mutable=True)
+        M.y = Var()
+        M.w = VarList()
+
+        e = sin(M.x) + M.x*M.y + 3 <= 0
+        walker = ReplacementWalkerTest3(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("sin(x) + x*y + 3  <=  0.0", str(e))
+        self.assertEqual("sin(2*w[1]) + 2*w[1]*y + 3  <=  0.0", str(f))
+
+    def test_replacement_walker4(self):
+        M = ConcreteModel()
+        M.x = Param(mutable=True)
+        M.y = Var()
+        M.w = VarList()
+
+        e = inequality(0, sin(M.x) + M.x*M.y + 3, 1)
+        walker = ReplacementWalkerTest3(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("0  <=  sin(x) + x*y + 3  <=  1", str(e))
+        self.assertEqual("0  <=  sin(2*w[1]) + 2*w[1]*y + 3  <=  1", str(f))
+
+    def test_replacement_walker5(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.w = VarList()
+        M.z = Param(mutable=True)
+
+        e = M.z*M.x
+        walker = ReplacementWalkerTest3(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertTrue(e.__class__ is EXPR.MonomialTermExpression)
+        self.assertTrue(f.__class__ is EXPR.ProductExpression)
+        self.assertTrue(f.arg(0).is_potentially_variable())
+        self.assertEqual("z*x", str(e))
+        self.assertEqual("2*w[1]*x", str(f))
+
+    def test_replacement_walker6(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.w = VarList()
+        M.z = Param(mutable=True)
+
+        e = (M.z*2)*3
+        walker = ReplacementWalkerTest3(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertTrue(not e.is_potentially_variable())
+        self.assertTrue(f.is_potentially_variable())
+        self.assertEqual("z*2*3", str(e))
+        self.assertEqual("2*w[1]*2*3", str(f))
+
+    def test_replacement_walker7(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.w = VarList()
+        M.z = Param(mutable=True)
+        M.e = Expression(expr=M.z*2)
+
+        e = M.x*M.e
+        self.assertTrue(e.arg(1).is_potentially_variable())
+        self.assertTrue(not e.arg(1).arg(0).is_potentially_variable())
+        self.assertEqual("x*(z*2)", str(e))
+        walker = ReplacementWalkerTest3(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertTrue(e.__class__ is EXPR.ProductExpression)
+        self.assertTrue(f.__class__ is EXPR.ProductExpression)
+        self.assertEqual(id(e), id(f))
+        self.assertTrue(f.arg(1).is_potentially_variable())
+        self.assertTrue(f.arg(1).arg(0).is_potentially_variable())
+        self.assertEqual("x*(2*w[1]*2)", str(f))
+
+    def test_replacement_walker0(self):
+        M = ConcreteModel()
+        M.x = Var(range(3))
+        M.w = VarList()
+        M.z = Param(range(3), mutable=True)
+
+        e = sum_product(M.z, M.x)
+        self.assertIs(type(e), EXPR.LinearExpression)
+        walker = ReplacementWalkerTest3(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("z[0]*x[0] + z[1]*x[1] + z[2]*x[2]", str(e))
+        self.assertEqual("2*w[1]*x[0] + 2*w[2]*x[1] + 2*w[3]*x[2]", str(f))
+
+        e = 2*sum_product(M.z, M.x)
+        walker = ReplacementWalkerTest3(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("2*(z[0]*x[0] + z[1]*x[1] + z[2]*x[2])", str(e))
+        self.assertEqual("2*(2*w[4]*x[0] + 2*w[5]*x[1] + 2*w[6]*x[2])", str(f))
 
 if __name__ == "__main__":
     unittest.main()

@@ -604,11 +604,16 @@ class ExpressionReplacementVisitor(object):
             The return value is determined by the :func:`finalize` function,
             which may be defined by the user.
         """
-        flag, value = self.visiting_potential_leaf(node)
-        if flag:
-            return value
-        #_stack = [ (node, self.children(node), 0, len(self.children(node)), [])]
-        _stack = [ (node, node._args_, 0, node.nargs(), [False])]
+        if node.__class__ is LinearExpression:
+            _argList                = [node.constant] + node.linear_coefs + node.linear_vars
+            _len                    = len(_argList)
+            _stack = [ (node, _argList, 0, _len, [False])]
+        else:
+            flag, value = self.visiting_potential_leaf(node)
+            if flag:
+                return value
+            #_stack = [ (node, self.children(node), 0, len(self.children(node)), [])]
+            _stack = [ (node, node._args_, 0, node.nargs(), [False])]
         #
         # Iterate until the stack is empty
         #
@@ -630,22 +635,34 @@ class ExpressionReplacementVisitor(object):
             while _idx < _len:
                 _sub = _argList[_idx]
                 _idx += 1
-                flag, value = self.visiting_potential_leaf(_sub)
-                if flag:
-                    if id(value) != id(_sub):
-                        _result[0] = True
-                    _result.append( value )
+                if _sub.__class__ is LinearExpression:
+                        #
+                        # Push an expression onto the stack
+                        #
+                        _stack.append( (_obj, _argList, _idx, _len, _result) )
+                        _obj                    = _sub
+                        #_argList                = self.children(_sub)
+                        _argList                = [_sub.constant] + _sub.linear_coefs + _sub.linear_vars
+                        _idx                    = 0
+                        _len                    = len(_argList)
+                        _result                 = [False]
                 else:
-                    #
-                    # Push an expression onto the stack
-                    #
-                    _stack.append( (_obj, _argList, _idx, _len, _result) )
-                    _obj                    = _sub
-                    #_argList                = self.children(_sub)
-                    _argList                = _sub._args_
-                    _idx                    = 0
-                    _len                    = _sub.nargs()
-                    _result                 = [False]
+                    flag, value = self.visiting_potential_leaf(_sub)
+                    if flag:
+                        if id(value) != id(_sub):
+                            _result[0] = True
+                        _result.append( value )
+                    else:
+                        #
+                        # Push an expression onto the stack
+                        #
+                        _stack.append( (_obj, _argList, _idx, _len, _result) )
+                        _obj                    = _sub
+                        #_argList                = self.children(_sub)
+                        _argList                = _sub._args_
+                        _idx                    = 0
+                        _len                    = _sub.nargs()
+                        _result                 = [False]
             #
             # Process the current node
             #
@@ -655,10 +672,26 @@ class ExpressionReplacementVisitor(object):
             # call the ExpressionReplacementVisitor.visit() function.
             #
             ans = self.visit(_obj, _result[1:])
-            if _result[0] and id(ans) == id(_obj):
-                ans = self.construct_node(_obj, _result[1:])
-            if _result[0] and ans.__class__ is MonomialTermExpression:
-                ans.__class__ = ProductExpression
+            if ans.is_named_expression_type():
+                _result[0] = False
+                assert(len(_result) == 2)
+                ans.expr = _result[1]
+            elif ans.__class__ is LinearExpression and _result[0]:
+                ans = _result[1]
+                nterms = (len(_result)-2)//2
+                for i in range(nterms):
+                    ans += _result[2+i]*_result[2+i+nterms]
+            elif _result[0]:
+                if id(ans) == id(_obj):
+                    ans = self.construct_node(_obj, _result[1:])
+                if ans.__class__ is MonomialTermExpression:
+                    if (not ans._args_[0].__class__ in native_numeric_types and ans._args_[0].is_potentially_variable) or \
+                       (ans._args_[1].__class__ in native_numeric_types or not ans._args_[1].is_potentially_variable()):
+                        ans.__class__ = ProductExpression
+                elif ans.__class__ in NPV_expression_types:
+                    # For simplicity, not-potentially-variable expressions are
+                    # replaced with their potentially variable counterparts.
+                    ans = ans.create_potentially_variable_object()
             if _stack:
                 if _result[0]:
                     _stack[-1][-1][0] = True
@@ -668,7 +701,6 @@ class ExpressionReplacementVisitor(object):
                 _stack[-1][-1].append( ans )
             else:
                 return self.finalize(ans)
-
 
 
 #-------------------------------------------------------
@@ -1424,7 +1456,7 @@ class ExpressionBase(NumericValue):
         """
         Construct a node using given arguments.
 
-        This class provides a consistent interface for constructing a
+        This method provides a consistent interface for constructing a
         node, which is used in tree visitor scripts.  In the simplest
         case, this simply returns::
 
@@ -1447,6 +1479,26 @@ class ExpressionBase(NumericValue):
             class.
         """
         return self.__class__(args)
+
+    def create_potentially_variable_object(self):
+        """
+        Create a potentially variable version of this object.
+
+        This method returns an object that is a potentially variable
+        version of the current object.  In the simplest
+        case, this simply sets the value of `__class__`:
+
+            self.__class__ = self.__class__.__mro__[1]
+
+        Note that this method is allowed to modify the current object
+        and return it.  But in some cases it may create a new 
+        potentially variable object.
+
+        Returns:
+            An object that is potentially variable.
+        """
+        self.__class__ = self.__class__.__mro__[1]
+        return self
 
     def is_constant(self):
         """Return True if this expression is an atomic constant
@@ -2140,6 +2192,9 @@ class SumExpressionBase(_LinearOperatorExpression):
 
 class NPV_SumExpression(SumExpressionBase):
     __slots__ = ()
+
+    def create_potentially_variable_object(self):
+        return SumExpression( self._args_ )
 
     def _apply_operation(self, result):
         l_, r_ = result
@@ -3400,4 +3455,15 @@ def _generate_intrinsic_function_expression(arg, name, fcn):
         return UnaryFunctionExpression(arg, name, fcn)
     else:
         return NPV_UnaryFunctionExpression(arg, name, fcn)
+
+
+NPV_expression_types = set(
+   [NPV_NegationExpression,
+    NPV_ExternalFunctionExpression,
+    NPV_PowExpression,
+    NPV_ProductExpression,
+    NPV_ReciprocalExpression,
+    NPV_SumExpression,
+    NPV_UnaryFunctionExpression,
+    NPV_AbsExpression])
 
