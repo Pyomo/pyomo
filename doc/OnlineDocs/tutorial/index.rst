@@ -52,8 +52,8 @@ and
    c : Size=3, Index=a, Active=True
        Key : Lower : Body        : Upper : Active
          1 :  -Inf : y[1] - x[1] :   0.0 :   True
-	 2 :  -Inf : y[2] - x[2] :   0.0 :   True
-	 3 :  -Inf : y[3] - x[3] :   0.0 :   True
+         2 :  -Inf : y[2] - x[2] :   0.0 :   True
+         3 :  -Inf : y[3] - x[3] :   0.0 :   True
 
 The index specifies the set of *allowable members* of the component.  In
 the case of :class:`Var<pyomo.core.base.var.Var>`, the constructor will
@@ -96,9 +96,9 @@ This set admits any hashable object as a member.
    >>> m.c2[8] = m.x[2] == m.z * m.y[2]
    >>> m.c2.pprint()
    c2 : Size=2, Index=Any, Active=True
-       Key : Lower : Body            : Upper : Active
-         1 :   0.0 :      x[1] - 5*z :   0.0 :   True
-	 8 :   0.0 : x[2] - z * y[2] :   0.0 :   True
+       Key : Lower : Body          : Upper : Active
+         1 :   0.0 :    x[1] - 5*z :   0.0 :   True
+         8 :   0.0 : x[2] - z*y[2] :   0.0 :   True
 
 .. note::
 
@@ -116,13 +116,13 @@ This set admits any hashable object as a member.
    v : Size=2, Index=Any
        Key : Lower : Value : Upper : Fixed : Stale : Domain
          1 :  None :  None :  None : False :  True :  Reals
-	 2 :  None :  None :  None : False :  True :  Reals
+         2 :  None :  None :  None : False :  True :  Reals
    >>> m.c2.pprint()
    c2 : Size=3, Index=Any, Active=True
-       Key : Lower : Body            : Upper : Active
-         1 :   0.0 :      x[1] - 5*z :   0.0 :   True
-	 2 :   0.0 :     v[1] + v[2] :   0.0 :   True
-	 8 :   0.0 : x[2] - z * y[2] :   0.0 :   True
+       Key : Lower : Body          : Upper : Active
+         1 :   0.0 :    x[1] - 5*z :   0.0 :   True
+         2 :   0.0 :   v[1] + v[2] :   0.0 :   True
+         8 :   0.0 : x[2] - z*y[2] :   0.0 :   True
 
 The following illustrates how to use `Any` with Blocks.
 
