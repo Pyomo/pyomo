@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -50,12 +50,12 @@ class GAMSTests(unittest.TestCase):
         m.x = Var()
         lbl = NumericLabeler('x')
         smap = SymbolMap(lbl)
-        # self.assertEquals(expression_to_string(
-        #     m.x ** -3, lbl, smap=smap), "power(x1, -3)")
+        self.assertEquals(expression_to_string(
+            m.x ** -3, lbl, smap=smap), "power(x1, -3)")
         self.assertEquals(expression_to_string(
             m.x ** 0.33, smap=smap), "x1 ** 0.33")
-        # self.assertEquals(expression_to_string(
-        #     pow(m.x, 2), smap=smap), "power(x1, 2)")
+        self.assertEquals(expression_to_string(
+            pow(m.x, 2), smap=smap), "power(x1, 2)")
 
     def test_gams_connector_in_active_constraint(self):
         """Test connector in active constraint for GAMS writer."""
