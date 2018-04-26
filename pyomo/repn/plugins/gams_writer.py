@@ -68,8 +68,9 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
         if node.__class__ is EXPR.PowExpression:
             # If the exponent is a positive integer, use the power() function.
             # Otherwise, use the ** operator.
-            if (tmp[1].__class__ in native_numeric_types and
-                    tmp[1] == int(tmp[1])):
+            exponent = node.arg(1)
+            if (exponent.__class__ in native_numeric_types and
+                    exponent == int(exponent)):
                 return "power({0}, {1})".format(tmp[0], tmp[1])
             else:
                 return "{0} ** {1}".format(tmp[0], tmp[1])
