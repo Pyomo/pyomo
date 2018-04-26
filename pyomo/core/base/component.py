@@ -477,26 +477,6 @@ class Component(_ComponentBase):
                 "is assigned to a Block.\nTriggered by attempting to set "
                 "component '%s' to name '%s'" % (self.name,val))
 
-    def pprint(self, ostream=None, verbose=False, prefix=""):
-        """Print component information"""
-        if ostream is None:
-            ostream = sys.stdout
-        tab="    "
-        ostream.write(prefix+self.local_name+" : ")
-        if self.doc is not None:
-            ostream.write(self.doc+'\n'+prefix+tab)
-
-        _attr, _data, _header, _fcn = self._pprint()
-
-        ostream.write(", ".join("%s=%s" % (k,v) for k,v in _attr))
-        ostream.write("\n")
-        if not self._constructed:
-            ostream.write(prefix+tab+"Not constructed\n")
-            return
-
-        if _data is not None:
-            tabular_writer( ostream, prefix+tab, _data, _header, _fcn )
-
     def is_indexed(self):
         """Return true if this component is indexed"""
         return False
