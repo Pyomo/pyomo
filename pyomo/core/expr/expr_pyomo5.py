@@ -1544,12 +1544,18 @@ class ExpressionBase(NumericValue):
 
     def is_potentially_variable(self):
         """
-        Return :const:`True` if this expression contains variables.
+        Return :const:`True` if this expression may contain variables.
 
-        This method returns :const:`True` if there are any variables
-        within this expression.  This method returns :const:`True`
-        even if there the variables in the expression are currently
-        fixed.
+        If this method returns :const:`False`, then there are no
+        variables within this expression.  However, if this 
+        method returns :const:`True`, then the expression may contain
+        variables (fixed or unfixed).  
+
+        Note:
+            This method may return :const:`True` even if the underlying 
+            expression contains no variables.  This allows for
+            optimizations when processing expressions that typically are
+            variable (e.g. sums).
 
         Returns:
             A boolean.  Defaults to :const:`True` for expressions.
@@ -2271,12 +2277,14 @@ class SumExpression(SumExpressionBase):
         return False
 
     def is_potentially_variable(self):
-        for v in islice(self._args_, self._nargs):
-            if v.__class__ in nonpyomo_leaf_types:
-                continue
-            if v.is_variable_type() or v.is_potentially_variable():
-                return True
-        return False
+        #
+        # In most normal contexts, a SumExpression is
+        # potentially variable.  Hence, we treat
+        # sums as potentially variable eliminate
+        # the effort of setting up an iterator and
+        # walking through it.
+        #
+        return True
 
     def _to_string(self, values, verbose, smap, compute_values):
         if verbose:
