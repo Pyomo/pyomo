@@ -1,4 +1,5 @@
 from pyomo.environ import *
+from pyutilib.math import isclose
 import math
 import copy
 
@@ -67,11 +68,11 @@ M = ConcreteModel()
 M.x = Var()
 M.x.value = math.pi/2.0
 val = value(M.x)
-assert(math.isclose(val, math.pi/2.0))
+assert(isclose(val, math.pi/2.0))
 # @ex5
 # @ex6
 val = M.x()
-assert(math.isclose(val, math.pi/2.0))
+assert(isclose(val, math.pi/2.0))
 # @ex6
 
 #---------------------------------------------
