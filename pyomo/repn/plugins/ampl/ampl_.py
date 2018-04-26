@@ -574,6 +574,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 self._print_nonlinear_terms_NL(exp._args[0])
 
             elif exp_type is expr._ExternalFunctionExpression:
+                # We have found models where external functions with
+                # strictly fixed/constant arguments causes AMPL to
+                # SEGFAULT.  To be safe, we will collapse fixed
+                # arguments to scalars and if the entire expression is
+                # constant, we will eliminate the external function
+                # call entirely.
+                if exp.is_fixed():
+                    self._print_nonlinear_terms_NL(exp())
+                    return
                 fun_str, string_arg_str = \
                     self._op_string[expr._ExternalFunctionExpression]
                 if not self._symbolic_solver_labels:
@@ -589,6 +598,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 for arg in exp._args:
                     if isinstance(arg, basestring):
                         OUTPUT.write(string_arg_str % (len(arg), arg))
+                    elif arg.is_fixed():
+                        self._print_nonlinear_terms_NL(arg())
                     else:
                         self._print_nonlinear_terms_NL(arg)
             elif (exp_type is expr._PowExpression) or \
