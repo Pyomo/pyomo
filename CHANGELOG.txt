@@ -6,9 +6,10 @@ Pyomo CHANGELOG
 Current Development
 -------------------------------------------------------------------------------
 
-- Resolved Python 3.4 build errors on Appveyor.
+- Resolved Python 3.4 build errors on Appveyor. (#438)
 - Wrap Vars in value() for assignment to numpy vectors (#436)
 - Adding TerminationCondition and SolverStatus to pyomo.environ (#429)
+- Removing testing for Python 2.6 (#322)
 
 -------------------------------------------------------------------------------
 Pyomo 5.5

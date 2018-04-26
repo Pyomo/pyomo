@@ -4,8 +4,7 @@ environment:
 
     # For Python versions available on Appveyor, see
     # http://www.appveyor.com/docs/installed-software#python
-    # The list here is complete (excluding Python 2.6, which
-    # isn't covered by this document) at the time of writing.
+    # The list here is complete at the time of writing.
 
     - PYTHON_VERSION: 2.7
       #PYTHON: "C:\\Python27"
@@ -78,7 +77,6 @@ install:
   - conda config --set auto_update_conda false
   #
   - "%CONDAFORGE% setuptools pip"
-  - "IF %PYTHON_VERSION%==2.6 (python -m pip install ordereddict)"
   - python -m pip install coverage
   - python -m pip install codecov
   - IF DEFINED YAML (python -m pip install pyyaml)
@@ -87,7 +85,7 @@ install:
   - python -m pip install openpyxl
   - python -m pip install sphinx_rtd_theme
   - "%ANACONDA% pandas networkx"
-  - "IF NOT %PYTHON_VERSION%==2.6 (%ANACONDA% scipy)"
+  - "%ANACONDA% scipy"
   #
   # Install GAMS
   #
