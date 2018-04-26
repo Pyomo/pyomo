@@ -164,7 +164,7 @@ class TestNLWriter(unittest.TestCase):
             variable_baseline,
             delete=True)
 
-        self.assertIsNot(m._ampl_repn, None)
+        self.assertIsNot(m._repn, None)
 
         m.x.fix()
         self._cleanup(test_fname)
