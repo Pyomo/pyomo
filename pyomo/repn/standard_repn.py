@@ -559,7 +559,21 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
         else:
             return _collect_standard_repn(exp._args_[1], multiplier*exp._args_[0], idMap, 
                                   compute_values, verbose, quadratic)
-
+    #
+    # RHS is a non-variable expression
+    #
+    elif not exp._args_[1].is_potentially_variable():
+        if compute_values:
+            val = value(exp._args_[1])
+            if val == 0:
+                return Results()
+            return _collect_standard_repn(exp._args_[0], multiplier * val, idMap, 
+                                  compute_values, verbose, quadratic)
+        else:
+            return _collect_standard_repn(exp._args_[0], multiplier*exp._args_[1], idMap, 
+                                  compute_values, verbose, quadratic)
+    #
+    # Both the LHS and RHS are potentially variable ...
     #
     # Collect LHS
     #
@@ -582,7 +596,6 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
         else:
             return _collect_standard_repn(exp._args_[1], multiplier*lhs.constant, idMap, 
                                   compute_values, verbose, quadratic)
-
     #
     # Collect RHS
     #
