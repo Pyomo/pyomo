@@ -30,6 +30,7 @@ from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel import expression, expression_dict, variable, expression, objective
 from pyomo.core.expr.numvalue import potentially_variable, native_types, nonpyomo_leaf_types
 from pyomo.core.base.var import SimpleVar
+from pyomo.core.base.param import _ParamData, SimpleParam
 from pyomo.core.base.label import *
 from pyomo.core.base.template_expr import IndexTemplate
 
@@ -1385,10 +1386,10 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         e = e1 * 5
         self.assertIs(type(e), EXPR.ProductExpression)
         self.assertEqual(e.nargs(), 2)
-        self.assertEqual(e.arg(0), 5)
-        self.assertIs(type(e.arg(1)), EXPR.ProductExpression)
-        self.assertIs(e.arg(1).arg(0), m.a)
-        self.assertIs(e.arg(1).arg(1), m.b)
+        self.assertEqual(e.arg(1), 5)
+        self.assertIs(type(e.arg(0)), EXPR.ProductExpression)
+        self.assertIs(e.arg(0).arg(0), m.a)
+        self.assertIs(e.arg(0).arg(1), m.b)
         self.assertEqual(e.size(), 5)
 
         #       *
@@ -1777,11 +1778,11 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         e = e1 / 5
         self.assertIs(type(e), EXPR.ProductExpression)
         self.assertEqual(e.nargs(), 2)
-        self.assertEqual(e.arg(0), 1./5)
-        self.assertIs(type(e.arg(1)), EXPR.ProductExpression)
-        self.assertIs(e.arg(1).arg(0), m.a)
-        self.assertIs(type(e.arg(1).arg(1)), EXPR.ReciprocalExpression)
-        self.assertIs(e.arg(1).arg(1).arg(0), m.b)
+        self.assertEqual(e.arg(1), 1./5)
+        self.assertIs(type(e.arg(0)), EXPR.ProductExpression)
+        self.assertIs(e.arg(0).arg(0), m.a)
+        self.assertIs(type(e.arg(0).arg(1)), EXPR.ReciprocalExpression)
+        self.assertIs(e.arg(0).arg(1).arg(0), m.b)
         self.assertEqual(e.size(), 6)
 
         #       /
@@ -2540,7 +2541,7 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
                           str(expr) )
 
         expr = 5 * model.a / model.a / 2
-        self.assertEqual( "prod(0.5, prod(prod(5, a), recip(a)))",
+        self.assertEqual( "prod(prod(prod(5, a), recip(a)), 0.5)",
                           str(expr) )
 
     def test_other(self):
@@ -2749,7 +2750,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
                           str(expr) )
 
         expr = 5 * model.a / model.a / 2
-        self.assertEqual( "0.5*5*a*(1/a)",
+        self.assertEqual( "5*a*(1/a)*0.5",
                           str(expr) )
 
         expr = model.a * model.b
@@ -4133,15 +4134,15 @@ class TestCloneExpression(unittest.TestCase):
         self.m = None
 
     def test_numeric(self):
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             e_ = 1
             e = EXPR.clone_expression(e_)
             self.assertEqual(id(e), id(e_))
             e = EXPR.clone_expression(self.m.p)
             self.assertEqual(id(e), id(self.m.p))
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 2)
         
     def test_Expression(self):
@@ -4154,8 +4155,8 @@ class TestCloneExpression(unittest.TestCase):
         m.e = Expression(expr=3*m.a)
         m.E = Expression([0,1], initialize={0:3*m.a, 1:4*m.b})
 
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             expr1 = m.e + m.E[1] 
             expr2 = expr1.clone()
             self.assertEqual( expr1(), 11 )
@@ -4165,7 +4166,7 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual( id(expr1.arg(0)), id(expr2.arg(0)) )
             self.assertEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
 
     def test_ExpressionX(self):
@@ -4178,8 +4179,8 @@ class TestCloneExpression(unittest.TestCase):
         m.e = Expression(expr=3*m.a)
         m.E = Expression([0,1], initialize={0:3*m.a, 1:4*m.b})
 
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             expr1 = m.e + m.E[1] 
             expr2 = copy.deepcopy(expr1)
             self.assertEqual( expr1(), 11 )
@@ -4189,12 +4190,12 @@ class TestCloneExpression(unittest.TestCase):
             self.assertNotEqual( id(expr1.arg(0)), id(expr2.arg(0)) )
             self.assertNotEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             #
-            total = EXPR.clone_counter.count - start
-            self.assertEqual(total, 1)
+            total = counter.count - start
+            self.assertEqual(total, 0)
 
     def test_SumExpression(self):
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             expr1 = self.m.a + self.m.b
             expr2 = expr1.clone()
             self.assertEqual( expr1(), 15 )
@@ -4211,31 +4212,30 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             self.assertEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
             
     def test_SumExpressionX(self):
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             expr1 = self.m.a + self.m.b
             expr2 = copy.deepcopy(expr1)
             self.assertEqual( expr1(), 15 )
             self.assertEqual( expr2(), 15 )
             self.assertNotEqual( id(expr1),       id(expr2) )
             self.assertNotEqual( id(expr1._args_), id(expr2._args_) )
-            # WEH - Why does this next test make sense?
-            self.assertEqual( id(expr1.arg(0)), id(expr2.arg(0)) )
-            self.assertEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
+            self.assertNotEqual( id(expr1.arg(0)), id(expr2.arg(0)) )
+            self.assertNotEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             expr1 += self.m.b
             self.assertEqual( expr1(), 25 )
             self.assertEqual( expr2(), 15 )
             self.assertNotEqual( id(expr1),       id(expr2) )
             self.assertNotEqual( id(expr1._args_), id(expr2._args_) )
-            self.assertEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
-            self.assertEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
+            self.assertNotEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
+            self.assertNotEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             #
-            total = EXPR.clone_counter.count - start
-            self.assertEqual(total, 1)
+            total = counter.count - start
+            self.assertEqual(total, 0)
             
     def test_SumExpressionY(self):
         self.m = ConcreteModel()
@@ -4243,8 +4243,8 @@ class TestCloneExpression(unittest.TestCase):
         self.m.a = Var(A, initialize=5)
         self.m.b = Var(initialize=10)
 
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             expr1 = quicksum(self.m.a[i] for i in self.m.a)
             expr2 = copy.deepcopy(expr1)
             self.assertEqual( expr1(), 25 )
@@ -4259,12 +4259,12 @@ class TestCloneExpression(unittest.TestCase):
             self.assertNotEqual( id(expr1),        id(expr2) )
             self.assertNotEqual( id(expr1._args_), id(expr2._args_) )
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 0)
             
     def test_ProductExpression_mult(self):
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             #
             expr1 = self.m.a * self.m.b
             expr2 = expr1.clone()
@@ -4297,12 +4297,12 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual( id(expr1.arg(0)), id(expr2.arg(0)) )
             self.assertNotEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 2)
 
     def test_ProductExpression_div(self):
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             #
             expr1 = self.m.a / self.m.b
             expr2 = expr1.clone()
@@ -4335,12 +4335,12 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual( id(expr1.arg(0)), id(expr2.arg(0)) )
             self.assertNotEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 2)
 
     def test_sumOfExpressions(self):
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             #
             expr1 = self.m.a * self.m.b + self.m.a * self.m.a
             expr2 = expr1.clone()
@@ -4364,12 +4364,12 @@ class TestCloneExpression(unittest.TestCase):
             self.assertNotEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             self.assertNotEqual(id(expr1.arg(1)), id(expr2.arg(1)))
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
 
     def test_productOfExpressions(self):
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             #
             expr1 = (self.m.a + self.m.b) * (self.m.a + self.m.a)
             expr2 = expr1.clone()
@@ -4407,12 +4407,12 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1.nargs(), 2)
             self.assertEqual(expr2.nargs(), 2)
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
 
     def test_productOfExpressions_div(self):
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             #
             expr1 = (self.m.a + self.m.b) / (self.m.a + self.m.a)
             expr2 = expr1.clone()
@@ -4446,12 +4446,12 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1.nargs(), 2)
             self.assertEqual(expr2.nargs(), 2)
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
 
     def test_Expr_if(self):
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             #
             expr1 = EXPR.Expr_if(IF=self.m.a + self.m.b < 20, THEN=self.m.a, ELSE=self.m.b)
             expr2 = expr1.clone()
@@ -4465,13 +4465,13 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1._then(), expr2._then())
             self.assertEqual(expr1._else(), expr2._else())
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
 
     def test_getitem(self):
         # Testing cloning of the abs() function
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             #
             m = ConcreteModel()
             m.I = RangeSet(1,9)
@@ -4483,13 +4483,13 @@ class TestCloneExpression(unittest.TestCase):
             e_ = e.clone()
             self.assertEqual("x({I} + P({I} + 1)) + 3", str(e_))
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
 
     def test_other(self):
         # Testing cloning of the abs() function
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             #
             model = ConcreteModel()
             model.a = Var()
@@ -4502,13 +4502,13 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(type(e_.arg(2)), type(e.arg(2)))
             self.assertEqual(type(e_.arg(3)), type(e.arg(3)))
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
 
     def test_abs(self):
         # Testing cloning of the abs() function
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             #
             expr1 = abs(self.m.a)
             expr2 = expr1.clone()
@@ -4517,13 +4517,13 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr2(), value(self.m.a))
             self.assertEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
 
     def test_sin(self):
         # Testing cloning of intrinsic functions
-        with EXPR.clone_counter:
-            start = EXPR.clone_counter.count
+        with EXPR.clone_counter() as counter:
+            start = counter.count
             #
             expr1 = sin(self.m.a)
             expr2 = expr1.clone()
@@ -4532,7 +4532,7 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr2(), math.sin(value(self.m.a)))
             self.assertEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             #
-            total = EXPR.clone_counter.count - start
+            total = counter.count - start
             self.assertEqual(total, 1)
 
 
@@ -5850,7 +5850,7 @@ class TestNamedExpressionDuckTyping(unittest.TestCase):
         self.assertTrue(hasattr(obj, '_precedence'))
         self.assertTrue(hasattr(obj, '_to_string'))
         self.assertTrue(hasattr(obj, 'clone'))
-        self.assertTrue(hasattr(obj, 'construct_node'))
+        self.assertTrue(hasattr(obj, 'create_node_with_local_data'))
         self.assertTrue(hasattr(obj, 'is_constant'))
         self.assertTrue(hasattr(obj, 'is_fixed'))
         self.assertTrue(hasattr(obj, '_is_fixed'))
@@ -5991,6 +5991,25 @@ class WalkerTests(unittest.TestCase):
         self.assertEqual("0  <=  sin(x) + x*y + 3  <=  1", str(e))
         self.assertEqual("0  <=  sin(w[1]) + w[1]*w[2] + 3  <=  1", str(f))
 
+    def test_replacement_walker0(self):
+        M = ConcreteModel()
+        M.x = Var(range(3))
+        M.w = VarList()
+        M.z = Param(range(3), mutable=True)
+
+        e = sum_product(M.z, M.x)
+        self.assertIs(type(e), EXPR.LinearExpression)
+        walker = ReplacementWalkerTest1(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("z[0]*x[0] + z[1]*x[1] + z[2]*x[2]", str(e))
+        self.assertEqual("z[0]*w[1] + z[1]*w[2] + z[2]*w[3]", str(f))
+
+        e = 2*sum_product(M.z, M.x)
+        walker = ReplacementWalkerTest1(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("2*(z[0]*x[0] + z[1]*x[1] + z[2]*x[2])", str(e))
+        self.assertEqual("2*(z[0]*w[4] + z[1]*w[5] + z[2]*w[6])", str(f))
+
     def test_identify_components(self):
         M = ConcreteModel()
         M.x = Var()
@@ -6098,6 +6117,180 @@ class WalkerTests2(unittest.TestCase):
         f = walker.dfs_postorder_stack(e)
         self.assertEqual("0  <=  sin(x) + x*y + 3  <=  1", str(e))
         self.assertEqual("0  <=  sin(2*w[1]) + 2*w[1]*2*w[2] + 3  <=  1", str(f))
+
+    def test_replacement_walker5(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.w = VarList()
+        M.z = Param(mutable=True)
+
+        e = M.z*M.x
+        walker = ReplacementWalkerTest2(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertTrue(e.__class__ is EXPR.MonomialTermExpression)
+        self.assertTrue(f.__class__ is EXPR.ProductExpression)
+        self.assertEqual("z*x", str(e))
+        self.assertEqual("z*2*w[1]", str(f))
+
+    def test_replacement_walker0(self):
+        M = ConcreteModel()
+        M.x = Var(range(3))
+        M.w = VarList()
+        M.z = Param(range(3), mutable=True)
+
+        e = sum_product(M.z, M.x)
+        self.assertIs(type(e), EXPR.LinearExpression)
+        walker = ReplacementWalkerTest2(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("z[0]*x[0] + z[1]*x[1] + z[2]*x[2]", str(e))
+        self.assertEqual("z[0]*2*w[1] + z[1]*2*w[2] + z[2]*2*w[3]", str(f))
+
+        e = 2*sum_product(M.z, M.x)
+        walker = ReplacementWalkerTest2(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("2*(z[0]*x[0] + z[1]*x[1] + z[2]*x[2])", str(e))
+        self.assertEqual("2*(z[0]*2*w[4] + z[1]*2*w[5] + z[2]*2*w[6])", str(f))
+
+#
+# Replace all mutable parameters with variables
+#
+class ReplacementWalkerTest3(EXPR.ExpressionReplacementVisitor):
+
+    def __init__(self, model):
+        EXPR.ExpressionReplacementVisitor.__init__(self)
+        self.model = model
+
+    def visiting_potential_leaf(self, node):
+        if node.__class__ in (_ParamData, SimpleParam):
+            if id(node) in self.memo:
+                return True, self.memo[id(node)]
+            self.memo[id(node)] = 2*self.model.w.add()
+            return True, self.memo[id(node)]
+
+        if node.__class__ in nonpyomo_leaf_types or \
+            node.is_constant() or \
+            node.is_variable_type():
+            return True, node
+
+        return False, None
+
+
+class WalkerTests3(unittest.TestCase):
+
+    def test_replacement_walker1(self):
+        M = ConcreteModel()
+        M.x = Param(mutable=True)
+        M.y = Var()
+        M.w = VarList()
+
+        e = sin(M.x) + M.x*M.y + 3
+        walker = ReplacementWalkerTest3(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("sin(x) + x*y + 3", str(e))
+        self.assertEqual("sin(2*w[1]) + 2*w[1]*y + 3", str(f))
+
+    def test_replacement_walker2(self):
+        M = ConcreteModel()
+        M.x = Param(mutable=True)
+        M.w = VarList()
+
+        e = M.x
+        walker = ReplacementWalkerTest3(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("x", str(e))
+        self.assertEqual("2*w[1]", str(f))
+
+    def test_replacement_walker3(self):
+        M = ConcreteModel()
+        M.x = Param(mutable=True)
+        M.y = Var()
+        M.w = VarList()
+
+        e = sin(M.x) + M.x*M.y + 3 <= 0
+        walker = ReplacementWalkerTest3(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("sin(x) + x*y + 3  <=  0.0", str(e))
+        self.assertEqual("sin(2*w[1]) + 2*w[1]*y + 3  <=  0.0", str(f))
+
+    def test_replacement_walker4(self):
+        M = ConcreteModel()
+        M.x = Param(mutable=True)
+        M.y = Var()
+        M.w = VarList()
+
+        e = inequality(0, sin(M.x) + M.x*M.y + 3, 1)
+        walker = ReplacementWalkerTest3(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("0  <=  sin(x) + x*y + 3  <=  1", str(e))
+        self.assertEqual("0  <=  sin(2*w[1]) + 2*w[1]*y + 3  <=  1", str(f))
+
+    def test_replacement_walker5(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.w = VarList()
+        M.z = Param(mutable=True)
+
+        e = M.z*M.x
+        walker = ReplacementWalkerTest3(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertTrue(e.__class__ is EXPR.MonomialTermExpression)
+        self.assertTrue(f.__class__ is EXPR.ProductExpression)
+        self.assertTrue(f.arg(0).is_potentially_variable())
+        self.assertEqual("z*x", str(e))
+        self.assertEqual("2*w[1]*x", str(f))
+
+    def test_replacement_walker6(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.w = VarList()
+        M.z = Param(mutable=True)
+
+        e = (M.z*2)*3
+        walker = ReplacementWalkerTest3(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertTrue(not e.is_potentially_variable())
+        self.assertTrue(f.is_potentially_variable())
+        self.assertEqual("z*2*3", str(e))
+        self.assertEqual("2*w[1]*2*3", str(f))
+
+    def test_replacement_walker7(self):
+        M = ConcreteModel()
+        M.x = Var()
+        M.w = VarList()
+        M.z = Param(mutable=True)
+        M.e = Expression(expr=M.z*2)
+
+        e = M.x*M.e
+        self.assertTrue(e.arg(1).is_potentially_variable())
+        self.assertTrue(not e.arg(1).arg(0).is_potentially_variable())
+        self.assertEqual("x*(z*2)", str(e))
+        walker = ReplacementWalkerTest3(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertTrue(e.__class__ is EXPR.ProductExpression)
+        self.assertTrue(f.__class__ is EXPR.ProductExpression)
+        self.assertEqual(id(e), id(f))
+        self.assertTrue(f.arg(1).is_potentially_variable())
+        self.assertTrue(f.arg(1).arg(0).is_potentially_variable())
+        self.assertEqual("x*(2*w[1]*2)", str(f))
+
+    def test_replacement_walker0(self):
+        M = ConcreteModel()
+        M.x = Var(range(3))
+        M.w = VarList()
+        M.z = Param(range(3), mutable=True)
+
+        e = sum_product(M.z, M.x)
+        self.assertIs(type(e), EXPR.LinearExpression)
+        walker = ReplacementWalkerTest3(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("z[0]*x[0] + z[1]*x[1] + z[2]*x[2]", str(e))
+        self.assertEqual("2*w[1]*x[0] + 2*w[2]*x[1] + 2*w[3]*x[2]", str(f))
+
+        e = 2*sum_product(M.z, M.x)
+        walker = ReplacementWalkerTest3(M)
+        f = walker.dfs_postorder_stack(e)
+        self.assertEqual("2*(z[0]*x[0] + z[1]*x[1] + z[2]*x[2])", str(e))
+        self.assertEqual("2*(2*w[4]*x[0] + 2*w[5]*x[1] + 2*w[6]*x[2])", str(f))
 
 if __name__ == "__main__":
     unittest.main()

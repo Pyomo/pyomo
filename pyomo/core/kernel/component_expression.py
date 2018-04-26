@@ -147,7 +147,7 @@ class IIdentityExpression(NumericValue):
     def _is_fixed(self, values):
         return values[0]
 
-    def construct_node(self, values, memo=None):
+    def create_node_with_local_data(self, values, memo=None):
         """
         Construct an expression after constructing the
         contained expression.

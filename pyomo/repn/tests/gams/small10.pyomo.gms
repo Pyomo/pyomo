@@ -35,7 +35,7 @@ c11.. 0.0*x1*1.0 =e= 0.0 ;
 c12.. 0.0*power(x1, 2) =e= 0.0 ;
 c13.. 0.0*x1*1.0 =e= 0.0 ;
 c14.. 0.0*x1 =e= 0.0 ;
-c15.. GAMS_OBJECTIVE =e= x1 + 0.0*x1 + 0.0*x1 + 0.0*x1*x1 + x1*x1*0.0 + 0.0*power(x1, 2) ;
+c15.. GAMS_OBJECTIVE =e= x1 + 0.0*x1 + 0.0*x1 + x1*x1*0.0 + x1*x1*0.0 + 0.0*power(x1, 2) ;
 
 
 MODEL GAMS_MODEL /all/ ;

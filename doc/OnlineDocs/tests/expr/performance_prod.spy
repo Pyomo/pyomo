@@ -1,0 +1,12 @@
+M = ConcreteModel()
+M.x = Var(range(5))
+M.z = Var()
+
+# The product M.x[0] * M.x[1] * ... * M.x[4]
+e1 = prod(M.x[i] for i in M.x)
+
+# The product M.x[0]*M.z
+e2 = prod([M.x[0], M.z])
+
+# The product M.z*(M.x[0] + ... + M.x[4])
+e3 = prod([sum(M.x[i] for i in M.x), M.z])

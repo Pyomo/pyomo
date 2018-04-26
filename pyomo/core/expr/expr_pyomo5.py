@@ -25,7 +25,6 @@ __all__ = (
 'inequality',
 'decompose_term',
 'clone_counter',
-'clone_counter_context',
 'clone_expression',
 'evaluate_expression',
 'identify_components',
@@ -167,7 +166,7 @@ def initialize_expression_data():
     from pyomo.core.base.template_expr import TemplateExpressionError
 
 
-class clone_counter_context(object):
+class clone_counter(object):
     """ Context manager for counting cloning events.
 
     This context manager counts the number of times that the
@@ -187,12 +186,7 @@ class clone_counter_context(object):
     def count(self):
         """A property that returns the clone count value.
         """
-        return clone_counter_context._count
-
-#: A clone counter context manager object that simplifies the
-#: use of this context manager.  Specifically, different
-#: instances of this context manger are not necessary.
-clone_counter = clone_counter_context()
+        return clone_counter._count
 
 
 class nonlinear_expression(object):
@@ -582,9 +576,9 @@ class ExpressionReplacementVisitor(object):
 
     def construct_node(self, node, values):
         """
-        Call the expression construct_node() method.
+        Call the expression create_node_with_local_data() method.
         """
-        return node.construct_node( tuple(values), self.memo )
+        return node.create_node_with_local_data( tuple(values), self.memo )
 
     def dfs_postorder_stack(self, node):
         """
@@ -610,11 +604,16 @@ class ExpressionReplacementVisitor(object):
             The return value is determined by the :func:`finalize` function,
             which may be defined by the user.
         """
-        flag, value = self.visiting_potential_leaf(node)
-        if flag:
-            return value
-        #_stack = [ (node, self.children(node), 0, len(self.children(node)), [])]
-        _stack = [ (node, node._args_, 0, node.nargs(), [False])]
+        if node.__class__ is LinearExpression:
+            _argList                = [node.constant] + node.linear_coefs + node.linear_vars
+            _len                    = len(_argList)
+            _stack = [ (node, _argList, 0, _len, [False])]
+        else:
+            flag, value = self.visiting_potential_leaf(node)
+            if flag:
+                return value
+            #_stack = [ (node, self.children(node), 0, len(self.children(node)), [])]
+            _stack = [ (node, node._args_, 0, node.nargs(), [False])]
         #
         # Iterate until the stack is empty
         #
@@ -636,22 +635,34 @@ class ExpressionReplacementVisitor(object):
             while _idx < _len:
                 _sub = _argList[_idx]
                 _idx += 1
-                flag, value = self.visiting_potential_leaf(_sub)
-                if flag:
-                    if id(value) != id(_sub):
-                        _result[0] = True
-                    _result.append( value )
+                if _sub.__class__ is LinearExpression:
+                        #
+                        # Push an expression onto the stack
+                        #
+                        _stack.append( (_obj, _argList, _idx, _len, _result) )
+                        _obj                    = _sub
+                        #_argList                = self.children(_sub)
+                        _argList                = [_sub.constant] + _sub.linear_coefs + _sub.linear_vars
+                        _idx                    = 0
+                        _len                    = len(_argList)
+                        _result                 = [False]
                 else:
-                    #
-                    # Push an expression onto the stack
-                    #
-                    _stack.append( (_obj, _argList, _idx, _len, _result) )
-                    _obj                    = _sub
-                    #_argList                = self.children(_sub)
-                    _argList                = _sub._args_
-                    _idx                    = 0
-                    _len                    = _sub.nargs()
-                    _result                 = [False]
+                    flag, value = self.visiting_potential_leaf(_sub)
+                    if flag:
+                        if id(value) != id(_sub):
+                            _result[0] = True
+                        _result.append( value )
+                    else:
+                        #
+                        # Push an expression onto the stack
+                        #
+                        _stack.append( (_obj, _argList, _idx, _len, _result) )
+                        _obj                    = _sub
+                        #_argList                = self.children(_sub)
+                        _argList                = _sub._args_
+                        _idx                    = 0
+                        _len                    = _sub.nargs()
+                        _result                 = [False]
             #
             # Process the current node
             #
@@ -661,10 +672,26 @@ class ExpressionReplacementVisitor(object):
             # call the ExpressionReplacementVisitor.visit() function.
             #
             ans = self.visit(_obj, _result[1:])
-            if _result[0] and id(ans) == id(_obj):
-                ans = self.construct_node(_obj, _result[1:])
-            if _result[0] and ans.__class__ is MonomialTermExpression:
-                ans.__class__ = ProductExpression
+            if ans.is_named_expression_type():
+                _result[0] = False
+                assert(len(_result) == 2)
+                ans.expr = _result[1]
+            elif ans.__class__ is LinearExpression and _result[0]:
+                ans = _result[1]
+                nterms = (len(_result)-2)//2
+                for i in range(nterms):
+                    ans += _result[2+i]*_result[2+i+nterms]
+            elif _result[0]:
+                if id(ans) == id(_obj):
+                    ans = self.construct_node(_obj, _result[1:])
+                if ans.__class__ is MonomialTermExpression:
+                    if (not ans._args_[0].__class__ in native_numeric_types and ans._args_[0].is_potentially_variable) or \
+                       (ans._args_[1].__class__ in native_numeric_types or not ans._args_[1].is_potentially_variable()):
+                        ans.__class__ = ProductExpression
+                elif ans.__class__ in NPV_expression_types:
+                    # For simplicity, not-potentially-variable expressions are
+                    # replaced with their potentially variable counterparts.
+                    ans = ans.create_potentially_variable_object()
             if _stack:
                 if _result[0]:
                     _stack[-1][-1][0] = True
@@ -674,7 +701,6 @@ class ExpressionReplacementVisitor(object):
                 _stack[-1][-1].append( ans )
             else:
                 return self.finalize(ans)
-
 
 
 #-------------------------------------------------------
@@ -695,7 +721,7 @@ class _CloneVisitor(ExpressionValueVisitor):
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
-        return node.construct_node( tuple(values), self.memo )
+        return node.create_node_with_local_data( tuple(values), self.memo )
 
     def visiting_potential_leaf(self, node):
         """
@@ -757,7 +783,7 @@ def clone_expression(expr, memo=None, clone_leaves=True):
     Returns:
         The cloned expression.
     """
-    clone_counter_context._count += 1
+    clone_counter._count += 1
     if not memo:
         memo = {'__block_scope__': { id(None): False }}
     #
@@ -1411,7 +1437,7 @@ class ExpressionBase(NumericValue):
         """
         return clone_expression(self, memo=substitute, clone_leaves=False)
 
-    def __deepcopy__(self, memo):
+    def X__deepcopy__(self, memo):
         """
         Return a clone of the expression tree.
 
@@ -1426,20 +1452,18 @@ class ExpressionBase(NumericValue):
         """
         return clone_expression(self, memo=memo, clone_leaves=True)
 
-    def construct_node(self, args, memo):
+    def create_node_with_local_data(self, args, memo):
         """
         Construct a node using given arguments.
 
-        This class provides a consistent interface for constructing a
+        This method provides a consistent interface for constructing a
         node, which is used in tree visitor scripts.  In the simplest
         case, this simply returns::
 
-            self.__class__(args))
+            self.__class__(args)
 
-        But in general this constructs a copy of the current
-        expression object using local data as well as arguments
-        that represent the child nodes.   Thus, this method can be viewed
-        as a node-level clone method.
+        But in general this creates an expression object using local
+        data as well as arguments that represent the child nodes.
 
         Args:
             args (list): A list of child nodes for the new expression
@@ -1455,6 +1479,26 @@ class ExpressionBase(NumericValue):
             class.
         """
         return self.__class__(args)
+
+    def create_potentially_variable_object(self):
+        """
+        Create a potentially variable version of this object.
+
+        This method returns an object that is a potentially variable
+        version of the current object.  In the simplest
+        case, this simply sets the value of `__class__`:
+
+            self.__class__ = self.__class__.__mro__[1]
+
+        Note that this method is allowed to modify the current object
+        and return it.  But in some cases it may create a new 
+        potentially variable object.
+
+        Returns:
+            An object that is potentially variable.
+        """
+        self.__class__ = self.__class__.__mro__[1]
+        return self
 
     def is_constant(self):
         """Return True if this expression is an atomic constant
@@ -1555,11 +1599,10 @@ class ExpressionBase(NumericValue):
         Return the polynomial degree of the expression.
 
         Returns:
-            A nonnegative integer that is the polynomial degree of
-            the expression, if the expression is polynomial.  And
-            :const:`None` otherwise.
+            A non-negative integer that is the polynomial
+            degree if the expression is polynomial, or :const:`None` otherwise.
         """
-        return _polynomial_degree(self)
+        return _PolynomialDegreeVisitor().dfs_postorder_stack(self)
 
     def _compute_polynomial_degree(self, values):                          #pragma: no cover
         """
@@ -1682,7 +1725,7 @@ class ExternalFunctionExpression(ExpressionBase):
     def nargs(self):
         return len(self._args_)
 
-    def construct_node(self, args, memo):
+    def create_node_with_local_data(self, args, memo):
         return self.__class__(args, self._fcn)
 
     def __getstate__(self):
@@ -1909,7 +1952,7 @@ class RangedExpression(_LinearOperatorExpression):
     def nargs(self):
         return 3
 
-    def construct_node(self, args, memo):
+    def create_node_with_local_data(self, args, memo):
         return self.__class__(args, self._strict)
 
     def __getstate__(self):
@@ -1981,7 +2024,7 @@ class InequalityExpression(_LinearOperatorExpression):
     def nargs(self):
         return 2
 
-    def construct_node(self, args, memo):
+    def create_node_with_local_data(self, args, memo):
         return self.__class__(args, self._strict)
 
     def __getstate__(self):
@@ -2143,6 +2186,16 @@ class SumExpressionBase(_LinearOperatorExpression):
     def _precedence(self):
         return SumExpressionBase.PRECEDENCE
 
+    def getname(self, *args, **kwds):
+        return 'sum'
+
+
+class NPV_SumExpression(SumExpressionBase):
+    __slots__ = ()
+
+    def create_potentially_variable_object(self):
+        return SumExpression( self._args_ )
+
     def _apply_operation(self, result):
         l_, r_ = result
         return l_ + r_
@@ -2153,13 +2206,6 @@ class SumExpressionBase(_LinearOperatorExpression):
         if values[1][0] == '-':
             return "{0} {1}".format(values[0],values[1])
         return "{0} + {1}".format(values[0],values[1])
-
-    def getname(self, *args, **kwds):
-        return 'sum'
-
-
-class NPV_SumExpression(SumExpressionBase):
-    __slots__ = ()
 
     def is_potentially_variable(self):
         return False
@@ -2205,7 +2251,7 @@ class SumExpression(SumExpressionBase):
     def _apply_operation(self, result):
         return sum(result)
 
-    def construct_node(self, args, memo):
+    def create_node_with_local_data(self, args, memo):
         return self.__class__(list(args))
 
     def __getstate__(self):
@@ -2298,7 +2344,7 @@ class GetItemExpression(ExpressionBase):
     def nargs(self):
         return len(self._args_)
 
-    def construct_node(self, args, memo):
+    def create_node_with_local_data(self, args, memo):
         return self.__class__(args, self._base)
 
     def __getstate__(self):
@@ -2465,7 +2511,7 @@ class UnaryFunctionExpression(ExpressionBase):
     def nargs(self):
         return 1
 
-    def construct_node(self, args, memo):
+    def create_node_with_local_data(self, args, memo):
         return self.__class__(args, self._name, self._fcn)
 
     def __getstate__(self):
@@ -2516,7 +2562,7 @@ class AbsExpression(UnaryFunctionExpression):
     def __init__(self, arg):
         super(AbsExpression, self).__init__(arg, 'abs', abs)
 
-    def construct_node(self, args, memo):
+    def create_node_with_local_data(self, args, memo):
         return self.__class__(args)
 
 
@@ -2558,10 +2604,10 @@ class LinearExpression(ExpressionBase):
            state[i] = getattr(self,i)
         return state
 
-    def __deepcopy__(self, memo):
-        return self.construct_node(None, memo)
+    def X__deepcopy__(self, memo):
+        return self.create_node_with_local_data(None, memo)
 
-    def construct_node(self, args, memo):
+    def create_node_with_local_data(self, args, memo):
         repn = self.__class__()
         repn.constant = deepcopy(self.constant, memo=memo)
         repn.linear_coefs = deepcopy(self.linear_coefs, memo=memo)
@@ -2820,6 +2866,9 @@ def _decompose_linear_terms(expr, multiplier=1):
     elif expr.__class__ is ProductExpression:
         if expr._args_[0].__class__ in native_numeric_types or not expr._args_[0].is_potentially_variable():
             for term in _decompose_linear_terms(expr._args_[1], multiplier*expr._args_[0]):
+                yield term
+        elif expr._args_[1].__class__ in native_numeric_types or not expr._args_[1].is_potentially_variable():
+            for term in _decompose_linear_terms(expr._args_[0], multiplier*expr._args_[1]):
                 yield term
         else:
             raise LinearDecompositionError("Quadratic terms exist in a product expression.")
@@ -3085,7 +3134,7 @@ def _generate_mul_expression(etype, _self, _other):
                 else:
                     return MonomialTermExpression((NPV_ProductExpression((_other,tmp)), _self._args_[1]))
             elif _self.is_potentially_variable():
-                return ProductExpression((_other, _self))
+                return ProductExpression((_self, _other))
             return NPV_ProductExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
             if _self == 0:
@@ -3112,7 +3161,7 @@ def _generate_mul_expression(etype, _self, _other):
         elif _self.is_variable_type():
             return MonomialTermExpression((_other, _self))
         elif _self.is_potentially_variable():
-            return ProductExpression((_other, _self))
+            return ProductExpression((_self, _other))
         else:
             return NPV_ProductExpression((_self, _other))
 
@@ -3132,8 +3181,8 @@ def _generate_mul_expression(etype, _self, _other):
             elif _self.__class__ is MonomialTermExpression:
                 return MonomialTermExpression((_self._args_[0]/_other, _self._args_[1]))
             elif _self.is_potentially_variable():
-                return ProductExpression((1/_other, _self))
-            return NPV_ProductExpression((1/_other, _self))
+                return ProductExpression((_self, 1/_other))
+            return NPV_ProductExpression((_self, 1/_other))
         elif _self.__class__ in native_numeric_types:
             if _self == 0:
                 return 0
@@ -3147,7 +3196,9 @@ def _generate_mul_expression(etype, _self, _other):
         elif _other.is_potentially_variable():
             return ProductExpression((_self, ReciprocalExpression((_other,))))
         elif _self.is_potentially_variable():
-            return ProductExpression((NPV_ReciprocalExpression((_other,)), _self))
+            if _self.is_variable_type():
+                return MonomialTermExpression((NPV_ReciprocalExpression((_other,)), _self))
+            return ProductExpression((_self, NPV_ReciprocalExpression((_other,))))
         else:
             return NPV_ProductExpression((_self, NPV_ReciprocalExpression((_other,))))
 
@@ -3407,4 +3458,15 @@ def _generate_intrinsic_function_expression(arg, name, fcn):
         return UnaryFunctionExpression(arg, name, fcn)
     else:
         return NPV_UnaryFunctionExpression(arg, name, fcn)
+
+
+NPV_expression_types = set(
+   [NPV_NegationExpression,
+    NPV_ExternalFunctionExpression,
+    NPV_PowExpression,
+    NPV_ProductExpression,
+    NPV_ReciprocalExpression,
+    NPV_SumExpression,
+    NPV_UnaryFunctionExpression,
+    NPV_AbsExpression])
 

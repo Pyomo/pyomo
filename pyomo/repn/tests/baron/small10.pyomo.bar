@@ -24,7 +24,7 @@ c12: 0.0 * x1 ^ 2 == 0;
 c13: 0.0 * x1 * 1.0 == 0;
 c14: 0.0 * x1 == 0;
 
-OBJ: minimize 1.0 * x1 + 0.0 * x1 + 0.0 * x1 + 0.0 * x1 * x1 + x1 * x1 * 0.0 + 0.0 * x1 ^ 2;
+OBJ: minimize 1.0 * x1 + 0.0 * x1 + 0.0 * x1 + x1 * x1 * 0.0 + x1 * x1 * 0.0 + 0.0 * x1 ^ 2;
 
 STARTING_POINT{
 ONE_VAR_CONST__: 1;

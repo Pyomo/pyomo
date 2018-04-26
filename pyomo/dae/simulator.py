@@ -138,7 +138,7 @@ def _check_negationexpression(expr, i):
     if type(arg) is EXPR.GetItemExpression and type(arg._base) is DerivativeVar:
         return [arg, - expr.arg(1-i)]
 
-    if type(arg) is _ProductExpression:
+    if type(arg) is EXPR.ProductExpression:
         lhs = arg.arg(0)
         rhs = arg.arg(1)
 
@@ -148,41 +148,6 @@ def _check_negationexpression(expr, i):
             return None
 
         return [rhs, - expr.arg(1-i)/lhs]
-
-    return None
-
-
-
-def _check_sumexpression(expr, i):
-    """
-    Accepts an equality expression and an index value. Checks the
-    Sum expression at expr.arg(i) to see if it contains a
-    :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>`. If so, return the
-    GetItemExpression for the
-    :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>` and the RHS. If not,
-    return None.
-    """
-    sumexp = expr.arg(i)
-    items = list(sumexp.args)
-    coefs = sumexp._coef
-    dv = None
-    dvcoef = 1
-
-    for idx, item in enumerate(items):
-        if type(item) is EXPR.GetItemExpression and \
-           type(item._base) is DerivativeVar:
-            dv = item
-            dvcoef = coefs[idx]
-            items = items[0:idx] + items[idx + 1:]
-            coefs = coefs[0:idx] + coefs[idx + 1:]
-            break
-
-    if dv is not None:
-        RHS = expr.arg(i - 1)
-        for idx, item in enumerate(items):
-            RHS -= coefs[idx] * item
-        RHS = RHS / dvcoef
-        return [dv, RHS]
 
     return None
 
@@ -573,7 +538,7 @@ class Simulator:
 
                 # Case 9: RHS = - dxdt[t]
                 if args is None:
-                    if type(tempexp.arg(0)) is EXPR.NegationExpression:
+                    if type(tempexp.arg(1)) is EXPR.NegationExpression:
                         args = _check_negationexpression(tempexp, 1)
 
 
