@@ -62,6 +62,8 @@ class Test(unittest.TestCase):
             del sys.modules["reference_test_scenario_tree_model"]
         if "ScenarioStructure" in sys.modules:
             del sys.modules["ScenarioStructure"]
+        if "both_callbacks" in sys.modules:
+            del sys.modules["both_callbacks"]
 
     def _get_testfname_prefix(self):
         class_name, test_name = self.id().split('.')[-2:]
@@ -666,6 +668,39 @@ class Test(unittest.TestCase):
             self._check_factory(factory)
         self.assertEqual(factory._closed, True)
         self.assertEqual(len(factory._archives), 0)
+
+    # model: name of .py file with model callback
+    # scenario_tree: name of same .py file with scenario tree callback
+    @unittest.skipIf(not has_networkx, "Requires networkx module")
+    def test_init21(self):
+        self.assertTrue("both_callbacks" not in sys.modules)
+        with ScenarioTreeInstanceFactory(
+                model=join(testdatadir,
+                           "both_callbacks.py"),
+                scenario_tree=join(testdatadir,
+                                   "both_callbacks.py")) as factory:
+            self.assertEqual(len(factory._archives), 0)
+            self.assertTrue(factory.model_directory() is not None)
+            self.assertTrue(factory.scenario_tree_directory() is not None)
+            self._check_factory(factory)
+        self.assertEqual(len(factory._archives), 0)
+        self.assertTrue("both_callbacks" in sys.modules)
+
+    # model: name of .py file with model callback
+    # scenario_tree: None (which implies the model filename)
+    @unittest.skipIf(not has_networkx, "Requires networkx module")
+    def test_init22(self):
+        self.assertTrue("both_callbacks" not in sys.modules)
+        with ScenarioTreeInstanceFactory(
+                model=join(testdatadir,
+                           "both_callbacks.py"),
+                scenario_tree=None) as factory:
+            self.assertEqual(len(factory._archives), 0)
+            self.assertTrue(factory.model_directory() is not None)
+            self.assertTrue(factory.scenario_tree_directory() is not None)
+            self._check_factory(factory)
+        self.assertEqual(len(factory._archives), 0)
+        self.assertTrue("both_callbacks" in sys.modules)
 
 Test = unittest.category('smoke','nightly','expensive')(Test)
 

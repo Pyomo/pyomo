@@ -44,7 +44,9 @@ _packages = [
 _optional_packages = set([
     'pyomo.contrib.example',
     'pyomo.contrib.preprocessing',
-    'pyomo.contrib.gdpopt'])
+    'pyomo.contrib.gdpopt',
+    'pyomo.contrib.trustregion',
+])
 
 
 def _import_packages():
@@ -91,4 +93,7 @@ _PG.pop_env()
 # Expose the symbols from pyomo.core
 #
 from pyomo.core import *
-from pyomo.opt import SolverFactory, SolverManagerFactory, UnknownSolver
+from pyomo.opt import (
+    SolverFactory, SolverManagerFactory, UnknownSolver,
+    TerminationCondition, SolverStatus,
+)

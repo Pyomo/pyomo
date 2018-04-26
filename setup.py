@@ -39,7 +39,7 @@ def read(*rnames):
     return open(os.path.join(os.path.dirname(__file__), *rnames)).read()
 
 requires = [
-    'PyUtilib>=5.6.2',
+    'PyUtilib>=5.6.3',
     'appdirs',
     'ply',
     'six>=1.4',
@@ -62,7 +62,7 @@ setup(name='Pyomo',
       #     pyomo/pyomo/version/__init__.py
       #     pyomo/RELEASE.txt
       #
-      version='5.5.0',
+      version='5.5.1',
       maintainer='William E. Hart',
       maintainer_email='wehart@sandia.gov',
       url='http://pyomo.org',
@@ -81,7 +81,6 @@ setup(name='Pyomo',
         'Operating System :: Unix',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
@@ -95,6 +94,7 @@ setup(name='Pyomo',
       packages=packages,
       keywords=['optimization'],
       install_requires=requires,
+      python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
       entry_points="""
         [console_scripts]
         runbenders=pyomo.pysp.benders:Benders_main
