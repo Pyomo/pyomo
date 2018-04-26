@@ -22,9 +22,9 @@ except ImportError:
     from urllib import pathname2url as pathname2url
 
 
-if sys.version_info < (2, 6):
+if sys.version_info < (2, 7):
     print('ERROR: %s' % sys.exc_info()[1])
-    print('ERROR: This script requires Python 2.6 or greater.')
+    print('ERROR: This script requires Python 2.7 or greater.')
     sys.exit(1)
 
 #
