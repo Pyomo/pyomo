@@ -20,10 +20,10 @@ matrix:
     #- python: '3.6'
     #  env:                             CATEGORY="parallel" EXTRAS="yes"
     #
-    - python: pypy2.7
+    - python: pypy2.7-5.8.0
       env:                             CATEGORY="nightly"
-      sudo: required
-      group: edge
+      sudo: false
+      dist: trusty
     - python: pypy2.7
       env:                             CATEGORY="nightly" EXTRAS="yes"
     - python: pypy3.5
