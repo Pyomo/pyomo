@@ -15,21 +15,21 @@ matrix:
     - python: '3.6'
       env:                             CATEGORY="nightly"  EXTRAS="yes"
     #
-    # NOTE: EXTRAS is not yet supported on Python 3.6.  Until it is,
-    #   parallel tests will be restricted to Python 3.5
     - python: '2.7'
       env:                             CATEGORY="parallel" EXTRAS="yes"
-    - python: '3.5'
+    - python: '3.6'
       env:                             CATEGORY="parallel" EXTRAS="yes"
     #
-    #- python: pypy
-    #  env:                             CATEGORY="nightly"
+    - python: pypy
+      env:                             CATEGORY="nightly"
+    - python: pypy
+      env:                             CATEGORY="nightly" EXTRAS="yes"
+    - python: pypy3
+      env:                             CATEGORY="nightly"
+    - python: pypy3
+      env:                             CATEGORY="nightly" EXTRAS="yes"
     #- python: '2.7'
     #  env: PYRO="Pyro" JYTHON="org.python:jython-installer:2.7.0"
-    #- python: pypy
-    #  env: PYRO="Pyro"  YAML="pyyaml"
-    #- python: pypy3
-    #  env: PYRO="Pyro4" YAML="pyyaml"
 
 
 install:
