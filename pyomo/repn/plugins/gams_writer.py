@@ -66,12 +66,21 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
                 tmp.append(val)
 
         if node.__class__ is EXPR.PowExpression:
-            return "power({0}, {1})".format(tmp[0], tmp[1])
+            #
+            # If the exponent is a positive integer, use the power() function.
+            # Otherwise, use the ** operator.
+            #
+            exponent = node.arg(1)
+            if (exponent.__class__ in native_numeric_types and
+                    exponent == int(exponent)):
+                return "power({0}, {1})".format(tmp[0], tmp[1])
+            else:
+                return "{0} ** {1}".format(tmp[0], tmp[1])
         else:
             return node._to_string(tmp, None, self.smap, True)
 
     def visiting_potential_leaf(self, node):
-        """ 
+        """
         Visiting a potential leaf.
 
         Return True if the node is not expanded.
