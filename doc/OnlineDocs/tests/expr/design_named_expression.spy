@@ -1,0 +1,7 @@
+M = ConcreteModel()
+M.v = Var()
+M.w = Var()
+
+M.e = Expression(expr=2*M.v)
+f = M.e + 3                     # f == 2*v + 3
+M.e += M.w                      # f == 2*v + 3 + w

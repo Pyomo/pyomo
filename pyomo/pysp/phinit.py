@@ -1127,10 +1127,8 @@ def run_ph(options, ph):
             # ef solve that is about to occur.
             for instance in ph._instances.values():
                 for block in instance.block_data_objects(active=True):
-                    block._gen_obj_ampl_repn = True
-                    block._gen_con_ampl_repn = True
-                    block._gen_obj_canonical_repn = True
-                    block._gen_con_canonical_repn = True
+                    block._gen_obj_repn = True
+                    block._gen_con_repn = True
 
         ph_solver_manager = ph._solver_manager
         ph._solver_manager = None

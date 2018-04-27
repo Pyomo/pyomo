@@ -9,15 +9,16 @@
 #  ___________________________________________________________________________
 
 from pyomo.util.plugin import alias
+from pyomo.core.expr.current import ProductExpression, PowExpression
 from pyomo.core import Binary, value, as_numeric
 from pyomo.core.base import Transformation, Var, Constraint, ConstraintList, Block, RangeSet
-from pyomo.core.base.expr import _ProductExpression, _PowExpression
 from pyomo.core.base.var import _VarData
 
 from six import iteritems
 
 import logging
 logger = logging.getLogger(__name__)
+
 
 class RadixLinearization(Transformation):
     """
@@ -239,9 +240,9 @@ class RadixLinearization(Transformation):
         return _w
 
     def _collect_bilinear(self, expr, bilin, quad):
-        if not expr.is_expression():
+        if not expr.is_expression_type():
             return
-        if type(expr) is _ProductExpression:
+        if type(expr) is ProductExpression:
             if len(expr._numerator) != 2:
                 for e in expr._numerator:
                     self._collect_bilinear(e, bilin, quad)
@@ -255,11 +256,11 @@ class RadixLinearization(Transformation):
             else:
                 bilin.append( (expr, expr._numerator[0], expr._numerator[1]) )
             return
-        if type(expr) is _PowExpression and value(expr._args[1]) == 2:
+        if type(expr) is PowExpression and value(expr._args[1]) == 2:
             # Note: directly testing the value of the exponent above is
             # safe: we have already verified that this expression is
             # polynominal, so the exponent must be constant.
-            tmp = _ProductExpression()
+            tmp = ProductExpression()
             tmp._numerator = [ expr._args[0], expr._args[0] ]
             tmp._denominator = []
             expr._args = (tmp, as_numeric(1))

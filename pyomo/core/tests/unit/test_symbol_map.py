@@ -2,7 +2,7 @@ import pickle
 
 import pyutilib.th as unittest
 import pyomo.environ
-from pyomo.core.kernel.symbol_map import SymbolMap
+from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.kernel.component_variable import variable
 
 class TestSymbolMap(unittest.TestCase):
@@ -10,8 +10,7 @@ class TestSymbolMap(unittest.TestCase):
     def test_no_labeler(self):
         s = SymbolMap()
         v = variable()
-        with self.assertRaises(RuntimeError):
-            s.getSymbol(v)
+        self.assertEquals(str(v), s.getSymbol(v))
 
     def test_existing_alias(self):
         s = SymbolMap()

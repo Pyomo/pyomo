@@ -87,7 +87,7 @@ class _ComponentBase(object):
         # copy.
         #
         # Nominally, expressions only point to ComponentData
-        # derivatives.  However, with the developemtn of Expression
+        # derivatives.  However, with the development of Expression
         # Templates (and the corresponding _GetItemExpression object),
         # expressions can refer to container (non-Simple) components, so
         # we need to override __deepcopy__ for both Component and
@@ -429,11 +429,14 @@ class Component(_ComponentBase):
         """Return the component name"""
         return self.name
 
-    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
-        """Write the component name to a buffer"""
-        if ostream is None:
-            ostream = sys.stdout
-        ostream.write(self.__str__())
+    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
+        """Return the component name"""
+        if compute_values:
+            try:
+                return str(self())
+            except:
+                pass
+        return self.name
 
     def getname(self, fully_qualified=False, name_buffer=None):
         """
@@ -712,17 +715,22 @@ class ComponentData(_ComponentBase):
         """Return a string with the component name and index"""
         return self.name
 
-    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
+    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         """
-        Write the component name and index to a buffer,
+        Return a string representation of this component,
         applying the labeler if passed one.
         """
-        if ostream is None:
-            ostream = sys.stdout
+        if compute_values:
+            try:
+                return str(self())
+            except:
+                pass
+        if smap:
+            return smap.getSymbol(self, labeler)
         if labeler is not None:
-            ostream.write(labeler(self))
+            return labeler(self)
         else:
-            ostream.write(self.__str__())
+            return self.__str__()
 
     def getname(self, fully_qualified=False, name_buffer=None):
         """Return a string with the component name and index"""

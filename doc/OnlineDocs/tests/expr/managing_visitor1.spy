@@ -1,0 +1,12 @@
+from pyomo.core.expr import current as EXPR
+
+class SizeofVisitor(EXPR.SimpleExpressionVisitor):
+
+    def __init__(self):
+        self.counter = 0
+
+    def visit(self, node):
+        self.counter += 1
+
+    def finalize(self):
+        return self.counter

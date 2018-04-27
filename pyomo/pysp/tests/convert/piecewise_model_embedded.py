@@ -27,7 +27,7 @@ def create_embedded():
     model.StageCost = aml.Expression([1,2])
     model.StageCost.add(1, model.fx)
     model.StageCost.add(2, -model.fz + model.r + model.d1)
-    model.o = aml.Objective(expr=aml.summation(model.StageCost))
+    model.o = aml.Objective(expr=aml.sum_product(model.StageCost))
 
     model.c_first_stage = aml.Constraint(expr= model.x >= 0)
 

@@ -226,3 +226,8 @@ class TestDisjunct(unittest.TestCase):
         self.assertFalse(m.d.disjuncts[0].indicator_var.is_fixed())
         self.assertFalse(m.d.disjuncts[1].indicator_var.is_fixed())
         self.assertFalse(m.d.disjuncts[2].indicator_var.is_fixed())
+
+
+if __name__ == '__main__':
+    unittest.main()
+

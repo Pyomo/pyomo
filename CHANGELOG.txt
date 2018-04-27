@@ -11,6 +11,7 @@ Current Development
 - Wrap Vars in value() for assignment to numpy vectors (#436)
 - Adding TerminationCondition and SolverStatus to pyomo.environ (#429)
 - Resolved problems with ExternalFunctions with fixed arguments (#442)
+- Adding the Pyomo5 expression system, which supports PyPy (#272)
 
 -------------------------------------------------------------------------------
 Pyomo 5.5
@@ -69,6 +70,7 @@ Pyomo 5.4.1
 Pyomo 5.4
 -------------------------------------------------------------------------------
 
+=======
 - Remove checks for is_indexed from PersistentSolver methods (#366)
 - GDP rewrite (#354)
 - Updated gdp.chull to handle named expressions (#318)

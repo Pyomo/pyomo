@@ -18,9 +18,9 @@ from ctypes import (
     Structure, POINTER, CFUNCTYPE, cdll, byref,
     c_int, c_long, c_ulong, c_double, c_byte, c_char_p, c_void_p )
 
-from pyomo.core.base.numvalue import as_numeric
+from pyomo.core.expr.numvalue import as_numeric, native_types, NonNumericValue
+from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import Component
-from pyomo.core.base import expr as EXPR
 
 __all__  = ( 'ExternalFunction', )
 
@@ -31,7 +31,9 @@ except:
 
 logger = logging.getLogger('pyomo.core')
 
+
 class ExternalFunction(Component):
+
     def __new__(cls, *args, **kwds):
         if cls != ExternalFunction:
             return super(ExternalFunction, cls).__new__(cls)
@@ -54,11 +56,32 @@ class ExternalFunction(Component):
         self._index = None
 
     def __call__(self, *args):
-        idxs = reversed(six.moves.xrange(len(args)))
-        for i in idxs:
-            if type(args[i]) is types.GeneratorType:
-                args = args[:i] + tuple(args[i]) + args[i+1:]
-        return EXPR._ExternalFunctionExpression(self, args)
+        args_ = []
+        for arg in args:
+            if type(arg) is types.GeneratorType:
+                args_.extend(val for val in arg)
+            else:
+                args_.append(arg)
+        #
+        # Loop and do two thing:
+        #   1. Wrap non-numeric arguments
+        #   2. See if we have a potentially variable argument
+        #
+        pv = False
+        for i,arg in enumerate(args_):
+            try:
+                # Q: Is there a better way to test if a value is an object
+                #    not in native_types and not a standard expression type?
+                if arg.__class__ in native_types or arg.is_expression_type():
+                    pass
+                if not arg.__class__ in native_types and arg.is_potentially_variable():
+                    pv = True
+            except AttributeError:    
+                args_[i] = NonNumericValue(arg)
+        #
+        if pv:
+            return EXPR.ExternalFunctionExpression(args_, self)
+        return EXPR.NPV_ExternalFunctionExpression(args_, self)
 
     def evaluate(self, args):
         raise NotImplementedError(
@@ -66,6 +89,7 @@ class ExternalFunction(Component):
 
 
 class AMPLExternalFunction(ExternalFunction):
+
     def __init__(self, *args, **kwds):
         if args:
             raise ValueError(
@@ -86,8 +110,14 @@ class AMPLExternalFunction(ExternalFunction):
                 "external library %s.\n\tAvailable functions: (%s)"
                 % ( self._function, self._library,
                     ', '.join(self._known_functions.keys()) ) )
-
-        arglist = _ARGLIST( *args )
+        #
+        args_ = []
+        for arg in args:
+            if arg.__class__ is NonNumericValue:
+                args_.append(arg.value)
+            else:
+                args_.append(arg)
+        arglist = _ARGLIST( *args_ )
         fcn = self._known_functions[self._function][0]
         return fcn(byref(arglist))
 
@@ -163,11 +193,17 @@ class PythonCallbackFunction(ExternalFunction):
     def evaluate(self, args):
         if args.__class__ is types.GeneratorType:
             args = tuple(args)
-        _id = args[0]
+        args_ = []
+        for arg in args:
+            if arg.__class__ is NonNumericValue:
+                args_.append(arg.value)
+            else:
+                args_.append(arg)
+        _id = args_[0]
         if _id != self._fcn_id:
             raise RuntimeError(
                 "PythonCallbackFunction called with invalid Global ID" )
-        return self._fcn(*args[1:])
+        return self._fcn(*args_[1:])
 
 
 class _ARGLIST(Structure):

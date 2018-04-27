@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.kernel as pmo
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, ConstraintList, Set, Integers, IntegerInterval, summation, Block
+from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, ConstraintList, Set, Integers, IntegerInterval, sum_product, Block
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 @register_model
@@ -60,8 +60,8 @@ class MILP_unused_vars(_BaseTestModel):
 
         model.obj = Objective(expr= model.x + \
                                     model.x_initialy_stale + \
-                                    summation(model.X) + \
-                                    summation(model.X_initialy_stale))
+                                    sum_product(model.X) + \
+                                    sum_product(model.X_initialy_stale))
 
         model.c = ConstraintList()
         model.c.add( model.x          >= 1 )

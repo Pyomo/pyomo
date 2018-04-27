@@ -122,7 +122,7 @@ install:
   #
   # Clone but don't install pyomo-model-libraries
   #
-  - git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
+  - git clone -b expr_dev --quiet https://github.com/Pyomo/pyomo-model-libraries.git
   #
   # Install PyUtilib (master branch)
   #
@@ -163,7 +163,8 @@ script:
   - test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
 
   # Run documentation tests
-  - nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
+  - cd doc/OnlineDocs; make doctests -d; cd ../..
+  # nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
 
 
 after_success:

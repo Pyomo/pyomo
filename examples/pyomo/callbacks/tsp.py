@@ -70,7 +70,7 @@ def pyomo_create_model(options=None, model_options=None):
     #
     #
     # Minimize tour length
-    model.tour_length = Objective(expr=summation(model.d, model.Z))
+    model.tour_length = Objective(expr=sum_product(model.d, model.Z))
     #
     # Each vertex has degree 2
     def Degrees_rule(model, i):

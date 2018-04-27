@@ -10,11 +10,11 @@
 
 2 Constraint Declarations
     c1 : Size=1, Index=None, Active=True
-        Key  : Lower : Body       : Upper : Active
-        None :  -Inf :  - x - s.y :  -3.0 :   True
+        Key  : Lower : Body      : Upper : Active
+        None :  -Inf : - x - s.y :  -3.0 :   True
     c2 : Size=1, Index=None, Active=True
-        Key  : Lower : Body           : Upper : Active
-        None : -10.0 :  - 3*x + 2*s.y :  +Inf :   True
+        Key  : Lower : Body         : Upper : Active
+        None : -10.0 : -3*x + 2*s.y :  +Inf :   True
 
 1 SubModel Declarations
     s : Size=1, Index=None, Active=True
@@ -30,8 +30,8 @@
 
         2 Constraint Declarations
             c1 : Size=1, Index=None, Active=True
-                Key  : Lower : Body                   : Upper : Active
-                None :  -Inf :  - 2*x + s.y - 2*s.s.z :  -1.0 :   True
+                Key  : Lower : Body                 : Upper : Active
+                None :  -Inf : -2*x + s.y - 2*s.s.z :  -1.0 :   True
             c2 : Size=1, Index=None, Active=True
                 Key  : Lower : Body                : Upper : Active
                 None :  -Inf : 2*x + s.y + 4*s.s.z :  14.0 :   True

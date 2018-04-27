@@ -2,11 +2,19 @@
 
 import pyutilib.th as unittest
 
-from pyomo.core.base.expr import identify_variables
+from pyomo.core.expr.current import identify_variables
 from pyomo.environ import *
 from pyomo.opt import check_available_solvers
-from pyomo.contrib.trustregion.PyomoInterface import *
 
+try:
+    import numpy
+    numpy_available = True
+    from pyomo.contrib.trustregion.PyomoInterface import *
+except:
+    numpy_available = False
+
+
+@unittest.skipIf(numpy_available==False, "Skipping pyomo.contrib.trustregion tests because numpy is not installed.")
 class TestPyomoInterfaceInitialization(unittest.TestCase):
     def setUp(self):
         m = ConcreteModel()

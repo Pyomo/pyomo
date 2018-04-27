@@ -23,7 +23,7 @@ from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import target_list
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
-from pyomo.repn import LinearCanonicalRepn, generate_canonical_repn
+from pyomo.repn import generate_standard_repn
 from pyomo.util.config import ConfigBlock, ConfigValue
 from pyomo.util.modeling import unique_component_name
 from pyomo.util.plugin import alias
@@ -643,18 +643,18 @@ class BigM_Transformation(Transformation):
 
     def _estimate_M(self, expr, name):
         # Calculate a best guess at M
-        repn = generate_canonical_repn(expr)
+        repn = generate_standard_repn(expr)
         M = [0, 0]
 
-        if isinstance(repn, LinearCanonicalRepn):
+        if not repn.is_nonlinear():
             if repn.constant is not None:
                 for i in (0, 1):
                     if M[i] is not None:
                         M[i] += repn.constant
 
-            for i, coef in enumerate(repn.linear or []):
-                var = repn.variables[i]
-                coef = repn.linear[i]
+            for i, coef in enumerate(repn.linear_coefs or []):
+                var = repn.linear_vars[i]
+                coef = repn.linear_coefs[i]
                 bounds = (value(var.lb), value(var.ub))
                 for i in (0, 1):
                     # reverse the bounds if the coefficient is negative

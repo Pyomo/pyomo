@@ -231,7 +231,7 @@ class SPSolver(object):
                         for id_ in tree_obj_solution:
                             var = ComponentUID(id_).\
                                   find_component(reference_model)
-                            if not var.is_expression():
+                            if not var.is_expression_type():
                                 var.value = tree_obj_solution[id_]
                                 var.stale = False
                     results.xhat_loaded = True

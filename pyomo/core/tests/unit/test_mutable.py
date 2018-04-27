@@ -66,7 +66,7 @@ class TestMutable(unittest.TestCase):
         model.X = Var()
 
         def constraint_rule(m):
-            return m.Q <= m.X <= m.P
+            return (m.Q, m.X, m.P)
         model.C = Constraint(rule=constraint_rule)
 
         instance = model.create_instance()

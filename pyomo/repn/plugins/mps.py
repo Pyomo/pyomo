@@ -29,9 +29,7 @@ from pyomo.core.base import \
      Var, value,
      SOSConstraint, Objective,
      ComponentMap, is_fixed)
-from pyomo.repn import (generate_canonical_repn,
-                        canonical_degree,
-                        LinearCanonicalRepn)
+from pyomo.repn import generate_standard_repn
 
 logger = logging.getLogger('pyomo.core')
 
@@ -182,63 +180,34 @@ class ProblemWriter_mps(AbstractProblemWriter):
     def _extract_variable_coefficients(
             self,
             row_label,
-            canonical_repn,
+            repn,
             column_data,
             quadratic_data,
             variable_to_column):
 
-        # cache - this is referenced numerous times.
-        if isinstance(canonical_repn, LinearCanonicalRepn):
-            var_hashes = None # not needed
-        else:
-            var_hashes = canonical_repn[-1]
-
-        constant = None
         #
         # Linear
         #
-        if isinstance(canonical_repn, LinearCanonicalRepn):
-            constant = canonical_repn.constant
-            coefficients = canonical_repn.linear
-            if (coefficients is not None) and \
-               (len(coefficients) > 0):
-                variables = canonical_repn.variables
+        if len(repn.linear_coefs) > 0:
+            for vardata, coef in zip(repn.linear_vars, repn.linear_coefs):
+                self._referenced_variable_ids[id(vardata)] = vardata
+                column_data[variable_to_column[vardata]].append((row_label, coef))
 
-                # the 99% case is when the input instance is a linear
-                # canonical expression, so the exception should be rare.
-                for vardata, coef in zip(variables, coefficients):
-                    self._referenced_variable_ids[id(vardata)] = vardata
-                    column_data[variable_to_column[vardata]].append(
-                        (row_label, coef))
-        else:
-            if 0 in canonical_repn:
-                constant = canonical_repn[0][None]
-            if 1 in canonical_repn:
-                for var_hash, coef in iteritems(canonical_repn[1]):
-                    vardata = var_hashes[var_hash]
-                    self._referenced_variable_ids[id(vardata)] = vardata
-                    column_data[variable_to_column[vardata]].append(
-                        (row_label, coef))
-            #
-            # Quadratic
-            #
-            if 2 in canonical_repn:
-                quad_terms = []
-                for var_hash, coef in iteritems(canonical_repn[2]):
-                    varlist = [var_hashes[var] for var in var_hash]
-                    if len(varlist) == 1:
-                        quad_terms.append(((varlist[0], varlist[0]), coef))
-                    else:
-                        quad_terms.append((tuple(varlist), coef))
-                quadratic_data.append((row_label, quad_terms))
+        #
+        # Quadratic
+        #
+        if len(repn.quadratic_coefs) > 0:
+            quad_terms = []
+            for vardata, coef in zip(repn.quadratic_vars, repn.quadratic_coefs):
+                self._referenced_variable_ids[id(vardata[0])] = vardata[0]
+                self._referenced_variable_ids[id(vardata[1])] = vardata[1]
+                quad_terms.append( (vardata, coef) )
+            quadratic_data.append((row_label, quad_terms))
 
         #
         # Return the constant
         #
-        if constant is None:
-            constant = 0.0
-
-        return constant
+        return repn.constant
 
     def _printSOS(self,
                   symbol_map,
@@ -375,13 +344,13 @@ class ProblemWriter_mps(AbstractProblemWriter):
         onames = []
         for block in all_blocks:
 
-            gen_obj_canonical_repn = \
-                getattr(block, "_gen_obj_canonical_repn", True)
+            gen_obj_repn = \
+                getattr(block, "_gen_obj_repn", True)
 
             # Get/Create the ComponentMap for the repn
-            if not hasattr(block,'_canonical_repn'):
-                block._canonical_repn = ComponentMap()
-            block_canonical_repn = block._canonical_repn
+            if not hasattr(block,'_repn'):
+                block._repn = ComponentMap()
+            block_repn = block._repn
             for objective_data in block.component_data_objects(
                     Objective,
                     active=True,
@@ -414,19 +383,19 @@ class ProblemWriter_mps(AbstractProblemWriter):
                 output_file.write("ROWS\n")
                 output_file.write(" N  %s\n" % (objective_label))
 
-                if gen_obj_canonical_repn:
-                    canonical_repn = \
-                        generate_canonical_repn(objective_data.expr)
-                    block_canonical_repn[objective_data] = canonical_repn
+                if gen_obj_repn:
+                    repn = \
+                        generate_standard_repn(objective_data.expr)
+                    block_repn[objective_data] = repn
                 else:
-                    canonical_repn = block_canonical_repn[objective_data]
+                    repn = block_repn[objective_data]
 
-                degree = canonical_degree(canonical_repn)
+                degree = repn.polynomial_degree()
                 if degree == 0:
                     logger.warning("Constant objective detected, replacing "
                           "with a placeholder to prevent solver failure.")
                     force_objective_constant = True
-                elif (degree != 1) and (degree != 2):
+                elif degree is None:
                     raise RuntimeError(
                         "Cannot write legal MPS file. Objective '%s' "
                         "has nonlinear terms that are not quadratic."
@@ -434,7 +403,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
 
                 constant = extract_variable_coefficients(
                     objective_label,
-                    canonical_repn,
+                    repn,
                     column_data,
                     quadobj_data,
                     variable_to_column)
@@ -452,13 +421,13 @@ class ProblemWriter_mps(AbstractProblemWriter):
         def constraint_generator():
             for block in all_blocks:
 
-                gen_con_canonical_repn = \
-                    getattr(block, "_gen_con_canonical_repn", True)
+                gen_con_repn = \
+                    getattr(block, "_gen_con_repn", True)
 
                 # Get/Create the ComponentMap for the repn
-                if not hasattr(block,'_canonical_repn'):
-                    block._canonical_repn = ComponentMap()
-                block_canonical_repn = block._canonical_repn
+                if not hasattr(block,'_repn'):
+                    block._repn = ComponentMap()
+                block_repn = block._repn
 
                 for constraint_data in block.component_data_objects(
                         Constraint,
@@ -472,36 +441,33 @@ class ProblemWriter_mps(AbstractProblemWriter):
                         continue # non-binding, so skip
 
                     if constraint_data._linear_canonical_form:
-                        canonical_repn = constraint_data.canonical_form()
-                    elif isinstance(constraint_data, LinearCanonicalRepn):
-                        canonical_repn = constraint_data
+                        repn = constraint_data.canonical_form()
+                    elif gen_con_repn:
+                        repn = generate_standard_repn(constraint_data.body)
+                        block_repn[constraint_data] = repn
                     else:
-                        if gen_con_canonical_repn:
-                            canonical_repn = generate_canonical_repn(constraint_data.body)
-                            block_canonical_repn[constraint_data] = canonical_repn
-                        else:
-                            canonical_repn = block_canonical_repn[constraint_data]
+                        repn = block_repn[constraint_data]
 
-                    yield constraint_data, canonical_repn
+                    yield constraint_data, repn
 
         if row_order is not None:
             sorted_constraint_list = list(constraint_generator())
             sorted_constraint_list.sort(key=lambda x: row_order[x[0]])
             def yield_all_constraints():
-                for constraint_data, canonical_repn in sorted_constraint_list:
-                    yield constraint_data, canonical_repn
+                for constraint_data, repn in sorted_constraint_list:
+                    yield constraint_data, repn
         else:
             yield_all_constraints = constraint_generator
 
-        for constraint_data, canonical_repn in yield_all_constraints():
+        for constraint_data, repn in yield_all_constraints():
 
-            degree = canonical_degree(canonical_repn)
+            degree = repn.polynomial_degree()
 
             # Write constraint
             if degree == 0:
                 if skip_trivial_constraints:
                     continue
-            elif (degree != 1) and (degree != 2):
+            elif degree is None:
                 raise RuntimeError(
                     "Cannot write legal MPS file. Constraint '%s' "
                     "has nonlinear terms that are not quadratic."
@@ -520,7 +486,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
                 output_file.write(" E  %s\n" % (label))
                 offset = extract_variable_coefficients(
                     label,
-                    canonical_repn,
+                    repn,
                     column_data,
                     quadmatrix_data,
                     variable_to_column)
@@ -537,7 +503,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
                     output_file.write(" G  %s\n" % (label))
                     offset = extract_variable_coefficients(
                         label,
-                        canonical_repn,
+                        repn,
                         column_data,
                         quadmatrix_data,
                         variable_to_column)
@@ -556,7 +522,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
                     output_file.write(" L  %s\n" % (label))
                     offset = extract_variable_coefficients(
                         label,
-                        canonical_repn,
+                        repn,
                         column_data,
                         quadmatrix_data,
                         variable_to_column)

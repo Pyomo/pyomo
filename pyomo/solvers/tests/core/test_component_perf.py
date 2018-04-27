@@ -98,7 +98,7 @@ class TestConstraintPerformance(ComponentPerformanceBase, unittest.TestCase):
     @classmethod
     def _setup(self):
         self._create_model(Constraint,
-                         **{'rule': lambda m,i: 1 <= m.x <= 2})
+                         **{'rule': lambda m,i: (1, m.x, 2)})
 
 @unittest.category('performance')
 class TestObjectivePerformance(ComponentPerformanceBase, unittest.TestCase):
