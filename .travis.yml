@@ -20,13 +20,13 @@ matrix:
     - python: '3.6'
       env:                             CATEGORY="parallel" EXTRAS="yes"
     #
-    - python: pypy
+    - python: pypy2.7
       env:                             CATEGORY="nightly"
-    - python: pypy
+    - python: pypy2.7
       env:                             CATEGORY="nightly" EXTRAS="yes"
-    - python: pypy3
+    - python: pypy3.5
       env:                             CATEGORY="nightly"
-    - python: pypy3
+    - python: pypy3.5
       env:                             CATEGORY="nightly" EXTRAS="yes"
     #- python: '2.7'
     #  env: PYRO="Pyro" JYTHON="org.python:jython-installer:2.7.0"
