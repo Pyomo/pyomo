@@ -12,8 +12,10 @@
 # Test replace_power function in gams writer
 #
 
-
 import pyutilib.th as unittest
+from pyomo.core.base import NumericLabeler
+from pyomo.core.expr.symbol_map import SymbolMap
+from pyomo.core.expr import current as EXPR
 from pyomo.repn.plugins.gams_writer import replace_power
 from pyomo.environ import (ConcreteModel, Block, Var, Connector, Constraint,
                            Objective)
@@ -43,6 +45,18 @@ class GAMSTests(unittest.TestCase):
 
         line6 = "log( abc**2.0 )**4.5"
         self.assertTrue(replace_power(line6) == line6)
+
+    def test_power_function_to_string(self):
+        m = ConcreteModel()
+        m.x = Var()
+        lbl = NumericLabeler('x')
+        smap = SymbolMap(lbl)
+        self.assertEquals(EXPR.expression_to_string(
+            m.x ** -3, lbl, smap=smap), "power(x, -3)")
+        self.assertEquals(EXPR.expression_to_string(
+            m.x ** 0.33, smap=smap), "x ** 0.33")
+        self.assertEquals(EXPR.expression_to_string(
+            pow(m.x, 2), smap=smap), "power(x, 2)")
 
     def test_gams_connector_in_active_constraint(self):
         """Test connector in active constraint for GAMS writer."""
