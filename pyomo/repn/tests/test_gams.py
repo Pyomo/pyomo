@@ -51,11 +51,11 @@ class GAMSTests(unittest.TestCase):
         lbl = NumericLabeler('x')
         smap = SymbolMap(lbl)
         self.assertEquals(expression_to_string(
-            m.x ** -3, lbl, smap=smap), "power(x, -3)")
+            m.x ** -3, lbl, smap=smap), "power(x1, -3)")
         self.assertEquals(expression_to_string(
-            m.x ** 0.33, smap=smap), "x ** 0.33")
+            m.x ** 0.33, smap=smap), "x1 ** 0.33")
         self.assertEquals(expression_to_string(
-            pow(m.x, 2), smap=smap), "power(x, 2)")
+            pow(m.x, 2), smap=smap), "power(x1, 2)")
 
     def test_gams_connector_in_active_constraint(self):
         """Test connector in active constraint for GAMS writer."""
