@@ -1,35 +1,37 @@
 language: python
 matrix:
   include:
-    - python: '2.7'
-      env:                             CATEGORY="nightly"
-    - python: '3.6'
-      env:                             CATEGORY="nightly"
-    #
-    - python: '2.7'
-      env:                             CATEGORY="nightly"  EXTRAS="yes"  KEY_JOB="yes"
-    - python: '3.4'
-      env:                             CATEGORY="nightly"  EXTRAS="yes"
-    - python: '3.5'
-      env:                             CATEGORY="nightly"  EXTRAS="yes"
-    - python: '3.6'
-      env:                             CATEGORY="nightly"  EXTRAS="yes"
-    #
-    # NOTE: EXTRAS is not yet supported on Python 3.6.  Until it is,
-    #   parallel tests will be restricted to Python 3.5
-    - python: '2.7'
-      env:                             CATEGORY="parallel" EXTRAS="yes"
-    - python: '3.5'
-      env:                             CATEGORY="parallel" EXTRAS="yes"
-    #
-    #- python: pypy
+    #- python: '2.7'
     #  env:                             CATEGORY="nightly"
+    #- python: '3.6'
+    #  env:                             CATEGORY="nightly"
+    #
+    #- python: '2.7'
+    #  env:                             CATEGORY="nightly"  EXTRAS="yes"  KEY_JOB="yes"
+    #- python: '3.4'
+    #  env:                             CATEGORY="nightly"  EXTRAS="yes"
+    #- python: '3.5'
+    #  env:                             CATEGORY="nightly"  EXTRAS="yes"
+    #- python: '3.6'
+    #  env:                             CATEGORY="nightly"  EXTRAS="yes"
+    #
+    #- python: '2.7'
+    #  env:                             CATEGORY="parallel" EXTRAS="yes"
+    #- python: '3.6'
+    #  env:                             CATEGORY="parallel" EXTRAS="yes"
+    #
+    - python: pypy2.7-5.8.0
+      env:                             CATEGORY="nightly"
+      sudo: false
+      dist: trusty
+    - python: pypy2.7
+      env:                             CATEGORY="nightly" EXTRAS="yes"
+    - python: pypy3.5
+      env:                             CATEGORY="nightly"
+    - python: pypy3.5
+      env:                             CATEGORY="nightly" EXTRAS="yes"
     #- python: '2.7'
     #  env: PYRO="Pyro" JYTHON="org.python:jython-installer:2.7.0"
-    #- python: pypy
-    #  env: PYRO="Pyro"  YAML="pyyaml"
-    #- python: pypy3
-    #  env: PYRO="Pyro4" YAML="pyyaml"
 
 
 install:
