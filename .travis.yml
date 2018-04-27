@@ -1,27 +1,29 @@
 language: python
 matrix:
   include:
-    - python: '2.7'
-      env:                             CATEGORY="nightly"
-    - python: '3.6'
-      env:                             CATEGORY="nightly"
+    #- python: '2.7'
+    #  env:                             CATEGORY="nightly"
+    #- python: '3.6'
+    #  env:                             CATEGORY="nightly"
     #
-    - python: '2.7'
-      env:                             CATEGORY="nightly"  EXTRAS="yes"  KEY_JOB="yes"
-    - python: '3.4'
-      env:                             CATEGORY="nightly"  EXTRAS="yes"
-    - python: '3.5'
-      env:                             CATEGORY="nightly"  EXTRAS="yes"
-    - python: '3.6'
-      env:                             CATEGORY="nightly"  EXTRAS="yes"
+    #- python: '2.7'
+    #  env:                             CATEGORY="nightly"  EXTRAS="yes"  KEY_JOB="yes"
+    #- python: '3.4'
+    #  env:                             CATEGORY="nightly"  EXTRAS="yes"
+    #- python: '3.5'
+    #  env:                             CATEGORY="nightly"  EXTRAS="yes"
+    #- python: '3.6'
+    #  env:                             CATEGORY="nightly"  EXTRAS="yes"
     #
-    - python: '2.7'
-      env:                             CATEGORY="parallel" EXTRAS="yes"
-    - python: '3.6'
-      env:                             CATEGORY="parallel" EXTRAS="yes"
+    #- python: '2.7'
+    #  env:                             CATEGORY="parallel" EXTRAS="yes"
+    #- python: '3.6'
+    #  env:                             CATEGORY="parallel" EXTRAS="yes"
     #
     - python: pypy2.7
       env:                             CATEGORY="nightly"
+      sudo: required
+      group: edge
     - python: pypy2.7
       env:                             CATEGORY="nightly" EXTRAS="yes"
     - python: pypy3.5
