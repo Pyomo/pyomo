@@ -80,7 +80,7 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
             return node._to_string(tmp, None, self.smap, True)
 
     def visiting_potential_leaf(self, node):
-        """ 
+        """
         Visiting a potential leaf.
 
         Return True if the node is not expanded.
