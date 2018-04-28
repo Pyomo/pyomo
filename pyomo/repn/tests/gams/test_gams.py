@@ -165,7 +165,7 @@ class Test(unittest.TestCase):
 
         expr = log( M.abc**2.0 )**4.5
         self.assertEqual(str(expr), "log(abc**2.0)**4.5")
-        self.assertEqual(expression_to_string(expr, smap=smap), "power(log(power(abc, 2.0)), 4.5)")
+        self.assertEqual(expression_to_string(expr, smap=smap), "log(power(abc, 2.0)) ** 4.5")
 
 
 
