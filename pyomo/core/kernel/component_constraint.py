@@ -13,6 +13,7 @@ import pyutilib.math
 from pyomo.core.expr.numvalue import (ZeroConstant,
                                       is_constant,
                                       as_numeric,
+                                      native_types,
                                       potentially_variable,
                                       value,
                                       _sub)
@@ -78,8 +79,8 @@ class IConstraint(IComponent, _ActiveComponentMixin):
         """Compute the value of the body of this constraint."""
         if exception and (self.body is None):
             raise ValueError("constraint body is None")
-        elif self.body is None:
-            return None
+        elif self.body.__class__ in native_types:
+            return self.body
         return self.body(exception=exception)
 
     @property
@@ -187,9 +188,9 @@ class _MutableBoundsConstraintMixin(object):
             raise ValueError(
                 "The lb property can not be set "
                 "when the equality property is True.")
-        if lb is not None:
-            tmp = as_numeric(lb)
-            if tmp.is_potentially_variable():
+        if lb.__class__ not in native_types:
+            #tmp = as_numeric(lb)
+            if lb.is_potentially_variable():
                 raise ValueError(
                     "Constraint lower bounds must be "
                     "expressions restricted to data.")
@@ -205,9 +206,9 @@ class _MutableBoundsConstraintMixin(object):
             raise ValueError(
                 "The ub property can not be set "
                 "when the equality property is True.")
-        if ub is not None:
-            tmp = as_numeric(ub)
-            if tmp.is_potentially_variable():
+        if ub.__class__ not in native_types:
+            #tmp = as_numeric(ub)
+            if ub.is_potentially_variable():
                 raise ValueError(
                     "Constraint lower bounds must be "
                     "expressions restricted to data.")
@@ -231,8 +232,8 @@ class _MutableBoundsConstraintMixin(object):
                 "Constraint right-hand side can not "
                 "be assigned a value of None.")
         else:
-            tmp = as_numeric(rhs)
-            if tmp.is_potentially_variable():
+            #tmp = as_numeric(rhs)
+            if rhs.__class__ not in native_types and rhs.is_potentially_variable():
                 raise ValueError(
                     "Constraint right-hand side must be "
                     "expressions restricted to data.")
@@ -440,10 +441,10 @@ class constraint(_MutableBoundsConstraintMixin,
 
                 # assigning to the rhs property
                 # will set the equality flag to True
-                if (arg1 is None) or (not arg1.is_potentially_variable()):
+                if arg1.__class__ in native_types or (not arg1.is_potentially_variable()):
                     self.rhs = arg1
                     self.body = arg0
-                elif (arg0 is None) or (not arg0.is_potentially_variable()):
+                elif arg0.__class__ in native_types or (not arg0.is_potentially_variable()):
                     self.rhs = arg0
                     self.body = arg1
                 else:

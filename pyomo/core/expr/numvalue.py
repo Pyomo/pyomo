@@ -297,6 +297,9 @@ def update_KnownConstants(obj, val):
 
 
 def as_numeric(obj):
+    return obj
+
+def Xas_numeric(obj):
     """
     Verify that this obj is a NumericValue or intrinsic value.
     """

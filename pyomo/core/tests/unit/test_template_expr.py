@@ -386,7 +386,7 @@ class TestTemplateSubstitution(unittest.TestCase):
 
         self.assertEqual(
             str(E),
-            'dxdt[5,2]  ==  5.0*x[5,2]**2 + y**2' )
+            'dxdt[5,2]  ==  5*x[5,2]**2 + y**2' )
 
 if __name__ == "__main__":
     unittest.main()

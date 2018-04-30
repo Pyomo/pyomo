@@ -19,9 +19,9 @@
 2 Constraint Declarations
     con : Size=1, Index=None, Active=True
         Key  : Lower : Body : Upper : Active
-        None :   1.0 :    x :  +Inf :   True
+        None :     1 :    x :  +Inf :   True
     con2 : Size=1, Index=None, Active=True
         Key  : Lower : Body                        : Upper : Active
-        None :   4.0 : x_indexed[1] + x_indexed[2] :  +Inf :   True
+        None :     4 : x_indexed[1] + x_indexed[2] :  +Inf :   True
 
 6 Declarations: s x x_indexed obj con con2

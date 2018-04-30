@@ -49,13 +49,13 @@
         None : A + B :    c : A + B :   True
     c12 : Size=1, Index=None, Active=True
         Key  : Lower : Body  : Upper : Active
-        None :   0.0 : c - d :   0.0 :   True
+        None :     0 : c - d :     0 :   True
     c13a : Size=1, Index=None, Active=True
         Key  : Lower : Body  : Upper : Active
-        None :  -Inf : c - d :   0.0 :   True
+        None :  -Inf : c - d :     0 :   True
     c14a : Size=1, Index=None, Active=True
         Key  : Lower : Body  : Upper : Active
-        None :  -Inf : d - c :   0.0 :   True
+        None :  -Inf : d - c :     0 :   True
     c15a : Size=1, Index=None, Active=True
         Key  : Lower : Body : Upper : Active
         None :     A :  A*d :  +Inf :   True
@@ -96,15 +96,15 @@
         None :  -Inf :    c : A + A :   True
     cl : Size=10, Index=cl_index, Active=True
         Key : Lower : Body     : Upper : Active
-          1 :  -Inf :    d - c :   0.0 :   True
-          2 :  -Inf :  d - 2*c :   0.0 :   True
-          3 :  -Inf :  d - 3*c :   0.0 :   True
-          4 :  -Inf :  d - 4*c :   0.0 :   True
-          5 :  -Inf :  d - 5*c :   0.0 :   True
-          6 :  -Inf :  d - 6*c :   0.0 :   True
-          7 :  -Inf :  d - 7*c :   0.0 :   True
-          8 :  -Inf :  d - 8*c :   0.0 :   True
-          9 :  -Inf :  d - 9*c :   0.0 :   True
-         10 :  -Inf : d - 10*c :   0.0 :   True
+          1 :  -Inf :    d - c :     0 :   True
+          2 :  -Inf :  d - 2*c :     0 :   True
+          3 :  -Inf :  d - 3*c :     0 :   True
+          4 :  -Inf :  d - 4*c :     0 :   True
+          5 :  -Inf :  d - 5*c :     0 :   True
+          6 :  -Inf :  d - 6*c :     0 :   True
+          7 :  -Inf :  d - 7*c :     0 :   True
+          8 :  -Inf :  d - 8*c :     0 :   True
+          9 :  -Inf :  d - 9*c :     0 :   True
+         10 :  -Inf : d - 10*c :     0 :   True
 
 30 Declarations: a b c d e A B o2 o3_index o3 c1 c2 c3 c4 c5 c6a c7a c7b c8 c9a c9b c10a c11 c15a c16a c12 c13a c14a cl_index cl

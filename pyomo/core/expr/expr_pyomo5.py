@@ -2453,7 +2453,7 @@ class Expr_ifExpression(ExpressionBase):
     def _is_fixed(self, args):
         assert(len(args) == 3)
         if args[0]: #self._if.is_constant():
-            if self._if():
+            if value(self._if):
                 return args[1] #self._then.is_constant()
             else:
                 return args[2] #self._else.is_constant()
@@ -2479,7 +2479,7 @@ class Expr_ifExpression(ExpressionBase):
         _if, _then, _else = result
         if _if == 0:
             try:
-                return _then if self._if() else _else
+                return _then if value(self._if) else _else
             except ValueError:
                 pass
         return None

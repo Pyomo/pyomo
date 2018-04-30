@@ -25,7 +25,7 @@ from pyomo.core.base.indexed_component import (
 from pyomo.core.base.misc import (apply_indexed_rule,
                                   tabular_writer)
 from pyomo.core.base.numvalue import (NumericValue,
-                                      as_numeric)
+                                      as_numeric, native_types)
 from pyomo.core.base.util import is_functor
 
 from six import iteritems
@@ -49,8 +49,8 @@ class _ExpressionData(NumericValue):
 
     def __call__(self, exception=True):
         """Compute the value of this expression."""
-        if self.expr is None:
-            return None
+        if self.expr.__class__ in native_types:
+            return self.expr
         return self.expr(exception=exception)
 
     def is_named_expression_type(self):
@@ -219,6 +219,8 @@ class _GeneralExpressionDataImpl(_ExpressionData):
 
     def is_fixed(self):
         """A boolean indicating whether this expression is fixed."""
+        if self._expr.__class__ in native_types:
+            return True
         return self._expr.is_fixed()
 
 class _GeneralExpressionData(_GeneralExpressionDataImpl,

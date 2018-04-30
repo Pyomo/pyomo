@@ -285,7 +285,7 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=1, Index=c.expanded_index, Active=True
     Key : Lower : Body : Upper : Active
-      1 :   1.0 :    x :   1.0 :   True
+      1 :     1 :    x :     1 :   True
 """)
 
 
@@ -319,8 +319,8 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=2, Index=c.expanded_index, Active=True
     Key : Lower : Body : Upper : Active
-      1 :   1.0 :    x :   1.0 :   True
-      2 :   1.0 :    y :   1.0 :   True
+      1 :     1 :    x :     1 :   True
+      2 :     1 :    y :     1 :   True
 """)
 
 
@@ -354,8 +354,8 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=2, Index=c.expanded_index, Active=True
     Key : Lower : Body  : Upper : Active
-      1 :   1.0 :   - x :   1.0 :   True
-      2 :   1.0 : 1 + y :   1.0 :   True
+      1 :     1 :   - x :     1 :   True
+      2 :     1 : 1 + y :     1 :   True
 """)
 
 
@@ -389,9 +389,9 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=3, Index=c.expanded_index, Active=True
     Key : Lower : Body : Upper : Active
-      1 :   1.0 : x[1] :   1.0 :   True
-      2 :   1.0 : x[2] :   1.0 :   True
-      3 :   1.0 :    y :   1.0 :   True
+      1 :     1 : x[1] :     1 :   True
+      2 :     1 : x[2] :     1 :   True
+      3 :     1 :    y :     1 :   True
 """)
 
 
@@ -431,8 +431,8 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=2, Index=c.expanded_index, Active=True
     Key : Lower : Body            : Upper : Active
-      1 :   0.0 : x - ECON.auto.x :   0.0 :   True
-      2 :   0.0 : y - ECON.auto.y :   0.0 :   True
+      1 :     0 : x - ECON.auto.x :     0 :   True
+      2 :     0 : y - ECON.auto.y :     0 :   True
 """)
 
 
@@ -467,8 +467,8 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=2, Index=c.expanded_index, Active=True
     Key : Lower : Body                : Upper : Active
-      1 :   0.0 :   - x - ECON.auto.x :   0.0 :   True
-      2 :   0.0 : 1 + y - ECON.auto.y :   0.0 :   True
+      1 :     0 :   - x - ECON.auto.x :     0 :   True
+      2 :     0 : 1 + y - ECON.auto.y :     0 :   True
 """)
 
 
@@ -511,9 +511,9 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=3, Index=c.expanded_index, Active=True
     Key : Lower : Body                  : Upper : Active
-      1 :   0.0 : x[1] - ECON.auto.x[1] :   0.0 :   True
-      2 :   0.0 : x[2] - ECON.auto.x[2] :   0.0 :   True
-      3 :   0.0 :       y - ECON.auto.y :   0.0 :   True
+      1 :     0 : x[1] - ECON.auto.x[1] :     0 :   True
+      2 :     0 : x[2] - ECON.auto.x[2] :     0 :   True
+      3 :     0 :       y - ECON.auto.y :     0 :   True
 """)
 
     def test_expand_multiple_empty_indexed(self):
@@ -566,9 +566,9 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=3, Index=c.expanded_index, Active=True
     Key : Lower : Body                   : Upper : Active
-      1 :   0.0 : x[1] - ECON1.auto.x[1] :   0.0 :   True
-      2 :   0.0 : x[2] - ECON1.auto.x[2] :   0.0 :   True
-      3 :   0.0 :       y - ECON1.auto.y :   0.0 :   True
+      1 :     0 : x[1] - ECON1.auto.x[1] :     0 :   True
+      2 :     0 : x[2] - ECON1.auto.x[2] :     0 :   True
+      3 :     0 :       y - ECON1.auto.y :     0 :   True
 """)
 
         os = StringIO()
@@ -576,9 +576,9 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """d.expanded : Size=3, Index=d.expanded_index, Active=True
     Key : Lower : Body                              : Upper : Active
-      1 :   0.0 : ECON2.auto.x[1] - ECON1.auto.x[1] :   0.0 :   True
-      2 :   0.0 : ECON2.auto.x[2] - ECON1.auto.x[2] :   0.0 :   True
-      3 :   0.0 :       ECON2.auto.y - ECON1.auto.y :   0.0 :   True
+      1 :     0 : ECON2.auto.x[1] - ECON1.auto.x[1] :     0 :   True
+      2 :     0 : ECON2.auto.x[2] - ECON1.auto.x[2] :     0 :   True
+      3 :     0 :       ECON2.auto.y - ECON1.auto.y :     0 :   True
 """)
 
 
@@ -626,9 +626,9 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=3, Index=c.expanded_index, Active=True
     Key : Lower : Body         : Upper : Active
-      1 :   0.0 : x[1] - a2[1] :   0.0 :   True
-      2 :   0.0 : x[2] - a2[2] :   0.0 :   True
-      3 :   0.0 :       y - b2 :   0.0 :   True
+      1 :     0 : x[1] - a2[1] :     0 :   True
+      2 :     0 : x[2] - a2[2] :     0 :   True
+      3 :     0 :       y - b2 :     0 :   True
 """)
 
         os = StringIO()
@@ -636,9 +636,9 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """d.expanded : Size=3, Index=d.expanded_index, Active=True
     Key : Lower : Body          : Upper : Active
-      1 :   0.0 : a1[1] - a2[1] :   0.0 :   True
-      2 :   0.0 : a1[2] - a2[2] :   0.0 :   True
-      3 :   0.0 :       b1 - b2 :   0.0 :   True
+      1 :     0 : a1[1] - a2[1] :     0 :   True
+      2 :     0 : a1[2] - a2[2] :     0 :   True
+      3 :     0 :       b1 - b2 :     0 :   True
 """)
 
 
@@ -700,9 +700,9 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=3, Index=c.expanded_index, Active=True
     Key : Lower : Body             : Upper : Active
-      1 :   0.0 :     x[1] - a2[1] :   0.0 :   True
-      2 :   0.0 :     x[2] - a2[2] :   0.0 :   True
-      3 :   0.0 : y - ECON1.auto.y :   0.0 :   True
+      1 :     0 :     x[1] - a2[1] :     0 :   True
+      2 :     0 :     x[2] - a2[2] :     0 :   True
+      3 :     0 : y - ECON1.auto.y :     0 :   True
 """)
 
         os = StringIO()
@@ -710,9 +710,9 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """d.expanded : Size=3, Index=d.expanded_index, Active=True
     Key : Lower : Body                   : Upper : Active
-      1 :   0.0 : ECON2.auto.x[1] - x[1] :   0.0 :   True
-      2 :   0.0 : ECON2.auto.x[2] - x[2] :   0.0 :   True
-      3 :   0.0 :                 b1 - y :   0.0 :   True
+      1 :     0 : ECON2.auto.x[1] - x[1] :     0 :   True
+      2 :     0 : ECON2.auto.x[2] - x[2] :     0 :   True
+      3 :     0 :                 b1 - y :     0 :   True
 """)
 
 
@@ -753,8 +753,8 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=2, Index=c.expanded_index, Active=True
     Key : Lower : Body                      : Upper : Active
-      1 :   0.0 : flow[1] - ECON1.auto.flow :   0.0 :   True
-      2 :   0.0 :  phase - ECON1.auto.phase :   0.0 :   True
+      1 :     0 : flow[1] - ECON1.auto.flow :     0 :   True
+      2 :     0 :  phase - ECON1.auto.phase :     0 :   True
 """)
 
         os = StringIO()
@@ -762,8 +762,8 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """d.expanded : Size=2, Index=d.expanded_index, Active=True
     Key : Lower : Body                      : Upper : Active
-      1 :   0.0 : ECON2.auto.flow - flow[2] :   0.0 :   True
-      2 :   0.0 :  ECON2.auto.phase - phase :   0.0 :   True
+      1 :     0 : ECON2.auto.flow - flow[2] :     0 :   True
+      2 :     0 :  ECON2.auto.phase - phase :     0 :   True
 """)
 
         os = StringIO()
@@ -771,7 +771,7 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """CON.flow.aggregate : Size=1, Index=None, Active=True
     Key  : Lower : Body              : Upper : Active
-    None :   0.0 : flow[1] + flow[2] :   0.0 :   True
+    None :     0 : flow[1] + flow[2] :     0 :   True
 """)
 
         os = StringIO()
@@ -801,7 +801,7 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """eq.expanded : Size=1, Index=eq.expanded_index, Active=True
     Key : Lower : Body  : Upper : Active
-      1 :   0.0 : x - y :   0.0 :   True
+      1 :     0 : x - y :     0 :   True
 """)
 
 
