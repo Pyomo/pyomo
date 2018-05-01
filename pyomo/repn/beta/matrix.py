@@ -29,6 +29,7 @@ from pyomo.core.base.constraint import (Constraint,
                                         IndexedConstraint,
                                         SimpleConstraint,
                                         _ConstraintData)
+from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.repn import generate_standard_repn
 
 from six import iteritems
@@ -160,7 +161,7 @@ def compile_block_linear_constraints(parent_block,
                 # before iterating:
                 for index, constraint_data in list(iteritems(constraint)):
 
-                    if constraint_data.body.polynomial_degree() <= 1:
+                    if constraint_data.body.__class__ in native_numeric_types or constraint_data.body.polynomial_degree() <= 1:
 
                         # collect for removal
                         if singleton:

@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.core.expr import value
 import pyomo.kernel as pmo
 from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, RangeSet, ConstraintList
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
@@ -74,27 +75,27 @@ class LP_compiled(_BaseTestModel):
         cdata = model.c.add((0, 1, 3))
         assert cdata.lower == 0
         assert cdata.upper == 3
-        assert cdata.body() == 1
+        assert value(cdata.body) == 1
         assert not cdata.equality
         cdata = model.c.add((0, 2, 3))
         assert cdata.lower == 0
         assert cdata.upper == 3
-        assert cdata.body() == 2
+        assert value(cdata.body) == 2
         assert not cdata.equality
         cdata = model.c.add((0, 1, None))
         assert cdata.lower == 0
         assert cdata.upper is None
-        assert cdata.body() == 1
+        assert value(cdata.body) == 1
         assert not cdata.equality
         cdata = model.c.add((None, 0, 1))
         assert cdata.lower is None
         assert cdata.upper == 1
-        assert cdata.body() == 0
+        assert value(cdata.body) == 0
         assert not cdata.equality
         cdata = model.c.add((1,1))
         assert cdata.lower == 1
         assert cdata.upper == 1
-        assert cdata.body() == 1
+        assert value(cdata.body) == 1
         assert cdata.equality
 
         model.fixed_var = Var()

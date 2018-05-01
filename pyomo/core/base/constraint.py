@@ -23,6 +23,7 @@ from pyomo.core.expr.numvalue import (ZeroConstant,
                                       value,
                                       as_numeric,
                                       is_constant,
+                                      native_types,
                                       native_numeric_types,
                                       _sub)
 from pyomo.core.base.plugin import register_component
@@ -191,8 +192,8 @@ class _ConstraintData(ActiveComponentData):
 
     def __call__(self, exception=True):
         """Compute the value of the body of this constraint."""
-        if self.body is None:
-            return None
+        if self.body.__class__ in native_types:
+            return self.body
         return self.body(exception=exception)
 
 
@@ -814,7 +815,7 @@ class Constraint(ActiveIndexedComponent):
                         ((k,v) for k,v in iteritems(self._data) if v.active),
                         ( "Lower","Body","Upper" ),
                         lambda k, v: [ value(v.lower),
-                                       v.body(),
+                                       value(v.body),
                                        value(v.upper),
                                        ] )
 
