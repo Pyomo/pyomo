@@ -17,6 +17,14 @@ env:
 before_install:
   - echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
   - docker pull ${DOCKERHUB_USERNAME}/${IMAGE_NAME}
+ # (1) We are mounting the current directory onto the
+ #     docker container and giving it a mount location with
+ #     an identical name, which avoids issues with file
+ #     paths in coverage reports.
+ # (2) We are starting a container in detached mode that
+ #     runs a semi-infinite sleep call. This allows us to
+ #     run separate docker exec commands that keep the state
+ #     of the container between calls.
   - export DOC_ID=`docker run -d -v $(pwd):$(pwd) -w $(pwd) ${DOCKERHUB_USERNAME}/${IMAGE_NAME}
   sleep 10000000000`
   - export CI_ENV=`bash <(curl -s https://codecov.io/env)`
@@ -32,8 +40,7 @@ install:
   - ${DOC} pip --version
   - ${DOC} pip install codecov
 script:
-#  - "${DOC} pytest -v --cov=tests"
-  - echo success
+  - ${DOC} echo success
 after_script:
 #  - "${DOC} codecov --env IMAGE_NAME"
   - docker kill ${DOC_ID}
