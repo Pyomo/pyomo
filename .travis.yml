@@ -25,8 +25,7 @@ before_install:
  #     runs a semi-infinite sleep call. This allows us to
  #     run separate docker exec commands that keep the state
  #     of the container between calls.
-  - export DOC_ID=`docker run -d -v $(pwd):$(pwd) -w $(pwd) ${DOCKERHUB_USERNAME}/${IMAGE_NAME}
-  sleep 10000000000`
+  - export DOC_ID=`docker run -d -v $(pwd):$(pwd) -w $(pwd) ${DOCKERHUB_USERNAME}/${IMAGE_NAME} sleep 10000000000`
   - export CI_ENV=`bash <(curl -s https://codecov.io/env)`
   - export DOC="docker exec ${CI_ENV} -e IMAGE_NAME ${DOC_ID}"
 install:
