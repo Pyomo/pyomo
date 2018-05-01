@@ -7,13 +7,14 @@ env:
   - secure: dC9Ihi6+5pLmJD3EtJNa/UMDRAUE+BK2QLOhD/igYvuCOVzA/blfDozDUXUKhBj4151pMRmT5HJW2tKoktAGvPMeV9N7kWEwSl5/tmOy+ATzAYcdQFylW2bYshPfyBRlK3CW4XrsF1/e0J4+L6FRIlvpAEFTtkPQQUDl/4cBE5ftR69gOKV1cEcbVzQ7zfA28TZN+J6DAR0rE11OaL1d0wRUzrxXbGVGNJ2W50R1LV+GZbRHu20qTwIGfLUVegriUXCa/xuq95upzN5/2mOIgDaLrwkpFEQDj6gUb60QDIPPi2GgNX05uaAszRWLnbroChCoK7niK2t616HvOgXRSvkcr+HRMQlwSCA1NAf3Qn5S1EMR5cekNTver9f13p8YbXzm0Hil/n8qCAAhMsKc9SAn1S6vDIdnMIUYaQ/eHPWJgGTqRkWGiaWzgb5/5QIHHE/WjJAleeV3p/pOD6myJeIqDByLCnLOhIgQeZ7fZ0d/S9+VavSoHTKfp5+ZBp/Xh7utl7wKDsSNak7Cw8miV7CntT8zTBtSiHVFWd0jvd6TEqHsFHw0AloUJu/0998kv3vk6Xj7yqpd/grZqL9DJSoBlJnHmuf/lqIYknGEUOX3ZczGnnmstc9c9TNwp8g6MD4f5cRXSLuqvW94BM7MoFh3eyx/mmCX1+uJTEpxHZs=
   - secure: Sofev3DLx/rWCgAmNxprKOEue4AjPq6i6z8o7eHigPEx6SO3IMH36EENsuvEpE/HyNn+PHqGWudEz1ArkL+2pxiVo1FVRL94cUoo3FwachUMWMK7BnIJleJ7nW1pUwsANs0bWpw8qNkRMVRG3ycCY28MQzfx71U+/AQd+xS0EkVqDg3WWcbjVnVDRpmFH1pdm/syOHzW3jGVKTRsr1u5v9LJ+QKwEQHeKIrntP17mzyWQhZ+SbgqHcEQrK0o0sCSv4g3b/cJdazaR12H7nfxmtNjKETiLCx37OPIE0DnMKWYJVFlhbxeUfX+fPvGdjFkfu7rGnanZgsHEPy0eiXQAPfXLCwSsrJ8/RTL5RVUzQ7aK/bIQbkUr1fvqwCcS0UQOj/ajTHZYKLe19s17lgOhxtMA8CIIC8rY828uEb8hZKKSvfz37lx0yz4OePxDddZJAm1jNsfqNeofW333yjE2jQx4ASIcm29arAv+izv0S3+2RZTPSa5XdWnqw9/Ko2whgbb/Ccts/hhbCYCLqED0XjZ2OSb0cLDScd/qXJRfkW8YBraE6KMaJou10S3NCyXBYQVB9PCmT7mPH32f/pPO98JiBC0sW1Ghe285pYUJMxrhSCScw80b2Mb8847KyviH9aQt3yqtkwAl87W0YICZu0AH5hRUSO3kpaW0WbmaBA=
   matrix:
-  - IMAGE_NAME=test-builds:python_2.7
-  - IMAGE_NAME=test-builds:python_3.5
-  - IMAGE_NAME=test-builds:python_3.6
-  - IMAGE_NAME=test-builds:pypy_2
-  - IMAGE_NAME=test-builds:pypy_3
-  - IMAGE_NAME=test-builds:anaconda_2
-  - IMAGE_NAME=test-builds:anaconda_3
+  - IMAGE_NAME=test-builds:python_2.7 CATEGORY="nightly"
+  - IMAGE_NAME=test-builds:python_3.5 CATEGORY="nightly"
+  - IMAGE_NAME=test-builds:python_3.6 CATEGORY="nightly"
+  - IMAGE_NAME=test-builds:pypy_2     CATEGORY="nightly"
+  - IMAGE_NAME=test-builds:pypy_3     CATEGORY="nightly"
+  - IMAGE_NAME=test-builds:anaconda_2 CATEGORY="nightly"
+  - IMAGE_NAME=test-builds:anaconda_3 CATEGORY="nightly"
+
 before_install:
   - echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
   - docker pull ${DOCKERHUB_USERNAME}/${IMAGE_NAME}
@@ -26,20 +27,35 @@ before_install:
  #     run separate docker exec commands that keep the state
  #     of the container between calls.
   - export DOC_ID=`docker run -d -v $(pwd):$(pwd) -w $(pwd) ${DOCKERHUB_USERNAME}/${IMAGE_NAME} sleep 10000000000`
+ # used by codecov when uploading the coverage report
   - export CI_ENV=`bash <(curl -s https://codecov.io/env)`
+ # commands prefixed by ${DOC_} will execute inside the
+ # running docker container
   - export DOC="docker exec ${CI_ENV} -e IMAGE_NAME ${DOC_ID}"
+
 install:
+  - ${DOC} pip install -U pip setuptools wheel
+  - ${DOC} pip install codecov
+ # Clone but don't install pyomo-model-libraries
+  - ${DOC} git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
+ # Install PyUtilib (master branch)
+  - ${DOC} pip install --quiet git+https://github.com/PyUtilib/pyutilib
+ # Install this package
+  - ${DOC} python setup.py develop
+
+script:
+  - ${DOC} python --version
+  - ${DOC} pip --version
   - ${DOC} bash -c 'echo GLPK_VERSION="$GLPK_VERSION"'
   - ${DOC} bash -c 'echo IPOPT_VERSION="$IPOPT_VERSION"'
   - ${DOC} bash -c 'echo CBC_VERSION="$CBC_VERSION"'
   - ${DOC} bash -c 'echo BARON_VERSION="$BARON_VERSION"'
   - ${DOC} bash -c 'echo GAMS_VERSION="$GAMS_VERSION"'
-  - ${DOC} pip install -U pip setuptools wheel
-  - ${DOC} python --version
-  - ${DOC} pip --version
-  - ${DOC} pip install codecov
-script:
-  - ${DOC} echo success
+  - ${DOC} test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
+ # Run documentation tests
+  - ${DOC} cd doc/OnlineDocs; make doctests -d; cd ../..
+  # nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
+
 after_script:
 #  - "${DOC} codecov --env IMAGE_NAME"
   - docker kill ${DOC_ID}
