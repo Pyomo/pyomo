@@ -56,8 +56,10 @@ script:
   - ${DOC} bash -c 'BARONEXE="$(which baron)" && mv "${BARONEXE}" "${BARONEXE%baron}_baron"'
   - ${DOC} pip install sphinx sphinx_rtd_theme
 ###########
-  - ${DOC} test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
+#  - ${DOC} test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
  # Run documentation tests
+  - ${DOC} pwd
+  - ${DOC} ls
   - ${DOC} "cd doc/OnlineDocs; make doctests -d; cd ../.."
   # nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
 
