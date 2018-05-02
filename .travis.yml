@@ -60,8 +60,9 @@ script:
  # Run documentation tests
   - ${DOC} pwd
   - ${DOC} ls
-  - ${DOC} "ls doc;"
- # - ${DOC} "cd doc/OnlineDocs; make doctests -d; cd ../.."
+  - ${DOC} ls doc
+  - ${DOC} cd doc/OnlineDocs && make doctests -d
+  - ${DOC} "cd doc/OnlineDocs && make doctests -d"
   # nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
 
 after_script:
