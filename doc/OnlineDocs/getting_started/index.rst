@@ -22,7 +22,7 @@ Getting Started
    suffixes.rst
    blackbox.rst
 
-   Installation
+Installation
 ------------
 
 Pyomo currently supports the following versions of Python:
@@ -37,23 +37,19 @@ We recommend installation with *conda*, which is included with the Anaconda
 distribution of Python.  If you have a different Python distribution, then
 you can install *miniconda* using *pip*:
 
-.. bash::
     pip install miniconda
 
 You can install Pyomo in your system Python installation
 by executing the following in a shell:
 
-.. bash::
     conda install -c conda-forge pyomo
 
 Pyomo also has conditional dependencies on a variety of third-party Python packages.  These can also be installed with conda:
 
-.. bash::
     conda install -c conda-forge pyomo.extras
 
 Optimization solvers are not installed with Pyomo, but some open source optimization solvers can be installed with conda as well:
 
-.. bash::
     conda install -c conda-forge ipopt coin-cbc glpk
 
 
@@ -64,5 +60,4 @@ The standard utility for installing Python packages is *pip*.  You
 can install Pyomo in your system Python installation by executing
 the following in a shell:
 
-.. bash::
     pip install pyomo
