@@ -58,11 +58,7 @@ script:
 ###########
 #  - ${DOC} test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
  # Run documentation tests
-  - ${DOC} pwd
-  - ${DOC} ls
-  - ${DOC} ls doc
-  - ${DOC} cd doc/OnlineDocs && make doctests -d
-  - ${DOC} "cd doc/OnlineDocs && make doctests -d"
+  - ${DOC} bash -c 'cd doc/OnlineDocs && make doctests -d'
   # nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
 
 after_script:
