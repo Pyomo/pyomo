@@ -8,9 +8,8 @@ Parameters are declared with the ``Param`` function, which takes arguments
 that are somewhat similar to the ``Set`` function. For example, the following code snippet declares sets
 ``model.A``, ``model.B`` and then a parameter array ``model.P`` that is indexed by ``model.A``:
 
->>> model.A = Set()
->>> model.B = Set()
->>> model.P = Param(model.A, model.B)
+.. literalinclude:: spyfiles/spy4Parameters_ABPSets.spy
+   :language: python
 
 In addition to sets that serve as indexes, the ``Param`` function takes
 the following command options:
@@ -27,22 +26,15 @@ the following command options:
 These options perform in the same way as they do for ``Set``. For example,
 suppose that ``Model.A = RangeSet(1,3)``, then there are many ways to create a parameter that is a square matrix with 9, 16, 25 on the main diagonal zeros elsewhere, here are two ways to do it. First using a Python object to initialize:
 
->>> v={}
->>> v[1,1] = 9
->>> v[2,2] = 16
->>> v[3,3] = 25
->>> model.S = Param(model.A, model.A, initialize=v, default=0)
+.. literalinclude:: spyfiles/spy4Parameters_Param_python.spy
+   :language: python
 
 And now using an initialization function that is automatically called once for
 each index tuple (remember that we are assuming that ``model.A`` contains
 1,2,3)
 
->>> def s_init(model, i, j):
->>>     if i == j:
->>>         return i*i
->>>     else:
->>>         return 0.0
->>> model.S = Param(model.A, model.A, initialize=s_init)
+.. literalinclude:: spyfiles/spy4Parameters_Param_def.spy
+   :language: python
 
 In this example, the index set contained integers, but index sets need not be numeric. It is very common to use strings.
 
@@ -53,6 +45,5 @@ and checked to be greater than 3.14159. If value is provided that is less than t
 and an error message issued. The function used to validate should be written so as to return ``True`` if the data is valid
 and ``False`` otherwise.
 
->>> def s_validate(model, v, i):
->>>    return v > 3.14159
->>> model.S = Param(model.A, validate=s_validate)
+.. literalinclude:: spyfiles/spy4Parameters_Valuecheck_validation.spy
+   :language: python
