@@ -12,7 +12,7 @@ import six
 import logging
 
 from pyomo.core.base import Block, VarList, ConstraintList, Objective, Var, Constraint, maximize, ComponentUID, Set
-from pyomo.repn import generate_canonical_repn
+from pyomo.repn import generate_standard_repn
 from pyomo.repn.collect import collect_linear_terms
 from pyomo.util.plugin import alias
 from pyomo.mpec import ComplementarityList, complements
@@ -98,11 +98,10 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
             else:
                 d_sense = 1
             #
-            # Iterate through the variables in the canonical representation
+            # Iterate through the variables in the representation
             #
-            o_terms = generate_canonical_repn(odata.expr, compute_values=False)
-            for i in range(len(o_terms.variables)):
-                var = o_terms.variables[i]
+            o_terms = generate_standard_repn(odata.expr, compute_values=False)
+            for i, var in enumerate(o_terms.linear_vars):
                 if var.parent_component().local_name in self._fixed_upper_vars:
                     #
                     # Skip fixed upper variables
@@ -113,7 +112,7 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
                 # negated if the objective is maximized.
                 #
                 id_ = id(var)
-                d2[id_] = d_sense * o_terms.linear[i]
+                d2[id_] = d_sense * o_terms.linear_coefs[i]
                 if not id_ in sids_set:
                     sids_set.add(id_)
                     sids_list.append(id_)
@@ -192,13 +191,12 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
             #
             # Store the coefficients for the contraint variables that are not fixed
             #
-            c_terms = generate_canonical_repn(cdata.body, compute_values=False)
-            for i in range(len(c_terms.variables)):
-                var = c_terms.variables[i]
+            c_terms = generate_standard_repn(cdata.body, compute_values=False)
+            for i, var in enumerate(c_terms.linear_vars):
                 if var.parent_component().local_name in self._fixed_upper_vars:
                     continue
                 id_ = id(var)
-                B2.setdefault(id_,{}).setdefault(id(cdata),c_terms.linear[i])
+                B2.setdefault(id_,{}).setdefault(id(cdata),c_terms.linear_coefs[i])
                 if not id_ in sids_set:
                     sids_set.add(id_)
                     sids_list.append(id_)

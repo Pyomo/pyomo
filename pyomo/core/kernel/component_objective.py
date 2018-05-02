@@ -2,12 +2,13 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.core.expr.numvalue import as_numeric
 from pyomo.core.kernel.component_interface import \
     (IComponent,
      _ActiveComponentMixin,
@@ -18,7 +19,6 @@ from pyomo.core.kernel.component_dict import ComponentDict
 from pyomo.core.kernel.component_tuple import ComponentTuple
 from pyomo.core.kernel.component_list import ComponentList
 from pyomo.core.kernel.component_expression import IExpression
-from pyomo.core.kernel.numvalue import as_numeric
 
 import six
 

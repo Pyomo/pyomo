@@ -79,7 +79,7 @@ class TestScenarioTreeManagerMisc(unittest.TestCase):
         model.stage_cost = Expression([1,2])
         model.stage_cost[1].expr = model.x
         model.stage_cost[2].expr = 0.0
-        model.o = Objective(expr=summation(model.stage_cost))
+        model.o = Objective(expr=sum_product(model.stage_cost))
         model.c = Constraint(expr=model.x >= model.y)
 
         scenario_tree_model = CreateConcreteTwoStageScenarioTreeModel(3)

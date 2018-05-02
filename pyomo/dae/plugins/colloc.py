@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 import logging
-from six import itervalues
 from six.moves import xrange
 
 from pyomo.core.base.plugin import alias
@@ -18,7 +17,7 @@ from pyomo.core import *
 from pyomo.dae import *
 from pyomo.dae.misc import generate_finite_elements
 from pyomo.dae.misc import generate_colloc_points
-from pyomo.dae.misc import update_contset_indexed_component
+from pyomo.dae.misc import expand_components
 from pyomo.dae.misc import create_partial_expression
 from pyomo.dae.misc import add_discretization_equations
 from pyomo.dae.misc import add_continuity_equations
@@ -407,15 +406,14 @@ class Collocation_Discretization_Transformation(Transformation):
         elif self._scheme_name == 'LAGRANGE-LEGENDRE':
             self._get_legendre_constants(currentds)
 
-        for block in instance.block_data_objects(active=True):
-            self._transformBlock(block, currentds)
+        self._transformBlock(instance, currentds)
 
         return instance
 
     def _transformBlock(self, block, currentds):
 
         self._fe = {}
-        for ds in itervalues(block.component_map(ContinuousSet)):
+        for ds in block.component_objects(ContinuousSet, descend_into=True):
             if currentds is None or currentds == ds.name:
                 generate_finite_elements(ds, self._nfe[currentds])
                 if not ds.get_changed():
@@ -440,10 +438,9 @@ class Collocation_Discretization_Transformation(Transformation):
                 disc_info['afinal'] = self._afinal[currentds]
                 disc_info['scheme'] = self._scheme_name
 
-        for c in itervalues(block.component_map()):
-            update_contset_indexed_component(c)
+        expand_components(block)
 
-        for d in itervalues(block.component_map(DerivativeVar)):
+        for d in block.component_objects(DerivativeVar, descend_into=True):
             dsets = d.get_continuousset_list()
             for i in set(dsets):
                 if currentds is None or i.name == currentds:
@@ -462,25 +459,29 @@ class Collocation_Discretization_Transformation(Transformation):
                                                         loc)
                     d.set_derivative_expression(newexpr)
                     if self._scheme_name == 'LAGRANGE-LEGENDRE':
-                        add_continuity_equations(block, d, i, loc)
+                        # Add continuity equations to DerivativeVar's parent
+                        #  block
+                        add_continuity_equations(d.parent_block(), d, i, loc)
 
             # Reclassify DerivativeVar if all indexing ContinuousSets have
-            # been discretized
+            # been discretized. Add discretization equations to the
+            # DerivativeVar's parent block.
             if d.is_fully_discretized():
-                add_discretization_equations(block, d)
-                block.reclassify_component_type(d, Var)
+                add_discretization_equations(d.parent_block(), d)
+                d.parent_block().reclassify_component_type(d, Var)
 
         # Reclassify Integrals if all ContinuousSets have been discretized
         if block_fully_discretized(block):
 
             if block.contains_component(Integral):
-                for i in itervalues(block.component_map(Integral)):
+                for i in block.component_objects(Integral, descend_into=True):
                     i.reconstruct()
-                    block.reclassify_component_type(i, Expression)
+                    i.parent_block().reclassify_component_type(i, Expression)
                 # If a model contains integrals they are most likely to appear
                 # in the objective function which will need to be reconstructed
                 # after the model is discretized.
-                for k in itervalues(block.component_map(Objective)):
+                for k in block.component_objects(Objective, descend_into=True):
+                    # TODO: check this, reconstruct might not work
                     k.reconstruct()
 
     def _get_idx(self, l, t, n, i, k):

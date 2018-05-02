@@ -1,0 +1,8 @@
+M = ConcreteModel()
+M.x = Var(range(5))
+
+# Summation using the Python sum() function
+e1 = sum(M.x[i]**2 for i in M.x)
+
+# Summation using the Pyomo quicksum function
+e2 = quicksum(M.x[i]**2 for i in M.x)

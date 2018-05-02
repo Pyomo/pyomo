@@ -39,7 +39,7 @@ model.Level = Var(model.ACT)
 # ***********************************
 
 def Total_Cost_rule(model):
-    return summation(model.cost, model.Level)
+    return sum_product(model.cost, model.Level)
 model.Total_Cost = Objective(rule=Total_Cost_rule)
 
 def Demand_rule(model, i):

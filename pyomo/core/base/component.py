@@ -87,7 +87,7 @@ class _ComponentBase(object):
         # copy.
         #
         # Nominally, expressions only point to ComponentData
-        # derivatives.  However, with the developemtn of Expression
+        # derivatives.  However, with the development of Expression
         # Templates (and the corresponding _GetItemExpression object),
         # expressions can refer to container (non-Simple) components, so
         # we need to override __deepcopy__ for both Component and
@@ -429,11 +429,14 @@ class Component(_ComponentBase):
         """Return the component name"""
         return self.name
 
-    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
-        """Write the component name to a buffer"""
-        if ostream is None:
-            ostream = sys.stdout
-        ostream.write(self.__str__())
+    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
+        """Return the component name"""
+        if compute_values:
+            try:
+                return str(self())
+            except:
+                pass
+        return self.name
 
     def getname(self, fully_qualified=False, name_buffer=None):
         """
@@ -473,26 +476,6 @@ class Component(_ComponentBase):
                 "The .name attribute is not settable when the component "
                 "is assigned to a Block.\nTriggered by attempting to set "
                 "component '%s' to name '%s'" % (self.name,val))
-
-    def pprint(self, ostream=None, verbose=False, prefix=""):
-        """Print component information"""
-        if ostream is None:
-            ostream = sys.stdout
-        tab="    "
-        ostream.write(prefix+self.local_name+" : ")
-        if self.doc is not None:
-            ostream.write(self.doc+'\n'+prefix+tab)
-
-        _attr, _data, _header, _fcn = self._pprint()
-
-        ostream.write(", ".join("%s=%s" % (k,v) for k,v in _attr))
-        ostream.write("\n")
-        if not self._constructed:
-            ostream.write(prefix+tab+"Not constructed\n")
-            return
-
-        if _data is not None:
-            tabular_writer( ostream, prefix+tab, _data, _header, _fcn )
 
     def is_indexed(self):
         """Return true if this component is indexed"""
@@ -732,17 +715,22 @@ class ComponentData(_ComponentBase):
         """Return a string with the component name and index"""
         return self.name
 
-    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
+    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         """
-        Write the component name and index to a buffer,
+        Return a string representation of this component,
         applying the labeler if passed one.
         """
-        if ostream is None:
-            ostream = sys.stdout
+        if compute_values:
+            try:
+                return str(self())
+            except:
+                pass
+        if smap:
+            return smap.getSymbol(self, labeler)
         if labeler is not None:
-            ostream.write(labeler(self))
+            return labeler(self)
         else:
-            ostream.write(self.__str__())
+            return self.__str__()
 
     def getname(self, fully_qualified=False, name_buffer=None):
         """Return a string with the component name and index"""

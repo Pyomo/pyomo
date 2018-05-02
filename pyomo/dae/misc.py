@@ -10,15 +10,19 @@
 
 import logging
 
-from pyomo.core import *
+from pyomo.core import Suffix, Var, Constraint, Piecewise, Block
+from pyomo.core import Expression, Param
 from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.block import _BlockData, IndexedBlock
-from pyomo.dae import *
+from pyomo.dae import ContinuousSet, DerivativeVar, DAE_Error
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.base.block import SortComponents
+from pyomo.util.log import LoggingIntercept
 
-from six import iterkeys, itervalues, iteritems
+from six import iterkeys, itervalues, iteritems, StringIO
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.dae')
 
 
 def generate_finite_elements(ds, nfe):
@@ -99,10 +103,85 @@ def generate_colloc_points(ds, tau):
     ds._sort()
 
 
-def update_contset_indexed_component(comp):
+def expand_components(block):
     """
-    Update any model components which are indexed by a ContinuousSet
-    that has changed
+    Loop over block components and try expanding them. If expansion fails
+    then save the component and try again later. This function has some
+    built-in robustness for block-hierarchical models with circular
+    references but will not work for all cases.
+    """
+
+    # expansion_map is used to map components to the functions used to
+    # expand them so that the update_contset_indexed_component function
+    # logic only has to be called once even in the case where we have to
+    # re-try expanding components due to circular references
+    expansion_map = ComponentMap()
+    redo_expansion = list()
+
+    # Record the missing BlockData before expanding components. This is for
+    # the case where a ContinuousSet indexed Block is used in a Constraint.
+    # If the Constraint is expanded before the Block then the missing
+    # BlockData will be added to the indexed Block but will not be
+    # constructed correctly.
+    for blk in block.component_objects(Block, descend_into=True):
+        missing_idx = set(blk._index) - set(iterkeys(blk._data))
+        if missing_idx:
+            blk._dae_missing_idx = missing_idx
+
+    # Wrap this whole process in a try block in order to ensure that errors
+    # swallowed by the LoggingIntercept context below are re-raised if the
+    # discretization encounters an error it isn't expecting.
+    try:
+
+        # Intercept logging to suppress Error messages arising from failed
+        # constraint rules. These error messages get logged even though the
+        # AttributeError causing the error is caught and handled by this
+        # function when expanding discretized models. We maintain a stream
+        # of the intercepted logging messages which will be printed if an
+        # unexpected exception is raised.
+        buf = StringIO()
+        with LoggingIntercept(buf, 'pyomo.core', logging.ERROR):
+
+            # Identify components that need to be expanded and try expanding
+            # them
+            for c in block.component_objects(descend_into=True,
+                                             sort=SortComponents.declOrder):
+                try:
+                    update_contset_indexed_component(c, expansion_map)
+                except AttributeError:
+                    redo_expansion.append(c)
+
+            # Re-try expansion on any components that failed the first time.
+            #  This is indicative of circular component references and not
+            # expanding components in the correct order the first time
+            # through.
+            N = len(redo_expansion)
+            while N:
+                for i in range(N):
+                    c = redo_expansion.pop()
+                    try:
+                        expansion_map[c](c)
+                    except AttributeError:
+                        redo_expansion.append(c)
+                if len(redo_expansion) == N:
+                    raise DAE_Error("Unable to fully discretize %s. Possible "
+                                    "circular references detected between "
+                                    "components %s. Reformulate your model to"
+                                    " remove circular references or apply a "
+                                    "discretization transformation before "
+                                    "linking blocks together."
+                                    % (block, str(redo_expansion)))
+
+                N = len(redo_expansion)
+
+    except Exception as e:
+        logger.error(buf.getvalue())
+        raise
+
+def update_contset_indexed_component(comp, expansion_map):
+    """
+    Update any model components which are indexed by a ContinuousSet that
+    has changed
     """
 
     # This implemenation will *NOT* check for or update
@@ -140,14 +219,19 @@ def update_contset_indexed_component(comp):
             if isinstance(comp, Var):  # Don't use the type() method here
                 # because we want to catch DerivativeVar components as well
                 # as Var components
+                expansion_map[comp] = _update_var
                 _update_var(comp)
             elif comp.type() == Constraint:
+                expansion_map[comp] = _update_constraint
                 _update_constraint(comp)
             elif comp.type() == Expression:
+                expansion_map[comp] = _update_expression
                 _update_expression(comp)
             elif isinstance(comp, Piecewise):
+                expansion_map[comp] =_update_piecewise
                 _update_piecewise(comp)
-            elif comp.type() == Block: 
+            elif comp.type() == Block:
+                expansion_map[comp] = _update_block
                 _update_block(comp)    
             else:
                 raise TypeError(
@@ -224,10 +308,10 @@ def _update_block(blk):
                                              '__func__',
                                              IndexedBlock.construct):
         # check for custom update function
-        try:
+        if hasattr(blk, 'update_after_discretization'):
             blk.update_after_discretization()
             return
-        except AttributeError:
+        else:
             logger.warning(
                 'DAE(misc): Attempting to apply a discretization '
                 'transformation to the Block-derived component "%s". The '
@@ -240,7 +324,7 @@ def _update_block(blk):
                 'construct()' % blk.name)
 
     # Code taken from the construct() method of Block
-    missing_idx = set(blk._index) - set(iterkeys(blk._data))
+    missing_idx = getattr(blk, '_dae_missing_idx', set([]))
     for idx in list(missing_idx):
         _block = blk[idx]
         obj = apply_indexed_rule(
@@ -256,6 +340,10 @@ def _update_block(blk):
             for name, val in iteritems(obj.__dict__):
                 if not hasattr(_block, name) and not hasattr(blk, name):
                     super(_BlockData, _block).__setattr__(name, val)
+
+    # Remove book-keeping data after Block is discretized
+    if hasattr(blk, '_dae_missing_idx'):
+        del blk._dae_missing_idx
 
 
 def _update_piecewise(pw):

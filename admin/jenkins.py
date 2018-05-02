@@ -12,11 +12,7 @@ import glob
 import sys
 import os
 import subprocess
-try:
-    from subprocess import check_output as _run_cmd
-except:
-    # python 2.6
-    from subprocess import check_call as _run_cmd
+from subprocess import check_output as _run_cmd
 import driver
 
 config = sys.argv[1]

@@ -1,0 +1,10 @@
+def scale_expression(expr, scale):
+    #
+    # Create the visitor object
+    #
+    visitor = ScalingVisitor(scale)
+    #
+    # Scale the expression using the :func:`dfs_postorder_stack` 
+    # search method.
+    #
+    return visitor.dfs_postorder_stack(expr)

@@ -13,31 +13,60 @@ import sys
 from pyomo.core import *
 from pyomo.opt import ProblemFormat
 
-# these are the only two preprocessors currently invoked by the
-# simple_preprocessor, which in turn is invoked by the preprocess()
-# method of PyomoModel.
-from pyomo.repn.compute_canonical_repn import preprocess_block_objectives \
-    as canonical_preprocess_block_objectives
-from pyomo.repn.compute_canonical_repn import preprocess_block_constraints \
-    as canonical_preprocess_block_constraints
-from pyomo.repn.compute_canonical_repn import preprocess_constraint \
-    as canonical_preprocess_constraint
-from pyomo.repn.compute_ampl_repn import preprocess_block_objectives \
-    as ampl_preprocess_block_objectives
-from pyomo.repn.compute_ampl_repn import preprocess_block_constraints \
-    as ampl_preprocess_block_constraints
-from pyomo.repn.compute_ampl_repn import preprocess_constraint \
-    as ampl_preprocess_constraint
+from pyomo.repn.standard_repn import (preprocess_block_objectives,
+                                      preprocess_block_constraints,
+                                      preprocess_constraint)
+from pyomo.opt import (UndefinedData,
+                       undefined)
 
 from six import iteritems, itervalues, string_types
 from six.moves import xrange
 
-canonical_expression_preprocessor = \
-    pyomo.util.PyomoAPIFactory("pyomo.repn.compute_canonical_repn")
-ampl_expression_preprocessor = \
-    pyomo.util.PyomoAPIFactory("pyomo.repn.compute_ampl_repn")
+def _preprocess(model, objective=True, constraints=True):
+    objective_found = False
+    if objective:
+        for block in model.block_data_objects(active=True):
+            for obj in block.component_data_objects(Objective,
+                                                    active=True,
+                                                    descend_into=False):
+                objective_found = True
+                preprocess_block_objectives(block)
+                break
+            if objective_found:
+                break
+    if constraints:
+        for block in model.block_data_objects(active=True):
+            preprocess_block_constraints(block)
 
 _OLD_OUTPUT = True
+
+def extract_solve_times(results, default=undefined):
+    solve_time = default
+    pyomo_solve_time = default
+    # if the solver plugin doesn't populate the
+    # user_time field, it is by default of type
+    # UndefinedData - defined in pyomo.opt.results
+    if hasattr(results.solver,"user_time") and \
+       (not isinstance(results.solver.user_time,
+                       UndefinedData)) and \
+       (results.solver.user_time is not None):
+        # the solve time might be a string, or might
+        # not be - we eventually would like more
+        # consistency on this front from the solver
+        # plugins.
+        solve_time = float(results.solver.user_time)
+    elif hasattr(results.solver,"wallclock_time") and \
+         (not isinstance(results.solver.wallclock_time,
+                         UndefinedData))and \
+         (results.solver.wallclock_time is not None):
+        solve_time = float(results.solver.wallclock_time)
+    elif hasattr(results.solver,"time"):
+        solve_time = float(results.solver.time)
+
+    if hasattr(results,"pyomo_solve_time"):
+        pyomo_solve_time = results.pyomo_solve_time
+
+    return solve_time, pyomo_solve_time
 
 class BasicSymbolMap(object):
 
@@ -218,7 +247,7 @@ def reset_stage_cost_variables(scenario_tree, scenario_instances):
     for stage in scenario_tree._stages:
         for tree_node in stage._tree_nodes:
             for cost_var_data, scenario_probability in tree_node._cost_variable_datas:
-                if cost_var_data.is_expression() is False:
+                if cost_var_data.is_expression_type() is False:
                     cost_var_data.value = None
                     cost_var_data.stale = True
 
@@ -654,106 +683,6 @@ def create_nodal_ph_parameters(scenario_tree):
             new_blend_parameter.store_values(1)
             tree_node._blend.update(dict.fromkeys(tree_node._blend,1))
 
-def preprocess_scenario_instance(scenario_instance,
-                                 instance_variables_fixed,
-                                 instance_variables_freed,
-                                 instance_user_constraints_modified,
-                                 instance_ph_constraints_modified,
-                                 instance_ph_constraints,
-                                 instance_objective_modified,
-                                 preprocess_fixed_variables,
-                                 solver):
-    # TODO: Does this import need to be delayed because
-    #       it is in a plugins subdirectory
-    from pyomo.solvers.plugins.solvers.persistent_solver import \
-        PersistentSolver
-
-    persistent_solver_in_use = isinstance(solver, PersistentSolver)
-    if (not instance_objective_modified) and \
-       (not instance_variables_fixed) and \
-       (not instance_variables_freed) and \
-       (not instance_ph_constraints_modified) and \
-       (not instance_user_constraints_modified):
-
-        # the condition of "nothing modified" should only be triggered
-        # at PH iteration 0. instances are already preprocessed
-        # following construction, and there isn't any augmentation of
-        # the objective function yet.
-        return
-
-    if instance_objective_modified:
-        # if only the objective changed, there is minimal work to do.
-
-        if solver.problem_format() == ProblemFormat.nl:
-            ampl_preprocess_block_objectives(scenario_instance)
-        else:
-
-            canonical_preprocess_block_objectives(scenario_instance)
-
-        if persistent_solver_in_use and solver.has_instance():
-            obj_count = 0
-            for obj in scenario_instance.component_data_objects(ctype=Objective, descend_into=True, active=True):
-                obj_count += 1
-                if obj_count > 1:
-                    raise RuntimeError('Persistent solver interface only supports a single objective.')
-                solver.set_objective(obj)
-
-    if (instance_variables_fixed or instance_variables_freed) and \
-       (preprocess_fixed_variables):
-
-        if solver.problem_format() == ProblemFormat.nl:
-            ampl_expression_preprocessor({}, model=scenario_instance)
-        else:
-            canonical_expression_preprocessor({}, model=scenario_instance)
-
-        # We've preprocessed the entire instance, no point in checking
-        # anything else
-        return
-
-    if (instance_variables_fixed or instance_variables_freed) and \
-       (persistent_solver_in_use):
-        # it can be the case that the solver plugin no longer has an
-        # instance compiled, depending on what state the solver plugin
-        # is in relative to the instance.  if this is the case, just
-        # don't compile the variable bounds.
-        if solver.has_instance():
-            variables_to_change = \
-                instance_variables_fixed + instance_variables_freed
-            for var_name, var_index in variables_to_change:
-                solver.update_var(scenario_instance.find_component(var_name)[var_index])
-
-    if instance_user_constraints_modified:
-        if solver.problem_format() == ProblemFormat.nl:
-            idMap = {}
-            for block in scenario_instance.block_data_objects(active=True,
-                                                              descend_into=True):
-                ampl_preprocess_block_constraints(block,
-                                                  idMap=idMap)
-        else:
-            idMap = {}
-            for block in scenario_instance.block_data_objects(active=True,
-                                                              descend_into=True):
-                canonical_preprocess_block_constraints(block,
-                                                       idMap=idMap)
-
-    elif instance_ph_constraints_modified:
-
-        # only pre-process the piecewise constraints
-        if solver.problem_format() == ProblemFormat.nl:
-            idMap = {}
-            for constraint_name in instance_ph_constraints:
-                ampl_preprocess_constraint(
-                    scenario_instance,
-                    getattr(scenario_instance, constraint_name),
-                    idMap=idMap)
-        else:
-            idMap = {}
-            for constraint_name in instance_ph_constraints:
-                canonical_preprocess_constraint(
-                    scenario_instance,
-                    getattr(scenario_instance, constraint_name),
-                    idMap=idMap)
-
 #
 # Extracts an active objective from the instance (top-level only).
 # Works with index objectives that may have all but one index
@@ -784,7 +713,115 @@ def find_active_objective(instance, safety_checks=False):
             return objectives[0]
     return None
 
+def preprocess_scenario_instance(scenario_instance,
+                                 instance_variables_fixed,
+                                 instance_variables_freed,
+                                 instance_user_constraints_modified,
+                                 instance_ph_constraints_modified,
+                                 instance_ph_constraints,
+                                 instance_objective_modified,
+                                 preprocess_fixed_variables,
+                                 solver):
+
+    # TODO: Does this import need to be delayed because
+    #       it is in a plugins subdirectory
+    from pyomo.solvers.plugins.solvers.persistent_solver import \
+        PersistentSolver
+
+    persistent_solver_in_use = isinstance(solver, PersistentSolver)
+
+    if (not instance_objective_modified) and \
+       (not instance_variables_fixed) and \
+       (not instance_variables_freed) and \
+       (not instance_ph_constraints_modified) and \
+       (not instance_user_constraints_modified):
+
+        # the condition of "nothing modified" should only be triggered
+        # at PH iteration 0. instances are already preprocessed
+        # following construction, and there isn't any augmentation of
+        # the objective function yet.
+        return
+
+    if instance_objective_modified:
+        # if only the objective changed, there is minimal work to do.
+        _preprocess(scenario_instance,
+                    objective=True,
+                    constraints=False)
+
+        if persistent_solver_in_use:
+            active_objective_datas = []
+            for active_objective_data in scenario_instance.component_data_objects(Objective,
+                                                                                  active=True,
+                                                                                  descend_into=True):
+                active_objective_datas.append(active_objective_data)
+            if len(active_objective_datas) > 1:
+                raise RuntimeError("Multiple active objectives identified for scenario=%s" % scenario_instance._name)
+            elif len(active_objective_datas) == 1:
+                solver.set_objective(active_objective_datas[0])
+
+    if (instance_variables_fixed or instance_variables_freed) and \
+       (preprocess_fixed_variables):
+
+        _preprocess(scenario_instance)
+
+        # We've preprocessed the entire instance, no point in checking
+        # anything else
+        return
+
+    if (instance_variables_fixed or instance_variables_freed) and \
+       (persistent_solver_in_use):
+        # it can be the case that the solver plugin no longer has an
+        # instance compiled, depending on what state the solver plugin
+        # is in relative to the instance.  if this is the case, just
+        # don't compile the variable bounds.
+        if solver.has_instance():
+            variables_to_change = \
+                instance_variables_fixed + instance_variables_freed
+            for var_name, var_index in variables_to_change:
+                solver.update_var(scenario_instance.find_component(var_name)[var_index])
+
+    if instance_user_constraints_modified:
+
+        _preprocess(scenario_instance,
+                    objective=False,
+                    constraints=True)
+
+    # TBD: Should this be an an if below - both user and ph constraints
+    #      could be modified at the same time, no?
+    elif instance_ph_constraints_modified:
+
+        # only pre-process the piecewise constraints
+        idMap = {}
+        for constraint_name in instance_ph_constraints:
+            preprocess_constraint(
+                scenario_instance,
+                getattr(scenario_instance, constraint_name),
+                idMap=idMap)
+
+
+# TBD: doesn't do much now... - SHOULD PROPAGATE FLAGS FROM _preprocess_scenario_instances...
+
+def preprocess_bundle_instance(bundle_instance,
+                               solver):
+
+    # TODO: Does this import need to be delayed because
+    #       it is in a plugins subdirectory
+    from pyomo.solvers.plugins.solvers.persistent_solver import \
+        PersistentSolver
+
+    persistent_solver_in_use = isinstance(solver, PersistentSolver)
+
+    if persistent_solver_in_use:
+        active_objective_datas = []
+        for active_objective_data in bundle_instance.component_data_objects(Objective,
+                                                                              active=True,
+                                                                              descend_into=True):
+            active_objective_datas.append(active_objective_data)
+        if len(active_objective_datas) > 1:
+            raise RuntimeError("Multiple active objectives identified for bundle=%s" % bundle_instance._name)
+        elif len(active_objective_datas) == 1:
+            solver.set_objective(active_objective_datas[0])
+
 def reset_ph_plugins(ph):
     for ph_plugin in ph._ph_plugins:
-        print("THIS PLUGIN=",ph_plugin)
         ph_plugin.reset(ph)

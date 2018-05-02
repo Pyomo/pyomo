@@ -37,7 +37,9 @@ from pyomo.pysp.phsolverserverutils import (TransmitType,
                                            InvocationType)
 from pyomo.pysp.ph import _PHBase
 from pyomo.pysp.phutils import (reset_nonconverged_variables,
-                                reset_stage_cost_variables)
+                                reset_stage_cost_variables,
+                                find_active_objective,
+                                extract_solve_times)
 from pyomo.pysp.util.misc import launch_command
 
 from six import iterkeys, iteritems
@@ -63,8 +65,8 @@ class PHPyroWorker(TaskWorker):
     def del_server(self, name):
         phsolver = self._phsolverserver_map[name]
         # Avoid memory leaks
-        if phsolver._solver is not None:
-            phsolver._solver.deactivate()
+        for object_name, object_solver in iteritems(phsolver._solver_map):
+            object_solver.deactivate()
         del self._phsolverserver_map[name]
 
     def process(self, data):
@@ -244,6 +246,11 @@ class _PHSolverServer(_PHBase):
                    verbose,
                    compile_scenario_instances):
 
+        # TODO: Does this import need to be delayed because
+        #       it is in a plugins subdirectory
+        from pyomo.solvers.plugins.solvers.persistent_solver import \
+            PersistentSolver
+
         if verbose:
             print("Received request to initialize PH solver server")
             print("")
@@ -280,13 +287,16 @@ class _PHSolverServer(_PHBase):
         self._integer_tolerance = integer_tolerance
         self._output_solver_results = output_solver_results
 
-        # the solver instance is persistent, applicable to all instances here.
+        # the following is applicable to *all* solver plugins managed by this
+        # server. this could be relaxed in the future, if one so desired.
         self._solver_type = solver_type
         self._solver_io = solver_io
+
         if self._verbose:
             print("Constructing solver type="+solver_type)
-        self._solver = SolverFactory(solver_type,solver_io=self._solver_io)
-        if self._solver == None:
+
+        object_solver = self._solver_map[object_name] = SolverFactory(solver_type,solver_io=self._solver_io)
+        if object_solver == None:
             raise ValueError("Unknown solver type=" + solver_type + " specified")
 
         # we need the base model to construct
@@ -359,13 +369,13 @@ class _PHSolverServer(_PHBase):
 
         self._setup_scenario_instances()
 
-        # let plugins know if they care.
-        if self._verbose:
-            print("Invoking post-instance-creation PHSolverServer plugins")
         # let plugins know if they care - this callback point allows
         # users to create/modify the original scenario instances
         # and/or the scenario tree prior to creating PH-related
         # parameters, variables, and the like.
+        if self._verbose:
+            print("Invoking post-instance-creation PHSolverServer plugins")
+
         for plugin in self._ph_plugins:
             plugin.post_instance_creation(self)
 
@@ -405,6 +415,30 @@ class _PHSolverServer(_PHBase):
         if self._scenario_tree.contains_bundles():
             self._form_bundle_binding_instances()
 
+        # if we are dealing with a persisent solver plugin, go ahead
+        # and compile the instance into the solver.
+        # TBD - we need to pass in the symbolic solver labels to initialize()
+        #       when using persistent solver plugins - because this attribute
+        #       is set up-front.     
+        if self._verbose:
+            print("Setting instance for persistent solver interface")
+
+        # TODO: the symbolic solver label option is not propagated presently 
+        #       from PH to ph solver servers until the solve() method is invoked.
+        #       making the default "False", as largely labels take memory and
+        #       one can debug in the interim with a non-persistent solver.
+        if isinstance(object_solver, PersistentSolver):
+            if self._scenario_tree.contains_bundles():
+                object_solver.set_instance(
+                    self._bundle_binding_instance_map[object_name],
+                    symbolic_solver_labels=False,
+                    output_fixed_variable_bounds=self._write_fixed_variables) 
+            else:
+                object_solver.set_instance(
+                    self._scenario_tree.get_scenario(object_name).instance,
+                    symbolic_solver_labels=False, 
+                    output_fixed_variable_bounds=self._write_fixed_variables) 
+
         # Delay any preprocessing of the scenario instances
         # until we are inside the solve method. This gives users a
         # chance to further modify the instances (e.g., boundsetter
@@ -418,6 +452,8 @@ class _PHSolverServer(_PHBase):
         for plugin in self._ph_plugins:
             plugin.post_ph_initialization(self)
 
+        # TBD - what does initialize() even mean - we could be dealing with more than one instance.
+        #       this too should probably be a map.
         # we're good to go!
         self._initialized = True
 
@@ -463,14 +499,35 @@ class _PHSolverServer(_PHBase):
         from pyomo.solvers.plugins.solvers.persistent_solver import \
             PersistentSolver
 
-        if self._verbose:
-            if self._scenario_tree.contains_bundles() is True:
-                print("Received request to solve scenario bundle="+object_name)
-            else:
-                print("Received request to solve scenario instance="+object_name)
-
         if self._initialized is False:
             raise RuntimeError("PH solver server has not been initialized!")
+
+        # cache the type of the object, to avoid some if-thens that would
+        # otherwise be necessary in the code below - largely with printing.
+        if self._scenario_tree.contains_bundles():
+            object_type = "bundle"
+        else:
+            object_type = "instance"
+
+        if self._verbose:
+            print("Received request to solve scenario %s=%s" % (object_type, object_name))
+
+        # verify that this PH solver server actually knows about the 
+        # input object, and find the corresponding solver plugin.
+        if self._scenario_tree.contains_bundles():
+            if not self._scenario_tree.is_bundle(object_name):
+                print("PH solver server requested to solve bundle=%s, "
+                      " but that bundle is not recognized." % object_name)
+                return None
+        else:
+            if not self._scenario_tree.is_scenario(object_name):
+                print("PH solver server requested to solve scenario=%s, "
+                      " but that scenario is not recognized." % object_name)
+                return None
+
+        if object_name not in self._solver_map:
+            print("No solver plugin available for scenario%s=%s" % (object_type,object_name))
+        object_solver = self._solver_map[object_name]
 
         self._tee = tee
         self._symbolic_solver_labels = symbolic_solver_labels
@@ -499,7 +556,7 @@ class _PHSolverServer(_PHBase):
         for key,value in iteritems(self._solver_options):
             if self._verbose:
                 print("Processing solver option="+key+", value="+str(value))
-            self._solver.options[key] = value
+            object_solver.options[key] = value
 
         # with the introduction of piecewise linearization, the form
         # of the penalty-weighted objective is no longer fixed. thus,
@@ -517,24 +574,7 @@ class _PHSolverServer(_PHBase):
 
         self._preprocess_scenario_instances()
 
-        if self._first_solve:
-
-            # if we are dealing with a persisent solver plugin, go ahead
-            # and compile the instance into the solver.
-            if isinstance(self._solver, PersistentSolver):
-                if self._scenario_tree.contains_bundles():
-                    # probably for no good reason, as we should be able to
-                    # hand the binding instance to the compile procedure -
-                    # just not tested.
-                    raise RuntimeError("***We presently can't handle bundles in "
-                                       "persistent solver plugins")
-                else:
-                    self._solver.set_instance(
-                        self._scenario_tree.get_arbitrary_scenario()._instance,
-                        symbolic_solver_labels=self._symbolic_solver_labels,
-                        output_fixed_variable_bounds=self._write_fixed_variables)
-
-        else:
+        if not self._first_solve:
 
             # GAH: We may need to redefine our concept of
             #      warmstart. These values could be helpful in the
@@ -553,7 +593,7 @@ class _PHSolverServer(_PHBase):
                 # clear stage cost variables, to ensure feasible warm starts.
                 reset_stage_cost_variables(self._scenario_tree, self._instances)
 
-        if isinstance(self._solver, PersistentSolver):
+        if isinstance(object_solver, PersistentSolver):
             common_solve_kwds = {
                 'load_solutions':False,
                 'tee':self._tee,
@@ -567,6 +607,8 @@ class _PHSolverServer(_PHBase):
                 'symbolic_solver_labels':self._symbolic_solver_labels,
                 'output_fixed_variable_bounds':self._write_fixed_variables,
                 'suffixes':self._solver_suffixes}
+        if object_solver.warm_start_capable():
+            common_solve_kwds['warmstart'] = self._warmstart
 
         stages_to_load = None
         if not TransmitType.TransmitAllStages(variable_transmission):
@@ -580,29 +622,12 @@ class _PHSolverServer(_PHBase):
         results = None
         if self._scenario_tree.contains_bundles():
 
-            if self._scenario_tree.contains_bundle(object_name) is False:
-                print("Requested scenario bundle to solve not known to PH "
-                      "solver server!")
-                return None
-
             bundle_ef_instance = self._bundle_binding_instance_map[object_name]
 
             solve_start_time = time.time()
 
-            if  self._warmstart and self._solver.warm_start_capable():
-                if isinstance(self._solver, PersistentSolver):
-                    results = self._solver.solve(warmstart=True,
-                                                 **common_solve_kwds)
-                else:
-                    results = self._solver.solve(bundle_ef_instance,
-                                                 warmstart=True,
-                                                 **common_solve_kwds)
-            else:
-                if isinstance(self._solver, PersistentSolver):
-                    results = self._solver.solve(**common_solve_kwds)
-                else:
-                    results = self._solver.solve(bundle_ef_instance,
-                                                 **common_solve_kwds)
+            results = object_solver.solve(bundle_ef_instance,
+                                          **common_solve_kwds)
 
             pyomo_solve_time = time.time() - solve_start_time
 
@@ -675,30 +700,13 @@ class _PHSolverServer(_PHBase):
 
         else:
 
-            if object_name not in self._instances:
-                print("Requested instance to solve not in PH solver "
-                      "server instance collection!")
-                return None
-
             scenario = self._scenario_tree._scenario_map[object_name]
             scenario_instance = self._instances[object_name]
 
             solve_start_time = time.time()
 
-            if self._warmstart and self._solver.warm_start_capable():
-                if isinstance(self._solver, PersistentSolver):
-                    results = self._solver.solve(warmstart=True,
-                                                 **common_solve_kwds)
-                else:
-                    results = self._solver.solve(scenario_instance,
-                                             warmstart=True,
-                                             **common_solve_kwds)
-            else:
-                if isinstance(self._solver, PersistentSolver):
-                    results = self._solver.solve(**common_solve_kwds)
-                else:
-                    results = self._solver.solve(scenario_instance,
-                                                 **common_solve_kwds)
+            results = object_solver.solve(scenario_instance,
+                                          **common_solve_kwds)
 
             pyomo_solve_time = time.time() - solve_start_time
 
@@ -779,28 +787,10 @@ class _PHSolverServer(_PHBase):
                (solution0.gap is not None):
                 auxilliary_values["gap"] = solution0.gap
 
-            # if the solver plugin doesn't populate the
-            # user_time field, it is by default of type
-            # UndefinedData - defined in pyomo.opt.results
-            if hasattr(results.solver,"user_time") and \
-               (not isinstance(results.solver.user_time, UndefinedData)) and \
-               (results.solver.user_time is not None):
-                # the solve time might be a string, or might
-                # not be - we eventually would like more
-                # consistency on this front from the solver
-                # plugins.
-                auxilliary_values["user_time"] = \
-                    float(results.solver.user_time)
-            elif hasattr(results.solver,"time"):
-                auxilliary_values["time"] = \
-                    float(results.solver.time)
+            auxilliary_values["solve_time"], auxilliary_values["pyomo_solve_time"] = \
+                extract_solve_times(results, default=None)
 
             auxilliary_values['solution_status'] = solution0.status.key
-
-            # add in the pyomo solve time, which is defined as
-            # the time consumed by the solve() method invocation
-            # on whatever solver plugin is being used.
-            auxilliary_values["pyomo_solve_time"] = pyomo_solve_time
 
             solve_method_result = (variable_values, suffix_values, auxilliary_values)
 

@@ -32,7 +32,7 @@ def define_model(**kwds):
     model.Fx = Var(INDEX_SET) # range variable
     model.p = Param(INDEX_SET, initialize=1.0, mutable=True)
 
-    model.obj = Objective(expr=summation(model.Fx), sense=kwds.pop('sense',maximize))
+    model.obj = Objective(expr=sum_product(model.Fx), sense=kwds.pop('sense',maximize))
 
     model.piecewise = Piecewise(INDEX_SET,model.Fx,model.x,
                                   pw_pts=DOMAIN_PTS,

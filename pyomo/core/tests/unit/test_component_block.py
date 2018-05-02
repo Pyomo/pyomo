@@ -3,6 +3,8 @@ import os
 import pickle
 
 import pyutilib.th as unittest
+from pyomo.core.expr.numvalue import native_numeric_types
+from pyomo.core.expr.symbol_map import SymbolMap
 import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
@@ -16,7 +18,6 @@ from pyomo.core.kernel.component_interface import (ICategorizedObject,
                                                  IComponentContainer,
                                                  _ActiveComponentContainerMixin)
 from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.symbol_map import SymbolMap
 from pyomo.core.kernel.component_suffix import suffix
 from pyomo.core.kernel.component_constraint import (constraint,
                                                     constraint_dict,
@@ -45,7 +46,6 @@ from pyomo.core.kernel.component_sos import sos
 from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
-import pyomo.core.base.expr
 from pyomo.opt.results import Solution
 
 def _path_to_object_exists(obj, descendent):
@@ -75,15 +75,11 @@ def _collect_expr_components(exp):
     ans = {}
     if isinstance(exp, IComponent):
         ans[id(exp)] = exp
-    if exp.is_expression():
-        if exp.__class__ is pyomo.core.base.expr._ProductExpression:
-            for subexp in exp._numerator:
-                ans.update(_collect_expr_components(subexp))
-            for subexp in exp._denominator:
-                ans.update(_collect_expr_components(subexp))
-        else:
-            for subexp in exp._args:
-                ans.update(_collect_expr_components(subexp))
+    if exp.__class__ in native_numeric_types:
+        return ans
+    if exp.is_expression_type():
+        for subexp in exp.args:
+            ans.update(_collect_expr_components(subexp))
     return ans
 
 class TestMisc(unittest.TestCase):
@@ -131,7 +127,7 @@ class TestMisc(unittest.TestCase):
         b.eu = data_expression(b.p**2 + 10)
         b.el = data_expression(-b.p**2 - 10)
         b.o = objective(b.v + b.y)
-        b.c1 = constraint(b.el + 1 <= b.e + 2 <= b.eu + 2)
+        b.c1 = constraint((b.el + 1, b.e + 2, b.eu + 2))
         b.c2 = constraint(lb=b.el, body=b.v)
         b.c3 = constraint(body=b.v, ub=b.eu)
 
@@ -266,7 +262,7 @@ class TestMisc(unittest.TestCase):
         b.eu = data_expression(b.p**2 + 10)
         b.el = data_expression(-b.p**2 - 10)
         b.o = objective(b.v + b.y)
-        b.c1 = constraint(b.el + 1 <= b.e + 2 <= b.eu + 2)
+        b.c1 = constraint((b.el + 1, b.e + 2, b.eu + 2))
         b.c2 = constraint(lb=b.el, body=b.v)
         b.c3 = constraint(body=b.v, ub=b.eu)
         b.dual = suffix(direction=suffix.IMPORT)
@@ -512,7 +508,7 @@ class TestMisc(unittest.TestCase):
         b.cdict = constraint_dict(((i, constraint(b.vdict[i] == i))
                                   for i in b.vdict),
                                   ordered=True)
-        b.clist = constraint_list(constraint(0 <= v_ <= i)
+        b.clist = constraint_list(constraint((0, v_, i))
                                   for i, v_ in enumerate(b.vlist))
         b.p = parameter()
         b.pdict = parameter_dict(((i, parameter(i))

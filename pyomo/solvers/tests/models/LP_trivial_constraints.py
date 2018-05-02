@@ -63,6 +63,9 @@ class LP_trivial_constraints(_BaseTestModel):
         assert cdata.upper == 1
         assert cdata.body() == 1
         assert cdata.equality
+        model.d = Constraint(
+            rule=lambda m: (float('-inf'), m.x, float('inf')))
+        assert not model.d.equality
 
     def warmstart_model(self):
         assert self.model is not None
@@ -74,9 +77,11 @@ class LP_trivial_constraints(_BaseTestModel):
         if tester is None:
             for i in self.model.c:
                 assert id(self.model.c[i]) in symbol_map.byObject
+            assert id(self.model.d[i]) not in symbol_map.byObject
         else:
             for i in self.model.c:
                 tester.assertTrue(id(self.model.c[i]) in symbol_map.byObject)
+            tester.assertTrue(id(self.model.d) not in symbol_map.byObject)
 
 @register_model
 class LP_trivial_constraints_kernel(LP_trivial_constraints):

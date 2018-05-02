@@ -8,7 +8,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+# The log should be imported first so that the Pyomo LogHandler can be
+# set up as soon as possible
 import pyomo.util.log
+
+import pyomo.util.config
+from pyomo.util.errors import DeveloperError
 from pyomo.util._task import pyomo_api, PyomoAPIData, PyomoAPIFactory
 from pyomo.util._command import pyomo_command, get_pyomo_commands
-from pyomo.util._config import *

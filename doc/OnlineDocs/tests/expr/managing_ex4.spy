@@ -1,0 +1,11 @@
+from pyomo.core.expr import current as EXPR
+
+M = ConcreteModel()
+M.x = Var()
+
+with EXPR.clone_counter() as counter:
+    start = counter.count
+    e1 = sin(M.x)
+    e2 = e1.clone()
+    total = counter.count - start
+    assert(total == 1)

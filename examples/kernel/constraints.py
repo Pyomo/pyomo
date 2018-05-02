@@ -44,9 +44,9 @@ c.lb = 1
 # Range constraints
 #
 
-c = pmo.constraint(0 <= v <= 1)
+c = pmo.constraint((0, v, 1))
 
-c = pmo.constraint(expr= 0 <= v <= 1)
+c = pmo.constraint(expr= (0, v, 1))
 
 c = pmo.constraint(lb=0, body=v, ub=1)
 

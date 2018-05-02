@@ -8,13 +8,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 #
-
+import os
 import pyutilib.th as unittest
 
+from pyomo.util.getGSL import find_GSL
 from pyomo.core.base import IntegerSet
 from pyomo.environ import *
 from pyomo.core.base.external import (PythonCallbackFunction,
                                       AMPLExternalFunction)
+from pyomo.opt import check_available_solvers
 
 def _g(*args):
     return len(args)
@@ -73,6 +75,31 @@ class TestAMPLExternalFunction(unittest.TestCase):
         self.assertEqual(M.m.f.local_name, "f")
         self.assertEqual(M.m.f.getname(), "f")
         self.assertEqual(M.m.f.getname(True), "m.f")
+
+    def test_eval_gsl_function(self):
+        DLL = find_GSL()
+        if not DLL:
+            self.skipTest("Could not find the amplgsl.dll library")
+        model = ConcreteModel()
+        model.z_func = ExternalFunction(library=DLL, function="gsl_sf_gamma")
+        model.x = Var(initialize=3, bounds=(1e-5,None))
+        model.o = Objective(expr=model.z_func(model.x))
+        self.assertAlmostEqual(value(model.o), 2.0, 7)
+
+    @unittest.skipIf(not check_available_solvers('ipopt'),
+                     "The 'ipopt' solver is not available")
+    def test_solve_gsl_function(self):
+        DLL = find_GSL()
+        if not DLL:
+            self.skipTest("Could not find the amplgsl.dll library")
+        model = ConcreteModel()
+        model.z_func = ExternalFunction(library=DLL, function="gsl_sf_gamma")
+        model.x = Var(initialize=3, bounds=(1e-5,None))
+        model.o = Objective(expr=model.z_func(model.x))
+        opt = SolverFactory('ipopt')
+        res = opt.solve(model, tee=True)
+        self.assertAlmostEqual(value(model.o), 0.885603194411, 7)
+
 
 if __name__ == "__main__":
     unittest.main()

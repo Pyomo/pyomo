@@ -32,7 +32,7 @@ def simple_twostage_model():
     model.c = ConstraintList()
     model.c.add(model.x >= 10)
     model.c.add(model.y >= 10)
-    model.o = Objective(expr=summation(model.StageCost))
+    model.o = Objective(expr=sum_product(model.StageCost))
     return model
 
 def simple_threestage_scenario_tree():
@@ -70,5 +70,5 @@ def simple_threestage_model():
     model.c.add(model.x >= 10)
     model.c.add(model.y >= 10)
     model.c.add(model.z >= 10)
-    model.o = Objective(expr=summation(model.StageCost))
+    model.o = Objective(expr=sum_product(model.StageCost))
     return model

@@ -537,8 +537,8 @@ You can silence this warning by one of three ways:
             # due to circular imports (expr imports _VarData
             # imports indexed_component, but we need expr
             # here
-            from pyomo.core.base import expr as EXPR
-            if index.__class__ is EXPR._GetItemExpression:
+            from pyomo.core.expr import current as EXPR
+            if index.__class__ is EXPR.GetItemExpression:
                 return index
             index = self._validate_index(index)
             # _processUnhashableIndex could have found a slice, or
@@ -771,8 +771,8 @@ You can silence this warning by one of three ways:
                     # due to circular imports (expr imports _VarData
                     # imports indexed_component, but we need expr
                     # here
-                    from pyomo.core.base import expr as EXPR
-                    return EXPR._GetItemExpression(self, idx)
+                    from pyomo.core.expr import current as EXPR
+                    return EXPR.GetItemExpression(tuple(idx), self)
                 except:
                     # There are other ways we could get an exception
                     # that is not TemplateExpressionError; most notably,

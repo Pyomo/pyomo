@@ -1,0 +1,7 @@
+M = ConcreteModel()
+M.x = Var(range(5))
+M.y = Var(range(5))
+
+with linear_expression() as e:
+    quicksum((M.x[i] for i in M.x), start=e)
+    quicksum((M.y[i] for i in M.y), start=e)

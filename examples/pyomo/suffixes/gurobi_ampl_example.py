@@ -46,7 +46,7 @@ opt.options['outlev'] = 1 # tell gurobi to be verbose with output
 model = ConcreteModel()
 model.s = Set(initialize=[1,2,3])
 model.x = Var(model.s,within=NonNegativeReals)
-model.obj = Objective(expr=summation(model.x))
+model.obj = Objective(expr=sum_product(model.x))
 model.con = Constraint(model.s, rule=lambda model,i: model.x[i] >= i-1)
 ###
 
