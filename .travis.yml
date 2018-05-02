@@ -79,7 +79,7 @@ install:
     fi
   - pip install --quiet xlrd
   - pip install --quiet openpyxl
-  - pip install sphinx_rtd_theme
+  - pip install sphinx sphinx_rtd_theme
   - pip install dill
   - conda install -q -y -c anaconda pandas networkx
 
