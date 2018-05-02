@@ -7,7 +7,7 @@ env:
   - secure: dC9Ihi6+5pLmJD3EtJNa/UMDRAUE+BK2QLOhD/igYvuCOVzA/blfDozDUXUKhBj4151pMRmT5HJW2tKoktAGvPMeV9N7kWEwSl5/tmOy+ATzAYcdQFylW2bYshPfyBRlK3CW4XrsF1/e0J4+L6FRIlvpAEFTtkPQQUDl/4cBE5ftR69gOKV1cEcbVzQ7zfA28TZN+J6DAR0rE11OaL1d0wRUzrxXbGVGNJ2W50R1LV+GZbRHu20qTwIGfLUVegriUXCa/xuq95upzN5/2mOIgDaLrwkpFEQDj6gUb60QDIPPi2GgNX05uaAszRWLnbroChCoK7niK2t616HvOgXRSvkcr+HRMQlwSCA1NAf3Qn5S1EMR5cekNTver9f13p8YbXzm0Hil/n8qCAAhMsKc9SAn1S6vDIdnMIUYaQ/eHPWJgGTqRkWGiaWzgb5/5QIHHE/WjJAleeV3p/pOD6myJeIqDByLCnLOhIgQeZ7fZ0d/S9+VavSoHTKfp5+ZBp/Xh7utl7wKDsSNak7Cw8miV7CntT8zTBtSiHVFWd0jvd6TEqHsFHw0AloUJu/0998kv3vk6Xj7yqpd/grZqL9DJSoBlJnHmuf/lqIYknGEUOX3ZczGnnmstc9c9TNwp8g6MD4f5cRXSLuqvW94BM7MoFh3eyx/mmCX1+uJTEpxHZs=
   - secure: Sofev3DLx/rWCgAmNxprKOEue4AjPq6i6z8o7eHigPEx6SO3IMH36EENsuvEpE/HyNn+PHqGWudEz1ArkL+2pxiVo1FVRL94cUoo3FwachUMWMK7BnIJleJ7nW1pUwsANs0bWpw8qNkRMVRG3ycCY28MQzfx71U+/AQd+xS0EkVqDg3WWcbjVnVDRpmFH1pdm/syOHzW3jGVKTRsr1u5v9LJ+QKwEQHeKIrntP17mzyWQhZ+SbgqHcEQrK0o0sCSv4g3b/cJdazaR12H7nfxmtNjKETiLCx37OPIE0DnMKWYJVFlhbxeUfX+fPvGdjFkfu7rGnanZgsHEPy0eiXQAPfXLCwSsrJ8/RTL5RVUzQ7aK/bIQbkUr1fvqwCcS0UQOj/ajTHZYKLe19s17lgOhxtMA8CIIC8rY828uEb8hZKKSvfz37lx0yz4OePxDddZJAm1jNsfqNeofW333yjE2jQx4ASIcm29arAv+izv0S3+2RZTPSa5XdWnqw9/Ko2whgbb/Ccts/hhbCYCLqED0XjZ2OSb0cLDScd/qXJRfkW8YBraE6KMaJou10S3NCyXBYQVB9PCmT7mPH32f/pPO98JiBC0sW1Ghe285pYUJMxrhSCScw80b2Mb8847KyviH9aQt3yqtkwAl87W0YICZu0AH5hRUSO3kpaW0WbmaBA=
   matrix:
-#  - IMAGE_NAME=test-builds:python_3.7-rc CATEGORY="nightly"
+  - IMAGE_NAME=test-builds:python_3.7-rc CATEGORY="nightly"
   - IMAGE_NAME=test-builds:python_3.6    CATEGORY="nightly"
   - IMAGE_NAME=test-builds:python_3.5    CATEGORY="nightly"
   - IMAGE_NAME=test-builds:python_2.7    CATEGORY="nightly"
@@ -47,6 +47,7 @@ install:
 script:
   - ${DOC} python --version
   - ${DOC} pip --version
+  - ${DOC} bash -c 'echo CPLEX_VERSION="$CPLEX_VERSION"'
   - ${DOC} bash -c 'echo GLPK_VERSION="$GLPK_VERSION"'
   - ${DOC} bash -c 'echo IPOPT_VERSION="$IPOPT_VERSION"'
   - ${DOC} bash -c 'echo CBC_VERSION="$CBC_VERSION"'
@@ -54,9 +55,8 @@ script:
   - ${DOC} bash -c 'echo GAMS_VERSION="$GAMS_VERSION"'
 ####### temp
   - ${DOC} bash -c 'BARONEXE="$(which baron)" && mv "${BARONEXE}" "${BARONEXE%baron}_baron"'
-  - ${DOC} pip install sphinx sphinx_rtd_theme
 ###########
-#  - ${DOC} test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
+  - ${DOC} test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
  # Run documentation tests
   - ${DOC} bash -c 'cd doc/OnlineDocs && make doctests -d'
   # nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
