@@ -15,6 +15,8 @@ env:
   - IMAGE_NAME=test-builds:pypy_2        CATEGORY="nightly"
   - IMAGE_NAME=test-builds:anaconda_3    CATEGORY="nightly"
   - IMAGE_NAME=test-builds:anaconda_2    CATEGORY="nightly"
+  - IMAGE_NAME=test-builds:python_3.6    CATEGORY="parallel"
+  - IMAGE_NAME=test-builds:python_2.7    CATEGORY="parallel"
 
 before_install:
   - echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
