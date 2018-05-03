@@ -837,7 +837,7 @@ class EmbeddedSP(object):
             options,
             factory=factory)
         try:
-            init = manager.initialize(async=True)
+            init = manager.initialize(async_call=True)
             pcuids = ComponentMap()
             for param in self.stochastic_data:
                 pcuids[param] = ComponentUID(param)
@@ -851,7 +851,7 @@ class EmbeddedSP(object):
                     thisfile,
                     invocation_type=InvocationType.OnScenario(scenario.name),
                     function_args=(data,),
-                    oneway=True)
+                    oneway_call=True)
             manager.reference_model = model
         except:
             manager.close()

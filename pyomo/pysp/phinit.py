@@ -179,7 +179,7 @@ def construct_ph_options_parser(usage_string):
     phOpts.add_argument("--async",
       help="Run PH in asychronous mode after iteration 0. Default is False.",
       action="store_true",
-      dest="async",
+      dest="async_mode",
       default=False)
     phOpts.add_argument("--async-buffer-length",
       help="Number of scenarios to collect, if in async mode, before doing statistics and weight updates. Default is 1.",
