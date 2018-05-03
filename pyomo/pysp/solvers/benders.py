@@ -681,28 +681,28 @@ class BendersAlgorithm(PySPConfiguredObject):
             "EXTERNAL_deactivate_rootnode_costs",
             thisfile,
             invocation_type=InvocationType.PerScenario,
-            oneway=True)
+            oneway_call=True)
 
     def activate_rootnode_costs(self):
         self._manager.invoke_function(
             "EXTERNAL_activate_rootnode_costs",
             thisfile,
             invocation_type=InvocationType.PerScenario,
-            oneway=True)
+            oneway_call=True)
 
     def activate_fix_constraints(self):
         self._manager.invoke_function(
             "EXTERNAL_activate_fix_constraints",
             thisfile,
             invocation_type=InvocationType.PerScenario,
-            oneway=True)
+            oneway_call=True)
 
     def deactivate_fix_constraints(self):
         self._manager.invoke_function(
             "EXTERNAL_deactivate_fix_constraints",
             thisfile,
             invocation_type=InvocationType.PerScenario,
-            oneway=True)
+            oneway_call=True)
 
     def update_fix_constraints(self, fix_values):
         self._manager.invoke_function(
@@ -710,14 +710,14 @@ class BendersAlgorithm(PySPConfiguredObject):
             thisfile,
             invocation_type=InvocationType.PerScenario,
             function_args=(fix_values,),
-            oneway=True)
+            oneway_call=True)
 
-    def collect_cut_data(self, async=False):
+    def collect_cut_data(self, async_call=False):
         return self._manager.invoke_function(
             "EXTERNAL_collect_cut_data",
             thisfile,
             invocation_type=InvocationType.PerScenario,
-            async=async)
+            async_call=async_call)
 
     def initialize_subproblems(self):
         if self.get_option("verbose"):
@@ -726,7 +726,7 @@ class BendersAlgorithm(PySPConfiguredObject):
             "EXTERNAL_initialize_for_benders",
             thisfile,
             invocation_type=InvocationType.PerScenario,
-            oneway=True)
+            oneway_call=True)
 
     def cleanup_subproblems(self):
         if self.get_option("verbose"):
@@ -735,7 +735,7 @@ class BendersAlgorithm(PySPConfiguredObject):
             "EXTERNAL_cleanup_from_benders",
             thisfile,
             invocation_type=InvocationType.PerScenario,
-            oneway=True)
+            oneway_call=True)
 
     def generate_cut(self,
                      xhat,

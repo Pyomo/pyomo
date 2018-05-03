@@ -59,7 +59,6 @@ script:
   - ${DOC} test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
  # Run documentation tests
   - ${DOC} make -C doc/OnlineDocs doctest -d
-  # nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
 
 after_script:
   - ${DOC} codecov --env IMAGE_NAME
