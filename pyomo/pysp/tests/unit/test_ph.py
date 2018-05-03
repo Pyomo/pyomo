@@ -1039,6 +1039,7 @@ class TestPH(unittest.TestCase):
             ef_output_file,
             baseline_dir+"sizes3_ef.baseline.lp.gz")
 
+    @unittest.category('fragile')
     def test_sizes3_ef_with_solve_cplex(self):
         if not solver['cplex','lp']:
             self.skipTest("The 'cplex' executable is not available")
@@ -1184,6 +1185,7 @@ class TestPH(unittest.TestCase):
             ef_output_file,
             baseline_dir+"farmer_ef_cvar.baseline.lp")
 
+    @unittest.category('fragile')
     def test_cc_ef_networkflow1ef3_cplex(self):
         if not solver['cplex','lp']:
             self.skipTest("The 'cplex' executable is not available")
@@ -1243,6 +1245,7 @@ class TestPH(unittest.TestCase):
             this_test_file_directory+"ScenarioList.csv"))
         os.remove(this_test_file_directory+"ScenarioList.csv")
 
+    @unittest.category('fragile')
     def test_lagrangian_param_1cc_networkflow1ef3_cplex(self):
         if not solver['cplex','lp']:
             self.skipTest("The 'cplex' executable is not available")
@@ -2096,6 +2099,7 @@ class TestPHParallel(unittest.TestCase):
                 self.fail("Differences identified relative to all baseline output file alternatives")
             os.remove(log_output_file)
 
+    @unittest.category('fragile')
     def test_farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve(self):
         if not solver['cplex','lp']:
             self.skipTest("The 'cplex' executable is not available")
