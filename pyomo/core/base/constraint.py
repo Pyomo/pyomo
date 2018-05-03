@@ -815,7 +815,7 @@ class Constraint(ActiveIndexedComponent):
                         ((k,v) for k,v in iteritems(self._data) if v.active),
                         ( "Lower","Body","Upper" ),
                         lambda k, v: [ value(v.lower),
-                                       value(v.body),
+                                       v.body(),
                                        value(v.upper),
                                        ] )
 
