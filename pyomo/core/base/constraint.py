@@ -422,7 +422,7 @@ class _GeneralConstraintData(_ConstraintData):
             elif len(expr) == 3:
                 arg0 = expr[0]
                 if arg0 is not None:
-                    #arg0 = as_numeric(arg0)
+                    arg0 = as_numeric(arg0)
                     if not arg0.__class__ in native_numeric_types and arg0.is_potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
@@ -437,7 +437,7 @@ class _GeneralConstraintData(_ConstraintData):
 
                 arg2 = expr[2]
                 if arg2 is not None:
-                    #arg2 = as_numeric(arg2)
+                    arg2 = as_numeric(arg2)
                     if not arg2.__class__ in native_numeric_types and arg2.is_potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
