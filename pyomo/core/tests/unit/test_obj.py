@@ -30,9 +30,9 @@ class TestSimpleObj(unittest.TestCase):
         self.assertEqual(len(model.o), 1)
         self.assertEqual(model.o.expr, 1)
         model.o.expr = 2
-        self.assertEqual(value(model.o.expr), 2)
+        self.assertEqual(model.o.expr(), 2)
         model.o.expr += 2
-        self.assertEqual(value(model.o.expr), 4)
+        self.assertEqual(model.o.expr(), 4)
 
     def test_singleton_get_set_value(self):
         model = ConcreteModel()
@@ -40,9 +40,9 @@ class TestSimpleObj(unittest.TestCase):
         self.assertEqual(len(model.o), 1)
         self.assertEqual(model.o.expr, 1)
         model.o.expr = 2
-        self.assertEqual(value(model.o.expr), 2)
+        self.assertEqual(model.o.expr(), 2)
         model.o.expr += 2
-        self.assertEqual(value(model.o.expr), 4)
+        self.assertEqual(model.o.expr(), 4)
 
     def test_empty_singleton(self):
         a = Objective()
@@ -114,7 +114,7 @@ class TestSimpleObj(unittest.TestCase):
         """Test expr option with a single numeric constant"""
         model = ConcreteModel()
         model.obj = Objective(expr=0.0)
-        self.assertEqual(value(model.obj), 0.0)
+        self.assertEqual(model.obj(), 0.0)
         self.assertEqual(value(model.obj), 0.0)
         self.assertEqual(value(model.obj._data[None]), 0.0)
 
@@ -124,7 +124,7 @@ class TestSimpleObj(unittest.TestCase):
         model.p = Param(initialize=1.0,mutable=True)
         model.obj = Objective(expr=model.p)
 
-        self.assertEqual(value(model.obj), 1.0)
+        self.assertEqual(model.obj(), 1.0)
         self.assertEqual(value(model.obj), 1.0)
         self.assertEqual(value(model.obj._data[None]), 1.0)
 
@@ -134,7 +134,7 @@ class TestSimpleObj(unittest.TestCase):
         model.p = Param(initialize=1.0,mutable=False)
         model.obj = Objective(expr=model.p)
 
-        self.assertEqual(value(model.obj), 1.0)
+        self.assertEqual(model.obj(), 1.0)
         self.assertEqual(value(model.obj), 1.0)
         self.assertEqual(value(model.obj._data[None]), 1.0)
 
@@ -144,7 +144,7 @@ class TestSimpleObj(unittest.TestCase):
         model.x = Var(initialize=1.0)
         model.obj = Objective(expr=model.x)
 
-        self.assertEqual(value(model.obj), 1.0)
+        self.assertEqual(model.obj(), 1.0)
         self.assertEqual(value(model.obj), 1.0)
         self.assertEqual(value(model.obj._data[None]), 1.0)
 
@@ -158,7 +158,7 @@ class TestSimpleObj(unittest.TestCase):
             ans = ans + model.x[i]
         model.obj = Objective(expr=ans)
 
-        self.assertEqual(value(model.obj), 8)
+        self.assertEqual(model.obj(), 8)
         self.assertEqual(value(model.obj), 8)
         self.assertEqual(value(model.obj._data[None]), 8)
 
@@ -168,7 +168,7 @@ class TestSimpleObj(unittest.TestCase):
         model.x = Var(initialize=2)
         model.obj = Objective(expr=model.x)
 
-        self.assertEqual(value(model.obj), 2)
+        self.assertEqual(model.obj(), 2)
         self.assertEqual(value(model.obj), 2)
         self.assertEqual(value(model.obj._data[None]), 2)
 
@@ -183,7 +183,7 @@ class TestSimpleObj(unittest.TestCase):
         model.x = Var(RangeSet(1,4),initialize=2)
         model.obj = Objective(rule=f)
 
-        self.assertEqual(value(model.obj), 8)
+        self.assertEqual(model.obj(), 8)
         self.assertEqual(value(model.obj), 8)
         self.assertEqual(value(model.obj._data[None]), 8)
 
@@ -283,9 +283,9 @@ class TestArrayObj(unittest.TestCase):
         self.assertEqual(len(model.o), 1)
         self.assertEqual(model.o[1].expr, 1)
         model.o[1].expr = 2
-        self.assertEqual(value(model.o[1].expr), 2)
+        self.assertEqual(model.o[1].expr(), 2)
         model.o[1].expr += 2
-        self.assertEqual(value(model.o[1].expr), 4)
+        self.assertEqual(model.o[1].expr(), 4)
 
     def test_objdata_get_set_value(self):
         model = ConcreteModel()
@@ -293,9 +293,9 @@ class TestArrayObj(unittest.TestCase):
         self.assertEqual(len(model.o), 1)
         self.assertEqual(model.o[1].expr, 1)
         model.o[1].expr = 2
-        self.assertEqual(value(model.o[1].expr), 2)
+        self.assertEqual(model.o[1].expr(), 2)
         model.o[1].expr += 2
-        self.assertEqual(value(model.o[1].expr), 4)
+        self.assertEqual(model.o[1].expr(), 4)
 
     def test_objdata_get_set_sense(self):
         model = ConcreteModel()
@@ -323,8 +323,8 @@ class TestArrayObj(unittest.TestCase):
         model.x = Var(model.B,initialize=2)
         model.obj = Objective(model.A,rule=f)
 
-        self.assertEqual(value(model.obj[1]), 8)
-        self.assertEqual(value(model.obj[2]), 16)
+        self.assertEqual(model.obj[1](), 8)
+        self.assertEqual(model.obj[2](), 16)
         self.assertEqual(value(model.obj[1]), 8)
         self.assertEqual(value(model.obj[2]), 16)
 
@@ -343,7 +343,7 @@ class TestArrayObj(unittest.TestCase):
         model.x = Var(model.B, initialize=2)
         model.obj = Objective(model.A,rule=f)
 
-        self.assertEqual(value(model.obj[2]), 16)
+        self.assertEqual(model.obj[2](), 16)
         self.assertEqual(value(model.obj[2]), 16)
 
     def test_rule_option3(self):
@@ -362,7 +362,7 @@ class TestArrayObj(unittest.TestCase):
         model.x = Var(model.B, initialize=2)
         model.obj = Objective(model.A,rule=f)
 
-        self.assertEqual(value(model.obj[2]), 16)
+        self.assertEqual(model.obj[2](), 16)
         self.assertEqual(value(model.obj[2]), 16)
 
     def test_rule_numeric_expr(self):
@@ -372,7 +372,7 @@ class TestArrayObj(unittest.TestCase):
             return 1.0
         model.obj = Objective(model.A,rule=f)
 
-        self.assertEqual(value(model.obj[2]), 1.0)
+        self.assertEqual(model.obj[2](), 1.0)
         self.assertEqual(value(model.obj[2]), 1.0)
 
     def test_rule_immutable_param_expr(self):
@@ -384,7 +384,7 @@ class TestArrayObj(unittest.TestCase):
         model.x = Var()
         model.obj = Objective(model.A,rule=f)
 
-        self.assertEqual(value(model.obj[2]), 1.0)
+        self.assertEqual(model.obj[2](), 1.0)
         self.assertEqual(value(model.obj[2]), 1.0)
 
     def test_rule_mutable_param_expr(self):
@@ -397,7 +397,7 @@ class TestArrayObj(unittest.TestCase):
         model.x = Var()
         model.obj = Objective(model.A,rule=f)
 
-        self.assertEqual(value(model.obj[2]), 1.0)
+        self.assertEqual(model.obj[2](), 1.0)
         self.assertEqual(value(model.obj[2]), 1.0)
 
     def test_rule_var_expr(self):
@@ -737,7 +737,7 @@ class MiscObjTests(unittest.TestCase):
             return 1.1
         model = ConcreteModel()
         model.o = Objective(rule=rule1)
-        self.assertEqual(value(model.o),1.1)
+        self.assertEqual(model.o(),1.1)
         #
         model = ConcreteModel()
         def rule1(model, i):

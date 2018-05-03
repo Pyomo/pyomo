@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.expr import value
 import pyomo.kernel as pmo
 from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, RealInterval, ConstraintList
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
@@ -42,27 +41,27 @@ class LP_trivial_constraints(_BaseTestModel):
         cdata = model.c.add((0, 1, 3))
         assert cdata.lower == 0
         assert cdata.upper == 3
-        assert value(cdata.body) == 1
+        assert cdata.body() == 1
         assert not cdata.equality
         cdata = model.c.add((0, 2, 3))
         assert cdata.lower == 0
         assert cdata.upper == 3
-        assert value(cdata.body) == 2
+        assert cdata.body() == 2
         assert not cdata.equality
         cdata = model.c.add((0, 1, None))
         assert cdata.lower == 0
         assert cdata.upper is None
-        assert value(cdata.body) == 1
+        assert cdata.body() == 1
         assert not cdata.equality
         cdata = model.c.add((None, 0, 1))
         assert cdata.lower is None
         assert cdata.upper == 1
-        assert value(cdata.body) == 0
+        assert cdata.body() == 0
         assert not cdata.equality
         cdata = model.c.add((1,1))
         assert cdata.lower == 1
         assert cdata.upper == 1
-        assert value(cdata.body) == 1
+        assert cdata.body() == 1
         assert cdata.equality
         model.d = Constraint(
             rule=lambda m: (float('-inf'), m.x, float('inf')))
@@ -102,27 +101,27 @@ class LP_trivial_constraints_kernel(LP_trivial_constraints):
         cdata = model.c[3] = pmo.constraint((0, 1, 3))
         assert cdata.lb == 0
         assert cdata.ub == 3
-        assert value(cdata.body) == 1
+        assert cdata.body() == 1
         assert not cdata.equality
         cdata = model.c[4] = pmo.constraint((0, 2, 3))
         assert cdata.lb == 0
         assert cdata.ub == 3
-        assert value(cdata.body) == 2
+        assert cdata.body() == 2
         assert not cdata.equality
         cdata = model.c[5] = pmo.constraint((0, 1, None))
         assert cdata.lb == 0
         assert cdata.ub is None
-        assert value(cdata.body) == 1
+        assert cdata.body() == 1
         assert not cdata.equality
         cdata = model.c[6] = pmo.constraint((None, 0, 1))
         assert cdata.lb is None
         assert cdata.ub == 1
-        assert value(cdata.body) == 0
+        assert cdata.body() == 0
         assert not cdata.equality
         cdata = model.c[7] = pmo.constraint((1,1))
         assert cdata.lb == 1
         assert cdata.ub == 1
-        assert value(cdata.body) == 1
+        assert cdata.body() == 1
         assert cdata.equality
 
     def post_solve_test_validation(self, tester, results):
