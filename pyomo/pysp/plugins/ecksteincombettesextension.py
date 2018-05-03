@@ -419,7 +419,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         # IMPORTANT: if the Eckstein-Combettes extension plugin is enabled,
         #            then make sure PH is in async mode - otherwise, nothing
         #            will work!
-        if not ph._async:
+        if not ph._async_mode:
             raise RuntimeError("PH is not in async mode - this is required for the Eckstein-Combettes extension")
 
         self._total_projection_steps = 0

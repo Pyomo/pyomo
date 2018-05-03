@@ -150,7 +150,7 @@ def pickle_compiled_scenario_tree(manager,
             thisfile,
             function_args=(os.path.join(output_directory),),
             invocation_type=InvocationType.PerScenario,
-            async=True)
+            async_call=True)
 
     filename = os.path.join(output_directory,
                             compiled_reference_model_filename)
