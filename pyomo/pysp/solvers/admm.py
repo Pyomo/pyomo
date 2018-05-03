@@ -466,7 +466,7 @@ class ADMMAlgorithm(PySPConfiguredObject):
             "EXTERNAL_initialize_for_admm",
             thisfile,
             invocation_type=InvocationType.PerScenario,
-            oneway=True)
+            oneway_call=True)
 
     def cleanup_subproblems(self):
         if self.get_option("verbose"):
@@ -475,49 +475,49 @@ class ADMMAlgorithm(PySPConfiguredObject):
             "EXTERNAL_cleanup_for_admm",
             thisfile,
             invocation_type=InvocationType.PerScenario,
-            oneway=True)
+            oneway_call=True)
 
     def activate_lagrangian_term(self):
         self._manager.invoke_function(
             "EXTERNAL_activate_lagrangian_term",
             thisfile,
             invocation_type=InvocationType.PerScenario,
-            oneway=True)
+            oneway_call=True)
 
     def deactivate_lagrangian_term(self):
         self._manager.invoke_function(
             "EXTERNAL_deactivate_lagrangian_term",
             thisfile,
             invocation_type=InvocationType.PerScenario,
-            oneway=True)
+            oneway_call=True)
 
     def activate_penalty_term(self):
         self._manager.invoke_function(
             "EXTERNAL_activate_penalty_term",
             thisfile,
             invocation_type=InvocationType.PerScenario,
-            oneway=True)
+            oneway_call=True)
 
     def deactivate_penalty_term(self):
         self._manager.invoke_function(
             "EXTERNAL_deactivate_penalty_term",
             thisfile,
             invocation_type=InvocationType.PerScenario,
-            oneway=True)
+            oneway_call=True)
 
     def activate_probability_weighted_cost_term(self):
         self._manager.invoke_function(
             "EXTERNAL_activate_probability_weighted_cost_term",
             thisfile,
             invocation_type=InvocationType.PerScenario,
-            oneway=True)
+            oneway_call=True)
 
     def deactivate_probability_weighted_cost_term(self):
         self._manager.invoke_function(
             "EXTERNAL_deactivate_probability_weighted_cost_term",
             thisfile,
             invocation_type=InvocationType.PerScenario,
-            oneway=True)
+            oneway_call=True)
 
     def run_x_update(self, x, y, z, rho):
         self._manager.invoke_function(
@@ -525,20 +525,20 @@ class ADMMAlgorithm(PySPConfiguredObject):
             thisfile,
             invocation_type=InvocationType.PerScenario,
             function_args=(rho,),
-            oneway=True)
+            oneway_call=True)
         for scenario in self._manager.scenario_tree.scenarios:
             self._manager.invoke_function(
                 "EXTERNAL_update_y",
                 thisfile,
                 invocation_type=InvocationType.OnScenario(scenario.name),
                 function_args=(y[scenario.name],),
-                oneway=True)
+                oneway_call=True)
         self._manager.invoke_function(
             "EXTERNAL_update_z",
             thisfile,
             invocation_type=InvocationType.PerScenario,
             function_args=(z,),
-            oneway=True)
+            oneway_call=True)
 
         self._manager_solver.solve_scenarios()
 
