@@ -55,6 +55,7 @@ script:
   - ${DOC} bash -c 'echo CBC_VERSION="$CBC_VERSION"'
   - ${DOC} bash -c 'echo BARON_VERSION="$BARON_VERSION"'
   - ${DOC} bash -c 'echo GAMS_VERSION="$GAMS_VERSION"'
+  - ${DOC} pip list
 ####### temp
   - ${DOC} bash -c 'BARONEXE="$(which baron)" && mv "${BARONEXE}" "${BARONEXE%baron}_baron"'
 ###########
