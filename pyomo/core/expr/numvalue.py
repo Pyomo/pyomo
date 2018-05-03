@@ -180,18 +180,12 @@ def value(obj, exception=True):
     """
     if obj.__class__ in native_types:
         return obj
+    if obj.__class__ is NumericConstant:
+        if obj.value is None:
+            raise ValueError("No value for uninitialized NumericConstant object %s" % (obj.name,))
+        return obj.value
     try:
-        numeric = obj.as_numeric()
-    except AttributeError:
-        try:
-            numeric = as_numeric(obj)
-        except ValueError:
-            if isinstance( obj, string_types + (text_type, binary_type) ):
-                native_types.add(type(obj))
-                return obj
-            raise
-    try:
-        tmp = numeric(exception=exception)
+        tmp = obj(exception=exception)
     except:
         if exception:
             logger.error(
@@ -202,8 +196,7 @@ def value(obj, exception=True):
             return None
 
     if exception and (tmp is None):
-        raise ValueError("No value for uninitialized NumericValue object %s"
-                         % (obj.name,))
+        raise ValueError("No value for uninitialized NumericValue object %s" % (obj.name,))
     return tmp
 
 
@@ -223,11 +216,7 @@ def is_constant(obj):
     #
     if obj.__class__ in native_types:
         return True
-    try:
-        return obj.is_constant()
-    except AttributeError:
-        pass
-    return as_numeric(obj).is_constant()
+    return obj.is_constant()
 
 def is_fixed(obj):
     """
@@ -240,11 +229,7 @@ def is_fixed(obj):
     #
     if obj.__class__ in native_types:
         return True
-    try:
-        return obj.is_fixed()
-    except AttributeError:
-        pass
-    return as_numeric(obj).is_fixed()
+    return obj.is_fixed()
 
 def is_variable_type(obj):
     """
@@ -253,11 +238,7 @@ def is_variable_type(obj):
     """
     if obj.__class__ in native_types:
         return False
-    try:
-        return obj.is_variable_type()
-    except AttributeError:
-        pass
-    return as_numeric(obj).is_variable_type()
+    return obj.is_variable_type()
 
 def potentially_variable(obj):
     """
@@ -266,11 +247,7 @@ def potentially_variable(obj):
     """
     if obj.__class__ in native_types:
         return False
-    try:
-        return obj.is_potentially_variable()
-    except AttributeError:
-        pass
-    return as_numeric(obj).is_potentially_variable()
+    return obj.is_potentially_variable()
 
 def polynomial_degree(obj):
     """
@@ -280,11 +257,7 @@ def polynomial_degree(obj):
     """
     if obj.__class__ in native_types:
         return 0
-    try:
-        return obj.polynomial_degree()
-    except AttributeError:
-        pass
-    return as_numeric(obj).polynomial_degree()
+    return obj.polynomial_degree()
 
 # It is very common to have only a few constants in a model, but those
 # constants get repeated many times.  KnownConstants lets us re-use /
@@ -297,6 +270,8 @@ def update_KnownConstants(obj, val):
 
 
 def as_numeric(obj):
+    if obj.__class__ in native_numeric_types:
+        return NumericConstant(obj)
     return obj
 
 def Xas_numeric(obj):
@@ -366,6 +341,9 @@ class NumericValue(object):
 
     # This is required because we define __eq__
     __hash__ = None
+
+    def as_numeric(self):
+        return self
 
     def __getstate__(self):
         """
@@ -472,9 +450,6 @@ class NumericValue(object):
     def is_indexed(self):
         """Return True if this numeric value is an indexed object"""
         return False
-
-    def as_numeric(self):
-        return self
 
     def polynomial_degree(self):
         """
