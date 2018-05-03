@@ -192,8 +192,8 @@ class _ConstraintData(ActiveComponentData):
 
     def __call__(self, exception=True):
         """Compute the value of the body of this constraint."""
-        if self.body.__class__ in native_types:
-            return self.body
+        if self.body is None:
+            return None
         return self.body(exception=exception)
 
 
@@ -407,10 +407,10 @@ class _GeneralConstraintData(_ConstraintData):
                     arg1 = as_numeric(arg1)
 
                 self._equality = True
-                if arg1.__class__ in native_numeric_types or (not arg1.is_potentially_variable()):
+                if arg1 is None or (not arg1.is_potentially_variable()):
                     self._lower = self._upper = arg1
                     self._body = arg0
-                elif arg0.__class__ in native_numeric_types or (not arg0.is_potentially_variable()):
+                elif arg0 is None or (not arg0.is_potentially_variable()):
                     self._lower = self._upper = arg0
                     self._body = arg1
                 else:
@@ -423,7 +423,7 @@ class _GeneralConstraintData(_ConstraintData):
                 arg0 = expr[0]
                 if arg0 is not None:
                     arg0 = as_numeric(arg0)
-                    if not arg0.__class__ in native_numeric_types and arg0.is_potentially_variable():
+                    if arg0.is_potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the lower "
@@ -438,7 +438,7 @@ class _GeneralConstraintData(_ConstraintData):
                 arg2 = expr[2]
                 if arg2 is not None:
                     arg2 = as_numeric(arg2)
-                    if not arg2.__class__ in native_numeric_types and arg2.is_potentially_variable():
+                    if arg2.is_potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the upper "
@@ -526,11 +526,11 @@ class _GeneralConstraintData(_ConstraintData):
                         "using '<=', '>=', or '=='."
                         % (self.name))
 
-                if expr.arg(1).__class__ in native_numeric_types or not expr.arg(1).is_potentially_variable():
+                if not expr.arg(1).is_potentially_variable():
                     self._lower = None
                     self._body  = expr.arg(0)
                     self._upper = expr.arg(1)
-                elif expr.arg(0).__class__ in native_numeric_types or not expr.arg(0).is_potentially_variable():
+                elif not expr.arg(0).is_potentially_variable():
                     self._lower = expr.arg(0)
                     self._body  = expr.arg(1)
                     self._upper = None
