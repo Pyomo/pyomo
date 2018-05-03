@@ -62,5 +62,5 @@ script:
   # nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
 
 after_script:
-#  - "${DOC} codecov --env IMAGE_NAME"
+  - ${DOC} codecov --env IMAGE_NAME
   - docker kill ${DOC_ID}
