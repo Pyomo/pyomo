@@ -395,6 +395,7 @@ class TestPH(unittest.TestCase):
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
+    @unittest.category('fragile')
     def test_farmer_with_integers_quadratic_cplex(self):
         if not solver['cplex','lp']:
             self.skipTest("The 'cplex' executable is not available")
