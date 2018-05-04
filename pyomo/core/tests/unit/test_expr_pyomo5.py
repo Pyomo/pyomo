@@ -28,7 +28,7 @@ from pyomo.environ import *
 from pyomo.core.expr import expr_common
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel import expression, expression_dict, variable, expression, objective
-from pyomo.core.expr.numvalue import potentially_variable, native_types, nonpyomo_leaf_types
+from pyomo.core.expr.numvalue import potentially_variable, native_types, nonpyomo_leaf_types, NumericConstant
 from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.param import _ParamData, SimpleParam
 from pyomo.core.base.label import *

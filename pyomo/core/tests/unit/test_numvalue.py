@@ -19,6 +19,7 @@ import pyutilib.math
 import pyutilib.th as unittest
 
 from pyomo.environ import *
+from pyomo.core.expr.numvalue import NumericConstant
 
 try:
     unicode
