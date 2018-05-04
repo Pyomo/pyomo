@@ -555,7 +555,7 @@ class TestExpression_Intrinsic(unittest.TestCase):
 
 class TestNumericValue(unittest.TestCase):
 
-    def Xtest_asnum(self):
+    def test_asnum(self):
         try:
             as_numeric(None)
             self.fail("test_asnum - expected TypeError")
