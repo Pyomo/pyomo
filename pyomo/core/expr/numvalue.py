@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ('value', 'is_constant', 'is_fixed', 'is_variable_type', 'potentially_variable', 'update_KnownConstants', 'as_numeric', 'NumericValue', 'NumericConstant', 'ZeroConstant', 'native_numeric_types', 'native_types', 'polynomial_degree')
+__all__ = ('value', 'is_constant', 'is_fixed', 'is_variable_type', 'potentially_variable', 'as_numeric', 'NumericValue', 'ZeroConstant', 'native_numeric_types', 'native_types', 'polynomial_degree')
 
 import sys
 import logging
@@ -262,76 +262,43 @@ def polynomial_degree(obj):
 # It is very common to have only a few constants in a model, but those
 # constants get repeated many times.  KnownConstants lets us re-use /
 # share constants we have seen before.
-KnownConstants = {}
-
-def update_KnownConstants(obj, val):
-    if len(KnownConstants) < 100:
-        KnownConstants[obj] = val
+_KnownConstants = {}
 
 
 def as_numeric(obj):
     if obj.__class__ in native_numeric_types:
-        return NumericConstant(obj)
+        #
+        # Because INT, FLOAT, and sometimes LONG hash the same, we
+        # index _KnownConstants with both the class and value.  This ensures
+        # consistent results.
+        #
+        try:
+            return _KnownConstants[obj.__class__, obj]
+        except KeyError:
+            pass
+        #
+        # Create the numeric constant.  This really
+        # should be the only place in the code
+        # where these objects are constructed.
+        #
+        retval = NumericConstant(obj)
+        #
+        # Cache the numeric constants.  We used a bounded the cache size to avoid
+        # unexpectedly large lists of constants.  There are typically a small number
+        # of constants that need to be cached.
+        #
+        # NOTE:  A LFU policy might be more sensible here, but that
+        # requires a more complex cache.  It's not clear that that
+        # is worth the extra cost.
+        #
+        if len(_KnownConstants) < 100:
+            _KnownConstants[obj.__class__,obj] = retval
+            return retval
+        #
+        return retval
     elif obj.__class__ in native_types:
         raise TypeError("Cannot treat the value '%s' as a constant" % str(obj))
     return obj
-
-def Xas_numeric(obj):
-    """
-    Verify that this obj is a NumericValue or intrinsic value.
-    """
-    # int and float are *so* common that it pays to treat them specially
-    if obj.__class__ in native_numeric_types:
-        if obj in KnownConstants:
-            return KnownConstants[obj]
-        else:
-            # Because INT, FLOAT, and sometimes LONG hash the same, we
-            # want to convert them to a common type (at the very least,
-            # so that the order in which tests run does not change the
-            # results!)
-            try:
-                tmp = float(obj)
-                if tmp == obj:
-                    tmp = NumericConstant(tmp)
-                    update_KnownConstants(obj, tmp)
-                    return tmp
-            except:
-                pass
-
-            tmp = NumericConstant(obj)
-            update_KnownConstants(obj, tmp)
-            return tmp
-    try:
-        return obj.as_numeric()
-    except AttributeError:
-        pass
-    try:
-        if obj.__class__ is (obj + 0).__class__:
-            # obj may (or may not) be hashable, so we need this try
-            # block so that things proceed normally for non-hashable
-            # "numeric" types
-            try:
-                if obj in KnownConstants:
-                    return KnownConstants[obj]
-                else:
-                    tmp = NumericConstant(obj)
-                    update_KnownConstants(obj, tmp)
-
-                    # If we get here, this is a reasonably well-behaving
-                    # numeric type: add it to the native numeric types
-                    # so that future lookups will be faster.
-                    native_numeric_types.add(obj.__class__)
-                    # native numeric types are also native types
-                    native_types.add(obj.__class__)
-
-                    return tmp
-            except:
-                return NumericConstant(obj)
-    except:
-        pass
-    raise TypeError(
-        "Cannot convert object of type '%s' (value = %s) to a numeric value."
-        % (type(obj).__name__, obj, ))
 
 
 class NumericValue(object):
