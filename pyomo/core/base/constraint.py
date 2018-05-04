@@ -23,7 +23,6 @@ from pyomo.core.expr.numvalue import (ZeroConstant,
                                       value,
                                       as_numeric,
                                       is_constant,
-                                      native_types,
                                       native_numeric_types,
                                       _sub)
 from pyomo.core.base.plugin import register_component

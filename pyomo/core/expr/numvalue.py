@@ -272,6 +272,10 @@ def update_KnownConstants(obj, val):
 def as_numeric(obj):
     if obj.__class__ in native_numeric_types:
         return NumericConstant(obj)
+    elif obj is None:
+        return obj
+    elif obj.__class__ in native_types:
+        raise TypeError("Cannot treat the value '%s' as a constant" % str(obj))
     return obj
 
 def Xas_numeric(obj):

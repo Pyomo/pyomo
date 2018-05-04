@@ -79,8 +79,8 @@ class IConstraint(IComponent, _ActiveComponentMixin):
         """Compute the value of the body of this constraint."""
         if exception and (self.body is None):
             raise ValueError("constraint body is None")
-        elif self.body.__class__ in native_types:
-            return self.body
+        elif self.body is None:
+            return None
         return self.body(exception=exception)
 
     @property
@@ -188,10 +188,10 @@ class _MutableBoundsConstraintMixin(object):
             raise ValueError(
                 "The lb property can not be set "
                 "when the equality property is True.")
-        if lb.__class__ not in native_types:
-            #tmp = as_numeric(lb)
-            if lb.is_potentially_variable():
-                raise ValueError(
+        if lb.__class__ in native_types:
+            lb = as_numeric(lb)
+        elif lb.is_potentially_variable():
+            raise ValueError(
                     "Constraint lower bounds must be "
                     "expressions restricted to data.")
         self._lb = lb
@@ -206,10 +206,10 @@ class _MutableBoundsConstraintMixin(object):
             raise ValueError(
                 "The ub property can not be set "
                 "when the equality property is True.")
-        if ub.__class__ not in native_types:
-            #tmp = as_numeric(ub)
-            if ub.is_potentially_variable():
-                raise ValueError(
+        if ub.__class__ in native_types:
+            ub = as_numeric(ub)
+        elif ub.is_potentially_variable():
+            raise ValueError(
                     "Constraint lower bounds must be "
                     "expressions restricted to data.")
         self._ub = ub
@@ -231,10 +231,10 @@ class _MutableBoundsConstraintMixin(object):
             raise ValueError(
                 "Constraint right-hand side can not "
                 "be assigned a value of None.")
-        else:
-            #tmp = as_numeric(rhs)
-            if rhs.__class__ not in native_types and rhs.is_potentially_variable():
-                raise ValueError(
+        elif rhs.__class__ in native_types:
+            rhs = as_numeric(rhs)
+        elif rhs.__class__ not in native_types and rhs.is_potentially_variable():
+            raise ValueError(
                     "Constraint right-hand side must be "
                     "expressions restricted to data.")
         self._lb = rhs
