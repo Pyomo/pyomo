@@ -25,7 +25,7 @@ from pyomo.core.base.indexed_component import (
 from pyomo.core.base.misc import (apply_indexed_rule,
                                   tabular_writer)
 from pyomo.core.base.numvalue import (NumericValue,
-                                      as_numeric, native_types)
+                                      as_numeric)
 from pyomo.core.base.util import is_functor
 
 from six import iteritems
