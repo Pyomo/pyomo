@@ -188,7 +188,9 @@ class _MutableBoundsConstraintMixin(object):
             raise ValueError(
                 "The lb property can not be set "
                 "when the equality property is True.")
-        if lb.__class__ in native_types:
+        if lb is None:
+            pass
+        elif lb.__class__ in native_types:
             lb = as_numeric(lb)
         elif lb.is_potentially_variable():
             raise ValueError(
@@ -206,7 +208,9 @@ class _MutableBoundsConstraintMixin(object):
             raise ValueError(
                 "The ub property can not be set "
                 "when the equality property is True.")
-        if ub.__class__ in native_types:
+        if ub is None:
+            pass
+        elif ub.__class__ in native_types:
             ub = as_numeric(ub)
         elif ub.is_potentially_variable():
             raise ValueError(
