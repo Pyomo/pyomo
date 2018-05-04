@@ -10,6 +10,9 @@ class ScalingVisitor(EXPR.ExpressionReplacementVisitor):
         #
         # Clone leaf nodes in the expression tree
         #
+        if node.__class__ in native_numeric_types:
+            return True, node
+
         if node.is_variable_type():
             return True, self.scale[id(node)]*node
 
