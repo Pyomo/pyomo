@@ -201,14 +201,14 @@ class _ConstraintData(ActiveComponentData):
         :const:`None` or negative infinity"""
         lb = self.lower
         return (lb is not None) and \
-            (value(lb) != float('-inf'))
+            (lb() != float('-inf'))
 
     def has_ub(self):
         """Returns :const:`False` when the upper bound is
         :const:`None` or positive infinity"""
         ub = self.upper
         return (ub is not None) and \
-            (value(ub) != float('inf'))
+            (ub() != float('inf'))
 
     def lslack(self):
         """
@@ -219,7 +219,7 @@ class _ConstraintData(ActiveComponentData):
         if self.lower is None:
             return float('inf')
         else:
-            return value(self.body)-value(self.lower)
+            return self.body()-self.lower()
 
     def uslack(self):
         """
@@ -230,18 +230,18 @@ class _ConstraintData(ActiveComponentData):
         if self.upper is None:
             return float('inf')
         else:
-            return value(self.upper)-value(self.body)
+            return self.upper()-self.body()
 
     def slack(self):
         """
         Returns the smaller of lslack and uslack values
         """
         if self.lower is None:
-            return value(self.upper)-value(self.body)
+            return self.upper()-self.body()
         elif self.upper is None:
-            return value(self.body)-value(self.lower)
-        return min(value(self.upper)-value(self.body),
-                   value(self.body)-value(self.lower))
+            return self.body()-self.lower()
+        return min(self.upper()-self.body(),
+                   self.body()-self.lower())
 
     #
     # Abstract Interface
@@ -507,10 +507,10 @@ class _GeneralConstraintData(_ConstraintData):
                 self._equality = True
 
                 if expr.arg(1).__class__ in native_numeric_types or not expr.arg(1).is_potentially_variable():
-                    self._lower = self._upper = expr.arg(1)
+                    self._lower = self._upper = as_numeric(expr.arg(1))
                     self._body = expr.arg(0)
                 elif expr.arg(0).__class__ in native_numeric_types or not expr.arg(0).is_potentially_variable():
-                    self._lower = self._upper = expr.arg(0)
+                    self._lower = self._upper = as_numeric(expr.arg(0))
                     self._body = expr.arg(1)
                 else:
                     self._lower = self._upper = ZeroConstant
@@ -528,9 +528,9 @@ class _GeneralConstraintData(_ConstraintData):
                 if not expr.arg(1).is_potentially_variable():
                     self._lower = None
                     self._body  = expr.arg(0)
-                    self._upper = expr.arg(1)
+                    self._upper = as_numeric(expr.arg(1))
                 elif not expr.arg(0).is_potentially_variable():
-                    self._lower = expr.arg(0)
+                    self._lower = as_numeric(expr.arg(0))
                     self._body  = expr.arg(1)
                     self._upper = None
                 else:
@@ -566,9 +566,9 @@ class _GeneralConstraintData(_ConstraintData):
                 #        "restricted to storage of data."
                 #        % (self.name))
 
-                self._lower = expr.arg(0)
+                self._lower = as_numeric(expr.arg(0))
                 self._body  = expr.arg(1)
-                self._upper = expr.arg(2)
+                self._upper = as_numeric(expr.arg(2))
 
         #
         # Reset the values to 'None' if they are 'infinite'
