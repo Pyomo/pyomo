@@ -2898,28 +2898,15 @@ def _decompose_linear_terms(expr, multiplier=1):
 
 
 def _process_arg(obj):
-    #if False and obj.__class__ is SumExpression or obj.__class__ is _MutableSumExpression:
-    #    if ignore_entangled_expressions.detangle[-1] and obj._is_owned:
-            #
-            # If the viewsum expression is owned, then we need to
-            # clone it to avoid creating an entangled expression.
-            #
-            # But we don't have to worry about entanglement amongst other immutable
-            # expression objects.
-            #
-    #        return clone_expression( obj, clone_leaves=False )
-    #    return obj
-
-    #if obj.is_expression_type():
-    #    return obj
-
-    if obj.__class__ is NumericConstant:
-        return value(obj)
-
-    if (obj.__class__ is _ParamData or obj.__class__ is SimpleParam) and not obj._component()._mutable:
+    if obj.__class__ is _ParamData or obj.__class__ is SimpleParam:
+        if obj._component()._mutable:
+            return obj
         if not obj._constructed:
             return obj
         return obj()
+
+    elif obj.__class__ is NumericConstant:
+        return value(obj)
 
     if obj.is_indexed():
         raise TypeError(
