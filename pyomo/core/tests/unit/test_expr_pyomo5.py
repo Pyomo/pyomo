@@ -3869,7 +3869,7 @@ class TestPolynomialDegree(unittest.TestCase):
 
         expr = pow(2**m.a, 0)
         self.assertEqual(expr, 1)
-        self.assertTrue(expr.__class__ in native_numeric_types) #as_numeric(expr).polynomial_degree(), 0)
+        self.assertEqual(as_numeric(expr).polynomial_degree(), 0)
         #
         # With an undefined exponent, the polynomial degree is None
         #
@@ -4930,8 +4930,7 @@ class TestIsFixedIsConstant(unittest.TestCase):
         self.assertEqual(is_fixed(expr), True)
         self.assertEqual(is_constant(expr), True)
         self.assertEqual(expr, 1)
-        self.assertTrue(expr.__class__ in native_numeric_types)
-        #self.assertEqual(as_numeric(expr).polynomial_degree(), 0)
+        self.assertEqual(as_numeric(expr).polynomial_degree(), 0)
 
     def test_Expr_if(self):
         m = self.instance
