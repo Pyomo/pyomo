@@ -461,6 +461,20 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
                 raise
             return None
 
+    def has_lb(self):
+        """Returns :const:`False` when the lower bound is
+        :const:`None` or negative infinity"""
+        lb = self.lower
+        return (lb is not None) and \
+            (lb != float('-inf'))
+
+    def has_ub(self):
+        """Returns :const:`False` when the upper bound is
+        :const:`None` or positive infinity"""
+        ub = self.upper
+        return (ub is not None) and \
+            (ub != float('inf'))
+
     def lslack(self):
         """
         Returns the value of L-f(x) for constraints of the form:
