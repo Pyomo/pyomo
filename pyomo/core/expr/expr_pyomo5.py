@@ -26,6 +26,8 @@ __all__ = (
 'decompose_term',
 'clone_counter',
 'clone_expression',
+'FixedExpressionError',
+'NonConstantExpressionError',
 'evaluate_expression',
 'identify_components',
 'identify_variables',
@@ -849,7 +851,52 @@ class _EvaluationVisitor(ExpressionValueVisitor):
         return False, None
 
 
-def evaluate_expression(exp, exception=True):
+class FixedExpressionError(Exception):
+
+    def __init__(self, *args, **kwds):
+        super(FixedExpressionError, self).__init__(*args, **kwds)
+
+
+class NonConstantExpressionError(Exception):
+
+    def __init__(self, *args, **kwds):
+        super(NonConstantExpressionError, self).__init__(*args, **kwds)
+
+
+class _ConstantEvaluationVisitor(ExpressionValueVisitor):
+
+    def visit(self, node, values):
+        """ Visit nodes that have been expanded """
+        return node._apply_operation(values)
+
+    def visiting_potential_leaf(self, node):
+        """
+        Visiting a potential leaf.
+
+        Return True if the node is not expanded.
+        """
+        if node.__class__ in nonpyomo_leaf_types:
+            return True, node
+
+        if (node.__class__ is _ParamData or node.__class__ is SimpleParam):
+            if node._component()._mutable:
+                raise FixedExpressionError()
+            return True, value(node)
+                
+
+        if node.is_variable_type():
+            if node.fixed:
+                raise FixedExpressionError()
+            else:
+                raise NonConstantExpressionError()
+
+        if not node.is_expression_type():
+            return True, value(node)
+
+        return False, None
+
+
+def evaluate_expression(exp, exception=True, constant=False):
     """
     Evaluate the value of the expression.
 
@@ -867,14 +914,28 @@ def evaluate_expression(exp, exception=True):
         normally, or :const:`None` if an exception occurs
         and is caught.
     """
-    try:
+    if constant:
+        visitor = _ConstantEvaluationVisitor()
+    else:
         visitor = _EvaluationVisitor()
+    try:
         return visitor.dfs_postorder_stack(exp)
+
+    except NonConstantExpressionError:  #pragma: no cover
+        if exception:
+            raise
+        return None
+
+    except FixedExpressionError:        #pragma: no cover
+        if exception:
+            raise
+        return None
 
     except TemplateExpressionError:     #pragma: no cover
         if exception:
             raise
         return None
+
     except ValueError:
         if exception:
             raise
