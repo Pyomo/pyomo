@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ('value', 'is_constant', 'is_fixed', 'is_variable_type', 'potentially_variable', 'as_numeric', 'NumericValue', 'ZeroConstant', 'native_numeric_types', 'native_types', 'polynomial_degree')
+__all__ = ('value', 'is_constant', 'is_fixed', 'is_variable_type', 'potentially_variable', 'NumericValue', 'ZeroConstant', 'native_numeric_types', 'native_types', 'polynomial_degree')
 
 import sys
 import logging
@@ -266,6 +266,23 @@ _KnownConstants = {}
 
 
 def as_numeric(obj):
+    """
+    A function that creates a NumericConstant object that
+    wraps Python numeric values.
+
+    This function also manages a cache of constants.
+
+    NOTE:  This function is only intended for use when
+        data is added to a component.
+
+    Args:
+        obj: The numeric value that may be wrapped.
+
+    Raises: TypeError if the object is in native_types and not in 
+        native_numeric_types
+
+    Returns: A NumericConstant object or the original object.
+    """
     if obj.__class__ in native_numeric_types:
         #
         # Because INT, FLOAT, and sometimes LONG hash the same, we
