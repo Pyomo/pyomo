@@ -15,7 +15,7 @@ from collections import namedtuple
 
 from pyomo.util.timing import ConstructionTimer
 from pyomo.core.expr import current as EXPR
-from pyomo.core.expr.numvalue import ZeroConstant, _sub, native_numeric_types
+from pyomo.core.expr.numvalue import ZeroConstant, _sub, native_numeric_types, as_numeric
 from pyomo.core import *
 from pyomo.core.base.plugin import register_component
 from pyomo.core.base.numvalue import ZeroConstant, _sub
