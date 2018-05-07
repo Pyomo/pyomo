@@ -163,8 +163,8 @@ script:
   - test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
 
   # Run documentation tests
-  - cd doc/OnlineDocs; make doctests -d; cd ../..
-  # nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
+  #- cd doc/OnlineDocs; make doctests -d; cd ../..
+  ## nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
 
 
 after_success:
