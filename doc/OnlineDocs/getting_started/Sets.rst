@@ -8,7 +8,8 @@ Sets can be declared using the `Set` and `RangeSet` functions or by
 assigning set expressions.  The simplest set declaration creates
 a set and postpones creation of its members:
 
->>> model.A = Set()
+.. literalinclude:: spyfiles/Spy4Sets_Declare_set.spy
+   :language: python
 
 The ``Set`` function takes optional arguments such as:
 
@@ -27,14 +28,13 @@ The ``Set`` function takes optional arguments such as:
 One way to create a set whose members will be two dimensional is to use
 the ``dimen`` argument:
 
->>> model.B = Set(dimen=2)
+.. literalinclude:: spyfiles/Spy4Sets_Set_dim.spy
+   :language: python
 
 To create a set of all the numbers in set ``model.A`` doubled, one could use
 
 .. literalinclude:: examples/doubleA.py
    :language: python
-
->>> model.C = Set(initialize=DoubleA_init)
 
 As an aside we note that as always in Python, there are lot
 of ways to accomplish the same thing. Also, note that this
@@ -43,7 +43,8 @@ which multiplication times two is not defined.
 
 The ``initialize`` option can refer to a Python set, which can be returned by a function or given directly as in
 
->>> model.D = Set(initialize=['red', 'green', 'blue'])
+.. literalinclude:: spyfiles/Spy4Sets_Initialize_python_sets.spy
+   :language: python
 
 The ``initialize`` option can also specify a
 function that is applied sequentially to generate set members. Consider the case of
@@ -54,8 +55,6 @@ returns the set element associated with that number:
 .. literalinclude:: examples/Z_init.py
    :language: python
 
->>> model.Z = Set(initialize=Z_init)
-
 The ``Set.End`` return value terminates input to the set. Additional information about iterators for set initialization is
 in the [PyomoBookII]_ book.
 
@@ -64,11 +63,13 @@ NOTE: Data specified in an input file will override the data specified by the in
 If sets are given as arguments to ``Set`` without keywords, they are interpreted as indexes for an array of sets. For example, to create an array of sets
 that is indexed by the members of the set ``model.A``, use
 
->>> model.E = Set(model.A)
+.. literalinclude:: spyfiles/Spy4Sets_Sets_without_keywords.spy
+   :language: python
 
 Arguments can be combined. For example, to create an array of sets with three dimensional members indexed by set ``model.A``, use
 
->>> model.F = Set(model.A, dimen=3)
+.. literalinclude:: spyfiles/Spy4Sets_Combined_arguments.spy
+   :language: python
 
 The ``initialize`` option can be used to
 create a set that contains a sequence of numbers, but
@@ -79,7 +80,8 @@ step size. If the ``RangeSet`` has only a single argument, then that value defin
 example, the following declaration creates a set with the
 numbers 1.5, 5 and 8.5:
 
->>> model.G = RangeSet(1.5, 10, 3.5)
+.. literalinclude:: spyfiles/Spy4Sets_RangeSet_simple_sequence.spy
+   :language: python
 
 Operations
 -----------
@@ -87,32 +89,33 @@ Operations
 Sets may also be created by assigning other Pyomo sets as in these examples that also
 illustrate the set operators union, intersection, difference, and exclusive-or:
 
->>> model.H = model.A
->>> model.I = model.A | model.D # union
->>> model.J = model.A & model.D # intersection
->>> model.K = model.A - model.D # difference
->>> model.L = model.A ^ model.D # exclusive-or
+.. literalinclude:: spyfiles/Spy4Sets_Set_operators.spy
+   :language: python
 
 The cross-product operator is the asterisk (*). For example, to assign
 a set the cross product of two other sets, one could use
 
->>> model.K = model.B * model.c
+.. literalinclude:: spyfiles/Spy4Sets_Set_cross_product.spy
+   :language: python
 
 or to indicate the the members of a set are restricted to be
 in the cross product of two other sets, one could use
 
->>> model.K = Set(within=model.B * model.C)
+.. literalinclude:: spyfiles/Spy4Sets_Restrict_to_crossproduct.spy
+   :language: python
 
 The cross-product operator is the asterisk (*).
 For example, to create a set that contains the cross-product
 of sets A and B, use
 
->>> model.C = Set(model.A * model.B)
+.. literalinclude:: spyfiles/Spy4Sets_Assign_to_crossproduct.spy
+   :language: python
 
 to instead create a set that can contain a subset of the members of this
 cross-product, use
 
->>> model.C = Set(within=model.A * model.B)
+.. literalinclude:: spyfiles/Spy4Sets_Contain_crossproduct_subset.spy
+   :language: python
 
 Predefined Virtual Sets
 -----------------------
@@ -143,7 +146,8 @@ For example, if the set ``model.M`` is declared to be within the virtual set ``N
 an attempt to add anything other than a negative integer will result in an error. Here
 is the declaration:
 
->>> model.M = Set(within=NegativeIntegers)
+.. literalinclude:: spyfiles/Spy4Sets_Predefined_set_example.spy
+   :language: python
 
 .. _Isinglecomm.py:
 
@@ -164,7 +168,8 @@ some of the options and issues, we will consider problems involving
 networks. In many network applications, it is useful to declare a set
 of nodes, such as
 
->>> model.Nodes = Set()
+.. literalinclude:: spyfiles/Spy4Sets_Declare_nodes.spy
+   :language: python
 
 and then a set of arcs can be created with reference to the nodes.
 
@@ -195,7 +200,8 @@ where
 In the simplest case, the arcs can just be the cross product of the nodes,
 which is accomplished by the definition
 
->>> model.Arcs = model.Nodes * model.Nodes
+.. literalinclude:: spyfiles/Spy4Sets_Declare_arcs_crossproduct.spy
+   :language: python
 
 that creates a set with two dimensional members.
 For applications where all nodes are always connected to all other nodes
@@ -207,11 +213,13 @@ Such a scheme is not very elegant or robust.
 For many network flow applications, it might be better to declare the
 arcs using
 
->>> model.Arcs = Set(within=model.Nodes*model.Nodes)
+.. literalinclude:: spyfiles/Spy4Sets_Declare_arcs_within.spy
+   :language: python
 
 or
 
->>> model.Arcs = Set(dimen=2)
+.. literalinclude:: spyfiles/Spy4Sets_Declare_arcs_dimen.spy
+   :language: python
 
 where the difference is that the first version will provide error checking as
 data is assigned to the set elements. This would enable specification of a
@@ -268,14 +276,12 @@ One may want to have a constraint that holds
 
 >>> for i in model.I, k in model.K, v in model.V[k]
 
-
 There are many ways to accomplish this, but one good way
 is to create a set of tuples composed of all of ``model.k, model.V[k]`` pairs.
 This can be done as follows:
 
->>> def kv_init(model):
->>>     return ((k,v) for k in model.K for v in model.V[k])
->>> model.KV=Set(dimen=2, initialize=kv_init)
+.. literalinclude:: spyfiles/Spy4Sets_Define_constraint_tuples.spy
+   :language: python
 
 So then if there was a constraint defining rule such as
 
@@ -284,36 +290,14 @@ So then if there was a constraint defining rule such as
 
 Then a constraint could be declared using
 
->>> model.MyConstraint = Constraint(model.I,model.KV,rule=c1Rule)
-
+.. literalinclude:: spyfiles/Spy4Sets_Define_another_constraint.spy
+   :language: python
 
 Here is the first few lines of a model that illustrates this:
 
->>> from pyomo.environ import *
->>>
->>> model = AbstractModel()
->>>
->>> model.I=Set()
->>> model.K=Set()
->>> model.V=Set(model.K)
->>>
->>> def kv_init(model):
->>>     return ((k,v) for k in model.K for v in model.V[k])
->>> model.KV=Set(dimen=2, initialize=kv_init)
->>>
->>> model.a = Param(model.I, model.K)
->>>
->>> model.y = Var(model.I)
->>> model.x = Var(model.I, model.KV)
->>>
->>> #include a constraint
->>> #x[i,k,v] <= a[i,k]*y[i], for i in model.I, k in model.K, v in model.V[k]
->>>
->>> def c1Rule(model,i,k,v):
->>>    return model.x[i,k,v] <= model.a[i,k]*model.y[i]
->>> model.c1 = Constraint(model.I,model.KV,rule=c1Rule)
+.. literalinclude:: spyfiles/Spy4Sets_Declare_constraints_example.spy
+   :language: python
 
 .. rubric:: References
 
 .. [PyomoBookII] Hart, W.E.; Laird, C.; Watson, J.-P.; Woodruff, D.L.; Hackebeil, G.A.; Nicholson, B.L.; Siirola, J.D.: Pyomo – Optimization Modeling in Python, Springer, 2017.
-

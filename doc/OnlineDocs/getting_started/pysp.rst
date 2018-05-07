@@ -1,6 +1,3 @@
-.. _PySP-Overview:
-
-
 PySP Overview
 ==============
 
@@ -1432,5 +1429,4 @@ description of how to use this functionality.
 
 .. rubric:: References
 
-.. [BirgeLouveauxBook] J.R. Birge and F. Louveaux. Introduction to Stochastic Programming. Springer. 1997.
-
+.. [BirgeLouveauxBook]

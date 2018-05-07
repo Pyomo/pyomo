@@ -78,5 +78,4 @@ Some notes:
 
 When you declare a Disjunct, it (at declaration time) will
 automatically have a variable “indicator_var” defined and attached to
-it.  After that, it is just a `Var` like any other `Var`.
-
+it.  After that, it is just a Var like any other Var.

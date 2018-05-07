@@ -6,9 +6,9 @@ that are created using a rule, which is a Python function. For example, if the v
 ``model.x`` has the indexes 'butter' and 'scones', then this constraint limits
 the sum for them to be exactly three:
 
->>> def teaOKrule(model):
->>>     return(model.x['butter'] + model.x['scones'] == 3)
->>> model.TeaConst = Constraint(rule=teaOKrule)
+.. literalinclude:: spyfiles/spy4Constraints_Constraint_example.spy
+   :language: python
+
 
 Instead of expressions involving equality (==) or inequalities (`<=` or `>=`),
 constraints can also be expressed using a 3-tuple if the form (lb, expr, ub)
@@ -16,15 +16,8 @@ where lb and ub can be ``None``, which is interpreted as
 lb `<=` expr `<=` ub. Variables can appear only in the middle expr. For example,
 the following two constraint declarations have the same meaning:
 
->>> model.x = Var()
->>>
->>> def aRule(model):
->>>    return model.x >= 2
->>> Boundx = Constraint(rule=aRule)
->>>
->>> def bRule(model):
->>>    return (2, model.x, None)
->>> Boundx = Constraint(rule=bRule)
+.. literalinclude:: spyfiles/spy4Constraints_Inequality_constraints_2expressions.spy
+   :language: python
 
 For this simple example, it would also be possible to declare
 ``model.x`` with a ``bound`` option to accomplish the same thing.
@@ -36,13 +29,8 @@ is sent. For example the following constraint could be interpreted as
 placing a budget of :math:`i` on the :math:`i^{\mbox{th}}` item
 to buy where the cost per item is given by the parameter ``model.a``:
 
->>> model.A = RangeSet(1,10)
->>> model.a = Param(model.A, within=PostiveReals)
->>> model.ToBuy = Var(model.A)
->>> def bud_rule(model, i):
->>>     return model.a[i]*model.ToBuy[i] <= i
->>> aBudget = Constraint(model.A, rule=bud_rule)
+.. literalinclude:: spyfiles/spy4Constraints_Passing_elements_crossproduct.spy
+   :language: python
 
 NOTE: Python and Pyomo are case sensitive so ``model.a`` is not the same
 as ``model.A``.
-

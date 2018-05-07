@@ -13,12 +13,14 @@ they are used to index the variable, other optional directives include:
 The following code snippet illustrates some aspects of these options by declaring a *singleton* (i.e. unindexed) variable named ``model.LumberJack``
 that will take on real values between zero and 6 and it initialized to be 1.5:
 
->>> model.LumberJack = Var(within=NonNegativeReals, bounds=(0,6), initialize=1.5)
+.. literalinclude:: spyfiles/spy4Variables_Declare_singleton_variable.spy
+   :language: python
 
 Instead of the ``initialize`` option, initialization is sometimes done with a Python assignment statement
 as in
 
->>> model.LumberJack = 1.5
+.. literalinclude:: spyfiles/spy4Variables_Assign_value.spy
+   :language: python
 
 For indexed variables, bounds and initial values are often specified by a rule (a Python function) that
 itself may make reference to parameters or other data. The formal arguments to these rules begins
@@ -26,14 +28,8 @@ with the model followed by the indexes. This is illustrated in the following cod
 makes use of Python dictionaries declared as lb and ub that are used by a function
 to provide bounds:
 
->>> model.A = Set(initialize=['Scones', 'Tea']
->>> lb = {'Scones':2, 'Tea':4}
->>> ub = {'Scones':5, 'Tea':7}
->>> def fb(model, i):
->>>    return (lb[i], ub[i])
->>> model.PriceToCharge = Var(model.A, domain=PositiveInteger, bounds=fb)
-
+.. literalinclude:: spyfiles/spy4Variables_Declare_bounds.spy
+   :language: python
 
 NOTE: Many of the pre-defined virtual sets that are used as domains imply bounds. A strong
 example is the set ``Boolean`` that implies bounds of zero and one.
-
