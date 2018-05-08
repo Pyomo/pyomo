@@ -605,8 +605,8 @@ class ExpressionReplacementVisitor(object):
             which may be defined by the user.
         """
         if node.__class__ is LinearExpression:
-            _argList                = [node.constant] + node.linear_coefs + node.linear_vars
-            _len                    = len(_argList)
+            _argList = [node.constant] + node.linear_coefs + node.linear_vars
+            _len = len(_argList)
             _stack = [ (node, _argList, 0, _len, [False])]
         else:
             flag, value = self.visiting_potential_leaf(node)
@@ -630,22 +630,21 @@ class ExpressionReplacementVisitor(object):
             #
             _obj, _argList, _idx, _len, _result = _stack.pop()
             #
-            # Iterate through the arguments
+            # Iterate through the arguments, entering each one
             #
             while _idx < _len:
                 _sub = _argList[_idx]
                 _idx += 1
                 if _sub.__class__ is LinearExpression:
-                        #
-                        # Push an expression onto the stack
-                        #
-                        _stack.append( (_obj, _argList, _idx, _len, _result) )
-                        _obj                    = _sub
-                        #_argList                = self.children(_sub)
-                        _argList                = [_sub.constant] + _sub.linear_coefs + _sub.linear_vars
-                        _idx                    = 0
-                        _len                    = len(_argList)
-                        _result                 = [False]
+                    #
+                    # Push an expression onto the stack
+                    #
+                    _stack.append( (_obj, _argList, _idx, _len, _result) )
+                    _obj = _sub
+                    _argList = [_sub.constant] + _sub.linear_coefs + _sub.linear_vars
+                    _idx = 0
+                    _len = len(_argList)
+                    _result = [False]
                 else:
                     flag, value = self.visiting_potential_leaf(_sub)
                     if flag:
@@ -657,14 +656,13 @@ class ExpressionReplacementVisitor(object):
                         # Push an expression onto the stack
                         #
                         _stack.append( (_obj, _argList, _idx, _len, _result) )
-                        _obj                    = _sub
-                        #_argList                = self.children(_sub)
-                        _argList                = _sub._args_
-                        _idx                    = 0
-                        _len                    = _sub.nargs()
-                        _result                 = [False]
+                        _obj = _sub
+                        _argList = _sub._args_
+                        _idx = 0
+                        _len = _sub.nargs()
+                        _result = [False]
             #
-            # Process the current node
+            # Finalize (exit) the current node
             #
             # If the user has defined a visit() function in a
             # subclass, then call that function.  But if the user
@@ -685,8 +683,11 @@ class ExpressionReplacementVisitor(object):
                 if id(ans) == id(_obj):
                     ans = self.construct_node(_obj, _result[1:])
                 if ans.__class__ is MonomialTermExpression:
-                    if (not ans._args_[0].__class__ in native_numeric_types and ans._args_[0].is_potentially_variable) or \
-                       (ans._args_[1].__class__ in native_numeric_types or not ans._args_[1].is_potentially_variable()):
+                    if ( ( ans._args_[0].__class__ not in native_numeric_types
+                           and ans._args_[0].is_potentially_variable )
+                         or
+                         ( ans._args_[1].__class__ in native_numeric_types
+                           or not ans._args_[1].is_potentially_variable() ) ):
                         ans.__class__ = ProductExpression
                 elif ans.__class__ in NPV_expression_types:
                     # For simplicity, not-potentially-variable expressions are
@@ -696,7 +697,8 @@ class ExpressionReplacementVisitor(object):
                 if _result[0]:
                     _stack[-1][-1][0] = True
                 #
-                # "return" the recursion by putting the return value on the end of the results stack
+                # "return" the recursion by putting the return value on
+                # the end of the results stack
                 #
                 _stack[-1][-1].append( ans )
             else:
