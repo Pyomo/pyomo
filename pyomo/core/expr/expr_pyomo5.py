@@ -2906,7 +2906,7 @@ def _process_arg(obj):
         return obj()
 
     elif obj.__class__ is NumericConstant:
-        return value(obj)
+        return obj.value
 
     if obj.is_indexed():
         raise TypeError(
