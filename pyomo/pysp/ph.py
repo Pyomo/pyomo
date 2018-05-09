@@ -1835,7 +1835,7 @@ class ProgressiveHedging(_PHBase):
         # after all scenarios are available.
         self._bound_setter = None
         self._max_iterations = 0
-        self._async = False
+        self._async_mode = False
         self._async_buffer_length = 1
 
         # it may be the case that some plugins think they can do a
@@ -1931,7 +1931,7 @@ class ProgressiveHedging(_PHBase):
         self._max_iterations                      = options.max_iterations
         self._overrelax                           = options.overrelax
         self._nu                                  = options.nu
-        self._async                               = options.async
+        self._async_mode                          = options.async_mode
         self._async_buffer_length                 = options.async_buffer_length
         self._rho                                 = options.default_rho
         self._rho_setter_file                     = options.rho_cfgfile
@@ -2155,7 +2155,7 @@ class ProgressiveHedging(_PHBase):
         if self._verbose:
             print("PH solver configuration: ")
             print("   Max iterations="+str(self._max_iterations))
-            print("   Async mode=" + str(self._async))
+            print("   Async mode=" + str(self._async_mode))
             print("   Async buffer length=" + str(self._async_buffer_length))
             print("   Default global rho=" + str(self._rho))
             print("   Over-relaxation enabled="+str(self._overrelax))
@@ -4164,7 +4164,7 @@ class ProgressiveHedging(_PHBase):
         ####################################################################################################
         # major logic branch - if we are not running async, do the usual PH - otherwise, invoke the async. #
         ####################################################################################################
-        if self._async is False:
+        if self._async_mode is False:
 
             ####################################################################################################
 

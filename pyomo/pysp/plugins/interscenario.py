@@ -31,7 +31,7 @@ from pyomo.pysp import phextension
 from pyomo.solvers.plugins.smanager.phpyro import SolverManager_PHPyro
 from pyomo.util.plugin import SingletonPlugin, implements
 
-from pyomo.repn.standard_repn import (preprocess_block_constraints
+from pyomo.repn.standard_repn import (preprocess_block_constraints,
                                       preprocess_block_objectives)
 from pyomo.pysp.phsolverserverutils import (
     InvocationType,

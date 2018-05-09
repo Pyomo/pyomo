@@ -79,7 +79,7 @@ install:
     fi
   - pip install --quiet xlrd
   - pip install --quiet openpyxl
-  - pip install sphinx_rtd_theme
+  - pip install sphinx sphinx_rtd_theme
   - pip install dill
   - conda install -q -y -c anaconda pandas networkx
 
@@ -122,7 +122,7 @@ install:
   #
   # Clone but don't install pyomo-model-libraries
   #
-  - git clone -b expr_dev --quiet https://github.com/Pyomo/pyomo-model-libraries.git
+  - git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
   #
   # Install PyUtilib (master branch)
   #
@@ -163,7 +163,7 @@ script:
   - test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
 
   # Run documentation tests
-  - cd doc/OnlineDocs; make doctests -d; cd ../..
+  - cd doc/OnlineDocs && make doctest -d && cd ../..
   # nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
 
 

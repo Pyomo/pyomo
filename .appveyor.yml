@@ -6,48 +6,38 @@ environment:
     # http://www.appveyor.com/docs/installed-software#python
     # The list here is complete at the time of writing.
 
-    - PYTHON_VERSION: 2.7
-      #PYTHON: "C:\\Python27"
-      PYTHON: "C:\\Miniconda-x64"
-      CATEGORY: "nightly"
+    #- PYTHON_VERSION: 2.7
+    #  PYTHON: "C:\\Miniconda-x64"
+    #  CATEGORY: "nightly"
 
-    # Removing testing of 3.4, as it inexplicably runs >10x slower than
-    # other Python versions and regularly times out (60 minutes)
-    - PYTHON_VERSION: 3.4
-      #PYTHON: "C:\\Python34"
-      PYTHON: "C:\\Miniconda34-x64"
-      CATEGORY: "nightly"
+    #- PYTHON_VERSION: 3.4
+    #  PYTHON: "C:\\Miniconda34-x64"
+    #  CATEGORY: "nightly"
 
-    - PYTHON_VERSION: 3.5
-      #PYTHON: "C:\\Python35"
-      PYTHON: "C:\\Miniconda35-x64"
-      CATEGORY: "nightly"
+    #- PYTHON_VERSION: 3.5
+    #  PYTHON: "C:\\Miniconda35-x64"
+    #  CATEGORY: "nightly"
 
-    - PYTHON_VERSION: 3.6
-      #PYTHON: "C:\\Python36"
-      PYTHON: "C:\\Miniconda36-x64"
-      CATEGORY: "nightly"
+    #- PYTHON_VERSION: 3.6
+    #  PYTHON: "C:\\Miniconda36-x64"
+    #  CATEGORY: "nightly"
 
     - PYTHON_VERSION: 2.7
-      #PYTHON: "C:\\Python27"
       PYTHON: "C:\\Miniconda-x64"
       CATEGORY: "nightly"
       EXTRAS: YES
 
     - PYTHON_VERSION: 3.4
-      #PYTHON: "C:\\Python34"
       PYTHON: "C:\\Miniconda34-x64"
       CATEGORY: "nightly"
       EXTRAS: YES
 
     - PYTHON_VERSION: 3.5
-      #PYTHON: "C:\\Python35"
       PYTHON: "C:\\Miniconda35-x64"
       CATEGORY: "nightly"
       EXTRAS: YES
 
     - PYTHON_VERSION: 3.6
-      #PYTHON: "C:\\Python36"
       PYTHON: "C:\\Miniconda36-x64"
       CATEGORY: "nightly"
       EXTRAS: YES
@@ -105,7 +95,7 @@ install:
   #
   # Clone but don't install pyomo-model-libraries
   #
-  - "git clone -b expr_dev https://github.com/Pyomo/pyomo-model-libraries.git"
+  - "git clone https://github.com/Pyomo/pyomo-model-libraries.git"
   - "python -m pip install git+https://github.com/PyUtilib/pyutilib"
   - "python setup.py develop"
   #

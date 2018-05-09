@@ -336,9 +336,9 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
     # on ScenarioTreeManager
     # ** NOTE **: These version are meant to be invoked locally.
     #             The client-side will always invoke the *_impl
-    #             methods, which do not accept the async or
-    #             oneway keywords. When invoked here, the
-    #             async and oneway keywords behave like they
+    #             methods, which do not accept the async_call or
+    #             oneway_call keywords. When invoked here, the
+    #             async_call and oneway_call keywords behave like they
     #             do for the Serial solver manager (they are
     #             a dummy interface)
     #
@@ -349,14 +349,14 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
                         invocation_type=InvocationType.Single,
                         function_args=(),
                         function_kwds=None,
-                        async=False,
-                        oneway=False):
+                        async_call=False,
+                        oneway_call=False):
         """This function is an override of that on the
         ScenarioTreeManager interface. It should not be invoked by a
         client, but only locally (e.g., inside a local function
         invocation transmitted by the client).
         """
-        if async and oneway:
+        if async_call and oneway_call:
             raise ValueError("async oneway calls do not make sense")
         invocation_type = _map_deprecated_invocation_type(invocation_type)
 
@@ -377,10 +377,10 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
                                    function_args=function_args,
                                    function_kwds=function_kwds)
 
-        if not oneway:
+        if not oneway_call:
             if invocation_type == InvocationType.Single:
                 result = {self._worker_name: result}
-        if async:
+        if async_call:
             result = self.AsyncResult(None, result=result)
 
         return result
@@ -389,24 +389,24 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
                       method_name,
                       method_args=(),
                       method_kwds=None,
-                      async=False,
-                      oneway=False):
+                      async_call=False,
+                      oneway_call=False):
         """This function is an override of that on the
         ScenarioTreeManager interface. It should not be invoked by a
         client, but only locally (e.g., inside a local function
         invocation transmitted by the client).
 
         """
-        if async and oneway:
+        if async_call and oneway_call:
             raise ValueError("async oneway calls do not make sense")
 
         if method_kwds is None:
             method_kwds = {}
         result = getattr(self, method_name)(*method_args, **method_kwds)
 
-        if not oneway:
+        if not oneway_call:
             result = {self._worker_name: result}
-        if async:
+        if async_call:
             result = self.AsyncResult(None, result=result)
 
         return result
