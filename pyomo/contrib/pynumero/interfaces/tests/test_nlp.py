@@ -187,13 +187,13 @@ class TestNLP(unittest.TestCase):
         df[1] = 2
         self.assertListEqual(list(self.nlp1.grad_objective(x)), list(df))
         df_ = self.nlp1.create_vector_x()
-        self.assertListEqual(list(self.nlp1.grad_objective(x, other=df_)), list(df))
+        self.assertListEqual(list(self.nlp1.grad_objective(x, out=df_)), list(df))
 
         x = self.nlp2.create_vector_x() + 3.0
         df = np.ones(self.nlp2.nx) * 2.0
         self.assertListEqual(list(self.nlp2.grad_objective(x)), list(df))
         df_ = self.nlp2.create_vector_x()
-        self.assertListEqual(list(self.nlp2.grad_objective(x, other=df_)), list(df))
+        self.assertListEqual(list(self.nlp2.grad_objective(x, out=df_)), list(df))
 
     def test_set_x_init(self):
         nlp = PyomoNLP(create_basic_model())

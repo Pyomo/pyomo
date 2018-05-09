@@ -21,7 +21,7 @@ has the following form
 
 minimize             f(x)
 subject to         c(x) = 0
-              g_L <= d(x) <= g_U
+              d_L <= d(x) <= d_U
               x_L <=  x   <= x_U
 
 where c: R^{n_x} \rightarrow R^{n_c} are the equality constraints
@@ -508,7 +508,7 @@ class NLP(object):
         return
 
 
-class AmplNLP(NLP):
+class StubNLP(NLP):
     """
     Nonlinear programm interface that relies on the Ampl solver library
 
@@ -525,13 +525,10 @@ class AmplNLP(NLP):
     # ToDo: add access to d_l d_u
     # ToDo: change on x_l and x_u, g_u, g_l?
 
-    def __init__(self, model, row_filename=None, col_filename=None):
+    def __init__(self, model):
 
         # call parent class to set model
-        super(AmplNLP, self).__init__(model)
-
-        self._rowfile = row_filename
-        self._colfile = col_filename
+        super(StubNLP, self).__init__(model)
 
         # ampl interface
         self._asl = _asl.AmplInterface(self._model)
@@ -590,7 +587,6 @@ class AmplNLP(NLP):
         self._irows_jac_d = np.compress(self._irows_d_mask, self._irows_jac_g)
         self._jcols_jac_d = np.compress(self._irows_d_mask, self._jcols_jac_g)
 
-
         # this is expensive but only done once TODO: to vectorize later
         mapa = {self._c_map[i]: i for i in range(self.nc)}
         for i, v in enumerate(self._irows_jac_c):
@@ -629,23 +625,6 @@ class AmplNLP(NLP):
         self._init_x.flags.writeable = False
         self._init_y.flags.writeable = False
 
-        # create containers with names of variables
-        self._vid_to_name = None
-        self._name_to_vid = None
-        if col_filename is not None:
-            self._vid_to_name = self._build_component_names_list(col_filename)
-            self._name_to_vid = {self._vid_to_name[vid]: vid for vid in range(self.nx)}
-
-        # create containers with names of constraints and objective
-        self._cid_to_name = None
-        self._name_to_cid = None
-        self._obj_name = None
-        if row_filename is not None:
-            all_names = self._build_component_names_list(row_filename)
-            self._obj_name = all_names[-1]
-            del all_names[-1]
-            self._cid_to_name = all_names
-            self._name_to_cid = {all_names[cid]: cid for cid in range(self.ng)}
 
     @property
     def nx(self):
@@ -940,7 +919,7 @@ class AmplNLP(NLP):
         """
         return self._asl.eval_f(x)
 
-    def grad_objective(self, x, other=None):
+    def grad_objective(self, x, out=None):
         """Return gradient of the objective function evaluated at x
 
         Parameters
@@ -955,12 +934,12 @@ class AmplNLP(NLP):
         The gradient of the objective function in a 1d-array
 
         """
-        if other is None:
+        if out is None:
             df = self.create_vector_x()
         else:
             msg = "grad_objective takes a ndarray of size {}".format(self.nx)
-            assert isinstance(other, np.ndarray) and other.size == self.nx, msg
-            df = other
+            assert isinstance(out, np.ndarray) and out.size == self.nx, msg
+            df = out
 
         self._asl.eval_deriv_f(x, df)
         return df
@@ -1263,6 +1242,50 @@ class AmplNLP(NLP):
                 ordered_names.append(line.strip('\n'))
         return ordered_names
 
+
+class AmplNLP(StubNLP):
+    """
+    Nonlinear programm interface that relies on the Ampl solver library
+
+    Parameters
+    -------------------
+    model: string
+    filename of the NL-file containing the model
+    row_filename: string (optional)
+    filename of .row file with identity of constraints (optional)
+    col_filename: string (optional)
+    filename of .col file with identity of variables (optional)
+    """
+
+    # ToDo: add access to d_l d_u
+    # ToDo: change on x_l and x_u, g_u, g_l?
+
+    def __init__(self, model, row_filename=None, col_filename=None):
+
+        # call parent class to set model
+        super(AmplNLP, self).__init__(model)
+
+        self._rowfile = row_filename
+        self._colfile = col_filename
+
+        # create containers with names of variables
+        self._vid_to_name = None
+        self._name_to_vid = None
+        if col_filename is not None:
+            self._vid_to_name = self._build_component_names_list(col_filename)
+            self._name_to_vid = {self._vid_to_name[vid]: vid for vid in range(self.nx)}
+
+        # create containers with names of constraints and objective
+        self._cid_to_name = None
+        self._name_to_cid = None
+        self._obj_name = None
+        if row_filename is not None:
+            all_names = self._build_component_names_list(row_filename)
+            self._obj_name = all_names[-1]
+            del all_names[-1]
+            self._cid_to_name = all_names
+            self._name_to_cid = {all_names[cid]: cid for cid in range(self.ng)}
+
     # Query methods
     def Grad_objective(self, x, var_names=None, var_indices=None):
 
@@ -1497,17 +1520,26 @@ class PyomoNLP(AmplNLP):
 
     def __init__(self, model):
 
-        # TODO: make filename unique?
         # TODO: create maps id to name component directly with pyomo symbolic_labels
         temporal_dir = tempfile.mkdtemp()
-        filename = os.path.join(temporal_dir, "pynumero_pyomo")
-        model.write(filename+'.nl', 'nl', io_options={"symbolic_solver_labels": True})
-        nl_file = filename+".nl"
-        row_file = filename+".row"
-        col_file = filename + ".col"
-        super(PyomoNLP, self).__init__(nl_file, row_filename=row_file, col_filename=col_file)
-        self._model = model
-
-        shutil.rmtree(temporal_dir)
+        try:
+            filename = os.path.join(temporal_dir, "pynumero_pyomo")
+            model.write(filename+'.nl', 'nl', io_options={"symbolic_solver_labels": True})
+            import pyomo
+            fname, symbolMap = pyomo.opt.WriterFactory('nl')(model, filename, lambda x:True, {})
+            varToIndex = pyomo.core.kernel.ComponentMap()
+            conToIndex = pyomo.core.kernel.ComponentMap()
+            for name, obj in six.iteritems(symbolMap.bySymbol):
+                if name[0] == 'v':
+                    varToIndex[obj()] = int(name[1:])
+                elif name[1] == 'c':
+                    conToIndex[obj()] = int(name[1:])
+            nl_file = filename+".nl"
+            row_file = filename+".row"
+            col_file = filename + ".col"
+            super(PyomoNLP, self).__init__(nl_file, row_filename=row_file, col_filename=col_file)
+            self._model = model
+        finally:
+            shutil.rmtree(temporal_dir)
 
 
