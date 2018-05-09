@@ -465,7 +465,7 @@ has a special structure that makes it useful for post-processing. To see a summa
 
 ::
 
-pyomo solve abstract1.py abstract1.dat --solver=cplex --summary
+   pyomo solve abstract1.py abstract1.dat --solver=cplex --summary
 
 To see a list of Pyomo command line options, use:
 
