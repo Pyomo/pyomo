@@ -11,9 +11,9 @@ This chapter provides an introduction to Pyomo: Python Optimization Modeling Obj
 A more complete description is contained in the [PyomoBookII]_ book. Pyomo
 supports the formulation and analysis of mathematical models for complex
 optimization applications.  This capability is commonly associated with
-commerically available algebraic modeling languages (AMLs) such as AMPL [AMPL]_ AIMMS [AIMMS]_
+commerically available algebraic modeling languages (AMLs) such as AMPL [AMPL]_, AIMMS [AIMMS]_,
 and GAMS [GAMS]_.  Pyomo's modeling objects are embedded within Python, a
-full-featured high-level programming language that contains a rich set of
+full-featured, high-level programming language that contains a rich set of
 supporting libraries.
 
 Modeling is a fundamental process in many aspects of scientific research,
@@ -34,14 +34,13 @@ Pyomo can be used in a variety of ways:
 
 - *Analyze trade-offs* to support human decision makers.
 
-Mathematical models represent system knowledge with a formalized
-mathematical language.
+Mathematical models represent system knowledge with a formalized language.
 The following mathematical concepts are central to modern
 modeling activities:
 
 variables
 *********
-    Variables represent unknown or changing parts of a model (e.g. whether or not to make a decision, or the characteristic of a system outcome). The values taken by the variables are often referred to as a *solution* and are usually an output of the optimization process.
+    Variables represent unknown or changing parts of a model (e.g., whether or not to make a decision, or the characteristic of a system outcome). The values taken by the variables are often referred to as a *solution* and are usually an output of the optimization process.
 
 parameters
 **********
@@ -59,7 +58,7 @@ The widespread availability of computing resources has made the
 numerical analysis of mathematical models a commonplace activity.
 Without a modeling language, the process of setting up input files,
 executing a solver and extracting the final results from the solver
-output is tedious and error prone.  This difficulty is compounded
+output is tedious and error-prone.  This difficulty is compounded
 in complex, large-scale real-world applications which are difficult
 to debug when errors occur.  Additionally, there are many different
 formats used by optimization software packages, and few formats are
@@ -140,7 +139,7 @@ Abstract Versus Concrete Models
 
 A mathematical model can be defined using symbols that represent data values.
 For example, the following equations represent a linear program
-(LP) to find optimal values for the vector :math:`x` with parameters :math: `n` and :math:`b`, and parameter vectors :math:`a` and :math:`c`:
+(LP) to find optimal values for the vector :math:`x` with parameters :math:`n` and :math:`b`, and parameter vectors :math:`a` and :math:`c`:
 
 .. math::
    :nowrap:
@@ -159,7 +158,7 @@ The ``AbstractModel`` class provides a context for defining and initializing abs
 optimization models in Pyomo when the data values will be supplied at the time a solution
 is to be obtained.
 
-In many contexts a mathematical model can and should be directly defined
+In many contexts, a mathematical model can and should be directly defined
 with the data values supplied at the time of the model definition.
 We call these *concrete* mathematical models.
 For example, the following LP model is a concrete instance of the previous abstract model:
@@ -178,7 +177,7 @@ The ``ConcreteModel`` class is used to define concrete optimization models in Py
 NOTE: Python programmers will probably prefer to write concrete
 models, while users of some other algebraic modeling languages may
 tend to prefer to write abstract models.  The choice is largely a
-matter of taste, some applications may be a little more
+matter of taste; some applications may be a little more
 straightforward using one or the other.
 
 A Simple Abstract Pyomo Model
@@ -266,7 +265,7 @@ and will passed to the solver when data is provided and the model is solved. Spe
 
 In abstract models, Pyomo expressions are usually provided to objective function and constraint declarations via a function
 defined with a
-Python ``def`` statement. The +def+ statement establishes a name for a function along with its arguments. When
+Python ``def`` statement. The ``def`` statement establishes a name for a function along with its arguments. When
 Pyomo uses a function to get objective function or constraint expressions, it always passes in the model (i.e., itself) as the
 the first argument so the model is always the first formal argument when declaring such functions in Pyomo.
 Additional arguments, if needed, follow. Since summation is an extremely common part of optimization models,
@@ -460,11 +459,12 @@ This yields the following output on the screen:
    [    0.39] Applying Pyomo postprocessing actions
    [    0.39] Pyomo Finished
 
-The numbers is square brackets indicate how much time was required for each step. Results are written to the file named ``results.json``, which
+The numbers in square brackets indicate how much time was required for each step. Results are written to the file named ``results.json``, which
 has a special structure that makes it useful for post-processing. To see a summary of results written to the screen, use the
 ``--summary`` option:
 
 ::
+
 pyomo solve abstract1.py abstract1.dat --solver=cplex --summary
 
 To see a list of Pyomo command line options, use:
