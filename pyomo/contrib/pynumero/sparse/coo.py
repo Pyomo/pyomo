@@ -1,5 +1,5 @@
 """
-The pynumero.sparse.coo module includes methods that extend
+The pyomo.contrib.pynumero.sparse.coo module includes methods that extend
 linear algebra operations in scipy.sparse. In particular pynumero
 adds functionality for dealing efficiently with symmetric matrices
 
@@ -19,12 +19,12 @@ from scipy.sparse.sputils import (upcast,
                                   get_index_dtype)
 
 try:
-    from pynumero.extensions.sparseutils import sym_coo_matvec
+    from pyomo.contrib.pynumero.extensions.sparseutils import sym_coo_matvec
 except ImportError as e:
     print('{}'.format(e))
     raise ImportError('Error importing sparseutils while running coo interface. '
                       'Make sure libpynumero_SPARSE is installed and added to path.')
-from pynumero.sparse import SparseBase
+from pyomo.contrib.pynumero.sparse import SparseBase
 import numpy as np
 
 
@@ -109,7 +109,7 @@ class COOMatrix(SparseBase, scipy_coo_matrix):
         CSRMatrix
 
         """
-        from pynumero.sparse.csr import CSRMatrix
+        from pyomo.contrib.pynumero.sparse.csr import CSRMatrix
         if self.nnz == 0:
             return CSRMatrix(self.shape, dtype=self.dtype)
         else:
@@ -183,7 +183,7 @@ class COOMatrix(SparseBase, scipy_coo_matrix):
                              shape=self.shape, dtype=data.dtype)
 
     def _mul_vector(self, other):
-        from pynumero.sparse.block_vector import BlockVector
+        from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
         if isinstance(other, BlockVector):
             raise RuntimeError('multiplication of COOMatrix with BlockVector not supported ')
         return super(COOMatrix, self)._mul_vector(other)
@@ -347,7 +347,7 @@ class COOSymMatrix(COOMatrix):
         CSCSymMatrix
 
         """
-        from pynumero.sparse.csc import CSCSymMatrix
+        from pyomo.contrib.pynumero.sparse.csc import CSCSymMatrix
         if self.nnz == 0:
             return CSCSymMatrix(self.shape, dtype=self.dtype)
         else:
@@ -378,7 +378,7 @@ class COOSymMatrix(COOMatrix):
         CSRSymMatrix
 
         """
-        from pynumero.sparse.csr import CSRSymMatrix
+        from pyomo.contrib.pynumero.sparse.csr import CSRSymMatrix
         if self.nnz == 0:
             return CSRSymMatrix(self.shape, dtype=self.dtype)
         else:
@@ -430,7 +430,7 @@ class COOSymMatrix(COOMatrix):
         #coo_matvec(self.nnz, self.col, self.row, self.data, other, resultu)
         #diagonal = self.diagonal()
 
-        from pynumero.sparse.block_vector import BlockVector
+        from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
         if isinstance(other, BlockVector):
             #ToDo: need to add support for this
             raise RuntimeError('multiplication of COOMatrix with BlockVector not supported yet')

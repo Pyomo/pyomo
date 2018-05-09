@@ -1,4 +1,4 @@
-from pynumero.sparse import (COOMatrix,
+from pyomo.contrib.pynumero.sparse import (COOMatrix,
                              COOSymMatrix,
                              SparseBase)
 

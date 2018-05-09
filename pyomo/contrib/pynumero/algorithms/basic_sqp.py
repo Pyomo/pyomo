@@ -1,10 +1,10 @@
-from pynumero.algorithms.print_utils import print_nlp_info, print_summary
-from pynumero.sparse import BlockVector, BlockSymMatrix
-from pynumero.algorithms import (InertiaCorrectionParams,
+from pyomo.contrib.pynumero.algorithms.print_utils import print_nlp_info, print_summary
+from pyomo.contrib.pynumero.sparse import BlockVector, BlockSymMatrix
+from pyomo.contrib.pynumero.algorithms import (InertiaCorrectionParams,
                                  BasicFilterLineSearch,
                                  newton_unconstrained)
-from pynumero.linalg.solvers import ma27_solver
-from pynumero.interfaces import PyomoNLP
+from pyomo.contrib.pynumero.linalg.solvers import ma27_solver
+from pyomo.contrib.pynumero.interfaces import PyomoNLP
 import pyomo.environ as pe
 import math as pymath
 import numpy as np
@@ -231,7 +231,7 @@ def basic_sqp(nlp, **kwargs):
 
 if __name__ == "__main__":
     """
-    import pynumero.algorithms.basic3 as mod
+    import pyomo.contrib.pynumero.algorithms.basic3 as mod
 
     model = mod.model
     opt = pe.SolverFactory('ipopt')

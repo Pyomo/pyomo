@@ -1,5 +1,5 @@
 """
-The pynumero.sparse.block_matrix module includes methods that extend
+The pyomo.contrib.pynumero.sparse.block_matrix module includes methods that extend
 linear algebra operations in scipy for case of structured problems
 where linear algebra operations present an inherent block structure.
 This interface consider matrices of the form:
@@ -13,7 +13,7 @@ where m_{i,j} are sparse matrices
 """
 
 from scipy.sparse.sputils import upcast, isscalarlike, get_index_dtype
-from pynumero.sparse import (COOMatrix,
+from pyomo.contrib.pynumero.sparse import (COOMatrix,
                              COOSymMatrix,
                              SparseBase,
                              BlockVector)

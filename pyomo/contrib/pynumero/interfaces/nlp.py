@@ -1,5 +1,5 @@
 """
-The pynumero.interfaces.nlp module includes methods to query nonlinear
+The pyomo.contrib.pynumero.interfaces.nlp module includes methods to query nonlinear
 programming problems. The NLPs considered in this module have
 the following form:
 
@@ -32,13 +32,13 @@ where c: R^{n_x} \rightarrow R^{n_c} are the equality constraints
 """
 
 try:
-    import pynumero.extensions.asl as _asl
+    import pyomo.contrib.pynumero.extensions.asl as _asl
 except ImportError as e:
     print('{}'.format(e))
     raise ImportError('Error importing asl while running nlp interface. '
                       'Make sure libpynumero_ASL is installed and added to path.')
 
-from pynumero.sparse import (COOMatrix,
+from pyomo.contrib.pynumero.sparse import (COOMatrix,
                              COOSymMatrix,
                              CSCMatrix,
                              CSCSymMatrix,

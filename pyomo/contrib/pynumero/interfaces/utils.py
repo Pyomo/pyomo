@@ -1,5 +1,5 @@
-from pynumero.linalg.solvers import ma27_solver
-from pynumero.sparse import (BlockVector,
+from pyomo.contrib.pynumero.linalg.solvers import ma27_solver
+from pyomo.contrib.pynumero.sparse import (BlockVector,
                              BlockSymMatrix,
                              COOSymMatrix)
 from scipy.sparse.linalg import spsolve

@@ -1,5 +1,5 @@
-from pynumero.interfaces import PyomoNLP, AmplNLP
-from pynumero.algorithms import basic_sqp
+from pyomo.contrib.pynumero.interfaces import PyomoNLP, AmplNLP
+from pyomo.contrib.pynumero.algorithms import basic_sqp
 import pyomo.environ as pe
 import pyomo.dae as dae
 import unittest

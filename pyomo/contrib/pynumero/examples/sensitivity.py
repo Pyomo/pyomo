@@ -1,7 +1,7 @@
 import pyomo.environ as aml
-from pynumero.interfaces import PyomoNLP
-from pynumero.sparse import BlockSymMatrix, BlockMatrix
-from pynumero.interfaces.utils import compute_init_lam
+from pyomo.contrib.pynumero.interfaces import PyomoNLP
+from pyomo.contrib.pynumero.sparse import BlockSymMatrix, BlockMatrix
+from pyomo.contrib.pynumero.interfaces.utils import compute_init_lam
 import numpy as np
 
 

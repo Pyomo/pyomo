@@ -1,4 +1,4 @@
-from pynumero.sparse import BlockVector
+from pyomo.contrib.pynumero.sparse import BlockVector
 import numpy as np
 import unittest
 import sys

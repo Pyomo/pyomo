@@ -1,5 +1,5 @@
 """
-The pynumero.sparse.block_vector module includes methods that extend
+The pyomo.contrib.pynumero.sparse.block_vector module includes methods that extend
 linear algebra operations in numpy for case of structured problems
 where linear algebra operations present an inherent block structure.
 This interface consider vectors of the form:

@@ -1,5 +1,5 @@
-from pynumero.sparse import BlockSymMatrix
-from pynumero.interfaces.nlp import PyomoNLP
+from pyomo.contrib.pynumero.sparse import BlockSymMatrix
+from pyomo.contrib.pynumero.interfaces.nlp import PyomoNLP
 import matplotlib.pylab as plt
 
 from pyomo.pysp.scenariotree.manager import \

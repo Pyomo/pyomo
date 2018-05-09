@@ -1,5 +1,5 @@
-from pynumero.interfaces.nlp import NLP, PyomoNLP
-from pynumero.sparse import (BlockMatrix,
+from pyomo.contrib.pynumero.interfaces.nlp import NLP, PyomoNLP
+from pyomo.contrib.pynumero.sparse import (BlockMatrix,
                              BlockSymMatrix,
                              BlockVector,
                              EmptyMatrix,

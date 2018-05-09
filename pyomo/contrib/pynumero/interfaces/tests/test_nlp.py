@@ -1,4 +1,4 @@
-from pynumero.interfaces.nlp import PyomoNLP, AmplNLP
+from pyomo.contrib.pynumero.interfaces.nlp import PyomoNLP, AmplNLP
 import pyomo.environ as pe
 import scipy.sparse as spa
 import numpy as np
@@ -406,8 +406,6 @@ class TestNLP(unittest.TestCase):
         self.assertEqual(hes.shape[0], self.nlp1.nx)
         self.assertEqual(hes.shape[1], 2)
         self.assertListEqual([2], list(hes.data))
-
-        print(hes.toarray())
 
     def test_Grad_objective(self):
         x = self.nlp1.create_vector_x()

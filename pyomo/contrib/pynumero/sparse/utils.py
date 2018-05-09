@@ -1,5 +1,5 @@
 from pyutilib.misc.timing import tic, toc
-from pynumero.sparse import (COOMatrix,
+from pyomo.contrib.pynumero.sparse import (COOMatrix,
                              COOSymMatrix,
                              CSCMatrix,
                              CSCSymMatrix,

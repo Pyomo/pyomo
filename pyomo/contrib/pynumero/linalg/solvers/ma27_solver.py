@@ -1,12 +1,12 @@
 
 try:
-    import pynumero.extensions.hsl as _hsl
+    import pyomo.contrib.pynumero.extensions.hsl as _hsl
 except ImportError as e:
     print('{}'.format(e))
     raise ImportError('Error importing hsl while running ma27 linear solver. '
                       'Make sure libdinopy_HSL is installed and added to path.')
 
-from pynumero.sparse import (COOMatrix,
+from pyomo.contrib.pynumero.sparse import (COOMatrix,
                              COOSymMatrix,
                              BlockMatrix,
                              BlockSymMatrix,

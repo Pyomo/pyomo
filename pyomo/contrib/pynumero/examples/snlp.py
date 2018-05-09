@@ -1,5 +1,5 @@
-from pynumero.interfaces import TwoStageStochasticNLP
-from pynumero.sparse import BlockMatrix, BlockSymMatrix
+from pyomo.contrib.pynumero.interfaces import TwoStageStochasticNLP
+from pyomo.contrib.pynumero.sparse import BlockMatrix, BlockSymMatrix
 import matplotlib.pylab as plt
 import pyomo.environ as aml
 import numpy as np

@@ -1,5 +1,5 @@
-from pynumero.sparse import BlockSymMatrix
-from pynumero.interfaces import PyomoNLP
+from pyomo.contrib.pynumero.sparse import BlockSymMatrix
+from pyomo.contrib.pynumero.interfaces import PyomoNLP
 import matplotlib.pylab as plt
 import pyomo.environ as aml
 import pyomo.dae as dae

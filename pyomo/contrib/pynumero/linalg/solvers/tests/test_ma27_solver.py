@@ -1,5 +1,5 @@
-from pynumero.linalg.solvers import MA27LinearSolver
-from pynumero.sparse import (COOMatrix,
+from pyomo.contrib.pynumero.linalg.solvers import MA27LinearSolver
+from pyomo.contrib.pynumero.sparse import (COOMatrix,
                              COOSymMatrix,
                              BlockSymMatrix,
                              BlockMatrix,

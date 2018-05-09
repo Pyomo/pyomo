@@ -7,7 +7,7 @@ from scipy.sparse.sputils import (upcast,
 from scipy.sparse._sparsetools import csr_tocsc
 
 try:
-    from pynumero.extensions.sparseutils import (sym_csr_matvec,
+    from pyomo.contrib.pynumero.extensions.sparseutils import (sym_csr_matvec,
                                                  csr_matvec_no_diag,
                                                  csc_matvec_no_diag)
 except ImportError as e:
@@ -16,7 +16,7 @@ except ImportError as e:
                       'Make sure libpynumero_SPARSE is installed and added to path.')
 
 from scipy.sparse import _sparsetools
-from pynumero.sparse.base import SparseBase
+from pyomo.contrib.pynumero.sparse.base import SparseBase
 
 import numpy as np
 
@@ -47,7 +47,7 @@ class CSRMatrix(SparseBase, scipy_csr_matrix):
                   indices,
                   data)
 
-        from pynumero.sparse.csc import CSCMatrix
+        from pyomo.contrib.pynumero.sparse.csc import CSCMatrix
         A = CSCMatrix((data, indices, indptr), shape=self.shape)
         A.has_sorted_indices = True
         return A
@@ -59,7 +59,7 @@ class CSRMatrix(SparseBase, scipy_csr_matrix):
         _sparsetools.expandptr(major_dim, self.indptr, major_indices)
         row, col = self._swap((major_indices, minor_indices))
 
-        from pynumero.sparse.coo import COOMatrix
+        from pyomo.contrib.pynumero.sparse.coo import COOMatrix
         return COOMatrix((self.data, (row, col)), self.shape, copy=copy,
                          dtype=self.dtype)
 
@@ -71,7 +71,7 @@ class CSRMatrix(SparseBase, scipy_csr_matrix):
 
         M, N = self.shape
 
-        from pynumero.sparse.csc import CSCMatrix
+        from pyomo.contrib.pynumero.sparse.csc import CSCMatrix
         return CSCMatrix((self.data, self.indices,
                           self.indptr), shape=(N, M), copy=copy)
 
@@ -144,7 +144,7 @@ class CSRSymMatrix(CSRMatrix):
                   indices,
                   data)
 
-        from pynumero.sparse.csc import CSCSymMatrix
+        from pyomo.contrib.pynumero.sparse.csc import CSCSymMatrix
         A = CSCSymMatrix((data, indices, indptr), shape=self.shape)
         A.has_sorted_indices = True
         return A
@@ -156,7 +156,7 @@ class CSRSymMatrix(CSRMatrix):
         _sparsetools.expandptr(major_dim, self.indptr, major_indices)
         row, col = self._swap((major_indices, minor_indices))
 
-        from pynumero.sparse.coo import COOSymMatrix
+        from pyomo.contrib.pynumero.sparse.coo import COOSymMatrix
         return COOSymMatrix((self.data, (row, col)), self.shape, copy=copy,
                             dtype=self.dtype)
 
