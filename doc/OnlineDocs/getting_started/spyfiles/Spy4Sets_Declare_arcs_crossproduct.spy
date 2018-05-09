@@ -1,1 +1,1 @@
->>> model.Arcs = Set(within=model.Nodes*model.Nodes)
+>>> model.Arcs = Set(model.Nodes*model.Nodes)
