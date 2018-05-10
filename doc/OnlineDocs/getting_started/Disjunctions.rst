@@ -36,7 +36,7 @@ condensed code snippet illustrates a ``Disjunct`` and a ``Disjunction``:
 >>>     return [model.d[0], model.d[1]]
 >>> model.c = Disjunction(rule=_c)
 
-Model.d is an indexed ``Disjunct`` that is indexed over an implicit set
+model.d is an indexed ``Disjunct`` that is indexed over an implicit set
 with members 0 and 1. Since it is an indexed thing, each member is
 initialized using a call to a rule, passing in the index value (just
 like any other pyomo component). However, just defining disjuncts is

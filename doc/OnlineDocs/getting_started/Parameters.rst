@@ -44,7 +44,7 @@ In this example, the index set contained integers, but index sets need not be nu
 NOTE: Data specified in an input file will override the data specified by the initialize options.
 
 Parameter values can be checked by a validation function. In the following example, the parameter S indexed by ``model.A``
-and checked to be greater than 3.14159. If value is provided that is less than that, the model instantation would be terminated
+and is checked to be greater than 3.14159. If a value is provided that is less than that, the model instantation would be terminated
 and an error message issued. The function used to validate should be written so as to return ``True`` if the data is valid
 and ``False`` otherwise.
 
