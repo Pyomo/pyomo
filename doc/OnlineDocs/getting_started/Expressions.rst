@@ -196,7 +196,7 @@ first index to be x squared.
 >>> model.x = Var(initialize=1.0)
 >>> def _e(m,i):
 >>>     return m.x*i
->>> model.e = Expression([1,2,3],initialize=_e)
+>>> model.e = Expression([1,2,3],rule=_e)
 >>>
 >>> instance = model.create_instance()
 >>>
