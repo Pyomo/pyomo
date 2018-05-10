@@ -12,6 +12,7 @@ Current Development
 - Adding TerminationCondition and SolverStatus to pyomo.environ (#429)
 - Resolved problems with ExternalFunctions with fixed arguments (#442)
 - Adding the Pyomo5 expression system, which supports PyPy (#272)
+- Bug fix processing exp() expressions in Pyomo5 (TODO)
 
 -------------------------------------------------------------------------------
 Pyomo 5.5
