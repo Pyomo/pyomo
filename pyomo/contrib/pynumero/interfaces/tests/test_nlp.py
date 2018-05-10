@@ -341,35 +341,21 @@ class TestNLP(unittest.TestCase):
         values = [2.0, 1, 1, 1, -1, 1, 1, 1, -1, 1, 1]
         self.assertListEqual(values, list(jac.data))
 
-        jac = self.nlp1.Jacobian_g(x, constraint_indices=[0])
+        jac = self.nlp1.Jacobian_g(x, constraints=[self.p1.c1])
         self.assertEqual(3, jac.shape[1])
         self.assertEqual(1, jac.shape[0])
         self.assertTrue(spa.isspmatrix_coo(jac))
         values = [2.0, -1]
         self.assertListEqual(values, list(jac.data))
 
-        jac = self.nlp1.Jacobian_g(x, constraint_names=['c1'])
-        self.assertEqual(3, jac.shape[1])
-        self.assertEqual(1, jac.shape[0])
-        self.assertTrue(spa.isspmatrix_coo(jac))
-        values = [2.0, -1]
-        self.assertListEqual(values, list(jac.data))
-
-        jac = self.nlp1.Jacobian_g(x, var_indices=[0, 1])
+        jac = self.nlp1.Jacobian_g(x, variables=[self.p1.x[1], self.p1.x[2]])
         self.assertEqual(2, jac.shape[1])
         self.assertEqual(5, jac.shape[0])
         self.assertTrue(spa.isspmatrix_coo(jac))
         values = [2.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0]
         self.assertListEqual(values, list(jac.data))
 
-        jac = self.nlp1.Jacobian_g(x, var_names=['x[1]', 'x[2]'])
-        self.assertEqual(2, jac.shape[1])
-        self.assertEqual(5, jac.shape[0])
-        self.assertTrue(spa.isspmatrix_coo(jac))
-        values = [2.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0]
-        self.assertListEqual(values, list(jac.data))
-
-        jac = self.nlp1.Jacobian_g(x, var_names=['x[1]', 'x[2]'], constraint_names=['c1'])
+        jac = self.nlp1.Jacobian_g(x, variables=[self.p1.x[1], self.p1.x[2]], constraints=[self.p1.c1])
         self.assertEqual(2, jac.shape[1])
         self.assertEqual(1, jac.shape[0])
         self.assertTrue(spa.isspmatrix_coo(jac))
@@ -387,22 +373,19 @@ class TestNLP(unittest.TestCase):
         self.assertEqual(hes.shape[1], 3)
         self.assertListEqual(values, list(hes.data))
 
-        hes = self.nlp1.Hessian_lag(x, l, var_indices_rows=[0, 1], var_indices_cols=[0, 1])
+        hes = self.nlp1.Hessian_lag(x, l,
+                                    variables_rows=[self.p1.x[1], self.p1.x[2]],
+                                    variables_cols=[self.p1.x[1], self.p1.x[2]])
         self.assertEqual(hes.shape[0], 2)
         self.assertEqual(hes.shape[1], 2)
         self.assertListEqual(values, list(hes.data))
 
-        hes = self.nlp1.Hessian_lag(x, l, var_indices_rows=[0, 1])
+        hes = self.nlp1.Hessian_lag(x, l, variables_rows=[self.p1.x[1], self.p1.x[2]])
         self.assertEqual(hes.shape[0], 2)
         self.assertEqual(hes.shape[1], self.nlp1.nx)
         self.assertListEqual(values, list(hes.data))
 
-        hes = self.nlp1.Hessian_lag(x, l, var_names_rows=['x[1]', 'x[2]'], var_names_cols=['x[1]', 'x[2]'])
-        self.assertEqual(hes.shape[0], 2)
-        self.assertEqual(hes.shape[1], 2)
-        self.assertListEqual(values, list(hes.data))
-
-        hes = self.nlp1.Hessian_lag(x, l, var_names_cols=['x[2]', 'x[3]'])
+        hes = self.nlp1.Hessian_lag(x, l, variables_cols=[self.p1.x[2], self.p1.x[3]])
         self.assertEqual(hes.shape[0], self.nlp1.nx)
         self.assertEqual(hes.shape[1], 2)
         self.assertListEqual([2], list(hes.data))
@@ -411,13 +394,10 @@ class TestNLP(unittest.TestCase):
         x = self.nlp1.create_vector_x()
         x.fill(1.0)
         sdf = np.array([0, 2], np.double)
-        self.assertListEqual(list(sdf), list(self.nlp1.Grad_objective(x, var_indices=[0, 1])))
+        self.assertListEqual(list(sdf), list(self.nlp1.Grad_objective(x, variables=[self.p1.x[1], self.p1.x[2]])))
 
         sdf = np.array([2, 0], np.double)
-        self.assertListEqual(list(sdf), list(self.nlp1.Grad_objective(x, var_indices=[1, 2])))
-
-        sdf = np.array([0, 2], np.double)
-        self.assertListEqual(list(sdf), list(self.nlp1.Grad_objective(x, var_names=['x[1]', 'x[2]'])))
+        self.assertListEqual(list(sdf), list(self.nlp1.Grad_objective(x, variables=[self.p1.x[2], self.p1.x[3]])))
 
     def test_Evaluate_g(self):
         x = self.nlp1.create_vector_x()

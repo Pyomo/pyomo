@@ -45,13 +45,15 @@ M[0, 0] = H
 M[1, 0] = J
 
 Np = BlockMatrix(2, 1)
-Np[0, 0] = nlp.Hessian_lag(x, y, var_names_cols=["eta1", "eta2"])
-Np[1, 0] = nlp.Jacobian_g(x, var_names=["eta1", "eta2"])
+Np[0, 0] = nlp.Hessian_lag(x, y, variables_cols=[m.eta1, m.eta2])
+Np[1, 0] = nlp.Jacobian_g(x, variables=[m.eta1, m.eta2])
 
 M_array = M.toarray()
 Np_array = Np.toarray()
 
 ds = np.linalg.solve(M_array, Np_array)
+
+print(nlp.variable_order())
 
 #################################################################
 

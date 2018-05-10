@@ -1,4 +1,4 @@
-from pyomo.contrib.pynumero.linalg.solvers import ma27_solver
+#from pyomo.contrib.pynumero.linalg.solvers import ma27_solver
 from pyomo.contrib.pynumero.sparse import (BlockVector,
                              BlockSymMatrix,
                              COOSymMatrix)
@@ -37,11 +37,9 @@ def compute_init_lam(nlp, x=None, lam_max=1e3):
     zeros = np.zeros(nc)
     rhs = BlockVector([-df, zeros])
 
-    """
-    flat_kkt = kkt.tofullmatrix().tocoo()
+
+    flat_kkt = kkt.tofullmatrix().tocsc()
     flat_rhs = rhs.flatten()
-    print(flat_kkt)
-    print(flat_rhs)
 
     sol = spsolve(flat_kkt, flat_rhs)
     return sol[nlp.nx: nlp.nx + nlp.ng]
@@ -58,4 +56,5 @@ def compute_init_lam(nlp, x=None, lam_max=1e3):
         print("larger than lam_max. returning zeros")
         return np.zeros(nc)
     return sol[1]
+    """
 

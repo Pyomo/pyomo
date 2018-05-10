@@ -1294,7 +1294,6 @@ class AmplNLP(StubNLP):
 
         df = self.create_vector_x()
 
-
         self._asl.eval_deriv_f(x, df)
 
         if var_indices is not None:
@@ -1516,7 +1515,7 @@ class AmplNLP(StubNLP):
         raise RuntimeError('Matrix format not recognized')
 
 
-class PyomoNLP(AmplNLP):
+class PyomoNLP(StubNLP):
 
     def __init__(self, model):
 
@@ -1532,14 +1531,220 @@ class PyomoNLP(AmplNLP):
             for name, obj in six.iteritems(symbolMap.bySymbol):
                 if name[0] == 'v':
                     varToIndex[obj()] = int(name[1:])
-                elif name[1] == 'c':
+                elif name[0] == 'c':
                     conToIndex[obj()] = int(name[1:])
+
+            self._varToIndex = varToIndex
+            self._conToIndex = conToIndex
+
             nl_file = filename+".nl"
+            """
             row_file = filename+".row"
             col_file = filename + ".col"
             super(PyomoNLP, self).__init__(nl_file, row_filename=row_file, col_filename=col_file)
+            """
+
+            super(PyomoNLP, self).__init__(nl_file)
             self._model = model
+
         finally:
             shutil.rmtree(temporal_dir)
 
+    # Query methods
 
+    def Grad_objective(self, x, variables=None):
+
+        df = self.create_vector_x()
+
+        self._asl.eval_deriv_f(x, df)
+
+        if variables is not None:
+            var_indices = []
+            for v in variables:
+                if v.is_indexed():
+                    for vd in v.values():
+                        var_id = self._varToIndex[vd]
+                        var_indices.append(var_id)
+                else:
+                    var_id = self._varToIndex[v]
+                    var_indices.append(var_id)
+            return df[var_indices]
+
+        return df
+
+    def Evaluate_g(self, x, constraints=None):
+
+        res = self.evaluate_g(x)
+
+        if constraints is not None:
+            con_indices = []
+            for c in constraints:
+                if c.is_indexed():
+                    for cd in c.values():
+                        con_id = self._conToIndex[cd]
+                        con_indices.append(con_id)
+                else:
+                    con_id = self._conToIndex[c]
+                    con_indices.append(con_id)
+            return res[con_indices]
+
+        return res
+
+    def Jacobian_g(self, x, variables=None, constraints=None):
+
+        subset_vars = False
+        if variables is not None:
+            var_indices = []
+            for v in variables:
+                if v.is_indexed():
+                    for vd in v.values():
+                        var_id = self._varToIndex[vd]
+                        var_indices.append(var_id)
+                else:
+                    var_id = self._varToIndex[v]
+                    var_indices.append(var_id)
+            indices_vars = var_indices
+            subset_vars = True
+
+        subset_constraints = False
+        if constraints is not None:
+            con_indices = []
+            for c in constraints:
+                if c.is_indexed():
+                    for cd in c.values():
+                        con_id = self._conToIndex[cd]
+                        con_indices.append(con_id)
+                else:
+                    con_id = self._conToIndex[c]
+                    con_indices.append(con_id)
+            indices_constraints = con_indices
+            subset_constraints = True
+
+        if subset_vars:
+            jcols_bool = np.isin(self._jcols_jac_g, indices_vars)
+            ncols = len(indices_vars)
+        else:
+            jcols_bool = np.ones(self.nnz_jacobian_g, dtype=bool)
+            ncols = self.nx
+
+        if subset_constraints:
+            irows_bool = np.isin(self._irows_jac_g, indices_constraints)
+            nrows = len(indices_constraints)
+        else:
+            irows_bool = np.ones(self.nnz_jacobian_g, dtype=bool)
+            nrows = self.ng
+
+        vals_bool = irows_bool * jcols_bool
+        vals_indices = np.where(vals_bool)
+
+        vals_jac = np.zeros(self.nnz_jacobian_g, np.double)
+        self._asl.eval_jac_g(x, vals_jac)
+        data = vals_jac[vals_indices]
+
+        # map indices to new indices
+        new_col_indices = self._jcols_jac_g[vals_indices]
+        if subset_vars:
+            old_col_indices = self._jcols_jac_g[vals_indices]
+            vid_to_nvid = {vid: idx for idx, vid in enumerate(indices_vars)}
+            new_col_indices = np.array([vid_to_nvid[vid] for vid in old_col_indices])
+
+        new_row_indices = self._irows_jac_g[vals_indices]
+        if subset_constraints:
+            old_const_indices = self._irows_jac_g[vals_indices]
+            cid_to_ncid = {cid: idx for idx, cid in enumerate(indices_constraints)}
+            new_row_indices = np.array([cid_to_ncid[cid] for cid in old_const_indices])
+
+        return COOMatrix((data, (new_row_indices, new_col_indices)),
+                         shape=(nrows, ncols))
+
+    def Hessian_lag(self,
+                    x,
+                    lam,
+                    variables_rows=None,
+                    variables_cols=None,
+                    eval_f_c=True):
+
+        subset_cols = False
+        if variables_cols is not None:
+            var_indices_cols = []
+            for v in variables_cols:
+                if v.is_indexed():
+                    for vd in v.values():
+                        var_id = self._varToIndex[vd]
+                        var_indices_cols.append(var_id)
+                else:
+                    var_id = self._varToIndex[v]
+                    var_indices_cols.append(var_id)
+
+            indices_cols = var_indices_cols
+            subset_cols = True
+
+        subset_rows = False
+        if variables_rows is not None:
+            var_indices_rows = []
+            for v in variables_rows:
+                if v.is_indexed():
+                    for vd in v.values():
+                        var_id = self._varToIndex[vd]
+                        var_indices_rows.append(var_id)
+                else:
+                    var_id = self._varToIndex[v]
+                    var_indices_rows.append(var_id)
+            indices_rows = var_indices_rows
+            subset_rows = True
+
+        if eval_f_c:
+            res = self.create_vector_y()
+            self._asl.eval_g(x, res)
+            self._asl.eval_f(x)
+
+        if subset_cols:
+            jcols_bool = np.isin(self._jcols_hess, indices_cols)
+            ncols = len(indices_cols)
+        else:
+            jcols_bool = np.ones(self.nnz_hessian_lag, dtype=bool)
+            ncols = self.nx
+
+        if subset_rows:
+            irows_bool = np.isin(self._irows_hess, indices_rows)
+            nrows = len(indices_rows)
+        else:
+            irows_bool = np.ones(self.nnz_hessian_lag, dtype=bool)
+            nrows = self.nx
+
+        vals_bool = irows_bool * jcols_bool
+        vals_indices = np.where(vals_bool)
+
+        vals_hess = np.zeros(self.nnz_hessian_lag, 'd')
+        self._asl.eval_hes_lag(x, lam, vals_hess)
+        data = vals_hess[vals_indices]
+
+        # map indices to new indices
+        new_col_indices = self._jcols_hess[vals_indices]
+        if subset_cols:
+            old_col_indices = self._jcols_hess[vals_indices]
+            vid_to_nvid = {vid: idx for idx, vid in enumerate(indices_cols)}
+            new_col_indices = np.array([vid_to_nvid[vid] for vid in old_col_indices])
+
+        new_row_indices = self._irows_hess[vals_indices]
+        if subset_rows:
+            old_row_indices = self._irows_hess[vals_indices]
+            cid_to_ncid = {cid: idx for idx, cid in enumerate(indices_rows)}
+            new_row_indices = np.array([cid_to_ncid[cid] for cid in old_row_indices])
+
+        return COOMatrix((data, (new_row_indices, new_col_indices)),
+                         shape=(nrows, ncols))
+
+    def variable_order(self):
+
+        var_order = [None] * self.nx
+        for v, idx in self._varToIndex.items():
+            var_order[idx] = v.name
+        return var_order
+
+    def constraint_order(self):
+
+        con_order = [None] * self.ng
+        for c, idx in self._conToIndex.items():
+            con_order[idx] = c.name
+        return con_order
