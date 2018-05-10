@@ -783,20 +783,23 @@ def _collect_nonl(exp, multiplier, idMap, compute_values, verbose, quadratic):
 def _collect_negation(exp, multiplier, idMap, compute_values, verbose, quadratic):
     return _collect_standard_repn(exp._args_[0], -1*multiplier, idMap, compute_values, verbose, quadratic)
 
+#
+# TODO - Verify if code is used
+#
 def _collect_const(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if compute_values:
-        return Results(constant=value(exp))
+        return Results(constant=multiplier*value(exp))
     else:
-        return Results(constant=exp)
+        return Results(constant=multiplier*exp)
 
 def _collect_identity(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if exp._args_[0].__class__ in native_numeric_types:
-        return Results(constant=exp._args_[0])
+        return Results(constant=multiplier*exp._args_[0])
     if not exp._args_[0].is_potentially_variable():
         if compute_values:
-            return Results(constant=value(exp._args_[0]))
+            return Results(constant=multiplier*value(exp._args_[0]))
         else:
-            return Results(constant=exp._args_[0])
+            return Results(constant=multiplier*exp._args_[0])
     return _collect_standard_repn(exp.expr, multiplier, idMap, compute_values, verbose, quadratic)
 
 def _collect_linear(exp, multiplier, idMap, compute_values, verbose, quadratic):

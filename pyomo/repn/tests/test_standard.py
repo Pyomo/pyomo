@@ -24,6 +24,7 @@ from pyomo.core.expr import expr_common, current as EXPR
 from pyomo.repn import *
 from pyomo.environ import *
 from pyomo.core.base.numvalue import native_numeric_types
+from pyomo.core.kernel import expression
 
 from six import iteritems
 from six.moves import range
@@ -56,7 +57,7 @@ def repn_to_dict(repn):
     return result
 
 
-class TestSimple(unittest.TestCase):
+class Test(unittest.TestCase):
 
     def test_number(self):
         # 1.0
@@ -3242,6 +3243,122 @@ class TestSimple(unittest.TestCase):
         s = pickle.dumps(rep)
         rep = pickle.loads(s)
         baseline = { id(rep.linear_vars[0]):1 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+    def test_expr_identity1(self):
+        m = ConcreteModel()
+        m.p = Param(mutable=True, initialize=2)
+        m.e = Expression(expr=m.p)
+
+        e = 1000*m.e
+
+        rep = generate_standard_repn(e, compute_values=True)
+        #
+        self.assertTrue( rep.is_fixed() )
+        self.assertEqual( rep.polynomial_degree(), 0 )
+        self.assertTrue( rep.is_constant() )
+        self.assertTrue( rep.is_linear() )
+        self.assertFalse( rep.is_quadratic() )
+        self.assertFalse( rep.is_nonlinear() )
+        #
+        self.assertTrue(len(rep.linear_vars) == 0)
+        self.assertTrue(len(rep.linear_coefs) == 0)
+        self.assertTrue(len(rep.quadratic_vars) == 0)
+        self.assertTrue(len(rep.quadratic_coefs) == 0)
+        self.assertTrue(rep.nonlinear_expr is None)
+        self.assertTrue(len(rep.nonlinear_vars) == 0)
+        baseline = { None:2000 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+        rep = generate_standard_repn(e, compute_values=False)
+        #
+        self.assertTrue( rep.is_fixed() )
+        self.assertEqual( rep.polynomial_degree(), 0 )
+        self.assertTrue( rep.is_constant() )
+        self.assertTrue( rep.is_linear() )
+        self.assertFalse( rep.is_quadratic() )
+        self.assertFalse( rep.is_nonlinear() )
+        #
+        self.assertTrue(len(rep.linear_vars) == 0)
+        self.assertTrue(len(rep.linear_coefs) == 0)
+        self.assertTrue(len(rep.quadratic_vars) == 0)
+        self.assertTrue(len(rep.quadratic_coefs) == 0)
+        self.assertTrue(rep.nonlinear_expr is None)
+        self.assertTrue(len(rep.nonlinear_vars) == 0)
+        baseline = { None:2000 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+    def test_expr_identity2(self):
+        o = expression()
+        o.expr = 2
+
+        e = 1000*o
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue( rep.is_fixed() )
+        self.assertEqual( rep.polynomial_degree(), 0 )
+        self.assertTrue( rep.is_constant() )
+        self.assertTrue( rep.is_linear() )
+        self.assertFalse( rep.is_quadratic() )
+        self.assertFalse( rep.is_nonlinear() )
+        #
+        self.assertTrue(len(rep.linear_vars) == 0)
+        self.assertTrue(len(rep.linear_coefs) == 0)
+        self.assertTrue(len(rep.quadratic_vars) == 0)
+        self.assertTrue(len(rep.quadratic_coefs) == 0)
+        self.assertTrue(rep.nonlinear_expr is None)
+        self.assertTrue(len(rep.nonlinear_vars) == 0)
+        baseline = { None:2000 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+    def test_expr_identity3(self):
+        m = ConcreteModel()
+        m.v = Var(initialize=2)
+        m.e = Expression(expr=m.v)
+
+        e = 1000*m.e
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertFalse( rep.is_fixed() )
+        self.assertEqual( rep.polynomial_degree(), 1 )
+        self.assertFalse( rep.is_constant() )
+        self.assertTrue( rep.is_linear() )
+        self.assertFalse( rep.is_quadratic() )
+        self.assertFalse( rep.is_nonlinear() )
+        #
+        self.assertTrue(len(rep.linear_vars) == 1)
+        self.assertTrue(len(rep.linear_coefs) == 1)
+        self.assertTrue(len(rep.quadratic_vars) == 0)
+        self.assertTrue(len(rep.quadratic_coefs) == 0)
+        self.assertTrue(rep.nonlinear_expr is None)
+        self.assertTrue(len(rep.nonlinear_vars) == 0)
+        baseline = { id(m.v):1000 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+    def test_expr_const1(self):
+        o = expression()
+        o.expr = as_numeric(2)
+
+        e = 1000*o
+
+        rep = generate_standard_repn(e, compute_values=True)
+        #
+        self.assertTrue( rep.is_fixed() )
+        self.assertEqual( rep.polynomial_degree(), 0 )
+        self.assertTrue( rep.is_constant() )
+        self.assertTrue( rep.is_linear() )
+        self.assertFalse( rep.is_quadratic() )
+        self.assertFalse( rep.is_nonlinear() )
+        #
+        self.assertTrue(len(rep.linear_vars) == 0)
+        self.assertTrue(len(rep.linear_coefs) == 0)
+        self.assertTrue(len(rep.quadratic_vars) == 0)
+        self.assertTrue(len(rep.quadratic_coefs) == 0)
+        self.assertTrue(rep.nonlinear_expr is None)
+        self.assertTrue(len(rep.nonlinear_vars) == 0)
+        baseline = { None:2000 }
         self.assertEqual(baseline, repn_to_dict(rep))
 
 
