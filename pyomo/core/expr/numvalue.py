@@ -387,9 +387,6 @@ class NumericValue(object):
     # This is required because we define __eq__
     __hash__ = None
 
-    def as_numeric(self):
-        return self
-
     def __getstate__(self):
         """
         Prepare a picklable state of this instance for pickling.
