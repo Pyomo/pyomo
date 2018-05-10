@@ -410,7 +410,7 @@ class ResultsWithQuadratics(object):
         #    self.quadratic = quadratic
 
     def __str__(self):          #pragma: nocover
-        return "Const:\t%f\nLinear:\t%s\nQuadratic:\t%s\nNonlinear:\t%s" % (self.constant, str(self.linear), str(self.quadratic), str(self.nonl))
+        return "Const:\t%s\nLinear:\t%s\nQuadratic:\t%s\nNonlinear:\t%s" % (str(self.constant), str(self.linear), str(self.quadratic), str(self.nonl))
 
 class ResultsWithoutQuadratics(object):
     __slot__ = ('const', 'nonl', 'linear')
@@ -425,7 +425,7 @@ class ResultsWithoutQuadratics(object):
         #    self.linear = linear
 
     def __str__(self):          #pragma: nocover
-        return "Const:\t%f\nLinear:\t%s\nNonlinear:\t%s" % (self.constant, str(self.linear), str(self.nonl))
+        return "Const:\t%s\nLinear:\t%s\nNonlinear:\t%s" % (str(self.constant), str(self.linear), str(self.nonl))
 
 Results = ResultsWithQuadratics
 
@@ -511,7 +511,7 @@ def _collect_term(exp, multiplier, idMap, compute_values, verbose, quadratic):
     # LHS is a numeric value
     #
     if exp._args_[0].__class__ in native_numeric_types:
-        if exp._args_[0] == 0:
+        if exp._args_[0] == 0:                          # TODO: coverage?
             return Results()
         return _collect_standard_repn(exp._args_[1], multiplier * exp._args_[0], idMap, 
                                   compute_values, verbose, quadratic)
@@ -534,7 +534,7 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     # LHS is a numeric value
     #
     if exp._args_[0].__class__ in native_numeric_types:
-        if exp._args_[0] == 0:
+        if exp._args_[0] == 0:                          # TODO: coverage?
             return Results()
         return _collect_standard_repn(exp._args_[1], multiplier * exp._args_[0], idMap, 
                                   compute_values, verbose, quadratic)
@@ -542,7 +542,7 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     # RHS is a numeric value
     #
     if exp._args_[1].__class__ in native_numeric_types:
-        if exp._args_[1] == 0:
+        if exp._args_[1] == 0:                          # TODO: coverage?
             return Results()
         return _collect_standard_repn(exp._args_[0], multiplier * exp._args_[1], idMap, 
                                   compute_values, verbose, quadratic)
@@ -589,7 +589,7 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
             return Results()
         if compute_values:
             val = value(lhs.constant)
-            if val == 0:
+            if val == 0:                            # TODO: coverage?
                 return Results()
             return _collect_standard_repn(exp._args_[1], multiplier*val, idMap, 
                                   compute_values, verbose, quadratic)
@@ -599,15 +599,7 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     # Collect RHS
     #
-    if exp._args_[1].__class__ in native_numeric_types:
-        rhs = Results(constant=exp._args_[1])
-    elif not exp._args_[1].is_potentially_variable():
-        if compute_values:
-            rhs = Results(constant=value(exp._args_[1]))
-        else:
-            rhs = Results(constant=exp._args_[1])
-    else:
-        rhs = _collect_standard_repn(exp._args_[1], 1, idMap, 
+    rhs = _collect_standard_repn(exp._args_[1], 1, idMap, 
                                   compute_values, verbose, quadratic)
     rhs_nonl_None = rhs.nonl.__class__ in native_numeric_types and rhs.nonl == 0
     #
@@ -624,7 +616,7 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     # If not collecting quadratic terms and both terms are linear, then simply return the nonlinear expression
     #
     if not quadratic and len(lhs.linear) > 0 and len(rhs.linear) > 0:
-        # NOTE: We treat a product of linear terms as nonlinear unless quadratic==2
+        # NOTE: We treat a product of linear terms as nonlinear unless quadratic is True
         return Results(nonl=multiplier*exp)
 
     ans = Results()
@@ -651,21 +643,17 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
                     ans.quadratic[key] = multiplier*coef*rhs.constant
         for lkey, lcoef in six.iteritems(lhs.linear):
             for rkey, rcoef in six.iteritems(rhs.linear):
-                if lkey <= rkey:
-                    ans.quadratic[lkey,rkey] = multiplier*lcoef*rcoef
+                ndx = (lkey, rkey) if lkey <= rkey else (rkey, lkey)
+                if ndx in ans.quadratic:
+                    ans.quadratic[ndx] += multiplier*lcoef*rcoef
                 else:
-                    ans.quadratic[rkey,lkey] = multiplier*lcoef*rcoef
+                    ans.quadratic[ndx] = multiplier*lcoef*rcoef
         # TODO - Use quicksum here?
         el_linear = multiplier*sum(coef*idMap[key] for key, coef in six.iteritems(lhs.linear))
         er_linear = multiplier*sum(coef*idMap[key] for key, coef in six.iteritems(rhs.linear))
         el_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in six.iteritems(lhs.quadratic))
         er_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in six.iteritems(rhs.quadratic))
         ans.nonl += el_linear*er_quadratic + el_quadratic*er_linear
-    elif len(lhs.linear) + len(rhs.linear) > 1:
-        return Results(nonl=multiplier*exp)
-        #el_linear = multiplier*sum(coef*idMap[key] for key, coef in six.iteritems(lhs.linear))
-        #er_linear = multiplier*sum(coef*idMap[key] for key, coef in six.iteritems(rhs.linear))
-        #ans.nonl += el_linear*er_linear
 
     return ans
 
@@ -687,7 +675,7 @@ def _collect_var(exp, multiplier, idMap, compute_values, verbose, quadratic):
             idMap[None][id_] = key
             idMap[key] = exp
         if key in ans.linear:
-            ans.linear[key] += multiplier
+            ans.linear[key] += multiplier       # TODO: coverage?
         else:
             ans.linear[key] = multiplier
 
@@ -737,7 +725,7 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
     return Results(nonl=multiplier*exp)
 
 def _collect_reciprocal(exp, multiplier, idMap, compute_values, verbose, quadratic):
-    if exp._args_[0].__class__ in native_numeric_types or not exp._args_[0].is_potentially_variable():
+    if exp._args_[0].__class__ in native_numeric_types or not exp._args_[0].is_potentially_variable():  # TODO: coverage?
         if compute_values:
             denom = 1.0 * value(exp._args_[0])
         else:
@@ -749,11 +737,11 @@ def _collect_reciprocal(exp, multiplier, idMap, compute_values, verbose, quadrat
         else:
             denom = 1.0*res.constant
     if denom.__class__ in native_numeric_types and denom == 0:
-        raise ZeroDivisionError()
+        raise ZeroDivisionError
     return Results(constant=multiplier/denom)
    
 def _collect_branching_expr(exp, multiplier, idMap, compute_values, verbose, quadratic):
-    if exp._if.__class__ in native_numeric_types:
+    if exp._if.__class__ in native_numeric_types:           # TODO: coverage?
         if_val = exp._if
     elif not exp._if.is_potentially_variable():
         if compute_values:
@@ -764,11 +752,17 @@ def _collect_branching_expr(exp, multiplier, idMap, compute_values, verbose, qua
         res = _collect_standard_repn(exp._if, 1, idMap, compute_values, verbose, quadratic)
         if not (res.nonl.__class__ in native_numeric_types and res.nonl == 0) or len(res.linear) > 0 or (quadratic and len(res.quadratic) > 0):
             return Results(nonl=multiplier*exp)
-        else:
+        elif res.constant.__class__ in native_numeric_types:
             if_val = res.constant
+        else:
+            return Results(constant=multiplier*exp)
     if if_val:
+        if exp._then.__class__ in native_numeric_types:
+            return Results(constant=multiplier*exp._then)
         return _collect_standard_repn(exp._then, multiplier, idMap, compute_values, verbose, quadratic)
     else:
+        if exp._else.__class__ in native_numeric_types:
+            return Results(constant=multiplier*exp._else)
         return _collect_standard_repn(exp._else, multiplier, idMap, compute_values, verbose, quadratic)
 
 def _collect_nonl(exp, multiplier, idMap, compute_values, verbose, quadratic):

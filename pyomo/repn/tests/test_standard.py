@@ -24,7 +24,7 @@ from pyomo.core.expr import expr_common, current as EXPR
 from pyomo.repn import *
 from pyomo.environ import *
 from pyomo.core.base.numvalue import native_numeric_types
-from pyomo.core.kernel import expression
+from pyomo.core.kernel import expression, variable
 
 from six import iteritems
 from six.moves import range
@@ -3361,6 +3361,277 @@ class Test(unittest.TestCase):
         baseline = { None:2000 }
         self.assertEqual(baseline, repn_to_dict(rep))
 
+    def test_to_expression1(self):
+        m = ConcreteModel()
+        m.A = RangeSet(5)
+        m.v = Var(m.A)
+        m.p = Param(m.A, initialize={1:-2, 2:-1, 3:0, 4:1, 5:2})
+
+        e = sum(m.v[i] for i in m.v)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "v[1] + v[2] + v[3] + v[4] + v[5]")
+        
+        e = sum(m.p[i]*m.v[i] for i in m.v)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "-2*v[1] - v[2] + v[4] + 2*v[5]")
+        
+    def test_to_expression2(self):
+        m = ConcreteModel()
+        m.A = RangeSet(5)
+        m.v = Var(m.A)
+        m.p = Param(m.A, initialize={1:-2, 2:-1, 3:0, 4:1, 5:2}, mutable=True)
+
+        e = sum(m.p[i]*m.v[i] for i in m.v)
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "p[1]*v[1] + p[2]*v[2] + p[3]*v[3] + p[4]*v[4] + p[5]*v[5]")
+        
+    def test_to_expression3(self):
+        m = ConcreteModel()
+        m.A = RangeSet(5)
+        m.v = Var(m.A)
+        m.p = Param(m.A, initialize={1:-2, 2:-1, 3:0, 4:1, 5:2})
+
+        e = sum(m.v[i]**2 for i in m.v)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "v[1]**2 + v[2]**2 + v[3]**2 + v[4]**2 + v[5]**2")
+        
+        e = sum(m.p[i]*m.v[i]**2 for i in m.v)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "-2*v[1]**2 - v[2]**2 + v[4]**2 + 2*v[5]**2")
+        
+        e = m.v[1]*m.v[2] + m.v[2]*m.v[3]
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "v[1]*v[2] + v[2]*v[3]")
+        
+    def test_to_expression4(self):
+        m = ConcreteModel()
+        m.A = RangeSet(3)
+        m.v = Var(m.A)
+        m.p = Param(m.A, initialize={1:-1, 2:0, 3:1}, mutable=True)
+
+        e = sum(m.p[i]*m.v[i]**2 for i in m.v)
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "p[1]*v[1]**2 + p[2]*v[2]**2 + p[3]*v[3]**2")
+
+        e = sin(m.v[1])
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "sin(v[1])")
+
+    def test_nonlinear_sum(self):
+        m = ConcreteModel()
+        m.v = Var()
+
+        e = 10*(sin(m.v) + cos(m.v))
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "10*sin(v) + 10*cos(v)")
+        
+        e = 10*(1 + sin(m.v))
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "10 + 10*sin(v)")
+        
+    def test_product1(self):
+        m = ConcreteModel()
+        m.v = Var()
+        m.p = Param(mutable=True, initialize=0)
+
+        e = m.p*(1+m.v)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "0")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "p + p*v")
+       
+        e = (1+m.v)*m.p
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "0")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "p + p*v")
+       
+        m.p.value = 1 
+
+        e = m.p*(1+m.v)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "1 + v")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "p + p*v")
+       
+        e = (1+m.v)*m.p
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "1 + v")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "p + p*v")
+     
+    def test_product2(self): 
+        m = ConcreteModel()
+        m.v = Var(initialize=2)
+        m.w = Var(initialize=3)
+        m.v.fixed = True
+        m.w.fixed = True
+
+        e = m.v*m.w
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "6")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "v*w")
+         
+        e = m.w*m.v
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "6")
+
+        m.v.value = 0
+
+        e = m.v*m.w
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "0")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "v*w")
+         
+        e = m.w*m.v
+        m.w.fixed = False
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "0")
+
+    def test_product3(self): 
+        m = ConcreteModel()
+        m.v = Var(initialize=2)
+        m.w = Var(initialize=3)
+
+        e = sin(m.v)*m.w
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "sin(v)*w")
+
+        e = m.w*sin(m.v)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "w*sin(v)")
+
+    def test_product4(self): 
+        m = ConcreteModel()
+        m.v = Var(initialize=2)
+        m.w = Var(initialize=3)
+
+        e = (1 + m.v + m.w)*(m.v + m.w)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "v + w + v**2 + 2*v*w + w**2")
+        rep = generate_standard_repn(e, compute_values=True, quadratic=False)
+        self.assertEqual(str(rep.to_expression()), "(1 + v + w)*(v + w)")
+
+        e = (1 + m.v + m.w + m.v**2)*(m.v + m.w + m.v**2)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "v + w + 2*v**2 + 2*v*w + w**2 + (v + w)*v*v + v*v*(v + w)")
+        rep = generate_standard_repn(e, compute_values=True, quadratic=False)
+        self.assertEqual(str(rep.to_expression()), "(1 + v + w + v**2)*(v + w + v**2)")
+
+        e = (m.v + m.w + m.v**2)*(1 + m.v + m.w + m.v**2)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "v + w + 2*v**2 + 2*v*w + w**2 + (v + w)*v*v + v*v*(v + w)")
+        rep = generate_standard_repn(e, compute_values=True, quadratic=False)
+        self.assertEqual(str(rep.to_expression()), "(v + w + v**2)*(1 + v + w + v**2)")
+
+        e = (1 + m.v + m.w + m.v**2)*(1 + m.v + m.w + m.v**2)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "1 + 2*v + 2*w + 3*v**2 + 2*v*w + w**2 + (v + w)*v*v + v*v*(v + w)")
+        rep = generate_standard_repn(e, compute_values=True, quadratic=False)
+        self.assertEqual(str(rep.to_expression()), "(1 + v + w + v**2)*(1 + v + w + v**2)")
+
+    def test_product5(self): 
+        m = ConcreteModel()
+        m.v = Var(initialize=2)
+        m.w = Var(initialize=3)
+
+        e = (1 + m.v)*(1 + m.v)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "1 + 2*v + v**2")
+        rep = generate_standard_repn(e, compute_values=True, quadratic=False)
+        self.assertEqual(str(rep.to_expression()), "(1 + v)*(1 + v)")
+
+    def test_vars(self): 
+        m = ConcreteModel()
+        m.v = Var(initialize=2)
+        m.w = Var(initialize=3)
+
+        e = sin(m.v) + m.v + 2*m.v
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "3*v + sin(v)")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "3*v + sin(v)")
+
+    def test_reciprocal(self):
+        m = ConcreteModel()
+        m.v = Var(initialize=6)
+        m.w = Var(initialize=0)
+        m.p = Param(mutable=True, initialize=0.5)
+
+        e = sin(m.v)/m.p
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "(1/p)*sin(v)")
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "2.0*sin(v)")
+
+        e = m.p/sin(m.v)
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "p*(1/sin(v))")
+
+        m.w.fixed=True
+        e = m.v/m.w
+        try:
+            rep = generate_standard_repn(e, compute_values=True)
+            self.fail("Expected division by zero")
+        except ZeroDivisionError:
+            pass
+
+    def test_IfThen(self):
+        m = ConcreteModel()
+        m.w = Var(initialize=1)
+        m.v = Var(initialize=0)
+        m.v.fixed = True
+        m.p = Param(mutable=True, initialize=1)
+
+        e = Expr_if(1, 1, m.w)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "1")
+
+        e = Expr_if(1, m.w, 0)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "w")
+
+        e = Expr_if(not m.p, 1, 0)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "0")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "Expr_if( ( 0.0 ), then=( 1 ), else=( 0 ) )")
+
+        e = Expr_if(not m.p, 1, m.v)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "0")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "Expr_if( ( 0.0 ), then=( 1 ), else=( v ) )")
+
+        e = Expr_if(m.v, 1, 0)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "0")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "Expr_if( ( v ), then=( 1 ), else=( 0 ) )")
+
+        e = Expr_if(m.w, 1, 0)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "Expr_if( ( w ), then=( 1 ), else=( 0 ) )")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "Expr_if( ( w ), then=( 1 ), else=( 0 ) )")
+
+    def test_nonl(self):
+        m = ConcreteModel()
+        m.w = Var(initialize=0)
+
+        e = 1 + sin(m.w)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "1 + sin(w)")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "1 + sin(w)")
+
+        m.w.fixed = True
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "1.0")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "1 + sin(w)")
 
 if __name__ == "__main__":
     unittest.main()
