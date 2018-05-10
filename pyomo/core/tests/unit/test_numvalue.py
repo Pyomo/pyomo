@@ -136,13 +136,13 @@ class Test_is_constant(unittest.TestCase):
         val = NumericConstant('foo')
         self.assertTrue(is_constant(val))
 
-    def Xtest_error(self):
+    def test_error(self):
         class A(object): pass
         val = A()
         try:
             is_constant(val)
-            self.fail("Expected TypeError")
-        except TypeError:
+            self.fail("Expected AttributeError")
+        except AttributeError:
             pass
 
 
@@ -229,16 +229,14 @@ class Test_as_numeric(unittest.TestCase):
             pass
 
     def test_unknownNumericType(self):
-        # This test confirms that a bogus type is not automatically registered
         ref = MyBogusNumericType(42)
-        try:
-            val = as_numeric(ref)
-            self.fail("MyBogusNumericType is not pre-registered")
-        except TypeError:
-            pass
+        val = as_numeric(ref)
+        self.assertEqual(val().val, 42)
         from pyomo.core.base.numvalue import native_numeric_types, native_types
-        self.assertNotIn(MyBogusNumericType, native_numeric_types)
-        self.assertNotIn(MyBogusNumericType, native_types)
+        self.assertIn(MyBogusNumericType, native_numeric_types)
+        self.assertIn(MyBogusNumericType, native_types)
+        native_numeric_types.remove(MyBogusNumericType)
+        native_types.remove(MyBogusNumericType)
 
     def test_numpy_basic_float_registration(self):
         if not numpy_available:

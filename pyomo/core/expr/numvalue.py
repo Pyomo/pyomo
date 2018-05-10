@@ -320,11 +320,61 @@ def as_numeric(obj):
             return retval
         #
         return retval
-    elif obj.__class__ in native_types:
+    #
+    # Ignore objects that are duck types to work with Pyomo expressions
+    #
+    try:
+        obj.is_expression_type()
+        return obj
+    except AttributeError:
+        pass
+    #
+    # Test if the object looks like a number.  If so, register that type with a
+    # warning.
+    #
+    try:
+        if obj.__class__ is (obj + 0).__class__:
+            #
+            # obj may (or may not) be hashable, so we need this try
+            # block so that things proceed normally for non-hashable
+            # "numeric" types
+            #
+            retval = NumericConstant(obj)
+            try:
+                #
+                # Create the numeric constant and add to the 
+                # list of known constants.
+                #
+                # Note: we don't worry about the size of the
+                # cache here, since we need to confirm that the
+                # object is hashable.
+                #
+                _KnownConstants[obj.__class__,obj] = retval
+                #
+                # If we get here, this is a reasonably well-behaving
+                # numeric type: add it to the native numeric types
+                # so that future lookups will be faster.
+                #
+                native_numeric_types.add(obj.__class__)
+                native_types.add(obj.__class__)
+                #
+                # Generate a warning, since Pyomo's management of third-party
+                # numeric types is more robust when registering explicitly.
+                #
+                logger.warning(
+                    "Dynamically recognizing the following numeric type:\n    %s.\n\n  Dynamic registration is supported for convenience, but there\n  are known limitations to this approach.  We recommend explicitly registering numeric types using the \n  following functions: RegisterNumericType(), RegisterIntegerType(), RegisterBooleanType()." % str(type(obj)))
+            except:
+                pass
+            return retval
+    except:
+        pass
+    #
+    # Generate errors
+    #
+    if obj.__class__ in native_types:
         raise TypeError("Cannot treat the value '%s' as a constant" % str(obj))
-    elif not isinstance_NumericValue(obj):
+    if not isinstance_NumericValue(obj):
         raise TypeError("Cannot treat the value '%s' as a constant because it has unknown type '%s'" % (str(obj), obj.__class__))
-    return obj
 
 
 class NumericValue(object):
