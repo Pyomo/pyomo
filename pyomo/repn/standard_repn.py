@@ -833,42 +833,10 @@ def _collect_comparison(exp, multiplier, idMap, compute_values, verbose, quadrat
     return Results(nonl=multiplier*exp)
     
 def _collect_external_fn(exp, multiplier, idMap, compute_values, verbose, quadratic):
+    if compute_values and exp.is_fixed():
+        return Results(nonl=multiplier*value(exp))
     return Results(nonl=multiplier*exp)
     
-def _collect_linear_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
-    ans = Results()
-    varkeys = idMap[None]
-
-    for e_ in itertools.islice(exp._args_, exp.nargs()):
-        c,v = e_
-        if not v is None:
-            if v.fixed:
-                if compute_values:
-                    ans.constant += multiplier*c*v.value
-                else:
-                    ans.constant += multiplier*c*v
-            else:
-                id_ = id(v)
-                if id_ in varkeys:
-                    key = varkeys[id_]
-                else:
-                    key = len(idMap) - 1
-                    varkeys[id_] = key
-                    idMap[key] = v
-                if key in ans.linear:
-                    ans.linear[key] += multiplier*c
-                else:
-                    ans.linear[key] = multiplier*c
-        elif c.__class__ in native_numeric_types:
-            ans.constant += multiplier*c
-        else:       # not c.is_potentially_variable()
-            if compute_values:
-                ans.constant += multiplier * value(c)
-            else:
-                ans.constant += multiplier * c
-
-    return ans
-
 
 _repn_collectors = {
     EXPR.SumExpression                          : _collect_sum,
@@ -885,7 +853,6 @@ _repn_collectors = {
     EXPR.RangedExpression                       : _collect_comparison,
     EXPR.EqualityExpression                     : _collect_comparison,
     EXPR.ExternalFunctionExpression             : _collect_external_fn,
-    #EXPR.LinearSumExpression               : _collect_linear_sum,
     #_ConnectorData          : _collect_linear_connector,
     #SimpleConnector         : _collect_linear_connector,
     #param._ParamData        : _collect_linear_const,
@@ -912,18 +879,23 @@ _repn_collectors = {
 
 def _collect_standard_repn(exp, multiplier, idMap, 
                                       compute_values, verbose, quadratic):
+    fn = _repn_collectors.get(exp.__class__, None)
+    if fn is not None:
+        return fn(exp, multiplier, idMap, compute_values, verbose, quadratic)
+    #
+    # These are types that might be extended using duck typing.
+    #
     try:
-        return _repn_collectors[exp.__class__](exp, multiplier, idMap, 
-                                          compute_values, verbose, quadratic)
-    except KeyError:
-        #
-        # These are types that might be extended using duck typing.
-        #
         if exp.is_variable_type():
-            return _collect_var(exp, multiplier, idMap, compute_values, verbose, quadratic)
+            fn = _collect_var
         if exp.is_named_expression_type():
-            return _collect_identity(exp, multiplier, idMap, compute_values, verbose, quadratic)
-        raise ValueError( "Unexpected expression (type %s)" % type(exp).__name__)
+            fn = _collect_identity
+    except AttributeError:                                                          # TODO: coverage?
+        pass
+    if fn is not None:
+        _repn_collectors[exp.__class__] = fn
+        return fn(exp, multiplier, idMap, compute_values, verbose, quadratic)
+    raise ValueError( "Unexpected expression (type %s)" % type(exp).__name__)       # TODO: coverage?
 
 
 def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None):
@@ -951,7 +923,7 @@ def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False
         if val.__class__ in native_numeric_types:
             if val == 0:
                 continue
-        elif val.is_constant():
+        elif val.is_constant():         # TODO: coverage?
             if value(val) == 0:
                 continue
         v.append(idMap[key])
@@ -965,9 +937,9 @@ def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False
         for key in ans.quadratic:
             val = ans.quadratic[key]
             if val.__class__ in native_numeric_types:
-                if val == 0:
+                if val == 0:            # TODO: coverage?
                     continue
-            elif val.is_constant():
+            elif val.is_constant():     # TODO: coverage?
                 if value(val) == 0:
                     continue
             repn.quadratic_vars.append( (idMap[key[0]],idMap[key[1]]) )
@@ -1296,17 +1268,22 @@ _linear_repn_collectors = {
 
 
 def _collect_linear_standard_repn(exp, multiplier, idMap, compute_values, verbose, coefs):
+    fn = _linear_repn_collectors.get(exp.__class__, None)
+    if fn is not None:
+        return fn(exp, multiplier, idMap, compute_values, verbose, coefs)
+    #
+    # These are types that might be extended using duck typing.
+    #
     try:
-        return _linear_repn_collectors[exp.__class__](exp, multiplier, idMap, compute_values, verbose, coefs)
-    except KeyError:
-        #
-        # These are types that might be extended using duck typing.
-        #
         if exp.is_variable_type():
-            return _linear_collect_var(exp, multiplier, idMap, compute_values, verbose, coefs)
+            fn = _linear_collect_var
         if exp.is_named_expression_type():
-            return _linear_collect_identity(exp, multiplier, idMap, compute_values, verbose, coefs)
-        raise ValueError( "Unexpected expression (type %s)" % type(exp).__name__)
+            fn = _linear_collect_identity
+    except AttributeError:
+        pass
+    if fn is not None:
+        return fn(exp, multiplier, idMap, compute_values, verbose, coefs)
+    raise ValueError( "Unexpected expression (type %s)" % type(exp).__name__)
 
 def _generate_linear_standard_repn(expr, idMap=None, compute_values=True, verbose=False, repn=None):
     coef = {None:0}

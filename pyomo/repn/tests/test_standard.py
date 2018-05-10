@@ -3633,5 +3633,128 @@ class Test(unittest.TestCase):
         rep = generate_standard_repn(e, compute_values=False)
         self.assertEqual(str(rep.to_expression()), "1 + sin(w)")
 
+    def test_linear1(self):
+        m = ConcreteModel()
+        m.A = RangeSet(5)
+        m.v = Var(m.A, initialize=1)
+        m.p = Param(m.A, initialize={1:-2, 2:-1, 3:0, 4:1, 5:2})
+
+        e = summation(m.v) + sum_product(m.p, m.v)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "- v[1] + v[3] + 2*v[4] + 3*v[5]")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "- v[1] + v[3] + 2*v[4] + 3*v[5]")
+
+        m.v[1].fixed=True
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "2 + v[3] + 2*v[4] + 3*v[5]")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "v[1] + v[1] + v[3] + 2*v[4] + 3*v[5]")
+
+    def test_linear2(self):
+        m = ConcreteModel()
+        m.A = RangeSet(5)
+        m.v = Var(m.A, initialize=1)
+        m.p = Param(m.A, initialize={1:-2, 2:-1, 3:0, 4:1, 5:2})
+
+        e = quicksum(m.p[i]*m.v[1] for i in m.p) + summation(m.p, m.v)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "-2*v[1] - v[2] + v[4] + 2*v[5]")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "-2*v[1] - v[2] + v[4] + 2*v[5]")
+
+    def test_quadraticX1(self):
+        m = ConcreteModel()
+        m.A = RangeSet(5)
+        m.v = Var(m.A, initialize=1)
+        m.p = Param(m.A, initialize={1:-2, 2:-1, 3:0, 4:1, 5:2}, mutable=True)
+
+        e = sum(m.p[i]*m.v[i]**2 for i in m.A)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "-2*v[1]**2 - v[2]**2 + v[4]**2 + 2*v[5]**2")
+        #rep = generate_standard_repn(e, compute_values=False)
+        #self.assertEqual(str(rep.to_expression()), "-2*v[1]**2 - v[2]**2 + v[4]**2 + 2*v[5]**2")
+
+        m.v[1].fixed=True
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "-2 - v[2]**2 + v[4]**2 + 2*v[5]**2")
+        #rep = generate_standard_repn(e, compute_values=False)
+        #self.assertEqual(str(rep.to_expression()), "-2*v[1]*v[1] - v[2]**2 + v[4]**2 + 2*v[5]**2")
+
+    def test_relational(self):
+        m = ConcreteModel()
+        m.v = Var()
+        m.w = Var()
+
+        e = m.v + m.w >= 2
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "2.0  <=  v + w")
+
+    def test_external_fn(self):
+        def _g(*args):
+            return len(args)
+
+        m = ConcreteModel()
+        m.v = Var(initialize=1)
+        m.v.fixed = True
+        m.g = ExternalFunction(_g)
+
+        e = 100*m.g(1,2.0,'3')
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "300")
+        rep = generate_standard_repn(e, compute_values=False)
+        # The function ID is inconsistent, so we don't do a test
+        #self.assertEqual(str(rep.to_expression()), "100*g(0, 1, 2.0, '3')")
+
+        e = 100*m.g(1,2.0,'3',m.v)
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "400")
+        rep = generate_standard_repn(e, compute_values=False)
+        # The function ID is inconsistent, so we don't do a test
+        #self.assertEqual(str(rep.to_expression()), "100*g(0, 1, 2.0, '3', v)")
+
+    def test_ducktyping(self):
+        class vtype(variable):
+            pass
+        class Etype(expression):
+            pass
+
+        E = Etype()
+        v = vtype()
+        v.value = 2
+        v.fixed = True
+
+        e = v
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "2")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "<vtype>")
+
+        e = 1 + v
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "3")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "1 + <vtype>")
+
+        e = (1 + v)*v
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "6")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "(1 + <vtype>)*<vtype>")
+
+        E.expr = v
+        e = (1 + v)*E
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "6")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(str(rep.to_expression()), "(1 + <vtype>)*<vtype>")
+
+    def test_error1(self):
+        class Foo(object):
+            pass
+
+        e = Foo()
+        self.assertRaises(AttributeError, generate_standard_repn, e)
+
 if __name__ == "__main__":
     unittest.main()
