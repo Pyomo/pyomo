@@ -1,1 +1,1 @@
->>> model.C = Set(model.A * model.B)
+>>> model.C = Set(initialize=model.A * model.B)
