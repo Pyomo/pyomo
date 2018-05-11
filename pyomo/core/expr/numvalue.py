@@ -274,14 +274,6 @@ def polynomial_degree(obj):
     return obj.polynomial_degree()
 
 
-_KnownNumericValueTypes = {}
-
-def isinstance_NumericValue(obj):
-    val = _KnownNumericValueTypes.get(obj.__class__, None)
-    if val is None:
-        val = _KnownNumericValueTypes[ obj.__class__ ] = isinstance(obj, NumericValue)
-    return val
-
 # It is very common to have only a few constants in a model, but those
 # constants get repeated many times.  KnownConstants lets us re-use /
 # share constants we have seen before.
@@ -329,7 +321,7 @@ def as_numeric(obj):
         # requires a more complex cache.  It's not clear that that
         # is worth the extra cost.
         #
-        if len(_KnownConstants) < 100:
+        if len(_KnownConstants) < 1024:
             _KnownConstants[obj.__class__,obj] = retval
             return retval
         #
@@ -387,8 +379,7 @@ def as_numeric(obj):
     #
     if obj.__class__ in native_types:
         raise TypeError("Cannot treat the value '%s' as a constant" % str(obj))
-    if not isinstance_NumericValue(obj):
-        raise TypeError("Cannot treat the value '%s' as a constant because it has unknown type '%s'" % (str(obj), obj.__class__))
+    raise TypeError("Cannot treat the value '%s' as a constant because it has unknown type '%s'" % (str(obj), obj.__class__))
 
 
 class NumericValue(object):
