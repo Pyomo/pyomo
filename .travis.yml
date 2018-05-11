@@ -42,7 +42,9 @@ before_install:
   - export DOC="docker exec ${CI_ENV} -e IMAGE_NAME -e COVERAGE_PROCESS_START ${DOC_ID}"
  # more setup related to tracking coverage for subprocesses
   - SITE_PACKAGES=`${DOC} python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
+  - echo ${SITE_PACKAGES}
   - ${DOC} bash -c 'echo "import coverage; coverage.process_startup()" > ${SITE_PACKAGES}/run_coverage_at_startup.pth'
+  - ${DOC} cat ${SITE_PACKAGES}/run_coverage_at_startup.pth
 
 install:
   - ${DOC} pip install -U pip setuptools wheel
