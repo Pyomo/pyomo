@@ -93,14 +93,18 @@ class Test_variable(unittest.TestCase):
                      domain_type=IntegerSet,
                      fixed=True)
         self.assertEqual(v.lb, 1)
+        self.assertEqual(type(v.lb), int)
         self.assertEqual(v.ub, 2)
+        self.assertEqual(type(v.ub), int)
         self.assertEqual(v.domain_type, IntegerSet)
         self.assertEqual(v.fixed, True)
         self.assertEqual(v.parent, None)
         vup = pickle.loads(
             pickle.dumps(v))
         self.assertEqual(vup.lb, 1)
+        self.assertEqual(type(vup.lb), int)
         self.assertEqual(vup.ub, 2)
+        self.assertEqual(type(vup.ub), int)
         self.assertEqual(vup.domain_type, IntegerSet)
         self.assertEqual(vup.fixed, True)
         self.assertEqual(vup.parent, None)
@@ -458,7 +462,9 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(v.is_binary(), True)
         self.assertEqual(v.is_integer(), True)
         self.assertEqual(v.lb, 0)
+        self.assertEqual(type(v.lb), int)
         self.assertEqual(v.ub, 1)
+        self.assertEqual(type(v.ub), int)
         self.assertEqual(v.bounds, (0,1))
 
         v.lb = 0
