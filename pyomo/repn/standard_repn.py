@@ -694,46 +694,85 @@ def _collect_var(exp, multiplier, idMap, compute_values, verbose, quadratic):
     return ans
 
 def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
+    #
+    # Exponent is a numeric value
+    #
     if exp._args_[1].__class__ in native_numeric_types:
-            exponent = exp._args_[1]
+        exponent = exp._args_[1]
+    #
+    # Exponent is not potentially variable
+    #
+    # Compute its value if compute_values==True
+    #
     elif not exp._args_[1].is_potentially_variable():
         if compute_values:
             exponent = value(exp._args_[1])
         else:
             exponent = exp._args_[1]
+    #
+    # Otherwise collect a standard repn
+    #
     else:
         res = _collect_standard_repn(exp._args_[1], 1, idMap, compute_values, verbose, quadratic)
+        #
+        # If the expression is variable, then return a nonlinear expression
+        #
         if not (res.nonl.__class__ in native_numeric_types and res.nonl == 0) or len(res.linear) > 0 or (quadratic and len(res.quadratic) > 0):
-            # The exponent is variable, so this is a nonlinear expression
             return Results(nonl=multiplier*exp)
         exponent = res.constant
 
     if exponent.__class__ in native_numeric_types:
+        #
+        # #**0 = 1
+        #
         if exponent == 0:
             return Results(constant=multiplier)
+        #
+        # #**1 = #
+        #
+        # Return the standard repn for arg(0)
+        #
         elif exponent == 1:
             return _collect_standard_repn(exp._args_[0], multiplier, idMap, compute_values, verbose, quadratic)
-        # If the exponent is >= 2, then this is a nonlinear expression
-        elif exponent == 2:
-            if quadratic:
-                # NOTE: We treat a product of linear terms as nonlinear unless quadratic==2
-                res =_collect_standard_repn(exp._args_[0], 1, idMap, compute_values, verbose, quadratic)
-                if not (res.nonl.__class__ in native_numeric_types and res.nonl == 0) or len(res.quadratic) > 0:
-                    return Results(nonl=multiplier*exp)
+        #
+        # Ignore #**2 unless quadratic==True
+        #
+        elif exponent == 2 and quadratic:
+            res =_collect_standard_repn(exp._args_[0], 1, idMap, compute_values, verbose, quadratic)
+            #
+            # If arg(0) is nonlinear, then this is a nonlinear repn
+            #
+            if not (res.nonl.__class__ in native_numeric_types and res.nonl == 0) or len(res.quadratic) > 0:
+                return Results(nonl=multiplier*exp)
+            #
+            # If computing values and no linear terms, then the return a constant repn
+            #
+            elif compute_values and len(res.linear) == 0:
+                return Results(constant=multiplier*res.constant**exponent)
+            #
+            # If there is one linear term, then we compute the quadratic expression for it.
+            #
+            elif len(res.linear) == 1:
+                key, coef = res.linear.popitem()
+                var = idMap[key]
                 ans = Results()
                 if not (res.constant.__class__ in native_numeric_types and res.constant == 0):
                     ans.constant = multiplier*res.constant*res.constant
-                    for key, coef in six.iteritems(res.linear):
-                        ans.linear[key] = 2*multiplier*coef*res.constant
-                for key, coef in six.iteritems(res.linear):
-                    ans.quadratic[key,key] = multiplier*coef
+                    ans.linear[key] = 2*multiplier*coef*res.constant
+                ans.quadratic[key,key] = multiplier*coef*coef
                 return ans
-            elif exp._args_[0].is_fixed():
-                if compute_values:
-                    return Results(constant=multiplier*value(exp._args_[0])**2)
-                else:
-                    return Results(constant=multiplier*exp)
-        
+
+    #
+    # If args(0) is a numeric value or it is fixed, then we have a constant value
+    #
+    if exp._args_[0].__class__ in native_numeric_types or exp._args_[0].is_fixed():
+        if compute_values:
+            return Results(constant=multiplier*value(exp._args_[0])**exponent)
+        else:
+            return Results(constant=multiplier*exp)
+    #
+    # Return a nonlinear expression here
+    #    
     return Results(nonl=multiplier*exp)
 
 def _collect_reciprocal(exp, multiplier, idMap, compute_values, verbose, quadratic):
