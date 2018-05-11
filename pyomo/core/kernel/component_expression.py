@@ -26,8 +26,7 @@ from pyomo.core.expr.numvalue import (NumericValue,
                                       is_variable_type,
                                       potentially_variable,
                                       is_numeric_data,
-                                      value,
-                                      as_numeric)
+                                      value)
 
 import six
 
