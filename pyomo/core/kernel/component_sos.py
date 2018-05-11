@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.core.expr
-from pyomo.core.expr.numvalue import potentially_variable
+from pyomo.core.expr.numvalue import is_numeric_data
 from pyomo.core.kernel.component_interface import \
     (IComponent,
      _ActiveComponentMixin,
@@ -82,10 +82,10 @@ class sos(ISOS):
         else:
             self._weights = tuple(weights)
             for w in self._weights:
-                if potentially_variable(w):
+                if not is_numeric_data(w):
                     raise ValueError(
                         "Weights for Special Ordered Sets must be "
-                        "expressions restricted to data")
+                        "expressions restricted to numeric data")
 
         assert len(self._variables) == len(self._weights)
         assert self._level >= 1

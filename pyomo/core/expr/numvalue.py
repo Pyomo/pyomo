@@ -249,9 +249,23 @@ def potentially_variable(obj):
         return False
     return obj.is_potentially_variable()
 
+def is_numeric_data(obj):
+    """
+    A utility function that returns a boolean indicating
+    whether the input object is numeric and not potentially
+    variable.
+    """
+    if obj.__class__ in native_numeric_types:
+        return True
+    elif obj.__class__ in native_types:
+        # this likely means it is a string
+        return False
+    else:
+        return not obj.is_potentially_variable()
+
 def polynomial_degree(obj):
     """
-    A utility function that returns an integer 
+    A utility function that returns an integer
     that indicates the polynomial degree for an
     object. boolean indicating
     """

@@ -25,6 +25,7 @@ from pyomo.core.expr.numvalue import (NumericValue,
                                       is_constant,
                                       is_variable_type,
                                       potentially_variable,
+                                      is_numeric_data,
                                       value,
                                       as_numeric)
 
@@ -294,8 +295,10 @@ class data_expression(expression):
         return self._expr
     @expr.setter
     def expr(self, expr):
-        if potentially_variable(expr):
-            raise ValueError("Expression is not restricted to data.")
+        if (expr is not None) and \
+           (not is_numeric_data(expr)):
+            raise ValueError("Expression is not restricted to "
+                             "numeric data.")
         self._expr = expr
 
 class expression_tuple(ComponentTuple):

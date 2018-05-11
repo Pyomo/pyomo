@@ -106,56 +106,73 @@ class Test_constraint(unittest.TestCase):
         c.lb = float('-inf')
         self.assertEqual(c.has_lb(), False)
         self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(type(c.lb), float)
         self.assertEqual(c.has_ub(), False)
-        self.assertEqual(c.ub, None)
+        self.assertIs(c.ub, None)
 
         c.ub = float('inf')
         self.assertEqual(c.has_lb(), False)
         self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(type(c.lb), float)
         self.assertEqual(c.has_ub(), False)
         self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(type(c.ub), float)
 
         c.lb = 0
         self.assertEqual(c.has_lb(), True)
         self.assertEqual(c.lb, 0)
+        self.assertEqual(type(c.lb), int)
         self.assertEqual(c.has_ub(), False)
         self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(type(c.ub), float)
 
         c.ub = 0
         self.assertEqual(c.has_lb(), True)
         self.assertEqual(c.lb, 0)
+        self.assertEqual(type(c.lb), int)
         self.assertEqual(c.has_ub(), True)
         self.assertEqual(c.ub, 0)
+        self.assertEqual(type(c.ub), int)
 
         c.lb = float('inf')
         self.assertEqual(c.has_lb(), True)
         self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(type(c.lb), float)
         self.assertEqual(c.has_ub(), True)
         self.assertEqual(c.ub, 0)
+        self.assertEqual(type(c.ub), int)
 
         c.ub = float('-inf')
         self.assertEqual(c.has_lb(), True)
         self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(type(c.lb), float)
         self.assertEqual(c.has_ub(), True)
         self.assertEqual(c.ub, float('-inf'))
+        self.assertEqual(type(c.ub), float)
 
         c.rhs = float('inf')
         self.assertEqual(c.has_lb(), True)
         self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(type(c.lb), float)
         self.assertEqual(c.has_ub(), False)
         self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(type(c.ub), float)
 
         c.rhs = float('-inf')
         self.assertEqual(c.has_lb(), False)
         self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(type(c.lb), float)
         self.assertEqual(c.has_ub(), True)
         self.assertEqual(c.ub, float('-inf'))
+        self.assertEqual(type(c.ub), float)
 
         c.equality = False
         pL = parameter()
         c.lb = pL
+        self.assertIs(c.lb, pL)
         pU = parameter()
         c.ub = pU
+        self.assertIs(c.ub, pU)
 
         with self.assertRaises(ValueError):
             self.assertEqual(c.has_lb(), False)
@@ -381,7 +398,7 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.rhs, 3)
         self.assertEqual(c.equality, True)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             c.rhs = 'a'
 
         with self.assertRaises(ValueError):
@@ -450,9 +467,9 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.lslack, -3.0)
         self.assertEqual(c.uslack, 3.0)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             c.lb = 'a'
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             c.ub = 'a'
         self.assertEqual(c.lb, 1.0)
         self.assertEqual(c.ub, 1.0)
@@ -747,29 +764,39 @@ class Test_constraint(unittest.TestCase):
         x = variable()
         c = constraint((0.0, x))
         self.assertEqual(c.equality, True)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(type(c.lb), float)
         self.assertIs(c.body, x)
-        self.assertEqual(c.ub(), 0)
+        self.assertEqual(c.ub, 0)
+        self.assertEqual(type(c.ub), float)
 
-        c = constraint((x, 0.0))
+        c = constraint((x, 0))
         self.assertEqual(c.equality, True)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(type(c.lb), int)
         self.assertIs(c.body, x)
-        self.assertEqual(c.ub(), 0)
+        self.assertEqual(c.ub, 0)
+        self.assertEqual(type(c.ub), int)
 
     def test_tuple_construct_inf_equality(self):
         x = variable()
         c = constraint((x, float('inf')))
         self.assertEqual(c.equality, True)
         self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(type(c.lb), float)
         self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(type(c.ub), float)
         self.assertEqual(c.rhs, float('inf'))
+        self.assertEqual(type(c.rhs), float)
         self.assertIs(c.body, x)
         c = constraint((float('inf'), x))
         self.assertEqual(c.equality, True)
         self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(type(c.lb), float)
         self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(type(c.ub), float)
         self.assertEqual(c.rhs, float('inf'))
+        self.assertEqual(type(c.rhs), float)
         self.assertIs(c.body, x)
 
     def test_tuple_construct_1sided_inequality(self):
@@ -791,14 +818,18 @@ class Test_constraint(unittest.TestCase):
         c = constraint((float('-inf'), y, 1))
         self.assertEqual(c.equality, False)
         self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(type(c.lb), float)
         self.assertIs(c.body, y)
         self.assertEqual(c.ub, 1)
+        self.assertEqual(type(c.ub), int)
 
         c = constraint((0, y, float('inf')))
         self.assertEqual(c.equality, False)
         self.assertEqual(c.lb, 0)
+        self.assertEqual(type(c.lb), int)
         self.assertIs(c.body, y)
         self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(type(c.ub), float)
 
     def test_tuple_construct_unbounded_inequality(self):
         y = variable()
@@ -811,8 +842,10 @@ class Test_constraint(unittest.TestCase):
         c = constraint((float('-inf'), y, float('inf')))
         self.assertEqual(c.equality, False)
         self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(type(c.lb), float)
         self.assertIs(c.body, y)
         self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(type(c.ub), float)
 
     def test_tuple_construct_invalid_1sided_inequality(self):
         x = variable()
@@ -1103,9 +1136,9 @@ class Test_constraint(unittest.TestCase):
         c = constraint()
         v = variable()
         c.expr = (v == 1)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             c.expr = (v, 'x')
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             c.expr = ('x', v)
 
     def test_slack_methods(self):
@@ -1925,13 +1958,17 @@ class Test_linear_constraint(unittest.TestCase):
         pL = parameter()
         pU = parameter()
         c.lb = pL
+        self.assertIs(c.lb, pL)
         c.ub = pU
+        self.assertIs(c.ub, pU)
 
         e.expr = 1.0
         eL = data_expression()
         eU = data_expression()
         c.lb = eL
+        self.assertIs(c.lb, eL)
         c.ub = eU
+        self.assertIs(c.ub, eU)
 
     def test_call(self):
         c = linear_constraint([],[])

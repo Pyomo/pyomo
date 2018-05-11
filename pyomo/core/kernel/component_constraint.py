@@ -15,6 +15,7 @@ from pyomo.core.expr.numvalue import (ZeroConstant,
                                       as_numeric,
                                       native_types,
                                       potentially_variable,
+                                      is_numeric_data,
                                       value,
                                       _sub)
 from pyomo.core.expr import current as EXPR
@@ -188,14 +189,11 @@ class _MutableBoundsConstraintMixin(object):
             raise ValueError(
                 "The lb property can not be set "
                 "when the equality property is True.")
-        if lb is None:
-            pass
-        elif lb.__class__ in native_types:
-            lb = as_numeric(lb)
-        elif lb.is_potentially_variable():
+        if (lb is not None) and \
+           (not is_numeric_data(lb)):
             raise ValueError(
                     "Constraint lower bounds must be "
-                    "expressions restricted to data.")
+                    "expressions restricted to numeric data.")
         self._lb = lb
 
     @property
@@ -208,14 +206,11 @@ class _MutableBoundsConstraintMixin(object):
             raise ValueError(
                 "The ub property can not be set "
                 "when the equality property is True.")
-        if ub is None:
-            pass
-        elif ub.__class__ in native_types:
-            ub = as_numeric(ub)
-        elif ub.is_potentially_variable():
+        if (ub is not None) and \
+           (not is_numeric_data(ub)):
             raise ValueError(
-                    "Constraint lower bounds must be "
-                    "expressions restricted to data.")
+                    "Constraint upper bounds must be "
+                    "expressions restricted to numeric data.")
         self._ub = ub
 
     @property
@@ -235,12 +230,10 @@ class _MutableBoundsConstraintMixin(object):
             raise ValueError(
                 "Constraint right-hand side can not "
                 "be assigned a value of None.")
-        elif rhs.__class__ in native_types:
-            rhs = as_numeric(rhs)
-        elif rhs.__class__ not in native_types and rhs.is_potentially_variable():
+        elif not is_numeric_data(rhs):
             raise ValueError(
-                    "Constraint right-hand side must be "
-                    "expressions restricted to data.")
+                    "Constraint right-hand side must be numbers "
+                    "or expressions restricted to data.")
         self._lb = rhs
         self._ub = rhs
         self._equality = True
@@ -437,18 +430,13 @@ class constraint(_MutableBoundsConstraintMixin,
             #
             if len(expr) == 2:
                 arg0 = expr[0]
-                if arg0 is not None:
-                    arg0 = as_numeric(arg0)
                 arg1 = expr[1]
-                if arg1 is not None:
-                    arg1 = as_numeric(arg1)
-
                 # assigning to the rhs property
                 # will set the equality flag to True
-                if arg1.__class__ in native_types or (not arg1.is_potentially_variable()):
+                if not potentially_variable(arg1):
                     self.rhs = arg1
                     self.body = arg0
-                elif arg0.__class__ in native_types or (not arg0.is_potentially_variable()):
+                elif not potentially_variable(arg0):
                     self.rhs = arg0
                     self.body = arg1
                 else:
@@ -462,12 +450,13 @@ class constraint(_MutableBoundsConstraintMixin,
             elif len(expr) == 3:
                 arg0 = expr[0]
                 if arg0 is not None:
-                    if potentially_variable(arg0):
+                    if not is_numeric_data(arg0):
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the lower "
-                            "value was not data or an expression "
-                            "restricted to storage of data."
+                            "value was not numeric data or an "
+                            "expression restricted to storage of "
+                            "numeric data."
                             % (self.name))
 
                 arg1 = expr[1]
@@ -476,12 +465,13 @@ class constraint(_MutableBoundsConstraintMixin,
 
                 arg2 = expr[2]
                 if arg2 is not None:
-                    if potentially_variable(arg2):
+                    if not is_numeric_data(arg2):
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the upper "
-                            "value was not data or an expression "
-                            "restricted to storage of data."
+                            "value was not numeric data or an "
+                            "expression restricted to storage of "
+                            "numeric data."
                             % (self.name))
 
                 self.lb = arg0
@@ -566,11 +556,11 @@ class constraint(_MutableBoundsConstraintMixin,
                         % (self.name))
                 if not potentially_variable(expr.arg(1)):
                     self.lb = None
-                    self.body  = expr.arg(0)
+                    self.body = expr.arg(0)
                     self.ub = expr.arg(1)
                 elif not potentially_variable(expr.arg(0)):
                     self.lb = expr.arg(0)
-                    self.body  = expr.arg(1)
+                    self.body = expr.arg(1)
                     self.ub = None
                 else:
                     self.lb = None
@@ -587,21 +577,23 @@ class constraint(_MutableBoundsConstraintMixin,
                         "using '<=', '>=', or '=='."
                         % (self.name))
 
-                if potentially_variable(expr.arg(0)):
+                if not is_numeric_data(expr.arg(0)):
                     raise ValueError(
                         "Constraint '%s' found a double-sided "
                         "inequality expression (lower <= "
                         "expression <= upper) but the lower "
-                        "bound was not data or an expression "
-                        "restricted to storage of data."
+                        "bound was not numeric data or an "
+                        "expression restricted to storage of "
+                        "numeric data."
                         % (self.name))
-                if potentially_variable(expr.arg(2)):
+                if not is_numeric_data(expr.arg(2)):
                     raise ValueError(
                         "Constraint '%s' found a double-sided "\
                         "inequality expression (lower <= "
                         "expression <= upper) but the upper "
-                        "bound was not data or an expression "
-                        "restricted to storage of data."
+                        "bound was not numeric data or an "
+                        "expression restricted to storage of "
+                        "numeric data."
                         % (self.name))
 
                 self.lb = expr.arg(0)

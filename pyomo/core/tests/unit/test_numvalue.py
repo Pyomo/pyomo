@@ -19,7 +19,9 @@ import pyutilib.math
 import pyutilib.th as unittest
 
 from pyomo.environ import *
-from pyomo.core.expr.numvalue import NumericConstant, as_numeric
+from pyomo.core.expr.numvalue import (NumericConstant,
+                                      as_numeric,
+                                      is_numeric_data)
 
 try:
     unicode
@@ -38,6 +40,21 @@ class MyBogusType(object):
 class MyBogusNumericType(MyBogusType):
     def __add__(self, other):
         return MyBogusNumericType(self.val + float(other))
+
+class Test_is_numeric_data(unittest.TestCase):
+
+    def test_string(self):
+        self.assertEqual(is_numeric_data("a"), False)
+        self.assertEqual(is_numeric_data(b"a"), False)
+
+    def test_float(self):
+        self.assertEqual(is_numeric_data(0.0), True)
+
+    def test_int(self):
+        self.assertEqual(is_numeric_data(0), True)
+
+    def test_NumericValue(self):
+        self.assertEqual(is_numeric_data(NumericConstant(1.0)), True)
 
 class Test_value(unittest.TestCase):
 
