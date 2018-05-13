@@ -9,8 +9,10 @@ env:
   matrix:
   - IMAGE_NAME=test-builds:python_3.7-rc CATEGORY="nightly"
   - IMAGE_NAME=test-builds:python_3.6    CATEGORY="nightly"
+  - IMAGE_NAME=test-builds:python_3.6    CATEGORY="nightly" SLIM=1
   - IMAGE_NAME=test-builds:python_3.5    CATEGORY="nightly"
-  - IMAGE_NAME=test-builds:python_2.7    CATEGORY="nightly"
+  - IMAGE_NAME=test-builds:python_2.7    CATEGORY="nightly" KEY_JOB=1
+  - IMAGE_NAME=test-builds:python_2.7    CATEGORY="nightly" SLIM=1
   - IMAGE_NAME=test-builds:pypy_3        CATEGORY="nightly"
   - IMAGE_NAME=test-builds:pypy_2        CATEGORY="nightly"
   - IMAGE_NAME=test-builds:anaconda_3    CATEGORY="nightly"
@@ -46,6 +48,13 @@ before_install:
 
 install:
   - ${DOC} pip install -U pip setuptools wheel
+  - |
+    if [ -n "$SLIM" ]
+    then
+        ${DOC} pip uninstall -y numpy scipy ipython openpyxl \
+                                sympy pymysql pyodbc pyro4 pyyaml \
+                                networkx xlrd pandas matplotlib dill
+    fi
   - ${DOC} pip install codecov
  # Clone but don't install pyomo-model-libraries
   - ${DOC} git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
