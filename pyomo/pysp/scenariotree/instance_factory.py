@@ -466,7 +466,7 @@ class ScenarioTreeInstanceFactory(object):
         if self._scenario_tree is None:
             if (not isinstance(self._scenario_tree_model,
                                (_BlockData, Block))) and \
-               (has_networkx and \
+               ((not has_networkx) or \
                 (not isinstance(self._scenario_tree_model,
                                 networkx.DiGraph))):
                 raise TypeError(
