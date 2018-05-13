@@ -42,9 +42,6 @@ before_install:
  # commands prefixed by ${DOC_} will execute inside the
  # running docker container
   - export DOC="docker exec ${CI_ENV} -e IMAGE_NAME -e COVERAGE_PROCESS_START ${DOC_ID}"
- # more setup related to tracking coverage for subprocesses
-  - DOCKER_SITE_PACKAGES=`${DOC} python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
-  - ${DOC} bash -c "echo 'import coverage; coverage.process_startup()' > ${DOCKER_SITE_PACKAGES}/run_coverage_at_startup.pth"
 
 install:
   - ${DOC} pip install -U pip setuptools wheel
@@ -55,13 +52,16 @@ install:
                                 sympy pymysql pyodbc pyro4 pyyaml \
                                 networkx xlrd pandas matplotlib dill
     fi
-  - ${DOC} pip install codecov
+  - ${DOC} pip install nose coverage codecov
  # Clone but don't install pyomo-model-libraries
   - ${DOC} git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
  # Install PyUtilib (master branch)
   - ${DOC} pip install --quiet git+https://github.com/PyUtilib/pyutilib
  # Install this package
   - ${DOC} python setup.py develop
+ # Finish setting up coverage tracking for subprocesses
+  - DOCKER_SITE_PACKAGES=`${DOC} python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
+  - ${DOC} bash -c "echo 'import coverage; coverage.process_startup()' > ${DOCKER_SITE_PACKAGES}/run_coverage_at_startup.pth"
 
 script:
   - ${DOC} python --version
