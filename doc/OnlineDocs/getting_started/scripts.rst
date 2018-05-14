@@ -30,25 +30,20 @@ the problem or even to iterate over solutions. This example is provided just to 
 NOTE: The built-in code for printing solutions prints only non-zero variable values. So if you run this code,
 no variable values will be output for the first solution found because all of the variables are zero. However, other information about the solution, such as the objective value, will be displayed.
 
-.. literalinclude:: scripts_examples/iterative1.py
+.. literalinclude:: spyfiles/iterative1.spy
    :language: python
 
 Let us now analyze this script. The first line is a comment that happens to give the name of the file. This is followed by
 two lines that import symbols for Pyomo:
 
-::
-
-  # iterative1.py
-  from pyomo.environ import *
-  from pyomo.opt import SolverFactory
+.. literalinclude:: spyfiles/iterative1_Import_symbols_for_pyomo.spy
+   :language: python
 
 An object to perform optimization is created by calling ``SolverFactory`` with an argument giving the name of the solver.t
 The argument would be ``'gurobi'`` if, e.g., Gurobi was desired instead of glpk:
 
-::
-
-  # Create a solver
-  opt = SolverFactory('glpk')
+.. literalinclude:: spyfiles/iterative1_Call_SolverFactory_with_argument.spy
+   :language: python
 
 
 The next lines after a comment create a model. For our discussion here, we will refer to this as the base model
@@ -59,21 +54,14 @@ Constraints could be present in the base model.
 Even though it is an abstract model, the base model
 is fully specified by these commands because it requires no external data:
 
-::
-
-  model = AbstractModel()
-  model.n = Param(default=4)
-  model.x = Var(RangeSet(model.n), within=Binary)
-  def o_rule(model):
-      return summation(model.x)
-      model.o = Objective(rule=o_rule)
+.. literalinclude:: spyfiles/iterative1_Call_SolverFactory_with_argument.spy
+   :language: python
 
 The next line is not part of the base model specification. It creates an empty constraint list that the script will use
 to add constraints.
 
-::
-
-  model.c = ConstraintList()
+.. literalinclude:: spyfiles/iterative1_Create_empty_constraint_list.spy
+   :language: python
 
 The next non-comment line creates the instantiated model and refers to the instance object
 with a Python variable ``instance``.
@@ -82,39 +70,34 @@ line because model instantiation is done by the ``pyomo`` script. In this exampl
 is called without arguments because none are needed; however, the name of a file with data
 commands is given as an argument in many scripts.
 
-::
-
-  instance = model.create_instance()
+.. literalinclude:: spyfiles/iterative1_Create_instantiated_model.spy
+   :language: python
 
 The next line invokes the solver and refers to the object contain results with the Python
 variable ``results``.
 
-::
-
-  results = opt.solve(instance)
+.. literalinclude:: spyfiles/iterative1_Solve_and_refer_to_results.spy
+   :language: python
 
 The solve function loads the results into the instance, so the next
 line writes out the updated values.
 
-::
-
-  instance.display()
+.. literalinclude:: spyfiles/iterative1_Display_updated_value.spy
+   :language: python
 
 The next non-comment line is a Python iteration command that will successively
 assign the integers from 0 to 4 to the Python variable ``i``, although that variable is not
 used in script. This loop is what
 causes the script to generate five more solutions:
 
-::
-
-  for i in range(5):
+.. literalinclude:: spyfiles/iterative1_Assign_integers.spy
+   :language: python
 
 The next line associates the results obtained with the instance. This then enables
 direct queries of solution values in subsequent lines using variable names contained in the instance:
 
-::
-
-      instance.solutions.load_from(results)
+.. literalinclude:: spyfiles/iterative1_Associate_results_with_instance.spy
+   :language: python
 
 An expression is built up in the Python variable named ``expr``.
 The Python variable ``j`` will be iteratively assigned all of the indexes of the variable ``x``. For each index,
@@ -123,14 +106,8 @@ the expression in ``expr`` is augmented accordingly.
 Although ``expr`` is initialized to 0 (an integer),
 its type will change to be a Pyomo expression when it is assigned expressions involving Pyomo variable objects:
 
-::
-
-      expr = 0
-      for j in instance.x:
-          if instance.x[j].value == 0:
-              expr += instance.x[j]
-          else:
-              expr += (1-instance.x[j])
+.. literalinclude:: spyfiles/iterative1_Iteratively_assign_and_test.spy
+   :language: python
 
 During the first iteration (when ``i`` is 0), we know that all values of ``x`` will be 0, so we can anticipate what the
 expression will look like. We know that ``x`` is indexed by the integers from 1 to 4 so we know that ``j`` will take on the
@@ -149,19 +126,15 @@ this case. When we wanted to use the current value in the ``if`` statement, we u
 The next line adds to the constaint list called ``c``
 the requirement that the expression be greater than or equal to one:
 
-::
-
-      instance.c.add( expr >= 1 )
+.. literalinclude:: spyfiles/iterative1_Add_expression_constraint.spy
+   :language: python
 
 The proof that this precludes the last solution is left as an exerise for the reader.
 
 The final lines in the outer for loop find a solution and display it:
 
-::
-
-      results = opt.solve(instance)
-      instance.display()
-
+.. literalinclude:: spyfiles/iterative1_Find_and_display_solution.spy
+   :language: python
 
 Changing the Model or Data and Re-solving
 -----------------------------------------
@@ -187,22 +160,20 @@ If ``instance`` has a parameter whose name is
 in ``ParamName`` with an index that is in ``idx``, the
 the value in ``NewVal`` can be assigned to it using
 
-::
-
-    getattr(instance, ParamName)[idx] = NewVal
+.. literalinclude:: spyfiles/spy4scripts_Assign_value_to_indexed_parametername.spy
+   :language: python
 
 For a singleton parameter named ``ParamName`` (i.e., if it
 is not indexed), the assignment can be made using either
 
-::
-
-    getattr(instance, ParamName)[None] = NewVal
+.. literalinclude:: spyfiles/spy4scripts_Assign_value_to_unindexed_parametername_1.spy
+   :language: python
 
 or else
 
-::
+.. literalinclude:: spyfiles/spy4scripts_Assign_value_to_unindexed_parametername_2.spy
+   :language: python
 
-    getattr(instance, ParamName).set_value(NewVal)
 
 The function ``getattr`` is provided by Python. For more information
 about access to Pyomo parameters, see the section in this document
@@ -223,30 +194,14 @@ is solved and then the
 value of ``model.x[2]`` is flipped to the opposite value
 before solving the model again. The main lines of interest are:
 
-::
-
-  instance.solutions.load_from(results)
-
-  if instance.x[2] == 0:
-      instance.x[2] = 1
-  else:
-      instance.x[2] = 0
-  instance.x[2].fixed = True
-  results = opt.solve(instance)
+.. literalinclude:: spyfiles/iterative2_Flip_value_before_solve_again.spy
+   :language: python
 
 This could also have been accomplished by setting the upper and lower bounds:
 
-::
+.. literalinclude:: spyfiles/spy4scripts_Set_upper&lower_bound.spy
+   :language: python
 
-  instance.solutions.load_from(results)
-
-  if instance.x[2] == 0:
-      instance.x[2].setlb(1)
-      instance.x[2].setub(1)
-  else:
-      instance.x[2].setlb(0)
-      instance.x[2].setub(0)
-  results = opt.solve(instance)
 
 Notice that when using the bounds, we do not set ``fixed`` to ``True`` because that
 would fix the variable at whatever value it presently has and then the bounds would be
@@ -257,10 +212,8 @@ in this document on ``Var`` access :ref:`VarAccess`.
 
 Note that ``instance.x.fix(2)`` is equivalent to
 
-::
-
-  instance.x.value = 2
-  instance.x.fixed = True
+.. literalinclude:: spyfiles/spy4scripts_Equivalent_form_of_instance.x.fix(2).spy
+   :language: python
 
 and
 ``instance.x.fix()`` is equivalent to ``instance.x.fixed = True``
@@ -275,10 +228,9 @@ that can be given more than one objective). If both
 using ``Objective``, then one can ensure that ``model.obj2``
 is passed to the solver using
 
-::
+.. literalinclude:: spyfiles/spy4scripts_Pass_multiple_objectives_to_solver.spy
+   :language: python
 
-  model.obj1.deactivate()
-  model.obj2.activate()
 
 For abstract models this would be done prior to instantiation or
 else the ``activate`` and ``deactivate`` calls would be on
@@ -311,23 +263,12 @@ be done either by listing the arguments, as we will show below, or by providing 
 arguments in the form ``**kwds``.  If the abritrary keywords are used, then the arguments are access using the get method.
 For example the ``pyomo_preprocess`` function takes one argument (as will be described below) so the following two function will produce the same output:
 
-::
+.. literalinclude:: spyfiles/spy4scripts_Listing_arguments.spy
+   :language: python
 
-  def pyomo_preprocess(options=None):
-     if options == None:
-        print "No command line options were given."
-     else:
-        print "Command line arguments were: %s" % options
+.. literalinclude:: spyfiles/spy4scripts_Provide_dictionary_for_arbitrary_keywords.spy
+   :language: python
 
-
-::
-
-  def pyomo_preprocess(**kwds):
-     options = kwds.get('options',None)
-     if options == None:
-        print "No command line options were given."
-     else:
-        print "Command line arguments were: %s" % options
 
 To access the various arguments using the ``**kwds`` argument, use the following strings:
 
@@ -344,9 +285,9 @@ This function has one argument, which is an enhanced Python dictionary containin
 the command line options given to launch Pyomo. It is called before model construction so
 it augments the workflow. It is defined in the model file as follows:
 
-::
+.. literalinclude:: spyfiles/spy4scripts_Pyomo_preprocess_argument.spy
+   :language: python
 
-  def pyomo_preprocess(options=None):
 
 ``pyomo_create_model``
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -469,13 +410,8 @@ using ``instance.solutions.load_from(results)`` and the code includes the line `
 use of the fact that the variable is a member of the instance object and its value can be accessed using its ``value`` member. Assuming the
 instance object has the name ``instance``, the following code snippet displays all variables and their values:
 
-::
-
-  for v in instance.component_objects(Var, active=True):
-      print ("Variable",v)
-      varobject = getattr(instance, str(v))
-      for index in varobject:
-          print ("   ",index, varobject[index].value)
+.. literalinclude:: spyfiles/spy4scripts_Display_all_variables&values.spy
+   :language: python
 
 This code could be improved by checking to see if the variable is not indexed (i.e., the only index
 value is ``None``), then the code could print the value without the word ``None`` next to it.
@@ -483,14 +419,8 @@ value is ``None``), then the code could print the value without the word ``None`
 Assuming again that the model has been instantiated and solved and the results have been loded back into the instance object
 using ``instance.solutions.load_from(results)`` and that the code includes the line ``from pyomo.core import Var`` here is a code snippet for fixing all integers at their current value:
 
-::
-
-  for v in instance.component_objects(Var, active=True):
-      varobject = getattr(instance, v)
-      if isinstance(varobject.domain, IntegerSet) or isinstance(varobject.domain, BooleanSet):
-          print ("fixing "+str(v))
-          for index in varobject:
-              varobject[index].fixed = True # fix the current value
+.. literalinclude:: spyfiles/spy4scripts_Fix_all_integers&values.spy
+   :language: python
 
 Another way to access all of the variables (particularly if there are blocks) is as follows:
 
@@ -510,16 +440,8 @@ matches the code snipped given for a Python script.
 For example, if the following defintion were included in the model file, then the ``pyomo`` command would output all
 variables and their values (including those variables with a value of zero):
 
-::
-
-  def pyomo_print_results(options, instance, results):
-      from pyomo.core import Var
-      for v in instance.component_objects(Var, active=True):
-          print ("Variable "+str(v))
-          varobject = getattr(instance, v)
-          for index in varobject:
-              print ("   ",index, varobject[index].value)
-
+.. literalinclude:: spyfiles/spy4scripts_Include_definition_in_modelfile.spy
+   :language: python
 
 .. _ParmAccess:
 
@@ -530,14 +452,8 @@ Accessing Parameter Values
 Access to paramaters is completely analgous to access to variables. For example, here is a code
 snippet to print the name and value of every Parameter:
 
-::
-
-  from pyomo.core import Param
-  for p in instance.component_objects(Param, active=True):
-      print ("Parameter "+str(p))
-      parmobject = getattr(instance, p)
-      for index in parmobject:
-          print ("   ",index, parmobject[index].value)
+.. literalinclude:: spyfiles/spy4scripts_Print_parameter_name&value.spy
+   :language: python
 
 NOTE:The value of a ``Param`` can be returned as None+ if no data
 was specified for it. This will be true even if a default value
@@ -562,39 +478,26 @@ Access Duals in a Python Script
 
 To signal that duals are desired, declare a Suffix component with the name "dual" on the model or instance with an IMPORT or IMPORT_EXPORT direction.
 
-::
-
-  # Create a 'dual' suffix component on the instance
-  # so the solver plugin will know which suffixes to collect
-  instance.dual = Suffix(direction=Suffix.IMPORT)
+.. literalinclude:: spyfiles/driveabs2_Create_dual_suffix_component.spy
+   :language: python
 
 See the section on Suffixes :ref:`Suffixes` for more information on Pyomo's Suffix component. After the results are obtained and loaded into an instance, duals can be accessed in the following fashion.
 
-::
-
-  # display all duals
-  print "Duals"
-  from pyomo.core import Constraint
-  for c in instance.component_objects(Constraint, active=True):
-      print ("   Constraint "+str(c))
-      cobject = getattr(instance, str(c))
-      for index in cobject:
-          print ("      ", index, instance.dual[cobject[index]])
+.. literalinclude:: spyfiles/driveabs2_Access_all_dual.spy
+   :language: python
 
 The following snippet will only work, of course, if there is a constraint with the name
 ``AxbConstraint`` that has and index, which is the string ``Film``.
 
-::
-
-  # access (display, this case) one dual
-  print ("Dual for Film=", instance.dual[instance.AxbConstraint['Film']])
+.. literalinclude:: spyfiles/driveabs2_Access_one_dual.spy
+   :language: python
 
 Here is a complete example that relies on the file ``abstract2.py`` to
 provide the model and the file ``abstract2.dat`` to provide the data. Note
 that the model in ``abstract2.py`` does contain a constraint named
 ``AxbConstraint`` and ``abstract2.dat`` does specify an index for it named ``Film``.
 
-.. literalinclude:: scripts_examples/driveabs2.py
+.. literalinclude:: spyfiles/driveabs2.spy
    :language: python
 
 Concrete models are slightly different because the model is the instance. Here is a complete example that relies on the file ``concrete1.py`` to
@@ -621,17 +524,8 @@ matches the code snipped given for a Python script.
 For example, if the following definition were included in the model file, then the ``pyomo`` command would output all
 constraints and their duals.
 
-::
-
-  def pyomo_print_results(options, instance, results):
-      # display all duals
-      print ("Duals")
-      from pyomo.core import Constraint
-      for c in instance.component_objects(Constraint, active=True):
-          print ("   Constraint",c)
-          cobject = getattr(instance, c)
-          for index in cobject:
-              print ("      ", index, instance.dual[cobject[index]])
+.. literalinclude:: spyfiles/spy4scripts_Include_definition_output_constraints&duals.spy
+   :language: python
 
 NOTE: If the ``--solver-suffixes`` command line option is used to request constraint duals, an IMPORT style Suffix component will be added
 to the model by the ``pyomo`` command.
@@ -649,45 +543,21 @@ Accessing Solver Status
 After a solve, the results object has a member ``Solution.Status`` that contains the
 solver status. The following snippet shows an example of access via a ``print`` statement:
 
-::
-
-  instance = model.create()
-  results = opt.solve(instance)
-  print ("The solver returned a status of:"+str(results.Solution.Status))
+.. literalinclude:: spyfiles/spy4scripts_Print_solver_status.spy
+   :language: python
 
 The use of the Python ``str`` function to cast the value to a be string makes it
 easy to test it. In particular, the value 'optimal' indicates that the
 solver succeeded. It is also possible to access Pyomo data that
 can be compared with the solver status as in the following code snippet:
 
-::
-
-  from pyomo.opt import SolverStatus, TerminationCondition
-
-  ...
-
-  if (results.solver.status == SolverStatus.ok) and (results.solver.termination_condition == TerminationCondition.optimal):
-      # this is feasible and optimal
-  elif results.solver.termination_condition == TerminationCondition.infeasible:
-      # do something about it? or exit?
-  else:
-      # something else is wrong
-      print (results.solver)
+.. literalinclude:: spyfiles/spy4scripts_Pyomo_data_comparedwith_solver_status_1.spy
+   :language: python
 
 Alternatively,
 
-::
-
-  from pyomo.opt import TerminationCondition
-
-  ...
-
-  results = opt.solve(model, load_solutions=False)
-  if results.solver.termination_condition == TerminationCondition.optimal:
-      model.solutions.load_from(results)
-  else:
-      print ("Solution is not optimal")
-      # now do something about it? or exit? ...
+.. literalinclude:: spyfiles/spy4scripts_Pyomo_data_comparedwith_solver_status_2.spy
+   :language: python
 
 .. _TeeTrue:
 
@@ -697,9 +567,8 @@ Display of Solver Output
 
 To see the output of the solver, use the option ``tee=True`` as in
 
-::
-
-  results = opt.solve(instance, tee=True)
+.. literalinclude:: spyfiles/spy4scripts_See_solver_output.spy
+   :language: python
 
 This can be useful for troubleshooting solver difficulties.
 
@@ -713,10 +582,8 @@ Most solvers accept options and Pyomo can pass options through to a solver. In s
 or callbacks, the options can be attached to the solver object by adding to its options
 dictionary as illustrated by this snippet:
 
-::
-
-  optimizer = SolverFactory['cbc']
-  optimizer.options["threads"] = 4
+.. literalinclude:: spyfiles/spy4scripts_Add_option_to_solver.spy
+   :language: python
 
 If multiple options are needed, then multiple dictionary entries should be
 added.
@@ -724,9 +591,8 @@ added.
 Sometime it is desirable to pass options as part of the call to the solve function as in this
 snippet:
 
-::
-
-  results = optimizer.solve(instance, options="threads=4", tee=True)
+.. literalinclude:: spyfiles/spy4scripts_Add_multiple_options_to_solver.spy
+   :language: python
 
 The quoted string is passed directly to the solver. If multiple options need to
 be passed to the solver in this way, they should be separated by a space within the
@@ -750,9 +616,8 @@ Often, the executables for solvers are in the path; however, for situations
 where they are not,
 the SolverFactory function accepts the keyword ``executable``, which you can use to set an absolute or relative path to a solver executable. E.g.,
 
-::
-
-  opt = SolverFactory("ipopt", executable="../ipopt")
+.. literalinclude:: spyfiles/spy4scripts_Set_path_to_solver_executable.spy
+   :language: python
 
 Warm Starts
 -----------
@@ -760,15 +625,8 @@ Warm Starts
 Some solvers support a warm start based on current values of variables. To use this feature, set the values of
 variables in the instance and pass ``warmstart=True`` to the ``solve()`` method. E.g.,
 
-::
-
-  instance = model.create()
-  instance.y[0] = 1
-  instance.y[1] = 0
-
-  opt = SolverFactory("cplex")
-
-  results = opt.solve(instance, warmstart=True)
+.. literalinclude:: spyfiles/spy4scripts_Pass_warmstart_to_solver.spy
+   :language: python
 
 NOTE: The Cplex and Gurobi LP file (and Python) interfaces will generate an MST file with the variable data and hand this off to the solver in addition to the LP file.
 
@@ -820,7 +678,5 @@ The pyomo command-line ``--tempdir`` option propagates through to the
 TempFileManager service. One can accomplish the same through the
 following few lines of code in a script:
 
-::
-
-  from pyutilib.services import TempFileManager
-  TempfileManager.tempdir = YourDirectoryNameGoesHere
+.. literalinclude:: spyfiles/spy4scripts_Specify_temporary_directory_name.spy
+   :language: python

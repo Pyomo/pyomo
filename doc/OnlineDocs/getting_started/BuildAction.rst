@@ -13,20 +13,22 @@ this capability in a Pyomo model.
 It takes as arguments optional index sets and a function to peform the action.
 For example,
 
->>> model.BuildBpts = BuildAction(model.J, rule=bpts_build)
+.. literalinclude:: spyfiles/abstract2piecebuild_BuildAction_example.spy
+   :language: python
 
 calls the function ``bpts_build`` for each member of ``model.J``. The function
 ``bpts_build`` should have the model and a variable for the members of ``model.J`` as
 formal arguments. In this example, the following would be a valid
 declaration for the function:
 
->>> def bpts_build(model, j):
+.. literalinclude:: spyfiles/abstract2piecebuild_Function_valid_declaration.spy
+   :language: python
 
 
 A full example, which extends the :ref:`abstract2.py` and
 :ref:`abstract2piece.py` examples, is
 
-.. literalinclude:: examples/abstract2piecebuild.py
+.. literalinclude:: spyfiles/abstract2piecebuild.spy
    :language: python
 
 This example uses the build action to create a model component with breakpoints for a

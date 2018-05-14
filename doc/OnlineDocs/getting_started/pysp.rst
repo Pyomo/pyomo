@@ -531,10 +531,8 @@ These will be discussed in further detail in the remaining
 sections. The following code snippet demonstrates how to
 import these annotations and declare them on a model.
 
->>> from pyomo.pysp.annotations import *
->>> model.stoch_rhs = PySP_StochasticRHSAnnotation()
->>> model.stoch_matrix = PySP_StochasticMatrixAnnotation()
->>> model.stoch_objective = PySP_StochasticObjectiveAnnotation()
+.. literalinclude:: spyfiles/spy4pysp_Import&declare_annotations.spy
+   :language: python
 
 Populating these annotations with entries is optional, and
 simply declaring them on the reference Pyomo model will alert the
@@ -602,29 +600,8 @@ that ``Block`` (that have not been deactivated) should be
 considered. As an example, we consider the following
 partially declared concrete Pyomo model:
 
->>> model = ConcreteModel()
->>>
->>> # data that is initialized on a per-scenario basis
->>> p = ...
->>> q = ...
->>>
->>> # variables declared as second-stage on the
->>> # PySP scenario tree
->>> model.z = Var()
->>> model.y = Var()
->>>
->>> # indexed constraint
->>> model.r_index = Set(initialize=['a', 'b', 'c'])
->>> def r_rule(model, i):
->>>     return expr= p + i <= 1 *model.z + model.y * 5 <= 10 + q + i
->>> model.r = Constraint(model.r_index, rule=r_rule)
->>>
->>> # singleton constraint
->>> model.c = Constraint(expr= p * model.z >= 1)
->>>
->>> # a sub-block with a singleton constraint
->>> model.b = Block()
->>> model.b.c = Constraint(expr= q * model.y >= 1)
+.. literalinclude:: spyfiles/spy4pysp_Partially_declared_concretemodel.spy
+   :language: python
 
 Here the local Python variables ``p`` and ``q`` serve as
 placeholders for data that changes with each scenario.
@@ -638,38 +615,31 @@ stochastic right-hand-side data:
 
 - Implicit form
 
->>> model.stoch_rhs = PySP_StochasticRHSAnnotation()
+.. literalinclude:: spyfiles/spy4pysp_Model_implicit_form.spy
+   :language: python
 
 - Implicit form for ``Block`` (model) assignment
 
->>> model.stoch_rhs = PySP_StochasticRHSAnnotation()
->>> model.stoch_rhs.declare(model)
+.. literalinclude:: spyfiles/spy4pysp_Model_implicit_block.spy
+   :language: python
 
 - Explicit form for singleton constraint with implicit form
   for indexed constraint and sub-block
 
->>> model.stoch_rhs = PySP_StochasticRHSAnnotation()
->>> model.stoch_rhs.declare(model.r)
->>> model.stoch_rhs.declare(model.c)
->>> model.stoch_rhs.declare(model.b)
+.. literalinclude:: spyfiles/spy4pysp_Explicit_singletonconstraint_implicit_indexedconstraint&subblock.spy
+   :language: python
 
 - Explicit form for singleton constraints at the model and
   sub-block level with implicit form for indexed constraint
 
->>> model.stoch_rhs = PySP_StochasticRHSAnnotation()
->>> model.stoch_rhs.declare(model.r)
->>> model.stoch_rhs.declare(model.c)
->>> model.stoch_rhs.declare(model.b.c)
+.. literalinclude:: spyfiles/spy4pysp_Explicit_singletonconstraint&subblock_implicit_indexedconstraint.spy
+   :language: python
 
 - Fully explicit form for singleton constraints as well as
   all indices of indexed constraint
 
->>> model.stoch_rhs = PySP_StochasticRHSAnnotation()
->>> model.stoch_rhs.declare(model.r['a'])
->>> model.stoch_rhs.declare(model.r['b'])
->>> model.stoch_rhs.declare(model.r['c'])
->>> model.stoch_rhs.declare(model.c)
->>> model.stoch_rhs.declare(model.b.c)
+.. literalinclude:: spyfiles/spy4pysp_Explicit_singletonconstraint_explicit_indexedconstraint.spy
+   :language: python
 
 Note that the equivalence of the first three bullet forms to
 the last two bullet forms relies on the following conditions
@@ -719,14 +689,8 @@ section could be written in the following way to allow
 execution with either an ``AbstractModel`` or a
 ``ConcreteModel``:
 
->>> def annotate_rule(m):
->>>     m.stoch_rhs = PySP_StochasticRHSAnnotation()
->>>     m.stoch_rhs.declare(m.r['a'])
->>>     m.stoch_rhs.declare(m.r['b'])
->>>     m.stoch_rhs.declare(m.r['c'])
->>>     m.stoch_rhs.declare(m.c)
->>>     m.stoch_rhs.declare(m.b.c)
->>> model.annotate = BuildAction(rule=annotate_rule)
+.. literalinclude:: spyfiles/spy4pysp_Annotation_Abstractmodel.spy
+   :language: python
 
 Note that the use of ``m`` rather than ``model`` in the
 ``annotate_rule`` function is meant to draw attention to the
@@ -757,43 +721,8 @@ not stochastic. The following code snippet shows example
 declarations with this annotation for various constraint
 types.
 
->>> from pyomo.pysp.annotations import PySP_StochasticRHSAnnotation
->>>
->>> model = ConcreteModel()
->>>
->>> # data that is initialized on a per-scenario basis
->>> p = ...
->>> q = ...
->>>
->>> # a second-stage variable
->>> model.y = Var()
->>>
->>> # declare the annotation
->>> model.stoch_rhs = PySP_StochasticRHSAnnotation()
->>>
->>> # equality constraint
->>> model.c = Constraint(expr= model.y == q)
->>> model.stoch_rhs.declare(model.c)
->>>
->>> # double-sided inequality constraint with
->>> # stochastic upper bound
->>> model.r = Constraint(expr= 0 <= model.y <= p)
->>> model.stoch_rhs.declare(model.r, lb=False)
->>>
->>> # indexed constraint using a BuildAction
->>> model.C_index = RangeSet(1,3)
->>> def C_rule(model, i):
->>>     if i == 1:
-        return model.y >= i * q
->>>     else:
->>>         return Constraint.Skip
->>> model.C = Constraint(model.C_index, rule=C_rule)
->>> def C_annotate_rule(model, i):
->>>     if i == 1:
->>>         model.stoch_rhs.declare(model.C[i])
->>>     else:
->>>         pass
->>> model.C_annotate = BuildAction(model.C_index, rule=C_annotate_rule)
+.. literalinclude:: spyfiles/spy4pysp_Stochastic_constraint_bounds.spy
+   :language: python
 
 Note that simply declaring the
 **PySP_StochasticRHSAnnotation** annotation type and leaving
@@ -822,34 +751,8 @@ objects. The following code snippet shows example
 declarations with this annotation for various constraint
 types.
 
->>> from pyomo.pysp.annotations import PySP_StochasticMatrixAnnotation
->>>
->>> model = ConcreteModel()
->>>
->>> # data that is initialized on a per-scenario basis
->>> p = ...
->>> q = ...
->>>
->>> # a first-stage variable
->>> model.x = Var()
->>>
->>> # a second-stage variable
->>> model.y = Var()
->>>
->>> # declare the annotation
->>> model.stoch_matrix = PySP_StochasticMatrixAnnotation()
->>>
->>> # a singleton constraint with stochastic coefficients
->>> # both the first- and second-stage variable
->>> model.c = Constraint(expr= p * model.x + q * model.y == 1)
->>> model.stoch_matrix.declare(model.c)
->>> # an assignment that is equivalent to the previous one
->>> model.stoch_matrix.declare(model.c, variables=[model.x, model.y])
->>>
->>> # a singleton range constraint with a stochastic coefficient
->>> # for the first-stage variable only
->>> model.r = Constraint(expr= 0 <= p * model.x - 2.0 * model.y <= 10)
->>> model.stoch_matrix.declare(model.r, variables=[model.x])
+.. literalinclude:: spyfiles/spy4pysp_Stochastic_constraint_matrix.spy
+   :language: python
 
 As is the case with the **PySP_StochasticRHSAnnotation**
 annotation type, simply declaring the
@@ -879,30 +782,8 @@ constant terms do not change across scenarios, this behavior
 can be disabled by setting the keyword ``include_constant`` to
 ``False`` in a call to the ``declare`` method.
 
->>> from pyomo.pysp.annotations import PySP_StochasticObjectiveAnnotation
->>>
->>> model = ConcreteModel()
->>>
->>> # data that is initialized on a per-scenario basis
->>> p = ...
->>> q = ...
->>>
->>> # a first-stage variable
->>> model.x = Var()
->>>
->>> # a second-stage variable
->>> model.y = Var()
->>>
->>> # declare the annotation
->>> model.stoch_objective = PySP_StochasticObjectiveAnnotation()
->>>
->>> model.FirstStageCost = Expression(expr= 5.0 * model.x)
->>> model.SecondStageCost = Expression(expr= p * model.x + q * model.y)
->>> model.TotalCost = Objective(expr= model.FirstStageCost + model.SecondStageCost)
->>>
->>> # each of these declarations is equivalent for this model
->>> model.stoch_objective.declare(model.TotalCost)
->>> model.stoch_objective.declare(model.TotalCost, variables=[model.x, model.y])
+.. literalinclude:: spyfiles/spy4pysp_Stochastic_objective_elements.spy
+   :language: python
 
 Similar to the previous annotation type, simply declaring
 the **PySP_StochasticObjectiveAnnotation** annotation type
@@ -926,27 +807,8 @@ called giving a ``Constraint`` or ``Block`` as the first
 argument and a positive integer as the second argument (1
 signifies the first time stage). Example:
 
->>> from pyomo.pysp.annotations import PySP_ConstraintStageAnnotation()
->>>
->>> # declare the annotation
->>> model.constraint_stage = PySP_ConstraintStageAnnotation()
->>>
->>> # all constraints on this Block are first-stage
->>> model.B = Block()
->>> ...
->>> model.constraint_stage.declare(model.B, 1)
->>>
->>> # all indices of this indexed constraint are first-stage
->>> model.C1 = Constraint(..., rule=...)
->>> model.constraint_stage.declare(model.C1, 1)
->>>
->>> # all but one index in this indexed constraint are second-stage
->>> model.C2 = Constraint(..., rule=...)
->>> for index in model.C2:
->>>     if index == 'a':
->>>         model.constraint_stage.declare(model.C2[index], 1)
->>>     else:
->>>         model.constraint_stage.declare(model.C2[index], 2)
+.. literalinclude:: spyfiles/spy4pysp_Annotating_constraint_stages.spy
+   :language: python
 
 .. _Edge-Cases:
 
@@ -974,32 +836,8 @@ reference Pyomo model that has stochastic cost coefficients
 for both a first-stage and a second-stage variable in the
 second-stage cost expression:
 
->>> from pyomo.pysp.annotations import PySP_StochasticObjectiveAnnotation
->>>
->>> model = ConcreteModel()
->>>
->>> # data that is initialized on a per-scenario basis
->>> p = ...
->>> q = ...
->>>
->>> # first-stage variable
->>> model.x = Var()
->>> # second-stage variable
->>> model.y = Var()
->>>
->>> # first-stage cost expression
->>> model.FirstStageCost = Expression(expr= 5.0 * model.x)
->>> # second-stage cost expression
->>> model.SecondStageCost = Expression(expr= p * model.x + q * model.y)
->>>
->>> # define the objective as the sum of the
->>> # stage-cost expressions
->>> model.TotalCost = Objective(expr= model.FirstStageCost + model.SecondStageCost)
->>>
->>> # declare that model.x and model.y have stochastic cost
->>> # coefficients in the second stage
->>> model.stoch_objective = PySP_StochasticObjectiveAnnotation()
->>> model.stoch_objective.declare(model.TotalCost, variables=[model.x, model.y])
+.. literalinclude:: spyfiles/spy4pysp_1&2stage_in_2stage_expression.spy
+   :language: python
 
 The code snippet below re-expresses this model using an
 objective consisting of the original first-stage cost
@@ -1011,38 +849,8 @@ named ``ComputeSecondStageCost``. Additionally, the
 **PySP_StochasticObjectiveAnnotation** annotation type is replaced with the
 **PySP_StochasticMatrixAnnotation** annotation type.
 
->>> from pyomo.pysp.annotations import PySP_StochasticMatrixAnnotation
->>>
->>> model = ConcreteModel()
->>>
->>> # data that is initialized on a per-scenario basis
->>> p = ...
->>> q = ...
->>>
->>> # first-stage variable
->>> model.x = Var()
->>> # second-stage variables
->>> model.y = Var()
->>> model.SecondStageCostVar = Var()
->>>
->>> # first-stage cost expression
->>> model.FirstStageCost = Expression(expr= 5.0 * model.x)
->>> # second-stage cost expression
->>> model.SecondStageCost = Expression(expr= p * model.x + q * model.y)
->>>
->>> # define the objective using SecondStageCostVar
->>> # in place of SecondStageCost
->>> model.TotalCost = Objective(expr= model.FirstStageCost + model.SecondStageCostVar)
->>>
->>> # set the variable SecondStageCostVar equal to the
->>> # expression SecondStageCost using an equality constraint
->>> model.ComputeSecondStageCost = Constraint(expr= model.SecondStageCostVar == model.SecondStageCost)
->>>
->>> # declare that model.x and model.y have stochastic constraint matrix
->>> # coefficients in the ComputeSecondStageCost constraint
->>> model.stoch_matrix = PySP_StochasticMatrixAnnotation()
->>> model.stoch_matrix.declare(model.ComputeSecondStageCost, variables=[model.x, model.y])
-
+.. literalinclude:: spyfiles/spy4pysp_Reexpressed_model_using_new_variable.spy
+   :language: python
 
 - *Stochastic Constant Terms*
 
@@ -1062,22 +870,8 @@ this would lead to an incorrect representation of the
 stochastic program in SMPS format. As an example, consider
 the following:
 
->>> model = AbstractModel()
->>>
->>> # a first-stage variable
->>> model.x = Var()
->>>
->>> # a second-stage variable
->>> model.y = Var()
->>>
->>> # a param initialized with scenario-specific data
->>> model.p = Param()
->>>
->>> # a second-stage constraint with a stochastic upper bound
->>> # hidden in the left-hand-side expression
->>> def c_rule(m):
->>>     return (m.x - m.p) + m.y <= 10
->>> model.c = Constraint(rule=c_rule)
+.. literalinclude:: spyfiles/spy4pysp_Constraint_in_PySP_StochasticRHSAnnotation.spy
+   :language: python
 
 Note that in the expression for constraint ``c``, there is a
 fixed parameter ``p`` involved in the variable expression on
@@ -1139,24 +933,8 @@ due to a 0 coefficient in a product expressions or
 indirectly due to user-defined logic that is based off of
 the values of stochastic data.
 
->>> model = ConcreteModel()
->>>
->>> # data that is initialized on a per-scenario basis
->>> # with q set to zero for this particular scenario
->>> p = ...
->>> q = 0
->>>
->>> model.x = Var()
->>> model.y = Var()
->>>
->>> model.c1 = Constraint(expr= p * model.x + q * model.y == 1)
->>>
->>> def c2_rule(model):
->>>     expr = p * model.x
->>>     if q != 0:
->>>        expr += model.y
->>>     return expr >= 0
->>> model.c2 = Constraint(rule=c2_rule)
+.. literalinclude:: spyfiles/spy4pysp_Variable_excluded_in_subsetscenerios.spy
+   :language: python
 
 The SMPS conversion routines will attempt some limited
 checking to help prevent this kind of situation from
@@ -1171,30 +949,16 @@ One way to deal with the 0 coefficient issue, which
 works for both cases discussed in the example above,
 is to create a *zero* ``Expression`` object. E.g.,
 
->>> model.zero = Expression(expr=0)
+.. literalinclude:: spyfiles/spy4pysp_Create_zero_expression_object.spy
+   :language: python
 
 This component can be used to add variables to a linear
 expression so that the resulting expression retains a
 reference to them. This behavior can be verified by
 examining the output from the following example:
 
->>> from pyomo.environ import *
->>> model = ConcreteModel()
->>> model.x = Var()
->>> model.y = Var()
->>> model.zero = Expression(expr=0)
->>>
->>> # an expression that does NOT
->>> # retain model.y
->>> print((model.x + 0 * model.y).to_string())               # -> x
->>>
->>> # an equivalent expression that DOES
->>> # retain model.y
->>> print((model.x + model.zero * model.y).to_string())      # -> x + 0.0 * y
->>>
->>> # an equivalent expression that does NOT
->>> # retain model.y (so beware)
->>> print((model.x + 0 * model.zero * model.y).to_string())  # -> x
+.. literalinclude:: spyfiles/spy4pysp_Retain_variable_reference_expression.spy
+   :language: python
 
 Generating SMPS Input Files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^

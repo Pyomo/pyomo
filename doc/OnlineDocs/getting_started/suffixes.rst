@@ -42,7 +42,7 @@ determined by the following traits:
   + ``IMPORT`` - suffix data will be imported from the solver by its respective solver plugin
   + ``EXPORT`` - suffix data will be exported to a solver by its respective solver plugin
   + ``IMPORT_EXPORT`` - suffix data flows in both directions between the model and the solver or algorithm
-  
+
 - datatype: This trait advertises the type of data held on the suffix for those interfaces where it matters (e.g., the NL file interface). A suffix datatype can be assigned one of three possible values:
 
   + ``FLOAT`` - the suffix stores floating point data (default)
@@ -54,21 +54,8 @@ have a strict datatype (i.e., ``datatype=None`` is not allowed).
 
 The following code snippet shows examples of declaring a Suffix component on a Pyomo model:
 
-::
-
-  from pyomo.environ import *
-
-  model = ConcreteModel()
-
-  # Export integer data
-  model.priority = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
-
-  # Export and import floating point data
-  model.dual = Suffix(direction=Suffix.IMPORT_EXPORT)
-
-  # Store floating point data
-  model.junk = Suffix()
-
+.. literalinclude:: spyfiles/spy4suffixes_Declare_suffix_component.spy
+   :language: python
 
 Declaring a Suffix with a non-local direction on a model is not
 guaranteed to be compatible with all solver plugins in Pyomo. Whether
@@ -118,46 +105,16 @@ number of methods whose default semantics are more convenient for
 working with indexed modeling components.  The easiest way to
 highlight this functionality is through the use of an example.
 
-::
-
-  from pyomo.environ import *
-
-  model = ConcreteModel()
-  model.x = Var()
-  model.y = Var([1,2,3])
-  model.foo = Suffix()
-
+.. literalinclude:: spyfiles/spy4suffixes_Use_suffix_component_class_methods.spy
+   :language: python
 
 In this example we have a concrete Pyomo model with two different
 types of variable components (indexed and non-indexed) as well as a
 Suffix declaration (foo). The next code snippet shows examples of adding
 entries to the suffix foo.
 
-::
-
-  # Assign a suffix value of 1.0 to model.x
-  model.foo.setValue(model.x, 1.0)
-
-  # Same as above with dict interface
-  model.foo[model.x] = 1.0
-
-
-  # Assign a suffix value of 0.0 to all indices of model.y
-  # By default this expands so that entries are created for
-  # every index (y[1], y[2], y[3]) and not model.y itself
-  model.foo.setValue(model.y, 0.0)
-
-  # The same operation using the dict interface results in an entry only
-  # for the parent component model.y
-  model.foo[model.y] = 50.0
-
-
-  # Assign a suffix value of -1.0 to model.y[1]
-  model.foo.setValue(model.y[1], -1.0)
-
-  # Same as above with the dict interface
-  model.foo[model.y[1]] = -1.0
-
+.. literalinclude:: spyfiles/spy4suffixes_Add_entries_to_suffix_declaration.spy
+   :language: python
 
 In this example we highlight the fact that the ``__setitem__`` and
 ``setValue`` entry methods can be used interchangeably except in the case
@@ -171,24 +128,8 @@ same behavior as ``__setitem__``.
 Other operations like accessing or removing entries in our mapping can performed as if the built-in
 ``dict`` class is in use.
 
-::
-
-  print(model.foo.get(model.x))         # -> 1.0
-  print(model.foo[model.x])             # -> 1.0
-
-  print(model.foo.get(model.y[1]))      # -> -1.0
-  print(model.foo[model.y[1]])          # -> -1.0
-
-  print(model.foo.get(model.y[2]))      # -> 0.0
-  print(model.foo[model.y[2]])          # -> 0.0
-
-  print(model.foo.get(model.y))         # -> 50.0
-  print(model.foo[model.y])             # -> 50.0
-
-  del model.foo[model.y]
-
-  print(model.foo.get(model.y))         # -> None
-  print(model.foo[model.y])             # -> raise KeyError
+.. literalinclude:: spyfiles/spy4suffixes_Print_value.spy
+   :language: python
 
 
 The non-dict method ``clearValue`` can be used in place of ``__delitem__`` to
@@ -196,15 +137,8 @@ remove entries, where it inherits the same default behavior as
 ``setValue`` for indexed components and does not raise a KeyError when
 the argument does not exist as a key in the mapping.
 
-::
-
-  model.foo.clearValue(model.y)
-
-  print(model.foo[model.y[1]])          # -> raise KeyError
-
-  del model.foo[model.y[1]]             # -> raise KeyError
-
-  model.foo.clearValue(model.y[1])      # -> does nothing
+.. literalinclude:: spyfiles/spy4suffixes_Clear_value.spy
+   :language: python
 
 
 A summary non-dict Suffix methods is provided here:
@@ -248,22 +182,13 @@ Importing Suffix Data
 
 Importing suffix information from a solver solution is achieved by declaring a Suffix component with the appropriate name and direction. Suffix names available for import may be specific to third-party solvers as well as individual solver interfaces within Pyomo. The most common of these, available with most solvers and solver interfaces, is constraint dual multipliers. Requesting that duals be imported into suffix data can be accomplished by declaring a Suffix component on the model.
 
-::
-
-  from pyomo.environ import *
-
-  model = ConcreteModel()
-  model.dual = Suffix(direction=Suffix.IMPORT)
-  model.x = Var()
-  model.obj = Objective(expr=model.x)
-  model.con = Constraint(expr=model.x>=1.0)
+.. literalinclude:: spyfiles/spy4suffixes_Import_suffix_information.spy
+   :language: python
 
 The existence of an active suffix with the name dual that has an import style suffix direction will cause constraint dual information to be collected into the solver results (assuming the solver supplies dual information). In addition to this, after loading solver results into a problem instance (using a python script or Pyomo callback functions in conjunction with the ``pyomo`` command), one can access the dual values associated with constraints using the dual Suffix component.
 
-::
-
-  print(instance.dual[instance.con]) # -> 1.0
-
+.. literalinclude:: spyfiles/spy4suffixes_Print_dual_value.spy
+   :language: python
 
 Alternatively, the ``pyomo`` option ``--solver-suffixes`` can be used to request suffix information from a solver. In the event that suffix names are provided via this command-line option, the ``pyomo`` script will automatically declare these Suffix components on the constructed instance making these suffixes available for import.
 
@@ -278,21 +203,8 @@ shows how one can declare a special ordered set of type 1 using
 AMPL-style suffix notation in conjunction with Pyomo's NL file
 interface.
 
-::
-
-  from pyomo.environ import *
-
-  model = ConcreteModel()
-  model.y = Var([1,2,3],within=NonNegativeReals)
-
-  model.sosno = Suffix(direction=Suffix.EXPORT)
-  model.ref = Suffix(direction=Suffix.EXPORT)
-
-  # Add entry for each index of model.y
-  model.sosno.setValue(model.y,1)
-  model.ref[model.y[1]] = 0
-  model.ref[model.y[2]] = 1
-  model.ref[model.y[3]] = 2
+.. literalinclude:: spyfiles/spy4suffixes_Export_suffix_data.spy
+   :language: python
 
 Most AMPL-compatible solvers will recognize the suffix names ``sosno``
 and ``ref`` as declaring a special ordered set, where a positive value
@@ -360,23 +272,8 @@ initialization. Suffix rules are expected to return an iterable of
 (component, value) tuples, where the ``expand=True`` semantics are
 applied for indexed components.
 
-::
-
-  from pyomo.environ import *
-
-  model = AbstractModel()
-  model.x = Var()
-  model.c = Constraint(expr= model.x >= 1)
-
-  def foo_rule(m):
-     return ((m.x, 2.0), (m.c, 3.0))
-  model.foo = Suffix(rule=foo_rule)
-
-  # Instantiate the model
-  inst = model.create()
-  print(inst.foo[model.x]) # -> raise KeyError
-  print(inst.foo[inst.x])  # -> 2.0
-  print(inst.foo[inst.c])  # -> 3.0
+.. literalinclude:: spyfiles/spy4suffixes_Suffix_initialization_rule_keyword.spy
+   :language: python
 
 
 The next example shows an abstract model where suffixes are attached

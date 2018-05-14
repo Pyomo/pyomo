@@ -20,23 +20,10 @@ Declaration
 The following
 condensed code snippet illustrates a ``Disjunct`` and a ``Disjunction``:
 
->>> # Two conditions
->>> def _d(disjunct, flag):
->>>     model = disjunct.model()
->>>     if flag:
->>>         # x == 0
->>>         disjunct.c = Constraint(expr=model.x == 0)
->>>     else:
->>>         # y == 0
->>>         disjunct.c = Constraint(expr=model.y == 0)
->>> model.d = Disjunct([0,1], rule=_d)
->>>
->>> # Define the disjunction
->>> def _c(model):
->>>     return [model.d[0], model.d[1]]
->>> model.c = Disjunction(rule=_c)
+.. literalinclude:: spyfiles/spy4Disjunctions_Disjunct_and_disjunction.spy
+   :language: python
 
-model.d is an indexed ``Disjunct`` that is indexed over an implicit set
+Model.d is an indexed ``Disjunct`` that is indexed over an implicit set
 with members 0 and 1. Since it is an indexed thing, each member is
 initialized using a call to a rule, passing in the index value (just
 like any other pyomo component). However, just defining disjuncts is

@@ -25,6 +25,7 @@ instance.display()
 
 # "flip" the value of x[2] (it is binary)
 # then solve again
+# @Flip_value_before_solve_again
 instance.solutions.load_from(results)
 
 if instance.x[2] == 0:
@@ -34,5 +35,5 @@ else:
 instance.x[2].fixed = True
 
 results = opt.solve(instance)
+# @Flip_value_before_solve_again
 instance.display()
-

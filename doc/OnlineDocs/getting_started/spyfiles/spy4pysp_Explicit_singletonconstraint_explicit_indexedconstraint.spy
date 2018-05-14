@@ -1,0 +1,6 @@
+>>> model.stoch_rhs = PySP_StochasticRHSAnnotation()
+>>> model.stoch_rhs.declare(model.r['a'])
+>>> model.stoch_rhs.declare(model.r['b'])
+>>> model.stoch_rhs.declare(model.r['c'])
+>>> model.stoch_rhs.declare(model.c)
+>>> model.stoch_rhs.declare(model.b.c)

@@ -1,0 +1,7 @@
+>>> model.foo.clearValue(model.y)
+>>>
+>>> print(model.foo[model.y[1]])          # -> raise KeyError
+>>>
+>>> del model.foo[model.y[1]]             # -> raise KeyError
+>>>
+>>> model.foo.clearValue(model.y[1])      # -> does nothing

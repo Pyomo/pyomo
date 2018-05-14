@@ -3,20 +3,20 @@ Variables
 
 Variables are intended to ultimately be given values by an optimization package. They are
 declared and optionally bounded, given initial values, and documented using the Pyomo ``Var`` function. If index sets are given as arguments to this function
-they are used to index the variable. Other optional directives include:
+they are used to index the variable, other optional directives include:
 
 * bounds = A function (or Python object) that gives a (lower,upper) bound pair for the variable
 * domain = A set that is a super-set of the values the variable can take on.
 * initialize = A function (or Python object) that gives a starting value for the variable; this is particularly important for non-linear models
 * within = (synonym for ``domain``)
 
-The following code snippet illustrates some aspects of these options by declaring a *singleton* (i.e., unindexed) variable named ``model.LumberJack``
+The following code snippet illustrates some aspects of these options by declaring a *singleton* (i.e. unindexed) variable named ``model.LumberJack``
 that will take on real values between zero and 6 and it initialized to be 1.5:
 
 .. literalinclude:: spyfiles/spy4Variables_Declare_singleton_variable.spy
    :language: python
 
-Instead of the ``initialize`` option, initialization is sometimes done with a Python assignment statement,
+Instead of the ``initialize`` option, initialization is sometimes done with a Python assignment statement
 as in
 
 .. literalinclude:: spyfiles/spy4Variables_Assign_value.spy

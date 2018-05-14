@@ -92,6 +92,18 @@ illustrate the set operators union, intersection, difference, and exclusive-or:
 .. literalinclude:: spyfiles/Spy4Sets_Set_operators.spy
    :language: python
 
+The cross-product operator is the asterisk (*). For example, to assign
+a set the cross product of two other sets, one could use
+
+.. literalinclude:: spyfiles/Spy4Sets_Set_cross_product.spy
+   :language: python
+
+or to indicate the the members of a set are restricted to be
+in the cross product of two other sets, one could use
+
+.. literalinclude:: spyfiles/Spy4Sets_Restrict_to_crossproduct.spy
+   :language: python
+
 The cross-product operator is the asterisk (*).
 For example, to create a set that contains the cross-product
 of sets A and B, use
@@ -169,7 +181,7 @@ Consider the following simple version of minimum cost flow problem:
 	\begin{array}{lll}
 	\mbox{minimize} & \sum_{a \in \mathcal{A}} c_{a}x_{a} \\
 	\mbox{subject to:} & S_{n} + \sum_{(i,n) \in \mathcal{A}}x_{(i,n)} &  \\
-					& -D_{n} - \sum_{(n,j) \in \mathcal{A}}x_{(n,j)} & n \in \mathcal{N} = 0 \\
+					& -D_{n} - \sum_{(n,j) \in \mathcal{A}}x_{(n,j)} & n \in \mathcal{N} \\
 					& x_{a} \geq 0, &  a \in \mathcal{A}
 	\end{array}
 

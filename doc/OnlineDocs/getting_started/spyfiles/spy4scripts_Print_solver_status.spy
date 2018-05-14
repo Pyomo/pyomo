@@ -1,0 +1,3 @@
+>>> instance = model.create()
+>>> results = opt.solve(instance)
+>>> print ("The solver returned a status of:"+str(results.Solution.Status))

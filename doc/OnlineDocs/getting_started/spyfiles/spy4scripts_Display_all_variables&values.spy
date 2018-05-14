@@ -1,0 +1,5 @@
+>>> for v in instance.component_objects(Var, active=True):
+>>>     print ("Variable",v)
+>>>     varobject = getattr(instance, str(v))
+>>>     for index in varobject:
+>>>         print ("   ",index, varobject[index].value)

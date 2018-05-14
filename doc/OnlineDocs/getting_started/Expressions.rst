@@ -3,7 +3,7 @@ Expressions
 
 In this chapter, we use the word "expression" in two ways: first in the general
 sense of the word and second to desribe a class of Pyomo objects that have
-the name ``Expression``, as described in the subsection on expression objects.
+the name ``Expression`` as described in the subsection on expression objects.
 
 Rules to Generate Expressions
 -----------------------------
@@ -14,23 +14,12 @@ expression. These are first-class functions that can access
 global data as well as data passed in, including the model object.
 
 Operations on model elements results in expressions, which seems
-natural in expressions like the constraints we have seen so far. It is also
-possible to build up expressions. The following example illustrates this, along
+natural in expression like the constraints we have seen so far. It is also
+possible to build up expressions. The following example illustrates this along
 with a reference to global Pyton data in the form of a Python variable called ``switch``:
 
->>> switch = 3
->>>
->>> model.A = RangeSet(1, 10)
->>> model.c = Param(model.A)
->>> model.d = Param()
->>> model.x = Var(model.A, domain=Boolean)
->>>
->>> def pi_rule(model)
->>>     accexpr = summation(model.c, model.x)
->>>     if switch >= 2:
->>>         accexpr = accexpr - model.d
->>>     return accexpr >= 0.5
->>> PieSlice = Constraint(rule=pi_rule)
+.. literalinclude:: spyfiles/spy4Expressions_Buildup_expression_switch.spy
+   :language: python
 
 In this example, the constraint that is generated depends on the value
 of the Python variable called ``switch``. If the value is 2 or greater, then
@@ -40,17 +29,8 @@ the ``model.d`` term is not present.
 CAUTION: Because model elements result in expressions, not values, the following
 does not work as expected in an abstract model!
 
->>> model.A = RangeSet(1, 10)
->>> model.c = Param(model.A)
->>> model.d = Param()
->>> model.x = Var(model.A, domain=Boolean)
->>>
->>> def pi_rule(model)
->>>     accexpr = summation(model.c, model.x)
->>>     if model.d >= 2:  # NOT in an abstract model!!
->>>         accexpr = accexpr - model.d
->>>     return accexpr >= 0.5
->>> PieSlice = Constraint(rule=pi_rule)
+.. literalinclude:: spyfiles/spy4Expressions_Abstract_wrong_usage.spy
+   :language: python
 
 The trouble is that ``model.d >= 2`` results in an expression, not its evaluated value. Instead use ``if value(model.d) >= 2``
 
@@ -71,8 +51,8 @@ BIGM_BIN are implement as described in the paper [Vielma_et_al]_.
 
 There are two basic forms for the declaration of the constraint:
 
->>> model.pwconst = Piecewise(indexes, yvar, xvar, **Keywords)
->>> model.pwconst = Piecewise(yvar,xvar,**Keywords)
+.. literalinclude:: spyfiles/spy4Expressions_Declare_piecewise_constraints.spy
+   :language: python
 
 where ``pwconst`` can be replaced by a name appropriate for the application. The choice depends on whether the x and y
 variables are indexed. If so, they must have the same index sets and these sets are give as the first arguments.
@@ -81,13 +61,13 @@ Keywords:
 *********
 
 * pw_pts=\{\},[],()
-          A dictionary of lists (where keys are the index set) or a single list (for
+          A dictionary of lists (keys are index set) or a single list (for
           the non-indexed case or when an identical set of breakpoints is
           used across all indices) defining the set of domain breakpoints for
           the piecewise linear function.
 
           NOTE: pw_pts is always required. These give the breakpoints for the piecewise function
-          and are expected to fully span the bounds for the independent variable(s).
+          and are expected to full span the bounds for the independent variable(s).
 
 * pw_repn=<Option>
           Indicates the type of piecewise representation to use. This can have
@@ -124,19 +104,8 @@ Keywords:
           used or when all indices use an identical piecewise function).
           Examples:
 
-          >>> # A function that changes with index
-          >>> def f(model,j,x):
-          >>>    if (j == 2):
-          >>>       return x**2 + 1.0
-          >>>    else:
-          >>>       return x**2 + 5.0
-          >>>
-          >>> # A nonlinear function
-          >>> f = lambda model,x: return exp(x) + value(model.p)
-          >>>     (model.p is a Pyomo Param)
-          >>>
-          >>> # A step function
-          >>> f = [0,0,1,1,2,2]
+          .. literalinclude:: spyfiles/spy4Expressions_f_rule_Function_examples.spy
+             :language: python
 
 * force_pw=True/False
           Using the given function rule and pw_pts, a check for convexity/concavity
@@ -160,14 +129,15 @@ Keywords:
           domain variable. Default=False
 
           NOTE: This does not imply unbounded piecewise segments will be
-          constructed. The outermost piecewise breakpoints will bound the
+          constructed. The outermost piecwise breakpoints will bound the
           domain variable at each index. However, the Var attributes
           .lb and .ub will not be modified.
 
 Here is an example of an assignment to a Python dictionary variable that has keywords for
 a picewise constraint:
 
->>> kwds = {'pw_constr_type':'EQ','pw_repn':'SOS2','sense':maximize,'force_pw':True}
+.. literalinclude:: spyfiles/spy4Expressions_Keyword_assignment_example.spy
+   :language: python
 
 Here is a simple example based on the example given earlier in :ref:`abstract2.py`. In this
 new example, the objective function is the sum of c times x to the fourth. In this
@@ -192,32 +162,14 @@ variable x times the index. Later in the model file, just to
 illustrate how to do it, the expression is changed but just for the
 first index to be x squared.
 
->>> model = AbstractModel()
->>> model.x = Var(initialize=1.0)
->>> def _e(m,i):
->>>     return m.x*i
->>> model.e = Expression([1,2,3],rule=_e)
->>>
->>> instance = model.create_instance()
->>>
->>> print value(instance.e[1]) # -> 1.0
->>> print instance.e[1]()           # -> 1.0
->>> print instance.e[1].value  # -> a pyomo expression object
->>>
->>> # Change the underlying expression
->>> instance.e[1].value = instance.x**2
->>>
->>> ... solve
->>> ... load results
->>>
->>> # print the value of the expression given the loaded optimal solution
->>> print value(instance.e[1])
+.. literalinclude:: spyfiles/spy4Expressions_Expression_objects_illustration.spy
+   :language: python
 
 An alternative is to create Python functions that, potentially, manipulate
 model objects. E.g., if you define a function
 
->>> def f(x, p):
->>>     return x + p
+.. literalinclude:: spyfiles/spy4Expressions_Define_python_function.spy
+   :language: python
 
 You can call this function with or without Pyomo modeling components as the arguments. E.g., f(2,3) will return a number, whereas f(model.x, 3) will return a Pyomo expression due to operator overloading.
 
@@ -225,15 +177,8 @@ If you take this approach you should note that anywhere a Pyomo expression is us
 (e.g., f(model.x, 3) + 5), the initial expression is always cloned so that the new generated expression is independent of the old.
 For example:
 
->>> model = ConcreteModel()
->>> model.x = Var()
->>>
->>> # create a Pyomo expression
->>> e1 = model.x + 5
->>>
->>> # create another Pyomo expression
->>> # e1 is copied when generating e2
->>> e2 = e1 + model.x
+.. literalinclude:: spyfiles/spy4Expressions_Generate_new_expression.spy
+   :language: python
 
 If you want to create an expression that is shared between other
 expressions, you can use the ``Expression`` component.

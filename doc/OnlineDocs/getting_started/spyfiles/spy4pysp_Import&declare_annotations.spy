@@ -1,0 +1,4 @@
+>>> from pyomo.pysp.annotations import *
+>>> model.stoch_rhs = PySP_StochasticRHSAnnotation()
+>>> model.stoch_matrix = PySP_StochasticMatrixAnnotation()
+>>> model.stoch_objective = PySP_StochasticObjectiveAnnotation()

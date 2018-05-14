@@ -1,0 +1,3 @@
+set A := dog cat ;
+set B := peanuts soybeans ;
+param P := dog peanuts 12.2 ;

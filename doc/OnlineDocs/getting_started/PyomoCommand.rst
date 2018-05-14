@@ -88,13 +88,8 @@ When there seem to be troubles expressing the model, it is often useful to
 embed print commands in the model in places that will yield helpful information.
 Consider the following snippet:
 
->>> def ax_constraint_rule(model, i):
->>>     # return the expression for the constraint for i
->>>     print "ax_constraint_rule was called for i=",i
->>>     return sum(model.a[i,j] * model.x[j] for j in model.J) >= model.b[i]
->>>
->>> # the next line creates one constraint for each member of the set model.I
->>> model.AxbConstraint = Constraint(model.I, rule=ax_constraint_rule)
+.. literalinclude:: spyfiles/spy4PyomoCommand_Troubleshooting_printed_command.spy
+   :language: python
 
 The effect will be to output every member of the set ``model.I`` at the time
 the constraint named ``model.AxbConstraint`` is constructed.
