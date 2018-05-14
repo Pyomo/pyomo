@@ -14,6 +14,7 @@ from pyomo.gdp.disjunct import Disjunct
 from pyomo.util.plugin import alias
 from pyomo.core.plugins.transform.hierarchy import Transformation
 import textwrap
+from six import iterkeys
 
 
 def disjunctive_lb(var, scope):
@@ -106,16 +107,22 @@ class ComputeDisjunctiveVarBounds(Transformation):
             # fix the disjunct to active, deactivate all nonlinear constraints,
             # and apply the big-M transformation
             old_disjunct_state = {'fixed': disjunct.indicator_var.fixed,
-                                  'value': value(disjunct.indicator_var)}
+                                  'value': disjunct.indicator_var.value}
 
             disjunct.indicator_var.fix(1)
-            var_set = scope._tmp_var_set = ComponentSet()
+            scope._tmp_var_set = ComponentSet()
+            # Maps a variable in a cloned model instance to the original model
+            # variable
             for constraint in disjunct.component_data_objects(
                     ctype=Constraint, active=True,
                     descend_into=(Block, Disjunct)):
                 if constraint.body.polynomial_degree() in [0, 1]:
-                    var_set.update(identify_variables(constraint.body))
+                    scope._tmp_var_set.update(
+                        identify_variables(constraint.body))
+            scope._var_list = list(scope._tmp_var_set)
             bigM_model = scope.clone()
+            new_to_orig = ComponentMap(
+                zip(bigM_model._var_list, scope._var_list))
             for constraint in bigM_model.component_data_objects(
                     ctype=Constraint, active=True,
                     descend_into=(Block, Disjunct)):
@@ -133,14 +140,15 @@ class ComputeDisjunctiveVarBounds(Transformation):
                     obj.deactivate()
                 bigM_model.del_component('_var_bounding_obj')
                 bigM_model._var_bounding_obj = Objective(expr=var, sense=minimize)
-                SolverFactory('gurobi').solve(bigM_model)
+                SolverFactory('cbc').solve(bigM_model)
                 # TODO check if solve successful
                 disj_lb = value(var)
                 bigM_model._var_bounding_obj.sense = maximize
-                SolverFactory('gurobi').solve(bigM_model)
+                SolverFactory('cbc').solve(bigM_model)
                 # TODO check if solve successful
                 disj_ub = value(var)
-                disjunct._disjunctive_bounds[var] = (disj_lb, disj_ub)
+                disjunct._disjunctive_bounds[new_to_orig[var]] = \
+                    (disj_lb, disj_ub)
 
             # reset the disjunct
             if not old_disjunct_state['fixed']:
