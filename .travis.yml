@@ -70,12 +70,15 @@ install:
 script:
   - ${DOC} python --version
   - ${DOC} pip --version
-  - ${DOC} bash -c 'echo CPLEX_VERSION="$CPLEX_VERSION"'
+  - ${DOC} bash -c 'echo CPLEX_AMPL_VERSION="$CPLEX_AMPL_VERSION"'
+  - ${DOC} bash -c 'echo GUROBI_AMPL_VERSION="$GUROBI_AMPL_VERSION"'
   - ${DOC} bash -c 'echo GLPK_VERSION="$GLPK_VERSION"'
   - ${DOC} bash -c 'echo IPOPT_VERSION="$IPOPT_VERSION"'
   - ${DOC} bash -c 'echo CBC_VERSION="$CBC_VERSION"'
   - ${DOC} bash -c 'echo BARON_VERSION="$BARON_VERSION"'
   - ${DOC} bash -c 'echo GAMS_VERSION="$GAMS_VERSION"'
+  - ${DOC} bash -c 'echo GJH_VERSION="$GJH_VERSION"'
+  - ${DOC} bash -c 'echo GJH_ASL_JSON_VERSION="$GJH_ASL_JSON_VERSION"'
   - ${DOC} pip list
 ####### temp
   - ${DOC} bash -c 'BARONEXE="$(which baron)" && mv "${BARONEXE}" "${BARONEXE%baron}_baron"'
