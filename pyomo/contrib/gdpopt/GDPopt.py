@@ -28,7 +28,7 @@ from math import copysign, fabs
 from six import iteritems
 
 import pyomo.util.plugin
-from pyomo.core.base import expr as EXPR
+from pyomo.core.expr import current as EXPR
 from pyomo.core.base import (Block, Constraint, ConstraintList, Expression,
                              Objective, Set, Suffix, TransformationFactory,
                              Var, maximize, minimize, value)

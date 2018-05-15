@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -19,6 +19,7 @@ try:
 except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
 
+from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.kernel.component_interface import \
     (IActiveObject,
      ICategorizedObject,
@@ -33,7 +34,6 @@ from pyomo.core.kernel.component_tuple import ComponentTuple
 from pyomo.core.kernel.component_list import ComponentList
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_suffix import import_suffix_generator
-from pyomo.core.kernel.symbol_map import SymbolMap
 import pyomo.opt
 
 import six
@@ -99,7 +99,8 @@ class IBlockStorage(IComponent,
                     '__block_scope__': {id(self): True, id(None): False},
                     '__paranoid__': False,
                     })
-        except:
+        except:                                        #pragma:nocover
+            # this is impossible to test and almost never happens
             new_block = copy.deepcopy(
                 self, {
                     '__block_scope__': {id(self): True, id(None): False},

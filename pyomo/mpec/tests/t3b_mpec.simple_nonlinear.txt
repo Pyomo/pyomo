@@ -11,10 +11,10 @@ cc : Size=1, Index=None, Active=True
             Key  : Lower : Body   : Upper : Active
             None :   0.0 : y + x3 :  +Inf :   True
         ccon : Size=1, Index=None, Active=True
-            Key  : Lower : Body              : Upper      : Active
-            None :  -Inf : ( y + x3 ) * cc.v : mpec_bound :   True
+            Key  : Lower : Body          : Upper      : Active
+            None :  -Inf : (y + x3)*cc.v : mpec_bound :   True
         ve : Size=1, Index=None, Active=True
-            Key  : Lower : Body                  : Upper : Active
-            None :   0.0 : -1.0 + cc.v - x1 - x2 :   0.0 :   True
+            Key  : Lower : Body                   : Upper : Active
+            None :   0.0 : cc.v - (x1 + x2 + 1.0) :   0.0 :   True
 
     4 Declarations: c v ve ccon

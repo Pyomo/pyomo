@@ -7,6 +7,8 @@ import stat
 import sys
 from six.moves.urllib.request import urlopen
 
+
+
 # These URLs were retrieved from
 #     https://ampl.com/resources/extended-function-library/
 urlmap = {
@@ -15,6 +17,19 @@ urlmap = {
     'cygwin':  'https://www.ampl.com/NEW/amplgsl/amplgsl.mswin%s.zip',
     'darwin':  'https://www.ampl.com/NEW/amplgsl/amplgsl.macosx%s.zip'
 }
+
+def find_GSL():
+    # Find the GSL DLL
+    DLL = None
+    locations = [os.getcwd()] \
+                + os.environ.get('LD_LIBRARY_PATH','').split(os.pathsep) \
+                + os.environ.get('PATH','').split(os.pathsep)
+    for path in locations:
+        test = os.path.join(path, 'amplgsl.dll')
+        if os.path.isfile(test):
+            DLL = test
+            break
+    return DLL
 
 def get_gsl(fname=None, insecure=False):
     system = platform.system().lower()

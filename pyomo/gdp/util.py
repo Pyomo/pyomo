@@ -10,10 +10,9 @@
 
 from six import string_types
 
-from pyomo.core.kernel.numvalue import native_types
-
-import pyomo.core.base.expr as EXPR
-import pyomo.core.base.expr_coopr3 as coopr3
+import pyomo.core.expr.current as EXPR
+from pyomo.core.expr.numvalue import nonpyomo_leaf_types, native_numeric_types
+from copy import deepcopy
 
 from pyomo.core.base.component import _ComponentBase, ComponentUID
 from pyomo.opt import TerminationCondition, SolverStatus
@@ -45,36 +44,86 @@ def verify_successful_solve(results):
         return NONOPTIMAL
 
 
-def clone_without_expression_components(expr, substitute):
-    ans = [EXPR.clone_expression(expr, substitute=substitute)]
-    _stack = [ (ans, 0, 1) ]
-    while _stack:
-        _argList, _idx, _len = _stack.pop()
-        while _idx < _len:
-            _sub = _argList[_idx]
-            _idx += 1
-            if type(_sub) in native_types:
-                pass
-            elif _sub.is_expression():
-                _stack.append(( _argList, _idx, _len ))
-                if not isinstance(_sub, EXPR._ExpressionBase):
-                    _argList[_idx-1] = EXPR.clone_expression(
-                        _sub._args[0], substitute=substitute )
-                elif type(_sub) is coopr3._ProductExpression:
-                    if _sub._denominator:
-                        _stack.append(
-                            (_sub._denominator, 0, len(_sub._denominator)) )
-                    _argList = _sub._numerator
-                else:
-                    _argList = _sub._args
-                    # HACK: As we may have to replace arguments, if the
-                    # _args is a tuple, then we will convert it to a
-                    # list.
-                    if type(_argList) is tuple:
-                        _argList = _sub._args = list(_argList)
-                _idx = 0
-                _len = len(_argList)
-    return ans[0]
+class _CloneVisitor(EXPR.ExpressionValueVisitor):
+
+    def __init__(self, clone_leaves=False, memo=None, substitute=None):
+        self.clone_leaves = clone_leaves
+        self.memo = memo
+        self.substitute = substitute
+
+    def visit(self, node, values):
+        """ Visit nodes that have been expanded """
+        if node.__class__ is EXPR.MonomialTermExpression and not values[1].is_variable_type():
+            #
+            # Turn a MonomialTermExpression whose variable has been replaced by a constant into
+            # a simple constant expression.
+            #
+            return values[0] * values[1]
+        return node.create_node_with_local_data( tuple(values), self.memo )
+
+    def visiting_potential_leaf(self, node):
+        """ 
+        Visiting a potential leaf.
+
+        Return True if the node is not expanded.
+        """
+        if id(node) in self.substitute:
+            return True, self.substitute[id(node)]
+
+        if node.__class__ in nonpyomo_leaf_types:
+            #
+            # Store a native or numeric object
+            #
+            return True, deepcopy(node, self.memo)
+
+        if not node.is_expression_type():
+            #
+            # Store a leave object that is cloned
+            #
+            if self.clone_leaves:
+                return True, deepcopy(node, self.memo)
+            else:
+                return True, node
+
+        return False, None
+
+
+def clone_without_expression_components(expr, memo=None, clone_leaves=True, substitute=None):
+    """A function that is used to clone an expression.
+
+    Cloning is roughly equivalent to calling ``copy.deepcopy``.
+    However, the :attr:`clone_leaves` argument can be used to 
+    clone only interior (i.e. non-leaf) nodes in the expression
+    tree.   Note that named expression objects are treated as
+    leaves when :attr:`clone_leaves` is :const:`True`, and hence
+    those subexpressions are not cloned.
+
+    This function uses a non-recursive 
+    logic, which makes it more scalable than the logic in 
+    ``copy.deepcopy``.
+
+    Args:
+        expr: The expression that will be cloned.
+        memo (dict): A dictionary mapping object ids to 
+            objects.  This dictionary has the same semantics as
+            the memo object used with ``copy.deepcopy``.  Defaults
+            to None, which indicates that no user-defined
+            dictionary is used.
+        clone_leaves (bool): If True, then leaves are
+            cloned along with the rest of the expression. 
+            Defaults to :const:`True`.
+   
+    Returns: 
+        The cloned expression.
+    """
+    if not memo:
+        memo = {'__block_scope__': { id(None): False }}
+    if substitute is None:
+        substitute = {}
+    #
+    visitor = _CloneVisitor(clone_leaves=clone_leaves, memo=memo, substitute=substitute)
+    return visitor.dfs_postorder_stack(expr)
+
 
 
 def target_list(x):

@@ -118,7 +118,7 @@ model.establish_dforsize = Constraint(model.ProductSizes, rule=establish_dforsiz
 
 # it "wants to be a one" so don't let it unless it should be
 def establish_dIndicator_rule(model):
-   return model.dIndicator * model.NumSizes <= summation(model.dforsize)
+   return model.dIndicator * model.NumSizes <= sum_product(model.dforsize)
 
 model.establish_dIndicator = Constraint(rule=establish_dIndicator_rule)
 

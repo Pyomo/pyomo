@@ -32,13 +32,13 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
         # at this point in time, do not expect for v1 to be fixed
         self.assertFalse(m2.v1.fixed)
 
-        self.assertEquals(value(m2.v2.lb), -2)
+        self.assertEqual(value(m2.v2.lb), -2)
         self.assertFalse(m2.v2.has_ub())
 
-        self.assertEquals(value(m2.v3.ub), 5)
+        self.assertEqual(value(m2.v3.ub), 5)
         self.assertFalse(m2.v3.has_lb())
 
-        self.assertEquals(value(m2.v4.ub), 5)
+        self.assertEqual(value(m2.v4.ub), 5)
         self.assertFalse(m2.v4.has_lb())
 
         self.assertEquals(value(m2.v6.lb), 2)
@@ -53,13 +53,13 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
         # at this point in time, do not expect for v1 to be fixed
         self.assertFalse(m.v1.fixed)
 
-        self.assertEquals(value(m.v2.lb), -2)
+        self.assertEqual(value(m.v2.lb), -2)
         self.assertFalse(m.v2.has_ub())
 
-        self.assertEquals(value(m.v3.ub), 5)
+        self.assertEqual(value(m.v3.ub), 5)
         self.assertFalse(m.v3.has_lb())
 
-        self.assertEquals(value(m.v4.ub), 5)
+        self.assertEqual(value(m.v4.ub), 5)
         self.assertFalse(m.v4.has_lb())
 
     def test_zero_coefficient(self):

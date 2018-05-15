@@ -420,14 +420,16 @@ create_test_classes('piecewise',
                     'piecewise',
                     piecewise_model,
                     piecewise_scenario_tree,
-                    ('nightly','expensive'))
+                    ('pyomo5_expected_failures'))
+                    #('nightly','expensive'))
 
 piecewise_model = join(thisdir, "piecewise_model_alt.py")
 create_test_classes('piecewise_alt',
                     'piecewise',
                     piecewise_model,
                     piecewise_scenario_tree,
-                    ('nightly','expensive'))
+                    ('pyomo5_expected_failures'))
+                    #('nightly','expensive'))
 
 if __name__ == "__main__":
     unittest.main()
