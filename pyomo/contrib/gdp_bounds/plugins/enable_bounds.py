@@ -40,5 +40,5 @@ class EnableDisjunctiveVarBounds(Transformation):
             if not hasattr(disjunct, '_disjunctive_bounds'):
                 disjunct._disjunctive_bounds = ComponentMap()
 
-            if not hasattr(disjunct, 'disjunctive_var_constraints'):
-                disjunct.disjunctive_var_constraints = ConstraintList()
+            if not hasattr(disjunct, '_disjunctive_var_constraints'):
+                disjunct._disjunctive_var_constraints = ConstraintList()

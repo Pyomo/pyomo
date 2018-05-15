@@ -41,8 +41,8 @@ class EnforceDisjunctiveVarBounds(Transformation):
             disjuncts_to_process.insert(0, scope)
 
         for disjunct in disjuncts_to_process:
-            del disjunct.disjunctive_var_constraints
-            cons_list = disjunct.disjunctive_var_constraints = ConstraintList()
+            del disjunct._disjunctive_var_constraints
+            cons_list = disjunct._disjunctive_var_constraints = ConstraintList()
             for var, bounds in iteritems(disjunct._disjunctive_bounds):
                 lbb, ubb = bounds
                 if lbb is not None:

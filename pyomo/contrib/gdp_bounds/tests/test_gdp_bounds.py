@@ -23,8 +23,8 @@ class TestGDPBounds(unittest.TestCase):
         TransformationFactory('contrib.enable_disjunctive_bounds').apply_to(m)
         self.assertTrue(hasattr(m.d1, '_disjunctive_bounds'))
         self.assertTrue(hasattr(m.d2, '_disjunctive_bounds'))
-        self.assertTrue(hasattr(m.d1, 'disjunctive_var_constraints'))
-        self.assertTrue(hasattr(m.d2, 'disjunctive_var_constraints'))
+        self.assertTrue(hasattr(m.d1, '_disjunctive_var_constraints'))
+        self.assertTrue(hasattr(m.d2, '_disjunctive_var_constraints'))
 
     def test_compute_bounds(self):
         """Test computation of disjunctive bounds."""
