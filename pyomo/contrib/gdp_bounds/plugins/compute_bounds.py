@@ -162,12 +162,30 @@ class ComputeDisjunctiveVarBounds(Transformation):
                 )
                 # update bounds values
                 disjunct._disjunctive_bounds[new_var_to_orig[var]] = (
-                    max(disj_lb, old_bounds[0])
-                        if disj_lb is not None else old_bounds[0],
-                    min(disj_ub, old_bounds[1])
-                        if disj_ub is not None else old_bounds[1])
+                    min_if_not_None(disj_lb, old_bounds[0]),
+                    max_if_not_None(disj_ub, old_bounds[1]))
 
             # reset the disjunct
             if not old_disjunct_state['fixed']:
                 disjunct.indicator_var.unfix()
             disjunct.indicator_var.set_value(old_disjunct_state['value'])
+
+
+def min_if_not_None(*args):
+    """Returns the minimum among non-None elements.
+
+    Returns None is no non-None elements exist.
+
+    """
+    non_nones = [a for a in args if a is not None]
+    return min(non_nones or [None])  # handling for empty non_nones list
+
+
+def max_if_not_None(*args):
+    """Returns the maximum among non-None elements.
+
+    Returns None is no non-None elements exist.
+
+    """
+    non_nones = [a for a in args if a is not None]
+    return max(non_nones or [None])  # handling for empty non_nones list
