@@ -8,24 +8,8 @@ from pyomo.gdp import Disjunct, Disjunction
 class TestGDPBounds(unittest.TestCase):
     """Tests disjunctive variable bounds implementation."""
 
-    # def test_enable_bounds(self):
-    #     """Test enabling disjunctive bounds."""
-    #     m = ConcreteModel()
-    #     m.x = Var(bounds=(0, 8))
-    #     m.d1 = Disjunct()
-    #     m.d1.c = Constraint(expr=m.x >= 2)
-    #     m.d2 = Disjunct()
-    #     m.d2.c = Constraint(expr=m.x <= 4)
-    #     m.disj = Disjunction(expr=[m.d1, m.d2])
-    #     m.obj = Objective(expr=m.x)
-    #     TransformationFactory('contrib.enable_disjunctive_bounds').apply_to(m)
-    #     self.assertTrue(hasattr(m.d1, '_disjunctive_bounds'))
-    #     self.assertTrue(hasattr(m.d2, '_disjunctive_bounds'))
-    #     self.assertTrue(hasattr(m.d1, 'disjunctive_var_constraints'))
-    #     self.assertTrue(hasattr(m.d2, 'disjunctive_var_constraints'))
-
-    def test_compute_bounds(self):
-        """Test computation of disjunctive bounds."""
+    def test_enable_bounds(self):
+        """Test enabling disjunctive bounds."""
         m = ConcreteModel()
         m.x = Var(bounds=(0, 8))
         m.d1 = Disjunct()
@@ -39,6 +23,22 @@ class TestGDPBounds(unittest.TestCase):
         self.assertTrue(hasattr(m.d2, '_disjunctive_bounds'))
         self.assertTrue(hasattr(m.d1, 'disjunctive_var_constraints'))
         self.assertTrue(hasattr(m.d2, 'disjunctive_var_constraints'))
+
+    def test_compute_bounds(self):
+        """Test computation of disjunctive bounds."""
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 8))
+        m.d1 = Disjunct()
+        m.d1.c = Constraint(expr=m.x >= 2)
+        m.d2 = Disjunct()
+        m.d2.c = Constraint(expr=m.x <= 4)
+        m.disj = Disjunction(expr=[m.d1, m.d2])
+        m.obj = Objective(expr=m.x)
+        # TransformationFactory('contrib.enable_disjunctive_bounds').apply_to(m)
+        # self.assertTrue(hasattr(m.d1, '_disjunctive_bounds'))
+        # self.assertTrue(hasattr(m.d2, '_disjunctive_bounds'))
+        # self.assertTrue(hasattr(m.d1, 'disjunctive_var_constraints'))
+        # self.assertTrue(hasattr(m.d2, 'disjunctive_var_constraints'))
         TransformationFactory('contrib.compute_disjunctive_bounds').apply_to(m)
         self.assertEquals(m.d1._disjunctive_bounds[m.x], (2, 8))
         self.assertEquals(m.d2._disjunctive_bounds[m.x], (0, 4))

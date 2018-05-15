@@ -119,6 +119,9 @@ class ComputeDisjunctiveVarBounds(Transformation):
                 if constraint.body.polynomial_degree() not in [0, 1]:
                     constraint.deactivate()
 
+            if not hasattr(disjunct, '_disjunctive_bounds'):
+                disjunct._disjunctive_bounds = ComponentMap()
+
             TransformationFactory('gdp.bigm').apply_to(bigM_model)
             for var in bigM_model._tmp_var_set:
                 # If variable is fixed, no need to calculate disjunctive bounds
@@ -154,8 +157,15 @@ class ComputeDisjunctiveVarBounds(Transformation):
                     raise NotImplementedError(
                         "Unhandled termination condition: %s"
                         % results.solver.termination_condition)
-                disjunct._disjunctive_bounds[new_var_to_orig[var]] = \
-                    (disj_lb, disj_ub)
+                old_bounds = disjunct._disjunctive_bounds.get(
+                    new_var_to_orig[var], (None, None)  # default of None
+                )
+                # update bounds values
+                disjunct._disjunctive_bounds[new_var_to_orig[var]] = (
+                    max(disj_lb, old_bounds[0])
+                        if disj_lb is not None else old_bounds[0],
+                    min(disj_ub, old_bounds[1])
+                        if disj_ub is not None else old_bounds[1])
 
             # reset the disjunct
             if not old_disjunct_state['fixed']:
