@@ -1,7 +1,7 @@
 """Tests explicit bound to variable bound transformation module."""
 import pyutilib.th as unittest
-from pyomo.environ import (ConcreteModel, Constraint, TransformationFactory,
-                           Var, value, Objective)
+from pyomo.environ import (ConcreteModel, Constraint, Objective,
+                           TransformationFactory, Var, value)
 from pyomo.gdp import Disjunct, Disjunction
 
 
@@ -35,6 +35,10 @@ class TestGDPBounds(unittest.TestCase):
         m.disj = Disjunction(expr=[m.d1, m.d2])
         m.obj = Objective(expr=m.x)
         TransformationFactory('contrib.enable_disjunctive_bounds').apply_to(m)
+        self.assertTrue(hasattr(m.d1, '_disjunctive_bounds'))
+        self.assertTrue(hasattr(m.d2, '_disjunctive_bounds'))
+        self.assertTrue(hasattr(m.d1, 'disjunctive_var_constraints'))
+        self.assertTrue(hasattr(m.d2, 'disjunctive_var_constraints'))
         TransformationFactory('contrib.compute_disjunctive_bounds').apply_to(m)
         self.assertEquals(m.d1._disjunctive_bounds[m.x], (2, 8))
         self.assertEquals(m.d2._disjunctive_bounds[m.x], (0, 4))
