@@ -4,7 +4,7 @@ These are tighter variable bounds that are valid within the scope of a certain
 disjunct.
 """
 from pyomo.core.base.block import Block, TraversalStrategy
-from pyomo.core.base.expr import identify_variables
+from pyomo.core.expr.current import identify_variables
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core import (Constraint, Objective,
