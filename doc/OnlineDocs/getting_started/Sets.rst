@@ -274,7 +274,7 @@ Sparse Index Sets Example
 
 One may want to have a constraint that holds
 
->>> for i in model.I, k in model.K, v in model.V[k]
+>>> for i in model.I, k in model.K, v in model.V[k] # doctest: +SKIP
 
 There are many ways to accomplish this, but one good way
 is to create a set of tuples composed of all of ``model.k, model.V[k]`` pairs.
@@ -285,8 +285,8 @@ This can be done as follows:
 
 So then if there was a constraint defining rule such as
 
->>> def MyC_rule(model, i, k, v):
->>>    return ...
+>>> def MyC_rule(model, i, k, v): # doctest: +SKIP
+>>>    return ...                 # doctest: +SKIP
 
 Then a constraint could be declared using
 
