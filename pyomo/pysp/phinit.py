@@ -870,7 +870,7 @@ def PHAlgorithmBuilder(options, scenario_tree):
                       pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
 
             if scenario_tree.contains_bundles():
-                num_jobs = len(scenario_tree._scenario_bundles)
+                num_jobs = len(scenario_tree._bundles)
                 if not _OLD_OUTPUT:
                     print("Bundle solver jobs available: "+str(num_jobs))
             else:

@@ -610,7 +610,7 @@ class _PHBase(object):
             raise RuntimeError("Failed to create binding instances for scenario "
                                "bundles - no scenario bundles are defined!")
 
-        for scenario_bundle in self._scenario_tree._scenario_bundles:
+        for scenario_bundle in self._scenario_tree._bundles:
 
             if self._verbose:
                 print("Creating binding instance for scenario bundle=%s"
@@ -1314,7 +1314,7 @@ class ProgressiveHedging(_PHBase):
 
         max_name_len = max(len(str(_scenario_bundle._name)) \
                            for _scenario_bundle in \
-                           self._scenario_tree._scenario_bundles)
+                           self._scenario_tree._bundles)
         max_name_len = max((len("Scenario Bundle"), max_name_len))
         line = (("  %-"+str(max_name_len)+"s    ") % "Scenario Bundle")
         line += ("%-20s %-20s %-20s %20s"
@@ -1326,7 +1326,7 @@ class ProgressiveHedging(_PHBase):
             line += (" %10s" % ("Solve Time"))
             line += (" %10s" % ("Pyomo Solve Time"))
         print(line)
-        for scenario_bundle in self._scenario_tree._scenario_bundles:
+        for scenario_bundle in self._scenario_tree._bundles:
 
             bundle_gap = self._gaps[scenario_bundle._name]
             bundle_status = self._solution_status[scenario_bundle._name]
@@ -2434,7 +2434,7 @@ class ProgressiveHedging(_PHBase):
                 print("Transmitting user aggregate callback invocations "
                       "to phsolverservers")
                 if self._scenario_tree.contains_bundles():
-                    for scenario_bundle in self._scenario_tree._scenario_bundles:
+                    for scenario_bundle in self._scenario_tree._bundles:
                         ah = phsolverserverutils.transmit_external_function_invocation_to_worker(
                             self,
                             scenario_bundle._name,
@@ -2511,7 +2511,7 @@ class ProgressiveHedging(_PHBase):
                 print("Transmitting user rho callback invocations "
                       "to phsolverservers")
                 if self._scenario_tree.contains_bundles():
-                    for scenario_bundle in self._scenario_tree._scenario_bundles:
+                    for scenario_bundle in self._scenario_tree._bundles:
                         initialization_action_handles.append(
                             phsolverserverutils.transmit_external_function_invocation_to_worker(
                                 self,
@@ -2557,7 +2557,7 @@ class ProgressiveHedging(_PHBase):
                 print("Transmitting user bound callback invocations to "
                       "phsolverservers")
                 if self._scenario_tree.contains_bundles():
-                    for scenario_bundle in self._scenario_tree._scenario_bundles:
+                    for scenario_bundle in self._scenario_tree._bundles:
                         initialization_action_handles.append(
                             phsolverserverutils.transmit_external_function_invocation_to_worker(
                                 self,
@@ -2729,7 +2729,7 @@ class ProgressiveHedging(_PHBase):
         if subproblems == None:
             subproblems = []
             if self._scenario_tree.contains_bundles():
-                for scenario_bundle in self._scenario_tree._scenario_bundles:
+                for scenario_bundle in self._scenario_tree._bundles:
                     subproblems.append(scenario_bundle._name)
             else:
                 for scenario in self._scenario_tree._scenarios:
@@ -2746,7 +2746,7 @@ class ProgressiveHedging(_PHBase):
         #          pyomo_solve_times, solution_status)
         #          don't have any results yet.
         if self._scenario_tree.contains_bundles():
-            for scenario_bundle in self._scenario_tree._scenario_bundles:
+            for scenario_bundle in self._scenario_tree._bundles:
                 if not bundle_in_subproblems(scenario_bundle._name, subproblems):
                     continue
                 self._gaps[scenario_bundle._name] = undefined
@@ -2818,7 +2818,7 @@ class ProgressiveHedging(_PHBase):
 
         if self._scenario_tree.contains_bundles():
 
-            for scenario_bundle in self._scenario_tree._scenario_bundles:
+            for scenario_bundle in self._scenario_tree._bundles:
                 if not bundle_in_subproblems(scenario_bundle._name, subproblems):
                     continue
 
@@ -3273,7 +3273,7 @@ class ProgressiveHedging(_PHBase):
 
         if subproblems is None:
             if self._scenario_tree.contains_bundles():
-                subproblem_count = len(self._scenario_tree._scenario_bundles)
+                subproblem_count = len(self._scenario_tree._bundles)
             else:
                 subproblem_count = len(self._scenario_tree._scenarios)
         else:

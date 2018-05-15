@@ -1319,7 +1319,9 @@ class ScenarioTreeBundle(object):
 class ScenarioTree(object):
 
     # a utility to construct scenario bundles.
-    def _construct_scenario_bundles(self, bundles):
+    def _construct_bundles(self, bundles):
+
+        self._scenario_to_bundle_map = {}
 
         for bundle_name in bundles:
 
@@ -1329,6 +1331,9 @@ class ScenarioTree(object):
                 scenario_list.append(scenario_name)
                 bundle_probability += \
                     self._scenario_map[scenario_name].probability
+                if scenario_name not in self._scenario_to_bundle_map:
+                    self._scenario_to_bundle_map[scenario_name] = []
+                self._scenario_to_bundle_map[scenario_name].append(bundle_name)
 
             scenario_tree_for_bundle = self.make_compressed(scenario_list,
                                                             normalize=True)
@@ -1341,8 +1346,8 @@ class ScenarioTree(object):
             new_bundle._scenario_tree = scenario_tree_for_bundle
             new_bundle._probability = bundle_probability
 
-            self._scenario_bundles.append(new_bundle)
-            self._scenario_bundle_map[new_bundle.name] = new_bundle
+            self._bundles.append(new_bundle)
+            self._bundle_map[new_bundle.name] = new_bundle
 
     #
     # a utility to construct the stage objects for this scenario tree.
@@ -1433,13 +1438,17 @@ class ScenarioTree(object):
         # collection of Scenarios
         self._scenarios = []
         # collection of ScenarioTreeBundles
-        self._scenario_bundles = []
+        self._bundles = []
 
         # dictionaries for the above.
         self._tree_node_map = {}
         self._stage_map = {}
         self._scenario_map = {}
-        self._scenario_bundle_map = {}
+        self._bundle_map = {}
+
+        # dictionary mapping scenario (name) to a list of bundles 
+        # (names) containing that scenario.
+        self._scenario_to_bundle_map = {}
 
         # a boolean indicating how data for scenario instances is specified.
         # possibly belongs elsewhere, e.g., in the PH algorithm.
@@ -1677,7 +1686,7 @@ class ScenarioTree(object):
             for bundle_name in scenariotreeinstance.Bundles:
                 bundles[bundle_name] = \
                     list(scenariotreeinstance.BundleScenarios[bundle_name])
-            self._construct_scenario_bundles(bundles)
+            self._construct_bundles(bundles)
 
     @property
     def scenarios(self):
@@ -1685,12 +1694,12 @@ class ScenarioTree(object):
 
     @property
     def bundles(self):
-        return self._scenario_bundles
+        return self._bundles
 
     @property
     def subproblems(self):
         if self.contains_bundles():
-            return self._scenario_bundles
+            return self._bundles
         else:
             return self._scenarios
 
@@ -1703,7 +1712,7 @@ class ScenarioTree(object):
         return self._tree_nodes
 
     def is_bundle(self, object_name):
-        return object_name in self._scenario_bundle_map
+        return object_name in self._bundle_map
 
     def is_scenario(self, object_name):
         return object_name in self._scenario_map
@@ -1891,10 +1900,10 @@ class ScenarioTree(object):
         return name in self._scenario_map
 
     def contains_bundles(self):
-        return len(self._scenario_bundle_map) > 0
+        return len(self._bundle_map) > 0
 
     def contains_bundle(self, name):
-        return name in self._scenario_bundle_map
+        return name in self._bundle_map
 
     #
     # get the scenario / bundle object from the tree.
@@ -1904,19 +1913,19 @@ class ScenarioTree(object):
         return self._scenario_map[name]
 
     def get_bundle(self, name):
-        return self._scenario_bundle_map[name]
+        return self._bundle_map[name]
 
     def get_subproblem(self, name):
         if self.contains_bundles():
-            return self._scenario_bundle_map[name]
+            return self._bundle_map[name]
         else:
             return self._scenario_map[name]
 
-    def get_scenario_bundle(self, name):
+    def get_scenario_bundles(self, name):
         if not self.contains_bundles():
             return None
         else:
-            return self._scenario_bundle_map[name]
+            return self._scenario_to_bundle_map[name]
 
     # there are many contexts where manipulators of a scenario
     # tree simply need an arbitrary scenario to proceed...
@@ -2058,20 +2067,20 @@ class ScenarioTree(object):
 
         # indices of the objects in the scenario tree bundle list
         bundles_to_delete = []
-        for i in xrange(0,len(self._scenario_bundles)):
-            scenario_bundle = self._scenario_bundles[i]
+        for i in xrange(0,len(self._bundles)):
+            scenario_bundle = self._bundles[i]
             for scenario_name in scenario_bundle._scenario_names:
                 if scenario_name not in self._scenario_map:
                     bundles_to_delete.append(i)
                     break
         bundles_to_delete.reverse()
         for i in bundles_to_delete:
-            deleted_bundle = self._scenario_bundles.pop(i)
-            del self._scenario_bundle_map[deleted_bundle.name]
+            deleted_bundle = self._bundles.pop(i)
+            del self._bundle_map[deleted_bundle.name]
 
         sum_bundle_probabilities = \
-            sum(bundle._probability for bundle in self._scenario_bundles)
-        for bundle in self._scenario_bundles:
+            sum(bundle._probability for bundle in self._bundles)
+        for bundle in self._bundles:
             bundle._probability /= sum_bundle_probabilities
 
     #
@@ -2265,7 +2274,7 @@ class ScenarioTree(object):
     #
     def add_bundle(self, name, scenario_bundle_list):
 
-        if name in self._scenario_bundle_map:
+        if name in self._bundle_map:
             raise ValueError("Cannot add a new bundle with name '%s', a bundle "
                              "with that name already exists." % (name))
 
@@ -2279,17 +2288,17 @@ class ScenarioTree(object):
         bundle._probability = sum(self._scenario_map[scenario_name]._probability
                                   for scenario_name in scenario_bundle_list)
 
-        self._scenario_bundle_map[name] = bundle
-        self._scenario_bundles.append(bundle)
+        self._bundle_map[name] = bundle
+        self._bundles.append(bundle)
 
     def remove_bundle(self, name):
 
-        if name not in self._scenario_bundle_map:
+        if name not in self._bundle_map:
             raise KeyError("Cannot remove bundle with name '%s', no bundle "
                            "with that name exists." % (name))
-        bundle = self._scenario_bundle_map[name]
-        del self._scenario_bundle_map[name]
-        self._scenario_bundles.remove(bundle)
+        bundle = self._bundle_map[name]
+        del self._bundle_map[name]
+        self._bundles.remove(bundle)
 
     #
     # utility for automatically selecting a proportion of scenarios from the
@@ -2453,7 +2462,7 @@ class ScenarioTree(object):
                         self._scenarios[sequence[scenario_index]].name)
                     scenario_index += 1
 
-            self._construct_scenario_bundles(bundles)
+            self._construct_bundles(bundles)
         finally:
             random.setstate(random_state)
 
@@ -2564,10 +2573,10 @@ class ScenarioTree(object):
                 print("\t\t%s" % (tree_node._name))
             print("")
         print("----------------------------------------------------")
-        if len(self._scenario_bundles) > 0:
+        if len(self._bundles) > 0:
             print("Scenario Bundles:")
-            for bundle_name in sorted(iterkeys(self._scenario_bundle_map)):
-                scenario_bundle = self._scenario_bundle_map[bundle_name]
+            for bundle_name in sorted(iterkeys(self._bundle_map)):
+                scenario_bundle = self._bundle_map[bundle_name]
                 print("\tName=%s" % (bundle_name))
                 print("\tProbability=%4.4f" % scenario_bundle._probability            )
                 sys.stdout.write("\tScenarios:  ")

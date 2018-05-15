@@ -81,20 +81,33 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                         expected_y += ((scenario._y[variable_id] * scenario._probability) / tree_node._probability)
         # the expected value of the y vector should be 0 if the solution is optimal
 
-    def compute_updates(self, ph, subproblems, scenario_solve_counts):
+    def compute_updates(self, ph, subproblems, subproblem_solve_counts):
 
+        print("TOP OF COMPUTE UPDATES")
+        print("SUBPROBLEMS=",subproblems)
         scale_factor = 1.0               # This should be a command-line parameter
 
         self._total_projection_steps += 1
         print("Initiating projection step: %d" % self._total_projection_steps)
 
-        print("Computing updates given solutions to the following sub-problems:")
+        # the first step in updating statistics is to unbundle, in order to 
+        # identify the set of scenarios that we are really dealing with.
+        scenarios_to_process = set()
         for subproblem in subproblems:
-            print("%s" % subproblem)
+            if ph._scenario_tree.is_bundle(subproblem):
+                this_bundle = ph._scenario_tree.get_bundle(subproblem)
+                for scenario in this_bundle.scenario_names:
+                    scenarios_to_process.add(scenario)
+            else:
+                scenarios_to_process.add(subproblem)
+
+        print("Computing updates given solutions to the following scenarios:")
+        for this_scenario in scenarios_to_process:
+            print("%s" % this_scenario)
         print("")
 
-        for subproblem in subproblems:
-            self._projection_step_of_last_update[subproblem] = self._total_projection_steps
+        for this_scenario in scenarios_to_process:
+            self._projection_step_of_last_update[this_scenario] = self._total_projection_steps
 
         ########################################
         ##### compute y values and u values ####
@@ -126,7 +139,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                         if varval is not None:
                             if scenario._objective_sense == minimize:
 
-                               if scenario._name in subproblems:
+                               if scenario._name in scenarios_to_process:
                                    # CRITICAL: Y depends on the z and weight values that were used when solving the scenario!
                                    z_for_solve = scenario._xbars_for_solve[tree_node._name][variable_id]
                                    w_for_solve = scenario._ws_for_solve[tree_node._name][variable_id]
@@ -381,10 +394,9 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                 scenario_name = sub_phi_to_scenario_map[phi][0]
 
                 if ph._scenario_tree.contains_bundles():
-                    print("****HERE****")
-                    print("SCENARIO=",scenario_name)
-                    print("SCENARIO BUNDLE=",self._scenario_tree.get_scenario_bundle(scenario_name))
-                    foobar
+                    # TBD: Eliminate print redundancy here.
+                    print("Queueing sub-problem=%s" % ph._scenario_tree.get_scenario_bundle(scenario_name))
+                    self._subproblems_to_queue.append(ph._scenario_tree.get_scenario_bundle(scenario_name))
                 else:
                     print("Queueing sub-problem=%s" % scenario_name)
                     self._subproblems_to_queue.append(scenario_name)
@@ -399,7 +411,16 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                 if ((self._queue_only_negative_subphi_subproblems) and (phi < 0.0)) or (not self._queue_only_negative_subphi_subproblems):
                     scenario_name = sub_phi_to_scenario_map[phi][0] 
                     print_("%30s %16e" % (scenario_name,phi), end="")
-                    self._subproblems_to_queue.append(scenario_name)
+
+                    # TBD: THIS IS NOT DONE - WORK ON DUPLICATE DETECTION, SO WE DON'T QUEUE SUBPROBLEMS MULTIPLE TIMES.
+                    if ph._scenario_tree.contains_bundles():
+                        print("***HERE***")
+                        # TBD - not properly handling lists below - fix!!!
+                        print("Queueing sub-problem=%s" % ph._scenario_tree.get_scenario_bundles(scenario_name)[0])
+                        self._subproblems_to_queue.append(ph._scenario_tree.get_scenario_bundles(scenario_name)[0])
+                    else:
+                        print("Queueing sub-problem=%s" % scenario_name)
+                        self._subproblems_to_queue.append(scenario_name)
 
         print("")
 
@@ -530,10 +551,13 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         """Called before the asynchronous solve loop is executed"""
         pass
 
+    # TBD - this should be renamed to "pre_subproblem"
     def asynchronous_pre_scenario_queue(self, ph, subproblem_name):
         """Called right before each subproblem solve is been queued"""
 
         scenarios_to_process = []
+        
+        print("ASYNCHRONOUS PRE SCENARIO QUEUE - PROCESSING SUBPROBLEM=",subproblem_name)
 
         if ph._scenario_tree.contains_bundles():
             for scenario_name in ph._scenario_tree.get_bundle(subproblem_name).scenario_names:
@@ -552,11 +576,12 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
             for tree_node in scenario._node_list[:-1]:
                 scenario._ws_for_solve[tree_node._name] = dict((k,v) for k,v in iteritems(scenario._w[tree_node._name]))
 
-    def post_asynchronous_var_w_update(self, ph, subproblems, scenario_solve_counts):
+    def post_asynchronous_var_w_update(self, ph, subproblems, subproblem_solve_counts):
         """Called after a batch of asynchronous sub-problems are solved and corresponding statistics are updated"""
         print("")
         print("Computing updates in Eckstein-Combettes extension")
-        self.compute_updates(ph, subproblems, scenario_solve_counts)
+        print("I AM PROCESSING THE FOLLOWING SUBPROBLEMS:",subproblems)
+        self.compute_updates(ph, subproblems, subproblem_solve_counts)
 
     def post_asynchronous_solves(self, ph):
         """Called after the asynchronous solve loop is executed"""

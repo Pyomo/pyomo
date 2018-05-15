@@ -149,7 +149,7 @@ def warmstart_scenario_instances(ph):
     
     if ph._scenario_tree.contains_bundles():
 
-        for bundle in ph._scenario_tree._scenario_bundles:
+        for bundle in ph._scenario_tree._bundles:
 
             for scenario_name in bundle._scenario_names:
 
@@ -234,7 +234,7 @@ def transmit_weights(ph):
     
     if ph._scenario_tree.contains_bundles():
 
-        for bundle in ph._scenario_tree._scenario_bundles:
+        for bundle in ph._scenario_tree._bundles:
 
             # map from scenario name to the corresponding weight map
             weights_to_transmit = {}
@@ -297,7 +297,7 @@ def transmit_xbars(ph):
     
     if ph._scenario_tree.contains_bundles():
 
-        for bundle in ph._scenario_tree._scenario_bundles:
+        for bundle in ph._scenario_tree._bundles:
 
             xbars_to_transmit = {}
             # Skip the leaf nodes
@@ -406,7 +406,7 @@ def initialize_ph_solver_servers(ph):
         raise RuntimeError("No PHSolverServer processes have been acquired!")
 
     if ph._scenario_tree.contains_bundles():
-        worker_jobs = [bundle.name for bundle in ph._scenario_tree._scenario_bundles]
+        worker_jobs = [bundle.name for bundle in ph._scenario_tree._bundles]
     else:
         worker_jobs = [scenario.name for scenario in ph._scenario_tree._scenarios]
 
@@ -449,7 +449,7 @@ def transmit_rhos(ph):
 
     if ph._scenario_tree.contains_bundles():
 
-        for bundle in ph._scenario_tree._scenario_bundles:
+        for bundle in ph._scenario_tree._bundles:
 
             # map from scenario name to the corresponding rho map
             rhos_to_transmit = {}
@@ -511,7 +511,7 @@ def transmit_tree_node_statistics(ph):
 
     if ph._scenario_tree.contains_bundles():
 
-        for bundle in ph._scenario_tree._scenario_bundles:
+        for bundle in ph._scenario_tree._bundles:
 
             tree_node_minimums = {}
             tree_node_maximums = {}
@@ -699,7 +699,7 @@ def transmit_fixed_variables(ph):
     ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
-        for bundle in ph._scenario_tree._scenario_bundles:
+        for bundle in ph._scenario_tree._bundles:
 
             transmit_variables = False
             for bundle_tree_node in bundle._scenario_tree._tree_nodes:
@@ -832,7 +832,7 @@ def transmit_external_function_invocation(
     ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
-        for bundle in ph._scenario_tree._scenario_bundles:
+        for bundle in ph._scenario_tree._bundles:
 
             action_handles.append(
                 ph._solver_manager.queue(
@@ -992,7 +992,7 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
     ph._solver_manager.begin_bulk()
     if ph._scenario_tree.contains_bundles():
 
-        for bundle in ph._scenario_tree._scenario_bundles:
+        for bundle in ph._scenario_tree._bundles:
 
             object_names = {}
             object_names['nodes'] = \
@@ -1060,7 +1060,7 @@ def gather_scenario_tree_data(ph, initialization_action_handles):
 
         num_results_so_far = 0
 
-        while (num_results_so_far < len(ph._scenario_tree._scenario_bundles)):
+        while (num_results_so_far < len(ph._scenario_tree._bundles)):
 
             action_handle = ph._solver_manager.wait_any()
 
