@@ -34,14 +34,15 @@ class EnforceDisjunctiveVarBounds(Transformation):
             scope: Pyomo model object to transform.
 
         """
-        disjuncts_to_process = [scope.component_data_objects(
+        disjuncts_to_process = list(scope.component_data_objects(
             ctype=Disjunct, active=True, descend_into=(Block, Disjunct),
-            descent_order=TraversalStrategy.BreadthFirstSearch)]
+            descent_order=TraversalStrategy.BreadthFirstSearch))
         if scope.type() == Disjunct:
             disjuncts_to_process.insert(0, scope)
 
         for disjunct in disjuncts_to_process:
-            del disjunct._disjunctive_var_constraints
+            if hasattr(disjunct, '_disjunctive_var_constraints'):
+                del disjunct._disjunctive_var_constraints
             cons_list = disjunct._disjunctive_var_constraints = ConstraintList()
             for var, bounds in iteritems(disjunct._disjunctive_bounds):
                 lbb, ubb = bounds
