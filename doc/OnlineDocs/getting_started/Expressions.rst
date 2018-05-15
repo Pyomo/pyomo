@@ -14,8 +14,8 @@ expression. These are first-class functions that can access
 global data as well as data passed in, including the model object.
 
 Operations on model elements results in expressions, which seems
-natural in expression like the constraints we have seen so far. It is also
-possible to build up expressions. The following example illustrates this along
+natural in expressions like the constraints we have seen so far. It is also
+possible to build up expressions. The following example illustrates this, along
 with a reference to global Pyton data in the form of a Python variable called ``switch``:
 
 .. literalinclude:: spyfiles/spy4Expressions_Buildup_expression_switch.spy
@@ -61,13 +61,13 @@ Keywords:
 *********
 
 * pw_pts=\{\},[],()
-          A dictionary of lists (keys are index set) or a single list (for
+          A dictionary of lists (where keys are the index set) or a single list (for
           the non-indexed case or when an identical set of breakpoints is
           used across all indices) defining the set of domain breakpoints for
           the piecewise linear function.
 
           NOTE: pw_pts is always required. These give the breakpoints for the piecewise function
-          and are expected to full span the bounds for the independent variable(s).
+          and are expected to fully span the bounds for the independent variable(s).
 
 * pw_repn=<Option>
           Indicates the type of piecewise representation to use. This can have
@@ -129,7 +129,7 @@ Keywords:
           domain variable. Default=False
 
           NOTE: This does not imply unbounded piecewise segments will be
-          constructed. The outermost piecwise breakpoints will bound the
+          constructed. The outermost piecewise breakpoints will bound the
           domain variable at each index. However, the Var attributes
           .lb and .ub will not be modified.
 

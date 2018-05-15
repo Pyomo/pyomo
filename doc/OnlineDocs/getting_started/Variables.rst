@@ -3,7 +3,7 @@ Variables
 
 Variables are intended to ultimately be given values by an optimization package. They are
 declared and optionally bounded, given initial values, and documented using the Pyomo ``Var`` function. If index sets are given as arguments to this function
-they are used to index the variable, other optional directives include:
+they are used to index the variable. Other optional directives include:
 
 * bounds = A function (or Python object) that gives a (lower,upper) bound pair for the variable
 * domain = A set that is a super-set of the values the variable can take on.
