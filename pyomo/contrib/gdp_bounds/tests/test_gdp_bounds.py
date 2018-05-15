@@ -8,6 +8,9 @@ from pyomo.core import ComponentMap
 from pyomo.gdp import Disjunct, Disjunction
 
 
+solvers = pyomo.opt.check_available_solvers('cbc')
+
+
 class TestGDPBounds(unittest.TestCase):
     """Tests disjunctive variable bounds implementation."""
 
@@ -45,6 +48,7 @@ class TestGDPBounds(unittest.TestCase):
         self.assertEquals(disjunctive_lb(m.x, m.d2), 0)
         self.assertEquals(disjunctive_ub(m.x, m.d2), 4)
 
+    @unittest.skipIf('cbc' not in solvers, "CBC solver not available")
     def test_enforce_bounds(self):
         """Test enforcement of disjunctive bounds."""
         m = ConcreteModel()
