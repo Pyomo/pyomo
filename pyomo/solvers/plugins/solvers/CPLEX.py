@@ -271,37 +271,37 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         #
         # Write the CPLEX execution script
         #
-        script = "set logfile %s\n" % (self._log_file,)
+        script = 'set logfile "%s"\n' % (self._log_file,)
         if self._timelimit is not None and self._timelimit > 0.0:
-            script += "set timelimit %s\n" % ( self._timelimit, )
+            script += 'set timelimit %s\n' % ( self._timelimit, )
 
         if (self.options.mipgap is not None) and \
            (float(self.options.mipgap) > 0.0):
-            script += ("set mip tolerances mipgap %s\n"
+            script += ('set mip tolerances mipgap %s\n'
                        % (self.options.mipgap,))
         for key in self.options:
             if key == 'relax_integrality' or key == 'mipgap':
                 continue
             elif isinstance(self.options[key], basestring) and \
                  (' ' in self.options[key]):
-                opt = " ".join(key.split('_'))+" "+str(self.options[key])
+                opt = ' '.join(key.split('_'))+' '+str(self.options[key])
             else:
-                opt = " ".join(key.split('_'))+" "+str(self.options[key])
-            script += "set %s\n" % ( opt, )
-        script += "read %s\n" % ( problem_files[0], )
+                opt = ' '.join(key.split('_'))+' '+str(self.options[key])
+            script += 'set %s\n' % ( opt, )
+        script += 'read "%s"\n' % ( problem_files[0], )
 
         # if we're dealing with an LP, the MST file will be empty.
         if self._warm_start_solve and \
            (self._warm_start_file_name is not None):
-            script += "read %s\n" % (self._warm_start_file_name,)
+            script += 'read "%s"\n' % (self._warm_start_file_name,)
 
         if 'relax_integrality' in self.options:
-            script += "change problem lp\n"
+            script += 'change problem lp\n'
 
-        script += "display problem stats\n"
-        script += "optimize\n"
-        script += "write %s\n" % (self._soln_file,)
-        script += "quit\n"
+        script += 'display problem stats\n'
+        script += 'optimize\n'
+        script += 'write "%s"\n' % (self._soln_file,)
+        script += 'quit\n'
 
         # dump the script and warm-start file names for the
         # user if we're keeping files around.
