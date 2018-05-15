@@ -137,6 +137,7 @@ class ComputeDisjunctiveVarBounds(Transformation):
                     disj_lb = value(var)
                 elif results.solver.termination_condition is tc.infeasible:
                     disj_lb = None
+                    # TODO disjunct can be fathomed?
                 else:
                     raise NotImplementedError(
                         "Unhandled termination condition: %s"
@@ -148,6 +149,7 @@ class ComputeDisjunctiveVarBounds(Transformation):
                     disj_ub = value(var)
                 elif results.solver.termination_condition is tc.infeasible:
                     disj_ub = None
+                    # TODO disjunct can be fathomed?
                 else:
                     raise NotImplementedError(
                         "Unhandled termination condition: %s"
