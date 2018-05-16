@@ -2,13 +2,13 @@
 import pyutilib.th as unittest
 from pyomo.contrib.gdp_bounds.plugins.compute_bounds import (disjunctive_lb,
                                                              disjunctive_ub)
+from pyomo.core import ComponentMap
 from pyomo.environ import (ConcreteModel, Constraint, Objective,
                            TransformationFactory, Var, value)
-from pyomo.core import ComponentMap
 from pyomo.gdp import Disjunct, Disjunction
+from pyomo.opt import check_available_solvers
 
-
-solvers = pyomo.opt.check_available_solvers('cbc')
+solvers = check_available_solvers('cbc')
 
 
 class TestGDPBounds(unittest.TestCase):
