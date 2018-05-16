@@ -45,15 +45,18 @@ class GDP_Disjunct_Fixer(Transformation):
     alias('gdp.fix_disjuncts',
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
-    def _apply_to(self, instance):
-        """Apply the transformation to the given instance.
+    def _apply_to(self, model, targets=None):
+        """Apply the transformation on the targets in the given model.
 
-        The instance ctype is expected to be Block, Disjunct, or Disjunction.
+        The model is expected to be Block-like.
+
+        The target ctype is expected to be Block, Disjunct, or Disjunction.
         For a Block or Disjunct, the transformation will fix all disjuncts
-        found in disjunctions within the container.
+        found in disjunctions within the container. If no target is specified,
+        the whole model is transformed.
 
         """
-        t = instance
+        t = targets if targets is not None else model
         if not t.active:
             return  # do nothing for inactive containers
 
