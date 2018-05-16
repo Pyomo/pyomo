@@ -1,1 +1,1 @@
->>> getattr(instance, ParamName)[idx] = NewVal
+getattr(instance, ParamName)[idx] = NewVal

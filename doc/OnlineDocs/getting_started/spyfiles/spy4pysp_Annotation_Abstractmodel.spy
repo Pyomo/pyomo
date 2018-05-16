@@ -1,8 +1,8 @@
->>> def annotate_rule(m):
->>>     m.stoch_rhs = PySP_StochasticRHSAnnotation()
->>>     m.stoch_rhs.declare(m.r['a'])
->>>     m.stoch_rhs.declare(m.r['b'])
->>>     m.stoch_rhs.declare(m.r['c'])
->>>     m.stoch_rhs.declare(m.c)
->>>     m.stoch_rhs.declare(m.b.c)
->>> model.annotate = BuildAction(rule=annotate_rule)
+def annotate_rule(m):
+    m.stoch_rhs = StochasticConstraintBoundsAnnotation()
+    m.stoch_rhs.declare(m.r[3])
+    m.stoch_rhs.declare(m.r[6])
+    m.stoch_rhs.declare(m.r[9])
+    m.stoch_rhs.declare(m.c)
+    m.stoch_rhs.declare(m.b.c)
+model.annotate = BuildAction(rule=annotate_rule)

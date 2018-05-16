@@ -1,1 +1,1 @@
->>> opt = SolverFactory("ipopt", executable="../ipopt")
+opt = SolverFactory("ipopt", executable="../ipopt")

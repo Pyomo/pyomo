@@ -1,1 +1,1 @@
->>> model.Nodes = Set()
+model.Nodes = Set()

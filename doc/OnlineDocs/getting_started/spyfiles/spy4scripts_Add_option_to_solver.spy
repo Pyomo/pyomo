@@ -1,2 +1,2 @@
->>> optimizer = SolverFactory['cbc']
->>> optimizer.options["threads"] = 4
+optimizer = SolverFactory['cbc']
+optimizer.options["threads"] = 4

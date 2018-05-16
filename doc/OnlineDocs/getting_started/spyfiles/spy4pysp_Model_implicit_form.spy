@@ -1,1 +1,1 @@
->>> model.stoch_rhs = PySP_StochasticRHSAnnotation()
+model.stoch_rhs = StochasticConstraintBoundsAnnotation()

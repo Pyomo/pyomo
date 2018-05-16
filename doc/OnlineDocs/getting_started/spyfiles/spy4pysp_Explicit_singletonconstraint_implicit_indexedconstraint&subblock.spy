@@ -1,4 +1,4 @@
->>> model.stoch_rhs = PySP_StochasticRHSAnnotation()
->>> model.stoch_rhs.declare(model.r)
->>> model.stoch_rhs.declare(model.c)
->>> model.stoch_rhs.declare(model.b)
+model.stoch_rhs = StochasticConstraintBoundsAnnotation()
+model.stoch_rhs.declare(model.r)
+model.stoch_rhs.declare(model.c)
+model.stoch_rhs.declare(model.b)

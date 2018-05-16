@@ -1,1 +1,1 @@
->>> model.D = Set(initialize=['red', 'green', 'blue'])
+model.D = Set(initialize=['red', 'green', 'blue'])

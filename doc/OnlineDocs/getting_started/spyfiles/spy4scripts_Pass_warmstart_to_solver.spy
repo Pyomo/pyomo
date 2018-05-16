@@ -1,7 +1,7 @@
->>> instance = model.create()
->>> instance.y[0] = 1
->>> instance.y[1] = 0
->>>
->>> opt = SolverFactory("cplex")
->>>
->>> results = opt.solve(instance, warmstart=True)
+instance = model.create()
+instance.y[0] = 1
+instance.y[1] = 0
+
+opt = SolverFactory("cplex")
+
+results = opt.solve(instance, warmstart=True)

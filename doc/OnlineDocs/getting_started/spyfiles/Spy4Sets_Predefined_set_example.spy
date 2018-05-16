@@ -1,1 +1,1 @@
->>> model.M = Set(within=NegativeIntegers)
+model.M = Set(within=NegativeIntegers)

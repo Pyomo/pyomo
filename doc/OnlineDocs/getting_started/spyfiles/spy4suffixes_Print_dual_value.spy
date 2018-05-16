@@ -1,1 +1,1 @@
->>> print(instance.dual[instance.con]) # -> 1.0
+print(instance.dual[instance.con]) # -> 1.0

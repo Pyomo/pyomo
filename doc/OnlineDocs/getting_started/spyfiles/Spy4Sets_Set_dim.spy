@@ -1,1 +1,1 @@
->>> model.B = Set(dimen=2)
+model.B = Set(dimen=2)

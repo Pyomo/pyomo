@@ -1,1 +1,1 @@
->>> results = opt.solve(instance, tee=True)
+results = opt.solve(instance, tee=True)

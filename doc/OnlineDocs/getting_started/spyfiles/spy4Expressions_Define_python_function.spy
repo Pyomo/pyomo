@@ -1,2 +1,2 @@
->>> def f(x, p):
->>>     return x + p
+def f(x, p):
+    return x + p

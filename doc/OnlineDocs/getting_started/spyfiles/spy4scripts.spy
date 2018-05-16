@@ -1,126 +1,132 @@
+###NOTE: as of May 16, this will not even come close to running. DLW
+### and it is "wrong" in a lot of places.
+### Someone should edit this file, then delete these comment lines. DLW may 16
+
 """
 David L. Woodruff and Mingye Yang, Spring 2018
 Code snippets for scripts.rst in testable form
 """
->>> getattr(instance, ParamName)[idx] = NewVal
-
->>> getattr(instance, ParamName)[None] = NewVal
-
->>> getattr(instance, ParamName).set_value(NewVal)
-
->>> instance.solutions.load_from(results)
->>>
->>> if instance.x[2] == 0:
->>>     instance.x[2].setlb(1)
->>>     instance.x[2].setub(1)
->>> else:
->>>     instance.x[2].setlb(0)
->>>     instance.x[2].setub(0)
->>> results = opt.solve(instance)
-
->>> instance.x.value = 2
->>> instance.x.fixed = True
-
->>> model.obj1.deactivate()
->>> model.obj2.activate()
-
->>> def pyomo_preprocess(options=None):
->>>    if options == None:
->>>       print "No command line options were given."
->>>    else:
->>>       print "Command line arguments were: %s" % options
 
 
->>> def pyomo_preprocess(**kwds):
->>>    options = kwds.get('options',None)
->>>    if options == None:
->>>       print "No command line options were given."
->>>    else:
->>>       print "Command line arguments were: %s" % options
+getattr(instance, ParamName)[idx] = NewVal
 
->>> def pyomo_preprocess(options=None):
+getattr(instance, ParamName)[None] = NewVal
 
->>> for v in instance.component_objects(Var, active=True):
->>>     print ("Variable",v)
->>>     varobject = getattr(instance, str(v))
->>>     for index in varobject:
->>>         print ("   ",index, varobject[index].value)
+getattr(instance, ParamName).set_value(NewVal)
 
->>> for v in instance.component_objects(Var, active=True):
->>>     varobject = getattr(instance, v)
->>>     if isinstance(varobject.domain, IntegerSet) or isinstance(varobject.domain, BooleanSet):
->>>         print ("fixing "+str(v))
->>>         for index in varobject:
->>>             varobject[index].fixed = True # fix the current value
+instance.solutions.load_from(results)
 
->>> def pyomo_print_results(options, instance, results):
->>>     from pyomo.core import Var
->>>     for v in instance.component_objects(Var, active=True):
->>>         print ("Variable "+str(v))
->>>         varobject = getattr(instance, v)
->>>         for index in varobject:
->>>             print ("   ",index, varobject[index].value)
+if instance.x[2] == 0:
+    instance.x[2].setlb(1)
+    instance.x[2].setub(1)
+else:
+    instance.x[2].setlb(0)
+    instance.x[2].setub(0)
+results = opt.solve(instance)
 
->>> from pyomo.core import Param
->>> for p in instance.component_objects(Param, active=True):
->>>     print ("Parameter "+str(p))
->>>     parmobject = getattr(instance, p)
->>>     for index in parmobject:
->>>         print ("   ",index, parmobject[index].value)
+instance.x.value = 2
+instance.x.fixed = True
 
->>> def pyomo_print_results(options, instance, results):
->>>     # display all duals
->>>     print ("Duals")
->>>     from pyomo.core import Constraint
->>>     for c in instance.component_objects(Constraint, active=True):
->>>         print ("   Constraint",c)
->>>         cobject = getattr(instance, c)
->>>         for index in cobject:
->>>             print ("      ", index, instance.dual[cobject[index]])
+model.obj1.deactivate()
+model.obj2.activate()
 
->>> instance = model.create()
->>> results = opt.solve(instance)
->>> print ("The solver returned a status of:"+str(results.Solution.Status))
+def pyomo_preprocess(options=None):
+   if options == None:
+      print "No command line options were given."
+   else:
+      print "Command line arguments were: %s" % options
 
->>> from pyomo.opt import SolverStatus, TerminationCondition
->>>
->>> ...
->>>
->>> if (results.solver.status == SolverStatus.ok) and (results.solver.termination_condition == TerminationCondition.optimal):
->>>      # this is feasible and optimal
->>> elif results.solver.termination_condition == TerminationCondition.infeasible:
->>>      # do something about it? or exit?
->>> else:
->>>      # something else is wrong
->>>      print (results.solver)
 
->>> from pyomo.opt import TerminationCondition
->>>
->>> ...
->>>
->>> results = opt.solve(model, load_solutions=False)
->>> if results.solver.termination_condition == TerminationCondition.optimal:
->>>     model.solutions.load_from(results)
->>> else:
->>>     print ("Solution is not optimal")
->>>     # now do something about it? or exit? ...
+def pyomo_preprocess(**kwds):
+   options = kwds.get('options',None)
+   if options == None:
+      print "No command line options were given."
+   else:
+      print "Command line arguments were: %s" % options
 
->>> results = opt.solve(instance, tee=True)
+def pyomo_preprocess(options=None):
 
->>> optimizer = SolverFactory['cbc']
->>> optimizer.options["threads"] = 4
+for v in instance.component_objects(Var, active=True):
+    print ("Variable",v)
+    varobject = getattr(instance, str(v))
+    for index in varobject:
+        print ("   ",index, varobject[index].value)
 
->>> results = optimizer.solve(instance, options="threads=4", tee=True)
+for v in instance.component_objects(Var, active=True):
+    varobject = getattr(instance, v)
+    if isinstance(varobject.domain, IntegerSet) or isinstance(varobject.domain, BooleanSet):
+        print ("fixing "+str(v))
+        for index in varobject:
+            varobject[index].fixed = True # fix the current value
 
->>> opt = SolverFactory("ipopt", executable="../ipopt")
+def pyomo_print_results(options, instance, results):
+    from pyomo.core import Var
+    for v in instance.component_objects(Var, active=True):
+        print ("Variable "+str(v))
+        varobject = getattr(instance, v)
+        for index in varobject:
+            print ("   ",index, varobject[index].value)
 
->>> instance = model.create()
->>> instance.y[0] = 1
->>> instance.y[1] = 0
->>>
->>> opt = SolverFactory("cplex")
->>>
->>> results = opt.solve(instance, warmstart=True)
+from pyomo.core import Param
+for p in instance.component_objects(Param, active=True):
+    print ("Parameter "+str(p))
+    parmobject = getattr(instance, p)
+    for index in parmobject:
+        print ("   ",index, parmobject[index].value)
 
->>> from pyutilib.services import TempFileManager
->>> TempfileManager.tempdir = YourDirectoryNameGoesHere
+def pyomo_print_results(options, instance, results):
+    # display all duals
+    print ("Duals")
+    from pyomo.core import Constraint
+    for c in instance.component_objects(Constraint, active=True):
+        print ("   Constraint",c)
+        cobject = getattr(instance, c)
+        for index in cobject:
+            print ("      ", index, instance.dual[cobject[index]])
+
+instance = model.create()
+results = opt.solve(instance)
+print ("The solver returned a status of:"+str(results.Solution.Status))
+
+from pyomo.opt import SolverStatus, TerminationCondition
+
+...
+
+if (results.solver.status == SolverStatus.ok) and (results.solver.termination_condition == TerminationCondition.optimal):
+     # this is feasible and optimal
+elif results.solver.termination_condition == TerminationCondition.infeasible:
+     # do something about it? or exit?
+else:
+     # something else is wrong
+     print (results.solver)
+
+from pyomo.opt import TerminationCondition
+
+...
+
+results = opt.solve(model, load_solutions=False)
+if results.solver.termination_condition == TerminationCondition.optimal:
+    model.solutions.load_from(results)
+else:
+    print ("Solution is not optimal")
+    # now do something about it? or exit? ...
+
+results = opt.solve(instance, tee=True)
+
+optimizer = SolverFactory['cbc']
+optimizer.options["threads"] = 4
+
+results = optimizer.solve(instance, options="threads=4", tee=True)
+
+opt = SolverFactory("ipopt", executable="../ipopt")
+
+instance = model.create()
+instance.y[0] = 1
+instance.y[1] = 0
+
+opt = SolverFactory("cplex")
+
+results = opt.solve(instance, warmstart=True)
+
+from pyutilib.services import TempFileManager
+TempfileManager.tempdir = YourDirectoryNameGoesHere

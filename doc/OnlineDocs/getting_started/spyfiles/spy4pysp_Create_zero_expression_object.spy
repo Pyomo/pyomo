@@ -1,1 +1,1 @@
->>> model.zero = Expression(expr=0)
+model.zero = Expression(expr=0)
