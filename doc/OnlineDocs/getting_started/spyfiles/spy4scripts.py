@@ -6,12 +6,23 @@
 David L. Woodruff and Mingye Yang, Spring 2018
 Code snippets for scripts.rst in testable form
 """
+from pyomo.environ import *
 
+instance = ConcreteModel()
+instance.I = Set(initialize=[1,2,3])
+instance.sigma = Param(mutable=True, initialize=2.3)
+instance.Theta = Param(instance.I, mutable=True)
+for i in instance.I:
+    instance.Theta[i] = i
+ParamName = "Theta"
+idx = 1
+NewVal = 1134
 
 # @Assign_value_to_indexed_parametername
 getattr(instance, ParamName)[idx] = NewVal
 # @Assign_value_to_indexed_parametername
 
+ParamName = "sigma"
 # @Assign_value_to_unindexed_parametername_1
 getattr(instance, ParamName)[None] = NewVal
 # @Assign_value_to_unindexed_parametername_1
@@ -20,8 +31,9 @@ getattr(instance, ParamName)[None] = NewVal
 getattr(instance, ParamName).set_value(NewVal)
 # @Assign_value_to_unindexed_parametername_2
 
+instance.x = Var([1,2,3], initialize=0)
+instance.y = Var()
 # @Set_upper&lower_bound
-instance.solutions.load_from(results)
 
 if instance.x[2] == 0:
     instance.x[2].setlb(1)
@@ -29,13 +41,16 @@ if instance.x[2] == 0:
 else:
     instance.x[2].setlb(0)
     instance.x[2].setub(0)
-results = opt.solve(instance)
 # @Set_upper&lower_bound
 
 # @Equivalent_form_of_instance.x.fix(2)
-instance.x.value = 2
-instance.x.fixed = True
+instance.y.value = 2
+instance.y.fixed = True
 # @Equivalent_form_of_instance.x.fix(2)
+
+model=ConcreteModel()
+model.obj1 = Objective(expr = 0)
+model.obj2 = Objective(expr = 0)
 
 # @Pass_multiple_objectives_to_solver
 model.obj1.deactivate()
@@ -45,9 +60,9 @@ model.obj2.activate()
 # @Listing_arguments
 def pyomo_preprocess(options=None):
    if options == None:
-      print "No command line options were given."
+      print ("No command line options were given.")
    else:
-      print "Command line arguments were: %s" % options
+      print ("Command line arguments were: %s" % options)
 # @Listing_arguments
 
 
@@ -55,13 +70,14 @@ def pyomo_preprocess(options=None):
 def pyomo_preprocess(**kwds):
    options = kwds.get('options',None)
    if options == None:
-      print "No command line options were given."
+      print ("No command line options were given.")
    else:
-      print "Command line arguments were: %s" % options
+      print ("Command line arguments were: %s" % options)
 # @Provide_dictionary_for_arbitrary_keywords
 
 # @Pyomo_preprocess_argument
 def pyomo_preprocess(options=None):
+    pass
 # @Pyomo_preprocess_argument
 
 # @Display_all_variables&values
@@ -72,13 +88,14 @@ for v in instance.component_objects(Var, active=True):
         print ("   ",index, varobject[index].value)
 # @Display_all_variables&values
 
+instance.iVar = Var([1,2,3], initialize=1, domain=Boolean)
+instance.sVar = Var(initialize=1, domain=Boolean)
+# dlw may 2018: the next snippet does not trigger any fixing ("active?")
 # @Fix_all_integers&values
-for v in instance.component_objects(Var, active=True):
-    varobject = getattr(instance, v)
-    if isinstance(varobject.domain, IntegerSet) or isinstance(varobject.domain, BooleanSet):
+for var in instance.component_data_objects(Var, active=True):
+    if var.domain is IntegerSet or var.domain is BooleanSet:
         print ("fixing "+str(v))
-        for index in varobject:
-            varobject[index].fixed = True # fix the current value
+        var.fixed = True # fix the current value
 # @Fix_all_integers&values
 
 # @Include_definition_in_modelfile
@@ -93,9 +110,8 @@ def pyomo_print_results(options, instance, results):
 
 # @Print_parameter_name&value
 from pyomo.core import Param
-for p in instance.component_objects(Param, active=True):
-    print ("Parameter "+str(p))
-    parmobject = getattr(instance, p)
+for parmobject in instance.component_objects(Param, active=True):
+    print ("Parameter "+str(parmobject.name))
     for index in parmobject:
         print ("   ",index, parmobject[index].value)
 # @Print_parameter_name&value
@@ -112,24 +128,25 @@ def pyomo_print_results(options, instance, results):
             print ("      ", index, instance.dual[cobject[index]])
 # @Include_definition_output_constraints&duals
 
+"""
+xxxxxxxxxxxxxxxxxxxx high alert!!!! xxxxxx testing blocked from here to the end xxxxxxxxxxxxxx
 # @Print_solver_status
-instance = model.create()
 results = opt.solve(instance)
-print ("The solver returned a status of:"+str(results.Solution.Status))
+#print ("The solver returned a status of:"+str(results.Solution.Status))
 # @Print_solver_status
 
 # @Pyomo_data_comparedwith_solver_status_1
 from pyomo.opt import SolverStatus, TerminationCondition
 
-...
+#...
 
 if (results.solver.status == SolverStatus.ok) and (results.solver.termination_condition == TerminationCondition.optimal):
-     # this is feasible and optimal
+     print ("this is feasible and optimal")
 elif results.solver.termination_condition == TerminationCondition.infeasible:
-     # do something about it? or exit?
+     print ("do something about it? or exit?")
 else:
      # something else is wrong
-     print (results.solver)
+     print (str(results.solver))
 # @Pyomo_data_comparedwith_solver_status_1
 
 # @Pyomo_data_comparedwith_solver_status_2
@@ -176,3 +193,4 @@ results = opt.solve(instance, warmstart=True)
 from pyutilib.services import TempFileManager
 TempfileManager.tempdir = YourDirectoryNameGoesHere
 # @Specify_temporary_directory_name
+"""
