@@ -134,7 +134,7 @@ test_script:
   - "test.pyomo -v --cat=%CATEGORY% pyomo %BUILD_DIR%\\pyomo-model-libraries"
 
   # Run documentation tests
-  #- "nosetests -v --with-doctest --doctest-extension=.rst doc\\OnlineDocs"
+  - "nosetests -v --with-doctest --doctest-extension=.rst doc\\OnlineDocs"
 
 
 #after_test:

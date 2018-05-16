@@ -1,3 +1,7 @@
 def s_validate(model, v, i):
     return v > 3.14159
+<<<<<<< HEAD
 model.s = Param(model.A, validate=s_validate)
+=======
+model.S = Param(model.A, validate=s_validate)
+>>>>>>> f5cb6a1eeb311f950242c4adcecb3b46e022a5f1

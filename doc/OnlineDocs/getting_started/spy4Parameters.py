@@ -31,7 +31,7 @@ model.S = Param(model.A, model.A, initialize=v, default=0)
 
 # @Valuecheck_validation
 def s_validate(model, v, i):
-return v > 3.14159
+    return v > 3.14159
 model.S = Param(model.A, validate=s_validate)
 # @Valuecheck_validation
 
