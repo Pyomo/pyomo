@@ -189,7 +189,7 @@ model.stoch_objective.declare(model.TotalCost, variables=[model.x, model.y])
 """
 xxxxxxxxxxxxxxxxxxxxxx alert!!!! as May 2018 not testing about half the file xxxxxxxxxxxxxxxxxx
 # @Annotating_constraint_stages
-from pyomo.pysp.annotations import PySP_ConstraintStageAnnotation
+from pyomo.pysp.annotations import PySP_ConstraintStageAnnotation()
 
 # declare the annotation
 model.constraint_stage = PySP_ConstraintStageAnnotation()
@@ -275,7 +275,7 @@ model.stoch_matrix = StochasticConstraintBodyAnnotation()
 model.stoch_matrix.declare(model.ComputeSecondStageCost, variables=[model.x, model.y])
 # @Reexpressed_model_using_new_variable
 
-# @Constraint_in_StochasticObjectiveAnnotation
+# @Constraint_in_PySP_StochasticRHSAnnotation
 model = AbstractModel()
 
 # a first-stage variable
@@ -286,6 +286,13 @@ model.y = Var()
 
 # a param initialized with scenario-specific data
 model.p = Param()
+
+# a second-stage constraint with a stochastic upper bound
+# hidden in the left-hand-side expression
+def c_rule(m):
+    return (m.x - m.p) + m.y <= 10
+model.c = Constraint(rule=c_rule)
+# @Constraint_in_PySP_StochasticRHSAnnotation
 
 
 # @Variable_excluded_in_subsetscenerios
