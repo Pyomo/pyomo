@@ -1,3 +1,4 @@
+from pyomo.gdp import *
 # Two conditions
 def _d(disjunct, flag):
     model = disjunct.model()
