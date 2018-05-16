@@ -87,6 +87,25 @@ class CSRMatrix(SparseBase, scipy_csr_matrix):
             return self.__class__((data, self.indices, self.indptr),
                                   shape=self.shape, dtype=data.dtype)
 
+    def _add_sparse(self, other):
+        if other.is_symmetric:
+            return super(CSRMatrix, self)._add_sparse(other.tofullmatrix())
+        else:
+            return super(CSRMatrix, self)._add_sparse(other)
+
+    def _sub_sparse(self, other):
+        if other.is_symmetric:
+            return super(CSRMatrix, self)._sub_sparse(other.tofullmatrix())
+        else:
+            return super(CSRMatrix, self)._sub_sparse(other)
+
+    def getcol(self, j):
+        from pyomo.contrib.pynumero.sparse.csc import CSCMatrix
+        return CSCMatrix(super(CSRMatrix, self).getcol(j))
+
+    def getrow(self, i):
+        return CSRMatrix(super(CSRMatrix, self).getrow(i))
+
     def __repr__(self):
         return 'CSRMatrix{}'.format(self.shape)
 
@@ -179,12 +198,19 @@ class CSRSymMatrix(CSRMatrix):
         raise NotImplementedError('Not supported')
 
     def _add_sparse(self, other):
-        raise NotImplementedError('Not supported')
+        if other.is_symmetric:
+            return self._binopt(other, '_plus_')
+        else:
+            return self.tofullmatrix()._add_sparse(other)
+
+    def _sub_sparse(self, other):
+        if other.is_symmetric:
+            return self._binopt(other, '_minus_')
+        else:
+            return self.tofullmatrix()._sub_sparse(other)
 
     def _add_dense(self, other):
         return self.tofullcoo()._add_dense(other)
-
-    #def diagonal(self, k=0):
 
     def _mul_vector(self, other):
 
@@ -220,10 +246,10 @@ class CSRSymMatrix(CSRMatrix):
         raise NotImplementedError('Not supported')
 
     def getcol(self, j):
-        raise NotImplementedError('Not supported')
+        return self.tofullmatrix().getcol(j)
 
     def getrow(self, i):
-        raise NotImplementedError('Not supported')
+        return self.tofullmatrix().getrow(i)
 
     def __repr__(self):
         return 'CSRSymMatrix{}'.format(self.shape)

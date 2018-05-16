@@ -89,6 +89,25 @@ class CSCMatrix(SparseBase, scipy_csc_matrix):
             return self.__class__((data, self.indices, self.indptr),
                                   shape=self.shape, dtype=data.dtype)
 
+    def _add_sparse(self, other):
+        if other.is_symmetric:
+            return super(CSCMatrix, self)._add_sparse(other.tofullmatrix())
+        else:
+            return super(CSCMatrix, self)._add_sparse(other)
+
+    def _sub_sparse(self, other):
+        if other.is_symmetric:
+            return super(CSCMatrix, self)._sub_sparse(other.tofullmatrix())
+        else:
+            return super(CSCMatrix, self)._sub_sparse(other)
+
+    def getcol(self, j):
+        return CSCMatrix(super(CSCMatrix, self).getcol(j))
+
+    def getrow(self, i):
+        from pyomo.contrib.pynumero.sparse.csr import CSRMatrix
+        return CSRMatrix(super(CSCMatrix, self).getrow(i))
+
     def __repr__(self):
         return 'CSCMatrix{}'.format(self.shape)
 
@@ -181,7 +200,17 @@ class CSCSymMatrix(CSCMatrix):
         raise NotImplementedError('Not supported')
 
     def _add_sparse(self, other):
-        raise NotImplementedError('Not supported')
+        if other.is_symmetric:
+            return self.tocsr()._add_sparse(other)
+        else:
+            return self.tofullmatrix()._add_sparse(other)
+
+    def _sub_sparse(self, other):
+        if other.is_symmetric:
+            # ToDo: check if binopt works here directly
+            return self.tocsr()._sub_sparse(other)
+        else:
+            return self.tofullmatrix()._sub_sparse(other)
 
     def _add_dense(self, other):
         return self.tofullcoo()._add_dense(other)
@@ -220,10 +249,10 @@ class CSCSymMatrix(CSCMatrix):
         raise NotImplementedError('Not supported')
 
     def getcol(self, j):
-        raise NotImplementedError('Not supported')
+        return self.tofullmatrix().getcol(j)
 
     def getrow(self, i):
-        raise NotImplementedError('Not supported')
+        return self.tofullmatrix().getrow(i)
 
     def __repr__(self):
         return 'CSCSymMatrix{}'.format(self.shape)

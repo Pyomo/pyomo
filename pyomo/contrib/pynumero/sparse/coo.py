@@ -11,6 +11,7 @@ explicitly stated.
 
 """
 
+from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 from scipy.sparse import coo_matrix as scipy_coo_matrix
 from scipy.sparse._sparsetools import coo_tocsr, coo_todense
 from scipy.sparse.sputils import (upcast,
@@ -77,7 +78,7 @@ class COOMatrix(SparseBase, scipy_coo_matrix):
         CSCMatrix
 
         """
-        from .csc import CSCMatrix
+        from pyomo.contrib.pynumero.sparse.csc import CSCMatrix
         if self.nnz == 0:
             return CSCMatrix(self.shape, dtype=self.dtype)
         else:
@@ -188,6 +189,26 @@ class COOMatrix(SparseBase, scipy_coo_matrix):
             raise RuntimeError('multiplication of COOMatrix with BlockVector not supported ')
         return super(COOMatrix, self)._mul_vector(other)
 
+    def _add_sparse(self, other):
+        if other.is_symmetric:
+            return super(COOMatrix, self)._add_sparse(other.tofullmatrix())
+        else:
+            return super(COOMatrix, self)._add_sparse(other)
+
+    def _sub_sparse(self, other):
+        if other.is_symmetric:
+            return super(COOMatrix, self)._sub_sparse(other.tofullmatrix())
+        else:
+            return super(COOMatrix, self)._sub_sparse(other)
+
+    def getcol(self, j):
+        from pyomo.contrib.pynumero.sparse.csc import CSCMatrix
+        return CSCMatrix(super(COOMatrix, self).getcol(j))
+
+    def getrow(self, i):
+        from pyomo.contrib.pynumero.sparse.csr import CSRMatrix
+        return CSRMatrix(super(COOMatrix, self).getrow(i))
+
     def __repr__(self):
         return 'COOMatrix{}'.format(self.shape)
 
@@ -215,6 +236,7 @@ class COOSymMatrix(COOMatrix):
     """
     def __init__(self, arg1, shape=None, dtype=None, copy=False):
 
+        # TODO: check if arg1 is np.array and remove upper triangular
         super(COOSymMatrix, self).__init__(arg1, shape=shape, dtype=dtype, copy=copy)
 
         # add check to veryfy square matrix
@@ -412,14 +434,25 @@ class COOSymMatrix(COOMatrix):
         # ToDo: decide if we should suppert this
         raise NotImplementedError('Not supported')
 
+    def getH(self):
+        return self.transpose().conj()
+
     def _add_sparse(self, other):
-        raise RuntimeError('COOSymMatrix does not support addition with other sparse matrix yet')
+        if other.is_symmetric:
+            return self.tocsr()._add_sparse(other)
+        else:
+            return self.tofullmatrix()._add_sparse(other)
 
     def _sub_sparse(self, other):
-        raise RuntimeError('COOSymMatrix does not support substraction with other sparse matrix yet')
+        if other.is_symmetric:
+            return self.tocsr()._sub_sparse(other)
+        else:
+            return self.tofullmatrix()._sub_sparse(other)
 
     def _add_dense(self, other):
-        return self.tofullcoo()._add_dense(other)
+        return self.tofullmatrix()._add_dense(other)
+
+    # sub_dense and rsub_dense works directly from inheritance
 
     def _mul_vector(self, other):
         #resultl = np.zeros(self.shape[0], dtype=upcast_char(self.dtype.char,
@@ -430,7 +463,6 @@ class COOSymMatrix(COOMatrix):
         #coo_matvec(self.nnz, self.col, self.row, self.data, other, resultu)
         #diagonal = self.diagonal()
 
-        from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
         if isinstance(other, BlockVector):
             #ToDo: need to add support for this
             raise RuntimeError('multiplication of COOMatrix with BlockVector not supported yet')
@@ -459,12 +491,10 @@ class COOSymMatrix(COOMatrix):
                                 shape=self.shape, dtype=data.dtype)
 
     def getcol(self, j):
-        # ToDo: implement this in the sparse library with ctypes
-        raise NotImplementedError('Not supported')
+        return self.tofullmatrix().getcol(j)
 
     def getrow(self, i):
-        # ToDo: implement this in the sparse library with ctypes
-        raise NotImplementedError('Not supported')
+        return self.tofullmatrix().getrow(i)
 
     def getallnnz(self):
         """
@@ -474,6 +504,13 @@ class COOSymMatrix(COOMatrix):
         nnz_diag = len(d[d!=0])
         lnnz = self.nnz - nnz_diag
         return lnnz*2 + nnz_diag
+
+    def diagonal(self, k=0):
+
+        if k == 0:
+            return super(COOSymMatrix, self).diagonal(k=k)
+        else:
+            return self.tofullmatrix().diagonal(k=k)
 
     def __repr__(self):
         return 'COOSymMatrix{}'.format(self.shape)
@@ -506,6 +543,14 @@ class EmptyMatrix(COOMatrix):
         if nrows == ncols:
             self._symmetric = True
 
+    @property
+    def is_symmetric(self):
+        return self.shape[0] == self.shape[1]
+
+    @is_symmetric.setter
+    def is_symmetric(self, value):
+        raise NotImplementedError
+
     def getallnnz(self):
         """
         Return total number of nonzero values in the matrix
@@ -519,16 +564,16 @@ class EmptyMatrix(COOMatrix):
         return self
 
     def tocsr(self, copy=False):
-        return self.tocsr(copy=copy)
+        return super(EmptyMatrix, self).tocsr(copy=copy)
 
     def tocsc(self, copy=False):
-        return self.tocsc(copy=copy)
+        return super(EmptyMatrix, self).tocsc(copy=copy)
 
 
 class IdentityMatrix(COOSymMatrix):
 
     def __init__(self, nrowcols):
-        data = np.ones(nrowcols)
+        data = np.ones(nrowcols, dtype=np.double)
         irows = np.arange(0, nrowcols)
         jcols = np.arange(0, nrowcols)
         arg1 = (data, (irows, jcols))

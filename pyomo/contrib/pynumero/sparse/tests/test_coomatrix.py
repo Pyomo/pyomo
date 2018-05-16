@@ -1,6 +1,12 @@
 from pyomo.contrib.pynumero.sparse import (COOMatrix,
-                             COOSymMatrix,
-                             SparseBase)
+                                           COOSymMatrix,
+                                           SparseBase,
+                                           IdentityMatrix,
+                                           EmptyMatrix)
+
+from pyomo.contrib.pynumero.sparse.csr import CSRMatrix, CSRSymMatrix
+from pyomo.contrib.pynumero.sparse.csc import CSCMatrix, CSCSymMatrix
+
 
 from scipy.sparse.csr import csr_matrix
 from scipy.sparse.csc import csc_matrix
@@ -9,13 +15,14 @@ import numpy as np
 import unittest
 import sys
 
+
 class TestCOOMatrix(unittest.TestCase):
 
     def setUp(self):
 
         row = np.array([0, 3, 1, 0])
         col = np.array([0, 3, 1, 2])
-        data = np.array([4, 5, 7, 9])
+        data = np.array([4., 5., 7., 9.])
         m = COOMatrix((data, (row, col)), shape=(4, 4))
         m.name = 'basic_matrix'
         self.basic_m = m
@@ -56,6 +63,75 @@ class TestCOOMatrix(unittest.TestCase):
         self.assertEqual(cscm.shape, scipym.shape)
         self.assertIsInstance(cscm, SparseBase)
 
+    def test_getrow(self):
+        m = self.basic_m
+        m_row = m.getrow(0)
+        self.assertIsInstance(m_row, CSRMatrix)
+        self.assertEqual(m_row.shape, (1, m.shape[1]))
+        values = m_row.toarray()[0]
+        tvalues = [4.0, 0.0, 9.0, 0.0]
+        self.assertListEqual(values.tolist(), tvalues)
+
+    def test_getcol(self):
+        m = self.basic_m
+        m_col = m.getcol(0)
+        self.assertIsInstance(m_col, CSCMatrix)
+        self.assertEqual(m_col.shape, (m.shape[1], 1))
+        values = m_col.toarray().transpose()[0]
+        tvalues = [4.0, 0.0, 0.0, 0.0]
+        self.assertListEqual(values.tolist(), tvalues)
+
+    def test_add_sparse(self):
+        m = self.basic_m
+        mm = m + m
+        test_m = np.array([[4., 0., 9., 0.],
+                           [0., 7., 0., 0.],
+                           [0., 0., 0., 0.],
+                           [0., 0., 0., 5.]])
+        mm2 = test_m * 2
+        self.assertIsInstance(mm, CSRMatrix)
+        self.assertListEqual(mm.toarray().flatten().tolist(), mm2.flatten().tolist())
+
+        m2 = IdentityMatrix(4)
+        mm = m + m2
+        test_m = np.array([[5., 0., 9., 0.],
+                           [0., 8., 0., 0.],
+                           [0., 0., 1., 0.],
+                           [0., 0., 0., 6.]])
+        mm2 = test_m
+        self.assertIsInstance(mm, CSRMatrix)
+        self.assertListEqual(mm.toarray().flatten().tolist(), mm2.flatten().tolist())
+
+        mm = m2 + m
+        self.assertIsInstance(mm, CSRMatrix)
+        self.assertListEqual(mm.toarray().flatten().tolist(), mm2.flatten().tolist())
+
+    def test_sub_sparse(self):
+        m = self.basic_m
+        mm = m - m
+        mm2 = np.zeros(m.shape, dtype=np.double)
+        self.assertIsInstance(mm, CSRMatrix)
+        self.assertListEqual(mm.toarray().flatten().tolist(), mm2.flatten().tolist())
+
+        m2 = IdentityMatrix(4)
+        mm = m - m2
+        test_m = np.array([[3., 0., 9., 0.],
+                           [0., 6., 0., 0.],
+                           [0., 0., -1., 0.],
+                           [0., 0., 0., 4.]])
+        mm2 = test_m
+        self.assertIsInstance(mm, CSRMatrix)
+        self.assertListEqual(mm.toarray().flatten().tolist(), mm2.flatten().tolist())
+
+        test_m = np.array([[-3., 0., -9., 0.],
+                           [0., -6., 0., 0.],
+                           [0., 0., 1., 0.],
+                           [0., 0., 0., -4.]])
+        mm = m2 - m
+        mm2 = test_m
+        self.assertIsInstance(mm, CSRMatrix)
+        self.assertListEqual(mm.toarray().flatten().tolist(), mm2.flatten().tolist())
+
 
 class TestCOOSymMatrix(unittest.TestCase):
 
@@ -63,24 +139,32 @@ class TestCOOSymMatrix(unittest.TestCase):
 
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
-        data = np.array([2, 1, 3, 4, 5, 1])
+        data = np.array([2., 1., 3., 4., 5., 1.])
         m = COOMatrix((data, (row, col)), shape=(4, 4))
         m.name = 'basic_matrix'
         self.full_m = m
 
         row = np.array([0, 3, 1, 2, 3])
         col = np.array([0, 0, 1, 2, 3])
-        data = np.array([2, 1, 3, 4, 5])
+        data = np.array([2., 1., 3., 4., 5.])
         m = COOSymMatrix((data, (row, col)), shape=(4, 4))
         m.name = 'basic_sym_matrix'
         self.basic_m = m
 
         row = np.array([0, 0, 1, 2, 3])
         col = np.array([0, 3, 1, 2, 3])
-        data = np.array([2, 1, 3, 4, 5])
+        data = np.array([2., 1., 3., 4., 5.])
         m = COOSymMatrix((data, (col, row)), shape=(4, 4))
         m.name = 'basic_sym_matrix'
         self.transposed = m
+
+        row = np.array([0, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5])
+        col = np.array([0, 0, 1, 0, 1, 2, 0, 1, 2, 3, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 5])
+        data = np.array([36., 17., 33., 19., 18., 43., 12., 11., 13., 18.,  8.,  7.,  8.,
+                         6.,  9., 15., 14., 16., 11.,  8., 29.])
+        m = COOSymMatrix((data, (row, col)), shape=(6, 6))
+        m.name = 'G'
+        self.g_matrix = m
 
     def test_is_symmetric(self):
         self.assertTrue(self.basic_m.is_symmetric)
@@ -96,7 +180,7 @@ class TestCOOSymMatrix(unittest.TestCase):
         #self.assertRaises(RuntimeError, setattr, self.basic_m, 'shape', (3, 3))
 
     # ToDo: this should be creating CSRMATRIX to check later
-    @unittest.skipIf(sys.version_info < (3, 0), "not supported in this veresion")
+    @unittest.skipIf(sys.version_info < (3, 0), "not supported in this version")
     def test_tocsr(self):
 
         csrm = self.basic_m.tocsr()
@@ -111,7 +195,7 @@ class TestCOOSymMatrix(unittest.TestCase):
         self.assertIsInstance(csrm, SparseBase)
 
     # ToDo: this should be creating CSCMATRIX to check later
-    @unittest.skipIf(sys.version_info < (3, 0), "not supported in this veresion")
+    @unittest.skipIf(sys.version_info < (3, 0), "not supported in this version")
     def test_tocsc(self):
         cscm = self.basic_m.tocsc()
         m = self.basic_m
@@ -200,3 +284,148 @@ class TestCOOSymMatrix(unittest.TestCase):
         self.assertListEqual(row.tolist(), trow.tolist())
         self.assertListEqual(col.tolist(), tcol.tolist())
         self.assertListEqual(data.tolist(), tdata.tolist())
+
+    def test_getrow(self):
+        m = self.g_matrix
+        m_row = m.getrow(0)
+        self.assertIsInstance(m_row, CSRMatrix)
+        self.assertEqual(m_row.shape, (1, m.shape[1]))
+        values = m_row.toarray()[0]
+        tvalues = [36., 17., 19., 12.,  8., 15.]
+        self.assertListEqual(values.tolist(), tvalues)
+
+    def test_getcol(self):
+        m = self.g_matrix
+        m_col = m.getcol(0)
+        self.assertIsInstance(m_col, CSCMatrix)
+        self.assertEqual(m_col.shape, (m.shape[1], 1))
+        values = m_col.toarray().transpose()[0]
+        tvalues = [36., 17., 19., 12., 8., 15.]
+        self.assertListEqual(values.tolist(), tvalues)
+
+    def test_add_sparse(self):
+        m = self.basic_m
+        mm = m + m
+        test_m = np.array([[2., 0., 0., 1.],
+                           [0., 3., 0., 0.],
+                           [0., 0., 4., 0.],
+                           [1., 0., 0., 5.]])
+        mm2 = test_m * 2
+        self.assertIsInstance(mm, CSRSymMatrix)
+        self.assertListEqual(mm.toarray().flatten().tolist(), mm2.flatten().tolist())
+
+        row = np.array([0, 3, 2])
+        col = np.array([0, 0, 2])
+        data = np.array([2., 1., 4.])
+        m2 = COOSymMatrix((data, (row, col)), shape=(4, 4))
+
+        test_m = np.array([[4., 0., 0., 2.],
+                           [0., 3., 0., 0.],
+                           [0., 0., 8., 0.],
+                           [2., 0., 0., 5.]])
+
+        mm = m + m2
+        self.assertIsInstance(mm, CSRSymMatrix)
+        self.assertListEqual(mm.toarray().flatten().tolist(), test_m.flatten().tolist())
+
+        row = np.array([0, 3, 1, 0, 2])
+        col = np.array([0, 3, 1, 2, 1])
+        data = np.array([4., 5., 7., 9., 6.])
+        m2 = COOMatrix((data, (row, col)), shape=(4, 4))
+
+        mm = m + m2
+
+        test_m = np.array([[6., 0., 9., 1.],
+                           [0., 10., 0., 0.],
+                           [0., 6., 4., 0.],
+                           [1., 0., 0., 10.]])
+        self.assertIsInstance(mm, CSRMatrix)
+        self.assertListEqual(mm.toarray().flatten().tolist(), test_m.flatten().tolist())
+
+        mm = m2 + m
+        self.assertIsInstance(mm, CSRMatrix)
+        self.assertListEqual(mm.toarray().flatten().tolist(), test_m.flatten().tolist())
+
+    def test_sub_sparse(self):
+        m = self.basic_m
+        mm = m - m
+        mm2 = np.zeros(m.shape, dtype=np.double)
+        self.assertIsInstance(mm, CSRSymMatrix)
+        self.assertListEqual(mm.toarray().flatten().tolist(), mm2.flatten().tolist())
+
+        row = np.array([0, 3, 2])
+        col = np.array([0, 0, 2])
+        data = np.array([2., 1., 4.])
+        m2 = COOSymMatrix((data, (row, col)), shape=(4, 4))
+
+        test_m = np.array([[0., 0., 0., 0.],
+                           [0., 3., 0., 0.],
+                           [0., 0., 0., 0.],
+                           [0., 0., 0., 5.]])
+
+        mm = m - m2
+        self.assertIsInstance(mm, CSRSymMatrix)
+        self.assertListEqual(mm.toarray().flatten().tolist(), test_m.flatten().tolist())
+
+        row = np.array([0, 3, 1, 0, 2])
+        col = np.array([0, 3, 1, 2, 1])
+        data = np.array([4., 5., 7., 9., 6.])
+        m2 = COOMatrix((data, (row, col)), shape=(4, 4))
+
+        mm = m - m2
+        test_m = np.array([[-2., 0., -9., 1.],
+                           [0., -4., 0., 0.],
+                           [0., -6., 4., 0.],
+                           [1., 0., 0., 0]])
+        self.assertIsInstance(mm, CSRMatrix)
+        self.assertListEqual(mm.toarray().flatten().tolist(), test_m.flatten().tolist())
+
+        test_m = np.array([[2., 0., 9., -1.],
+                           [0., 4., 0., 0.],
+                           [0., 6., -4., 0.],
+                           [-1., 0., 0., 0]])
+
+        mm = m2 - m
+        self.assertIsInstance(mm, CSRMatrix)
+        self.assertListEqual(mm.toarray().flatten().tolist(), test_m.flatten().tolist())
+
+
+class TestEmptyMatrix(unittest.TestCase):
+
+    def test_constructor(self):
+
+        m = EmptyMatrix(3, 3)
+        self.assertEqual(m.shape, (3, 3))
+        self.assertTrue(m.is_symmetric)
+        self.assertEqual(m.nnz, 0)
+        self.assertEqual(m.getallnnz(), 0)
+
+        m = EmptyMatrix(3, 1)
+        self.assertFalse(m.is_symmetric)
+
+    def test_tocsr(self):
+        m = EmptyMatrix(3, 1)
+        mcsr = m.tocsr()
+        self.assertIsInstance(mcsr, CSRMatrix)
+
+    def test_tocsc(self):
+        m = EmptyMatrix(3, 1)
+        mcsc = m.tocsc()
+        self.assertIsInstance(mcsc, CSCMatrix)
+
+
+class TestIdentityMatrix(unittest.TestCase):
+
+    def test_constructor(self):
+
+        m = IdentityMatrix(3)
+        self.assertEqual(m.shape, (3, 3))
+        self.assertTrue(m.is_symmetric)
+        self.assertEqual(m.nnz, 3)
+        self.assertEqual(m.getallnnz(), 3)
+        self.assertListEqual(m.data.tolist(), [1.0]*3)
+
+
+
+
+
