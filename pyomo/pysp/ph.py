@@ -3712,29 +3712,27 @@ class ProgressiveHedging(_PHBase):
         # criterion is met modified nov 2011 by dlw to do async
         # with a window-like paramater
 
-        if self._scenario_tree.contains_bundles():
-            raise RuntimeError("Async PH does not currently support bundling")
-
         if (self._async_buffer_length <= 0) or \
-           (self._async_buffer_length > len(self._scenario_tree._scenarios)):
-            raise RuntimeError("Async buffer length parameter is bad: %s"
-                               % (self._async_buffer_length))
+           (self._async_buffer_length > len(self._scenario_tree.subproblems)):
+            raise RuntimeError("Async buffer length parameter=%d is invalid -"
+                               " must be less than or equal to the number of subproblems=%d"
+                               % (self._async_buffer_length, len(self._scenario_tree.subproblems)))
         if self._verbose:
             print("Starting PH iteration k+ solves - running async "
                   "with buffer length=%s" % (self._async_buffer_length))
 
-        # we are going to buffer the scenario names
-        ScenarioBuffer = []
+        # we are going to buffer the subproblem names
+        subproblem_buffer = []
 
         # things progress at different rates - keep track of what's going on.
-        total_scenario_solve_count = 0
+        total_subproblem_solve_count = 0
         # a map of scenario name to the number of sub-problems solved thus far.
-        scenario_solve_counts = {}
-        for scenario in self._scenario_tree._scenarios:
-            scenario_solve_counts[scenario._name] = 0
+        subproblem_solve_counts = {}
+        for subproblem in self._scenario_tree.subproblems:
+            subproblem_solve_counts[subproblem.name] = 0
 
         # keep track of action handles mapping to scenarios.
-        action_handle_scenario_map = {}
+        action_handle_subproblem_map = {}
 
         # scan any variables fixed/freed, set up the appropriate flags
         # for pre-processing, and - if appropriate - transmit the
@@ -3769,6 +3767,8 @@ class ProgressiveHedging(_PHBase):
             subproblems_to_queue = plugin.asynchronous_subproblems_to_queue(self)
         assert(len(subproblems_to_queue)!=0)
 
+        print("SUBPROBLEMS TO QUEUE=",subproblems_to_queue)
+
         # in general, we need to track the number of subproblems queued - it may not be,
         # depending on the plugin, equal to the async buffer length.
         number_subproblems_queued = len(subproblems_to_queue)
@@ -3776,33 +3776,44 @@ class ProgressiveHedging(_PHBase):
         # NOTE - THE FOLLOWING IS NOT BUNDLE AWARE!
         for plugin in self._ph_plugins:
             for subproblem in subproblems_to_queue:
-                plugin.asynchronous_pre_scenario_queue(self, scenario._name)
+                plugin.asynchronous_pre_scenario_queue(self, subproblem)
+
+        integrated_action_handle_scenario_map = {}
+        integrated_action_handle_bundle_map = {}
 
         # queue up the solves for all scenario sub-problems - iteration 0 is special.
-        action_handle_scenario_map_updates, a, b, c = self.queue_subproblems(subproblems=subproblems_to_queue,
-                                                                             warmstart=not self._disable_warmstarts)
-        action_handle_scenario_map.update(action_handle_scenario_map_updates)
+        print("ABOUT TO QUEUE SUBPROLEMS")
+        print("SUBPROBLEMS TO QUEUE=",subproblems_to_queue)
+        action_handle_scenario_map, \
+        scenario_action_handle_map, \
+        action_handle_bundle_map, \
+        bundle_action_handle_map = self.queue_subproblems(subproblems=subproblems_to_queue,
+                                                          warmstart=not self._disable_warmstarts)
+        
+        integrated_action_handle_scenario_map.update(action_handle_scenario_map)
+        integrated_action_handle_bundle_map.update(action_handle_bundle_map)
 
         print("Entering PH asynchronous processing loop")
 
         while(True):
 
             # TBD - revisit the below - why are we doing anything one-at-a-time?
+            print("CALLING WAIT FOR AND PROCESS")
             solved_subproblems, failures = self.wait_for_and_process_subproblems(1, # we're doing these one at a time
-                                                                                 action_handle_scenario_map,
-                                                                                 {}, # TBD - populate
-                                                                                 {}, # TBD - populate
-                                                                                 {}) # TBD - populate
-
+                                                                                 integrated_action_handle_scenario_map,
+                                                                                 {},
+                                                                                 integrated_action_handle_bundle_map,
+                                                                                 {})
+            print("DONE WITH CALL")
             assert(len(solved_subproblems) == 1)
 
-            solved_scenario = self._scenario_tree.get_scenario(solved_subproblems[0])
-            solved_scenario_name = solved_scenario._name
+            solved_subproblem = self._scenario_tree.get_subproblem(solved_subproblems[0])
+            solved_subproblem_name = solved_subproblem.name
 
-            scenario_solve_counts[solved_scenario_name] += 1
-            total_scenario_solve_count += 1
+            subproblem_solve_counts[solved_subproblem_name] += 1
+            total_subproblem_solve_count += 1
 
-            if int(total_scenario_solve_count / len(scenario_solve_counts)) > \
+            if int(total_subproblem_solve_count / len(subproblem_solve_counts)) > \
                self._current_iteration:
                 new_reportable_iteration = True
                 self._current_iteration += 1
@@ -3810,39 +3821,39 @@ class ProgressiveHedging(_PHBase):
                 new_reportable_iteration = False
 
             if self._verbose:
-                print("Solve for scenario=%s completed - new solve count for "
-                      "this scenario=%s"
-                      % (solved_scenario_name,
-                         scenario_solve_counts[solved_scenario_name]))
+                print("Solve for subproblem=%s completed - new solve count for "
+                      "this subproblem=%s"
+                      % (solved_subproblem_name,
+                         subproblem_solve_counts[solved_subproblem_name]))
 
             if self._verbose:
                 print("%20s       %18.4f     %14.4f"
-                      % (solved_scenario_name,
-                         solved_scenario._objective,
+                      % (solved_subproblem_name,
+                         0.0, # TBD - REVISIT solved_subproblem._objective,
                          0.0))
 
+
             # changed 19 Nov 2011 to support scenario buffers for async
-            ScenarioBuffer.append(solved_scenario_name)
-#            if len(ScenarioBuffer) == self._async_buffer_length:
-            if len(ScenarioBuffer) == number_subproblems_queued:
+            subproblem_buffer.append(solved_subproblem_name)
+            if len(subproblem_buffer) == number_subproblems_queued:
                 if self._verbose:
                     print("Processing async buffer")
 
                 # update variable statistics and compute new weights
                 self.update_variable_statistics()
 
-                for scenario_name in ScenarioBuffer:
-                    scenario = self._scenario_tree.get_scenario(scenario_name)
+                for subproblem_name in subproblem_buffer:
+                    subproblem = self._scenario_tree.get_subproblem(subproblem_name)
                     if self._ph_weight_updates_enabled:
-                        self.update_weights_for_scenario(scenario)
+                        self.update_weights_for_scenario(subproblem)
 
                 # give a user a chance to react if they want to change something.
                 for plugin in self._ph_plugins:
-                    plugin.post_asynchronous_var_w_update(self, ScenarioBuffer, scenario_solve_counts)
+                    plugin.post_asynchronous_var_w_update(self, subproblem_buffer, subproblem_solve_counts)
 
                 # we don't want to report stuff and invoke callbacks
-                # after each scenario solve - wait for when each
-                # scenario (on average) has reported back a solution.
+                # after each subproblem solve - wait for when each
+                # subproblem (on average) has reported back a solution.
                 if new_reportable_iteration:
 
                     # let plugins know if they care.
@@ -3915,7 +3926,7 @@ class ProgressiveHedging(_PHBase):
                 # on July 10, 2011 by dlw (really, it should be some
                 # combination of the min and average over the
                 # scenarios)
-                if total_scenario_solve_count / len(self._scenario_tree._scenarios) >= \
+                if total_subproblem_solve_count / len(self._scenario_tree.subproblems) >= \
                    self._max_iterations:
                     return
 
@@ -3923,15 +3934,15 @@ class ProgressiveHedging(_PHBase):
                 self._push_xbar_to_instances()
                 self._push_w_to_instances() # NOTE: redundant with above loop for push_w_to_instance?
 
-                # now that we've processsed all scenarios/bundles, we need to queue up for
-                # new work. we will ask the plugin for the scenarios/bundles to queue.
+                # now that we've processsed all subproblems, we need to queue up for
+                # new work. we will ask the plugin for the subproblems to queue.
                 # the plugins define the order.
                 subproblems_to_queue = []
                 # WARNING - BEING SLOPPY - WE SHOULD MAKE SURE WE HAVE ONE LIST RETURNED (MORE THAN ONE PLUGIN CAUSES ISSUES)
                 for plugin in self._ph_plugins:
                     subproblems_to_queue = plugin.asynchronous_subproblems_to_queue(self)
 
-                for scenario_name in subproblems_to_queue:
+                for subproblem_name in subproblems_to_queue:
 
                     # if linearizing, form the necessary terms to
                     # compute the cost variables.
@@ -3939,40 +3950,44 @@ class ProgressiveHedging(_PHBase):
                     if self._linearize_nonbinary_penalty_terms > 0:
                         new_attrs = \
                             form_linearized_objective_constraints(
-                                scenario_name,
+                                subproblem_name,
                                 instance,
                                 self._scenario_tree,
                                 self._linearize_nonbinary_penalty_terms,
                                 self._breakpoint_strategy,
                                 self._integer_tolerance)
-                        self._problem_states.ph_constraints[scenario_name].\
+                        self._problem_states.ph_constraints[subproblem_name].\
                             extend(new_attrs)
                         # Flag the preprocessor
                         self._problem_states.\
-                            ph_constraints_updated[scenario_name] = True
+                            ph_constraints_updated[subproblem_name] = True
 
                     # let plugins know if they care.
                     for plugin in self._ph_plugins:
-                        plugin.asynchronous_pre_scenario_queue(self, scenario_name)
+                        plugin.asynchronous_pre_scenario_queue(self, subproblem_name)
 
                     # queue stuff!
-                    action_handle_scenario_map_updates, a, b, c = self.queue_subproblems(subproblems=[scenario_name],
-                                                                                         warmstart=not self._disable_warmstarts)
-                    action_handle_scenario_map.update(action_handle_scenario_map_updates)
+                    action_handle_scenario_map, \
+                    scenario_action_handle_map, \
+                    action_handle_bundle_map, \
+                    bundle_action_handle_map = self.queue_subproblems(subproblems=[subproblem_name],
+                                                                      warmstart=not self._disable_warmstarts)
+                    integrated_action_handle_scenario_map.update(action_handle_scenario_map)
+                    integrated_action_handle_bundle_map.update(action_handle_bundle_map)
 
                     number_subproblems_queued = len(subproblems_to_queue)
 
                     if self._verbose:
                         print("Queued solve k=%s for scenario=%s"
-                              % (scenario_solve_counts[scenario_name]+1,
-                                 solved_scenario_name))
+                              % (subproblem_solve_counts[subproblem_name]+1,
+                                 solved_subproblem_name))
 
                     if self._verbose:
-                        for sname, scenario_count in iteritems(scenario_solve_counts):
+                        for sname, scenario_count in iteritems(subproblem_solve_counts):
                             print("Scenario=%s was solved %s times"
                                   % (sname, scenario_count))
                         print("Cumulative number of scenario solves=%s"
-                              % (total_scenario_solve_count))
+                              % (total_subproblem_solve_count))
                         print("PH Iteration Count (computed)=%s"
                               % (self._current_iteration))
 
@@ -3988,7 +4003,7 @@ class ProgressiveHedging(_PHBase):
                     print("Emptying the asynch scenario buffer.")
 
                 # this is not a speed issue, is there a memory issue?
-                ScenarioBuffer = []
+                subproblem_buffer = []
 
     def solve(self):
         # return None unless a solve failure was detected in iter0,
