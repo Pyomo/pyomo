@@ -202,6 +202,12 @@ def update_contset_indexed_component(comp, expansion_map):
     if comp.type() is Param:
         return
 
+    # Skip components that do not have a 'dim' attribute. This assumes that
+    # all components that could be indexed by a ContinuousSet have the 'dim'
+    # attribute
+    if not hasattr(comp, 'dim'):
+        return
+
     # Components indexed by a ContinuousSet must have a dimension of at
     # least 1
     if comp.dim() == 0:
