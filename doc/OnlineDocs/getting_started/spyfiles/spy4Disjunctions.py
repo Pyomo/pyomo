@@ -9,6 +9,7 @@ model.x = Var()
 model.y = Var()
 
 # @Disjunct_and_disjunction
+from pyomo.gdp import *
 # Two conditions
 def _d(disjunct, flag):
     model = disjunct.model()
