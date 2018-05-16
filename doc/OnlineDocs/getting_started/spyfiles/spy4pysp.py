@@ -9,8 +9,8 @@ q=1.0
 # @Import&declare_annotations
 from pyomo.pysp.annotations import *
 model.stoch_rhs = StochasticConstraintBoundsAnnotation()
-model.stoch_matrix = PySP_StochasticMatrixAnnotation()
-model.stoch_objective = PySP_StochasticObjectiveAnnotation()
+model.stoch_matrix = StochasticConstraintBodyAnnotation()
+model.stoch_objective = StochasticObjectiveAnnotation()
 # @Import&declare_annotations
 
 # @Partially_declared_concretemodel
@@ -82,14 +82,16 @@ def annotate_rule(m):
 model.annotate = BuildAction(rule=annotate_rule)
 # @Annotation_Abstractmodel
 
+p=1
+q=1
 # @Stochastic_constraint_bounds
 from pyomo.pysp.annotations import StochasticConstraintBoundsAnnotation
 
 model = ConcreteModel()
 
 # data that is initialized on a per-scenario basis
-p = ...
-q = ...
+#p = ...
+#q = ...
 
 # a second-stage variable
 model.y = Var()
@@ -122,15 +124,16 @@ def C_annotate_rule(model, i):
 model.C_annotate = BuildAction(model.C_index, rule=C_annotate_rule)
 # @Stochastic_constraint_bounds
 
-
+p=1
+q=1
 # @Stochastic_constraint_matrix
-from pyomo.pysp.annotations import PySP_StochasticMatrixAnnotation
+from pyomo.pysp.annotations import StochasticConstraintBodyAnnotation
 
 model = ConcreteModel()
 
 # data that is initialized on a per-scenario basis
-p = ...
-q = ...
+#p = ...
+#q = ...
 
 # a first-stage variable
 model.x = Var()
@@ -139,7 +142,7 @@ model.x = Var()
 model.y = Var()
 
 # declare the annotation
-model.stoch_matrix = PySP_StochasticMatrixAnnotation()
+model.stoch_matrix = StochasticConstraintBodyAnnotation()
 
 # a singleton constraint with stochastic coefficients
 # both the first- and second-stage variable
@@ -154,15 +157,16 @@ model.r = Constraint(expr= 0 <= p * model.x - 2.0 * model.y <= 10)
 model.stoch_matrix.declare(model.r, variables=[model.x])
 # @Stochastic_constraint_matrix
 
-
+p=1
+q=1
 # @Stochastic_objective_elements
-from pyomo.pysp.annotations import PySP_StochasticObjectiveAnnotation
+from pyomo.pysp.annotations import StochasticObjectiveAnnotation
 
 model = ConcreteModel()
 
 # data that is initialized on a per-scenario basis
-p = ...
-q = ...
+#p = ...
+#q = ...
 
 # a first-stage variable
 model.x = Var()
@@ -171,7 +175,7 @@ model.x = Var()
 model.y = Var()
 
 # declare the annotation
-model.stoch_objective = PySP_StochasticObjectiveAnnotation()
+model.stoch_objective = StochasticObjectiveAnnotation()
 
 model.FirstStageCost = Expression(expr= 5.0 * model.x)
 model.SecondStageCost = Expression(expr= p * model.x + q * model.y)
@@ -182,7 +186,8 @@ model.stoch_objective.declare(model.TotalCost)
 model.stoch_objective.declare(model.TotalCost, variables=[model.x, model.y])
 # @Stochastic_objective_elements
 
-
+"""
+xxxxxxxxxxxxxxxxxxxxxx alert!!!! as May 2018 not testing about half the file xxxxxxxxxxxxxxxxxx
 # @Annotating_constraint_stages
 from pyomo.pysp.annotations import PySP_ConstraintStageAnnotation
 
@@ -208,7 +213,7 @@ for index in model.C2:
 # @Annotating_constraint_stages
 
 # @1&2stage_in_2stage_expression
-from pyomo.pysp.annotations import PySP_StochasticObjectiveAnnotation
+from pyomo.pysp.annotations import StochasticObjectiveAnnotation
 
 model = ConcreteModel()
 
@@ -232,12 +237,12 @@ model.TotalCost = Objective(expr= model.FirstStageCost + model.SecondStageCost)
 
 # declare that model.x and model.y have stochastic cost
 # coefficients in the second stage
-model.stoch_objective = PySP_StochasticObjectiveAnnotation()
+model.stoch_objective = StochasticObjectiveAnnotation()
 model.stoch_objective.declare(model.TotalCost, variables=[model.x, model.y])
 # @1&2stage_in_2stage_expression
 
 # @Reexpressed_model_using_new_variable
-from pyomo.pysp.annotations import PySP_StochasticMatrixAnnotation
+from pyomo.pysp.annotations import StochasticConstraintBodyAnnotation
 
 model = ConcreteModel()
 
@@ -266,11 +271,11 @@ model.ComputeSecondStageCost = Constraint(expr= model.SecondStageCostVar == mode
 
 # declare that model.x and model.y have stochastic constraint matrix
 # coefficients in the ComputeSecondStageCost constraint
-model.stoch_matrix = PySP_StochasticMatrixAnnotation()
+model.stoch_matrix = StochasticConstraintBodyAnnotation()
 model.stoch_matrix.declare(model.ComputeSecondStageCost, variables=[model.x, model.y])
 # @Reexpressed_model_using_new_variable
 
-# @Constraint_in_PySP_StochasticObjectiveAnnotation
+# @Constraint_in_StochasticObjectiveAnnotation
 model = AbstractModel()
 
 # a first-stage variable
@@ -281,13 +286,6 @@ model.y = Var()
 
 # a param initialized with scenario-specific data
 model.p = Param()
-
-# a second-stage constraint with a stochastic upper bound
-# hidden in the left-hand-side expression
-def c_rule(m):
-    return (m.x - m.p) + m.y <= 10
-model.c = Constraint(rule=c_rule)
-# @Constraint_in_PySP_StochasticObjectiveAnnotation
 
 
 # @Variable_excluded_in_subsetscenerios
@@ -335,3 +333,4 @@ print((model.x + model.zero * model.y).to_string())      # -> x + 0.0 * y
 # retain model.y (so beware)
 print((model.x + 0 * model.zero * model.y).to_string())  # -> x
 # @Retain_variable_reference_expression
+"""
