@@ -132,7 +132,7 @@ Other operations like accessing or removing entries in our mapping can performed
    :language: python
 
 
-The non-dict method ``clearValue`` can be used in place of ``__delitem__`` to
+The non-dict method ``clear_value`` can be used in place of ``__delitem__`` to
 remove entries, where it inherits the same default behavior as
 ``setValue`` for indexed components and does not raise a KeyError when
 the argument does not exist as a key in the mapping.
@@ -146,7 +146,7 @@ A summary non-dict Suffix methods is provided here:
  |  clearAllValues()
  |      Clears all suffix data.
  |
- |  clearValue(component, expand=True)
+ |  clear_value(component, expand=True)
  |      Clears suffix information for a component.
  |
  |  setAllValues(value)

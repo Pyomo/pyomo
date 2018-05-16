@@ -70,18 +70,28 @@ print(model.foo[model.y])             # -> 50.0
 del model.foo[model.y]
 
 print(model.foo.get(model.y))         # -> None
-print(model.foo[model.y])             # -> raise KeyError
+
+try:
+   print(model.foo[model.y])          # -> raise KeyError
+except KeyError:
+   pass
 # @Print_value
 
 
 # @Clear_value
-model.foo.clearValue(model.y)
+model.foo.clear_value(model.y)
 
-print(model.foo[model.y[1]])          # -> raise KeyError
+try:
+   print(model.foo[model.y[1]])       # -> raise KeyError
+except KeyError:
+   pass
 
-del model.foo[model.y[1]]             # -> raise KeyError
+try:
+   del model.foo[model.y[1]]          # -> raise KeyError
+except KeyError:
+   pass
 
-model.foo.clearValue(model.y[1])      # -> does nothing
+model.foo.clear_value(model.y[1])      # -> does nothing
 # @Clear_value
 
 # @Import_suffix_information
@@ -95,7 +105,8 @@ model.con = Constraint(expr=model.x>=1.0)
 # @Import_suffix_information
 
 # @Print_dual_value
-print(instance.dual[instance.con]) # -> 1.0
+SolverFactory('glpk').solve(model)
+print(model.dual[model.con]) # -> 1.0
 # @Print_dual_value
 
 # @Export_suffix_data
@@ -126,10 +137,10 @@ def foo_rule(m):
 model.foo = Suffix(rule=foo_rule)
 
 # Instantiate the model
-inst = model.create()
+inst = model.create_instance()
 try:
     print(inst.foo[model.x]) # -> raise KeyError
-except:
+except KeyError:
     print ("raised an error")
 print(inst.foo[inst.x])  # -> 2.0
 print(inst.foo[inst.c])  # -> 3.0
