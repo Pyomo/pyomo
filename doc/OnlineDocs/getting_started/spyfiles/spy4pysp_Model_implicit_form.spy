@@ -1,0 +1,1 @@
+model.stoch_rhs = StochasticConstraintBoundsAnnotation()
