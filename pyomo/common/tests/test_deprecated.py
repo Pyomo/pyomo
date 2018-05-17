@@ -8,7 +8,6 @@ from six import StringIO
 import logging
 logger = logging.getLogger('pyomo.util')
 
-__author__ = "Qi Chen <https://github.com/qtothec>"
 
 class TestDeprecated(unittest.TestCase):
     """Tests for deprecated function decorator."""
@@ -224,7 +223,7 @@ class TestDeprecated(unittest.TestCase):
         self.assertIn('DEPRECATED: This function has been deprecated',
                       DEP_OUT.getvalue())
 
-        
+
 
 if __name__ == '__main__':
     unittest.main()
