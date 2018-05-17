@@ -29,6 +29,7 @@ from pyomo.core.kernel.component_dict import (ComponentDict,
 from pyomo.core.kernel.component_block import (IBlockStorage,
                                                block,
                                                block_dict)
+from pyomo.core.kernel.component_variable import variable
 
 import six
 
@@ -551,6 +552,13 @@ class _TestComponentDictBase(object):
         self.assertEqual(len(names), len(list(m.children())))
         for c in m.children():
             self.assertEqual(c.name, names[c])
+
+    def test_getname_relativeto(self):
+        m = block()
+        m.b = block()
+        m.b.v = variable()
+        self.assertEqual(m.b.v.getname(fully_qualified=True), 'b.v')
+        self.assertEqual(m.b.v.getname(fully_qualified=True, relative_to=m.b), 'v')
 
     def test_preorder_traversal(self):
         traversal = []

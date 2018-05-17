@@ -46,12 +46,12 @@ def _name_index_generator(idx):
         return "[" + _escape(str(idx)) + "]"
 
 
-def name(component, index=None, fully_qualified=False):
+def name(component, index=None, fully_qualified=False, relative_to=None):
     """
     Return a string representation of component for a specific
     index value.
     """
-    base = component.getname(fully_qualified=fully_qualified)
+    base = component.getname(fully_qualified=fully_qualified, relative_to=relative_to)
     if index is None:
         return base
     else:
@@ -438,7 +438,7 @@ class Component(_ComponentBase):
                 pass
         return self.name
 
-    def getname(self, fully_qualified=False, name_buffer=None):
+    def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
         """
         Returns the component name associated with this object.
 
@@ -446,11 +446,13 @@ class Component(_ComponentBase):
             fully_qualified     Generate full name from nested block names
             name_buffer         Can be used to optimize iterative name
                                     generation (using a dictionary)
+            relative_to         When generating a fully qualified name,
+                                    stop at this block.
         """
         if fully_qualified:
             pb = self.parent_block()
-            if pb is not None and pb is not self.model():
-                ans = pb.getname(fully_qualified, name_buffer) \
+            if pb is not None and pb is not self.model() and (relative_to is None or relative_to is not pb):
+                ans = pb.getname(fully_qualified, name_buffer, relative_to) \
                       + "." + self._name
             else:
                 ans = self._name
@@ -732,7 +734,7 @@ class ComponentData(_ComponentBase):
         else:
             return self.__str__()
 
-    def getname(self, fully_qualified=False, name_buffer=None):
+    def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
         """Return a string with the component name and index"""
         #
         # Using the buffer, which is a dictionary:  id -> string
@@ -744,11 +746,11 @@ class ComponentData(_ComponentBase):
         c = self.parent_component()
         if c is self:
             # This is a scalar component, so call the Component.getname() method
-            return super(ComponentData, self).getname(fully_qualified, name_buffer)
+            return super(ComponentData, self).getname(fully_qualified, name_buffer, relative_to)
         #
         # Get the name of the component
         #
-        base = c.getname(fully_qualified, name_buffer)
+        base = c.getname(fully_qualified, name_buffer, relative_to)
         if name_buffer is not None:
             # Iterate through the dictionary and generate all names in the buffer
             for idx, obj in iteritems(c):
