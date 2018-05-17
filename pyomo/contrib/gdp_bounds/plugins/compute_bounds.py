@@ -98,7 +98,10 @@ class ComputeDisjunctiveVarBounds(Transformation):
             # If disjunct does not have a component map to store disjunctive
             # bounds, then make one.
             if not hasattr(disjunct, '_disj_var_bounds'):
-                disjunct._disj_var_bounds = ComponentMap()
+                disjunct._disj_var_bounds = ComponentMap(
+                    doc="A mapping of variables to their bounds within an "
+                    "active disjunctive scope "
+                    "(when the relevant disjunct is active).")
 
             # fix the disjunct to active, deactivate all nonlinear constraints,
             # and apply the big-M transformation
