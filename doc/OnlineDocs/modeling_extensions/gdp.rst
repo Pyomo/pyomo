@@ -45,10 +45,10 @@ The following models all work and are equivalent:
    >>> model.y = Var()
  
    >>> model.fix_x = Disjunct()
-   >>> model.fix_x.c = Constraint(model.x == 0)
+   >>> model.fix_x.c = Constraint(expr=model.x == 0)
  
    >>> model.fix_y = Disjunct()
-   >>> model.fix_y.c = Constraint(model.y == 0)
+   >>> model.fix_y.c = Constraint(exptr=model.y == 0)
  
    >>> model.c = Disjunction(expr=[model.fix_x, model.fix_y])
  

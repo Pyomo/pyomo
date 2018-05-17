@@ -1,0 +1,8 @@
+def annotate_rule(m):
+    m.stoch_rhs = StochasticConstraintBoundsAnnotation()
+    m.stoch_rhs.declare(m.r[3])
+    m.stoch_rhs.declare(m.r[6])
+    m.stoch_rhs.declare(m.r[9])
+    m.stoch_rhs.declare(m.c)
+    m.stoch_rhs.declare(m.b.c)
+model.annotate = BuildAction(rule=annotate_rule)
