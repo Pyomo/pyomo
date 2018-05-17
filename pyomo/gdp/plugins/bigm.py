@@ -314,6 +314,8 @@ class BigM_Transformation(Transformation):
         obj.deactivate()
 
     def _transformDisjunctionData(self, obj, transBlock, bigM, index):
+        if not obj.active:
+            return  # Do not process a deactivated disjunction
         parent_component = obj.parent_component()
         transBlock.disjContainers.add(parent_component)
         orConstraint = self._getXorConstraint(parent_component)
