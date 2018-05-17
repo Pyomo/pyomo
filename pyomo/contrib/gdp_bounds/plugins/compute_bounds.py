@@ -28,12 +28,12 @@ def disjunctive_bound(var, scope):
             most immediate enclosing _DisjunctData.
 
     Returns:
-        numeric: the maximum of either the disjunctive lower bound, the
+        numeric: the tighter of either the disjunctive lower bound, the
             variable lower bound, or None if neither exist.
 
     """
     # Initialize to the global variable bound
-    var_bnd = (var.lb, var.ub)
+    var_bnd = (value(var.lb, exception=False), value(var.ub, exception=False))
     possible_disjunct = scope
     while possible_disjunct is not None:
         try:
