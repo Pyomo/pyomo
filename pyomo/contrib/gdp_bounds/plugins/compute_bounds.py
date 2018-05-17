@@ -37,7 +37,7 @@ def disjunctive_bound(var, scope):
     possible_disjunct = scope
     while possible_disjunct is not None:
         try:
-            disj_bnd = possible_disjunct._disjunctive_bounds.get(
+            disj_bnd = possible_disjunct._disj_var_bounds.get(
                 var, (None, None))
             disj_bnd = (
                 max(var_bnd[0], disj_bnd[0]) \
@@ -47,10 +47,10 @@ def disjunctive_bound(var, scope):
             )
             return disj_bnd
         except AttributeError:
-            # possible disjunct does not have attribute '_disjunctive_bounds'.
+            # possible disjunct does not have attribute '_disj_var_bounds'.
             # Try again with the scope's parent block.
             possible_disjunct = possible_disjunct.parent_block()
-    # Unable to find '_disjunctive_bounds' attribute within search scope.
+    # Unable to find '_disj_var_bounds' attribute within search scope.
     return var_bnd
 
 
@@ -78,7 +78,7 @@ class ComputeDisjunctiveVarBounds(Transformation):
 
     """
 
-    alias('contrib.compute_disjunctive_bounds',
+    alias('contrib.compute_disj_var_bounds',
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, model):
@@ -95,6 +95,11 @@ class ComputeDisjunctiveVarBounds(Transformation):
             disjuncts_to_process.insert(0, model)
 
         for disjunct in disjuncts_to_process:
+            # If disjunct does not have a component map to store disjunctive
+            # bounds, then make one.
+            if not hasattr(disjunct, '_disj_var_bounds'):
+                disjunct._disj_var_bounds = ComponentMap()
+
             # fix the disjunct to active, deactivate all nonlinear constraints,
             # and apply the big-M transformation
             old_disjunct_state = {'fixed': disjunct.indicator_var.fixed,
@@ -102,6 +107,7 @@ class ComputeDisjunctiveVarBounds(Transformation):
 
             disjunct.indicator_var.fix(1)
             model._tmp_var_set = ComponentSet()
+            model._tmp_constr_deactivated = ComponentSet()
             # Maps a variable in a cloned model instance to the original model
             # variable
             for constraint in disjunct.component_data_objects(
@@ -118,9 +124,6 @@ class ComputeDisjunctiveVarBounds(Transformation):
                     descend_into=(Block, Disjunct)):
                 if constraint.body.polynomial_degree() not in [0, 1]:
                     constraint.deactivate()
-
-            if not hasattr(disjunct, '_disjunctive_bounds'):
-                disjunct._disjunctive_bounds = ComponentMap()
 
             TransformationFactory('gdp.bigm').apply_to(bigM_model)
             for var in bigM_model._tmp_var_set:
@@ -157,11 +160,11 @@ class ComputeDisjunctiveVarBounds(Transformation):
                     raise NotImplementedError(
                         "Unhandled termination condition: %s"
                         % results.solver.termination_condition)
-                old_bounds = disjunct._disjunctive_bounds.get(
+                old_bounds = disjunct._disj_var_bounds.get(
                     new_var_to_orig[var], (None, None)  # default of None
                 )
                 # update bounds values
-                disjunct._disjunctive_bounds[new_var_to_orig[var]] = (
+                disjunct._disj_var_bounds[new_var_to_orig[var]] = (
                     min_if_not_None(disj_lb, old_bounds[0]),
                     max_if_not_None(disj_ub, old_bounds[1]))
 

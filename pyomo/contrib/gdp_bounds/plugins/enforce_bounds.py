@@ -24,7 +24,7 @@ class EnforceDisjunctiveVarBounds(Transformation):
     """
 
     alias(
-        'contrib.enforce_disjunctive_bounds',
+        'contrib.enforce_disj_var_bounds',
         doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, scope):
@@ -44,7 +44,7 @@ class EnforceDisjunctiveVarBounds(Transformation):
             if hasattr(disjunct, '_disjunctive_var_constraints'):
                 del disjunct._disjunctive_var_constraints
             cons_list = disjunct._disjunctive_var_constraints = ConstraintList()
-            for var, bounds in iteritems(disjunct._disjunctive_bounds):
+            for var, bounds in iteritems(disjunct._disj_var_bounds):
                 lbb, ubb = bounds
                 if lbb is not None:
                     cons_list.add(expr=lbb <= var)
