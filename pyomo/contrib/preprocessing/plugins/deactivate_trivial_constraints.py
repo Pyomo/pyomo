@@ -22,10 +22,6 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
         'contrib.deactivate_trivial_constraints',
         doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
-    def __init__(self):
-        """Initialize the transformation."""
-        super(TrivialConstraintDeactivator, self).__init__()
-
     def _apply_to(self, instance, **kwargs):
         """Apply the transformation.
 

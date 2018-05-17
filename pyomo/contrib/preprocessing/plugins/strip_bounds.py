@@ -14,10 +14,6 @@ class VariableBoundStripper(NonIsomorphicTransformation):
     alias('contrib.strip_var_bounds',
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
-    def __init__(self):
-        """Initialize the transformation."""
-        super(VariableBoundStripper, self).__init__()
-
     def _apply_to(self, instance, strip_domains=True, reversible=False):
         """Apply the transformation.
 

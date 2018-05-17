@@ -24,10 +24,6 @@ class FixedVarDetector(IsomorphicTransformation):
         'contrib.detect_fixed_vars',
         doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
-    def __init__(self):
-        """Initialize the transformation."""
-        super(FixedVarDetector, self).__init__()
-
     def _apply_to(self, instance, **kwargs):
         """Apply the transformation.
 

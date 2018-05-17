@@ -27,10 +27,6 @@ class RemoveZeroTerms(IsomorphicTransformation):
         'contrib.remove_zero_terms',
         doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
-    def __init__(self, *args, **kwargs):
-        """Initialize the transformation."""
-        super(RemoveZeroTerms, self).__init__(*args, **kwargs)
-
     def _apply_to(self, model):
         """Apply the transformation."""
         m = model

@@ -21,16 +21,6 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
     alias('contrib.constraints_to_var_bounds',
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
-    def __init__(self, *args, **kwargs):
-        """Initialize the transformation."""
-        super(ConstraintToVarBoundTransform, self).__init__(*args, **kwargs)
-
-    def _create_using(self, model):
-        """Create new model, applying transformation."""
-        m = model.clone()
-        self._apply_to(m)
-        return m
-
     def _apply_to(self, model):
         """Apply the transformation to the given model."""
         m = model

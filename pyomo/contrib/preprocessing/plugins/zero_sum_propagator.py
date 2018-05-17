@@ -7,8 +7,6 @@ from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.util.plugin import alias
 
-__author__ = "Qi Chen <https://github.com/qtothec>"
-
 
 class ZeroSumPropagator(IsomorphicTransformation):
     """Propagates fixed-to-zero for sums of only positive (or negative) vars.
@@ -21,10 +19,6 @@ class ZeroSumPropagator(IsomorphicTransformation):
 
     alias('contrib.propagate_zero_sum',
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
-
-    def __init__(self):
-        """Initialize the transformation."""
-        super(ZeroSumPropagator, self).__init__()
 
     def _apply_to(self, instance):
         """Apply the transformation.
