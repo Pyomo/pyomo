@@ -84,7 +84,7 @@ def _import_packages():
         pkg = _sys.modules[pname]
         pkg.load()
 
-from pyomo.util.plugin import PluginGlobals as _PG
+from pyomo.common.plugin import PluginGlobals as _PG
 _PG.add_env("pyomo")
 _import_packages()
 _PG.pop_env()

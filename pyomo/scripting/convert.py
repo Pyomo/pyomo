@@ -15,7 +15,7 @@ import sys
 
 from pyutilib.misc import Options, Container
 
-from pyomo.util import pyomo_command
+from pyomo.common import pyomo_command
 from pyomo.opt import ProblemFormat
 from pyomo.core.base import (Objective,
                              Var,

@@ -17,7 +17,7 @@ import sys
 from copy import deepcopy
 from pickle import PickleError
 
-import pyomo.util
+import pyomo.common
 from pyomo.core.base.misc import tabular_writer
 
 from six import iteritems, string_types
@@ -288,7 +288,7 @@ class Component(_ComponentBase):
         # Verify that ctype has been specified.
         #
         if self._type is None:
-            raise pyomo.util.DeveloperError(
+            raise pyomo.common.DeveloperError(
                 "Must specify a component type for class %s!"
                 % ( type(self).__name__, ) )
         #
@@ -1238,5 +1238,3 @@ ComponentUID.tDict.update( (ComponentUID.tKeys[i], v)
                            for i,v in enumerate(ComponentUID.tList) )
 ComponentUID.tDict.update( (v, ComponentUID.tKeys[i])
                            for i,v in enumerate(ComponentUID.tList) )
-
-

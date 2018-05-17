@@ -19,7 +19,7 @@ from six import StringIO
 import pyutilib.th as unittest
 
 from pyomo.environ import *
-from pyomo.util.log import LoggingIntercept
+from pyomo.common.log import LoggingIntercept
 from pyomo.dae import *
 from pyomo.dae.misc import *
 from pyomo.core.kernel.component_map import ComponentMap

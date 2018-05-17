@@ -15,7 +15,7 @@ import os
 
 from pyomo.opt.base.formats import guess_format
 from pyomo.opt.base.error import ConverterError
-from pyomo.util.plugin import Interface, ExtensionPoint
+from pyomo.common.plugin import Interface, ExtensionPoint
 
 try:
     unicode

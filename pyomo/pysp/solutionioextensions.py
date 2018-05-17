@@ -11,7 +11,7 @@
 __all__ = ('IPySPSolutionSaverExtension',
            'IPySPSolutionLoaderExtension')
 
-from pyomo.util.plugin import Interface
+from pyomo.common.plugin import Interface
 
 class IPySPSolutionSaverExtension(Interface):
 

@@ -7,7 +7,7 @@ from pyomo.core.base.constraint import Constraint
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 
 
 class TrivialConstraintDeactivator(IsomorphicTransformation):

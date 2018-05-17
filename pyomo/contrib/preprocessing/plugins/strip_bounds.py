@@ -3,7 +3,7 @@ import textwrap
 
 from pyomo.core.base.var import Var
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.set_types import Reals
 

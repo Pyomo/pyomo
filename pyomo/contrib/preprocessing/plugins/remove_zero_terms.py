@@ -10,7 +10,7 @@ from pyomo.core import quicksum
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 
 
 class RemoveZeroTerms(IsomorphicTransformation):

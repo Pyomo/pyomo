@@ -18,7 +18,7 @@ from pyomo.core.base.block import _BlockData, IndexedBlock
 from pyomo.dae import ContinuousSet, DerivativeVar, DAE_Error
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.base.block import SortComponents
-from pyomo.util.log import LoggingIntercept
+from pyomo.common.log import LoggingIntercept
 
 from six import iterkeys, itervalues, iteritems, StringIO
 
