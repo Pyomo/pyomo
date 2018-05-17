@@ -1,0 +1,2 @@
+model.I = RangeSet(1, model.m)
+model.J = RangeSet(1, model.n)

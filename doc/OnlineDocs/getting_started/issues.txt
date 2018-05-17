@@ -1,0 +1,35 @@
+dlw Jan 2018
+
+The conversion is "done."
+   - Many examples need to be redone so they are better tested.
+   - There are are errors and typos.
+   - There is an issue dealing with Bill's data section and cross-ref.
+   - A had a big fight with git to get this pushed, so who knows what got messed up
+     during that fight. (crazy text may appear at the end of a file and/or
+     a little text might be missing from the beginning)
+
+=======
+dlw Dec 2017
+Issues related to conversion from asciidoc to sphinx
+
+The main issues concern python code: how to best display
+it and how to test it.
+
+There are presently two main cases:
+
+0. In overview.rst there is a python file that is brought in
+via a
+
+.. literalinclude::
+
+This seems to me to be very simple: just test the examples directory.
+
+1. Parameters.rst has many code snippets (as will many other).
+
+1a. Minor thing: the student keeps using >>> for all lines and
+    never ... but I'm not sure that is bad.
+
+1b. Probably these snippet lines should be brought in from
+a testable py file in the examples directory. So far as I know, in sphinx
+one must reference lines by line number, which is fragile but can
+be made to work.
