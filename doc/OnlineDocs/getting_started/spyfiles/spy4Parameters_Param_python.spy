@@ -1,0 +1,5 @@
+v={}
+v[1,1] = 9
+v[2,2] = 16
+v[3,3] = 25
+model.S = Param(model.A, model.A, initialize=v, default=0)

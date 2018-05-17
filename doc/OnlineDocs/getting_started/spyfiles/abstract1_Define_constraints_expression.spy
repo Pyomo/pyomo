@@ -1,0 +1,3 @@
+def ax_constraint_rule(model, i):
+    # return the expression for the constraint for i
+    return sum(model.a[i,j] * model.x[j] for j in model.J) >= model.b[i]
