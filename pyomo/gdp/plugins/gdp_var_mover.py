@@ -66,7 +66,7 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
             Disjunct, descend_into=(Block, Disjunct))
         for disjunct_component in disjunct_generator:
             for disjunct in itervalues(disjunct_component._data):
-                if disjunct.active:
+                if disjunct.active and self._disjunct_on_active_block(disjunct):
                     logger.error("""
                     Reclassifying active Disjunct "%s" as a Block.  This
                     is generally an error as it indicates that the model
@@ -91,3 +91,18 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
                     Constraint, descend_into=Block, active=True)
                 for con in cons_in_disjunct:
                     con.deactivate()
+
+    def _disjunct_on_active_block(self, disjunct):
+        # Check first to make sure that the disjunct is not a
+        # descendent of an inactive Block or fixed and deactivated
+        # Disjunct, before raising a warning.
+        parent_block = disjunct.parent_block()
+        while parent_block is not None:
+            if parent_block.type() is Block and not parent_block.active:
+                return False
+            elif (parent_block.type() is Disjunct and not parent_block.active
+                  and parent_block.indicator_var.value == 0):
+                return False
+            else:
+                continue
+        return True
