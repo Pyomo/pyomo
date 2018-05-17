@@ -14,22 +14,6 @@ solvers = check_available_solvers('cbc')
 class TestGDPBounds(unittest.TestCase):
     """Tests disjunctive variable bounds implementation."""
 
-    def test_enable_bounds(self):
-        """Test enabling disjunctive bounds."""
-        m = ConcreteModel()
-        m.x = Var(bounds=(0, 8))
-        m.d1 = Disjunct()
-        m.d1.c = Constraint(expr=m.x >= 2)
-        m.d2 = Disjunct()
-        m.d2.c = Constraint(expr=m.x <= 4)
-        m.disj = Disjunction(expr=[m.d1, m.d2])
-        m.obj = Objective(expr=m.x)
-        TransformationFactory('contrib.enable_disjunctive_bounds').apply_to(m)
-        self.assertTrue(hasattr(m.d1, '_disjunctive_bounds'))
-        self.assertTrue(hasattr(m.d2, '_disjunctive_bounds'))
-        self.assertTrue(hasattr(m.d1, '_disjunctive_var_constraints'))
-        self.assertTrue(hasattr(m.d2, '_disjunctive_var_constraints'))
-
     @unittest.skipIf('cbc' not in solvers, "CBC solver not available")
     def test_compute_bounds(self):
         """Test computation of disjunctive bounds."""
