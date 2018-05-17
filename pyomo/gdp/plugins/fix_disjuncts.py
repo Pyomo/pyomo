@@ -27,6 +27,20 @@ from six import itervalues
 logger = logging.getLogger('pyomo.gdp.fix_disjuncts')
 
 
+def target_list(x):
+    if isinstance(x, _ComponentBase):
+        return [x]
+    elif hasattr(x, '__iter__'):
+        ans = []
+        for i in x:
+            if isinstance(i, _ComponentBase):
+                ans.append(i)
+            else:
+                raise ValueError(
+                    "Expected Component or list of Components."
+                    "\n\tReceived %s" % (type(i),)
+                )
+
 class GDP_Disjunct_Fixer(Transformation):
     """Fix disjuncts to their current logical values.
 
@@ -45,35 +59,46 @@ class GDP_Disjunct_Fixer(Transformation):
     alias('gdp.fix_disjuncts',
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
-    def _apply_to(self, model, targets=None):
-        """Apply the transformation on the targets in the given model.
+    CONFIG = ConfigBlock("gdp.fix_disjuncts")
+    CONFIG.declare('targets', ConfigValue(
+        default=None,
+        domain=target_list,
+        description="target or list of targets that will be fixed",
+    ))
 
-        The model is expected to be Block-like.
+    def _apply_to(self, instance, **kwds):
+        """Apply the transformation on the targets in the given instance.
+
+        The instance is expected to be Block-like.
 
         The target ctype is expected to be Block, Disjunct, or Disjunction.
         For a Block or Disjunct, the transformation will fix all disjuncts
         found in disjunctions within the container. If no target is specified,
-        the whole model is transformed.
+        the whole instance is transformed.
 
         """
-        t = targets if targets is not None else model
-        if not t.active:
-            return  # do nothing for inactive containers
+        config = self.CONFIG(kwds.pop('options', {}))
 
-        # screen for allowable instance types
-        if (type(t) not in (_DisjunctData, _BlockData, _DisjunctionData) and
-                t.type() not in (Disjunct, Block, Disjunction)):
-            raise GDP_Error(
-                "Target %s was not a Block, Disjunct, or Disjunction. "
-                "It was of type %s and can't be transformed."
-                % (t.name, type(t)))
+        targets = config.targets
+        t = targets if targets is not None else (instance,)
+        for t in targets:
+            if not t.active:
+                return  # do nothing for inactive containers
 
-        # if the object is indexed, transform all of its _ComponentData
-        if t.is_indexed():
-            for obj in itervalues(t):
-                self._transformObject(obj)
-        else:
-            self._transformObject(t)
+            # screen for allowable instance types
+            if (type(t) not in (_DisjunctData, _BlockData, _DisjunctionData) and
+                    t.type() not in (Disjunct, Block, Disjunction)):
+                raise GDP_Error(
+                    "Target %s was not a Block, Disjunct, or Disjunction. "
+                    "It was of type %s and can't be transformed."
+                    % (t.name, type(t)))
+
+            # if the object is indexed, transform all of its _ComponentData
+            if t.is_indexed():
+                for obj in itervalues(t):
+                    self._transformObject(obj)
+            else:
+                self._transformObject(t)
 
     def _transformObject(self, obj):
         # If the object is a disjunction, transform it.
