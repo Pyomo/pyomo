@@ -65,34 +65,34 @@ def disjunctive_ub(var, scope):
 
 
 class ComputeDisjunctiveVarBounds(Transformation):
-    """Compute disjunctive bounds in a given scope.
+    """Compute disjunctive bounds in a given model.
 
     Tries to compute the disjunctive bounds for all variables found in
-    constraints that are in disjuncts under the given scope.
+    constraints that are in disjuncts under the given model.
 
     This function uses the linear relaxation of the model to try to compute
     disjunctive bounds.
 
     Args:
-        scope (Component): The scope under which to look for disjuncts.
+        model (Component): The model under which to look for disjuncts.
 
     """
 
     alias('contrib.compute_disjunctive_bounds',
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
-    def _apply_to(self, scope):
+    def _apply_to(self, model):
         """Apply the transformation.
 
         Args:
-            scope: Pyomo model object on which to compute disjuctive bounds.
+            model: Pyomo model object on which to compute disjuctive bounds.
 
         """
-        disjuncts_to_process = list(scope.component_data_objects(
+        disjuncts_to_process = list(model.component_data_objects(
             ctype=Disjunct, active=True, descend_into=(Block, Disjunct),
             descent_order=TraversalStrategy.BreadthFirstSearch))
-        if scope.type() == Disjunct:
-            disjuncts_to_process.insert(0, scope)
+        if model.type() == Disjunct:
+            disjuncts_to_process.insert(0, model)
 
         for disjunct in disjuncts_to_process:
             # fix the disjunct to active, deactivate all nonlinear constraints,
@@ -101,18 +101,18 @@ class ComputeDisjunctiveVarBounds(Transformation):
                                   'value': disjunct.indicator_var.value}
 
             disjunct.indicator_var.fix(1)
-            scope._tmp_var_set = ComponentSet()
+            model._tmp_var_set = ComponentSet()
             # Maps a variable in a cloned model instance to the original model
             # variable
             for constraint in disjunct.component_data_objects(
                     ctype=Constraint, active=True, descend_into=True):
                 if constraint.body.polynomial_degree() in [0, 1]:
-                    scope._tmp_var_set.update(
+                    model._tmp_var_set.update(
                         identify_variables(constraint.body))
-            scope._var_list = list(scope._tmp_var_set)
-            bigM_model = scope.clone()
+            model._var_list = list(model._tmp_var_set)
+            bigM_model = model.clone()
             new_var_to_orig = ComponentMap(
-                zip(bigM_model._var_list, scope._var_list))
+                zip(bigM_model._var_list, model._var_list))
             for constraint in bigM_model.component_data_objects(
                     ctype=Constraint, active=True,
                     descend_into=(Block, Disjunct)):
