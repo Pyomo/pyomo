@@ -13,6 +13,8 @@ import logging
 import textwrap
 from math import fabs
 
+from six import itervalues
+
 from pyomo.core.base import Transformation
 from pyomo.core.base.block import Block, _BlockData
 from pyomo.core.base.constraint import Constraint
@@ -21,8 +23,8 @@ from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import GDP_Error
 from pyomo.gdp.disjunct import (Disjunct, Disjunction, _DisjunctData,
                                 _DisjunctionData)
+from pyomo.util.config import ConfigBlock, ConfigValue
 from pyomo.util.plugin import alias
-from six import itervalues
 
 logger = logging.getLogger('pyomo.gdp.fix_disjuncts')
 
@@ -40,6 +42,7 @@ def target_list(x):
                     "Expected Component or list of Components."
                     "\n\tReceived %s" % (type(i),)
                 )
+
 
 class GDP_Disjunct_Fixer(Transformation):
     """Fix disjuncts to their current logical values.
