@@ -1,8 +1,8 @@
 """Transformation to propagate a zero value to terms of a sum."""
 import textwrap
 
-from pyomo.core.expr.numvalue import value
 from pyomo.core.base.constraint import Constraint
+from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.util.plugin import alias
@@ -42,7 +42,7 @@ class ZeroSumPropagator(IsomorphicTransformation):
             if (constr.has_ub() and (
                 (repn.constant is None and value(constr.upper) == 0) or
                 repn.constant == value(constr.upper)
-                    )):
+            )):
                 # term1 + term2 + term3 + ... <= 0
                 # all var terms need to be non-negative
                 if all(
@@ -55,7 +55,7 @@ class ZeroSumPropagator(IsomorphicTransformation):
                     # variable is non-positive and has non-positive coefficient
                     (repn.linear_vars[i].has_ub() and
                      value(repn.linear_vars[i].ub) <= 0 and
-                     coef <= 0) for i,coef in enumerate(repn.linear_coefs)):
+                     coef <= 0) for i, coef in enumerate(repn.linear_coefs)):
                     for i, coef in enumerate(repn.linear_coefs):
                         if not coef == 0:
                             repn.linear_vars[i].fix(0)
@@ -63,7 +63,7 @@ class ZeroSumPropagator(IsomorphicTransformation):
             if (constr.has_lb() and (
                 (repn.constant is None and value(constr.lower) == 0) or
                 repn.constant == value(constr.lower)
-                    )):
+            )):
                 # term1 + term2 + term3 + ... >= 0
                 # all var terms need to be non-positive
                 if all(

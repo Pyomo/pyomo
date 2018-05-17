@@ -31,7 +31,8 @@ def _build_equality_set(m):
                 constr.body.polynomial_degree() == 1):
             repn = generate_standard_repn(constr.body)
             # only take the variables with nonzero coefficients
-            vars_ = [v for i, v in enumerate(repn.linear_vars) if repn.linear_coefs[i]]
+            vars_ = [v for i, v in enumerate(repn.linear_vars)
+                     if repn.linear_coefs[i]]
             if (len(vars_) == 2 and
                     sorted(l for l in repn.linear_coefs if l) == [-1, 1]):
                 # this is an a == b constraint.
