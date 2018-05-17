@@ -30,6 +30,7 @@ class TestGDPBounds(unittest.TestCase):
         self.assertTrue(hasattr(m.d1, '_disjunctive_var_constraints'))
         self.assertTrue(hasattr(m.d2, '_disjunctive_var_constraints'))
 
+    @unittest.skipIf('cbc' not in solvers, "CBC solver not available")
     def test_compute_bounds(self):
         """Test computation of disjunctive bounds."""
         m = ConcreteModel()
@@ -48,7 +49,6 @@ class TestGDPBounds(unittest.TestCase):
         self.assertEquals(disjunctive_lb(m.x, m.d2), 0)
         self.assertEquals(disjunctive_ub(m.x, m.d2), 4)
 
-    @unittest.skipIf('cbc' not in solvers, "CBC solver not available")
     def test_enforce_bounds(self):
         """Test enforcement of disjunctive bounds."""
         m = ConcreteModel()
