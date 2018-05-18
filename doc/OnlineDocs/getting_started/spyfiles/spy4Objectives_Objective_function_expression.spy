@@ -1,0 +1,3 @@
+def ObjRule(model):
+    return 2*model.x[1] + 3*model.x[2]
+model.g = Objective(rule=ObjRule)

@@ -14,6 +14,8 @@ Current Development
 - Adding the Pyomo5 expression system, which supports PyPy (#272)
 - Bug fix processing exp() expressions in Pyomo5 (#471)
 - Optimizations to minimize use of NumericConstant objects (#469)
+- Resolving scaling issue with Pyomo expressions (#475)
+- Resolving issue when path names with spaces appear in CPLEX run file (#485)
 
 -------------------------------------------------------------------------------
 Pyomo 5.5

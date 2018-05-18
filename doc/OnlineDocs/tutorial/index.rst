@@ -1,5 +1,5 @@
-Tutorial
-========
+Advanced Tutorial
+=================
 
 Overview
 --------
@@ -134,10 +134,4 @@ The following illustrates how to use `Any` with Blocks.
    >>> m.b['foo1'].c = pe.Constraint(expr=m.b['foo1'].x >= 5*m.b['foo1'].y)
    >>> m.b[1].x = pe.Var()
 
-Pyomo Command
--------------
 
-.. doctest::
-
-    >>> print('Hello World')
-    Hello World

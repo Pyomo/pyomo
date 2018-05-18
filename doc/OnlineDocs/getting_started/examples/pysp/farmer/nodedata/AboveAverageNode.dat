@@ -1,0 +1,5 @@
+# high yield scenario
+
+param Yield := WHEAT 3.0 CORN 3.6 SUGAR_BEETS 24 ;
+
+
