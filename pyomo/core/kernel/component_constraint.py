@@ -191,7 +191,7 @@ class _MutableBoundsConstraintMixin(object):
                 "when the equality property is True.")
         if (lb is not None) and \
            (not is_numeric_data(lb)):
-            raise ValueError(
+            raise TypeError(
                     "Constraint lower bounds must be "
                     "expressions restricted to numeric data.")
         self._lb = lb
@@ -208,7 +208,7 @@ class _MutableBoundsConstraintMixin(object):
                 "when the equality property is True.")
         if (ub is not None) and \
            (not is_numeric_data(ub)):
-            raise ValueError(
+            raise TypeError(
                     "Constraint upper bounds must be "
                     "expressions restricted to numeric data.")
         self._ub = ub
@@ -231,7 +231,7 @@ class _MutableBoundsConstraintMixin(object):
                 "Constraint right-hand side can not "
                 "be assigned a value of None.")
         elif not is_numeric_data(rhs):
-            raise ValueError(
+            raise TypeError(
                     "Constraint right-hand side must be numbers "
                     "or expressions restricted to data.")
         self._lb = rhs
