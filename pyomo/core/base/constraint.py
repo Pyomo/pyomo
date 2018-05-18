@@ -26,7 +26,7 @@ from pyomo.core.expr.numvalue import (ZeroConstant,
                                       native_numeric_types,
                                       _sub)
 from pyomo.core.base.plugin import register_component
-from pyomo.core.base.component import ActiveComponentData
+from pyomo.core.base.component import ActiveComponentData, ComponentData
 from pyomo.core.base.indexed_component import \
     ( ActiveIndexedComponent,
       UnindexedComponent_set,
@@ -1162,6 +1162,113 @@ class ConstraintList(IndexedConstraint):
         next_idx = len(self._index) + 1
         self._index.add(next_idx)
         return self.__setitem__(next_idx, expr)
+
+
+#
+# The following classes support a specialization of ConstraintList where each 
+# constrained can be assigned a unique name
+#
+class _NamedGeneralConstraintData(_GeneralConstraintData):
+    """
+    This class defines the data for a single general constraint.
+
+    Constructor arguments:
+        component       The Constraint object that owns this data.
+        expr            The Pyomo expression stored in this constraint.
+
+    Public class attributes:
+        active          A boolean that is true if this constraint is
+                            active in the model.
+        body            The Pyomo expression for this constraint
+        lower           The Pyomo expression for the lower bound
+        upper           The Pyomo expression for the upper bound
+        equality        A boolean that indicates whether this is an
+                            equality constraint
+        strict_lower    A boolean that indicates whether this
+                            constraint uses a strict lower bound
+        strict_upper    A boolean that indicates whether this
+                            constraint uses a strict upper bound
+        name            The name for this constraint
+
+    Private class attributes:
+        _component      The objective component.
+        _active         A boolean that indicates whether this data is active
+    """
+
+    __slots__ = ('_name',)
+
+    def __init__(self,  expr=None, component=None):
+        self._name = None
+        _GeneralConstraintData.__init__(self, expr, component)
+
+    def __getstate__(self):
+        state = super(_NamedGeneralConstraintData, self).__getstate__()
+        for i in _NamedGeneralConstraintData.__slots__:
+            state[i] = getattr(self, i)
+        return state
+
+    @property
+    def name(self):
+        """Get the fully qualifed component name."""
+        return self.getname(fully_qualified=True)
+
+    @name.setter
+    def name(self, val):
+        """Set the local name"""
+        self._name = val
+
+    def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
+        """
+        Returns the component name associated with this object.
+
+        Arguments:
+            fully_qualified     Generate full name from nested block names
+            name_buffer         Can be used to optimize iterative name
+                                    generation (using a dictionary)
+            relative_to         When generating a fully qualified name,
+                                    stop at this block.
+        """
+        if self._name is None:
+            return ComponentData.getname(self, fully_qualified=True)
+        if fully_qualified:
+            pb = self.parent_block()
+            if pb is not None and pb is not self.model() and (relative_to is None or relative_to is not pb):
+                ans = pb.getname(fully_qualified, name_buffer, relative_to) \
+                      + "." + self._name
+            else:
+                ans = self._name
+        else:
+            ans = self._name
+        if name_buffer is not None:
+            name_buffer[id(self)] = ans
+        return ans
+
+
+class NamedConstraintList(ConstraintList):
+    """
+    Variable-length indexed constraint objects that contain their own names.
+    """
+    _ComponentDataClass = _NamedGeneralConstraintData
+
+    def _pprint(self):
+        """
+        Return data that will be printed for this component.
+        """
+        return (
+            [("Size", len(self)),
+             ("Index", self._index if self.is_indexed() else None),
+             ("Active", self.active),
+             ],
+            iteritems(self),
+            ( "Name", "Lower","Body","Upper","Active" ),
+            lambda k, v: [ v.getname(fully_qualified=False),
+                           "-Inf" if v.lower is None else v.lower,
+                           v.body,
+                           "+Inf" if v.upper is None else v.upper,
+                           v.active,
+                           ]
+            )
+
 
 register_component(Constraint, "General constraint expressions.")
 register_component(ConstraintList, "A list of constraint expressions.")
