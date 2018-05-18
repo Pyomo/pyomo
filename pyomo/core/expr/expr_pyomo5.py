@@ -726,61 +726,12 @@ class ExpressionReplacementVisitor(object):
 #  clone_expression
 # =====================================================
 
-class _CloneVisitor(ExpressionValueVisitor):
-
-    def __init__(self, clone_leaves=False, memo=None):
-        self.clone_leaves = clone_leaves
-        self.memo = memo
-
-    def visit(self, node, values):
-        """ Visit nodes that have been expanded """
-        return node.create_node_with_local_data( tuple(values), self.memo )
-
-    def visiting_potential_leaf(self, node):
-        """
-        Visiting a potential leaf.
-
-        Return True if the node is not expanded.
-        """
-        if node.__class__ in nonpyomo_leaf_types:
-            #
-            # Store a native or numeric object
-            #
-            return True, deepcopy(node, self.memo)
-
-        if not node.is_expression_type():
-            #
-            # Store a leave object that is cloned
-            #
-            if self.clone_leaves:
-                return True, deepcopy(node, self.memo)
-            else:
-                return True, node
-
-        if not self.clone_leaves and node.is_named_expression_type():
-            #
-            # If we are not cloning leaves, then
-            # we don't copy the expression tree for a
-            # named expression.
-            #
-            return True, node
-
-        return False, None
-
-
-def clone_expression(expr, memo=None, clone_leaves=True):
+def clone_expression(expr, memo=None):
     """A function that is used to clone an expression.
 
-    Cloning is roughly equivalent to calling ``copy.deepcopy``.
-    However, the :attr:`clone_leaves` argument can be used to
-    clone only interior (i.e. non-leaf) nodes in the expression
-    tree.   Note that named expression objects are treated as
-    leaves when :attr:`clone_leaves` is :const:`True`, and hence
-    those subexpressions are not cloned.
-
-    This function uses a non-recursive
-    logic, which makes it more scalable than the logic in
-    ``copy.deepcopy``.
+    Cloning is equivalent to calling ``copy.deepcopy`` with no Block
+    scope.  That is, the expression tree is duplicated, but no Pyomo
+    components (leaf nodes *or* named Expressions) are duplicated.
 
     Args:
         expr: The expression that will be cloned.
@@ -789,19 +740,17 @@ def clone_expression(expr, memo=None, clone_leaves=True):
             the memo object used with ``copy.deepcopy``.  Defaults
             to None, which indicates that no user-defined
             dictionary is used.
-        clone_leaves (bool): If True, then leaves are
-            cloned along with the rest of the expression.
-            Defaults to :const:`True`.
 
     Returns:
         The cloned expression.
+
     """
     clone_counter._count += 1
     if not memo:
-        memo = {'__block_scope__': { id(None): False }}
-    #
-    visitor = _CloneVisitor(clone_leaves=clone_leaves, memo=memo)
-    return visitor.dfs_postorder_stack(expr)
+        memo = {}
+    if '__block_scope__' not in memo:
+        memo['__block_scope__'] = { id(None): False }
+    return deepcopy(expr, memo)
 
 
 # =====================================================
@@ -1448,22 +1397,7 @@ class ExpressionBase(NumericValue):
         Returns:
             A new expression tree.
         """
-        return clone_expression(self, memo=substitute, clone_leaves=False)
-
-    def X__deepcopy__(self, memo):
-        """
-        Return a clone of the expression tree.
-
-        Note:
-            This method clones the leaves of the tree.
-        Args:
-            memo (dict): a dictionary that maps object ids to clone
-                objects generated earlier during the cloning process.
-
-        Returns:
-            A new expression tree.
-        """
-        return clone_expression(self, memo=memo, clone_leaves=True)
+        return clone_expression(self, memo=substitute)
 
     def create_node_with_local_data(self, args):
         """
