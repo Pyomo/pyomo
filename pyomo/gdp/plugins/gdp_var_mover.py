@@ -19,6 +19,7 @@ import textwrap
 from pyomo.util.plugin import alias
 from pyomo.core.base import Transformation, Block, Constraint
 from pyomo.gdp import Disjunct
+from pyomo.core import TraversalStrategy
 
 from six import itervalues
 
@@ -64,7 +65,8 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
     def _apply_to(self, instance, **kwds):
         assert not kwds  # no keywords expected to the transformation
         disjunct_generator = instance.component_objects(
-            Disjunct, descend_into=(Block, Disjunct))
+            Disjunct, descend_into=(Block, Disjunct),
+            descent_order=TraversalStrategy.PostfixDFS)
         for disjunct_component in disjunct_generator:
 
             # Check that the disjuncts being reclassified are all relaxed or are
