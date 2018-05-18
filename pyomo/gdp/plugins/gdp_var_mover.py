@@ -35,6 +35,7 @@ class HACK_GDP_Var_Mover(Transformation):
 
     alias('gdp.varmover', doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
+    # TODO this should be deprecated.
     def _apply_to(self, instance, **kwds):
         assert not kwds
         count = 0
