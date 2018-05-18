@@ -76,7 +76,7 @@ class BigM_Transformation(Transformation):
             'relaxedConstraints': ComponentMap(constraint: relaxed_constraint)
         }
 
-    In addition, any block or disjunct containind a relaxed disjunction
+    In addition, any block or disjunct containing a relaxed disjunction
     will have a "_gdp_transformation_info" dict with the following
     entry:
 
@@ -654,7 +654,6 @@ class BigM_Transformation(Transformation):
 
             for i, coef in enumerate(repn.linear_coefs or []):
                 var = repn.linear_vars[i]
-                coef = repn.linear_coefs[i]
                 bounds = (value(var.lb), value(var.ub))
                 for i in (0, 1):
                     # reverse the bounds if the coefficient is negative
