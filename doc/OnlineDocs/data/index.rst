@@ -1,3 +1,5 @@
+.. _page-managingdata
+
 Managing Data in Pyomo Models
 =============================
 

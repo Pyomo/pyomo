@@ -1,5 +1,0 @@
-M = ConcreteModel()
-M.v = Var()
-
-e = 2*M.v
-f = e + 3

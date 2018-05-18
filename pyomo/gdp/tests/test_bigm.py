@@ -2042,6 +2042,26 @@ class IndexedDisjunction(unittest.TestCase):
             self.assertIs(xorC[i].body.arg(0), m.disjunct[i, 0].indicator_var)
             self.assertIs(xorC[i].body.arg(1), m.disjunct[i, 1].indicator_var)
 
+    def test_partial_deactivate_indexed_disjunction(self):
+        """Test for partial deactivation of a indexed disjunction."""
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 10))
+        @m.Disjunction([0, 1])
+        def disj(m, i):
+            if i == 0:
+                return [m.x >= 1, m.x >= 2]
+            else:
+                return [m.x >= 3, m.x >= 4]
+
+        m.disj[0].disjuncts[0].indicator_var.fix(1)
+        m.disj[0].disjuncts[1].indicator_var.fix(1)
+        m.disj[0].deactivate()
+        TransformationFactory('gdp.bigm').apply_to(m)
+        self.assertEqual(
+            len(m._gdp_bigm_relaxation_disj_xor), 1,
+            "There should only be one XOR constraint generated. Found %s." %
+            len(m._gdp_bigm_relaxation_disj_xor))
+
 
 class BlocksOnDisjuncts(unittest.TestCase):
     def setUp(self):
@@ -2128,4 +2148,3 @@ class InnerDisjunctionSharedDisjuncts(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

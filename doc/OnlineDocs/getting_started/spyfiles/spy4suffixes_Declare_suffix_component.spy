@@ -1,0 +1,12 @@
+from pyomo.environ import *
+
+model = ConcreteModel()
+
+# Export integer data
+model.priority = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
+
+# Export and import floating point data
+model.dual = Suffix(direction=Suffix.IMPORT_EXPORT)
+
+# Store floating point data
+model.junk = Suffix()

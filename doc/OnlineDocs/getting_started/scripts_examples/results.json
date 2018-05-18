@@ -1,0 +1,50 @@
+{
+    "Problem": [
+        {
+            "Lower bound": 2.8,
+            "Name": "tmpbh5gx7jt",
+            "Number of constraints": 4,
+            "Number of nonzeros": 13,
+            "Number of objectives": 1,
+            "Number of variables": 10,
+            "Sense": "minimize",
+            "Upper bound": 2.8
+        }
+    ],
+    "Solution": [
+        {
+            "number of solutions": 1,
+            "number of solutions displayed": 1
+        },
+        {
+            "Constraint": "No values",
+            "Gap": 0.0,
+            "Message": null,
+            "Objective": {
+                "Obj": {
+                    "Value": 2.8
+                }
+            },
+            "Problem": {},
+            "Status": "optimal",
+            "Variable": {
+                "Flow[CityA,CityB]": {
+                    "Value": 2.0
+                },
+                "Flow[CityB,CityC]": {
+                    "Value": 1.0
+                }
+            }
+        }
+    ],
+    "Solver": [
+        {
+            "Error rc": 0,
+            "Status": "ok",
+            "Termination condition": "optimal",
+            "Termination message": "Dual simplex - Optimal\\x3a Objective = 2.8000000000e+00",
+            "Time": 0.009924888610839844,
+            "User time": 0.0
+        }
+    ]
+}
