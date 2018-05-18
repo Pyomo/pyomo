@@ -13,6 +13,7 @@ Current Development
 - Resolved problems with ExternalFunctions with fixed arguments (#442)
 - Adding the Pyomo5 expression system, which supports PyPy (#272)
 - Bug fix processing exp() expressions in Pyomo5 (#471)
+- Optimizations to minimize use of NumericConstant objects (#469)
 
 -------------------------------------------------------------------------------
 Pyomo 5.5
