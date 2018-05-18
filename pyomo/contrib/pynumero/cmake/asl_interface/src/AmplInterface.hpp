@@ -17,9 +17,13 @@ struct SufDesc;
 class AmplInterface {
 public:
 
-    AmplInterface(char *nlfilename);
+    AmplInterface();
 
     virtual ~AmplInterface();
+
+    void initialize(const char *nlfilename); 
+
+    virtual FILE* open_nl(ASL_pfgh *asl, char *stub) = 0;
 
     void get_nlp_dimensions(int &n_x, int &n_g, int &nnz_jac_g, int &nnz_hes_lag) const;
 
@@ -72,12 +76,12 @@ public:
     //void report_solution(int n_x, const double* x) const;
 */
 private:
-    AmplInterface();
 
     AmplInterface(const AmplInterface &);
 
     void operator=(const AmplInterface &);
 
+protected:
     // ASL pointer
     ASL_pfgh *asl_;
 
@@ -93,8 +97,24 @@ private:
 
     int nnz_hes_lag_;
 
-
 };
 
+class AmplInterface_file : public AmplInterface {
+public:
+   AmplInterface_file();
+
+   virtual FILE* open_nl(ASL_pfgh *asl, char *stub);
+};
+
+class AmplInterface_str : public AmplInterface {
+public:
+    AmplInterface_str(char* nl, size_t size);
+
+    virtual FILE* open_nl(ASL_pfgh *asl, char *stub);
+
+private:
+    char *nl_content;
+    size_t nl_size;
+};
 
 #endif
