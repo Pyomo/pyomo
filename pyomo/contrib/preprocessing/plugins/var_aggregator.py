@@ -23,6 +23,8 @@ def _get_equality_linked_variables(constraint):
     if constraint.body.polynomial_degree() != 1:
         # must be a linear constraint; otherwise, return empty tuple.
         return ()
+
+    # Generate the standard linear representation
     repn = generate_standard_repn(constraint.body)
     nonzero_coef_vars = tuple(v for i, v in enumerate(repn.linear_vars)
                          # if coefficient on variable is nonzero
