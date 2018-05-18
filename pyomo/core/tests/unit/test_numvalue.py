@@ -41,6 +41,92 @@ class MyBogusNumericType(MyBogusType):
     def __add__(self, other):
         return MyBogusNumericType(self.val + float(other))
 
+
+class Test_value(unittest.TestCase):
+
+    def test_none(self):
+        val = None
+        try:
+            value(val)
+            self.fail("Expected ValueError")
+        except ValueError:
+            pass
+
+    def test_bool(self):
+        val = False
+        self.assertEqual(val, value(val))
+        val = True
+        self.assertEqual(val, value(val))
+
+    def test_float(self):
+        val = 1.1
+        self.assertEqual(val, value(val))
+
+    def test_int(self):
+        val = 1
+        self.assertEqual(val, value(val))
+
+    def test_long(self):
+        val = long(1e10)
+        self.assertEqual(val, value(val))
+
+    def test_string(self):
+        val = 'foo'
+        try:
+            value(val)
+            self.fail("Expected ValueError")
+        except ValueError:
+            pass
+
+    def test_const1(self):
+        val = NumericConstant(1.0)
+        self.assertEqual(1.0, value(val))
+
+    def test_const2(self):
+        val = NumericConstant('foo')
+        try:
+            value(val)
+            self.fail("Expected ValueError")
+        except ValueError:
+            pass
+
+    def test_error1(self):
+        class A(object): pass
+        val = A()
+        try:
+            value(val)
+            self.fail("Expected TypeError")
+        except TypeError:
+            pass
+
+    def test_error2(self):
+        val = NumericConstant(None)
+        num = value(val)
+        try:
+            value(num)
+            self.fail("Expected ValueError")
+        except ValueError:
+            pass
+
+    def test_unknownType(self):
+        ref = MyBogusType(42)
+        try:
+            val = value(ref)
+            self.fail("Expected TypeError")
+        except TypeError:
+            pass
+
+    def test_unknownNumericType(self):
+        ref = MyBogusNumericType(42)
+        val = value(ref)
+        self.assertEqual(val().val, 42)
+        from pyomo.core.base.numvalue import native_numeric_types, native_types
+        self.assertIn(MyBogusNumericType, native_numeric_types)
+        self.assertIn(MyBogusNumericType, native_types)
+        native_numeric_types.remove(MyBogusNumericType)
+        native_types.remove(MyBogusNumericType)
+
+
 class Test_is_numeric_data(unittest.TestCase):
 
     def test_string(self):
