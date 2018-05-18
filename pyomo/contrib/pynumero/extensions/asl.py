@@ -11,7 +11,7 @@ import os
 #TODO: ask about freeing memory
 
 class AmplInterface(object):
-    def __init__(self, filename):
+    def __init__(self, filename=None, nl_buffer=None):
 
         #TODO: check for 32 or 64 bit and raise error if not supported
 
@@ -33,6 +33,12 @@ class AmplInterface(object):
         # constructor
         self.ASLib.EXTERNAL_AmplInterface_new.argtypes = [ctypes.c_char_p]
         self.ASLib.EXTERNAL_AmplInterface_new.restype = ctypes.c_void_p
+
+        self.ASLib.EXTERNAL_AmplInterface_new_file.argtypes = [ctypes.c_char_p]
+        self.ASLib.EXTERNAL_AmplInterface_new_file.restype = ctypes.c_void_p
+
+        self.ASLib.EXTERNAL_AmplInterface_new_str.argtypes = [ctypes.c_char_p]
+        self.ASLib.EXTERNAL_AmplInterface_new_str.restype = ctypes.c_void_p
 
         # number of variables
         self.ASLib.EXTERNAL_AmplInterface_n_vars.argtypes = [ctypes.c_void_p]
@@ -177,10 +183,17 @@ class AmplInterface(object):
         self.ASLib.EXTERNAL_AmplInterface_free_memory.argtypes = [ctypes.c_void_p]
         self.ASLib.EXTERNAL_AmplInterface_free_memory.restype = None
 
-        b_name = filename.encode('utf-8')
+        if filename is not None:
+            if nl_buffer is not None:
+                raise ValueError("Cannot specify both filename= and nl_buffer=")
 
-        # ToDo: add check pointer is not null in the c-code
-        self._obj = self.ASLib.EXTERNAL_AmplInterface_new(b_name)
+            b_data = filename.encode('utf-8')
+            # ToDo: add check pointer is not null in the c-code
+            self._obj = self.ASLib.EXTERNAL_AmplInterface_new_file(b_data)
+        elif nl_buffer is not None:
+            b_data = nl_buffer.encode('utf-8')
+            # ToDo: add check pointer is not null in the c-code
+            self._obj = self.ASLib.EXTERNAL_AmplInterface_new_str(b_data)
 
         assert self._obj, "Error building ASL interface. Possible error in nl-file"
 
