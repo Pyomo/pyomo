@@ -979,5 +979,96 @@ class VarList(IndexedVar):
         self._index.add(next_idx)
         return self[next_idx]
 
+#
+# The following classes support a specialization of VarList where each 
+# variable can be assigned a unique name
+#
+class _NamedGeneralVarData(_GeneralVarData):
+    """
+    This class defines the data for a single variable.
+
+    Constructor Arguments:
+        component   The Var object that owns this data.
+
+    Public Class Attributes:
+        domain      The domain of this variable.
+        bounds      A tuple (lower,upper) that defines the variable bounds.
+        fixed       If True, then this variable is treated as a
+                        fixed constant in the model.
+        lb          A lower bound for this variable.  The lower bound can be
+                        either numeric constants, parameter values, expressions
+                        or any object that can be called with no arguments.
+        ub          A upper bound for this variable.  The upper bound can be either
+                        numeric constants, parameter values, expressions or any
+                        object that can be called with no arguments.
+        stale       A Boolean indicating whether the value of this variable is
+                        legitimiate.  This value is true if the value should
+                        be considered legitimate for purposes of reporting or
+                        other interrogation.
+        value       The numeric value of this variable.
+        name        The name of this variable.
+
+    The domain, lb, and ub attributes are properties because they
+    are too widely accessed directly to enforce explicit getter/setter
+    methods and we need to deter directly modifying or accessing
+    these attributes in certain cases.
+    """
+
+    __slots__ = ('_name',)
+
+    def __init__(self, domain=Reals, component=None):
+        self._name = None
+        _GeneralVarData.__init__(self, domain, component)
+
+    def __getstate__(self):
+        state = super(_NamedGeneralVarData, self).__getstate__()
+        for i in _NamedGeneralVarData.__slots__:
+            state[i] = getattr(self, i)
+        return state
+
+    @property
+    def name(self):
+        """Get the fully qualifed component name."""
+        return self.getname(fully_qualified=True)
+
+    @name.setter
+    def name(self, val):
+        """Set the local name"""
+        self._name = val
+
+    def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
+        """
+        Returns the component name associated with this object.
+
+        Arguments:
+            fully_qualified     Generate full name from nested block names
+            name_buffer         Can be used to optimize iterative name
+                                    generation (using a dictionary)
+            relative_to         When generating a fully qualified name,
+                                    stop at this block.
+        """
+        if self._name is None:
+            return ComponentData.getname(self, fully_qualified=True)
+        if fully_qualified:
+            pb = self.parent_block()
+            if pb is not None and pb is not self.model() and (relative_to is None or relative_to is not pb):
+                ans = pb.getname(fully_qualified, name_buffer, relative_to) \
+                      + "." + self._name
+            else:
+                ans = self._name
+        else:
+            ans = self._name
+        if name_buffer is not None:
+            name_buffer[id(self)] = ans
+        return ans
+
+
+class NamedVarList(VarList):
+    """
+    Variable-length indexed variable objects that contain their own names.
+    """
+    _ComponentDataClass = _NamedGeneralVarData
+
+
 register_component(Var, "Decision variables.")
 register_component(VarList, "List of decision variables.")
