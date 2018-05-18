@@ -109,12 +109,15 @@ class _ParamData(ComponentData, NumericValue):
         Return the value of this object.
         """
         if self._value is _NotValid:
-            raise ValueError(
-                "Error evaluating Param value (%s):\n\tThe Param value is "
-                "currently set to an invalid value.  This is\n\ttypically "
-                "from a scalar Param or mutable Indexed Param without\n"
-                "\tan initial or default value."
-                % ( self.name, ))
+            if exception:
+                raise ValueError(
+                    "Error evaluating Param value (%s):\n\tThe Param value is "
+                    "currently set to an invalid value.  This is\n\ttypically "
+                    "from a scalar Param or mutable Indexed Param without\n"
+                    "\tan initial or default value."
+                    % ( self.name, ))
+            else:
+                return None
         return self._value
 
     @property
