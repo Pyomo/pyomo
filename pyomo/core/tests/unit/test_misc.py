@@ -173,8 +173,14 @@ class TestComponent(unittest.TestCase):
         m = ConcreteModel()
         m.b = Block()
         m.b.v = Var()
-        #self.assertEqual(m.b.v.getname(fully_qualified=True), 'b.v')
         self.assertEqual(m.b.v.getname(fully_qualified=True, relative_to=m.b), 'v')
+
+    def test_getname_error(self):
+        m = ConcreteModel()
+        m.b = Block()
+        m.b.v = Var()
+        m.c = Block()
+        self.assertRaises(RuntimeError, m.b.v.getname, fully_qualified=True, relative_to=m.c)
 
 if __name__ == "__main__":
     unittest.main()

@@ -455,6 +455,8 @@ class Component(_ComponentBase):
                 relative_to = self.model()
             if pb is not None and pb is not relative_to:
                 ans = pb.getname(fully_qualified, name_buffer, relative_to) + "." + self._name
+            elif pb is None and relative_to != self.model():
+                raise RuntimeError("The relative_to argument was specified but not found in the block hierarchy: %s" % str(relative_to))
             else:
                 ans = self._name
         else:
