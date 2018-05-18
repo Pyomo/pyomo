@@ -20,12 +20,16 @@ def collect_linear_terms(block, unfixed):
     # Variables are constraints of block
     # Constraints are unfixed variables of block and the parent model.
     #
+    #print("VNAMES")
     vnames = set()
-    for (name, data) in block.component_map(Constraint, active=True).items():
-        vnames.add((name, data.is_indexed()))
+    for obj in block.component_objects(Constraint, active=True):
+        #print(obj.getname(fully_qualified=True, relative_to=block))
+        vnames.add((obj.getname(fully_qualified=True, relative_to=block), obj.is_indexed()))
+    #print("CNAMES")
     cnames = set(unfixed)
-    for (name, data) in block.component_map(Var, active=True).items():
-        cnames.add((name, data.is_indexed()))
+    for obj in block.component_objects(Var, active=True):
+        #print(obj.getname(fully_qualified=True, relative_to=block))
+        cnames.add((obj.getname(fully_qualified=True, relative_to=block), obj.is_indexed()))
     #
     A = {}
     b_coef = {}
@@ -36,7 +40,7 @@ def collect_linear_terms(block, unfixed):
     #
     # Collect objective
     #
-    for (oname, odata) in block.component_map(Objective, active=True).items():
+    for odata in block.component_objects(Objective, active=True):
         for ndx in odata:
             if odata[ndx].sense == maximize:
                 o_terms = generate_standard_repn(-1*odata[ndx].expr, compute_values=False)
@@ -51,7 +55,8 @@ def collect_linear_terms(block, unfixed):
     #
     # Collect constraints
     #
-    for (name, data) in block.component_map(Constraint, active=True).items():
+    for data in block.component_objects(Constraint, active=True):
+        name = data.getname(relative_to=block)
         for ndx in data:
             con = data[ndx]
             body_terms = generate_standard_repn(con.body, compute_values=False)
@@ -64,10 +69,11 @@ def collect_linear_terms(block, unfixed):
                 raise(RuntimeError, "Error during dualization:  Constraint '%s' has an upper bound that is non-constant")
             #
             for var, coef in zip(body_terms.linear_vars, body_terms.linear_coefs):
-                varname = var.parent_component().local_name
+                varname = var.parent_component().getname(fully_qualified=True, relative_to=block)
                 varndx = var.index()
+                #print("ZZZ")
+                #print(varname)
                 A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=coef, var=name, ndx=ndx) )
-
             #
             if not con.equality:
                 #
@@ -109,21 +115,36 @@ def collect_linear_terms(block, unfixed):
     #
     # Collect bound constraints
     #
-    def all_vars(block):
+    def all_vars(b):
         """
         This conditionally chains together the active variables in the current block with
         the active variables in all of the parent blocks (if any exist).
         """
-        while not block is None:
-            for (name, data) in block.component_map(Var, active=True).items():
-                yield (name, data)
-            block = block.parent_block()
+        for obj in b.component_objects(Var, active=True, descend_into=True):
+            name = obj.parent_component().getname(fully_qualified=True, relative_to=b)
+            #print("FOO")
+            #print(name)
+            yield (name, obj)
+        #
+        # Look through parent blocks
+        #
+        b = b.parent_block()
+        while not b is None:
+            for obj in b.component_objects(Var, active=True, descend_into=False):
+                name = obj.parent_component().name
+                #print("BAR")
+                #print(name)
+                yield (name, obj)
+            b = b.parent_block()
 
-    for (name, data) in all_vars(block):
+    for name, data in all_vars(block):
         #
         # Skip fixed variables (in the parent)
         #
         if not (name, data.is_indexed()) in cnames:
+            #print("HERE")
+            #print((name, data.is_indexed()))
+            #print(data)
             continue
         #
         # Iterate over all variable indices
@@ -142,8 +163,9 @@ def collect_linear_terms(block, unfixed):
                     # Add constraint that defines the upper bound
                     #
                     name_ = name + "_upper_"
-                    varname = data.parent_component().local_name
+                    varname = data.parent_component().getname(fully_qualified=True, relative_to=block)
                     varndx = data[ndx].index()
+                    #print(('a0',varname))
                     A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
                     #
                     v_domain[name_,ndx] = -1
@@ -157,8 +179,9 @@ def collect_linear_terms(block, unfixed):
                     # Add constraint that defines the lower bound
                     #
                     name_ = name + "_lower_"
-                    varname = data.parent_component().local_name
+                    varname = data.parent_component().getname(fully_qualified=True, relative_to=block)
                     varndx = data[ndx].index()
+                    #print(('a1',varname))
                     A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
                     #
                     v_domain[name_,ndx] = 1
@@ -170,8 +193,9 @@ def collect_linear_terms(block, unfixed):
                 # Add constraint that defines the upper bound
                 #
                 name_ = name + "_upper_"
-                varname = data.parent_component().local_name
+                varname = data.parent_component().getname(fully_qualified=True, relative_to=block)
                 varndx = data[ndx].index()
+                #print(('a2',varname))
                 A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
                 #
                 v_domain[name_,ndx] = -1
@@ -180,8 +204,9 @@ def collect_linear_terms(block, unfixed):
                 # Add constraint that defines the lower bound
                 #
                 name_ = name + "_lower_"
-                varname = data.parent_component().local_name
+                varname = data.parent_component().getname(fully_qualified=True, relative_to=block)
                 varndx = data[ndx].index()
+                #print(('a3',varname))
                 A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
                 #
                 v_domain[name_,ndx] = 1
