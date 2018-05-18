@@ -101,9 +101,9 @@ class LinearDual_PyomoTransformation(Transformation):
             v = _vars.get((name,ndx), None)
             if v is None:
                 v = dual.v.add()
-                if name is None:
+                if ndx is None:
                     v.name = name
-                elif type(name) is tuple:
+                elif type(ndx) is tuple:
                     v.name = "%s[%s]" % (name, ','.join(map(str,ndx)))
                 else:
                     v.name = "%s[%s]" % (name, str(ndx))
@@ -133,9 +133,9 @@ class LinearDual_PyomoTransformation(Transformation):
                 else:
                     e = expr - c_rhs[cname,ndx] >= 0
                 c = dual.c.add(e)
-                if cname is None:
+                if ndx is None:
                     c.name = cname
-                elif type(cname) is tuple:
+                elif type(ndx) is tuple:
                     c.name = "%s[%s]" % (cname, ','.join(map(str,ndx)))
                 else:
                     c.name = "%s[%s]" % (cname, str(ndx))
