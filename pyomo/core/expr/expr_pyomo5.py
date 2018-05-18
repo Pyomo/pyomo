@@ -591,7 +591,7 @@ class ExpressionReplacementVisitor(object):
         """
         Call the expression create_node_with_local_data() method.
         """
-        return node.create_node_with_local_data( tuple(values), self.memo )
+        return node.create_node_with_local_data( tuple(values) )
 
     def dfs_postorder_stack(self, node):
         """
@@ -1465,7 +1465,7 @@ class ExpressionBase(NumericValue):
         """
         return clone_expression(self, memo=memo, clone_leaves=True)
 
-    def create_node_with_local_data(self, args, memo):
+    def create_node_with_local_data(self, args):
         """
         Construct a node using given arguments.
 
@@ -1741,7 +1741,7 @@ class ExternalFunctionExpression(ExpressionBase):
     def nargs(self):
         return len(self._args_)
 
-    def create_node_with_local_data(self, args, memo):
+    def create_node_with_local_data(self, args):
         return self.__class__(args, self._fcn)
 
     def __getstate__(self):
@@ -1968,7 +1968,7 @@ class RangedExpression(_LinearOperatorExpression):
     def nargs(self):
         return 3
 
-    def create_node_with_local_data(self, args, memo):
+    def create_node_with_local_data(self, args):
         return self.__class__(args, self._strict)
 
     def __getstate__(self):
@@ -2040,7 +2040,7 @@ class InequalityExpression(_LinearOperatorExpression):
     def nargs(self):
         return 2
 
-    def create_node_with_local_data(self, args, memo):
+    def create_node_with_local_data(self, args):
         return self.__class__(args, self._strict)
 
     def __getstate__(self):
@@ -2267,7 +2267,7 @@ class SumExpression(SumExpressionBase):
     def _apply_operation(self, result):
         return sum(result)
 
-    def create_node_with_local_data(self, args, memo):
+    def create_node_with_local_data(self, args):
         return self.__class__(list(args))
 
     def __getstate__(self):
@@ -2360,7 +2360,7 @@ class GetItemExpression(ExpressionBase):
     def nargs(self):
         return len(self._args_)
 
-    def create_node_with_local_data(self, args, memo):
+    def create_node_with_local_data(self, args):
         return self.__class__(args, self._base)
 
     def __getstate__(self):
@@ -2527,7 +2527,7 @@ class UnaryFunctionExpression(ExpressionBase):
     def nargs(self):
         return 1
 
-    def create_node_with_local_data(self, args, memo):
+    def create_node_with_local_data(self, args):
         return self.__class__(args, self._name, self._fcn)
 
     def __getstate__(self):
@@ -2578,7 +2578,7 @@ class AbsExpression(UnaryFunctionExpression):
     def __init__(self, arg):
         super(AbsExpression, self).__init__(arg, 'abs', abs)
 
-    def create_node_with_local_data(self, args, memo):
+    def create_node_with_local_data(self, args):
         return self.__class__(args)
 
 
@@ -2603,9 +2603,18 @@ class LinearExpression(ExpressionBase):
     PRECEDENCE = 6
 
     def __init__(self, args=None):
-        self.constant = 0
-        self.linear_coefs = []
-        self.linear_vars = []
+        # I am not sure why LinearExpression allows omitting args, but
+        # it does.  If they are provided, they should be the constant
+        # followed by the coefficients followed by the variables.
+        if args:
+            self.constant = args[0]
+            n = (len(args)-1) // 2
+            self.linear_coefs = args[1:n+1]
+            self.linear_vars = args[n+1:]
+        else:
+            self.constant = 0
+            self.linear_coefs = []
+            self.linear_vars = []
         self._args_ = tuple()
 
     def nargs(self):
@@ -2620,15 +2629,8 @@ class LinearExpression(ExpressionBase):
            state[i] = getattr(self,i)
         return state
 
-    def X__deepcopy__(self, memo):
-        return self.create_node_with_local_data(None, memo)
-
-    def create_node_with_local_data(self, args, memo):
-        repn = self.__class__()
-        repn.constant = deepcopy(self.constant, memo=memo)
-        repn.linear_coefs = deepcopy(self.linear_coefs, memo=memo)
-        repn.linear_vars = deepcopy(self.linear_vars, memo=memo)
-        return repn
+    def create_node_with_local_data(self, args):
+        return self.__class__(args)
 
     def getname(self, *args, **kwds):
         return 'sum'

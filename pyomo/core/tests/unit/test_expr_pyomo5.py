@@ -4271,7 +4271,7 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual( expr1(), 50 )
             self.assertEqual( expr2(), 50 )
             self.assertNotEqual( id(expr1),      id(expr2) )
-            self.assertNotEqual( id(expr1._args_),    id(expr2._args_) )
+            self.assertEqual( id(expr1._args_), id(expr2._args_) )
             self.assertEqual( id(expr1.arg(0)), id(expr2.arg(0)) )
             self.assertEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
 
@@ -4280,7 +4280,7 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual( expr2(), 50 )
             self.assertNotEqual( id(expr1),                 id(expr2) )
             self.assertNotEqual( id(expr1._args_),           id(expr2._args_) )
-            self.assertNotEqual( id(expr1.arg(0)._args_),     id(expr2._args_) )
+            self.assertEqual( id(expr1.arg(0)._args_), id(expr2._args_) )
             self.assertEqual( id(expr1.arg(1)),           id(expr2.arg(1)) )
             self.assertEqual( id(expr1.arg(0).arg(0)),  id(expr2.arg(0)) )
             self.assertEqual( id(expr1.arg(0).arg(1)),  id(expr2.arg(1)) )
