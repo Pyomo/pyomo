@@ -23,7 +23,7 @@ from pyomo.core.expr.current import Expr_if
 from pyomo.core.expr import expr_common, current as EXPR
 from pyomo.repn import *
 from pyomo.environ import *
-from pyomo.core.base.numvalue import native_numeric_types
+from pyomo.core.base.numvalue import native_numeric_types, as_numeric
 from pyomo.core.kernel import expression, variable
 
 from six import iteritems
@@ -3932,13 +3932,13 @@ class Test(unittest.TestCase):
         rep = generate_standard_repn(e, compute_values=True)
         self.assertEqual(str(rep.to_expression()), "0")
         rep = generate_standard_repn(e, compute_values=False)
-        self.assertEqual(str(rep.to_expression()), "Expr_if( ( 0.0 ), then=( 1 ), else=( 0 ) )")
+        self.assertEqual(str(rep.to_expression()), "Expr_if( ( False ), then=( 1 ), else=( 0 ) )")
 
         e = Expr_if(not m.p, 1, m.v)
         rep = generate_standard_repn(e, compute_values=True)
         self.assertEqual(str(rep.to_expression()), "0")
         rep = generate_standard_repn(e, compute_values=False)
-        self.assertEqual(str(rep.to_expression()), "Expr_if( ( 0.0 ), then=( 1 ), else=( v ) )")
+        self.assertEqual(str(rep.to_expression()), "Expr_if( ( False ), then=( 1 ), else=( v ) )")
 
         e = Expr_if(m.v, 1, 0)
         rep = generate_standard_repn(e, compute_values=True)
@@ -4023,7 +4023,7 @@ class Test(unittest.TestCase):
 
         e = m.v + m.w >= 2
         rep = generate_standard_repn(e, compute_values=True)
-        self.assertEqual(str(rep.to_expression()), "2.0  <=  v + w")
+        self.assertEqual(str(rep.to_expression()), "2  <=  v + w")
 
     def test_external_fn(self):
         def _g(*args):
