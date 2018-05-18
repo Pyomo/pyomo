@@ -398,7 +398,7 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.rhs, 3)
         self.assertEqual(c.equality, True)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.rhs = 'a'
 
         with self.assertRaises(ValueError):
@@ -417,18 +417,18 @@ class Test_constraint(unittest.TestCase):
         eU.expr = 1.0
         with self.assertRaises(ValueError):
             c.expr = (eL, e, eU)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.lb = eL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.ub = eU
 
         vL = variable()
         vU = variable()
         with self.assertRaises(ValueError):
             c.expr = (vL, e, vU)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.lb = vL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.ub = vU
 
         e.expr = 1.0
@@ -436,11 +436,11 @@ class Test_constraint(unittest.TestCase):
         vU.value = 1.0
         with self.assertRaises(ValueError):
             c.expr = (vL, e, vU)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.lb = vL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.ub = vU
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.rhs = vL
 
         # the fixed status of a variable
@@ -449,11 +449,11 @@ class Test_constraint(unittest.TestCase):
         vU.fixed = True
         with self.assertRaises(ValueError):
             c.expr = (vL, e, vU)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.lb = vL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.ub = vU
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.rhs = vL
 
         vL.value = 1.0
@@ -467,9 +467,9 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.lslack, -3.0)
         self.assertEqual(c.uslack, 3.0)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.lb = 'a'
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.ub = 'a'
         self.assertEqual(c.lb, 1.0)
         self.assertEqual(c.ub, 1.0)
@@ -1136,9 +1136,9 @@ class Test_constraint(unittest.TestCase):
         c = constraint()
         v = variable()
         c.expr = (v == 1)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.expr = (v, 'x')
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.expr = ('x', v)
 
     def test_slack_methods(self):
@@ -1820,40 +1820,40 @@ class Test_linear_constraint(unittest.TestCase):
 
         eL = expression()
         eU = expression()
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.rhs = eL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.lb = eL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.ub = eU
 
         vL = variable()
         vU = variable()
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.rhs = vL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.lb = vL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.ub = vU
 
         vL.value = 1.0
         vU.value = 1.0
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.rhs = vL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.lb = vL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.ub = vU
 
         # the fixed status of a variable
         # does not change this restriction
         vL.fixed = True
         vU.fixed = True
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.rhs = vL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.lb = vL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.ub = vU
 
         vL.value = -1
