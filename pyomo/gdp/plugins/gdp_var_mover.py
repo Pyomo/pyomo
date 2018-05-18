@@ -62,12 +62,17 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, instance, **kwds):
-        assert not kwds
+        assert not kwds  # no keywords expected to the transformation
         disjunct_generator = instance.component_objects(
             Disjunct, descend_into=(Block, Disjunct))
         for disjunct_component in disjunct_generator:
+
+            # Check that the disjuncts being reclassified are all relaxed or are
+            # not on an active block.
             for disjunct in itervalues(disjunct_component._data):
-                if disjunct.active and self._disjunct_on_active_block(disjunct):
+                if (disjunct.active and
+                        self._disjunct_not_relaxed(disjunct) and
+                        self._disjunct_on_active_block(disjunct)):
                     logger.error("""
                     Reclassifying active Disjunct "%s" as a Block.  This
                     is generally an error as it indicates that the model
@@ -92,6 +97,17 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
                     Constraint, descend_into=Block, active=True)
                 for con in cons_in_disjunct:
                     con.deactivate()
+
+    def _disjunct_not_relaxed(self, disjunct):
+        # Return True if the disjunct was not relaxed by a transformation.
+        try:
+            if disjunct._gdp_transformation_info['relaxed']:
+                return False  # disjunct was relaxed
+        except AttributeError:
+            pass  # disjunct does not have _gdp_transformation_info dictionary
+
+        # Disjunct is not properly labeled as relaxed. Return True.
+        return True
 
     def _disjunct_on_active_block(self, disjunct):
         # Check first to make sure that the disjunct is not a
