@@ -501,7 +501,10 @@ class ExpressionReplacementVisitor(object):
         class because all key methods are reimplemented.
     """
 
-    def __init__(self, memo=None):
+    def __init__(self,
+                 substitute=None,
+                 descend_into_named_expressions=True,
+                 remove_named_expressions=False):
         """
         Contruct a visitor that is tailored to support the
         replacement of sub-trees in a pyomo expression tree.
@@ -513,10 +516,12 @@ class ExpressionReplacementVisitor(object):
                 to None, which indicates that no user-defined
                 dictionary is used.
         """
-        if memo is None:
-            self.memo = {'__block_scope__': { id(None): False }}
+        self.enter_named_expr = descend_into_named_expressions
+        self.rm_named_expr = remove_named_expressions
+        if substitute is None:
+            self.substitute = {}
         else:
-            self.memo = memo        #pragma: no cover
+            self.substitute = substitute
 
     def visit(self, node, values):
         """
@@ -553,7 +558,15 @@ class ExpressionReplacementVisitor(object):
             then the node is not a leaf and ``value`` is :const:`None`.
             Otherwise, ``value`` is a cloned node.
         """
-        raise RuntimeError("The visiting_potential_leaf method needs to be defined.")
+        _id = id(node)
+        if _id in self.substitute:
+            return True, self.substitute[_id]
+        elif type(node) in nonpyomo_leaf_types or not node.is_expression_type():
+            return True, node
+        elif not self.enter_named_expr and node.is_named_expression_type():
+            return True, node
+        else:
+            return False, None
 
     def finalize(self, ans):
         """
@@ -612,7 +625,6 @@ class ExpressionReplacementVisitor(object):
             flag, value = self.visiting_potential_leaf(node)
             if flag:
                 return value
-            #_stack = [ (node, self.children(node), 0, len(self.children(node)), [])]
             _stack = [ (node, node._args_, 0, node.nargs(), [False])]
         #
         # Iterate until the stack is empty
@@ -635,32 +647,26 @@ class ExpressionReplacementVisitor(object):
             while _idx < _len:
                 _sub = _argList[_idx]
                 _idx += 1
-                if _sub.__class__ is LinearExpression:
+                flag, value = self.visiting_potential_leaf(_sub)
+                if flag:
+                    if id(value) != id(_sub):
+                        _result[0] = True
+                    _result.append( value )
+                else:
                     #
                     # Push an expression onto the stack
                     #
                     _stack.append( (_obj, _argList, _idx, _len, _result) )
                     _obj = _sub
-                    _argList = [_sub.constant] + _sub.linear_coefs + _sub.linear_vars
                     _idx = 0
-                    _len = len(_argList)
                     _result = [False]
-                else:
-                    flag, value = self.visiting_potential_leaf(_sub)
-                    if flag:
-                        if id(value) != id(_sub):
-                            _result[0] = True
-                        _result.append( value )
+                    if _sub.__class__ is LinearExpression:
+                        _argList = [_sub.constant] + _sub.linear_coefs \
+                                   + _sub.linear_vars
+                        _len = len(_argList)
                     else:
-                        #
-                        # Push an expression onto the stack
-                        #
-                        _stack.append( (_obj, _argList, _idx, _len, _result) )
-                        _obj = _sub
                         _argList = _sub._args_
-                        _idx = 0
                         _len = _sub.nargs()
-                        _result = [False]
             #
             # Finalize (exit) the current node
             #
@@ -671,15 +677,19 @@ class ExpressionReplacementVisitor(object):
             #
             ans = self.visit(_obj, _result[1:])
             if ans.is_named_expression_type():
-                _result[0] = False
-                assert(len(_result) == 2)
-                ans.expr = _result[1]
-            elif ans.__class__ is LinearExpression and _result[0]:
-                ans = _result[1]
-                nterms = (len(_result)-2)//2
-                for i in range(nterms):
-                    ans += _result[2+i]*_result[2+i+nterms]
+                if self.rm_named_expr:
+                    ans = _result[1]
+                    _result[0] = True
+                else:
+                    _result[0] = False
+                    assert(len(_result) == 2)
+                    ans.expr = _result[1]
             elif _result[0]:
+                if ans.__class__ is LinearExpression:
+                    ans = _result[1]
+                    nterms = (len(_result)-2)//2
+                    for i in range(nterms):
+                        ans += _result[2+i]*_result[2+i+nterms]
                 if id(ans) == id(_obj):
                     ans = self.construct_node(_obj, _result[1:])
                 if ans.__class__ is MonomialTermExpression:
@@ -693,6 +703,7 @@ class ExpressionReplacementVisitor(object):
                     # For simplicity, not-potentially-variable expressions are
                     # replaced with their potentially variable counterparts.
                     ans = ans.create_potentially_variable_object()
+
             if _stack:
                 if _result[0]:
                     _stack[-1][-1][0] = True
