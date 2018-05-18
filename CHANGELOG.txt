@@ -13,6 +13,8 @@ Current Development
 - Resolved problems with ExternalFunctions with fixed arguments (#442)
 - Adding the Pyomo5 expression system, which supports PyPy (#272)
 - Bug fix processing exp() expressions in Pyomo5 (#471)
+- Transformations map create_using arguments through the model clone (#497)
+- unique_component_name now checks all attributes (not just components) (#497)
 
 -------------------------------------------------------------------------------
 Pyomo 5.5
