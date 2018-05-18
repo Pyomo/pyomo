@@ -34,7 +34,7 @@ def _get_equality_linked_variables(constraint):
         # Expect two variables with nonzero cofficient in constraint; otherwise,
         # return empty tuple.
         return ()
-    if sorted(coef for coef in rpn.linear_coefs if coef != 0) != [-1, 1]:
+    if sorted(coef for coef in repn.linear_coefs if coef != 0) != [-1, 1]:
         # Expect a constraint of form x == y --> 0 == -1 * x + 1 * y; otherwise,
         # return empty tuple.
         return ()
@@ -55,7 +55,7 @@ def _build_equality_set(model):
     eq_var_map = ComponentMap()
 
     # Loop through all the active constraints in the model
-    for constraint in m.component_data_objects(
+    for constraint in model.component_data_objects(
             ctype=Constraint, active=True, descend_into=True):
         eq_linked_vars = _get_equality_linked_variables(constraint)
         if not eq_linked_vars:
