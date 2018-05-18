@@ -451,9 +451,10 @@ class Component(_ComponentBase):
         """
         if fully_qualified:
             pb = self.parent_block()
-            if pb is not None and pb is not self.model() and (relative_to is None or relative_to is not pb):
-                ans = pb.getname(fully_qualified, name_buffer, relative_to) \
-                      + "." + self._name
+            if relative_to is None:
+                relative_to = self.model()
+            if pb is not None and pb is not relative_to:
+                ans = pb.getname(fully_qualified, name_buffer, relative_to) + "." + self._name
             else:
                 ans = self._name
         else:
