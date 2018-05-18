@@ -181,22 +181,39 @@ def value(obj, exception=True):
     if obj.__class__ in native_types:
         return obj
     if obj.__class__ is NumericConstant:
-        if obj.value is None:
+        if exception and obj.value is None:
             raise ValueError("No value for uninitialized NumericConstant object %s" % (obj.name,))
         return obj.value
+    #
+    # Test if we have a duck types for Pyomo expressions
+    #
     try:
-        tmp = obj(exception=exception)
-    except:
-        if exception:
+        obj.is_expression_type()
+    except AttributeError:
+        #
+        # If not, then try to coerce this into a numeric constant
+        #
+        try:
+            tmp = as_numeric(obj)
+            return obj
+        except:
+            raise TypeError("Cannot evaluate object with unknown type: %s" % str(obj.__class__))
+    #
+    # Evaluate the expression object
+    #
+    if exception:
+        try:
+            tmp = obj(exception=True)
+            if tmp is None:
+                raise ValueError("No value for uninitialized NumericValue object %s" % (obj.name,))
+        except:
             logger.error(
                 "evaluating object as numeric value: %s\n    (object: %s)\n%s"
                 % (obj, type(obj), sys.exc_info()[1]))
             raise
-        else:
-            return None
+    else:
+        tmp = obj(exception=False)
 
-    if exception and (tmp is None):
-        raise ValueError("No value for uninitialized NumericValue object %s" % (obj.name,))
     return tmp
 
 
