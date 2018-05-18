@@ -16,6 +16,7 @@ from math import fabs
 from six import itervalues
 
 from pyomo.core.base import Transformation
+from pyomo.core.base.component import _ComponentBase
 from pyomo.core.base.block import Block, _BlockData
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.numvalue import value
@@ -81,9 +82,9 @@ class GDP_Disjunct_Fixer(Transformation):
 
         """
         config = self.CONFIG(kwds.pop('options', {}))
+        config.set_value(kwds)
 
-        targets = config.targets
-        t = targets if targets is not None else (instance,)
+        targets = config.targets if config.targets is not None else (instance,)
         for t in targets:
             if not t.active:
                 return  # do nothing for inactive containers
