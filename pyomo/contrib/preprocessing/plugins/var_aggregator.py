@@ -39,6 +39,41 @@ def _get_equality_linked_variables(constraint):
     return nonzero_coef_vars
 
 
+def _build_equality_set(model):
+    """Construct an equality set map.
+
+    Maps all variables to the set of variables that are linked to them by
+    equality. Mapping takes place using id(). That is, if you have x = y, then
+    you would have id(x) -> ComponentSet([x, y]) and id(y) -> ComponentSet([x,
+    y]) in the mapping.
+
+    """
+    # Map of variables to their equality set (ComponentSet)
+    eq_var_map = ComponentMap()
+
+    # Loop through all the active constraints in the model
+    for constraint in m.component_data_objects(
+            ctype=Constraint, active=True, descend_into=True):
+        eq_linked_vars = _get_equality_linked_variables(constraint)
+        if not eq_linked_vars:
+            continue  # if we get an empty tuple, skip to next constraint.
+        v1, v2 = eq_linked_vars
+        set1 = eq_var_map.get(v1, ComponentSet((v1, v2)))
+        set2 = eq_var_map.get(v2, (v2,))
+
+        # if set1 and set2 are equivalent, skip to next constraint.
+        if set1 is set2:
+            continue
+
+        # add all elements of set2 to set 1
+        set1.update(set2)
+        # Update all elements of set 2 to point to set 1
+        for v in set2:
+            eq_var_map[v] = set1
+
+    return eq_var_map
+
+
 class VariableAggregator(IsomorphicTransformation):
     """Aggregate model variables that are linked by equality constraints."""
 
