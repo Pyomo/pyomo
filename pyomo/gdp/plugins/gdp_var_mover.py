@@ -102,14 +102,8 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
 
     def _disjunct_not_relaxed(self, disjunct):
         # Return True if the disjunct was not relaxed by a transformation.
-        try:
-            if disjunct._gdp_transformation_info['relaxed']:
-                return False  # disjunct was relaxed
-        except AttributeError:
-            pass  # disjunct does not have _gdp_transformation_info dictionary
-
-        # Disjunct is not properly labeled as relaxed. Return True.
-        return True
+        return not getattr(
+            disjunct, '_gdp_transformation_info', {}).get('relaxed', False)
 
     def _disjunct_on_active_block(self, disjunct):
         # Check first to make sure that the disjunct is not a
