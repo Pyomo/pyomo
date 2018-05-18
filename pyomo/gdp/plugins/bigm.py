@@ -362,7 +362,7 @@ class BigM_Transformation(Transformation):
                 else:
                     raise GDP_Error(
                         "The disjunct %s is deactivated, but the "
-                        "indicator_var is fixed to %. This makes no sense."
+                        "indicator_var is fixed to %s. This makes no sense."
                         % ( obj.name, value(obj.indicator_var) ))
             if not infodict.get('relaxed', False):
                 raise GDP_Error(
