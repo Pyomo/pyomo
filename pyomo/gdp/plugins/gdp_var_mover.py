@@ -122,5 +122,7 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
                   and parent_block.indicator_var.fixed):
                 return False
             else:
+                # Step up one level in the hierarchy
+                parent_block = parent_block.parent_block()
                 continue
         return True
