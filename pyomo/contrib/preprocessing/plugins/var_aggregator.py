@@ -9,6 +9,7 @@ from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
 from pyomo.util.plugin import alias
+from pyomo.core.base import Any
 
 
 def _get_equality_linked_variables(constraint):
@@ -85,6 +86,17 @@ class VariableAggregator(IsomorphicTransformation):
     def _apply_to(self, model):
         """Apply the transformation to the given model."""
         # Generate the equality sets
+
+        # Generate aggregation infrastructure
+        # model._var_aggregator_info = Block(
+        #     doc="Holds information for the variable aggregation "
+        #     "transformation system.")
+        # z = model._var_aggregator_info.z = Var(Any, doc="Aggregated variables.")
+        # # Map of the aggregate var to the equalty set (ComponentSet)
+        # z_to_vars = model._var_aggregator_info.z_to_vars = ComponentMap()
+        # # Map of variables to their corresponding aggregate var
+        # var_to_z = model._var_aggregator_info.var_to_z = ComponentMap()
+
         # Do the substitution
         # profit
         pass
