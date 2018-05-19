@@ -128,7 +128,7 @@ class ICategorizedObject(object):
     def getname(self,
                 fully_qualified=False,
                 name_buffer={}, # HACK: ignored (required to work with some solver interfaces, but that code should change soon)
-                convert=str):
+                convert=str, relative_to=None):
         """
         Dynamically generates a name for this object.
 
@@ -140,6 +140,9 @@ class ICategorizedObject(object):
                 storage key into a string
                 representation. Default is the built-in
                 function str.
+            relative_to (object): When generating a fully
+                qualified name, generate the name relative
+                to this block.
 
         Returns:
             If a parent exists, this method returns a string
@@ -161,7 +164,7 @@ class ICategorizedObject(object):
         name = parent._child_storage_entry_string % convert(key)
         if fully_qualified:
             parent_name = parent.getname(fully_qualified=True)
-            if parent_name is not None:
+            if parent_name is not None and (relative_to is None or parent is not relative_to):
                 return (parent_name +
                         parent._child_storage_delimiter_string +
                         name)
