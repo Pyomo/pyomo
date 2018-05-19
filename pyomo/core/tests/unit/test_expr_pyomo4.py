@@ -22,28 +22,29 @@ import pyutilib.th as unittest
 from pyutilib.th import nottest
 
 from pyomo.environ import *
-from pyomo.core.base import expr_common, expr as EXPR
+import pyomo.core.expr.current as EXPR
 from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.numvalue import potentially_variable, native_types
 
-from pyomo.core.base.expr_pyomo4 import (
-    EntangledExpressionError, _getrefcount_available, UNREFERENCED_EXPR_COUNT
-)
+if EXPR.mode is EXPR.Mode.pyomo4_trees:
+    TestCase = unittest.TestCase
+    from pyomo.core.base.expr_pyomo4 import (
+        EntangledExpressionError, _getrefcount_available, UNREFERENCED_EXPR_COUNT
+        )
+else:
+    TestCase = object
+    _getrefcount_available=False
 
 
-class TestExpression_EvaluateNumericConstant(unittest.TestCase):
+
+@unittest.skipIf(EXPR.mode != EXPR.Mode.pyomo4_trees, "Only test for Pyomo4 expressions")
+class TestExpression_EvaluateNumericConstant(TestCase):
 
     def setUp(self):
-        # Set the type of expression trees used in Pyomo to be Pyomo4 
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
         # Do we expect arithmetic operations to return expressions?
         self.expectExpression = False
         # Do we expect relational tests to return constant expressions?
         self.expectConstExpression = True
-
-    def tearDown(self):
-        # Reset the type of expression trees used in Pyomo
-        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def create(self, val, domain):
         # Create the type of expression term that we are testing
@@ -298,15 +299,8 @@ class TestExpression_EvaluateMutableParam(TestExpression_EvaluateNumericConstant
         tmp.construct()
         return tmp
 
-
-class TestNumericValue(unittest.TestCase):
-
-    def setUp(self):
-        # This class tests the Pyomo 4.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
-
-    def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
+@unittest.skipIf(EXPR.mode != EXPR.Mode.pyomo4_trees, "Only test for Pyomo4 expressions")
+class TestNumericValue(TestCase):
 
     def test_asnum(self):
         try:
@@ -359,14 +353,8 @@ class TestNumericValue(unittest.TestCase):
         self.assertEqual(str(c), "-2.2")
 
 
-class TestGenerate_SumExpression(unittest.TestCase):
-
-    def setUp(self):
-        # This class tests the Pyomo 4.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
-
-    def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
+@unittest.skipIf(EXPR.mode != EXPR.Mode.pyomo4_trees, "Only test for Pyomo4 expressions")
+class TestGenerate_SumExpression(TestCase):
 
     def test_simpleSum(self):
         # a + b
@@ -931,14 +919,8 @@ class TestGenerate_SumExpression(unittest.TestCase):
             self.assertIs(e._args[1]._args[0], e1)
 
 
-class TestGenerate_ProductExpression(unittest.TestCase):
-
-    def setUp(self):
-        # This class tests the Pyomo 4.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
-
-    def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
+@unittest.skipIf(EXPR.mode != EXPR.Mode.pyomo4_trees, "Only test for Pyomo4 expressions")
+class TestGenerate_ProductExpression(TestCase):
 
     def test_simpleProduct(self):
         #
@@ -1264,12 +1246,10 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertEqual(e, 1.5)
 
 
-class TestGenerate_RelationalExpression(unittest.TestCase):
+@unittest.skipIf(EXPR.mode != EXPR.Mode.pyomo4_trees, "Only test for Pyomo4 expressions")
+class TestGenerate_RelationalExpression(TestCase):
 
     def setUp(self):
-        # This class tests the Pyomo 4.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
-
         m = AbstractModel()
         m.I = Set()
         m.a = Var()
@@ -1279,7 +1259,6 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.m = m
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
         self.m = None
 
     def test_simpleEquality(self):
@@ -1746,18 +1725,17 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
             pass
 
 
-class TestPrettyPrinter_oldStyle(unittest.TestCase):
+@unittest.skipIf(EXPR.mode != EXPR.Mode.pyomo4_trees, "Only test for Pyomo4 expressions")
+class TestPrettyPrinter_oldStyle(TestCase):
 
     _save = None
 
     def setUp(self):
         # This class tests the Pyomo 4.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
         TestPrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = True
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = TestPrettyPrinter_oldStyle._save
 
     def test_sum(self):
@@ -1879,18 +1857,17 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
             str(expr) )
 
 
-class TestPrettyPrinter_newStyle(unittest.TestCase):
+@unittest.skipIf(EXPR.mode != EXPR.Mode.pyomo4_trees, "Only test for Pyomo4 expressions")
+class TestPrettyPrinter_newStyle(TestCase):
 
     _save = None
 
     def setUp(self):
         # This class tests the Pyomo 4.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
         TestPrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = False
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = TestPrettyPrinter_oldStyle._save
 
     def test_sum(self):
@@ -2154,19 +2131,16 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
 #
 # Check cloning with in-place expressions
 #
-class TestInplaceExpressionGeneration(unittest.TestCase):
+@unittest.skipIf(EXPR.mode != EXPR.Mode.pyomo4_trees, "Only test for Pyomo4 expressions")
+class TestInplaceExpressionGeneration(TestCase):
 
     def setUp(self):
-        # This class tests the Pyomo 4.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
-
         m = AbstractModel()
         m.a = Var()
         m.b = Var()
         self.m = m
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
         self.m = None
 
     def test_iadd(self):
@@ -2315,14 +2289,8 @@ class TestInplaceExpressionGeneration(unittest.TestCase):
             # then we can plow ahead.
 
 
-class TestGeneralExpressionGeneration(unittest.TestCase):
-
-    def setUp(self):
-        # This class tests the Pyomo 4.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
-
-    def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
+@unittest.skipIf(EXPR.mode != EXPR.Mode.pyomo4_trees, "Only test for Pyomo4 expressions")
+class TestGeneralExpressionGeneration(TestCase):
 
     def test_invalidIndexing(self):
         #
@@ -2416,14 +2384,10 @@ class TestGeneralExpressionGeneration(unittest.TestCase):
         self.assertIs(type(e._args[0]), EXPR._IntrinsicFunctionExpression)
 
 
-class TestExprConditionalContext(unittest.TestCase):
-
-    def setUp(self):
-        # This class tests the Pyomo 4.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
+@unittest.skipIf(EXPR.mode != EXPR.Mode.pyomo4_trees, "Only test for Pyomo4 expressions")
+class TestExprConditionalContext(TestCase):
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
         # Make sure errors here don't bleed over to other tests
         EXPR.generate_relational_expression.chainedInequality = None
 
@@ -2837,11 +2801,11 @@ class TestExprConditionalContext(unittest.TestCase):
         self.checkCondition(value(2 == instance.v), False)
 
 
-class TestPolynomialDegree(unittest.TestCase):
+@unittest.skipIf(EXPR.mode != EXPR.Mode.pyomo4_trees, "Only test for Pyomo4 expressions")
+class TestPolynomialDegree(TestCase):
 
     def setUp(self):
         # This class tests the Pyomo 4.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
         def d_fn(model):
             return model.c+model.c
         self.model = AbstractModel()
@@ -2852,7 +2816,6 @@ class TestPolynomialDegree(unittest.TestCase):
         self.instance = self.model.create_instance()
 
     def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
         self.model = None
         self.instance = None
 
@@ -3115,7 +3078,7 @@ class TestPolynomialDegree(unittest.TestCase):
 @unittest.skipIf(
     _getrefcount_available,
     "Entangled Errors not generated when sys.getrefcount() is available" )
-class EntangledExpressionErrors(unittest.TestCase):
+class EntangledExpressionErrors(TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -3159,7 +3122,7 @@ def TrapRefCount_fcn(target, inplace, *objs):
         _inplace += 1
         if obj.__class__ in native_types:
             continue
-        if not obj.is_expression():
+        if not obj.is_expression_type():
             continue
         TrapRefCount.inst.fcn(sys.getrefcount(obj),target,_inplace,obj)
     return TrapRefCount.inst.saved_fcn(target, inplace, *objs)
@@ -3168,7 +3131,7 @@ def TrapRefCount_fcn(target, inplace, *objs):
 @unittest.skipIf(
     not _getrefcount_available, "clone_if_needed is not "
     "supported on platforms that do not implement sys.getrefcount")
-class TestCloneIfNeeded(unittest.TestCase):
+class TestCloneIfNeeded(TestCase):
 
     def setUp(self):
         # This class tests the Pyomo 4.x expression trees
@@ -3439,7 +3402,7 @@ class TestCloneIfNeeded(unittest.TestCase):
                           count + 1)
 
 
-class TestCloneExpression(unittest.TestCase):
+class TestCloneExpression(TestCase):
 
     def setUp(self):
         # This class tests the Pyomo 4.x expression trees
@@ -3673,7 +3636,7 @@ class TestCloneExpression(unittest.TestCase):
 # Constant            - Expr only contains constants and immutable parameters
 # PotentiallyVariable - Expr contains one or more variables
 #
-class TestIsFixedIsConstant(unittest.TestCase):
+class TestIsFixedIsConstant(TestCase):
 
     def setUp(self):
         # This class tests the Pyomo 4.x expression trees
@@ -4139,7 +4102,7 @@ class TestIsFixedIsConstant(unittest.TestCase):
         self.assertEqual(potentially_variable(None), False)
 
 
-class TestExpressionUtilities(unittest.TestCase):
+class TestExpressionUtilities(TestCase):
 
     def setUp(self):
         # This class tests the Pyomo 4.x expression trees
@@ -4213,7 +4176,7 @@ class TestExpressionUtilities(unittest.TestCase):
                           [ m.a, m.a, m.a,  ] )
 
 
-class TestMultiArgumentExpressions(unittest.TestCase):
+class TestMultiArgumentExpressions(TestCase):
 
     def setUp(self):
         # This class tests the Pyomo 4 expression trees

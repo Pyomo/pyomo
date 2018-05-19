@@ -25,7 +25,7 @@ model.Demand = Param(model.Nodes)
 model.Supply = Param(model.Nodes)
 
 def Obj_rule(model):
-    return summation(model.FlowCost, model.Flow)
+    return sum_product(model.FlowCost, model.Flow)
 model.Obj = Objective(rule=Obj_rule, sense=minimize)
 
 def FlowBalance_rule(model, node):

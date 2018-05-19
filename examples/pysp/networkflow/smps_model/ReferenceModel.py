@@ -121,12 +121,12 @@ model.NoArcCapacityUnlessBoughtConstraint = Constraint(model.Arcs, rule=no_arc_c
 #
 
 def compute_first_stage_cost_rule(model):
-    return (model.FirstStageCost - summation(model.CapCost, model.x) - summation(model.b0Cost, model.b0)) == 0.0
+    return (model.FirstStageCost - sum_product(model.CapCost, model.x) - sum_product(model.b0Cost, model.b0)) == 0.0
 model.ComputeFirstStageCost = Constraint(rule=compute_first_stage_cost_rule)
 
 # this is a Var and constraint to help DDSIP (dlw, Aug 2016)
 def compute_second_stage_cost_rule(model):
-    return (model.SecondStageCost - summation(model.FCost, model.b)) == 0.0
+    return (model.SecondStageCost - sum_product(model.FCost, model.b)) == 0.0
 model.ComputeSecondStageCost = Constraint(rule=compute_second_stage_cost_rule)
 
 #

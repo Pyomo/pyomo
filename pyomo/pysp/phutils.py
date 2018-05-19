@@ -13,31 +13,30 @@ import sys
 from pyomo.core import *
 from pyomo.opt import ProblemFormat
 
-# these are the only two preprocessors currently invoked by the
-# simple_preprocessor, which in turn is invoked by the preprocess()
-# method of PyomoModel.
-from pyomo.repn.compute_canonical_repn import preprocess_block_objectives \
-    as canonical_preprocess_block_objectives
-from pyomo.repn.compute_canonical_repn import preprocess_block_constraints \
-    as canonical_preprocess_block_constraints
-from pyomo.repn.compute_canonical_repn import preprocess_constraint \
-    as canonical_preprocess_constraint
-from pyomo.repn.compute_ampl_repn import preprocess_block_objectives \
-    as ampl_preprocess_block_objectives
-from pyomo.repn.compute_ampl_repn import preprocess_block_constraints \
-    as ampl_preprocess_block_constraints
-from pyomo.repn.compute_ampl_repn import preprocess_constraint \
-    as ampl_preprocess_constraint
+from pyomo.repn.standard_repn import (preprocess_block_objectives,
+                                      preprocess_block_constraints,
+                                      preprocess_constraint)
 from pyomo.opt import (UndefinedData,
                        undefined)
 
 from six import iteritems, itervalues, string_types
 from six.moves import xrange
 
-canonical_expression_preprocessor = \
-    pyomo.util.PyomoAPIFactory("pyomo.repn.compute_canonical_repn")
-ampl_expression_preprocessor = \
-    pyomo.util.PyomoAPIFactory("pyomo.repn.compute_ampl_repn")
+def _preprocess(model, objective=True, constraints=True):
+    objective_found = False
+    if objective:
+        for block in model.block_data_objects(active=True):
+            for obj in block.component_data_objects(Objective,
+                                                    active=True,
+                                                    descend_into=False):
+                objective_found = True
+                preprocess_block_objectives(block)
+                break
+            if objective_found:
+                break
+    if constraints:
+        for block in model.block_data_objects(active=True):
+            preprocess_block_constraints(block)
 
 _OLD_OUTPUT = True
 
@@ -248,7 +247,7 @@ def reset_stage_cost_variables(scenario_tree, scenario_instances):
     for stage in scenario_tree._stages:
         for tree_node in stage._tree_nodes:
             for cost_var_data, scenario_probability in tree_node._cost_variable_datas:
-                if cost_var_data.is_expression() is False:
+                if cost_var_data.is_expression_type() is False:
                     cost_var_data.value = None
                     cost_var_data.stale = True
 
@@ -745,11 +744,9 @@ def preprocess_scenario_instance(scenario_instance,
 
     if instance_objective_modified:
         # if only the objective changed, there is minimal work to do.
-
-        if solver.problem_format() == ProblemFormat.nl:
-            ampl_preprocess_block_objectives(scenario_instance)
-        else:
-            canonical_preprocess_block_objectives(scenario_instance)
+        _preprocess(scenario_instance,
+                    objective=True,
+                    constraints=False)
 
         if persistent_solver_in_use:
             active_objective_datas = []
@@ -765,10 +762,7 @@ def preprocess_scenario_instance(scenario_instance,
     if (instance_variables_fixed or instance_variables_freed) and \
        (preprocess_fixed_variables):
 
-        if solver.problem_format() == ProblemFormat.nl:
-            ampl_expression_preprocessor({}, model=scenario_instance)
-        else:
-            canonical_expression_preprocessor({}, model=scenario_instance)
+        _preprocess(scenario_instance)
 
         # We've preprocessed the entire instance, no point in checking
         # anything else
@@ -787,37 +781,23 @@ def preprocess_scenario_instance(scenario_instance,
                 solver.update_var(scenario_instance.find_component(var_name)[var_index])
 
     if instance_user_constraints_modified:
-        if solver.problem_format() == ProblemFormat.nl:
-            idMap = {}
-            for block in scenario_instance.block_data_objects(active=True,
-                                                              descend_into=True):
-                ampl_preprocess_block_constraints(block,
-                                                  idMap=idMap)
-        else:
-            idMap = {}
-            for block in scenario_instance.block_data_objects(active=True,
-                                                              descend_into=True):
-                canonical_preprocess_block_constraints(block,
-                                                       idMap=idMap)
+
+        _preprocess(scenario_instance,
+                    objective=False,
+                    constraints=True)
+
     # TBD: Should this be an an if below - both user and ph constraints
     #      could be modified at the same time, no?
     elif instance_ph_constraints_modified:
 
         # only pre-process the piecewise constraints
-        if solver.problem_format() == ProblemFormat.nl:
-            idMap = {}
-            for constraint_name in instance_ph_constraints:
-                ampl_preprocess_constraint(
-                    scenario_instance,
-                    getattr(scenario_instance, constraint_name),
-                    idMap=idMap)
-        else:
-            idMap = {}
-            for constraint_name in instance_ph_constraints:
-                canonical_preprocess_constraint(
-                    scenario_instance,
-                    getattr(scenario_instance, constraint_name),
-                    idMap=idMap)
+        idMap = {}
+        for constraint_name in instance_ph_constraints:
+            preprocess_constraint(
+                scenario_instance,
+                getattr(scenario_instance, constraint_name),
+                idMap=idMap)
+
 
 # TBD: doesn't do much now... - SHOULD PROPAGATE FLAGS FROM _preprocess_scenario_instances...
 

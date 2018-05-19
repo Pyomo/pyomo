@@ -11,11 +11,12 @@
 import pyutilib.th as unittest
 
 from pyomo.core import ConcreteModel, Var, Expression
-import pyomo.core.base.expr as EXPR
-from pyomo.core.base.expression import _ExpressionData
+import pyomo.core.expr.current as EXPR
+from pyomo.core.base.expression import _ExpressionData, SimpleExpression
 from pyomo.gdp.util import clone_without_expression_components
 
 class TestGDPUtils(unittest.TestCase):
+
     def test_clone_expr_no_expressions(self):
         m = ConcreteModel()
         m.x = Var(initialize=5)
@@ -34,7 +35,7 @@ class TestGDPUtils(unittest.TestCase):
         self.assertIsNot(base, test)
         self.assertEqual(base(), test())
         self.assertIsInstance(base, _ExpressionData)
-        self.assertIsInstance(test, EXPR._SumExpression)
+        self.assertIsInstance(test, SimpleExpression)
         test = clone_without_expression_components(base, {id(m.x): m.y})
         self.assertEqual(3**2+3-1, test())
 
@@ -42,9 +43,14 @@ class TestGDPUtils(unittest.TestCase):
         test = clone_without_expression_components(base, {})
         self.assertIsNot(base, test)
         self.assertEqual(base(), test())
-        self.assertIsInstance(base, EXPR._SumExpression)
-        self.assertIsInstance(test, EXPR._SumExpression)
-        self.assertIsInstance(base._args[0], _ExpressionData)
-        self.assertIsInstance(test._args[0], EXPR._SumExpression)
+        self.assertIsInstance(base, EXPR.SumExpression)
+        self.assertIsInstance(test, EXPR.SumExpression)
+        self.assertIsInstance(base.arg(0), _ExpressionData)
+        self.assertIsInstance(test.arg(0), SimpleExpression)
         test = clone_without_expression_components(base, {id(m.x): m.y})
         self.assertEqual(3**2+3-1 + 3, test())
+
+
+if __name__ == '__main__':
+    unittest.main()
+

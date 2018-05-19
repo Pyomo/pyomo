@@ -33,7 +33,7 @@ model.Total_Profit = Objective(rule=Objective_rule, sense=maximize)
 
 # Time Constraint
 def Time_rule(model):
-    return summation(model.X, denom=model.a) <= model.b
+    return sum_product(model.X, denom=model.a) <= model.b
 model.Time = Constraint(rule=Time_rule)
 
 # Limit Constraint

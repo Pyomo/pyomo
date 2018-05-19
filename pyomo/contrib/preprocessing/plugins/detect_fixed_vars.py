@@ -5,10 +5,10 @@ from math import fabs
 from six import iteritems
 
 from pyomo.core.base.var import Var
-from pyomo.core.kernel.numvalue import value
+from pyomo.core.expr.numvalue import value
+from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.util.plugin import alias
-from pyomo.core.kernel.component_map import ComponentMap
 
 
 class FixedVarDetector(IsomorphicTransformation):
@@ -23,10 +23,6 @@ class FixedVarDetector(IsomorphicTransformation):
     alias(
         'contrib.detect_fixed_vars',
         doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
-
-    def __init__(self):
-        """Initialize the transformation."""
-        super(FixedVarDetector, self).__init__()
 
     def _apply_to(self, instance, **kwargs):
         """Apply the transformation.

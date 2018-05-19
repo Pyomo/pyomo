@@ -14,8 +14,8 @@
 
 1 Block Declarations
     cc : Size=1, Index=None, Active=True
-        Key  : Arg0                     : Arg1 : Active
-        None : 2.0  <=  y + x1  <=  3.0 :   x1 :   True
+        Key  : Arg0                 : Arg1 : Active
+        None : 2  <=  y + x1  <=  3 :   x1 :   True
         1 Var Declarations
             bv : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
@@ -23,8 +23,8 @@
 
         2 Constraint Declarations
             bc : Size=1, Index=None, Active=True
-                Key  : Lower : Body                  : Upper : Active
-                None :   0.0 : -2.0 + cc.bv + y + x1 :   0.0 :   True
+                Key  : Lower : Body                   : Upper : Active
+                None :   0.0 : cc.bv - (2 - (y + x1)) :   0.0 :   True
             c : Size=1, Index=None, Active=True
                 Key  : Lower : Body  : Upper : Active
                 None :   0.0 : cc.bv :  +Inf :   True

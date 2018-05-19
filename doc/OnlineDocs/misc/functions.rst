@@ -13,7 +13,7 @@ are described further in this section.
 \code{display} \index{display function@\code{display} function} & Display the properties of models and model components\\
 \code{dot\_product} \index{dot\_product@\code{dot\_product} function} & Compute a generalized dot product\\
 \code{sequence} \index{sequence@\code{sequence} function} & Compute a sequence of integers\\
-\code{summation} \index{summation@\code{summation} function} & Compute a generalized dot product\\
+\code{sum_product} \index{sum_product@\code{sum_product} function} & Compute a generalized dot product\\
 \code{value} \index{value@\code{value} function} & Compute the value of a model component\\
 \code{xsequence} \index{xsequence@\code{xsequence} function} & Compute a sequence of integers\\ \hline
 \end{tabular}
@@ -23,7 +23,7 @@ are described further in this section.
 
 \subsection{Generalized Dot Products}
 
-The \code{summation}\index{summation@\code{summation} function|textbf} function is a utility function that   computes a generalized
+The \code{sum_product}\index{sum_product@\code{sum_product} function|textbf} function is a utility function that   computes a generalized
 dot product;  the \code{dot\_product}\index{dot\_product@\code{dot\_product} function|textbf} is a synonym   for this function.
 This function creates an expression that represents the sum of elements of one or
 more indexed components.  We use the following components in our examples:

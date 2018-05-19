@@ -2,12 +2,14 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.core.expr.numvalue import (NumericValue,
+                                      value)
 from pyomo.core.kernel.component_interface import \
     (IComponent,
      _abstract_readwrite_property,
@@ -18,8 +20,6 @@ from pyomo.core.kernel.component_tuple import (ComponentTuple,
                                                create_component_tuple)
 from pyomo.core.kernel.component_list import (ComponentList,
                                               create_component_list)
-from pyomo.core.kernel.numvalue import (NumericValue,
-                                        value)
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet,
                                          BooleanSet,
@@ -246,7 +246,12 @@ class IVariable(IComponent, NumericValue):
         constant in an expression."""
         return False
 
-    def _potentially_variable(self):
+    def is_variable_type(self):
+        """Returns :const:`True` because this is a
+        variable object."""
+        return True
+
+    def is_potentially_variable(self):
         """Returns :const:`True` because this is a
         variable."""
         return True
@@ -307,6 +312,7 @@ class variable(IVariable):
             :meth:`fix` method. Default is :const:`False`.
 
     Examples:
+        >>> import pyomo.kernel as pmo
         >>> # A continuous variable with infinite bounds
         >>> x = pmo.variable()
         >>> # A binary variable

@@ -24,4 +24,4 @@ fix x[1,1] := 1.0;
 option substout 0;
 option presolve 0;
 option auxfiles 'rc';
-write gjunk;
+write gsmall11.ampl;

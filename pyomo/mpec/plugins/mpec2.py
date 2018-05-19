@@ -12,6 +12,7 @@ import logging
 from six import iterkeys
 
 from pyomo.util.plugin import alias
+from pyomo.core.expr import inequality
 from pyomo.core.base import (Transformation,
                              Constraint,
                              Block,
@@ -71,7 +72,7 @@ class MPEC2_Transformation(Transformation):
                             _data.expr2.c1 = Constraint(expr= _e2[1] <= 0)
                             #
                             _data.expr3 = Disjunct()
-                            _data.expr3.c0 = Constraint(expr= _e1[0] <= _e1[1] <= _e1[2])
+                            _data.expr3.c0 = Constraint(expr= inequality(_e1[0], _e1[1], _e1[2]))
                             _data.expr3.c1 = Constraint(expr= _e2[1] == 0)
                             _data.complements = Disjunction(expr=(_data.expr1, _data.expr2, _data.expr3))
                     else:

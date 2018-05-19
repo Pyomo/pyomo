@@ -1,6 +1,7 @@
 import pickle
 
 import pyutilib.th as unittest
+from pyomo.core.expr.numvalue import NumericValue
 import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
@@ -20,7 +21,6 @@ from pyomo.core.kernel.component_objective import (IObjective,
                                                    objective_list,
                                                    minimize,
                                                    maximize)
-from pyomo.core.kernel.numvalue import NumericValue
 from pyomo.core.kernel.component_variable import variable
 from pyomo.core.kernel.component_block import block
 from pyomo.core.kernel.set_types import (RealSet,

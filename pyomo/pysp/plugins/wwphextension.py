@@ -107,7 +107,7 @@ def collect_node_variable_bounds(tree_node):
     var_bounds = {}
     for variable_id, vardatas in iteritems(tree_node._variable_datas):
         vardata = vardatas[0][0]
-        if not vardata.is_expression():
+        if not vardata.is_expression_type():
             var_bounds[variable_id] = (vardata.lb, vardata.ub)
         else:
             # Expression
