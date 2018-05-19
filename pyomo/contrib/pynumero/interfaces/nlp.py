@@ -70,7 +70,6 @@ class NLP(object):
 
     def __init__(self, model, **kwargs):
 
-
         self._model = model
         self._nx = 0
         self._ng = 0
@@ -91,6 +90,7 @@ class NLP(object):
         self._upper_g = None
         self._lower_g = None
 
+        # ToDo: this may be moved to StubNLP
         # jacobian structure
         self._irows_jac_g = None
         self._jcols_jac_g = None
@@ -282,14 +282,14 @@ class NLP(object):
         raise NotImplementedError('Abstract class method')
 
     @gl.setter
-    def gl(self):
+    def gl(self, other):
         """
         Change lower bounds of constraints
         """
         raise NotImplementedError('Abstract class method')
 
     @gu.setter
-    def gu(self):
+    def gu(self, other):
         """
         Change upper bounds of constraints
         """
@@ -781,14 +781,14 @@ class StubNLP(NLP):
         #self._upper_x = np.copy(other)
 
     @gl.setter
-    def gl(self):
+    def gl(self, other):
         """
         Prevent changing lower bounds of constraints
         """
         raise NotImplementedError('Abstract class method')
 
     @gu.setter
-    def gu(self):
+    def gu(self, other):
         """
         Prevent changing upper bounds of constraints
         """

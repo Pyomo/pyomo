@@ -1,4 +1,4 @@
-from pyomo.contrib.pynumero.interfaces.nlp import NLP, PyomoNLP
+from pyomo.contrib.pynumero.interfaces.nlp import NLP, PyomoNLP, AmplNLP
 from pyomo.contrib.pynumero.sparse import (BlockMatrix,
                              BlockSymMatrix,
                              BlockVector,
@@ -187,12 +187,22 @@ class TwoStageStochasticNLP(NLP):
                 if z_var.is_indexed():
                     indexed_set = sorted([k for k in z_var.keys()])
                     for k in indexed_set:
-                        local_v = z_var[k].local_name
-                        self._zid_to_vid[-1][counter] = self._nlps[sid]._name_to_vid[local_v]
+                        if isinstance(self._nlps[sid], PyomoNLP):
+                            self._zid_to_vid[-1][counter] = self._nlps[sid]._varToIndex[z_var[k]]
+                        elif isinstance(self._nlps[sid], AmplNLP):
+                            local_v = z_var[k].local_name
+                            self._zid_to_vid[-1][counter] = self._nlps[sid]._name_to_vid[local_v]
+                        else:
+                            raise NotImplementedError("Interface not supported")
                         counter += 1
                 else:
-                    local_v = z_var.local_name
-                    self._zid_to_vid[-1][counter] = self._nlps[sid]._name_to_vid[local_v]
+                    if isinstance(self._nlps[sid], PyomoNLP):
+                        self._zid_to_vid[-1][counter] = self._nlps[sid]._varToIndex[z_var]
+                    elif isinstance(self._nlps[sid], AmplNLP):
+                        local_v = z_var.local_name
+                        self._zid_to_vid[-1][counter] = self._nlps[sid]._name_to_vid[local_v]
+                    else:
+                        raise NotImplementedError("Interface not supported")
                     counter += 1
                 assert counter == self._nz
 
@@ -303,7 +313,6 @@ class TwoStageStochasticNLP(NLP):
         self._irows_hess = flat_hess.row
         self._jcols_hess = flat_hess.col
         self._nnz_hess_lag = flat_hess.nnz
-
 
     def nlps(self):
         for sid, name in enumerate(self._sid_to_sname):
@@ -562,6 +571,15 @@ class TwoStageStochasticNLP(NLP):
                 raise NotImplementedError("ToDo")
         else:
             raise NotImplementedError("ToDo")
+
+    def block_id(self, name):
+        return self._sname_to_sidp[name]
+
+    def block_name(self, bid):
+        return self._sid_to_sname[bid]
+
+    def complicated_vars_ids(self, name):
+        return self._zid_to_vid[name]
 
 
 

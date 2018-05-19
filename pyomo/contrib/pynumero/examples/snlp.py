@@ -67,7 +67,7 @@ c = np.array([20, 15, 21, 18, 29, 24])
 complicated_vars_ids = [4, 5]
 
 scenarios = dict()
-n_scenarios = 3
+n_scenarios = 2
 np.random.seed(seed=985739465)
 bs = [b+np.random.normal(scale=20.0, size=1) for i in range(n_scenarios)]
 for i in range(n_scenarios):
@@ -108,8 +108,27 @@ kkt[0, 0] = hess_lag
 kkt[1, 0] = jac_g
 print("KKT")
 print(kkt)
+kkt.tocoo()
 full_kkt = kkt.tofullmatrix()
 plt.spy(full_kkt)
 plt.title('Karush-Kuhn-Tucker Matrix\n')
 plt.show()
+"""
+from pyomo.contrib.pynumero.algorithms.stochastic_kkt import build_permuted_kkt
 
+jac_g = nlp.jacobian_g(x)
+print([jac_g[sid, sid].nnz for sid in range(nlp.nblocks)])
+print([nlp._nlps[sid].nnz_jacobian_g for sid in range(nlp.nblocks)])
+hess_lag = nlp.hessian_lag(x, y)
+print([hess_lag[sid, sid].nnz for sid in range(nlp.nblocks)])
+print([hess_lag[sid, sid].getallnnz() for sid in range(nlp.nblocks)])
+print([nlp._nlps[sid].nnz_hessian_lag for sid in range(nlp.nblocks)])
+kkt2, _ = build_permuted_kkt(nlp, x, y)
+print(kkt2.getallnnz())
+print(kkt2)
+full_kkt2 = kkt2.tofullmatrix()
+print(full_kkt2)
+plt.spy(full_kkt2)
+plt.title('Karush-Kuhn-Tucker Matrix\n')
+plt.show()
+"""

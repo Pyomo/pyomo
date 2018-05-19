@@ -202,8 +202,10 @@ class BlockMatrix(SparseBase):
         nonzeros = 0
         ii, jj = np.nonzero(self._block_mask)
         for i, j in zip(ii, jj):
-            if self._blocks[i, j].is_symmetric:
-                nonzeros += self._blocks[i, j].getallnnz()
+            if self[i, j].is_symmetric:
+                nonzeros += self[i, j].getallnnz()
+            elif isinstance(self[i, j], BlockMatrix):
+                nonzeros += self[i, j].getallnnz()
             else:
                 nonzeros += self._blocks[i, j].nnz
         return nonzeros
@@ -255,7 +257,6 @@ class BlockMatrix(SparseBase):
         shape = (row_offsets[-1], col_offsets[-1])
 
         nonzeros = self.getallnnz()
-
         data = np.empty(nonzeros, dtype=dtype)
         idx_dtype = get_index_dtype(maxval=max(shape))
         row = np.empty(nonzeros, dtype=idx_dtype)
@@ -264,10 +265,11 @@ class BlockMatrix(SparseBase):
         nnz = 0
         ii, jj = np.nonzero(self._block_mask)
         for i, j in zip(ii, jj):
+            #print(i, j)
             if self._blocks[i, j].is_symmetric:
-                B = self._blocks[i, j].tofullcoo()
+                B = self[i, j].tofullcoo()
             else:
-                B = self._blocks[i, j].tocoo()
+                B = self[i, j].tocoo()
             idx = slice(nnz, nnz + B.nnz)
             data[idx] = B.data
             row[idx] = B.row + row_offsets[i]
@@ -785,6 +787,25 @@ class BlockSymMatrix(BlockMatrix):
                 empty_rows.append(idx)
         return len(empty_rows) > 0
 
+    def getallnnz(self):
+        """
+        Return total number of nonzero values in the matrix
+        """
+        nonzeros = 0
+        ii, jj = np.nonzero(self._block_mask)
+        for i, j in zip(ii, jj):
+
+            if i == j:
+                nonzeros += self[i, j].getallnnz()
+            else:
+                if self[i, j].is_symmetric:
+                    nonzeros += 2 * self[i, j].getallnnz()
+                elif isinstance(self[i, j], BlockMatrix):
+                    nonzeros += 2 * self[i, j].getallnnz()
+                else:
+                    nonzeros += 2 * self[i, j].nnz
+        return nonzeros
+
     def tofullmatrix(self):
         """
         Convert this matrix to BlockMatrix format.
@@ -850,7 +871,6 @@ class BlockSymMatrix(BlockMatrix):
 
         """
         self._check_mask()
-
         dtype = self.dtype
 
         row_offsets = np.append(0, np.cumsum(self._brow_lengths))

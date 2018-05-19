@@ -569,6 +569,9 @@ class EmptyMatrix(COOMatrix):
     def tocsc(self, copy=False):
         return super(EmptyMatrix, self).tocsc(copy=copy)
 
+    def __repr__(self):
+        return 'EmptyMatrix{}'.format(self.shape)
+
 
 class IdentityMatrix(COOSymMatrix):
 
@@ -578,6 +581,9 @@ class IdentityMatrix(COOSymMatrix):
         jcols = np.arange(0, nrowcols)
         arg1 = (data, (irows, jcols))
         super(IdentityMatrix, self).__init__(arg1, shape=(nrowcols, nrowcols), dtype=np.double, copy=False)
+
+    def __repr__(self):
+        return 'IdentityMatrix{}'.format(self.shape)
 
 
 if __name__ == "__main__":
