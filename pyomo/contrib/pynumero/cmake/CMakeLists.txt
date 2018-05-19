@@ -44,9 +44,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O3")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -static-libstdc++")
 
-option(BUILD_ASL "BUILD_ASL" OFF)
-option(BUILD_HSL "BUILD_HSL" ON)
-option(BUILD_SPARSE "BUILD_SPARSE" OFF)
+option(BUILD_ASL "BUILD_ASL" ON)
+option(BUILD_HSL "BUILD_HSL" OFF)
+option(BUILD_SPARSE "BUILD_SPARSE" ON)
 
 if(${BUILD_ASL})
 add_subdirectory(asl_interface)

@@ -19,7 +19,7 @@
 #define MAX_ARGS 100
 
 //AmplInterface::AmplInterface(int argc, char**& argv)
-AmplInterface::AmplInterface(char *nlfilename)
+AmplInterface::AmplInterface()
         :
         asl_(NULL),
         obj_sense_(1),
@@ -28,8 +28,10 @@ AmplInterface::AmplInterface(char *nlfilename)
         laminit_(NULL),
         laminit_present_(NULL),
         nnz_hes_lag_(-1)
-{
+{}
 
+void AmplInterface::initialize(const char *nlfilename)
+{
     // The ASL include files #define certain
     // variables that they expect you to work with.
     // These variables then appear as though they are
@@ -106,9 +108,7 @@ AmplInterface::AmplInterface(char *nlfilename)
 
     // this pointer may need to be stored for the call to write_solution
     delete Oinfo;
-    assert_exit(stub, "No .nl file was specified.");
-    FILE *nl = NULL;
-    nl = jac0dim(stub, (int) strlen(stub));
+    FILE *nl = this->open_nl(asl, stub);
     _ASSERT_(nl != NULL);
 
     // check that this is the right problem class
@@ -495,9 +495,47 @@ void AmplInterface::finalize_solution(int status, double *const_x, int nx, doubl
     delete[] cmessage;
 }
 
+AmplInterface_file::AmplInterface_file()
+   : AmplInterface()
+{}
+
+FILE* AmplInterface_file::open_nl(ASL_pfgh *asl, char* stub)
+{
+    assert_exit(stub, "No .nl file was specified.");
+    return jac0dim(stub, (int) strlen(stub));
+}
+
+AmplInterface_str::AmplInterface_str(char* nl, size_t size)
+   : AmplInterface(),
+     nl_content(nl),
+     nl_size(size)
+{}
+
+FILE* AmplInterface_str::open_nl(ASL_pfgh *asl, char* stub)
+{
+   // Ignore the stub and use the cached NL file content
+   FILE* nl = fmemopen(this->nl_content, this->nl_size, "rb");
+   return jac0dim_FILE(nl);
+}
+
+
 extern "C"
 {
-AmplInterface *EXTERNAL_AmplInterface_new(char *nlfilename) { return new AmplInterface(nlfilename); }
+AmplInterface *EXTERNAL_AmplInterface_new_file(char *nlfilename) {
+   AmplInterface* ans = new AmplInterface_file();
+   ans->initialize(nlfilename);
+   return ans;
+}
+
+AmplInterface *EXTERNAL_AmplInterface_new_str(char *nl, size_t size) {
+   AmplInterface* ans = new AmplInterface_str(nl, size);
+   ans->initialize("membuf.nl");
+   return ans;
+}
+
+AmplInterface *EXTERNAL_AmplInterface_new(char *nlfilename) {
+   return EXTERNAL_AmplInterface_new_file(nlfilename);
+}
 
 int EXTERNAL_AmplInterface_n_vars(AmplInterface *p_ai) { return p_ai->get_n_vars(); }
 
