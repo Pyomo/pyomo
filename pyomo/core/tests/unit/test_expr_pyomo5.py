@@ -2563,19 +2563,19 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         model.a = Var()
 
         expr = 5 < model.a
-        self.assertEqual( "5  <  a", str(expr) )
+        self.assertEqual( "5.0  <  a", str(expr) )
 
         expr = model.a >= 5
-        self.assertEqual( "5  <=  a", str(expr) )
+        self.assertEqual( "5.0  <=  a", str(expr) )
 
         expr = expr < 10
-        self.assertEqual( "5  <=  a  <  10", str(expr) )
+        self.assertEqual( "5.0  <=  a  <  10.0", str(expr) )
 
         expr = 5 <= model.a + 5
-        self.assertEqual( "5  <=  sum(a, 5)", str(expr) )
+        self.assertEqual( "5.0  <=  sum(a, 5)", str(expr) )
 
         expr = expr < 10
-        self.assertEqual( "5  <=  sum(a, 5)  <  10", str(expr) )
+        self.assertEqual( "5.0  <=  sum(a, 5)  <  10.0", str(expr) )
 
     def test_equality(self):
         #
@@ -2594,16 +2594,16 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         # NB: since there is no "reverse equality" operator, explicit
         # constants will always show up second.
         expr = 5 == model.a
-        self.assertEqual( "a  ==  5", str(expr) )
+        self.assertEqual( "a  ==  5.0", str(expr) )
 
         expr = model.a == 10
-        self.assertEqual( "a  ==  10", str(expr) )
+        self.assertEqual( "a  ==  10.0", str(expr) )
 
         expr = 5 == model.a + 5
-        self.assertEqual( "sum(a, 5)  ==  5", str(expr) )
+        self.assertEqual( "sum(a, 5)  ==  5.0", str(expr) )
 
         expr = model.a + 5 == 5
-        self.assertEqual( "sum(a, 5)  ==  5", str(expr) )
+        self.assertEqual( "sum(a, 5)  ==  5.0", str(expr) )
 
     def test_getitem(self):
         m = ConcreteModel()
@@ -2766,19 +2766,19 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         model.a = Var()
 
         expr = 5 < model.a
-        self.assertEqual( "5  <  a", str(expr) )
+        self.assertEqual( "5.0  <  a", str(expr) )
 
         expr = model.a >= 5
-        self.assertEqual( "5  <=  a", str(expr) )
+        self.assertEqual( "5.0  <=  a", str(expr) )
 
         expr = expr < 10
-        self.assertEqual( "5  <=  a  <  10", str(expr) )
+        self.assertEqual( "5.0  <=  a  <  10.0", str(expr) )
 
         expr = 5 <= model.a + 5
-        self.assertEqual( "5  <=  a + 5", str(expr) )
+        self.assertEqual( "5.0  <=  a + 5", str(expr) )
 
         expr = expr < 10
-        self.assertEqual( "5  <=  a + 5  <  10", str(expr) )
+        self.assertEqual( "5.0  <=  a + 5  <  10.0", str(expr) )
 
     def test_equality(self):
         #
@@ -2797,16 +2797,16 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         # NB: since there is no "reverse equality" operator, explicit
         # constants will always show up second.
         expr = 5 == model.a
-        self.assertEqual( "a  ==  5", str(expr) )
+        self.assertEqual( "a  ==  5.0", str(expr) )
 
         expr = model.a == 10
-        self.assertEqual( "a  ==  10", str(expr) )
+        self.assertEqual( "a  ==  10.0", str(expr) )
 
         expr = 5 == model.a + 5
-        self.assertEqual( "a + 5  ==  5", str(expr) )
+        self.assertEqual( "a + 5  ==  5.0", str(expr) )
 
         expr = model.a + 5 == 5
-        self.assertEqual( "a + 5  ==  5", str(expr) )
+        self.assertEqual( "a + 5  ==  5.0", str(expr) )
 
 
     def test_linear(self):
@@ -2838,9 +2838,9 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         m.a = Var()
         m.b = Var()
         expr = EXPR.Expr_if(IF=m.a + m.b < 20, THEN=m.a, ELSE=m.b)
-        self.assertEqual("Expr_if( ( a + b  <  20 ), then=( a ), else=( b ) )", str(expr))
+        self.assertEqual("Expr_if( ( a + b  <  20.0 ), then=( a ), else=( b ) )", str(expr))
         expr = EXPR.Expr_if(IF=m.a + m.b < 20, THEN=1, ELSE=m.b)
-        self.assertEqual("Expr_if( ( a + b  <  20 ), then=( 1 ), else=( b ) )", str(expr))
+        self.assertEqual("Expr_if( ( a + b  <  20.0 ), then=( 1 ), else=( b ) )", str(expr))
 
     def test_getitem(self):
         m = ConcreteModel()
@@ -5976,8 +5976,8 @@ class WalkerTests(unittest.TestCase):
         e = sin(M.x) + M.x*M.y + 3 <= 0
         walker = ReplacementWalkerTest1(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertEqual("sin(x) + x*y + 3  <=  0", str(e))
-        self.assertEqual("sin(w[1]) + w[1]*w[2] + 3  <=  0", str(f))
+        self.assertEqual("sin(x) + x*y + 3  <=  0.0", str(e))
+        self.assertEqual("sin(w[1]) + w[1]*w[2] + 3  <=  0.0", str(f))
 
     def test_replacement_walker4(self):
         M = ConcreteModel()
@@ -6103,8 +6103,8 @@ class WalkerTests2(unittest.TestCase):
         e = sin(M.x) + M.x*M.y + 3 <= 0
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertEqual("sin(x) + x*y + 3  <=  0", str(e))
-        self.assertEqual("sin(2*w[1]) + 2*w[1]*2*w[2] + 3  <=  0", str(f))
+        self.assertEqual("sin(x) + x*y + 3  <=  0.0", str(e))
+        self.assertEqual("sin(2*w[1]) + 2*w[1]*2*w[2] + 3  <=  0.0", str(f))
 
     def test_replacement_walker4(self):
         M = ConcreteModel()
@@ -6209,8 +6209,8 @@ class WalkerTests3(unittest.TestCase):
         e = sin(M.x) + M.x*M.y + 3 <= 0
         walker = ReplacementWalkerTest3(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertEqual("sin(x) + x*y + 3  <=  0", str(e))
-        self.assertEqual("sin(2*w[1]) + 2*w[1]*y + 3  <=  0", str(f))
+        self.assertEqual("sin(x) + x*y + 3  <=  0.0", str(e))
+        self.assertEqual("sin(2*w[1]) + 2*w[1]*y + 3  <=  0.0", str(f))
 
     def test_replacement_walker4(self):
         M = ConcreteModel()

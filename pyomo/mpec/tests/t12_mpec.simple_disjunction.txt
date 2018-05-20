@@ -11,10 +11,10 @@ cc : Size=1, Index=None, Active=True
             2 Constraint Declarations
                 c0 : Size=1, Index=None, Active=True
                     Key  : Lower : Body   : Upper : Active
-                    None :     2 : y + x1 :     2 :   True
+                    None :   2.0 : y + x1 :   2.0 :   True
                 c1 : Size=1, Index=None, Active=True
                     Key  : Lower : Body : Upper : Active
-                    None :     0 :   x1 :  +Inf :   True
+                    None :   0.0 :   x1 :  +Inf :   True
 
             3 Declarations: indicator_var c0 c1
         expr2 : Size=1, Index=None, Active=True
@@ -26,10 +26,10 @@ cc : Size=1, Index=None, Active=True
             2 Constraint Declarations
                 c0 : Size=1, Index=None, Active=True
                     Key  : Lower : Body   : Upper : Active
-                    None :     3 : y + x1 :     3 :   True
+                    None :   3.0 : y + x1 :   3.0 :   True
                 c1 : Size=1, Index=None, Active=True
                     Key  : Lower : Body : Upper : Active
-                    None :  -Inf :   x1 :     0 :   True
+                    None :  -Inf :   x1 :   0.0 :   True
 
             3 Declarations: indicator_var c0 c1
         expr3 : Size=1, Index=None, Active=True
@@ -41,10 +41,10 @@ cc : Size=1, Index=None, Active=True
             2 Constraint Declarations
                 c0 : Size=1, Index=None, Active=True
                     Key  : Lower : Body   : Upper : Active
-                    None :     2 : y + x1 :     3 :   True
+                    None :   2.0 : y + x1 :   3.0 :   True
                 c1 : Size=1, Index=None, Active=True
                     Key  : Lower : Body : Upper : Active
-                    None :     0 :   x1 :     0 :   True
+                    None :   0.0 :   x1 :   0.0 :   True
 
             3 Declarations: indicator_var c0 c1
 

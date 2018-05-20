@@ -24,10 +24,10 @@
         2 Constraint Declarations
             bc : Size=1, Index=None, Active=True
                 Key  : Lower : Body                   : Upper : Active
-                None :     0 : cc.bv - (2 - (y + x1)) :     0 :   True
+                None :   0.0 : cc.bv - (2 - (y + x1)) :   0.0 :   True
             c : Size=1, Index=None, Active=True
                 Key  : Lower : Body  : Upper : Active
-                None :     0 : cc.bv :  +Inf :   True
+                None :   0.0 : cc.bv :  +Inf :   True
 
         3 Declarations: bv c bc
 

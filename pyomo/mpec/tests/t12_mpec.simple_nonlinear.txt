@@ -18,6 +18,6 @@ cc : Size=1, Index=None, Active=True
             None :  -Inf : (cc.v - 3)*x1 : mpec_bound :   True
         ve : Size=1, Index=None, Active=True
             Key  : Lower : Body            : Upper : Active
-            None :     0 : cc.v - (y + x1) :     0 :   True
+            None :   0.0 : cc.v - (y + x1) :   0.0 :   True
 
     5 Declarations: c v ve ccon_l ccon_u

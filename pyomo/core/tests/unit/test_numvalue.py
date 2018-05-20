@@ -244,8 +244,8 @@ class Test_is_constant(unittest.TestCase):
         val = A()
         try:
             is_constant(val)
-            self.fail("Expected AttributeError")
-        except AttributeError:
+            self.fail("Expected TypeError")
+        except TypeError:
             pass
 
 
@@ -275,15 +275,23 @@ class Test_as_numeric(unittest.TestCase):
 
     def test_float(self):
         val = 1.1
-        self.assertEqual(val, as_numeric(val))
+        nval = as_numeric(val)
+        self.assertEqual(val, nval)
+        self.assertEqual(nval/2, 0.55)
 
     def test_int(self):
         val = 1
-        self.assertEqual(val, as_numeric(val))
+        nval = as_numeric(val)
+        self.assertEqual(1.0, nval)
+        #self.assertEqual(val, nval)
+        self.assertEqual(nval/2, 0.5)
 
     def test_long(self):
         val = long(1e10)
-        self.assertEqual(val, as_numeric(val))
+        nval = as_numeric(val)
+        self.assertEqual(1.0e10, nval)
+        #self.assertEqual(val, as_numeric(val))
+        self.assertEqual(nval/2, 5.0e9)
 
     def test_string(self):
         val = 'foo'
@@ -334,7 +342,8 @@ class Test_as_numeric(unittest.TestCase):
     def test_unknownNumericType(self):
         ref = MyBogusNumericType(42)
         val = as_numeric(ref)
-        self.assertEqual(val().val, 42)
+        self.assertEqual(val().val, 42.0)
+        #self.assertEqual(val().val, 42)
         from pyomo.core.base.numvalue import native_numeric_types, native_types
         self.assertIn(MyBogusNumericType, native_numeric_types)
         self.assertIn(MyBogusNumericType, native_types)

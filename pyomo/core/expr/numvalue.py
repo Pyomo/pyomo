@@ -191,10 +191,11 @@ def value(obj, exception=True):
         obj.is_expression_type()
     except AttributeError:
         #
-        # If not, then try to coerce this into a numeric constant
+        # If not, then try to coerce this into a numeric constant.  If that
+        # works, then return the object
         #
         try:
-            tmp = as_numeric(obj)
+            as_numeric(obj)
             return obj
         except:
             raise TypeError("Cannot evaluate object with unknown type: %s" % str(obj.__class__))
@@ -202,19 +203,24 @@ def value(obj, exception=True):
     # Evaluate the expression object
     #
     if exception:
+        #
+        # Here, we try to catch the exception
+        #
         try:
             tmp = obj(exception=True)
             if tmp is None:
                 raise ValueError("No value for uninitialized NumericValue object %s" % (obj.name,))
+            return tmp
         except:
             logger.error(
                 "evaluating object as numeric value: %s\n    (object: %s)\n%s"
                 % (obj, type(obj), sys.exc_info()[1]))
             raise
     else:
-        tmp = obj(exception=False)
-
-    return tmp
+        #
+        # Here, we do not try to catch the exception
+        #
+        return obj(exception=False)
 
 
 def is_constant(obj):
@@ -233,7 +239,16 @@ def is_constant(obj):
     #
     if obj.__class__ in native_types:
         return True
-    return obj.is_constant()
+    try:
+        return obj.is_constant()
+    except AttributeError:
+        pass
+    try:
+        # Now we need to confirm that we have an unknown numeric type
+        as_numeric(obj)
+        return True
+    except:
+        raise TypeError("Cannot assess properties of object with unknown type: %s" % str(obj.__class__))
 
 def is_fixed(obj):
     """
@@ -246,7 +261,10 @@ def is_fixed(obj):
     #
     if obj.__class__ in native_types:
         return True
-    return obj.is_fixed()
+    try:
+        return obj.is_fixed()
+    except AttributeError:
+        return False
 
 def is_variable_type(obj):
     """
@@ -255,7 +273,10 @@ def is_variable_type(obj):
     """
     if obj.__class__ in native_types:
         return False
-    return obj.is_variable_type()
+    try:
+        return obj.is_variable_type()
+    except AttributeError:
+        return False
 
 def potentially_variable(obj):
     """
@@ -264,7 +285,10 @@ def potentially_variable(obj):
     """
     if obj.__class__ in native_types:
         return False
-    return obj.is_potentially_variable()
+    try:
+        return obj.is_potentially_variable()
+    except AttributeError:
+        return False
 
 def is_numeric_data(obj):
     """
@@ -277,8 +301,19 @@ def is_numeric_data(obj):
     elif obj.__class__ in native_types:
         # this likely means it is a string
         return False
-    else:
+    try:
+        # Test if this is an expression object that 
+        # is not potentially variable
         return not obj.is_potentially_variable()
+    except AttributeError:
+        pass
+    try:
+        # Now we need to confirm that we have an unknown numeric type
+        as_numeric(obj)
+        return True
+    except:
+        pass
+    return False
 
 def polynomial_degree(obj):
     """
@@ -288,12 +323,31 @@ def polynomial_degree(obj):
     """
     if obj.__class__ in native_types:
         return 0
-    return obj.polynomial_degree()
+    try:
+        return obj.polynomial_degree()
+    except AttributeError:
+        pass
+    try:
+        # Now we need to confirm that we have an unknown numeric type
+        as_numeric(obj)
+        return 0
+    except:
+        raise TypeError("Cannot assess properties of object with unknown type: %s" % str(obj.__class__))
 
 
 # It is very common to have only a few constants in a model, but those
 # constants get repeated many times.  KnownConstants lets us re-use /
 # share constants we have seen before.
+#
+# Note:
+#   For now, all constants are coerced to floats.  This avoids integer division
+#   in Python 2.x.  (At least some of the time.)
+#
+#   When we eliminate support for Python 3.x, we will not need this coercion.  The main
+#   difference in the following code is that we will need to index
+#   KnownConstants by both the class type and value, since INT, FLOAT and LONG values
+#   sometimes hash the same.
+#
 _KnownConstants = {}
 
 def as_numeric(obj):
@@ -315,14 +369,16 @@ def as_numeric(obj):
     Returns: A NumericConstant object or the original object.
     """
     if obj.__class__ in native_numeric_types:
-        #
-        # Because INT, FLOAT, and sometimes LONG hash the same, we
-        # index _KnownConstants with both the class and value.  This ensures
-        # consistent results.
-        #
-        val = _KnownConstants.get((obj.__class__, obj), None)
+        val = _KnownConstants.get(obj, None)
         if val is not None:
             return val 
+        #
+        # Coerce the value to a float, if possible
+        #
+        try:
+            obj = float(obj)
+        except:
+            pass
         #
         # Create the numeric constant.  This really
         # should be the only place in the code
@@ -339,7 +395,7 @@ def as_numeric(obj):
         # is worth the extra cost.
         #
         if len(_KnownConstants) < 1024:
-            _KnownConstants[obj.__class__,obj] = retval
+            _KnownConstants[obj] = retval
             return retval
         #
         return retval
@@ -372,7 +428,7 @@ def as_numeric(obj):
                 # cache here, since we need to confirm that the
                 # object is hashable.
                 #
-                _KnownConstants[obj.__class__,obj] = retval
+                _KnownConstants[obj] = retval
                 #
                 # If we get here, this is a reasonably well-behaving
                 # numeric type: add it to the native numeric types
