@@ -1,12 +1,16 @@
-from pyomo.contrib.pynumero.sparse import (COOMatrix,
-                             COOSymMatrix,
-                             BlockMatrix,
-                             BlockSymMatrix,
-                             SparseBase,
-                             BlockVector)
-from scipy.sparse import bmat
-import numpy as np
 import unittest
+
+try:
+    from pyomo.contrib.pynumero.sparse import (COOMatrix,
+                                               COOSymMatrix,
+                                               BlockMatrix,
+                                               BlockSymMatrix,
+                                               SparseBase,
+                                               BlockVector)
+    from scipy.sparse import bmat
+    import numpy as np
+except:
+    raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
 
 class TestBlockMatrix(unittest.TestCase):

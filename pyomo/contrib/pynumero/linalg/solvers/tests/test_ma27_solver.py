@@ -1,12 +1,15 @@
-from pyomo.contrib.pynumero.linalg.solvers import MA27LinearSolver
-from pyomo.contrib.pynumero.sparse import (COOMatrix,
-                             COOSymMatrix,
-                             BlockSymMatrix,
-                             BlockMatrix,
-                             BlockVector)
-import numpy as np
 import unittest
 
+try:
+    from pyomo.contrib.pynumero.linalg.solvers import MA27LinearSolver
+    from pyomo.contrib.pynumero.sparse import (COOMatrix,
+                                               COOSymMatrix,
+                                               BlockSymMatrix,
+                                               BlockMatrix,
+                                               BlockVector)
+    import numpy as np
+except:
+    raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
 @unittest.skip
 class TestMA27(unittest.TestCase):

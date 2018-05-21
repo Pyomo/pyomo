@@ -41,8 +41,25 @@ set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
 # to find our dependencies
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
+if(WIN32)
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O3")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -static-libstdc++")
+endif()
+
+# check fpr windows
+if(MSVC OR MSYS OR MINGW)
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O3")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -static-libstdc++")
+# check for apple
+elseif(APPLE)
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O3 -fpermissive")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -static-libstdc++ -fpermissive")
+# check for linux
+else()
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O3")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -static-libstdc++")
+endif()
+
 
 option(BUILD_ASL "BUILD_ASL" ON)
 option(BUILD_HSL "BUILD_HSL" OFF)

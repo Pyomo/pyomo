@@ -7,11 +7,18 @@ cmake_minimum_required(VERSION 3.2)
 # set the default directory for ASL
 set(DEFAULT_ASL_PATH "${PROJECT_SOURCE_DIR}/third_party/ASL/solvers")
 
-set(ASL_SOURCES
-src/AmplInterface.cpp
-src/AsserUtils.hpp
-)
-
+if(APPLE)
+    set(ASL_SOURCES
+    src/AmplInterface.cpp
+    src/AsserUtils.hpp
+    src/fmemopen.c
+    )
+else()
+    set(ASL_SOURCES
+    src/AmplInterface.cpp
+    src/AsserUtils.hpp
+    )
+endif()
 
 if (USE_ASL_PATH)
    ADD_LIBRARY( pynumero_ASL MODULE ${ASL_SOURCES})

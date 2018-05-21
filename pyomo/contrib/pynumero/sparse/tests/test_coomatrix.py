@@ -1,19 +1,22 @@
-from pyomo.contrib.pynumero.sparse import (COOMatrix,
-                                           COOSymMatrix,
-                                           SparseBase,
-                                           IdentityMatrix,
-                                           EmptyMatrix)
-
-from pyomo.contrib.pynumero.sparse.csr import CSRMatrix, CSRSymMatrix
-from pyomo.contrib.pynumero.sparse.csc import CSCMatrix, CSCSymMatrix
-
-
-from scipy.sparse.csr import csr_matrix
-from scipy.sparse.csc import csc_matrix
-from scipy.sparse.coo import coo_matrix
-import numpy as np
 import unittest
 import sys
+
+try:
+    from pyomo.contrib.pynumero.sparse import (COOMatrix,
+                                               COOSymMatrix,
+                                               SparseBase,
+                                               IdentityMatrix,
+                                               EmptyMatrix)
+
+    from pyomo.contrib.pynumero.sparse.csr import CSRMatrix, CSRSymMatrix
+    from pyomo.contrib.pynumero.sparse.csc import CSCMatrix, CSCSymMatrix
+
+    from scipy.sparse.csr import csr_matrix
+    from scipy.sparse.csc import csc_matrix
+    from scipy.sparse.coo import coo_matrix
+    import numpy as np
+except:
+    raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
 
 class TestCOOMatrix(unittest.TestCase):

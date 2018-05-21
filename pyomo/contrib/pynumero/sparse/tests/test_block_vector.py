@@ -1,7 +1,11 @@
-from pyomo.contrib.pynumero.sparse import BlockVector
-import numpy as np
 import unittest
 import sys
+
+try:
+    from pyomo.contrib.pynumero.sparse import BlockVector
+    import numpy as np
+except:
+    raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
 
 class TestBlockVector(unittest.TestCase):

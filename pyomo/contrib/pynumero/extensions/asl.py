@@ -37,8 +37,8 @@ class AmplInterface(object):
         self.ASLib.EXTERNAL_AmplInterface_new_file.argtypes = [ctypes.c_char_p]
         self.ASLib.EXTERNAL_AmplInterface_new_file.restype = ctypes.c_void_p
 
-        self.ASLib.EXTERNAL_AmplInterface_new_str.argtypes = [ctypes.c_char_p]
-        self.ASLib.EXTERNAL_AmplInterface_new_str.restype = ctypes.c_void_p
+        #self.ASLib.EXTERNAL_AmplInterface_new_str.argtypes = [ctypes.c_char_p]
+        #self.ASLib.EXTERNAL_AmplInterface_new_str.restype = ctypes.c_void_p
 
         # number of variables
         self.ASLib.EXTERNAL_AmplInterface_n_vars.argtypes = [ctypes.c_void_p]
@@ -192,8 +192,11 @@ class AmplInterface(object):
             self._obj = self.ASLib.EXTERNAL_AmplInterface_new_file(b_data)
         elif nl_buffer is not None:
             b_data = nl_buffer.encode('utf-8')
-            # ToDo: add check pointer is not null in the c-code
-            self._obj = self.ASLib.EXTERNAL_AmplInterface_new_str(b_data)
+            if os.name in ['nt', 'dos']:
+                # ToDo: add check pointer is not null in the c-code
+                self._obj = self.ASLib.EXTERNAL_AmplInterface_new_file(b_data)
+            else:
+                self._obj = self.ASLib.EXTERNAL_AmplInterface_new_str(b_data)
 
         assert self._obj, "Error building ASL interface. Possible error in nl-file"
 
