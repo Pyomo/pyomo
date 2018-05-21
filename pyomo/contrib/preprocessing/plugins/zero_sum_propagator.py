@@ -5,7 +5,7 @@ from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 
 
 class ZeroSumPropagator(IsomorphicTransformation):

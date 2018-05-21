@@ -20,7 +20,7 @@ from six import iteritems, iterkeys, StringIO
 from six.moves import xrange
 
 from pyutilib.misc import PauseGC
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
 from pyomo.core.base import \
@@ -48,7 +48,7 @@ def _get_bound(exp):
 
 class ProblemWriter_mps(AbstractProblemWriter):
 
-    pyomo.util.plugin.alias('mps', 'Generate the corresponding MPS file')
+    pyomo.common.plugin.alias('mps', 'Generate the corresponding MPS file')
 
     def __init__(self):
 

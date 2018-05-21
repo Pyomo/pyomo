@@ -6,7 +6,7 @@ import textwrap
 from pyomo.core.base.var import Var
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 
 
 class InitMidpoint(IsomorphicTransformation):

@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -25,8 +25,8 @@ from pyutilib.pyro import (TaskWorker,
 
 from pyomo.core import *
 from pyomo.opt import UndefinedData
-from pyomo.util import pyomo_command
-from pyomo.util.plugin import ExtensionPoint
+from pyomo.common import pyomo_command
+from pyomo.common.plugin import ExtensionPoint
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
                        SolutionStatus)
@@ -419,11 +419,11 @@ class _PHSolverServer(_PHBase):
         # and compile the instance into the solver.
         # TBD - we need to pass in the symbolic solver labels to initialize()
         #       when using persistent solver plugins - because this attribute
-        #       is set up-front.     
+        #       is set up-front.
         if self._verbose:
             print("Setting instance for persistent solver interface")
 
-        # TODO: the symbolic solver label option is not propagated presently 
+        # TODO: the symbolic solver label option is not propagated presently
         #       from PH to ph solver servers until the solve() method is invoked.
         #       making the default "False", as largely labels take memory and
         #       one can debug in the interim with a non-persistent solver.
@@ -432,12 +432,12 @@ class _PHSolverServer(_PHBase):
                 object_solver.set_instance(
                     self._bundle_binding_instance_map[object_name],
                     symbolic_solver_labels=False,
-                    output_fixed_variable_bounds=self._write_fixed_variables) 
+                    output_fixed_variable_bounds=self._write_fixed_variables)
             else:
                 object_solver.set_instance(
                     self._scenario_tree.get_scenario(object_name).instance,
-                    symbolic_solver_labels=False, 
-                    output_fixed_variable_bounds=self._write_fixed_variables) 
+                    symbolic_solver_labels=False,
+                    output_fixed_variable_bounds=self._write_fixed_variables)
 
         # Delay any preprocessing of the scenario instances
         # until we are inside the solve method. This gives users a
@@ -512,7 +512,7 @@ class _PHSolverServer(_PHBase):
         if self._verbose:
             print("Received request to solve scenario %s=%s" % (object_type, object_name))
 
-        # verify that this PH solver server actually knows about the 
+        # verify that this PH solver server actually knows about the
         # input object, and find the corresponding solver plugin.
         if self._scenario_tree.contains_bundles():
             if not self._scenario_tree.is_bundle(object_name):
@@ -1369,10 +1369,10 @@ def exec_phsolverserver(options):
                 module_to_find = string.split(module_to_find,"/")[-1]
 
             for name, obj in inspect.getmembers(sys.modules[module_to_find], inspect.isclass):
-                import pyomo.util
+                import pyomo.common
                 # the second condition gets around goofyness related to issubclass returning
                 # True when the obj is the same as the test class.
-                if issubclass(obj, pyomo.util.plugin.SingletonPlugin) and name != "SingletonPlugin":
+                if issubclass(obj, pyomo.common.plugin.SingletonPlugin) and name != "SingletonPlugin":
                     ph_extension_point = ExtensionPoint(IPHSolverServerExtension)
                     for plugin in ph_extension_point(all=True):
                         if isinstance(plugin, obj):

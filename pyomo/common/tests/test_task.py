@@ -11,8 +11,8 @@
 import pyutilib.th as unittest
 import pyutilib.misc
 
-from pyomo.util import *
-from pyomo.util.log import LoggingIntercept
+from pyomo.common import *
+from pyomo.common.log import LoggingIntercept
 
 from six import StringIO
 
@@ -549,7 +549,7 @@ class TestAPI(unittest.TestCase):
     def test_err1_varargs(self):
         #"""Expect an error when variable length arguments are supported"""
         buf = StringIO()
-        with LoggingIntercept(buf, 'pyomo.util'):
+        with LoggingIntercept(buf, 'pyomo.common'):
             @pyomo_api
             def err1(*args): pass
         self.assertIn(
@@ -559,7 +559,7 @@ class TestAPI(unittest.TestCase):
     def test_err2_kwds(self):
         #"""Expect an error when variable length keyword arguments are supported"""
         buf = StringIO()
-        with LoggingIntercept(buf, 'pyomo.util'):
+        with LoggingIntercept(buf, 'pyomo.common'):
             @pyomo_api
             def err2(**kwargs): pass
         self.assertIn(
@@ -605,7 +605,7 @@ class TestAPI(unittest.TestCase):
         #"""Expect an error when no data argument is specified"""
 
         buf = StringIO()
-        with LoggingIntercept(buf, 'pyomo.util'):
+        with LoggingIntercept(buf, 'pyomo.common'):
             @pyomo_api
             def err6(): pass
         self.assertIn("A Pyomo functor 'err6' must have a 'data argument",
@@ -621,7 +621,7 @@ class TestAPI(unittest.TestCase):
     def test_err7a_arg_missing_from_docstring(self):
         #"""Argument missing from docstring"""
         buf = StringIO()
-        with LoggingIntercept(buf, 'pyomo.util'):
+        with LoggingIntercept(buf, 'pyomo.common'):
             @pyomo_api
             def err7a(data, x=1, y=2):
                 """
@@ -635,7 +635,7 @@ class TestAPI(unittest.TestCase):
     def test_err7b_arg_missing_from_docstring(self):
         #"""Argument missing from docstring"""
         buf = StringIO()
-        with LoggingIntercept(buf, 'pyomo.util'):
+        with LoggingIntercept(buf, 'pyomo.common'):
             @pyomo_api
             def err7b(data, x=1, y=2):
                 """
@@ -649,7 +649,7 @@ class TestAPI(unittest.TestCase):
     def test_err7c_return_missing_from_docstring(self):
         #"""Argument missing from docstring"""
         buf = StringIO()
-        with LoggingIntercept(buf, 'pyomo.util'):
+        with LoggingIntercept(buf, 'pyomo.common'):
             @pyomo_api(outputs=('z'))
             def err7c(data, x=1, y=2):
                 """
@@ -664,7 +664,7 @@ class TestAPI(unittest.TestCase):
     def test_err7A_extra_required_arg(self):
         #"""Unexpected required argument"""
         buf = StringIO()
-        with LoggingIntercept(buf, 'pyomo.util'):
+        with LoggingIntercept(buf, 'pyomo.common'):
             @pyomo_api
             def err7A(data, x=1, y=2):
                 """
@@ -681,7 +681,7 @@ class TestAPI(unittest.TestCase):
     def test_err7B_extra_optional_arg(self):
         #"""Argument missing from docstring"""
         buf = StringIO()
-        with LoggingIntercept(buf, 'pyomo.util'):
+        with LoggingIntercept(buf, 'pyomo.common'):
             @pyomo_api
             def err7B(data, x=1, y=2):
                 """
@@ -698,7 +698,7 @@ class TestAPI(unittest.TestCase):
     def test_err7C_extra_return_arg(self):
         #"""Argument missing from docstring"""
         buf = StringIO()
-        with LoggingIntercept(buf, 'pyomo.util'):
+        with LoggingIntercept(buf, 'pyomo.common'):
             @pyomo_api(outputs=('z'))
             def err7C(data, x=1, y=2):
                 """
@@ -783,7 +783,7 @@ class TestAPI(unittest.TestCase):
     def test_err10a_duplicate_function(self):
         #"""Expect an error when the same functor is defined twice"""
         buf = StringIO()
-        with LoggingIntercept(buf, 'pyomo.util'):
+        with LoggingIntercept(buf, 'pyomo.common'):
             @pyomo_api
             def err10a(data): pass
 
@@ -795,7 +795,7 @@ class TestAPI(unittest.TestCase):
     def test_err10b_duplicate_namespace_function(self):
         #"""Expect an error when the same functor is defined twice"""
         buf = StringIO()
-        with LoggingIntercept(buf, 'pyomo.util'):
+        with LoggingIntercept(buf, 'pyomo.common'):
             @pyomo_api(namespace='foo')
             def err10b(data): pass
 
@@ -850,4 +850,3 @@ class TestAPI(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

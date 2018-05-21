@@ -19,14 +19,14 @@ currdir = dirname(abspath(__file__))+os.sep
 import pyutilib.th as unittest
 import pyutilib.services
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 import pyomo.opt
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
 class TestSolver1(pyomo.opt.OptSolver):
 
-    pyomo.util.plugin.alias('stest1')
+    pyomo.common.plugin.alias('stest1')
 
     def __init__(self, **kwds):
         kwds['type'] = 'stest_type'

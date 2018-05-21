@@ -138,7 +138,7 @@ install:
   - export PATH="$PWD/bin:$PATH"
   - python pyomo/contrib/trustregion/getGJH.py $PWD/bin
   - gjh -v
-  - python pyomo/util/getGSL.py $PWD/bin
+  - python pyomo/common/getGSL.py $PWD/bin
   #
   # Verify that the Python interpreter hasn't changed (occasionally conda
   # installers will change the installed Python!!)
