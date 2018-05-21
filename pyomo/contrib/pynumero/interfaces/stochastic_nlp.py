@@ -402,9 +402,9 @@ class TwoStageStochasticNLP(NLP):
 
         if isinstance(x, BlockVector):
             assert x.size == self.nx
-            assert x.nblocks == self.nblocks # this will change as z are included in x
+            assert x.nblocks == self.nblocks + 1# this will change as z are included in x
             for i in range(self.nblocks):
-                self._nlps[i].grad_objective(x[i], other=df[i])
+                self._nlps[i].grad_objective(x[i], out=df[i])
             return df
         elif isinstance(x, np.ndarray):
             raise NotImplementedError("ToDo")
@@ -420,14 +420,14 @@ class TwoStageStochasticNLP(NLP):
 
         if isinstance(x, BlockVector):
             assert x.size == self.nx
-            assert x.nblocks == 2 * self.nblocks
+            assert x.nblocks == self.nblocks + 1
             for sid in range(self.nblocks):
-                self._nlps[sid].evaluate_g(x[sid], other=res[sid])
+                self._nlps[sid].evaluate_g(x[sid], out=res[sid])
                 scenario_vids = self._zid_to_vid[sid]
                 diff = []
                 for zid in range(self.nz):
                     vid = scenario_vids[zid]
-                    diff.append(x[sid][vid] - x[sid + self.nblocks][zid])
+                    diff.append(x[sid][vid] - x[self.nblocks][zid])
                 res[sid + self.nblocks] = np.array(diff, dtype=np.double)
             return res
         elif isinstance(x, np.ndarray):
@@ -444,14 +444,14 @@ class TwoStageStochasticNLP(NLP):
 
         if isinstance(x, BlockVector):
             assert x.size == self.nx
-            assert x.nblocks == 2 * self.nblocks
+            assert x.nblocks == self.nblocks + 1
             for sid in range(self.nblocks):
-                self._nlps[sid].evaluate_c(x[sid], other=res[sid])
+                self._nlps[sid].evaluate_c(x[sid], out=res[sid])
                 scenario_vids = self._zid_to_vid[sid]
                 diff = []
                 for zid in range(self.nz):
                     vid = scenario_vids[zid]
-                    diff.append(x[sid][vid] - x[sid + self.nblocks][zid])
+                    diff.append(x[sid][vid] - x[self.nblocks][zid])
                 res[sid + self.nblocks] = np.array(diff, dtype=np.double)
             return res
         elif isinstance(x, np.ndarray):
@@ -467,9 +467,9 @@ class TwoStageStochasticNLP(NLP):
 
         if isinstance(x, BlockVector):
             assert x.size == self.nx
-            assert x.nblocks == self.nblocks
+            assert x.nblocks == self.nblocks + 1
             for sid in range(self.nblocks):
-                self._nlps[sid].evaluate_d(x[sid], other=res[sid])
+                self._nlps[sid].evaluate_d(x[sid], out=res[sid])
             return res
         elif isinstance(x, np.ndarray):
             raise NotImplementedError("ToDo")
