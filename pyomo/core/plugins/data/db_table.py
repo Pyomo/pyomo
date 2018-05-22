@@ -44,7 +44,7 @@ try:
 except ImportError:
     pymysql_available=False
 
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 from pyomo.core.data.TableData import TableData
 
 

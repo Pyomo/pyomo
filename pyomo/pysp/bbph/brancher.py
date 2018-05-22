@@ -12,7 +12,7 @@ import time
 import os
 import pickle # so we can send index across with its type (I hope)
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.core import *
 from pyomo.pysp import phextension
 from pyomo.pysp.phutils import *
@@ -56,14 +56,14 @@ def external_collect_variable_bounds(ph,
 
 
 #==================================================
-class brancherextension(pyomo.util.plugin.SingletonPlugin):
+class brancherextension(pyomo.common.plugin.SingletonPlugin):
 
-    pyomo.util.plugin.implements(phextension.IPHExtension)
+    pyomo.common.plugin.implements(phextension.IPHExtension)
     
     # the below is a hack to get this extension into the
     # set of IPHExtension objects, so it can be queried
     # automagically by PH.
-    pyomo.util.plugin.alias("brancherextension")
+    pyomo.common.plugin.alias("brancherextension")
 
     def __init__(self, *args, **kwds):
 

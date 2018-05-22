@@ -19,7 +19,7 @@ from pyomo.pysp.phutils import (reset_nonconverged_variables,
                                 extractVariableNameAndIndex,
                                 reset_stage_cost_variables)
 from pyomo.pysp.solutionwriter import ISolutionWriterExtension
-from pyomo.util.plugin import ExtensionPoint
+from pyomo.common.plugin import ExtensionPoint
 
 # Tear the scenario instances off the ef instance when it is no longer required
 # so warnings are not generated next time scenarios instances are placed inside

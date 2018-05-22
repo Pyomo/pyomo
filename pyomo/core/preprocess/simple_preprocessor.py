@@ -2,19 +2,19 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
 import pyutilib.misc
-import pyomo.util.plugin
-import pyomo.util
+import pyomo.common.plugin
+import pyomo.common
 from pyomo.core.base import IPyomoPresolveAction
 
 
-@pyomo.util.pyomo_api(namespace='pyomo.model')
+@pyomo.common.pyomo_api(namespace='pyomo.model')
 def simple_preprocessor(data, model=None):
     """
     This plugin simply applies preprocess actions in a fixed order.
@@ -22,11 +22,11 @@ def simple_preprocessor(data, model=None):
     Required:
         model:      A concrete model instance.
     """
-    pyomo.util.PyomoAPIFactory('pyomo.repn.compute_standard_repn')(data, model=model)
+    pyomo.common.PyomoAPIFactory('pyomo.repn.compute_standard_repn')(data, model=model)
     #
     # Process the presolver actions
     #
-    actions = pyomo.util.plugin.ExtensionPoint(IPyomoPresolveAction)
+    actions = pyomo.common.plugin.ExtensionPoint(IPyomoPresolveAction)
     active_actions = set()
     action_rank = {}
     #
@@ -56,4 +56,3 @@ def simple_preprocessor(data, model=None):
     #
     for action in sorted:
         model = actions.service(action).preprocess(model)
-

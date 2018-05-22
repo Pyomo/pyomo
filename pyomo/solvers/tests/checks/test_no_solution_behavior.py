@@ -20,7 +20,7 @@ import pyutilib.th as unittest
 
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.testcases import test_scenarios
-from pyomo.util.log import LoggingIntercept
+from pyomo.common.log import LoggingIntercept
 
 import six
 from six import StringIO

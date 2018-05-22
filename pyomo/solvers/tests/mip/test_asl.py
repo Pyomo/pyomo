@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -44,7 +44,7 @@ class mock_all(unittest.TestCase):
         import pyomo.environ
         from pyomo.solvers.tests.solvers import test_solver_cases
         cplexamp_available = test_solver_cases('cplex', 'nl').available
-        
+
     def setUp(self):
         self.do_setup(False)
 
@@ -72,7 +72,7 @@ class mock_all(unittest.TestCase):
         """ Verify that the ASL path is what is expected """
         if type(self.asl) == 'ASL':
             self.assertEqual(self.asl.executable.split(os.sep)[-1],
-                             "ASL"+pyomo.util.executable_extension)
+                             "ASL"+pyomo.common.executable_extension)
 
     def test_solve4(self):
         """ Test ASL - test4.nl """

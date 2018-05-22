@@ -24,9 +24,9 @@ from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import target_list
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 from pyomo.repn import generate_standard_repn
-from pyomo.util.config import ConfigBlock, ConfigValue
-from pyomo.util.modeling import unique_component_name
-from pyomo.util.plugin import alias
+from pyomo.common.config import ConfigBlock, ConfigValue
+from pyomo.common.modeling import unique_component_name
+from pyomo.common.plugin import alias
 from six import iterkeys, iteritems
 
 logger = logging.getLogger('pyomo.gdp.bigm')

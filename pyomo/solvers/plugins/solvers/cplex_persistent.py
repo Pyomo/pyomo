@@ -15,7 +15,7 @@ from pyomo.core.base.var import Var
 from pyomo.core.base.sos import SOSConstraint
 from pyomo.solvers.plugins.solvers.cplex_direct import CPLEXDirect
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 
 
 class CPLEXPersistent(PersistentSolver, CPLEXDirect):

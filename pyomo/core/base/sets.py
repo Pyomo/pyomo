@@ -23,7 +23,7 @@ from weakref import ref as weakref_ref
 
 from pyutilib.misc import flatten_tuple as pyutilib_misc_flatten_tuple
 
-from pyomo.util.timing import ConstructionTimer
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.misc import apply_indexed_rule, \
     apply_parameterized_indexed_rule, sorted_robust
 from pyomo.core.base.plugin import register_component

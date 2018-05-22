@@ -18,7 +18,7 @@ import pyutilib.services
 import pyutilib.common
 import pyutilib.misc
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -40,7 +40,7 @@ class CPLEX(OptSolver):
     """The CPLEX LP/MIP solver
     """
 
-    pyomo.util.plugin.alias('cplex', doc='The CPLEX LP/MIP solver')
+    pyomo.common.plugin.alias('cplex', doc='The CPLEX LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
         try:
@@ -85,7 +85,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
     """Shell interface to the CPLEX LP/MIP solver
     """
 
-    pyomo.util.plugin.alias('_cplex_shell', doc='Shell interface to the CPLEX LP/MIP solver')
+    pyomo.common.plugin.alias('_cplex_shell', doc='Shell interface to the CPLEX LP/MIP solver')
 
     def __init__(self, **kwds):
         #
@@ -745,7 +745,7 @@ class MockCPLEX(CPLEXSHELL,MockMIP):
     """A Mock CPLEX solver used for testing
     """
 
-    pyomo.util.plugin.alias('_mock_cplex')
+    pyomo.common.plugin.alias('_mock_cplex')
 
     def __init__(self, **kwds):
         try:

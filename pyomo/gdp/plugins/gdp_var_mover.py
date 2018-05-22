@@ -16,7 +16,7 @@ detect variables inside of Disjuncts or deactivated Blocks.
 
 import logging
 import textwrap
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 from pyomo.core.base import Transformation, Block, Constraint
 from pyomo.gdp import Disjunct
 from pyomo.core import TraversalStrategy

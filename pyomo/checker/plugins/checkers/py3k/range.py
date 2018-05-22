@@ -9,13 +9,13 @@
 #  ___________________________________________________________________________
 
 import ast
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.checker.plugins.checker import IterativeTreeChecker
 
 
 class XRange(IterativeTreeChecker):
 
-    pyomo.util.plugin.alias('py3k.xrange', 'Check if the xrange() function is used.')
+    pyomo.common.plugin.alias('py3k.xrange', 'Check if the xrange() function is used.')
 
     def check(self, runner, script, info):
         if isinstance(info, ast.Name):

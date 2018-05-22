@@ -1423,7 +1423,7 @@ static const char __pyx_k_pyomo_core_base_var[] = "pyomo.core.base.var";
 static const char __pyx_k_pyomo_core_util_pyx[] = "pyomo/core/util.pyx";
 static const char __pyx_k_native_numeric_types[] = "native_numeric_types";
 static const char __pyx_k_nonlinear_expression[] = "nonlinear_expression";
-static const char __pyx_k_pyomo_util_deprecation[] = "pyomo.util.deprecation";
+static const char __pyx_k_pyomo_util_deprecation[] = "pyomo.common.deprecation";
 static const char __pyx_k_pyomo_core_expr_numvalue[] = "pyomo.core.expr.numvalue";
 static const char __pyx_k_summation_locals_genexpr[] = "summation.<locals>.genexpr";
 static const char __pyx_k_pyomo_core_expr_expr_pyomo5[] = "pyomo.core.expr.expr_pyomo5";
@@ -6891,7 +6891,7 @@ static PyObject *__pyx_pf_5pyomo_4core_4util_6sequence(CYTHON_UNUSED PyObject *_
  * 
  * 
  * def xsequence(*args):             # <<<<<<<<<<<<<<
- *     from pyomo.util.deprecation import deprecation_warning
+ *     from pyomo.common.deprecation import deprecation_warning
  *     deprecation_warning("The xsequence function is deprecated.  Use the sequence() function, which returns a generator.")  # Remove in Pyomo 6.0
  */
 
@@ -6925,7 +6925,7 @@ static PyObject *__pyx_pf_5pyomo_4core_4util_8xsequence(CYTHON_UNUSED PyObject *
   /* "pyomo/core/util.pyx":280
  * 
  * def xsequence(*args):
- *     from pyomo.util.deprecation import deprecation_warning             # <<<<<<<<<<<<<<
+ *     from pyomo.common.deprecation import deprecation_warning             # <<<<<<<<<<<<<<
  *     deprecation_warning("The xsequence function is deprecated.  Use the sequence() function, which returns a generator.")  # Remove in Pyomo 6.0
  *     return sequence(*args)
  */
@@ -6946,7 +6946,7 @@ static PyObject *__pyx_pf_5pyomo_4core_4util_8xsequence(CYTHON_UNUSED PyObject *
 
   /* "pyomo/core/util.pyx":281
  * def xsequence(*args):
- *     from pyomo.util.deprecation import deprecation_warning
+ *     from pyomo.common.deprecation import deprecation_warning
  *     deprecation_warning("The xsequence function is deprecated.  Use the sequence() function, which returns a generator.")  # Remove in Pyomo 6.0             # <<<<<<<<<<<<<<
  *     return sequence(*args)
  * 
@@ -6956,7 +6956,7 @@ static PyObject *__pyx_pf_5pyomo_4core_4util_8xsequence(CYTHON_UNUSED PyObject *
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
   /* "pyomo/core/util.pyx":282
- *     from pyomo.util.deprecation import deprecation_warning
+ *     from pyomo.common.deprecation import deprecation_warning
  *     deprecation_warning("The xsequence function is deprecated.  Use the sequence() function, which returns a generator.")  # Remove in Pyomo 6.0
  *     return sequence(*args)             # <<<<<<<<<<<<<<
  * 
@@ -6975,7 +6975,7 @@ static PyObject *__pyx_pf_5pyomo_4core_4util_8xsequence(CYTHON_UNUSED PyObject *
  * 
  * 
  * def xsequence(*args):             # <<<<<<<<<<<<<<
- *     from pyomo.util.deprecation import deprecation_warning
+ *     from pyomo.common.deprecation import deprecation_warning
  *     deprecation_warning("The xsequence function is deprecated.  Use the sequence() function, which returns a generator.")  # Remove in Pyomo 6.0
  */
 
@@ -8107,7 +8107,7 @@ static int __Pyx_InitCachedConstants(void) {
 
   /* "pyomo/core/util.pyx":281
  * def xsequence(*args):
- *     from pyomo.util.deprecation import deprecation_warning
+ *     from pyomo.common.deprecation import deprecation_warning
  *     deprecation_warning("The xsequence function is deprecated.  Use the sequence() function, which returns a generator.")  # Remove in Pyomo 6.0             # <<<<<<<<<<<<<<
  *     return sequence(*args)
  * 
@@ -8168,7 +8168,7 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  * 
  * def xsequence(*args):             # <<<<<<<<<<<<<<
- *     from pyomo.util.deprecation import deprecation_warning
+ *     from pyomo.common.deprecation import deprecation_warning
  *     deprecation_warning("The xsequence function is deprecated.  Use the sequence() function, which returns a generator.")  # Remove in Pyomo 6.0
  */
   __pyx_tuple__20 = PyTuple_Pack(2, __pyx_n_s_args, __pyx_n_s_deprecation_warning); if (unlikely(!__pyx_tuple__20)) __PYX_ERR(0, 279, __pyx_L1_error)
@@ -8596,7 +8596,7 @@ static int __pyx_pymod_exec_util(PyObject *__pyx_pyinit_module)
  * 
  * 
  * def xsequence(*args):             # <<<<<<<<<<<<<<
- *     from pyomo.util.deprecation import deprecation_warning
+ *     from pyomo.common.deprecation import deprecation_warning
  *     deprecation_warning("The xsequence function is deprecated.  Use the sequence() function, which returns a generator.")  # Remove in Pyomo 6.0
  */
   __pyx_t_2 = PyCFunction_NewEx(&__pyx_mdef_5pyomo_4core_4util_9xsequence, NULL, __pyx_n_s_pyomo_core_util); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 279, __pyx_L1_error)

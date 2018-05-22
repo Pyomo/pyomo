@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import logging
-from pyomo.util.timing import ConstructionTimer
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core import *
 from pyomo.core.base.plugin import register_component
 from pyomo.core.base.sets import OrderedSimpleSet

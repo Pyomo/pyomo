@@ -2,7 +2,7 @@ import sys
 import logging
 from pyutilib.misc.timing import TicTocTimer
 
-_logger = logging.getLogger('pyomo.util.timing')
+_logger = logging.getLogger('pyomo.common.timing')
 _logger.propagate = False
 _logger.setLevel(logging.WARNING)
 
@@ -20,7 +20,7 @@ def report_timing(stream=True):
         for h in _logger.handlers:
             _logger.removeHandler(h)
 
-_construction_logger = logging.getLogger('pyomo.util.timing.construction')
+_construction_logger = logging.getLogger('pyomo.common.timing.construction')
 class ConstructionTimer(object):
     fmt = "%%6.%df seconds to construct %s %s; %d %s total"
     def __init__(self, obj):
@@ -57,7 +57,7 @@ class ConstructionTimer(object):
                 self.timer.toc("") )
 
 
-_transform_logger = logging.getLogger('pyomo.util.timing.transformation')
+_transform_logger = logging.getLogger('pyomo.common.timing.transformation')
 class TransformationTimer(object):
     fmt = "%%6.%df seconds to apply Transformation %s%s"
     def __init__(self, obj, mode=None):
