@@ -22,7 +22,7 @@ import pyutilib.common
 
 import pyomo.opt
 import pyomo.solvers.plugins.solvers
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 
 old_tempdir = None
 def setUpModule():

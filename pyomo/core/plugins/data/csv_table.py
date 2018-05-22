@@ -11,7 +11,7 @@
 import os.path
 import csv
 
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 
 from pyomo.core.base.param import Param
 from pyomo.core.data.TableData import TableData

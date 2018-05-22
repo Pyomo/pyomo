@@ -2,7 +2,7 @@ import os
 import numpy as np
 from pyutilib.math import infinity
 from pyutilib.services import TempfileManager
-from pyomo.util.modeling import randint, unique_component_name
+from pyomo.common.modeling import randint, unique_component_name
 from pyomo.core import Block, Var, Param, Set, VarList, ConstraintList, Constraint, Objective, RangeSet, value, ConcreteModel, Reals, sqrt, minimize, maximize
 from pyomo.core.base import expr_coopr3, expr as EXPR
 from pyomo.core.base.var import _VarData
@@ -620,5 +620,3 @@ class PyomoInterface:
                         count = count + 1
 
         return rom_params, y1
-
-

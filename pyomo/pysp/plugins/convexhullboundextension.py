@@ -12,7 +12,7 @@ import os
 import logging
 import copy
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.opt import SolverFactory
 from pyomo.core import *
 from pyomo.pysp import phextension
@@ -21,11 +21,11 @@ from pyomo.pysp.plugins.phboundextension import (_PHBoundBase,
 
 logger = logging.getLogger('pyomo.pysp')
 
-class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
+class convexhullboundextension(pyomo.common.plugin.SingletonPlugin, _PHBoundBase):
 
-    pyomo.util.plugin.implements(phextension.IPHExtension)
+    pyomo.common.plugin.implements(phextension.IPHExtension)
 
-    pyomo.util.plugin.alias("convexhullboundextension")
+    pyomo.common.plugin.alias("convexhullboundextension")
 
     def __init__(self, *args, **kwds):
 

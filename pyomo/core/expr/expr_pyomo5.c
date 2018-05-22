@@ -2017,7 +2017,7 @@ static const char __pyx_k_VariableVisitor___init[] = "_VariableVisitor.__init__"
 static const char __pyx_k_decompose_linear_terms[] = "_decompose_linear_terms";
 static const char __pyx_k_generate_standard_repn[] = "generate_standard_repn";
 static const char __pyx_k_mutable_linear_context[] = "mutable_linear_context";
-static const char __pyx_k_pyomo_util_deprecation[] = "pyomo.util.deprecation";
+static const char __pyx_k_pyomo_util_deprecation[] = "pyomo.common.deprecation";
 static const char __pyx_k_ComponentVisitor___init[] = "_ComponentVisitor.__init__";
 static const char __pyx_k_Equality_expression_x_y[] = "\n    Equality expression::\n\n        x == y\n    ";
 static const char __pyx_k_EvaluationVisitor_visit[] = "_EvaluationVisitor.visit";
@@ -69342,7 +69342,7 @@ static int __pyx_pymod_exec_expr_pyomo5(PyObject *__pyx_pyinit_module)
  * from pyutilib.misc.visitor import SimpleVisitor, ValueVisitor
  * from pyutilib.math.util import isclose             # <<<<<<<<<<<<<<
  * 
- * from pyomo.util.deprecation import deprecation_warning
+ * from pyomo.common.deprecation import deprecation_warning
  */
   __pyx_t_2 = PyList_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 92, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
@@ -69361,7 +69361,7 @@ static int __pyx_pymod_exec_expr_pyomo5(PyObject *__pyx_pyinit_module)
   /* "pyomo/core/expr/expr_pyomo5.pyx":94
  * from pyutilib.math.util import isclose
  * 
- * from pyomo.util.deprecation import deprecation_warning             # <<<<<<<<<<<<<<
+ * from pyomo.common.deprecation import deprecation_warning             # <<<<<<<<<<<<<<
  * from pyomo.core.expr.symbol_map import SymbolMap
  * from pyomo.core.expr.numvalue import \
  */
@@ -69381,7 +69381,7 @@ static int __pyx_pymod_exec_expr_pyomo5(PyObject *__pyx_pyinit_module)
 
   /* "pyomo/core/expr/expr_pyomo5.pyx":95
  * 
- * from pyomo.util.deprecation import deprecation_warning
+ * from pyomo.common.deprecation import deprecation_warning
  * from pyomo.core.expr.symbol_map import SymbolMap             # <<<<<<<<<<<<<<
  * from pyomo.core.expr.numvalue import \
  *     (NumericValue,
@@ -69432,7 +69432,7 @@ static int __pyx_pymod_exec_expr_pyomo5(PyObject *__pyx_pyinit_module)
   PyList_SET_ITEM(__pyx_t_1, 6, __pyx_n_s_value);
 
   /* "pyomo/core/expr/expr_pyomo5.pyx":96
- * from pyomo.util.deprecation import deprecation_warning
+ * from pyomo.common.deprecation import deprecation_warning
  * from pyomo.core.expr.symbol_map import SymbolMap
  * from pyomo.core.expr.numvalue import \             # <<<<<<<<<<<<<<
  *     (NumericValue,

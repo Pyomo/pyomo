@@ -15,6 +15,8 @@ from math import fabs
 
 from six import itervalues
 
+from pyomo.common.config import ConfigBlock, ConfigValue
+from pyomo.common.plugin import alias
 from pyomo.core.base import Transformation
 from pyomo.core.base.component import _ComponentBase
 from pyomo.core.base.block import Block, _BlockData
@@ -24,8 +26,6 @@ from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import GDP_Error
 from pyomo.gdp.disjunct import (Disjunct, Disjunction, _DisjunctData,
                                 _DisjunctionData)
-from pyomo.util.config import ConfigBlock, ConfigValue
-from pyomo.util.plugin import alias
 
 logger = logging.getLogger('pyomo.gdp.fix_disjuncts')
 

@@ -37,7 +37,7 @@ from pyutilib.pyro.util import find_unused_port
 from pyutilib.services import TempfileManager
 import pyutilib.common
 from pyomo.opt.base import ConverterError
-from pyomo.util.plugin import (ExtensionPoint,
+from pyomo.common.plugin import (ExtensionPoint,
                                SingletonPlugin)
 from pyomo.pysp.util.config import PySPConfigBlock
 from pyomo.pysp.util.configured_object import PySPConfiguredObject

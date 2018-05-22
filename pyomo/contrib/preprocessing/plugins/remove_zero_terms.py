@@ -9,7 +9,7 @@ from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr import current as EXPR
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 from pyutilib.math.util import isclose
 
 

@@ -32,7 +32,7 @@ try:
 except:
     basestring = str
 
-#from pyomo.util.plugin import *
+#from pyomo.common.plugin import *
 
 #from pyomo.core.kernel.component import Component
 from pyomo.core.expr.numvalue import *

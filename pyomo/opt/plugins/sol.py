@@ -16,7 +16,7 @@ import re
 
 import pyutilib.misc
 
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 from pyomo.opt.base import results
 from pyomo.opt.base.formats import ResultsFormat
 from pyomo.opt import (SolverResults,

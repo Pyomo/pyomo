@@ -12,7 +12,7 @@ import sys
 import time
 import copy
 
-from pyomo.util import pyomo_command
+from pyomo.common import pyomo_command
 from pyomo.core import minimize
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,

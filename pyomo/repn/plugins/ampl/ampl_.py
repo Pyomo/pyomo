@@ -28,7 +28,7 @@ import time
 from pyutilib.math.util import isclose
 from pyutilib.misc import PauseGC
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import *
 from pyomo.core.expr import current as EXPR
@@ -284,7 +284,7 @@ class RepnWrapper(object):
 
 class ProblemWriter_nl(AbstractProblemWriter):
 
-    pyomo.util.plugin.alias(str(ProblemFormat.nl),
+    pyomo.common.plugin.alias(str(ProblemFormat.nl),
                             'Generate the corresponding AMPL NL file.')
 
     def __init__(self):

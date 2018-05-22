@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -13,11 +13,11 @@ from __future__ import division
 __all__ = ['compute_standard_repn']
 
 
-import pyomo.util
+import pyomo.common
 from pyomo.repn.standard_repn import preprocess_block_constraints, preprocess_block_objectives
 
 
-@pyomo.util.pyomo_api(namespace='pyomo.repn')
+@pyomo.common.pyomo_api(namespace='pyomo.repn')
 def compute_standard_repn(data, model=None):
     """
     This plugin computes the standard representation for all objectives

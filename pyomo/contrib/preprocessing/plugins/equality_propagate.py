@@ -8,7 +8,7 @@ from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 
 
 def _build_equality_set(m):
