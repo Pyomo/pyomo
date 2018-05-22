@@ -18,7 +18,7 @@ import logging
 import textwrap
 from pyomo.common.plugin import alias
 from pyomo.core.base import Transformation, Block, Constraint
-from pyomo.gdp import Disjunct
+from pyomo.gdp import Disjunct, GDP_Error
 from pyomo.core import TraversalStrategy
 
 from six import itervalues
@@ -75,7 +75,7 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
                 if (disjunct.active and
                         self._disjunct_not_relaxed(disjunct) and
                         self._disjunct_on_active_block(disjunct)):
-                    logger.error("""
+                    raise GDP_Error("""
                     Reclassifying active Disjunct "%s" as a Block.  This
                     is generally an error as it indicates that the model
                     was not completely relaxed before applying the
