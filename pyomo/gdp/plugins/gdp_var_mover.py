@@ -75,7 +75,8 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
             for disjunct in itervalues(disjunct_component._data):
                 if (disjunct.active and
                         self._disjunct_not_relaxed(disjunct) and
-                        self._disjunct_on_active_block(disjunct)):
+                        self._disjunct_on_active_block(disjunct) and
+                        self._disjunct_not_fixed_true(disjunct)):
                     raise GDP_Error("""
                     Reclassifying active Disjunct "%s" as a Block.  This
                     is generally an error as it indicates that the model
@@ -100,6 +101,11 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
                     Constraint, descend_into=Block, active=True)
                 for con in cons_in_disjunct:
                     con.deactivate()
+
+    def _disjunct_not_fixed_true(self, disjunct):
+        # Return true if the disjunct indicator variable is not fixed to True
+        return not (disjunct.indicator_var.fixed and
+                    disjunct.indicator_var.value == 1)
 
     def _disjunct_not_relaxed(self, disjunct):
         # Return True if the disjunct was not relaxed by a transformation.
