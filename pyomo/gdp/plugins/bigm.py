@@ -24,9 +24,9 @@ from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import target_list
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 from pyomo.repn import generate_standard_repn
-from pyomo.util.config import ConfigBlock, ConfigValue
-from pyomo.util.modeling import unique_component_name
-from pyomo.util.plugin import alias
+from pyomo.common.config import ConfigBlock, ConfigValue
+from pyomo.common.modeling import unique_component_name
+from pyomo.common.plugin import alias
 from six import iterkeys, iteritems
 
 logger = logging.getLogger('pyomo.gdp.bigm')
@@ -314,6 +314,8 @@ class BigM_Transformation(Transformation):
         obj.deactivate()
 
     def _transformDisjunctionData(self, obj, transBlock, bigM, index):
+        if not obj.active:
+            return  # Do not process a deactivated disjunction
         parent_component = obj.parent_component()
         transBlock.disjContainers.add(parent_component)
         orConstraint = self._getXorConstraint(parent_component)
@@ -360,7 +362,7 @@ class BigM_Transformation(Transformation):
                 else:
                     raise GDP_Error(
                         "The disjunct %s is deactivated, but the "
-                        "indicator_var is fixed to %. This makes no sense."
+                        "indicator_var is fixed to %s. This makes no sense."
                         % ( obj.name, value(obj.indicator_var) ))
             if not infodict.get('relaxed', False):
                 raise GDP_Error(

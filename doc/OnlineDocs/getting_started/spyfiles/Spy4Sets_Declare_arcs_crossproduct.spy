@@ -1,0 +1,1 @@
+model.arcs = model.Nodes*model.Nodes

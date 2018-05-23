@@ -2,7 +2,7 @@ import logging
 import copy
 import math
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.pysp import phextension
 from pyomo.pysp.phutils import indexToString
 
@@ -189,12 +189,12 @@ class _AdaptiveRhoBase(object):
     def post_ph_execution(self, ph):
         pass
 
-class admm(pyomo.util.plugin.SingletonPlugin,
+class admm(pyomo.common.plugin.SingletonPlugin,
            _AdaptiveRhoBase):
 
-    pyomo.util.plugin.implements(phextension.IPHExtension)
+    pyomo.common.plugin.implements(phextension.IPHExtension)
 
-    pyomo.util.plugin.alias("admm")
+    pyomo.common.plugin.alias("admm")
 
     def __init__(self):
         _AdaptiveRhoBase.__init__(self)

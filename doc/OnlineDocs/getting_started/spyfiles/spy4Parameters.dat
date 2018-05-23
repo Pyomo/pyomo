@@ -1,0 +1,3 @@
+set A := 1 2 3 ;
+set B := peanuts soybeans ;
+param P := 1 peanuts 12.2 ;

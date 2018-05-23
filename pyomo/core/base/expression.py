@@ -14,7 +14,7 @@ import sys
 import logging
 from weakref import ref as weakref_ref
 
-from pyomo.util.timing import ConstructionTimer
+from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import ComponentData

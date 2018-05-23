@@ -16,7 +16,7 @@ from pyomo.core.base import (Constraint, Suffix, Var, value,
                              Expression, Objective)
 from pyomo.opt import ProblemFormat, SolverFactory
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.opt.base import IOptSolver
 import pyutilib.services
 
@@ -37,7 +37,7 @@ logger = logging.getLogger('pyomo.solvers')
 
 pyutilib.services.register_executable(name="gams")
 
-class GAMSSolver(pyomo.util.plugin.Plugin):
+class GAMSSolver(pyomo.common.plugin.Plugin):
     """
     A generic interface to GAMS solvers
 
@@ -47,8 +47,8 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
         solver_io='shell' or 'gms' to use command line to call gams
             Requires the gams executable be on your system PATH.
     """
-    pyomo.util.plugin.implements(IOptSolver)
-    pyomo.util.plugin.alias('gams', doc='The GAMS modeling language')
+    pyomo.common.plugin.implements(IOptSolver)
+    pyomo.common.plugin.alias('gams', doc='The GAMS modeling language')
 
     def __new__(cls, *args, **kwds):
         try:
@@ -68,10 +68,10 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
             return
 
 
-class GAMSDirect(pyomo.util.plugin.Plugin):
+class GAMSDirect(pyomo.common.plugin.Plugin):
     """A generic interface to GAMS solvers"""
-    pyomo.util.plugin.implements(IOptSolver)
-    pyomo.util.plugin.alias('_gams_direct', doc='The GAMS modeling language')
+    pyomo.common.plugin.implements(IOptSolver)
+    pyomo.common.plugin.alias('_gams_direct', doc='The GAMS modeling language')
 
     def __init__(self, **kwds):
         self._version = None
@@ -87,7 +87,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
 
         self.options = Options() # ignored
 
-        pyomo.util.plugin.Plugin.__init__(self, **kwds)
+        pyomo.common.plugin.Plugin.__init__(self, **kwds)
 
     def available(self, exception_flag=True):
         """True if the solver is available"""
@@ -544,10 +544,10 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         return results
 
 
-class GAMSShell(pyomo.util.plugin.Plugin):
+class GAMSShell(pyomo.common.plugin.Plugin):
     """A generic interface to GAMS solvers"""
-    pyomo.util.plugin.implements(IOptSolver)
-    pyomo.util.plugin.alias('_gams_shell', doc='The GAMS modeling language')
+    pyomo.common.plugin.implements(IOptSolver)
+    pyomo.common.plugin.alias('_gams_shell', doc='The GAMS modeling language')
 
     def __init__(self, **kwds):
         self._version = None
@@ -563,7 +563,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         self.options = Options() # ignored
 
-        pyomo.util.plugin.Plugin.__init__(self, **kwds)
+        pyomo.common.plugin.Plugin.__init__(self, **kwds)
 
     def available(self, exception_flag=True):
         """True if the solver is available"""

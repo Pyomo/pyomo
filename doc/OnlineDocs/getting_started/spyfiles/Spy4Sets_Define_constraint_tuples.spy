@@ -1,0 +1,3 @@
+def kv_init(model):
+    return ((k,v) for k in model.K for v in model.V[k])
+model.KV=Set(dimen=2, initialize=kv_init)
