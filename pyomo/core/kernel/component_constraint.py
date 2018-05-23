@@ -14,7 +14,7 @@ from pyomo.core.expr.numvalue import (ZeroConstant,
                                       is_constant,
                                       as_numeric,
                                       native_types,
-                                      potentially_variable,
+                                      is_potentially_variable,
                                       is_numeric_data,
                                       value,
                                       _sub)
@@ -433,10 +433,10 @@ class constraint(_MutableBoundsConstraintMixin,
                 arg1 = expr[1]
                 # assigning to the rhs property
                 # will set the equality flag to True
-                if not potentially_variable(arg1):
+                if not is_potentially_variable(arg1):
                     self.rhs = arg1
                     self.body = arg0
-                elif not potentially_variable(arg0):
+                elif not is_potentially_variable(arg0):
                     self.rhs = arg0
                     self.body = arg1
                 else:
@@ -535,10 +535,10 @@ class constraint(_MutableBoundsConstraintMixin,
             if _expr_type is EXPR.EqualityExpression:
                 # assigning to the rhs property
                 # will set the equality flag to True
-                if not potentially_variable(expr.arg(1)):
+                if not is_potentially_variable(expr.arg(1)):
                     self.rhs = expr.arg(1)
                     self.body = expr.arg(0)
-                elif not potentially_variable(expr.arg(0)):
+                elif not is_potentially_variable(expr.arg(0)):
                     self.rhs = expr.arg(0)
                     self.body = expr.arg(1)
                 else:
@@ -554,11 +554,11 @@ class constraint(_MutableBoundsConstraintMixin,
                         " constraints must be formulated using "
                         "using '<=', '>=', or '=='."
                         % (self.name))
-                if not potentially_variable(expr.arg(1)):
+                if not is_potentially_variable(expr.arg(1)):
                     self.lb = None
                     self.body = expr.arg(0)
                     self.ub = expr.arg(1)
-                elif not potentially_variable(expr.arg(0)):
+                elif not is_potentially_variable(expr.arg(0)):
                     self.lb = expr.arg(0)
                     self.body = expr.arg(1)
                     self.ub = None

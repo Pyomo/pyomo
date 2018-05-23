@@ -24,7 +24,7 @@ from pyomo.core.expr.numvalue import (NumericValue,
                                       is_fixed,
                                       is_constant,
                                       is_variable_type,
-                                      potentially_variable,
+                                      is_potentially_variable,
                                       is_numeric_data,
                                       value)
 
@@ -80,7 +80,7 @@ class IIdentityExpression(NumericValue):
     def is_potentially_variable(self):
         """A boolean indicating whether this expression can
         reference variables."""
-        return potentially_variable(self._expr)
+        return is_potentially_variable(self._expr)
 
     def is_named_expression_type(self):
         """A boolean indicating whether this in a named expression."""
