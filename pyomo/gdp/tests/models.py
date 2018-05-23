@@ -378,24 +378,25 @@ def makeDisjunctInMultipleDisjunctions():
     m.disjunct2[1].deactivate()
     return m
 
+
 def makeDisjunctInMultipleDisjunctions_incorrect():
     m = ConcreteModel()
-    m.a = Var(bounds=(-10,50))
+    m.a = Var(bounds=(-10, 50))
 
     def d1_rule(disjunct, flag):
         m = disjunct.model()
         if flag:
-            disjunct.c = Constraint(expr=m.a==0)
+            disjunct.c = Constraint(expr=m.a == 0)
         else:
-            disjunct.c = Constraint(expr=m.a>=5)
-    m.disjunct1 = Disjunct([0,1], rule=d1_rule)
+            disjunct.c = Constraint(expr=m.a >= 5)
+    m.disjunct1 = Disjunct([0, 1], rule=d1_rule)
 
     def d2_rule(disjunct, flag):
         if not flag:
-            disjunct.c = Constraint(expr=m.a>=30)
+            disjunct.c = Constraint(expr=m.a >= 30)
         else:
-            disjunct.c = Constraint(expr=m.a==100)
-    m.disjunct2 = Disjunct([0,1], rule=d2_rule)
+            disjunct.c = Constraint(expr=m.a == 100)
+    m.disjunct2 = Disjunct([0, 1], rule=d2_rule)
 
     m.disjunction1 = Disjunction(expr=[m.disjunct1[0], m.disjunct1[1]])
     m.disjunction2 = Disjunction(expr=[m.disjunct2[0], m.disjunct1[1]])
