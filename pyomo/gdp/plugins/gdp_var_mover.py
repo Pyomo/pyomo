@@ -20,6 +20,7 @@ from pyomo.common.plugin import alias
 from pyomo.core.base import Transformation, Block, Constraint
 from pyomo.gdp import Disjunct, GDP_Error
 from pyomo.core import TraversalStrategy
+from pyomo.common.deprecation import deprecated
 
 from six import itervalues
 
@@ -36,7 +37,8 @@ class HACK_GDP_Var_Mover(Transformation):
 
     alias('gdp.varmover', doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
-    # TODO this should be deprecated.
+    @deprecated(msg="The gdp.varmover transformation has been deprecated in "
+                "favor of the gdp.reclassify transformation.")
     def _apply_to(self, instance, **kwds):
         assert not kwds
         count = 0
@@ -68,9 +70,8 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
             Disjunct, descend_into=(Block, Disjunct),
             descent_order=TraversalStrategy.PostfixDFS)
         for disjunct_component in disjunct_generator:
-
-            # Check that the disjuncts being reclassified are all relaxed or are
-            # not on an active block.
+            # Check that the disjuncts being reclassified are all relaxed or
+            # are not on an active block.
             for disjunct in itervalues(disjunct_component._data):
                 if (disjunct.active and
                         self._disjunct_not_relaxed(disjunct) and
