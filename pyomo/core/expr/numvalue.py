@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ('value', 'is_constant', 'is_fixed', 'is_variable_type', 'potentially_variable', 'NumericValue', 'ZeroConstant', 'native_numeric_types', 'native_types', 'polynomial_degree')
+__all__ = ('value', 'is_constant', 'is_fixed', 'is_variable_type', 'is_potentially_variable', 'NumericValue', 'ZeroConstant', 'native_numeric_types', 'native_types', 'polynomial_degree')
 
 import sys
 import logging
@@ -181,8 +181,12 @@ def value(obj, exception=True):
     if obj.__class__ in native_types:
         return obj
     if obj.__class__ is NumericConstant:
-        if exception and obj.value is None:
-            raise ValueError("No value for uninitialized NumericConstant object %s" % (obj.name,))
+        #
+        # I'm commenting this out for now, but I think we should never expect
+        # to see a numeric constant with value None.
+        #
+        #if exception and obj.value is None:
+        #    raise ValueError("No value for uninitialized NumericConstant object %s" % (obj.name,))
         return obj.value
     #
     # Test if we have a duck types for Pyomo expressions
@@ -264,7 +268,13 @@ def is_fixed(obj):
     try:
         return obj.is_fixed()
     except AttributeError:
-        return False
+        pass
+    try:
+        # Now we need to confirm that we have an unknown numeric type
+        as_numeric(obj)
+        return True
+    except:
+        raise TypeError("Cannot assess properties of object with unknown type: %s" % str(obj.__class__))
 
 def is_variable_type(obj):
     """
@@ -278,7 +288,7 @@ def is_variable_type(obj):
     except AttributeError:
         return False
 
-def potentially_variable(obj):
+def is_potentially_variable(obj):
     """
     A utility function that returns a boolean indicating
     whether the input object can reference variables.
@@ -321,8 +331,10 @@ def polynomial_degree(obj):
     that indicates the polynomial degree for an
     object. boolean indicating
     """
-    if obj.__class__ in native_types:
+    if obj.__class__ in native_numeric_types:
         return 0
+    elif obj.__class__ in native_types:
+        raise TypeError("Cannot evaluate the the polynomial degree of a non-numeric type: %s" % str(obj.__class__))
     try:
         return obj.polynomial_degree()
     except AttributeError:
@@ -436,6 +448,7 @@ def as_numeric(obj):
                 #
                 native_numeric_types.add(obj.__class__)
                 native_types.add(obj.__class__)
+                nonpyomo_leaf_types.add(obj.__class__)
                 #
                 # Generate a warning, since Pyomo's management of third-party
                 # numeric types is more robust when registering explicitly.
