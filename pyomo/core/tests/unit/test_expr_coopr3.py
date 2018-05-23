@@ -23,7 +23,7 @@ from pyutilib.th import nottest
 
 from pyomo.environ import *
 import pyomo.core.expr.current as EXPR
-from pyomo.core.expr.numvalue import potentially_variable
+#from pyomo.core.expr.numvalue import potentially_variable
 from pyomo.core.base.var import SimpleVar
 
 

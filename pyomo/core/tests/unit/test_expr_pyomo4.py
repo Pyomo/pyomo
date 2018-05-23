@@ -24,7 +24,7 @@ from pyutilib.th import nottest
 from pyomo.environ import *
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base.var import SimpleVar
-from pyomo.core.base.numvalue import potentially_variable, native_types
+from pyomo.core.base.numvalue import native_types
 
 if EXPR.mode is EXPR.Mode.pyomo4_trees:
     TestCase = unittest.TestCase
