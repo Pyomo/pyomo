@@ -28,12 +28,14 @@ from math import copysign, fabs
 from six import iteritems
 
 import pyomo.common.plugin
-from pyomo.core.expr import current as EXPR
+from pyomo.common import (ConfigBlock, ConfigList, ConfigValue, In,
+                          NonNegativeFloat, NonNegativeInt)
 from pyomo.core.base import (Block, Constraint, ConstraintList, Expression,
                              Objective, Set, Suffix, TransformationFactory,
                              Var, maximize, minimize, value)
 from pyomo.core.base.block import generate_cuid_names
 from pyomo.core.base.symbolic import differentiate
+from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel import (ComponentMap, ComponentSet, NonNegativeReals,
                                Reals)
 from pyomo.gdp import Disjunct, Disjunction
@@ -42,17 +44,33 @@ from pyomo.opt import SolutionStatus, SolverFactory, SolverStatus
 from pyomo.opt.base import IOptSolver
 from pyomo.opt.results import ProblemSense, SolverResults
 
-logger = logging.getLogger('pyomo.contrib.gdpopt')
-
 __version__ = (0, 1, 0)
+
+
+class _DoNothing(object):
+    """Do nothing, literally.
+
+    This class is used in situations of "do something if attribute exists."
+    """
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __call__(self, *args, **kwargs):
+        pass
+
+    def __getattr__(self, attr):
+        def _do_nothing(*args, **kwargs):
+            pass
+        return _do_nothing
 
 
 class GDPoptSolver(pyomo.common.plugin.Plugin):
     """A decomposition-based GDP solver."""
 
     pyomo.common.plugin.implements(IOptSolver)
-    pyomo.common.plugin.alias('gdpopt',
-                            doc='The GDPopt decomposition-based GDP solver')
+    pyomo.common.plugin.alias(
+        'gdpopt', doc='The GDPopt decomposition-based GDP solver')
 
     CONFIG = ConfigBlock("GDPopt")
     CONFIG.declare("bound_tolerance", ConfigValue(
@@ -69,12 +87,12 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
     ))
     CONFIG.declare("init_strategy", ConfigValue(
         default="set_covering", domain=In(["set_covering"]),
-        description="Initialization strategy to use."
+        description="Initialization strategy to use.",
         doc="""Selects the initialization strategy to use when generating
         the initial cuts to construct the master problem."""
     ))
     CONFIG.declare("custom_init_disjuncts", ConfigList(
-        #domain=ComponentSet of Disjuncts,
+        # domain=ComponentSets of Disjuncts,
         default=None,
         description="List of disjunct sets to use for initialization."
     ))
@@ -87,9 +105,70 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         description="Penalty multiplication term for slack variables on the "
         "objective value."
     ))
-    CONFIG.declare("nlp", ConfigValue(default="ipopt"))
-    # TODO how do I do this?
-    CONFIG.declare("nlp_options", ConfigBlock())
+    CONFIG.declare("nlp", ConfigValue(
+        default="ipopt",
+        description="Nonlinear solver to use"))
+    nlp_options = CONFIG.declare("nlp_options", ConfigBlock())
+    CONFIG.declare("mip", ConfigValue(
+        default="gurobi",
+        description="Mixed integer linear solver to use."
+    ))
+    mip_options = CONFIG.declare("mip_options", ConfigBlock())
+    # CONFIG.declare("solve_in_place", ConfigValue(
+    #     default=True,
+    #     description="If true, GDPopt manipulations are performed "
+    #                 "directly upon the model. Otherwise, the model is "
+    #                 "first copied and solution values are copied over "
+    #                 "afterwards.",
+    #     domain=In([True, False])
+    # ))
+    CONFIG.declare("master_postsolve", ConfigValue(
+        default=_DoNothing,
+        description="callback hook after a solution of the master problem"
+    ))
+    CONFIG.declare("subprob_presolve", ConfigValue(
+        default=_DoNothing,
+        description="callback hook before calling the subproblem solver"
+    ))
+    CONFIG.declare("subprob_postsolve", ConfigValue(
+        default=_DoNothing,
+        description="callback hook after a solution of the "
+        "nonlinear subproblem"
+    ))
+    CONFIG.declare("subprob_postfeas", ConfigValue(
+        default=_DoNothing,
+        description="callback hook after feasible solution of "
+        "the nonlinear subproblem"
+    ))
+    CONFIG.declare("algorithm_stall_after", ConfigValue(
+        default=2,
+        description="number of non-improving master iterations after which "
+        "the algorithm will stall and exit."
+    ))
+    CONFIG.declare("tee", ConfigValue(
+        default=False,
+        description="Stream output to terminal.",
+        domain=In([True, False])
+    ))
+    CONFIG.declare("logger", ConfigValue(
+        default=logging.getLogger('pyomo.contrib.gdpopt'),
+        description="The logger object to use for reporting."
+    ))
+    CONFIG.declare("small_dual_tolerance", ConfigValue(
+        default=1E-8,
+        description="When generating cuts, small duals multiplied "
+        "by expressions can cause problems. Exclude all duals "
+        "smaller in absolue value than the following."
+    ))
+    CONFIG.declare("integer_tolerance", ConfigValue(
+        default=1E-5,
+        description="Tolerance on integral values."
+    ))
+    CONFIG.declare("round_NLP_binaries", ConfigValue(
+        default=True,
+        description="flag to round binary values to exactly 0 or 1. "
+        "Rounding is done before solving NLP subproblem"
+    ))
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -113,101 +192,34 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         Args:
             model (Block): a Pyomo model or block to be solved
 
-        Kwargs:
-            tol (float): bound tolerance
-            iterlim (int): maximum number of master iterations
-            strategy (str): decomposition strategy to use. Possible values:
-                LOA, LGBD
-            init_strategy (str): initialization strategy to use when generating
-                the initial cuts to construct the master problem.
-            max_slack (float): upper bound on slack variable values
-            OA_penalty (float): multiplier on objective penalization for slack
-                variables.
-            nlp (str): Solver to use for nonlinear subproblems
-            nlp_kwargs (dict): Keyword arguments to pass to NLP solver
-            mip (str): Solver to use for linear discrete problems
-            mip_kwargs (dict): Keyword arguments to pass to MIP solver
-            solve_in_place (bool): If true, GDPopt manipulations are performed
-                directly upon the model. Otherwise, the model is first copied
-                and solution values are copied over afterwards.
-            master_postsolve (func): callback hook after a solution of the
-                master problem
-            subprob_presolve (func): callback hook before calling the
-                subproblem solver
-            subprob_postsolve (func): callback hook after a solution of the
-                nonlinear subproblem
-            subprob_postfeas (func): callback hook after feasible solution of
-                the nonlinear subproblem
-
         """
-        solve_data = GDPoptSolveData()
-        solve_data.bound_tolerance = kwds.pop('tol', 1E-6)
-        solve_data.iteration_limit = kwds.pop('iterlim', 30)
-        solve_data.decomposition_strategy = kwds.pop('strategy', 'LOA')
-        solve_data.initialization_strategy = kwds.pop('init_strategy', None)
-        solve_data.custom_init_disjuncts = kwds.pop(
-            'custom_init_disjuncts', None)
-        solve_data.max_slack = kwds.pop('max_slack', 1000)
-        solve_data.OA_penalty_factor = kwds.pop('OA_penalty', 1000)
-        solve_data.nlp_solver_name = kwds.pop('nlp', 'ipopt')
-        solve_data.nlp_solver_kwargs = kwds.pop('nlp_kwargs', {})
-        solve_data.mip_solver_name = kwds.pop('mip', 'gurobi')
-        solve_data.mip_solver_kwargs = kwds.pop('mip_kwargs', {})
-        solve_data.modify_in_place = kwds.pop('solve_in_place', True)
-        solve_data.master_postsolve = kwds.pop(
-            'master_postsolve', _DoNothing())
-        solve_data.subproblem_presolve = kwds.pop(
-            'subprob_presolve', _DoNothing())
-        solve_data.subproblem_postsolve = kwds.pop(
-            'subprob_postsolve', _DoNothing())
-        solve_data.subproblem_postfeasible = kwds.pop(
-            'subprob_postfeas', _DoNothing())
-        solve_data.algorithm_stall_after = kwds.pop('algorithm_stall_after', 2)
-        solve_data.tee = kwds.pop('tee', False)
+        config = self.CONFIG(kwds.pop('options', {}))
 
-        if solve_data.tee:
-            old_logger_level = logger.getEffectiveLevel()
-            logger.setLevel(logging.INFO)
+        config.set_value(kwds)
+
+        solve_data = GDPoptSolveData()
+
+        if config.tee:
+            config.logger.setLevel(logging.INFO)
+        else:
+            config.logger.setLevel(logging.WARNING)
 
         if kwds:
-            logger.warn("Unrecognized arguments passed to GDPopt solver: %s"
-                        % (kwds,))
-
-        # Verify that decomposition strategy chosen is one of the supported
-        # strategies
-        valid_strategies = ['LOA']
-        if solve_data.decomposition_strategy not in valid_strategies:
-            raise ValueError('Unrecognized decomposition strategy %s. '
-                             'Valid strategies include: %s'
-                             % (solve_data.decomposition_strategy,
-                                valid_strategies))
-
-        # To accommodate multi-phase hybrid strategies, define an attribute to
-        # track the current phase.
-        if solve_data.decomposition_strategy == 'hPSC':
-            solve_data.current_strategy = 'PSC'
-        else:
-            solve_data.current_strategy = solve_data.decomposition_strategy
-
-        # When generating cuts, small duals multiplied by expressions can cause
-        # problems. Exclude all duals smaller in absolue value than the
-        # following.
-        solve_data.small_dual_tolerance = 1E-8
-        solve_data.integer_tolerance = 1E-5
-
-        solve_data.round_NLP_binaries = True
-        """bool: flag to round binary values to exactly 0 or 1.
-        Rounding is done before solving NLP subproblem"""
+            config.logger.warn(
+                "Unrecognized arguments passed to GDPopt solver: %s" % (kwds,))
 
         # Modify in place decides whether to run the algorithm on a copy of the
         # originally model passed to the solver, or whether to manipulate the
         # original model directly.
-        solve_data.original_model = model
-        if solve_data.modify_in_place:
-            solve_data.working_model = m = model
-        else:
-            # print('Clone for working model')
-            solve_data.working_model = m = model.clone()
+        solve_data.working_model = m = model
+
+        # Create a model block on which to store GDPopt-specific utility
+        # modeling objects.
+        GDPopt = m.GDPopt_utils = Block()
+
+        GDPopt.initial_var_list = list(v for v in m.component_data_objects(
+            ctype=Var, descend_into=(Block, Disjunct)
+        ))
 
         # Store the initial model state as the best solution found. If we find
         # no better solution, then we will restore from this copy.
@@ -216,18 +228,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
         # Save model initial values. These are used later to initialize NLP
         # subproblems.
-        model_obj_to_cuid = generate_cuid_names(
-            model, ctype=(Var, Disjunct), descend_into=(Block, Disjunct))
-        model_cuid_to_obj = dict((cuid, obj)
-                                 for obj, cuid in iteritems(model_obj_to_cuid))
-        solve_data.initial_variable_values = dict(
-            (model_obj_to_cuid[v], value(v, exception=False))
-            for v in model.component_data_objects(
-                ctype=Var, descend_into=(Block, Disjunct)))
-
-        # Create a model block on which to store GDPopt-specific utility
-        # modeling objects.
-        GDPopt = m.GDPopt_utils = Block()
+        GDPopt.initial_var_values = list(
+            v.value for v in GDPopt.initial_var_list)
 
         # Create the solver results object
         res = solve_data.results = SolverResults()
@@ -244,12 +246,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         res.solver.termination_message = None
 
         # Validate the model to ensure that GDPopt is able to solve it.
-        #
-        # This needs to take place before the detection of nonlinear
-        # constraints, because if the objective is nonlinear, it will be moved
-        # to the constraints.
-        assert(not hasattr(solve_data, 'nonlinear_constraints'))
-        self._validate_model(solve_data)
+        self._validate_model(config, solve_data)
 
         # Maps in order to keep track of certain generated constraints
         GDPopt.oa_cut_map = Suffix(direction=Suffix.LOCAL, datatype=None)
@@ -269,11 +266,6 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         if not solve_data._no_discrete_decisions:
             GDPopt.feasible_integer_cuts.deactivate()
 
-        # # Build a list of binary variables
-        # self.binary_vars = [v for v in m.component_data_objects(
-        #     ctype=Var, descend_into=True)
-        #     if v.is_binary() and not v.fixed]
-        #
         # Build list of nonlinear constraints
         solve_data.nonlinear_constraints = [
             v for v in m.component_data_objects(
@@ -381,7 +373,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             to_model_obj = to_map[from_map[model_obj]]
             to_suffix[to_model_obj] = from_suffix[model_obj]
 
-    def _validate_model(self, solve_data):
+    def _validate_model(self, config, solve_data):
         """Validate that the model is solveable by GDPopt.
 
         Also populates results object with problem information.
@@ -437,7 +429,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
         # Handle LP/NLP being passed to the solver
         if len(binary_var_set) == 0 and len(active_disjunctions) == 0:
-            logger.info('Problem has no discrete decisions.')
+            config.logger.info('Problem has no discrete decisions.')
             solve_data._no_discrete_decisions = True
         else:
             solve_data._no_discrete_decisions = False
@@ -448,7 +440,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         num_objs = len(objs)
         solve_data.results.problem.number_of_objectives = num_objs
         if num_objs == 0:
-            logger.warning(
+            config.logger.warning(
                 'Model has no active objectives. Adding dummy objective.')
             GDPopt.dummy_objective = Objective(expr=1)
             main_obj = GDPopt.dummy_objective
@@ -458,6 +450,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             main_obj = objs[0]
 
         # Move the objective to the constraints
+
+        # TODO only move the objective if nonlinear?
         GDPopt.objective_value = Var(domain=Reals, initialize=0)
         if main_obj.sense == minimize:
             GDPopt.objective_expr = Constraint(
@@ -1439,24 +1433,6 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         else:
             logger.info('Adding feasible integer cut')
             GDPopt.feasible_integer_cuts.add(expr=int_cut)
-
-
-class _DoNothing(object):
-    """Do nothing, literally.
-
-    This class is used in situations of "do something if attribute exists."
-    """
-
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def __call__(self, *args, **kwargs):
-        pass
-
-    def __getattr__(self, attr):
-        def _do_nothing(*args, **kwargs):
-            pass
-        return _do_nothing
 
 
 class GDPoptSolveData(object):
