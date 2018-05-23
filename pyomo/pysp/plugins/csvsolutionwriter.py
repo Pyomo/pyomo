@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.pysp import solutionwriter
 from pyomo.pysp.scenariotree.tree_structure import \
     ScenarioTree
@@ -82,9 +82,9 @@ def write_csv_soln(scenario_tree, output_file_prefix):
     print("Scenario stage costs written to file="+cost_filename)
 
 
-class CSVSolutionWriter(pyomo.util.plugin.SingletonPlugin):
+class CSVSolutionWriter(pyomo.common.plugin.SingletonPlugin):
 
-    pyomo.util.plugin.implements(
+    pyomo.common.plugin.implements(
         solutionwriter.ISolutionWriterExtension)
 
     def write(self, scenario_tree, output_file_prefix):

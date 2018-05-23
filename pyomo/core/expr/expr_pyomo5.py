@@ -88,7 +88,7 @@ logger = logging.getLogger('pyomo.core')
 from pyutilib.misc.visitor import SimpleVisitor, ValueVisitor
 from pyutilib.math.util import isclose
 
-from pyomo.util.deprecation import deprecation_warning
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.expr.numvalue import \
     (NumericValue,

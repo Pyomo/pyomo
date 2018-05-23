@@ -17,7 +17,7 @@ import sys
 from copy import deepcopy
 from pickle import PickleError
 
-import pyomo.util
+import pyomo.common
 from pyomo.core.base.misc import tabular_writer
 
 from six import iteritems, string_types
@@ -46,12 +46,12 @@ def _name_index_generator(idx):
         return "[" + _escape(str(idx)) + "]"
 
 
-def name(component, index=None, fully_qualified=False):
+def name(component, index=None, fully_qualified=False, relative_to=None):
     """
     Return a string representation of component for a specific
     index value.
     """
-    base = component.getname(fully_qualified=fully_qualified)
+    base = component.getname(fully_qualified=fully_qualified, relative_to=relative_to)
     if index is None:
         return base
     else:
@@ -288,7 +288,7 @@ class Component(_ComponentBase):
         # Verify that ctype has been specified.
         #
         if self._type is None:
-            raise pyomo.util.DeveloperError(
+            raise pyomo.common.DeveloperError(
                 "Must specify a component type for class %s!"
                 % ( type(self).__name__, ) )
         #
@@ -438,7 +438,7 @@ class Component(_ComponentBase):
                 pass
         return self.name
 
-    def getname(self, fully_qualified=False, name_buffer=None):
+    def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
         """
         Returns the component name associated with this object.
 
@@ -446,12 +446,17 @@ class Component(_ComponentBase):
             fully_qualified     Generate full name from nested block names
             name_buffer         Can be used to optimize iterative name
                                     generation (using a dictionary)
+            relative_to         When generating a fully qualified name,
+                                    stop at this block.
         """
         if fully_qualified:
             pb = self.parent_block()
-            if pb is not None and pb is not self.model():
-                ans = pb.getname(fully_qualified, name_buffer) \
-                      + "." + self._name
+            if relative_to is None:
+                relative_to = self.model()
+            if pb is not None and pb is not relative_to:
+                ans = pb.getname(fully_qualified, name_buffer, relative_to) + "." + self._name
+            elif pb is None and relative_to != self.model():
+                raise RuntimeError("The relative_to argument was specified but not found in the block hierarchy: %s" % str(relative_to))
             else:
                 ans = self._name
         else:
@@ -732,7 +737,7 @@ class ComponentData(_ComponentBase):
         else:
             return self.__str__()
 
-    def getname(self, fully_qualified=False, name_buffer=None):
+    def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
         """Return a string with the component name and index"""
         #
         # Using the buffer, which is a dictionary:  id -> string
@@ -744,11 +749,11 @@ class ComponentData(_ComponentBase):
         c = self.parent_component()
         if c is self:
             # This is a scalar component, so call the Component.getname() method
-            return super(ComponentData, self).getname(fully_qualified, name_buffer)
+            return super(ComponentData, self).getname(fully_qualified, name_buffer, relative_to)
         #
         # Get the name of the component
         #
-        base = c.getname(fully_qualified, name_buffer)
+        base = c.getname(fully_qualified, name_buffer, relative_to)
         if name_buffer is not None:
             # Iterate through the dictionary and generate all names in the buffer
             for idx, obj in iteritems(c):
@@ -1238,5 +1243,3 @@ ComponentUID.tDict.update( (ComponentUID.tKeys[i], v)
                            for i,v in enumerate(ComponentUID.tList) )
 ComponentUID.tDict.update( (v, ComponentUID.tKeys[i])
                            for i,v in enumerate(ComponentUID.tList) )
-
-

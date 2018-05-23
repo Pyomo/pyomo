@@ -8,7 +8,7 @@ except ImportError:
     yaml_available = False
 
 from pyutilib.misc.config import ConfigBase
-from pyomo.util.config import ConfigBlock, ConfigValue, ADVANCED_OPTION
+from pyomo.common.config import ConfigBlock, ConfigValue, ADVANCED_OPTION
 
 
 class PyomoOptions_(object):

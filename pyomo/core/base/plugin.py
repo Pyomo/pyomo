@@ -36,11 +36,11 @@ __all__ = ['pyomo_callback',
 
 import logging
 import pyutilib.misc
-from pyomo.util.deprecation import deprecated
-from pyomo.util.plugin import (
+from pyomo.common.deprecation import deprecated
+from pyomo.common.plugin import (
     alias, implements, Interface, Plugin, PluginFactory, CreatePluginFactory,
     PluginError, ExtensionPoint )
-from pyomo.util.timing import TransformationTimer
+from pyomo.common.timing import TransformationTimer
 
 logger = logging.getLogger('pyomo.core')
 registered_callback = {}

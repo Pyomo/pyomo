@@ -13,7 +13,7 @@ import re
 import sys
 import pyutilib.services
 from pyutilib.misc import Bunch
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
 from pyomo.repn import generate_standard_repn

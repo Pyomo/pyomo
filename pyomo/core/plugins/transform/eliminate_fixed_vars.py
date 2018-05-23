@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 from pyomo.core.expr.current import ExpressionBase
 from pyomo.core.expr.numvalue import as_numeric
 from pyomo.core import Constraint, Objective
