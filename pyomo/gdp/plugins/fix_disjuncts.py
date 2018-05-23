@@ -21,7 +21,7 @@ from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import GDP_Error
 from pyomo.gdp.disjunct import (Disjunct, Disjunction, _DisjunctData,
                                 _DisjunctionData)
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 from six import itervalues
 
 logger = logging.getLogger('pyomo.gdp.fix_disjuncts')

@@ -78,7 +78,7 @@ class OptConvertDebug(unittest.TestCase):
         #
         # Reset all options
         #
-        #for ep in pyomo.util.plugin.ExtensionPoint(pyomo.util.plugin.IOption):
+        #for ep in pyomo.common.plugin.ExtensionPoint(pyomo.common.plugin.IOption):
             #ep.reset()
         pass
 

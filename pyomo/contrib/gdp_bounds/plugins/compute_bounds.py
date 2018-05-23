@@ -17,7 +17,7 @@ from pyomo.core import (Constraint, Objective, ConstraintList,
                            TransformationFactory, maximize, minimize, value)
 from pyomo.opt import SolverFactory
 from pyomo.gdp.disjunct import Disjunct
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 from pyomo.core.plugins.transform.hierarchy import Transformation
 from pyomo.opt import TerminationCondition as tc
 import textwrap

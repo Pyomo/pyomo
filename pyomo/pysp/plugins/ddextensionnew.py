@@ -21,7 +21,7 @@ from operator import itemgetter
 import os
 thisfile = os.path.abspath(__file__)
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.core import *
 from pyomo.core.base.var import _VarData
 from pyomo.core.base.piecewise import _PiecewiseData
@@ -861,9 +861,9 @@ class DDSIP_Input(object):
                     self._num_stochastic_matrix_entries += 1
             print(("%s %s" % list(map(str,(self._reference_scenario._name, self._num_stochastic_matrix_entries)))))
 
-class ddextension(pyomo.util.plugin.SingletonPlugin):
+class ddextension(pyomo.common.plugin.SingletonPlugin):
 
-    pyomo.util.plugin.implements(phextension.IPHExtension)
+    pyomo.common.plugin.implements(phextension.IPHExtension)
 
     def __init__(self):
 

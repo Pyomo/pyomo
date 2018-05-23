@@ -27,7 +27,7 @@ from math import copysign, fabs
 
 from six import iteritems
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base import (Block, Constraint, ConstraintList, Expression,
                              Objective, Set, Suffix, TransformationFactory,
@@ -47,11 +47,11 @@ logger = logging.getLogger('pyomo.contrib.gdpopt')
 __version__ = (0, 1, 0)
 
 
-class GDPoptSolver(pyomo.util.plugin.Plugin):
+class GDPoptSolver(pyomo.common.plugin.Plugin):
     """A decomposition-based GDP solver."""
 
-    pyomo.util.plugin.implements(IOptSolver)
-    pyomo.util.plugin.alias('gdpopt',
+    pyomo.common.plugin.implements(IOptSolver)
+    pyomo.common.plugin.alias('gdpopt',
                             doc='The GDPopt decomposition-based GDP solver')
 
     CONFIG = ConfigBlock("GDPopt")
