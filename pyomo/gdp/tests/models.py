@@ -63,10 +63,9 @@ def makeTwoTermDisj_IndexedConstraints():
     m.b.disjunction = Disjunction(expr=[m.b.simpledisj1, m.b.simpledisj2])
     return m
 
-# same concept as above, but bounded variables
-
 
 def makeTwoTermDisj_IndexedConstraints_BoundedVars():
+    # same concept as above, but bounded variables
     m = ConcreteModel()
     m.s = Set(initialize=[1, 2])
     m.lbs = Param(m.s, initialize={1: 2, 2: 4})
@@ -379,7 +378,7 @@ def makeDisjunctInMultipleDisjunctions():
     return m
 
 
-def makeDisjunctInMultipleDisjunctions_incorrect():
+def makeDisjunctInMultipleDisjunctions_no_deactivate():
     m = ConcreteModel()
     m.a = Var(bounds=(-10, 50))
 
