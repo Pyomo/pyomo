@@ -12,7 +12,6 @@ import pyutilib.th as unittest
 
 from pyomo.environ import *
 from pyomo.gdp import *
-#import pyomo.core.expr.current as EXPR
 import pyomo.opt
 
 import random
@@ -28,10 +27,6 @@ solvers = pyomo.opt.check_available_solvers('gurobi')
 #       transformation
 
 class TwoTermDisj(unittest.TestCase):
-    def setUp(self):
-        # set seed so we can test name collisions predictably
-        random.seed(666)
-
     @staticmethod
     def makeModel():
         m = ConcreteModel()
@@ -40,11 +35,11 @@ class TwoTermDisj(unittest.TestCase):
         def d_rule(disjunct, flag):
             m = disjunct.model()
             if flag:
-                disjunct.c1 = Constraint(expr=inequality(1, m.x, 2))
-                disjunct.c2 = Constraint(expr=inequality(3, m.y, 4))
+                disjunct.c1 = Constraint(expr=1 <= m.x <= 2)
+                disjunct.c2 = Constraint(expr=3 <= m.y <= 4)
             else:
-                disjunct.c1 = Constraint(expr=inequality(3, m.x, 4))
-                disjunct.c2 = Constraint(expr=inequality(1, m.y, 2))
+                disjunct.c1 = Constraint(expr=3 <= m.x <= 4)
+                disjunct.c2 = Constraint(expr=1 <= m.y <= 2)
         m.d = Disjunct([0,1], rule=d_rule)
         def disj_rule(m):
             return [m.d[0], m.d[1]]
@@ -80,7 +75,7 @@ class TwoTermDisj(unittest.TestCase):
         self.assertEqual(len(cut.body._coef), 4)
         self.assertEqual(len(cut.body._args), 4)
         self.assertEqual(cut.body._const, 0)
-        
+
         coefs = {
             0: 0.45,
             1: 0.55,
@@ -138,8 +133,3 @@ class TwoTermDisj(unittest.TestCase):
             TransformationFactory('gdp.cuttingplane').apply_to,
             m
         )
-
-
-if __name__ == '__main__':
-    unittest.main()
-
