@@ -57,7 +57,7 @@ class BigM_Transformation(Transformation):
        3) if 'None' is in the bigM argument dict
        4) if the constraint or the constraint parent_component appear in
           a BigM Suffix attached to any parent_block() beginning with the
-          constraint's parent_block and moving up to the the root model.
+          constraint's parent_block and moving up to the root model.
        5) if None appears in a BigM Suffix attached to any
           parent_block() between the constraint and the root model.
        6) if the constraint is linear, estimate M using the variable bounds
