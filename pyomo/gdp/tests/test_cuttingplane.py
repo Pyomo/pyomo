@@ -21,7 +21,7 @@ from six import StringIO
 
 from nose.tools import set_trace
 
-solvers = pyomo.opt.check_available_solvers('gurobi')
+solvers = pyomo.opt.check_available_solvers('ipopt')
 
 # TODO:
 #     - test that deactivated objectives on the model don't get used by the
@@ -57,7 +57,7 @@ class TwoTermDisj(unittest.TestCase):
         m.obj = Objective(expr=m.x + 2*m.y)
         return m
 
-    @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_transformation_block(self):
         m = self.makeModel()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
@@ -71,7 +71,7 @@ class TwoTermDisj(unittest.TestCase):
         # this one adds 4 cuts
         self.assertEqual(len(cuts), 4)
 
-    @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_cut_constraint(self):
         m = self.makeModel()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
@@ -99,7 +99,7 @@ class TwoTermDisj(unittest.TestCase):
             repn.constant, -1*sum(c*x for v,c,x in expected_cut), 5)
 
 
-    @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_create_using(self):
         m = self.makeModel()
 
@@ -116,7 +116,7 @@ class TwoTermDisj(unittest.TestCase):
         self.maxDiff = None
         self.assertMultiLineEqual(modelcopy_output, model_output)
 
-    @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_active_objective_err(self):
         m = self.makeModel()
         m.obj.deactivate()
