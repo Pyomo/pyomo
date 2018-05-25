@@ -82,9 +82,6 @@ script:
   - ${DOC} bash -c 'echo GJH_VERSION="$GJH_VERSION"'
   - ${DOC} bash -c 'echo GJH_ASL_JSON_VERSION="$GJH_ASL_JSON_VERSION"'
   - ${DOC} pip list
-####### temp
-  - ${DOC} bash -c 'BARONEXE="$(which baron)" && mv "${BARONEXE}" "${BARONEXE%baron}_baron"'
-###########
   - ${DOC} test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
  # Run documentation tests
   - if [[ "$IMAGE_NAME" != "test-builds:python_3.7-rc" ]]; then ${DOC} make -C doc/OnlineDocs doctest -d; fi
