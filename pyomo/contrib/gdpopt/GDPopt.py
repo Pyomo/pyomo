@@ -30,8 +30,9 @@ from math import copysign, fabs
 from six import iteritems
 
 import pyomo.common.plugin
-from pyomo.common import (ConfigBlock, ConfigList, ConfigValue, In,
-                          NonNegativeFloat, NonNegativeInt)
+from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue, In,
+                                 NonNegativeFloat, NonNegativeInt)
+from pyomo.contrib.gdpopt.util import GDPoptSolveData, _DoNothing
 from pyomo.core.base import (Block, Constraint, ConstraintList, Expression,
                              Objective, Set, Suffix, TransformationFactory,
                              Var, maximize, minimize, value)
@@ -45,7 +46,6 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory, SolverStatus
 from pyomo.opt.base import IOptSolver
 from pyomo.opt.results import ProblemSense, SolverResults
-from pyomo.contrib.gdpopt.util import _DoNothing, GDPoptSolveData
 
 __version__ = (0, 1, 0)
 
@@ -71,7 +71,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         description="Decomposition strategy to use."
     ))
     CONFIG.declare("init_strategy", ConfigValue(
-        default="set_covering", domain=In(["set_covering"]),
+        default="set_covering", domain=In([
+            "set_covering", "max_binary", "fixed_binary", "custom_disjuncts"]),
         description="Initialization strategy to use.",
         doc="""Selects the initialization strategy to use when generating
         the initial cuts to construct the master problem."""
@@ -85,20 +86,20 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         default=1000, domain=NonNegativeFloat,
         description="Upper bound on slack variables for OA"
     ))
-    CONFIG.declare("OA_penalty", ConfigValue(
+    CONFIG.declare("OA_penalty_factor", ConfigValue(
         default=1000, domain=NonNegativeFloat,
         description="Penalty multiplication term for slack variables on the "
         "objective value."
     ))
-    CONFIG.declare("nlp", ConfigValue(
-        default="ipopt",
-        description="Nonlinear solver to use"))
-    nlp_options = CONFIG.declare("nlp_options", ConfigBlock(implicit=True))
     CONFIG.declare("mip", ConfigValue(
         default="gurobi",
         description="Mixed integer linear solver to use."
     ))
     mip_options = CONFIG.declare("mip_options", ConfigBlock(implicit=True))
+    CONFIG.declare("nlp", ConfigValue(
+        default="ipopt",
+        description="Nonlinear solver to use"))
+    nlp_options = CONFIG.declare("nlp_options", ConfigBlock(implicit=True))
     CONFIG.declare("master_postsolve", ConfigValue(
         default=_DoNothing,
         description="callback hook after a solution of the master problem"
@@ -184,28 +185,29 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
         solve_data = GDPoptSolveData()
 
-        old_logger_level = config.logger.getLevel()
+        old_logger_level = config.logger.getEffectiveLevel()
         if config.tee:
             config.logger.setLevel(logging.INFO)
         else:
             config.logger.setLevel(logging.WARNING)
-
-        if kwds:
-            config.logger.warn(
-                "Unrecognized arguments passed to GDPopt solver: %s" % (kwds,))
 
         # Modify in place decides whether to run the algorithm on a copy of the
         # originally model passed to the solver, or whether to manipulate the
         # original model directly.
         solve_data.working_model = m = model
 
+        solve_data.current_strategy = config.strategy
+
         # Create a model block on which to store GDPopt-specific utility
         # modeling objects.
+        # TODO check if name is taken already
         GDPopt = m.GDPopt_utils = Block()
 
         GDPopt.initial_var_list = list(v for v in m.component_data_objects(
             ctype=Var, descend_into=(Block, Disjunct)
         ))
+        GDPopt.initial_var_values = list(
+            v.value for v in GDPopt.initial_var_list)
 
         # Store the initial model state as the best solution found. If we find
         # no better solution, then we will restore from this copy.
@@ -249,7 +251,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         # already in the primary GDPopt_integer_cuts ConstraintList.
         GDPopt.feasible_integer_cuts = ConstraintList(
             doc='explored integer cuts')
-        if not solve_data._no_discrete_decisions:
+        if not GDPopt._no_discrete_decisions:
             GDPopt.feasible_integer_cuts.deactivate()
 
         # Build list of nonlinear constraints
@@ -259,9 +261,9 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             if v.body.polynomial_degree() not in (0, 1)]
 
         # Set up iteration counters
-        GDPopt.nlp_iter = 0
-        GDPopt.mip_iter = 0
-        GDPopt.mip_subiter = 0
+        solve_data.nlp_iter = 0
+        solve_data.mip_iter = 0
+        solve_data.mip_subiter = 0
 
         # set up bounds
         solve_data.LB = float('-inf')
@@ -285,7 +287,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         solve_data.results.problem.lower_bound = solve_data.LB
         solve_data.results.problem.upper_bound = solve_data.UB
 
-        if solve_data.tee:
+        if config.tee:
             config.logger.setLevel(old_logger_level)
 
     def _copy_values(self, from_model, to_model, config):
@@ -390,9 +392,9 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         # Handle LP/NLP being passed to the solver
         if len(binary_var_set) == 0 and len(active_disjunctions) == 0:
             config.logger.info('Problem has no discrete decisions.')
-            solve_data._no_discrete_decisions = True
+            GDPopt._no_discrete_decisions = True
         else:
-            solve_data._no_discrete_decisions = False
+            GDPopt._no_discrete_decisions = False
 
         # Handle missing or multiple objectives
         objs = list(m.component_data_objects(
@@ -437,37 +439,23 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         """
         m = solve_data.working_model
         GDPopt = m.GDPopt_utils
-        if (solve_data.current_strategy == 'LOA' or
-                solve_data.decomposition_strategy == 'hPSC' or
-                solve_data.current_strategy == 'LGBD'):
-            if not hasattr(m, 'dual'):  # Set up dual value reporting
-                m.dual = Suffix(direction=Suffix.IMPORT)
-            m.dual.activate()
-        if solve_data.current_strategy == 'PSC':
-            if not hasattr(m, 'dual'):  # Set up dual value reporting
-                m.dual = Suffix(direction=Suffix.IMPORT)
-            m.dual.activate()
-            if not hasattr(m, 'ipopt_zL_out'):
-                m.ipopt_zL_out = Suffix(direction=Suffix.IMPORT)
-            if not hasattr(m, 'ipopt_zU_out'):
-                m.ipopt_zU_out = Suffix(direction=Suffix.IMPORT)
-            GDPopt.psc_cuts = ConstraintList()
-        if solve_data.current_strategy == 'LGBD':
-            GDPopt.gbd_cuts = ConstraintList(doc='Generalized Benders cuts')
+        if not hasattr(m, 'dual'):  # Set up dual value reporting
+            m.dual = Suffix(direction=Suffix.IMPORT)
+        m.dual.activate()
 
-        if solve_data.initialization_strategy is None:
+        if config.init_strategy == 'set_covering':
             self._init_set_covering(solve_data, config)
-        elif solve_data.initialization_strategy == 'max_binary':
+        elif config.init_strategy == 'max_binary':
             self._init_max_binaries(solve_data, config)
             self._solve_NLP_subproblem(solve_data, config)
-        elif solve_data.initialization_strategy == 'fixed_binary':
+        elif config.init_strategy == 'fixed_binary':
             self._validate_disjunctions(solve_data, config)
             self._solve_NLP_subproblem(solve_data, config)
-        elif solve_data.initialization_strategy == 'custom_disjuncts':
+        elif config.init_strategy == 'custom_disjuncts':
             self._init_custom_disjuncts(solve_data, config)
         else:
             raise ValueError('Unknown initialization strategy: %s'
-                             % (self.initialization_strategy,))
+                             % (config.init_strategy,))
 
     def _validate_disjunctions(self, solve_data, config):
         """Validate if the disjunctions are satisfied by the current values."""
@@ -578,7 +566,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 'of %s. Solver message: %s' %
                 (terminate_cond, results.solver.message))
 
-    def _init_max_binaries(self, solve_data):
+    def _init_max_binaries(self, solve_data, config):
         """Initialize by maximizing binary variables and disjuncts.
 
         This function activates as many binary variables and disjucts as
@@ -589,7 +577,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         solve_data.mip_subiter += 1
         # print('Clone working model for init max binaries')
         m = solve_data.working_model.clone()
-        logger.info("MIP %s.%s: maximize value of binaries" %
+        config.logger.info(
+            "MIP %s.%s: maximize value of binaries" %
                     (solve_data.mip_iter, solve_data.mip_subiter))
         nonlinear_constraints = (
             c for c in m.component_data_objects(
@@ -604,18 +593,17 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             if v.is_binary() and not v.fixed)
         m.GDPopt_utils.max_binary_obj = Objective(
             expr=sum(v for v in binary_vars), sense=maximize)
-        getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
-        getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
         TransformationFactory('gdp.bigm').apply_to(m)
         TransformationFactory('gdp.reclassify').apply_to(m)  # HACK
         # TODO: chull too?
-        results = solve_data.mip_solver.solve(
-            m, **solve_data.mip_solver_kwargs)
+        mip_solver = SolverFactory(config.mip)
+        results = mip_solver.solve(
+            m, **config.mip_options)
         # m.display()
         solve_terminate_cond = results.solver.termination_condition
         if solve_terminate_cond is tc.optimal:
             # Transfer variable values back to main working model
-            self._copy_values(m, solve_data.working_model)
+            self._copy_values(m, solve_data.working_model, config)
         elif solve_terminate_cond is tc.infeasible:
             raise ValueError('Linear relaxation is infeasible. '
                              'Problem is infeasible.')
@@ -623,7 +611,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             raise ValueError('Cannot handle termination condition %s'
                              % (solve_terminate_cond,))
 
-    def _init_set_covering(self, solve_data, iterlim=8):
+    def _init_set_covering(self, solve_data, config, iterlim=8):
         """Initialize by solving problems to cover the set of all disjuncts.
 
         The purpose of this initialization is to generate linearizations
@@ -635,41 +623,39 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         """
         m = solve_data.working_model
         GDPopt = m.GDPopt_utils
-        working_map = generate_cuid_names(m, ctype=(Var, Disjunct),
-                                          descend_into=(Block, Disjunct))
-        nonlinear_disjuncts = frozenset(
-            working_map[disj] for disj in m.component_data_objects(
+        GDPopt.nonlinear_disjuncts = list(
+            disj for disj in m.component_data_objects(
                 ctype=Disjunct, active=True, descend_into=(Block, Disjunct))
             if any(constr.body.polynomial_degree() not in (0, 1)
                    for constr in disj.component_data_objects(
                        ctype=Constraint, active=True,
+                       # TODO should this descend into both Block and Disjunct,
+                       # or just Block?
                        descend_into=(Block, Disjunct))))
-        covered_disjuncts = set()
-        not_covered_disjuncts = set(nonlinear_disjuncts)
+        GDPopt.covered_disjuncts = ComponentSet()
+        GDPopt.not_covered_disjuncts = ComponentSet(GDPopt.nonlinear_disjuncts)
         iter_count = 1
         GDPopt.feasible_integer_cuts.activate()
-        while not_covered_disjuncts and iter_count <= iterlim:
+        while GDPopt.not_covered_disjuncts and iter_count <= iterlim:
             # Solve set covering MIP
-            if not self._solve_set_cover_MIP(
-                    solve_data,
-                    covered_disjuncts=covered_disjuncts,
-                    not_covered_disjuncts=not_covered_disjuncts):
+            if not self._solve_set_cover_MIP(solve_data, config):
                 # problem is infeasible. break
                 return False
             # solve local NLP
-            if self._solve_NLP_subproblem(solve_data):
+            if self._solve_NLP_subproblem(solve_data, config):
                 # if successful, updated sets
-                active_disjuncts = frozenset(
-                    working_map[disj] for disj in m.component_data_objects(
+                active_disjuncts = ComponentSet(
+                    disj for disj in m.component_data_objects(
                         ctype=Disjunct, active=True,
                         descend_into=(Block, Disjunct))
-                    if fabs(value(disj.indicator_var) - 1) <= 1E-5)
-                covered_disjuncts.update(active_disjuncts)
-                not_covered_disjuncts.difference_update(active_disjuncts)
+                    if fabs(value(disj.indicator_var) - 1)
+                    <= config.integer_tolerance)
+                GDPopt.covered_disjuncts.update(active_disjuncts)
+                GDPopt.not_covered_disjuncts -= active_disjuncts
             iter_count += 1
             # m.GDPopt_utils.integer_cuts.pprint()
         GDPopt.feasible_integer_cuts.deactivate()
-        if not_covered_disjuncts:
+        if GDPopt.not_covered_disjuncts:
             # Iteration limit was hit without a full covering of all nonlinear
             # disjuncts
             logger.warn('Iteration limit reached for set covering '
@@ -677,24 +663,20 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             return False
         return True
 
-    def _solve_set_cover_MIP(self, solve_data, covered_disjuncts,
-                             not_covered_disjuncts):
-        # print('Clone working model for set cover MIP')
+    def _solve_set_cover_MIP(self, solve_data, config):
         m = solve_data.working_model.clone()
         GDPopt = m.GDPopt_utils
-
-        cuid_map = generate_cuid_names(m, ctype=Disjunct,
-                                       descend_into=(Block, Disjunct))
-        reverse_map = dict((cuid, obj) for obj, cuid in iteritems(cuid_map))
+        covered_disjuncts = GDPopt.covered_disjuncts
 
         # Set up set covering objective
-        weights = dict((disjID, 1) for disjID in covered_disjuncts)
-        weights.update(dict((disjID, len(covered_disjuncts) + 1)
-                            for disjID in not_covered_disjuncts))
+        weights = ComponentMap((disj, 1) for disj in covered_disjuncts)
+        weights.update(ComponentMap(
+            (disj, len(covered_disjuncts) + 1)
+            for disj in GDPopt.not_covered_disjuncts))
         GDPopt.objective.deactivate()
         GDPopt.set_cover_obj = Objective(
-            expr=sum(weights[disjID] * reverse_map[disjID].indicator_var
-                     for disjID in weights),
+            expr=sum(weights[disj] * disj.indicator_var
+                     for disj in weights),
             sense=maximize)
 
         # deactivate nonlinear constraints
@@ -708,8 +690,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         # Deactivate potentially non-rigorous generated cuts
         for constr in m.component_objects(ctype=Constraint, active=True,
                                           descend_into=(Block, Disjunct)):
-            if (constr.local_name == 'GDPopt_OA_cuts' or
-                    constr.local_name == 'psc_cuts'):
+            if (constr.local_name == 'GDPopt_OA_cuts'):
                 constr.deactivate()
 
         # Transform disjunctions
@@ -735,30 +716,27 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         TransformationFactory(
             'contrib.deactivate_trivial_constraints').apply_to(m)
 
-        # Deactivate extraneous IMPORT/EXPORT suffixes
-        getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
-        getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
-
-        results = solve_data.mip_solver.solve(
+        mip_solver = SolverFactory(config.mip)
+        results = mip_solver.solve(
             m, load_solutions=False,
-            **solve_data.mip_solver_kwargs)
+            **config.mip_options)
         terminate_cond = results.solver.termination_condition
         if terminate_cond is tc.infeasibleOrUnbounded:
             # Linear solvers will sometimes tell me that it's infeasible or
             # unbounded during presolve, but fails to distinguish. We need to
             # resolve with a solver option flag on.
-            old_options = deepcopy(solve_data.mip_solver.options)
+            old_options = deepcopy(mip_solver.options)
             # This solver option is specific to Gurobi.
-            solve_data.mip_solver.options['DualReductions'] = 0
-            results = solve_data.mip_solver.solve(
+            mip_solver.options['DualReductions'] = 0
+            results = mip_solver.solve(
                 m, load_solutions=False,
-                **solve_data.mip_solver_kwargs)
+                **config.mip_options)
             terminate_cond = results.solver.termination_condition
-            solve_data.mip_solver.options.update(old_options)
+            mip_solver.options.update(old_options)
 
         if terminate_cond is tc.optimal:
             m.solutions.load_from(results)
-            self._copy_values(m, solve_data.working_model)
+            self._copy_values(m, solve_data.working_model, config)
             config.logger.info('Solved set covering MIP')
             return True
         elif terminate_cond is tc.infeasible:
@@ -766,9 +744,9 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 'Set covering problem is infeasible. '
                 'Problem may have no more feasible '
                 'binary configurations.')
-            if solve_data.mip_iter <= 1:
+            if GDPopt.mip_iter <= 1:
                 config.logger.warn(
-                    'Problem was infeasible. '
+                    'Set covering problem was infeasible. '
                     'Check your linear and logical constraints '
                     'for contradictions.')
             if GDPopt.objective.sense == minimize:
@@ -787,43 +765,43 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         m = solve_data.working_model
         GDPopt = m.GDPopt_utils
         # Backup counter to prevent infinite loop
-        backup_max_iter = max(1000, solve_data.iteration_limit)
+        backup_max_iter = max(1000, config.iterlim)
         backup_iter = 0
         while backup_iter < backup_max_iter:
-            logger.info('')  # print blank lines for visual display
+            config.logger.info('')  # print blank lines for visual display
             backup_iter += 1
             # Check bound convergence
-            if solve_data.LB + solve_data.bound_tolerance >= solve_data.UB:
-                logger.info('GDPopt exiting on bound convergence. '
-                            'LB: %s + (tol %s) >= UB: %s' %
-                            (solve_data.LB, solve_data.bound_tolerance,
-                             solve_data.UB))
+            if solve_data.LB + config.bound_tolerance >= solve_data.UB:
+                config.logger.info(
+                    'GDPopt exiting on bound convergence. '
+                    'LB: %s + (tol %s) >= UB: %s' %
+                    (solve_data.LB, config.bound_tolerance,
+                     solve_data.UB))
                 break
             # Check iteration limit
-            if solve_data.mip_iter >= solve_data.iteration_limit:
-                logger.info('GDPopt unable to converge bounds '
-                            'after %s master iterations.'
-                            % (solve_data.mip_iter,))
-                logger.info('Final bound values: LB: %s  UB: %s'
-                            % (solve_data.LB, solve_data.UB))
+            if solve_data.mip_iter >= config.iterlim:
+                config.logger.info(
+                    'GDPopt unable to converge bounds '
+                    'after %s master iterations.'
+                    % (solve_data.mip_iter,))
+                config.logger.info(
+                    'Final bound values: LB: %s  UB: %s'
+                    % (solve_data.LB, solve_data.UB))
                 break
             solve_data.mip_subiter = 0
             # solve MILP master problem
             if solve_data.current_strategy == 'LOA':
-                self._solve_OA_master(solve_data)
-            elif solve_data.current_strategy == 'PSC':
-                self._solve_PSC_master(solve_data)
-            elif solve_data.current_strategy == 'LGBD':
-                self._solve_GBD_master(solve_data)
+                self._solve_OA_master(solve_data, config)
             # Check bound convergence
-            if solve_data.LB + solve_data.bound_tolerance >= solve_data.UB:
-                logger.info('GDPopt exiting on bound convergence. '
-                            'LB: %s + (tol %s) >= UB: %s'
-                            % (solve_data.LB, solve_data.bound_tolerance,
-                               solve_data.UB))
+            if solve_data.LB + config.bound_tolerance >= solve_data.UB:
+                config.logger.info(
+                    'GDPopt exiting on bound convergence. '
+                    'LB: %s + (tol %s) >= UB: %s'
+                    % (solve_data.LB, config.bound_tolerance,
+                       solve_data.UB))
                 break
             # Solve NLP subproblem
-            self._solve_NLP_subproblem(solve_data)
+            self._solve_NLP_subproblem(solve_data, config)
 
             # If the hybrid algorithm is not making progress, switch to OA.
             required_relax_prog = 1E-6
@@ -836,19 +814,6 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 relax_prog_log = solve_data.UB_progress
                 feas_prog_log = solve_data.LB_progress
                 sign_adjust = -1
-            # Maximum number of iterations in which the lower (optimistic)
-            # bound does not improve sufficiently before switching to OA
-            LB_stall_after = 5
-            if (len(relax_prog_log) > LB_stall_after and
-                (sign_adjust * relax_prog_log[-1] <= sign_adjust * (
-                    relax_prog_log[-1 - LB_stall_after]
-                    + required_relax_prog))):
-                if (solve_data.decomposition_strategy == 'hPSC' and
-                        solve_data.current_strategy == 'PSC'):
-                    logger.info('Relaxation not making enough progress '
-                                'for %s iterations. '
-                                'Switching to OA.' % (LB_stall_after,))
-                    solve_data.current_strategy = 'LOA'
 
             # Max number of iterations in which upper (feasible) bound does not
             # improve before turning on no-backtracking
@@ -857,31 +822,34 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 (sign_adjust * (feas_prog_log[-1] + required_feas_prog)
                  >= sign_adjust * feas_prog_log[-1 - no_backtrack_after])):
                 if not GDPopt.feasible_integer_cuts.active:
-                    logger.info('Feasible solutions not making enough '
-                                'progress for %s iterations. '
-                                'Turning on no-backtracking '
-                                'integer cuts.' % (no_backtrack_after,))
+                    config.logger.info(
+                        'Feasible solutions not making enough '
+                        'progress for %s iterations. '
+                        'Turning on no-backtracking '
+                        'integer cuts.' % (no_backtrack_after,))
                     GDPopt.feasible_integer_cuts.activate()
 
             # Maximum number of iterations in which feasible bound does not
             # improve before terminating algorithm
-            if (len(feas_prog_log) > solve_data.algorithm_stall_after and
+            if (len(feas_prog_log) > config.algorithm_stall_after and
                 (sign_adjust * (feas_prog_log[-1] + required_feas_prog)
                  >= sign_adjust *
-                 feas_prog_log[-1 - solve_data.algorithm_stall_after])):
-                logger.info('Feasible solutions not making enough progress '
-                            'for %s iterations. Algorithm stalled. Exiting.\n'
-                            'To continue, increase value of parameter '
-                            'algorithm_stall_after.'
-                            % (solve_data.algorithm_stall_after,))
+                 feas_prog_log[-1 - config.algorithm_stall_after])):
+                config.logger.info(
+                    'Feasible solutions not making enough progress '
+                    'for %s iterations. Algorithm stalled. Exiting.\n'
+                    'To continue, increase value of parameter '
+                    'algorithm_stall_after.'
+                    % (config.algorithm_stall_after,))
                 break
 
-    def _solve_OA_master(self, solve_data):
+    def _solve_OA_master(self, solve_data, config):
         solve_data.mip_iter += 1
         m = solve_data.working_model.clone()
         GDPopt = m.GDPopt_utils
-        logger.info('MIP %s: Solve master problem.' %
-                    (solve_data.mip_iter,))
+        config.logger.info(
+            'MIP %s: Solve master problem.' %
+            (solve_data.mip_iter,))
 
         # Deactivate nonlinear constraints
         for c in m.component_data_objects(
@@ -893,7 +861,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         GDPopt.objective.deactivate()
         sign_adjust = 1 if GDPopt.objective.sense == minimize else -1
         GDPopt.OA_penalty_expr = Expression(
-            expr=sign_adjust * solve_data.OA_penalty_factor *
+            expr=sign_adjust * config.OA_penalty_factor *
             sum(v for v in m.component_data_objects(
                 ctype=Var, descend_into=(Block, Disjunct))
                 if v.parent_component().local_name == 'GDPopt_OA_slack'))
@@ -929,28 +897,29 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
 
         # Solve
-        results = solve_data.mip_solver.solve(
+        mip_solver = SolverFactory(config.mip)
+        results = mip_solver.solve(
             m, load_solutions=False,
-            **solve_data.mip_solver_kwargs)
+            **config.mip_options)
         master_terminate_cond = results.solver.termination_condition
         if master_terminate_cond is tc.infeasibleOrUnbounded:
             # Linear solvers will sometimes tell me that the problem is
             # infeasible or unbounded during presolve, but fails to
             # distinguish. We need to resolve with a solver option flag on.
-            old_options = deepcopy(solve_data.mip_solver.options)
+            old_options = deepcopy(mip_solver.options)
             # This solver option is specific to Gurobi.
-            solve_data.mip_solver.options['DualReductions'] = 0
-            results = solve_data.mip_solver.solve(
+            mip_solver.options['DualReductions'] = 0
+            results = mip_solver.solve(
                 m, load_solutions=False,
-                **solve_data.mip_solver_kwargs)
+                **config.mip_options)
             master_terminate_cond = results.solver.termination_condition
-            solve_data.mip_solver.options.update(old_options)
+            mip_solver.options.update(old_options)
 
         # Process master problem result
         if master_terminate_cond is tc.optimal:
             # proceed. Just need integer values
             m.solutions.load_from(results)
-            self._copy_values(m, solve_data.working_model)
+            self._copy_values(m, solve_data.working_model, config)
             if GDPopt.objective.sense == minimize:
                 solve_data.LB = max(value(GDPopt.oa_obj.expr), solve_data.LB)
                 solve_data.LB_progress.append(solve_data.LB)
@@ -958,14 +927,16 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 solve_data.UB = min(value(GDPopt.oa_obj.expr), solve_data.UB)
                 solve_data.UB_progress.append(solve_data.UB)
             # m.print_selected_units()
-            logger.info('MIP %s: OBJ: %s  LB: %s  UB: %s'
-                        % (solve_data.mip_iter, value(GDPopt.oa_obj.expr),
-                           solve_data.LB, solve_data.UB))
+            config.logger.info(
+                'MIP %s: OBJ: %s  LB: %s  UB: %s'
+                % (solve_data.mip_iter, value(GDPopt.oa_obj.expr),
+                   solve_data.LB, solve_data.UB))
         elif master_terminate_cond is tc.maxTimeLimit:
             # TODO check that status is actually ok and everything is feasible
-            logger.info('Unable to optimize MILP master problem '
-                        'within time limit. '
-                        'Using current solver feasible solution.')
+            config.logger.info(
+                'Unable to optimize MILP master problem '
+                'within time limit. '
+                'Using current solver feasible solution.')
             results.solver.status = SolverStatus.ok
             m.solutions.load_from(results)
             self._copy_values(m, solve_data.working_model)
@@ -977,15 +948,17 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 solve_data.UB = min(
                     value(GDPopt.objective.expr), solve_data.UB)
                 solve_data.UB_progress.append(solve_data.UB)
-            logger.info('MIP %s: OBJ: %s  LB: %s  UB: %s'
-                        % (self.mip_iter, value(GDPopt.objective.expr),
-                           self.LB, self.UB))
+            config.logger.info(
+                'MIP %s: OBJ: %s  LB: %s  UB: %s'
+                % (self.mip_iter, value(GDPopt.objective.expr),
+                   self.LB, self.UB))
         elif (master_terminate_cond is tc.other and
                 results.solution.status is SolutionStatus.feasible):
             # load the solution and suppress the warning message by setting
             # solver status to ok.
-            logger.info('MILP solver reported feasible solution, '
-                        'but not guaranteed to be optimal.')
+            config.logger.info(
+                'MILP solver reported feasible solution, '
+                'but not guaranteed to be optimal.')
             results.solver.status = SolverStatus.ok
             m.solutions.load_from(results)
             self._copy_values(m, solve_data.working_model)
@@ -995,16 +968,19 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             else:
                 solve_data.UB = min(value(GDPopt.oa_obj.expr), solve_data.UB)
                 solve_data.UB_progress.append(solve_data.UB)
-            logger.info('MIP %s: OBJ: %s  LB: %s  UB: %s'
-                        % (solve_data.mip_iter, value(GDPopt.oa_obj.expr),
-                           solve_data.LB, solve_data.UB))
+            config.logger.info(
+                'MIP %s: OBJ: %s  LB: %s  UB: %s'
+                % (solve_data.mip_iter, value(GDPopt.oa_obj.expr),
+                   solve_data.LB, solve_data.UB))
         elif master_terminate_cond is tc.infeasible:
-            logger.info('MILP master problem is infeasible. '
-                        'Problem may have no more feasible '
-                        'binary configurations.')
+            config.logger.info(
+                'MILP master problem is infeasible. '
+                'Problem may have no more feasible '
+                'binary configurations.')
             if solve_data.mip_iter == 1:
-                logger.warn('GDPopt initialization may have generated poor '
-                            'quality cuts.')
+                config.logger.warn(
+                    'GDPopt initialization may have generated poor '
+                    'quality cuts.')
             # set optimistic bound to infinity
             if GDPopt.objective.sense == minimize:
                 solve_data.LB = float('inf')
@@ -1019,16 +995,16 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 (master_terminate_cond, results.solver.message))
 
         # Call the MILP post-solve callback
-        solve_data.master_postsolve(m, solve_data)
+        config.master_postsolve(m, solve_data)
 
-    def _solve_NLP_subproblem(self, solve_data):
+    def _solve_NLP_subproblem(self, solve_data, config):
         # print('Clone working model for NLP')
         m = solve_data.working_model.clone()
         GDPopt = m.GDPopt_utils
         solve_data.nlp_iter += 1
-        logger.info('NLP %s: Solve subproblem for fixed binaries and '
-                    'logical realizations.'
-                    % (solve_data.nlp_iter,))
+        config.logger.info('NLP %s: Solve subproblem for fixed binaries and '
+                           'logical realizations.'
+                           % (solve_data.nlp_iter,))
         # Fix binary variables
         binary_vars = [
             v for v in m.component_data_objects(
@@ -1041,7 +1017,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             else:
                 # round the integer variable values so that they are exactly 0
                 # or 1
-                if solve_data.round_NLP_binaries:
+                if config.round_NLP_binaries:
                     v.set_value(round(v.value))
             v.fix()
 
@@ -1057,11 +1033,11 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         for disj in m.component_data_objects(
                 ctype=Disjunct, descend_into=(Block, Disjunct)):
             if (fabs(value(disj.indicator_var) - 1)
-                    <= solve_data.integer_tolerance):
+                    <= config.integer_tolerance):
                 # Disjunct is active. Convert to Block.
                 disj.parent_block().reclassify_component_type(disj, Block)
             elif (fabs(value(disj.indicator_var))
-                    <= solve_data.integer_tolerance):
+                    <= config.integer_tolerance):
                 disj.deactivate()
             else:
                 raise ValueError(
@@ -1092,40 +1068,30 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             'contrib.deactivate_trivial_constraints').apply_to(m)
 
         # restore original variable values
-        obj_to_cuid = generate_cuid_names(m, ctype=(Var, Constraint, Disjunct),
-                                          descend_into=(Block, Disjunct))
-        for v in m.component_data_objects(ctype=Var,
-                                          descend_into=(Block, Disjunct)):
-            if not v.fixed and not v.is_binary():
-                try:
-                    old_value = solve_data.initial_variable_values[
-                        obj_to_cuid[v]]
-                    # Ensure that the value is within the bounds
-                    if old_value is not None:
-                        if v.has_lb() and old_value < v.lb:
-                            old_value = v.lb
-                        if v.has_ub() and old_value > v.ub:
-                            old_value = v.ub
-                        # Set the value
-                        v.set_value(old_value)
-                except KeyError:
-                    continue
+        for var, old_value in zip(GDPopt.initial_var_list,
+                                  GDPopt.initial_var_values):
+            if not var.fixed and not var.is_binary():
+                if old_value is not None:
+                    if var.has_lb() and old_value < var.lb:
+                        old_value = var.lb
+                    if var.has_ub() and old_value > var.ub:
+                        old_value = var.ub
+                    # Set the value
+                    var.set_value(old_value)
 
-        solve_data.subproblem_presolve(m, solve_data)
+        config.subprob_presolve(m, solve_data)
 
         # Solve the NLP
-        results = solve_data.nlp_solver.solve(
+        results = SolverFactory(config.nlp).solve(
             m, load_solutions=False,
-            **solve_data.nlp_solver_kwargs)
+            **config.nlp_options)
         solve_data.solve_results = results
 
         solnFeasible = False
 
         def process_feasible_solution():
-            self._copy_values(m, solve_data.working_model,
-                              from_map=obj_to_cuid)
-            self._copy_dual_suffixes(m, solve_data.working_model,
-                                     from_map=obj_to_cuid)
+            self._copy_values(m, solve_data.working_model, config)
+            self._copy_dual_suffixes(m, solve_data.working_model)
             if GDPopt.objective.sense == minimize:
                 solve_data.UB = min(
                     value(GDPopt.objective.expr), solve_data.UB)
@@ -1136,29 +1102,26 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                     value(GDPopt.objective.expr), solve_data.LB)
                 solve_data.solution_improved = (
                     solve_data.LB > solve_data.LB_progress[-1])
-            logger.info('NLP %s: OBJ: %s  LB: %s  UB: %s'
-                        % (solve_data.nlp_iter,
-                           value(GDPopt.objective.expr),
-                           solve_data.LB, solve_data.UB))
+            config.logger.info(
+                'NLP %s: OBJ: %s  LB: %s  UB: %s'
+                % (solve_data.nlp_iter,
+                   value(GDPopt.objective.expr),
+                   solve_data.LB, solve_data.UB))
             if solve_data.solution_improved:
                 # print('Clone model for best_solution_found')
                 solve_data.best_solution_found = m.clone()
 
             # Add the linear cut
             if solve_data.current_strategy == 'LOA':
-                self._add_oa_cut(m, solve_data)
-            elif solve_data.current_strategy == 'PSC':
-                self._add_psc_cut(solve_data)
-            elif solve_data.current_strategy == 'LGBD':
-                self._add_gbd_cut(solve_data)
+                self._add_oa_cut(m, solve_data, config)
 
             # This adds an integer cut to the GDPopt_feasible_integer_cuts
             # ConstraintList, which is not activated by default. However, it
             # may be activated as needed in certain situations or for certain
             # values of option flags.
-            self._add_int_cut(solve_data, feasible=True)
+            self._add_int_cut(solve_data, config, feasible=True)
 
-            solve_data.subproblem_postfeasible(m, solve_data)
+            config.subprob_postfeas(m, solve_data)
 
         subprob_terminate_cond = results.solver.termination_condition
         if subprob_terminate_cond is tc.optimal:
@@ -1176,12 +1139,6 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             self._copy_values(m, solve_data.working_model)
             self._copy_dual_suffixes(m, solve_data.working_model,
                                      from_map=obj_to_cuid)
-            if solve_data.current_strategy == 'PSC':
-                logger.info('Adding PSC feasibility cut.')
-                self._add_psc_cut(solve_data, nlp_feasible=False)
-            elif solve_data.current_strategy == 'LGBD':
-                logger.info('Adding GBD feasibility cut.')
-                self._add_gbd_cut(solve_data, nlp_feasible=False)
             # Add an integer cut to exclude this discrete option
             self._add_int_cut(solve_data)
         elif subprob_terminate_cond is tc.maxIterations:
@@ -1211,7 +1168,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             solve_data.LB_progress.append(solve_data.LB)
 
         # Call the NLP post-solve callback
-        solve_data.subproblem_postsolve(m, solve_data)
+        config.subprob_postsolve(m, solve_data)
         return solnFeasible
 
     def _is_feasible(self, m, config, constr_tol=1E-6, var_tol=1E-8):
@@ -1302,7 +1259,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 oa_utils.GDPopt_OA_slacks = Set(dimen=1)
                 oa_utils.GDPopt_OA_slack = Var(
                     oa_utils.GDPopt_OA_slacks,
-                    bounds=(0, solve_data.max_slack),
+                    bounds=(0, config.max_slack),
                     domain=NonNegativeReals, initialize=0)
 
             oa_cuts = oa_utils.GDPopt_OA_cuts
@@ -1321,7 +1278,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
     def _add_int_cut(self, solve_data, config, feasible=False):
         m = solve_data.working_model
         GDPopt = m.GDPopt_utils
-        int_tol = solve_data.integer_tolerance
+        int_tol = config.integer_tolerance
         binary_vars = [
             v for v in m.component_data_objects(
                 ctype=Var, descend_into=(Block, Disjunct))
