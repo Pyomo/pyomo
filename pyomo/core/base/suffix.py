@@ -15,13 +15,13 @@ __all__ = ('Suffix',
 import logging
 import pprint
 
-from pyomo.util.timing import ConstructionTimer
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.base.plugin import register_component
 from pyomo.core.base.component import ActiveComponent
 
 from six import iteritems, itervalues
-from pyomo.util.deprecation import deprecated
+from pyomo.common.deprecation import deprecated
 
 logger = logging.getLogger('pyomo.core')
 

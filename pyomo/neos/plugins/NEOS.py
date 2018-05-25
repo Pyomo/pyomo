@@ -11,7 +11,7 @@
 import pyutilib.misc
 import pyutilib.services
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.opt.base import *
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
@@ -19,7 +19,7 @@ from pyomo.opt.solver import *
 class NEOSRemoteSolver(SystemCallSolver):
     """A wrapper class for NEOS Remote Solvers"""
 
-    pyomo.util.plugin.alias('_neos', 'Interface for solvers hosted on NEOS')
+    pyomo.common.plugin.alias('_neos', 'Interface for solvers hosted on NEOS')
 
     def __init__(self, **kwds):
         kwds["type"] = "neos"

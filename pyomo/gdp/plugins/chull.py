@@ -12,9 +12,9 @@ import weakref
 import logging
 import textwrap
 
-import pyomo.util.config as cfg
-from pyomo.util.modeling import unique_component_name
-from pyomo.util.plugin import alias
+import pyomo.common.config as cfg
+from pyomo.common.modeling import unique_component_name
+from pyomo.common.plugin import alias
 from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.expr import current as EXPR
 from pyomo.core import *

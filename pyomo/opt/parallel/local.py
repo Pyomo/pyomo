@@ -18,7 +18,7 @@ try:
 except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
 
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 import pyomo.opt
 from pyomo.opt.parallel.manager import (ActionManagerError,
                                         ActionStatus,
