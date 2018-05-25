@@ -21,6 +21,8 @@ Questions: Please make a post at StackOverflow and/or contact Qi Chen
 <https://github.com/qtothec>.
 
 """
+from __future__ import division
+
 import logging
 from copy import deepcopy
 from math import copysign, fabs
@@ -43,26 +45,9 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory, SolverStatus
 from pyomo.opt.base import IOptSolver
 from pyomo.opt.results import ProblemSense, SolverResults
+from pyomo.contrib.gdpopt.util import _DoNothing, GDPoptSolveData
 
 __version__ = (0, 1, 0)
-
-
-class _DoNothing(object):
-    """Do nothing, literally.
-
-    This class is used in situations of "do something if attribute exists."
-    """
-
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def __call__(self, *args, **kwargs):
-        pass
-
-    def __getattr__(self, attr):
-        def _do_nothing(*args, **kwargs):
-            pass
-        return _do_nothing
 
 
 class GDPoptSolver(pyomo.common.plugin.Plugin):
@@ -108,20 +93,12 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
     CONFIG.declare("nlp", ConfigValue(
         default="ipopt",
         description="Nonlinear solver to use"))
-    nlp_options = CONFIG.declare("nlp_options", ConfigBlock())
+    nlp_options = CONFIG.declare("nlp_options", ConfigBlock(implicit=True))
     CONFIG.declare("mip", ConfigValue(
         default="gurobi",
         description="Mixed integer linear solver to use."
     ))
-    mip_options = CONFIG.declare("mip_options", ConfigBlock())
-    # CONFIG.declare("solve_in_place", ConfigValue(
-    #     default=True,
-    #     description="If true, GDPopt manipulations are performed "
-    #                 "directly upon the model. Otherwise, the model is "
-    #                 "first copied and solution values are copied over "
-    #                 "afterwards.",
-    #     domain=In([True, False])
-    # ))
+    mip_options = CONFIG.declare("mip_options", ConfigBlock(implicit=True))
     CONFIG.declare("master_postsolve", ConfigValue(
         default=_DoNothing,
         description="callback hook after a solution of the master problem"
@@ -164,6 +141,14 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         default=1E-5,
         description="Tolerance on integral values."
     ))
+    CONFIG.declare("constraint_tolerance", ConfigValue(
+        default=1E-6,
+        description="Tolerance on constraint satisfaction."
+    ))
+    CONFIG.declare("variable_tolerance", ConfigValue(
+        default=1E-8,
+        description="Tolerance on variable bounds."
+    ))
     CONFIG.declare("round_NLP_binaries", ConfigValue(
         default=True,
         description="flag to round binary values to exactly 0 or 1. "
@@ -199,6 +184,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
         solve_data = GDPoptSolveData()
 
+        old_logger_level = config.logger.getLevel()
         if config.tee:
             config.logger.setLevel(logging.INFO)
         else:
@@ -267,15 +253,15 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             GDPopt.feasible_integer_cuts.deactivate()
 
         # Build list of nonlinear constraints
-        solve_data.nonlinear_constraints = [
+        GDPopt.nonlinear_constraints = [
             v for v in m.component_data_objects(
                 ctype=Constraint, active=True, descend_into=(Block, Disjunct))
             if v.body.polynomial_degree() not in (0, 1)]
 
         # Set up iteration counters
-        solve_data.nlp_iter = 0
-        solve_data.mip_iter = 0
-        solve_data.mip_subiter = 0
+        GDPopt.nlp_iter = 0
+        GDPopt.mip_iter = 0
+        GDPopt.mip_subiter = 0
 
         # set up bounds
         solve_data.LB = float('-inf')
@@ -287,61 +273,35 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         # or not
         solve_data.solution_improved = False
 
-        # Set up solvers
-        solve_data.nlp_solver = SolverFactory(solve_data.nlp_solver_name)
-        solve_data.mip_solver = SolverFactory(solve_data.mip_solver_name)
-
         # Initialize the master problem
-        self._GDPopt_initialize_master(solve_data)
+        self._GDPopt_initialize_master(solve_data, config)
 
         # Algorithm main loop
-        self._GDPopt_iteration_loop(solve_data)
+        self._GDPopt_iteration_loop(solve_data, config)
 
         # Update values in original model
-        self._copy_values(solve_data.best_solution_found, model,
-                          to_map=model_cuid_to_obj)
+        self._copy_values(solve_data.best_solution_found, model, config)
 
         solve_data.results.problem.lower_bound = solve_data.LB
         solve_data.results.problem.upper_bound = solve_data.UB
 
         if solve_data.tee:
-            logger.setLevel(old_logger_level)
+            config.logger.setLevel(old_logger_level)
 
-    def _copy_values(self, from_model, to_model, from_map=None, to_map=None):
-        """Copy variable values from one model to another.
-
-        from_map: a mapping of source model objects to uid names
-        to_map: a mapping of uid names to destination model objects
-        """
-        if from_map is None:
-            from_map = generate_cuid_names(from_model,
-                                           ctype=(Var, Disjunct),
-                                           descend_into=(Block, Disjunct))
-        if to_map is None:
-            tm_obj_to_uid = generate_cuid_names(to_model,
-                                                ctype=(Var, Disjunct),
-                                                descend_into=(Block, Disjunct))
-            to_map = dict((cuid, obj)
-                          for obj, cuid in iteritems(tm_obj_to_uid))
-        for v in from_model.component_data_objects(
-                ctype=Var, descend_into=(Block, Disjunct)):
-            uid = from_map[v]
-            dest_model_var = to_map.get(uid, None)
-            if dest_model_var is not None:
-                try:
-                    dest_model_var.set_value(value(v))
-                except ValueError as err:
-                    if 'is not in domain Binary' in err.message:
-                        # check to see whether this is just a tolerance
-                        # issue
-                        if (fabs(value(v) - 1) <= self.integer_tolerance or
-                                fabs(value(v)) <= self.integer_tolerance):
-                            dest_model_var.set_value(round(value(v)))
-                        else:
-                            raise
-                    elif 'No value for uninitialized' in err.message:
-                        # Variable value was None
-                        dest_model_var.set_value(None)
+    def _copy_values(self, from_model, to_model, config):
+        """Copy variable values from one model to another."""
+        for v_from, v_to in zip(from_model.GDPopt_utils.initial_var_list,
+                                to_model.GDPopt_utils.initial_var_list):
+            try:
+                v_to.set_value(v_from.value)
+            except ValueError as err:
+                if 'is not in domain Binary' in err.message:
+                    # Check to see if this is just a tolerance issue
+                    if (fabs(v_from.value - 1) <= config.integer_tolerance or
+                            fabs(v_from.value) <= config.integer_tolerance):
+                        v_to.set_value(round(v_from.value))
+                    else:
+                        raise
 
     def _copy_dual_suffixes(self, from_model, to_model,
                             from_map=None, to_map=None):
@@ -468,7 +428,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         # TODO if any continuous variables are multipled with binary ones, need
         # to do some kind of transformation (Glover?) or throw an error message
 
-    def _GDPopt_initialize_master(self, solve_data):
+    def _GDPopt_initialize_master(self, solve_data, config):
         """Initialize the decomposition algorithm.
 
         This includes generating the initial cuts require to build the master
@@ -496,38 +456,30 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             GDPopt.gbd_cuts = ConstraintList(doc='Generalized Benders cuts')
 
         if solve_data.initialization_strategy is None:
-            self._init_set_covering(solve_data)
+            self._init_set_covering(solve_data, config)
         elif solve_data.initialization_strategy == 'max_binary':
-            self._init_max_binaries(solve_data)
-            self._solve_NLP_subproblem(solve_data)
+            self._init_max_binaries(solve_data, config)
+            self._solve_NLP_subproblem(solve_data, config)
         elif solve_data.initialization_strategy == 'fixed_binary':
-            self._validate_disjunctions(solve_data)
-            self._solve_NLP_subproblem(solve_data)
+            self._validate_disjunctions(solve_data, config)
+            self._solve_NLP_subproblem(solve_data, config)
         elif solve_data.initialization_strategy == 'custom_disjuncts':
-            self._init_custom_disjuncts(solve_data)
+            self._init_custom_disjuncts(solve_data, config)
         else:
             raise ValueError('Unknown initialization strategy: %s'
                              % (self.initialization_strategy,))
 
-    def _validate_disjunctions(self, solve_data):
+    def _validate_disjunctions(self, solve_data, config):
         """Validate if the disjunctions are satisfied by the current values."""
         # TODO implement this? If not, the user will simply get an infeasible
         # return value
         pass
 
-    def _init_custom_disjuncts(self, solve_data):
+    def _init_custom_disjuncts(self, solve_data, config):
         """Initialize by using user-specified custom disjuncts."""
         m = solve_data.working_model
-        # error checking to make sure that the user gave proper disjuncts
-        orig_model_cuids = generate_cuid_names(
-            solve_data.original_model, ctype=Disjunct,
-            descend_into=(Block, Disjunct))
-        working_model_cuids = generate_cuid_names(
-            m, ctype=Disjunct, descend_into=(Block, Disjunct))
-        model_cuid_to_obj = dict(
-            (cuid, obj)
-            for obj, cuid in iteritems(working_model_cuids))
-        for disj_set in solve_data.custom_init_disjuncts:
+        # TODO error checking to make sure that the user gave proper disjuncts
+        for disj_set in config.custom_init_disjuncts:
             fixed_disjs = ComponentSet()
             for disj in disj_set:
                 disj_to_fix = model_cuid_to_obj[orig_model_cuids[disj]]
@@ -539,7 +491,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 disj.indicator_var.unfix()
             self._solve_NLP_subproblem(solve_data)
 
-    def _solve_init_MIP(self, solve_data):
+    def _solve_init_MIP(self, solve_data, config):
         """Solves the initialization MIP corresponding to the passed model.
 
         Intended to consolidate some MIP solution code.
@@ -807,28 +759,18 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         if terminate_cond is tc.optimal:
             m.solutions.load_from(results)
             self._copy_values(m, solve_data.working_model)
-            # m.print_all_units()
-            # int_tol = 1E-4
-            # binary_vars = [
-            #     v for v in m.component_data_objects(
-            #         ctype=Var, descend_into=(Block, Disjunct))
-            #     if v.is_binary() and not v.fixed]
-            #
-            # from pprint import pprint
-            # pprint(list(v.name for v in binary_vars
-            #             if fabs(v.value - 1) <= int_tol))
-            # pprint(list(v.name for v in binary_vars
-            #             if fabs(v.value) <= int_tol))
-            logger.info('Solved set covering MIP')
+            config.logger.info('Solved set covering MIP')
             return True
         elif terminate_cond is tc.infeasible:
-            logger.info('Set covering problem is infeasible. '
-                        'Problem may have no more feasible '
-                        'binary configurations.')
+            config.logger.info(
+                'Set covering problem is infeasible. '
+                'Problem may have no more feasible '
+                'binary configurations.')
             if solve_data.mip_iter <= 1:
-                logger.warn('Problem was infeasible. '
-                            'Check your linear and logical constraints '
-                            'for contradictions.')
+                config.logger.warn(
+                    'Problem was infeasible. '
+                    'Check your linear and logical constraints '
+                    'for contradictions.')
             if GDPopt.objective.sense == minimize:
                 solve_data.LB = float('inf')
             else:
@@ -841,7 +783,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 'of %s. Solver message: %s' %
                 (terminate_cond, results.solver.message))
 
-    def _GDPopt_iteration_loop(self, solve_data):
+    def _GDPopt_iteration_loop(self, solve_data, config):
         m = solve_data.working_model
         GDPopt = m.GDPopt_utils
         # Backup counter to prevent infinite loop
@@ -1272,46 +1214,42 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         solve_data.subproblem_postsolve(m, solve_data)
         return solnFeasible
 
-    def _is_feasible(self, m, constr_tol=1E-6, var_tol=1E-8):
+    def _is_feasible(self, m, config, constr_tol=1E-6, var_tol=1E-8):
         for constr in m.component_data_objects(
-                ctype=Constraint, active=True, descend_into=(Block, Disjunct)):
-            # constraint is an equality
-            if constr.equality:
-                if fabs(value(constr.lower) -
-                        value(constr.body)) >= constr_tol:
-                    logger.info('%s: %s != %s' % (
-                        constr.name, value(constr.body), value(constr.lower)))
-                    return False
-            if constr.lower is not None:
-                if value(constr.lower) - value(constr.body) >= constr_tol:
-                    logger.info('%s: %s < %s' % (
-                        constr.name, value(constr.body), value(constr.lower)))
-                    return False
-            if constr.upper is not None:
-                if value(constr.body) - value(constr.upper) >= constr_tol:
-                    logger.info('%s: %s > %s' % (
-                        constr.name, value(constr.body), value(constr.upper)))
-                    return False
-        for var in m.component_data_objects(
-                ctype=Var, descend_into=(Block, Disjunct)):
-            if var.lb is not None:
-                if value(var.lb) - value(var) >= var_tol:
-                    logger.info('%s: %s < %s' % (
-                        var.name, value(var), value(var.lb)))
-                    return False
-            if var.ub is not None:
-                if value(var) - value(var.ub) >= var_tol:
-                    logger.info('%s: %s > %s' % (
-                        var.name, value(var), value(var.ub)))
-                    return False
+                ctype=Constraint, active=True, descend_into=True):
+            # Check constraint lower bound
+            if (constr.lower is not None and (
+                value(constr.lower) - value(constr.body)
+                >= config.constraint_tolerance
+            )):
+                config.logger.info('%s: body %s < LB %s' % (
+                    constr.name, value(constr.body), value(constr.lower)))
+                return False
+            # check constraint upper bound
+            if (constr.upper is not None and (
+                value(constr.body) - value(constr.upper)
+                >= config.constraint_tolerance
+            )):
+                config.logger.info('%s: body %s > UB %s' % (
+                    constr.name, value(constr.body), value(constr.upper)))
+                return False
+        for var in m.component_data_objects(ctype=Var, descend_into=True):
+            # Check variable lower bound
+            if (var.has_lb() and
+                    value(var.lb) - value(var) >= config.variable_tolerance):
+                config.logger.info('%s: %s < LB %s' % (
+                    var.name, value(var), value(var.lb)))
+                return False
+            # Check variable upper bound
+            if (var.has_ub() and
+                    value(var) - value(var.ub) >= config.variable_tolerance):
+                config.logger.info('%s: %s > UB %s' % (
+                    var.name, value(var), value(var.ub)))
+                return False
         return True
 
-    def _add_oa_cut(self, nlp_solution, solve_data, for_GBD=False):
-        """Add outer approximation cuts to working model.
-
-        If for_GBD flag is True, then place the cuts in a component called
-        GDPopt_OA_cuts_for_GBD and deactivate them by default.
-        """
+    def _add_oa_cut(self, nlp_solution, solve_data, config):
+        """Add outer approximation cuts to working model."""
         m = solve_data.working_model
         GDPopt = m.GDPopt_utils
         sign_adjust = -1 if GDPopt.objective.sense == minimize else 1
@@ -1333,49 +1271,44 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
         # generate new constraints
         # TODO some kind of special handling if the dual is phenomenally small?
-        logger.info('Adding OA cuts.')
+        config.logger.info('Adding OA cuts.')
         counter = 0
         for constr in nonlinear_constraints:
             if not m.dual.get(constr, None):
                 continue
             parent_block = constr.parent_block()
             ignore_set = getattr(parent_block, 'GDPopt_ignore_OA', None)
-            logger.debug('Ignore_set %s' % ignore_set)
+            config.logger.debug('Ignore_set %s' % ignore_set)
             if (ignore_set and (constr in ignore_set or
                                 constr.parent_component() in ignore_set)):
-                logger.debug('OA cut addition for %s skipped because it is in '
-                             'the ignore set.' % constr.name)
+                config.logger.debug(
+                    'OA cut addition for %s skipped because it is in '
+                    'the ignore set.' % constr.name)
                 continue
 
-            logger.debug("Adding OA cut for %s with dual value %s"
-                         % (constr.name, m.dual.get(constr)))
+            config.logger.debug(
+                "Adding OA cut for %s with dual value %s"
+                % (constr.name, m.dual.get(constr)))
 
             constr_vars = list(EXPR.identify_variables(constr.body))
             jac_list = differentiate(constr.body, wrt_list=constr_vars)
             jacobians = ComponentMap(zip(constr_vars, jac_list))
 
-            if not for_GBD:
-                oa_utils = parent_block.component('GDPopt_OA')
-                if oa_utils is None:
-                    oa_utils = parent_block.GDPopt_OA = Block()
-                    oa_utils.GDPopt_OA_cuts = ConstraintList()
-                    oa_utils.next_idx = 1
-                    oa_utils.GDPopt_OA_slacks = Set(dimen=1)
-                    oa_utils.GDPopt_OA_slack = Var(
-                        oa_utils.GDPopt_OA_slacks,
-                        bounds=(0, solve_data.max_slack),
-                        domain=NonNegativeReals, initialize=0)
+            oa_utils = parent_block.component('GDPopt_OA')
+            if oa_utils is None:
+                oa_utils = parent_block.GDPopt_OA = Block()
+                oa_utils.GDPopt_OA_cuts = ConstraintList()
+                oa_utils.next_idx = 1
+                oa_utils.GDPopt_OA_slacks = Set(dimen=1)
+                oa_utils.GDPopt_OA_slack = Var(
+                    oa_utils.GDPopt_OA_slacks,
+                    bounds=(0, solve_data.max_slack),
+                    domain=NonNegativeReals, initialize=0)
 
-                oa_cuts = oa_utils.GDPopt_OA_cuts
-                oa_utils.GDPopt_OA_slacks.add(oa_utils.next_idx)
-                slack_var = oa_utils.GDPopt_OA_slack[oa_utils.next_idx]
-                oa_utils.next_idx += 1
-            else:
-                oa_cuts = parent_block.component('GDPopt_OA_cuts_for_GBD')
-                if oa_cuts is None:
-                    oa_cuts = parent_block.GDPopt_OA_cuts_for_GBD = \
-                        ConstraintList()
-                oa_cuts.deactivate()
+            oa_cuts = oa_utils.GDPopt_OA_cuts
+            oa_utils.GDPopt_OA_slacks.add(oa_utils.next_idx)
+            slack_var = oa_utils.GDPopt_OA_slack[oa_utils.next_idx]
+            oa_utils.next_idx += 1
             oa_cuts.add(
                 expr=copysign(1, sign_adjust * m.dual[constr]) * (
                     value(constr.body) + sum(
@@ -1383,9 +1316,9 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                         for var in constr_vars)) + slack_var <= 0)
             counter += 1
 
-        logger.info('Added %s OA cuts' % counter)
+        config.logger.info('Added %s OA cuts' % counter)
 
-    def _add_int_cut(self, solve_data, feasible=False):
+    def _add_int_cut(self, solve_data, config, feasible=False):
         m = solve_data.working_model
         GDPopt = m.GDPopt_utils
         int_tol = solve_data.integer_tolerance
@@ -1402,7 +1335,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         if not binary_vars:
             # if no binary variables, add infeasible constraints.
             if not feasible:
-                logger.info(
+                config.logger.info(
                     'Adding integer cut to a model without binary variables. '
                     'Model is now infeasible.')
                 GDPopt.integer_cuts.add(expr=GDPopt.objective_value >= 1)
@@ -1419,22 +1352,10 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                    sum(v for v in binary_vars
                        if fabs(value(v)) <= int_tol) >= 1)
 
-        # print('Active: {}'.format(
-        #     list(v.name for v in binary_vars
-        #          if fabs(v.value - 1) <= int_tol)))
-        # print('Inactive: {}'.format(
-        #     list(v.name for v in binary_vars
-        #          if fabs(v.value) <= int_tol)))
-
         if not feasible:
             # Add the integer cut
-            logger.info('Adding integer cut')
+            config.logger.info('Adding integer cut')
             GDPopt.integer_cuts.add(expr=int_cut)
         else:
-            logger.info('Adding feasible integer cut')
+            config.logger.info('Adding feasible integer cut')
             GDPopt.feasible_integer_cuts.add(expr=int_cut)
-
-
-class GDPoptSolveData(object):
-    """Data container to hold solve-instance data."""
-    pass
