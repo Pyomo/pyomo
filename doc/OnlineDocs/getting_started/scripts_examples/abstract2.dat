@@ -1,0 +1,22 @@
+# abstract2.dat AMPL data format
+
+set I := TV Film ;
+set J := Graham John Carol ;
+
+param a :=
+TV  Graham 3
+TV John 4.4
+TV Carol 4.9
+Film Graham 1
+Film John 2.4
+Film Carol 1.1
+;
+
+param c := [*]
+ Graham 2.2
+ John 3.1416
+ Carol 3
+;
+
+param b := TV 1 Film 1 ;
+

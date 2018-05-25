@@ -1,0 +1,7 @@
+from pyomo.environ import *
+
+model = ConcreteModel()
+model.dual = Suffix(direction=Suffix.IMPORT)
+model.x = Var()
+model.obj = Objective(expr=model.x)
+model.con = Constraint(expr=model.x>=1.0)

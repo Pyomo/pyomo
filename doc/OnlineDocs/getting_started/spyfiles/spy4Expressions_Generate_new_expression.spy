@@ -1,0 +1,9 @@
+model = ConcreteModel()
+model.x = Var()
+
+# create a Pyomo expression
+e1 = model.x + 5
+
+# create another Pyomo expression
+# e1 is copied when generating e2
+e2 = e1 + model.x

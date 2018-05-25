@@ -18,7 +18,7 @@ except ImportError:
 
 from pyutilib.misc import Options
 
-from pyomo.util.plugin import alias, Plugin, implements
+from pyomo.common.plugin import alias, Plugin, implements
 from pyomo.core.base.plugin import IDataManager
 import six
 

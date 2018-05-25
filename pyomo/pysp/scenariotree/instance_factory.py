@@ -27,7 +27,7 @@ from pyomo.core import (Block,
                         DataPortal,
                         AbstractModel)
 from pyomo.core.base.block import _BlockData
-from pyomo.util.plugin import ExtensionPoint
+from pyomo.common.plugin import ExtensionPoint
 from pyomo.pysp.phutils import _OLD_OUTPUT
 from pyomo.pysp.util.misc import load_external_module
 from pyomo.pysp.scenariotree.tree_structure_model import \
