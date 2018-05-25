@@ -12,19 +12,28 @@ import pyutilib.th as unittest
 
 from pyomo.environ import *
 from pyomo.gdp import *
+
 import pyomo.opt
+from pyomo.repn import generate_standard_repn
 
 import random
 from six import StringIO
 
 from nose.tools import set_trace
-from pyomo.opt import SolverFactory
 
 solvers = pyomo.opt.check_available_solvers('gurobi')
 
 # TODO:
 #     - test that deactivated objectives on the model don't get used by the
 #       transformation
+
+def check_linear_coef(self, repn, var, coef):
+    var_id = None
+    for i,v in enumerate(repn.linear_vars):
+        if v is var:
+            var_id = i
+    self.assertIsNotNone(var_id)
+    self.assertAlmostEqual(repn.linear_coefs[var_id], coef)
 
 class TwoTermDisj(unittest.TestCase):
     @staticmethod
@@ -71,39 +80,24 @@ class TwoTermDisj(unittest.TestCase):
         self.assertEqual(cut.lower, 0)
         self.assertIsNone(cut.upper)
 
+        # Var, coef, xhat:
+        expected_cut = [
+            ( m.x, 0.45, 2.7 ),
+            ( m.y, 0.55, 1.3 ),
+            ( m.d[0].indicator_var, 0.1, 0.85 ),
+            ( m.d[1].indicator_var, -0.1, 0.15 ),
+        ]
+
         # test body
-        self.assertEqual(len(cut.body._coef), 4)
-        self.assertEqual(len(cut.body._args), 4)
-        self.assertEqual(cut.body._const, 0)
+        repn = generate_standard_repn(cut.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 4)
+        for v, coef, xhat in expected_cut:
+            check_linear_coef(self, repn, v, coef)
 
-        coefs = {
-            0: 0.45,
-            1: 0.55,
-            2: 0.1,
-            3: -0.1
-        }
+        self.assertAlmostEqual(
+            repn.constant, -1*sum(c*x for v,c,x in expected_cut), 5)
 
-        xhat = {
-            0: 2.7,
-            1: 1.3,
-            2: 0.85,
-            3: 0.15
-        }
-
-        variables = {
-            0: m.x,
-            1: m.y,
-            2: m.d[0].indicator_var,
-            3: m.d[1].indicator_var
-        }
-
-        for i in range(4):
-            self.assertAlmostEqual(cut.body._coef[i], coefs[i])
-            self.assertEqual(len(cut.body._args[i]._coef), 1)
-            self.assertEqual(len(cut.body._args[i]._args), 1)
-            self.assertAlmostEqual(cut.body._args[i]._const, -1*xhat[i])
-            self.assertEqual(cut.body._args[i]._coef[0], 1)
-            self.assertIs(cut.body._args[i]._args[0], variables[i])
 
     @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
     def test_create_using(self):
