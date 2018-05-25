@@ -4,13 +4,13 @@ from __future__ import division
 
 import textwrap
 
-from pyomo.core.base import Block, Constraint, VarList
+from pyomo.core.base import Any, Block, Constraint, VarList
+from pyomo.core.expr.current import clone_expression
 from pyomo.core.expr.numvalue import value
+from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
 from pyomo.util.plugin import alias
-from pyomo.core.base import Any
-from pyomo.core.kernel import ComponentMap, ComponentSet
 
 
 def _get_equality_linked_variables(constraint):
@@ -29,8 +29,8 @@ def _get_equality_linked_variables(constraint):
     # Generate the standard linear representation
     repn = generate_standard_repn(constraint.body)
     nonzero_coef_vars = tuple(v for i, v in enumerate(repn.linear_vars)
-                         # if coefficient on variable is nonzero
-                         if repn.linear_coefs[i] != 0)
+                              # if coefficient on variable is nonzero
+                              if repn.linear_coefs[i] != 0)
     if len(nonzero_coef_vars) != 2:
         # Expect two variables with nonzero cofficient in constraint; otherwise,
         # return empty tuple.
@@ -71,8 +71,8 @@ def _build_equality_set(model):
 
         # add all elements of set2 to set 1
         set1.update(set2)
-        # Update all elements of set 2 to point to set 1
-        for v in set2:
+        # Update all elements to point to set 1
+        for v in set1:
             eq_var_map[v] = set1
 
     return eq_var_map
@@ -115,5 +115,15 @@ class VariableAggregator(IsomorphicTransformation):
             processed_vars.update(eq_set)
 
         # Do the substitution
+        substitution_map = {id(var): z_var
+                            for var, z_var in var_to_z.iteritems()}
+        for constraint in model.component_data_objects(ctype=Constraint):
+            memo = {'__block_scope__': {id(None): False}}
+            memo.update(substitution_map)
+            constraint.set_value(
+                (constraint.lower,
+                 clone_expression(constraint.body, memo=memo),
+                 constraint.upper))
+
         # profit
         pass
