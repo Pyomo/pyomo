@@ -59,7 +59,10 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
             elif arg.__class__ in native_types:
                 tmp.append("'{0}'".format(val))
             elif arg.is_variable_type():
-                tmp.append(val)
+                if arg.is_fixed():
+                    tmp.append("(%s)" % val)
+                else:
+                    tmp.append(val)
             elif arg.is_expression_type() and node._precedence() < arg._precedence():
                 tmp.append("({0})".format(val))
             else:
