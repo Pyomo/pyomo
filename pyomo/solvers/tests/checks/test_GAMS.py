@@ -10,13 +10,10 @@
 
 
 import pyutilib.th as unittest
-import pyutilib.subprocess
 from pyutilib.misc import capture_output
 from pyomo.environ import *
-from six import StringIO
-import contextlib, sys, os, shutil
+import os, shutil
 from tempfile import mkdtemp
-import subprocess
 
 opt_py = SolverFactory('gams', solver_io='python')
 gamspy_available = opt_py.available(exception_flag=False)
