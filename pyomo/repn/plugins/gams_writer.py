@@ -27,7 +27,7 @@ from pyomo.core.base import (
 from pyomo.core.base.component import ComponentData
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
-import pyomo.util.plugin
+import pyomo.common.plugin
 
 from pyomo.core.kernel.component_block import IBlockStorage
 from pyomo.core.kernel.component_interface import ICategorizedObject
@@ -59,7 +59,10 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
             elif arg.__class__ in native_types:
                 tmp.append("'{0}'".format(val))
             elif arg.is_variable_type():
-                tmp.append(val)
+                if arg.is_fixed():
+                    tmp.append("(%s)" % val)
+                else:
+                    tmp.append(val)
             elif arg.is_expression_type() and node._precedence() < arg._precedence():
                 tmp.append("({0})".format(val))
             else:
@@ -119,7 +122,7 @@ def _get_bound(exp):
 
 
 class ProblemWriter_gams(AbstractProblemWriter):
-    pyomo.util.plugin.alias('gams', 'Generate the corresponding GAMS file')
+    pyomo.common.plugin.alias('gams', 'Generate the corresponding GAMS file')
 
     def __init__(self):
         AbstractProblemWriter.__init__(self, ProblemFormat.gams)

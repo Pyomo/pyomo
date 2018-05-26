@@ -33,20 +33,20 @@ class TestFixDisjuncts(unittest.TestCase):
         m = ConcreteModel()
         m.c = Constraint()
         with self.assertRaises(GDP_Error):
-            TransformationFactory('gdp.fix_disjuncts').apply_to(m.c)
+            TransformationFactory('gdp.fix_disjuncts').apply_to(m, targets=m.c)
 
     def test_inactive_target(self):
         m = ConcreteModel()
         m.b = Block()
         m.b.deactivate()
-        TransformationFactory('gdp.fix_disjuncts').apply_to(m.b)
+        TransformationFactory('gdp.fix_disjuncts').apply_to(m, targets=m.b)
 
     def test_indexed_target(self):
         m = ConcreteModel()
         m.s = RangeSet(2)
         m.b = Block(m.s)
         m.b[1].bb = Block()
-        TransformationFactory('gdp.fix_disjuncts').apply_to(m.b)
+        TransformationFactory('gdp.fix_disjuncts').apply_to(m, targets=m.b)
 
     def test_disjunction_target(self):
         m = ConcreteModel()
@@ -56,7 +56,7 @@ class TestFixDisjuncts(unittest.TestCase):
         m.d1.indicator_var.set_value(1)
         m.d2.indicator_var.set_value(0)
 
-        TransformationFactory('gdp.fix_disjuncts').apply_to(m.d)
+        TransformationFactory('gdp.fix_disjuncts').apply_to(m, targets=m.d)
         self.assertTrue(m.d1.indicator_var.fixed)
         self.assertTrue(m.d1.active)
         self.assertTrue(m.d2.indicator_var.fixed)

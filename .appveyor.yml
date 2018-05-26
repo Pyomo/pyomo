@@ -105,7 +105,7 @@ install:
   - "SET PATH=%cd%\\bin;%PATH%"
   - "python pyomo\\contrib\\trustregion\\getGJH.py %cd%\\bin"
   - "gjh -v"
-  - "python pyomo\\util\\getGSL.py %cd%\\bin"
+  - "python pyomo\\common\\getGSL.py %cd%\\bin"
   #
   # Verify the python version
   - python --version
@@ -134,7 +134,7 @@ test_script:
   - "test.pyomo -v --cat=%CATEGORY% pyomo %BUILD_DIR%\\pyomo-model-libraries"
 
   # Run documentation tests
-  - "nosetests -v --with-doctest --doctest-extension=.rst doc\\OnlineDocs"
+  #- "nosetests -v --with-doctest --doctest-extension=.rst doc\\OnlineDocs"
 
 
 #after_test:

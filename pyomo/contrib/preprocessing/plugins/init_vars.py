@@ -6,7 +6,7 @@ import textwrap
 from pyomo.core.base.var import Var
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 
 
 class InitMidpoint(IsomorphicTransformation):
@@ -20,10 +20,6 @@ class InitMidpoint(IsomorphicTransformation):
     alias(
         'contrib.init_vars_midpoint',
         doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
-
-    def __init__(self):
-        """Initialize the transformation."""
-        super(InitMidpoint, self).__init__()
 
     def _apply_to(self, instance, overwrite=False):
         """Apply the transformation.
@@ -62,10 +58,6 @@ class InitZero(IsomorphicTransformation):
     alias(
         'contrib.init_vars_zero',
         doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
-
-    def __init__(self):
-        """Initialize the transformation."""
-        super(InitZero, self).__init__()
 
     def _apply_to(self, instance, overwrite=False):
         """Apply the transformation.

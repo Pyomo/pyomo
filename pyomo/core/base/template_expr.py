@@ -110,8 +110,8 @@ class IndexTemplate(NumericValue):
     def __str__(self):
         return self.getname()
 
-    def getname(self, fully_qualified=False, name_buffer=None):
-        return "{"+self._set.getname(fully_qualified, name_buffer)+"}"
+    def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
+        return "{"+self._set.getname(fully_qualified, name_buffer, relative_to)+"}"
 
     def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         return self.name

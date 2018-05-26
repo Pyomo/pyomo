@@ -14,7 +14,7 @@ import logging
 from pyomo.core.base import Block, VarList, ConstraintList, Objective, Var, Constraint, maximize, ComponentUID, Set
 from pyomo.repn import generate_standard_repn
 from pyomo.repn.collect import collect_linear_terms
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 from pyomo.mpec import ComplementarityList, complements
 from pyomo.bilevel.plugins.transform import Base_BilevelTransformation
 from pyomo.bilevel.components import SubModel

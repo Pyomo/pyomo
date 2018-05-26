@@ -1,0 +1,1 @@
+    instance.solutions.load_from(results)

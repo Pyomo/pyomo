@@ -14,7 +14,7 @@ import logging
 import math
 from six.moves import xrange
 
-from pyomo.util.timing import ConstructionTimer
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.sets import OrderedSimpleSet
 from pyomo.core.base.set_types import Integers, Reals

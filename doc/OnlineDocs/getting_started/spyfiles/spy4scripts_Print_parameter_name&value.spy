@@ -1,0 +1,6 @@
+from pyomo.core import Param
+for p in instance.component_objects(Param, active=True):
+    print ("Parameter "+str(p))
+    parmobject = getattr(instance, p)
+    for index in parmobject:
+        print ("   ",index, parmobject[index].value)
