@@ -23,7 +23,7 @@ def log_infeasible_constraints(m, tol=1E-6, logger=logger):
             ctype=Constraint, active=True, descend_into=True):
         # if constraint is an equality, handle differently
         if constr.equality and fabs(value(constr.lower - constr.body)) >= tol:
-            logger.info('CONSTR {}: {} ≠ {}'.format(
+            logger.info('CONSTR {}: {} != {}'.format(
                 constr.name, value(constr.body), value(constr.lower)))
             continue
         # otherwise, check LB and UB, if they exist
@@ -35,7 +35,7 @@ def log_infeasible_constraints(m, tol=1E-6, logger=logger):
                 constr.name, value(constr.body), value(constr.upper)))
 
 
-def log_infeasible_bounds(m, tol=1E-6):
+def log_infeasible_bounds(m, tol=1E-6, logger=logger):
     """Print the infeasible variable bounds in the model.
 
     Args:
@@ -53,7 +53,7 @@ def log_infeasible_bounds(m, tol=1E-6):
                 var.name, value(var), value(var.ub)))
 
 
-def log_close_to_bounds(m, tol=1E-6):
+def log_close_to_bounds(m, tol=1E-6, logger=logger):
     """Print the variables and constraints that are near their bounds.
 
     Fixed variables and equality constraints are excluded from this analysis.
@@ -85,7 +85,7 @@ def log_close_to_bounds(m, tol=1E-6):
                 logger.info('{} near LB'.format(constr.name))
 
 
-def log_active_constraints(m):
+def log_active_constraints(m, logger=logger):
     """Prints the active constraints in the model."""
     for constr in m.component_data_objects(
         ctype=Constraint, active=True, descend_into=True,
