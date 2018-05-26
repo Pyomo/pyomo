@@ -1069,6 +1069,23 @@ class NamedVarList(VarList):
     """
     _ComponentDataClass = _NamedGeneralVarData
 
+    def _pprint(self):
+        """Print component information."""
+        return ( [("Size", len(self)),
+                  ("Index", self._index if self.is_indexed() else None),
+                  ],
+                 iteritems(self._data),
+                 ( "Name", "Lower","Value","Upper","Fixed","Stale","Domain"),
+                 lambda k, v: [ v.getname(fully_qualified=False),
+                                value(v.lb),
+                                v.value,
+                                value(v.ub),
+                                v.fixed,
+                                v.stale,
+                                v.domain
+                                ]
+                 )
+
 
 register_component(Var, "Decision variables.")
 register_component(VarList, "List of decision variables.")
