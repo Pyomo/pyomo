@@ -164,9 +164,9 @@ class ShortNameLabeler(object):
 
     def __call__(self, obj=None):
         lbl = self.labeler(obj)
-        if len(lbl) > self.limit:
-            self.id += 1
-            suffix = self.prefix + str(self.id)
-            return lbl[:self.limit - len(suffix)] + suffix
-        else:
+        if (len(lbl) < self.limit) or ((len(lbl) == self.limit) and (lbl[-len(self.prefix):] != self.prefix)):
             return lbl
+        else:
+            self.id += 1
+            suffix = self.prefix + str(self.id) + self.prefix
+            return lbl[-self.limit + len(suffix):] + suffix

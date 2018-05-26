@@ -18,11 +18,12 @@ class LabelerTests(unittest.TestCase):
     def setUp(self):
         m = ConcreteModel()
         m.mycomp = Var()
-        m.this = Var()
         m.that = Var()
         self.long1 = m.myverylongcomponentname = Var()
         self.long2 = m.myverylongcomponentnamerighthere = Var()
         self.long3 = m.anotherlongonebutdifferent = Var()
+        self.long4 = m.anotherlongonebutdifferentlongcomponentname = Var()
+        self.long5 = m.longcomponentname_1_ = Var()
         m.s = RangeSet(10)
         m.ind = Var(m.s)
         m.myblock = Block()
@@ -106,7 +107,7 @@ class LabelerTests(unittest.TestCase):
 
     def test_namelabeler(self):
         m = self.m
-        lbl = CNameLabeler()
+        lbl = NameLabeler()
         self.assertEqual(lbl(m.mycomp), 'mycomp')
         self.assertEqual(lbl(m.mycomp), 'mycomp')
         self.assertEqual(lbl(m.that), 'that')
@@ -132,9 +133,23 @@ class LabelerTests(unittest.TestCase):
         self.assertEqual(lbl(m.ind[10]), ComponentUID(m.ind[10]))
         self.assertEqual(lbl(m.ind[1]), ComponentUID(m.ind[1]))
 
-    # TODO: when we decide how this one is going to work
-    # def test_shortnamelabeler(self):
-    #     return 42
+    def test_shortnamelabeler(self):
+        m = self.m
+        lbl = ShortNameLabeler(20, '_')
+        self.assertEqual(lbl(m.mycomp), 'mycomp')
+        self.assertEqual(lbl(m.mycomp), 'mycomp')
+        self.assertEqual(lbl(m.that), 'that')
+        self.assertEqual(lbl(self.long1), 'longcomponentname_1_')
+        self.assertEqual(lbl(self.long2), 'nentnamerighthere_2_')
+        self.assertEqual(lbl(self.long3), 'ngonebutdifferent_3_')
+        self.assertEqual(lbl(self.long4), 'longcomponentname_4_')
+        self.assertEqual(lbl(self.long5), 'gcomponentname_1__5_')
+        self.assertEqual(lbl(m.myblock), 'myblock')
+        self.assertEqual(lbl(m.myblock.mystreet), 'myblock_mystreet')
+        self.assertEqual(lbl(self.thecopy), 'myblock_mystreet')
+        self.assertEqual(lbl(m.ind[3]), 'ind_3_')
+        self.assertEqual(lbl(m.ind[10]), 'ind_10_')
+        self.assertEqual(lbl(m.ind[1]), 'ind_1_')
 
 
 if __name__ == "__main__":
