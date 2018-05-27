@@ -1,8 +1,8 @@
 """Tests the variable aggregation module."""
 import pyutilib.th as unittest
-
+from pyomo.core.kernel import ComponentSet
 from pyomo.environ import (ConcreteModel, Constraint, RangeSet,
-                           TransformationFactory, Var, value)
+                           TransformationFactory, Var)
 
 
 class TestVarAggregate(unittest.TestCase):
@@ -36,27 +36,25 @@ class TestVarAggregate(unittest.TestCase):
         m.ignore_me = Constraint(expr=m.y[1] + m.z1 + m.z2 <= 0)
 
         TransformationFactory('contrib.aggregate_vars').apply_to(m)
-        m.pprint()
-        from pprint import pprint
         z_to_vars = m._var_aggregator_info.z_to_vars
-        pprint({z.name: list(v.name for v in z_to_vars[z]) for z in z_to_vars})
-        # self.assertTrue(m.v1.fixed)
-        # self.assertTrue(m.v2.fixed)
-        # self.assertTrue(m.v3.fixed)
-        # self.assertTrue(m.v4.fixed)
-        # self.assertEquals(value(m.v4), 2)
-        #
-        # self.assertTrue(m.x[1].fixed)
-        # self.assertTrue(m.x[2].fixed)
-        # self.assertTrue(m.x[3].fixed)
-        # self.assertTrue(m.x[4].fixed)
-        # self.assertEquals(value(m.x[4]), 1)
-        #
-        # self.assertFalse(m.y[1].fixed)
-        # self.assertFalse(m.y[2].fixed)
-        # self.assertFalse(m.z1.fixed)
-        # self.assertFalse(m.z2.fixed)
-        # m.display()
+        var_to_z = m._var_aggregator_info.var_to_z
+        self.assertEquals(
+            z_to_vars[m._var_aggregator_info.z[1]],
+            ComponentSet([m.v3, m.v4]))
+        self.assertEquals(
+            z_to_vars[m._var_aggregator_info.z[2]],
+            ComponentSet([m.x[1], m.x[2], m.x[3], m.x[4]]))
+        self.assertEquals(
+            z_to_vars[m._var_aggregator_info.z[3]],
+            ComponentSet([m.y[1], m.y[2]]))
+        self.assertIs(var_to_z[m.v3], m._var_aggregator_info.z[1])
+        self.assertIs(var_to_z[m.v4], m._var_aggregator_info.z[1])
+        self.assertIs(var_to_z[m.x[1]], m._var_aggregator_info.z[2])
+        self.assertIs(var_to_z[m.x[2]], m._var_aggregator_info.z[2])
+        self.assertIs(var_to_z[m.x[3]], m._var_aggregator_info.z[2])
+        self.assertIs(var_to_z[m.x[4]], m._var_aggregator_info.z[2])
+        self.assertIs(var_to_z[m.y[1]], m._var_aggregator_info.z[3])
+        self.assertIs(var_to_z[m.y[2]], m._var_aggregator_info.z[3])
 
 
 if __name__ == '__main__':

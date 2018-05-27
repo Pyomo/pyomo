@@ -4,13 +4,13 @@ from __future__ import division
 
 import textwrap
 
-from pyomo.core.base import Any, Block, Constraint, VarList
+from pyomo.core.base import Block, Constraint, VarList
 from pyomo.core.expr.current import clone_expression
 from pyomo.core.expr.numvalue import value
 from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 
 
 def _get_equality_linked_variables(constraint):
@@ -32,12 +32,12 @@ def _get_equality_linked_variables(constraint):
                               # if coefficient on variable is nonzero
                               if repn.linear_coefs[i] != 0)
     if len(nonzero_coef_vars) != 2:
-        # Expect two variables with nonzero cofficient in constraint; otherwise,
-        # return empty tuple.
+        # Expect two variables with nonzero cofficient in constraint;
+        # otherwise, return empty tuple.
         return ()
     if sorted(coef for coef in repn.linear_coefs if coef != 0) != [-1, 1]:
-        # Expect a constraint of form x == y --> 0 == -1 * x + 1 * y; otherwise,
-        # return empty tuple.
+        # Expect a constraint of form x == y --> 0 == -1 * x + 1 * y;
+        # otherwise, return empty tuple.
         return ()
     # Above checks are satisifed. Return the variables.
     return nonzero_coef_vars
@@ -104,8 +104,8 @@ class VariableAggregator(IsomorphicTransformation):
             if var in processed_vars:
                 continue  # Skip already-process variables
 
-            # This would be weird. The variable hasn't been processed, but is in
-            # the map. Raise an exception.
+            # This would be weird. The variable hasn't been processed, but is
+            # in the map. Raise an exception.
             assert var_to_z.get(var, None) is None
 
             z_agg = z.add()
