@@ -126,7 +126,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
     CONFIG.declare("tee", ConfigValue(
         default=False,
         description="Stream output to terminal.",
-        domain=In([True, False])
+        domain=bool
     ))
     CONFIG.declare("logger", ConfigValue(
         default=logging.getLogger('pyomo.contrib.gdpopt'),
@@ -186,10 +186,9 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         solve_data = GDPoptSolveData()
 
         old_logger_level = config.logger.getEffectiveLevel()
-        if config.tee:
+        if config.tee and old_logger_level > logging.INFO:
+            # If the logger does not already include INFO, include it.
             config.logger.setLevel(logging.INFO)
-        else:
-            config.logger.setLevel(logging.WARNING)
 
         # Modify in place decides whether to run the algorithm on a copy of the
         # originally model passed to the solver, or whether to manipulate the
@@ -287,7 +286,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         solve_data.results.problem.lower_bound = solve_data.LB
         solve_data.results.problem.upper_bound = solve_data.UB
 
-        if config.tee:
+        if config.tee and old_logger_level > logging.INFO:
             config.logger.setLevel(old_logger_level)
 
     def _copy_values(self, from_model, to_model, config):
@@ -597,6 +596,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         TransformationFactory('gdp.reclassify').apply_to(m)  # HACK
         # TODO: chull too?
         mip_solver = SolverFactory(config.mip)
+        if not mip_solver.available():
+            raise RuntimeError("MIP solver %s is not available." % config.mip)
         results = mip_solver.solve(
             m, **config.mip_options)
         # m.display()
@@ -717,6 +718,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             'contrib.deactivate_trivial_constraints').apply_to(m)
 
         mip_solver = SolverFactory(config.mip)
+        if not mip_solver.available():
+            raise RuntimeError("MIP solver %s is not available." % config.mip)
         results = mip_solver.solve(
             m, load_solutions=False,
             **config.mip_options)
@@ -898,6 +901,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
         # Solve
         mip_solver = SolverFactory(config.mip)
+        if not mip_solver.available():
+            raise RuntimeError("MIP solver %s is not available." % config.mip)
         results = mip_solver.solve(
             m, load_solutions=False,
             **config.mip_options)
@@ -1082,7 +1087,10 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         config.subprob_presolve(m, solve_data)
 
         # Solve the NLP
-        results = SolverFactory(config.nlp).solve(
+        nlp_solver = SolverFactory(config.nlp)
+        if not nlp_solver.available():
+            raise RuntimeError("NLP solver %s is not available." % config.nlp)
+        results = nlp_solver.solve(
             m, load_solutions=False,
             **config.nlp_options)
         solve_data.solve_results = results
