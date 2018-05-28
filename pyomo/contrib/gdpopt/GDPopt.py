@@ -32,7 +32,7 @@ from six import iteritems
 import pyomo.common.plugin
 from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue, In,
                                  NonNegativeFloat, NonNegativeInt)
-from pyomo.contrib.gdpopt.util import GDPoptSolveData, _DoNothing
+from pyomo.contrib.gdpopt.util import GDPoptSolveData, _DoNothing, a_logger
 from pyomo.core.base import (Block, Constraint, ConstraintList, Expression,
                              Objective, Set, Suffix, TransformationFactory,
                              Var, maximize, minimize, value)
@@ -129,8 +129,9 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         domain=bool
     ))
     CONFIG.declare("logger", ConfigValue(
-        default=logging.getLogger('pyomo.contrib.gdpopt'),
-        description="The logger object to use for reporting."
+        default='pyomo.contrib.gdpopt',
+        description="The logger object or name to use for reporting.",
+        domain=a_logger
     ))
     CONFIG.declare("small_dual_tolerance", ConfigValue(
         default=1E-8,
