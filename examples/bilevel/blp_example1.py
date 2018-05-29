@@ -22,14 +22,14 @@ def pyomo_create_model(options, model_options):
     
     M.sub = SubModel(fixed=M.x)
     M.sub.o  = Objective( expr=                     + M.y2 +  9*M.y3      )
-    M.sub.c1 = Constraint(expr=        M.x + 5*M.y1        + 10*M.y3 <= 19)
-    M.sub.c2 = Constraint(expr=20 <= 2*M.x + 6*M.y1                       )
+    M.sub.c1 = Constraint(expr=        M.x + 5*M.y1        - 10*M.y3 <= 19)
+    M.sub.c2 = Constraint(expr=18 <= 2*M.x + 6*M.y1                       )
     M.sub.c3 = Constraint(expr=21 <= 3*M.x + 7*M.y1                  <= 21)
-    M.sub.c4 = Constraint(expr=22 == 4*M.x + 8*M.y1                       )
+    M.sub.c4 = Constraint(expr=24 == 4*M.x + 8*M.y1                       )
 
     return M
 
-instance = pyomo_create_model(None, None)
-xfrm = TransformationFactory('bilevel.linear_mpec')
-xfrm.apply_to(instance)
-instance.pprint()
+#instance = pyomo_create_model(None, None)
+#xfrm = TransformationFactory('bilevel.linear_mpec')
+#xfrm.apply_to(instance)
+#instance.pprint()

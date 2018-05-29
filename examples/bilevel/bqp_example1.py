@@ -22,18 +22,42 @@ def pyomo_create_model(options, model_options):
     M.o = Objective(expr=M.x1 - 4*M.y1)
     
     M.sub = SubModel(fixed=(M.x1, M.x2))
-    M.sub.o  = Objective( expr=              11*M.x2 +          12*M.x2*M.y1 +         M.y2 +       9*M.y3                      )
-    M.sub.c1 = Constraint(expr=                 M.x1 + 13*M.x2*M.y1 + 5*M.y1                +      10*M.y3                 <= 19)
-    M.sub.c2 = Constraint(expr=20 <=          2*M.x1 +                6*M.y1 + 14*M.x2*M.y2                                     )
-    M.sub.c3 = Constraint(expr=21 ==          4*M.x1 +                8*M.y1                               + 15*M.x2*M.y4       )
-    M.sub.c4 = Constraint(expr=inequality(22, 3*M.x1 +                7*M.y1                + 16*M.x2*M.y3                ,  23))
+    M.sub.o  = Objective( expr=              11*M.x2 +          0*12*M.x2*M.y1 +         M.y2 +       9*M.y3                      )
+    M.sub.c1 = Constraint(expr=                 M.x1 + 0*13*M.x2*M.y1 + 5*M.y1                -      10*M.y3                 <= 19)
+    M.sub.c2 = Constraint(expr=20 <=          2*M.x1 +                6*M.y1 + 0*14*M.x2*M.y2                                     )
+    M.sub.c3 = Constraint(expr=32 ==          4*M.x1 +                8*M.y1                               + 0*15*M.x2*M.y4       )
+    M.sub.c4 = Constraint(expr=inequality(22, 3*M.x1 +                7*M.y1                + 0*16*M.x2*M.y3                ,  28))
 
     return M
 
-#instance = pyomo_create_model(None, None)
-#instance.pprint()
-#print("+"*80)
+if False:
+    instance = pyomo_create_model(None, None)
+    instance.pprint()
+    print("+"*80)
 
-#xfrm = TransformationFactory('bilevel.linear_mpec')
-#xfrm.apply_to(instance)
-#instance.pprint()
+    xfrm = TransformationFactory('bilevel.linear_mpec')
+    xfrm.apply_to(instance)
+    instance.pprint()
+    print("+"*80)
+
+    xfrm = TransformationFactory('mpec.simple_disjunction')
+    xfrm.apply_to(instance)
+    instance.pprint()
+    print("+"*80)
+
+    xfrm = TransformationFactory('gdp.bigm')
+    xfrm.apply_to(instance, bigM=999)
+    instance.pprint()
+    print("+"*80)
+
+    xfrm = TransformationFactory('gdp.bilinear')
+    xfrm.apply_to(instance)
+    instance.pprint()
+    print("+"*80)
+
+    xfrm = TransformationFactory('gdp.bigm')
+    xfrm.apply_to(instance, bigM=888)
+    instance.pprint()
+    print("+"*80)
+
+
