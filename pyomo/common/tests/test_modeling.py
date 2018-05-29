@@ -11,7 +11,7 @@
 import pyutilib.th as unittest
 
 from pyomo.environ import ConcreteModel, Var
-from pyomo.util.modeling import unique_component_name
+from pyomo.common.modeling import unique_component_name
 
 class TestModeling(unittest.TestCase):
     def test_unique_component_name(self):
