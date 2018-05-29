@@ -335,7 +335,7 @@ def help_solvers():
     wrapper = textwrap.TextWrapper(subsequent_indent=' '*(n+9))
     try:
         # Disable warnings
-        logger.disable(logging.WARNING)
+        logging.disable(logging.WARNING)
         for s in solver_list:
             # Create a solver, and see if it is available
             with pyomo.opt.SolverFactory(s) as opt:
@@ -348,7 +348,7 @@ def help_solvers():
                 print(wrapper.fill(msg % (s, pyomo.opt.SolverFactory.doc(s))))
     finally:
         # Reset logging level
-        logger.disable(logging.NOTSET)
+        logging.disable(logging.NOTSET)
     print("")
     wrapper = textwrap.TextWrapper(subsequent_indent='')
     print(wrapper.fill("An asterisk indicates solvers that are currently available to be run from Pyomo with the serial solver manager. A plus indicates meta-solvers, that are always available."))
