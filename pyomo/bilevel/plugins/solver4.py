@@ -31,7 +31,7 @@ class BILEVEL_Solver4(pyomo.opt.OptSolver):
     def _apply_solver(self):
         start_time = time.time()
         if not self.options.bigM:
-            self._bigM = 100000
+            self._bigM = 9999
         else:
             self._bigM = self.options.bigM
         #
@@ -44,19 +44,19 @@ class BILEVEL_Solver4(pyomo.opt.OptSolver):
         xfrm = TransformationFactory('gdp.bigm')
         xfrm.apply_to(self._instance, bigM=self.options.get('bigM',self._bigM))
         #
-        self._instance.pprint()
+        #self._instance.pprint()
 
         xfrm = TransformationFactory('gdp.bilinear')
         xfrm.apply_to(self._instance)
         xfrm = TransformationFactory('gdp.bigm')
         xfrm.apply_to(self._instance, bigM=self.options.get('bigM',self._bigM))
 
-        self._instance.pprint()
+        #self._instance.pprint()
         #
         # Solve with a specified solver
         #
         solver = self.options.solver
-        if not self.options.solver:
+        if not solver:
             solver = 'glpk'
         # use the with block here so that deactivation of the
         # solver plugin always occurs thereby avoiding memory
@@ -74,7 +74,10 @@ class BILEVEL_Solver4(pyomo.opt.OptSolver):
             #
             self.results.append(opt.solve(self._instance,
                                           tee=self._tee,
-                                          timelimit=self._timelimit))
+                                          timelimit=self._timelimit,
+                                          symbolic_solver_labels=True,
+                                          keepfiles=True
+                                          ))
         #
         stop_time = time.time()
         self.wall_time = stop_time - start_time
@@ -82,11 +85,14 @@ class BILEVEL_Solver4(pyomo.opt.OptSolver):
         # Deactivate the block that contains the optimality conditions,
         # and reactivate SubModel
         #
-        submodel = self._instance._transformation_data['bilevel.linear_mpec'].submodel_cuid.                 find_component(self._instance)
+        submodel = self._instance._transformation_data['bilevel.linear_mpec'].submodel_cuid.find_component(self._instance)
         for (name, data) in submodel.component_map(active=False).items():
             if not isinstance(data,Var) and not isinstance(data,Set):
                 data.activate()
+        #
         # TODO: delete this subblock
+        # TODO: Remove bilinear and bigM blocks
+        #
         self._instance._transformation_data['bilevel.linear_mpec'].block_cuid.find_component(self._instance).deactivate()
         #
         # Return the sub-solver return condition value and log
