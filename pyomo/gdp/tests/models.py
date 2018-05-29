@@ -429,3 +429,31 @@ def grossmann_twoDisj():
     m.disjunction2 = Disjunction(expr=[m.disjunct3, m.disjunct4])
     
     return m
+
+# TODO: these are things to use to test targets. Because I think you should be
+# able to solve m.b below and get what you expect, not have all the constraints
+# from your disjunctions get moved onto the model.
+def gdp_on_block():
+    m = ConcreteModel()
+    m.b = Block()
+    m.b.x = Var(bounds=(0,10))
+    m.b.y = Var(bounds=(-5, 5))
+    m.b.disjunct1 = Disjunct()
+    m.b.disjunct1.cons1 = Constraint(expr=(7, m.b.x, 9))
+    m.b.disjunct1.cons2 = Constraint(expr=(2, m.b.y, 5))
+    m.b.disjunct2 = Disjunct()
+    m.b.disjunct2.cons1 = Constraint(expr=(0, m.b.x, 1))
+    m.b.disjunct2.cons2 = Constraint(expr=(-4, m.b.y, 0))
+    m.b.disjunction = Disjunction(expr=[m.b.disjunct1, m.b.disjunct2])
+
+    return m
+
+def gdps_on_indexedBlock():
+    m = ConcreteModel()
+
+    # put the entire gdp on each of two blockDatas
+    @m.Block([1,2])
+    def b(m, i):
+        return gdp_on_block()
+    
+    return m
