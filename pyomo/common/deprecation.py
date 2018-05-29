@@ -1,7 +1,5 @@
 """Decorator for deprecating functions."""
 
-__author__ = "Qi Chen <https://github.com/qtothec>"
-
 import logging
 import functools
 import inspect

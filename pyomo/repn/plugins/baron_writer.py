@@ -18,7 +18,7 @@ from six import iteritems, StringIO, iterkeys
 from six.moves import xrange
 from pyutilib.math import isclose
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
 from pyomo.core.expr.numvalue import is_fixed, value, as_numeric, native_numeric_types, native_types
@@ -142,8 +142,8 @@ def expression_to_string(expr, variables, labeler=None, smap=None):
 
 class ProblemWriter_bar(AbstractProblemWriter):
 
-    #pyomo.util.plugin.alias('baron_writer')
-    pyomo.util.plugin.alias('bar', 'Generate the corresponding BARON BAR file.')
+    #pyomo.common.plugin.alias('baron_writer')
+    pyomo.common.plugin.alias('bar', 'Generate the corresponding BARON BAR file.')
 
     def __init__(self):
 

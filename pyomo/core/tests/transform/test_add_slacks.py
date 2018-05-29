@@ -3,14 +3,14 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 from six import StringIO
-from pyomo.util.log import LoggingIntercept
+from pyomo.common.log import LoggingIntercept
 
 import pyutilib.th as unittest
 import pyutilib.services
 import random
 
 import pyomo.opt
-from pyomo.util.plugin import Plugin
+from pyomo.common.plugin import Plugin
 from pyomo.environ import *
 import pyomo.core.expr.current as EXPR
 

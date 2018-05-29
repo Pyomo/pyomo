@@ -4,13 +4,13 @@ from __future__ import division
 
 import textwrap
 
-from pyutilib.math.util import isclose
-from pyomo.core.expr import current as EXPR
 from pyomo.core import quicksum
 from pyomo.core.base.constraint import Constraint
+from pyomo.core.expr import current as EXPR
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
+from pyutilib.math.util import isclose
 
 
 class RemoveZeroTerms(IsomorphicTransformation):
@@ -26,10 +26,6 @@ class RemoveZeroTerms(IsomorphicTransformation):
     alias(
         'contrib.remove_zero_terms',
         doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
-
-    def __init__(self, *args, **kwargs):
-        """Initialize the transformation."""
-        super(RemoveZeroTerms, self).__init__(*args, **kwargs)
 
     def _apply_to(self, model):
         """Apply the transformation."""
@@ -51,7 +47,7 @@ class RemoveZeroTerms(IsomorphicTransformation):
             # reconstitute the constraint, including only variable terms with
             # nonzero coefficients
             constr_body = quicksum(repn.linear_coefs[i] * repn.linear_vars[i]
-                              for i in nonzero_vars_indx) + const
+                                   for i in nonzero_vars_indx) + const
             if constr.equality:
                 constr.set_value(constr_body == constr.upper)
             elif constr.has_lb() and not constr.has_ub():
@@ -60,4 +56,5 @@ class RemoveZeroTerms(IsomorphicTransformation):
                 constr.set_value(constr_body <= constr.upper)
             else:
                 # constraint is a bounded inequality of form a <= x <= b.
-                constr.set_value(EXPR.inequality(constr.lower, constr_body, constr.upper))
+                constr.set_value(EXPR.inequality(
+                    constr.lower, constr_body, constr.upper))

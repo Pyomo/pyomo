@@ -10,7 +10,7 @@
 
 import sys
 import ast
-import pyomo.util.plugin
+import pyomo.common.plugin
 
 from pyomo.checker.plugins.model import ModelTrackerHook
 from pyomo.checker.plugins.checker import IterativeTreeChecker
@@ -30,7 +30,7 @@ if False:
 
   class ModelShadowing(IterativeTreeChecker):
 
-    pyomo.util.plugin.alias('model.rule.shadowing', 'Ignoring for now')
+    pyomo.common.plugin.alias('model.rule.shadowing', 'Ignoring for now')
 
     ModelTrackerHook()
 
@@ -51,7 +51,7 @@ if False:
 
 class ModelAccess(IterativeTreeChecker):
 
-    pyomo.util.plugin.alias('model.rule.model_access', 'Check that a rule does not reference a global model instance.')
+    pyomo.common.plugin.alias('model.rule.model_access', 'Check that a rule does not reference a global model instance.')
 
     ModelTrackerHook()
 
@@ -77,7 +77,7 @@ class ModelAccess(IterativeTreeChecker):
 
 class ModelArgument(_ModelRuleChecker):
 
-    pyomo.util.plugin.alias('model.rule.model_argument', 'Check that the model instance is the first argument for a rule.')
+    pyomo.common.plugin.alias('model.rule.model_argument', 'Check that the model instance is the first argument for a rule.')
 
     def checkerDoc(self):
         return """\
@@ -99,7 +99,7 @@ class ModelArgument(_ModelRuleChecker):
 
 class NoneReturn(_ModelRuleChecker):
 
-    pyomo.util.plugin.alias('model.rule.none_return', 'Check that a rule does not return the value None.')
+    pyomo.common.plugin.alias('model.rule.none_return', 'Check that a rule does not return the value None.')
 
     def checkerDoc(self):
         return """\

@@ -295,7 +295,6 @@ class Test(unittest.TestCase):
 
     # model: name of .py file with model
     # scenario_tree: Pyomo scenario tree model
-    @unittest.category('pyomo5_expected_failures', '!smoke')
     def test_init6(self):
         self.assertTrue("reference_test_model" not in sys.modules)
         scenario_tree_model = CreateAbstractScenarioTreeModel().\
