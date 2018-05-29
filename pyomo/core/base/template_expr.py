@@ -126,7 +126,7 @@ class IndexTemplate(NumericValue):
 class ReplaceTemplateExpression(EXPR.ExpressionReplacementVisitor):
 
     def __init__(self, substituter, *args):
-        super(ReplaceTemplateExpression,self).__init__(self)
+        super(ReplaceTemplateExpression, self).__init__()
         self.substituter = substituter
         self.substituter_args = args
 
@@ -134,10 +134,8 @@ class ReplaceTemplateExpression(EXPR.ExpressionReplacementVisitor):
         if type(node) is EXPR.GetItemExpression or type(node) is IndexTemplate:
             return True, self.substituter(node, *self.substituter_args)
 
-        if type(node) in native_numeric_types or not node.is_expression_type():
-            return True, node
-
-        return False, None
+        return super(
+            ReplaceTemplateExpression, self).visiting_potential_leaf(node)
 
 
 def substitute_template_expression(expr, substituter, *args):
