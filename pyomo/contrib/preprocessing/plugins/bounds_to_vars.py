@@ -1,12 +1,13 @@
 """Transformation to convert explicit bounds to variable bounds."""
 
 from __future__ import division
+
 import textwrap
 
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 from pyomo.repn import generate_standard_repn
 
 
@@ -20,16 +21,6 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
 
     alias('contrib.constraints_to_var_bounds',
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
-
-    def __init__(self, *args, **kwargs):
-        """Initialize the transformation."""
-        super(ConstraintToVarBoundTransform, self).__init__(*args, **kwargs)
-
-    def _create_using(self, model):
-        """Create new model, applying transformation."""
-        m = model.clone()
-        self._apply_to(m)
-        return m
 
     def _apply_to(self, model):
         """Apply the transformation to the given model."""
@@ -98,10 +89,10 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
                     # deactivating is not an invalid constraint, but rather we
                     # are moving its implied bound directly onto the variable.
                     if (var.has_lb() and var.value is not None
-                        and var.value < var.lb):
+                            and var.value < var.lb):
                         var.set_value(var.lb)
                     if (var.has_ub() and var.value is not None
-                        and var.value > var.ub):
+                            and var.value > var.ub):
                         var.set_value(var.ub)
 
                 constr.deactivate()

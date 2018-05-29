@@ -2,7 +2,7 @@ import weakref
 import logging
 from copy import deepcopy
 
-from pyomo.util.timing import ConstructionTimer
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import Component, ComponentData
 
 logger = logging.getLogger('pyomo.core')

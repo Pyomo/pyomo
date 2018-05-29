@@ -50,7 +50,7 @@ Pyomo also has conditional dependencies on a variety of third-party Python packa
 
 Optimization solvers are not installed with Pyomo, but some open source optimization solvers can be installed with conda as well:
 
-    conda install -c conda-forge ipopt coin-cbc glpk
+    conda install -c conda-forge ipopt coincbc glpk
 
 
 Using PIP

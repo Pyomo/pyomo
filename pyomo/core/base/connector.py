@@ -16,8 +16,8 @@ from six import iteritems, itervalues, iterkeys
 from six.moves import xrange
 from weakref import ref as weakref_ref
 
-from pyomo.util.timing import ConstructionTimer
-from pyomo.util.plugin import Plugin, implements
+from pyomo.common.timing import ConstructionTimer
+from pyomo.common.plugin import Plugin, implements
 
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent

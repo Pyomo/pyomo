@@ -8,8 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.util.deprecation import deprecated
-from pyomo.util.plugin import Plugin, implements
+from pyomo.common.deprecation import deprecated
+from pyomo.common.plugin import Plugin, implements
 from pyomo.core import IPyomoScriptModifyInstance, TransformationFactory
 
 # This import ensures that gdp.chull is registered, even if pyomo.environ

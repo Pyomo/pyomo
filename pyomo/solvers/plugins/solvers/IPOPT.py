@@ -13,7 +13,7 @@ import os
 import pyutilib.services
 import pyutilib.misc
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -32,7 +32,7 @@ class IPOPT(SystemCallSolver):
     An interface to the Ipopt optimizer that uses the AMPL Solver Library.
     """
 
-    pyomo.util.plugin.alias('ipopt', doc='The Ipopt NLP solver')
+    pyomo.common.plugin.alias('ipopt', doc='The Ipopt NLP solver')
 
     def __init__(self, **kwds):
         #

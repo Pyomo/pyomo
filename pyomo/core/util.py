@@ -277,7 +277,7 @@ def sequence(*args):
 
 
 def xsequence(*args):
-    from pyomo.util.deprecation import deprecation_warning
+    from pyomo.common.deprecation import deprecation_warning
     deprecation_warning("The xsequence function is deprecated.  Use the sequence() function, which returns a generator.")  # Remove in Pyomo 6.0
     return sequence(*args)
 

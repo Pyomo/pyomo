@@ -11,7 +11,7 @@
 import logging
 from six import iteritems
 
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 from pyomo.core.expr.current import ProductExpression
 from pyomo.core import *
 from pyomo.core.base.set_types import BooleanSet

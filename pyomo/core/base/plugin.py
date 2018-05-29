@@ -41,7 +41,7 @@ from pyomo.util.modeling import unique_component_name
 from pyomo.util.plugin import (
     alias, implements, Interface, Plugin, PluginFactory, CreatePluginFactory,
     PluginError, ExtensionPoint )
-from pyomo.util.timing import TransformationTimer
+from pyomo.common.timing import TransformationTimer
 
 logger = logging.getLogger('pyomo.core')
 registered_callback = {}

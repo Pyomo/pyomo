@@ -21,7 +21,7 @@ except:
 
 from pyutilib.misc import Options, Container
 
-from pyomo.util import pyomo_command
+from pyomo.common import pyomo_command
 import pyomo.scripting.util
 from pyomo.core import ConcreteModel
 
