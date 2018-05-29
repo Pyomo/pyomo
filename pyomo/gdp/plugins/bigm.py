@@ -57,7 +57,7 @@ class BigM_Transformation(Transformation):
        3) if 'None' is in the bigM argument dict
        4) if the constraint or the constraint parent_component appear in
           a BigM Suffix attached to any parent_block() beginning with the
-          constraint's parent_block and moving up to the the root model.
+          constraint's parent_block and moving up to the root model.
        5) if None appears in a BigM Suffix attached to any
           parent_block() between the constraint and the root model.
        6) if the constraint is linear, estimate M using the variable bounds
@@ -76,7 +76,7 @@ class BigM_Transformation(Transformation):
             'relaxedConstraints': ComponentMap(constraint: relaxed_constraint)
         }
 
-    In addition, any block or disjunct containind a relaxed disjunction
+    In addition, any block or disjunct containing a relaxed disjunction
     will have a "_gdp_transformation_info" dict with the following
     entry:
 
@@ -656,7 +656,6 @@ class BigM_Transformation(Transformation):
 
             for i, coef in enumerate(repn.linear_coefs or []):
                 var = repn.linear_vars[i]
-                coef = repn.linear_coefs[i]
                 bounds = (value(var.lb), value(var.ub))
                 for i in (0, 1):
                     # reverse the bounds if the coefficient is negative
