@@ -55,7 +55,7 @@ class CuttingPlane_Transformation(Transformation):
 
     CONFIG = ConfigBlock("gdp.cuttingplane")
     CONFIG.declare('solver', ConfigValue(
-        default='gurobi',
+        default='ipopt',
         description="""Solver to use for relaxed BigM problem and the separation
         problem""",
         doc="""

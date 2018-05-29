@@ -1,5 +1,5 @@
 from pyomo.core import (Block, ConcreteModel, Constraint, Objective, Param,
-                        Set, Var, inequality)
+                        Set, Var, inequality, maximize)
 from pyomo.gdp import Disjunct, Disjunction
 
 
@@ -100,11 +100,11 @@ def makeTwoTermDisj_boxes():
     def d_rule(disjunct, flag):
         m = disjunct.model()
         if flag:
-            disjunct.c1 = Constraint(expr=1 <= m.x <= 2)
-            disjunct.c2 = Constraint(expr=3 <= m.y <= 4)
+            disjunct.c1 = Constraint(expr=inequality(1, m.x, 2))
+            disjunct.c2 = Constraint(expr=inequality(3, m.y, 4))
         else:
-            disjunct.c1 = Constraint(expr=3 <= m.x <= 4)
-            disjunct.c2 = Constraint(expr=1 <= m.y <= 2)
+            disjunct.c1 = Constraint(expr=inequality(3, m.x, 4))
+            disjunct.c2 = Constraint(expr=inequality(1, m.y, 2))
     m.d = Disjunct([0,1], rule=d_rule)
     def disj_rule(m):
         return [m.d[0], m.d[1]]
@@ -432,12 +432,12 @@ def grossmann_oneDisj():
     m.x = Var(bounds=(0,20))
     m.y = Var(bounds=(0, 20))
     m.disjunct1 = Disjunct()
-    m.disjunct1.constraintx = Constraint(expr=0 <= m.x <= 2)
-    m.disjunct1.constrainty = Constraint(expr=7 <= m.y <= 10)
+    m.disjunct1.constraintx = Constraint(expr=inequality(0, m.x, 2))
+    m.disjunct1.constrainty = Constraint(expr=inequality(7, m.y, 10))
 
     m.disjunct2 = Disjunct()
-    m.disjunct2.constraintx = Constraint(expr=8 <= m.x <= 10)
-    m.disjunct2.constrainty = Constraint(expr=0 <= m.y <= 3)
+    m.disjunct2.constraintx = Constraint(expr=inequality(8, m.x, 10))
+    m.disjunct2.constrainty = Constraint(expr=inequality(0, m.y, 3))
 
     m.disjunction = Disjunction(expr=[m.disjunct1, m.disjunct2])
 
@@ -450,12 +450,12 @@ def to_break_constraint_tolerances():
     m.x = Var(bounds=(0, 130))
     m.y = Var(bounds=(0, 130))
     m.disjunct1 = Disjunct()
-    m.disjunct1.constraintx = Constraint(expr=0 <= m.x <= 2)
-    m.disjunct1.constrainty = Constraint(expr=117 <= m.y <= 127)
+    m.disjunct1.constraintx = Constraint(expr=inequality(0, m.x, 2))
+    m.disjunct1.constrainty = Constraint(expr=inequality(117, m.y, 127))
 
     m.disjunct2 = Disjunct()
-    m.disjunct2.constraintx = Constraint(expr=118 <= m.x <= 120)
-    m.disjunct2.constrainty = Constraint(expr=0 <= m.y <= 3)
+    m.disjunct2.constraintx = Constraint(expr=inequality(118, m.x, 120))
+    m.disjunct2.constrainty = Constraint(expr=inequality(0, m.y, 3))
 
     m.disjunction = Disjunction(expr=[m.disjunct1, m.disjunct2])
 
@@ -467,12 +467,12 @@ def grossmann_twoDisj():
     m = grossmann_oneDisj()
 
     m.disjunct3 = Disjunct()
-    m.disjunct3.constraintx = Constraint(expr=1 <= m.x <= 2.5)
-    m.disjunct3.constrainty = Constraint(expr=6.5 <= m.y <= 8)
+    m.disjunct3.constraintx = Constraint(expr=inequality(1, m.x, 2.5))
+    m.disjunct3.constrainty = Constraint(expr=inequality(6.5, m.y, 8))
     
     m.disjunct4 = Disjunct()
-    m.disjunct4.constraintx = Constraint(expr=9 <= m.x <= 11)
-    m.disjunct4.constrainty = Constraint(expr=2 <= m.y <= 3.5)
+    m.disjunct4.constraintx = Constraint(expr=inequality(9, m.x, 11))
+    m.disjunct4.constrainty = Constraint(expr=inequality(2, m.y, 3.5))
 
     m.disjunction2 = Disjunction(expr=[m.disjunct3, m.disjunct4])
     
