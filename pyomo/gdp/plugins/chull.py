@@ -22,7 +22,6 @@ from pyomo.core.base.block import SortComponents
 from pyomo.core.base.component import ComponentUID, ActiveComponent
 from pyomo.core.base import _ExpressionData
 from pyomo.core.base.var import _VarData
-from pyomo.repn import generate_standard_repn
 from pyomo.core.kernel import ComponentMap, ComponentSet
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base import Transformation
