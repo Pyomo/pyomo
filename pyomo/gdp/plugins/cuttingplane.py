@@ -20,6 +20,7 @@ try:
 except:
     from ordereddict import OrderedDict
 
+from pyomo.util.config import ConfigBlock, ConfigValue, PositiveFloat
 from pyomo.util.modeling import unique_component_name
 from pyomo.util.plugin import alias
 from pyomo.core import (
@@ -49,7 +50,7 @@ from nose.tools import set_trace
 # TODO: this should be an option probably, right?
 # do I have other options that won't be mad about the quadratic objective in the
 # separation problem?
-SOLVER = 'gurobi'
+# SOLVER = 'gurobi'
 stream_solvers = False
 
 class CuttingPlane_Transformation(Transformation):
@@ -57,18 +58,61 @@ class CuttingPlane_Transformation(Transformation):
     alias('gdp.cuttingplane', doc="Relaxes a linear disjunctive model by "
           "adding cuts from convex hull to Big-M relaxation.")
 
+    CONFIG = ConfigBlock("gdp.cuttingplane")
+    # TODO: Should have different options for solvers for rBigM and for
+    # separation?
+    CONFIG.declare('solver', ConfigValue(
+        default='gurobi',
+        description="Solver to use for relaxed BigM problem",
+        doc="""
+        This specifies the solver which will be used to solve LP relaxation
+        of the BigM problem.
+        """
+    ))
+    CONFIG.declare('separationSolver', ConfigValue(
+        default='gurobi',
+        description="Solver to use for the separation problem",
+        doc=""" 
+        This specifies the solver which will be used to solve the separation
+        problem, that is, the projection of the solution to the relaxed BigM
+        problem onto the convex hull. Note that this solver must be able to
+        handle a quadratic objective (since this problem minimizes Euclidean
+        distance.)  """
+    ))
+    CONFIG.declare('EPS', ConfigValue(
+        default=0.01,
+        domain=PositiveFloat,
+        description="Epsilon value used to decide when to stop adding cuts",
+        doc=""" 
+        If the difference between the objectives in two consecutive iterations is
+        less than this value, the algorithm terminates without adding the cut
+        cut generated in the last iteration.  """
+    ))
+    CONFIG.declare('stream_solvers', ConfigValue(
+        default=False,
+        # TODO: I don't think such a thing exists right now?
+        #domain=Binary,
+        description="""If true, sets tee=True for every solve performed over 
+        "the course of the algorithm"""
+    ))
+
     def __init__(self):
         super(CuttingPlane_Transformation, self).__init__()
 
     def _apply_to(self, instance, bigM=None, **kwds):
-        options = kwds.pop('options', {})
+        self._config = self.CONFIG(kwds.pop('options', {}))
+        self._config.set_value(kwds)
+        #options = kwds.pop('options', {})
+        # config = self.CONFIG(kwds.pop('options', {}))
+        # config.set_value(kwds)
+        # SOLVER = config.solver
 
-        if kwds:
-            logger.warning("GDP(CuttingPlanes): unrecognized keyword arguments:"
-                           "\n%s" % ( '\n'.join(iterkeys(kwds)), ))
-        if options:
-            logger.warning("GDP(CuttingPlanes): unrecognized options:\n%s"
-                        % ( '\n'.join(iterkeys(options)), ))
+        # if kwds:
+        #     logger.warning("GDP(CuttingPlanes): unrecognized keyword arguments:"
+        #                    "\n%s" % ( '\n'.join(iterkeys(kwds)), ))
+        # if options:
+        #     logger.warning("GDP(CuttingPlanes): unrecognized options:\n%s"
+        #                 % ( '\n'.join(iterkeys(options)), ))
 
         instance_rBigM, instance_rCHull, var_info, transBlockName \
             = self._setup_subproblems(instance, bigM)
@@ -162,7 +206,10 @@ class CuttingPlane_Transformation(Transformation):
             self, instance, instance_rBigM, instance_rCHull,
             var_info, transBlockName):
 
-        opt = SolverFactory(SOLVER)
+        opt = SolverFactory(self._config.solver)
+        # TODO: I'm doing this for resiliency model for a minute.
+        # I want this in options too, expecially if this goes somewhere!
+        opt.options['presolve'] = 2
 
         improving = True
         prev_obj = float("inf")
@@ -271,10 +318,12 @@ class CuttingPlane_Transformation(Transformation):
         normal_vectors = []
         for constraint in instance_rCHull.component_data_objects(
                 Constraint,
+                active=True,
                 descend_into=Block,
                 sort=SortComponents.deterministic):
             if self.constraint_tight(instance_rCHull, constraint):
                 print(constraint.expr)
+                print(constraint.active)
                 # get normal vector to tangent plane to this constraint at xhat
                 f = constraint.body
                 firstDerivs = differentiate(f, wrt_list=rCHull_vars)
