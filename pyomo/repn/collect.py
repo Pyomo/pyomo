@@ -20,15 +20,11 @@ def collect_linear_terms(block, unfixed):
     # Variables are constraints of block
     # Constraints are unfixed variables of block and the parent model.
     #
-    #print("VNAMES")
     vnames = set()
     for obj in block.component_objects(Constraint, active=True):
-        #print(obj.getname(fully_qualified=True, relative_to=block))
         vnames.add((obj.getname(fully_qualified=True, relative_to=block), obj.is_indexed()))
-    #print("CNAMES")
     cnames = set(unfixed)
     for obj in block.component_objects(Var, active=True):
-        #print(obj.getname(fully_qualified=True, relative_to=block))
         cnames.add((obj.getname(fully_qualified=True, relative_to=block), obj.is_indexed()))
     #
     A = {}
@@ -60,6 +56,11 @@ def collect_linear_terms(block, unfixed):
         for ndx in data:
             con = data[ndx]
             body_terms = generate_standard_repn(con.body, compute_values=False)
+            if body_terms.is_fixed():
+                #
+                # If a constraint has a fixed body, then don't collect it.
+                #
+                continue
             lower_terms = generate_standard_repn(con.lower, compute_values=False) if not con.lower is None else None
             upper_terms = generate_standard_repn(con.upper, compute_values=False) if not con.upper is None else None
             #
@@ -71,8 +72,6 @@ def collect_linear_terms(block, unfixed):
             for var, coef in zip(body_terms.linear_vars, body_terms.linear_coefs):
                 varname = var.parent_component().getname(fully_qualified=True, relative_to=block)
                 varndx = var.index()
-                #print("ZZZ")
-                #print(varname)
                 A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=coef, var=name, ndx=ndx) )
             #
             if not con.equality:
@@ -122,8 +121,6 @@ def collect_linear_terms(block, unfixed):
         """
         for obj in b.component_objects(Var, active=True, descend_into=True):
             name = obj.parent_component().getname(fully_qualified=True, relative_to=b)
-            #print("FOO")
-            #print(name)
             yield (name, obj)
         #
         # Look through parent blocks
@@ -132,8 +129,6 @@ def collect_linear_terms(block, unfixed):
         while not b is None:
             for obj in b.component_objects(Var, active=True, descend_into=False):
                 name = obj.parent_component().name
-                #print("BAR")
-                #print(name)
                 yield (name, obj)
             b = b.parent_block()
 
@@ -142,9 +137,6 @@ def collect_linear_terms(block, unfixed):
         # Skip fixed variables (in the parent)
         #
         if not (name, data.is_indexed()) in cnames:
-            #print("HERE")
-            #print((name, data.is_indexed()))
-            #print(data)
             continue
         #
         # Iterate over all variable indices
@@ -165,7 +157,6 @@ def collect_linear_terms(block, unfixed):
                     name_ = name + "_upper_"
                     varname = data.parent_component().getname(fully_qualified=True, relative_to=block)
                     varndx = data[ndx].index()
-                    #print(('a0',varname))
                     A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
                     #
                     v_domain[name_,ndx] = -1
@@ -181,7 +172,6 @@ def collect_linear_terms(block, unfixed):
                     name_ = name + "_lower_"
                     varname = data.parent_component().getname(fully_qualified=True, relative_to=block)
                     varndx = data[ndx].index()
-                    #print(('a1',varname))
                     A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
                     #
                     v_domain[name_,ndx] = 1
@@ -195,7 +185,6 @@ def collect_linear_terms(block, unfixed):
                 name_ = name + "_upper_"
                 varname = data.parent_component().getname(fully_qualified=True, relative_to=block)
                 varndx = data[ndx].index()
-                #print(('a2',varname))
                 A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
                 #
                 v_domain[name_,ndx] = -1
@@ -206,7 +195,6 @@ def collect_linear_terms(block, unfixed):
                 name_ = name + "_lower_"
                 varname = data.parent_component().getname(fully_qualified=True, relative_to=block)
                 varndx = data[ndx].index()
-                #print(('a3',varname))
                 A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
                 #
                 v_domain[name_,ndx] = 1
