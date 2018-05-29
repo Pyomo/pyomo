@@ -37,21 +37,9 @@ def check_linear_coef(self, repn, var, coef):
     self.assertAlmostEqual(repn.linear_coefs[var_id], coef)
 
 class OneVarDisj(unittest.TestCase):
-    @staticmethod
-    def makeModel():
-        m = ConcreteModel()
-        m.x = Var(bounds=(0, 10))
-        m.disj1 = Disjunct()
-        m.disj1.xTrue = Constraint(expr=m.x==1)
-        m.disj2 = Disjunct()
-        m.disj2.xFalse = Constraint(expr=m.x==0)
-        m.disjunction = Disjunction(expr=[m.disj1, m.disj2])
-        m.obj = Objective(expr=m.x)
-        return m
-
     # there are no useful cuts here, and so we don't add them!
     def test_no_cuts_added(self):
-        m = self.makeModel()
+        m = models.oneVarDisj()
 
         TransformationFactory('gdp.cuttingplane').apply_to(m)
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
@@ -69,9 +57,6 @@ class TwoTermDisj(unittest.TestCase):
         # the cuts are on it
         cuts = transBlock.cuts
         self.assertIsInstance(cuts, Constraint)
-        # this one adds 2 cuts
-        # TODO: you could test number of cuts here when you are sure.
-        #self.assertEqual(len(cuts), 2)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_cut_constraint(self):
@@ -79,31 +64,7 @@ class TwoTermDisj(unittest.TestCase):
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
         # we don't get any cuts from this
-        # TODO: Really? I find this kind of surprising.
         self.assertEqual(len(m._pyomo_gdp_cuttingplane_relaxation.cuts), 0)
-
-        # cut = m._pyomo_gdp_cuttingplane_relaxation.cuts[0]
-        # self.assertEqual(cut.lower, 0)
-        # self.assertIsNone(cut.upper)
-
-        # # Var, coef, xhat:
-        # expected_cut = [
-        #     ( m.x, 0.45, 2.7 ),
-        #     ( m.y, 0.55, 1.3 ),
-        #     ( m.d[0].indicator_var, 0.1, 0.85 ),
-        #     ( m.d[1].indicator_var, -0.1, 0.15 ),
-        # ]
-
-        # # test body
-        # repn = generate_standard_repn(cut.body)
-        # self.assertTrue(repn.is_linear())
-        # self.assertEqual(len(repn.linear_vars), 4)
-        # for v, coef, xhat in expected_cut:
-        #     check_linear_coef(self, repn, v, coef)
-
-        # self.assertAlmostEqual(
-        #     repn.constant, -1*sum(c*x for v,c,x in expected_cut), 5)
-
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_create_using(self):
@@ -147,20 +108,18 @@ class Grossmann_TestCases(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 10)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_cuts_valid(self):
+    def test_cut_valid(self):
         m = models.grossmann_oneDisj()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
-        # Constraint 1
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
-        # TODO: I'm actually not sure what I expect here right now:
         self.assertEqual(len(cuts), 1)
 
         cut0 = cuts[0]
         self.assertEqual(cut0.upper, 0)
         self.assertIsNone(cut0.lower)
         cut0_expr = cut0.body
-        # we first check that the first cut is tight at the upper righthand
+        # we check that the cut is tight at the upper righthand
         # corners of the two regions:
         m.x.fix(2)
         m.y.fix(10)
@@ -174,25 +133,6 @@ class Grossmann_TestCases(unittest.TestCase):
         m.disjunct1.indicator_var.fix(0)
         m.disjunct2.indicator_var.fix(1)
         self.assertAlmostEqual(value(cut0_expr), 0)
-
-        # Constraint 2
-        # now we check that the second cut is tight for the top region:
-        # cut1 = cuts[1]
-        # self.assertEqual(cut1.upper, 0)
-        # self.assertIsNone(cut1.lower)
-        # cut1_expr = cut1.body
-        # m.x.fix(2)
-        # m.y.fix(10)
-        # m.disjunct1.indicator_var.fix(1)
-        # m.disjunct2.indicator_var.fix(0)
-        # self.assertLessEqual(value(cut1_expr), 0)
-
-        # m.x.fix(0)
-        # self.assertLessEqual(value(cut1_expr), 0)
-
-        # cut2 = cuts[2]
-        # cut3 = cuts[3]
-        # set_trace()
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_cuts_dont_cut_off_optimal(self):
@@ -210,7 +150,12 @@ class Grossmann_TestCases(unittest.TestCase):
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
         self.assertEqual(len(cuts), 1)
         cut1_expr = cuts[0].body
+        # cut tight, but within tolerance
+        self.assertAlmostEqual(0, value(cut1_expr))
 
+        # check that the cut is valid for the other upper RH corner
+        m.x.fix(120)
+        m.y.fix(3)
         self.assertGreaterEqual(0, value(cut1_expr))
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
@@ -234,9 +179,9 @@ class Grossmann_TestCases(unittest.TestCase):
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_2disj_cuts_valid_elsewhere(self):
-        # I'm doing this test to see if it is cutting into the the feasible
-        # region somewhere other than the optimal value... That is, if the angle
-        # is off enough to cause problems.
+        # Check to see if it is cutting into the the feasible region somewhere
+        # other than the optimal value... That is, if the angle is off enough to
+        # cause problems.
         m = models.grossmann_twoDisj()
         
         TransformationFactory('gdp.cuttingplane').apply_to(m)
@@ -252,4 +197,17 @@ class Grossmann_TestCases(unittest.TestCase):
         m.disjunct4.indicator_var.fix(1)
 
         cut = cuts[0].body
+        self.assertGreaterEqual(0, value(cut))
+        
+        m.y.fix(2)
+        self.assertGreaterEqual(0, value(cut))
+
+        m.x.fix(9)
+        self.assertGreaterEqual(0, value(cut))
+
+        m.x.fix(1)
+        m.y.fix(8)
+        self.assertGreaterEqual(0, value(cut))
+
+        m.y.fix(7)
         self.assertGreaterEqual(0, value(cut))
