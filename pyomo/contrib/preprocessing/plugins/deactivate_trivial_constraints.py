@@ -4,10 +4,10 @@ import textwrap
 from math import fabs
 
 from pyomo.core.base.constraint import Constraint
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.expr.numvalue import value
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 
 
 class TrivialConstraintDeactivator(IsomorphicTransformation):
@@ -21,10 +21,6 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
     alias(
         'contrib.deactivate_trivial_constraints',
         doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
-
-    def __init__(self):
-        """Initialize the transformation."""
-        super(TrivialConstraintDeactivator, self).__init__()
 
     def _apply_to(self, instance, **kwargs):
         """Apply the transformation.

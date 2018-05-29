@@ -97,13 +97,15 @@ model.p_n_const = Constraint(model.S_meas,rule=_p_n_const)
 
 # disjuncts
 
+model.BigM = Suffix()
 model.y = RangeSet(0,1)
-def _high_low(model, disjunct, i, y):
-    disjunct.set_M(20)
+def _high_low(disjunct, i, y):
+    model = disjunct.model()
     if y:
         disjunct.c = Constraint(expr=model.logbeta_high - model.logbeta[i]== 0.0)
     else:
         disjunct.c = Constraint(expr=model.logbeta[i] - model.logbeta_low == 0.0)
+    model.BigM[disjunct.c] = bigM
 model.high_low = Disjunct(model.S_beta, model.y, rule=_high_low)
 
 # disjunctions

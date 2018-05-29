@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -86,9 +86,9 @@ elif config == "core":
         assert False
     # Test
     os.environ['TEST_PACKAGES'] = ' '.join([
-            'pyomo.checker','pyomo.core','pyomo.environ','pyomo.opt',
-            'pyomo.repn','pyomo.scripting','pyomo.solvers','pyomo.util',
-            'pyomo.version'])
+            'pyomo.checker','pyomo.common','pyomo.core','pyomo.environ',
+            'pyomo.opt','pyomo.repn','pyomo.scripting','pyomo.solvers',
+            'pyomo.util','pyomo.version'])
     print("-" * 60)
     print("Performing tests")
     print("-" * 60)
@@ -126,4 +126,3 @@ elif config == "booktests" or config == "book":
 elif config == "perf":
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
     driver.perform_build('pyomo', cat='performance')
-

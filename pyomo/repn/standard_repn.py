@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -22,7 +22,7 @@ from pyomo.core.base import (Constraint,
                              Objective,
                              ComponentMap)
 
-import pyomo.util
+import pyomo.common
 from pyutilib.misc import Bunch
 from pyutilib.math.util import isclose as isclose_default
 
@@ -373,13 +373,13 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         #
         #degree = expr.polynomial_degree()
         #if degree == 1:
-        #    return _generate_linear_standard_repn(expr, 
+        #    return _generate_linear_standard_repn(expr,
         #                        idMap=idMap,
         #                        compute_values=compute_values,
         #                        verbose=verbose,
         #                        repn=repn)
         #else:
-        return _generate_standard_repn(expr, 
+        return _generate_standard_repn(expr,
                                 idMap=idMap,
                                 compute_values=compute_values,
                                 verbose=verbose,
@@ -484,7 +484,7 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
             else:
                 ans.constant += multiplier * e_
         else:
-            res_ = _collect_standard_repn(e_, multiplier, idMap, 
+            res_ = _collect_standard_repn(e_, multiplier, idMap,
                                       compute_values, verbose, quadratic)
             #
             # Add returned from recursion
@@ -513,7 +513,7 @@ def _collect_term(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if exp._args_[0].__class__ in native_numeric_types:
         if exp._args_[0] == 0:                          # TODO: coverage?
             return Results()
-        return _collect_standard_repn(exp._args_[1], multiplier * exp._args_[0], idMap, 
+        return _collect_standard_repn(exp._args_[1], multiplier * exp._args_[0], idMap,
                                   compute_values, verbose, quadratic)
     #
     # LHS is a non-variable expression
@@ -523,10 +523,10 @@ def _collect_term(exp, multiplier, idMap, compute_values, verbose, quadratic):
             val = value(exp._args_[0])
             if val == 0:
                 return Results()
-            return _collect_standard_repn(exp._args_[1], multiplier * val, idMap, 
+            return _collect_standard_repn(exp._args_[1], multiplier * val, idMap,
                                   compute_values, verbose, quadratic)
         else:
-            return _collect_standard_repn(exp._args_[1], multiplier*exp._args_[0], idMap, 
+            return _collect_standard_repn(exp._args_[1], multiplier*exp._args_[0], idMap,
                                   compute_values, verbose, quadratic)
 
 def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
@@ -536,7 +536,7 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if exp._args_[0].__class__ in native_numeric_types:
         if exp._args_[0] == 0:                          # TODO: coverage?
             return Results()
-        return _collect_standard_repn(exp._args_[1], multiplier * exp._args_[0], idMap, 
+        return _collect_standard_repn(exp._args_[1], multiplier * exp._args_[0], idMap,
                                   compute_values, verbose, quadratic)
     #
     # RHS is a numeric value
@@ -544,7 +544,7 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if exp._args_[1].__class__ in native_numeric_types:
         if exp._args_[1] == 0:                          # TODO: coverage?
             return Results()
-        return _collect_standard_repn(exp._args_[0], multiplier * exp._args_[1], idMap, 
+        return _collect_standard_repn(exp._args_[0], multiplier * exp._args_[1], idMap,
                                   compute_values, verbose, quadratic)
     #
     # LHS is a non-variable expression
@@ -554,10 +554,10 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
             val = value(exp._args_[0])
             if val == 0:
                 return Results()
-            return _collect_standard_repn(exp._args_[1], multiplier * val, idMap, 
+            return _collect_standard_repn(exp._args_[1], multiplier * val, idMap,
                                   compute_values, verbose, quadratic)
         else:
-            return _collect_standard_repn(exp._args_[1], multiplier*exp._args_[0], idMap, 
+            return _collect_standard_repn(exp._args_[1], multiplier*exp._args_[0], idMap,
                                   compute_values, verbose, quadratic)
     #
     # RHS is a non-variable expression
@@ -567,17 +567,17 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
             val = value(exp._args_[1])
             if val == 0:
                 return Results()
-            return _collect_standard_repn(exp._args_[0], multiplier * val, idMap, 
+            return _collect_standard_repn(exp._args_[0], multiplier * val, idMap,
                                   compute_values, verbose, quadratic)
         else:
-            return _collect_standard_repn(exp._args_[0], multiplier*exp._args_[1], idMap, 
+            return _collect_standard_repn(exp._args_[0], multiplier*exp._args_[1], idMap,
                                   compute_values, verbose, quadratic)
     #
     # Both the LHS and RHS are potentially variable ...
     #
     # Collect LHS
     #
-    lhs = _collect_standard_repn(exp._args_[0], 1, idMap, 
+    lhs = _collect_standard_repn(exp._args_[0], 1, idMap,
                                   compute_values, verbose, quadratic)
     lhs_nonl_None = lhs.nonl.__class__ in native_numeric_types and lhs.nonl == 0
     #
@@ -591,15 +591,15 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
             val = value(lhs.constant)
             if val == 0:                            # TODO: coverage?
                 return Results()
-            return _collect_standard_repn(exp._args_[1], multiplier*val, idMap, 
+            return _collect_standard_repn(exp._args_[1], multiplier*val, idMap,
                                   compute_values, verbose, quadratic)
         else:
-            return _collect_standard_repn(exp._args_[1], multiplier*lhs.constant, idMap, 
+            return _collect_standard_repn(exp._args_[1], multiplier*lhs.constant, idMap,
                                   compute_values, verbose, quadratic)
     #
     # Collect RHS
     #
-    rhs = _collect_standard_repn(exp._args_[1], 1, idMap, 
+    rhs = _collect_standard_repn(exp._args_[1], 1, idMap,
                                   compute_values, verbose, quadratic)
     rhs_nonl_None = rhs.nonl.__class__ in native_numeric_types and rhs.nonl == 0
     #
@@ -760,7 +760,7 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
             return Results(constant=multiplier*exp)
     #
     # Return a nonlinear expression here
-    #    
+    #
     return Results(nonl=multiplier*exp)
 
 def _collect_reciprocal(exp, multiplier, idMap, compute_values, verbose, quadratic):
@@ -778,7 +778,7 @@ def _collect_reciprocal(exp, multiplier, idMap, compute_values, verbose, quadrat
     if denom.__class__ in native_numeric_types and denom == 0:
         raise ZeroDivisionError
     return Results(constant=multiplier/denom)
-   
+
 def _collect_branching_expr(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if exp._if.__class__ in native_numeric_types:           # TODO: coverage?
         if_val = exp._if
@@ -870,12 +870,12 @@ def _collect_linear(exp, multiplier, idMap, compute_values, verbose, quadratic):
 
 def _collect_comparison(exp, multiplier, idMap, compute_values, verbose, quadratic):
     return Results(nonl=multiplier*exp)
-    
+
 def _collect_external_fn(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if compute_values and exp.is_fixed():
         return Results(nonl=multiplier*value(exp))
     return Results(nonl=multiplier*exp)
-    
+
 
 _repn_collectors = {
     EXPR.SumExpression                          : _collect_sum,
@@ -916,7 +916,7 @@ _repn_collectors = {
     }
 
 
-def _collect_standard_repn(exp, multiplier, idMap, 
+def _collect_standard_repn(exp, multiplier, idMap,
                                       compute_values, verbose, quadratic):
     fn = _repn_collectors.get(exp.__class__, None)
     if fn is not None:
@@ -1465,4 +1465,3 @@ def preprocess_constraint_data(block,
         raise
 
     block_repn[constraint_data] = repn
-
