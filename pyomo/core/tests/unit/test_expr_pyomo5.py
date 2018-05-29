@@ -4271,7 +4271,7 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual( expr1(), 50 )
             self.assertEqual( expr2(), 50 )
             self.assertNotEqual( id(expr1),      id(expr2) )
-            self.assertNotEqual( id(expr1._args_),    id(expr2._args_) )
+            self.assertEqual( id(expr1._args_), id(expr2._args_) )
             self.assertEqual( id(expr1.arg(0)), id(expr2.arg(0)) )
             self.assertEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
 
@@ -4280,7 +4280,7 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual( expr2(), 50 )
             self.assertNotEqual( id(expr1),                 id(expr2) )
             self.assertNotEqual( id(expr1._args_),           id(expr2._args_) )
-            self.assertNotEqual( id(expr1.arg(0)._args_),     id(expr2._args_) )
+            self.assertEqual( id(expr1.arg(0)._args_), id(expr2._args_) )
             self.assertEqual( id(expr1.arg(1)),           id(expr2.arg(1)) )
             self.assertEqual( id(expr1.arg(0).arg(0)),  id(expr2.arg(0)) )
             self.assertEqual( id(expr1.arg(0).arg(1)),  id(expr2.arg(1)) )
@@ -5935,10 +5935,10 @@ class ReplacementWalkerTest1(EXPR.ExpressionReplacementVisitor):
            not node.is_potentially_variable():
             return True, node
         if node.is_variable_type():
-            if id(node) in self.memo:
-                return True, self.memo[id(node)]
-            self.memo[id(node)] = self.model.w.add()
-            return True, self.memo[id(node)]
+            if id(node) in self.substitute:
+                return True, self.substitute[id(node)]
+            self.substitute[id(node)] = self.model.w.add()
+            return True, self.substitute[id(node)]
         return False, None
 
 
@@ -6062,10 +6062,10 @@ class ReplacementWalkerTest2(EXPR.ExpressionReplacementVisitor):
             return True, node
 
         if node.is_variable_type():
-            if id(node) in self.memo:
-                return True, self.memo[id(node)]
-            self.memo[id(node)] = 2 * self.model.w.add()
-            return True, self.memo[id(node)]
+            if id(node) in self.substitute:
+                return True, self.substitute[id(node)]
+            self.substitute[id(node)] = 2 * self.model.w.add()
+            return True, self.substitute[id(node)]
         return False, None
 
 
@@ -6162,10 +6162,10 @@ class ReplacementWalkerTest3(EXPR.ExpressionReplacementVisitor):
 
     def visiting_potential_leaf(self, node):
         if node.__class__ in (_ParamData, SimpleParam):
-            if id(node) in self.memo:
-                return True, self.memo[id(node)]
-            self.memo[id(node)] = 2*self.model.w.add()
-            return True, self.memo[id(node)]
+            if id(node) in self.substitute:
+                return True, self.substitute[id(node)]
+            self.substitute[id(node)] = 2*self.model.w.add()
+            return True, self.substitute[id(node)]
 
         if node.__class__ in nonpyomo_leaf_types or \
             node.is_constant() or \
