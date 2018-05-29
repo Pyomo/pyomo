@@ -48,37 +48,22 @@ logger = logging.getLogger('pyomo.gdp.cuttingplane')
 # DEBUG
 from nose.tools import set_trace
 
-# TODO: this should be an option probably, right?
-# do I have other options that won't be mad about the quadratic objective in the
-# separation problem?
-# SOLVER = 'gurobi'
-stream_solvers = False
-
 class CuttingPlane_Transformation(Transformation):
 
     alias('gdp.cuttingplane', doc="Relaxes a linear disjunctive model by "
           "adding cuts from convex hull to Big-M relaxation.")
 
     CONFIG = ConfigBlock("gdp.cuttingplane")
-    # TODO: Should have different options for solvers for rBigM and for
-    # separation?
     CONFIG.declare('solver', ConfigValue(
         default='gurobi',
-        description="Solver to use for relaxed BigM problem",
+        description="""Solver to use for relaxed BigM problem and the separation
+        problem""",
         doc="""
         This specifies the solver which will be used to solve LP relaxation
-        of the BigM problem.
+        of the BigM problem and the separation problem. Note that this solver
+        must be able to handle a quadratic objective because of the separation
+        problem.
         """
-    ))
-    CONFIG.declare('separationSolver', ConfigValue(
-        default='gurobi',
-        description="Solver to use for the separation problem",
-        doc=""" 
-        This specifies the solver which will be used to solve the separation
-        problem, that is, the projection of the solution to the relaxed BigM
-        problem onto the convex hull. Note that this solver must be able to
-        handle a quadratic objective (since this problem minimizes Euclidean
-        distance.)  """
     ))
     CONFIG.declare('EPS', ConfigValue(
         default=0.01,
@@ -89,12 +74,21 @@ class CuttingPlane_Transformation(Transformation):
         less than this value, the algorithm terminates without adding the cut
         cut generated in the last iteration.  """
     ))
-    CONFIG.declare('stream_solvers', ConfigValue(
+    CONFIG.declare('stream_solver', ConfigValue(
         default=False,
-        # TODO: I don't think such a thing exists right now?
-        #domain=Binary,
+        # TODO: Qi's looks like this but this doesn't work here... Is it Python
+        #3??  
+        #domain=In([True, False]),
         description="""If true, sets tee=True for every solve performed over 
         "the course of the algorithm"""
+    ))
+    CONFIG.declare('solver_options', ConfigValue(
+        default={},
+        description="Dictionary of solver options",
+        doc="""
+        Dictionary of solver options that will be set for the solver for both the
+        relaxed BigM and separation problem solves.
+        """
     ))
 
     def __init__(self):
@@ -103,17 +97,6 @@ class CuttingPlane_Transformation(Transformation):
     def _apply_to(self, instance, bigM=None, **kwds):
         self._config = self.CONFIG(kwds.pop('options', {}))
         self._config.set_value(kwds)
-        #options = kwds.pop('options', {})
-        # config = self.CONFIG(kwds.pop('options', {}))
-        # config.set_value(kwds)
-        # SOLVER = config.solver
-
-        # if kwds:
-        #     logger.warning("GDP(CuttingPlanes): unrecognized keyword arguments:"
-        #                    "\n%s" % ( '\n'.join(iterkeys(kwds)), ))
-        # if options:
-        #     logger.warning("GDP(CuttingPlanes): unrecognized options:\n%s"
-        #                 % ( '\n'.join(iterkeys(options)), ))
 
         instance_rBigM, instance_rCHull, var_info, transBlockName \
             = self._setup_subproblems(instance, bigM)
@@ -208,13 +191,12 @@ class CuttingPlane_Transformation(Transformation):
             var_info, transBlockName):
 
         opt = SolverFactory(self._config.solver)
-        # TODO: I'm doing this for resiliency model for a minute.
-        # I want this in options too, expecially if this goes somewhere!
-        opt.options['presolve'] = 2
+        stream_solver = self._config.stream_solver
+        opt.options = self._config.solver_options
 
         improving = True
         prev_obj = float("inf")
-        epsilon = 0.01
+        epsilon = self._config.EPS
         cuts = None
 
         transBlock = instance.component(transBlockName)
@@ -238,7 +220,7 @@ class CuttingPlane_Transformation(Transformation):
 
         while (improving):
             # solve rBigM, solution is xstar
-            results = opt.solve(instance_rBigM, tee=stream_solvers)
+            results = opt.solve(instance_rBigM, tee=stream_solver)
             if verify_successful_solve(results) is not NORMAL:
                 logger.warning("GDP.cuttingplane: Relaxed BigM subproblem "
                                "did not solve normally. Stopping cutting "
@@ -269,7 +251,7 @@ class CuttingPlane_Transformation(Transformation):
                 transBlock.cuts.add(cut_number, cuts['bigm'] <= 0)
 
             # solve separation problem to get xhat.
-            opt.solve(instance_rCHull, tee=stream_solvers)
+            opt.solve(instance_rCHull, tee=stream_solver)
 
             cuts = self._create_cuts(var_info, rCHull_vars, instance_rCHull, 
                                      transBlock, transBlock_rBigM)
@@ -324,7 +306,6 @@ class CuttingPlane_Transformation(Transformation):
                 sort=SortComponents.deterministic):
             if self.constraint_tight(instance_rCHull, constraint):
                 print(constraint.expr)
-                print(constraint.active)
                 # get normal vector to tangent plane to this constraint at xhat
                 f = constraint.body
                 firstDerivs = differentiate(f, wrt_list=rCHull_vars)

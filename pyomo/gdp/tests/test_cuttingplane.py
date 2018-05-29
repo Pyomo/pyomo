@@ -78,27 +78,30 @@ class TwoTermDisj(unittest.TestCase):
         m = models.makeTwoTermDisj_boxes()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
-        cut = m._pyomo_gdp_cuttingplane_relaxation.cuts[0]
-        self.assertEqual(cut.lower, 0)
-        self.assertIsNone(cut.upper)
+        # we don't get any cuts from this
+        self.assertEqual(len(m._pyomo_gdp_cuttingplane_relaxation.cuts), 0)
 
-        # Var, coef, xhat:
-        expected_cut = [
-            ( m.x, 0.45, 2.7 ),
-            ( m.y, 0.55, 1.3 ),
-            ( m.d[0].indicator_var, 0.1, 0.85 ),
-            ( m.d[1].indicator_var, -0.1, 0.15 ),
-        ]
+        # cut = m._pyomo_gdp_cuttingplane_relaxation.cuts[0]
+        # self.assertEqual(cut.lower, 0)
+        # self.assertIsNone(cut.upper)
 
-        # test body
-        repn = generate_standard_repn(cut.body)
-        self.assertTrue(repn.is_linear())
-        self.assertEqual(len(repn.linear_vars), 4)
-        for v, coef, xhat in expected_cut:
-            check_linear_coef(self, repn, v, coef)
+        # # Var, coef, xhat:
+        # expected_cut = [
+        #     ( m.x, 0.45, 2.7 ),
+        #     ( m.y, 0.55, 1.3 ),
+        #     ( m.d[0].indicator_var, 0.1, 0.85 ),
+        #     ( m.d[1].indicator_var, -0.1, 0.15 ),
+        # ]
 
-        self.assertAlmostEqual(
-            repn.constant, -1*sum(c*x for v,c,x in expected_cut), 5)
+        # # test body
+        # repn = generate_standard_repn(cut.body)
+        # self.assertTrue(repn.is_linear())
+        # self.assertEqual(len(repn.linear_vars), 4)
+        # for v, coef, xhat in expected_cut:
+        #     check_linear_coef(self, repn, v, coef)
+
+        # self.assertAlmostEqual(
+        #     repn.constant, -1*sum(c*x for v,c,x in expected_cut), 5)
 
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
