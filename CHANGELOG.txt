@@ -6,7 +6,19 @@ Pyomo CHANGELOG
 Current Development
 -------------------------------------------------------------------------------
 
-- None
+- Removing testing and support for Python 2.6 (#322)
+- Resolved Python 3.4 build errors on Appveyor. (#438)
+- Wrap Vars in value() for assignment to numpy vectors (#436)
+- Adding TerminationCondition and SolverStatus to pyomo.environ (#429)
+- Resolved problems with ExternalFunctions with fixed arguments (#442)
+- Adding the Pyomo5 expression system, which supports PyPy (#272)
+- Bug fix processing exp() expressions in Pyomo5 (#471)
+- Resolving scaling issue with Pyomo expressions (#475)
+- Resolving issue when path names with spaces appear in CPLEX run file (#485)
+- Adding relative_to argument for getname() (#495)
+- Refactoring pyomo.util into pyomo.common for the general utilities that do
+  not depend on the rest of Pyomo, and the user-focused modeling utilities in
+  pyomo.util. (#502)
 
 -------------------------------------------------------------------------------
 Pyomo 5.5
@@ -65,6 +77,7 @@ Pyomo 5.4.1
 Pyomo 5.4
 -------------------------------------------------------------------------------
 
+=======
 - Remove checks for is_indexed from PersistentSolver methods (#366)
 - GDP rewrite (#354)
 - Updated gdp.chull to handle named expressions (#318)

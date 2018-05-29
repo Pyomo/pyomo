@@ -1,0 +1,6 @@
+for v in instance.component_objects(Var, active=True):
+    varobject = getattr(instance, v)
+    if isinstance(varobject.domain, IntegerSet) or isinstance(varobject.domain, BooleanSet):
+        print ("fixing "+str(v))
+        for index in varobject:
+            varobject[index].fixed = True # fix the current value

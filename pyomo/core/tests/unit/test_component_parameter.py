@@ -1,6 +1,10 @@
 import pickle
 
 import pyutilib.th as unittest
+from pyomo.core.expr.numvalue import (NumericValue,
+                                        is_fixed,
+                                        is_constant,
+                                        potentially_variable)
 import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
@@ -19,10 +23,6 @@ from pyomo.core.kernel.component_variable import variable
 from pyomo.core.kernel.component_block import block
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet)
-from pyomo.core.kernel.numvalue import (NumericValue,
-                                        is_fixed,
-                                        is_constant,
-                                        potentially_variable)
 from pyomo.core.base.param import Param
 
 class Test_parameter(unittest.TestCase):
@@ -101,10 +101,10 @@ class Test_parameter(unittest.TestCase):
 
     def test_potentially_variable(self):
         p = parameter()
-        self.assertEqual(p._potentially_variable(), False)
+        self.assertEqual(p.is_potentially_variable(), False)
         self.assertEqual(potentially_variable(p), False)
         p.value = 1.0
-        self.assertEqual(p._potentially_variable(), False)
+        self.assertEqual(p.is_potentially_variable(), False)
         self.assertEqual(potentially_variable(p), False)
 
     def test_polynomial_degree(self):

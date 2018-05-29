@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 from pyomo.core.base import Var
 from pyomo.core.base.set_types import BooleanSet, IntegerSet, Reals, RealInterval
 import pyomo.core.base

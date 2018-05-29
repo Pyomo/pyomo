@@ -45,6 +45,8 @@ def setUpModule():
     reference_test_model = load_external_module(
         join(testdatadir, "reference_test_model.py"))[0].model
 
+
+@unittest.category('smoke','nightly','expensive')
 class Test(unittest.TestCase):
 
     @classmethod
@@ -701,8 +703,6 @@ class Test(unittest.TestCase):
             self._check_factory(factory)
         self.assertEqual(len(factory._archives), 0)
         self.assertTrue("both_callbacks" in sys.modules)
-
-Test = unittest.category('smoke','nightly','expensive')(Test)
 
 if __name__ == "__main__":
     unittest.main()

@@ -28,7 +28,7 @@ def constraint2_rule(model,t1,t2):
 def constraint3_rule(model,t1,t2):
     return sum(model.y[t1,t2,j] for j in xrange(len(PIECEWISE_PTS[t1,t2]))) == 1
 
-model.obj = Objective(expr=summation(model.Fx), sense=maximize)
+model.obj = Objective(expr=sum_product(model.Fx), sense=maximize)
 model.constraint1 = Constraint(INDEX_SET1,INDEX_SET2,rule=constraint1_rule)
 model.constraint2 = Constraint(INDEX_SET1,INDEX_SET2,rule=constraint2_rule)
 model.constraint3 = Constraint(INDEX_SET1,INDEX_SET2,rule=constraint3_rule)

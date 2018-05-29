@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.kernel as pmo
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, NonNegativeReals, SOSConstraint, summation
+from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, NonNegativeReals, SOSConstraint, sum_product
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 @register_model
@@ -37,9 +37,9 @@ class SOS1_simple(_BaseTestModel):
 
         model.obj = Objective(expr=model.x + model.y[1]+2*model.y[2])
         model.c1 = Constraint(expr=model.a <= model.y[2])
-        model.c2 = Constraint(expr=2.0 <= model.x <= 10.0)
+        model.c2 = Constraint(expr=(2.0, model.x, 10.0))
         model.c3 = SOSConstraint(var=model.y, index=[1,2], sos=1)
-        model.c4 = Constraint(expr=summation(model.y) == 1)
+        model.c4 = Constraint(expr=sum_product(model.y) == 1)
 
         # Make an empty SOSConstraint
         model.c5 = SOSConstraint(var=model.y, index=[1,2], sos=1)
@@ -69,7 +69,7 @@ class SOS1_simple_kernel(SOS1_simple):
 
         model.obj = pmo.objective(model.x + model.y[1]+2*model.y[2])
         model.c1 = pmo.constraint(model.a <= model.y[2])
-        model.c2 = pmo.constraint(2.0 <= model.x <= 10.0)
+        model.c2 = pmo.constraint((2.0, model.x, 10.0))
         model.c3 = pmo.sos1(model.y.values())
         model.c4 = pmo.constraint(sum(model.y.values()) == 1)
 

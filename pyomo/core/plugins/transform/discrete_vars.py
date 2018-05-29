@@ -13,7 +13,7 @@ logger = logging.getLogger('pyomo.core')
 
 from six import itervalues
 
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 from pyomo.core.base import ( 
     Transformation,
     Binary,

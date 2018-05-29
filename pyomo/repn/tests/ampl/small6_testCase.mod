@@ -31,8 +31,8 @@ s.t.
                 v*(x/p-y/p) = 2.0;
         CON5:
                 v*(x-y)*(1.0/p) = 2.0;
-	CON6:
-		v*(x-y) = 2.0*p;
+        CON6:
+                v*(x-y) = 2.0*p;
 
 data;
 var x := 1.0;
@@ -44,4 +44,4 @@ fix p := 2.0;
 option substout 0;
 option presolve 0;
 option auxfiles 'rc';
-write gjunk;
+write gsmall6.ampl;

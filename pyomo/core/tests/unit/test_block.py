@@ -26,9 +26,9 @@ import pyutilib.th as unittest
 import pyutilib.services
 
 from pyomo.environ import *
-from pyomo.util.log import LoggingIntercept
+from pyomo.common.log import LoggingIntercept
 from pyomo.core.base.block import SimpleBlock
-from pyomo.core.base.expr import identify_variables
+from pyomo.core.expr import current as EXPR
 from pyomo.opt import *
 
 from pyomo.gdp import Disjunct
@@ -1632,11 +1632,11 @@ class TestBlock(unittest.TestCase):
         self.assertIs(n.c.parent_block(), n)
         self.assertIs(n.c.parent_component(), n.c)
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(m.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(m.c.body)),
             sorted(id(x) for x in (m.x,m.y[1])),
         )
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(n.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(n.c.body)),
             sorted(id(x) for x in (n.x,n.y[1])),
         )
 
@@ -1664,11 +1664,11 @@ class TestBlock(unittest.TestCase):
         self.assertIs(n.b.c.parent_block(), n.b)
         self.assertIs(n.b.c.parent_component(), n.b.c)
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(m.b.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(m.b.c.body)),
             sorted(id(x) for x in (m.x, m.y[1], m.b.x, m.b.y[1])),
         )
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(n.b.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(n.b.c.body)),
             sorted(id(x) for x in (n.x, n.y[1], n.b.x, n.b.y[1])),
         )
 
@@ -1703,11 +1703,11 @@ class TestBlock(unittest.TestCase):
         self.assertIs(n.c.parent_block(), n)
         self.assertIs(n.c.parent_component(), n.c)
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(m.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(m.c.body)),
             sorted(id(x) for x in (m.x,m.y[1])),
         )
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(n.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(n.c.body)),
             sorted(id(x) for x in (n.x,n.y[1])),
         )
 
@@ -1735,11 +1735,11 @@ class TestBlock(unittest.TestCase):
         self.assertIs(n.b.c.parent_block(), n.b)
         self.assertIs(n.b.c.parent_component(), n.b.c)
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(m.b.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(m.b.c.body)),
             sorted(id(x) for x in (m.x, m.y[1], m.b.x, m.b.y[1])),
         )
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(n.b.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(n.b.c.body)),
             sorted(id(x) for x in (n.x, n.y[1], n.b.x, n.b.y[1])),
         )
 
@@ -1779,11 +1779,11 @@ class TestBlock(unittest.TestCase):
         self.assertIs(nb.c.parent_block(), nb)
         self.assertIs(nb.c.parent_component(), nb.c)
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(m.b.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(m.b.c.body)),
             sorted(id(x) for x in (m.x, m.y[1], m.b.x, m.b.y[1])),
         )
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(nb.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(nb.c.body)),
             sorted(id(x) for x in (m.x, m.y[1], nb.x, nb.y[1])),
         )
 
@@ -1862,11 +1862,11 @@ class TestBlock(unittest.TestCase):
         self.assertIs(n.c.parent_block(), n)
         self.assertIs(n.c.parent_component(), n.c)
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(m.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(m.c.body)),
             sorted(id(x) for x in (m.x,m.y[1])),
         )
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(n.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(n.c.body)),
             sorted(id(x) for x in (n.x,n.y[1])),
         )
 
@@ -1894,11 +1894,11 @@ class TestBlock(unittest.TestCase):
         self.assertIs(n.b.c.parent_block(), n.b)
         self.assertIs(n.b.c.parent_component(), n.b.c)
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(m.b.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(m.b.c.body)),
             sorted(id(x) for x in (m.x, m.y[1], m.b.x, m.b.y[1])),
         )
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(n.b.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(n.b.c.body)),
             sorted(id(x) for x in (n.x, n.y[1], n.b.x, n.b.y[1])),
         )
 
@@ -1956,7 +1956,7 @@ class TestBlock(unittest.TestCase):
         model.A = RangeSet(1,4)
         model.x = Var(model.A, bounds=(-1,1))
         def obj_rule(model):
-            return summation(model.x)
+            return sum_product(model.x)
         model.obj = Objective(rule=obj_rule)
         def c_rule(model):
             expr = 0
@@ -2018,7 +2018,7 @@ class TestBlock(unittest.TestCase):
         model.A = RangeSet(1,4)
         model.x = Var(model.A, bounds=(-1,1))
         def obj_rule(model):
-            return summation(model.x)
+            return sum_product(model.x)
         model.obj = Objective(rule=obj_rule)
         def c_rule(model):
             expr = 0
@@ -2047,7 +2047,7 @@ class TestBlock(unittest.TestCase):
         model.b.A = RangeSet(1,4)
         model.b.x = Var(model.b.A, bounds=(-1,1))
         def obj_rule(block):
-            return summation(block.x)
+            return sum_product(block.x)
         model.b.obj = Objective(rule=obj_rule)
         def c_rule(model):
             expr = model.y
@@ -2075,7 +2075,7 @@ class TestBlock(unittest.TestCase):
         model.B = Set(initialize=['A B', 'C,D', 'E'])
         model.x = Var(model.A, model.B, bounds=(-1,1))
         def obj_rule(model):
-            return summation(model.x)
+            return sum_product(model.x)
         model.obj = Objective(rule=obj_rule)
         def c_rule(model):
             expr = model.y

@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 
 from six import iteritems, itervalues, print_
 
@@ -39,11 +39,11 @@ class EcksteinCombettesConverger(ConvergenceBase):
 
 # the primary Eckstein-Combettes extension class
 
-class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
+class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
 
-    pyomo.util.plugin.implements(phextension.IPHExtension)
+    pyomo.common.plugin.implements(phextension.IPHExtension)
 
-    pyomo.util.plugin.alias("ecksteincombettesextension")
+    pyomo.common.plugin.alias("ecksteincombettesextension")
 
     def __init__(self):
 
@@ -379,8 +379,15 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
             random.shuffle(all_phis)
             for phi in all_phis[0:ph._async_buffer_length]:
                 scenario_name = sub_phi_to_scenario_map[phi][0]
-                print("Queueing sub-problem=%s" % scenario_name)
-                self._subproblems_to_queue.append(scenario_name)
+
+                if ph._scenario_tree.contains_bundles():
+                    print("****HERE****")
+                    print("SCENARIO=",scenario_name)
+                    print("SCENARIO BUNDLE=",self._scenario_tree.get_scenario_bundle(scenario_name))
+                    foobar
+                else:
+                    print("Queueing sub-problem=%s" % scenario_name)
+                    self._subproblems_to_queue.append(scenario_name)
 
         else:
             if self._queue_only_negative_subphi_subproblems:
@@ -419,7 +426,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         # IMPORTANT: if the Eckstein-Combettes extension plugin is enabled,
         #            then make sure PH is in async mode - otherwise, nothing
         #            will work!
-        if not ph._async:
+        if not ph._async_mode:
             raise RuntimeError("PH is not in async mode - this is required for the Eckstein-Combettes extension")
 
         self._total_projection_steps = 0
@@ -491,13 +498,13 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                 tree_node._xbars = dict((i,tree_node._z[i]) for i in nodal_index_set)
 
         # mainly to set up data structures.
-        for scenario in ph._scenario_tree._scenarios:
-            self.asynchronous_pre_scenario_queue(ph, scenario._name)
+        for subproblem in ph._scenario_tree.subproblems:
+            self.asynchronous_pre_scenario_queue(ph, subproblem.name)
 
         # pick subproblems at random - we need a number equal to the async buffer length,
         # although we need all of them initially (PH does - not this particular plugin).
         async_buffer_length = ph._async_buffer_length
-        all_subproblems = [scenario._name for scenario in ph._scenario_tree._scenarios]
+        all_subproblems = [subproblem.name for subproblem in ph._scenario_tree.subproblems]
         random.shuffle(all_subproblems)
         self._subproblems_to_queue = all_subproblems[0:ph._async_buffer_length]
 
@@ -523,19 +530,27 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         """Called before the asynchronous solve loop is executed"""
         pass
 
-    def asynchronous_pre_scenario_queue(self, ph, scenario_name):
-        """Called right before each scenario solve is been queued"""
+    def asynchronous_pre_scenario_queue(self, ph, subproblem_name):
+        """Called right before each subproblem solve is been queued"""
+
+        scenarios_to_process = []
+
+        if ph._scenario_tree.contains_bundles():
+            for scenario_name in ph._scenario_tree.get_bundle(subproblem_name).scenario_names:
+                scenarios_to_process.append(ph._scenario_tree.get_scenario(scenario_name))
+        else:
+            scenarios_to_process.append(ph._scenario_tree.get_scenario(subproblem_name))
 
         # we need to cache the z and w that were used when solving the input scenario.
-        scenario = ph._scenario_tree.get_scenario(scenario_name)
+        for scenario in scenarios_to_process:
 
-        scenario._xbars_for_solve = {}
-        for tree_node in scenario._node_list[:-1]:
-            scenario._xbars_for_solve[tree_node._name] = dict((k,v) for k,v in iteritems(tree_node._z))
+            scenario._xbars_for_solve = {}
+            for tree_node in scenario._node_list[:-1]:
+                scenario._xbars_for_solve[tree_node._name] = dict((k,v) for k,v in iteritems(tree_node._z))
 
-        scenario._ws_for_solve = {}
-        for tree_node in scenario._node_list[:-1]:
-            scenario._ws_for_solve[tree_node._name] = dict((k,v) for k,v in iteritems(scenario._w[tree_node._name]))
+            scenario._ws_for_solve = {}
+            for tree_node in scenario._node_list[:-1]:
+                scenario._ws_for_solve[tree_node._name] = dict((k,v) for k,v in iteritems(scenario._w[tree_node._name]))
 
     def post_asynchronous_var_w_update(self, ph, subproblems, scenario_solve_counts):
         """Called after a batch of asynchronous sub-problems are solved and corresponding statistics are updated"""

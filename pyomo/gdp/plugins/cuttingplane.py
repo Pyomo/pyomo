@@ -20,9 +20,10 @@ try:
 except:
     from ordereddict import OrderedDict
 
-from pyomo.util.config import ConfigBlock, ConfigValue, PositiveFloat
-from pyomo.util.modeling import unique_component_name
-from pyomo.util.plugin import alias
+
+from pyomo.common.config import ConfigBlock, ConfigValue, PositiveFloat
+from pyomo.common.modeling import unique_component_name
+from pyomo.common.plugin import alias
 from pyomo.core import (
     Any, Block, Constraint, Objective, Param, Var, SortComponents,
     Transformation, TransformationFactory, value

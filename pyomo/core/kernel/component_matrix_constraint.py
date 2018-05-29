@@ -2,13 +2,14 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.kernel.numvalue import NumericValue
+import pyomo.core.expr
+from pyomo.core.expr.numvalue import NumericValue, value
 from pyomo.core.kernel.component_interface import \
     (IComponent,
      _ActiveComponentMixin,
@@ -20,7 +21,6 @@ from pyomo.core.kernel.component_tuple import ComponentTuple
 from pyomo.core.kernel.component_list import ComponentList
 from pyomo.core.kernel.component_constraint import (IConstraint,
                                                     constraint_tuple)
-from pyomo.core.kernel.numvalue import value
 
 import six
 from six.moves import zip, xrange
@@ -215,21 +215,27 @@ class _MatrixConstraintData(IConstraint,
     # _linear_canonical_form flag is True
     #
 
-    def canonical_form(self):
-        from pyomo.repn.canonical_repn import \
-            coopr3_CompiledLinearCanonicalRepn
+    def canonical_form(self, compute_values=True):
+        """Build a canonical representation of the body of
+        this constraints"""
+        from pyomo.repn.standard_repn import StandardRepn
         variables = []
         coefficients = []
         constant = 0
         for v, c in self.terms:
+            # we call float to get rid of the numpy type
+            c = float(c)
             if not v.fixed:
                 variables.append(v)
                 coefficients.append(c)
             else:
-                constant += value(c) * v()
-        repn = coopr3_CompiledLinearCanonicalRepn()
-        repn.variables = tuple(variables)
-        repn.linear = tuple(coefficients)
+                if compute_values:
+                    constant += c * v()
+                else:
+                    constant += c * v
+        repn = StandardRepn()
+        repn.linear_vars = tuple(variables)
+        repn.linear_coefs = tuple(coefficients)
         repn.constant = constant
         return repn
 

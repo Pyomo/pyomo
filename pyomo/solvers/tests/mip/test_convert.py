@@ -92,7 +92,7 @@ class Test(unittest.TestCase):
         #
         # Reset all options
         #
-        #for ep in pyomo.util.plugin.ExtensionPoint(pyomoe.core.plugin.IOption):
+        #for ep in pyomo.common.plugin.ExtensionPoint(pyomoe.core.plugin.IOption):
             #ep.reset()
 
     def test_nl_nl1(self):

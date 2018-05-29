@@ -227,7 +227,7 @@ def _scaled_beta(model, i):
 model.con_city_varying_beta = Constraint(model.S_BETA, rule=_scaled_beta)
 
 def _mean_patt(model):
-    return (1.0, summation(model.beta_patt)/len(model.S_BETA))
+    return (1.0, sum_product(model.beta_patt)/len(model.S_BETA))
 model.con_mean_patt = Constraint(rule=_mean_patt)
 
 def _beta_c(model):

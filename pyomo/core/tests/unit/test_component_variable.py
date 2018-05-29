@@ -1,6 +1,10 @@
 import pickle
 
 import pyutilib.th as unittest
+from pyomo.core.expr.numvalue import (NumericValue,
+                                        is_fixed,
+                                        is_constant,
+                                        potentially_variable)
 import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
@@ -8,10 +12,6 @@ from pyomo.core.tests.unit.test_component_tuple import \
     _TestComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestComponentListBase
-from pyomo.core.kernel.numvalue import (NumericValue,
-                                        is_fixed,
-                                        is_constant,
-                                        potentially_variable)
 from pyomo.core.kernel.component_interface import (ICategorizedObject,
                                                    IActiveObject,
                                                    IComponent,
@@ -72,6 +72,14 @@ class Test_variable(unittest.TestCase):
         self.assertIs(domain_type, RealSet)
         self.assertIs(lb, None)
         self.assertIs(ub, None)
+
+    def test_polynomial_degree(self):
+        v = variable()
+        self.assertEqual(v.polynomial_degree(), 1)
+        v.fix(0)
+        self.assertEqual(v.polynomial_degree(), 0)
+        v.free()
+        self.assertEqual(v.polynomial_degree(), 1)
 
     def test_ctype(self):
         v = variable()
@@ -201,27 +209,27 @@ class Test_variable(unittest.TestCase):
 
     def test_potentially_variable(self):
         v = variable()
-        self.assertEqual(v._potentially_variable(), True)
+        self.assertEqual(v.is_potentially_variable(), True)
         self.assertEqual(potentially_variable(v), True)
         self.assertEqual(v.fixed, False)
         self.assertEqual(v.value, None)
         v.value = 1.0
-        self.assertEqual(v._potentially_variable(), True)
+        self.assertEqual(v.is_potentially_variable(), True)
         self.assertEqual(potentially_variable(v), True)
         self.assertEqual(v.fixed, False)
         self.assertEqual(v.value, 1.0)
         v.fix()
-        self.assertEqual(v._potentially_variable(), True)
+        self.assertEqual(v.is_potentially_variable(), True)
         self.assertEqual(potentially_variable(v), True)
         self.assertEqual(v.fixed, True)
         self.assertEqual(v.value, 1.0)
         v.value = None
-        self.assertEqual(v._potentially_variable(), True)
+        self.assertEqual(v.is_potentially_variable(), True)
         self.assertEqual(potentially_variable(v), True)
         self.assertEqual(v.fixed, True)
         self.assertEqual(v.value, None)
         v.free()
-        self.assertEqual(v._potentially_variable(), True)
+        self.assertEqual(v.is_potentially_variable(), True)
         self.assertEqual(potentially_variable(v), True)
         self.assertEqual(v.fixed, False)
         self.assertEqual(v.value, None)

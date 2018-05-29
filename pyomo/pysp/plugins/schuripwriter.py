@@ -10,7 +10,7 @@
 
 from pyutilib.misc import *
 
-from pyomo.util.plugin import *
+from pyomo.common.plugin import *
 from pyomo.pysp import phextension
 
 from pyomo.core import *

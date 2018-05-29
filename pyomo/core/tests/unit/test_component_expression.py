@@ -1,6 +1,11 @@
 import pickle
 
 import pyutilib.th as unittest
+from pyomo.core.expr.numvalue import (NumericValue,
+                                        is_fixed,
+                                        is_constant,
+                                        potentially_variable,
+                                        value)
 import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
@@ -20,11 +25,6 @@ from pyomo.core.kernel.component_expression import (IIdentityExpression,
                                                     expression_dict,
                                                     expression_tuple,
                                                     expression_list)
-from pyomo.core.kernel.numvalue import (NumericValue,
-                                        is_fixed,
-                                        is_constant,
-                                        potentially_variable,
-                                        value)
 from pyomo.core.kernel.component_variable import variable
 from pyomo.core.kernel.component_parameter import parameter
 from pyomo.core.kernel.component_objective import objective
@@ -43,6 +43,18 @@ except:
     numpy_available = False
 
 class Test_noclone(unittest.TestCase):
+
+    def test_is_named_expression_type(self):
+        e = expression()
+        self.assertEqual(e.is_named_expression_type(), True)
+
+    def test_arg(self):
+        e = expression()
+        self.assertEqual(e.arg(0), None)
+        e.expr = 1
+        self.assertEqual(e.arg(0), 1)
+        with self.assertRaises(KeyError):
+            e.arg(1)
 
     def test_init_non_NumericValue(self):
         types = [None, 1, 1.1, True, ""]
@@ -164,18 +176,18 @@ class Test_noclone(unittest.TestCase):
         self.assertEqual(e.is_fixed(), True)
         self.assertEqual(is_fixed(e), True)
 
-    def test_potentially_variable(self):
+    def testis_potentially_variable(self):
         e = noclone(variable())
-        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(e.is_potentially_variable(), True)
         self.assertEqual(potentially_variable(e), True)
         e = noclone(parameter())
-        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(e.is_potentially_variable(), False)
         self.assertEqual(potentially_variable(e), False)
         e = noclone(expression())
-        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(e.is_potentially_variable(), True)
         self.assertEqual(potentially_variable(e), True)
         e = noclone(data_expression())
-        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(e.is_potentially_variable(), False)
         self.assertEqual(potentially_variable(e), False)
 
     def test_polynomial_degree(self):
@@ -196,20 +208,20 @@ class Test_noclone(unittest.TestCase):
         v.free()
         self.assertEqual(e.polynomial_degree(), None)
 
-    def test_is_expression(self):
+    def test_is_expression_type(self):
         for obj in (variable(), parameter(), objective(),
                     expression(), data_expression()):
-            self.assertEqual(noclone(obj).is_expression(), True)
+            self.assertEqual(noclone(obj).is_expression_type(), True)
 
     def test_args(self):
         e = noclone(parameter() + 1)
-        self.assertEqual(len(e._args), 1)
-        self.assertTrue(e._args[0] is e.expr)
+        self.assertEqual(e.nargs(), 1)
+        self.assertTrue(e.arg(0) is e.expr)
 
     def test_aruments(self):
         e = noclone(parameter() + 1)
-        self.assertEqual(len(tuple(e._arguments())), 1)
-        self.assertTrue(tuple(e._arguments())[0] is e.expr)
+        self.assertEqual(len(tuple(e.args)), 1)
+        self.assertTrue(tuple(e.args)[0] is e.expr)
 
     def test_clone(self):
 
@@ -240,34 +252,18 @@ class Test_noclone(unittest.TestCase):
         b = block()
         p = parameter()
         e = noclone(p**2)
-        self.assertEqual(str(e.expr), "<parameter>**2.0")
-        self.assertEqual(str(e), "{<parameter>**2.0}")
-        e.to_string()
-        out = StringIO()
-        e.to_string(ostream=out)
-        self.assertEqual(out.getvalue(), "<parameter>**2.0")
-        e.to_string(verbose=False)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=False)
-        self.assertEqual(out.getvalue(), "<parameter>**2.0")
-        e.to_string(verbose=True)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=True)
-        self.assertEqual(out.getvalue(),
-                         "{pow( <parameter> , 2.0 )}")
+        self.assertEqual(str(e.expr), "<parameter>**2")
+        self.assertEqual(str(e), "{(<parameter>**2)}")
+        self.assertEqual(e.to_string(), "(<parameter>**2)")
+        self.assertEqual(e.to_string(verbose=False), "(<parameter>**2)")
+        self.assertEqual(e.to_string(verbose=True), "{pow(<parameter>, 2)}")
         b.e = e
         b.p = p
         self.assertNotEqual(p.name, None)
-        e.to_string(verbose=True)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=True)
-        self.assertEqual(out.getvalue(),
-                         "{pow( "+p.name+" , 2.0 )}")
-        self.assertEqual(out.getvalue(),
-                         "{pow( p , 2.0 )}")
+        self.assertEqual(e.to_string(verbose=True), "{pow("+p.name+", 2)}")
+        self.assertEqual(e.to_string(verbose=True), "{pow(p, 2)}")
         del b.e
         del b.p
-
 
 class _Test_expression_base(object):
 
@@ -355,23 +351,23 @@ class _Test_expression_base(object):
         self.assertEqual(e.is_constant(), False)
         self.assertEqual(is_constant(e), False)
 
-    def test_is_expression(self):
+    def test_is_expression_type(self):
         e = self._ctype_factory()
-        self.assertEqual(e.is_expression(), True)
+        self.assertEqual(e.is_expression_type(), True)
 
     def test_args(self):
         e = self._ctype_factory()
         p = parameter()
         e.expr = p + 1
-        self.assertEqual(len(e._args), 1)
-        self.assertTrue(e._args[0] is e.expr)
+        self.assertEqual(e.nargs(), 1)
+        self.assertTrue(e.arg(0) is e.expr)
 
     def test_aruments(self):
         e = self._ctype_factory()
         p = parameter()
         e.expr = p + 1
-        self.assertEqual(len(tuple(e._arguments())), 1)
-        self.assertTrue(tuple(e._arguments())[0] is e.expr)
+        self.assertEqual(len(tuple(e.args)), 1)
+        self.assertTrue(tuple(e.args)[0] is e.expr)
 
     def test_clone(self):
         e = self._ctype_factory()
@@ -409,82 +405,137 @@ class _Test_expression_base(object):
 
         self.assertEqual(str(e.expr), "None")
         self.assertEqual(str(e), label)
-        e.to_string()
-        out = StringIO()
-        e.to_string(ostream=out)
-        self.assertEqual(out.getvalue(), "Undefined")
-        e.to_string(verbose=False)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=False)
-        self.assertEqual(out.getvalue(), "Undefined")
-        e.to_string(verbose=True)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=True)
-        self.assertEqual(out.getvalue(), label+"{Undefined}")
+        self.assertEqual(e.to_string(), label+"{Undefined}")
+        self.assertEqual(e.to_string(verbose=False), label+"{Undefined}")
+        self.assertEqual(e.to_string(verbose=True), label+"{Undefined}")
         b.e = e
         self.assertNotEqual(e.name, None)
-        e.to_string(verbose=True)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=True)
-        self.assertEqual(out.getvalue(), "e{Undefined}")
+        self.assertEqual(e.to_string(verbose=True), "e{Undefined}")
         del b.e
         self.assertEqual(e.name, None)
 
         e.expr = 1
         self.assertEqual(str(e.expr), "1")
         self.assertEqual(str(e), label)
-        e.to_string()
-        out = StringIO()
-        e.to_string(ostream=out)
-        self.assertEqual(out.getvalue(), "1.0")
-        e.to_string(verbose=False)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=False)
-        self.assertEqual(out.getvalue(), "1.0")
-        e.to_string(verbose=True)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=True)
-        self.assertEqual(out.getvalue(), label+"{1.0}")
+        self.assertEqual(e.to_string(), "1")
+        self.assertEqual(e.to_string(verbose=False), "1")
+        self.assertEqual(e.to_string(verbose=True), label+"{1}")
         b.e = e
         self.assertNotEqual(e.name, None)
-        e.to_string(verbose=True)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=True)
-        self.assertEqual(out.getvalue(), "e{1.0}")
+        self.assertEqual(e.to_string(verbose=True), "e{1}")
         del b.e
         self.assertEqual(e.name, None)
 
 
         p = parameter()
         e.expr = p**2
-        self.assertEqual(str(e.expr), "<parameter>**2.0")
+        self.assertEqual(str(e.expr), "<parameter>**2")
         self.assertEqual(str(e), label)
-        e.to_string()
-        out = StringIO()
-        e.to_string(ostream=out)
-        self.assertEqual(out.getvalue(), "<parameter>**2.0")
-        e.to_string(verbose=False)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=False)
-        self.assertEqual(out.getvalue(), "<parameter>**2.0")
-        e.to_string(verbose=True)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=True)
-        self.assertEqual(out.getvalue(),
-                         label+"{pow( <parameter> , 2.0 )}")
+        self.assertEqual(e.to_string(), "(<parameter>**2)")
+        self.assertEqual(e.to_string(verbose=False), "(<parameter>**2)")
+        self.assertEqual(e.to_string(verbose=True), label+"{pow(<parameter>, 2)}")
         b.e = e
         b.p = p
         self.assertNotEqual(e.name, None)
         self.assertNotEqual(p.name, None)
-        e.to_string(verbose=True)
-        out = StringIO()
-        e.to_string(ostream=out, verbose=True)
-        self.assertEqual(out.getvalue(),
-                         e.name+"{pow( "+p.name+" , 2.0 )}")
-        self.assertEqual(out.getvalue(),
-                         "e{pow( p , 2.0 )}")
+        self.assertEqual(e.to_string(verbose=True), e.name+"{pow("+p.name+", 2)}")
+        self.assertEqual(e.to_string(verbose=True), "e{pow(p, 2)}")
         del b.e
         del b.p
+
+    def test_iadd(self):
+        # make sure simple for loops that look like they
+        # create a new expression do not modify the named
+        # expression
+        e = self._ctype_factory(1.0)
+        expr = 0.0
+        for v in [1.0,e]:
+            expr += v
+        self.assertEqual(e.expr, 1)
+        self.assertEqual(expr(), 2)
+        expr = 0.0
+        for v in [e,1.0]:
+            expr += v
+        self.assertEqual(e.expr, 1)
+        self.assertEqual(expr(), 2)
+
+    def test_isub(self):
+        # make sure simple for loops that look like they
+        # create a new expression do not modify the named
+        # expression
+        e = self._ctype_factory(1.0)
+        expr = 0.0
+        for v in [1.0,e]:
+            expr -= v
+        self.assertEqual(e.expr, 1)
+        self.assertEqual(expr(), -2)
+        expr = 0.0
+        for v in [e,1.0]:
+            expr -= v
+        self.assertEqual(e.expr, 1)
+        self.assertEqual(expr(), -2)
+
+    def test_imul(self):
+        # make sure simple for loops that look like they
+        # create a new expression do not modify the named
+        # expression
+        e = self._ctype_factory(3.0)
+        expr = 1.0
+        for v in [2.0,e]:
+            expr *= v
+        self.assertEqual(e.expr, 3)
+        self.assertEqual(expr(), 6)
+        expr = 1.0
+        for v in [e,2.0]:
+            expr *= v
+        self.assertEqual(e.expr, 3)
+        self.assertEqual(expr(), 6)
+
+    def test_idiv(self):
+        # make sure simple for loops that look like they
+        # create a new expression do not modify the named
+        # expression
+        # floating point division
+        e = self._ctype_factory(3.0)
+        expr = e
+        for v in [2.0,1.0]:
+            expr /= v
+        self.assertEqual(e.expr, 3)
+        self.assertEqual(expr(), 1.5)
+        expr = e
+        for v in [1.0,2.0]:
+            expr /= v
+        self.assertEqual(e.expr, 3)
+        self.assertEqual(expr(), 1.5)
+        # note that integer division does not occur within
+        # Pyomo expressions
+        e = self._ctype_factory(3)
+        expr = e
+        for v in [2,1]:
+            expr /= v
+        self.assertEqual(e.expr, 3)
+        self.assertEqual(expr(), 1.5)
+        expr = e
+        for v in [1,2]:
+            expr /= v
+        self.assertEqual(e.expr, 3)
+        self.assertEqual(expr(), 1.5)
+
+    def test_ipow(self):
+        # make sure simple for loops that look like they
+        # create a new expression do not modify the named
+        # expression
+        e = self._ctype_factory(3.0)
+        expr = e
+        for v in [2.0,1.0]:
+            expr **= v
+        self.assertEqual(e.expr, 3)
+        self.assertEqual(expr(), 9)
+        expr = e
+        for v in [1.0,2.0]:
+            expr **= v
+        self.assertEqual(e.expr, 3)
+        self.assertEqual(expr(), 9)
 
 class Test_expression(_Test_expression_base,
                       unittest.TestCase):
@@ -513,21 +564,21 @@ class Test_expression(_Test_expression_base,
         self.assertEqual(is_fixed(e), True)
         self.assertEqual(e(), 3)
 
-    def test_potentially_variable(self):
+    def testis_potentially_variable(self):
         e = self._ctype_factory()
-        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(e.is_potentially_variable(), True)
         self.assertEqual(potentially_variable(e), True)
         e.expr = 1
-        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(e.is_potentially_variable(), True)
         self.assertEqual(potentially_variable(e), True)
         v = variable()
         v.value = 2
         e.expr = v + 1
-        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(e.is_potentially_variable(), True)
         self.assertEqual(potentially_variable(e), True)
         v.fix()
         e.expr = v + 1
-        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(e.is_potentially_variable(), True)
         self.assertEqual(potentially_variable(e), True)
         self.assertEqual(e(), 3)
 
@@ -600,24 +651,24 @@ class Test_data_expression(_Test_expression_base,
         with self.assertRaises(ValueError):
             e.expr = v + 1
 
-    def test_potentially_variable(self):
+    def testis_potentially_variable(self):
         e = self._ctype_factory()
-        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(e.is_potentially_variable(), False)
         self.assertEqual(potentially_variable(e), False)
         e.expr = 1
-        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(e.is_potentially_variable(), False)
         self.assertEqual(potentially_variable(e), False)
         p = parameter()
         e.expr = p**2
-        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(e.is_potentially_variable(), False)
         self.assertEqual(potentially_variable(e), False)
         a = self._ctype_factory()
         e.expr = (a*p)**2/(p + 5)
-        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(e.is_potentially_variable(), False)
         self.assertEqual(potentially_variable(e), False)
         a.expr = 2.0
         p.value = 5.0
-        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(e.is_potentially_variable(), False)
         self.assertEqual(potentially_variable(e), False)
         self.assertEqual(e(), 10.0)
 

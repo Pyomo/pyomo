@@ -3,30 +3,25 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 from six import StringIO
-from pyomo.util.log import LoggingIntercept
+from pyomo.common.log import LoggingIntercept
 
 import pyutilib.th as unittest
 import pyutilib.services
 import random
 
 import pyomo.opt
-from pyomo.util.plugin import Plugin
+from pyomo.common.plugin import Plugin
 from pyomo.environ import *
-from pyomo.core.base import expr_common, expr as EXPR
+import pyomo.core.expr.current as EXPR
 
 solvers = pyomo.opt.check_available_solvers('glpk')
 
-# DEBUG
-from nose.tools import set_trace
 
-class TestAddSlacks_coopr3(unittest.TestCase):
+class TestAddSlacks(unittest.TestCase):
+
     def setUp(self):
-        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
         # set seed so we can test name collisions predictably
         random.seed(666)
-
-    def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     @staticmethod
     def makeModel():
@@ -34,7 +29,7 @@ class TestAddSlacks_coopr3(unittest.TestCase):
         model.x = Var(within=NonNegativeReals)
         model.y = Var(within=NonNegativeReals)
         model.rule1 = Constraint(expr=model.x <= 5)
-        model.rule2 = Constraint(expr=1 <= model.y <= 3)
+        model.rule2 = Constraint(expr=inequality(1, model.y, 3))
         model.rule3 = Constraint(expr=model.x >= 0.1)
         model.obj = Objective(expr=-model.x-model.y)
         return model
@@ -81,14 +76,12 @@ class TestAddSlacks_coopr3(unittest.TestCase):
         self.assertIsNone(cons.lower)
         self.assertEqual(cons.upper, 5)
         
-        self.assertIs(cons.body._args[0], m.x)
-        self.assertEqual(cons.body._coef[0], 1)
-        self.assertIs(cons.body._args[1], transBlock._slack_minus_rule1)
-        self.assertEqual(cons.body._coef[1], -1)
-        
-        self.assertEqual(len(cons.body._args), 2)
-        self.assertEqual(len(cons.body._coef), 2)
-        self.assertEqual(cons.body._const, 0)
+        self.assertEqual(cons.body.nargs(), 2)
+
+        self.assertIs(cons.body.arg(0), m.x)
+        self.assertIs(cons.body.arg(1).__class__, EXPR.MonomialTermExpression)
+        self.assertEqual(cons.body.arg(1).arg(0), -1)
+        self.assertIs(cons.body.arg(1).arg(1), transBlock._slack_minus_rule1)
         
     def checkRule3(self, m):
         # check all original variables still there:
@@ -98,14 +91,10 @@ class TestAddSlacks_coopr3(unittest.TestCase):
         self.assertIsNone(cons.upper)
         self.assertEqual(cons.lower, 0.1)
         
-        self.assertIs(cons.body._args[0], m.x)
-        self.assertEqual(cons.body._coef[0], 1)
-        self.assertIs(cons.body._args[1], transBlock._slack_plus_rule3)
-        self.assertEqual(cons.body._coef[1], 1)
-        
-        self.assertEqual(len(cons.body._args), 2)
-        self.assertEqual(len(cons.body._coef), 2)
-        self.assertEqual(cons.body._const, 0)
+        self.assertEqual(cons.body.nargs(), 2)
+
+        self.assertIs(cons.body.arg(0), m.x)
+        self.assertIs(cons.body.arg(1), transBlock._slack_plus_rule3)
 
     def test_ub_constraint_modified(self):
         m = self.makeModel()
@@ -128,16 +117,13 @@ class TestAddSlacks_coopr3(unittest.TestCase):
         self.assertEqual(cons.lower, 1)
         self.assertEqual(cons.upper, 3)
 
-        self.assertIs(cons.body._args[0], m.y)
-        self.assertEqual(cons.body._coef[0], 1)
-        self.assertIs(cons.body._args[1], transBlock._slack_plus_rule2)
-        self.assertEqual(cons.body._coef[1], 1)
-        self.assertIs(cons.body._args[2], transBlock._slack_minus_rule2)
-        self.assertEqual(cons.body._coef[2], -1)
-        
-        self.assertEqual(len(cons.body._args), 3)
-        self.assertEqual(len(cons.body._coef), 3)
-        self.assertEqual(cons.body._const, 0)
+        self.assertEqual(cons.body.nargs(), 3)
+
+        self.assertIs(cons.body.arg(0), m.y)
+        self.assertIs(cons.body.arg(1), transBlock._slack_plus_rule2)
+        self.assertIs(cons.body.arg(2).__class__, EXPR.MonomialTermExpression)
+        self.assertEqual(cons.body.arg(2).arg(0), -1)
+        self.assertIs(cons.body.arg(2).arg(1), transBlock._slack_minus_rule2)
 
     def test_obj_deactivated(self):
         m = self.makeModel()
@@ -157,20 +143,17 @@ class TestAddSlacks_coopr3(unittest.TestCase):
         self.assertIsInstance(obj, Objective)
         self.assertTrue(obj.active)
         
-        self.assertIs(obj.expr._args[0], transBlock._slack_minus_rule1)
-        self.assertIs(obj.expr._args[1], transBlock._slack_plus_rule2)
-        self.assertIs(obj.expr._args[2], transBlock._slack_minus_rule2)
-        self.assertIs(obj.expr._args[3], transBlock._slack_plus_rule3)
-        for i in range(0, 4):
-            self.assertEqual(obj.expr._coef[i], 1)
-        self.assertEqual(obj.expr._const, 0)
-        self.assertEqual(len(obj.expr._args), 4)
-        self.assertEqual(len(obj.expr._coef), 4)
+        self.assertEqual(obj.expr.nargs(), 4)
+
+        self.assertIs(obj.expr.arg(0), transBlock._slack_minus_rule1)
+        self.assertIs(obj.expr.arg(1), transBlock._slack_plus_rule2)
+        self.assertIs(obj.expr.arg(2), transBlock._slack_minus_rule2)
+        self.assertIs(obj.expr.arg(3), transBlock._slack_plus_rule3)
 
     def test_badModel_err(self):
         model = ConcreteModel()
         model.x = Var(within=NonNegativeReals)
-        model.rule1 = Constraint(expr=6 <= model.x <= 5)
+        model.rule1 = Constraint(expr=inequality(6, model.x, 5))
         self.assertRaisesRegexp(
             RuntimeError, 
             "Lower bound exceeds upper bound in constraint rule1*", 
@@ -261,13 +244,9 @@ class TestAddSlacks_coopr3(unittest.TestCase):
     def checkTargetsObj(self, m):
         transBlock = m._core_add_slack_variables
         obj = transBlock.component("_slack_objective")
-        self.assertEqual(len(obj.expr._args), 2)
-        self.assertEqual(len(obj.expr._coef), 2)
-        self.assertIs(obj.expr._args[0], transBlock._slack_minus_rule1)
-        self.assertEqual(obj.expr._coef[0], 1)
-        self.assertIs(obj.expr._args[1], transBlock._slack_plus_rule3)
-        self.assertEqual(obj.expr._coef[1], 1)
-        self.assertEqual(obj.expr._const, 0)
+        self.assertEqual(obj.expr.nargs(), 2)
+        self.assertIs(obj.expr.arg(0), transBlock._slack_minus_rule1)
+        self.assertIs(obj.expr.arg(1), transBlock._slack_plus_rule3)
 
     def test_target_objective(self):
         m = self.makeModel()
@@ -300,7 +279,7 @@ class TestAddSlacks_coopr3(unittest.TestCase):
 
     def test_transformed_constraints_sumexpression_body(self):
         m = self.makeModel()
-        m.rule4 = Constraint(expr=5 <= m.x - 2*m.y <= 9)
+        m.rule4 = Constraint(expr=inequality(5, m.x - 2*m.y, 9))
         TransformationFactory('core.add_slack_variables').apply_to(
             m,
             targets=[ComponentUID(m.rule4)])
@@ -309,16 +288,16 @@ class TestAddSlacks_coopr3(unittest.TestCase):
         c = m.rule4
         self.assertEqual(c.lower, 5)
         self.assertEqual(c.upper, 9)
-        self.assertEqual(len(c.body._args), 4)
-        self.assertEqual(len(c.body._coef), 4)
-        self.assertIs(c.body._args[0], m.x)
-        self.assertIs(c.body._args[1], m.y)
-        self.assertIs(c.body._args[2], transBlock._slack_plus_rule4)
-        self.assertIs(c.body._args[3], transBlock._slack_minus_rule4)
-        self.assertEqual(c.body._coef[0], 1)
-        self.assertEqual(c.body._coef[1], -2)
-        self.assertEqual(c.body._coef[2], 1)
-        self.assertEqual(c.body._coef[3], -1)
+
+        self.assertEqual(c.body.nargs(), 4)
+
+        self.assertIs(c.body.arg(0), m.x)
+        self.assertIs(c.body.arg(1).arg(0), -2)
+        self.assertIs(c.body.arg(1).arg(1), m.y)
+        self.assertIs(c.body.arg(2), transBlock._slack_plus_rule4)
+        self.assertIs(c.body.arg(3).__class__, EXPR.MonomialTermExpression)
+        self.assertEqual(c.body.arg(3).arg(0), -1)
+        self.assertIs(c.body.arg(3).arg(1), transBlock._slack_minus_rule4)
 
     def test_transformed_constraint_scalar_body(self):
         m = self.makeModel()
@@ -332,13 +311,14 @@ class TestAddSlacks_coopr3(unittest.TestCase):
         c = m.rule4
         self.assertIsNone(c.lower)
         self.assertEqual(c.upper, 9)
-        self.assertEqual(len(c.body._args), 1)
-        self.assertEqual(len(c.body._coef), 1)
-        self.assertEqual(c.body._const, 6)
-        self.assertIs(c.body._args[0], transBlock._slack_minus_rule4)
-        self.assertEqual(c.body._coef[0], -1)
+        self.assertEqual(c.body.nargs(), 2)
+        self.assertEqual(c.body.arg(0), 6)
+        self.assertIs(c.body.arg(1).__class__, EXPR.MonomialTermExpression)
+        self.assertEqual(c.body.arg(1).arg(0), -1)
+        self.assertIs(c.body.arg(1).arg(1), transBlock._slack_minus_rule4)
        
 
+"""
 # TODO: QUESTION: Is this bad? I just copied all of the tests that involve 
 # expressions and changed what I needed to. But the only thing different is the
 # coefficients as dictionaries rather than constraints... So... the code is 
@@ -364,13 +344,12 @@ class TestAddSlacks_pyomo4(unittest.TestCase):
         self.assertIsNone(cons.lower)
         self.assertEqual(cons.upper, 5)
         
-        self.assertIs(cons.body._args[0], m.x)
-        self.assertEqual(cons.body._coef[id(cons.body._args[0])], 1)
-        self.assertIs(cons.body._args[1], transBlock._slack_minus_rule1)
-        self.assertEqual(cons.body._coef[id(cons.body._args[1])], -1)
+        self.assertIs(cons.body.arg(0), m.x)
+        self.assertEqual(cons.body._coef[id(cons.body.arg(0))], 1)
+        self.assertIs(cons.body.arg(1), transBlock._slack_minus_rule1)
+        self.assertEqual(cons.body._coef[id(cons.body.arg(1))], -1)
         
-        self.assertEqual(len(cons.body._args), 2)
-        self.assertEqual(len(cons.body._coef), 2)
+        self.assertEqual(cons.body.nargs(), 2)
         self.assertEqual(cons.body._const, 0)
         
     def checkRule3(self, m):
@@ -381,13 +360,12 @@ class TestAddSlacks_pyomo4(unittest.TestCase):
         self.assertIsNone(cons.upper)
         self.assertEqual(cons.lower, 0.1)
         
-        self.assertIs(cons.body._args[0], m.x)
-        self.assertEqual(cons.body._coef[id(cons.body._args[0])], 1)
-        self.assertIs(cons.body._args[1], transBlock._slack_plus_rule3)
-        self.assertEqual(cons.body._coef[id(cons.body._args[1])], 1)
+        self.assertIs(cons.body.arg(0), m.x)
+        self.assertEqual(cons.body._coef[id(cons.body.arg(0))], 1)
+        self.assertIs(cons.body.arg(1), transBlock._slack_plus_rule3)
+        self.assertEqual(cons.body._coef[id(cons.body.arg(1))], 1)
         
-        self.assertEqual(len(cons.body._args), 2)
-        self.assertEqual(len(cons.body._coef), 2)
+        self.assertEqual(cons.body.nargs(), 2)
         self.assertEqual(cons.body._const, 0)
 
     def test_ub_constraint_modified(self):
@@ -411,15 +389,14 @@ class TestAddSlacks_pyomo4(unittest.TestCase):
         self.assertEqual(cons.lower, 1)
         self.assertEqual(cons.upper, 3)
 
-        self.assertIs(cons.body._args[0], m.y)
-        self.assertEqual(cons.body._coef[id(cons.body._args[0])], 1)
-        self.assertIs(cons.body._args[1], transBlock._slack_plus_rule2)
-        self.assertEqual(cons.body._coef[id(cons.body._args[1])], 1)
-        self.assertIs(cons.body._args[2], transBlock._slack_minus_rule2)
-        self.assertEqual(cons.body._coef[id(cons.body._args[2])], -1)
+        self.assertIs(cons.body.arg(0), m.y)
+        self.assertEqual(cons.body._coef[id(cons.body.arg(0))], 1)
+        self.assertIs(cons.body.arg(1), transBlock._slack_plus_rule2)
+        self.assertEqual(cons.body._coef[id(cons.body.arg(1))], 1)
+        self.assertIs(cons.body.arg(2), transBlock._slack_minus_rule2)
+        self.assertEqual(cons.body._coef[id(cons.body.arg(2))], -1)
         
-        self.assertEqual(len(cons.body._args), 3)
-        self.assertEqual(len(cons.body._coef), 3)
+        self.assertEqual(cons.body.nargs(), 3)
         self.assertEqual(cons.body._const, 0)
 
     def test_new_obj_created(self):
@@ -433,14 +410,14 @@ class TestAddSlacks_pyomo4(unittest.TestCase):
         self.assertIsInstance(obj, Objective)
         self.assertTrue(obj.active)
         
-        self.assertIs(obj.expr._args[0], transBlock._slack_minus_rule1)
-        self.assertIs(obj.expr._args[1], transBlock._slack_plus_rule2)
-        self.assertIs(obj.expr._args[2], transBlock._slack_minus_rule2)
-        self.assertIs(obj.expr._args[3], transBlock._slack_plus_rule3)
+        self.assertIs(obj.expr.arg(0), transBlock._slack_minus_rule1)
+        self.assertIs(obj.expr.arg(1), transBlock._slack_plus_rule2)
+        self.assertIs(obj.expr.arg(2), transBlock._slack_minus_rule2)
+        self.assertIs(obj.expr.arg(3), transBlock._slack_plus_rule3)
         for i in range(0, 4):
-            self.assertEqual(obj.expr._coef[id(obj.expr._args[i])], 1)
+            self.assertEqual(obj.expr._coef[id(obj.expr.arg(i))], 1)
         self.assertEqual(obj.expr._const, 0)
-        self.assertEqual(len(obj.expr._args), 4)
+        self.assertEqual(obj.expr.nargs(), 4)
         self.assertEqual(len(obj.expr._coef), 4)
 
     def test_leave_deactivated_constraints(self):
@@ -485,17 +462,16 @@ class TestAddSlacks_pyomo4(unittest.TestCase):
 
         transBlock = m._core_add_slack_variables
         obj = transBlock.component("_slack_objective")
-        self.assertEqual(len(obj.expr._args), 2)
-        self.assertEqual(len(obj.expr._coef), 2)
-        self.assertIs(obj.expr._args[0], transBlock._slack_minus_rule1)
-        self.assertEqual(obj.expr._coef[id(obj.expr._args[0])], 1)
-        self.assertIs(obj.expr._args[1], transBlock._slack_plus_rule3)
-        self.assertEqual(obj.expr._coef[id(obj.expr._args[1])], 1)
+        self.assertEqual(obj.expr.nargs(), 2)
+        self.assertIs(obj.expr.arg(0), transBlock._slack_minus_rule1)
+        self.assertEqual(obj.expr._coef[id(obj.expr.arg(0))], 1)
+        self.assertIs(obj.expr.arg(1), transBlock._slack_plus_rule3)
+        self.assertEqual(obj.expr._coef[id(obj.expr.arg(1))], 1)
         self.assertEqual(obj.expr._const, 0)
 
     def test_transformed_constraints_linearexpression_body(self):
         m = self.makeModel()
-        m.rule4 = Constraint(expr=5 <= m.x - 2*m.y <= 9)
+        m.rule4 = Constraint(expr=inequality(5, m.x - 2*m.y, 9))
         TransformationFactory('core.add_slack_variables').apply_to(
             m,
             targets=[ComponentUID(m.rule4)])
@@ -504,20 +480,20 @@ class TestAddSlacks_pyomo4(unittest.TestCase):
         c = m.rule4
         self.assertEqual(c.lower, 5)
         self.assertEqual(c.upper, 9)
-        self.assertEqual(len(c.body._args), 4)
+        self.assertEqual(c.body.nargs(), 4)
         self.assertEqual(len(c.body._coef), 4)
-        self.assertIs(c.body._args[0], m.x)
-        self.assertIs(c.body._args[1], m.y)
-        self.assertIs(c.body._args[2], transBlock._slack_plus_rule4)
-        self.assertIs(c.body._args[3], transBlock._slack_minus_rule4)
-        self.assertEqual(c.body._coef[id(c.body._args[0])], 1)
-        self.assertEqual(c.body._coef[id(c.body._args[1])], -2)
-        self.assertEqual(c.body._coef[id(c.body._args[2])], 1)
-        self.assertEqual(c.body._coef[id(c.body._args[3])], -1)
+        self.assertIs(c.body.arg(0), m.x)
+        self.assertIs(c.body.arg(1), m.y)
+        self.assertIs(c.body.arg(2), transBlock._slack_plus_rule4)
+        self.assertIs(c.body.arg(3), transBlock._slack_minus_rule4)
+        self.assertEqual(c.body._coef[id(c.body.arg(0))], 1)
+        self.assertEqual(c.body._coef[id(c.body.arg(1))], -2)
+        self.assertEqual(c.body._coef[id(c.body.arg(2))], 1)
+        self.assertEqual(c.body._coef[id(c.body.arg(3))], -1)
 
     def test_transformed_constraints_sumexpression_body(self):
         m = self.makeModel()
-        m.rule4 = Constraint(expr=5 <= m.x**2 - 2*m.y <= 9)
+        m.rule4 = Constraint(expr=inequality(5, m.x**2 - 2*m.y, 9))
         TransformationFactory('core.add_slack_variables').apply_to(
             m,
             targets=[ComponentUID(m.rule4)])
@@ -526,24 +502,24 @@ class TestAddSlacks_pyomo4(unittest.TestCase):
         c = m.rule4
         self.assertEqual(c.lower, 5)
         self.assertEqual(c.upper, 9)
-        self.assertEqual(len(c.body._args), 4)
+        self.assertEqual(c.body.nargs(), 4)
         # this is a PowExpression now
-        self.assertIs(c.body._args[0]._args[0], m.x)
-        self.assertEqual(c.body._args[0]._args[1], 2)
+        self.assertIs(c.body.arg(0).arg(0), m.x)
+        self.assertEqual(c.body.arg(0).arg(1), 2)
         # this is a linear expression
-        term2 = c.body._args[1]
-        self.assertEqual(len(term2._args), 1)
+        term2 = c.body.arg(1)
+        self.assertEqual(term2.nargs(), 1)
         self.assertEqual(len(term2._coef), 1)
-        self.assertIs(term2._args[0], m.y)
-        self.assertEqual(term2._coef[id(term2._args[0])], -2)
+        self.assertIs(term2.arg(0), m.y)
+        self.assertEqual(term2._coef[id(term2.arg(0))], -2)
         # this is just a variable
-        self.assertIs(c.body._args[2], transBlock._slack_plus_rule4)
+        self.assertIs(c.body.arg(2), transBlock._slack_plus_rule4)
         # this is a linear expression
-        term4 = c.body._args[3]
-        self.assertEqual(len(term4._args), 1)
+        term4 = c.body.arg(3)
+        self.assertEqual(term4.nargs(), 1)
         self.assertEqual(len(term4._coef), 1)
-        self.assertIs(term4._args[0], transBlock._slack_minus_rule4)
-        self.assertEqual(term4._coef[id(term4._args[0])], -1)
+        self.assertIs(term4.arg(0), transBlock._slack_minus_rule4)
+        self.assertEqual(term4._coef[id(term4.arg(0))], -1)
 
     def test_transformed_constraint_scalar_body(self):
         m = self.makeModel()
@@ -557,19 +533,15 @@ class TestAddSlacks_pyomo4(unittest.TestCase):
         c = m.rule4
         self.assertIsNone(c.lower)
         self.assertEqual(c.upper, 9)
-        self.assertEqual(len(c.body._args), 1)
+        self.assertEqual(c.body.nargs(), 1)
         self.assertEqual(len(c.body._coef), 1)
         self.assertEqual(c.body._const, 6)
-        self.assertIs(c.body._args[0], transBlock._slack_minus_rule4)
-        self.assertEqual(c.body._coef[id(c.body._args[0])], -1)
+        self.assertIs(c.body.arg(0), transBlock._slack_minus_rule4)
+        self.assertEqual(c.body._coef[id(c.body.arg(0))], -1)
+"""
 
 
-class TestAddSlacks_IndexedConstraints_coopr3(unittest.TestCase):
-    def setUp(self):
-        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
-
-    def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
+class TestAddSlacks_IndexedConstraints(unittest.TestCase):
 
     @staticmethod
     def makeModel():
@@ -637,18 +609,13 @@ class TestAddSlacks_IndexedConstraints_coopr3(unittest.TestCase):
         transBlock = m._core_add_slack_variables
         obj = transBlock.component("_slack_objective")
         self.assertIsInstance(obj, Objective)
-        self.assertEqual(len(obj.expr._args), 3)
-        self.assertEqual(len(obj.expr._coef), 3)
-        self.assertEqual(obj.expr._const, 0)
-        self.assertIs(obj.expr._args[0], 
+        self.assertEqual(obj.expr.nargs(), 3)
+        self.assertIs(obj.expr.arg(0), 
                       transBlock.component("_slack_plus_rule1[1]"))
-        self.assertIs(obj.expr._args[1], 
+        self.assertIs(obj.expr.arg(1), 
                       transBlock.component("_slack_plus_rule1[2]"))
-        self.assertIs(obj.expr._args[2], 
+        self.assertIs(obj.expr.arg(2), 
                       transBlock.component("_slack_plus_rule1[3]"))
-        self.assertIs(obj.expr._coef[0], 1) 
-        self.assertIs(obj.expr._coef[1], 1) 
-        self.assertIs(obj.expr._coef[2], 1) 
 
     def test_indexedtarget_objective(self):
         m = self.makeModel()
@@ -672,16 +639,14 @@ class TestAddSlacks_IndexedConstraints_coopr3(unittest.TestCase):
         c = m.rule1[i]
         self.assertEqual(c.lower, 4)
         self.assertIsNone(c.upper)
-        self.assertEqual(len(c.body._args), 2)
-        self.assertEqual(len(c.body._coef), 2)
-        self.assertIs(c.body._args[0], m.x[i])
+
+        self.assertEqual(c.body.nargs(), 2)
+        self.assertEqual(c.body.arg(0).arg(0), 2)
+        self.assertIs(c.body.arg(0).arg(1), m.x[i])
         self.assertIs(
-            c.body._args[1], 
+            c.body.arg(1), 
             m._core_add_slack_variables.component(
                 "_slack_plus_rule1[%s]" % i))
-        self.assertEqual(c.body._coef[0], 2)
-        self.assertEqual(c.body._coef[1], 1)
-        self.assertEqual(c.body._const, 0)
 
     def test_indexedtarget_targets_transformed(self):
         m = self.makeModel()
@@ -729,10 +694,8 @@ class TestAddSlacks_IndexedConstraints_coopr3(unittest.TestCase):
         c = m.rule1[i]
         self.assertEqual(c.lower, 4)
         self.assertIsNone(c.upper)
-        self.assertEqual(len(c.body._numerator), 1)
-        self.assertEqual(len(c.body._denominator), 0)
-        self.assertIs(c.body._numerator[0], m.x[i])
-        self.assertEqual(c.body._coef, 2)
+        self.assertEqual(c.body.arg(0), 2)
+        self.assertIs(c.body.arg(1), m.x[i])
 
     def test_ConstraintDatatarget_nontargets_same(self):
         m = self.makeModel()
@@ -794,7 +757,7 @@ class TestAddSlacks_IndexedConstraints_coopr3(unittest.TestCase):
         self.assertFalse(m2.obj.active)
         self.checkConstraintDataObj(m2)
 
-
+"""
 # TODO: QUESTION: same as above here...
 class TestAddSlacks_IndexedConstraints_pyomo4(unittest.TestCase):
     def setUp(self):
@@ -832,32 +795,30 @@ class TestAddSlacks_IndexedConstraints_pyomo4(unittest.TestCase):
         transBlock = m._core_add_slack_variables
         obj = transBlock.component("_slack_objective")
         self.assertIsInstance(obj, Objective)
-        self.assertEqual(len(obj.expr._args), 3)
-        self.assertEqual(len(obj.expr._coef), 3)
+        self.assertEqual(obj.expr.nargs(), 3)
         self.assertEqual(obj.expr._const, 0)
-        self.assertIs(obj.expr._args[0], 
+        self.assertIs(obj.expr.arg(0), 
                       transBlock.component("_slack_plus_rule1[1]"))
-        self.assertIs(obj.expr._args[1], 
+        self.assertIs(obj.expr.arg(1), 
                       transBlock.component("_slack_plus_rule1[2]"))
-        self.assertIs(obj.expr._args[2], 
+        self.assertIs(obj.expr.arg(2), 
                       transBlock.component("_slack_plus_rule1[3]"))
-        self.assertIs(obj.expr._coef[id(obj.expr._args[0])], 1) 
-        self.assertIs(obj.expr._coef[id(obj.expr._args[1])], 1) 
-        self.assertIs(obj.expr._coef[id(obj.expr._args[2])], 1) 
+        self.assertIs(obj.expr._coef[id(obj.expr.arg(0))], 1) 
+        self.assertIs(obj.expr._coef[id(obj.expr.arg(1))], 1) 
+        self.assertIs(obj.expr._coef[id(obj.expr.arg(2))], 1) 
 
     def checkTransformedRule1(self, m, i):
         c = m.rule1[i]
         self.assertEqual(c.lower, 4)
         self.assertIsNone(c.upper)
-        self.assertEqual(len(c.body._args), 2)
-        self.assertEqual(len(c.body._coef), 2)
-        self.assertIs(c.body._args[0], m.x[i])
+        self.assertEqual(c.body.nargs(), 2)
+        self.assertIs(c.body.arg(0), m.x[i])
         self.assertIs(
-            c.body._args[1], 
+            c.body.arg(1), 
             m._core_add_slack_variables.component(
                 "_slack_plus_rule1[%s]" % i))
-        self.assertEqual(c.body._coef[id(c.body._args[0])], 2)
-        self.assertEqual(c.body._coef[id(c.body._args[1])], 1)
+        self.assertEqual(c.body._coef[id(c.body.arg(0))], 2)
+        self.assertEqual(c.body._coef[id(c.body.arg(1))], 1)
         self.assertEqual(c.body._const, 0)
 
     def test_indexedtarget_targets_transformed(self):
@@ -873,10 +834,9 @@ class TestAddSlacks_IndexedConstraints_pyomo4(unittest.TestCase):
         c = m.rule1[i]
         self.assertEqual(c.lower, 4)
         self.assertIsNone(c.upper)
-        self.assertEqual(len(c.body._args), 1)
-        self.assertEqual(len(c.body._coef), 1)
-        self.assertIs(c.body._args[0], m.x[i])
-        self.assertEqual(c.body._coef[id(c.body._args[0])], 2)
+        self.assertEqual(c.body.nargs(), 1)
+        self.assertIs(c.body.arg(0), m.x[i])
+        self.assertEqual(c.body._coef[id(c.body.arg(0))], 2)
 
     def test_ConstraintDatatarget_nontargets_same(self):
         m = self.makeModel()
@@ -908,3 +868,10 @@ class TestAddSlacks_IndexedConstraints_pyomo4(unittest.TestCase):
         obj = transBlock.component("_slack_objective")
         self.assertIsInstance(obj, Objective)
         self.assertIs(obj.expr, transBlock.component("_slack_plus_rule1[2]"))
+"""
+
+
+
+if __name__ == '__main__':
+    unittest.main()
+

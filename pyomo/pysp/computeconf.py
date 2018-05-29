@@ -25,7 +25,7 @@ from pyomo.core import *
 # plugin would yield a complete failure to solve cvar problems. see
 # related hacks below, searching for CVARHACK.
 from pyomo.opt import UndefinedData
-from pyomo.util import pyomo_command
+from pyomo.common import pyomo_command
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
 from pyomo.pysp.phinit import (construct_ph_options_parser,
