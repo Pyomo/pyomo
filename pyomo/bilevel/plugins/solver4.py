@@ -31,7 +31,7 @@ class BILEVEL_Solver4(pyomo.opt.OptSolver):
     def _apply_solver(self):
         start_time = time.time()
         if not self.options.bigM:
-            self._bigM = 9999
+            self._bigM = 999
         else:
             self._bigM = self.options.bigM
         #
@@ -44,14 +44,15 @@ class BILEVEL_Solver4(pyomo.opt.OptSolver):
         xfrm = TransformationFactory('gdp.bigm')
         xfrm.apply_to(self._instance, bigM=self.options.get('bigM',self._bigM))
         #
-        #self._instance.pprint()
+        ##self._instance.pprint()
 
         xfrm = TransformationFactory('gdp.bilinear')
         xfrm.apply_to(self._instance)
         xfrm = TransformationFactory('gdp.bigm')
-        xfrm.apply_to(self._instance, bigM=self.options.get('bigM',self._bigM))
+        #xfrm.apply_to(self._instance, bigM=self.options.get('bigM',self._bigM))
+        xfrm.apply_to(self._instance, bigM=8888)
 
-        #self._instance.pprint()
+        ##self._instance.pprint()
         #
         # Solve with a specified solver
         #
@@ -75,12 +76,14 @@ class BILEVEL_Solver4(pyomo.opt.OptSolver):
             self.results.append(opt.solve(self._instance,
                                           tee=self._tee,
                                           timelimit=self._timelimit,
-                                          symbolic_solver_labels=True,
-                                          keepfiles=True
+                                          symbolic_solver_labels=False,
+                                          keepfiles=False
                                           ))
         #
         stop_time = time.time()
         self.wall_time = stop_time - start_time
+        #self._instance.pprint()
+        #self._instance.display()
         #
         # Deactivate the block that contains the optimality conditions,
         # and reactivate SubModel
@@ -135,7 +138,7 @@ class BILEVEL_Solver4(pyomo.opt.OptSolver):
         prob.number_of_continuous_variables = self._instance.statistics.number_of_continuous_variables
         prob.number_of_objectives = self._instance.statistics.number_of_objectives
         #
-        from pyomo.core import maximize
+        ##from pyomo.core import maximize
         ##if self._instance.sense == maximize:
             ##prob.sense = pyomo.opt.ProblemSense.maximize
         ##else:
