@@ -40,6 +40,7 @@ class TestVarAggregate(unittest.TestCase):
         TransformationFactory('contrib.aggregate_vars').apply_to(m)
         z_to_vars = m._var_aggregator_info.z_to_vars
         var_to_z = m._var_aggregator_info.var_to_z
+        # print(z_to_vars[m._var_aggregator_info.z[1]] == ComponentSet([m.v3, m.v4]))
         self.assertEquals(
             z_to_vars[m._var_aggregator_info.z[1]],
             ComponentSet([m.v3, m.v4]))
