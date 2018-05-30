@@ -149,8 +149,6 @@ else:                               #pragma: no cover
     _chainedInequality = None
 
 
-_ParamData = None
-SimpleParam = None
 TemplateExpressionError = None
 def initialize_expression_data():
     """
@@ -159,10 +157,7 @@ def initialize_expression_data():
     This function is necessary to avoid global imports.  It is executed
     when ``pyomo.environ`` is imported.
     """
-    global _ParamData
-    global SimpleParam
     global TemplateExpressionError
-    from pyomo.core.base.param import _ParamData, SimpleParam
     from pyomo.core.base.template_expr import TemplateExpressionError
 
 
@@ -2847,37 +2842,21 @@ def _decompose_linear_terms(expr, multiplier=1):
 
 
 def _process_arg(obj):
-    #if False and obj.__class__ is SumExpression or obj.__class__ is _MutableSumExpression:
-    #    if ignore_entangled_expressions.detangle[-1] and obj._is_owned:
-            #
-            # If the viewsum expression is owned, then we need to
-            # clone it to avoid creating an entangled expression.
-            #
-            # But we don't have to worry about entanglement amongst other immutable
-            # expression objects.
-            #
-    #        return clone_expression( obj, clone_leaves=False )
-    #    return obj
-
-    #if obj.is_expression_type():
-    #    return obj
-
     if obj.__class__ is NumericConstant:
         return value(obj)
 
-    if (obj.__class__ is _ParamData or obj.__class__ is SimpleParam) and not obj._component()._mutable:
-        if not obj._constructed:
-            return obj
-        return obj()
-
-    if obj.is_indexed():
-        raise TypeError(
-                "Argument for expression is an indexed numeric "
-                "value\nspecified without an index:\n\t%s\nIs this "
-                "value defined over an index that you did not specify?"
-                % (obj.name, ) )
-
-    return obj
+    try:
+        if obj.is_parameter_type() and not obj._component()._mutable and obj._constructed:
+            return obj()
+        return obj
+    except:
+        if obj.is_indexed():
+            raise TypeError(
+                    "Argument for expression is an indexed numeric "
+                    "value\nspecified without an index:\n\t%s\nIs this "
+                    "value defined over an index that you did not specify?"
+                    % (obj.name, ) )
+        raise
 
 
 #@profile
