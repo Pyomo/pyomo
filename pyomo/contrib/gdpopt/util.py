@@ -1,5 +1,6 @@
 """Utility functions and classes for the GDPopt solver."""
 from __future__ import division
+import logging
 
 
 class _DoNothing(object):
@@ -23,3 +24,11 @@ class _DoNothing(object):
 class GDPoptSolveData(object):
     """Data container to hold solve-instance data."""
     pass
+
+
+def a_logger(str_or_logger):
+    """Returns a logger when passed either a logger name or logger object."""
+    if isinstance(str_or_logger, logging.Logger):
+        return str_or_logger
+    else:
+        return logging.getLogger(str_or_logger)
