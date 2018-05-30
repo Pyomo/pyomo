@@ -59,6 +59,7 @@ __all__ = (
 'ExpressionValueVisitor',
 'ExpressionReplacementVisitor',
 'LinearDecompositionError',
+'TemplateExpressionError',
 'SumExpressionBase',
 '_MutableSumExpression',    # This should not be referenced, except perhaps while testing code
 '_MutableLinearExpression',     # This should not be referenced, except perhaps while testing code
@@ -108,6 +109,14 @@ from pyomo.core.expr.expr_common import \
 from pyomo.core.expr import expr_common as common
 
 
+class TemplateExpressionError(ValueError):
+
+    def __init__(self, template, *args, **kwds):
+        self.template = template
+        super(TemplateExpressionError, self).__init__(*args, **kwds)
+
+
+
 if _using_chained_inequality:               #pragma: no cover
     class _chainedInequality(object):
 
@@ -147,18 +156,6 @@ if _using_chained_inequality:               #pragma: no cover
 
 else:                               #pragma: no cover
     _chainedInequality = None
-
-
-TemplateExpressionError = None
-def initialize_expression_data():
-    """
-    A function used to initialize expression global data.
-
-    This function is necessary to avoid global imports.  It is executed
-    when ``pyomo.environ`` is imported.
-    """
-    global TemplateExpressionError
-    from pyomo.core.base.template_expr import TemplateExpressionError
 
 
 class clone_counter(object):
@@ -2319,12 +2316,9 @@ class GetItemExpression(ExpressionBase):
         return True
 
     def _is_fixed(self, values):
-        from pyomo.core.base import Var # TODO
-        from pyomo.core.kernel.component_variable import IVariable # TODO
-        if isinstance(self._base, (Var, IVariable)):
-            for x in itervalues(self._base):
-                if not x.__class__ in nonpyomo_leaf_types and not x.is_fixed():
-                    return False
+        for x in itervalues(self._base):
+            if not x.__class__ in nonpyomo_leaf_types and not x.is_fixed():
+                return False
         return True
 
     def _compute_polynomial_degree(self, result):       # TODO: coverage
@@ -2847,6 +2841,7 @@ def _process_arg(obj):
 
     try:
         if obj.is_parameter_type() and not obj._component()._mutable and obj._constructed:
+            # Return the value of an immutable SimpleParam or ParamData object
             return obj()
         return obj
     except:
