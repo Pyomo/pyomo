@@ -48,20 +48,21 @@ from six import StringIO
 class Test_variable(unittest.TestCase):
 
     def test_pprint(self):
+        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
         v = variable()
-        pyomo.core.kernel.pprint(v)
+        pyomo.kernel.pprint(v)
         b = block()
         b.v = v
-        pyomo.core.kernel.pprint(v)
-        pyomo.core.kernel.pprint(b)
+        pyomo.kernel.pprint(v)
+        pyomo.kernel.pprint(b)
         m = block()
         m.b = b
-        pyomo.core.kernel.pprint(v)
-        pyomo.core.kernel.pprint(b)
-        pyomo.core.kernel.pprint(m)
+        pyomo.kernel.pprint(v)
+        pyomo.kernel.pprint(b)
+        pyomo.kernel.pprint(m)
 
     def test_extract_domain_type_and_bounds(self):
         # test an edge case

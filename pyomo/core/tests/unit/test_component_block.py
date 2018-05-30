@@ -85,6 +85,7 @@ def _collect_expr_components(exp):
 class TestMisc(unittest.TestCase):
 
     def test_pprint(self):
+        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
@@ -97,16 +98,16 @@ class TestMisc(unittest.TestCase):
         B.o = objective()
         B.p = parameter()
         B.s = sos([])
-        pyomo.core.kernel.pprint(B)
+        pyomo.kernel.pprint(B)
         b = block()
         b.B = B
-        pyomo.core.kernel.pprint(B)
-        pyomo.core.kernel.pprint(b)
+        pyomo.kernel.pprint(B)
+        pyomo.kernel.pprint(b)
         m = block()
         m.b = b
-        pyomo.core.kernel.pprint(B)
-        pyomo.core.kernel.pprint(b)
-        pyomo.core.kernel.pprint(m)
+        pyomo.kernel.pprint(B)
+        pyomo.kernel.pprint(b)
+        pyomo.kernel.pprint(m)
 
     def test_ctype(self):
         b = block()
