@@ -91,6 +91,7 @@ class Bilinear_Transformation(Transformation):
                     if v is None:
                         instance.bilinear_data_.vlist_boolean.append(vars_[0])
                         v = instance.bilinear_data_.vlist.add()
+                        instance.bilinear_data_.cache[id(vars_[0]), id(vars_[1])] = v
                         bounds = vars_[1].bounds
                         v.setlb(bounds[0])
                         v.setub(bounds[1])
@@ -115,6 +116,7 @@ class Bilinear_Transformation(Transformation):
                     if v is None:
                         instance.bilinear_data_.vlist_boolean.append(vars_[1])
                         v = instance.bilinear_data_.vlist.add()
+                        instance.bilinear_data_.cache[id(vars_[1]), id(vars_[0])] = v
                         bounds = vars_[0].bounds
                         v.setlb(bounds[0])
                         v.setub(bounds[1])
