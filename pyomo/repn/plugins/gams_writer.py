@@ -20,7 +20,7 @@ from pyutilib.misc import PauseGC
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import is_fixed, value, as_numeric, native_types, native_numeric_types
 from pyomo.core.base import (
-    SymbolMap, AlphaNumericTextLabeler, NumericLabeler,
+    SymbolMap, ShortNameLabeler, NumericLabeler,
     Block, Constraint, Expression, Objective, Var, Set, RangeSet, Param,
     minimize, Suffix, SortComponents, Connector)
 
@@ -59,7 +59,10 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
             elif arg.__class__ in native_types:
                 tmp.append("'{0}'".format(val))
             elif arg.is_variable_type():
-                tmp.append(val)
+                if arg.is_fixed():
+                    tmp.append("(%s)" % val)
+                else:
+                    tmp.append(val)
             elif arg.is_expression_type() and node._precedence() < arg._precedence():
                 tmp.append("({0})".format(val))
             else:
@@ -239,7 +242,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                              "I/O options is forbidden")
 
         if symbolic_solver_labels:
-            var_labeler = con_labeler = AlphaNumericTextLabeler()
+            var_labeler = con_labeler = ShortNameLabeler(63, '_')
         elif labeler is None:
             var_labeler = NumericLabeler('x')
             con_labeler = NumericLabeler('c')

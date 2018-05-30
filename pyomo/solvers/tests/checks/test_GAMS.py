@@ -10,13 +10,10 @@
 
 
 import pyutilib.th as unittest
-import pyutilib.subprocess
 from pyutilib.misc import capture_output
 from pyomo.environ import *
-from six import StringIO
-import contextlib, sys, os, shutil
+import os, shutil
 from tempfile import mkdtemp
-import subprocess
 
 opt_py = SolverFactory('gams', solver_io='python')
 gamspy_available = opt_py.available(exception_flag=False)
@@ -164,6 +161,88 @@ class GAMSTests(unittest.TestCase):
                                                          'resultsstat.dat')))
 
             shutil.rmtree(tmpdir)
+
+    @unittest.skipIf(not gamspy_available,
+                     "The 'gams' python bindings are not available")
+    def test_fixed_var_sign_py(self):
+        with SolverFactory("gams", solver_io="python") as opt:
+
+            m = ConcreteModel()
+            m.x = Var()
+            m.y = Var()
+            m.z = Var()
+            m.z.fix(-3)
+            m.c1 = Constraint(expr= m.x + m.y - m.z == 0)
+            m.c2 = Constraint(expr= m.z + m.y - m.z >= -10000)
+            m.c3 = Constraint(expr= -3 * m.z + m.y - m.z >= -10000)
+            m.c4 = Constraint(expr= -m.z + m.y - m.z >= -10000)
+            m.c5 = Constraint(expr= m.x <= 100)
+            m.o = Objective(expr= m.x, sense=maximize)
+
+            results = opt.solve(m)
+
+            self.assertEqual(results.solver.termination_condition,
+                             TerminationCondition.optimal)
+
+    @unittest.skipIf(not gamsgms_available,
+                     "The 'gams' executable is not available")
+    def test_fixed_var_sign_gms(self):
+        with SolverFactory("gams", solver_io="gms") as opt:
+
+            m = ConcreteModel()
+            m.x = Var()
+            m.y = Var()
+            m.z = Var()
+            m.z.fix(-3)
+            m.c1 = Constraint(expr= m.x + m.y - m.z == 0)
+            m.c2 = Constraint(expr= m.z + m.y - m.z >= -10000)
+            m.c3 = Constraint(expr= -3 * m.z + m.y - m.z >= -10000)
+            m.c4 = Constraint(expr= -m.z + m.y - m.z >= -10000)
+            m.c5 = Constraint(expr= m.x <= 100)
+            m.o = Objective(expr= m.x, sense=maximize)
+
+            results = opt.solve(m)
+
+            self.assertEqual(results.solver.termination_condition,
+                             TerminationCondition.optimal)
+
+    @unittest.skipIf(not gamspy_available,
+                     "The 'gams' python bindings are not available")
+    def test_long_var_py(self):
+        with SolverFactory("gams", solver_io="python") as opt:
+
+            m = ConcreteModel()
+            x = m.a23456789012345678901234567890123456789012345678901234567890123 = Var()
+            y = m.b234567890123456789012345678901234567890123456789012345678901234 = Var()
+            z = m.c23456789012345678901234567890123456789012345678901234567890123456789012345678901234567890 = Var()
+            w = m.d01234567890 = Var()
+            m.c1 = Constraint(expr= x + y + z + w == 0)
+            m.c2 = Constraint(expr= x >= 10)
+            m.o = Objective(expr= x)
+
+            results = opt.solve(m)
+
+            self.assertEqual(results.solver.termination_condition,
+                             TerminationCondition.optimal)
+
+    @unittest.skipIf(not gamsgms_available,
+                     "The 'gams' executable is not available")
+    def test_long_var_gms(self):
+        with SolverFactory("gams", solver_io="gms") as opt:
+
+            m = ConcreteModel()
+            x = m.a23456789012345678901234567890123456789012345678901234567890123 = Var()
+            y = m.b234567890123456789012345678901234567890123456789012345678901234 = Var()
+            z = m.c23456789012345678901234567890123456789012345678901234567890123456789012345678901234567890 = Var()
+            w = m.d01234567890 = Var()
+            m.c1 = Constraint(expr= x + y + z + w == 0)
+            m.c2 = Constraint(expr= x >= 10)
+            m.o = Objective(expr= x)
+
+            results = opt.solve(m)
+
+            self.assertEqual(results.solver.termination_condition,
+                             TerminationCondition.optimal)
 
 class GAMSLogfileTestBase(unittest.TestCase):
     def setUp(self):
