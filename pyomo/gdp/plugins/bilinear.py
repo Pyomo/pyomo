@@ -100,7 +100,7 @@ class Bilinear_Transformation(Transformation):
                         # First disjunct
                         d0 = instance.bilinear_data_.disjuncts_[id_,0]
                         d0.c1 = Constraint(expr=vars_[0] == 1)
-                        d0.c2 = Constraint(expr=v == coef_*vars_[1])
+                        d0.c2 = Constraint(expr=v == vars_[1])
                         # Second disjunct
                         d1 = instance.bilinear_data_.disjuncts_[id_,1]
                         d1.c1 = Constraint(expr=vars_[0] == 0)
@@ -109,7 +109,7 @@ class Bilinear_Transformation(Transformation):
                         instance.bilinear_data_.disjunction_data[id_] = [instance.bilinear_data_.disjuncts_[id_,0], instance.bilinear_data_.disjuncts_[id_,1]]
                         instance.bilinear_data_.disjunction_data[id_] = [instance.bilinear_data_.disjuncts_[id_,0], instance.bilinear_data_.disjuncts_[id_,1]]
                     # The disjunctive variable is the expression
-                    e += v
+                    e += coef_*v
                 #
                 elif isinstance(vars_[1].domain, BooleanSet):
                     v = instance.bilinear_data_.cache.get( (id(vars_[1]),id(vars_[0])), None )
@@ -125,7 +125,7 @@ class Bilinear_Transformation(Transformation):
                         # First disjunct
                         d0 = instance.bilinear_data_.disjuncts_[id_,0]
                         d0.c1 = Constraint(expr=vars_[1] == 1)
-                        d0.c2 = Constraint(expr=v == coef_*vars_[0])
+                        d0.c2 = Constraint(expr=v == vars_[0])
                         # Second disjunct
                         d1 = instance.bilinear_data_.disjuncts_[id_,1]
                         d1.c1 = Constraint(expr=vars_[1] == 0)
@@ -133,7 +133,7 @@ class Bilinear_Transformation(Transformation):
                         # Disjunction
                         instance.bilinear_data_.disjunction_data[id_] = [instance.bilinear_data_.disjuncts_[id_,0], instance.bilinear_data_.disjuncts_[id_,1]]
                     # The disjunctive variable is the expression
-                    e += v
+                    e += coef_*v
                 else:
                     # If neither variable is boolean, just reinsert the original bilinear term
                     e += coef_*vars_[0]*vars_[1]
