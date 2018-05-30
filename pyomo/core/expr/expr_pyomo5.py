@@ -1101,7 +1101,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
         return False, None
 
 
-def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_values=False, standardize=False):
+def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_values=False):
     """
     Return a string representation of an expression.
 
@@ -1117,48 +1117,11 @@ def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_va
         compute_values (bool): If :const:`True`, then
             parameters and fixed variables are evaluated before the
             expression string is generated.  Default is :const:`False`.
-        standardize (bool): If :const:`True` and :attr:`verbose` is :const:`False`, then the
-            expression form is standardized to pull out constant and linear terms.
-            Default is :const:`False`.
 
     Returns:
         A string representation for the expression.
     """
     verbose = common.TO_STRING_VERBOSE if verbose is None else verbose
-    #
-    # Standardize the output of expressions if requested (when verbose=False).
-    # This involves constructing a standard representation and then creating
-    # a string.
-    #
-    if standardize and not verbose:
-        from pyomo.repn import generate_standard_repn
-        try:
-            if expr.__class__ is EqualityExpression:
-                repn0 = generate_standard_repn(expr._args_[0], quadratic=True, compute_values=compute_values)
-                repn1 = generate_standard_repn(expr._args_[1], quadratic=True, compute_values=compute_values)
-                expr = EqualityExpression( (repn0.to_expression(), repn1.to_expression()) )
-            elif expr.__class__ is InequalityExpression:
-                repn0 = generate_standard_repn(expr._args_[0], quadratic=True, compute_values=compute_values)
-                repn1 = generate_standard_repn(expr._args_[1], quadratic=True, compute_values=compute_values)
-                expr = InequalityExpression( (repn0.to_expression(), repn1.to_expression()), strict=expr._strict )
-            elif expr.__class__ is RangedExpression:
-                repn0 = generate_standard_repn(expr._args_[0], quadratic=True, compute_values=compute_values)
-                repn1 = generate_standard_repn(expr._args_[1], quadratic=True, compute_values=compute_values)
-                repn2 = generate_standard_repn(expr._args_[2], quadratic=True, compute_values=compute_values)
-                expr = RangedExpression( (repn0.to_expression(), repn1.to_expression(), repn2.to_expression()), strict=expr._strict )
-            else:
-                repn = generate_standard_repn(expr, quadratic=True, compute_values=compute_values)
-                expr = repn.to_expression()
-        except:     #pragma: no cover
-            #
-            # Generation of the standard repn will fail if the
-            # expression is uninitialized.  Hence, we default to
-            # using the non-standardized form.
-            #
-            # It might be smarter to raise errors for specific issues (e.g. uninitialized parameters).
-            # Let's see if we start seeing errors that are masked here.
-            #
-            pass
     #
     # Setup the symbol map
     #
@@ -1299,7 +1262,7 @@ class ExpressionBase(NumericValue):
         Returns:
             A string.
         """
-        return expression_to_string(self, standardize=False)
+        return expression_to_string(self)
 
     def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         """
