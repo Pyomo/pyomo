@@ -1,5 +1,7 @@
 """Tests the variable aggregation module."""
 import pyutilib.th as unittest
+from pyomo.contrib.preprocessing.plugins.var_aggregator import (max_if_not_None,
+                                                                min_if_not_None)
 from pyomo.core.kernel import ComponentSet
 from pyomo.environ import (ConcreteModel, Constraint, RangeSet,
                            TransformationFactory, Var)
@@ -55,6 +57,22 @@ class TestVarAggregate(unittest.TestCase):
         self.assertIs(var_to_z[m.x[4]], m._var_aggregator_info.z[2])
         self.assertIs(var_to_z[m.y[1]], m._var_aggregator_info.z[3])
         self.assertIs(var_to_z[m.y[2]], m._var_aggregator_info.z[3])
+
+    def test_min_if_not_None(self):
+        self.assertEquals(min_if_not_None([1, 2, None, 3, None]), 1)
+        self.assertEquals(min_if_not_None([None, None, None]), None)
+        self.assertEquals(min_if_not_None([]), None)
+        self.assertEquals(min_if_not_None([None, 3, -1, 2]), -1)
+        self.assertEquals(min_if_not_None([0]), 0)
+        self.assertEquals(min_if_not_None([0, None]), 0)
+
+    def test_max_if_not_None(self):
+        self.assertEquals(max_if_not_None([1, 2, None, 3, None]), 3)
+        self.assertEquals(max_if_not_None([None, None, None]), None)
+        self.assertEquals(max_if_not_None([]), None)
+        self.assertEquals(max_if_not_None([None, 3, -1, 2]), 3)
+        self.assertEquals(max_if_not_None([0]), 0)
+        self.assertEquals(max_if_not_None([0, None]), 0)
 
 
 if __name__ == '__main__':

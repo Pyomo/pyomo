@@ -78,6 +78,28 @@ def _build_equality_set(model):
     return eq_var_map
 
 
+# TODO: these two functions were copied from contrib.gdp_bounds.compute_bounds
+# at some point, these all should be moved into pyomo.common.
+def min_if_not_None(iterable):
+    """Returns the minimum among non-None elements.
+
+    Returns None when all elements are None.
+
+    """
+    non_nones = [a for a in iterable if a is not None]
+    return min(non_nones or [None])  # min( [] or [None] ) -> None
+
+
+def max_if_not_None(iterable):
+    """Returns the maximum among non-None elements.
+
+    Returns None when all elements are None.
+
+    """
+    non_nones = [a for a in iterable if a is not None]
+    return max(non_nones or [None])  # min( [] or [None] ) -> None
+
+
 class VariableAggregator(IsomorphicTransformation):
     """Aggregate model variables that are linked by equality constraints."""
 
@@ -118,6 +140,7 @@ class VariableAggregator(IsomorphicTransformation):
         substitution_map = {id(var): z_var
                             for var, z_var in var_to_z.iteritems()}
         for constraint in model.component_data_objects(ctype=Constraint):
+            # TODO why memo instead of substitute?
             memo = {'__block_scope__': {id(None): False}}
             memo.update(substitution_map)
             constraint.set_value(
