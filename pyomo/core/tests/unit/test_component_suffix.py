@@ -34,6 +34,7 @@ from six import StringIO
 class Test_suffix(unittest.TestCase):
 
     def test_pprint(self):
+        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
@@ -42,18 +43,18 @@ class Test_suffix(unittest.TestCase):
         s = suffix()
         s[v] = 1
         s[clist] = None
-        pyomo.core.kernel.pprint(s)
+        pyomo.kernel.pprint(s)
         b = block()
         b.s = s
-        pyomo.core.kernel.pprint(s)
-        pyomo.core.kernel.pprint(b)
+        pyomo.kernel.pprint(s)
+        pyomo.kernel.pprint(b)
         m = block()
         m.b = b
-        pyomo.core.kernel.pprint(s)
-        pyomo.core.kernel.pprint(b)
-        pyomo.core.kernel.pprint(m)
+        pyomo.kernel.pprint(s)
+        pyomo.kernel.pprint(b)
+        pyomo.kernel.pprint(m)
 
-        pyomo.core.kernel.pprint({'a': 1, 'b': 2})
+        pyomo.kernel.pprint({'a': 1, 'b': 2})
 
     def test_str(self):
         s = suffix()

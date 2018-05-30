@@ -54,6 +54,7 @@ except:
 class Test_matrix_constraint(unittest.TestCase):
 
     def test_pprint(self):
+        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
@@ -64,16 +65,16 @@ class Test_matrix_constraint(unittest.TestCase):
                                    lb=1,
                                    ub=2,
                                    x=vlist)
-        pyomo.core.kernel.pprint(ctuple)
+        pyomo.kernel.pprint(ctuple)
         b = block()
         b.c = ctuple
-        pyomo.core.kernel.pprint(ctuple)
-        pyomo.core.kernel.pprint(b)
+        pyomo.kernel.pprint(ctuple)
+        pyomo.kernel.pprint(b)
         m = block()
         m.b = b
-        pyomo.core.kernel.pprint(ctuple)
-        pyomo.core.kernel.pprint(b)
-        pyomo.core.kernel.pprint(m)
+        pyomo.kernel.pprint(ctuple)
+        pyomo.kernel.pprint(b)
+        pyomo.kernel.pprint(m)
 
     def test_ctype(self):
         ctuple = matrix_constraint(numpy.random.rand(3,3))
