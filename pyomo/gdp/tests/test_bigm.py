@@ -1273,13 +1273,21 @@ class DisjunctInMultipleDisjunctions(unittest.TestCase, CommonTests):
         # We have an extra disjunct not in any of the disjunctions.
         # He doesn't get transformed, and so he should still be active
         # so the writers will scream. His constraint, also, is still active.
-        m = models.makeDisjunctInMultipleDisjunctions()
-        TransformationFactory('gdp.bigm').apply_to(m, targets=(m,))
+        m = models.makeDisjunctInMultipleDisjunctions_no_deactivate()
+        TransformationFactory('gdp.bigm').apply_to(m, targets=(
+            m.disjunction1, m.disjunction2))
 
         self.assertTrue(m.disjunct2[1].active)
         self.assertTrue(m.disjunct2[1].c.active)
         # and it means his container is active
         self.assertTrue(m.disjunct2.active)
+
+    def test_untransformed_disj_error(self):
+        # If we try to transform the whole model without deactivating the extra
+        # disjunct, the reclassify transformation should complain.
+        m = models.makeDisjunctInMultipleDisjunctions_no_deactivate()
+        with self.assertRaises(GDP_Error):
+            TransformationFactory('gdp.bigm').apply_to(m)
 
     def test_transformation_block_structure(self):
         m = models.makeDisjunctInMultipleDisjunctions()
@@ -1416,7 +1424,7 @@ class DisjunctInMultipleDisjunctions(unittest.TestCase, CommonTests):
 
 class TestTargets_SingleDisjunction(unittest.TestCase, CommonTests):
     def test_only_targets_inactive(self):
-        m = models.makeDisjunctInMultipleDisjunctions()
+        m = models.makeDisjunctInMultipleDisjunctions_no_deactivate()
         TransformationFactory('gdp.bigm').apply_to(
             m,
             targets=[ComponentUID(m.disjunction1)])
