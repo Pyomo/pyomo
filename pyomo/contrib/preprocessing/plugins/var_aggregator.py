@@ -122,7 +122,9 @@ class VariableAggregator(IsomorphicTransformation):
         var_to_z = model._var_aggregator_info.var_to_z = ComponentMap()
         processed_vars = ComponentSet()
 
-        for var, eq_set in eq_var_map.iteritems():
+    # TODO This iteritems is sorted by the variable name of the key in order to preserve determinism.
+    # Unfortunately, var.name() is an expensive operation right now.
+        for var, eq_set in sorted(eq_var_map.iteritems(), key=lambda tup: tup[0].name):
             if var in processed_vars:
                 continue  # Skip already-process variables
 

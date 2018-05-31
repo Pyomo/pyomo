@@ -1,7 +1,9 @@
 """Tests the variable aggregation module."""
 import pyutilib.th as unittest
 from pyomo.contrib.preprocessing.plugins.var_aggregator import (max_if_not_None,
-                                                                min_if_not_None)
+                                                                min_if_not_None,
+                                                                _get_equality_linked_variables,
+                                                                _build_equality_set)
 from pyomo.core.kernel import ComponentSet
 from pyomo.environ import (ConcreteModel, Constraint, RangeSet,
                            TransformationFactory, Var)
@@ -10,8 +12,7 @@ from pyomo.environ import (ConcreteModel, Constraint, RangeSet,
 class TestVarAggregate(unittest.TestCase):
     """Tests variable aggregation."""
 
-    def test_var_aggregate(self):
-        """Test for transitivity in a variable equality set."""
+    def build_model(self):
         m = ConcreteModel()
         m.v1 = Var(initialize=1)
         m.v2 = Var(initialize=2)
@@ -37,10 +38,50 @@ class TestVarAggregate(unittest.TestCase):
         m.z2 = Var()
         m.ignore_me = Constraint(expr=m.y[1] + m.z1 + m.z2 <= 0)
 
+        return m
+
+    def test_equality_linked_variables(self):
+        """Test for equality-linked variable detection."""
+        m = self.build_model()
+        self.assertEquals(_get_equality_linked_variables(m.c1), ())
+        self.assertEquals(_get_equality_linked_variables(m.c2), ())
+        c3 = _get_equality_linked_variables(m.c3)
+        self.assertIn(m.v3, c3)
+        self.assertIn(m.v4, c3)
+        self.assertEquals(len(c3), 2)
+        self.assertEquals(_get_equality_linked_variables(m.ignore_me), ())
+
+    def test_equality_set(self):
+        """Test for equality set map generation."""
+        m = self.build_model()
+        eq_var_map = _build_equality_set(m)
+        self.assertIsNone(eq_var_map.get(m.z1, None))
+        self.assertIsNone(eq_var_map.get(m.v1, None))
+        self.assertIsNone(eq_var_map.get(m.v2, None))
+        self.assertEquals(eq_var_map[m.v3], ComponentSet([m.v3, m.v4]))
+        self.assertEquals(eq_var_map[m.v4], ComponentSet([m.v3, m.v4]))
+        self.assertEquals(
+            eq_var_map[m.x[1]],
+            ComponentSet([m.x[1], m.x[2], m.x[3], m.x[4]]))
+        self.assertEquals(
+            eq_var_map[m.x[2]],
+            ComponentSet([m.x[1], m.x[2], m.x[3], m.x[4]]))
+        self.assertEquals(
+            eq_var_map[m.x[3]],
+            ComponentSet([m.x[1], m.x[2], m.x[3], m.x[4]]))
+        self.assertEquals(
+            eq_var_map[m.x[4]],
+            ComponentSet([m.x[1], m.x[2], m.x[3], m.x[4]]))
+        self.assertEquals(eq_var_map[m.y[1]], ComponentSet([m.y[1], m.y[2]]))
+        self.assertEquals(eq_var_map[m.y[2]], ComponentSet([m.y[1], m.y[2]]))
+
+    def test_var_aggregate(self):
+        """Test for transitivity in a variable equality set."""
+        m = self.build_model()
+
         TransformationFactory('contrib.aggregate_vars').apply_to(m)
         z_to_vars = m._var_aggregator_info.z_to_vars
         var_to_z = m._var_aggregator_info.var_to_z
-        # print(z_to_vars[m._var_aggregator_info.z[1]] == ComponentSet([m.v3, m.v4]))
         self.assertEquals(
             z_to_vars[m._var_aggregator_info.z[1]],
             ComponentSet([m.v3, m.v4]))
