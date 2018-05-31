@@ -1244,31 +1244,5 @@ class _NamedGeneralConstraintData(_GeneralConstraintData):
         return ans
 
 
-class NamedConstraintList(ConstraintList):
-    """
-    Variable-length indexed constraint objects that contain their own names.
-    """
-    _ComponentDataClass = _NamedGeneralConstraintData
-
-    def _pprint(self):
-        """
-        Return data that will be printed for this component.
-        """
-        return (
-            [("Size", len(self)),
-             ("Index", self._index if self.is_indexed() else None),
-             ("Active", self.active),
-             ],
-            iteritems(self),
-            ( "Name", "Lower","Body","Upper","Active" ),
-            lambda k, v: [ v.getname(fully_qualified=False),
-                           "-Inf" if v.lower is None else v.lower,
-                           v.body,
-                           "+Inf" if v.upper is None else v.upper,
-                           v.active,
-                           ]
-            )
-
-
 register_component(Constraint, "General constraint expressions.")
 register_component(ConstraintList, "A list of constraint expressions.")
