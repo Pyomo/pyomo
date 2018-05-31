@@ -25,8 +25,6 @@ from pyomo.core.base import (Transformation,
                              Block,
                              Model,
                              ConcreteModel)
-from pyomo.core.base.var import NamedVarList
-from pyomo.core.base.constraint import NamedConstraintList
 from pyomo.repn.collect import collect_linear_terms
 
 from six import iteritems
@@ -93,20 +91,19 @@ class LinearDual_PyomoTransformation(Transformation):
             dual = ConcreteModel()
         else:
             dual = Block()
-        dual.v = NamedVarList()
-        dual.c = NamedConstraintList()
         dual.construct()
         _vars = {}
         def getvar(name, ndx=None):
             v = _vars.get((name,ndx), None)
             if v is None:
-                v = dual.v.add()
+                v = Var()
                 if ndx is None:
-                    v.name = name
+                    v_name = name
                 elif type(ndx) is tuple:
-                    v.name = "%s[%s]" % (name, ','.join(map(str,ndx)))
+                    v_name = "%s[%s]" % (name, ','.join(map(str,ndx)))
                 else:
-                    v.name = "%s[%s]" % (name, str(ndx))
+                    v_name = "%s[%s]" % (name, str(ndx))
+                setattr(dual, v_name, v)
                 _vars[name,ndx] = v
             return v
         #
@@ -132,13 +129,14 @@ class LinearDual_PyomoTransformation(Transformation):
                     e = expr - c_rhs[cname,ndx] <= 0
                 else:
                     e = expr - c_rhs[cname,ndx] >= 0
-                c = dual.c.add(e)
+                c = Constraint(expr=e)
                 if ndx is None:
-                    c.name = cname
+                    c_name = cname
                 elif type(ndx) is tuple:
-                    c.name = "%s[%s]" % (cname, ','.join(map(str,ndx)))
+                    c_name = "%s[%s]" % (cname, ','.join(map(str,ndx)))
                 else:
-                    c.name = "%s[%s]" % (cname, str(ndx))
+                    c_name = "%s[%s]" % (cname, str(ndx))
+                setattr(dual, c_name, c)
             #
             for (name, ndx), domain in iteritems(v_domain):
                 v = getvar(name, ndx)
