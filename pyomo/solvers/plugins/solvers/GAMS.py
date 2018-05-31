@@ -1144,7 +1144,7 @@ def check_expr(expr, name, solver_io):
     # Used to handle log and log10 violations, for example
     try:
         value(expr)
-    except ValueError:
+    except (ValueError, ZeroDivisionError):
         logger.warning("While evaluating model.%s's expression, GAMS solver "
                        "encountered an error.\nGAMS requires that all "
                        "equations and expressions evaluate at initial values.\n"
