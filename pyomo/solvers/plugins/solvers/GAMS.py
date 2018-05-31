@@ -153,7 +153,8 @@ class GAMSDirect(pyomo.common.plugin.Plugin):
         report_timing=False: bool
             Print timing reports for presolve, solver, postsolve, etc.
         io_options: dict
-            Options that get passed to the writer. See writer for details.
+            Options that get passed to the writer.
+            See writer in pyomo.repn.plugins.gams_writer for details.
             Updated with any other keywords passed to solve method.
         """
 
@@ -612,7 +613,8 @@ class GAMSShell(pyomo.common.plugin.Plugin):
         report_timing=False: bool
             Print timing reports for presolve, solver, postsolve, etc.
         io_options: dict
-            Options that get passed to the writer. See writer for details.
+            Options that get passed to the writer.
+            See writer in pyomo.repn.plugins.gams_writer for details.
             Updated with any other keywords passed to solve method.
             Note: put_results is not available for modification on
             GAMSShell solver.
