@@ -149,8 +149,4 @@ class LinearDual_PyomoTransformation(Transformation):
                     # TODO: verify that this case is possible
                     v.domain = Reals
 
-
-        print("-"*80)
-        dual.pprint()
-        print("-"*80)
         return dual
