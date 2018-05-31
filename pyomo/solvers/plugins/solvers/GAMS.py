@@ -153,36 +153,8 @@ class GAMSDirect(pyomo.common.plugin.Plugin):
         report_timing=False: bool
             Print timing reports for presolve, solver, postsolve, etc.
         io_options: dict
-            Options that get passed to the writer.
+            Options that get passed to the writer. See writer for details.
             Updated with any other keywords passed to solve method.
-
-            - warmstart=False
-                Warmstart by initializing model's variables to their values.
-            - symbolic_solver_labels=False
-                Use full Pyomo component names rather than
-                shortened symbols (slower, but useful for debugging).
-            - labeler=None
-                Custom labeler. Incompatible with symbolic_solver_labels.
-            - solver=None
-                If None, GAMS will use default solver for model type.
-            - mtype=None
-                Model type. If None, will chose from lp, nlp, mip, and minlp.
-            - add_options=None
-                List of additional lines to write directly
-                into model file before the solve statement.
-                For model attributes, <model name> is GAMS_MODEL.
-            - skip_trivial_constraints=False
-                Skip writing constraints whose body section is fixed.
-            - file_determinism=1
-                | How much effort do we want to put into ensuring the
-                | GAMS file is written deterministically for a Pyomo model:
-                |     0 : None
-                |     1 : sort keys of indexed components (default)
-                |     2 : sort keys AND sort names (over declaration order)
-            - put_results='results'
-                Filename for optionally writing solution values and
-                marginals to (put_results).dat, and solver statuses
-                to (put_results + 'stat').dat.
         """
 
         # Make sure available() doesn't crash
@@ -640,34 +612,10 @@ class GAMSShell(pyomo.common.plugin.Plugin):
         report_timing=False: bool
             Print timing reports for presolve, solver, postsolve, etc.
         io_options: dict
-            Options that get passed to the writer.
+            Options that get passed to the writer. See writer for details.
             Updated with any other keywords passed to solve method.
-
-            - warmstart=False
-                Warmstart by initializing model's variables to their values.
-            - symbolic_solver_labels=False
-                Use full Pyomo component names rather than
-                shortened symbols (slower, but useful for debugging).
-            - labeler=None
-                Custom labeler. Incompatible with symbolic_solver_labels.
-            - solver=None
-                If None, GAMS will use default solver for model type.
-            - mtype=None
-                Model type. If None, will chose from lp, nlp, mip, and minlp.
-            - add_options=None
-                List of additional lines to write directly
-                into model file before the solve statement.
-                For model attributes, <model name> is GAMS_MODEL.
-            - skip_trivial_constraints=False
-                Skip writing constraints whose body section is fixed.
-            - file_determinism=1
-                | How much effort do we want to put into ensuring the
-                | GAMS file is written deterministically for a Pyomo model:
-                |     0 : None
-                |     1 : sort keys of indexed components (default)
-                |     2 : sort keys AND sort names (over declaration order)
-            - put_results='results'
-                Not available for modification on GAMSShell solver.
+            Note: put_results is not available for modification on
+            GAMSShell solver.
         """
 
         # Make sure available() doesn't crash
