@@ -122,9 +122,11 @@ class VariableAggregator(IsomorphicTransformation):
         var_to_z = model._var_aggregator_info.var_to_z = ComponentMap()
         processed_vars = ComponentSet()
 
-    # TODO This iteritems is sorted by the variable name of the key in order to preserve determinism.
-    # Unfortunately, var.name() is an expensive operation right now.
-        for var, eq_set in sorted(eq_var_map.iteritems(), key=lambda tup: tup[0].name):
+        # TODO This iteritems is sorted by the variable name of the key in
+        # order to preserve determinism. Unfortunately, var.name() is an
+        # expensive operation right now.
+        for var, eq_set in sorted(eq_var_map.iteritems(),
+                                  key=lambda tup: tup[0].name):
             if var in processed_vars:
                 continue  # Skip already-process variables
 
@@ -135,6 +137,50 @@ class VariableAggregator(IsomorphicTransformation):
             z_agg = z.add()
             z_to_vars[z_agg] = eq_set
             var_to_z.update(ComponentMap((v, z_agg) for v in eq_set))
+
+            # Set the bounds of the aggregate variable based on the bounds of
+            # the variables in its equality set.
+            z_agg.setlb(max_if_not_None(v.lb for v in eq_set if v.has_lb()))
+            z_agg.setub(min_if_not_None(v.ub for v in eq_set if v.has_ub()))
+
+            # Set the fixed status of the aggregate var
+            fixed_vals = [v.value for v in eq_set if v.fixed]
+            if fixed_vals:
+                # Check to make sure all the fixed values are the same.
+                if any(val != fixed_vals[0] for val in fixed_vals[1:]):
+                    raise ValueError(
+                        "Aggregate variable for equality set is fixed to "
+                        "multiple different values: %s" % (fixed_vals,))
+                z_agg.fix(fixed_vals[0])
+
+                # Check that the fixed value lies within bounds.
+                if z_agg.has_lb() and z_agg.value < value(z_agg.lb):
+                    raise ValueError(
+                        "Aggregate variable for equality set is fixed to "
+                        "a value less than its lower bound: %s < LB %s" %
+                        (z_agg.value, value(z_agg.lb))
+                    )
+                if z_agg.has_ub() and z_agg.value > value(z_agg.ub):
+                    raise ValueError(
+                        "Aggregate variable for equality set is fixed to "
+                        "a value greater than its upper bound: %s > UB %s" %
+                        (z_agg.value, value(z_agg.ub))
+                    )
+            else:
+                # Set the value to be the average of the values within the
+                # bounds only if the value is not already fixed.
+                values_within_bounds = [
+                    v.value for v in eq_set if (
+                        v.value is not None and
+                        ((z_agg.has_lb() and v.value >= value(z_agg.lb))
+                         or not z_agg.has_lb()) and
+                        ((z_agg.has_ub() and v.value <= value(z_agg.ub))
+                         or not z_agg.has_ub())
+                    )]
+                num_vals = len(values_within_bounds)
+                z_agg.value = (
+                    sum(val for val in values_within_bounds) / num_vals) \
+                    if num_vals > 0 else None
 
             processed_vars.update(eq_set)
 

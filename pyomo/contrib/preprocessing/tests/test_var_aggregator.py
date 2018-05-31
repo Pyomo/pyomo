@@ -14,10 +14,10 @@ class TestVarAggregate(unittest.TestCase):
 
     def build_model(self):
         m = ConcreteModel()
-        m.v1 = Var(initialize=1)
-        m.v2 = Var(initialize=2)
-        m.v3 = Var(initialize=3)
-        m.v4 = Var(initialize=4)
+        m.v1 = Var(initialize=1, bounds=(1, 8))
+        m.v2 = Var(initialize=2, bounds=(0, 3))
+        m.v3 = Var(initialize=3, bounds=(-7, 4))
+        m.v4 = Var(initialize=4, bounds=(2, 6))
         m.c1 = Constraint(expr=m.v1 == m.v2)
         m.c2 = Constraint(expr=m.v2 == m.v3)
         m.c3 = Constraint(expr=m.v3 == m.v4)
@@ -82,23 +82,27 @@ class TestVarAggregate(unittest.TestCase):
         TransformationFactory('contrib.aggregate_vars').apply_to(m)
         z_to_vars = m._var_aggregator_info.z_to_vars
         var_to_z = m._var_aggregator_info.var_to_z
+        z = m._var_aggregator_info.z
         self.assertEquals(
-            z_to_vars[m._var_aggregator_info.z[1]],
-            ComponentSet([m.v3, m.v4]))
+            z_to_vars[z[1]], ComponentSet([m.v3, m.v4]))
         self.assertEquals(
-            z_to_vars[m._var_aggregator_info.z[2]],
+            z_to_vars[z[2]],
             ComponentSet([m.x[1], m.x[2], m.x[3], m.x[4]]))
         self.assertEquals(
-            z_to_vars[m._var_aggregator_info.z[3]],
+            z_to_vars[z[3]],
             ComponentSet([m.y[1], m.y[2]]))
-        self.assertIs(var_to_z[m.v3], m._var_aggregator_info.z[1])
-        self.assertIs(var_to_z[m.v4], m._var_aggregator_info.z[1])
-        self.assertIs(var_to_z[m.x[1]], m._var_aggregator_info.z[2])
-        self.assertIs(var_to_z[m.x[2]], m._var_aggregator_info.z[2])
-        self.assertIs(var_to_z[m.x[3]], m._var_aggregator_info.z[2])
-        self.assertIs(var_to_z[m.x[4]], m._var_aggregator_info.z[2])
-        self.assertIs(var_to_z[m.y[1]], m._var_aggregator_info.z[3])
-        self.assertIs(var_to_z[m.y[2]], m._var_aggregator_info.z[3])
+        self.assertIs(var_to_z[m.v3], z[1])
+        self.assertIs(var_to_z[m.v4], z[1])
+        self.assertIs(var_to_z[m.x[1]], z[2])
+        self.assertIs(var_to_z[m.x[2]], z[2])
+        self.assertIs(var_to_z[m.x[3]], z[2])
+        self.assertIs(var_to_z[m.x[4]], z[2])
+        self.assertIs(var_to_z[m.y[1]], z[3])
+        self.assertIs(var_to_z[m.y[2]], z[3])
+
+        self.assertEquals(z[1].value, 3.5)
+        self.assertEquals(z[1].lb, 2)
+        self.assertEquals(z[1].ub, 4)
 
     def test_min_if_not_None(self):
         self.assertEquals(min_if_not_None([1, 2, None, 3, None]), 1)
