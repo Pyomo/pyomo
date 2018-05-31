@@ -70,7 +70,12 @@ def collect_linear_terms(block, unfixed):
                 raise(RuntimeError, "Error during dualization:  Constraint '%s' has an upper bound that is non-constant")
             #
             for var, coef in zip(body_terms.linear_vars, body_terms.linear_coefs):
-                varname = var.parent_component().getname(fully_qualified=True, relative_to=block)
+                try:
+                    # The variable is in the subproblem
+                    varname = var.parent_component().getname(fully_qualified=True, relative_to=block)
+                except:
+                    # The variable is somewhere else in the model
+                    varname = var.parent_component().getname(fully_qualified=True, relative_to=block.model())
                 varndx = var.index()
                 A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=coef, var=name, ndx=ndx) )
             #
