@@ -32,7 +32,7 @@ from six import iteritems
 import pyomo.common.plugin
 from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue, In,
                                  NonNegativeFloat, NonNegativeInt)
-from pyomo.contrib.gdpopt.util import GDPoptSolveData, _DoNothing
+from pyomo.contrib.gdpopt.util import GDPoptSolveData, _DoNothing, a_logger
 from pyomo.core.base import (Block, Constraint, ConstraintList, Expression,
                              Objective, Set, Suffix, TransformationFactory,
                              Var, maximize, minimize, value)
@@ -126,11 +126,12 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
     CONFIG.declare("tee", ConfigValue(
         default=False,
         description="Stream output to terminal.",
-        domain=In([True, False])
+        domain=bool
     ))
     CONFIG.declare("logger", ConfigValue(
-        default=logging.getLogger('pyomo.contrib.gdpopt'),
-        description="The logger object to use for reporting."
+        default='pyomo.contrib.gdpopt',
+        description="The logger object or name to use for reporting.",
+        domain=a_logger
     ))
     CONFIG.declare("small_dual_tolerance", ConfigValue(
         default=1E-8,
@@ -186,108 +187,110 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         solve_data = GDPoptSolveData()
 
         old_logger_level = config.logger.getEffectiveLevel()
-        if config.tee:
-            config.logger.setLevel(logging.INFO)
-        else:
-            config.logger.setLevel(logging.WARNING)
+        try:
+            if config.tee and old_logger_level > logging.INFO:
+                # If the logger does not already include INFO, include it.
+                config.logger.setLevel(logging.INFO)
 
-        # Modify in place decides whether to run the algorithm on a copy of the
-        # originally model passed to the solver, or whether to manipulate the
-        # original model directly.
-        solve_data.working_model = m = model
+            # Modify in place decides whether to run the algorithm on a copy of
+            # the originally model passed to the solver, or whether to
+            # manipulate the original model directly.
+            solve_data.working_model = m = model
 
-        solve_data.current_strategy = config.strategy
+            solve_data.current_strategy = config.strategy
 
-        # Create a model block on which to store GDPopt-specific utility
-        # modeling objects.
-        # TODO check if name is taken already
-        GDPopt = m.GDPopt_utils = Block()
+            # Create a model block on which to store GDPopt-specific utility
+            # modeling objects.
+            # TODO check if name is taken already
+            GDPopt = m.GDPopt_utils = Block()
 
-        GDPopt.initial_var_list = list(v for v in m.component_data_objects(
-            ctype=Var, descend_into=(Block, Disjunct)
-        ))
-        GDPopt.initial_var_values = list(
-            v.value for v in GDPopt.initial_var_list)
+            GDPopt.initial_var_list = list(v for v in m.component_data_objects(
+                ctype=Var, descend_into=(Block, Disjunct)
+            ))
+            GDPopt.initial_var_values = list(
+                v.value for v in GDPopt.initial_var_list)
 
-        # Store the initial model state as the best solution found. If we find
-        # no better solution, then we will restore from this copy.
-        # print('Initial clone for best_solution_found')
-        solve_data.best_solution_found = model.clone()
+            # Store the initial model state as the best solution found. If we
+            # find no better solution, then we will restore from this copy.
+            # print('Initial clone for best_solution_found')
+            solve_data.best_solution_found = model.clone()
 
-        # Save model initial values. These are used later to initialize NLP
-        # subproblems.
-        GDPopt.initial_var_values = list(
-            v.value for v in GDPopt.initial_var_list)
+            # Save model initial values. These are used later to initialize NLP
+            # subproblems.
+            GDPopt.initial_var_values = list(
+                v.value for v in GDPopt.initial_var_list)
 
-        # Create the solver results object
-        res = solve_data.results = SolverResults()
-        res.problem.name = m.name
-        res.problem.number_of_nonzeros = None  # TODO
-        res.solver.name = 'GDPopt ' + str(self.version())
-        # TODO work on termination condition and message
-        res.solver.termination_condition = None
-        res.solver.message = None
-        # TODO add some kind of timing
-        res.solver.user_time = None
-        res.solver.system_time = None
-        res.solver.wallclock_time = None
-        res.solver.termination_message = None
+            # Create the solver results object
+            res = solve_data.results = SolverResults()
+            res.problem.name = m.name
+            res.problem.number_of_nonzeros = None  # TODO
+            res.solver.name = 'GDPopt ' + str(self.version())
+            # TODO work on termination condition and message
+            res.solver.termination_condition = None
+            res.solver.message = None
+            # TODO add some kind of timing
+            res.solver.user_time = None
+            res.solver.system_time = None
+            res.solver.wallclock_time = None
+            res.solver.termination_message = None
 
-        # Validate the model to ensure that GDPopt is able to solve it.
-        self._validate_model(config, solve_data)
+            # Validate the model to ensure that GDPopt is able to solve it.
+            self._validate_model(config, solve_data)
 
-        # Maps in order to keep track of certain generated constraints
-        GDPopt.oa_cut_map = Suffix(direction=Suffix.LOCAL, datatype=None)
+            # Maps in order to keep track of certain generated constraints
+            GDPopt.oa_cut_map = Suffix(direction=Suffix.LOCAL, datatype=None)
 
-        # Integer cuts exclude particular discrete decisions
-        GDPopt.integer_cuts = ConstraintList(doc='integer cuts')
-        # Feasible integer cuts exclude discrete realizations that have been
-        # explored via an NLP subproblem. Depending on model characteristics,
-        # the user may wish to revisit NLP subproblems (with a different
-        # initialization, for example). Therefore, these cuts are not enabled
-        # by default, unless the initial model has no discrete decisions.
-        #
-        # Note: these cuts will only exclude integer realizations that are not
-        # already in the primary GDPopt_integer_cuts ConstraintList.
-        GDPopt.feasible_integer_cuts = ConstraintList(
-            doc='explored integer cuts')
-        if not GDPopt._no_discrete_decisions:
-            GDPopt.feasible_integer_cuts.deactivate()
+            # Integer cuts exclude particular discrete decisions
+            GDPopt.integer_cuts = ConstraintList(doc='integer cuts')
+            # Feasible integer cuts exclude discrete realizations that have been
+            # explored via an NLP subproblem. Depending on model
+            # characteristics, the user may wish to revisit NLP subproblems
+            # (with a different initialization, for example). Therefore, these
+            # cuts are not enabled by default, unless the initial model has no
+            # discrete decisions.
+            #
+            # Note: these cuts will only exclude integer realizations that are
+            # not already in the primary GDPopt_integer_cuts ConstraintList.
+            GDPopt.feasible_integer_cuts = ConstraintList(
+                doc='explored integer cuts')
+            if not GDPopt._no_discrete_decisions:
+                GDPopt.feasible_integer_cuts.deactivate()
 
-        # Build list of nonlinear constraints
-        GDPopt.nonlinear_constraints = [
-            v for v in m.component_data_objects(
-                ctype=Constraint, active=True, descend_into=(Block, Disjunct))
-            if v.body.polynomial_degree() not in (0, 1)]
+            # Build list of nonlinear constraints
+            GDPopt.nonlinear_constraints = [
+                v for v in m.component_data_objects(
+                    ctype=Constraint, active=True,
+                    descend_into=(Block, Disjunct))
+                if v.body.polynomial_degree() not in (0, 1)]
 
-        # Set up iteration counters
-        solve_data.nlp_iter = 0
-        solve_data.mip_iter = 0
-        solve_data.mip_subiter = 0
+            # Set up iteration counters
+            solve_data.nlp_iter = 0
+            solve_data.mip_iter = 0
+            solve_data.mip_subiter = 0
 
-        # set up bounds
-        solve_data.LB = float('-inf')
-        solve_data.UB = float('inf')
-        solve_data.LB_progress = [solve_data.LB]
-        solve_data.UB_progress = [solve_data.UB]
+            # set up bounds
+            solve_data.LB = float('-inf')
+            solve_data.UB = float('inf')
+            solve_data.LB_progress = [solve_data.LB]
+            solve_data.UB_progress = [solve_data.UB]
 
-        # Flag indicating whether the solution improved in the past iteration
-        # or not
-        solve_data.solution_improved = False
+            # Flag indicating whether the solution improved in the past
+            # iteration or not
+            solve_data.solution_improved = False
 
-        # Initialize the master problem
-        self._GDPopt_initialize_master(solve_data, config)
+            # Initialize the master problem
+            self._GDPopt_initialize_master(solve_data, config)
 
-        # Algorithm main loop
-        self._GDPopt_iteration_loop(solve_data, config)
+            # Algorithm main loop
+            self._GDPopt_iteration_loop(solve_data, config)
 
-        # Update values in original model
-        self._copy_values(solve_data.best_solution_found, model, config)
+            # Update values in original model
+            self._copy_values(solve_data.best_solution_found, model, config)
 
-        solve_data.results.problem.lower_bound = solve_data.LB
-        solve_data.results.problem.upper_bound = solve_data.UB
+            solve_data.results.problem.lower_bound = solve_data.LB
+            solve_data.results.problem.upper_bound = solve_data.UB
 
-        if config.tee:
+        finally:
             config.logger.setLevel(old_logger_level)
 
     def _copy_values(self, from_model, to_model, config):
@@ -597,6 +600,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         TransformationFactory('gdp.reclassify').apply_to(m)  # HACK
         # TODO: chull too?
         mip_solver = SolverFactory(config.mip)
+        if not mip_solver.available():
+            raise RuntimeError("MIP solver %s is not available." % config.mip)
         results = mip_solver.solve(
             m, **config.mip_options)
         # m.display()
@@ -717,6 +722,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             'contrib.deactivate_trivial_constraints').apply_to(m)
 
         mip_solver = SolverFactory(config.mip)
+        if not mip_solver.available():
+            raise RuntimeError("MIP solver %s is not available." % config.mip)
         results = mip_solver.solve(
             m, load_solutions=False,
             **config.mip_options)
@@ -898,6 +905,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
         # Solve
         mip_solver = SolverFactory(config.mip)
+        if not mip_solver.available():
+            raise RuntimeError("MIP solver %s is not available." % config.mip)
         results = mip_solver.solve(
             m, load_solutions=False,
             **config.mip_options)
@@ -1082,7 +1091,10 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         config.subprob_presolve(m, solve_data)
 
         # Solve the NLP
-        results = SolverFactory(config.nlp).solve(
+        nlp_solver = SolverFactory(config.nlp)
+        if not nlp_solver.available():
+            raise RuntimeError("NLP solver %s is not available." % config.nlp)
+        results = nlp_solver.solve(
             m, load_solutions=False,
             **config.nlp_options)
         solve_data.solve_results = results
