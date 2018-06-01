@@ -5,7 +5,7 @@ from __future__ import division
 import textwrap
 
 from pyomo.core.base import Block, Constraint, VarList, Objective
-from pyomo.core.expr.current import clone_expression
+from pyomo.core.expr.current import ExpressionReplacementVisitor
 from pyomo.core.expr.numvalue import value
 from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
@@ -261,21 +261,18 @@ class VariableAggregator(IsomorphicTransformation):
         for constraint in model.component_data_objects(
             ctype=Constraint, active=True
         ):
-            # TODO why memo instead of substitute?
-            memo = {'__block_scope__': {id(None): False}}
-            memo.update(substitution_map)
-            constraint.set_value(
-                (constraint.lower,
-                 clone_expression(constraint.body, memo=memo),
-                 constraint.upper))
+            new_body = ExpressionReplacementVisitor(
+                substitute=substitution_map
+            ).dfs_postorder_stack(constraint.body)
+            constraint.set_value((constraint.lower, new_body, constraint.upper))
+
         for objective in model.component_data_objects(
             ctype=Objective, active=True
         ):
-            # TODO why memo instead of substitute?
-            memo = {'__block_scope__': {id(None): False}}
-            memo.update(substitution_map)
-            objective.set_value(
-                 clone_expression(objective.expr, memo=memo))
+            new_expr = ExpressionReplacementVisitor(
+                substitute=substitution_map
+            ).dfs_postorder_stack(objective.expr)
+            objective.set_value(new_expr)
 
     def update_variables(self, model):
         """Update the values of the variables that were replaced by aggregates.
