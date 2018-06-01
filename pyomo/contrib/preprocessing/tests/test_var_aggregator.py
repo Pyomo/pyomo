@@ -75,6 +75,18 @@ class TestVarAggregate(unittest.TestCase):
         with self.assertRaises(ValueError):
             TransformationFactory('contrib.aggregate_vars').apply_to(m)
 
+    def test_do_not_tranform_deactivated_constraints(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.c1 = Constraint(expr=m.x == m.y)
+        m.c2 = Constraint(expr=(2, m.x, 3))
+        m.c3 = Constraint(expr=m.x == 0)
+        m.c3.deactivate()
+        TransformationFactory('contrib.aggregate_vars').apply_to(m)
+        self.assertIs(m.c2.body, m._var_aggregator_info.z[1])
+        self.assertIs(m.c3.body, m.x)
+
     def test_equality_linked_variables(self):
         """Test for equality-linked variable detection."""
         m = self.build_model()

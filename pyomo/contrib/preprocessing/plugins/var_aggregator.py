@@ -253,7 +253,9 @@ class VariableAggregator(IsomorphicTransformation):
         # Do the substitution
         substitution_map = {id(var): z_var
                             for var, z_var in var_to_z.iteritems()}
-        for constraint in model.component_data_objects(ctype=Constraint):
+        for constraint in model.component_data_objects(
+            ctype=Constraint, active=True
+        ):
             # TODO why memo instead of substitute?
             memo = {'__block_scope__': {id(None): False}}
             memo.update(substitution_map)
