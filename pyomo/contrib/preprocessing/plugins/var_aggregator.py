@@ -11,6 +11,9 @@ from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
 from pyomo.common.plugin import alias
+import logging
+
+logger = logging.getLogger('pyomo.contrib.preprocessing')
 
 
 def _get_equality_linked_variables(constraint):
@@ -41,6 +44,64 @@ def _get_equality_linked_variables(constraint):
         return ()
     # Above checks are satisifed. Return the variables.
     return nonzero_coef_vars
+
+
+def _fix_equality_fixed_variables(model, scaling_tolerance=1E-10):
+    """Detects variables fixed by a constraint: ax=b.
+
+    Fixes the variable to the constant value (b/a) and deactivates the relevant
+    constraint.
+
+    This sub-transformation is different than contrib.detect_fixed_vars because
+    it looks for x = const rather than x.lb = x.ub.
+
+    """
+    for constraint in model.component_data_objects(
+        ctype=Constraint, active=True, descend_into=True
+    ):
+        if not (constraint.has_lb() and constraint.has_ub()):
+            # Constraint is not an equality. Skip.
+            continue
+        if value(constraint.lower) != value(constraint.upper):
+            # Constraint is not an equality. Skip.
+            continue
+        if constraint.body.polynomial_degree() != 1:
+            # Constraint is not linear. Skip.
+            continue
+
+        # Generate the standard linear representation
+        repn = generate_standard_repn(constraint.body)
+        # Generator of tuples with the coefficient and variable object for
+        # nonzero coefficients.
+        nonzero_coef_vars = (
+            (repn.linear_coefs[i], v)
+            for i, v in enumerate(repn.linear_vars)
+            # if coefficient on variable is nonzero
+            if repn.linear_coefs[i] != 0)
+        # get the coefficient and variable object
+        coef, var = next(nonzero_coef_vars)
+        if next(nonzero_coef_vars, None) is not None:
+            # Expect one variable with nonzero cofficient in constraint;
+            # otherwise, skip.
+            continue
+        # Constant term on the constraint body
+        const = repn.constant if repn.constant is not None else 0
+
+        if abs(coef) <= scaling_tolerance:
+            logger.warn(
+                "Skipping fixed variable processing for constraint %s: "
+                "%s * %s + %s = %s because coefficient %s is below "
+                "tolerance of %s. Check your problem scaling." %
+                (constraint.name, coef, var.name, const,
+                 value(constraint.lower), coef, scaling_tolerance))
+            continue
+
+        # Constraint has form lower <= coef * var + const <= upper. We know that
+        # lower = upper, so coef * var + const = lower.
+        var_value = (value(constraint.lower) - const) / coef
+
+        var.fix(var_value)
+        constraint.deactivate()
 
 
 def _build_equality_set(model):
@@ -106,10 +167,14 @@ class VariableAggregator(IsomorphicTransformation):
     alias('contrib.aggregate_vars',
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
-    def _apply_to(self, model):
+    def _apply_to(self, model, detect_fixed_vars=True):
         """Apply the transformation to the given model."""
         # Generate the equality sets
         eq_var_map = _build_equality_set(model)
+
+        # Detect and process fixed variables.
+        if detect_fixed_vars:
+            _fix_equality_fixed_variables(model)
 
         # Generate aggregation infrastructure
         model._var_aggregator_info = Block(

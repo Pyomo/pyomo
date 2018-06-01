@@ -23,22 +23,29 @@ class TestVarAggregate(unittest.TestCase):
         m.c3 = Constraint(expr=m.v3 == m.v4)
         m.v2.fix()
 
-        m.s = RangeSet(4)
+        m.s = RangeSet(5)
         m.x = Var(m.s, initialize=5)
         m.c = Constraint(m.s)
         m.c.add(1, expr=m.x[1] == m.x[3])
         m.c.add(2, expr=m.x[2] == m.x[4])
         m.c.add(3, expr=m.x[2] == m.x[3])
         m.c.add(4, expr=m.x[1] == 1)
+        m.c.add(5, expr=(2, m.x[5], 3))
 
-        m.y = Var([1, 2], initialize=3)
+        m.y = Var([1, 2], initialize={1: 3, 2: 4})
         m.c_too = Constraint(expr=m.y[1] == m.y[2])
 
         m.z1 = Var()
         m.z2 = Var()
         m.ignore_me = Constraint(expr=m.y[1] + m.z1 + m.z2 <= 0)
+        m.ignore_me_too = Constraint(expr=m.y[1] * m.y[2] == 0)
+        m.multiple = Constraint(expr=m.y[1] == 2 * m.y[2])
 
         return m
+
+    def test_aggregate_fixed_var(self):
+        m = self.build_model()
+        pass
 
     def test_equality_linked_variables(self):
         """Test for equality-linked variable detection."""
@@ -50,6 +57,8 @@ class TestVarAggregate(unittest.TestCase):
         self.assertIn(m.v4, c3)
         self.assertEquals(len(c3), 2)
         self.assertEquals(_get_equality_linked_variables(m.ignore_me), ())
+        self.assertEquals(_get_equality_linked_variables(m.ignore_me_too), ())
+        self.assertEquals(_get_equality_linked_variables(m.multiple), ())
 
     def test_equality_set(self):
         """Test for equality set map generation."""
@@ -100,9 +109,11 @@ class TestVarAggregate(unittest.TestCase):
         self.assertIs(var_to_z[m.y[1]], z[3])
         self.assertIs(var_to_z[m.y[2]], z[3])
 
-        self.assertEquals(z[1].value, 3.5)
+        self.assertEquals(z[1].value, 2)
         self.assertEquals(z[1].lb, 2)
         self.assertEquals(z[1].ub, 4)
+
+        self.assertEquals(z[3].value, 3.5)
 
     def test_min_if_not_None(self):
         self.assertEquals(min_if_not_None([1, 2, None, 3, None]), 1)
