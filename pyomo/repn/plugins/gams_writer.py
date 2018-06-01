@@ -133,34 +133,38 @@ class ProblemWriter_gams(AbstractProblemWriter):
                  solver_capability,
                  io_options):
         """
-        output_filename:
+        Write a model in the GAMS modeling language format.
+
+        Keyword Arguments
+        -----------------
+        output_filename: str
             Name of file to write GAMS model to. Optionally pass a file-like
             stream and the model will be written to that instead.
-        io_options:
-            warmstart=True:
+        io_options: dict
+            - warmstart=True
                 Warmstart by initializing model's variables to their values.
-            symbolic_solver_labels=False:
+            - symbolic_solver_labels=False
                 Use full Pyomo component names rather than
                 shortened symbols (slower, but useful for debugging).
-            labeler=None:
+            - labeler=None
                 Custom labeler. Incompatible with symbolic_solver_labels.
-            solver=None:
+            - solver=None
                 If None, GAMS will use default solver for model type.
-            mtype=None:
+            - mtype=None
                 Model type. If None, will chose from lp, nlp, mip, and minlp.
-            add_options=None:
+            - add_options=None
                 List of additional lines to write directly
                 into model file before the solve statement.
                 For model attributes, <model name> is GAMS_MODEL.
-            skip_trivial_constraints=False:
-                Skip writing constraints whose body section is fixed
-            file_determinism=1:
-                How much effort do we want to put into ensuring the
-                GAMS file is written deterministically for a Pyomo model:
-                   0 : None
-                   1 : sort keys of indexed components (default)
-                   2 : sort keys AND sort names (over declaration order)
-            put_results=None:
+            - skip_trivial_constraints=False
+                Skip writing constraints whose body section is fixed.
+            - file_determinism=1
+                | How much effort do we want to put into ensuring the
+                | GAMS file is written deterministically for a Pyomo model:
+                |     0 : None
+                |     1 : sort keys of indexed components (default)
+                |     2 : sort keys AND sort names (over declaration order)
+            - put_results=None
                 Filename for optionally writing solution values and
                 marginals to (put_results).dat, and solver statuses
                 to (put_results + 'stat').dat.
