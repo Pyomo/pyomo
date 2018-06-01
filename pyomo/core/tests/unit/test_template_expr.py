@@ -72,8 +72,7 @@ class ExpressionObjectTester(object):
         self.assertIs(e.resolve_template(), m.p[5,10])
         t.set_value(None)
 
-    # TODO: Fixing this test requires fixing Set (it
-    #       currently only fails with pyomo4-expressions)
+    # TODO: Fixing this test requires fixing Set
     def _test_template_scalar_with_set(self):
         m = self.m
         t = IndexTemplate(m.I)
@@ -256,35 +255,7 @@ class ExpressionObjectTester(object):
         self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
 
 
-
-@unittest.skipIf(EXPR.mode != EXPR.Mode.coopr3_trees, "Only test for Coopr3 expressions")
-class TestTemplate_expressionObjects_coopr3\
-      ( ExpressionObjectTester, unittest.TestCase ):
-
-    def setUp(self):
-        # This class tests the Coopr 3.x expression trees
-        ExpressionObjectTester.setUp(self)
-
-    # see TODO next to _test_template_scalar_with_set
-    def test_template_scalar_with_set(self):
-        self._test_template_scalar_with_set()
-
-
-@unittest.skipIf(EXPR.mode != EXPR.Mode.pyomo4_trees, "Only test for Pyomo4 expressions")
-class TestTemplate_expressionObjects_pyomo4\
-      ( ExpressionObjectTester, unittest.TestCase ):
-
-    def setUp(self):
-        # This class tests the Pyomo 4.x expression trees
-        ExpressionObjectTester.setUp(self)
-
-    @unittest.expectedFailure
-    def test_template_scalar_with_set(self):
-        self._test_template_scalar_with_set()
-
-
-@unittest.skipIf(EXPR.mode != EXPR.Mode.pyomo5_trees, "Only test for Pyomo5 expressions")
-class TestTemplate_expressionObjects_pyomo5\
+class TestTemplate_expressionObjects\
       ( ExpressionObjectTester, unittest.TestCase ):
 
     def setUp(self):
