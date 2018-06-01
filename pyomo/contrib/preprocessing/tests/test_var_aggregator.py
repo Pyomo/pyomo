@@ -1,11 +1,11 @@
 """Tests the variable aggregation module."""
 import pyutilib.th as unittest
-from pyomo.contrib.preprocessing.plugins.var_aggregator import (max_if_not_None,
-                                                                min_if_not_None,
+from pyomo.contrib.preprocessing.plugins.var_aggregator import (_build_equality_set,
                                                                 _get_equality_linked_variables,
-                                                                _build_equality_set)
+                                                                max_if_not_None,
+                                                                min_if_not_None)
 from pyomo.core.kernel import ComponentSet
-from pyomo.environ import (ConcreteModel, Constraint, RangeSet,
+from pyomo.environ import (ConcreteModel, Constraint, ConstraintList, RangeSet,
                            TransformationFactory, Var)
 
 
@@ -43,9 +43,37 @@ class TestVarAggregate(unittest.TestCase):
 
         return m
 
-    def test_aggregate_fixed_var(self):
-        m = self.build_model()
-        pass
+    def test_aggregate_fixed_var_diff_values(self):
+        m = ConcreteModel()
+        m.s = RangeSet(3)
+        m.v = Var(m.s, bounds=(0, 5))
+        m.c = ConstraintList()
+        m.c.add(expr=m.v[1] == m.v[2])
+        m.c.add(expr=m.v[2] == m.v[3])
+        m.c.add(expr=m.v[1] == 1)
+        m.c.add(expr=m.v[3] == 3)
+        with self.assertRaises(ValueError):
+            TransformationFactory('contrib.aggregate_vars').apply_to(m)
+
+    def test_fixed_var_out_of_bounds_lb(self):
+        m = ConcreteModel()
+        m.s = RangeSet(2)
+        m.v = Var(m.s, bounds=(0, 5))
+        m.c = ConstraintList()
+        m.c.add(expr=m.v[1] == m.v[2])
+        m.c.add(expr=m.v[1] == -1)
+        with self.assertRaises(ValueError):
+            TransformationFactory('contrib.aggregate_vars').apply_to(m)
+
+    def test_fixed_var_out_of_bounds_ub(self):
+        m = ConcreteModel()
+        m.s = RangeSet(2)
+        m.v = Var(m.s, bounds=(0, 5))
+        m.c = ConstraintList()
+        m.c.add(expr=m.v[1] == m.v[2])
+        m.c.add(expr=m.v[1] == 6)
+        with self.assertRaises(ValueError):
+            TransformationFactory('contrib.aggregate_vars').apply_to(m)
 
     def test_equality_linked_variables(self):
         """Test for equality-linked variable detection."""

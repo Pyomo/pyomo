@@ -209,14 +209,15 @@ class VariableAggregator(IsomorphicTransformation):
             z_agg.setub(min_if_not_None(v.ub for v in eq_set if v.has_ub()))
 
             # Set the fixed status of the aggregate var
-            fixed_vals = [v.value for v in eq_set if v.fixed]
-            if fixed_vals:
+            fixed_vars = [v for v in eq_set if v.fixed]
+            if fixed_vars:
                 # Check to make sure all the fixed values are the same.
-                if any(val != fixed_vals[0] for val in fixed_vals[1:]):
+                if any(var.value != fixed_vars[0].value
+                       for var in fixed_vars[1:]):
                     raise ValueError(
                         "Aggregate variable for equality set is fixed to "
-                        "multiple different values: %s" % (fixed_vals,))
-                z_agg.fix(fixed_vals[0])
+                        "multiple different values: %s" % (fixed_vars,))
+                z_agg.fix(fixed_vars[0].value)
 
                 # Check that the fixed value lies within bounds.
                 if z_agg.has_lb() and z_agg.value < value(z_agg.lb):
