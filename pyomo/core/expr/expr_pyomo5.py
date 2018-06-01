@@ -703,6 +703,8 @@ class ExpressionReplacementVisitor(object):
                     # For simplicity, not-potentially-variable expressions are
                     # replaced with their potentially variable counterparts.
                     ans = ans.create_potentially_variable_object()
+            elif id(ans) != id(_obj):
+                _result[0] = True
 
             if _stack:
                 if _result[0]:
