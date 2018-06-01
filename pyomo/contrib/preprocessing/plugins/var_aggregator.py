@@ -4,7 +4,7 @@ from __future__ import division
 
 import textwrap
 
-from pyomo.core.base import Block, Constraint, VarList
+from pyomo.core.base import Block, Constraint, VarList, Objective
 from pyomo.core.expr.current import clone_expression
 from pyomo.core.expr.numvalue import value
 from pyomo.core.kernel import ComponentMap, ComponentSet
@@ -162,7 +162,12 @@ def max_if_not_None(iterable):
 
 
 class VariableAggregator(IsomorphicTransformation):
-    """Aggregate model variables that are linked by equality constraints."""
+    """Aggregate model variables that are linked by equality constraints.
+
+    TODO: Caution: unclear what happens to "capital-E" Expressions at this point
+    in time.
+
+    """
 
     alias('contrib.aggregate_vars',
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
@@ -263,6 +268,24 @@ class VariableAggregator(IsomorphicTransformation):
                 (constraint.lower,
                  clone_expression(constraint.body, memo=memo),
                  constraint.upper))
+        for objective in model.component_data_objects(
+            ctype=Objective, active=True
+        ):
+            # TODO why memo instead of substitute?
+            memo = {'__block_scope__': {id(None): False}}
+            memo.update(substitution_map)
+            objective.set_value(
+                 clone_expression(objective.expr, memo=memo))
 
-        # profit
-        pass
+    def update_variables(self, model):
+        """Update the values of the variables that were replaced by aggregates.
+
+        TODO: reduced costs
+
+        """
+        datablock = model._var_aggregator_info
+        for agg_var in datablock.z.itervalues():
+            if not agg_var.stale:
+                for var in datablock.z_to_vars[agg_var]:
+                    var.value = agg_var.value
+                    var.stale = False

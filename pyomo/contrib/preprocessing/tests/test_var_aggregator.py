@@ -5,7 +5,8 @@ from pyomo.contrib.preprocessing.plugins.var_aggregator import (_build_equality_
                                                                 max_if_not_None,
                                                                 min_if_not_None)
 from pyomo.core.kernel import ComponentSet
-from pyomo.environ import (ConcreteModel, Constraint, ConstraintList, RangeSet,
+from pyomo.environ import (ConcreteModel, Constraint, ConstraintList,
+                           Objective, RangeSet, SolverFactory,
                            TransformationFactory, Var)
 
 
@@ -170,6 +171,25 @@ class TestVarAggregate(unittest.TestCase):
         self.assertEquals(max_if_not_None([None, 3, -1, 2]), 3)
         self.assertEquals(max_if_not_None([0]), 0)
         self.assertEquals(max_if_not_None([0, None]), 0)
+
+    @unittest.skipIf(not SolverFactory('glpk').available(),
+                     "GLPK solver is not available.")
+    def test_var_update(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var(bounds=(0, 1))
+        m.c = Constraint(expr=m.x == m.y)
+        m.o = Objective(expr=m.x)
+        TransformationFactory('contrib.aggregate_vars').apply_to(m)
+        SolverFactory('glpk').solve(m)
+        z = m._var_aggregator_info.z
+        self.assertEquals(z[1].value, 0)
+        self.assertEquals(m.x.value, None)
+        self.assertEquals(m.y.value, None)
+        TransformationFactory('contrib.aggregate_vars').update_variables(m)
+        self.assertEquals(z[1].value, 0)
+        self.assertEquals(m.x.value, 0)
+        self.assertEquals(m.y.value, 0)
 
 
 if __name__ == '__main__':
