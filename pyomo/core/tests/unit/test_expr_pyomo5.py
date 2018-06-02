@@ -5898,6 +5898,7 @@ class TestNumValueDuckTyping(unittest.TestCase):
     def check_api(self, obj):
         self.assertTrue(hasattr(obj, 'is_fixed'))
         self.assertTrue(hasattr(obj, 'is_constant'))
+        self.assertTrue(hasattr(obj, 'is_parameter_type'))
         self.assertTrue(hasattr(obj, 'is_potentially_variable'))
         self.assertTrue(hasattr(obj, 'is_variable_type'))
         self.assertTrue(hasattr(obj, 'is_named_expression_type'))
@@ -5905,6 +5906,21 @@ class TestNumValueDuckTyping(unittest.TestCase):
         self.assertTrue(hasattr(obj, '_compute_polynomial_degree'))
         self.assertTrue(hasattr(obj, '__call__'))
         self.assertTrue(hasattr(obj, 'to_string'))
+
+    def test_Param(self):
+        M = ConcreteModel()
+        M.x = Param()
+        self.check_api(M.x)
+
+    def test_MutableParam(self):
+        M = ConcreteModel()
+        M.x = Param(mutable=True)
+        self.check_api(M.x)
+
+    def test_MutableParamIndex(self):
+        M = ConcreteModel()
+        M.x = Param([0], initialize=10, mutable=True)
+        self.check_api(M.x[0])
 
     def test_Var(self):
         M = ConcreteModel()

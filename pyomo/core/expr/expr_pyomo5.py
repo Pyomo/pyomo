@@ -59,6 +59,7 @@ __all__ = (
 'ExpressionValueVisitor',
 'ExpressionReplacementVisitor',
 'LinearDecompositionError',
+'TemplateExpressionError',
 'SumExpressionBase',
 '_MutableSumExpression',    # This should not be referenced, except perhaps while testing code
 '_MutableLinearExpression',     # This should not be referenced, except perhaps while testing code
@@ -108,6 +109,14 @@ from pyomo.core.expr.expr_common import \
 from pyomo.core.expr import expr_common as common
 
 
+class TemplateExpressionError(ValueError):
+
+    def __init__(self, template, *args, **kwds):
+        self.template = template
+        super(TemplateExpressionError, self).__init__(*args, **kwds)
+
+
+
 if _using_chained_inequality:               #pragma: no cover
     class _chainedInequality(object):
 
@@ -147,23 +156,6 @@ if _using_chained_inequality:               #pragma: no cover
 
 else:                               #pragma: no cover
     _chainedInequality = None
-
-
-_ParamData = None
-SimpleParam = None
-TemplateExpressionError = None
-def initialize_expression_data():
-    """
-    A function used to initialize expression global data.
-
-    This function is necessary to avoid global imports.  It is executed
-    when ``pyomo.environ`` is imported.
-    """
-    global _ParamData
-    global SimpleParam
-    global TemplateExpressionError
-    from pyomo.core.base.param import _ParamData, SimpleParam
-    from pyomo.core.base.template_expr import TemplateExpressionError
 
 
 class clone_counter(object):
@@ -1109,7 +1101,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
         return False, None
 
 
-def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_values=False, standardize=False):
+def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_values=False):
     """
     Return a string representation of an expression.
 
@@ -1125,48 +1117,11 @@ def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_va
         compute_values (bool): If :const:`True`, then
             parameters and fixed variables are evaluated before the
             expression string is generated.  Default is :const:`False`.
-        standardize (bool): If :const:`True` and :attr:`verbose` is :const:`False`, then the
-            expression form is standardized to pull out constant and linear terms.
-            Default is :const:`False`.
 
     Returns:
         A string representation for the expression.
     """
     verbose = common.TO_STRING_VERBOSE if verbose is None else verbose
-    #
-    # Standardize the output of expressions if requested (when verbose=False).
-    # This involves constructing a standard representation and then creating
-    # a string.
-    #
-    if standardize and not verbose:
-        from pyomo.repn import generate_standard_repn
-        try:
-            if expr.__class__ is EqualityExpression:
-                repn0 = generate_standard_repn(expr._args_[0], quadratic=True, compute_values=compute_values)
-                repn1 = generate_standard_repn(expr._args_[1], quadratic=True, compute_values=compute_values)
-                expr = EqualityExpression( (repn0.to_expression(), repn1.to_expression()) )
-            elif expr.__class__ is InequalityExpression:
-                repn0 = generate_standard_repn(expr._args_[0], quadratic=True, compute_values=compute_values)
-                repn1 = generate_standard_repn(expr._args_[1], quadratic=True, compute_values=compute_values)
-                expr = InequalityExpression( (repn0.to_expression(), repn1.to_expression()), strict=expr._strict )
-            elif expr.__class__ is RangedExpression:
-                repn0 = generate_standard_repn(expr._args_[0], quadratic=True, compute_values=compute_values)
-                repn1 = generate_standard_repn(expr._args_[1], quadratic=True, compute_values=compute_values)
-                repn2 = generate_standard_repn(expr._args_[2], quadratic=True, compute_values=compute_values)
-                expr = RangedExpression( (repn0.to_expression(), repn1.to_expression(), repn2.to_expression()), strict=expr._strict )
-            else:
-                repn = generate_standard_repn(expr, quadratic=True, compute_values=compute_values)
-                expr = repn.to_expression()
-        except:     #pragma: no cover
-            #
-            # Generation of the standard repn will fail if the
-            # expression is uninitialized.  Hence, we default to
-            # using the non-standardized form.
-            #
-            # It might be smarter to raise errors for specific issues (e.g. uninitialized parameters).
-            # Let's see if we start seeing errors that are masked here.
-            #
-            pass
     #
     # Setup the symbol map
     #
@@ -1307,7 +1262,7 @@ class ExpressionBase(NumericValue):
         Returns:
             A string.
         """
-        return expression_to_string(self, standardize=False)
+        return expression_to_string(self)
 
     def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         """
@@ -2324,12 +2279,9 @@ class GetItemExpression(ExpressionBase):
         return True
 
     def _is_fixed(self, values):
-        from pyomo.core.base import Var # TODO
-        from pyomo.core.kernel.component_variable import IVariable # TODO
-        if isinstance(self._base, (Var, IVariable)):
-            for x in itervalues(self._base):
-                if not x.__class__ in nonpyomo_leaf_types and not x.is_fixed():
-                    return False
+        for x in itervalues(self._base):
+            if not x.__class__ in nonpyomo_leaf_types and not x.is_fixed():
+                return False
         return True
 
     def _compute_polynomial_degree(self, result):       # TODO: coverage
@@ -2847,37 +2799,22 @@ def _decompose_linear_terms(expr, multiplier=1):
 
 
 def _process_arg(obj):
-    #if False and obj.__class__ is SumExpression or obj.__class__ is _MutableSumExpression:
-    #    if ignore_entangled_expressions.detangle[-1] and obj._is_owned:
-            #
-            # If the viewsum expression is owned, then we need to
-            # clone it to avoid creating an entangled expression.
-            #
-            # But we don't have to worry about entanglement amongst other immutable
-            # expression objects.
-            #
-    #        return clone_expression( obj, clone_leaves=False )
-    #    return obj
-
-    #if obj.is_expression_type():
-    #    return obj
-
     if obj.__class__ is NumericConstant:
         return value(obj)
 
-    if (obj.__class__ is _ParamData or obj.__class__ is SimpleParam) and not obj._component()._mutable:
-        if not obj._constructed:
-            return obj
-        return obj()
-
-    if obj.is_indexed():
-        raise TypeError(
-                "Argument for expression is an indexed numeric "
-                "value\nspecified without an index:\n\t%s\nIs this "
-                "value defined over an index that you did not specify?"
-                % (obj.name, ) )
-
-    return obj
+    try:
+        if obj.is_parameter_type() and not obj._component()._mutable and obj._constructed:
+            # Return the value of an immutable SimpleParam or ParamData object
+            return obj()
+        return obj
+    except:
+        if obj.is_indexed():
+            raise TypeError(
+                    "Argument for expression is an indexed numeric "
+                    "value\nspecified without an index:\n\t%s\nIs this "
+                    "value defined over an index that you did not specify?"
+                    % (obj.name, ) )
+        raise
 
 
 #@profile

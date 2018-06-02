@@ -222,6 +222,10 @@ class IExpression(IComponent, IIdentityExpression):
         """A boolean indicating whether this expression is constant."""
         return False
 
+    def is_parameter_type(self):
+        """A boolean indicating whether this expression is a parameter object."""
+        return False
+
     def is_variable_type(self):
         """A boolean indicating whether this expression is a variable object."""
         return False
