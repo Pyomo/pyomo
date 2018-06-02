@@ -195,7 +195,7 @@ class VariableAggregator(IsomorphicTransformation):
         # TODO This iteritems is sorted by the variable name of the key in
         # order to preserve determinism. Unfortunately, var.name() is an
         # expensive operation right now.
-        for var, eq_set in sorted(eq_var_map.iteritems(),
+        for var, eq_set in sorted(eq_var_map.items(),
                                   key=lambda tup: tup[0].name):
             if var in processed_vars:
                 continue  # Skip already-process variables
@@ -257,14 +257,14 @@ class VariableAggregator(IsomorphicTransformation):
 
         # Do the substitution
         substitution_map = {id(var): z_var
-                            for var, z_var in var_to_z.iteritems()}
-        for constraint in model.component_data_objects(
+                            for var, z_var in var_to_z.items()}
+        for constr in model.component_data_objects(
             ctype=Constraint, active=True
         ):
             new_body = ExpressionReplacementVisitor(
                 substitute=substitution_map
-            ).dfs_postorder_stack(constraint.body)
-            constraint.set_value((constraint.lower, new_body, constraint.upper))
+            ).dfs_postorder_stack(constr.body)
+            constr.set_value((constr.lower, new_body, constr.upper))
 
         for objective in model.component_data_objects(
             ctype=Objective, active=True

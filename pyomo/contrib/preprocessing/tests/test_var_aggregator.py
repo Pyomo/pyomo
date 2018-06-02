@@ -91,15 +91,15 @@ class TestVarAggregate(unittest.TestCase):
     def test_equality_linked_variables(self):
         """Test for equality-linked variable detection."""
         m = self.build_model()
-        self.assertEquals(_get_equality_linked_variables(m.c1), ())
-        self.assertEquals(_get_equality_linked_variables(m.c2), ())
+        self.assertEqual(_get_equality_linked_variables(m.c1), ())
+        self.assertEqual(_get_equality_linked_variables(m.c2), ())
         c3 = _get_equality_linked_variables(m.c3)
         self.assertIn(m.v3, c3)
         self.assertIn(m.v4, c3)
-        self.assertEquals(len(c3), 2)
-        self.assertEquals(_get_equality_linked_variables(m.ignore_me), ())
-        self.assertEquals(_get_equality_linked_variables(m.ignore_me_too), ())
-        self.assertEquals(_get_equality_linked_variables(m.multiple), ())
+        self.assertEqual(len(c3), 2)
+        self.assertEqual(_get_equality_linked_variables(m.ignore_me), ())
+        self.assertEqual(_get_equality_linked_variables(m.ignore_me_too), ())
+        self.assertEqual(_get_equality_linked_variables(m.multiple), ())
 
     def test_equality_set(self):
         """Test for equality set map generation."""
@@ -108,22 +108,22 @@ class TestVarAggregate(unittest.TestCase):
         self.assertIsNone(eq_var_map.get(m.z1, None))
         self.assertIsNone(eq_var_map.get(m.v1, None))
         self.assertIsNone(eq_var_map.get(m.v2, None))
-        self.assertEquals(eq_var_map[m.v3], ComponentSet([m.v3, m.v4]))
-        self.assertEquals(eq_var_map[m.v4], ComponentSet([m.v3, m.v4]))
-        self.assertEquals(
+        self.assertEqual(eq_var_map[m.v3], ComponentSet([m.v3, m.v4]))
+        self.assertEqual(eq_var_map[m.v4], ComponentSet([m.v3, m.v4]))
+        self.assertEqual(
             eq_var_map[m.x[1]],
             ComponentSet([m.x[1], m.x[2], m.x[3], m.x[4]]))
-        self.assertEquals(
+        self.assertEqual(
             eq_var_map[m.x[2]],
             ComponentSet([m.x[1], m.x[2], m.x[3], m.x[4]]))
-        self.assertEquals(
+        self.assertEqual(
             eq_var_map[m.x[3]],
             ComponentSet([m.x[1], m.x[2], m.x[3], m.x[4]]))
-        self.assertEquals(
+        self.assertEqual(
             eq_var_map[m.x[4]],
             ComponentSet([m.x[1], m.x[2], m.x[3], m.x[4]]))
-        self.assertEquals(eq_var_map[m.y[1]], ComponentSet([m.y[1], m.y[2]]))
-        self.assertEquals(eq_var_map[m.y[2]], ComponentSet([m.y[1], m.y[2]]))
+        self.assertEqual(eq_var_map[m.y[1]], ComponentSet([m.y[1], m.y[2]]))
+        self.assertEqual(eq_var_map[m.y[2]], ComponentSet([m.y[1], m.y[2]]))
 
     def test_var_aggregate(self):
         """Test for transitivity in a variable equality set."""
@@ -133,12 +133,12 @@ class TestVarAggregate(unittest.TestCase):
         z_to_vars = m._var_aggregator_info.z_to_vars
         var_to_z = m._var_aggregator_info.var_to_z
         z = m._var_aggregator_info.z
-        self.assertEquals(
+        self.assertEqual(
             z_to_vars[z[1]], ComponentSet([m.v3, m.v4]))
-        self.assertEquals(
+        self.assertEqual(
             z_to_vars[z[2]],
             ComponentSet([m.x[1], m.x[2], m.x[3], m.x[4]]))
-        self.assertEquals(
+        self.assertEqual(
             z_to_vars[z[3]],
             ComponentSet([m.y[1], m.y[2]]))
         self.assertIs(var_to_z[m.v3], z[1])
@@ -150,27 +150,27 @@ class TestVarAggregate(unittest.TestCase):
         self.assertIs(var_to_z[m.y[1]], z[3])
         self.assertIs(var_to_z[m.y[2]], z[3])
 
-        self.assertEquals(z[1].value, 2)
-        self.assertEquals(z[1].lb, 2)
-        self.assertEquals(z[1].ub, 4)
+        self.assertEqual(z[1].value, 2)
+        self.assertEqual(z[1].lb, 2)
+        self.assertEqual(z[1].ub, 4)
 
-        self.assertEquals(z[3].value, 3.5)
+        self.assertEqual(z[3].value, 3.5)
 
     def test_min_if_not_None(self):
-        self.assertEquals(min_if_not_None([1, 2, None, 3, None]), 1)
-        self.assertEquals(min_if_not_None([None, None, None]), None)
-        self.assertEquals(min_if_not_None([]), None)
-        self.assertEquals(min_if_not_None([None, 3, -1, 2]), -1)
-        self.assertEquals(min_if_not_None([0]), 0)
-        self.assertEquals(min_if_not_None([0, None]), 0)
+        self.assertEqual(min_if_not_None([1, 2, None, 3, None]), 1)
+        self.assertEqual(min_if_not_None([None, None, None]), None)
+        self.assertEqual(min_if_not_None([]), None)
+        self.assertEqual(min_if_not_None([None, 3, -1, 2]), -1)
+        self.assertEqual(min_if_not_None([0]), 0)
+        self.assertEqual(min_if_not_None([0, None]), 0)
 
     def test_max_if_not_None(self):
-        self.assertEquals(max_if_not_None([1, 2, None, 3, None]), 3)
-        self.assertEquals(max_if_not_None([None, None, None]), None)
-        self.assertEquals(max_if_not_None([]), None)
-        self.assertEquals(max_if_not_None([None, 3, -1, 2]), 3)
-        self.assertEquals(max_if_not_None([0]), 0)
-        self.assertEquals(max_if_not_None([0, None]), 0)
+        self.assertEqual(max_if_not_None([1, 2, None, 3, None]), 3)
+        self.assertEqual(max_if_not_None([None, None, None]), None)
+        self.assertEqual(max_if_not_None([]), None)
+        self.assertEqual(max_if_not_None([None, 3, -1, 2]), 3)
+        self.assertEqual(max_if_not_None([0]), 0)
+        self.assertEqual(max_if_not_None([0, None]), 0)
 
     @unittest.skipIf(not SolverFactory('glpk').available(),
                      "GLPK solver is not available.")
@@ -183,13 +183,13 @@ class TestVarAggregate(unittest.TestCase):
         TransformationFactory('contrib.aggregate_vars').apply_to(m)
         SolverFactory('glpk').solve(m)
         z = m._var_aggregator_info.z
-        self.assertEquals(z[1].value, 0)
-        self.assertEquals(m.x.value, None)
-        self.assertEquals(m.y.value, None)
+        self.assertEqual(z[1].value, 0)
+        self.assertEqual(m.x.value, None)
+        self.assertEqual(m.y.value, None)
         TransformationFactory('contrib.aggregate_vars').update_variables(m)
-        self.assertEquals(z[1].value, 0)
-        self.assertEquals(m.x.value, 0)
-        self.assertEquals(m.y.value, 0)
+        self.assertEqual(z[1].value, 0)
+        self.assertEqual(m.x.value, 0)
+        self.assertEqual(m.y.value, 0)
 
 
 if __name__ == '__main__':
