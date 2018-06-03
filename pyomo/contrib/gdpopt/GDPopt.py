@@ -209,6 +209,9 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             ))
             GDPopt.initial_var_values = list(
                 v.value for v in GDPopt.initial_var_list)
+            GDPopt.initial_disjuncts_list = list(
+                m.component_data_objects(
+                    ctype=Disjunct, descend_into=(Block, Disjunct)))
 
             # Store the initial model state as the best solution found. If we
             # find no better solution, then we will restore from this copy.
@@ -242,13 +245,14 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
             # Integer cuts exclude particular discrete decisions
             GDPopt.integer_cuts = ConstraintList(doc='integer cuts')
-            # Feasible integer cuts exclude discrete realizations that have been
-            # explored via an NLP subproblem. Depending on model
+
+            # Feasible integer cuts exclude discrete realizations that have
+            # been explored via an NLP subproblem. Depending on model
             # characteristics, the user may wish to revisit NLP subproblems
             # (with a different initialization, for example). Therefore, these
             # cuts are not enabled by default, unless the initial model has no
             # discrete decisions.
-            #
+
             # Note: these cuts will only exclude integer realizations that are
             # not already in the primary GDPopt_integer_cuts ConstraintList.
             GDPopt.feasible_integer_cuts = ConstraintList(
@@ -292,21 +296,6 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
         finally:
             config.logger.setLevel(old_logger_level)
-
-    def _copy_values(self, from_model, to_model, config):
-        """Copy variable values from one model to another."""
-        for v_from, v_to in zip(from_model.GDPopt_utils.initial_var_list,
-                                to_model.GDPopt_utils.initial_var_list):
-            try:
-                v_to.set_value(v_from.value)
-            except ValueError as err:
-                if 'is not in domain Binary' in err.message:
-                    # Check to see if this is just a tolerance issue
-                    if (fabs(v_from.value - 1) <= config.integer_tolerance or
-                            fabs(v_from.value) <= config.integer_tolerance):
-                        v_to.set_value(round(v_from.value))
-                    else:
-                        raise
 
     def _copy_dual_suffixes(self, from_model, to_model,
                             from_map=None, to_map=None):
@@ -441,10 +430,11 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
         """
         m = solve_data.working_model
-        GDPopt = m.GDPopt_utils
         if not hasattr(m, 'dual'):  # Set up dual value reporting
             m.dual = Suffix(direction=Suffix.IMPORT)
         m.dual.activate()
+
+        solve_data.linear_GDP = m.clone()
 
         if config.init_strategy == 'set_covering':
             self._init_set_covering(solve_data, config)
@@ -465,308 +455,6 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         # TODO implement this? If not, the user will simply get an infeasible
         # return value
         pass
-
-    def _init_custom_disjuncts(self, solve_data, config):
-        """Initialize by using user-specified custom disjuncts."""
-        m = solve_data.working_model
-        # TODO error checking to make sure that the user gave proper disjuncts
-        for disj_set in config.custom_init_disjuncts:
-            fixed_disjs = ComponentSet()
-            for disj in disj_set:
-                disj_to_fix = model_cuid_to_obj[orig_model_cuids[disj]]
-                if not disj_to_fix.indicator_var.fixed:
-                    disj_to_fix.indicator_var.fix(1)
-                    fixed_disjs.add(disj_to_fix)
-            self._solve_init_MIP(solve_data)
-            for disj in fixed_disjs:
-                disj.indicator_var.unfix()
-            self._solve_NLP_subproblem(solve_data)
-
-    def _solve_init_MIP(self, solve_data, config):
-        """Solves the initialization MIP corresponding to the passed model.
-
-        Intended to consolidate some MIP solution code.
-
-        """
-        # print('Clone working model for init MIP')
-        m = solve_data.working_model.clone()
-        GDPopt = m.GDPopt_utils
-
-        # deactivate nonlinear constraints
-        nonlinear_constraints = (
-            c for c in m.component_data_objects(
-                ctype=Constraint, active=True, descend_into=(Block, Disjunct))
-            if c.body.polynomial_degree() not in (0, 1))
-        for c in nonlinear_constraints:
-            c.deactivate()
-
-        # Transform disjunctions
-        TransformationFactory('gdp.bigm').apply_to(m)
-
-        # Propagate variable bounds
-        TransformationFactory('contrib.propagate_eq_var_bounds').apply_to(m)
-        # Detect fixed variables
-        TransformationFactory('contrib.detect_fixed_vars').apply_to(m)
-        # Propagate fixed variables
-        TransformationFactory('contrib.propagate_fixed_vars').apply_to(m)
-        # Remove zero terms in linear expressions
-        TransformationFactory('contrib.remove_zero_terms').apply_to(m)
-        # Remove terms in equal to zero summations
-        TransformationFactory('contrib.propagate_zero_sum').apply_to(m)
-        # Transform bound constraints
-        TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
-        # Detect fixed variables
-        TransformationFactory('contrib.detect_fixed_vars').apply_to(m)
-        # Remove terms in equal to zero summations
-        TransformationFactory('contrib.propagate_zero_sum').apply_to(m)
-        # Remove trivial constraints
-        TransformationFactory(
-            'contrib.deactivate_trivial_constraints').apply_to(m)
-
-        # Deactivate extraneous IMPORT/EXPORT suffixes
-        getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
-        getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
-
-        results = solve_data.mip_solver.solve(
-            m, load_solutions=False,
-            **solve_data.mip_solver_kwargs)
-        terminate_cond = results.solver.termination_condition
-        if terminate_cond is tc.infeasibleOrUnbounded:
-            # Linear solvers will sometimes tell me that it's infeasible or
-            # unbounded during presolve, but fails to distinguish. We need to
-            # resolve with a solver option flag on.
-            old_options = deepcopy(solve_data.mip_solver.options)
-            # This solver option is specific to Gurobi.
-            solve_data.mip_solver.options['DualReductions'] = 0
-            results = solve_data.mip_solver.solve(
-                m, load_solutions=False,
-                **solve_data.mip_solver_kwargs)
-            terminate_cond = results.solver.termination_condition
-            solve_data.mip_solver.options.update(old_options)
-
-        if terminate_cond is tc.optimal:
-            m.solutions.load_from(results)
-            self._copy_values(m, solve_data.working_model)
-            logger.info('Solved set covering MIP')
-            return True
-        elif terminate_cond is tc.infeasible:
-            logger.info('Set covering problem is infeasible. '
-                        'Problem may have no more feasible '
-                        'binary configurations.')
-            if solve_data.mip_iter <= 1:
-                logger.warn('Problem was infeasible. '
-                            'Check your linear and logical constraints '
-                            'for contradictions.')
-            if GDPopt.objective.sense == minimize:
-                solve_data.LB = float('inf')
-            else:
-                solve_data.UB = float('-inf')
-            return False
-        else:
-            raise ValueError(
-                'GDPopt unable to handle set covering MILP '
-                'termination condition '
-                'of %s. Solver message: %s' %
-                (terminate_cond, results.solver.message))
-
-    def _init_max_binaries(self, solve_data, config):
-        """Initialize by maximizing binary variables and disjuncts.
-
-        This function activates as many binary variables and disjucts as
-        feasible. The user would usually want to call _solve_NLP_subproblem()
-        after an invocation of this function.
-
-        """
-        solve_data.mip_subiter += 1
-        # print('Clone working model for init max binaries')
-        m = solve_data.working_model.clone()
-        config.logger.info(
-            "MIP %s.%s: maximize value of binaries" %
-                    (solve_data.mip_iter, solve_data.mip_subiter))
-        nonlinear_constraints = (
-            c for c in m.component_data_objects(
-                ctype=Constraint, active=True, descend_into=(Block, Disjunct))
-            if c.body.polynomial_degree() not in (0, 1))
-        for c in nonlinear_constraints:
-            c.deactivate()
-        m.GDPopt_utils.objective.deactivate()
-        binary_vars = (
-            v for v in m.component_data_objects(
-                ctype=Var, descend_into=(Block, Disjunct))
-            if v.is_binary() and not v.fixed)
-        m.GDPopt_utils.max_binary_obj = Objective(
-            expr=sum(v for v in binary_vars), sense=maximize)
-        TransformationFactory('gdp.bigm').apply_to(m)
-        TransformationFactory('gdp.reclassify').apply_to(m)  # HACK
-        # TODO: chull too?
-        mip_solver = SolverFactory(config.mip)
-        if not mip_solver.available():
-            raise RuntimeError("MIP solver %s is not available." % config.mip)
-        results = mip_solver.solve(
-            m, **config.mip_options)
-        # m.display()
-        solve_terminate_cond = results.solver.termination_condition
-        if solve_terminate_cond is tc.optimal:
-            # Transfer variable values back to main working model
-            self._copy_values(m, solve_data.working_model, config)
-        elif solve_terminate_cond is tc.infeasible:
-            raise ValueError('Linear relaxation is infeasible. '
-                             'Problem is infeasible.')
-        else:
-            raise ValueError('Cannot handle termination condition %s'
-                             % (solve_terminate_cond,))
-
-    def _init_set_covering(self, solve_data, config, iterlim=8):
-        """Initialize by solving problems to cover the set of all disjuncts.
-
-        The purpose of this initialization is to generate linearizations
-        corresponding to each of the disjuncts.
-
-        This work is based upon prototyping work done by Eloy Fernandez at
-        Carnegie Mellon University.
-
-        """
-        m = solve_data.working_model
-        GDPopt = m.GDPopt_utils
-        GDPopt.nonlinear_disjuncts = list(
-            disj for disj in m.component_data_objects(
-                ctype=Disjunct, active=True, descend_into=(Block, Disjunct))
-            if any(constr.body.polynomial_degree() not in (0, 1)
-                   for constr in disj.component_data_objects(
-                       ctype=Constraint, active=True,
-                       # TODO should this descend into both Block and Disjunct,
-                       # or just Block?
-                       descend_into=(Block, Disjunct))))
-        GDPopt.covered_disjuncts = ComponentSet()
-        GDPopt.not_covered_disjuncts = ComponentSet(GDPopt.nonlinear_disjuncts)
-        iter_count = 1
-        GDPopt.feasible_integer_cuts.activate()
-        while GDPopt.not_covered_disjuncts and iter_count <= iterlim:
-            # Solve set covering MIP
-            if not self._solve_set_cover_MIP(solve_data, config):
-                # problem is infeasible. break
-                return False
-            # solve local NLP
-            if self._solve_NLP_subproblem(solve_data, config):
-                # if successful, updated sets
-                active_disjuncts = ComponentSet(
-                    disj for disj in m.component_data_objects(
-                        ctype=Disjunct, active=True,
-                        descend_into=(Block, Disjunct))
-                    if fabs(value(disj.indicator_var) - 1)
-                    <= config.integer_tolerance)
-                GDPopt.covered_disjuncts.update(active_disjuncts)
-                GDPopt.not_covered_disjuncts -= active_disjuncts
-            iter_count += 1
-            # m.GDPopt_utils.integer_cuts.pprint()
-        GDPopt.feasible_integer_cuts.deactivate()
-        if GDPopt.not_covered_disjuncts:
-            # Iteration limit was hit without a full covering of all nonlinear
-            # disjuncts
-            logger.warn('Iteration limit reached for set covering '
-                        'initialization.')
-            return False
-        return True
-
-    def _solve_set_cover_MIP(self, solve_data, config):
-        m = solve_data.working_model.clone()
-        GDPopt = m.GDPopt_utils
-        covered_disjuncts = GDPopt.covered_disjuncts
-
-        # Set up set covering objective
-        weights = ComponentMap((disj, 1) for disj in covered_disjuncts)
-        weights.update(ComponentMap(
-            (disj, len(covered_disjuncts) + 1)
-            for disj in GDPopt.not_covered_disjuncts))
-        GDPopt.objective.deactivate()
-        GDPopt.set_cover_obj = Objective(
-            expr=sum(weights[disj] * disj.indicator_var
-                     for disj in weights),
-            sense=maximize)
-
-        # deactivate nonlinear constraints
-        nonlinear_constraints = (
-            c for c in m.component_data_objects(
-                ctype=Constraint, active=True, descend_into=(Block, Disjunct))
-            if c.body.polynomial_degree() not in (0, 1))
-        for c in nonlinear_constraints:
-            c.deactivate()
-
-        # Deactivate potentially non-rigorous generated cuts
-        for constr in m.component_objects(ctype=Constraint, active=True,
-                                          descend_into=(Block, Disjunct)):
-            if (constr.local_name == 'GDPopt_OA_cuts'):
-                constr.deactivate()
-
-        # Transform disjunctions
-        TransformationFactory('gdp.bigm').apply_to(m)
-
-        # Propagate variable bounds
-        TransformationFactory('contrib.propagate_eq_var_bounds').apply_to(m)
-        # Detect fixed variables
-        TransformationFactory('contrib.detect_fixed_vars').apply_to(m)
-        # Propagate fixed variables
-        TransformationFactory('contrib.propagate_fixed_vars').apply_to(m)
-        # Remove zero terms in linear expressions
-        TransformationFactory('contrib.remove_zero_terms').apply_to(m)
-        # Remove terms in equal to zero summations
-        TransformationFactory('contrib.propagate_zero_sum').apply_to(m)
-        # Transform bound constraints
-        TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
-        # Detect fixed variables
-        TransformationFactory('contrib.detect_fixed_vars').apply_to(m)
-        # Remove terms in equal to zero summations
-        TransformationFactory('contrib.propagate_zero_sum').apply_to(m)
-        # Remove trivial constraints
-        TransformationFactory(
-            'contrib.deactivate_trivial_constraints').apply_to(m)
-
-        mip_solver = SolverFactory(config.mip)
-        if not mip_solver.available():
-            raise RuntimeError("MIP solver %s is not available." % config.mip)
-        results = mip_solver.solve(
-            m, load_solutions=False,
-            **config.mip_options)
-        terminate_cond = results.solver.termination_condition
-        if terminate_cond is tc.infeasibleOrUnbounded:
-            # Linear solvers will sometimes tell me that it's infeasible or
-            # unbounded during presolve, but fails to distinguish. We need to
-            # resolve with a solver option flag on.
-            old_options = deepcopy(mip_solver.options)
-            # This solver option is specific to Gurobi.
-            mip_solver.options['DualReductions'] = 0
-            results = mip_solver.solve(
-                m, load_solutions=False,
-                **config.mip_options)
-            terminate_cond = results.solver.termination_condition
-            mip_solver.options.update(old_options)
-
-        if terminate_cond is tc.optimal:
-            m.solutions.load_from(results)
-            self._copy_values(m, solve_data.working_model, config)
-            config.logger.info('Solved set covering MIP')
-            return True
-        elif terminate_cond is tc.infeasible:
-            config.logger.info(
-                'Set covering problem is infeasible. '
-                'Problem may have no more feasible '
-                'binary configurations.')
-            if GDPopt.mip_iter <= 1:
-                config.logger.warn(
-                    'Set covering problem was infeasible. '
-                    'Check your linear and logical constraints '
-                    'for contradictions.')
-            if GDPopt.objective.sense == minimize:
-                solve_data.LB = float('inf')
-            else:
-                solve_data.UB = float('-inf')
-            return False
-        else:
-            raise ValueError(
-                'GDPopt unable to handle set covering MILP '
-                'termination condition '
-                'of %s. Solver message: %s' %
-                (terminate_cond, results.solver.message))
 
     def _GDPopt_iteration_loop(self, solve_data, config):
         m = solve_data.working_model
@@ -1005,183 +693,6 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
         # Call the MILP post-solve callback
         config.master_postsolve(m, solve_data)
-
-    def _solve_NLP_subproblem(self, solve_data, config):
-        # print('Clone working model for NLP')
-        m = solve_data.working_model.clone()
-        GDPopt = m.GDPopt_utils
-        solve_data.nlp_iter += 1
-        config.logger.info('NLP %s: Solve subproblem for fixed binaries and '
-                           'logical realizations.'
-                           % (solve_data.nlp_iter,))
-        # Fix binary variables
-        binary_vars = [
-            v for v in m.component_data_objects(
-                ctype=Var, descend_into=(Block, Disjunct))
-            if v.is_binary() and not v.fixed]
-        for v in binary_vars:
-            if v.value is None:
-                logger.warning('No value is defined for binary variable %s'
-                               ' for the NLP subproblem.' % (v.name,))
-            else:
-                # round the integer variable values so that they are exactly 0
-                # or 1
-                if config.round_NLP_binaries:
-                    v.set_value(round(v.value))
-            v.fix()
-
-        # Deactivate the OA and PSC cuts
-        for constr in m.component_objects(ctype=Constraint, active=True,
-                                          descend_into=(Block, Disjunct)):
-            if (constr.local_name == 'GDPopt_OA_cuts' or
-                    constr.local_name == 'psc_cuts'):
-                constr.deactivate()
-
-        # Activate or deactivate disjuncts according to the value of their
-        # indicator variable
-        for disj in m.component_data_objects(
-                ctype=Disjunct, descend_into=(Block, Disjunct)):
-            if (fabs(value(disj.indicator_var) - 1)
-                    <= config.integer_tolerance):
-                # Disjunct is active. Convert to Block.
-                disj.parent_block().reclassify_component_type(disj, Block)
-            elif (fabs(value(disj.indicator_var))
-                    <= config.integer_tolerance):
-                disj.deactivate()
-            else:
-                raise ValueError(
-                    'Non-binary value of disjunct indicator variable '
-                    'for %s: %s' % (disj.name, value(disj.indicator_var)))
-
-        for d in m.component_data_objects(Disjunction, active=True):
-            d.deactivate()
-
-        # Propagate variable bounds
-        TransformationFactory('contrib.propagate_eq_var_bounds').apply_to(m)
-        # Detect fixed variables
-        TransformationFactory('contrib.detect_fixed_vars').apply_to(m)
-        # Propagate fixed variables
-        TransformationFactory('contrib.propagate_fixed_vars').apply_to(m)
-        # Remove zero terms in linear expressions
-        TransformationFactory('contrib.remove_zero_terms').apply_to(m)
-        # Remove terms in equal to zero summations
-        TransformationFactory('contrib.propagate_zero_sum').apply_to(m)
-        # Transform bound constraints
-        TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
-        # Detect fixed variables
-        TransformationFactory('contrib.detect_fixed_vars').apply_to(m)
-        # Remove terms in equal to zero summations
-        TransformationFactory('contrib.propagate_zero_sum').apply_to(m)
-        # Remove trivial constraints
-        TransformationFactory(
-            'contrib.deactivate_trivial_constraints').apply_to(m)
-
-        # restore original variable values
-        for var, old_value in zip(GDPopt.initial_var_list,
-                                  GDPopt.initial_var_values):
-            if not var.fixed and not var.is_binary():
-                if old_value is not None:
-                    if var.has_lb() and old_value < var.lb:
-                        old_value = var.lb
-                    if var.has_ub() and old_value > var.ub:
-                        old_value = var.ub
-                    # Set the value
-                    var.set_value(old_value)
-
-        config.subprob_presolve(m, solve_data)
-
-        # Solve the NLP
-        nlp_solver = SolverFactory(config.nlp)
-        if not nlp_solver.available():
-            raise RuntimeError("NLP solver %s is not available." % config.nlp)
-        results = nlp_solver.solve(
-            m, load_solutions=False,
-            **config.nlp_options)
-        solve_data.solve_results = results
-
-        solnFeasible = False
-
-        def process_feasible_solution():
-            self._copy_values(m, solve_data.working_model, config)
-            self._copy_dual_suffixes(m, solve_data.working_model)
-            if GDPopt.objective.sense == minimize:
-                solve_data.UB = min(
-                    value(GDPopt.objective.expr), solve_data.UB)
-                solve_data.solution_improved = (
-                    solve_data.UB < solve_data.UB_progress[-1])
-            else:
-                solve_data.LB = max(
-                    value(GDPopt.objective.expr), solve_data.LB)
-                solve_data.solution_improved = (
-                    solve_data.LB > solve_data.LB_progress[-1])
-            config.logger.info(
-                'NLP %s: OBJ: %s  LB: %s  UB: %s'
-                % (solve_data.nlp_iter,
-                   value(GDPopt.objective.expr),
-                   solve_data.LB, solve_data.UB))
-            if solve_data.solution_improved:
-                # print('Clone model for best_solution_found')
-                solve_data.best_solution_found = m.clone()
-
-            # Add the linear cut
-            if solve_data.current_strategy == 'LOA':
-                self._add_oa_cut(m, solve_data, config)
-
-            # This adds an integer cut to the GDPopt_feasible_integer_cuts
-            # ConstraintList, which is not activated by default. However, it
-            # may be activated as needed in certain situations or for certain
-            # values of option flags.
-            self._add_int_cut(solve_data, config, feasible=True)
-
-            config.subprob_postfeas(m, solve_data)
-
-        subprob_terminate_cond = results.solver.termination_condition
-        if subprob_terminate_cond is tc.optimal:
-            m.solutions.load_from(results)
-            process_feasible_solution()
-            solnFeasible = True
-        elif subprob_terminate_cond is tc.infeasible:
-            # TODO try something else? Reinitialize with different initial
-            # value?
-            logger.info('NLP subproblem was locally infeasible.')
-            # load the solution and suppress the warning message by setting
-            # solver status to ok.
-            results.solver.status = SolverStatus.ok
-            m.solutions.load_from(results)
-            self._copy_values(m, solve_data.working_model)
-            self._copy_dual_suffixes(m, solve_data.working_model,
-                                     from_map=obj_to_cuid)
-            # Add an integer cut to exclude this discrete option
-            self._add_int_cut(solve_data)
-        elif subprob_terminate_cond is tc.maxIterations:
-            # TODO try something else? Reinitialize with different initial
-            # value?
-            logger.info('NLP subproblem failed to converge '
-                        'within iteration limit.')
-            results.solver.status = SolverStatus.ok
-            m.solutions.load_from(results)
-            if self._is_feasible(m):
-                logger.info('NLP solution is still feasible. '
-                            'Using potentially suboptimal feasible solution.')
-                process_feasible_solution()
-                solnFeasible = True
-            else:
-                # Add an integer cut to exclude this discrete option
-                self._add_int_cut(solve_data)
-        else:
-            raise ValueError(
-                'GDPopt unable to handle NLP subproblem termination '
-                'condition of %s. Results: %s'
-                % (subprob_terminate_cond, results))
-
-        if GDPopt.objective.sense == minimize:
-            solve_data.UB_progress.append(solve_data.UB)
-        else:
-            solve_data.LB_progress.append(solve_data.LB)
-
-        # Call the NLP post-solve callback
-        config.subprob_postsolve(m, solve_data)
-        return solnFeasible
 
     def _is_feasible(self, m, config, constr_tol=1E-6, var_tol=1E-8):
         for constr in m.component_data_objects(

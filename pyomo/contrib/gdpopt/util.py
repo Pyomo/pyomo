@@ -1,6 +1,8 @@
 """Utility functions and classes for the GDPopt solver."""
 from __future__ import division
+
 import logging
+from math import fabs
 
 
 class _DoNothing(object):
@@ -32,3 +34,22 @@ def a_logger(str_or_logger):
         return str_or_logger
     else:
         return logging.getLogger(str_or_logger)
+
+
+def copy_values(from_model, to_model, config):
+    """Copy variable values from one model to another."""
+    for v_from, v_to in zip(from_model.GDPopt_utils.initial_var_list,
+                            to_model.GDPopt_utils.initial_var_list):
+        if v_from.is_stale():
+            # Skip stale variable values.
+            continue
+        try:
+            v_to.set_value(v_from.value)
+        except ValueError as err:
+            if 'is not in domain Binary' in err.message:
+                # Check to see if this is just a tolerance issue
+                if (fabs(v_from.value - 1) <= config.integer_tolerance or
+                        fabs(v_from.value) <= config.integer_tolerance):
+                    v_to.set_value(round(v_from.value))
+                else:
+                    raise
