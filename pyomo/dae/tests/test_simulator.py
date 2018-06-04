@@ -888,6 +888,25 @@ class TestSimulator(unittest.TestCase):
         m.del_component('con2')
         m.del_component('con2_index')
 
+    # check that all diffvars have been added to templatemap even if not
+    # appearing in RHS of a differential equation
+    @unittest.skipIf(not casadi_available, "casadi not available")
+    def test_nonRHS_vars(self):
+
+        m = self.m
+        m.v2 = Var(m.t)
+        m.dv2 = DerivativeVar(m.v2)
+        m.p = Param(initialize=5)
+        t = IndexTemplate(m.t)
+
+        def _con(m, t):
+            return m.dv2[t] == 10 + m.p
+        m.con = Constraint(m.t, rule=_con)
+
+        mysim = Simulator(m,package='casadi')
+        self.assertEqual(len(mysim._templatemap), 1)
+        self.assertEqual(mysim._diffvars[0], _GetItemIndexer(m.v2[t]))
+        m.del_component('con')
 
 class TestExpressionCheckers(unittest.TestCase):
     """
