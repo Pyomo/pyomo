@@ -12,10 +12,79 @@ from pyomo.core import (Block, ComponentSet, Constraint, Objective,
                         SolverFactory, TransformationFactory, Var, maximize,
                         minimize, value, ComponentMap)
 from pyomo.gdp import Disjunct
+from pyomo.contrib.gdpopt.util import _DoNothing
+from pyomo.contrib.gdpopt.nlp_solve import solve_NLP
 
 
-def solve_linear_GDP():
-    pass
+def solve_linear_GDP(linear_GDP_model, solve_data, config):
+    m = linear_GDP_model
+    GDPopt = m.GDPopt_utils
+    # Transform disjunctions
+    TransformationFactory('gdp.bigm').apply_to(m)
+
+    preprocessing_transformations = [
+        # Propagate variable bounds
+        'contrib.propagate_eq_var_bounds',
+        # Detect fixed variables
+        'contrib.detect_fixed_vars',
+        # Propagate fixed variables
+        'contrib.propagate_fixed_vars',
+        # Remove zero terms in linear expressions
+        'contrib.remove_zero_terms',
+        # Remove terms in equal to zero summations
+        'contrib.propagate_zero_sum',
+        # Transform bound constraints
+        'contrib.constraints_to_var_bounds',
+        # Detect fixed variables
+        'contrib.detect_fixed_vars',
+        # Remove terms in equal to zero summations
+        'contrib.propagate_zero_sum',
+        # Remove trivial constraints
+        'contrib.deactivate_trivial_constraints']
+    for xfrm in preprocessing_transformations:
+        TransformationFactory(xfrm).apply_to(m)
+
+    # Deactivate extraneous IMPORT/EXPORT suffixes
+    getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
+    getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
+
+    # Load solutions is false because otherwise an annoying error message
+    # appears for infeasible models.
+    mip_solver = SolverFactory(config.mip)
+    if not mip_solver.available():
+        raise RuntimeError("MIP solver %s is not available." % config.mip)
+    results = mip_solver.solve(
+        m, load_solutions=False,
+        **config.mip_options)
+    terminate_cond = results.solver.termination_condition
+    if terminate_cond is tc.infeasibleOrUnbounded:
+        # Linear solvers will sometimes tell me that it's infeasible or
+        # unbounded during presolve, but fails to distinguish. We need to
+        # resolve with a solver option flag on.
+        tmp_options = deepcopy(config.mip_options)
+        # TODO This solver option is specific to Gurobi.
+        tmp_options['DualReductions'] = 0
+        results = mip_solver.solve(
+            m, load_solutions=False,
+            **tmp_options)
+        terminate_cond = results.solver.termination_condition
+
+    if terminate_cond is tc.optimal:
+        m.solutions.load_from(results)
+        config.logger.info('Solved set covering MIP')
+        return True, ((v.value if not v.is_stale() else None)
+                      for v in GDPopt.initial_var_values)
+    elif terminate_cond is tc.infeasible:
+        config.logger.info(
+            'Linear GDP is infeasible. '
+            'Problem may have no more feasible discrete configurations.')
+        return False
+    else:
+        raise ValueError(
+            'GDPopt unable to handle set covering MILP '
+            'termination condition '
+            'of %s. Solver message: %s' %
+            (terminate_cond, results.solver.message))
 
 
 def _init_custom_disjuncts(self, solve_data, config):
@@ -24,15 +93,35 @@ def _init_custom_disjuncts(self, solve_data, config):
     for active_disjunct_set in config.custom_init_disjuncts:
         # custom_init_disjuncts contains a list of sets, giving the disjuncts
         # active at each initialization iteration
-        fixed_disjs = ComponentSet()
-        for disj in active_disjunct_set:
-            if not disj.indicator_var.fixed:
-                disj.indicator_var.fix(1)
-                fixed_disjs.add(disj)
-        self._solve_init_MIP(solve_data)
-        for disj in fixed_disjs:
-            disj.indicator_var.unfix()
-        self._solve_NLP_subproblem(solve_data)
+
+        # fix the disjuncts in the linear GDP and send for solution.
+        linear_GDP = solve_data.linear_GDP.clone()
+        for orig_disj, clone_disj in zip(
+            solve_data.linear_GDP.GDPopt_utils.initial_disjuncts_list,
+            linear_GDP.GDPopt_utils.initial_disjuncts_list
+        ):
+            if orig_disj in active_disjunct_set:
+                clone_disj.indicator_var.fix(1)
+        mip_result = solve_linear_GDP(linear_GDP, solve_data, config)
+        if mip_result:
+            _, mip_var_values = mip_result
+            # use the mip_var_values to create the NLP subproblem
+            nlp_model = solve_data.working_model.clone()
+            # copy in the discrete variable values
+            for var, val in zip(nlp_model.GDPopt_utils.initial_var_list,
+                                mip_var_values):
+                if val is None:
+                    continue
+                else:
+                    var.value = val
+            TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
+            nlp_result = solve_NLP(nlp_model, solve_data, config)
+            nlp_feasible, nlp_var_values, nlp_duals = nlp_result
+            # TODO update the progress indicators
+            # TODO add the cuts
+        else:
+            config.logger.error(
+                'Linear GDP infeasible.')
 
 
 def _init_max_binaries(self, solve_data, config):

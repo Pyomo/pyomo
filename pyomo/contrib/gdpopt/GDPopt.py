@@ -212,6 +212,9 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             GDPopt.initial_disjuncts_list = list(
                 m.component_data_objects(
                     ctype=Disjunct, descend_into=(Block, Disjunct)))
+            GDPopt.initial_constraints_list = list(
+                m.component_data_objects(
+                    ctype=Constraint, descend_into=(Block, Disjunct)))
 
             # Store the initial model state as the best solution found. If we
             # find no better solution, then we will restore from this copy.
@@ -435,6 +438,13 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         m.dual.activate()
 
         solve_data.linear_GDP = m.clone()
+        # deactivate nonlinear constraints
+        nonlinear_constraints = (
+            c for c in solve_data.linear_GDP.component_data_objects(
+                ctype=Constraint, active=True, descend_into=(Block, Disjunct))
+            if c.body.polynomial_degree() not in (1, 0))
+        for c in nonlinear_constraints:
+            c.deactivate()
 
         if config.init_strategy == 'set_covering':
             self._init_set_covering(solve_data, config)

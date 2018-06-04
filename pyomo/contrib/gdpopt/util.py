@@ -4,6 +4,8 @@ from __future__ import division
 import logging
 from math import fabs
 
+from pyomo.core import value, Var, Constraint
+
 
 class _DoNothing(object):
     """Do nothing, literally.
@@ -53,3 +55,40 @@ def copy_values(from_model, to_model, config):
                     v_to.set_value(round(v_from.value))
                 else:
                     raise
+
+
+def is_feasible(model, config):
+    config.logger.info('Checking if model is feasible.')
+    for constr in model.component_data_objects(
+            ctype=Constraint, active=True, descend_into=True):
+        # Check constraint lower bound
+        if (constr.lower is not None and (
+            value(constr.lower) - value(constr.body)
+            >= config.constraint_tolerance
+        )):
+            config.logger.info('%s: body %s < LB %s' % (
+                constr.name, value(constr.body), value(constr.lower)))
+            return False
+        # check constraint upper bound
+        if (constr.upper is not None and (
+            value(constr.body) - value(constr.upper)
+            >= config.constraint_tolerance
+        )):
+            config.logger.info('%s: body %s > UB %s' % (
+                constr.name, value(constr.body), value(constr.upper)))
+            return False
+    for var in model.component_data_objects(ctype=Var, descend_into=True):
+        # Check variable lower bound
+        if (var.has_lb() and
+                value(var.lb) - value(var) >= config.variable_tolerance):
+            config.logger.info('%s: %s < LB %s' % (
+                var.name, value(var), value(var.lb)))
+            return False
+        # Check variable upper bound
+        if (var.has_ub() and
+                value(var) - value(var.ub) >= config.variable_tolerance):
+            config.logger.info('%s: %s > UB %s' % (
+                var.name, value(var), value(var.ub)))
+            return False
+    config.logger.info('Model is feasible.')
+    return True
