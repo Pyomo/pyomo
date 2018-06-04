@@ -23,11 +23,11 @@ def randint(a,b):
 def unique_component_name(instance, name):
     # test if this name already exists in model. If not, we're good. 
     # Else, we add random numbers until it doesn't
-    if instance.component(name) is None:
+    if instance.component(name) is None and not hasattr(instance, name):
         return name
     name += '_%d' % (randint(0,9),)
     while True:
-        if instance.component(name) is None:
+        if instance.component(name) is None and not hasattr(instance, name):
             return name
         else:
             name += str(randint(0,9))
