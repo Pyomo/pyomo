@@ -5,12 +5,12 @@ from __future__ import division
 
 from math import fabs
 
-from pyomo.core import TerminationCondition as tc
-from pyomo.core import (Block, Constraint, SolverFactory,
-                        TransformationFactory, Var, value, minimize)
-from pyomo.gdp import Disjunct, Disjunction
-from pyomo.opt import SolverStatus
 from pyomo.contrib.gdpopt.util import is_feasible
+from pyomo.opt import TerminationCondition as tc
+from pyomo.core import (Block, Constraint,
+                        TransformationFactory, Var, minimize, value)
+from pyomo.gdp import Disjunct, Disjunction
+from pyomo.opt import SolverStatus, SolverFactory
 
 
 def solve_NLP(nlp_model, solve_data, config):
@@ -21,8 +21,8 @@ def solve_NLP(nlp_model, solve_data, config):
         'logical realizations.' % (solve_data.nlp_iter,))
     if any(v for v in nlp_model.component_data_objects(
         ctype=Var, descend_into=(Block, Disjunct), active=True)
-           if (v.is_binary() or v.is_integer()) and not v.fixed
-           ):
+        if (v.is_binary() or v.is_integer()) and not v.fixed
+    ):
         config.logger.warning(
             "Unfixed discrete variables exist on the NLP subproblem.")
 
@@ -106,16 +106,38 @@ def solve_NLP(nlp_model, solve_data, config):
     return (
         nlp_feasible,  # If solution is feasible.
         # Variable values
-        ((v.value if not v.is_stale() else None)
-         for v in GDPopt.initial_var_values),
+        list((v.value if not v.stale else None)
+         for v in GDPopt.initial_var_list),
         # Dual values
-        (nlp_model.dual.get(c, None)
+        list(nlp_model.dual.get(c, None)
          for c in GDPopt.initial_constraints_list))
 
-    # if GDPopt.objective.sense == minimize:
-    #     solve_data.UB_progress.append(solve_data.UB)
-    # else:
-    #     solve_data.LB_progress.append(solve_data.LB)
+
+def update_nlp_progress_indicators(model, solve_data, config):
+    """Update the progress indicators for the NLP subproblem."""
+    GDPopt = model.GDPopt_utils
+    if GDPopt.objective.sense == minimize:
+        solve_data.UB = min(
+            value(GDPopt.objective.expr), solve_data.UB)
+        solve_data.solution_improved = (
+            solve_data.UB < solve_data.UB_progress[-1])
+        solve_data.UB_progress.append(solve_data.UB)
+    else:
+        solve_data.LB = max(
+            value(GDPopt.objective.expr), solve_data.LB)
+        solve_data.solution_improved = (
+            solve_data.LB > solve_data.LB_progress[-1])
+        solve_data.LB_progress.append(solve_data.LB)
+
+    if solve_data.solution_improved:
+        config.logger.info('Solution improved.')
+        solve_data.best_solution_found = [
+            v.value for v in GDPopt.initial_var_list]
+    config.logger.info(
+        'NLP %s: OBJ: %s  LB: %s  UB: %s'
+        % (solve_data.nlp_iter,
+           value(GDPopt.objective.expr),
+           solve_data.LB, solve_data.UB))
 
 
 def _solve_NLP_subproblem(solve_data, config):
@@ -240,7 +262,7 @@ def _solve_NLP_subproblem(solve_data, config):
         if solve_data.current_strategy == 'LOA':
             self._add_oa_cut(m, solve_data, config)
 
-        # This adds an integer cut to the GDPopt_feasible_integer_cuts
+        # This adds an integer cut to the exclude_explored_configurations
         # ConstraintList, which is not activated by default. However, it
         # may be activated as needed in certain situations or for certain
         # values of option flags.
