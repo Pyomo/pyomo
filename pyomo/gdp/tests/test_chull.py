@@ -38,7 +38,6 @@ def check_linear_coef(self, repn, var, coef):
 
 
 class TwoTermDisj(unittest.TestCase):
-    # make sure that we are using coopr3 expressions...
     def setUp(self):
         # set seed to test unique namer
         random.seed(666)

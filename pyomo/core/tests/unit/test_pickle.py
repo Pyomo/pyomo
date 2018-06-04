@@ -25,7 +25,6 @@ import pyomo.core.expr.current as EXPR
 
 
 using_pypy = platform.python_implementation() == "PyPy"
-_using_pyomo5_trees = EXPR.mode == EXPR.Mode.pyomo5_trees
 
 
 def obj_rule(model):
@@ -269,10 +268,7 @@ class Test(unittest.TestCase):
         tmodel = pickle.loads(pickle_str)
         instance=tmodel.create_instance()
         expr = sum_product(instance.x,instance.B,instance.y)
-        if _using_pyomo5_trees:
-            baseline = "B[1]*x[1]*y[1] + B[2]*x[2]*y[2] + B[3]*x[3]*y[3]"
-        else:
-            baseline = "x[1] * B[1] * y[1] + x[2] * B[2] * y[2] + x[3] * B[3] * y[3]"
+        baseline = "B[1]*x[1]*y[1] + B[2]*x[2]*y[2] + B[3]*x[3]*y[3]"
         self.assertEquals( str(expr), baseline )
 
     # same as above, but pickles the constructed AbstractModel and
@@ -289,10 +285,7 @@ class Test(unittest.TestCase):
         pickle_str = pickle.dumps(tmp)
         instance = pickle.loads(pickle_str)
         expr = sum_product(instance.x,instance.B,instance.y)
-        if _using_pyomo5_trees:
-            baseline = "B[1]*x[1]*y[1] + B[2]*x[2]*y[2] + B[3]*x[3]*y[3]"
-        else:
-            baseline = "x[1] * B[1] * y[1] + x[2] * B[2] * y[2] + x[3] * B[3] * y[3]"
+        baseline = "B[1]*x[1]*y[1] + B[2]*x[2]*y[2] + B[3]*x[3]*y[3]"
         self.assertEquals( str(expr), baseline )
 
     # verifies that the use of lambda expressions as rules yields model instances

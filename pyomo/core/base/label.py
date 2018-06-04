@@ -9,7 +9,8 @@
 #  ___________________________________________________________________________
 
 __all__ = ['CounterLabeler', 'NumericLabeler', 'CNameLabeler', 'TextLabeler',
-           'AlphaNumericTextLabeler','NameLabeler', 'CuidLabeler']
+           'AlphaNumericTextLabeler','NameLabeler', 'CuidLabeler',
+           'ShortNameLabeler']
 
 import six
 if six.PY3:
@@ -150,3 +151,22 @@ class NameLabeler(object):
 
     def __call__(self, obj):
         return obj.getname(True, self.name_buffer)
+
+class ShortNameLabeler(object):
+    def __init__(self, limit, prefix, start=0, labeler=None):
+        self.id = start
+        self.prefix = prefix
+        self.limit = limit
+        if labeler is not None:
+            self.labeler = labeler
+        else:
+            self.labeler = AlphaNumericTextLabeler()
+
+    def __call__(self, obj=None):
+        lbl = self.labeler(obj)
+        if (len(lbl) < self.limit) or ((len(lbl) == self.limit) and (lbl[-len(self.prefix):] != self.prefix)):
+            return lbl
+        else:
+            self.id += 1
+            suffix = self.prefix + str(self.id) + self.prefix
+            return lbl[-self.limit + len(suffix):] + suffix
