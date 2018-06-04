@@ -9,6 +9,7 @@
 from pyomo.core.base import Constraint, Param, value, Suffix, Block
 
 from pyomo.dae import ContinuousSet, DerivativeVar
+from pyomo.core.base import Var
 from pyomo.dae.diffvar import DAE_Error
 
 from pyomo.core.expr import current as EXPR
@@ -422,7 +423,12 @@ class Simulator:
         cstemplate = IndexTemplate(contset)
 
         # Ensure that there is at least one derivative in the model
-        derivs = m.component_map(DerivativeVar)
+        allvars = m.component_map([DerivativeVar, Var])
+        derivs = {}
+        for i in allvars:
+            if isinstance(allvars[i], DerivativeVar):
+                derivs[i] = allvars[i]
+
         if len(derivs) == 0:
             raise DAE_Error("Cannot simulate a model with no derivatives")
 
