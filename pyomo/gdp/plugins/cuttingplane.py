@@ -29,7 +29,6 @@ from pyomo.core import (
     Transformation, TransformationFactory, value
 )
 from pyomo.core.base.symbolic import differentiate
-from pyomo.core.base.expr import identify_variables
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt import SolverFactory
 
