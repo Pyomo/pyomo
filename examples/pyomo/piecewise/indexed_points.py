@@ -35,4 +35,4 @@ model.c.add(model.x[1] >= 1.0)
 model.c.add(model.x[2] >= 2.0)
 model.c.add(model.x[3] >= 3.1)
 
-model.o = Objective(expr=summation(model.y))
+model.o = Objective(expr=sum_product(model.y))

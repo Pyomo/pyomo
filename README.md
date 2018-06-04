@@ -22,6 +22,11 @@ Pyomo is a Python-based open-source software package that supports a diverse set
 
 Pyomo is available under the BSD License.
 
+Pyomo is currently tested with the following Python implementations:
+
+* CPython: 2.6, 2.7, 3.4, 3.5, 3.6
+* PyPy: 2, 3
+
 ### Installation
 
 #### PyPI [![PyPI](https://img.shields.io/pypi/v/pyomo.svg?maxAge=2592000)]()
@@ -31,7 +36,7 @@ Pyomo is available under the BSD License.
 --->
 
     pip install pyomo
-    
+
 #### BinStar [![Binstar Badge](https://anaconda.org/conda-forge/pyomo/badges/version.svg)](https://anaconda.org/conda-forge/pyomo) [![Binstar Badge](https://anaconda.org/conda-forge/pyomo/badges/downloads.svg)](https://anaconda.org/conda-forge/pyomo)
 
     conda install -c https://conda.anaconda.org/conda-forge pyomo

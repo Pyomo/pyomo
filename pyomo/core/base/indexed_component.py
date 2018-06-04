@@ -15,7 +15,7 @@ import pyutilib.misc
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.template_expr import TemplateExpressionError
-from pyomo.util import DeveloperError
+from pyomo.common import DeveloperError
 
 from six import PY3, itervalues, iteritems, advance_iterator
 import sys
@@ -537,8 +537,8 @@ You can silence this warning by one of three ways:
             # due to circular imports (expr imports _VarData
             # imports indexed_component, but we need expr
             # here
-            from pyomo.core.base import expr as EXPR
-            if index.__class__ is EXPR._GetItemExpression:
+            from pyomo.core.expr import current as EXPR
+            if index.__class__ is EXPR.GetItemExpression:
                 return index
             index = self._validate_index(index)
             # _processUnhashableIndex could have found a slice, or
@@ -771,8 +771,8 @@ You can silence this warning by one of three ways:
                     # due to circular imports (expr imports _VarData
                     # imports indexed_component, but we need expr
                     # here
-                    from pyomo.core.base import expr as EXPR
-                    return EXPR._GetItemExpression(self, idx)
+                    from pyomo.core.expr import current as EXPR
+                    return EXPR.GetItemExpression(tuple(idx), self)
                 except:
                     # There are other ways we could get an exception
                     # that is not TemplateExpressionError; most notably,
@@ -939,4 +939,3 @@ class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
         if self.is_indexed():
             for component_data in itervalues(self):
                 component_data.deactivate()
-

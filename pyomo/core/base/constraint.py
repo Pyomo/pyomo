@@ -17,14 +17,15 @@ import logging
 from weakref import ref as weakref_ref
 
 import pyutilib.math
-from pyomo.util.timing import ConstructionTimer
-from pyomo.core.base import expr as EXPR
-from pyomo.core.base.plugin import register_component
-from pyomo.core.base.numvalue import (ZeroConstant,
+from pyomo.common.timing import ConstructionTimer
+from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.numvalue import (ZeroConstant,
                                       value,
                                       as_numeric,
                                       is_constant,
+                                      native_numeric_types,
                                       _sub)
+from pyomo.core.base.plugin import register_component
 from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import \
     ( ActiveIndexedComponent,
@@ -405,19 +406,15 @@ class _GeneralConstraintData(_ConstraintData):
                     arg1 = as_numeric(arg1)
 
                 self._equality = True
-                if arg1 is None or (not arg1._potentially_variable()):
+                if arg1 is None or (not arg1.is_potentially_variable()):
                     self._lower = self._upper = arg1
                     self._body = arg0
-                elif arg0 is None or (not arg0._potentially_variable()):
+                elif arg0 is None or (not arg0.is_potentially_variable()):
                     self._lower = self._upper = arg0
                     self._body = arg1
                 else:
-                    with EXPR.bypass_clone_check():
-                        self._lower = self._upper = ZeroConstant
-                        self._body = arg0
-                        self._body -= arg1
-                    #self._body = EXPR.generate_expression_bypassCloneCheck(
-                    #    _sub, arg0, arg1)
+                    self._lower = self._upper = ZeroConstant
+                    self._body = arg0 - arg1
             #
             # Form inequality expression
             #
@@ -425,7 +422,7 @@ class _GeneralConstraintData(_ConstraintData):
                 arg0 = expr[0]
                 if arg0 is not None:
                     arg0 = as_numeric(arg0)
-                    if arg0._potentially_variable():
+                    if arg0.is_potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the lower "
@@ -440,7 +437,7 @@ class _GeneralConstraintData(_ConstraintData):
                 arg2 = expr[2]
                 if arg2 is not None:
                     arg2 = as_numeric(arg2)
-                    if arg2._potentially_variable():
+                    if arg2.is_potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the upper "
@@ -469,14 +466,14 @@ class _GeneralConstraintData(_ConstraintData):
                         "Constraint '%s' does not have a proper "
                         "value. Found '%s'\nExpecting a tuple or "
                         "equation. Examples:"
-                        "\n   summation(model.costs) == model.income"
+                        "\n   sum(model.costs) == model.income"
                         "\n   (0, model.price[item], 50)"
                         % (self.name, str(expr)))
             except AttributeError:
                 msg = ("Constraint '%s' does not have a proper "
                        "value. Found '%s'\nExpecting a tuple or "
                        "equation. Examples:"
-                       "\n   summation(model.costs) == model.income"
+                       "\n   sum(model.costs) == model.income"
                        "\n   (0, model.price[item], 50)"
                        % (self.name, str(expr)))
                 if type(expr) is bool:
@@ -498,111 +495,86 @@ class _GeneralConstraintData(_ConstraintData):
         # user did ( var < 1 > 0 ) (which also results in a non-None
         # chainedInequality value)
         #
-        if EXPR.generate_relational_expression.chainedInequality is not None:
-            raise TypeError(EXPR.chainedInequalityErrorMessage())
+        if EXPR._using_chained_inequality and EXPR._chainedInequality.prev is not None:
+            raise TypeError(EXPR._chainedInequality.error_message())
         #
         # Process relational expressions
         # (i.e. explicit '==', '<', and '<=')
         #
         if relational_expr:
-            if _expr_type is EXPR._EqualityExpression:
+            if _expr_type is EXPR.EqualityExpression:
                 # Equality expression: only 2 arguments!
                 self._equality = True
-                _args = expr._args
-                # Explicitly dereference the original arglist (otherwise
-                # this runs afoul of the getrefcount logic)
-                expr._args = []
 
-                if not _args[1]._potentially_variable():
-                    self._lower = self._upper = _args[1]
-                    self._body = _args[0]
-                elif not _args[0]._potentially_variable():
-                    self._lower = self._upper = _args[0]
-                    self._body = _args[1]
+                if expr.arg(1).__class__ in native_numeric_types or not expr.arg(1).is_potentially_variable():
+                    self._lower = self._upper = expr.arg(1)
+                    self._body = expr.arg(0)
+                elif expr.arg(0).__class__ in native_numeric_types or not expr.arg(0).is_potentially_variable():
+                    self._lower = self._upper = expr.arg(0)
+                    self._body = expr.arg(1)
                 else:
-                    with EXPR.bypass_clone_check():
-                        self._lower = self._upper = ZeroConstant
-                        self._body = _args[0]
-                        self._body -= _args[1]
-                    #self._body = EXPR.generate_expression_bypassCloneCheck(
-                    #    _sub, _args[0], _args[1] )
-            else:
-                # Inequality expression: 2 or 3 arguments
+                    self._lower = self._upper = ZeroConstant
+                    self._body = expr.arg(0) - expr.arg(1)
+
+            elif _expr_type is EXPR.InequalityExpression:
                 if expr._strict:
-                    try:
-                        _strict = any(expr._strict)
-                    except:
-                        _strict = True
-                    if _strict:
-                        #
-                        # We can relax this when:
-                        #   (a) we have a need for this
-                        #   (b) we have problem writer that
-                        #       explicitly handles this
-                        #   (c) we make sure that all problem writers
-                        #       that don't handle this make it known
-                        #       to the user through an error or
-                        #       warning
-                        #
-                        raise ValueError(
-                            "Constraint '%s' encountered a strict "
-                            "inequality expression ('>' or '<'). All"
-                            " constraints must be formulated using "
-                            "using '<=', '>=', or '=='."
-                            % (self.name))
+                    raise ValueError(
+                        "Constraint '%s' encountered a strict "
+                        "inequality expression ('>' or '<'). All"
+                        " constraints must be formulated using "
+                        "using '<=', '>=', or '=='."
+                        % (self.name))
 
-                _args = expr._args
-                # Explicitly dereference the original arglist (otherwise
-                # this runs afoul of the getrefcount logic)
-                expr._args = []
-
-                if len(_args) == 3:
-
-                    if _args[0]._potentially_variable():
-                        raise ValueError(
-                            "Constraint '%s' found a double-sided "
-                            "inequality expression (lower <= "
-                            "expression <= upper) but the lower "
-                            "bound was not data or an expression "
-                            "restricted to storage of data."
-                            % (self.name))
-                    if _args[2]._potentially_variable():
-                        raise ValueError(
-                            "Constraint '%s' found a double-sided "\
-                            "inequality expression (lower <= "
-                            "expression <= upper) but the upper "
-                            "bound was not data or an expression "
-                            "restricted to storage of data."
-                            % (self.name))
-
-                    self._lower = _args[0]
-                    self._body  = _args[1]
-                    self._upper = _args[2]
-
+                if not expr.arg(1).is_potentially_variable():
+                    self._lower = None
+                    self._body  = expr.arg(0)
+                    self._upper = expr.arg(1)
+                elif not expr.arg(0).is_potentially_variable():
+                    self._lower = expr.arg(0)
+                    self._body  = expr.arg(1)
+                    self._upper = None
                 else:
-                    if not _args[1]._potentially_variable():
-                        self._lower = None
-                        self._body  = _args[0]
-                        self._upper = _args[1]
-                    elif not _args[0]._potentially_variable():
-                        self._lower = _args[0]
-                        self._body  = _args[1]
-                        self._upper = None
-                    else:
-                        with EXPR.bypass_clone_check():
-                            self._lower = None
-                            self._body = _args[0]
-                            self._body -= _args[1]
-                            self._upper = ZeroConstant
-                        #self._body  = EXPR.generate_expression_bypassCloneCheck(
-                        #    _sub, _args[0], _args[1])
+                    self._lower = None
+                    self._body = expr.arg(0)
+                    self._body -= expr.arg(1)
+                    self._upper = ZeroConstant
+
+            
+            else:   # RangedExpression
+                if any(expr._strict):
+                    raise ValueError(
+                        "Constraint '%s' encountered a strict "
+                        "inequality expression ('>' or '<'). All"
+                        " constraints must be formulated using "
+                        "using '<=', '>=', or '=='."
+                        % (self.name))
+
+                #if expr.arg(0).is_potentially_variable():
+                #    raise ValueError(
+                #        "Constraint '%s' found a double-sided "
+                #        "inequality expression (lower <= "
+                #        "expression <= upper) but the lower "
+                #        "bound was not data or an expression "
+                #        "restricted to storage of data."
+                #        % (self.name))
+                #if expr.arg(2).is_potentially_variable():
+                #    raise ValueError(
+                #        "Constraint '%s' found a double-sided "\
+                #        "inequality expression (lower <= "
+                #        "expression <= upper) but the upper "
+                #        "bound was not data or an expression "
+                #        "restricted to storage of data."
+                #        % (self.name))
+
+                self._lower = expr.arg(0)
+                self._body  = expr.arg(1)
+                self._upper = expr.arg(2)
 
         #
-        # Replace numeric bound values with a NumericConstant object,
-        # and reset the values to 'None' if they are 'infinite'
+        # Reset the values to 'None' if they are 'infinite'
         #
         if (self._lower is not None) and is_constant(self._lower):
-            val = self._lower()
+            val = self._lower if self._lower.__class__ in native_numeric_types else self._lower()
             if not pyutilib.math.is_finite(val):
                 if val > 0:
                     raise ValueError(
@@ -615,7 +587,7 @@ class _GeneralConstraintData(_ConstraintData):
                     "lower bound." % (self.name))
 
         if (self._upper is not None) and is_constant(self._upper):
-            val = self._upper()
+            val = self._upper if self._upper.__class__ in native_numeric_types else self._upper()
             if not pyutilib.math.is_finite(val):
                 if val < 0:
                     raise ValueError(
@@ -651,6 +623,7 @@ class _GeneralConstraintData(_ConstraintData):
             elif self._upper is None:
                 return self._lower <= self._body
             return self._lower <= self._body <= self._upper
+
 
 class Constraint(ActiveIndexedComponent):
     """
@@ -871,18 +844,15 @@ class Constraint(ActiveIndexedComponent):
             # non-None, but the expression will be a bool.  For
             # example, model.a < 1 > 0.
             #
-            if EXPR.generate_relational_expression.\
-                    chainedInequality is not None:
+            if EXPR._using_chained_inequality and EXPR._chainedInequality.prev is not None:
 
                 buf = StringIO()
-                EXPR.generate_relational_expression.\
-                    chainedInequality.pprint(buf)
+                EXPR._chainedInequality.prev.pprint(buf)
                 #
                 # We are about to raise an exception, so it's OK to
                 # reset chainedInequality
                 #
-                EXPR.generate_relational_expression.\
-                    chainedInequality = None
+                EXPR._chainedInequality.prev = None
                 raise ValueError(
                     "Invalid chained (2-sided) inequality detected. "
                     "The expression is resolving to %s instead of a "

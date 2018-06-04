@@ -263,7 +263,7 @@ class TestSuffixMethods(unittest.TestCase):
         model.junk = Suffix()
         model.x = Var()
         model.X = Var([1,2,3])
-        model.obj = Objective(expr=summation(model.X)+model.x)
+        model.obj = Objective(expr=sum_product(model.X)+model.x)
         model.OBJ = Objective([1,2,3], rule=lambda model,i: model.X[i])
 
         model.junk.set_value(model.OBJ,1.0)
@@ -293,7 +293,7 @@ class TestSuffixMethods(unittest.TestCase):
         model.junk = Suffix()
         model.x = Var()
         model.X = Var([1,2,3])
-        model.obj = Objective(expr=summation(model.X)+model.x)
+        model.obj = Objective(expr=sum_product(model.X)+model.x)
         model.OBJ = Objective([1,2,3], rule=lambda model,i: model.X[i])
 
         model.OBJ.set_suffix_value('junk', 1.0)
@@ -323,7 +323,7 @@ class TestSuffixMethods(unittest.TestCase):
         model.junk = Suffix()
         model.x = Var()
         model.X = Var([1,2,3])
-        model.obj = Objective(expr=summation(model.X)+model.x)
+        model.obj = Objective(expr=sum_product(model.X)+model.x)
         model.OBJ = Objective([1,2,3], rule=lambda model,i: model.X[i])
 
         model.OBJ.set_suffix_value(model.junk, 1.0)

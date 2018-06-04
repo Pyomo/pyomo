@@ -106,6 +106,7 @@ class CommonTests:
             if key.startswith('test'):
                 getattr(self,key).__doc__ = " (%s)" % getattr(self,key).__name__
 
+    @unittest.category('fragile')
     def test_bard511(self):
         self.problem='test_bard511'
         self.run_bilevel( join(exdir,'bard_5_1_1.py') )

@@ -395,6 +395,7 @@ class TestPH(unittest.TestCase):
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
+    @unittest.category('fragile')
     def test_farmer_with_integers_quadratic_cplex(self):
         if not solver['cplex','lp']:
             self.skipTest("The 'cplex' executable is not available")
@@ -1039,6 +1040,7 @@ class TestPH(unittest.TestCase):
             ef_output_file,
             baseline_dir+"sizes3_ef.baseline.lp.gz")
 
+    @unittest.category('fragile')
     def test_sizes3_ef_with_solve_cplex(self):
         if not solver['cplex','lp']:
             self.skipTest("The 'cplex' executable is not available")
@@ -1184,6 +1186,7 @@ class TestPH(unittest.TestCase):
             ef_output_file,
             baseline_dir+"farmer_ef_cvar.baseline.lp")
 
+    @unittest.category('fragile')
     def test_cc_ef_networkflow1ef3_cplex(self):
         if not solver['cplex','lp']:
             self.skipTest("The 'cplex' executable is not available")
@@ -1243,6 +1246,7 @@ class TestPH(unittest.TestCase):
             this_test_file_directory+"ScenarioList.csv"))
         os.remove(this_test_file_directory+"ScenarioList.csv")
 
+    @unittest.category('fragile')
     def test_lagrangian_param_1cc_networkflow1ef3_cplex(self):
         if not solver['cplex','lp']:
             self.skipTest("The 'cplex' executable is not available")
@@ -1574,7 +1578,26 @@ class TestPHExpensive(unittest.TestCase):
                 baseline_dir+"sizes10_quadratic_twobundles_gurobi.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance_relaxed)
-
+    # dlw, Feb 2018; just checking for a stack trace (no baseline)
+    def test_sorgw_sizes3_cplex(self):
+        if not solver['cplex','lp']:
+            self.skipTest("The 'cplex' executable is not available")
+        sizes_example_dir = pysp_examples_dir + "sizes"
+        model_dir = sizes_example_dir + os.sep + "models"
+        instance_dir = sizes_example_dir + os.sep + "SIZES3"
+        argstring = "runph --traceback -r 100.0 --solver=cplex --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+                    " --max-iterations=5 --user-defined-extension=pyomo.pysp.plugins.sorgw"
+        print("Testing command: " + argstring)
+        log_output_file = this_test_file_directory+"sorgw_sizes3_cplex.out"
+        pyutilib.misc.setup_redirect(log_output_file)
+        args = argstring.split()
+        pyomo.pysp.phinit.main(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        os.remove(log_output_file)
+        # these files should be here if all is OK
+        os.remove(this_test_file_directory+"winterest.ssv")
+        os.remove(this_test_file_directory+"wsummary.ssv")
+    #
     def test_quadratic_networkflow1ef10_cplex(self):
         if not solver['cplex','lp']:
             self.skipTest("The 'cplex' executable is not available")
@@ -1874,6 +1897,7 @@ class TestPHParallel(unittest.TestCase):
             baseline_dir+"farmer_quadratic_cplex_with_pyro.baseline",
             filter=filter_pyro)
 
+    @unittest.category('fragile')
     def test_farmer_quadratic_cplex_with_phpyro(self):
         if not solver['cplex','lp']:
             self.skipTest("The 'cplex' executable is not available")
@@ -2036,6 +2060,7 @@ class TestPHParallel(unittest.TestCase):
             filter=filter_pyro,
             tolerance=_diff_tolerance_relaxed)
 
+    @unittest.category('fragile')
     def test_quadratic_sizes3_cplex_with_phpyro(self):
         if (not solver['cplex','lp']) or (not has_yaml):
             self.skipTest("The 'cplex' executable is not available "
@@ -2077,6 +2102,7 @@ class TestPHParallel(unittest.TestCase):
                 self.fail("Differences identified relative to all baseline output file alternatives")
             os.remove(log_output_file)
 
+    @unittest.category('fragile')
     def test_farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve(self):
         if not solver['cplex','lp']:
             self.skipTest("The 'cplex' executable is not available")
@@ -2095,6 +2121,7 @@ class TestPHParallel(unittest.TestCase):
             filter=filter_pyro,
             tolerance=_diff_tolerance)
 
+    @unittest.category('fragile')
     def test_linearized_sizes3_cplex_with_phpyro(self):
         if (not solver['cplex','lp']) or (not has_yaml):
             self.skipTest("The 'cplex' executable is not available "
@@ -2277,6 +2304,7 @@ class TestPHParallel(unittest.TestCase):
             filter=filter_pyro,
             tolerance=_diff_tolerance_relaxed)
 
+    @unittest.category('fragile')
     def test_farmer_with_integers_linearized_cplex_with_phpyro(self):
         if not solver['cplex','lp']:
             self.skipTest("The 'cplex' executable is not available")
@@ -2297,6 +2325,7 @@ class TestPHParallel(unittest.TestCase):
 
     # the primary objective of this test is to validate the bare minimum level of functionality on the PH solver server
     # end (solves and rho setting) - obviously should yield the same results as serial PH.
+    @unittest.category('fragile')
     def test_simple_quadratic_networkflow1ef10_cplex_with_phpyro(self):
         if not solver['cplex','lp']:
             self.skipTest("The 'cplex' executable is not available")
@@ -2319,6 +2348,7 @@ class TestPHParallel(unittest.TestCase):
 
     # builds on the above test, to validate warm-start capabilities; by imposing a migap,
     # executions with and without warm-starts will arrive at different solutions.
+    @unittest.category('fragile')
     def test_advanced_quadratic_networkflow1ef10_cplex_with_phpyro(self):
         if not solver['cplex','lp']:
             self.skipTest("The 'cplex' executable is not available")
@@ -2396,6 +2426,7 @@ class TestPHParallel(unittest.TestCase):
                 self.fail("Differences identified relative to all baseline output file alternatives")
             os.remove(log_output_file)
 
+    @unittest.category('fragile')
     def test_simple_linearized_networkflow1ef3_cplex_with_phpyro(self):
         if not solver['cplex','lp']:
             self.skipTest("The 'cplex' executable is not available")
@@ -2425,6 +2456,7 @@ class TestPHParallel(unittest.TestCase):
                 baseline_dir+"networkflow1ef3_simple_linearized_cplex_with_phpyro.baseline",
                 filter=filter_pyro)
 
+    @unittest.category('fragile')
     def test_simple_linearized_networkflow1ef10_cplex_with_phpyro(self):
         if not solver['cplex','lp']:
             self.skipTest("The 'cplex' executable is not available")
@@ -2462,6 +2494,7 @@ class TestPHParallel(unittest.TestCase):
             self.fail("Differences identified relative to all baseline output file alternatives")
         _remove(this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out")
 
+    @unittest.category('fragile')
     def test_advanced_linearized_networkflow1ef10_cplex_with_phpyro(self):
         if (not solver['cplex','lp']) or (not has_yaml):
             self.skipTest("The 'cplex' executable is not available "
@@ -2504,6 +2537,7 @@ class TestPHParallel(unittest.TestCase):
             self.fail("Differences identified relative to all baseline output file alternatives")
         _remove(this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out")
 
+    @unittest.category('fragile')
     def test_linearized_networkflow1ef10_cplex_with_bundles_with_phpyro(self):
         if (not solver['cplex','lp']) or (not has_yaml):
             self.skipTest("The 'cplex' executable is not available "

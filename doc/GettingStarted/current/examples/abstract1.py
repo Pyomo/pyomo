@@ -17,7 +17,7 @@ model.c = Param(model.J)
 model.x = Var(model.J, domain=NonNegativeReals)
 
 def obj_expression(model):
-    return summation(model.c, model.x)
+    return sum_product(model.c, model.x)
 
 model.OBJ = Objective(rule=obj_expression)
 

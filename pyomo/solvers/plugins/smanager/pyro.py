@@ -21,7 +21,7 @@ except:
 import pyutilib.pyro
 from pyutilib.pyro import using_pyro4, TaskProcessingError
 import pyutilib.misc
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.opt.base import OptSolver, SolverFactory
 from pyomo.opt.parallel.manager import ActionManagerError, ActionStatus
 from pyomo.opt.parallel.async_solver import (AsynchronousSolverManager,
@@ -37,7 +37,7 @@ import six
 
 class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManager):
 
-    pyomo.util.plugin.alias('pyro', doc="Execute solvers remotely using pyro")
+    pyomo.common.plugin.alias('pyro', doc="Execute solvers remotely using pyro")
 
     def __init__(self, *args, **kwds):
         self._opt_data = {}

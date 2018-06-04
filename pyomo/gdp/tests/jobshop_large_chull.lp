@@ -759,7 +759,6 @@ c_u__pyomo_gdp_chull_relaxation_relaxedDisjuncts(7)_t(A)_bounds(ub)_:
 <= 0
 
 c_u__pyomo_gdp_chull_relaxation_relaxedDisjuncts(7)_NoClash(A_D_3_1)_c(ub)_:
-+0 NoClash(A_D_3_1)_indicator_var
 +1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(7)_t(A)
 -1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(7)_t(D)
 <= 0
@@ -823,7 +822,6 @@ c_u__pyomo_gdp_chull_relaxation_relaxedDisjuncts(11)_t(A)_bounds(ub)_:
 <= 0
 
 c_u__pyomo_gdp_chull_relaxation_relaxedDisjuncts(11)_NoClash(A_E_5_1)_c(ub)_:
-+0 NoClash(A_E_5_1)_indicator_var
 +1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(11)_t(A)
 -1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(11)_t(E)
 <= 0
@@ -1111,7 +1109,6 @@ c_u__pyomo_gdp_chull_relaxation_relaxedDisjuncts(29)_t(B)_bounds(ub)_:
 <= 0
 
 c_u__pyomo_gdp_chull_relaxation_relaxedDisjuncts(29)_NoClash(B_E_5_1)_c(ub)_:
-+0 NoClash(B_E_5_1)_indicator_var
 +1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(29)_t(B)
 -1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(29)_t(E)
 <= 0
@@ -1607,7 +1604,6 @@ c_u__pyomo_gdp_chull_relaxation_relaxedDisjuncts(60)_t(D)_bounds(ub)_:
 <= 0
 
 c_u__pyomo_gdp_chull_relaxation_relaxedDisjuncts(60)_NoClash(D_G_4_0)_c(ub)_:
-+0 NoClash(D_G_4_0)_indicator_var
 -1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(60)_t(D)
 +1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(60)_t(G)
 <= 0

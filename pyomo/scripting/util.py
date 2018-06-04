@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -19,7 +19,7 @@ import time
 import json
 from six import itervalues, iterkeys, iteritems
 from six.moves import xrange
-from pyomo.util import pyomo_api
+from pyomo.common import pyomo_api
 
 try:
     import yaml
@@ -58,7 +58,7 @@ except:
 memory_data = Options()
 
 import pyutilib.misc
-from pyomo.util.plugin import ExtensionPoint, Plugin, implements
+from pyomo.common.plugin import ExtensionPoint, Plugin, implements
 from pyutilib.misc import Container
 from pyutilib.services import TempfileManager
 
@@ -236,7 +236,7 @@ def apply_preprocessing(data, parser=None):
                     return self.fn(**kwds)
             tmp = TMP()
             data.local._usermodel_plugins.append( tmp )
-            #print "HERE", modelapi[key], pyomo.util.plugin.interface_services[modelapi[key]]
+            #print "HERE", modelapi[key], pyomo.common.plugin.interface_services[modelapi[key]]
 
     #print "HERE", data.options._usermodel_plugins
 
@@ -809,7 +809,7 @@ def finalize(data, model=None, instance=None, results=None):
     ##gc.collect()
     ##print gc.get_referrers(_tmp)
     ##import pyomo.core.base.plugin
-    ##print pyomo.util.plugin.interface_services[pyomo.core.base.plugin.IPyomoScriptSaveResults]
+    ##print pyomo.common.plugin.interface_services[pyomo.core.base.plugin.IPyomoScriptSaveResults]
     ##print "HERE - usermodel_plugins"
     ##
     if not data.options.runtime.logging == 'quiet':
@@ -1043,5 +1043,3 @@ def get_config_values(filename):
         INPUT.close()
         return val
     raise IOError("ERROR: Unexpected configuration file '%s'" % filename)
-
-

@@ -283,7 +283,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         model.stochdata.declare(
             model.q,
             distribution=TableDistribution([0.0,1.0]))
-        model.c3 = aml.Constraint(expr= model.q <= model.y <= 0)
+        model.c3 = aml.Constraint(expr=aml.inequality(model.q, model.y, 0))
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
             pyomo.pysp.convert.smps.convert_embedded(self.tmpdir,

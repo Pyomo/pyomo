@@ -103,7 +103,7 @@ model.ComputeProfits = Piecewise(model.CROPS,
 #
 
 def ConstrainTotalAcreage_rule(model):
-    return summation(model.DevotedAcreage) <= model.TOTAL_ACREAGE
+    return sum_product(model.DevotedAcreage) <= model.TOTAL_ACREAGE
 
 model.ConstrainTotalAcreage = Constraint(rule=ConstrainTotalAcreage_rule)
 
@@ -122,12 +122,12 @@ model.LimitAmountSold = Constraint(model.CROPS, rule=LimitAmountSold_rule)
 #
 
 def ComputeFirstStageCost_rule(model):
-    return model.FirstStageCost - summation(model.PlantingCostPerAcre, model.DevotedAcreage) == 0.0
+    return model.FirstStageCost - sum_product(model.PlantingCostPerAcre, model.DevotedAcreage) == 0.0
 
 model.ComputeFirstStageCost = Constraint(rule=ComputeFirstStageCost_rule)
 
 def ComputeSecondStageCost_rule(model):
-    return model.SecondStageCost - (summation(model.PurchasePrice, model.QuantityPurchased) - summation(model.Profit)) == 0.0
+    return model.SecondStageCost - (sum_product(model.PurchasePrice, model.QuantityPurchased) - sum_product(model.Profit)) == 0.0
 
 model.ComputeSecondStageCost = Constraint(rule=ComputeSecondStageCost_rule)
 

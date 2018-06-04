@@ -1,0 +1,4 @@
+model.I = model.A | model.D # union
+model.J = model.A & model.D # intersection
+model.K = model.A - model.D # difference
+model.L = model.A ^ model.D # exclusive-or

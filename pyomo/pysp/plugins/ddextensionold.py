@@ -124,7 +124,7 @@ class ddextension_base(object):
         print("Creating the sip.in file")
 
         # This is usuall called just prior to solving the instances,
-        # however the scenariotree uses CanonicalRepn for determining
+        # however the scenariotree uses StandardRepn for determining
         # constraint stage
         ph._preprocess_scenario_instances()
 
@@ -360,9 +360,9 @@ class ddextension_base(object):
         for alias, obj_weakref in iteritems(LP_symbol_map.aliases):
             LP_reverse_alias[LP_byObject[id(obj_weakref())]].append(alias)
         for block in reference_instance.block_data_objects(active=True):
-            block_canonical_repn = getattr(block, "_canonical_repn",None)
-            if block_canonical_repn is None:
-                raise ValueError("Unable to find _canonical_repn ComponentMap "
+            block_repn = getattr(block, "_repn",None)
+            if block_repn is None:
+                raise ValueError("Unable to find _repn ComponentMap "
                                  "on block %s" % (block.name))
             isPiecewise = False
             if isinstance(block, (Piecewise, _PiecewiseData)):
@@ -379,7 +379,7 @@ class ddextension_base(object):
                 if not isPiecewise:
                     constraint_node = reference_scenario.constraintNode(
                         constraint_data,
-                        canonical_repn=block_canonical_repn.get(constraint_data),
+                        repn=block_repn.get(constraint_data),
                         instance=reference_instance)
                     stage_index = reference_scenario.node_stage_index(constraint_node)
                 else:

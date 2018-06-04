@@ -17,7 +17,8 @@
 #
 
 from pyomo.environ import *
-from pyomo.core.base.expr import Expr_if
+from pyomo.core.expr.current import Expr_if
+
 
 model = ConcreteModel()
 
@@ -62,15 +63,15 @@ model.c13 = Constraint(expr= Expr_if(IF=(model.v0*10.0  > 0), THEN=(model.vTrue)
 model.c14 = Constraint(expr= Expr_if(IF=(model.vP1*10.0 > 0), THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pTrue)
 
 # -1 <= x <= 1
-model.c15 = Constraint(expr= Expr_if(IF=(-1        <= model.vN2 <= 1), THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pFalse)
-model.c16 = Constraint(expr= Expr_if(IF=(-1*model.vP1    <= model.vN1 <= 1), THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pTrue)
-model.c17 = Constraint(expr= Expr_if(IF=(-1*model.vP1**2 <= model.v0  <= 1), THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pTrue)
-model.c18 = Constraint(expr= Expr_if(IF=(model.vN1       <= model.vP1 <= 1), THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pTrue)
-model.c19 = Constraint(expr= Expr_if(IF=(-1        <= model.vP2 <= 1), THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pFalse)
+model.c15 = Constraint(expr= Expr_if(IF=inequality(-1,              model.vN2, 1), THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pFalse)
+model.c16 = Constraint(expr= Expr_if(IF=inequality(-1*model.vP1,    model.vN1, 1), THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pTrue)
+model.c17 = Constraint(expr= Expr_if(IF=inequality(-1*model.vP1**2, model.v0,  1), THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pTrue)
+model.c18 = Constraint(expr= Expr_if(IF=inequality(model.vN1,       model.vP1, 1), THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pTrue)
+model.c19 = Constraint(expr= Expr_if(IF=inequality(-1,              model.vP2, 1), THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pFalse)
 
 # -1 < x < 1
-model.c20 = Constraint(expr= Expr_if(IF=(-1 < model.vN2 < 1)       , THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pFalse)
-model.c21 = Constraint(expr= Expr_if(IF=(-1 < model.vN1 < 1*model.vP1)   , THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pFalse)
-model.c22 = Constraint(expr= Expr_if(IF=(-1 < model.v0  < 1*model.vP1**2), THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pTrue)
-model.c23 = Constraint(expr= Expr_if(IF=(-1 < model.vP1 < model.vP1)     , THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pFalse)
-model.c24 = Constraint(expr= Expr_if(IF=(-1 < model.vP2 < 1)       , THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pFalse)
+model.c20 = Constraint(expr= Expr_if(IF=inequality(-1, model.vN2, 1, strict=True), THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pFalse)
+model.c21 = Constraint(expr= Expr_if(IF=inequality(-1, model.vN1, 1*model.vP1, strict=True), THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pFalse)
+model.c22 = Constraint(expr= Expr_if(IF=inequality(-1, model.v0,  1*model.vP1**2, strict=True), THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pTrue)
+model.c23 = Constraint(expr= Expr_if(IF=inequality(-1, model.vP1, model.vP1, strict=True), THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pFalse)
+model.c24 = Constraint(expr= Expr_if(IF=inequality(-1, model.vP2, 1, strict=True) , THEN=(model.vTrue), ELSE=(model.vFalse)) == model.pFalse)

@@ -11,7 +11,7 @@
 import sys
 import pprint as _pprint_
 
-from pyomo.core.kernel.numvalue import \
+from pyomo.core.expr.numvalue import \
     NumericValue
 from pyomo.core.kernel.component_interface import \
     (ICategorizedObject,

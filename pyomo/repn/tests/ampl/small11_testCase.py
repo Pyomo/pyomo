@@ -32,7 +32,7 @@ def obj_rule(model):
 model.obj = Objective(rule=obj_rule)
 
 def var_bnd_rule(model,i):
-	return -1.0 <= model.x[1,i] <= 1.0
+	return (-1.0, model.x[1,i], 1.0)
 model.var_bnd = Constraint(RangeSet(1,n),rule=var_bnd_rule)
 
 model.x[1,1] = 1.0

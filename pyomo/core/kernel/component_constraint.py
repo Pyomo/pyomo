@@ -2,14 +2,21 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
 import pyutilib.math
 
+from pyomo.core.expr.numvalue import (ZeroConstant,
+                                      is_constant,
+                                      as_numeric,
+                                      potentially_variable,
+                                      value,
+                                      _sub)
+from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.component_interface import \
     (IComponent,
      _ActiveComponentMixin,
@@ -20,13 +27,6 @@ from pyomo.core.kernel.component_dict import ComponentDict
 from pyomo.core.kernel.component_tuple import ComponentTuple
 from pyomo.core.kernel.component_list import ComponentList
 
-from pyomo.core.kernel.numvalue import (ZeroConstant,
-                                        is_constant,
-                                        as_numeric,
-                                        potentially_variable,
-                                        value,
-                                        _sub)
-from pyomo.core.kernel import expr as EXPR
 
 import six
 from six.moves import zip
@@ -141,7 +141,7 @@ class IConstraint(IComponent, _ActiveComponentMixin):
                 return body_expr <= self.ub
             elif self.ub is None:
                 return self.lb <= body_expr
-            return self.lb <= body_expr <= self.ub
+            return EXPR.RangedExpression((self.lb, body_expr, self.ub), (False,False))
 
     @property
     def bounds(self):
@@ -189,7 +189,7 @@ class _MutableBoundsConstraintMixin(object):
                 "when the equality property is True.")
         if lb is not None:
             tmp = as_numeric(lb)
-            if tmp._potentially_variable():
+            if tmp.is_potentially_variable():
                 raise ValueError(
                     "Constraint lower bounds must be "
                     "expressions restricted to data.")
@@ -207,7 +207,7 @@ class _MutableBoundsConstraintMixin(object):
                 "when the equality property is True.")
         if ub is not None:
             tmp = as_numeric(ub)
-            if tmp._potentially_variable():
+            if tmp.is_potentially_variable():
                 raise ValueError(
                     "Constraint lower bounds must be "
                     "expressions restricted to data.")
@@ -232,7 +232,7 @@ class _MutableBoundsConstraintMixin(object):
                 "be assigned a value of None.")
         else:
             tmp = as_numeric(rhs)
-            if tmp._potentially_variable():
+            if tmp.is_potentially_variable():
                 raise ValueError(
                     "Constraint right-hand side must be "
                     "expressions restricted to data.")
@@ -312,6 +312,7 @@ class constraint(_MutableBoundsConstraintMixin,
             in combination with the :attr:`expr` keyword.
 
     Examples:
+        >>> import pyomo.kernel as pmo
         >>> # A decision variable used to define constraints
         >>> x = pmo.variable()
         >>> # An upper bound constraint
@@ -425,7 +426,7 @@ class constraint(_MutableBoundsConstraintMixin,
             return
 
         _expr_type = expr.__class__
-        if _expr_type is tuple: # or expr_type is list:
+        if _expr_type is tuple:
             #
             # Form equality expression
             #
@@ -439,17 +440,16 @@ class constraint(_MutableBoundsConstraintMixin,
 
                 # assigning to the rhs property
                 # will set the equality flag to True
-                if arg1 is None or (not arg1._potentially_variable()):
+                if (arg1 is None) or (not arg1.is_potentially_variable()):
                     self.rhs = arg1
                     self.body = arg0
-                elif arg0 is None or (not arg0._potentially_variable()):
+                elif (arg0 is None) or (not arg0.is_potentially_variable()):
                     self.rhs = arg0
                     self.body = arg1
                 else:
-                    with EXPR.bypass_clone_check():
-                        self.rhs = ZeroConstant
-                        self.body = arg0
-                        self.body -= arg1
+                    self.rhs = ZeroConstant
+                    self.body = arg0
+                    self.body -= arg1
 
             #
             # Form inequality expression
@@ -457,8 +457,7 @@ class constraint(_MutableBoundsConstraintMixin,
             elif len(expr) == 3:
                 arg0 = expr[0]
                 if arg0 is not None:
-                    arg0 = as_numeric(arg0)
-                    if arg0._potentially_variable():
+                    if potentially_variable(arg0):
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the lower "
@@ -472,8 +471,7 @@ class constraint(_MutableBoundsConstraintMixin,
 
                 arg2 = expr[2]
                 if arg2 is not None:
-                    arg2 = as_numeric(arg2)
-                    if arg2._potentially_variable():
+                    if potentially_variable(arg2):
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the upper "
@@ -502,14 +500,14 @@ class constraint(_MutableBoundsConstraintMixin,
                         "Constraint '%s' does not have a proper "
                         "value. Found '%s'\nExpecting a tuple or "
                         "equation. Examples:"
-                        "\n   summation(model.costs) == model.income"
+                        "\n   sum_product(model.costs) == model.income"
                         "\n   (0, model.price[item], 50)"
                         % (self.name, str(expr)))
             except AttributeError:
                 msg = ("Constraint '%s' does not have a proper "
                        "value. Found '%s'\nExpecting a tuple or "
                        "equation. Examples:"
-                       "\n   summation(model.costs) == model.income"
+                       "\n   sum_product(model.costs) == model.income"
                        "\n   (0, model.price[item], 50)"
                        % (self.name, str(expr)))
                 if type(expr) is bool:
@@ -531,122 +529,79 @@ class constraint(_MutableBoundsConstraintMixin,
         # user did ( var < 1 > 0 ) (which also results in a non-None
         # chainedInequality value)
         #
-        if EXPR.generate_relational_expression.chainedInequality is not None:
-            raise TypeError(EXPR.chainedInequalityErrorMessage())
+        if EXPR._using_chained_inequality and \
+           (EXPR._chainedInequality.prev is not None):
+            raise TypeError(EXPR._chainedInequality.error_message())
         #
         # Process relational expressions
         # (i.e. explicit '==', '<', and '<=')
         #
         if relational_expr:
-            if _expr_type is EXPR._EqualityExpression:
-                # Equality expression: only 2 arguments!
-                _args = expr._args
-                # Explicitly dereference the original arglist (otherwise
-                # this runs afoul of the getrefcount logic)
-                expr._args = []
+            if _expr_type is EXPR.EqualityExpression:
                 # assigning to the rhs property
                 # will set the equality flag to True
-                if not _args[1]._potentially_variable():
-                    self.rhs = _args[1]
-                    self.body = _args[0]
-                elif not _args[0]._potentially_variable():
-                    self.rhs = _args[0]
-                    self.body = _args[1]
+                if not potentially_variable(expr.arg(1)):
+                    self.rhs = expr.arg(1)
+                    self.body = expr.arg(0)
+                elif not potentially_variable(expr.arg(0)):
+                    self.rhs = expr.arg(0)
+                    self.body = expr.arg(1)
                 else:
-                    with EXPR.bypass_clone_check():
-                        self.rhs = ZeroConstant
-                        self.body = _args[0]
-                        self.body -= _args[1]
-            else:
-                # Inequality expression: 2 or 3 arguments
+                    self.rhs = ZeroConstant
+                    self.body = expr.arg(0)
+                    self.body -= expr.arg(1)
+
+            elif _expr_type is EXPR.InequalityExpression:
                 if expr._strict:
-                    try:
-                        _strict = any(expr._strict)
-                    except:
-                        _strict = True
-                    if _strict:
-                        #
-                        # We can relax this when:
-                        #   (a) we have a need for this
-                        #   (b) we have problem writer that
-                        #       explicitly handles this
-                        #   (c) we make sure that all problem writers
-                        #       that don't handle this make it known
-                        #       to the user through an error or
-                        #       warning
-                        #
-                        raise ValueError(
-                            "Constraint '%s' encountered a strict "
-                            "inequality expression ('>' or '<'). All"
-                            " constraints must be formulated using "
-                            "using '<=', '>=', or '=='."
-                            % (self.name))
-
-                _args = expr._args
-                # Explicitly dereference the original arglist (otherwise
-                # this runs afoul of the getrefcount logic)
-                expr._args = []
-                if len(_args) == 3:
-
-                    if _args[0]._potentially_variable():
-                        raise ValueError(
-                            "Constraint '%s' found a double-sided "
-                            "inequality expression (lower <= "
-                            "expression <= upper) but the lower "
-                            "bound was not data or an expression "
-                            "restricted to storage of data."
-                            % (self.name))
-                    if _args[2]._potentially_variable():
-                        raise ValueError(
-                            "Constraint '%s' found a double-sided "\
-                            "inequality expression (lower <= "
-                            "expression <= upper) but the upper "
-                            "bound was not data or an expression "
-                            "restricted to storage of data."
-                            % (self.name))
-
-                    self.lb = _args[0]
-                    self.body  = _args[1]
-                    self.ub = _args[2]
-
+                    raise ValueError(
+                        "Constraint '%s' encountered a strict "
+                        "inequality expression ('>' or '<'). All"
+                        " constraints must be formulated using "
+                        "using '<=', '>=', or '=='."
+                        % (self.name))
+                if not potentially_variable(expr.arg(1)):
+                    self.lb = None
+                    self.body  = expr.arg(0)
+                    self.ub = expr.arg(1)
+                elif not potentially_variable(expr.arg(0)):
+                    self.lb = expr.arg(0)
+                    self.body  = expr.arg(1)
+                    self.ub = None
                 else:
+                    self.lb = None
+                    self.body  = expr.arg(0)
+                    self.body -= expr.arg(1)
+                    self.ub = ZeroConstant
 
-                    if not _args[1]._potentially_variable():
-                        self.lb = None
-                        self.body  = _args[0]
-                        self.ub = _args[1]
-                    elif not _args[0]._potentially_variable():
-                        self.lb = _args[0]
-                        self.body  = _args[1]
-                        self.ub = None
-                    else:
-                        with EXPR.bypass_clone_check():
-                            self.lb = None
-                            self.body  = _args[0]
-                            self.body -= _args[1]
-                            self.ub = ZeroConstant
-
-        #
-        # Replace numeric bound values with a NumericConstant object,
-        # and reset the values to 'None' if they are 'infinite'
-        #
-        if (self.lb is not None) and is_constant(self.lb):
-            val = self.lb()
-            if not pyutilib.math.is_finite(val):
-                if val > 0:
+            else:   # RangedExpression
+                if any(expr._strict):
                     raise ValueError(
-                        "Constraint '%s' created with a +Inf lower "
-                        "bound." % (self.name))
-                self.lb = None
+                        "Constraint '%s' encountered a strict "
+                        "inequality expression ('>' or '<'). All"
+                        " constraints must be formulated using "
+                        "using '<=', '>=', or '=='."
+                        % (self.name))
 
-        if (self.ub is not None) and is_constant(self.ub):
-            val = self.ub()
-            if not pyutilib.math.is_finite(val):
-                if val < 0:
+                if potentially_variable(expr.arg(0)):
                     raise ValueError(
-                        "Constraint '%s' created with a -Inf upper "
-                        "bound." % (self.name))
-                self.ub = None
+                        "Constraint '%s' found a double-sided "
+                        "inequality expression (lower <= "
+                        "expression <= upper) but the lower "
+                        "bound was not data or an expression "
+                        "restricted to storage of data."
+                        % (self.name))
+                if potentially_variable(expr.arg(2)):
+                    raise ValueError(
+                        "Constraint '%s' found a double-sided "\
+                        "inequality expression (lower <= "
+                        "expression <= upper) but the upper "
+                        "bound was not data or an expression "
+                        "restricted to storage of data."
+                        % (self.name))
+
+                self.lb = expr.arg(0)
+                self.body  = expr.arg(1)
+                self.ub = expr.arg(2)
 
         #
         # Error check, to ensure that we don't have an equality
@@ -708,6 +663,7 @@ class linear_constraint(_MutableBoundsConstraintMixin,
             :const:`True`.
 
     Examples:
+        >>> import pyomo.kernel as pmo
         >>> # Decision variables used to define constraints
         >>> x = pmo.variable()
         >>> y = pmo.variable()
@@ -721,7 +677,7 @@ class linear_constraint(_MutableBoundsConstraintMixin,
     # To avoid a circular import, for the time being, this
     # property will be set externally
     _ctype = None
-    _linear_canonical_form = True
+    _linear_canonical_form = False
     __slots__ = ("_parent",
                  "_active",
                  "_variables",
@@ -827,24 +783,30 @@ class linear_constraint(_MutableBoundsConstraintMixin,
     #
 
     def canonical_form(self, compute_values=True):
-        from pyomo.repn.canonical_repn import \
-            coopr3_CompiledLinearCanonicalRepn
+        """Build a canonical representation of the body of
+        this constraints"""
+        from pyomo.repn.standard_repn import \
+            StandardRepn
         variables = []
         coefficients = []
         constant = 0
         for v, c in self.terms:
-            if compute_values:
-                c = value(c)
-            if v.is_expression():
+            if v.is_expression_type():
                 v = v.expr
             if not v.fixed:
                 variables.append(v)
-                coefficients.append(c)
+                if compute_values:
+                    coefficients.append(value(c))
+                else:
+                    coefficients.append(c)
             else:
-                constant += c * v()
-        repn = coopr3_CompiledLinearCanonicalRepn()
-        repn.variables = tuple(variables)
-        repn.linear = tuple(coefficients)
+                if compute_values:
+                    constant += value(c) * v()
+                else:
+                    constant += c * v
+        repn = StandardRepn()
+        repn.linear_vars = tuple(variables)
+        repn.linear_coefs = tuple(coefficients)
         repn.constant = constant
         return repn
 

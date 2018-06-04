@@ -8,7 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.base.numvalue import NumericValue
+from pyomo.core.expr import NumericValue
+
 
 class MockFixedValue(NumericValue):
     value = 42

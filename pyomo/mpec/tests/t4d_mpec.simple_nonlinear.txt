@@ -3,7 +3,7 @@ cc : Size=1, Index=None, Active=True
     None : x1 + 2*x2  ==  1 - 3*x3 : y + x3 :   True
     1 Constraint Declarations
         c : Size=1, Index=None, Active=True
-            Key  : Lower : Body                  : Upper : Active
-            None :   0.0 : -1 + x1 + 2*x2 + 3*x3 :   0.0 :   True
+            Key  : Lower : Body                   : Upper : Active
+            None :   0.0 : x1 + 2*x2 - (1 - 3*x3) :   0.0 :   True
 
     1 Declarations: c

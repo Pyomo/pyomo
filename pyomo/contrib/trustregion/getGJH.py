@@ -56,9 +56,9 @@ def get_gjh(fname=None, insecure=False):
     os.chmod(fname, mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1 and sys.argv[1] == '--insecure':
+    if len(sys.argv) > 1 and '--insecure' in sys.argv:
         insecure = True
-        sys.argv.pop(1)
+        sys.argv.remove('--insecure')
     else:
         insecure = False
     if len(sys.argv) > 1:
