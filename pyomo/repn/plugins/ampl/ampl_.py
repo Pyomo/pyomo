@@ -28,7 +28,7 @@ import time
 from pyutilib.math.util import isclose
 from pyutilib.misc import PauseGC
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import *
 from pyomo.core.expr import current as EXPR
@@ -51,9 +51,6 @@ from pyomo.core.kernel.component_variable import IVariable
 
 from six import itervalues, iteritems
 from six.moves import xrange, zip
-
-_using_pyomo4_trees = EXPR.mode == EXPR.Mode.pyomo4_trees
-_using_pyomo5_trees = EXPR.mode == EXPR.Mode.pyomo5_trees
 
 logger = logging.getLogger('pyomo.core')
 
@@ -89,21 +86,10 @@ def _build_op_template():
     prod_comment = "\t#*"
     div_template = "o3{C}\n"
     div_comment = "\t#/"
-    if _using_pyomo5_trees:
-        _op_template[EXPR.ProductExpression] = prod_template
-        _op_comment[EXPR.ProductExpression] = prod_comment
-        _op_template[EXPR.ReciprocalExpression] = div_template
-        _op_comment[EXPR.ReciprocalExpression] = div_comment
-    elif _using_pyomo4_trees:
-        _op_template[EXPR._ProductExpression] = prod_template
-        _op_comment[EXPR._ProductExpression] = prod_comment
-        _op_template[EXPR._DivisionExpression] = div_template
-        _op_comment[EXPR._DivisionExpression] = div_comment
-    else:
-        _op_template[EXPR._ProductExpression] = (prod_template,
-                                                 div_template)
-        _op_comment[EXPR._ProductExpression] = (prod_comment,
-                                                div_comment)
+    _op_template[EXPR.ProductExpression] = prod_template
+    _op_comment[EXPR.ProductExpression] = prod_comment
+    _op_template[EXPR.ReciprocalExpression] = div_template
+    _op_comment[EXPR.ReciprocalExpression] = div_comment
     del prod_template
     del prod_comment
     del div_template
@@ -147,15 +133,8 @@ def _build_op_template():
     _op_comment[EXPR.SumExpressionBase] = ("\t#sumlist", # nary +
                                         "\t#+",       # +
                                         _op_comment[NumericConstant]) # * coef
-    if _using_pyomo5_trees:
-        _op_template[EXPR.NegationExpression] = "o16{C}\n"
-        _op_comment[EXPR.NegationExpression] = "\t#-"
-    elif _using_pyomo4_trees:
-        _op_template[EXPR._LinearExpression] = _op_template[EXPR.SumExpressionBase]
-        _op_comment[EXPR._LinearExpression] = _op_comment[EXPR.SumExpressionBase]
-
-        _op_template[EXPR._NegationExpression] = "o16{C}\n"
-        _op_comment[EXPR._NegationExpression] = "\t#-"
+    _op_template[EXPR.NegationExpression] = "o16{C}\n"
+    _op_comment[EXPR.NegationExpression] = "\t#-"
 
     return _op_template, _op_comment
 
@@ -284,7 +263,7 @@ class RepnWrapper(object):
 
 class ProblemWriter_nl(AbstractProblemWriter):
 
-    pyomo.util.plugin.alias(str(ProblemFormat.nl),
+    pyomo.common.plugin.alias(str(ProblemFormat.nl),
                             'Generate the corresponding AMPL NL file.')
 
     def __init__(self):

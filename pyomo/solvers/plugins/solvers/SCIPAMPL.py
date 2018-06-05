@@ -13,7 +13,7 @@ import os
 import pyutilib.services
 import pyutilib.misc
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -31,7 +31,7 @@ class SCIPAMPL(SystemCallSolver):
     """A generic optimizer that uses the AMPL Solver Library to interface with applications.
     """
 
-    pyomo.util.plugin.alias('scip', doc='The SCIP LP/MIP solver')
+    pyomo.common.plugin.alias('scip', doc='The SCIP LP/MIP solver')
 
     def __init__(self, **kwds):
         #
