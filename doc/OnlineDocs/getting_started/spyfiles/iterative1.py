@@ -40,9 +40,6 @@ instance.display()
 # @Assign_integers
 for i in range(5):
 # @Assign_integers
-# @Associate_results_with_instance
-    instance.solutions.load_from(results)
-# @Associate_results_with_instance
 # @Iteratively_assign_and_test
     expr = 0
     for j in instance.x:

@@ -93,12 +93,6 @@ causes the script to generate five more solutions:
 .. literalinclude:: spyfiles/iterative1_Assign_integers.spy
    :language: python
 
-The next line associates the results obtained with the instance. This then enables
-direct queries of solution values in subsequent lines using variable names contained in the instance:
-
-.. literalinclude:: spyfiles/iterative1_Associate_results_with_instance.spy
-   :language: python
-
 An expression is built up in the Python variable named ``expr``.
 The Python variable ``j`` will be iteratively assigned all of the indexes of the variable ``x``. For each index,
 the value of the variable (which was loaded by the ``load`` method just described) is tested to see if it is zero and
