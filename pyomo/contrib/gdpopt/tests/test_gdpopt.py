@@ -26,7 +26,7 @@ class TestGDPopt(unittest.TestCase):
         """Test logic-based outer approximation."""
         with SolverFactory('gdpopt') as opt:
             model = build_eight_process_flowsheet()
-            opt.solve(model, strategy='LOA', mip='cbc', tee=True)
+            opt.solve(model, strategy='LOA', mip='cbc')
 
             self.assertTrue(fabs(value(model.profit.expr) - 68) <= 1E-2)
 
