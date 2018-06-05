@@ -161,6 +161,11 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         description="flag to round binary values to exactly 0 or 1. "
         "Rounding is done before solving NLP subproblem"
     ))
+    CONFIG.declare("reformulate_integer_vars_using", ConfigValue(
+        default=None,
+        description="The method to use for reformulating integer variables "
+        "into binary for this solver."
+    ))
 
     def available(self, exception_flag=True):
         """Check if solver is available.
