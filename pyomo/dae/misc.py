@@ -18,7 +18,7 @@ from pyomo.core.base.block import _BlockData, IndexedBlock
 from pyomo.dae import ContinuousSet, DerivativeVar, DAE_Error
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.base.block import SortComponents
-from pyomo.util.log import LoggingIntercept
+from pyomo.common.log import LoggingIntercept
 
 from six import iterkeys, itervalues, iteritems, StringIO
 
@@ -200,6 +200,12 @@ def update_contset_indexed_component(comp, expansion_map):
     # requested. Therefore, no special processing is required for
     # Params.
     if comp.type() is Param:
+        return
+
+    # Skip components that do not have a 'dim' attribute. This assumes that
+    # all components that could be indexed by a ContinuousSet have the 'dim'
+    # attribute
+    if not hasattr(comp, 'dim'):
         return
 
     # Components indexed by a ContinuousSet must have a dimension of at

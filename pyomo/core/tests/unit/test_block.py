@@ -26,7 +26,7 @@ import pyutilib.th as unittest
 import pyutilib.services
 
 from pyomo.environ import *
-from pyomo.util.log import LoggingIntercept
+from pyomo.common.log import LoggingIntercept
 from pyomo.core.base.block import SimpleBlock
 from pyomo.core.expr import current as EXPR
 from pyomo.opt import *

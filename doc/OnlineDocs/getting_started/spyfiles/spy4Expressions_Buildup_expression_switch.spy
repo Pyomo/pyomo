@@ -1,0 +1,13 @@
+switch = 3
+
+model.A = RangeSet(1, 10)
+model.c = Param(model.A)
+model.d = Param()
+model.x = Var(model.A, domain=Boolean)
+
+def pi_rule(model):
+    accexpr = summation(model.c, model.x)
+    if switch >= 2:
+        accexpr = accexpr - model.d
+    return accexpr >= 0.5
+PieSlice = Constraint(rule=pi_rule)

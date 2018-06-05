@@ -1,0 +1,1 @@
+model.BuildBpts = BuildAction(model.J, rule=bpts_build)

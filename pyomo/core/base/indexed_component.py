@@ -12,10 +12,10 @@ __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 
 import pyutilib.misc
 
+from pyomo.core.expr.current import TemplateExpressionError
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
-from pyomo.core.base.template_expr import TemplateExpressionError
-from pyomo.util import DeveloperError
+from pyomo.common import DeveloperError
 
 from six import PY3, itervalues, iteritems, advance_iterator
 import sys
@@ -939,4 +939,3 @@ class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
         if self.is_indexed():
             for component_data in itervalues(self):
                 component_data.deactivate()
-

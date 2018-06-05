@@ -1,0 +1,22 @@
+# Assign a suffix value of 1.0 to model.x
+model.foo.set_value(model.x, 1.0)
+
+# Same as above with dict interface
+model.foo[model.x] = 1.0
+
+
+# Assign a suffix value of 0.0 to all indices of model.y
+# By default this expands so that entries are created for
+# every index (y[1], y[2], y[3]) and not model.y itself
+model.foo.set_value(model.y, 0.0)
+
+# The same operation using the dict interface results in an entry only
+# for the parent component model.y
+model.foo[model.y] = 50.0
+
+
+# Assign a suffix value of -1.0 to model.y[1]
+model.foo.set_value(model.y[1], -1.0)
+
+# Same as above with the dict interface
+model.foo[model.y[1]] = -1.0

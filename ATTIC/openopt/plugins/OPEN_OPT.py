@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -13,7 +13,7 @@ import logging
 
 from pyutilib.common import ApplicationError
 import pyutilib.misc
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.opt.base import *
 from pyomo.opt import (SolverResults,
                        TerminationCondition,
@@ -41,7 +41,7 @@ logger = logging.getLogger('pyomo.core')
 class OpenOptSolver(OptSolver):
     """A generic interface to OpenOpt solvers"""
 
-    pyomo.util.plugin.alias('openopt', doc='Interface to OpenOpt solvers')
+    pyomo.common.plugin.alias('openopt', doc='Interface to OpenOpt solvers')
 
     def __init__(self, **kwds):
         #
@@ -236,4 +236,3 @@ class OpenOptSolver(OptSolver):
         self._symbol_map = None
         self._problem = None
         return results
-

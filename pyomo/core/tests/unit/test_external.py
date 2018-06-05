@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -11,7 +11,7 @@
 import os
 import pyutilib.th as unittest
 
-from pyomo.util.getGSL import find_GSL
+from pyomo.common.getGSL import find_GSL
 from pyomo.core.base import IntegerSet
 from pyomo.environ import *
 from pyomo.core.base.external import (PythonCallbackFunction,
