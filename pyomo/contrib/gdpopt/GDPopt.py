@@ -33,7 +33,12 @@ import pyomo.common.plugin
 from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue, In,
                                  NonNegativeFloat, NonNegativeInt)
 from pyomo.contrib.gdpopt.master_initialize import (init_custom_disjuncts,
-                                                    init_set_covering)
+                                                    init_set_covering,
+                                                    init_max_binaries)
+from pyomo.contrib.gdpopt.nlp_solve import (solve_NLP,
+                                            update_nlp_progress_indicators)
+from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
+                                                 add_outer_approximation_cuts)
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
 from pyomo.contrib.gdpopt.util import GDPoptSolveData, _DoNothing, a_logger
 from pyomo.core.base import (Block, Constraint, ConstraintList, Expression,
@@ -454,8 +459,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         if config.init_strategy == 'set_covering':
             init_set_covering(solve_data, config)
         elif config.init_strategy == 'max_binary':
-            self._init_max_binaries(solve_data, config)
-            self._solve_NLP_subproblem(solve_data, config)
+            init_max_binaries(solve_data, config)
         elif config.init_strategy == 'fixed_binary':
             self._validate_disjunctions(solve_data, config)
             self._solve_NLP_subproblem(solve_data, config)
@@ -478,7 +482,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         backup_max_iter = max(1000, config.iterlim)
         backup_iter = 0
         while backup_iter < backup_max_iter:
-            config.logger.info('')  # print blank lines for visual display
+            # print line for visual display
+            config.logger.info('---Master Iteration---')
             backup_iter += 1
             # Check bound convergence
             if solve_data.LB + config.bound_tolerance >= solve_data.UB:
@@ -501,7 +506,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             solve_data.mip_subiter = 0
             # solve MILP master problem
             if solve_data.current_strategy == 'LOA':
-                self._solve_OA_master(solve_data, config)
+                mip_results = self._solve_OA_master(solve_data, config)
+                _, mip_var_values = mip_results
             # Check bound convergence
             if solve_data.LB + config.bound_tolerance >= solve_data.UB:
                 config.logger.info(
@@ -511,7 +517,24 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                        solve_data.UB))
                 break
             # Solve NLP subproblem
-            self._solve_NLP_subproblem(solve_data, config)
+            nlp_model = solve_data.working_model.clone()
+            # copy in the discrete variable values
+            for var, val in zip(nlp_model.GDPopt_utils.initial_var_list,
+                                mip_var_values):
+                if val is None:
+                    continue
+                else:
+                    var.value = val
+            TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
+            solve_data.nlp_iter += 1
+            nlp_result = solve_NLP(nlp_model, solve_data, config)
+            nlp_feasible, nlp_var_values, nlp_duals = nlp_result
+            if nlp_feasible:
+                update_nlp_progress_indicators(nlp_model, solve_data, config)
+                add_outer_approximation_cuts(
+                    nlp_var_values, nlp_duals, solve_data, config)
+            add_integer_cut(
+                mip_var_values, solve_data, config, feasible=nlp_feasible)
 
             # If the hybrid algorithm is not making progress, switch to OA.
             required_relax_prog = 1E-6

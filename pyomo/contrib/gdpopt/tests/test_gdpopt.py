@@ -30,14 +30,14 @@ class TestGDPopt(unittest.TestCase):
 
             self.assertTrue(fabs(value(model.profit.expr) - 68) <= 1E-2)
 
-    # def test_LOA_maxBinary(self):
-    #     """Test logic-based OA with max_binary initialization."""
-    #     with SolverFactory('gdpopt') as opt:
-    #         model = build_eight_process_flowsheet()
-    #         opt.solve(model, strategy='LOA', init_strategy='max_binary',
-    #                   mip='cbc')
-    #
-    #         self.assertTrue(fabs(value(model.profit.expr) - 68) <= 1E-2)
+    def test_LOA_maxBinary(self):
+        """Test logic-based OA with max_binary initialization."""
+        with SolverFactory('gdpopt') as opt:
+            model = build_eight_process_flowsheet()
+            opt.solve(model, strategy='LOA', init_strategy='max_binary',
+                      mip='cbc')
+
+            self.assertTrue(fabs(value(model.profit.expr) - 68) <= 1E-2)
 
     def test_LOA_custom_disjuncts(self):
         """Test logic-based OA with custom disjuncts initialization."""

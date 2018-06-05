@@ -3,19 +3,11 @@
 from __future__ import division
 
 from copy import deepcopy
-from math import fabs
 
-from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
-                                                 add_outer_approximation_cuts)
-from pyomo.contrib.gdpopt.nlp_solve import (solve_NLP,
-                                            update_nlp_progress_indicators)
 from pyomo.contrib.gdpopt.util import _DoNothing
-from pyomo.core import (Block, Constraint, Objective, TransformationFactory,
-                        Var, maximize, minimize, value)
-from pyomo.core.kernel import ComponentMap, ComponentSet
-from pyomo.gdp import Disjunct
+from pyomo.core import TransformationFactory
 from pyomo.opt import TerminationCondition as tc
-from pyomo.opt import SolverFactory
+from pyomo.opt import SolverFactory, SolverStatus, SolutionStatus
 
 
 def solve_linear_GDP(linear_GDP_model, solve_data, config):
@@ -75,7 +67,7 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
         m.solutions.load_from(results)
         config.logger.info('Solved linear GDP')
         return True, list((v.value if not v.stale else None)
-                      for v in GDPopt.initial_var_list)
+                          for v in GDPopt.initial_var_list)
     elif terminate_cond is tc.infeasible:
         config.logger.info(
             'Linear GDP is infeasible. '
@@ -89,7 +81,7 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
         results.solver.status = SolverStatus.ok
         m.solutions.load_from(results)
         return True, list((v.value if not v.stale else None)
-                      for v in GDPopt.initial_var_list)
+                          for v in GDPopt.initial_var_list)
     elif (terminate_cond is tc.other and
           results.solution.status is SolutionStatus.feasible):
         # load the solution and suppress the warning message by setting
@@ -100,7 +92,7 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
         results.solver.status = SolverStatus.ok
         m.solutions.load_from(results)
         return True, list((v.value if not v.stale else None)
-                      for v in GDPopt.initial_var_list)
+                          for v in GDPopt.initial_var_list)
     else:
         raise ValueError(
             'GDPopt unable to handle linear GDP '
