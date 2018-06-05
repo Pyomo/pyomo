@@ -16,7 +16,7 @@ from pyomo.pysp.solutionioextensions import \
     (IPySPSolutionSaverExtension,
      IPySPSolutionLoaderExtension)
 from pyomo.pysp.phutils import indexToString
-from pyomo.util.plugin import implements, SingletonPlugin
+from pyomo.common.plugin import implements, SingletonPlugin
 from pyomo.pysp.util.config import (PySPConfigBlock,
                                     safe_declare_common_option)
 from pyomo.pysp.util.configured_object import (PySPConfiguredObject,

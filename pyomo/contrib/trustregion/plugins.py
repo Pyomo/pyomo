@@ -1,4 +1,4 @@
-from pyomo.util import plugin
+from pyomo.common import plugin
 from pyomo.opt.base import IOptSolver
 from pyomo.contrib.trustregion.TRF import TRF
 import pyomo.contrib.trustregion.param as param
@@ -42,5 +42,3 @@ class TrustRegionSolver(plugin.Plugin):
         assert not kwds
         #config = param.CONFIG(kwds)
         return TRF(model, eflist)#, config)
-
-

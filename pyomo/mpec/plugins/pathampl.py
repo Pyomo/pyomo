@@ -15,7 +15,7 @@ import six
 import pyutilib.services
 import pyutilib.misc
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.opt.base import *
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
@@ -27,7 +27,7 @@ logger = logging.getLogger('pyomo.solvers')
 class PATHAMPL(ASL):
     """An interface to the PATH MCP solver."""
 
-    pyomo.util.plugin.alias('path', doc='Nonlinear MCP solver')
+    pyomo.common.plugin.alias('path', doc='Nonlinear MCP solver')
 
     def __init__(self, **kwds):
         #

@@ -3,8 +3,8 @@ from pyomo.core import *
 from pyomo.gdp import *
 from pyomo.opt import SolverFactory
 
-from pyomo.util.plugin import alias
-from pyomo.util.modeling import unique_component_name
+from pyomo.common.plugin import alias
+from pyomo.common.modeling import unique_component_name
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
 
 from random import randint

@@ -1,4 +1,6 @@
-We are pleased to announce the release of Pyomo 5.3. Pyomo is a collection of Python software packages that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
+We are pleased to announce the release of Pyomo 5.5. Pyomo is a collection of
+Python software packages that supports a diverse set of optimization
+capabilities for formulating and analyzing optimization models.
 
 
 The following are a summary of changes in this release:
@@ -40,8 +42,7 @@ Pyomo development is hosted at GitHub:
 
  * https://github.com/Pyomo
 
-Get help at 
+Get help at
 
  * StackOverflow: http://stackoverflow.com/questions/tagged/pyomo
  * Pyomo Forum:   http://groups.google.com/group/pyomo-forum/
-

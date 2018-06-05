@@ -39,7 +39,7 @@ from pyutilib.pyro import (TaskWorker,
 if using_pyro4:                                    #pragma:nocover
     import Pyro4
 
-from pyomo.util import pyomo_command
+from pyomo.common import pyomo_command
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
                        SolutionStatus)

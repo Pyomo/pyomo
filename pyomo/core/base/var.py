@@ -13,7 +13,7 @@ __all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar']
 import logging
 from weakref import ref as weakref_ref
 
-from pyomo.util.timing import ConstructionTimer
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.numvalue import NumericValue, value, is_fixed
 from pyomo.core.base.set_types import BooleanSet, IntegerSet, RealSet, Reals
 from pyomo.core.base.plugin import register_component
@@ -134,6 +134,10 @@ class _VarData(ComponentData, NumericValue):
 
     def is_constant(self):
         """Returns False because this is not a constant in an expression."""
+        return False
+
+    def is_parameter_type(self):
+        """Returns False because this is not a parameter object."""
         return False
 
     def is_variable_type(self):

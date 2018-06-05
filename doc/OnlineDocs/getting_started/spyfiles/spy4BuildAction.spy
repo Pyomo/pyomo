@@ -1,0 +1,11 @@
+"""
+David L. Woodruff and Mingye Yang, Spring 2018
+Code snippets for BuildAction.rst in testable form
+"""
+from pyomo.environ import *
+model = ConcreteModel()
+def bpts_build(model, j):
+    pass
+model.J = Set(initialize=['red','green'])
+model.BuildBpts = BuildAction(model.J, rule=bpts_build)
+

@@ -1,0 +1,150 @@
+
+Distributed Optimization with Pyro
+==================================
+
+
+Pyomo supports distributed computing via the Python "PYRO" package.
+PYRO stands for PYthon Remote Objects. There are two widely-available
+versions of PYRO, both of which Pyomo supports: PYRO3 and PYRO4.  PYRO3
+only works with Python 2.x whereas PYRO4 supports both Python 2.x and
+3.x.  Full documentation of PYRO is available from:
+https://pythonhosted.org/Pyro4/.
+
+The following describes a "quick-start" process for creating and
+using a client and multiple solvers on a single, presumably multi-core
+compute server. For example, an institution may have an 8-core
+workstation with numerous CPLEX licenses. With distributed solves
+under PYRO, Pyomo algorithms can take advantage of the full set of
+resources on a machine.
+
+The following example assumes a unix/linux platform. The steps for
+Windows are qualitatively identical - the sole difference is that
+you can't (or at least we haven't figured out how to) put processes
+in the background on Windows. The work-around is simply (albeit
+painfully) to launch the various processes in distinct shells.
+
+This process should work for both PYRO3 and PYRO4 installations.
+
+Step 1: Starting a Name Server
+------------------------------
+
+All PYRO objects communicate via a name server, which provides a
+well-defined point of contact through which distributed objects can
+interact. You can think of the name server as a phone directory.
+
+To start the name server, type:
+
+::
+
+  pyomo_ns
+
+In general, we suggest that the output be redirected to a file,
+with the entire process being placed in the background:
+
+::
+
+  pyomo_ns >& ns.out &
+
+
+Step 2: Starting a Dispatch Server
+----------------------------------
+
+With the name server up and running, the next step is to create a
+dispatch server. The function of the dispatch server is to route
+work from clients to servers - both of the latter will be established
+in the immediately following steps. We again assume the process is
+executed in the background, with the output redirected:
+
+::
+
+  dispatch_srvr >& dispatch_srvr.out &
+
+
+Step 3: Starting a MIP server
+-----------------------------
+
+With the work dispatcher up, the next step is to create servers to
+do real work! Pyomo ships with a `pyro_mip_server` script, which
+launches a server capable of solving a single MIP at a time. This
+server can be invoked as follows:
+
+::
+
+  pyro_mip_server >& pyro_mip_server1.out &
+
+
+We can also create multiple instances of the ``pyro_mip_server``, e.g.,
+to take advantage of multiple solver licenses:
+
+::
+
+  pyro_mip_server >& pyro_mip_server2.out &
+
+
+With this configuration, the dispatch server "sees" two mip servers,
+and can route work to both.
+
+
+Step 4: Running a Client
+------------------------
+
+To take advantage of the distributed MIP servers, a Pyomo user only
+needs to change the type of the solver manager supplied to the
+various solver scripts.
+
+For example, one can run pyomo as follows, considering the PySP
+example found in: ``pyomo/examples/pysp/farmer``:
+
+::
+
+  pyomo solve --solver=cplex --solver-manager=pyro farmer_lp.py farmer_lp.dat
+
+
+This will execute the LP solve using one of the two mip servers
+established in Step 3, which might be useful if they are on remote
+servers.
+
+To take advantage of parallelism, we can solve the farmer example
+using progressive hedging, as follows:
+
+::
+
+  runph --solver=cplex --solver-manager=pyro --model-directory=models --instance-directory=scenariodata
+
+
+Moving from Multi-Core to Distributed Computation
+-------------------------------------------------
+
+Truly distributed computation, i.e., with the client and server
+components on different hosts, is only incrementally more difficult
+than what is outlined above. If multiple hosts are involved in the
+computation, the only real issue is making sure the various hosts
+can all find a common nameserver. After starting `pyomo-ns` on some
+host (presumably a server-class machine), the other components
+(`dispatch_srvr` and the `pyro_mip_server`) can be pointed to the
+nameserver by simply setting the environment variable PYRO_NS_HOSTNAME
+to the name (or IP address) of the host running the nameserver. The
+same process should be followed on the client prior to executing
+either `pyomo`, `runph`, or some other client solver script.
+
+We have tested this on linux clusters with success. The only issues
+encountered involve overly aggressive firewalls on the host running
+the nameserver, which was easily corrected. In theory, Pyro should
+also work on Windows clusters, and linux-Window hybrid clusters via
+the same mechanism.
+
+
+Cleaning Up After Yourself
+--------------------------
+
+It is important to remember that the name server, the dispatch
+server, and the mip server processes are persistent, and need to
+be terminated when a user has completed computational experiments.
+Actually, that is not entirely correct - the server processes can
+live forever, and continue to receive work. On some shared computers
+with batch queue managers, they will be shutdown automatically; on
+other systems the user must shut them down or arrange for them
+to be shut down (e.g., by using the ``runph`` command option ``--shutdown-pyro``).
+When multiple users are attempting to use the same compute platform and are
+running their own servers, each user may want to their ``PYRO_NS_PORT``
+system environment variable to a unique value.

@@ -20,14 +20,14 @@ from pyutilib.misc import PauseGC
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import is_fixed, value, as_numeric, native_types, native_numeric_types
 from pyomo.core.base import (
-    SymbolMap, AlphaNumericTextLabeler, NumericLabeler,
+    SymbolMap, ShortNameLabeler, NumericLabeler,
     Block, Constraint, Expression, Objective, Var, Set, RangeSet, Param,
     minimize, Suffix, SortComponents, Connector)
 
 from pyomo.core.base.component import ComponentData
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
-import pyomo.util.plugin
+import pyomo.common.plugin
 
 from pyomo.core.kernel.component_block import IBlockStorage
 from pyomo.core.kernel.component_interface import ICategorizedObject
@@ -59,7 +59,10 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
             elif arg.__class__ in native_types:
                 tmp.append("'{0}'".format(val))
             elif arg.is_variable_type():
-                tmp.append(val)
+                if arg.is_fixed():
+                    tmp.append("(%s)" % val)
+                else:
+                    tmp.append(val)
             elif arg.is_expression_type() and node._precedence() < arg._precedence():
                 tmp.append("({0})".format(val))
             else:
@@ -119,7 +122,7 @@ def _get_bound(exp):
 
 
 class ProblemWriter_gams(AbstractProblemWriter):
-    pyomo.util.plugin.alias('gams', 'Generate the corresponding GAMS file')
+    pyomo.common.plugin.alias('gams', 'Generate the corresponding GAMS file')
 
     def __init__(self):
         AbstractProblemWriter.__init__(self, ProblemFormat.gams)
@@ -130,34 +133,38 @@ class ProblemWriter_gams(AbstractProblemWriter):
                  solver_capability,
                  io_options):
         """
-        output_filename:
+        Write a model in the GAMS modeling language format.
+
+        Keyword Arguments
+        -----------------
+        output_filename: str
             Name of file to write GAMS model to. Optionally pass a file-like
             stream and the model will be written to that instead.
-        io_options:
-            warmstart=True:
+        io_options: dict
+            - warmstart=True
                 Warmstart by initializing model's variables to their values.
-            symbolic_solver_labels=False:
+            - symbolic_solver_labels=False
                 Use full Pyomo component names rather than
                 shortened symbols (slower, but useful for debugging).
-            labeler=None:
+            - labeler=None
                 Custom labeler. Incompatible with symbolic_solver_labels.
-            solver=None:
+            - solver=None
                 If None, GAMS will use default solver for model type.
-            mtype=None:
+            - mtype=None
                 Model type. If None, will chose from lp, nlp, mip, and minlp.
-            add_options=None:
+            - add_options=None
                 List of additional lines to write directly
                 into model file before the solve statement.
                 For model attributes, <model name> is GAMS_MODEL.
-            skip_trivial_constraints=False:
-                Skip writing constraints whose body section is fixed
-            file_determinism=1:
-                How much effort do we want to put into ensuring the
-                GAMS file is written deterministically for a Pyomo model:
-                   0 : None
-                   1 : sort keys of indexed components (default)
-                   2 : sort keys AND sort names (over declaration order)
-            put_results=None:
+            - skip_trivial_constraints=False
+                Skip writing constraints whose body section is fixed.
+            - file_determinism=1
+                | How much effort do we want to put into ensuring the
+                | GAMS file is written deterministically for a Pyomo model:
+                |     0 : None
+                |     1 : sort keys of indexed components (default)
+                |     2 : sort keys AND sort names (over declaration order)
+            - put_results=None
                 Filename for optionally writing solution values and
                 marginals to (put_results).dat, and solver statuses
                 to (put_results + 'stat').dat.
@@ -239,7 +246,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                              "I/O options is forbidden")
 
         if symbolic_solver_labels:
-            var_labeler = con_labeler = AlphaNumericTextLabeler()
+            var_labeler = con_labeler = ShortNameLabeler(63, '_')
         elif labeler is None:
             var_labeler = NumericLabeler('x')
             con_labeler = NumericLabeler('c')
