@@ -180,7 +180,7 @@ Fixing Variables and Re-solving
 Instead of changing model data, scripts are often used to fix variable
 values. The following example illustrates this.
 
-.. literalinclude:: scripts_examples/iterative2.py
+.. literalinclude:: spyfiles/iterative2.spy
    :language: python
 
 In this example, the variables are binary. The model
@@ -435,7 +435,7 @@ snippet for fixing all integers at their current value:
 
 Another way to access all of the variables (particularly if there are blocks) is as follows:
 
-.. literalinclude:: scripts_examples/block_iter_example_compprintloop.spy
+.. literalinclude:: spyfiles/block_iter_example_compprintloop.spy
    :language: python
 
 The use of ``True`` as an argument to ``cname`` indicates that the full name is desired.
@@ -508,7 +508,7 @@ provide the model and the file ``abstract2.dat`` to provide the data. Note
 that the model in ``abstract2.py`` does contain a constraint named
 ``AxbConstraint`` and ``abstract2.dat`` does specify an index for it named ``Film``.
 
-.. literalinclude:: scripts_examples/driveabs2.py
+.. literalinclude:: spyfiles/driveabs2.spy
    :language: python
 
 Concrete models are slightly different because the model is the instance. Here is a complete example that relies on the file ``concrete1.py`` to
