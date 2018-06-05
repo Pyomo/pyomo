@@ -4,11 +4,10 @@ in Logic-based outer approximation.
 from __future__ import division
 
 from pyomo.contrib.gdpopt.util import is_feasible
-from pyomo.opt import TerminationCondition as tc
-from pyomo.core import (Block,
-                        TransformationFactory, Var, minimize, value)
+from pyomo.core import Block, TransformationFactory, Var, minimize, value
 from pyomo.gdp import Disjunct
-from pyomo.opt import SolverStatus, SolverFactory
+from pyomo.opt import TerminationCondition as tc
+from pyomo.opt import SolverFactory, SolverStatus
 
 
 def solve_NLP(nlp_model, solve_data, config):

@@ -28,24 +28,25 @@ import logging
 import pyomo.common.plugin
 from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue, In,
                                  NonNegativeFloat, NonNegativeInt)
-from pyomo.contrib.gdpopt.master_initialize import (init_custom_disjuncts,
-                                                    init_set_covering,
-                                                    init_max_binaries)
-from pyomo.contrib.gdpopt.nlp_solve import (solve_NLP,
-                                            update_nlp_progress_indicators)
 from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
                                                  add_outer_approximation_cuts)
+from pyomo.contrib.gdpopt.master_initialize import (init_custom_disjuncts,
+                                                    init_max_binaries,
+                                                    init_set_covering)
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
-from pyomo.contrib.gdpopt.util import GDPoptSolveData, _DoNothing, a_logger
+from pyomo.contrib.gdpopt.nlp_solve import (solve_NLP,
+                                            update_nlp_progress_indicators)
+from pyomo.contrib.gdpopt.util import (GDPoptSolveData,
+                                       _define_initial_ordered_component_lists,
+                                       _DoNothing, _record_problem_statistics,
+                                       a_logger, copy_var_list_values)
 from pyomo.core.base import (Block, Constraint, ConstraintList, Expression,
-                             Objective, Suffix, TransformationFactory,
-                             Var, minimize, value, Reals)
-from pyomo.core.expr import current as EXPR
+                             Objective, Reals, Suffix, TransformationFactory,
+                             Var, minimize, value)
 from pyomo.core.kernel import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt.base import IOptSolver
 from pyomo.opt.results import ProblemSense, SolverResults
-
 
 __version__ = (0, 2, 0)
 
@@ -208,41 +209,23 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             # TODO check if name is taken already
             GDPopt = m.GDPopt_utils = Block()
 
-            GDPopt.initial_var_list = list(v for v in m.component_data_objects(
-                ctype=Var, descend_into=(Block, Disjunct)
-            ))
+            # TODO Reformulate integer variables to binary
+            pass
+
+            # Save ordered lists of main modeling components, so that data can
+            # be easily transferred between future model clones.
+            _define_initial_ordered_component_lists(m)
+            _record_problem_statistics(m, solve_data)
+            solve_data.results.solver.name = 'GDPopt ' + str(self.version())
+
             # Save model initial values. These are used later to initialize NLP
             # subproblems.
             GDPopt.initial_var_values = list(
                 v.value for v in GDPopt.initial_var_list)
-            GDPopt.initial_disjuncts_list = list(
-                m.component_data_objects(
-                    ctype=Disjunct, descend_into=(Block, Disjunct)))
-            GDPopt.initial_constraints_list = list(
-                m.component_data_objects(
-                    ctype=Constraint, descend_into=(Block, Disjunct)))
-            GDPopt.initial_nonlinear_constraints = [
-                v for v in GDPopt.initial_constraints_list
-                if v.body.polynomial_degree() not in (0, 1)]
 
             # Store the initial model state as the best solution found. If we
             # find no better solution, then we will restore from this copy.
-            # print('Initial clone for best_solution_found')
-            solve_data.best_solution_found = model.clone()
-
-            # Create the solver results object
-            res = solve_data.results = SolverResults()
-            res.problem.name = m.name
-            res.problem.number_of_nonzeros = None  # TODO
-            res.solver.name = 'GDPopt ' + str(self.version())
-            # TODO work on termination condition and message
-            res.solver.termination_condition = None
-            res.solver.message = None
-            # TODO add some kind of timing
-            res.solver.user_time = None
-            res.solver.system_time = None
-            res.solver.wallclock_time = None
-            res.solver.termination_message = None
+            solve_data.best_solution_found = list(GDPopt.initial_var_values)
 
             # Validate the model to ensure that GDPopt is able to solve it.
             self._validate_model(config, solve_data)
@@ -264,7 +247,9 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             # not already in the primary GDPopt_integer_cuts ConstraintList.
             GDPopt.exclude_explored_configurations = ConstraintList(
                 doc='explored integer cuts')
-            if not GDPopt._no_discrete_decisions:
+            if not solve_data.no_discrete_decisions:
+                # If there are multiple discrete decisions, allow re-visiting
+                # them by default. Otherwise, no point in resolving the problem.
                 GDPopt.exclude_explored_configurations.deactivate()
 
             # Set up iteration counters
@@ -289,9 +274,10 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             self._GDPopt_iteration_loop(solve_data, config)
 
             # Update values in original model
-            for var, val in zip(GDPopt.initial_var_list,
-                                solve_data.best_solution_found):
-                var.value = val
+            copy_var_list_values(
+                from_list=solve_data.best_solution_found,
+                to_list=GDPopt.initial_var_list,
+                config=config)
 
             solve_data.results.problem.lower_bound = solve_data.LB
             solve_data.results.problem.upper_bound = solve_data.UB
@@ -308,57 +294,21 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         m = solve_data.working_model
         GDPopt = m.GDPopt_utils
 
-        # Get count of constraints and variables
-        solve_data.results.problem.number_of_constraints = 0
-        var_set = ComponentSet()
-        binary_var_set = ComponentSet()
-        integer_var_set = ComponentSet()
-        continuous_var_set = ComponentSet()
-        for constr in m.component_data_objects(ctype=Constraint, active=True,
-                                               descend_into=(Disjunct, Block)):
-            solve_data.results.problem.number_of_constraints += 1
-            for v in EXPR.identify_variables(constr.body, include_fixed=False):
-                var_set.add(v)
-                if v.is_binary():
-                    binary_var_set.add(v)
-                elif v.is_integer():
-                    integer_var_set.add(v)
-                elif v.is_continuous():
-                    continuous_var_set.add(v)
-                else:
-                    raise TypeError('Variable {0} has unknown domain of {1}'.
-                                    format(v.name, v.domain))
-
-        active_disjunctions = ComponentSet(
-            disj for disj in m.component_data_objects(
-                ctype=Disjunction, active=True,
-                descend_into=(Disjunct, Block)))
-        solve_data.results.problem.number_of_disjunctions = \
-            len(active_disjunctions)
-
-        solve_data.results.problem.number_of_variables = len(var_set)
-        solve_data.results.problem.number_of_binary_variables = \
-            len(binary_var_set)
-        solve_data.results.problem.number_of_integer_variables = \
-            len(integer_var_set)
-        solve_data.results.problem.number_of_continuous_variables = \
-            len(continuous_var_set)
-
         # Check for any integer variables
-        if any(True for v in m.component_data_objects(
-                ctype=Var, active=True, descend_into=(Block, Disjunct))
-                if v.is_integer() and not v.fixed):
+        if solve_data.results.problem.number_of_integer_variables > 0:
             raise ValueError('Model contains unfixed integer variables. '
                              'GDPopt does not currently support solution of '
                              'such problems.')
             # TODO add in the reformulation using base 2
 
         # Handle LP/NLP being passed to the solver
-        if len(binary_var_set) == 0 and len(active_disjunctions) == 0:
+        prob = solve_data.results.problem
+        if (prob.number_of_binary_variables == 0 and
+                prob.number_of_disjunctions == 0):
             config.logger.info('Problem has no discrete decisions.')
-            GDPopt._no_discrete_decisions = True
+            solve_data.no_discrete_decisions = True
         else:
-            GDPopt._no_discrete_decisions = False
+            solve_data.no_discrete_decisions = False
 
         # Handle missing or multiple objectives
         objs = list(m.component_data_objects(

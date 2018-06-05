@@ -7,7 +7,7 @@ from copy import deepcopy
 from pyomo.contrib.gdpopt.util import _DoNothing
 from pyomo.core import TransformationFactory
 from pyomo.opt import TerminationCondition as tc
-from pyomo.opt import SolverFactory, SolverStatus, SolutionStatus
+from pyomo.opt import SolutionStatus, SolverFactory, SolverStatus
 
 
 def solve_linear_GDP(linear_GDP_model, solve_data, config):
