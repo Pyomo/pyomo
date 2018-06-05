@@ -6,6 +6,7 @@ from pyomo.common.modeling import randint, unique_component_name
 from pyomo.core import Block, Var, Param, Set, VarList, ConstraintList, Constraint, Objective, RangeSet, value, ConcreteModel, Reals, sqrt, minimize, maximize
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel import ComponentSet
+from pyomo.core.base.external import PythonCallbackFunction
 from pyomo.core.base.var import _VarData
 from pyomo.core.base.numvalue import nonpyomo_leaf_types
 from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
@@ -32,20 +33,41 @@ class ReplaceEFVisitor(EXPR.ExpressionReplacementVisitor):
             return node
         if id(node._fcn) not in self.efSet:
             return node
+        # At this point we know this is an ExternalFunctionExpression
+        # node that we want to replace with an auliliary variable (y)
         new_args = []
         seen = ComponentSet()
+        # TODO: support more than PythonCallbackFunctions
+        assert isinstance(node._fcn, PythonCallbackFunction)
+        #
+        # Note: the first argument to PythonCallbackFunction is the
+        # function ID.  Since we are going to complain about constant
+        # parameters, we need to skip the first argument when processing
+        # the argument list.  This is really not good: we should allow
+        # for constant arguments to the functions, and we should relax
+        # the restriction that the external functions implement the
+        # PythonCallbackFunction API (that restriction leads unfortunate
+        # things later; i.e., accessing the private _fcn attribute
+        # below).
         for arg in list(values)[1:]:
             if type(arg) in nonpyomo_leaf_types or arg.is_fixed():
+                # We currently do not allow constants or parameters for
+                # the external functions.
                 raise RuntimeError(
                     "TrustRegion does not support black boxes with "
                     "constant or parameter inputs\n\tExpression: %s"
                     % (node,) )
             if arg.is_expression_type():
+                # All expressions (including simple linear expressions)
+                # are replaced with a single auxiliary variable (and
+                # eventually an additional constraint equating the
+                # auxiliary variable to the original expression)
                 _x = self.trf.x.add()
                 _x.set_value( value(arg) )
                 self.trf.conset.add(_x == arg)
                 new_args.append(_x)
             else:
+                # The only thing left is bare variables: check for duplicates.
                 if arg in seen:
                     raise RuntimeError(
                         "TrustRegion does not support black boxes with "
