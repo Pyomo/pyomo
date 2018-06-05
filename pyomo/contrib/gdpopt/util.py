@@ -224,12 +224,13 @@ def reformulate_integer_variables(model, config):
                 "variables." % (int_var.name)
             )
         # do the reformulation
-        highest_power = int(floor(log(value(int_var.ub), 2)))
+        highest_power = floor(log(value(int_var.ub), 2))
+        print(int_var.ub, highest_power)
         var_name = int_var.name
         reform_block.integer_to_binary_constraint.add(
             var_name, expr=int_var == sum(
                 reform_block.new_binary_var[var_name, pwr] * (2 ^ pwr)
-                for pwr in range(0, highest_power + 1)))
+                for pwr in range(0, int(highest_power) + 1)))
         int_var.domain = NonNegativeReals
 
     config.logger.info(
