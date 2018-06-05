@@ -211,6 +211,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             GDPopt.initial_var_list = list(v for v in m.component_data_objects(
                 ctype=Var, descend_into=(Block, Disjunct)
             ))
+            # Save model initial values. These are used later to initialize NLP
+            # subproblems.
             GDPopt.initial_var_values = list(
                 v.value for v in GDPopt.initial_var_list)
             GDPopt.initial_disjuncts_list = list(
@@ -227,11 +229,6 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             # find no better solution, then we will restore from this copy.
             # print('Initial clone for best_solution_found')
             solve_data.best_solution_found = model.clone()
-
-            # Save model initial values. These are used later to initialize NLP
-            # subproblems.
-            GDPopt.initial_var_values = list(
-                v.value for v in GDPopt.initial_var_list)
 
             # Create the solver results object
             res = solve_data.results = SolverResults()
