@@ -130,7 +130,7 @@ def init_set_covering(solve_data, config):
     while (any(disjunct_needs_cover) and
            iter_count <= config.set_cover_iterlim):
         linear_GDP = solve_data.linear_GDP.clone()
-        linear_GDP.GDPopt_utils.exclude_explored_configurations.activate()
+        linear_GDP.GDPopt_utils.no_backtracking.activate()
         # Solve set covering MIP
         mip_results = solve_set_cover_MIP(
             linear_GDP, disjunct_needs_cover, solve_data, config)

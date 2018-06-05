@@ -20,8 +20,13 @@ def solve_NLP(nlp_model, solve_data, config):
         ctype=Var, descend_into=(Block, Disjunct), active=True)
         if (v.is_binary() or v.is_integer()) and not v.fixed
     ):
+        discrete_var_names = list(
+            v.name for v in nlp_model.component_data_objects(
+                ctype=Var, descend_into=(Block, Disjunct), active=True)
+            if (v.is_binary() or v.is_integer()) and not v.fixed)
         config.logger.warning(
-            "Unfixed discrete variables exist on the NLP subproblem.")
+            "Unfixed discrete variables exist on the NLP subproblem: %s"
+            % (discrete_var_names,))
 
     GDPopt = nlp_model.GDPopt_utils
 

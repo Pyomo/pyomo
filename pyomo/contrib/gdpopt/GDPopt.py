@@ -250,12 +250,12 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
             # Note: these cuts will only exclude integer realizations that are
             # not already in the primary GDPopt_integer_cuts ConstraintList.
-            GDPopt.exclude_explored_configurations = ConstraintList(
+            GDPopt.no_backtracking = ConstraintList(
                 doc='explored integer cuts')
             if not solve_data.no_discrete_decisions:
                 # If there are multiple discrete decisions, allow re-visiting
                 # them by default. Otherwise, no point in resolving the problem.
-                GDPopt.exclude_explored_configurations.deactivate()
+                GDPopt.no_backtracking.deactivate()
 
             # Set up iteration counters
             solve_data.nlp_iter = 0
@@ -438,6 +438,10 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 else:
                     var.value = val
             TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
+            # TODO also fix other discrete variables?
+            for var in nlp_model.GDPopt_utils.initial_var_list:
+                if var.is_binary():
+                    var.fix()
             solve_data.nlp_iter += 1
             nlp_result = solve_NLP(nlp_model, solve_data, config)
             nlp_feasible, nlp_var_values, nlp_duals = nlp_result
@@ -466,13 +470,13 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             if (len(feas_prog_log) > no_backtrack_after and
                 (sign_adjust * (feas_prog_log[-1] + required_feas_prog)
                  >= sign_adjust * feas_prog_log[-1 - no_backtrack_after])):
-                if not GDPopt.exclude_explored_configurations.active:
+                if not solve_data.linear_GDP.no_backtracking.active:
                     config.logger.info(
                         'Feasible solutions not making enough '
                         'progress for %s iterations. '
                         'Turning on no-backtracking '
                         'integer cuts.' % (no_backtrack_after,))
-                    GDPopt.exclude_explored_configurations.activate()
+                    GDPopt.no_backtracking.activate()
 
             # Maximum number of iterations in which feasible bound does not
             # improve before terminating algorithm

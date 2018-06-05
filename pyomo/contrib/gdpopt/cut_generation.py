@@ -77,7 +77,7 @@ def add_outer_approximation_cuts(var_values, duals, solve_data, config):
 
 def add_integer_cut(var_values, solve_data, config, feasible=False):
     """Add an integer cut to the linear GDP model."""
-    m = solve_data.working_model
+    m = solve_data.linear_GDP
     GDPopt = m.GDPopt_utils
     var_value_is_one = ComponentSet()
     var_value_is_zero = ComponentSet()
@@ -123,4 +123,4 @@ def add_integer_cut(var_values, solve_data, config, feasible=False):
         GDPopt.integer_cuts.add(expr=int_cut)
     else:
         config.logger.info('Adding feasible integer cut')
-        GDPopt.exclude_explored_configurations.add(expr=int_cut)
+        GDPopt.no_backtracking.add(expr=int_cut)

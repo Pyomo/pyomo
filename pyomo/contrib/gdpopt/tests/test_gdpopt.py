@@ -26,7 +26,9 @@ class TestGDPopt(unittest.TestCase):
         """Test logic-based outer approximation."""
         with SolverFactory('gdpopt') as opt:
             model = build_eight_process_flowsheet()
-            opt.solve(model, strategy='LOA', mip='cbc')
+            opt.solve(model, strategy='LOA',
+                      mip=required_solvers[1],
+                      nlp=required_solvers[0])
 
             self.assertTrue(fabs(value(model.profit.expr) - 68) <= 1E-2)
 
@@ -35,7 +37,8 @@ class TestGDPopt(unittest.TestCase):
         with SolverFactory('gdpopt') as opt:
             model = build_eight_process_flowsheet()
             opt.solve(model, strategy='LOA', init_strategy='max_binary',
-                      mip='cbc')
+                      mip=required_solvers[1],
+                      nlp=required_solvers[0])
 
             self.assertTrue(fabs(value(model.profit.expr) - 68) <= 1E-2)
 
@@ -57,7 +60,8 @@ class TestGDPopt(unittest.TestCase):
             ]
             opt.solve(model, strategy='LOA', init_strategy='custom_disjuncts',
                       custom_init_disjuncts=initialize,
-                      mip='cbc')
+                      mip=required_solvers[1],
+                      nlp=required_solvers[0])
 
             self.assertTrue(fabs(value(model.profit.expr) - 68) <= 1E-2)
 
