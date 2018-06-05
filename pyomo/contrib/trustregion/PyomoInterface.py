@@ -34,7 +34,7 @@ class ReplaceEFVisitor(EXPR.ExpressionReplacementVisitor):
             return node
         new_args = []
         seen = ComponentSet()
-        for arg in list(node.args)[1:]:
+        for arg in list(values)[1:]:
             if type(arg) in nonpyomo_leaf_types or arg.is_fixed():
                 raise RuntimeError(
                     "TrustRegion does not support black boxes with "
