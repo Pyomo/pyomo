@@ -66,16 +66,8 @@ install:
   - conda update -q -y conda
   - conda config --set auto_update_conda false
   #
-  - "%CONDAFORGE% setuptools pip"
-  - python -m pip install coverage
+  - "%CONDAFORGE% setuptools pip coverage sphinx_rtd_theme"
   - python -m pip install codecov
-  - IF DEFINED YAML (python -m pip install pyyaml)
-  - "IF DEFINED PYRO (python -m pip install %PYRO%)"
-  - python -m pip install xlrd
-  - python -m pip install openpyxl
-  - python -m pip install sphinx_rtd_theme
-  - "%ANACONDA% pandas networkx"
-  - "%ANACONDA% scipy"
   #
   # Install GAMS
   #

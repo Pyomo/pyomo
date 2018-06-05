@@ -1,2 +1,2 @@
-from pyutilib.services import TempFileManager
+from pyutilib.services import TempfileManager
 TempfileManager.tempdir = YourDirectoryNameGoesHere

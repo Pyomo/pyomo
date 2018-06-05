@@ -47,6 +47,15 @@ class IParameter(IComponent, NumericValue):
         """A boolean indicating that this parameter is constant."""
         return False
 
+    def is_parameter_type(self):
+        """A boolean indicating that this is a parameter object."""
+        #
+        # The semantics of ParamData and parameter are different.
+        # By default, ParamData are immutable.  Hence, we treat the
+        # parameter objects as non-parameter data ... for now.
+        #
+        return False
+
     def is_variable_type(self):
         """A boolean indicating that this is a variable object."""
         return False

@@ -1,2 +1,2 @@
-instance.x.value = 2
-instance.x.fixed = True
+instance.y.value = 2
+instance.y.fixed = True
