@@ -888,7 +888,7 @@ class TestSimulator(unittest.TestCase):
         m.del_component('con2')
         m.del_component('con2_index')
 
-
+    @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_discretized_vars(self):
 
         m = self.m
