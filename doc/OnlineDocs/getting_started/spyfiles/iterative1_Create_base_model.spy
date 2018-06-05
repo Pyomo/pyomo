@@ -1,6 +1,6 @@
-model = AbstractModel()
-model.n = Param(default=4)
-model.x = Var(RangeSet(model.n), within=Binary)
+model = pyo.AbstractModel()
+model.n = pyo.Param(default=4)
+model.x = pyo.Var(pyo.RangeSet(model.n), within=pyo.Binary)
 def o_rule(model):
-    return summation(model.x)
-model.o = Objective(rule=o_rule)
+    return pyo.summation(model.x)
+model.o = pyo.Objective(rule=o_rule)

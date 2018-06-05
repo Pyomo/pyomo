@@ -1,4 +1,4 @@
-from pyomo.pysp.annotations import PySP_StochasticObjectiveAnnotation
+from pyomo.pysp.annotations import StochasticObjectiveAnnotation
 
 model = ConcreteModel()
 
@@ -22,5 +22,5 @@ model.TotalCost = Objective(expr= model.FirstStageCost + model.SecondStageCost)
 
 # declare that model.x and model.y have stochastic cost
 # coefficients in the second stage
-model.stoch_objective = PySP_StochasticObjectiveAnnotation()
+model.stoch_objective = StochasticObjectiveAnnotation()
 model.stoch_objective.declare(model.TotalCost, variables=[model.x, model.y])
