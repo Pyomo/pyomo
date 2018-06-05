@@ -46,9 +46,8 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt.base import IOptSolver
 from pyomo.opt.results import ProblemSense, SolverResults
 
-init_set_covering
 
-__version__ = (0, 1, 0)
+__version__ = (0, 2, 0)
 
 
 class GDPoptSolver(pyomo.common.plugin.Plugin):
