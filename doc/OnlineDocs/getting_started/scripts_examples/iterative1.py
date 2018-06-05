@@ -1,12 +1,12 @@
 # @Import_symbols_for_pyomo
 # iterative1.py
-from pyomo.environ import *
+import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 # @Import_symbols_for_pyomo
 
 # @Call_SolverFactory_with_argument
 # Create a solver
-opt = SolverFactory('glpk')
+opt = pyo.SolverFactory('glpk')
 # @Call_SolverFactory_with_argument
 
 #
@@ -14,15 +14,15 @@ opt = SolverFactory('glpk')
 # an empty constraint list.
 #
 # @Create_base_model
-model = AbstractModel()
-model.n = Param(default=4)
-model.x = Var(RangeSet(model.n), within=Binary)
+model = pyo.AbstractModel()
+model.n = pyo.Param(default=4)
+model.x = pyo.Var(pyo.RangeSet(model.n), within=pyo.Binary)
 def o_rule(model):
-    return summation(model.x)
-model.o = Objective(rule=o_rule)
+    return pyo.summation(model.x)
+model.o = pyo.Objective(rule=o_rule)
 # @Create_base_model
 # @Create_empty_constraint_list
-model.c = ConstraintList()
+model.c = pyo.ConstraintList()
 # @Create_empty_constraint_list
 
 # Create a model instance and optimize
@@ -46,7 +46,7 @@ for i in range(5):
 # @Iteratively_assign_and_test
     expr = 0
     for j in instance.x:
-        if instance.x[j].value == 0:
+        if pyo.value(instance.x[j]) == 0:
             expr += instance.x[j]
         else:
             expr += (1-instance.x[j])
