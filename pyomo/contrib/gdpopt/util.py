@@ -224,7 +224,7 @@ def reformulate_integer_variables(model, config):
                 "variables." % (int_var.name)
             )
         # do the reformulation
-        highest_power = floor(log(value(int_var.ub), 2))
+        highest_power = int(floor(log(value(int_var.ub), 2)))
         var_name = int_var.name
         reform_block.integer_to_binary_constraint.add(
             var_name, expr=int_var == sum(
