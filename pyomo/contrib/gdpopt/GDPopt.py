@@ -24,10 +24,6 @@ Questions: Please make a post at StackOverflow and/or contact Qi Chen
 from __future__ import division
 
 import logging
-from copy import deepcopy
-from math import copysign, fabs
-
-from six import iteritems
 
 import pyomo.common.plugin
 from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue, In,
@@ -42,16 +38,11 @@ from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
 from pyomo.contrib.gdpopt.util import GDPoptSolveData, _DoNothing, a_logger
 from pyomo.core.base import (Block, Constraint, ConstraintList, Expression,
-                             Objective, Set, Suffix, TransformationFactory,
-                             Var, maximize, minimize, value)
-from pyomo.core.base.block import generate_cuid_names
-from pyomo.core.base.symbolic import differentiate
+                             Objective, Suffix, TransformationFactory,
+                             Var, minimize, value, Reals)
 from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel import (ComponentMap, ComponentSet, NonNegativeReals,
-                               Reals)
+from pyomo.core.kernel import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
-from pyomo.opt import TerminationCondition as tc
-from pyomo.opt import SolutionStatus, SolverFactory, SolverStatus
 from pyomo.opt.base import IOptSolver
 from pyomo.opt.results import ProblemSense, SolverResults
 
@@ -311,36 +302,6 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
         finally:
             config.logger.setLevel(old_logger_level)
-
-    def _copy_dual_suffixes(self, from_model, to_model,
-                            from_map=None, to_map=None):
-        """Copy suffix values from one model to another."""
-        self._copy_suffix(from_model.dual, to_model.dual,
-                          from_map=from_map, to_map=to_map)
-        if hasattr(from_model, 'ipopt_zL_out'):
-            self._copy_suffix(from_model.ipopt_zL_out, to_model.ipopt_zL_out,
-                              from_map=from_map, to_map=to_map)
-        if hasattr(from_model, 'ipopt_zU_out'):
-            self._copy_suffix(from_model.ipopt_zU_out, to_model.ipopt_zU_out,
-                              from_map=from_map, to_map=to_map)
-
-    def _copy_suffix(self, from_suffix, to_suffix, from_map=None, to_map=None):
-        """Copy suffix values from one model to another."""
-        if from_map is None:
-            from_map = generate_cuid_names(from_suffix.model(),
-                                           ctype=(Var, Constraint, Disjunct),
-                                           descend_into=(Block, Disjunct))
-        if to_map is None:
-            tm_obj_to_uid = generate_cuid_names(
-                to_suffix.model(), ctype=(Var, Constraint, Disjunct),
-                descend_into=(Block, Disjunct))
-            to_map = dict((cuid, obj)
-                          for obj, cuid in iteritems(tm_obj_to_uid))
-
-        to_suffix.clear()
-        for model_obj in from_suffix:
-            to_model_obj = to_map[from_map[model_obj]]
-            to_suffix[to_model_obj] = from_suffix[model_obj]
 
     def _validate_model(self, config, solve_data):
         """Validate that the model is solveable by GDPopt.

@@ -4,11 +4,10 @@ from __future__ import division
 from math import copysign, fabs
 
 from pyomo.core import (Block, ConstraintList, NonNegativeReals, VarList,
-                        minimize, value, Var)
+                        minimize, value)
 from pyomo.core.base.symbolic import differentiate
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel import ComponentMap, ComponentSet
-from pyomo.gdp import Disjunct
 
 
 def add_outer_approximation_cuts(var_values, duals, solve_data, config):
@@ -101,7 +100,7 @@ def add_integer_cut(var_values, solve_data, config, feasible=False):
             var_value_is_zero.add(var)
         else:
             raise ValueError(
-                'Binary %s = %s is not 0 or 1' % (v.name, value(v)))
+                'Binary %s = %s is not 0 or 1' % (var.name, val))
 
     if not (var_value_is_one or var_value_is_zero):
         # if no remaining binary variables, then terminate algorithm.
