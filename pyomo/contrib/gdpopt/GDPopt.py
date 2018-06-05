@@ -39,14 +39,14 @@ from pyomo.contrib.gdpopt.nlp_solve import (solve_NLP,
 from pyomo.contrib.gdpopt.util import (GDPoptSolveData,
                                        _define_initial_ordered_component_lists,
                                        _DoNothing, _record_problem_statistics,
-                                       a_logger, copy_var_list_values)
+                                       a_logger, copy_var_list_values,
+                                       reformulate_integer_variables)
 from pyomo.core.base import (Block, Constraint, ConstraintList, Expression,
                              Objective, Reals, Suffix, TransformationFactory,
                              Var, minimize, value)
-from pyomo.core.kernel import ComponentSet
-from pyomo.gdp import Disjunct, Disjunction
+from pyomo.gdp import Disjunct
 from pyomo.opt.base import IOptSolver
-from pyomo.opt.results import ProblemSense, SolverResults
+from pyomo.opt.results import ProblemSense
 
 __version__ = (0, 2, 0)
 
@@ -210,7 +210,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             GDPopt = m.GDPopt_utils = Block()
 
             # TODO Reformulate integer variables to binary
-            pass
+            reformulate_integer_variables(model, config)
 
             # Save ordered lists of main modeling components, so that data can
             # be easily transferred between future model clones.
