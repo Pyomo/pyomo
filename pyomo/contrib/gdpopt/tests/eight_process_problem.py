@@ -26,10 +26,11 @@ http://dx.doi.org/10.1016/0098-1354(95)00219-7
 """
 from __future__ import division
 
+from six import iteritems
+
 from pyomo.environ import (ConcreteModel, Constraint, NonNegativeReals,
                            Objective, Param, RangeSet, Var, exp, minimize)
-from pyomo.gdp import Disjunct, Disjunction
-from six import iteritems
+from pyomo.gdp import Disjunction
 
 
 def build_eight_process_flowsheet():
@@ -44,7 +45,11 @@ def build_eight_process_flowsheet():
     # FIXED COST INVESTMENT COEFF FOR PROCESS UNITS
     # Format: process #: cost
     fixed_cost = {1: 5, 2: 8, 3: 6, 4: 10, 5: 6, 6: 7, 7: 4, 8: 5}
-    CF = m.CF = Param(m.units, initialize=fixed_cost)
+    m.CF = Param(m.units, initialize=fixed_cost)
+
+    def fixed_cost_bounds(m, unit):
+        return (0, m.CF[unit])
+    m.yCF = Var(m.units, initialize=0, bounds=fixed_cost_bounds)
 
     # VARIABLE COST COEFF FOR PROCESS UNITS - STREAMS
     # Format: stream #: cost
@@ -67,58 +72,72 @@ def build_eight_process_flowsheet():
 
     """Constraint definitions"""
     # INPUT-OUTPUT RELATIONS FOR process units 1 through 8
-    m.use_unit1 = Disjunct()
-    m.use_unit1.inout1 = Constraint(expr=exp(m.flow[3]) - 1 == m.flow[2])
-    m.use_unit1.no_unit2_flow1 = Constraint(expr=m.flow[4] == 0)
-    m.use_unit1.no_unit2_flow2 = Constraint(expr=m.flow[5] == 0)
-    m.use_unit2 = Disjunct()
-    m.use_unit2.inout2 = Constraint(
-        expr=exp(m.flow[5] / 1.2) - 1 == m.flow[4])
-    m.use_unit2.no_unit1_flow1 = Constraint(expr=m.flow[2] == 0)
-    m.use_unit2.no_unit1_flow2 = Constraint(expr=m.flow[3] == 0)
-
-    m.use_unit3 = Disjunct()
-    m.use_unit3.inout3 = Constraint(
-        expr=1.5 * m.flow[9] + m.flow[10] == m.flow[8])
-    m.no_unit3 = Disjunct()
-    m.no_unit3.no_unit3_flow1 = Constraint(expr=m.flow[9] == 0)
-    m.no_unit3.flow_pass_through = Constraint(expr=m.flow[10] == m.flow[8])
-
-    m.use_unit4 = Disjunct()
-    m.use_unit4.inout4 = Constraint(
-        expr=1.25 * (m.flow[12] + m.flow[14]) == m.flow[13])
-    m.use_unit4.no_unit5_flow = Constraint(expr=m.flow[15] == 0)
-    m.use_unit5 = Disjunct()
-    m.use_unit5.inout5 = Constraint(expr=m.flow[15] == 2 * m.flow[16])
-    m.use_unit5.no_unit4_flow1 = Constraint(expr=m.flow[12] == 0)
-    m.use_unit5.no_unit4_flow2 = Constraint(expr=m.flow[14] == 0)
-    m.no_unit4or5 = Disjunct()
-    m.no_unit4or5.no_unit5_flow = Constraint(expr=m.flow[15] == 0)
-    m.no_unit4or5.no_unit4_flow1 = Constraint(expr=m.flow[12] == 0)
-    m.no_unit4or5.no_unit4_flow2 = Constraint(expr=m.flow[14] == 0)
-
-    m.use_unit6 = Disjunct()
-    m.use_unit6.inout6 = Constraint(
-        expr=exp(m.flow[20] / 1.5) - 1 == m.flow[19])
-    m.use_unit6.no_unit7_flow1 = Constraint(expr=m.flow[21] == 0)
-    m.use_unit6.no_unit7_flow2 = Constraint(expr=m.flow[22] == 0)
-    m.use_unit7 = Disjunct()
-    m.use_unit7.inout7 = Constraint(expr=exp(m.flow[22]) - 1 == m.flow[21])
-    m.use_unit7.no_unit6_flow1 = Constraint(expr=m.flow[19] == 0)
-    m.use_unit7.no_unit6_flow2 = Constraint(expr=m.flow[20] == 0)
-    m.no_unit6or7 = Disjunct()
-    m.no_unit6or7.no_unit7_flow1 = Constraint(expr=m.flow[21] == 0)
-    m.no_unit6or7.no_unit7_flow2 = Constraint(expr=m.flow[22] == 0)
-    m.no_unit6or7.no_unit6_flow = Constraint(expr=m.flow[19] == 0)
-    m.no_unit6or7.no_unit6_flow2 = Constraint(expr=m.flow[20] == 0)
-
-    m.use_unit8 = Disjunct()
-    m.use_unit8.inout8 = Constraint(
-        expr=exp(m.flow[18]) - 1 == m.flow[10] + m.flow[17])
-    m.no_unit8 = Disjunct()
-    m.no_unit8.no_unit8_flow1 = Constraint(expr=m.flow[10] == 0)
-    m.no_unit8.no_unit8_flow2 = Constraint(expr=m.flow[17] == 0)
-    m.no_unit8.no_unit8_flow3 = Constraint(expr=m.flow[18] == 0)
+    m.use_unit_1or2 = Disjunction(
+        expr=[
+            # use unit 1 disjunct
+            [m.yCF[1] == m.CF[1],
+             exp(m.flow[3]) - 1 == m.flow[2],
+             m.flow[4] == 0,
+             m.flow[5] == 0],
+            # use unit 2 disjunct
+            [m.yCF[2] == m.CF[2],
+             exp(m.flow[5] / 1.2) - 1 == m.flow[4],
+             m.flow[2] == 0,
+             m.flow[3] == 0]
+        ])
+    m.use_unit_3ornot = Disjunction(
+        expr=[
+            # Use unit 3 disjunct
+            [m.yCF[3] == m.CF[3],
+             1.5 * m.flow[9] + m.flow[10] == m.flow[8]],
+            # No unit 3 disjunct
+            [m.flow[9] == 0,
+             m.flow[10] == m.flow[8]]
+        ])
+    m.use_unit_4or5ornot = Disjunction(
+        expr=[
+            # Use unit 4 disjunct
+            [m.yCF[4] == m.CF[4],
+             1.25 * (m.flow[12] + m.flow[14]) == m.flow[13],
+             m.flow[15] == 0],
+            # Use unit 5 disjunct
+            [m.yCF[5] == m.CF[5],
+             m.flow[15] == 2 * m.flow[16],
+             m.flow[12] == 0,
+             m.flow[14] == 0],
+            # No unit 4 or 5 disjunct
+            [m.flow[15] == 0,
+             m.flow[12] == 0,
+             m.flow[14] == 0]
+        ])
+    m.use_unit_6or7ornot = Disjunction(
+        expr=[
+            # use unit 6 disjunct
+            [m.yCF[6] == m.CF[6],
+             exp(m.flow[20] / 1.5) - 1 == m.flow[19],
+             m.flow[21] == 0,
+             m.flow[22] == 0],
+            # use unit 7 disjunct
+            [m.yCF[7] == m.CF[7],
+             exp(m.flow[22]) - 1 == m.flow[21],
+             m.flow[19] == 0,
+             m.flow[20] == 0],
+            # No unit 6 or 7 disjunct
+            [m.flow[21] == 0,
+                m.flow[22] == 0,
+                m.flow[19] == 0,
+                m.flow[20] == 0]
+        ])
+    m.use_unit_8ornot = Disjunction(
+        expr=[
+            # use unit 8 disjunct
+            [m.yCF[8] == m.CF[8],
+             exp(m.flow[18]) - 1 == m.flow[10] + m.flow[17]],
+            # no unit 8 disjunct
+            [m.flow[10] == 0,
+                m.flow[17] == 0,
+                m.flow[18] == 0]
+        ])
 
     # Mass balance equations
     m.massbal1 = Constraint(expr=m.flow[13] == m.flow[19] + m.flow[21])
@@ -138,26 +157,17 @@ def build_eight_process_flowsheet():
     m.specs4 = Constraint(expr=m.flow[12] >= 2 * m.flow[14])
 
     # pure integer constraints
-    m.use1or2 = Disjunction(expr=[m.use_unit1, m.use_unit2])
-    m.use4or5maybe = Disjunction(
-        expr=[m.use_unit4, m.use_unit5, m.no_unit4or5])
-    m.use4or5 = Constraint(
-        expr=m.use_unit4.indicator_var + m.use_unit5.indicator_var <= 1)
-    m.use6or7maybe = Disjunction(
-        expr=[m.use_unit6, m.use_unit7, m.no_unit6or7])
     m.use4implies6or7 = Constraint(
-        expr=m.use_unit6.indicator_var + m.use_unit7.indicator_var -
-        m.use_unit4.indicator_var == 0)
-    m.use3maybe = Disjunction(expr=[m.use_unit3, m.no_unit3])
-    m.either3ornot = Constraint(
-        expr=m.use_unit3.indicator_var + m.no_unit3.indicator_var == 1)
-    m.use8maybe = Disjunction(expr=[m.use_unit8, m.no_unit8])
+        expr=m.use_unit_6or7ornot.disjuncts[0].indicator_var +
+        m.use_unit_6or7ornot.disjuncts[1].indicator_var -
+        m.use_unit_4or5ornot.disjuncts[0].indicator_var == 0)
     m.use3implies8 = Constraint(
-        expr=m.use_unit3.indicator_var - m.use_unit8.indicator_var <= 0)
+        expr=m.use_unit_3ornot.disjuncts[0].indicator_var
+        - m.use_unit_8ornot.disjuncts[0].indicator_var <= 0)
 
     """Profit (objective) function definition"""
     m.profit = Objective(expr=sum(
-        getattr(m, 'use_unit%s' % (unit,)).indicator_var * CF[unit]
+        m.yCF[unit]
         for unit in m.units) +
         sum(m.flow[stream] * CV[stream]
             for stream in m.streams) + CONSTANT,
@@ -169,18 +179,6 @@ def build_eight_process_flowsheet():
     for i, x_ub in iteritems(x_ubs):
         m.flow[i].setub(x_ub)
 
-    # # optimal solution
-    # m.use_unit1.indicator_var = 0
-    # m.use_unit2.indicator_var = 1
-    # m.use_unit3.indicator_var = 0
-    # m.no_unit3.indicator_var = 1
-    # m.use_unit4.indicator_var = 1
-    # m.use_unit5.indicator_var = 0
-    # m.no_unit4or5.indicator_var = 0
-    # m.use_unit6.indicator_var = 1
-    # m.use_unit7.indicator_var = 0
-    # m.no_unit6or7.indicator_var = 0
-    # m.use_unit8.indicator_var = 1
-    # m.no_unit8.indicator_var = 0
+    # Optimal solution uses units 2, 4, 6, 8 with objective value 68.
 
     return m

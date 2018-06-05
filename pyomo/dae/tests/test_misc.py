@@ -19,7 +19,7 @@ from six import StringIO
 import pyutilib.th as unittest
 
 from pyomo.environ import *
-from pyomo.util.log import LoggingIntercept
+from pyomo.common.log import LoggingIntercept
 from pyomo.dae import *
 from pyomo.dae.misc import *
 from pyomo.core.kernel.component_map import ComponentMap
@@ -966,6 +966,27 @@ class TestDaeMisc(unittest.TestCase):
         self.assertTrue(len(m.b.c.d), 6)
         self.assertTrue(len(m.b.con), 6)
         self.assertTrue(len(m.b.y), 6)
+
+    def test_external_function(self):
+        m = ConcreteModel()
+        m.t = ContinuousSet(bounds=(0, 10))
+        
+        def _fun(x):
+            return x**2
+        m.x_func = ExternalFunction(_fun)
+
+        m.y = Var(m.t, initialize=3)
+        m.dy = DerivativeVar(m.y, initialize=3)
+        
+        def _con(m, t):
+            return m.dy[t] == m.x_func(m.y[t])
+        m.con = Constraint(m.t, rule=_con)
+        
+        generate_finite_elements(m.t, 5)
+        expand_components(m)
+
+        self.assertTrue(len(m.y), 6)
+        self.assertTrue(len(m.con), 6)
 
     
 if __name__ == "__main__":

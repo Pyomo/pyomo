@@ -25,6 +25,7 @@ Pyomo is available under the BSD License.
 Pyomo is currently tested with the following Python implementations:
 
 * CPython: 2.6, 2.7, 3.4, 3.5, 3.6
+* PyPy: 2, 3
 
 ### Installation
 
@@ -35,7 +36,7 @@ Pyomo is currently tested with the following Python implementations:
 --->
 
     pip install pyomo
-    
+
 #### BinStar [![Binstar Badge](https://anaconda.org/conda-forge/pyomo/badges/version.svg)](https://anaconda.org/conda-forge/pyomo) [![Binstar Badge](https://anaconda.org/conda-forge/pyomo/badges/downloads.svg)](https://anaconda.org/conda-forge/pyomo)
 
     conda install -c https://conda.anaconda.org/conda-forge pyomo

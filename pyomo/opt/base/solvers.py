@@ -21,7 +21,7 @@ import time
 import logging
 
 from pyutilib.misc.config import ConfigBlock, ConfigList, ConfigValue
-from pyomo.util.plugin import *
+from pyomo.common.plugin import *
 import pyutilib.common
 import pyutilib.misc
 import pyutilib.services

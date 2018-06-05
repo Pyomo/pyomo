@@ -11,7 +11,7 @@
 import pyutilib.th as unittest
 
 import pyomo.environ
-from pyomo.util import DeveloperError
+from pyomo.common import DeveloperError
 from pyomo.core import *
 from pyomo.core.base.symbolic import (
     differentiate, NondifferentiableError,

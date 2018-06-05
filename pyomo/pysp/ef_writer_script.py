@@ -24,7 +24,7 @@ import pyutilib.misc
 from pyutilib.pyro import shutdown_pyro_components
 
 import pyomo.solvers
-from pyomo.util import pyomo_command
+from pyomo.common import pyomo_command
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
                        undefined,

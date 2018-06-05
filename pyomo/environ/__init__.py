@@ -45,6 +45,7 @@ _optional_packages = set([
     'pyomo.contrib.example',
     'pyomo.contrib.preprocessing',
     'pyomo.contrib.gdpopt',
+    'pyomo.contrib.gdp_bounds',
     'pyomo.contrib.trustregion',
 ])
 
@@ -84,7 +85,7 @@ def _import_packages():
         pkg = _sys.modules[pname]
         pkg.load()
 
-from pyomo.util.plugin import PluginGlobals as _PG
+from pyomo.common.plugin import PluginGlobals as _PG
 _PG.add_env("pyomo")
 _import_packages()
 _PG.pop_env()
@@ -97,9 +98,3 @@ from pyomo.opt import (
     SolverFactory, SolverManagerFactory, UnknownSolver,
     TerminationCondition, SolverStatus,
 )
-
-#
-# Initialize expression data
-#
-from pyomo.core.expr.expr_pyomo5 import initialize_expression_data
-initialize_expression_data()

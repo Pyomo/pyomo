@@ -13,7 +13,7 @@ import pyutilib.misc
 from pyomo import core
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr import native_types
-from pyomo.util import DeveloperError
+from pyomo.common import DeveloperError
 
 _sympy_available = True
 try:
@@ -152,7 +152,7 @@ def differentiate(expr, wrt=None, wrt_list=None):
     #
     sympy_expr = sympify_expression(expr, sympy2pyomo, pyomo2sympy)
     #
-    # Differentiate for each WRT variable, and map the 
+    # Differentiate for each WRT variable, and map the
     # result back into a Pyomo expression tree.
     #
     for i, target in enumerate(wrt_list):
@@ -244,7 +244,7 @@ class Sympy2PyomoVisitor(pyutilib.misc.ValueVisitor):
         return _op(*tuple(values))
 
     def visiting_potential_leaf(self, node):
-        """ 
+        """
         Visiting a potential leaf.
 
         Return True if the node is not expanded.
@@ -270,4 +270,3 @@ def _map_sympy2pyomo(expr, sympy2pyomo):
             return float(expr.evalf())
     visitor = Sympy2PyomoVisitor(sympy2pyomo)
     return visitor.dfs_postorder_stack(expr)
-

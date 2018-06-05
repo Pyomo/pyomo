@@ -16,7 +16,7 @@ from pyomo.core import TransformationFactory
 
 class MPEC_Solver2(pyomo.opt.OptSolver):
 
-    pyomo.util.plugin.alias('mpec_minlp', doc='MPEC solver transforms to a MINLP')
+    pyomo.common.plugin.alias('mpec_minlp', doc='MPEC solver transforms to a MINLP')
 
     def __init__(self, **kwds):
         kwds['type'] = 'mpec_minlp'

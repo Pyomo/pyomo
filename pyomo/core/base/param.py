@@ -15,7 +15,7 @@ import types
 import logging
 from weakref import ref as weakref_ref
 
-from pyomo.util.timing import ConstructionTimer
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import register_component
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent, \
@@ -138,6 +138,12 @@ class _ParamData(ComponentData, NumericValue):
         Returns False because this is not a constant in an expression.
         """
         return False
+
+    def is_parameter_type(self):
+        """
+        Returns True because this is a parameter object.
+        """
+        return True
 
     def is_variable_type(self):
         """
