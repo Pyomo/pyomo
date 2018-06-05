@@ -182,7 +182,7 @@ def reformulate_integer_variables(model, config):
     integer_vars = list(
         v for v in model.component_data_objects(
             ctype=Var, descend_into=(Block, Disjunct))
-        if not v.fixed)
+        if v.is_integer() and not v.fixed)
     if len(integer_vars) == 0:
         return  # if no free integer variables, no reformulation needed.
 
