@@ -124,6 +124,7 @@ class TableData(Plugin):
                     header_index.append(headers.index(str(i)))
                 except:
                     print("Model declaration '%s' not found in returned query columns" %str(i))
+                    raise
         self.options.ncolumns = len(headers)
 
         if not self.options.param is None:
