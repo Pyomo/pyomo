@@ -54,17 +54,15 @@ class TestAddSlacks(unittest.TestCase):
         xblock = m.component("_core_add_slack_variables")
         
         # should have new variables on new block
-        self.assertIsInstance(xblock.component("_slack_minus_rule1"), Var)
-        self.assertFalse(hasattr(xblock, "_slack_plus_rule1"))
-        self.assertIsInstance(xblock.component("_slack_minus_rule2"), Var)
-        self.assertIsInstance(xblock.component("_slack_plus_rule2"), Var)
-        self.assertFalse(hasattr(xblock, "_slack_minus_rule3"))
-        self.assertIsInstance(xblock.component("_slack_plus_rule3"), Var)
+        self.assertTrue("_slack_minus_rule1" in xblock.slacks)
+        self.assertTrue("_slack_minus_rule2" in xblock.slacks)
+        self.assertTrue("_slack_plus_rule2" in xblock.slacks)
+        self.assertTrue("_slack_plus_rule3" in xblock.slacks)
         # all new variables in non-negative reals
-        self.assertEqual(xblock._slack_minus_rule1.bounds, (0, None))
-        self.assertEqual(xblock._slack_minus_rule2.bounds, (0, None))
-        self.assertEqual(xblock._slack_plus_rule2.bounds, (0, None))
-        self.assertEqual(xblock._slack_plus_rule3.bounds, (0, None))
+        self.assertEqual(xblock.slacks['_slack_minus_rule1'].bounds, (0, None))
+        self.assertEqual(xblock.slacks['_slack_minus_rule2'].bounds, (0, None))
+        self.assertEqual(xblock.slacks['_slack_plus_rule2'].bounds, (0, None))
+        self.assertEqual(xblock.slacks['_slack_plus_rule3'].bounds, (0, None))
 
     # wrapping this as a method because I use it again later when I test
     # targets
@@ -81,7 +79,7 @@ class TestAddSlacks(unittest.TestCase):
         self.assertIs(cons.body.arg(0), m.x)
         self.assertIs(cons.body.arg(1).__class__, EXPR.MonomialTermExpression)
         self.assertEqual(cons.body.arg(1).arg(0), -1)
-        self.assertIs(cons.body.arg(1).arg(1), transBlock._slack_minus_rule1)
+        self.assertIs(cons.body.arg(1).arg(1), transBlock.slacks['_slack_minus_rule1'])
         
     def checkRule3(self, m):
         # check all original variables still there:
@@ -94,7 +92,7 @@ class TestAddSlacks(unittest.TestCase):
         self.assertEqual(cons.body.nargs(), 2)
 
         self.assertIs(cons.body.arg(0), m.x)
-        self.assertIs(cons.body.arg(1), transBlock._slack_plus_rule3)
+        self.assertIs(cons.body.arg(1), transBlock.slacks['_slack_plus_rule3'])
 
     def test_ub_constraint_modified(self):
         m = self.makeModel()
@@ -120,10 +118,10 @@ class TestAddSlacks(unittest.TestCase):
         self.assertEqual(cons.body.nargs(), 3)
 
         self.assertIs(cons.body.arg(0), m.y)
-        self.assertIs(cons.body.arg(1), transBlock._slack_plus_rule2)
+        self.assertIs(cons.body.arg(1), transBlock.slacks['_slack_plus_rule2'])
         self.assertIs(cons.body.arg(2).__class__, EXPR.MonomialTermExpression)
         self.assertEqual(cons.body.arg(2).arg(0), -1)
-        self.assertIs(cons.body.arg(2).arg(1), transBlock._slack_minus_rule2)
+        self.assertIs(cons.body.arg(2).arg(1), transBlock.slacks['_slack_minus_rule2'])
 
     def test_obj_deactivated(self):
         m = self.makeModel()
@@ -145,10 +143,10 @@ class TestAddSlacks(unittest.TestCase):
         
         self.assertEqual(obj.expr.nargs(), 4)
 
-        self.assertIs(obj.expr.arg(0), transBlock._slack_minus_rule1)
-        self.assertIs(obj.expr.arg(1), transBlock._slack_plus_rule2)
-        self.assertIs(obj.expr.arg(2), transBlock._slack_minus_rule2)
-        self.assertIs(obj.expr.arg(3), transBlock._slack_plus_rule3)
+        self.assertIs(obj.expr.arg(0), transBlock.slacks['_slack_minus_rule1'])
+        self.assertIs(obj.expr.arg(1), transBlock.slacks['_slack_plus_rule2'])
+        self.assertIs(obj.expr.arg(2), transBlock.slacks['_slack_minus_rule2'])
+        self.assertIs(obj.expr.arg(3), transBlock.slacks['_slack_plus_rule3'])
 
     def test_badModel_err(self):
         model = ConcreteModel()
@@ -173,12 +171,10 @@ class TestAddSlacks(unittest.TestCase):
         self.assertIs(cons.body, m.y)
 
     def checkTargetSlackVars(self, transBlock):
-        self.assertIsInstance(transBlock.component("_slack_minus_rule1"), Var)
-        self.assertFalse(hasattr(transBlock, "_slack_plus_rule1"))
-        self.assertIsNone(transBlock.component("_slack_minus_rule2"))
-        self.assertIsNone(transBlock.component("_slack_plus_rule2"))
-        self.assertFalse(hasattr(transBlock, "_slack_minus_rule3"))
-        self.assertIsInstance(transBlock.component("_slack_plus_rule3"), Var)
+        self.assertTrue("_slack_minus_rule1" in transBlock.slacks)
+        self.assertFalse("_slack_minus_rule2" in transBlock.slacks)
+        self.assertFalse("_slack_plus_rule2" in transBlock.slacks)
+        self.assertTrue("_slack_plus_rule3" in transBlock.slacks)
 
     def test_only_targets_have_slack_vars(self):
         m = self.makeModel()
@@ -245,8 +241,8 @@ class TestAddSlacks(unittest.TestCase):
         transBlock = m._core_add_slack_variables
         obj = transBlock.component("_slack_objective")
         self.assertEqual(obj.expr.nargs(), 2)
-        self.assertIs(obj.expr.arg(0), transBlock._slack_minus_rule1)
-        self.assertIs(obj.expr.arg(1), transBlock._slack_plus_rule3)
+        self.assertIs(obj.expr.arg(0), transBlock.slacks['_slack_minus_rule1'])
+        self.assertIs(obj.expr.arg(1), transBlock.slacks['_slack_plus_rule3'])
 
     def test_target_objective(self):
         m = self.makeModel()
@@ -294,10 +290,10 @@ class TestAddSlacks(unittest.TestCase):
         self.assertIs(c.body.arg(0), m.x)
         self.assertIs(c.body.arg(1).arg(0), -2)
         self.assertIs(c.body.arg(1).arg(1), m.y)
-        self.assertIs(c.body.arg(2), transBlock._slack_plus_rule4)
+        self.assertIs(c.body.arg(2), transBlock.slacks['_slack_plus_rule4'])
         self.assertIs(c.body.arg(3).__class__, EXPR.MonomialTermExpression)
         self.assertEqual(c.body.arg(3).arg(0), -1)
-        self.assertIs(c.body.arg(3).arg(1), transBlock._slack_minus_rule4)
+        self.assertIs(c.body.arg(3).arg(1), transBlock.slacks['_slack_minus_rule4'])
 
     def test_transformed_constraint_scalar_body(self):
         m = self.makeModel()
@@ -315,7 +311,7 @@ class TestAddSlacks(unittest.TestCase):
         self.assertEqual(c.body.arg(0), 6)
         self.assertIs(c.body.arg(1).__class__, EXPR.MonomialTermExpression)
         self.assertEqual(c.body.arg(1).arg(0), -1)
-        self.assertIs(c.body.arg(1).arg(1), transBlock._slack_minus_rule4)
+        self.assertIs(c.body.arg(1).arg(1), transBlock.slacks['_slack_minus_rule4'])
        
 
 class TestAddSlacks_IndexedConstraints(unittest.TestCase):
@@ -334,10 +330,10 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         return m
     
     def checkSlackVars_indexedtarget(self, transBlock):
-        self.assertIsInstance(transBlock.component("_slack_plus_rule1[1]"), Var)
-        self.assertIsInstance(transBlock.component("_slack_plus_rule1[2]"), Var)
-        self.assertIsInstance(transBlock.component("_slack_plus_rule1[3]"), Var)
-        self.assertIsNone(transBlock.component("_slack_minus_rule2"))
+        self.assertTrue("_slack_plus_rule1[1]" in transBlock.slacks)
+        self.assertTrue("_slack_plus_rule1[2]" in transBlock.slacks)
+        self.assertTrue("_slack_plus_rule1[3]" in transBlock.slacks)
+        self.assertFalse("_slack_minus_rule2" in transBlock.slacks)
 
     def test_indexedtarget_only_create_slackvars_for_targets(self):
         m = self.makeModel()
@@ -387,12 +383,9 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         obj = transBlock.component("_slack_objective")
         self.assertIsInstance(obj, Objective)
         self.assertEqual(obj.expr.nargs(), 3)
-        self.assertIs(obj.expr.arg(0), 
-                      transBlock.component("_slack_plus_rule1[1]"))
-        self.assertIs(obj.expr.arg(1), 
-                      transBlock.component("_slack_plus_rule1[2]"))
-        self.assertIs(obj.expr.arg(2), 
-                      transBlock.component("_slack_plus_rule1[3]"))
+        self.assertIs(obj.expr.arg(0), transBlock.slacks["_slack_plus_rule1[1]"])
+        self.assertIs(obj.expr.arg(1), transBlock.slacks["_slack_plus_rule1[2]"])
+        self.assertIs(obj.expr.arg(2), transBlock.slacks["_slack_plus_rule1[3]"])
 
     def test_indexedtarget_objective(self):
         m = self.makeModel()
@@ -422,8 +415,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         self.assertIs(c.body.arg(0).arg(1), m.x[i])
         self.assertIs(
             c.body.arg(1), 
-            m._core_add_slack_variables.component(
-                "_slack_plus_rule1[%s]" % i))
+            m._core_add_slack_variables.slacks["_slack_plus_rule1[%s]" % i])
 
     def test_indexedtarget_targets_transformed(self):
         m = self.makeModel()
@@ -444,10 +436,10 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
             self.checkTransformedRule1(m2, i)
 
     def checkSlackVars_constraintDataTarget(self, transBlock):
-        self.assertIsInstance(transBlock.component("_slack_plus_rule1[2]"), Var)
-        self.assertIsNone(transBlock.component("_slack_plus_rule1[1]"))
-        self.assertIsNone(transBlock.component("_slack_plus_rule1[3]"))
-        self.assertIsNone(transBlock.component("_slack_minus_rule2"))
+        self.assertTrue("_slack_plus_rule1[2]" in transBlock.slacks)
+        self.assertFalse("_slack_plus_rule1[1]" in transBlock.slacks)
+        self.assertFalse("_slack_plus_rule1[3]" in transBlock.slacks)
+        self.assertFalse("_slack_minus_rule2" in transBlock.slacks)
 
     def test_ConstraintDatatarget_only_add_slackvars_for_targets(self):
         m = self.makeModel()
@@ -514,7 +506,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         transBlock = m._core_add_slack_variables
         obj = transBlock.component("_slack_objective")
         self.assertIsInstance(obj, Objective)
-        self.assertIs(obj.expr, transBlock.component("_slack_plus_rule1[2]"))
+        self.assertIs(obj.expr, transBlock.slacks["_slack_plus_rule1[2]"])
 
     def test_ConstraintDatatarget_objective(self):
         m = self.makeModel()

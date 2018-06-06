@@ -58,6 +58,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
         xblockname = unique_component_name(instance, "_core_add_slack_variables")
         instance.add_component(xblockname, Block())
         xblock = instance.component(xblockname)
+        xblock.slacks = Var(Any, within=NonNegativeReals, dense=False)
 
         obj_expr = 0
         for cons in constraintDatas:
@@ -72,8 +73,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
                 # we add positive slack variable to body:
                 # declare positive slack
                 varName = "_slack_plus_" + cons.name
-                posSlack = Var(within=NonNegativeReals)
-                xblock.add_component(varName, posSlack)
+                posSlack = xblock.slacks.add(varName)
                 # add positive slack to body expression
                 cons._body += posSlack
                 # penalize slack in objective
@@ -82,8 +82,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
                 # we subtract a positive slack variable from the body:
                 # declare slack
                 varName = "_slack_minus_" + cons.name
-                negSlack = Var(within=NonNegativeReals)
-                xblock.add_component(varName, negSlack)
+                negSlack = xblock.slacks.add(varName)
                 # add negative slack to body expression
                 cons._body -= negSlack
                 # add slack to objective

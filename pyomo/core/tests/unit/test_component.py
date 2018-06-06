@@ -362,9 +362,9 @@ class TestComponentUID(unittest.TestCase):
         model.V = Var([('a','b'),(1,'2'),(3,4)])
         model.b = Block(concrete=True)
         model.b.z = Var([1,'2'])
-        setattr(model.b, '.H', Var(['a',2]))
+        setattr(model.b, '_H', Var(['a',2]))
         model.B = Block(['a',2], concrete=True)
-        setattr(model.B['a'],'.k', Var())
+        setattr(model.B['a'],'_k', Var())
         model.B[2].b = Block()
         model.B[2].b.x = Var()
 
@@ -385,14 +385,14 @@ class TestComponentUID(unittest.TestCase):
                     model.b.z_index,
                     model.b.z[1],
                     model.b.z['2'],
-                    getattr(model.b, '.H'),
-                    getattr(model.b, '.H_index'),
-                    getattr(model.b, '.H')['a'],
-                    getattr(model.b, '.H')[2],
+                    getattr(model.b, '_H'),
+                    getattr(model.b, '_H_index'),
+                    getattr(model.b, '_H')['a'],
+                    getattr(model.b, '_H')[2],
                     model.B,
                     model.B_index,
                     model.B['a'],
-                    getattr(model.B['a'],'.k'),
+                    getattr(model.B['a'],'_k'),
                     model.B[2],
                     model.B[2].b,
                     model.B[2].b.x]:
@@ -437,12 +437,12 @@ class TestComponentUID(unittest.TestCase):
                     model.b.z,
                     model.b.z[1],
                     model.b.z['2'],
-                    getattr(model.b, '.H'),
-                    getattr(model.b, '.H')['a'],
-                    getattr(model.b, '.H')[2],
+                    getattr(model.b, '_H'),
+                    getattr(model.b, '_H')['a'],
+                    getattr(model.b, '_H')[2],
                     model.B,
                     model.B['a'],
-                    getattr(model.B['a'],'.k'),
+                    getattr(model.B['a'],'_k'),
                     model.B[2],
                     model.B[2].b,
                     model.B[2].b.x]:

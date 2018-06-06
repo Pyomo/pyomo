@@ -12,6 +12,7 @@ __all__ = ['Block', 'TraversalStrategy', 'SortComponents',
            'active_components', 'components', 'active_components_data',
            'components_data']
 
+import re
 import copy
 import sys
 import weakref
@@ -38,6 +39,7 @@ from pyomo.opt import WriterFactory
 
 logger = logging.getLogger('pyomo.core')
 
+valid_component_name = re.compile("[_a-zA-Z][_a-zA-Z0-9]*")
 
 # Monkey-patch for deepcopying weakrefs
 # Only required on Python <= 2.6
@@ -818,6 +820,9 @@ class _BlockData(ActiveComponentData):
         #
         # Error checks
         #
+        if valid_component_name.fullmatch(name) is None:
+            raise AttributeError(
+                "'%s' is not a valid component name.  Cannot add '%s' as a component to a block with t" % (name, str(type(val))))
         if not val.valid_model_component():
             raise RuntimeError(
                 "Cannot add '%s' as a component to a block" % str(type(val)))

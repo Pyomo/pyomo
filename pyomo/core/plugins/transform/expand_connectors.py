@@ -93,7 +93,7 @@ class ExpandConnectors(Transformation):
         for constraint, conn_set in constraint_list:
             cList = ConstraintList()
             constraint.parent_block().add_component(
-                '%s.expanded' % ( constraint.local_name, ), cList )
+                '%s_expanded' % ( constraint.local_name, ), cList )
             connId = next(iterkeys(conn_set))
             ref = known_conn_sets[id(matched_connectors[connId])]
             for k,v in sorted(iteritems(ref)):
@@ -123,7 +123,7 @@ class ExpandConnectors(Transformation):
             for var, aggregator in iteritems(conn.aggregators):
                 c = Constraint(expr=aggregator(block, conn.vars[var]))
                 block.add_component(
-                    '%s.%s.aggregate' % (conn.local_name, var), c )
+                    '%s_%s_aggregate' % (conn.local_name, var), c )
 
 
     def _validate_and_expand_connector_set(self, connectors):
@@ -227,7 +227,7 @@ class ExpandConnectors(Transformation):
                 except AttributeError:
                     pass
                 new_var = Var( *idx, **var_args )
-                block.add_component('%s.auto.%s' % ( c.local_name, k ), new_var)
+                block.add_component('%s_auto_%s' % ( c.local_name, k ), new_var)
                 if idx:
                     for i in idx[0]:
                         new_var[i].domain = v[0][i].domain

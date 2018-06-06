@@ -278,12 +278,12 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        self.assertTrue(m.component('c.expanded').active)
+        self.assertTrue(m.component('c_expanded').active)
 
         os = StringIO()
-        m.component('c.expanded').pprint(ostream=os)
+        m.component('c_expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c.expanded : Size=1, Index=c.expanded_index, Active=True
+"""c_expanded : Size=1, Index=c_expanded_index, Active=True
     Key : Lower : Body : Upper : Active
       1 :   1.0 :    x :   1.0 :   True
 """)
@@ -312,12 +312,12 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        self.assertTrue(m.component('c.expanded').active)
+        self.assertTrue(m.component('c_expanded').active)
 
         os = StringIO()
-        m.component('c.expanded').pprint(ostream=os)
+        m.component('c_expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c.expanded : Size=2, Index=c.expanded_index, Active=True
+"""c_expanded : Size=2, Index=c_expanded_index, Active=True
     Key : Lower : Body : Upper : Active
       1 :   1.0 :    x :   1.0 :   True
       2 :   1.0 :    y :   1.0 :   True
@@ -347,12 +347,12 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        self.assertTrue(m.component('c.expanded').active)
+        self.assertTrue(m.component('c_expanded').active)
 
         os = StringIO()
-        m.component('c.expanded').pprint(ostream=os)
+        m.component('c_expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c.expanded : Size=2, Index=c.expanded_index, Active=True
+"""c_expanded : Size=2, Index=c_expanded_index, Active=True
     Key : Lower : Body  : Upper : Active
       1 :   1.0 :   - x :   1.0 :   True
       2 :   1.0 : 1 + y :   1.0 :   True
@@ -382,12 +382,12 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 5)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        self.assertTrue(m.component('c.expanded').active)
+        self.assertTrue(m.component('c_expanded').active)
 
         os = StringIO()
-        m.component('c.expanded').pprint(ostream=os)
+        m.component('c_expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c.expanded : Size=3, Index=c.expanded_index, Active=True
+"""c_expanded : Size=3, Index=c_expanded_index, Active=True
     Key : Lower : Body : Upper : Active
       1 :   1.0 : x[1] :   1.0 :   True
       2 :   1.0 : x[2] :   1.0 :   True
@@ -419,20 +419,20 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        self.assertTrue(m.component('c.expanded').active)
+        self.assertTrue(m.component('c_expanded').active)
 
-        self.assertIs( m.x.domain, m.component('ECON.auto.x').domain )
-        self.assertIs( m.y.domain, m.component('ECON.auto.y').domain )
-        self.assertEqual( m.x.bounds, m.component('ECON.auto.x').bounds )
-        self.assertEqual( m.y.bounds, m.component('ECON.auto.y').bounds )
+        self.assertIs( m.x.domain, m.component('ECON_auto_x').domain )
+        self.assertIs( m.y.domain, m.component('ECON_auto_y').domain )
+        self.assertEqual( m.x.bounds, m.component('ECON_auto_x').bounds )
+        self.assertEqual( m.y.bounds, m.component('ECON_auto_y').bounds )
 
         os = StringIO()
-        m.component('c.expanded').pprint(ostream=os)
+        m.component('c_expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c.expanded : Size=2, Index=c.expanded_index, Active=True
+"""c_expanded : Size=2, Index=c_expanded_index, Active=True
     Key : Lower : Body            : Upper : Active
-      1 :   0.0 : x - ECON.auto.x :   0.0 :   True
-      2 :   0.0 : y - ECON.auto.y :   0.0 :   True
+      1 :   0.0 : x - ECON_auto_x :   0.0 :   True
+      2 :   0.0 : y - ECON_auto_y :   0.0 :   True
 """)
 
 
@@ -460,15 +460,15 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        self.assertTrue(m.component('c.expanded').active)
+        self.assertTrue(m.component('c_expanded').active)
 
         os = StringIO()
-        m.component('c.expanded').pprint(ostream=os)
+        m.component('c_expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c.expanded : Size=2, Index=c.expanded_index, Active=True
+"""c_expanded : Size=2, Index=c_expanded_index, Active=True
     Key : Lower : Body                : Upper : Active
-      1 :   0.0 :   - x - ECON.auto.x :   0.0 :   True
-      2 :   0.0 : 1 + y - ECON.auto.y :   0.0 :   True
+      1 :   0.0 :   - x - ECON_auto_x :   0.0 :   True
+      2 :   0.0 : 1 + y - ECON_auto_y :   0.0 :   True
 """)
 
 
@@ -497,23 +497,23 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 5)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        self.assertTrue(m.component('c.expanded').active)
+        self.assertTrue(m.component('c_expanded').active)
 
-        self.assertIs( m.x[1].domain, m.component('ECON.auto.x')[1].domain )
-        self.assertIs( m.x[2].domain, m.component('ECON.auto.x')[2].domain )
-        self.assertIs( m.y.domain, m.component('ECON.auto.y').domain )
-        self.assertEqual( m.x[1].bounds, m.component('ECON.auto.x')[1].bounds )
-        self.assertEqual( m.x[2].bounds, m.component('ECON.auto.x')[2].bounds )
-        self.assertEqual( m.y.bounds, m.component('ECON.auto.y').bounds )
+        self.assertIs( m.x[1].domain, m.component('ECON_auto_x')[1].domain )
+        self.assertIs( m.x[2].domain, m.component('ECON_auto_x')[2].domain )
+        self.assertIs( m.y.domain, m.component('ECON_auto_y').domain )
+        self.assertEqual( m.x[1].bounds, m.component('ECON_auto_x')[1].bounds )
+        self.assertEqual( m.x[2].bounds, m.component('ECON_auto_x')[2].bounds )
+        self.assertEqual( m.y.bounds, m.component('ECON_auto_y').bounds )
 
         os = StringIO()
-        m.component('c.expanded').pprint(ostream=os)
+        m.component('c_expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c.expanded : Size=3, Index=c.expanded_index, Active=True
+"""c_expanded : Size=3, Index=c_expanded_index, Active=True
     Key : Lower : Body                  : Upper : Active
-      1 :   0.0 : x[1] - ECON.auto.x[1] :   0.0 :   True
-      2 :   0.0 : x[2] - ECON.auto.x[2] :   0.0 :   True
-      3 :   0.0 :       y - ECON.auto.y :   0.0 :   True
+      1 :   0.0 : x[1] - ECON_auto_x[1] :   0.0 :   True
+      2 :   0.0 : x[2] - ECON_auto_x[2] :   0.0 :   True
+      3 :   0.0 :       y - ECON_auto_y :   0.0 :   True
 """)
 
     def test_expand_multiple_empty_indexed(self):
@@ -543,42 +543,42 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 9)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        self.assertTrue(m.component('c.expanded').active)
+        self.assertTrue(m.component('c_expanded').active)
         self.assertFalse(m.d.active)
-        self.assertTrue(m.component('d.expanded').active)
+        self.assertTrue(m.component('d_expanded').active)
 
-        self.assertIs( m.x[1].domain, m.component('ECON1.auto.x')[1].domain )
-        self.assertIs( m.x[2].domain, m.component('ECON1.auto.x')[2].domain )
-        self.assertIs( m.y.domain, m.component('ECON1.auto.y').domain )
-        self.assertEqual( m.x[1].bounds, m.component('ECON1.auto.x')[1].bounds )
-        self.assertEqual( m.x[2].bounds, m.component('ECON1.auto.x')[2].bounds )
-        self.assertEqual( m.y.bounds, m.component('ECON1.auto.y').bounds )
+        self.assertIs( m.x[1].domain, m.component('ECON1_auto_x')[1].domain )
+        self.assertIs( m.x[2].domain, m.component('ECON1_auto_x')[2].domain )
+        self.assertIs( m.y.domain, m.component('ECON1_auto_y').domain )
+        self.assertEqual( m.x[1].bounds, m.component('ECON1_auto_x')[1].bounds )
+        self.assertEqual( m.x[2].bounds, m.component('ECON1_auto_x')[2].bounds )
+        self.assertEqual( m.y.bounds, m.component('ECON1_auto_y').bounds )
 
-        self.assertIs( m.x[1].domain, m.component('ECON2.auto.x')[1].domain )
-        self.assertIs( m.x[2].domain, m.component('ECON2.auto.x')[2].domain )
-        self.assertIs( m.y.domain, m.component('ECON2.auto.y').domain )
-        self.assertEqual( m.x[1].bounds, m.component('ECON2.auto.x')[1].bounds )
-        self.assertEqual( m.x[2].bounds, m.component('ECON2.auto.x')[2].bounds )
-        self.assertEqual( m.y.bounds, m.component('ECON2.auto.y').bounds )
+        self.assertIs( m.x[1].domain, m.component('ECON2_auto_x')[1].domain )
+        self.assertIs( m.x[2].domain, m.component('ECON2_auto_x')[2].domain )
+        self.assertIs( m.y.domain, m.component('ECON2_auto_y').domain )
+        self.assertEqual( m.x[1].bounds, m.component('ECON2_auto_x')[1].bounds )
+        self.assertEqual( m.x[2].bounds, m.component('ECON2_auto_x')[2].bounds )
+        self.assertEqual( m.y.bounds, m.component('ECON2_auto_y').bounds )
 
         os = StringIO()
-        m.component('c.expanded').pprint(ostream=os)
+        m.component('c_expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c.expanded : Size=3, Index=c.expanded_index, Active=True
+"""c_expanded : Size=3, Index=c_expanded_index, Active=True
     Key : Lower : Body                   : Upper : Active
-      1 :   0.0 : x[1] - ECON1.auto.x[1] :   0.0 :   True
-      2 :   0.0 : x[2] - ECON1.auto.x[2] :   0.0 :   True
-      3 :   0.0 :       y - ECON1.auto.y :   0.0 :   True
+      1 :   0.0 : x[1] - ECON1_auto_x[1] :   0.0 :   True
+      2 :   0.0 : x[2] - ECON1_auto_x[2] :   0.0 :   True
+      3 :   0.0 :       y - ECON1_auto_y :   0.0 :   True
 """)
 
         os = StringIO()
-        m.component('d.expanded').pprint(ostream=os)
+        m.component('d_expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""d.expanded : Size=3, Index=d.expanded_index, Active=True
+"""d_expanded : Size=3, Index=d_expanded_index, Active=True
     Key : Lower : Body                              : Upper : Active
-      1 :   0.0 : ECON2.auto.x[1] - ECON1.auto.x[1] :   0.0 :   True
-      2 :   0.0 : ECON2.auto.x[2] - ECON1.auto.x[2] :   0.0 :   True
-      3 :   0.0 :       ECON2.auto.y - ECON1.auto.y :   0.0 :   True
+      1 :   0.0 : ECON2_auto_x[1] - ECON1_auto_x[1] :   0.0 :   True
+      2 :   0.0 : ECON2_auto_x[2] - ECON1_auto_x[2] :   0.0 :   True
+      3 :   0.0 :       ECON2_auto_y - ECON1_auto_y :   0.0 :   True
 """)
 
 
@@ -617,14 +617,14 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 9)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        self.assertTrue(m.component('c.expanded').active)
+        self.assertTrue(m.component('c_expanded').active)
         self.assertFalse(m.d.active)
-        self.assertTrue(m.component('d.expanded').active)
+        self.assertTrue(m.component('d_expanded').active)
 
         os = StringIO()
-        m.component('c.expanded').pprint(ostream=os)
+        m.component('c_expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c.expanded : Size=3, Index=c.expanded_index, Active=True
+"""c_expanded : Size=3, Index=c_expanded_index, Active=True
     Key : Lower : Body         : Upper : Active
       1 :   0.0 : x[1] - a2[1] :   0.0 :   True
       2 :   0.0 : x[2] - a2[2] :   0.0 :   True
@@ -632,9 +632,9 @@ class TestConnector(unittest.TestCase):
 """)
 
         os = StringIO()
-        m.component('d.expanded').pprint(ostream=os)
+        m.component('d_expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""d.expanded : Size=3, Index=d.expanded_index, Active=True
+"""d_expanded : Size=3, Index=d_expanded_index, Active=True
     Key : Lower : Body          : Upper : Active
       1 :   0.0 : a1[1] - a2[1] :   0.0 :   True
       2 :   0.0 : a1[2] - a2[2] :   0.0 :   True
@@ -684,34 +684,34 @@ class TestConnector(unittest.TestCase):
 """ECON1 : Size=1, Index=None
     Key  : Name : Size : Variable
     None :    x :    2 :           a2
-         :    y :    1 : ECON1.auto.y
+         :    y :    1 : ECON1_auto_y
 """)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 5)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 9)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        self.assertTrue(m.component('c.expanded').active)
+        self.assertTrue(m.component('c_expanded').active)
         self.assertFalse(m.d.active)
-        self.assertTrue(m.component('d.expanded').active)
+        self.assertTrue(m.component('d_expanded').active)
 
         os = StringIO()
-        m.component('c.expanded').pprint(ostream=os)
+        m.component('c_expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c.expanded : Size=3, Index=c.expanded_index, Active=True
+"""c_expanded : Size=3, Index=c_expanded_index, Active=True
     Key : Lower : Body             : Upper : Active
       1 :   0.0 :     x[1] - a2[1] :   0.0 :   True
       2 :   0.0 :     x[2] - a2[2] :   0.0 :   True
-      3 :   0.0 : y - ECON1.auto.y :   0.0 :   True
+      3 :   0.0 : y - ECON1_auto_y :   0.0 :   True
 """)
 
         os = StringIO()
-        m.component('d.expanded').pprint(ostream=os)
+        m.component('d_expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""d.expanded : Size=3, Index=d.expanded_index, Active=True
+"""d_expanded : Size=3, Index=d_expanded_index, Active=True
     Key : Lower : Body                   : Upper : Active
-      1 :   0.0 : ECON2.auto.x[1] - x[1] :   0.0 :   True
-      2 :   0.0 : ECON2.auto.x[2] - x[2] :   0.0 :   True
+      1 :   0.0 : ECON2_auto_x[1] - x[1] :   0.0 :   True
+      2 :   0.0 : ECON2_auto_x[2] - x[2] :   0.0 :   True
       3 :   0.0 :                 b1 - y :   0.0 :   True
 """)
 
@@ -742,28 +742,28 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 5)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 7)
         self.assertFalse(m.c.active)
-        self.assertTrue(m.component('c.expanded').active)
+        self.assertTrue(m.component('c_expanded').active)
         self.assertFalse(m.d.active)
-        self.assertTrue(m.component('d.expanded').active)
+        self.assertTrue(m.component('d_expanded').active)
 
         self.assertEqual( len(m.flow), 2 )
 
         os = StringIO()
-        m.component('c.expanded').pprint(ostream=os)
+        m.component('c_expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c.expanded : Size=2, Index=c.expanded_index, Active=True
+"""c_expanded : Size=2, Index=c_expanded_index, Active=True
     Key : Lower : Body                      : Upper : Active
-      1 :   0.0 : flow[1] - ECON1.auto.flow :   0.0 :   True
-      2 :   0.0 :  phase - ECON1.auto.phase :   0.0 :   True
+      1 :   0.0 : flow[1] - ECON1_auto_flow :   0.0 :   True
+      2 :   0.0 :  phase - ECON1_auto_phase :   0.0 :   True
 """)
 
         os = StringIO()
-        m.component('d.expanded').pprint(ostream=os)
+        m.component('d_expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""d.expanded : Size=2, Index=d.expanded_index, Active=True
+"""d_expanded : Size=2, Index=d_expanded_index, Active=True
     Key : Lower : Body                      : Upper : Active
-      1 :   0.0 : ECON2.auto.flow - flow[2] :   0.0 :   True
-      2 :   0.0 :  ECON2.auto.phase - phase :   0.0 :   True
+      1 :   0.0 : ECON2_auto_flow - flow[2] :   0.0 :   True
+      2 :   0.0 :  ECON2_auto_phase - phase :   0.0 :   True
 """)
 
         os = StringIO()
@@ -797,9 +797,9 @@ class TestConnector(unittest.TestCase):
         TransformationFactory('core.expand_connectors').apply_to(m)
 
         os = StringIO()
-        m.component('eq.expanded').pprint(ostream=os)
+        m.component('eq_expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""eq.expanded : Size=1, Index=eq.expanded_index, Active=True
+"""eq_expanded : Size=1, Index=eq_expanded_index, Active=True
     Key : Lower : Body  : Upper : Active
       1 :   0.0 : x - y :   0.0 :   True
 """)
