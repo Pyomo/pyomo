@@ -34,7 +34,7 @@ no variable values will be output for the first solution found because all of th
    :language: python
 
 Let us now analyze this script. The first line is a comment that happens to give the name of the file. This is followed by
-two lines that import symbols for Pyomo:
+two lines that import symbols for Pyomo. The pyomo namespace is imported as ``pyo``. Therefore, ``pyo.`` must precede each use of a Pyomo name.
 
 .. literalinclude:: spyfiles/iterative1_Import_symbols_for_pyomo.spy
    :language: python
@@ -93,12 +93,6 @@ causes the script to generate five more solutions:
 .. literalinclude:: spyfiles/iterative1_Assign_integers.spy
    :language: python
 
-The next line associates the results obtained with the instance. This then enables
-direct queries of solution values in subsequent lines using variable names contained in the instance:
-
-.. literalinclude:: spyfiles/iterative1_Associate_results_with_instance.spy
-   :language: python
-
 An expression is built up in the Python variable named ``expr``.
 The Python variable ``j`` will be iteratively assigned all of the indexes of the variable ``x``. For each index,
 the value of the variable (which was loaded by the ``load`` method just described) is tested to see if it is zero and
@@ -121,7 +115,7 @@ so we know that the value of ``expr`` will be something like
 The value of ``j`` will be evaluated because it is a Python variable; however, because it is a Pyomo variable,
 the value of ``instance.x[j]`` not be used, instead the variable object will
 appear in the expression. That is exactly what we want in
-this case. When we wanted to use the current value in the ``if`` statement, we used the ``value`` method to get it.
+this case. When we wanted to use the current value in the ``if`` statement, we used the ``value`` function to get it.
 
 The next line adds to the constaint list called ``c``
 the requirement that the expression be greater than or equal to one:
@@ -164,18 +158,12 @@ the value in ``NewVal`` can be assigned to it using
    :language: python
 
 For a singleton parameter named ``ParamName`` (i.e., if it
-is not indexed), the assignment can be made using either
-
-.. literalinclude:: spyfiles/spy4scripts_Assign_value_to_unindexed_parametername_1.spy
-   :language: python
-
-or else
+is not indexed), the assignment can be made using
 
 .. literalinclude:: spyfiles/spy4scripts_Assign_value_to_unindexed_parametername_2.spy
    :language: python
 
-
-The function ``getattr`` is provided by Python. For more information
+For more information
 about access to Pyomo parameters, see the section in this document
 on ``Param`` access :ref:`ParmAccess`. Note that for concrete models, the model is
 the instance.
@@ -186,7 +174,7 @@ Fixing Variables and Re-solving
 Instead of changing model data, scripts are often used to fix variable
 values. The following example illustrates this.
 
-.. literalinclude:: scripts_examples/iterative2.py
+.. literalinclude:: spyfiles/iterative2.spy
    :language: python
 
 In this example, the variables are binary. The model
@@ -236,13 +224,16 @@ For abstract models this would be done prior to instantiation or
 else the ``activate`` and ``deactivate`` calls would be on
 the instance rather than the model.
 
-Pyomo Callbacks
----------------
+Pyomo Command Callbacks
+-----------------------
 
-Pyomo enables altering or extending its workflow through the use of callbacks that are defined in the model file.
-Taken together, the callbacks allow for consruction of a rich set of workflows. However, many users might be interesting
-in making use of only one or two of the callbacks.
-They are executable Python functions with pre-defined names:
+For those using the ``pyomo`` command, Pyomo enables altering or
+extending its workflow through the use of callbacks that are defined
+in the model file. For users writing scripts executed with the
+``python`` command, this section is not relevant. Taken together, the
+callbacks allow for consruction of a rich set of workflows for the
+``pyomo`` command. They are executable Python
+functions with pre-defined names:
 
 .. autosummary::
    :nosignatures:
@@ -389,50 +380,64 @@ illustrates access to variable values.
 One Variable from a Python Script
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Assuming the model has been instantiated and solved and the results have been loded back into the instance object, then we can make
-use of the fact that the variable is a member of the instance object and its value can be accessed using its ``value`` member. For example,
-suppose the model contains a variable named ``quant`` that is a singleton (has no indexes) and suppose further that the name of the instance object is ``instance``. Then the value of this variable can be accessed using ``instance.quant.value``. Variables with indexes can be referenced by supplying the index.
+Assuming the model has been instantiated and solved and the results
+have been loded back into the instance object, then we can make use of
+the fact that the variable is a member of the instance object and its
+value can be accessed using its ``value`` member. For example, suppose
+the model contains a variable named ``quant`` that is a singleton (has
+no indexes) and suppose further that the name of the instance object
+is ``instance``. Then the value of this variable can be accessed using
+``pyo.value(instance.quant)``. Variables with indexes can be
+referenced by supplying the index.
 
-Consider the following very simple example, which is similar to the iterative example. This is a very simple model and there are
-no parameter values to be read from a data file, so the ``model.create_instance()`` call does not specify a file name. In this example, the
+Consider the following very simple example, which is similar to the
+iterative example. This is a concrete model. In this example, the
 value of ``x[2]`` is accessed.
 
 .. literalinclude:: scripts_examples/noiteration1.py
    :language: python
 
-NOTE: If this script is run without modification, Pyomo is likely to issue a warning because there are no constraints. The warning is because some solvers may fail if given a problem instance that does not have any constraints.
+NOTE: If this script is run without modification, Pyomo is likely to
+issue a warning because there are no constraints. The warning is
+because some solvers may fail if given a problem instance that does
+not have any constraints.
 
 All Variables from a Python Script
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-As with one variable, we assume that the model has been instantiated and solved and the results have been loded back into the instance object
-using ``instance.solutions.load_from(results)`` and the code includes the line ``from pyomo.core import Var``, then we can make
-use of the fact that the variable is a member of the instance object and its value can be accessed using its ``value`` member. Assuming the
-instance object has the name ``instance``, the following code snippet displays all variables and their values:
+As with one variable, we assume that the model has been instantiated
+and solved. Assuming the instance object has the name ``instance``,
+the following code snippet displays all variables and their values:
 
 .. literalinclude:: spyfiles/spy4scripts_Display_all_variables&values.spy
+   :language: python
+
+Alternatively,
+
+.. literalinclude:: spyfiles/spy4scripts_Display_all_variables&values_data.spy
    :language: python
 
 This code could be improved by checking to see if the variable is not indexed (i.e., the only index
 value is ``None``), then the code could print the value without the word ``None`` next to it.
 
-Assuming again that the model has been instantiated and solved and the results have been loded back into the instance object
-using ``instance.solutions.load_from(results)`` and that the code includes the line ``from pyomo.core import Var`` here is a code snippet for fixing all integers at their current value:
+Assuming again that the model has been instantiated and solved and the
+results have been loded back into the instance object. Here is a code
+snippet for fixing all integers at their current value:
 
 .. literalinclude:: spyfiles/spy4scripts_Fix_all_integers&values.spy
    :language: python
 
 Another way to access all of the variables (particularly if there are blocks) is as follows:
 
-.. literalinclude:: scripts_examples/block_iter_example@compprintloop.py
+.. literalinclude:: spyfiles/block_iter_example_compprintloop.spy
    :language: python
 
-The use of ``True`` as an argument to ``name`` indicates that the full name is desired.
+The use of ``True`` as an argument to ``cname`` indicates that the full name is desired.
 
 All Variables from Workflow Callbacks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``pyomo_print_results``, ``pyomo_save_results``, and ``pyomo_postprocess`` callbacks from the ``pyomo`` script
+For users of the ``pyomo`` command, the ``pyomo_print_results``, ``pyomo_save_results``, and ``pyomo_postprocess`` callbacks from the ``pyomo`` script
 take the instance as one of their arguments and the instance
 has the solver results at the time of the callback so the body of the callback
 matches the code snipped given for a Python script.

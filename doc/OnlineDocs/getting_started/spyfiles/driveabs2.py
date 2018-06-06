@@ -1,6 +1,6 @@
 # driveabs2.py
 from __future__ import division
-from pyomo.environ import *
+import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 
 # Create a solver
@@ -15,7 +15,7 @@ instance = model.create_instance('abstract2.dat')
 # @Create_dual_suffix_component
 # Create a 'dual' suffix component on the instance
 # so the solver plugin will know which suffixes to collect
-instance.dual = Suffix(direction=Suffix.IMPORT)
+instance.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 # @Create_dual_suffix_component
 
 results = opt.solve(instance)
@@ -24,12 +24,10 @@ results = opt.solve(instance)
 # @Access_all_dual
 # display all duals
 print ("Duals")
-from pyomo.core import Constraint
-for c in instance.component_objects(Constraint, active=True):
+for c in instance.component_objects(pyo.Constraint, active=True):
     print ("   Constraint",c)
-    cobject = getattr(instance, str(c))
-    for index in cobject:
-        print ("      ", index, instance.dual[cobject[index]])
+    for index in c:
+        print ("      ", index, instance.dual[c[index]])
 # @Access_all_dual
 
 # @Access_one_dual
