@@ -664,12 +664,15 @@ class GAMSShell(pyomo.common.plugin.Plugin):
             os.makedirs(tmpdir)
             newdir = True
 
-        output_filename = os.path.join(tmpdir, 'model.gms')
-        lst_filename = os.path.join(tmpdir, 'output.lst')
-        statresults_filename = os.path.join(tmpdir, 'resultsstat.dat')
+        output = "model.gms"
+        output_filename = os.path.join(tmpdir, output)
+        lst = "output.lst"
+        lst_filename = os.path.join(tmpdir, lst)
 
-        io_options['put_results'] = os.path.join(tmpdir, 'results')
-        results_filename = os.path.join(tmpdir, 'results.dat')
+        put_results = "results"
+        io_options["put_results"] = put_results
+        results_filename = os.path.join(tmpdir, put_results + ".dat")
+        statresults_filename = os.path.join(tmpdir, put_results + "stat.dat")
 
         if isinstance(model, IBlockStorage):
             # Kernel blocks have slightly different write method
@@ -694,7 +697,7 @@ class GAMSShell(pyomo.common.plugin.Plugin):
         ####################################################################
 
         exe = self.executable()
-        command = [exe, output_filename, 'o=' + lst_filename]
+        command = [exe, output, "o=" + lst, "curdir=" + tmpdir]
         if tee and not logfile:
             # default behaviour of gams is to print to console, for
             # compatability with windows and *nix we want to explicitly log to
