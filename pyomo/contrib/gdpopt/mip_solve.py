@@ -65,7 +65,6 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
 
     if terminate_cond is tc.optimal:
         m.solutions.load_from(results)
-        config.logger.info('Solved linear GDP')
         return True, list((v.value if not v.stale else None)
                           for v in GDPopt.initial_var_list)
     elif terminate_cond is tc.infeasible:

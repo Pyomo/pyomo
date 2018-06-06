@@ -137,7 +137,7 @@ def _define_initial_ordered_component_lists(model):
         if v.body.polynomial_degree() not in (0, 1)]
 
 
-def _record_problem_statistics(model, solve_data):
+def _record_problem_statistics(model, solve_data, config):
     # Create the solver results object
     res = solve_data.results = SolverResults()
     prob = res.problem
@@ -176,6 +176,15 @@ def _record_problem_statistics(model, solve_data):
     prob.number_of_binary_variables = num_binary
     prob.number_of_continuous_variables = num_continuous
     prob.number_of_integer_variables = 0
+    config.logger.info(
+        "Problem has %s constraints (%s nonlinear) and %s disjunctions, "
+        "with %s variables, of which %s are binary and %s continuous." %
+        (prob.number_of_constraints,
+         len(GDPopt.initial_nonlinear_constraints),
+         prob.number_of_disjunctions,
+         prob.number_of_variables,
+         prob.number_of_binary_variables,
+         prob.number_of_continuous_variables))
 
 
 def reformulate_integer_variables(model, config):

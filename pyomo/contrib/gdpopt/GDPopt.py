@@ -24,6 +24,7 @@ Questions: Please make a post at StackOverflow and/or contact Qi Chen
 from __future__ import division
 
 import logging
+from math import fabs
 
 import pyomo.common.plugin
 from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue, In,
@@ -59,10 +60,6 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         'gdpopt', doc='The GDPopt decomposition-based GDP solver')
 
     CONFIG = ConfigBlock("GDPopt")
-    CONFIG.declare("bound_tolerance", ConfigValue(
-        default=1E-6, domain=NonNegativeFloat,
-        description="Tolerance for bound convergence."
-    ))
     CONFIG.declare("iterlim", ConfigValue(
         default=30, domain=NonNegativeInt,
         description="Iteration limit."
@@ -138,6 +135,10 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         description="The logger object or name to use for reporting.",
         domain=a_logger
     ))
+    CONFIG.declare("bound_tolerance", ConfigValue(
+        default=1E-6, domain=NonNegativeFloat,
+        description="Tolerance for bound convergence."
+    ))
     CONFIG.declare("small_dual_tolerance", ConfigValue(
         default=1E-8,
         description="When generating cuts, small duals multiplied "
@@ -159,7 +160,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
     CONFIG.declare("round_NLP_binaries", ConfigValue(
         default=True,
         description="flag to round binary values to exactly 0 or 1. "
-        "Rounding is done before solving NLP subproblem"
+        "Rounding is done before fixing disjuncts."
     ))
     CONFIG.declare("reformulate_integer_vars_using", ConfigValue(
         default=None,
@@ -201,26 +202,31 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             if config.tee and old_logger_level > logging.INFO:
                 # If the logger does not already include INFO, include it.
                 config.logger.setLevel(logging.INFO)
+            config.logger.info("---Starting GDPopt---")
 
-            # Modify in place decides whether to run the algorithm on a copy of
-            # the originally model passed to the solver, or whether to
-            # manipulate the original model directly.
+            # TODO make a copy of the working model to use for the solve.
             solve_data.working_model = m = model
 
             solve_data.current_strategy = config.strategy
 
             # Create a model block on which to store GDPopt-specific utility
             # modeling objects.
-            # TODO check if name is taken already
-            GDPopt = m.GDPopt_utils = Block()
+            if hasattr(m, 'GDPopt_utils'):
+                raise RuntimeError(
+                    "GDPopt needs to create a Block named GDPopt_utils "
+                    "on the model object, but an attribute with that name "
+                    "already exists.")
+            else:
+                GDPopt = m.GDPopt_utils = Block(
+                    doc="Container for GDPopt solver utility modeling objects")
 
-            # TODO Reformulate integer variables to binary
+            # Reformulate integer variables to binary
             reformulate_integer_variables(model, config)
 
             # Save ordered lists of main modeling components, so that data can
             # be easily transferred between future model clones.
             _define_initial_ordered_component_lists(m)
-            _record_problem_statistics(m, solve_data)
+            _record_problem_statistics(m, solve_data, config)
             solve_data.results.solver.name = 'GDPopt ' + str(self.version())
 
             # Save model initial values. These are used later to initialize NLP
@@ -254,13 +260,13 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 doc='explored integer cuts')
             if not solve_data.no_discrete_decisions:
                 # If there are multiple discrete decisions, allow re-visiting
-                # them by default. Otherwise, no point in resolving the problem.
+                # them by default. Otherwise, no point in resolving the
+                # problem.
                 GDPopt.no_backtracking.deactivate()
 
             # Set up iteration counters
-            solve_data.nlp_iter = 0
-            solve_data.mip_iter = 0
-            solve_data.mip_subiter = 0
+            solve_data.subproblem_iteration = 0
+            solve_data.master_iteration = 0
 
             # set up bounds
             solve_data.LB = float('-inf')
@@ -357,6 +363,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         problem.
 
         """
+        config.logger.info("---Starting GDPopt initialization---")
         m = solve_data.working_model
         if not hasattr(m, 'dual'):  # Set up dual value reporting
             m.dual = Suffix(direction=Suffix.IMPORT)
@@ -395,7 +402,11 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         backup_iter = 0
         while backup_iter < backup_max_iter:
             # print line for visual display
-            config.logger.info('---Master Iteration---')
+            solve_data.master_iteration += 1
+            solve_data.subproblem_iteration = 0
+            config.logger.info(
+                '---GDPopt Master Iteration %s---'
+                % solve_data.master_iteration)
             backup_iter += 1
             # Check bound convergence
             if solve_data.LB + config.bound_tolerance >= solve_data.UB:
@@ -406,16 +417,15 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                      solve_data.UB))
                 break
             # Check iteration limit
-            if solve_data.mip_iter >= config.iterlim:
+            if solve_data.master_iteration >= config.iterlim:
                 config.logger.info(
                     'GDPopt unable to converge bounds '
                     'after %s master iterations.'
-                    % (solve_data.mip_iter,))
+                    % (solve_data.master_iteration,))
                 config.logger.info(
                     'Final bound values: LB: %s  UB: %s'
                     % (solve_data.LB, solve_data.UB))
                 break
-            solve_data.mip_subiter = 0
             # solve MILP master problem
             if solve_data.current_strategy == 'LOA':
                 mip_results = self._solve_OA_master(solve_data, config)
@@ -430,19 +440,28 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 break
             # Solve NLP subproblem
             nlp_model = solve_data.working_model.clone()
+            solve_data.subproblem_iteration += 1
             # copy in the discrete variable values
             for var, val in zip(nlp_model.GDPopt_utils.initial_var_list,
                                 mip_var_values):
                 if val is None:
                     continue
-                else:
+                if not var.is_binary():
                     var.value = val
+                elif ((fabs(val) <= config.integer_tolerance or
+                       fabs(val - 1) <= config.integer_tolerance)
+                      and config.round_NLP_binaries):
+                    # Round the binary variables to 0 or 1 if appropriate.
+                    var.value = int(round(val))
+                else:
+                    raise ValueError(
+                        "Binary variable %s value %s is not "
+                        "within tolerance %s of 0 or 1." %
+                        (var.name, var.value, config.integer_tolerance))
             TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
-            # TODO also fix other discrete variables?
             for var in nlp_model.GDPopt_utils.initial_var_list:
                 if var.is_binary():
                     var.fix()
-            solve_data.nlp_iter += 1
             nlp_result = solve_NLP(nlp_model, solve_data, config)
             nlp_feasible, nlp_var_values, nlp_duals = nlp_result
             if nlp_feasible:
@@ -493,12 +512,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 break
 
     def _solve_OA_master(self, solve_data, config):
-        solve_data.mip_iter += 1
         m = solve_data.linear_GDP.clone()
         GDPopt = m.GDPopt_utils
-        config.logger.info(
-            'MIP %s: Solve master problem.' %
-            (solve_data.mip_iter,))
 
         # Set up augmented Lagrangean penalty objective
         GDPopt.objective.deactivate()
@@ -521,11 +536,13 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 solve_data.UB = min(value(GDPopt.oa_obj.expr), solve_data.UB)
                 solve_data.UB_progress.append(solve_data.UB)
             config.logger.info(
-                'MIP %s: OBJ: %s  LB: %s  UB: %s'
-                % (solve_data.mip_iter, value(GDPopt.oa_obj.expr),
+                'ITER %s.%s-MIP: OBJ: %s  LB: %s  UB: %s'
+                % (solve_data.master_iteration,
+                   solve_data.subproblem_iteration,
+                   value(GDPopt.oa_obj.expr),
                    solve_data.LB, solve_data.UB))
         else:
-            if solve_data.mip_iter == 1:
+            if solve_data.master_iteration == 1:
                 config.logger.warn(
                     'GDPopt initialization may have generated poor '
                     'quality cuts.')

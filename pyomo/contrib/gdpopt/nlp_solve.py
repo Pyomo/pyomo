@@ -12,10 +12,9 @@ from pyomo.opt import SolverFactory, SolverStatus
 
 def solve_NLP(nlp_model, solve_data, config):
     """Solve the NLP subproblem."""
-    solve_data.nlp_iter += 1
     config.logger.info(
-        'NLP %s: Solve subproblem for fixed binaries and '
-        'logical realizations.' % (solve_data.nlp_iter,))
+        'Solving nonlinear subproblem for '
+        'fixed binaries and logical realizations.')
     if any(v for v in nlp_model.component_data_objects(
         ctype=Var, descend_into=(Block, Disjunct), active=True)
         if (v.is_binary() or v.is_integer()) and not v.fixed
@@ -132,11 +131,19 @@ def update_nlp_progress_indicators(model, solve_data, config):
         solve_data.LB_progress.append(solve_data.LB)
 
     if solve_data.solution_improved:
-        config.logger.info('Solution improved.')
         solve_data.best_solution_found = [
             v.value for v in GDPopt.initial_var_list]
+
+    improvement_tag = (
+        "(IMPROVED) " if solve_data.solution_improved else "")
+    lb_improved, ub_improved = (
+        ("", improvement_tag)
+        if solve_data.objective_sense == minimize
+        else (improvement_tag, ""))
     config.logger.info(
-        'NLP %s: OBJ: %s  LB: %s  UB: %s'
-        % (solve_data.nlp_iter,
+        'ITER %s.%s-NLP: OBJ: %s  LB: %s %s UB: %s %s'
+        % (solve_data.master_iteration,
+           solve_data.subproblem_iteration,
            value(GDPopt.objective.expr),
-           solve_data.LB, solve_data.UB))
+           solve_data.LB, lb_improved,
+           solve_data.UB, ub_improved))

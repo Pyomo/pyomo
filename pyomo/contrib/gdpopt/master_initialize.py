@@ -25,6 +25,9 @@ def init_custom_disjuncts(solve_data, config):
 
         # fix the disjuncts in the linear GDP and send for solution.
         linear_GDP = solve_data.linear_GDP.clone()
+        config.logger.info(
+            "Generating initial linear GDP approximation by "
+            "solving subproblems with the specified disjuncts active.")
         for orig_disj, clone_disj in zip(
             solve_data.linear_GDP.GDPopt_utils.initial_disjuncts_list,
             linear_GDP.GDPopt_utils.initial_disjuncts_list
@@ -44,7 +47,7 @@ def init_custom_disjuncts(solve_data, config):
                 else:
                     var.value = val
             TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
-            solve_data.nlp_iter += 1
+            solve_data.subproblem_iteration += 1
             nlp_result = solve_NLP(nlp_model, solve_data, config)
             nlp_feasible, nlp_var_values, nlp_duals = nlp_result
             if nlp_feasible:
@@ -65,11 +68,11 @@ def init_max_binaries(solve_data, config):
     feasible.
 
     """
-    solve_data.mip_subiter += 1
     linear_GDP = solve_data.linear_GDP.clone()
     config.logger.info(
-        "MIP %s.%s: maximize value of binaries" %
-        (solve_data.mip_iter, solve_data.mip_subiter))
+        "Generating initial linear GDP approximation by "
+        "solving a subproblem that maximizes "
+        "the sum of all binary and logical variables.")
     # Set up binary maximization objective
     linear_GDP.GDPopt_utils.objective.deactivate()
     binary_vars = (
@@ -93,7 +96,7 @@ def init_max_binaries(solve_data, config):
             else:
                 var.value = val
         TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
-        solve_data.nlp_iter += 1
+        solve_data.subproblem_iteration += 1
         nlp_result = solve_NLP(nlp_model, solve_data, config)
         nlp_feasible, nlp_var_values, nlp_duals = nlp_result
         if nlp_feasible:
@@ -119,7 +122,9 @@ def init_set_covering(solve_data, config):
     Carnegie Mellon University.
 
     """
-    config.logger.info("Initializing using set covering.")
+    config.logger.info(
+        "Generating initial linear GDP approximation by solving subproblems "
+        "to cover all nonlinear disjuncts.")
     disjunct_needs_cover = list(
         any(constr.body.polynomial_degree() not in (0, 1)
             for constr in disj.component_data_objects(
@@ -147,7 +152,7 @@ def init_set_covering(solve_data, config):
             else:
                 disj.indicator_var.value = val
         TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
-        solve_data.nlp_iter += 1
+        solve_data.subproblem_iteration += 1
         nlp_result = solve_NLP(nlp_model, solve_data, config)
         nlp_feasible, nlp_var_values, nlp_duals = nlp_result
         if nlp_feasible:

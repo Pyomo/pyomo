@@ -22,7 +22,7 @@ def add_outer_approximation_cuts(var_values, duals, solve_data, config):
             var.value = val
 
     # TODO some kind of special handling if the dual is phenomenally small?
-    config.logger.info('Adding OA cuts.')
+    config.logger.debug('Adding OA cuts.')
 
     nonlinear_constraints = ComponentSet(GDPopt.initial_nonlinear_constraints)
     counter = 0
@@ -122,5 +122,9 @@ def add_integer_cut(var_values, solve_data, config, feasible=False):
         config.logger.info('Adding integer cut')
         GDPopt.integer_cuts.add(expr=int_cut)
     else:
-        config.logger.info('Adding feasible integer cut')
+        backtracking_enabled = (
+            "disabled" if GDPopt.no_backtracking.active else "allowed")
+        config.logger.info(
+            'Registering explored configuration. '
+            'Backtracking is currently %s.' % backtracking_enabled)
         GDPopt.no_backtracking.add(expr=int_cut)
