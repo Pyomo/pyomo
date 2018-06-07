@@ -20,6 +20,8 @@ Current Development
 - Refactoring pyomo.util into pyomo.common for the general utilities that do
   not depend on the rest of Pyomo, and the user-focused modeling utilities in
   pyomo.util. (#502)
+- Transformations map create_using arguments through the model clone (#497)
+- unique_component_name now checks all attributes (not just components) (#497)
 
 -------------------------------------------------------------------------------
 Pyomo 5.5

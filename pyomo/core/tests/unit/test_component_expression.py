@@ -83,22 +83,23 @@ class Test_noclone(unittest.TestCase):
             self.assertIs(noclone(obj).expr, obj)
 
     def test_pprint(self):
+        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
         v = variable()
         e = noclone(v**2)
-        pyomo.core.kernel.pprint(e)
-        pyomo.core.kernel.pprint(e, indent=1)
+        pyomo.kernel.pprint(e)
+        pyomo.kernel.pprint(e, indent=1)
         b = block()
         b.e = expression(expr=e)
-        pyomo.core.kernel.pprint(e)
-        pyomo.core.kernel.pprint(b)
+        pyomo.kernel.pprint(e)
+        pyomo.kernel.pprint(b)
         m = block()
         m.b = b
-        pyomo.core.kernel.pprint(e)
-        pyomo.core.kernel.pprint(b)
-        pyomo.core.kernel.pprint(m)
+        pyomo.kernel.pprint(e)
+        pyomo.kernel.pprint(b)
+        pyomo.kernel.pprint(m)
 
     def test_pickle(self):
         v = variable()
@@ -270,21 +271,22 @@ class _Test_expression_base(object):
     _ctype_factory = None
 
     def test_pprint(self):
+        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
         p = parameter()
         e = self._ctype_factory(p**2)
-        pyomo.core.kernel.pprint(e)
+        pyomo.kernel.pprint(e)
         b = block()
         b.e = e
-        pyomo.core.kernel.pprint(e)
-        pyomo.core.kernel.pprint(b)
+        pyomo.kernel.pprint(e)
+        pyomo.kernel.pprint(b)
         m = block()
         m.b = b
-        pyomo.core.kernel.pprint(e)
-        pyomo.core.kernel.pprint(b)
-        pyomo.core.kernel.pprint(m)
+        pyomo.kernel.pprint(e)
+        pyomo.kernel.pprint(b)
+        pyomo.kernel.pprint(m)
 
     def test_pickle(self):
         e = self._ctype_factory(expr=1.0)

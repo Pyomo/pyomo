@@ -1,4 +1,4 @@
-from pyomo.pysp.annotations import PySP_StochasticMatrixAnnotation
+from pyomo.pysp.annotations import StochasticConstraintBodyAnnotation
 
 model = ConcreteModel()
 
@@ -27,5 +27,5 @@ model.ComputeSecondStageCost = Constraint(expr= model.SecondStageCostVar == mode
 
 # declare that model.x and model.y have stochastic constraint matrix
 # coefficients in the ComputeSecondStageCost constraint
-model.stoch_matrix = PySP_StochasticMatrixAnnotation()
+model.stoch_matrix = StochasticConstraintBodyAnnotation()
 model.stoch_matrix.declare(model.ComputeSecondStageCost, variables=[model.x, model.y])
