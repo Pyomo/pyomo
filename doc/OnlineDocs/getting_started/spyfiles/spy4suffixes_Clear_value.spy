@@ -1,7 +1,13 @@
-model.foo.clearValue(model.y)
+model.foo.clear_value(model.y)
 
-print(model.foo[model.y[1]])          # -> raise KeyError
+try:
+   print(model.foo[model.y[1]])       # -> raise KeyError
+except KeyError:
+   pass
 
-del model.foo[model.y[1]]             # -> raise KeyError
+try:
+   del model.foo[model.y[1]]          # -> raise KeyError
+except KeyError:
+   pass
 
-model.foo.clearValue(model.y[1])      # -> does nothing
+model.foo.clear_value(model.y[1])      # -> does nothing

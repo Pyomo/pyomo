@@ -4,6 +4,8 @@ from pyutilib.math import infinity
 from pyutilib.services import TempfileManager
 from pyomo.common.modeling import randint, unique_component_name
 from pyomo.core import Block, Var, Param, Set, VarList, ConstraintList, Constraint, Objective, RangeSet, value, ConcreteModel, Reals, sqrt, minimize, maximize
+# This line will cause an import error.  This contrib package needs
+# to be updated to use Pyomo5 expressions
 from pyomo.core.base import expr_coopr3, expr as EXPR
 from pyomo.core.base.var import _VarData
 from pyomo.core.base.numvalue import native_types

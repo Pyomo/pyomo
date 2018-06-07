@@ -98,9 +98,3 @@ from pyomo.opt import (
     SolverFactory, SolverManagerFactory, UnknownSolver,
     TerminationCondition, SolverStatus,
 )
-
-#
-# Initialize expression data
-#
-from pyomo.core.expr.expr_pyomo5 import initialize_expression_data
-initialize_expression_data()

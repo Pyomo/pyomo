@@ -14,7 +14,7 @@ import pyomo.opt
 from pyomo.opt import (SolverFactory,
                        SolverStatus,
                        TerminationCondition)
-
+from pyomo.kernel.util import pprint
 from pyomo.core.kernel import *
 
 # set up the Block ctype

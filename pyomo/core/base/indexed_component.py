@@ -12,9 +12,9 @@ __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 
 import pyutilib.misc
 
+from pyomo.core.expr.current import TemplateExpressionError
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
-from pyomo.core.base.template_expr import TemplateExpressionError
 from pyomo.common import DeveloperError
 
 from six import PY3, itervalues, iteritems, advance_iterator

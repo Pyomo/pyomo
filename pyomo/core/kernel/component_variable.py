@@ -246,6 +246,11 @@ class IVariable(IComponent, NumericValue):
         constant in an expression."""
         return False
 
+    def is_parameter_type(self):
+        """Returns :const:`False` because this is not a
+        parameter object."""
+        return False
+
     def is_variable_type(self):
         """Returns :const:`True` because this is a
         variable object."""

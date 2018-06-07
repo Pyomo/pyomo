@@ -1,4 +1,4 @@
-from pyomo.pysp.annotations import PySP_ConstraintStageAnnotation
+from pyomo.pysp.annotations import PySP_ConstraintStageAnnotation()
 
 # declare the annotation
 model.constraint_stage = PySP_ConstraintStageAnnotation()
