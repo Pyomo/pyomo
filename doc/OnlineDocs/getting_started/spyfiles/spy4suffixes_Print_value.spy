@@ -13,4 +13,8 @@ print(model.foo[model.y])             # -> 50.0
 del model.foo[model.y]
 
 print(model.foo.get(model.y))         # -> None
-print(model.foo[model.y])             # -> raise KeyError
+
+try:
+   print(model.foo[model.y])          # -> raise KeyError
+except KeyError:
+   pass

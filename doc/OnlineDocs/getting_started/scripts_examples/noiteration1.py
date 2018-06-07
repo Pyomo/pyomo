@@ -1,6 +1,6 @@
 # noiteration1.py
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 
 # Create a solver
@@ -10,21 +10,18 @@ opt = SolverFactory('glpk')
 # A simple model with binary variables and
 # an empty constraint list.
 #
-model = AbstractModel()
-model.n = Param(default=4)
-model.x = Var(RangeSet(model.n), within=Binary)
+model = pyo.ConcreteModel()
+model.n = pyo.Param(default=4)
+model.x = pyo.Var(pyo.RangeSet(model.n), within=pyo.Binary)
 def o_rule(model):
     return summation(model.x)
-model.o = Objective(rule=o_rule)
-model.c = ConstraintList()
+model.o = pyo.Objective(rule=o_rule)
+model.c = pyo.ConstraintList()
 
-# Create a model instance and optimize
-instance = model.create_instance()
-results = opt.solve(instance)
-instance.solutions.load_from(results)
+results = opt.solve(model)
 
-if instance.x[2].value == 0:
+if pyo.value(model.x[2]) == 0:
     print("The second index has a zero")
 else:
-    print("x[2]=",instance.x[2].value)
+    print("x[2]=",pyo.value(model.x[2]))
 

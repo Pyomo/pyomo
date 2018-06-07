@@ -718,7 +718,7 @@ class ExpressionReplacementVisitor(object):
 #  clone_expression
 # =====================================================
 
-def clone_expression(expr, memo=None):
+def clone_expression(expr, substitute=None):
     """A function that is used to clone an expression.
 
     Cloning is equivalent to calling ``copy.deepcopy`` with no Block
@@ -727,9 +727,9 @@ def clone_expression(expr, memo=None):
 
     Args:
         expr: The expression that will be cloned.
-        memo (dict): A dictionary mapping object ids to
-            objects.  This dictionary has the same semantics as
-            the memo object used with ``copy.deepcopy``.  Defaults
+        substitute (dict): A dictionary mapping object ids to
+            objects. This dictionary has the same semantics as
+            the memo object used with ``copy.deepcopy``. Defaults
             to None, which indicates that no user-defined
             dictionary is used.
 
@@ -738,10 +738,9 @@ def clone_expression(expr, memo=None):
 
     """
     clone_counter._count += 1
-    if not memo:
-        memo = {}
-    if '__block_scope__' not in memo:
-        memo['__block_scope__'] = { id(None): False }
+    memo = {'__block_scope__': {id(None): False}}
+    if substitute:
+        memo.update(substitute)
     return deepcopy(expr, memo)
 
 
@@ -1352,7 +1351,7 @@ class ExpressionBase(NumericValue):
         Returns:
             A new expression tree.
         """
-        return clone_expression(self, memo=substitute)
+        return clone_expression(self, substitute=substitute)
 
     def create_node_with_local_data(self, args):
         """
