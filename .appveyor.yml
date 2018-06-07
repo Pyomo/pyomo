@@ -36,10 +36,10 @@ environment:
       CATEGORY: "nightly"
       EXTRAS: YES
 
-    - PYTHON_VERSION: 3.5
-      PYTHON: "C:\\Miniconda35-x64"
-      CATEGORY: "nightly"
-      EXTRAS: YES
+    #- PYTHON_VERSION: 3.5
+    #  PYTHON: "C:\\Miniconda35-x64"
+    #  CATEGORY: "nightly"
+    #  EXTRAS: YES
 
     - PYTHON_VERSION: 3.6
       PYTHON: "C:\\Miniconda36-x64"
@@ -81,7 +81,7 @@ install:
   #
   # Install pyomo.extras
   #
-  - "IF DEFINED EXTRAS (%CONDAFORGE% numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill)"
+  - "IF DEFINED EXTRAS (%CONDAFORGE% mkl numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill)"
   #
   - "%CONDAFORGE% glpk"
   - "glpsol -v"
