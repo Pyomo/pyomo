@@ -186,7 +186,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         user_warmstart = False
         if self._warm_start_file_name is not None:
             if ' ' in self._warm_start_file_name:
-                if self.version[:2] >= (12,8):
+                if self.version()[:2] >= (12,8):
                     if '"' not in self._warm_start_file_name:
                         self._warm_start_file_name \
                             = '"'+self._warm_start_file_name+'"'
@@ -271,7 +271,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             self._log_file = pyutilib.services.TempfileManager.\
                             create_tempfile(suffix = '.cplex.log')
         if ' ' in self._log_file:
-            if self.version[:2] >= (12,8):
+            if self.version()[:2] >= (12,8):
                 if '"' not in self._log_file:
                     self._log_file = '"'+self._log_file+'"'
             else:
@@ -288,7 +288,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             self._soln_file = pyutilib.services.TempfileManager.\
                               create_tempfile(suffix = '.cplex.sol')
         if ' ' in self._soln_file:
-            if self.version[:2] >= (12,8):
+            if self.version()[:2] >= (12,8):
                 if '"' not in self._soln_file:
                     self._soln_file = '"'+self._soln_file+'"'
             else:
@@ -319,7 +319,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             script += 'set %s\n' % ( opt, )
         _lp_file = problem_files[0]
         if ' ' in _lp_file:
-            if self.version[:2] >= (12,8):
+            if self.version()[:2] >= (12,8):
                 if '"' not in _lp_file:
                     _lp_file = '"'+_lp_file+'"'
             else:
