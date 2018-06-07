@@ -2798,16 +2798,13 @@ def _decompose_linear_terms(expr, multiplier=1):
 
 
 def _process_arg(obj):
-    if obj.__class__ is NumericConstant:
-        return value(obj)
-
     try:
         if obj.is_parameter_type() and not obj._component()._mutable and obj._constructed:
             # Return the value of an immutable SimpleParam or ParamData object
             return obj()
 
         elif obj.__class__ is NumericConstant:
-            return value(obj)
+            return obj.value
 
         return obj
     except AttributeError:
