@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -185,6 +185,17 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         self._warm_start_file_name = kwds.pop('warmstart_file', None)
         user_warmstart = False
         if self._warm_start_file_name is not None:
+            if ' ' in self._warm_start_file_name:
+                if self.version[:2] >= (12,8):
+                    if '"' not in self._warm_start_file_name:
+                        self._warm_start_file_name \
+                            = '"'+self._warm_start_file_name+'"'
+                else:
+                    raise ValueError(
+                        "Space detected in CPLEX warm start file path/name and "
+                        "CPLEX older than version 12.8.  Please either upgrade "
+                        "CPLEX or remove the space from the logfile path.")
+
             user_warmstart = True
 
         # the input argument can currently be one of two things: an instance or a filename.
@@ -259,6 +270,15 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         if self._log_file is None:
             self._log_file = pyutilib.services.TempfileManager.\
                             create_tempfile(suffix = '.cplex.log')
+        if ' ' in self._log_file:
+            if self.version[:2] >= (12,8):
+                if '"' not in self._log_file:
+                    self._log_file = '"'+self._log_file+'"'
+            else:
+                raise ValueError(
+                    "Space detected in CPLEX log file path/name and "
+                    "CPLEX older than version 12.8.  Please either upgrade "
+                    "CPLEX or remove the space from the logfile path.")
 
         #
         # Define solution file
@@ -267,11 +287,20 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         if self._soln_file is None:
             self._soln_file = pyutilib.services.TempfileManager.\
                               create_tempfile(suffix = '.cplex.sol')
+        if ' ' in self._soln_file:
+            if self.version[:2] >= (12,8):
+                if '"' not in self._soln_file:
+                    self._soln_file = '"'+self._soln_file+'"'
+            else:
+                raise ValueError(
+                    "Space detected in CPLEX solution file path/name and "
+                    "CPLEX older than version 12.8.  Please either upgrade "
+                    "CPLEX or remove the space from the logfile path.")
 
         #
         # Write the CPLEX execution script
         #
-        script = 'set logfile "%s"\n' % (self._log_file,)
+        script = 'set logfile %s\n' % (self._log_file,)
         if self._timelimit is not None and self._timelimit > 0.0:
             script += 'set timelimit %s\n' % ( self._timelimit, )
 
@@ -288,19 +317,30 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             else:
                 opt = ' '.join(key.split('_'))+' '+str(self.options[key])
             script += 'set %s\n' % ( opt, )
-        script += 'read "%s"\n' % ( problem_files[0], )
+        _lp_file = problem_files[0]
+        if ' ' in _lp_file:
+            if self.version[:2] >= (12,8):
+                if '"' not in _lp_file:
+                    _lp_file = '"'+_lp_file+'"'
+            else:
+                raise ValueError(
+                    "Space detected in CPLEX LP file path/name and "
+                    "CPLEX older than version 12.8.  Please either upgrade "
+                    "CPLEX or remove the space from the logfile path.")
+
+        script += 'read %s\n' % ( _lp_file, )
 
         # if we're dealing with an LP, the MST file will be empty.
         if self._warm_start_solve and \
            (self._warm_start_file_name is not None):
-            script += 'read "%s"\n' % (self._warm_start_file_name,)
+            script += 'read %s\n' % (self._warm_start_file_name,)
 
         if 'relax_integrality' in self.options:
             script += 'change problem lp\n'
 
         script += 'display problem stats\n'
         script += 'optimize\n'
-        script += 'write "%s"\n' % (self._soln_file,)
+        script += 'write %s\n' % (self._soln_file,)
         script += 'quit\n'
 
         # dump the script and warm-start file names for the
