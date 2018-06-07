@@ -24,11 +24,11 @@ model.c = Block([1,2], rule=c_rule)
 
 model.pprint()
 
-# @compprintloop:
-for v in model.component_objects(Var):
+# @compprintloop
+for v in model.component_objects(Var, descend_into=True):
     print("FOUND VAR:" + v.cname(True))
     v.pprint()
 
-for v_data in model.component_data_objects(Var):
+for v_data in model.component_data_objects(Var, descend_into=True):
     print("Found: "+v_data.cname(True)+", value = "+str(value(v_data)))
-# @:compprintloop
+# @compprintloop
