@@ -175,7 +175,7 @@ def init_set_covering(solve_data, config):
     if any(disjunct_needs_cover):
         # Iteration limit was hit without a full covering of all nonlinear
         # disjuncts
-        config.logger.warn(
+        config.logger.warning(
             'Iteration limit reached for set covering initialization '
             'without covering all disjuncts.')
         return False
@@ -221,7 +221,7 @@ def solve_set_cover_MIP(linear_GDP_model, disj_needs_cover,
             'Problem may have no more feasible '
             'binary configurations.')
         if GDPopt.mip_iter <= 1:
-            config.logger.warn(
+            config.logger.warning(
                 'Set covering problem was infeasible. '
                 'Check your linear and logical constraints '
                 'for contradictions.')

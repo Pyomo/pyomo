@@ -291,6 +291,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 from_list=solve_data.best_solution_found,
                 to_list=GDPopt.initial_var_list,
                 config=config)
+            GDPopt.objective_value.set_value(
+                value(solve_data.working_objective_expr))
 
             solve_data.results.problem.lower_bound = solve_data.LB
             solve_data.results.problem.upper_bound = solve_data.UB
@@ -337,6 +339,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             raise ValueError('Model has multiple active objectives.')
         else:
             main_obj = objs[0]
+        solve_data.working_objective_expr = main_obj.expr
 
         # Move the objective to the constraints
 
@@ -431,7 +434,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             # solve MILP master problem
             if solve_data.current_strategy == 'LOA':
                 mip_results = self._solve_OA_master(solve_data, config)
-                _, mip_var_values = mip_results
+                if mip_results:
+                    _, mip_var_values = mip_results
             # Check bound convergence
             if solve_data.LB + config.bound_tolerance >= solve_data.UB:
                 config.logger.info(
@@ -545,7 +549,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                    solve_data.LB, solve_data.UB))
         else:
             if solve_data.master_iteration == 1:
-                config.logger.warn(
+                config.logger.warning(
                     'GDPopt initialization may have generated poor '
                     'quality cuts.')
             # set optimistic bound to infinity
