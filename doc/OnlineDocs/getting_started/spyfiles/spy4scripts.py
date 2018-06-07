@@ -6,12 +6,12 @@
 David L. Woodruff and Mingye Yang, Spring 2018
 Code snippets for scripts.rst in testable form
 """
-from pyomo.environ import *
+import pyomo.environ as pyo
 
-instance = ConcreteModel()
-instance.I = Set(initialize=[1,2,3])
-instance.sigma = Param(mutable=True, initialize=2.3)
-instance.Theta = Param(instance.I, mutable=True)
+instance = pyo.ConcreteModel()
+instance.I = pyo.Set(initialize=[1,2,3])
+instance.sigma = pyo.Param(mutable=True, initialize=2.3)
+instance.Theta = pyo.Param(instance.I, mutable=True)
 for i in instance.I:
     instance.Theta[i] = i
 ParamName = "Theta"
@@ -19,20 +19,17 @@ idx = 1
 NewVal = 1134
 
 # @Assign_value_to_indexed_parametername
-getattr(instance, ParamName)[idx] = NewVal
+instance.ParamName[idx].value = NewVal
 # @Assign_value_to_indexed_parametername
 
 ParamName = "sigma"
-# @Assign_value_to_unindexed_parametername_1
-getattr(instance, ParamName)[None] = NewVal
-# @Assign_value_to_unindexed_parametername_1
 
 # @Assign_value_to_unindexed_parametername_2
-getattr(instance, ParamName).set_value(NewVal)
+instance.ParamName.value = NewVal
 # @Assign_value_to_unindexed_parametername_2
 
-instance.x = Var([1,2,3], initialize=0)
-instance.y = Var()
+instance.x = pyo.Var([1,2,3], initialize=0)
+instance.y = pyo.Var()
 # @Set_upper&lower_bound
 
 if instance.x[2] == 0:
@@ -49,8 +46,8 @@ instance.y.fixed = True
 # @Equivalent_form_of_instance.x.fix(2)
 
 model=ConcreteModel()
-model.obj1 = Objective(expr = 0)
-model.obj2 = Objective(expr = 0)
+model.obj1 = pyo.Objective(expr = 0)
+model.obj2 = pyo.Objective(expr = 0)
 
 # @Pass_multiple_objectives_to_solver
 model.obj1.deactivate()
@@ -81,27 +78,31 @@ def pyomo_preprocess(options=None):
 # @Pyomo_preprocess_argument
 
 # @Display_all_variables&values
-for v in instance.component_objects(Var, active=True):
-    print ("Variable",v)
-    varobject = getattr(instance, str(v))
-    for index in varobject:
-        print ("   ",index, varobject[index].value)
+for v in instance.component_objects(pyo.Var, active=True):
+    print("Variable",v)
+    for index in v:
+        print ("   ",index, pyo.value(v[index]))
 # @Display_all_variables&values
 
-instance.iVar = Var([1,2,3], initialize=1, domain=Boolean)
-instance.sVar = Var(initialize=1, domain=Boolean)
+# @Display_all_varaibles&values_data
+for v in instance.component_data_objects(pyo.Var, active=True):
+    print(v, pyo.value(v))
+# @Display_all_varaibles&values_data
+
+
+instance.iVar = pyo.Var([1,2,3], initialize=1, domain=pyo.Boolean)
+instance.sVar = pyo.Var(initialize=1, domain=pyo.Boolean)
 # dlw may 2018: the next snippet does not trigger any fixing ("active?")
 # @Fix_all_integers&values
-for var in instance.component_data_objects(Var, active=True):
-    if var.domain is IntegerSet or var.domain is BooleanSet:
+for var in instance.component_data_objects(pyo.Var, active=True):
+    if var.domain is pyo.IntegerSet or var.domain is pyo.BooleanSet:
         print ("fixing "+str(v))
         var.fixed = True # fix the current value
 # @Fix_all_integers&values
 
 # @Include_definition_in_modelfile
 def pyomo_print_results(options, instance, results):
-    from pyomo.core import Var
-    for v in instance.component_objects(Var, active=True):
+    for v in instance.component_objects(pyo.Var, active=True):
         print ("Variable "+str(v))
         varobject = getattr(instance, v)
         for index in varobject:
@@ -109,8 +110,7 @@ def pyomo_print_results(options, instance, results):
 # @Include_definition_in_modelfile
 
 # @Print_parameter_name&value
-from pyomo.core import Param
-for parmobject in instance.component_objects(Param, active=True):
+for parmobject in instance.component_objects(pyo.Param, active=True):
     print ("Parameter "+str(parmobject.name))
     for index in parmobject:
         print ("   ",index, parmobject[index].value)
@@ -120,8 +120,7 @@ for parmobject in instance.component_objects(Param, active=True):
 def pyomo_print_results(options, instance, results):
     # display all duals
     print ("Duals")
-    from pyomo.core import Constraint
-    for c in instance.component_objects(Constraint, active=True):
+    for c in instance.component_objects(pyo.Constraint, active=True):
         print ("   Constraint",c)
         cobject = getattr(instance, c)
         for index in cobject:
@@ -132,7 +131,7 @@ def pyomo_print_results(options, instance, results):
 xxxxxxxxxxxxxxxxxxxx high alert!!!! xxxxxx testing blocked from here to the end xxxxxxxxxxxxxx
 # @Print_solver_status
 results = opt.solve(instance)
-#print ("The solver returned a status of:"+str(results.Solution.Status))
+#print ("The solver returned a status of:"+str(results.solver.status))
 # @Print_solver_status
 
 # @Pyomo_data_comparedwith_solver_status_1
@@ -167,7 +166,7 @@ results = opt.solve(instance, tee=True)
 # @See_solver_output
 
 # @Add_option_to_solver
-optimizer = SolverFactory['cbc']
+optimizer = pyo.SolverFactory['cbc']
 optimizer.options["threads"] = 4
 # @Add_option_to_solver
 
@@ -176,7 +175,7 @@ results = optimizer.solve(instance, options="threads=4", tee=True)
 # @Add_multiple_options_to_solver
 
 # @Set_path_to_solver_executable
-opt = SolverFactory("ipopt", executable="../ipopt")
+opt = pyo.SolverFactory("ipopt", executable="../ipopt")
 # @Set_path_to_solver_executable
 
 # @Pass_warmstart_to_solver
@@ -184,13 +183,13 @@ instance = model.create()
 instance.y[0] = 1
 instance.y[1] = 0
 
-opt = SolverFactory("cplex")
+opt = pyo.SolverFactory("cplex")
 
 results = opt.solve(instance, warmstart=True)
 # @Pass_warmstart_to_solver
 
 # @Specify_temporary_directory_name
-from pyutilib.services import TempFileManager
+from pyutilib.services import TempfileManager
 TempfileManager.tempdir = YourDirectoryNameGoesHere
 # @Specify_temporary_directory_name
 """

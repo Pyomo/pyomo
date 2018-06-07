@@ -1,3 +1,7 @@
+branches:
+  only:
+    - master
+
 environment:
 
   matrix:
@@ -32,10 +36,10 @@ environment:
       CATEGORY: "nightly"
       EXTRAS: YES
 
-    - PYTHON_VERSION: 3.5
-      PYTHON: "C:\\Miniconda35-x64"
-      CATEGORY: "nightly"
-      EXTRAS: YES
+    #- PYTHON_VERSION: 3.5
+    #  PYTHON: "C:\\Miniconda35-x64"
+    #  CATEGORY: "nightly"
+    #  EXTRAS: YES
 
     - PYTHON_VERSION: 3.6
       PYTHON: "C:\\Miniconda36-x64"
@@ -66,16 +70,8 @@ install:
   - conda update -q -y conda
   - conda config --set auto_update_conda false
   #
-  - "%CONDAFORGE% setuptools pip"
-  - python -m pip install coverage
+  - "%CONDAFORGE% setuptools pip coverage sphinx_rtd_theme"
   - python -m pip install codecov
-  - IF DEFINED YAML (python -m pip install pyyaml)
-  - "IF DEFINED PYRO (python -m pip install %PYRO%)"
-  - python -m pip install xlrd
-  - python -m pip install openpyxl
-  - python -m pip install sphinx_rtd_theme
-  - "%ANACONDA% pandas networkx"
-  - "%ANACONDA% scipy"
   #
   # Install GAMS
   #
@@ -85,7 +81,7 @@ install:
   #
   # Install pyomo.extras
   #
-  - "IF DEFINED EXTRAS (%CONDAFORGE% numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill)"
+  - "IF DEFINED EXTRAS (%CONDAFORGE% mkl numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill)"
   #
   - "%CONDAFORGE% glpk"
   - "glpsol -v"

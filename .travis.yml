@@ -1,3 +1,6 @@
+branches:
+  only:
+  - master
 cache: false
 language: generic
 services:

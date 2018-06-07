@@ -136,6 +136,10 @@ class _VarData(ComponentData, NumericValue):
         """Returns False because this is not a constant in an expression."""
         return False
 
+    def is_parameter_type(self):
+        """Returns False because this is not a parameter object."""
+        return False
+
     def is_variable_type(self):
         """Returns True because this is a variable."""
         return True
