@@ -1,1 +1,1 @@
-getattr(instance, ParamName)[idx] = NewVal
+instance.ParamName[idx].value = NewVal
