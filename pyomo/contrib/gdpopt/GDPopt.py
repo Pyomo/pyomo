@@ -57,7 +57,9 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
     pyomo.common.plugin.implements(IOptSolver)
     pyomo.common.plugin.alias(
-        'gdpopt', doc='The GDPopt decomposition-based GDP solver')
+        'gdpopt',
+        doc='The GDPopt decomposition-based '
+        'Generalized Disjunctive Programming (GDP) solver')
 
     CONFIG = ConfigBlock("GDPopt")
     CONFIG.declare("iterlim", ConfigValue(
