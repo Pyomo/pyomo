@@ -59,7 +59,9 @@ def init_custom_disjuncts(solve_data, config):
         else:
             config.logger.error(
                 'Linear GDP infeasible for user-specified '
-                'custom initialization disjunct set.')
+                'custom initialization disjunct set %s. '
+                'Skipping that set and continuing on.'
+                % set(disj.name for disj in active_disjunct_set))
 
 
 def init_max_binaries(solve_data, config):
