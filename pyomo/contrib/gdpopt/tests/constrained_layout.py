@@ -16,7 +16,7 @@ from pyomo.environ import (ConcreteModel, Objective, Param,
 
 def build_constrained_layout_model():
     """Build the model."""
-    m = ConcreteModel()
+    m = ConcreteModel(name="2-D constrained layout")
     m.rectangles = RangeSet(3)
     m.circles = RangeSet(2)
 

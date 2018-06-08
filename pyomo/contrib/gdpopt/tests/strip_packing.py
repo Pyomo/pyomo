@@ -17,7 +17,7 @@ from pyomo.environ import (ConcreteModel, NonNegativeReals, Objective, Param,
 
 def build_rect_strip_packing_model():
     """Build the strip packing model."""
-    model = ConcreteModel()
+    model = ConcreteModel(name="Rectangles strip packing")
     model.rectangles = Set(ordered=True, initialize=[0, 1, 2, 3])
 
     # Width and Lenght of each rectangle
