@@ -68,7 +68,7 @@ class TestGDPopt(unittest.TestCase):
                 fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
             cons_layout = build_constrained_layout_model()
-            opt.solve(cons_layout, strategy='LOA',
+            opt.solve(cons_layout, strategy='LOA', init_strategy='max_binary',
                       mip=required_solvers[1],
                       nlp=required_solvers[0])
             self.assertTrue(
@@ -81,10 +81,11 @@ class TestGDPopt(unittest.TestCase):
             initialize = [
                 # Use units 1, 4, 7, 8
                 [model.use_unit_1or2.disjuncts[0],
+                 model.use_unit_3ornot.disjuncts[1],
                  model.use_unit_4or5ornot.disjuncts[0],
                  model.use_unit_6or7ornot.disjuncts[1],
                  model.use_unit_8ornot.disjuncts[0]],
-                # Use units 2, 3, 6, 8
+                # Use units 2, 4, 6, 8
                 [model.use_unit_1or2.disjuncts[1],
                  model.use_unit_3ornot.disjuncts[0],
                  model.use_unit_6or7ornot.disjuncts[0],
