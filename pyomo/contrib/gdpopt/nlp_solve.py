@@ -107,8 +107,7 @@ def solve_NLP(nlp_model, solve_data, config):
     return (
         nlp_feasible,  # If solution is feasible.
         # Variable values
-        list((v.value if not v.stale else None)
-             for v in GDPopt.initial_var_list),
+        list(v.value for v in GDPopt.initial_var_list),
         # Dual values
         list(nlp_model.dual.get(c, None)
              for c in GDPopt.initial_constraints_list))
