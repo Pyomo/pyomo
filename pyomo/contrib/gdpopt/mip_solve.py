@@ -65,7 +65,7 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
 
     if terminate_cond is tc.optimal:
         m.solutions.load_from(results)
-        return True, list(v.value for v in GDPopt.initial_var_list)
+        return True, list(v.value for v in GDPopt.working_var_list)
     elif terminate_cond is tc.infeasible:
         config.logger.info(
             'Linear GDP is infeasible. '
@@ -78,7 +78,7 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
             'Using current solver feasible solution.')
         results.solver.status = SolverStatus.ok
         m.solutions.load_from(results)
-        return True, list(v.value for v in GDPopt.initial_var_list)
+        return True, list(v.value for v in GDPopt.working_var_list)
     elif (terminate_cond is tc.other and
           results.solution.status is SolutionStatus.feasible):
         # load the solution and suppress the warning message by setting
@@ -88,7 +88,7 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
             'but not guaranteed to be optimal.')
         results.solver.status = SolverStatus.ok
         m.solutions.load_from(results)
-        return True, list(v.value for v in GDPopt.initial_var_list)
+        return True, list(v.value for v in GDPopt.working_var_list)
     else:
         raise ValueError(
             'GDPopt unable to handle linear GDP '

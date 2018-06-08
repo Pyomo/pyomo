@@ -17,16 +17,16 @@ def add_outer_approximation_cuts(var_values, duals, solve_data, config):
     sign_adjust = -1 if GDPopt.objective.sense == minimize else 1
 
     # copy values over
-    for var, val in zip(GDPopt.initial_var_list, var_values):
+    for var, val in zip(GDPopt.working_var_list, var_values):
         if val is not None and not var.fixed:
             var.value = val
 
     # TODO some kind of special handling if the dual is phenomenally small?
     config.logger.debug('Adding OA cuts.')
 
-    nonlinear_constraints = ComponentSet(GDPopt.initial_nonlinear_constraints)
+    nonlinear_constraints = ComponentSet(GDPopt.working_nonlinear_constraints)
     counter = 0
-    for constr, dual_value in zip(GDPopt.initial_constraints_list, duals):
+    for constr, dual_value in zip(GDPopt.working_constraints_list, duals):
         if dual_value is None or constr not in nonlinear_constraints:
             continue
 
@@ -81,7 +81,7 @@ def add_integer_cut(var_values, solve_data, config, feasible=False):
     GDPopt = m.GDPopt_utils
     var_value_is_one = ComponentSet()
     var_value_is_zero = ComponentSet()
-    for var, val in zip(GDPopt.initial_var_list, var_values):
+    for var, val in zip(GDPopt.working_var_list, var_values):
         if not var.is_binary():
             continue
         if var.fixed:

@@ -93,12 +93,17 @@ class TestGDPopt(unittest.TestCase):
                  model.use_unit_8ornot.disjuncts[0]]
             ]
 
-            def assert_correct_disjuncts_active(model, solve_data):
-                # iter_num = solve_data.subproblem_iteration
-                # disjs_should_be_active = initialize[iter_num - 1]
-                # for solve_data.orig_model
-                # model.display('nlp%s.txt' % solve_data.subproblem_iteration)
-                pass
+            def assert_correct_disjuncts_active(nlp_model, solve_data):
+                if solve_data.master_iteration >= 1:
+                    return  # only checking initialization
+                iter_num = solve_data.subproblem_iteration
+                disjs_should_be_active = initialize[iter_num - 1]
+                for orig_disj, soln_disj in zip(
+                    solve_data.original_model.GDPopt_utils.orig_disjuncts_list,
+                    nlp_model.GDPopt_utils.orig_disjuncts_list
+                ):
+                    if orig_disj in disjs_should_be_active:
+                        self.assertTrue(soln_disj.indicator_var.value == 1)
 
             opt.solve(model, strategy='LOA', init_strategy='custom_disjuncts',
                       custom_init_disjuncts=initialize,

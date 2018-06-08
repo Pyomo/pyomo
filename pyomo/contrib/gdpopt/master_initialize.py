@@ -29,8 +29,8 @@ def init_custom_disjuncts(solve_data, config):
             "Generating initial linear GDP approximation by "
             "solving subproblems with the specified disjuncts active.")
         for orig_disj, clone_disj in zip(
-            solve_data.working_model.GDPopt_utils.initial_disjuncts_list,
-            linear_GDP.GDPopt_utils.initial_disjuncts_list
+            solve_data.original_model.GDPopt_utils.orig_disjuncts_list,
+            linear_GDP.GDPopt_utils.orig_disjuncts_list
         ):
             if orig_disj in active_disjunct_set:
                 clone_disj.indicator_var.fix(1)
@@ -40,7 +40,7 @@ def init_custom_disjuncts(solve_data, config):
             # use the mip_var_values to create the NLP subproblem
             nlp_model = solve_data.working_model.clone()
             # copy in the discrete variable values
-            for var, val in zip(nlp_model.GDPopt_utils.initial_var_list,
+            for var, val in zip(nlp_model.GDPopt_utils.working_var_list,
                                 mip_var_values):
                 if val is None:
                     continue
@@ -92,7 +92,7 @@ def init_max_binaries(solve_data, config):
         # use the mip_var_values to create the NLP subproblem
         nlp_model = solve_data.working_model.clone()
         # copy in the discrete variable values
-        for var, val in zip(nlp_model.GDPopt_utils.initial_var_list,
+        for var, val in zip(nlp_model.GDPopt_utils.working_var_list,
                             mip_var_values):
             if val is None:
                 continue
@@ -133,7 +133,7 @@ def init_set_covering(solve_data, config):
             for constr in disj.component_data_objects(
                 ctype=Constraint, active=True, descend_into=True))
         for disj in solve_data.working_model.GDPopt_utils.
-        initial_disjuncts_list)
+        working_disjuncts_list)
     iter_count = 1
     while (any(disjunct_needs_cover) and
            iter_count <= config.set_cover_iterlim):
@@ -148,7 +148,7 @@ def init_set_covering(solve_data, config):
         # solve local NLP
         _, mip_var_values, mip_disjunct_values = mip_results
         nlp_model = solve_data.working_model.clone()
-        for disj, val in zip(nlp_model.GDPopt_utils.initial_disjuncts_list,
+        for disj, val in zip(nlp_model.GDPopt_utils.working_disjuncts_list,
                              mip_disjunct_values):
             if val is None:
                 continue
@@ -202,7 +202,7 @@ def solve_set_cover_MIP(linear_GDP_model, disj_needs_cover,
     GDPopt.set_cover_obj = Objective(
         expr=sum(weight * disj.indicator_var
                  for (weight, disj) in zip(weights,
-                                           GDPopt.initial_disjuncts_list)),
+                                           GDPopt.working_disjuncts_list)),
         sense=maximize)
 
     # Deactivate potentially non-rigorous generated cuts
@@ -217,7 +217,7 @@ def solve_set_cover_MIP(linear_GDP_model, disj_needs_cover,
         config.logger.info('Solved set covering MIP')
         return mip_results + (
             list(disj.indicator_var.value
-                 for disj in GDPopt.initial_disjuncts_list),)
+                 for disj in GDPopt.working_disjuncts_list),)
     else:
         config.logger.info(
             'Set covering problem is infeasible. '

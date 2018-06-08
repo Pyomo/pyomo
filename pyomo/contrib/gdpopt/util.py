@@ -10,6 +10,7 @@ from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt.results import SolverResults
+from pyomo.common.modeling import unique_component_name
 
 
 class _DoNothing(object):
@@ -31,7 +32,14 @@ class _DoNothing(object):
 
 
 class GDPoptSolveData(object):
-    """Data container to hold solve-instance data."""
+    """Data container to hold solve-instance data.
+
+    Key attributes:
+        - original_model: the original model that the user gave us to solve
+        - working_model: the original model after preprocessing
+        - linear_GDP: the linear-discrete master problem
+
+    """
     pass
 
 
@@ -100,40 +108,85 @@ def is_feasible(model, config):
     return True
 
 
-def _define_initial_ordered_component_lists(model):
-    """Define lists used for future data transfer."""
-    GDPopt = model.GDPopt_utils
+def clone_orig_model_with_lists(original_model):
+    """Clones the original model to create a working model.
+
+    Also attaches ordered lists of the variables, constraints, disjuncts, and
+    disjunctions to the model so that they can be used for mapping back and
+    forth
+
+    """
+    GDPopt = original_model.GDPopt_utils
     var_set = ComponentSet()
-    GDPopt.initial_constraints_list = list(
-        model.component_data_objects(
+    GDPopt.orig_constraints_list = list(
+        original_model.component_data_objects(
             ctype=Constraint, active=True, descend_into=(Block, Disjunct)))
-    GDPopt.initial_disjuncts_list = list(
-        model.component_data_objects(
+    GDPopt.orig_disjuncts_list = list(
+        original_model.component_data_objects(
             ctype=Disjunct, descend_into=(Block, Disjunct)))
-    GDPopt.initial_disjunctions_list = list(
-        model.component_data_objects(
+    GDPopt.orig_disjunctions_list = list(
+        original_model.component_data_objects(
             ctype=Disjunction, active=True,
             descend_into=(Disjunct, Block)))
 
     # Identify the non-fixed variables in (potentially) active constraints
-    for constr in GDPopt.initial_constraints_list:
+    for constr in GDPopt.orig_constraints_list:
         for v in EXPR.identify_variables(constr.body, include_fixed=False):
             var_set.add(v)
     # Disjunct indicator variables might not appear in active constraints. In
     # fact, if we consider them Logical variables, they should not appear in
     # active algebraic constraints. For now, they need to be added to the
     # variable set.
-    for disj in GDPopt.initial_disjuncts_list:
+    for disj in GDPopt.orig_disjuncts_list:
         var_set.add(disj.indicator_var)
 
     # We use component_data_objects rather than list(var_set) in order to
     # preserve a deterministic ordering.
-    GDPopt.initial_var_list = list(
+    GDPopt.orig_var_list = list(
+        v for v in original_model.component_data_objects(
+            ctype=Var, descend_into=(Block, Disjunct))
+        if v in var_set)
+    GDPopt.orig_nonlinear_constraints = [
+        v for v in GDPopt.orig_constraints_list
+        if v.body.polynomial_degree() not in (0, 1)]
+
+    return original_model.clone()
+
+
+def _define_initial_ordered_component_lists(model):
+    """Define lists used for future data transfer."""
+    GDPopt = model.GDPopt_utils
+    var_set = ComponentSet()
+    GDPopt.working_constraints_list = list(
+        model.component_data_objects(
+            ctype=Constraint, active=True, descend_into=(Block, Disjunct)))
+    GDPopt.working_disjuncts_list = list(
+        model.component_data_objects(
+            ctype=Disjunct, descend_into=(Block, Disjunct)))
+    GDPopt.working_disjunctions_list = list(
+        model.component_data_objects(
+            ctype=Disjunction, active=True,
+            descend_into=(Disjunct, Block)))
+
+    # Identify the non-fixed variables in (potentially) active constraints
+    for constr in GDPopt.working_constraints_list:
+        for v in EXPR.identify_variables(constr.body, include_fixed=False):
+            var_set.add(v)
+    # Disjunct indicator variables might not appear in active constraints. In
+    # fact, if we consider them Logical variables, they should not appear in
+    # active algebraic constraints. For now, they need to be added to the
+    # variable set.
+    for disj in GDPopt.working_disjuncts_list:
+        var_set.add(disj.indicator_var)
+
+    # We use component_data_objects rather than list(var_set) in order to
+    # preserve a deterministic ordering.
+    GDPopt.working_var_list = list(
         v for v in model.component_data_objects(
             ctype=Var, descend_into=(Block, Disjunct))
         if v in var_set)
-    GDPopt.initial_nonlinear_constraints = [
-        v for v in GDPopt.initial_constraints_list
+    GDPopt.working_nonlinear_constraints = [
+        v for v in GDPopt.working_constraints_list
         if v.body.polynomial_degree() not in (0, 1)]
 
 
@@ -155,7 +208,7 @@ def _record_problem_statistics(model, solve_data, config):
 
     # Classify the variables
     num_binary, num_continuous = 0, 0
-    for v in GDPopt.initial_var_list:
+    for v in GDPopt.working_var_list:
         if v.is_binary():
             num_binary += 1
         elif v.is_continuous():
@@ -169,10 +222,9 @@ def _record_problem_statistics(model, solve_data, config):
                             format(v.name, v.domain))
 
     # Get count of constraints and variables
-    prob.number_of_constraints = len(GDPopt.initial_constraints_list)
-    prob.number_of_disjunctions = len(GDPopt.initial_disjunctions_list)
-
-    prob.number_of_variables = len(GDPopt.initial_var_list)
+    prob.number_of_constraints = len(GDPopt.working_constraints_list)
+    prob.number_of_disjunctions = len(GDPopt.working_disjunctions_list)
+    prob.number_of_variables = len(GDPopt.working_var_list)
     prob.number_of_binary_variables = num_binary
     prob.number_of_continuous_variables = num_continuous
     prob.number_of_integer_variables = 0
@@ -180,7 +232,7 @@ def _record_problem_statistics(model, solve_data, config):
         "Problem has %s constraints (%s nonlinear) and %s disjunctions, "
         "with %s variables, of which %s are binary and %s continuous." %
         (prob.number_of_constraints,
-         len(GDPopt.initial_nonlinear_constraints),
+         len(GDPopt.working_nonlinear_constraints),
          prob.number_of_disjunctions,
          prob.number_of_variables,
          prob.number_of_binary_variables,
