@@ -29,7 +29,7 @@ def init_custom_disjuncts(solve_data, config):
             "Generating initial linear GDP approximation by "
             "solving subproblems with the specified disjuncts active.")
         for orig_disj, clone_disj in zip(
-            solve_data.linear_GDP.GDPopt_utils.initial_disjuncts_list,
+            solve_data.working_model.GDPopt_utils.initial_disjuncts_list,
             linear_GDP.GDPopt_utils.initial_disjuncts_list
         ):
             if orig_disj in active_disjunct_set:
