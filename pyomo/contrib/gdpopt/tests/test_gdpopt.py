@@ -87,14 +87,24 @@ class TestGDPopt(unittest.TestCase):
                  model.use_unit_8ornot.disjuncts[0]],
                 # Use units 2, 4, 6, 8
                 [model.use_unit_1or2.disjuncts[1],
-                 model.use_unit_3ornot.disjuncts[0],
+                 model.use_unit_3ornot.disjuncts[1],
+                 model.use_unit_4or5ornot.disjuncts[0],
                  model.use_unit_6or7ornot.disjuncts[0],
                  model.use_unit_8ornot.disjuncts[0]]
             ]
+
+            def assert_correct_disjuncts_active(model, solve_data):
+                # iter_num = solve_data.subproblem_iteration
+                # disjs_should_be_active = initialize[iter_num - 1]
+                # for solve_data.orig_model
+                # model.display('nlp%s.txt' % solve_data.subproblem_iteration)
+                pass
+
             opt.solve(model, strategy='LOA', init_strategy='custom_disjuncts',
                       custom_init_disjuncts=initialize,
                       mip=required_solvers[1],
-                      nlp=required_solvers[0])
+                      nlp=required_solvers[0],
+                      subprob_postfeas=assert_correct_disjuncts_active)
 
             self.assertTrue(fabs(value(model.profit.expr) - 68) <= 1E-2)
 
