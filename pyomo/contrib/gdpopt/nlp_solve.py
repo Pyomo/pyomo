@@ -104,6 +104,10 @@ def solve_NLP(nlp_model, solve_data, config):
     # Call the NLP post-solve callback
     config.subprob_postsolve(nlp_model, solve_data)
 
+    # if feasible, call the NLP post-feasible callback
+    if nlp_feasible:
+        config.subprob_postfeas(nlp_model, solve_data)
+
     return (
         nlp_feasible,  # If solution is feasible.
         # Variable values
