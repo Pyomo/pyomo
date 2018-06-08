@@ -58,7 +58,8 @@ def init_custom_disjuncts(solve_data, config):
                 mip_var_values, solve_data, config, feasible=nlp_feasible)
         else:
             config.logger.error(
-                'Linear GDP infeasible.')
+                'Linear GDP infeasible for user-specified '
+                'custom initialization disjunct set.')
 
 
 def init_max_binaries(solve_data, config):
