@@ -124,22 +124,22 @@ def update_nlp_progress_indicators(model, solve_data, config):
     if GDPopt.objective.sense == minimize:
         solve_data.UB = min(
             value(GDPopt.objective.expr), solve_data.UB)
-        solve_data.solution_improved = (
+        solve_data.feasible_solution_improved = (
             solve_data.UB < solve_data.UB_progress[-1])
         solve_data.UB_progress.append(solve_data.UB)
     else:
         solve_data.LB = max(
             value(GDPopt.objective.expr), solve_data.LB)
-        solve_data.solution_improved = (
+        solve_data.feasible_solution_improved = (
             solve_data.LB > solve_data.LB_progress[-1])
         solve_data.LB_progress.append(solve_data.LB)
 
-    if solve_data.solution_improved:
+    if solve_data.feasible_solution_improved:
         solve_data.best_solution_found = [
             v.value for v in GDPopt.working_var_list]
 
     improvement_tag = (
-        "(IMPROVED) " if solve_data.solution_improved else "")
+        "(IMPROVED) " if solve_data.feasible_solution_improved else "")
     lb_improved, ub_improved = (
         ("", improvement_tag)
         if solve_data.objective_sense == minimize

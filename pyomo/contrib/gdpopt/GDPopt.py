@@ -38,7 +38,7 @@ from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
 from pyomo.contrib.gdpopt.nlp_solve import (solve_NLP,
                                             update_nlp_progress_indicators)
 from pyomo.contrib.gdpopt.util import (GDPoptSolveData,
-                                       _define_initial_ordered_component_lists,
+                                       build_ordered_component_lists,
                                        _DoNothing, _record_problem_statistics,
                                        a_logger, copy_var_list_values,
                                        reformulate_integer_variables,
@@ -46,6 +46,7 @@ from pyomo.contrib.gdpopt.util import (GDPoptSolveData,
 from pyomo.core.base import (Block, Constraint, ConstraintList, Expression,
                              Objective, Reals, Suffix, TransformationFactory,
                              Var, minimize, value)
+from pyomo.core.kernel import ComponentMap
 from pyomo.gdp import Disjunct
 from pyomo.opt.base import IOptSolver
 from pyomo.opt.results import ProblemSense
@@ -196,7 +197,6 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         """
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
-
         solve_data = GDPoptSolveData()
 
         old_logger_level = config.logger.getEffectiveLevel()
@@ -229,7 +229,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
             # Save ordered lists of main modeling components, so that data can
             # be easily transferred between future model clones.
-            _define_initial_ordered_component_lists(solve_data.working_model)
+            build_ordered_component_lists(solve_data.working_model)
             _record_problem_statistics(m, solve_data, config)
             solve_data.results.solver.name = 'GDPopt ' + str(self.version())
 
@@ -246,7 +246,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             self._validate_model(config, solve_data)
 
             # Maps in order to keep track of certain generated constraints
-            GDPopt.oa_cut_map = Suffix(direction=Suffix.LOCAL, datatype=None)
+            GDPopt.oa_cut_map = ComponentMap()
 
             # Integer cuts exclude particular discrete decisions
             GDPopt.integer_cuts = ConstraintList(doc='integer cuts')
@@ -280,7 +280,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
             # Flag indicating whether the solution improved in the past
             # iteration or not
-            solve_data.solution_improved = False
+            solve_data.feasible_solution_improved = False
 
             # Initialize the master problem
             self._GDPopt_initialize_master(solve_data, config)

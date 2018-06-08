@@ -4,13 +4,13 @@ from __future__ import division
 import logging
 from math import fabs, floor, log
 
+from pyomo.common.modeling import unique_component_name
 from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals, Var,
                         value)
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt.results import SolverResults
-from pyomo.common.modeling import unique_component_name
 
 
 class _DoNothing(object):
@@ -113,81 +113,54 @@ def clone_orig_model_with_lists(original_model):
 
     Also attaches ordered lists of the variables, constraints, disjuncts, and
     disjunctions to the model so that they can be used for mapping back and
-    forth
+    forth.
 
     """
-    GDPopt = original_model.GDPopt_utils
-    var_set = ComponentSet()
-    GDPopt.orig_constraints_list = list(
-        original_model.component_data_objects(
-            ctype=Constraint, active=True, descend_into=(Block, Disjunct)))
-    GDPopt.orig_disjuncts_list = list(
-        original_model.component_data_objects(
-            ctype=Disjunct, descend_into=(Block, Disjunct)))
-    GDPopt.orig_disjunctions_list = list(
-        original_model.component_data_objects(
-            ctype=Disjunction, active=True,
-            descend_into=(Disjunct, Block)))
-
-    # Identify the non-fixed variables in (potentially) active constraints
-    for constr in GDPopt.orig_constraints_list:
-        for v in EXPR.identify_variables(constr.body, include_fixed=False):
-            var_set.add(v)
-    # Disjunct indicator variables might not appear in active constraints. In
-    # fact, if we consider them Logical variables, they should not appear in
-    # active algebraic constraints. For now, they need to be added to the
-    # variable set.
-    for disj in GDPopt.orig_disjuncts_list:
-        var_set.add(disj.indicator_var)
-
-    # We use component_data_objects rather than list(var_set) in order to
-    # preserve a deterministic ordering.
-    GDPopt.orig_var_list = list(
-        v for v in original_model.component_data_objects(
-            ctype=Var, descend_into=(Block, Disjunct))
-        if v in var_set)
-    GDPopt.orig_nonlinear_constraints = [
-        v for v in GDPopt.orig_constraints_list
-        if v.body.polynomial_degree() not in (0, 1)]
-
+    build_ordered_component_lists(original_model, prefix='orig')
     return original_model.clone()
 
 
-def _define_initial_ordered_component_lists(model):
+def build_ordered_component_lists(model, prefix='working'):
     """Define lists used for future data transfer."""
     GDPopt = model.GDPopt_utils
     var_set = ComponentSet()
-    GDPopt.working_constraints_list = list(
-        model.component_data_objects(
-            ctype=Constraint, active=True, descend_into=(Block, Disjunct)))
-    GDPopt.working_disjuncts_list = list(
-        model.component_data_objects(
-            ctype=Disjunct, descend_into=(Block, Disjunct)))
-    GDPopt.working_disjunctions_list = list(
-        model.component_data_objects(
-            ctype=Disjunction, active=True,
-            descend_into=(Disjunct, Block)))
+    setattr(
+        GDPopt, '%s_constraints_list' % prefix, list(
+            model.component_data_objects(
+                ctype=Constraint, active=True,
+                descend_into=(Block, Disjunct))))
+    setattr(
+        GDPopt, '%s_disjuncts_list' % prefix, list(
+            model.component_data_objects(
+                ctype=Disjunct, descend_into=(Block, Disjunct))))
+    setattr(
+        GDPopt, '%s_disjunctions_list' % prefix, list(
+            model.component_data_objects(
+                ctype=Disjunction, active=True,
+                descend_into=(Disjunct, Block))))
 
     # Identify the non-fixed variables in (potentially) active constraints
-    for constr in GDPopt.working_constraints_list:
+    for constr in getattr(GDPopt, '%s_constraints_list' % prefix):
         for v in EXPR.identify_variables(constr.body, include_fixed=False):
             var_set.add(v)
     # Disjunct indicator variables might not appear in active constraints. In
     # fact, if we consider them Logical variables, they should not appear in
     # active algebraic constraints. For now, they need to be added to the
     # variable set.
-    for disj in GDPopt.working_disjuncts_list:
+    for disj in getattr(GDPopt, '%s_disjuncts_list' % prefix):
         var_set.add(disj.indicator_var)
 
     # We use component_data_objects rather than list(var_set) in order to
     # preserve a deterministic ordering.
-    GDPopt.working_var_list = list(
-        v for v in model.component_data_objects(
-            ctype=Var, descend_into=(Block, Disjunct))
-        if v in var_set)
-    GDPopt.working_nonlinear_constraints = [
-        v for v in GDPopt.working_constraints_list
-        if v.body.polynomial_degree() not in (0, 1)]
+    setattr(
+        GDPopt, '%s_var_list' % prefix, list(
+            v for v in model.component_data_objects(
+                ctype=Var, descend_into=(Block, Disjunct))
+            if v in var_set))
+    setattr(
+        GDPopt, '%s_nonlinear_constraints' % prefix, [
+            v for v in getattr(GDPopt, '%s_constraints_list' % prefix)
+            if v.body.polynomial_degree() not in (0, 1)])
 
 
 def _record_problem_statistics(model, solve_data, config):
@@ -207,36 +180,45 @@ def _record_problem_statistics(model, solve_data, config):
     res.solver.termination_message = None
 
     # Classify the variables
-    num_binary, num_continuous = 0, 0
-    for v in GDPopt.working_var_list:
-        if v.is_binary():
-            num_binary += 1
-        elif v.is_continuous():
-            num_continuous += 1
-        elif v.is_integer():
-            raise TypeError(
-                "GDP model has unreformulated integer variable %s"
-                % v.name)
-        else:
-            raise TypeError('Variable {0} has unknown domain of {1}'.
-                            format(v.name, v.domain))
+    orig_binary = sum(1 for v in GDPopt.orig_var_list if v.is_binary())
+    orig_continuous = sum(1 for v in GDPopt.orig_var_list if v.is_continuous())
+    orig_integer = sum(1 for v in GDPopt.orig_var_list if v.is_integer())
+    now_binary = sum(1 for v in GDPopt.working_var_list if v.is_binary())
+    now_continuous = sum(
+        1 for v in GDPopt.working_var_list if v.is_continuous())
+    now_integer = sum(1 for v in GDPopt.working_var_list if v.is_integer())
+    assert now_integer == 0, "Unreformulated, unfixed integer variables found."
 
     # Get count of constraints and variables
-    prob.number_of_constraints = len(GDPopt.working_constraints_list)
-    prob.number_of_disjunctions = len(GDPopt.working_disjunctions_list)
-    prob.number_of_variables = len(GDPopt.working_var_list)
-    prob.number_of_binary_variables = num_binary
-    prob.number_of_continuous_variables = num_continuous
-    prob.number_of_integer_variables = 0
+    prob.number_of_constraints = len(GDPopt.orig_constraints_list)
+    prob.number_of_disjunctions = len(GDPopt.orig_disjunctions_list)
+    prob.number_of_variables = len(GDPopt.orig_var_list)
+    prob.number_of_binary_variables = orig_binary
+    prob.number_of_continuous_variables = orig_continuous
+    prob.number_of_integer_variables = orig_integer
+
     config.logger.info(
-        "Problem has %s constraints (%s nonlinear) and %s disjunctions, "
-        "with %s variables, of which %s are binary and %s continuous." %
+        "Model has %s constraints (%s nonlinear) and %s disjunctions, "
+        "with %s variables, of which %s are binary, %s are integer, "
+        "and %s are continuous." %
         (prob.number_of_constraints,
-         len(GDPopt.working_nonlinear_constraints),
+         len(GDPopt.orig_nonlinear_constraints),
          prob.number_of_disjunctions,
          prob.number_of_variables,
-         prob.number_of_binary_variables,
-         prob.number_of_continuous_variables))
+         orig_binary,
+         orig_integer,
+         orig_continuous))
+
+    config.logger.info(
+        "After preprocessing, model has %s constraints (%s nonlinear) "
+        "and %s disjunctions, "
+        "with %s variables, of which %s are binary and %s are continuous." %
+        (len(GDPopt.working_constraints_list),
+         len(GDPopt.working_nonlinear_constraints),
+         len(GDPopt.working_disjunctions_list),
+         len(GDPopt.working_var_list),
+         now_binary,
+         now_continuous))
 
 
 def reformulate_integer_variables(model, config):
