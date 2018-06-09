@@ -199,7 +199,7 @@ def value(obj, exception=True):
         # works, then return the object
         #
         try:
-            as_numeric(obj)
+            check_if_numeric_type_and_cache(obj)
             return obj
         except:
             raise TypeError("Cannot evaluate object with unknown type: %s" % str(obj.__class__))
@@ -249,7 +249,7 @@ def is_constant(obj):
         pass
     try:
         # Now we need to confirm that we have an unknown numeric type
-        as_numeric(obj)
+        check_if_numeric_type_and_cache(obj)
         return True
     except:
         raise TypeError("Cannot assess properties of object with unknown type: %s" % str(obj.__class__))
@@ -271,7 +271,7 @@ def is_fixed(obj):
         pass
     try:
         # Now we need to confirm that we have an unknown numeric type
-        as_numeric(obj)
+        check_if_numeric_type_and_cache(obj)
         return True
     except:
         raise TypeError("Cannot assess properties of object with unknown type: %s" % str(obj.__class__))
@@ -319,7 +319,7 @@ def is_numeric_data(obj):
         pass
     try:
         # Now we need to confirm that we have an unknown numeric type
-        as_numeric(obj)
+        check_if_numeric_type_and_cache(obj)
         return True
     except:
         pass
@@ -341,12 +341,12 @@ def polynomial_degree(obj):
         pass
     try:
         # Now we need to confirm that we have an unknown numeric type
-        as_numeric(obj)
+        check_if_numeric_type_and_cache(obj)
         return 0
     except:
         raise TypeError("Cannot assess properties of object with unknown type: %s" % str(obj.__class__))
 
-
+#
 # It is very common to have only a few constants in a model, but those
 # constants get repeated many times.  KnownConstants lets us re-use /
 # share constants we have seen before.
@@ -424,40 +424,7 @@ def as_numeric(obj):
     # warning.
     #
     try:
-        if obj.__class__ is (obj + 0).__class__:
-            #
-            # obj may (or may not) be hashable, so we need this try
-            # block so that things proceed normally for non-hashable
-            # "numeric" types
-            #
-            retval = NumericConstant(obj)
-            try:
-                #
-                # Create the numeric constant and add to the 
-                # list of known constants.
-                #
-                # Note: we don't worry about the size of the
-                # cache here, since we need to confirm that the
-                # object is hashable.
-                #
-                _KnownConstants[obj] = retval
-                #
-                # If we get here, this is a reasonably well-behaving
-                # numeric type: add it to the native numeric types
-                # so that future lookups will be faster.
-                #
-                native_numeric_types.add(obj.__class__)
-                native_types.add(obj.__class__)
-                nonpyomo_leaf_types.add(obj.__class__)
-                #
-                # Generate a warning, since Pyomo's management of third-party
-                # numeric types is more robust when registering explicitly.
-                #
-                logger.warning(
-                    "Dynamically recognizing the following numeric type:\n    %s.\n\n  Dynamic registration is supported for convenience, but there\n  are known limitations to this approach.  We recommend explicitly registering numeric types using the \n  following functions: RegisterNumericType(), RegisterIntegerType(), RegisterBooleanType()." % str(type(obj)))
-            except:
-                pass
-            return retval
+        return check_if_numeric_type_and_cache(obj)
     except:
         pass
     #
@@ -466,6 +433,47 @@ def as_numeric(obj):
     if obj.__class__ in native_types:
         raise TypeError("Cannot treat the value '%s' as a constant" % str(obj))
     raise TypeError("Cannot treat the value '%s' as a constant because it has unknown type '%s'" % (str(obj), obj.__class__))
+
+
+def check_if_numeric_type_and_cache(obj):
+    """
+    Test if the argument is a numeric type by checking if we can add zero to it.  If
+    that works, then we cache the value and return a NumericConstant object.
+    """
+    if obj.__class__ is (obj + 0).__class__:
+        #
+        # obj may (or may not) be hashable, so we need this try
+        # block so that things proceed normally for non-hashable
+        # "numeric" types
+        #
+        retval = NumericConstant(obj)
+        try:
+            #
+            # Create the numeric constant and add to the 
+            # list of known constants.
+            #
+            # Note: we don't worry about the size of the
+            # cache here, since we need to confirm that the
+            # object is hashable.
+            #
+            _KnownConstants[obj] = retval
+            #
+            # If we get here, this is a reasonably well-behaving
+            # numeric type: add it to the native numeric types
+            # so that future lookups will be faster.
+            #
+            native_numeric_types.add(obj.__class__)
+            native_types.add(obj.__class__)
+            nonpyomo_leaf_types.add(obj.__class__)
+            #
+            # Generate a warning, since Pyomo's management of third-party
+            # numeric types is more robust when registering explicitly.
+            #
+            logger.warning(
+                "Dynamically recognizing the following numeric type:\n    %s.\n\n  Dynamic registration is supported for convenience, but there\n  are known limitations to this approach.  We recommend explicitly registering numeric types using the \n  following functions: RegisterNumericType(), RegisterIntegerType(), RegisterBooleanType()." % str(type(obj)))
+        except:
+            pass
+        return retval
 
 
 class NumericValue(object):
