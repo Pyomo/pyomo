@@ -339,11 +339,13 @@ def help_solvers():
         for s in solver_list:
             # Create a solver, and see if it is available
             with pyomo.opt.SolverFactory(s) as opt:
-                try:
-                    # Not all solvers implement the private
-                    # "_metasolver" attribute
+                # Not all solvers implement the private "_metasolver"
+                # attribute, but solvers also raise a RuntimeError when
+                # attempting to get an unknown attribute if the solver
+                # is not available.
+                if hasattr(opt, '_metasolver'):
                     _metasolver = opt._metasolver
-                except AttributeError:
+                else:
                     _metasolver = False
                 if s == 'py' or _metasolver:
                     msg = '    %-'+str(n)+'s   + %s'
