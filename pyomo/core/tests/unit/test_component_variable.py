@@ -13,7 +13,6 @@ from pyomo.core.tests.unit.test_component_tuple import \
 from pyomo.core.tests.unit.test_component_list import \
     _TestComponentListBase
 from pyomo.core.kernel.component_interface import (ICategorizedObject,
-                                                   IActiveObject,
                                                    IComponent,
                                                    IComponentContainer)
 from pyomo.core.kernel.component_parameter import parameter
