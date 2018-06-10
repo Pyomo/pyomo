@@ -29,7 +29,7 @@ class TestScriptingCommands(unittest.TestCase):
         self.assertTrue(re.search('ps +\*', OUT))
         for solver in ('ipopt','baron','cbc','glpk'):
             s = SolverFactory(solver)
-            if s.available:
+            if s.available():
                 self.assertTrue(re.search("%s +\* [a-zA-Z]" % solver, OUT))
             else:
                 self.assertTrue(re.search("%s +[a-zA-Z]" % solver, OUT))
