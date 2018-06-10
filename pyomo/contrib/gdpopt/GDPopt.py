@@ -42,7 +42,8 @@ from pyomo.contrib.gdpopt.util import (GDPoptSolveData,
                                        _DoNothing, _record_problem_statistics,
                                        a_logger, copy_var_list_values,
                                        reformulate_integer_variables,
-                                       clone_orig_model_with_lists)
+                                       clone_orig_model_with_lists,
+                                       validate_disjunctions)
 from pyomo.core.base import (Block, Constraint, ConstraintList, Expression,
                              Objective, Reals, Suffix, TransformationFactory,
                              Var, minimize, value)
@@ -393,19 +394,13 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         elif config.init_strategy == 'max_binary':
             init_max_binaries(solve_data, config)
         elif config.init_strategy == 'fixed_binary':
-            self._validate_disjunctions(solve_data, config)
+            validate_disjunctions(solve_data, config)
             self._solve_NLP_subproblem(solve_data, config)
         elif config.init_strategy == 'custom_disjuncts':
             init_custom_disjuncts(solve_data, config)
         else:
             raise ValueError('Unknown initialization strategy: %s'
                              % (config.init_strategy,))
-
-    def _validate_disjunctions(self, solve_data, config):
-        """Validate if the disjunctions are satisfied by the current values."""
-        # TODO implement this? If not, the user will simply get an infeasible
-        # return value
-        pass
 
     def _GDPopt_iteration_loop(self, solve_data, config):
         m = solve_data.working_model

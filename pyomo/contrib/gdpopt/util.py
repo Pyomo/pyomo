@@ -280,3 +280,23 @@ def reformulate_integer_variables(model, config):
         "%s binary variables and %s constraints."
         % (len(integer_vars), len(reform_block.new_binary_var),
            len(reform_block.integer_to_binary_constraint)))
+
+
+def validate_disjunctions(model, config):
+    """Validate that the active disjunctions on the model are satisfied
+    by the current disjunct indicator_var values."""
+    active_disjunctions = model.component_data_objects(
+        ctype=Disjunction, active=True, descend_into=(Block, Disjunct))
+    for disjtn in active_disjunctions:
+        sum_disj_vals = sum(disj.indicator_var.value
+                            for disj in disjtn.disjuncts)
+        if disjtn.xor and fabs(sum_disj_vals - 1) > config.integer_tolerance:
+            raise ValueError(
+                "Expected disjunct values to add up to 1 "
+                "for XOR disjunction %s. "
+                "Instead, values add up to %s." % (disjtn.name, sum_disj_vals))
+        elif sum_disj_vals + config.integer_tolerance < 1:
+            raise ValueError(
+                "Expected disjunct values to add up to at least 1 for "
+                "OR disjunction %s. "
+                "Instead, values add up to %s." % (disjtn.name, sum_disj_vals))
