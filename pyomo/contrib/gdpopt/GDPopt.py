@@ -566,37 +566,3 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         config.master_postsolve(m, solve_data)
 
         return mip_results
-
-    def _is_feasible(self, m, config, constr_tol=1E-6, var_tol=1E-8):
-        for constr in m.component_data_objects(
-                ctype=Constraint, active=True, descend_into=True):
-            # Check constraint lower bound
-            if (constr.lower is not None and (
-                value(constr.lower) - value(constr.body)
-                >= config.constraint_tolerance
-            )):
-                config.logger.info('%s: body %s < LB %s' % (
-                    constr.name, value(constr.body), value(constr.lower)))
-                return False
-            # check constraint upper bound
-            if (constr.upper is not None and (
-                value(constr.body) - value(constr.upper)
-                >= config.constraint_tolerance
-            )):
-                config.logger.info('%s: body %s > UB %s' % (
-                    constr.name, value(constr.body), value(constr.upper)))
-                return False
-        for var in m.component_data_objects(ctype=Var, descend_into=True):
-            # Check variable lower bound
-            if (var.has_lb() and
-                    value(var.lb) - value(var) >= config.variable_tolerance):
-                config.logger.info('%s: %s < LB %s' % (
-                    var.name, value(var), value(var.lb)))
-                return False
-            # Check variable upper bound
-            if (var.has_ub() and
-                    value(var) - value(var.ub) >= config.variable_tolerance):
-                config.logger.info('%s: %s > UB %s' % (
-                    var.name, value(var), value(var.ub)))
-                return False
-        return True
