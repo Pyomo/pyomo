@@ -283,34 +283,6 @@ class ICategorizedObject(object):
         if self._parent is not None:
             self._parent = weakref.ref(self._parent)
 
-@six.add_metaclass(abc.ABCMeta)
-class IActiveObject(object):
-    """
-    Interface for objects that support activate/deactivate
-    semantics.
-
-    This class is abstract.
-    """
-    __slots__ = ()
-
-    #
-    # Interface
-    #
-
-    active = _abstract_readonly_property(
-        doc=("A boolean indicating whether or "
-             "not this object is active."))
-
-    @abc.abstractmethod
-    def activate(self, *args, **kwds):
-        """Set the active attribute to :const:`True`"""
-        raise NotImplementedError     #pragma:nocover
-
-    @abc.abstractmethod
-    def deactivate(self, *args, **kwds):
-        """Set the active attribute to :const:`False`"""
-        raise NotImplementedError     #pragma:nocover
-
 class IComponent(ICategorizedObject):
     """
     Interface for components that can be stored inside
@@ -327,61 +299,6 @@ class IComponent(ICategorizedObject):
     _is_component = True
     _is_container = False
     __slots__ = ()
-
-class _ActiveComponentMixin(IActiveObject):
-    """
-    To be used as an additional base class in IComponent
-    implementations to add fuctionality for activating and
-    deactivating the component.
-
-    Any container that stores implementations of this type
-    should use _ActiveComponentContainerMixin as a base
-    class.
-
-    This class is abstract. It assumes any derived class
-    declares the attributes below at the class or instance
-    level (with or without __slots__):
-
-    Attributes:
-        _active (bool): A boolean indicating whethor or not
-            this component is active.
-    """
-    __slots__ = ()
-
-    #
-    # Interface
-    #
-
-    @property
-    def active(self):
-        """The active status of this container."""
-        return self._active
-
-    @active.setter
-    def active(self, value):
-        raise AttributeError(
-            "Assignment not allowed. Use the "
-            "(de)activate method")
-
-    def activate(self, _from_parent_=False):
-        """Activate this component."""
-        if (not self._active) and \
-           (not _from_parent_):
-            # inform the parent
-            parent = self.parent
-            if parent is not None:
-                parent._increment_active()
-        self._active = True
-
-    def deactivate(self, _from_parent_=False):
-        """Deactivate this component."""
-        if self._active and \
-           (not _from_parent_):
-            # inform the parent
-            parent = self.parent
-            if parent is not None:
-                parent._decrement_active()
-        self._active = False
 
 class IComponentContainer(ICategorizedObject):
     """
@@ -444,49 +361,21 @@ class IComponentContainer(ICategorizedObject):
         """A generator over all descendents in postfix order."""
         raise NotImplementedError     #pragma:nocover
 
-class _ActiveComponentContainerMixin(IActiveObject):
+class _ActiveObjectMixin(object):
     """
-    To be used as an additional base class in
+    To be used as an additional base class in IComponent or
     IComponentContainer implementations to add fuctionality
-    for activating and deactivating the container and its
-    children.
+    for activating and deactivating the component.
 
-    .. note::
-        This class is abstract. It assumes any derived class
-        declares the attributes below at the class or
-        instance level (with or without __slots__):
+    This class is abstract. It assumes any derived class
+    declares the attributes below at the class or instance
+    level (with or without __slots__):
 
-        Attributes:
-            _active (int): A integer that keeps track of the
-                number of active children stored under this
-                container.
+    Attributes:
+        _active (bool): A boolean indicating whethor or not
+            this component is active.
     """
     __slots__ = ()
-
-    def _increment_active(self):
-        """This method must be called any time a new active
-        child is added or any time an existing child's
-        active status changes from :const:`False` to
-        :const:`True`."""
-        assert self._active >= 0
-        if self._active == 0:
-            # the container itself is currently
-            # inactive, so activate it
-            self._active = 1
-            # this includes notifying any parent
-            # of the change in status
-            parent = self.parent
-            if parent is not None:
-                parent._increment_active()
-        self._active += 1
-
-    def _decrement_active(self):
-        """This method must be called any time an active is
-        child removed or any time an existing child's active
-        status changes from :const:`True` to
-        :const:`False`."""
-        self._active -= 1
-        assert self._active >= 1
 
     #
     # Interface
@@ -495,47 +384,30 @@ class _ActiveComponentContainerMixin(IActiveObject):
     @property
     def active(self):
         """The active status of this container."""
-        return bool(self._active)
-
+        return self._active
     @active.setter
     def active(self, value):
         raise AttributeError(
             "Assignment not allowed. Use the "
-            "(de)activate method.")
+            "(de)activate method")
 
-    def activate(self, _from_parent_=False):
-        """Activate this container. All children of this
-        container will be activated and the active flag on
-        all ancestors of this container will be set to
-        :const:`True`."""
-        assert self._active >= 0
-        if (not self.active) and \
-           (not _from_parent_):
-            # inform the parent
-            parent = self.parent
-            if parent is not None:
-                parent._increment_active()
-        # activate all children
-        self._active = 1
-        for child in self.children():
-            self._active += 1
-            if isinstance(child, IActiveObject):
-                child.activate(_from_parent_=True)
+    def activate(self, shallow=True):
+        """Activate this component."""
+        self._active = True
+        if (not shallow) and \
+           (self._is_container):
+            for child in self.children():
+                if isinstance(child, _ActiveObjectMixin):
+                    child.activate(shallow=False)
 
-    def deactivate(self, _from_parent_=False):
-        """Deactivate this container and all of its children."""
-        assert self._active >= 0
-        if self.active and \
-           (not _from_parent_):
-            # inform the parent
-            parent = self.parent
-            if parent is not None:
-                parent._decrement_active()
-        self._active = 0
-        # deactivate all children
-        for child in self.children():
-            if isinstance(child, IActiveObject):
-                child.deactivate(_from_parent_=True)
+    def deactivate(self, shallow=True):
+        """Deactivate this component."""
+        self._active = False
+        if (not shallow) and \
+           (self._is_container):
+            for child in self.children():
+                if isinstance(child, _ActiveObjectMixin):
+                    child.deactivate(shallow=False)
 
 #
 # I'm placing this class here for now to avoid
@@ -567,23 +439,11 @@ class _SimpleContainerMixin(object):
         """This method must be called any time a new child
         is inserted into this container."""
         obj._parent = weakref.ref(self)
-        # children that are not of type
-        # IActiveObject retain the active status
-        # of their parent, which is why the default
-        # return value from getattr is False
-        if getattr(obj, _active_flag_name, False):
-            self._increment_active()
 
     def _prepare_for_delete(self, obj):
         """This method must be called any time a new child
         is removed from this container."""
         obj._parent = None
-        # children that are not of type
-        # IActiveObject retain the active status
-        # of their parent, which is why the default
-        # return value from getattr is False
-        if getattr(obj, _active_flag_name, False):
-            self._decrement_active()
 
     def components(self,
                    active=None,

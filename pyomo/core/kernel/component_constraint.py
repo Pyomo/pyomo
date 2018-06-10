@@ -19,8 +19,7 @@ from pyomo.core.expr.numvalue import (ZeroConstant,
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.component_interface import \
     (IComponent,
-     _ActiveComponentMixin,
-     _ActiveComponentContainerMixin,
+     _ActiveObjectMixin,
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.kernel.component_dict import ComponentDict
@@ -34,7 +33,7 @@ from six.moves import zip
 _pos_inf = float('inf')
 _neg_inf = float('-inf')
 
-class IConstraint(IComponent, _ActiveComponentMixin):
+class IConstraint(IComponent, _ActiveObjectMixin):
     """The interface for constraints"""
     __slots__ = ()
 
@@ -811,7 +810,7 @@ class linear_constraint(_MutableBoundsConstraintMixin,
         return repn
 
 class constraint_tuple(ComponentTuple,
-                       _ActiveComponentContainerMixin):
+                       _ActiveObjectMixin):
     """A tuple-style container for constraints."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
@@ -831,7 +830,7 @@ class constraint_tuple(ComponentTuple,
         super(constraint_tuple, self).__init__(*args, **kwds)
 
 class constraint_list(ComponentList,
-                      _ActiveComponentContainerMixin):
+                      _ActiveObjectMixin):
     """A list-style container for constraints."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
@@ -851,7 +850,7 @@ class constraint_list(ComponentList,
         super(constraint_list, self).__init__(*args, **kwds)
 
 class constraint_dict(ComponentDict,
-                      _ActiveComponentContainerMixin):
+                      _ActiveObjectMixin):
     """A dict-style container for constraints."""
     # To avoid a circular import, for the time being, this
     # property will be set externally

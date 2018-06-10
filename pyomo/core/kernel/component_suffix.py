@@ -15,7 +15,7 @@ import pyutilib.math
 from pyomo.core.expr.numvalue import NumericValue
 from pyomo.core.kernel.component_interface import \
     (IComponent,
-     _ActiveComponentMixin,
+     _ActiveObjectMixin,
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.kernel.component_map import ComponentMap
@@ -37,7 +37,7 @@ _noarg = object()
 #       like IComponent instead of ComponentMap
 class suffix(ComponentMap,
              IComponent,
-             _ActiveComponentMixin):
+             _ActiveObjectMixin):
     """A container for storing extraneous model data that
     can be imported to or exported from a solver."""
     # To avoid a circular import, for the time being, this

@@ -12,8 +12,7 @@ import pyomo.core.expr
 from pyomo.core.expr.numvalue import NumericValue, value
 from pyomo.core.kernel.component_interface import \
     (IComponent,
-     _ActiveComponentMixin,
-     _ActiveComponentContainerMixin,
+     _ActiveObjectMixin,
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.kernel.component_dict import ComponentDict
@@ -45,7 +44,7 @@ _noarg = object()
 #
 
 class _MatrixConstraintData(IConstraint,
-                            _ActiveComponentMixin):
+                            _ActiveObjectMixin):
     """
     A placeholder object for linear constraints in a
     matrix_constraint container. A user should not
