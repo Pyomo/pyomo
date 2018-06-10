@@ -816,7 +816,7 @@ class NonConstantExpressionError(Exception):
         super(NonConstantExpressionError, self).__init__(*args, **kwds)
 
 
-class _ConstantEvaluationVisitor(ExpressionValueVisitor):
+class _EvaluateConstantExpressionVisitor(ExpressionValueVisitor):
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
@@ -850,8 +850,7 @@ class _ConstantEvaluationVisitor(ExpressionValueVisitor):
 
 
 def evaluate_expression(exp, exception=True, constant=False):
-    """
-    Evaluate the value of the expression.
+    """Evaluate the value of the expression.
 
     Args:
         expr: The root node of an expression tree.
@@ -861,14 +860,19 @@ def evaluate_expression(exp, exception=True, constant=False):
             occurs while evaluating the expression
             is caught and the return value is :const:`None`.
             Default is :const:`True`.
+        constant (bool): If True, constant expressions are
+            evaluated and returned but nonconstant expressions
+            raise either FixedExpressionError or
+            NonconstantExpressionError (default=False).
 
     Returns:
         A floating point value if the expression evaluates
         normally, or :const:`None` if an exception occurs
         and is caught.
+
     """
     if constant:
-        visitor = _ConstantEvaluationVisitor()
+        visitor = _EvaluateConstantExpressionVisitor()
     else:
         visitor = _EvaluationVisitor()
     try:
