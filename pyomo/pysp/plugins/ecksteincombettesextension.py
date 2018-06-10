@@ -83,12 +83,19 @@ class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
 
     def compute_updates(self, ph, subproblems, subproblem_solve_counts):
 
-        print("TOP OF COMPUTE UPDATES")
-        print("SUBPROBLEMS=",subproblems)
+        if ph._verbose:
+            print("Computing updates in Eckstein-Combettes PH extension")
+            print("Subproblems:")
+            for subproblem in subproblems:
+                print(subproblem)
+            print("")
+
         scale_factor = 1.0               # This should be a command-line parameter
 
         self._total_projection_steps += 1
-        print("Initiating projection step: %d" % self._total_projection_steps)
+
+        if ph._verbose:
+            print("Initiating projection step: %d" % self._total_projection_steps)
 
         # the first step in updating statistics is to unbundle, in order to 
         # identify the set of scenarios that we are really dealing with.
@@ -101,10 +108,11 @@ class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
             else:
                 scenarios_to_process.add(subproblem)
 
-        print("Computing updates given solutions to the following scenarios:")
-        for this_scenario in scenarios_to_process:
-            print("%s" % this_scenario)
-        print("")
+        if ph._verbose:
+            print("Computing updates given solutions to the following scenarios:")
+            for this_scenario in scenarios_to_process:
+                print("%s" % this_scenario)
+            print("")
 
         for this_scenario in scenarios_to_process:
             self._projection_step_of_last_update[this_scenario] = self._total_projection_steps
@@ -208,8 +216,9 @@ class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
         # compute phi; if greater than zero, update z and w #
         #####################################################
 
-        print("")
-        print("Initiating projection calculations...")
+        if ph._verbose:
+            print("")
+            print("Initiating projection calculations...")
 
         with open(self._JName,"a") as f:
              f.write("%10d" % (ph._current_iteration))
@@ -240,19 +249,22 @@ class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
                 f.write(", %s" % subproblem)
             f.write("\n")
 
-        print("Computed sub-phi values, by scenario:")
-        for scenario_name in sorted(sub_phi_map.keys()):
-            print("  %30s %16e" % (scenario_name, sub_phi_map[scenario_name]))
+        if ph._verbose:
+            print("Computed sub-phi values, by scenario:")
+            for scenario_name in sorted(sub_phi_map.keys()):
+                print("  %30s %16e" % (scenario_name, sub_phi_map[scenario_name]))
 
-        print("")
-        print("Computed phi:    %16e" % phi)
+            print("")
+            print("Computed phi:    %16e" % phi)
+
         if phi > 0:
             tau = 1.0 # this is the over-relaxation parameter - we need to do something more useful
             denominator = p_unorm*p_unorm + scale_factor*p_vnorm*p_vnorm
             if self._check_output :
                 print("denominator = " + str(denominator))
             theta = phi/denominator 
-            print("Computed theta: %16e" % theta)
+            if ph._verbose:
+                print("Computed theta: %16e" % theta)
             for stage in ph._scenario_tree._stages[:-1]:
                 for tree_node in stage._tree_nodes:
                     if self._check_output:
@@ -335,7 +347,8 @@ class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
 
         scalarized_norm = math.sqrt(p_unorm*p_unorm + p_vnorm*p_vnorm)
 
-        print("Computed separator norm: (%e,%e) - scalarized norm=%e" % (p_unorm, p_vnorm, scalarized_norm))
+        if ph._verbose:
+            print("Computed separator norm: (%e,%e) - scalarized norm=%e" % (p_unorm, p_vnorm, scalarized_norm))
 
         self._converger._last_computed_uv_norm_value = scalarized_norm
 
@@ -343,8 +356,9 @@ class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
 #            print("Separator norm dropped below threshold (%e,%e)" % (delta, epsilon))
 #            return
 
-        print("")
-        print("Initiating post-projection calculations...")
+        if ph._verbose:
+            print("")
+            print("Initiating post-projection calculations...")
 
         phi = 0.0
         sub_phi_to_scenario_map = {}
@@ -370,18 +384,19 @@ class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
 
             phi += cumulative_sub_phi
 
-        print("Computed sub-phi values (scenario, phi, iters-since-last-incorporated):")
-        for sub_phi in sorted(sub_phi_to_scenario_map.keys()):
-            print_("  %16e: " % sub_phi, end="")
-            for scenario_name in sub_phi_to_scenario_map[sub_phi]:
-                print("%30s %4d" % (scenario_name,
-                                    self._total_projection_steps - self._projection_step_of_last_update[scenario_name]))
+        if ph._verbose:
+            print("Computed sub-phi values (scenario, phi, iters-since-last-incorporated):")
+            for sub_phi in sorted(sub_phi_to_scenario_map.keys()):
+                print_("  %16e: " % sub_phi, end="")
+                for scenario_name in sub_phi_to_scenario_map[sub_phi]:
+                    print("%30s %4d" % (scenario_name,
+                                        self._total_projection_steps - self._projection_step_of_last_update[scenario_name]))
 
-        print("")
+            print("")
 
-        print("Computed phi: %16e" % phi)
-        with open(self._JName,"a") as f:
-            f.write("\n")
+            print("Computed phi: %16e" % phi)
+            with open(self._JName,"a") as f:
+                f.write("\n")
 
         negative_sub_phis = [sub_phi for sub_phi in sub_phi_to_scenario_map if sub_phi < 0.0]
 
@@ -395,33 +410,37 @@ class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
 
                 if ph._scenario_tree.contains_bundles():
                     # TBD: Eliminate print redundancy here.
-                    print("Queueing sub-problem=%s" % ph._scenario_tree.get_scenario_bundle(scenario_name))
+                    if ph._verbose:
+                        print("Queueing sub-problem=%s" % ph._scenario_tree.get_scenario_bundle(scenario_name))
                     self._subproblems_to_queue.append(ph._scenario_tree.get_scenario_bundle(scenario_name))
                 else:
-                    print("Queueing sub-problem=%s" % scenario_name)
+                    if ph._verbose:
+                        print("Queueing sub-problem=%s" % scenario_name)
                     self._subproblems_to_queue.append(scenario_name)
 
         else:
-            if self._queue_only_negative_subphi_subproblems:
-                print("Queueing sub-problems whose scenarios possess the most negative phi values:")
-            else:
-                print("Queueing sub-problems whose scenarios possess the smallest phi values:")
+            if ph._verbose:
+                if self._queue_only_negative_subphi_subproblems:
+                    print("Queueing sub-problems whose scenarios possess the most negative phi values:")
+                else:
+                    print("Queueing sub-problems whose scenarios possess the smallest phi values:")
             sorted_phis = sorted(sub_phi_to_scenario_map.keys())
             for phi in sorted_phis[0:ph._async_buffer_length]:
                 if ((self._queue_only_negative_subphi_subproblems) and (phi < 0.0)) or (not self._queue_only_negative_subphi_subproblems):
                     scenario_name = sub_phi_to_scenario_map[phi][0] 
-                    print_("%30s %16e" % (scenario_name,phi), end="")
+                    if ph._verbose:
+                        print_("%30s %16e" % (scenario_name,phi), end="")
 
                     # TBD: THIS IS NOT DONE - WORK ON DUPLICATE DETECTION, SO WE DON'T QUEUE SUBPROBLEMS MULTIPLE TIMES.
                     if ph._scenario_tree.contains_bundles():
-                        print("***HERE***")
                         # TBD - not properly handling lists below - fix!!!
-                        print("Queueing sub-problem=%s" % ph._scenario_tree.get_scenario_bundles(scenario_name)[0])
+                        if ph._verbose:
+                            print(" - queueing corresponding sub-problem=%s" % ph._scenario_tree.get_scenario_bundles(scenario_name)[0])
                         self._subproblems_to_queue.append(ph._scenario_tree.get_scenario_bundles(scenario_name)[0])
                     else:
-                        print("Queueing sub-problem=%s" % scenario_name)
+                        if ph._verbose:
+                            print(" - queueing corresponding sub-problem=%s" % scenario_name)
                         self._subproblems_to_queue.append(scenario_name)
-
         print("")
 
     def reset(self, ph):
@@ -478,11 +497,10 @@ class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
 
     def post_iteration_0(self, ph):
         """Called after the iteration 0 solves, averages computation, and weight computation"""
-        print("POST ITERATION 0 CALLBACK")
+        if ph._verbose:
+            print("Starting Eckstein-Combettes PH extension post iteration 0 callback")
 
         # define y and u parameters for each non-leaf variable in each scenario.
-        print("****ADDING Y, U, V, and Z PARAMETERS")
-
         for scenario in ph._scenario_tree._scenarios:
 
             scenario._y = {}
@@ -556,8 +574,9 @@ class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
         """Called right before each subproblem solve is been queued"""
 
         scenarios_to_process = []
-        
-        print("ASYNCHRONOUS PRE SCENARIO QUEUE - PROCESSING SUBPROBLEM=",subproblem_name)
+
+        if ph._verbose:
+            print("Processing subproblem=%s in asynchronous pre-queue callback" % subproblem_name)
 
         if ph._scenario_tree.contains_bundles():
             for scenario_name in ph._scenario_tree.get_bundle(subproblem_name).scenario_names:
@@ -578,9 +597,6 @@ class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
 
     def post_asynchronous_var_w_update(self, ph, subproblems, subproblem_solve_counts):
         """Called after a batch of asynchronous sub-problems are solved and corresponding statistics are updated"""
-        print("")
-        print("Computing updates in Eckstein-Combettes extension")
-        print("I AM PROCESSING THE FOLLOWING SUBPROBLEMS:",subproblems)
         self.compute_updates(ph, subproblems, subproblem_solve_counts)
 
     def post_asynchronous_solves(self, ph):

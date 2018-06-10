@@ -3767,8 +3767,6 @@ class ProgressiveHedging(_PHBase):
             subproblems_to_queue = plugin.asynchronous_subproblems_to_queue(self)
         assert(len(subproblems_to_queue)!=0)
 
-        print("SUBPROBLEMS TO QUEUE=",subproblems_to_queue)
-
         # in general, we need to track the number of subproblems queued - it may not be,
         # depending on the plugin, equal to the async buffer length.
         number_subproblems_queued = len(subproblems_to_queue)
@@ -3782,8 +3780,6 @@ class ProgressiveHedging(_PHBase):
         integrated_action_handle_bundle_map = {}
 
         # queue up the solves for all scenario sub-problems - iteration 0 is special.
-        print("ABOUT TO QUEUE SUBPROLEMS")
-        print("SUBPROBLEMS TO QUEUE=",subproblems_to_queue)
         action_handle_scenario_map, \
         scenario_action_handle_map, \
         action_handle_bundle_map, \
@@ -3798,13 +3794,11 @@ class ProgressiveHedging(_PHBase):
         while(True):
 
             # TBD - revisit the below - why are we doing anything one-at-a-time?
-            print("CALLING WAIT FOR AND PROCESS")
             solved_subproblems, failures = self.wait_for_and_process_subproblems(1, # we're doing these one at a time
                                                                                  integrated_action_handle_scenario_map,
                                                                                  {},
                                                                                  integrated_action_handle_bundle_map,
                                                                                  {})
-            print("DONE WITH CALL")
             assert(len(solved_subproblems) == 1)
 
             solved_subproblem = self._scenario_tree.get_subproblem(solved_subproblems[0])
