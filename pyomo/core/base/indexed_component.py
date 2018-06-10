@@ -20,9 +20,6 @@ from pyomo.common import DeveloperError
 from six import PY3, itervalues, iteritems, advance_iterator
 import sys
 
-import logging
-logger = logging.getLogger('pyomo.core')
-
 UnindexedComponent_set = set([None])
 
 def normalize_index(index):
@@ -755,10 +752,6 @@ You can silence this warning by one of three ways:
                 continue
 
             if hasattr(val, 'as_numeric'):
-                #
-                # Disable all logging while evaluating the expression
-                #
-                #logging.disable(logging.CRITICAL)
                 try:
                     val = EXPR.evaluate_expression(val, constant=True)
                     _found_numeric = True
@@ -794,16 +787,11 @@ meant to do, as if you later change the fixed value of the object this
 lookup will not change.  If you understand the implications of using
 fixed but not constant values, you can get the current value using the
 value() function.""" % ( self.name, i ))
-
-                except ValueError:
-                    #
-                    # There are other ways we could get an exception
-                    # such as evaluating a Param / Var that is not initialized.
-                    #
-                    raise
-
-                #finally:
-                #    logging.disable(logging.NOTSET)
+                #
+                # There are other ways we could get an exception such as
+                # evaluating a Param / Var that is not initialized.
+                # These exceptions will continue up the call stack.
+                #
 
             # verify that the value is hashable
             hash(val)
