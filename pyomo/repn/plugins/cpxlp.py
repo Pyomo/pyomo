@@ -20,7 +20,7 @@ from six import iterkeys, iteritems, StringIO
 from six.moves import xrange
 
 from pyutilib.misc import PauseGC
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
 from pyomo.core.base import \
@@ -49,8 +49,8 @@ def _get_bound(exp):
 
 class ProblemWriter_cpxlp(AbstractProblemWriter):
 
-    pyomo.util.plugin.alias('cpxlp', 'Generate the corresponding CPLEX LP file')
-    pyomo.util.plugin.alias('lp', 'Generate the corresponding CPLEX LP file')
+    pyomo.common.plugin.alias('cpxlp', 'Generate the corresponding CPLEX LP file')
+    pyomo.common.plugin.alias('lp', 'Generate the corresponding CPLEX LP file')
 
     def __init__(self):
 

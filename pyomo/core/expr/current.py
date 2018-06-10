@@ -28,8 +28,6 @@ __all__ = copy.copy(_public)
 # Provide a global value that indicates which expression system is being used
 #
 class Mode(object):
-    coopr3_trees = (1,)
-    pyomo4_trees = (2,)
     pyomo5_trees = (3,)
 mode = Mode.pyomo5_trees
 
@@ -43,7 +41,7 @@ if mode == Mode.pyomo5_trees:
     for obj in curr.__all__:
         globals()[obj] = getattr(curr, obj)
 else:
-    raise ValueError("WEH - Other expression systems aren't working right now.")    #pragma: no cover
+    raise ValueError("No other expression systems are supported in Pyomo right now.")    #pragma: no cover
 
 
 

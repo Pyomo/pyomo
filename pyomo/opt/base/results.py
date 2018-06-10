@@ -10,7 +10,7 @@
 
 __all__ = [ 'IResultsReader', 'AbstractResultsReader', 'ReaderFactory' ]
 
-from pyomo.util.plugin import *
+from pyomo.common.plugin import *
 
 
 class IResultsReader(Interface):

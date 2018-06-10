@@ -147,7 +147,7 @@ class IIdentityExpression(NumericValue):
     def _is_fixed(self, values):
         return values[0]
 
-    def create_node_with_local_data(self, values, memo=None):
+    def create_node_with_local_data(self, values):
         """
         Construct an expression after constructing the
         contained expression.
@@ -155,8 +155,6 @@ class IIdentityExpression(NumericValue):
         This class provides a consistent interface for constructing a
         node, which is used in tree visitor scripts.
         """
-        if id(self) in memo:
-            return memo[id(self)]
         return self.__class__(expr=values[0])
 
 class noclone(IIdentityExpression):
@@ -222,6 +220,10 @@ class IExpression(IComponent, IIdentityExpression):
 
     def is_constant(self):
         """A boolean indicating whether this expression is constant."""
+        return False
+
+    def is_parameter_type(self):
+        """A boolean indicating whether this expression is a parameter object."""
         return False
 
     def is_variable_type(self):

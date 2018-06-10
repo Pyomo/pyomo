@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 
 from six import iteritems, itervalues, print_
 
@@ -39,11 +39,11 @@ class EcksteinCombettesConverger(ConvergenceBase):
 
 # the primary Eckstein-Combettes extension class
 
-class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
+class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
 
-    pyomo.util.plugin.implements(phextension.IPHExtension)
+    pyomo.common.plugin.implements(phextension.IPHExtension)
 
-    pyomo.util.plugin.alias("ecksteincombettesextension")
+    pyomo.common.plugin.alias("ecksteincombettesextension")
 
     def __init__(self):
 

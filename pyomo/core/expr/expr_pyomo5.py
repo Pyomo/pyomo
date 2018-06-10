@@ -59,6 +59,7 @@ __all__ = (
 'ExpressionValueVisitor',
 'ExpressionReplacementVisitor',
 'LinearDecompositionError',
+'TemplateExpressionError',
 'SumExpressionBase',
 '_MutableSumExpression',    # This should not be referenced, except perhaps while testing code
 '_MutableLinearExpression',     # This should not be referenced, except perhaps while testing code
@@ -88,7 +89,7 @@ logger = logging.getLogger('pyomo.core')
 from pyutilib.misc.visitor import SimpleVisitor, ValueVisitor
 from pyutilib.math.util import isclose
 
-from pyomo.util.deprecation import deprecation_warning
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.expr.numvalue import \
     (NumericValue,
@@ -106,6 +107,14 @@ from pyomo.core.expr.expr_common import \
      _imul, _idiv, _ipow, _lt, _le,
      _eq)
 from pyomo.core.expr import expr_common as common
+
+
+class TemplateExpressionError(ValueError):
+
+    def __init__(self, template, *args, **kwds):
+        self.template = template
+        super(TemplateExpressionError, self).__init__(*args, **kwds)
+
 
 
 if _using_chained_inequality:               #pragma: no cover
@@ -147,23 +156,6 @@ if _using_chained_inequality:               #pragma: no cover
 
 else:                               #pragma: no cover
     _chainedInequality = None
-
-
-_ParamData = None
-SimpleParam = None
-TemplateExpressionError = None
-def initialize_expression_data():
-    """
-    A function used to initialize expression global data.
-
-    This function is necessary to avoid global imports.  It is executed
-    when ``pyomo.environ`` is imported.
-    """
-    global _ParamData
-    global SimpleParam
-    global TemplateExpressionError
-    from pyomo.core.base.param import _ParamData, SimpleParam
-    from pyomo.core.base.template_expr import TemplateExpressionError
 
 
 class clone_counter(object):
@@ -501,7 +493,10 @@ class ExpressionReplacementVisitor(object):
         class because all key methods are reimplemented.
     """
 
-    def __init__(self, memo=None):
+    def __init__(self,
+                 substitute=None,
+                 descend_into_named_expressions=True,
+                 remove_named_expressions=False):
         """
         Contruct a visitor that is tailored to support the
         replacement of sub-trees in a pyomo expression tree.
@@ -513,10 +508,12 @@ class ExpressionReplacementVisitor(object):
                 to None, which indicates that no user-defined
                 dictionary is used.
         """
-        if memo is None:
-            self.memo = {'__block_scope__': { id(None): False }}
+        self.enter_named_expr = descend_into_named_expressions
+        self.rm_named_expr = remove_named_expressions
+        if substitute is None:
+            self.substitute = {}
         else:
-            self.memo = memo        #pragma: no cover
+            self.substitute = substitute
 
     def visit(self, node, values):
         """
@@ -553,7 +550,15 @@ class ExpressionReplacementVisitor(object):
             then the node is not a leaf and ``value`` is :const:`None`.
             Otherwise, ``value`` is a cloned node.
         """
-        raise RuntimeError("The visiting_potential_leaf method needs to be defined.")
+        _id = id(node)
+        if _id in self.substitute:
+            return True, self.substitute[_id]
+        elif type(node) in nonpyomo_leaf_types or not node.is_expression_type():
+            return True, node
+        elif not self.enter_named_expr and node.is_named_expression_type():
+            return True, node
+        else:
+            return False, None
 
     def finalize(self, ans):
         """
@@ -578,7 +583,7 @@ class ExpressionReplacementVisitor(object):
         """
         Call the expression create_node_with_local_data() method.
         """
-        return node.create_node_with_local_data( tuple(values), self.memo )
+        return node.create_node_with_local_data( tuple(values) )
 
     def dfs_postorder_stack(self, node):
         """
@@ -605,14 +610,13 @@ class ExpressionReplacementVisitor(object):
             which may be defined by the user.
         """
         if node.__class__ is LinearExpression:
-            _argList                = [node.constant] + node.linear_coefs + node.linear_vars
-            _len                    = len(_argList)
+            _argList = [node.constant] + node.linear_coefs + node.linear_vars
+            _len = len(_argList)
             _stack = [ (node, _argList, 0, _len, [False])]
         else:
             flag, value = self.visiting_potential_leaf(node)
             if flag:
                 return value
-            #_stack = [ (node, self.children(node), 0, len(self.children(node)), [])]
             _stack = [ (node, node._args_, 0, node.nargs(), [False])]
         #
         # Iterate until the stack is empty
@@ -630,41 +634,33 @@ class ExpressionReplacementVisitor(object):
             #
             _obj, _argList, _idx, _len, _result = _stack.pop()
             #
-            # Iterate through the arguments
+            # Iterate through the arguments, entering each one
             #
             while _idx < _len:
                 _sub = _argList[_idx]
                 _idx += 1
-                if _sub.__class__ is LinearExpression:
-                        #
-                        # Push an expression onto the stack
-                        #
-                        _stack.append( (_obj, _argList, _idx, _len, _result) )
-                        _obj                    = _sub
-                        #_argList                = self.children(_sub)
-                        _argList                = [_sub.constant] + _sub.linear_coefs + _sub.linear_vars
-                        _idx                    = 0
-                        _len                    = len(_argList)
-                        _result                 = [False]
+                flag, value = self.visiting_potential_leaf(_sub)
+                if flag:
+                    if id(value) != id(_sub):
+                        _result[0] = True
+                    _result.append( value )
                 else:
-                    flag, value = self.visiting_potential_leaf(_sub)
-                    if flag:
-                        if id(value) != id(_sub):
-                            _result[0] = True
-                        _result.append( value )
+                    #
+                    # Push an expression onto the stack
+                    #
+                    _stack.append( (_obj, _argList, _idx, _len, _result) )
+                    _obj = _sub
+                    _idx = 0
+                    _result = [False]
+                    if _sub.__class__ is LinearExpression:
+                        _argList = [_sub.constant] + _sub.linear_coefs \
+                                   + _sub.linear_vars
+                        _len = len(_argList)
                     else:
-                        #
-                        # Push an expression onto the stack
-                        #
-                        _stack.append( (_obj, _argList, _idx, _len, _result) )
-                        _obj                    = _sub
-                        #_argList                = self.children(_sub)
-                        _argList                = _sub._args_
-                        _idx                    = 0
-                        _len                    = _sub.nargs()
-                        _result                 = [False]
+                        _argList = _sub._args_
+                        _len = _sub.nargs()
             #
-            # Process the current node
+            # Finalize (exit) the current node
             #
             # If the user has defined a visit() function in a
             # subclass, then call that function.  But if the user
@@ -673,30 +669,39 @@ class ExpressionReplacementVisitor(object):
             #
             ans = self.visit(_obj, _result[1:])
             if ans.is_named_expression_type():
-                _result[0] = False
-                assert(len(_result) == 2)
-                ans.expr = _result[1]
-            elif ans.__class__ is LinearExpression and _result[0]:
-                ans = _result[1]
-                nterms = (len(_result)-2)//2
-                for i in range(nterms):
-                    ans += _result[2+i]*_result[2+i+nterms]
+                if self.rm_named_expr:
+                    ans = _result[1]
+                    _result[0] = True
+                else:
+                    _result[0] = False
+                    assert(len(_result) == 2)
+                    ans.expr = _result[1]
             elif _result[0]:
+                if ans.__class__ is LinearExpression:
+                    ans = _result[1]
+                    nterms = (len(_result)-2)//2
+                    for i in range(nterms):
+                        ans += _result[2+i]*_result[2+i+nterms]
                 if id(ans) == id(_obj):
                     ans = self.construct_node(_obj, _result[1:])
                 if ans.__class__ is MonomialTermExpression:
-                    if (not ans._args_[0].__class__ in native_numeric_types and ans._args_[0].is_potentially_variable) or \
-                       (ans._args_[1].__class__ in native_numeric_types or not ans._args_[1].is_potentially_variable()):
+                    if ( ( ans._args_[0].__class__ not in native_numeric_types
+                           and ans._args_[0].is_potentially_variable )
+                         or
+                         ( ans._args_[1].__class__ in native_numeric_types
+                           or not ans._args_[1].is_potentially_variable() ) ):
                         ans.__class__ = ProductExpression
                 elif ans.__class__ in NPV_expression_types:
                     # For simplicity, not-potentially-variable expressions are
                     # replaced with their potentially variable counterparts.
                     ans = ans.create_potentially_variable_object()
+
             if _stack:
                 if _result[0]:
                     _stack[-1][-1][0] = True
                 #
-                # "return" the recursion by putting the return value on the end of the results stack
+                # "return" the recursion by putting the return value on
+                # the end of the results stack
                 #
                 _stack[-1][-1].append( ans )
             else:
@@ -713,82 +718,30 @@ class ExpressionReplacementVisitor(object):
 #  clone_expression
 # =====================================================
 
-class _CloneVisitor(ExpressionValueVisitor):
-
-    def __init__(self, clone_leaves=False, memo=None):
-        self.clone_leaves = clone_leaves
-        self.memo = memo
-
-    def visit(self, node, values):
-        """ Visit nodes that have been expanded """
-        return node.create_node_with_local_data( tuple(values), self.memo )
-
-    def visiting_potential_leaf(self, node):
-        """
-        Visiting a potential leaf.
-
-        Return True if the node is not expanded.
-        """
-        if node.__class__ in nonpyomo_leaf_types:
-            #
-            # Store a native or numeric object
-            #
-            return True, deepcopy(node, self.memo)
-
-        if not node.is_expression_type():
-            #
-            # Store a leave object that is cloned
-            #
-            if self.clone_leaves:
-                return True, deepcopy(node, self.memo)
-            else:
-                return True, node
-
-        if not self.clone_leaves and node.is_named_expression_type():
-            #
-            # If we are not cloning leaves, then
-            # we don't copy the expression tree for a
-            # named expression.
-            #
-            return True, node
-
-        return False, None
-
-
-def clone_expression(expr, memo=None, clone_leaves=True):
+def clone_expression(expr, substitute=None):
     """A function that is used to clone an expression.
 
-    Cloning is roughly equivalent to calling ``copy.deepcopy``.
-    However, the :attr:`clone_leaves` argument can be used to
-    clone only interior (i.e. non-leaf) nodes in the expression
-    tree.   Note that named expression objects are treated as
-    leaves when :attr:`clone_leaves` is :const:`True`, and hence
-    those subexpressions are not cloned.
-
-    This function uses a non-recursive
-    logic, which makes it more scalable than the logic in
-    ``copy.deepcopy``.
+    Cloning is equivalent to calling ``copy.deepcopy`` with no Block
+    scope.  That is, the expression tree is duplicated, but no Pyomo
+    components (leaf nodes *or* named Expressions) are duplicated.
 
     Args:
         expr: The expression that will be cloned.
-        memo (dict): A dictionary mapping object ids to
-            objects.  This dictionary has the same semantics as
-            the memo object used with ``copy.deepcopy``.  Defaults
+        substitute (dict): A dictionary mapping object ids to
+            objects. This dictionary has the same semantics as
+            the memo object used with ``copy.deepcopy``. Defaults
             to None, which indicates that no user-defined
             dictionary is used.
-        clone_leaves (bool): If True, then leaves are
-            cloned along with the rest of the expression.
-            Defaults to :const:`True`.
 
     Returns:
         The cloned expression.
+
     """
     clone_counter._count += 1
-    if not memo:
-        memo = {'__block_scope__': { id(None): False }}
-    #
-    visitor = _CloneVisitor(clone_leaves=clone_leaves, memo=memo)
-    return visitor.dfs_postorder_stack(expr)
+    memo = {'__block_scope__': {id(None): False}}
+    if substitute:
+        memo.update(substitute)
+    return deepcopy(expr, memo)
 
 
 # =====================================================
@@ -1147,7 +1100,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
         return False, None
 
 
-def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_values=False, standardize=False):
+def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_values=False):
     """
     Return a string representation of an expression.
 
@@ -1163,48 +1116,11 @@ def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_va
         compute_values (bool): If :const:`True`, then
             parameters and fixed variables are evaluated before the
             expression string is generated.  Default is :const:`False`.
-        standardize (bool): If :const:`True` and :attr:`verbose` is :const:`False`, then the
-            expression form is standardized to pull out constant and linear terms.
-            Default is :const:`False`.
 
     Returns:
         A string representation for the expression.
     """
     verbose = common.TO_STRING_VERBOSE if verbose is None else verbose
-    #
-    # Standardize the output of expressions if requested (when verbose=False).
-    # This involves constructing a standard representation and then creating
-    # a string.
-    #
-    if standardize and not verbose:
-        from pyomo.repn import generate_standard_repn
-        try:
-            if expr.__class__ is EqualityExpression:
-                repn0 = generate_standard_repn(expr._args_[0], quadratic=True, compute_values=compute_values)
-                repn1 = generate_standard_repn(expr._args_[1], quadratic=True, compute_values=compute_values)
-                expr = EqualityExpression( (repn0.to_expression(), repn1.to_expression()) )
-            elif expr.__class__ is InequalityExpression:
-                repn0 = generate_standard_repn(expr._args_[0], quadratic=True, compute_values=compute_values)
-                repn1 = generate_standard_repn(expr._args_[1], quadratic=True, compute_values=compute_values)
-                expr = InequalityExpression( (repn0.to_expression(), repn1.to_expression()), strict=expr._strict )
-            elif expr.__class__ is RangedExpression:
-                repn0 = generate_standard_repn(expr._args_[0], quadratic=True, compute_values=compute_values)
-                repn1 = generate_standard_repn(expr._args_[1], quadratic=True, compute_values=compute_values)
-                repn2 = generate_standard_repn(expr._args_[2], quadratic=True, compute_values=compute_values)
-                expr = RangedExpression( (repn0.to_expression(), repn1.to_expression(), repn2.to_expression()), strict=expr._strict )
-            else:
-                repn = generate_standard_repn(expr, quadratic=True, compute_values=compute_values)
-                expr = repn.to_expression()
-        except:     #pragma: no cover
-            #
-            # Generation of the standard repn will fail if the
-            # expression is uninitialized.  Hence, we default to
-            # using the non-standardized form.
-            #
-            # It might be smarter to raise errors for specific issues (e.g. uninitialized parameters).
-            # Let's see if we start seeing errors that are masked here.
-            #
-            pass
     #
     # Setup the symbol map
     #
@@ -1345,7 +1261,7 @@ class ExpressionBase(NumericValue):
         Returns:
             A string.
         """
-        return expression_to_string(self, standardize=False)
+        return expression_to_string(self)
 
     def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         """
@@ -1435,24 +1351,9 @@ class ExpressionBase(NumericValue):
         Returns:
             A new expression tree.
         """
-        return clone_expression(self, memo=substitute, clone_leaves=False)
+        return clone_expression(self, substitute=substitute)
 
-    def X__deepcopy__(self, memo):
-        """
-        Return a clone of the expression tree.
-
-        Note:
-            This method clones the leaves of the tree.
-        Args:
-            memo (dict): a dictionary that maps object ids to clone
-                objects generated earlier during the cloning process.
-
-        Returns:
-            A new expression tree.
-        """
-        return clone_expression(self, memo=memo, clone_leaves=True)
-
-    def create_node_with_local_data(self, args, memo):
+    def create_node_with_local_data(self, args):
         """
         Construct a node using given arguments.
 
@@ -1728,7 +1629,7 @@ class ExternalFunctionExpression(ExpressionBase):
     def nargs(self):
         return len(self._args_)
 
-    def create_node_with_local_data(self, args, memo):
+    def create_node_with_local_data(self, args):
         return self.__class__(args, self._fcn)
 
     def __getstate__(self):
@@ -1955,7 +1856,7 @@ class RangedExpression(_LinearOperatorExpression):
     def nargs(self):
         return 3
 
-    def create_node_with_local_data(self, args, memo):
+    def create_node_with_local_data(self, args):
         return self.__class__(args, self._strict)
 
     def __getstate__(self):
@@ -2027,7 +1928,7 @@ class InequalityExpression(_LinearOperatorExpression):
     def nargs(self):
         return 2
 
-    def create_node_with_local_data(self, args, memo):
+    def create_node_with_local_data(self, args):
         return self.__class__(args, self._strict)
 
     def __getstate__(self):
@@ -2254,7 +2155,7 @@ class SumExpression(SumExpressionBase):
     def _apply_operation(self, result):
         return sum(result)
 
-    def create_node_with_local_data(self, args, memo):
+    def create_node_with_local_data(self, args):
         return self.__class__(list(args))
 
     def __getstate__(self):
@@ -2347,7 +2248,7 @@ class GetItemExpression(ExpressionBase):
     def nargs(self):
         return len(self._args_)
 
-    def create_node_with_local_data(self, args, memo):
+    def create_node_with_local_data(self, args):
         return self.__class__(args, self._base)
 
     def __getstate__(self):
@@ -2377,12 +2278,9 @@ class GetItemExpression(ExpressionBase):
         return True
 
     def _is_fixed(self, values):
-        from pyomo.core.base import Var # TODO
-        from pyomo.core.kernel.component_variable import IVariable # TODO
-        if isinstance(self._base, (Var, IVariable)):
-            for x in itervalues(self._base):
-                if not x.__class__ in nonpyomo_leaf_types and not x.is_fixed():
-                    return False
+        for x in itervalues(self._base):
+            if not x.__class__ in nonpyomo_leaf_types and not x.is_fixed():
+                return False
         return True
 
     def _compute_polynomial_degree(self, result):       # TODO: coverage
@@ -2514,7 +2412,7 @@ class UnaryFunctionExpression(ExpressionBase):
     def nargs(self):
         return 1
 
-    def create_node_with_local_data(self, args, memo):
+    def create_node_with_local_data(self, args):
         return self.__class__(args, self._name, self._fcn)
 
     def __getstate__(self):
@@ -2565,7 +2463,7 @@ class AbsExpression(UnaryFunctionExpression):
     def __init__(self, arg):
         super(AbsExpression, self).__init__(arg, 'abs', abs)
 
-    def create_node_with_local_data(self, args, memo):
+    def create_node_with_local_data(self, args):
         return self.__class__(args)
 
 
@@ -2590,9 +2488,18 @@ class LinearExpression(ExpressionBase):
     PRECEDENCE = 6
 
     def __init__(self, args=None):
-        self.constant = 0
-        self.linear_coefs = []
-        self.linear_vars = []
+        # I am not sure why LinearExpression allows omitting args, but
+        # it does.  If they are provided, they should be the constant
+        # followed by the coefficients followed by the variables.
+        if args:
+            self.constant = args[0]
+            n = (len(args)-1) // 2
+            self.linear_coefs = args[1:n+1]
+            self.linear_vars = args[n+1:]
+        else:
+            self.constant = 0
+            self.linear_coefs = []
+            self.linear_vars = []
         self._args_ = tuple()
 
     def nargs(self):
@@ -2607,15 +2514,8 @@ class LinearExpression(ExpressionBase):
            state[i] = getattr(self,i)
         return state
 
-    def X__deepcopy__(self, memo):
-        return self.create_node_with_local_data(None, memo)
-
-    def create_node_with_local_data(self, args, memo):
-        repn = self.__class__()
-        repn.constant = deepcopy(self.constant, memo=memo)
-        repn.linear_coefs = deepcopy(self.linear_coefs, memo=memo)
-        repn.linear_vars = deepcopy(self.linear_vars, memo=memo)
-        return repn
+    def create_node_with_local_data(self, args):
+        return self.__class__(args)
 
     def getname(self, *args, **kwds):
         return 'sum'
@@ -2898,37 +2798,22 @@ def _decompose_linear_terms(expr, multiplier=1):
 
 
 def _process_arg(obj):
-    #if False and obj.__class__ is SumExpression or obj.__class__ is _MutableSumExpression:
-    #    if ignore_entangled_expressions.detangle[-1] and obj._is_owned:
-            #
-            # If the viewsum expression is owned, then we need to
-            # clone it to avoid creating an entangled expression.
-            #
-            # But we don't have to worry about entanglement amongst other immutable
-            # expression objects.
-            #
-    #        return clone_expression( obj, clone_leaves=False )
-    #    return obj
-
-    #if obj.is_expression_type():
-    #    return obj
-
     if obj.__class__ is NumericConstant:
         return value(obj)
 
-    if (obj.__class__ is _ParamData or obj.__class__ is SimpleParam) and not obj._component()._mutable:
-        if not obj._constructed:
-            return obj
-        return obj()
-
-    if obj.is_indexed():
-        raise TypeError(
-                "Argument for expression is an indexed numeric "
-                "value\nspecified without an index:\n\t%s\nIs this "
-                "value defined over an index that you did not specify?"
-                % (obj.name, ) )
-
-    return obj
+    try:
+        if obj.is_parameter_type() and not obj._component()._mutable and obj._constructed:
+            # Return the value of an immutable SimpleParam or ParamData object
+            return obj()
+        return obj
+    except:
+        if obj.is_indexed():
+            raise TypeError(
+                    "Argument for expression is an indexed numeric "
+                    "value\nspecified without an index:\n\t%s\nIs this "
+                    "value defined over an index that you did not specify?"
+                    % (obj.name, ) )
+        raise
 
 
 #@profile

@@ -1,0 +1,2 @@
+def obj_expression(model):
+    return summation(model.c, model.x)

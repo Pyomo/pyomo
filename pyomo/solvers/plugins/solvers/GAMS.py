@@ -8,15 +8,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import StringIO, iteritems, itervalues
+from six import StringIO, iteritems
 from tempfile import mkdtemp
 import os, sys, math, logging, shutil, time
 
-from pyomo.core.base import (Constraint, Suffix, Var, value,
-                             Expression, Objective)
+from pyomo.core.base import Constraint, Var, value, Objective
 from pyomo.opt import ProblemFormat, SolverFactory
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.opt.base import IOptSolver
 import pyutilib.services
 
@@ -37,18 +36,18 @@ logger = logging.getLogger('pyomo.solvers')
 
 pyutilib.services.register_executable(name="gams")
 
-class GAMSSolver(pyomo.util.plugin.Plugin):
+class GAMSSolver(pyomo.common.plugin.Plugin):
     """
-    A generic interface to GAMS solvers
+    A generic interface to GAMS solvers.
 
     Pass solver_io keyword arg to SolverFactory to choose solver mode:
         solver_io='direct' or 'python' to use GAMS Python API
-            Requires installation, visit https://www.gams.com for help.
+            Requires installation, visit Python API page on gams.com for help.
         solver_io='shell' or 'gms' to use command line to call gams
             Requires the gams executable be on your system PATH.
     """
-    pyomo.util.plugin.implements(IOptSolver)
-    pyomo.util.plugin.alias('gams', doc='The GAMS modeling language')
+    pyomo.common.plugin.implements(IOptSolver)
+    pyomo.common.plugin.alias('gams', doc='The GAMS modeling language')
 
     def __new__(cls, *args, **kwds):
         try:
@@ -68,10 +67,14 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
             return
 
 
-class GAMSDirect(pyomo.util.plugin.Plugin):
-    """A generic interface to GAMS solvers"""
-    pyomo.util.plugin.implements(IOptSolver)
-    pyomo.util.plugin.alias('_gams_direct', doc='The GAMS modeling language')
+class GAMSDirect(pyomo.common.plugin.Plugin):
+    """
+    A generic python interface to GAMS solvers.
+
+    Visit Python API page on gams.com for installation help.
+    """
+    pyomo.common.plugin.implements(IOptSolver)
+    pyomo.common.plugin.alias('_gams_direct', doc='The GAMS modeling language')
 
     def __init__(self, **kwds):
         self._version = None
@@ -87,10 +90,10 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
 
         self.options = Options() # ignored
 
-        pyomo.util.plugin.Plugin.__init__(self, **kwds)
+        pyomo.common.plugin.Plugin.__init__(self, **kwds)
 
     def available(self, exception_flag=True):
-        """True if the solver is available"""
+        """True if the solver is available."""
         try:
             from gams import GamsWorkspace, DebugLevel
             return True
@@ -103,9 +106,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                                   "GAMS message: %s" % e)
 
     def _get_version(self):
-        """
-        Returns a tuple describing the solver executable version.
-        """
+        """Returns a tuple describing the solver executable version."""
         if not self.available(exception_flag=False):
             return _extract_version('')
         from gams import GamsWorkspace
@@ -117,14 +118,13 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         return version
 
     def version(self):
-        """
-        Returns a 4-tuple describing the solver executable version.
-        """
+        """Returns a 4-tuple describing the solver executable version."""
         if self._version is None:
             self._version = self._get_version()
         return self._version
 
     def warm_start_capable(self):
+        """True is the solver can accept a warm-start solution."""
         return True
 
     def default_variable_value(self):
@@ -132,53 +132,30 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
 
     def solve(self, *args, **kwds):
         """
-        Uses GAMS Python API. Visit https://www.gams.com for installation help.
+        Solve a model via the GAMS Python API.
 
-        tee=False:
+        Keyword Arguments
+        -----------------
+        tee=False: bool
             Output GAMS log to stdout.
-        logfile=None:
-            Optionally a logfile can be written.
-        load_solutions=True:
-            Optionally skip loading solution into model, in which case
-            the results object will contain the solution data.
-        keepfiles=False:
+        logfile=None: str
+            Filename to output GAMS log to a file.
+        load_solutions=True: bool
+            Load solution into model. If False, the results
+            object will contain the solution data.
+        keepfiles=False: bool
             Keep temporary files. Equivalent of DebugLevel.KeepFiles.
             Summary of temp files can be found in _gams_py_gjo0.pf
-        tmpdir=None:
+        tmpdir=None: str
             Specify directory path for storing temporary files.
             A directory will be created if one of this name doesn't exist.
-            None (default) uses the system default temporary path.
-        report_timing=False:
+            By default uses the system default temporary path.
+        report_timing=False: bool
             Print timing reports for presolve, solver, postsolve, etc.
-        io_options:
-            Updated with additional keywords passed to solve()
-            warmstart=False:
-                Warmstart by initializing model's variables to their values.
-            symbolic_solver_labels=False:
-                Use full Pyomo component names rather than
-                shortened symbols (slower, but useful for debugging).
-            labeler=None:
-                Custom labeler option. Incompatible with symbolic_solver_labels.
-            solver=None:
-                If None, GAMS will use default solver for model type.
-            mtype=None:
-                Model type. If None, will chose from lp, nlp, mip, and minlp.
-            add_options=None:
-                List of additional lines to write directly
-                into model file before the solve statement.
-                For model attributes, <model name> is GAMS_MODEL.
-            skip_trivial_constraints=False:
-                Skip writing constraints whose body section is fixed
-            file_determinism=1:
-                How much effort do we want to put into ensuring the
-                GAMS file is written deterministically for a Pyomo model:
-                   0 : None
-                   1 : sort keys of indexed components (default)
-                   2 : sort keys AND sort names (over declaration order)
-            put_results=None:
-                Filename for optionally writing solution values and
-                marginals to (put_results).dat, and solver statuses
-                to (put_results + 'stat').dat.
+        io_options: dict
+            Options that get passed to the writer.
+            See writer in pyomo.repn.plugins.gams_writer for details.
+            Updated with any other keywords passed to solve method.
         """
 
         # Make sure available() doesn't crash
@@ -544,10 +521,10 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         return results
 
 
-class GAMSShell(pyomo.util.plugin.Plugin):
-    """A generic interface to GAMS solvers"""
-    pyomo.util.plugin.implements(IOptSolver)
-    pyomo.util.plugin.alias('_gams_shell', doc='The GAMS modeling language')
+class GAMSShell(pyomo.common.plugin.Plugin):
+    """A generic shell interface to GAMS solvers."""
+    pyomo.common.plugin.implements(IOptSolver)
+    pyomo.common.plugin.alias('_gams_shell', doc='The GAMS modeling language')
 
     def __init__(self, **kwds):
         self._version = None
@@ -563,10 +540,10 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         self.options = Options() # ignored
 
-        pyomo.util.plugin.Plugin.__init__(self, **kwds)
+        pyomo.common.plugin.Plugin.__init__(self, **kwds)
 
     def available(self, exception_flag=True):
-        """True if the solver is available"""
+        """True if the solver is available."""
         exe = pyutilib.services.registered_executable("gams")
         if exception_flag is False:
             return exe is not None
@@ -588,15 +565,11 @@ class GAMSShell(pyomo.util.plugin.Plugin):
         return executable.get_path()
 
     def executable(self):
-        """
-        Returns the executable used by this solver.
-        """
+        """Returns the executable used by this solver."""
         return self._default_executable()
 
     def _get_version(self):
-        """
-        Returns a tuple describing the solver executable version.
-        """
+        """Returns a tuple describing the solver executable version."""
         solver_exec = self.executable()
 
         if solver_exec is None:
@@ -606,14 +579,13 @@ class GAMSShell(pyomo.util.plugin.Plugin):
             return _extract_version(results[1])
 
     def version(self):
-        """
-        Returns a 4-tuple describing the solver executable version.
-        """
+        """Returns a 4-tuple describing the solver executable version."""
         if self._version is None:
             self._version = self._get_version()
         return self._version
 
     def warm_start_capable(self):
+        """True is the solver can accept a warm-start solution."""
         return True
 
     def default_variable_value(self):
@@ -621,50 +593,31 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
     def solve(self, *args, **kwds):
         """
-        Uses command line to call GAMS.
+        Solve a model via the GAMS executable.
 
-        tee=False:
+        Keyword Arguments
+        -----------------
+        tee=False: bool
             Output GAMS log to stdout.
-        logfile=None:
-            Optionally a logfile can be written.
-        load_solutions=True:
-            Optionally skip loading solution into model, in which case
-            the results object will contain the solution data.
-        keepfiles=False:
+        logfile=None: str
+            Filename to output GAMS log to a file.
+        load_solutions=True: bool
+            Load solution into model. If False, the results
+            object will contain the solution data.
+        keepfiles=False: bool
             Keep temporary files.
-        tmpdir=None:
+        tmpdir=None: str
             Specify directory path for storing temporary files.
             A directory will be created if one of this name doesn't exist.
-            None (default) uses the system default temporary path.
-        report_timing=False:
+            By default uses the system default temporary path.
+        report_timing=False: bool
             Print timing reports for presolve, solver, postsolve, etc.
-        io_options:
-            Updated with additional keywords passed to solve()
-            warmstart=False:
-                Warmstart by initializing model's variables to their values.
-            symbolic_solver_labels=False:
-                Use full Pyomo component names rather than
-                shortened symbols (slower, but useful for debugging).
-            labeler=None:
-                Custom labeler. Incompatible with symbolic_solver_labels.
-            solver=None:
-                If None, GAMS will use default solver for model type.
-            mtype=None:
-                Model type. If None, will chose from lp, nlp, mip, and minlp.
-            add_options=None:
-                List of additional lines to write directly
-                into model file before the solve statement.
-                For model attributes, <model name> is GAMS_MODEL.
-            skip_trivial_constraints=False:
-                Skip writing constraints whose body section is fixed
-            file_determinism=1:
-                How much effort do we want to put into ensuring the
-                GAMS file is written deterministically for a Pyomo model:
-                   0 : None
-                   1 : sort keys of indexed components (default)
-                   2 : sort keys AND sort names (over declaration order)
-            put_results='results':
-                Not available for modification on GAMSShell solver.
+        io_options: dict
+            Options that get passed to the writer.
+            See writer in pyomo.repn.plugins.gams_writer for details.
+            Updated with any other keywords passed to solve method.
+            Note: put_results is not available for modification on
+            GAMSShell solver.
         """
 
         # Make sure available() doesn't crash
@@ -711,12 +664,15 @@ class GAMSShell(pyomo.util.plugin.Plugin):
             os.makedirs(tmpdir)
             newdir = True
 
-        output_filename = os.path.join(tmpdir, 'model.gms')
-        lst_filename = os.path.join(tmpdir, 'output.lst')
-        statresults_filename = os.path.join(tmpdir, 'resultsstat.dat')
+        output = "model.gms"
+        output_filename = os.path.join(tmpdir, output)
+        lst = "output.lst"
+        lst_filename = os.path.join(tmpdir, lst)
 
-        io_options['put_results'] = os.path.join(tmpdir, 'results')
-        results_filename = os.path.join(tmpdir, 'results.dat')
+        put_results = "results"
+        io_options["put_results"] = put_results
+        results_filename = os.path.join(tmpdir, put_results + ".dat")
+        statresults_filename = os.path.join(tmpdir, put_results + "stat.dat")
 
         if isinstance(model, IBlockStorage):
             # Kernel blocks have slightly different write method
@@ -741,7 +697,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
         ####################################################################
 
         exe = self.executable()
-        command = [exe, output_filename, 'o=' + lst_filename]
+        command = [exe, output, "o=" + lst, "curdir=" + tmpdir]
         if tee and not logfile:
             # default behaviour of gams is to print to console, for
             # compatability with windows and *nix we want to explicitly log to
@@ -1141,7 +1097,7 @@ def check_expr(expr, name, solver_io):
     # Used to handle log and log10 violations, for example
     try:
         value(expr)
-    except ValueError:
+    except (ValueError, ZeroDivisionError):
         logger.warning("While evaluating model.%s's expression, GAMS solver "
                        "encountered an error.\nGAMS requires that all "
                        "equations and expressions evaluate at initial values.\n"

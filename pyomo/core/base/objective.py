@@ -21,7 +21,7 @@ import logging
 from weakref import ref as weakref_ref
 import inspect
 
-from pyomo.util.timing import ConstructionTimer
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import as_numeric, value
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.plugin import register_component

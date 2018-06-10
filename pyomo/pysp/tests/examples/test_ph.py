@@ -499,7 +499,8 @@ class PHTester(object):
 
         new_options_string = \
             options_string+(" --user-defined-extension"
-                            "=pyomo.pysp.plugins.convexhullboundextension")
+                            "=pyomo.pysp.plugins.convexhullboundextension "
+                            "--max-iteration=50")
         self._baseline_test(options_string=new_options_string,
                             validation_options_string=validation_options_string,
                             cleanup_func=_cleanup_func,
@@ -1180,7 +1181,7 @@ class TestPHNetworkFlow1ef3Serial(NetworkFlowTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
         NetworkFlowTester._setUpClass(cls)
 
-@unittest.category('parallel')
+@unittest.category('parallel', 'fragile')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHNetworkFlow1ef3Pyro(NetworkFlowTester,unittest.TestCase):
     @classmethod
@@ -1189,7 +1190,7 @@ class TestPHNetworkFlow1ef3Pyro(NetworkFlowTester,unittest.TestCase):
         cls.diff_filter = staticmethod(filter_pyro)
         NetworkFlowTester._setUpClass(cls)
 
-@unittest.category('parallel')
+@unittest.category('parallel', 'fragile')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
 class TestPHNetworkFlow1ef3PHPyro(NetworkFlowTester,unittest.TestCase):
     @classmethod

@@ -29,6 +29,7 @@ from pyomo.core.kernel.component_dict import (ComponentDict,
 from pyomo.core.kernel.component_block import (IBlockStorage,
                                                block,
                                                block_dict)
+from pyomo.core.kernel.component_variable import variable
 
 import six
 
@@ -55,20 +56,21 @@ class _TestComponentDictBase(object):
     _ctype_factory = None
 
     def test_pprint(self):
+        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
         cdict = self._container_type({None: self._ctype_factory()})
-        pyomo.core.kernel.pprint(cdict)
+        pyomo.kernel.pprint(cdict)
         b = block()
         b.cdict = cdict
-        pyomo.core.kernel.pprint(cdict)
-        pyomo.core.kernel.pprint(b)
+        pyomo.kernel.pprint(cdict)
+        pyomo.kernel.pprint(b)
         m = block()
         m.b = b
-        pyomo.core.kernel.pprint(cdict)
-        pyomo.core.kernel.pprint(b)
-        pyomo.core.kernel.pprint(m)
+        pyomo.kernel.pprint(cdict)
+        pyomo.kernel.pprint(b)
+        pyomo.kernel.pprint(m)
 
     def test_ctype(self):
         c = self._container_type()
@@ -551,6 +553,13 @@ class _TestComponentDictBase(object):
         self.assertEqual(len(names), len(list(m.children())))
         for c in m.children():
             self.assertEqual(c.name, names[c])
+
+    def test_getname_relativeto(self):
+        m = block()
+        m.b = block()
+        m.b.v = variable()
+        self.assertEqual(m.b.v.getname(fully_qualified=True), 'b.v')
+        self.assertEqual(m.b.v.getname(fully_qualified=True, relative_to=m.b), 'v')
 
     def test_preorder_traversal(self):
         traversal = []
