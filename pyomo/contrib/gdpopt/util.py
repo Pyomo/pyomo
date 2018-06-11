@@ -4,13 +4,13 @@ from __future__ import division
 import logging
 from math import fabs, floor, log
 
-from pyomo.common.modeling import unique_component_name
-from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals, Var,
-                        value)
+from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
+                        Objective, Reals, Var, minimize, value)
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
-from pyomo.opt.results import SolverResults
+from pyomo.opt import SolverFactory
+from pyomo.opt.results import ProblemSense, SolverResults
 
 
 class _DoNothing(object):
@@ -41,6 +41,75 @@ class GDPoptSolveData(object):
 
     """
     pass
+
+
+def model_is_valid(solve_data, config):
+    """Validate that the model is solveable by GDPopt.
+
+    Also preforms some preprocessing such as moving the objective to the
+    constraints.
+
+    """
+    m = solve_data.working_model
+    GDPopt = m.GDPopt_utils
+
+    # Handle LP/NLP being passed to the solver
+    prob = solve_data.results.problem
+    if (prob.number_of_binary_variables == 0 and
+        prob.number_of_integer_variables == 0 and
+            prob.number_of_disjunctions == 0):
+        config.logger.info('Problem has no discrete decisions.')
+        if len(GDPopt.working_nonlinear_constraints) > 0:
+            config.logger.info(
+                "Your model is an NLP (nonlinear program). "
+                "Using NLP solver %s to solve." % config.nlp)
+            SolverFactory(config.nlp).solve(
+                solve_data.original_model, **config.nlp_options)
+            return False
+        else:
+            config.logger.info(
+                "Your model is an LP (linear program). "
+                "Using LP solver %s to solve." % config.mip)
+            SolverFactory(config.mip).solve(
+                solve_data.original_model, **config.mip_options)
+            return False
+
+    # Handle missing or multiple objectives
+    objs = list(m.component_data_objects(
+        ctype=Objective, active=True, descend_into=True))
+    num_objs = len(objs)
+    solve_data.results.problem.number_of_objectives = num_objs
+    if num_objs == 0:
+        config.logger.warning(
+            'Model has no active objectives. Adding dummy objective.')
+        GDPopt.dummy_objective = Objective(expr=1)
+        main_obj = GDPopt.dummy_objective
+    elif num_objs > 1:
+        raise ValueError('Model has multiple active objectives.')
+    else:
+        main_obj = objs[0]
+    solve_data.working_objective_expr = main_obj.expr
+
+    # Move the objective to the constraints
+
+    # TODO only move the objective if nonlinear?
+    GDPopt.objective_value = Var(domain=Reals, initialize=0)
+    solve_data.objective_sense = main_obj.sense
+    if main_obj.sense == minimize:
+        GDPopt.objective_expr = Constraint(
+            expr=GDPopt.objective_value >= main_obj.expr)
+        solve_data.results.problem.sense = ProblemSense.minimize
+    else:
+        GDPopt.objective_expr = Constraint(
+            expr=GDPopt.objective_value <= main_obj.expr)
+        solve_data.results.problem.sense = ProblemSense.maximize
+    main_obj.deactivate()
+    GDPopt.objective = Objective(
+        expr=GDPopt.objective_value, sense=main_obj.sense)
+
+    # TODO if any continuous variables are multipled with binary ones, need
+    # to do some kind of transformation (Glover?) or throw an error message
+    return True
 
 
 def a_logger(str_or_logger):

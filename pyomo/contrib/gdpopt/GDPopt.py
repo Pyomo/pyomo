@@ -31,26 +31,23 @@ from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue, In,
                                  NonNegativeFloat, NonNegativeInt)
 from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
                                                  add_outer_approximation_cuts)
+from pyomo.contrib.gdpopt.loa import solve_OA_master
 from pyomo.contrib.gdpopt.master_initialize import (init_custom_disjuncts,
                                                     init_max_binaries,
                                                     init_set_covering)
-from pyomo.contrib.gdpopt.loa import solve_OA_master
 from pyomo.contrib.gdpopt.nlp_solve import (solve_NLP,
                                             update_nlp_progress_indicators)
-from pyomo.contrib.gdpopt.util import (GDPoptSolveData,
+from pyomo.contrib.gdpopt.util import (GDPoptSolveData, _DoNothing,
+                                       _record_problem_statistics, a_logger,
+                                       algorithm_should_terminate,
                                        build_ordered_component_lists,
-                                       _DoNothing, _record_problem_statistics,
-                                       a_logger, copy_var_list_values,
-                                       reformulate_integer_variables,
                                        clone_orig_model_with_lists,
-                                       validate_disjunctions,
-                                       algorithm_should_terminate)
-from pyomo.core.base import (Block, Constraint, ConstraintList,
-                             Objective, Reals, Suffix, TransformationFactory,
-                             Var, minimize, value)
+                                       copy_var_list_values, model_is_valid,
+                                       reformulate_integer_variables)
+from pyomo.core.base import (Block, ConstraintList, Suffix,
+                             TransformationFactory, value)
 from pyomo.core.kernel import ComponentMap
 from pyomo.opt.base import IOptSolver
-from pyomo.opt.results import ProblemSense
 
 __version__ = (0, 3, 0)
 
@@ -248,7 +245,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             solve_data.best_solution_found = list(GDPopt.initial_var_values)
 
             # Validate the model to ensure that GDPopt is able to solve it.
-            self._validate_model(config, solve_data)
+            if not model_is_valid(config, solve_data):
+                return
 
             # Maps in order to keep track of certain generated constraints
             GDPopt.oa_cut_map = ComponentMap()
@@ -267,11 +265,6 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             # not already in the primary GDPopt_integer_cuts ConstraintList.
             GDPopt.no_backtracking = ConstraintList(
                 doc='explored integer cuts')
-            if not solve_data.no_discrete_decisions:
-                # If there are multiple discrete decisions, allow re-visiting
-                # them by default. Otherwise, no point in resolving the
-                # problem.
-                GDPopt.no_backtracking.deactivate()
 
             # Set up iteration counters
             solve_data.master_iteration = 0
@@ -313,67 +306,6 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         finally:
             config.logger.setLevel(old_logger_level)
 
-    def _validate_model(self, config, solve_data):
-        """Validate that the model is solveable by GDPopt.
-
-        Also populates results object with problem information.
-
-        """
-        m = solve_data.working_model
-        GDPopt = m.GDPopt_utils
-
-        # Check for any integer variables
-        if solve_data.results.problem.number_of_integer_variables > 0:
-            raise ValueError('Model contains unfixed integer variables. '
-                             'GDPopt does not currently support solution of '
-                             'such problems.')
-            # TODO add in the reformulation using base 2
-
-        # Handle LP/NLP being passed to the solver
-        prob = solve_data.results.problem
-        if (prob.number_of_binary_variables == 0 and
-                prob.number_of_disjunctions == 0):
-            config.logger.info('Problem has no discrete decisions.')
-            solve_data.no_discrete_decisions = True
-        else:
-            solve_data.no_discrete_decisions = False
-
-        # Handle missing or multiple objectives
-        objs = list(m.component_data_objects(
-            ctype=Objective, active=True, descend_into=True))
-        num_objs = len(objs)
-        solve_data.results.problem.number_of_objectives = num_objs
-        if num_objs == 0:
-            config.logger.warning(
-                'Model has no active objectives. Adding dummy objective.')
-            GDPopt.dummy_objective = Objective(expr=1)
-            main_obj = GDPopt.dummy_objective
-        elif num_objs > 1:
-            raise ValueError('Model has multiple active objectives.')
-        else:
-            main_obj = objs[0]
-        solve_data.working_objective_expr = main_obj.expr
-
-        # Move the objective to the constraints
-
-        # TODO only move the objective if nonlinear?
-        GDPopt.objective_value = Var(domain=Reals, initialize=0)
-        solve_data.objective_sense = main_obj.sense
-        if main_obj.sense == minimize:
-            GDPopt.objective_expr = Constraint(
-                expr=GDPopt.objective_value >= main_obj.expr)
-            solve_data.results.problem.sense = ProblemSense.minimize
-        else:
-            GDPopt.objective_expr = Constraint(
-                expr=GDPopt.objective_value <= main_obj.expr)
-            solve_data.results.problem.sense = ProblemSense.maximize
-        main_obj.deactivate()
-        GDPopt.objective = Objective(
-            expr=GDPopt.objective_value, sense=main_obj.sense)
-
-        # TODO if any continuous variables are multipled with binary ones, need
-        # to do some kind of transformation (Glover?) or throw an error message
-
     def _GDPopt_initialize_master(self, solve_data, config):
         """Initialize the decomposition algorithm.
 
@@ -387,6 +319,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             m.dual = Suffix(direction=Suffix.IMPORT)
         m.dual.activate()
 
+        # Set up the linear GDP model
         solve_data.linear_GDP = m.clone()
         # deactivate nonlinear constraints
         for c in solve_data.linear_GDP.GDPopt_utils.\
