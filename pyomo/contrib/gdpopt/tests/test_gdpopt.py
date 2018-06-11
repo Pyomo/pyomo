@@ -47,8 +47,10 @@ class TestGDPopt(unittest.TestCase):
             opt.solve(cons_layout, strategy='LOA',
                       mip=required_solvers[1],
                       nlp=required_solvers[0])
+            objective_value = value(cons_layout.min_dist_cost.expr)
             self.assertTrue(
-                fabs(value(cons_layout.min_dist_cost.expr) - 41573) <= 200)
+                fabs(objective_value - 41573) <= 200,
+                "Objective value of %s instead of 41573" % objective_value)
 
     def test_LOA_maxBinary(self):
         """Test logic-based OA with max_binary initialization."""
@@ -71,8 +73,10 @@ class TestGDPopt(unittest.TestCase):
             opt.solve(cons_layout, strategy='LOA', init_strategy='max_binary',
                       mip=required_solvers[1],
                       nlp=required_solvers[0])
+            objective_value = value(cons_layout.min_dist_cost.expr)
             self.assertTrue(
-                fabs(value(cons_layout.min_dist_cost.expr) - 41573) <= 200)
+                fabs(objective_value - 41573) <= 200,
+                "Objective value of %s instead of 41573" % objective_value)
 
     def test_LOA_custom_disjuncts(self):
         """Test logic-based OA with custom disjuncts initialization."""
