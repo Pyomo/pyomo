@@ -15,7 +15,7 @@ def solve_NLP(nlp_model, solve_data, config):
     config.logger.info(
         'Solving nonlinear subproblem for '
         'fixed binaries and logical realizations.')
-    if any(v for v in nlp_model.component_data_objects(
+    if any(True for v in nlp_model.component_data_objects(
         ctype=Var, descend_into=(Block, Disjunct), active=True)
         if (v.is_binary() or v.is_integer()) and not v.fixed
     ):
