@@ -24,19 +24,16 @@ Questions: Please make a post at StackOverflow and/or contact Qi Chen
 from __future__ import division
 
 import logging
-from math import fabs
 
 import pyomo.common.plugin
 from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue, In,
                                  NonNegativeFloat, NonNegativeInt)
 from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
                                                  add_outer_approximation_cuts)
-from pyomo.contrib.gdpopt.loa import solve_OA_master
+from pyomo.contrib.gdpopt.loa import solve_LOA_subproblem, solve_OA_master
 from pyomo.contrib.gdpopt.master_initialize import (init_custom_disjuncts,
                                                     init_max_binaries,
                                                     init_set_covering)
-from pyomo.contrib.gdpopt.nlp_solve import (solve_NLP,
-                                            update_nlp_progress_indicators)
 from pyomo.contrib.gdpopt.util import (GDPoptSolveData, _DoNothing,
                                        _record_problem_statistics, a_logger,
                                        algorithm_should_terminate,
@@ -44,8 +41,7 @@ from pyomo.contrib.gdpopt.util import (GDPoptSolveData, _DoNothing,
                                        clone_orig_model_with_lists,
                                        copy_var_list_values, model_is_valid,
                                        reformulate_integer_variables)
-from pyomo.core.base import (Block, ConstraintList, Suffix,
-                             TransformationFactory, value)
+from pyomo.core.base import Block, ConstraintList, Suffix, value
 from pyomo.core.kernel import ComponentMap
 from pyomo.opt.base import IOptSolver
 
@@ -245,7 +241,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             solve_data.best_solution_found = list(GDPopt.initial_var_values)
 
             # Validate the model to ensure that GDPopt is able to solve it.
-            if not model_is_valid(config, solve_data):
+            if not model_is_valid(solve_data, config):
                 return
 
             # Maps in order to keep track of certain generated constraints
@@ -366,33 +362,10 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             if algorithm_should_terminate(solve_data, config):
                 break
             # Solve NLP subproblem
-            nlp_model = solve_data.working_model.clone()
-            solve_data.nlp_iteration += 1
-            # copy in the discrete variable values
-            for var, val in zip(nlp_model.GDPopt_utils.working_var_list,
-                                mip_var_values):
-                if val is None:
-                    continue
-                if not var.is_binary():
-                    var.value = val
-                elif ((fabs(val) <= config.integer_tolerance or
-                       fabs(val - 1) <= config.integer_tolerance)
-                      and config.round_NLP_binaries):
-                    # Round the binary variables to 0 or 1 if appropriate.
-                    var.value = int(round(val))
-                else:
-                    raise ValueError(
-                        "Binary variable %s value %s is not "
-                        "within tolerance %s of 0 or 1." %
-                        (var.name, var.value, config.integer_tolerance))
-            TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
-            for var in nlp_model.GDPopt_utils.working_var_list:
-                if var.is_binary():
-                    var.fix()
-            nlp_result = solve_NLP(nlp_model, solve_data, config)
+            nlp_result = solve_LOA_subproblem(
+                mip_var_values, solve_data, config)
             nlp_feasible, nlp_var_values, nlp_duals = nlp_result
             if nlp_feasible:
-                update_nlp_progress_indicators(nlp_model, solve_data, config)
                 add_outer_approximation_cuts(
                     nlp_var_values, nlp_duals, solve_data, config)
             add_integer_cut(
