@@ -158,6 +158,9 @@ def init_set_covering(solve_data, config):
             else:
                 disj.indicator_var.value = val
         TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
+        for var in nlp_model.GDPopt_utils.working_var_list:
+            if var.is_binary():
+                var.fix()
         solve_data.nlp_iteration += 1
         nlp_result = solve_NLP(nlp_model, solve_data, config)
         nlp_feasible, nlp_var_values, nlp_duals = nlp_result
