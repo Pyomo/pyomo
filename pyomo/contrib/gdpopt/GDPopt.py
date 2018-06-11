@@ -219,18 +219,19 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
             solve_data.original_model = model
 
-            solve_data.working_model = m = clone_orig_model_with_lists(model)
+            solve_data.working_model = clone_orig_model_with_lists(model)
             GDPopt = solve_data.working_model.GDPopt_utils
 
             solve_data.current_strategy = config.strategy
 
             # Reformulate integer variables to binary
-            reformulate_integer_variables(model, config)
+            reformulate_integer_variables(solve_data.working_model, config)
 
             # Save ordered lists of main modeling components, so that data can
             # be easily transferred between future model clones.
             build_ordered_component_lists(solve_data.working_model)
-            _record_problem_statistics(m, solve_data, config)
+            _record_problem_statistics(
+                solve_data.working_model, solve_data, config)
             solve_data.results.solver.name = 'GDPopt ' + str(self.version())
 
             # Save model initial values. These are used later to initialize NLP
