@@ -34,7 +34,7 @@ from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
 from pyomo.contrib.gdpopt.master_initialize import (init_custom_disjuncts,
                                                     init_max_binaries,
                                                     init_set_covering)
-from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
+from pyomo.contrib.gdpopt.loa import solve_OA_master
 from pyomo.contrib.gdpopt.nlp_solve import (solve_NLP,
                                             update_nlp_progress_indicators)
 from pyomo.contrib.gdpopt.util import (GDPoptSolveData,
@@ -43,16 +43,16 @@ from pyomo.contrib.gdpopt.util import (GDPoptSolveData,
                                        a_logger, copy_var_list_values,
                                        reformulate_integer_variables,
                                        clone_orig_model_with_lists,
-                                       validate_disjunctions)
-from pyomo.core.base import (Block, Constraint, ConstraintList, Expression,
+                                       validate_disjunctions,
+                                       algorithm_should_terminate)
+from pyomo.core.base import (Block, Constraint, ConstraintList,
                              Objective, Reals, Suffix, TransformationFactory,
                              Var, minimize, value)
 from pyomo.core.kernel import ComponentMap
-from pyomo.gdp import Disjunct
 from pyomo.opt.base import IOptSolver
 from pyomo.opt.results import ProblemSense
 
-__version__ = (0, 2, 0)
+__version__ = (0, 3, 0)
 
 
 class GDPoptSolver(pyomo.common.plugin.Plugin):
@@ -191,6 +191,10 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
         Warning: this solver is still in beta. Keyword arguments subject to
         change. Undocumented keyword arguments definitely subject to change.
+
+        This function performs all of the GDPopt solver setup and problem
+        validation. It then calls upon helper functions to construct the
+        initial master approximation and iteration loop.
 
         Args:
             model (Block): a Pyomo model or block to be solved
@@ -389,6 +393,23 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 working_nonlinear_constraints:
             c.deactivate()
 
+        # Initialization strategies
+        valid_init_strategies = {
+            'set_covering': init_set_covering,
+            'max_binary': init_max_binaries,
+            'fixed_binary': None,
+            'custom_disjuncts': init_custom_disjuncts
+        }
+        init_strategy = valid_init_strategies.get(config.init_strategy, None)
+        if init_strategy is not None:
+            init_strategy(solve_data, config)
+        else:
+            raise ValueError(
+                'Unknown initialization strategy: %s. '
+                'Valid strategies include: %s'
+                % (config.init_strategy,
+                   ", ".join(valid_init_strategies.keys())))
+
         if config.init_strategy == 'set_covering':
             init_set_covering(solve_data, config)
         elif config.init_strategy == 'max_binary':
@@ -403,49 +424,25 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                              % (config.init_strategy,))
 
     def _GDPopt_iteration_loop(self, solve_data, config):
-        m = solve_data.working_model
-        GDPopt = m.GDPopt_utils
-        # Backup counter to prevent infinite loop
-        backup_max_iter = max(1000, config.iterlim)
-        backup_iter = 0
-        while backup_iter < backup_max_iter:
+        """Algorithm main loop.
+
+        Returns True if successful convergence is obtained. False otherwise.
+
+        """
+        while solve_data.master_iteration < config.iterlim:
             # print line for visual display
             solve_data.master_iteration += 1
             solve_data.subproblem_iteration = 0
             config.logger.info(
                 '---GDPopt Master Iteration %s---'
                 % solve_data.master_iteration)
-            backup_iter += 1
-            # Check bound convergence
-            if solve_data.LB + config.bound_tolerance >= solve_data.UB:
-                config.logger.info(
-                    'GDPopt exiting on bound convergence. '
-                    'LB: %s + (tol %s) >= UB: %s' %
-                    (solve_data.LB, config.bound_tolerance,
-                     solve_data.UB))
-                break
-            # Check iteration limit
-            if solve_data.master_iteration >= config.iterlim:
-                config.logger.info(
-                    'GDPopt unable to converge bounds '
-                    'after %s master iterations.'
-                    % (solve_data.master_iteration,))
-                config.logger.info(
-                    'Final bound values: LB: %s  UB: %s'
-                    % (solve_data.LB, solve_data.UB))
-                break
             # solve MILP master problem
             if solve_data.current_strategy == 'LOA':
-                mip_results = self._solve_OA_master(solve_data, config)
+                mip_results = solve_OA_master(solve_data, config)
                 if mip_results:
                     _, mip_var_values = mip_results
-            # Check bound convergence
-            if solve_data.LB + config.bound_tolerance >= solve_data.UB:
-                config.logger.info(
-                    'GDPopt exiting on bound convergence. '
-                    'LB: %s + (tol %s) >= UB: %s'
-                    % (solve_data.LB, config.bound_tolerance,
-                       solve_data.UB))
+            # Check termination conditions
+            if algorithm_should_terminate(solve_data, config):
                 break
             # Solve NLP subproblem
             nlp_model = solve_data.working_model.clone()
@@ -480,89 +477,6 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             add_integer_cut(
                 mip_var_values, solve_data, config, feasible=nlp_feasible)
 
-            # If the hybrid algorithm is not making progress, switch to OA.
-            required_relax_prog = 1E-6
-            required_feas_prog = 1E-6
-            if GDPopt.objective.sense == minimize:
-                relax_prog_log = solve_data.LB_progress
-                feas_prog_log = solve_data.UB_progress
-                sign_adjust = 1
-            else:
-                relax_prog_log = solve_data.UB_progress
-                feas_prog_log = solve_data.LB_progress
-                sign_adjust = -1
-
-            # Max number of iterations in which upper (feasible) bound does not
-            # improve before turning on no-backtracking
-            no_backtrack_after = 1
-            if (len(feas_prog_log) > no_backtrack_after and
-                (sign_adjust * (feas_prog_log[-1] + required_feas_prog)
-                 >= sign_adjust * feas_prog_log[-1 - no_backtrack_after])):
-                if not solve_data.linear_GDP.no_backtracking.active:
-                    config.logger.info(
-                        'Feasible solutions not making enough '
-                        'progress for %s iterations. '
-                        'Turning on no-backtracking '
-                        'integer cuts.' % (no_backtrack_after,))
-                    GDPopt.no_backtracking.activate()
-
-            # Maximum number of iterations in which feasible bound does not
-            # improve before terminating algorithm
-            if (len(feas_prog_log) > config.algorithm_stall_after and
-                (sign_adjust * (feas_prog_log[-1] + required_feas_prog)
-                 >= sign_adjust *
-                 feas_prog_log[-1 - config.algorithm_stall_after])):
-                config.logger.info(
-                    'Feasible solutions not making enough progress '
-                    'for %s iterations. Algorithm stalled. Exiting.\n'
-                    'To continue, increase value of parameter '
-                    'algorithm_stall_after.'
-                    % (config.algorithm_stall_after,))
+            # Check termination conditions
+            if algorithm_should_terminate(solve_data, config):
                 break
-
-    def _solve_OA_master(self, solve_data, config):
-        m = solve_data.linear_GDP.clone()
-        GDPopt = m.GDPopt_utils
-
-        # Set up augmented Lagrangean penalty objective
-        GDPopt.objective.deactivate()
-        sign_adjust = 1 if GDPopt.objective.sense == minimize else -1
-        GDPopt.OA_penalty_expr = Expression(
-            expr=sign_adjust * config.OA_penalty_factor *
-            sum(v for v in m.component_data_objects(
-                ctype=Var, descend_into=(Block, Disjunct))
-                if v.parent_component().local_name == 'GDPopt_OA_slacks'))
-        GDPopt.oa_obj = Objective(
-            expr=GDPopt.objective.expr + GDPopt.OA_penalty_expr,
-            sense=GDPopt.objective.sense)
-
-        mip_results = solve_linear_GDP(m, solve_data, config)
-        if mip_results:
-            if GDPopt.objective.sense == minimize:
-                solve_data.LB = max(value(GDPopt.oa_obj.expr), solve_data.LB)
-                solve_data.LB_progress.append(solve_data.LB)
-            else:
-                solve_data.UB = min(value(GDPopt.oa_obj.expr), solve_data.UB)
-                solve_data.UB_progress.append(solve_data.UB)
-            config.logger.info(
-                'ITER %s.%s-MIP: OBJ: %s  LB: %s  UB: %s'
-                % (solve_data.master_iteration,
-                   solve_data.subproblem_iteration,
-                   value(GDPopt.oa_obj.expr),
-                   solve_data.LB, solve_data.UB))
-        else:
-            if solve_data.master_iteration == 1:
-                config.logger.warning(
-                    'GDPopt initialization may have generated poor '
-                    'quality cuts.')
-            # set optimistic bound to infinity
-            if GDPopt.objective.sense == minimize:
-                solve_data.LB = float('inf')
-                solve_data.LB_progress.append(solve_data.UB)
-            else:
-                solve_data.UB = float('-inf')
-                solve_data.UB_progress.append(solve_data.UB)
-        # Call the MILP post-solve callback
-        config.master_postsolve(m, solve_data)
-
-        return mip_results
