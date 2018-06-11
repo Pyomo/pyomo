@@ -36,7 +36,42 @@ logger = logging.getLogger('pyomo.solvers')
 
 pyutilib.services.register_executable(name="gams")
 
-class GAMSSolver(pyomo.common.plugin.Plugin):
+class _GAMSSolver(pyomo.common.plugin.Plugin):
+    """Aggregate of common methods for GAMS interfaces"""
+
+    pyomo.common.plugin.implements(IOptSolver)
+
+    def __init__(self, **kwds):
+        self._version = None
+        self._default_variable_value = None
+        self._metasolver = False
+
+        self._capabilities = Options()
+        self._capabilities.linear = True
+        self._capabilities.quadratic_objective = True
+        self._capabilities.quadratic_constraint = True
+        self._capabilities.integer = True
+        self._capabilities.sos1 = False
+        self._capabilities.sos2 = False
+
+        self.options = Options() # ignored
+
+        pyomo.common.plugin.Plugin.__init__(self, **kwds)
+
+    def version(self):
+        """Returns a 4-tuple describing the solver executable version."""
+        if self._version is None:
+            self._version = self._get_version()
+        return self._version
+
+    def warm_start_capable(self):
+        """True is the solver can accept a warm-start solution."""
+        return True
+
+    def default_variable_value(self):
+        return self._default_variable_value
+
+class GAMSSolver(_GAMSSolver):
     """
     A generic interface to GAMS solvers.
 
@@ -46,7 +81,6 @@ class GAMSSolver(pyomo.common.plugin.Plugin):
         solver_io='shell' or 'gms' to use command line to call gams
             Requires the gams executable be on your system PATH.
     """
-    pyomo.common.plugin.implements(IOptSolver)
     pyomo.common.plugin.alias('gams', doc='The GAMS modeling language')
 
     def __new__(cls, *args, **kwds):
@@ -67,32 +101,14 @@ class GAMSSolver(pyomo.common.plugin.Plugin):
             return
 
 
-class GAMSDirect(pyomo.common.plugin.Plugin):
+class GAMSDirect(_GAMSSolver):
     """
     A generic python interface to GAMS solvers.
 
     Visit Python API page on gams.com for installation help.
     """
-    pyomo.common.plugin.implements(IOptSolver)
     pyomo.common.plugin.alias('_gams_direct',
         doc='Direct python interface to the GAMS modeling language')
-
-    def __init__(self, **kwds):
-        self._version = None
-        self._default_variable_value = None
-        self._metasolver = False
-
-        self._capabilities = Options()
-        self._capabilities.linear = True
-        self._capabilities.quadratic_objective = True
-        self._capabilities.quadratic_constraint = True
-        self._capabilities.integer = True
-        self._capabilities.sos1 = False
-        self._capabilities.sos2 = False
-
-        self.options = Options() # ignored
-
-        pyomo.common.plugin.Plugin.__init__(self, **kwds)
 
     def available(self, exception_flag=True):
         """True if the solver is available."""
@@ -118,19 +134,6 @@ class GAMSDirect(pyomo.common.plugin.Plugin):
             version += (0,)
         version = version[:4]
         return version
-
-    def version(self):
-        """Returns a 4-tuple describing the solver executable version."""
-        if self._version is None:
-            self._version = self._get_version()
-        return self._version
-
-    def warm_start_capable(self):
-        """True is the solver can accept a warm-start solution."""
-        return True
-
-    def default_variable_value(self):
-        return self._default_variable_value
 
     def solve(self, *args, **kwds):
         """
@@ -523,28 +526,10 @@ class GAMSDirect(pyomo.common.plugin.Plugin):
         return results
 
 
-class GAMSShell(pyomo.common.plugin.Plugin):
+class GAMSShell(_GAMSSolver):
     """A generic shell interface to GAMS solvers."""
-    pyomo.common.plugin.implements(IOptSolver)
     pyomo.common.plugin.alias('_gams_shell',
         doc='Shell interface to the GAMS modeling language')
-
-    def __init__(self, **kwds):
-        self._version = None
-        self._default_variable_value = None
-        self._metasolver = False
-
-        self._capabilities = Options()
-        self._capabilities.linear = True
-        self._capabilities.quadratic_objective = True
-        self._capabilities.quadratic_constraint = True
-        self._capabilities.integer = True
-        self._capabilities.sos1 = False
-        self._capabilities.sos2 = False
-
-        self.options = Options() # ignored
-
-        pyomo.common.plugin.Plugin.__init__(self, **kwds)
 
     def available(self, exception_flag=True):
         """True if the solver is available."""
@@ -581,19 +566,6 @@ class GAMSShell(pyomo.common.plugin.Plugin):
         else:
             results = pyutilib.subprocess.run([solver_exec])
             return _extract_version(results[1])
-
-    def version(self):
-        """Returns a 4-tuple describing the solver executable version."""
-        if self._version is None:
-            self._version = self._get_version()
-        return self._version
-
-    def warm_start_capable(self):
-        """True is the solver can accept a warm-start solution."""
-        return True
-
-    def default_variable_value(self):
-        return self._default_variable_value
 
     def solve(self, *args, **kwds):
         """
