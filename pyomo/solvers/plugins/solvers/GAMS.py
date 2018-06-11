@@ -74,11 +74,13 @@ class GAMSDirect(pyomo.common.plugin.Plugin):
     Visit Python API page on gams.com for installation help.
     """
     pyomo.common.plugin.implements(IOptSolver)
-    pyomo.common.plugin.alias('_gams_direct', doc='The GAMS modeling language')
+    pyomo.common.plugin.alias('_gams_direct',
+        doc='Direct python interface to the GAMS modeling language')
 
     def __init__(self, **kwds):
         self._version = None
         self._default_variable_value = None
+        self._metasolver = False
 
         self._capabilities = Options()
         self._capabilities.linear = True
@@ -524,11 +526,13 @@ class GAMSDirect(pyomo.common.plugin.Plugin):
 class GAMSShell(pyomo.common.plugin.Plugin):
     """A generic shell interface to GAMS solvers."""
     pyomo.common.plugin.implements(IOptSolver)
-    pyomo.common.plugin.alias('_gams_shell', doc='The GAMS modeling language')
+    pyomo.common.plugin.alias('_gams_shell',
+        doc='Shell interface to the GAMS modeling language')
 
     def __init__(self, **kwds):
         self._version = None
         self._default_variable_value = None
+        self._metasolver = False
 
         self._capabilities = Options()
         self._capabilities.linear = True

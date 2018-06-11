@@ -335,11 +335,15 @@ def help_solvers():
     wrapper = textwrap.TextWrapper(subsequent_indent=' '*(n+9))
     try:
         # Disable warnings
-        logger.disable(logging.WARNING)
+        logging.disable(logging.WARNING)
         for s in solver_list:
             # Create a solver, and see if it is available
             with pyomo.opt.SolverFactory(s) as opt:
-                if s == 'py' or opt._metasolver:
+                if s == 'py' or (hasattr(opt, "_metasolver") and opt._metasolver):
+                    # py is a metasolver, but since we don't specify a subsolver
+                    # for this test, opt is actually an UnknownSolver, so we
+                    # can't try to get the _metasolver attribute from it.
+                    # Also, default to False if the attribute isn't implemented
                     msg = '    %-'+str(n)+'s   + %s'
                 elif opt.available(False):
                     msg = '    %-'+str(n)+'s   * %s'
@@ -348,7 +352,7 @@ def help_solvers():
                 print(wrapper.fill(msg % (s, pyomo.opt.SolverFactory.doc(s))))
     finally:
         # Reset logging level
-        logger.disable(logging.NOTSET)
+        logging.disable(logging.NOTSET)
     print("")
     wrapper = textwrap.TextWrapper(subsequent_indent='')
     print(wrapper.fill("An asterisk indicates solvers that are currently available to be run from Pyomo with the serial solver manager. A plus indicates meta-solvers, that are always available."))

@@ -57,6 +57,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         doc='The GDPopt decomposition-based '
         'Generalized Disjunctive Programming (GDP) solver')
 
+    _metasolver = False
+
     CONFIG = ConfigBlock("GDPopt")
     CONFIG.declare("iterlim", ConfigValue(
         default=30, domain=NonNegativeInt,
