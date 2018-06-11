@@ -96,7 +96,7 @@ class TestGDPopt(unittest.TestCase):
             def assert_correct_disjuncts_active(nlp_model, solve_data):
                 if solve_data.master_iteration >= 1:
                     return  # only checking initialization
-                iter_num = solve_data.subproblem_iteration
+                iter_num = solve_data.nlp_iteration
                 disjs_should_be_active = initialize[iter_num - 1]
                 for orig_disj, soln_disj in zip(
                     solve_data.original_model.GDPopt_utils.orig_disjuncts_list,

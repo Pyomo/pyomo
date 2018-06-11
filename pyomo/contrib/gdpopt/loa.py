@@ -22,22 +22,31 @@ def solve_OA_master(solve_data, config):
     GDPopt.oa_obj = Objective(
         expr=GDPopt.objective.expr + GDPopt.OA_penalty_expr,
         sense=GDPopt.objective.sense)
+    solve_data.mip_iteration += 1
 
     mip_results = solve_linear_GDP(m, solve_data, config)
     if mip_results:
         if GDPopt.objective.sense == minimize:
             solve_data.LB = max(value(GDPopt.oa_obj.expr), solve_data.LB)
-            solve_data.LB_progress.append(solve_data.LB)
         else:
             solve_data.UB = min(value(GDPopt.oa_obj.expr), solve_data.UB)
-            solve_data.UB_progress.append(solve_data.UB)
+        solve_data.iteration_log[
+            (solve_data.master_iteration,
+             solve_data.mip_iteration,
+             solve_data.nlp_iteration)] = (
+                 value(GDPopt.oa_obj.expr),
+                 value(GDPopt.objective.expr),
+                 mip_results[1]  # mip_var_values
+             )
         config.logger.info(
-            'ITER %s.%s-MIP: OBJ: %s  LB: %s  UB: %s'
+            'ITER %s.%s.%s-MIP: OBJ: %s  LB: %s  UB: %s'
             % (solve_data.master_iteration,
-               solve_data.subproblem_iteration,
+               solve_data.mip_iteration,
+               solve_data.nlp_iteration,
                value(GDPopt.oa_obj.expr),
                solve_data.LB, solve_data.UB))
     else:
+        # Master problem was infeasible.
         if solve_data.master_iteration == 1:
             config.logger.warning(
                 'GDPopt initialization may have generated poor '
@@ -45,10 +54,8 @@ def solve_OA_master(solve_data, config):
         # set optimistic bound to infinity
         if GDPopt.objective.sense == minimize:
             solve_data.LB = float('inf')
-            solve_data.LB_progress.append(solve_data.UB)
         else:
             solve_data.UB = float('-inf')
-            solve_data.UB_progress.append(solve_data.UB)
     # Call the MILP post-solve callback
     config.master_postsolve(m, solve_data)
 

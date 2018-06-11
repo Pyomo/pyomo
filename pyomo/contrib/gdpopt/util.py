@@ -72,7 +72,22 @@ def copy_var_list_values(from_list, to_list, config, skip_stale=False):
 
 
 def is_feasible(model, config):
-    config.logger.info('Checking if model is feasible.')
+    """Checks to see if the algebraic model is feasible in its current state.
+
+    Checks variable bounds and active constraints. Not for use with
+    untransformed GDP models.
+
+    """
+    disj = next(model.component_data_objects(
+        ctype=Disjunct, active=True), None)
+    if disj is not None:
+        raise NotImplementedError(
+            "Found active disjunct %s. "
+            "This function is not intended to check "
+            "feasibility of disjunctive models, "
+            "only transformed subproblems." % disj.name)
+
+    config.logger.debug('Checking if model is feasible.')
     for constr in model.component_data_objects(
             ctype=Constraint, active=True, descend_into=True):
         # Check constraint lower bound
@@ -315,10 +330,8 @@ def algorithm_is_making_progress(solve_data, config):
     # If the hybrid algorithm is not making progress, switch to OA.
     # required_feas_prog = 1E-6
     # if solve_data.working_model.GDPopt_utils.objective.sense == minimize:
-    #     feas_prog_log = solve_data.UB_progress
     #     sign_adjust = 1
     # else:
-    #     feas_prog_log = solve_data.LB_progress
     #     sign_adjust = -1
 
     # Maximum number of iterations in which feasible bound does not

@@ -122,17 +122,23 @@ def update_nlp_progress_indicators(model, solve_data, config):
     """Update the progress indicators for the NLP subproblem."""
     GDPopt = model.GDPopt_utils
     if GDPopt.objective.sense == minimize:
+        old_UB = solve_data.UB
         solve_data.UB = min(
             value(GDPopt.objective.expr), solve_data.UB)
-        solve_data.feasible_solution_improved = (
-            solve_data.UB < solve_data.UB_progress[-1])
-        solve_data.UB_progress.append(solve_data.UB)
+        solve_data.feasible_solution_improved = (solve_data.UB < old_UB)
     else:
+        old_LB = solve_data.LB
         solve_data.LB = max(
             value(GDPopt.objective.expr), solve_data.LB)
-        solve_data.feasible_solution_improved = (
-            solve_data.LB > solve_data.LB_progress[-1])
-        solve_data.LB_progress.append(solve_data.LB)
+        solve_data.feasible_solution_improved = (solve_data.LB > old_LB)
+    solve_data.iteration_log[
+        (solve_data.master_iteration,
+         solve_data.mip_iteration,
+         solve_data.nlp_iteration)] = (
+             value(GDPopt.objective.expr),
+             value(GDPopt.objective.expr),
+             [v.value for v in GDPopt.working_var_list]
+         )
 
     if solve_data.feasible_solution_improved:
         solve_data.best_solution_found = [
@@ -145,9 +151,10 @@ def update_nlp_progress_indicators(model, solve_data, config):
         if solve_data.objective_sense == minimize
         else (improvement_tag, ""))
     config.logger.info(
-        'ITER %s.%s-NLP: OBJ: %s  LB: %s %s UB: %s %s'
+        'ITER %s.%s.%s-NLP: OBJ: %s  LB: %s %s UB: %s %s'
         % (solve_data.master_iteration,
-           solve_data.subproblem_iteration,
+           solve_data.mip_iteration,
+           solve_data.nlp_iteration,
            value(GDPopt.objective.expr),
            solve_data.LB, lb_improved,
            solve_data.UB, ub_improved))

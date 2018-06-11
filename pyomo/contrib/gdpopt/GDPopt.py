@@ -274,14 +274,14 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 GDPopt.no_backtracking.deactivate()
 
             # Set up iteration counters
-            solve_data.subproblem_iteration = 0
             solve_data.master_iteration = 0
+            solve_data.mip_iteration = 0
+            solve_data.nlp_iteration = 0
 
             # set up bounds
             solve_data.LB = float('-inf')
             solve_data.UB = float('inf')
-            solve_data.LB_progress = [solve_data.LB]
-            solve_data.UB_progress = [solve_data.UB]
+            solve_data.iteration_log = {}
 
             # Flag indicating whether the solution improved in the past
             # iteration or not
@@ -410,19 +410,6 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 % (config.init_strategy,
                    ", ".join(valid_init_strategies.keys())))
 
-        if config.init_strategy == 'set_covering':
-            init_set_covering(solve_data, config)
-        elif config.init_strategy == 'max_binary':
-            init_max_binaries(solve_data, config)
-        elif config.init_strategy == 'fixed_binary':
-            validate_disjunctions(solve_data, config)
-            self._solve_NLP_subproblem(solve_data, config)
-        elif config.init_strategy == 'custom_disjuncts':
-            init_custom_disjuncts(solve_data, config)
-        else:
-            raise ValueError('Unknown initialization strategy: %s'
-                             % (config.init_strategy,))
-
     def _GDPopt_iteration_loop(self, solve_data, config):
         """Algorithm main loop.
 
@@ -432,7 +419,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         while solve_data.master_iteration < config.iterlim:
             # print line for visual display
             solve_data.master_iteration += 1
-            solve_data.subproblem_iteration = 0
+            solve_data.mip_iteration = 0
+            solve_data.nlp_iteration = 0
             config.logger.info(
                 '---GDPopt Master Iteration %s---'
                 % solve_data.master_iteration)
@@ -446,7 +434,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 break
             # Solve NLP subproblem
             nlp_model = solve_data.working_model.clone()
-            solve_data.subproblem_iteration += 1
+            solve_data.nlp_iteration += 1
             # copy in the discrete variable values
             for var, val in zip(nlp_model.GDPopt_utils.working_var_list,
                                 mip_var_values):

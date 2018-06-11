@@ -109,10 +109,8 @@ def add_integer_cut(var_values, solve_data, config, feasible=False):
             'Model is now infeasible.')
         if solve_data.objective_sense == minimize:
             solve_data.LB = float('inf')
-            solve_data.LB_progress.append(solve_data.LB)
         else:
             solve_data.UB = float('-inf')
-            solve_data.UB_progress.append(solve_data.UB)
         return False
 
     int_cut = (sum(1 - v for v in var_value_is_one) +

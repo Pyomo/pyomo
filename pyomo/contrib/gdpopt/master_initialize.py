@@ -24,6 +24,7 @@ def init_custom_disjuncts(solve_data, config):
         # active at each initialization iteration
 
         # fix the disjuncts in the linear GDP and send for solution.
+        solve_data.mip_iteration += 1
         linear_GDP = solve_data.linear_GDP.clone()
         config.logger.info(
             "Generating initial linear GDP approximation by "
@@ -47,7 +48,7 @@ def init_custom_disjuncts(solve_data, config):
                 else:
                     var.value = val
             TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
-            solve_data.subproblem_iteration += 1
+            solve_data.nlp_iteration += 1
             nlp_result = solve_NLP(nlp_model, solve_data, config)
             nlp_feasible, nlp_var_values, nlp_duals = nlp_result
             if nlp_feasible:
@@ -71,6 +72,7 @@ def init_max_binaries(solve_data, config):
     feasible.
 
     """
+    solve_data.mip_iteration += 1
     linear_GDP = solve_data.linear_GDP.clone()
     config.logger.info(
         "Generating initial linear GDP approximation by "
@@ -99,7 +101,7 @@ def init_max_binaries(solve_data, config):
             else:
                 var.value = val
         TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
-        solve_data.subproblem_iteration += 1
+        solve_data.nlp_iteration += 1
         nlp_result = solve_NLP(nlp_model, solve_data, config)
         nlp_feasible, nlp_var_values, nlp_duals = nlp_result
         if nlp_feasible:
@@ -137,6 +139,7 @@ def init_set_covering(solve_data, config):
     iter_count = 1
     while (any(disjunct_needs_cover) and
            iter_count <= config.set_cover_iterlim):
+        solve_data.mip_iteration += 1
         linear_GDP = solve_data.linear_GDP.clone()
         linear_GDP.GDPopt_utils.no_backtracking.activate()
         # Solve set covering MIP
@@ -155,7 +158,7 @@ def init_set_covering(solve_data, config):
             else:
                 disj.indicator_var.value = val
         TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
-        solve_data.subproblem_iteration += 1
+        solve_data.nlp_iteration += 1
         nlp_result = solve_NLP(nlp_model, solve_data, config)
         nlp_feasible, nlp_var_values, nlp_duals = nlp_result
         if nlp_feasible:
