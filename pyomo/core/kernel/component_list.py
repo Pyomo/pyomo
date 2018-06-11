@@ -45,7 +45,7 @@ class ComponentList(ComponentTuple,
                 # be sure the current object is properly
                 # removed
                 self._prepare_for_delete(self._data[i])
-                self._prepare_for_add(item)
+                self._prepare_for_add(i, item)
                 self._data[i] = item
                 return
             elif self._data[i] is item:

@@ -198,11 +198,11 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # Check for active suffixes to export
         #
         if isinstance(model, IBlockStorage):
-            suffix_gen = lambda b: pyomo.core.kernel.component_suffix.\
-                         export_suffix_generator(b,
-                                                 active=True,
-                                                 return_key=True,
-                                                 descend_into=False)
+            suffix_gen = lambda b: ((suf.storage_key, suf) \
+                                    for suf in pyomo.core.kernel.component_suffix.\
+                                    export_suffix_generator(b,
+                                                            active=True,
+                                                            descend_into=False))
         else:
             suffix_gen = lambda b: pyomo.core.base.suffix.\
                          active_export_suffix_generator(b)

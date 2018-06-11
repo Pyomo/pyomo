@@ -54,12 +54,14 @@ class objective(IObjective):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_expr",
                  "_sense",
                  "__weakref__")
     def __init__(self, expr=None, sense=minimize):
         self._parent = None
+        self._storage_key = None
         self._active = True
         self._expr = None
         self._sense = None
@@ -104,6 +106,7 @@ class objective_tuple(ComponentTuple, _ActiveObjectMixin):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_data")
     if six.PY3:
@@ -115,6 +118,7 @@ class objective_tuple(ComponentTuple, _ActiveObjectMixin):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         self._active = True
         super(objective_tuple, self).__init__(*args, **kwds)
 
@@ -124,6 +128,7 @@ class objective_list(ComponentList, _ActiveObjectMixin):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_data")
     if six.PY3:
@@ -135,6 +140,7 @@ class objective_list(ComponentList, _ActiveObjectMixin):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         self._active = True
         super(objective_list, self).__init__(*args, **kwds)
 
@@ -144,6 +150,7 @@ class objective_dict(ComponentDict, _ActiveObjectMixin):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_data")
     if six.PY3:
@@ -155,5 +162,6 @@ class objective_dict(ComponentDict, _ActiveObjectMixin):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         self._active = True
         super(objective_dict, self).__init__(*args, **kwds)

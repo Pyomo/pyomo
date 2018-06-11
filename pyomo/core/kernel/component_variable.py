@@ -329,6 +329,7 @@ class variable(IVariable):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_domain_type",
                  "_lb",
                  "_ub",
@@ -345,6 +346,7 @@ class variable(IVariable):
                  value=None,
                  fixed=False):
         self._parent = None
+        self._storage_key = None
         self._domain_type = RealSet
         self._lb = lb
         self._ub = ub
@@ -430,6 +432,7 @@ class variable_tuple(ComponentTuple):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_data")
     if six.PY3:
         # This has to do with a bug in the abc module
@@ -440,6 +443,7 @@ class variable_tuple(ComponentTuple):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         super(variable_tuple, self).__init__(*args, **kwds)
 
 def create_variable_tuple(size, *args, **kwds):
@@ -473,6 +477,7 @@ class variable_list(ComponentList):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_data")
     if six.PY3:
         # This has to do with a bug in the abc module
@@ -483,6 +488,7 @@ class variable_list(ComponentList):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         super(variable_list, self).__init__(*args, **kwds)
 
 def create_variable_list(size, *args, **kwds):
@@ -516,6 +522,7 @@ class variable_dict(ComponentDict):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_data")
     if six.PY3:
         # This has to do with a bug in the abc module
@@ -526,6 +533,7 @@ class variable_dict(ComponentDict):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         super(variable_dict, self).__init__(*args, **kwds)
 
 def create_variable_dict(keys, *args, **kwds):

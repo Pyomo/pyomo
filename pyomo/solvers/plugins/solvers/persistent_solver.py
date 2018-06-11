@@ -352,9 +352,10 @@ class PersistentSolver(DirectOrPersistentSolver):
 
         else:
             assert isinstance(self._pyomo_model, IBlockStorage)
-            model_suffixes = list(name for (name, comp) in
-                                  import_suffix_generator(self._pyomo_model, active=True,
-                                                          descend_into=False, return_key=True))
+            model_suffixes = list(comp.storage_key for comp in
+                                  import_suffix_generator(self._pyomo_model,
+                                                          active=True,
+                                                          descend_into=False))
 
         if len(model_suffixes) > 0:
             kwds_suffixes = kwds.setdefault('suffixes', [])

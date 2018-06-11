@@ -330,6 +330,7 @@ class constraint(_MutableBoundsConstraintMixin,
     _ctype = None
     _linear_canonical_form = False
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_body",
                  "_lb",
@@ -344,6 +345,7 @@ class constraint(_MutableBoundsConstraintMixin,
                  ub=None,
                  rhs=None):
         self._parent = None
+        self._storage_key = None
         self._active = True
         self._body = None
         self._lb = None
@@ -678,6 +680,7 @@ class linear_constraint(_MutableBoundsConstraintMixin,
     _ctype = None
     _linear_canonical_form = False
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_variables",
                  "_coefficients",
@@ -694,6 +697,7 @@ class linear_constraint(_MutableBoundsConstraintMixin,
                  ub=None,
                  rhs=None):
         self._parent = None
+        self._storage_key = None
         self._active = True
         self._variables = None
         self._coefficients = None
@@ -816,6 +820,7 @@ class constraint_tuple(ComponentTuple,
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_data")
     if six.PY3:
@@ -826,6 +831,7 @@ class constraint_tuple(ComponentTuple,
         __slots__ = list(__slots__) + ["__weakref__"]
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         self._active = True
         super(constraint_tuple, self).__init__(*args, **kwds)
 
@@ -836,6 +842,7 @@ class constraint_list(ComponentList,
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_data")
     if six.PY3:
@@ -846,6 +853,7 @@ class constraint_list(ComponentList,
         __slots__ = list(__slots__) + ["__weakref__"]
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         self._active = True
         super(constraint_list, self).__init__(*args, **kwds)
 
@@ -856,6 +864,7 @@ class constraint_dict(ComponentDict,
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_data")
     if six.PY3:
@@ -866,5 +875,6 @@ class constraint_dict(ComponentDict,
         __slots__ = list(__slots__) + ["__weakref__"]
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         self._active = True
         super(constraint_dict, self).__init__(*args, **kwds)
