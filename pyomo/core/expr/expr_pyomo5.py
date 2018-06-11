@@ -831,7 +831,7 @@ class _EvaluateConstantExpressionVisitor(ExpressionValueVisitor):
         if node.__class__ in nonpyomo_leaf_types:
             return True, node
 
-        if (node.__class__ is _ParamData or node.__class__ is SimpleParam):
+        if node.is_parameter_type():
             if node._component()._mutable:
                 raise FixedExpressionError()
             return True, value(node)
