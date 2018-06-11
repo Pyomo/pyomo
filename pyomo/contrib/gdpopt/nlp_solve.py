@@ -118,9 +118,9 @@ def solve_NLP(nlp_model, solve_data, config):
              for c in GDPopt.working_constraints_list))
 
 
-def update_nlp_progress_indicators(model, solve_data, config):
+def update_nlp_progress_indicators(solved_model, solve_data, config):
     """Update the progress indicators for the NLP subproblem."""
-    GDPopt = model.GDPopt_utils
+    GDPopt = solved_model.GDPopt_utils
     if GDPopt.objective.sense == minimize:
         old_UB = solve_data.UB
         solve_data.UB = min(
