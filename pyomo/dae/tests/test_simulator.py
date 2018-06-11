@@ -888,6 +888,25 @@ class TestSimulator(unittest.TestCase):
         m.del_component('con2')
         m.del_component('con2_index')
 
+    @unittest.skipIf(not scipy_available, "Scipy is not available")
+    def test_discretized_vars(self):
+
+        m = self.m
+        m.v1 = Var(m.t)
+        m.dv1 = DerivativeVar(m.v1)
+
+        def _con(m, t):
+            return m.dv1[t] == 2 + m.v1[t]
+        m.con = Constraint(m.t, rule=_con)
+
+        discretizer = TransformationFactory('dae.finite_difference')
+        discretizer.apply_to(m)
+
+        mysim = Simulator(m)
+
+        self.assertEqual(len(mysim._diffvars), 1)
+        m.del_component('con')
+
 
 class TestExpressionCheckers(unittest.TestCase):
     """
