@@ -1,0 +1,47 @@
+Names
+ c_e_p_second_stage(1)_INC_constraint1_
+ c_e_p_second_stage(1)_INC_constraint2_
+ c_u_p_second_stage(1)_INC_constraint3(1)_
+ c_u_p_second_stage(1)_INC_constraint3(2)_
+ c_u_p_second_stage(1)_INC_constraint3(3)_
+ c_u_p_second_stage(1)_INC_constraint4(1)_
+ c_u_p_second_stage(1)_INC_constraint4(2)_
+ c_u_p_second_stage(1)_INC_constraint4(3)_
+ r_l_r_second_stage_
+ r_u_r_second_stage_
+scen
+0.33333333329999998
+  -10
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+scen
+0.33333333329999998
+  -10
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+  -1
+  0
+scen
+0.33333333329999998
+  -10
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+  -2
+  0

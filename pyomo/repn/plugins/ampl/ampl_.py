@@ -574,6 +574,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 self._print_nonlinear_terms_NL(exp._args[0])
 
             elif exp_type is expr._ExternalFunctionExpression:
+                # We have found models where external functions with
+                # strictly fixed/constant arguments causes AMPL to
+                # SEGFAULT.  To be safe, we will collapse fixed
+                # arguments to scalars and if the entire expression is
+                # constant, we will eliminate the external function
+                # call entirely.
+                if exp.is_fixed():
+                    self._print_nonlinear_terms_NL(exp())
+                    return
                 fun_str, string_arg_str = \
                     self._op_string[expr._ExternalFunctionExpression]
                 if not self._symbolic_solver_labels:
@@ -589,6 +598,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 for arg in exp._args:
                     if isinstance(arg, basestring):
                         OUTPUT.write(string_arg_str % (len(arg), arg))
+                    elif arg.is_fixed():
+                        self._print_nonlinear_terms_NL(arg())
                     else:
                         self._print_nonlinear_terms_NL(arg)
             elif (exp_type is expr._PowExpression) or \
@@ -794,16 +805,19 @@ class ProblemWriter_nl(AbstractProblemWriter):
         all_blocks_list = list(model.block_data_objects(active=True, sort=sorter))
 
         # create a deterministic var labeling
-        cntr = 0
-        for block in all_blocks_list:
-            vars_counter = tuple(enumerate(
-                block.component_data_objects(Var,
-                                             active=True,
-                                             sort=sorter,
-                                             descend_into=False),
-                cntr))
-            cntr += len(vars_counter)
-            Vars_dict.update(vars_counter)
+        Vars_dict = dict( enumerate( model.component_data_objects(
+                    Var, sort=sorter) ) )
+        cntr = len(Vars_dict)
+        # cntr = 0
+        # for block in all_blocks_list:
+        #     vars_counter = tuple(enumerate(
+        #         block.component_data_objects(Var,
+        #                                      active=True,
+        #                                      sort=sorter,
+        #                                      descend_into=False),
+        #         cntr))
+        #     cntr += len(vars_counter)
+        #     Vars_dict.update(vars_counter)
         self._varID_map = dict((id(val),key) for key,val in iteritems(Vars_dict))
         self_varID_map = self._varID_map
         # Use to label the rest of the components (which we will not encounter twice)
@@ -945,6 +959,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     else:
                         ampl_repn = block_ampl_repn[constraint_data]
 
+                if (not constraint_data.has_lb()) and \
+                   (not constraint_data.has_ub()):
+                    assert not constraint_data.equality
+                    continue  # non-binding, so skip
+
                 ### GAH: Even if this is fixed, it is still useful to
                 ###      write out these types of constraints
                 ###      (trivial) as a feasibility check for fixed
@@ -1029,7 +1048,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     elif (L > U):
                         msg = 'Constraint {0}: lower bound greater than upper' \
                             ' bound ({1} > {2})'
-                        raise ValueError(msg.format(con_ID, str(L), str(U)))
+                        raise ValueError(msg.format(constraint_data.name,
+                                                    str(L), str(U)))
                     else:
                         constraint_bounds_dict[con_ID] = \
                             "0 %r %r\n" % (L-offset, U-offset)
@@ -1420,7 +1440,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     "components to exist on a single model. To avoid this "
                     "error please use only one of these methods to define "
                     "special ordered sets.")
-        for suffix_name, suffixes in iteritems(suffix_dict):
+        # do a sort to make sure NL file output is deterministic
+        # across python versions
+        for suffix_name in sorted(suffix_dict):
+            suffixes = suffix_dict[suffix_name]
             datatypes = set()
             for suffix in suffixes:
                 try:

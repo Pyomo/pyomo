@@ -15,6 +15,7 @@ import time
 import posixpath
 import tempfile
 import shutil
+import copy
 import logging
 
 from pyutilib.misc import (ArchiveReaderFactory,
@@ -23,13 +24,15 @@ from pyutilib.misc import (ArchiveReaderFactory,
 
 from pyomo.core import (Block,
                         IPyomoScriptModifyInstance,
-                        DataPortal)
+                        DataPortal,
+                        AbstractModel)
 from pyomo.core.base.block import _BlockData
 from pyomo.util.plugin import ExtensionPoint
 from pyomo.pysp.phutils import _OLD_OUTPUT
 from pyomo.pysp.util.misc import load_external_module
 from pyomo.pysp.scenariotree.tree_structure_model import \
-    CreateAbstractScenarioTreeModel
+    (CreateAbstractScenarioTreeModel,
+     ScenarioTreeModelFromNetworkX)
 from pyomo.pysp.scenariotree.tree_structure import \
     ScenarioTree
 
@@ -40,7 +43,14 @@ try:
     import yaml
     has_yaml = True
 except:                #pragma:nocover
-    has_yaml = False   #pragma:nocover
+    has_yaml = False
+
+has_networkx = False
+try:
+    import networkx
+    has_networkx = True
+except:                #pragma:nocover
+    has_networkx = False
 
 logger = logging.getLogger('pyomo.pysp')
 
@@ -181,51 +191,86 @@ def _extract_pathspec(
 
     return filename, archives
 
-def _import_model_or_callback(src, callback_name):
-    """ Try to import a Pyomo model or callback.
-
-    Args:
-        src: The python file, module name, or module to
-            search. When the argument is a file or module
-            name, it will force the import whether or not
-            this overwrites an existing imported module.
-        callback_name: The name of a callback to search for
-            before looking for a model object.
-
-    Returns:
-        A tuple consisting of a reference to the imported
-        module, the model object possibly found in this
-        module, and the callback possibly found in this
-        module. If the callback is found, the model object
-        will be None. Otherwise, the callback will be None.
-        If neither is found, they will both be None.
-    """
-
+def _find_reference_model_or_callback(src):
+    """Tries to find a single reference model or callback for
+    generating scenario models."""
     module, _ = load_external_module(src, clear_cache=True)
-    model = None
+    reference_model = None
     callback = None
     dir_module = dir(module)
-    if callback_name in dir_module:
-        callback = getattr(module, callback_name)
+    if "pysp_instance_creation_callback" in dir_module:
+        callback = getattr(module, "pysp_instance_creation_callback")
         if not hasattr(callback,"__call__"):
-            raise TypeError(
-                "'%s' object found in src '%s' is not callable"
-                % (callback_name, src))
-    elif "model" in dir_module:
-        model = module.model
-        if not isinstance(model, (_BlockData, Block)):
-            raise TypeError(
-                "'model' object found in src '%s' has "
-                "incorrect type:" % (src))
+            raise TypeError("'pysp_instance_creation_callback' "
+                            "object found in source '%s' is not "
+                            "callable" % (src))
+    else:
+        matching_names = []
+        for attr_name in dir_module:
+            obj = getattr(module, attr_name)
+            if isinstance(obj, (_BlockData, Block)):
+                reference_model = obj
+                matching_names.append(attr_name)
+        if len(matching_names) > 1:
+            raise ValueError("Multiple objects found in source '%s' "
+                             "that could be a reference model. Make "
+                             "sure there is only one Pyomo model in "
+                             "the source file. Object names: %s"
+                             % (str(matching_names)))
 
-    return module, model, callback
+    return module, reference_model, callback
+
+def _find_scenariotree(src=None, module=None):
+    """Tries to find a single reference model or callback for
+    generating scenario models."""
+    if module is None:
+        assert src is not None
+        module, _ = load_external_module(src, clear_cache=True)
+    else:
+        assert src is None
+    scenario_tree_object = None
+    scenario_tree_model = None
+    callback = None
+    dir_module = dir(module)
+    if "pysp_scenario_tree_model_callback" in dir_module:
+        callback = getattr(module, "pysp_scenario_tree_model_callback")
+        if not hasattr(callback,"__call__"):
+            raise TypeError("'pysp_scenario_tree_model_callback' "
+                            "object found in source '%s' is not "
+                            "callable" % (src))
+        attrs = [(None, callback())]
+    else:
+        attrs = [(attr_name,getattr(module, attr_name))
+                 for attr_name in dir_module]
+    matching_names = []
+    for attr_name, obj in attrs:
+        if isinstance(obj, ScenarioTree):
+            scenario_tree_object = obj
+            matching_names.append(attr_name)
+        elif isinstance(obj, (_BlockData, Block)):
+            scenario_tree_model = obj
+            matching_names.append(attr_name)
+        elif has_networkx and \
+             isinstance(obj, networkx.DiGraph):
+            scenario_tree_model = obj
+            matching_names.append(attr_name)
+    if len(matching_names) > 1:
+        raise ValueError("Multiple objects found in source '%s' "
+                         "that could act as a scenario tree "
+                         "specification. Make sure there is only "
+                         "one Pyomo model, ScenarioTree, or "
+                         "networkx.DiGraph object in the source "
+                         "file. Object names: %s"
+                         % (str(matching_names)))
+
+    return module, scenario_tree_object, scenario_tree_model
 
 class ScenarioTreeInstanceFactory(object):
 
     def __init__(self,
                  model,
                  scenario_tree,
-                 data_location=None):
+                 data=None):
         """Class to help manage construction of scenario tree models.
 
         This class is designed to help manage the various input formats
@@ -245,16 +290,19 @@ class ScenarioTreeInstanceFactory(object):
                 model, or a .dat file containing data for an
                 abstract scenario tree model representation,
                 which defines the structure of the scenario
-                tree. For historical reasons, this argument
-                can also be set to a directory name where it
-                is assumed a file named
-                ScenarioStructure.dat exists.
-            data_location: Directory containing .dat files
-                necessary for building the scenario
-                instances associated with the scenario
-                tree. This argument is required if no
-                filenames are given for the first two
-                arguments and the reference model is an
+                tree. It can also be a .py file that
+                contains a networkx scenario tree or a
+                networkx scenario tree object.  For
+                historical reasons, this argument can also
+                be set to a directory name where it is
+                assumed a file named ScenarioStructure.dat
+                exists.
+            data: Directory containing .dat files necessary
+                for building the scenario instances
+                associated with the scenario tree. This
+                argument is required if no directory
+                information can be extracted from the first
+                two arguments and the reference model is an
                 abstract Pyomo model. Otherwise, it is not
                 required or the location will be inferred
                 from the scenario tree location (first) or
@@ -262,7 +310,6 @@ class ScenarioTreeInstanceFactory(object):
                 where it is assumed the data files reside in
                 the same directory.
         """
-
         self._closed = True
 
         self._archives = []
@@ -274,15 +321,16 @@ class ScenarioTreeInstanceFactory(object):
         self._scenario_tree_filename = None
         self._scenario_tree_module = None
         self._scenario_tree_model = None
+        self._scenario_tree = None
         self._data_directory = None
         try:
-            self._init(model, scenario_tree, data_location)
+            self._init(model, scenario_tree, data)
         except:
             self.close()
             raise
         self._closed = False
 
-    def _init(self, model, scenario_tree, data_location):
+    def _init(self, model, scenario_tree, data):
 
         self._model_filename = None
         self._model_module = None
@@ -295,21 +343,22 @@ class ScenarioTreeInstanceFactory(object):
                                   "ReferenceModel.py",
                                   archives=self._archives)
             if not os.path.exists(self._model_filename):
-                logger.error("Failed to extract reference model .py file"
+                logger.error("Failed to extract reference model python file "
                              "from path specification: %s"
                              % (model))
                 raise IOError("path does not exist: %s"
                               % (self._model_filename))
             assert self._model_filename is not None
             assert self._model_filename.endswith(".py")
-            self._model_module, self._model_object, self._model_callback = \
-                _import_model_or_callback(
-                    self._model_filename,
-                    "pysp_instance_creation_callback")
+            (self._model_module,
+             self._model_object,
+             self._model_callback) = \
+                _find_reference_model_or_callback(self._model_filename)
             if (self._model_object is None) and \
                (self._model_callback is None):
                 raise AttributeError(
-                    "No 'model' object or 'pysp_instance_creation_callback' "
+                    "No reference Pyomo model or "
+                    "'pysp_instance_creation_callback' "
                     "function object found in src: %s"
                     % (self._model_filename))
         elif hasattr(model, "__call__"):
@@ -326,7 +375,19 @@ class ScenarioTreeInstanceFactory(object):
 
         self._scenario_tree_filename = None
         self._scenario_tree_model = None
-        if isinstance(scenario_tree, six.string_types):
+        self._scenario_tree = None
+        if isinstance(scenario_tree, ScenarioTree):
+            for scenario in scenario_tree.scenarios:
+                if scenario.instance is not None:
+                    raise ValueError(
+                        "The scenario tree can not be linked with instances")
+            if hasattr(scenario_tree, "_scenario_instance_factory"):
+                del scenario_tree._scenario_instance_factory
+            self._scenario_tree = scenario_tree
+        elif has_networkx and \
+             isinstance(scenario_tree, networkx.DiGraph):
+            self._scenario_tree_model = scenario_tree
+        elif isinstance(scenario_tree, six.string_types):
             logger.debug("scenario tree input is a string, attempting "
                          "to load file specification: %s"
                          % (scenario_tree))
@@ -359,30 +420,21 @@ class ScenarioTreeInstanceFactory(object):
                 if self._scenario_tree_filename == self._model_filename:
                     # try not to clobber the model import
                     (self._scenario_tree_module,
-                     scenario_tree_model,
-                     scenario_tree_callback) = \
-                        _import_model_or_callback(
-                            self._model_module,
-                            "pysp_scenario_tree_model_callback")
+                     self._scenario_tree,
+                     self._scenario_tree_model) = \
+                        _find_scenariotree(module=self._model_module)
                 else:
                     (self._scenario_tree_module,
-                     scenario_tree_model,
-                     scenario_tree_callback) = \
-                        _import_model_or_callback(
-                            self._scenario_tree_filename,
-                            "pysp_scenario_tree_model_callback")
-                if (scenario_tree_model is None) and \
-                   (scenario_tree_callback is None):
+                     self._scenario_tree,
+                     self._scenario_tree_model) = \
+                        _find_scenariotree(src=self._scenario_tree_filename)
+                if (self._scenario_tree is None) and \
+                   (self._scenario_tree_model is None):
                     raise AttributeError(
-                        "No 'model' object or "
-                        "'pysp_scenario_tree_model_callback' function "
-                        "object found in src: %s"
+                        "No scenario tree or "
+                        "'pysp_scenario_tree_model_callback' "
+                        "function found in src: %s"
                         % (self._scenario_tree_filename))
-                elif scenario_tree_callback is not None:
-                    self._scenario_tree_model = scenario_tree_callback()
-                else:
-                    assert scenario_tree_model is not None
-                    self._scenario_tree_model = scenario_tree_model
             elif self._scenario_tree_filename.endswith(".dat"):
                 self._scenario_tree_model = \
                     CreateAbstractScenarioTreeModel().\
@@ -390,29 +442,44 @@ class ScenarioTreeInstanceFactory(object):
             else:
                 assert False
         elif scenario_tree is None:
-            if (self._model_module is not None) and \
-               ("pysp_scenario_tree_model_callback" in dir(self._model_module)):
-                self._scenario_tree_model = \
-                    self._model_module.pysp_scenario_tree_model_callback()
+            if self._model_module is not None:
+                self._scenario_tree_filename = self._model_filename
+                (self._scenario_tree_module,
+                 self._scenario_tree,
+                 self._scenario_tree_model) = \
+                    _find_scenariotree(module=self._model_module)
+                if (self._scenario_tree is None) and \
+                   (self._scenario_tree_model is None):
+                    raise ValueError(
+                        "No input was provided for the scenario tree "
+                        "and no callback or scenario tree object was "
+                        "found with the model")
             else:
                 raise ValueError(
-                    "No input was provided for the scenario tree model but "
-                    "there is no module to search for a "
-                    "'pysp_scenario_tree_model_callback' function.")
+                    "No input was provided for the scenario tree "
+                    "but there is no module to search for a "
+                    "'pysp_scenario_tree_model_callback' function "
+                    "or a ScenarioTree object.")
         else:
             self._scenario_tree_model = scenario_tree
 
-        if not isinstance(self._scenario_tree_model, (_BlockData, Block)):
-            raise TypeError(
-                "scenario tree model object has incorrect type: %s. "
-                "Must be a string type or a Pyomo model."
-                % (type(scenario_tree)))
-        if not self._scenario_tree_model.is_constructed():
-            raise ValueError(
-                "scenario tree model must be a concrete Pyomo model.")
+        if self._scenario_tree is None:
+            if (not isinstance(self._scenario_tree_model,
+                               (_BlockData, Block))) and \
+               (has_networkx and \
+                (not isinstance(self._scenario_tree_model,
+                                networkx.DiGraph))):
+                raise TypeError(
+                    "scenario tree model object has incorrect type: %s. "
+                    "Must be a string type,  Pyomo model, or a "
+                    "networkx.DiGraph object." % (type(scenario_tree)))
+            if isinstance(self._scenario_tree_model, (_BlockData, Block)):
+                if not self._scenario_tree_model.is_constructed():
+                    raise ValueError(
+                        "scenario tree model is not constructed")
 
         self._data_directory = None
-        if data_location is None:
+        if data is None:
             if self.scenario_tree_directory() is not None:
                 logger.debug("data directory is set to the scenario tree "
                              "directory: %s"
@@ -424,7 +491,9 @@ class ScenarioTreeInstanceFactory(object):
                              % (self.model_directory()))
                 self._data_directory = self.model_directory()
             else:
-                if self._model_callback is None:
+                if (self._model_callback is None) and \
+                   isinstance(self._model_object, AbstractModel) and \
+                   (not self._model_object.is_constructed()):
                     raise ValueError(
                         "A data location is required since no model "
                         "callback was provided and no other location could "
@@ -433,15 +502,15 @@ class ScenarioTreeInstanceFactory(object):
         else:
             logger.debug("data location is provided, attempting "
                          "to load specification: %s"
-                         % (data_location))
+                         % (data))
             self._data_directory, self._archives = \
-                _extract_pathspec(data_location,
+                _extract_pathspec(data,
                                   None,
                                   archives=self._archives)
             if not os.path.exists(self._data_directory):
                 logger.error("Failed to extract data directory "
                              "from path specification: %s"
-                             % (data_location))
+                             % (data))
                 raise IOError("path does not exist: %s"
                               % (self._data_directory))
 
@@ -515,14 +584,45 @@ class ScenarioTreeInstanceFactory(object):
             if self._model_callback is not None:
 
                 assert self._model_object is None
-                scenario_instance = self._model_callback(scenario_name,
-                                                         node_name_list)
+                try:
+                    _scenario_tree_arg = None
+                    # new callback signature
+                    if (self._scenario_tree_filename is not None) and \
+                       self._scenario_tree_filename.endswith('.dat'):
+                        # we started with a .dat file, so
+                        # send the PySP scenario tree
+                        _scenario_tree_arg = scenario_tree
+                    elif self._scenario_tree_model is not None:
+                        # We started from a Pyomo
+                        # scenario tree model instance, or a
+                        # networkx tree.
+                        _scenario_tree_arg = self._scenario_tree_model
+                    else:
+                        # send the PySP scenario tree
+                        _scenario_tree_arg = scenario_tree
+                    scenario_instance = self._model_callback(_scenario_tree_arg,
+                                                             scenario_name,
+                                                             node_name_list)
+                except TypeError:
+                    # old callback signature
+                    # TODO:
+                    #logger.warning(
+                    #    "DEPRECATED: The 'pysp_instance_creation_callback' function "
+                    #    "signature has changed. An additional argument should be "
+                    #    "added to the beginning of the arguments list that will be "
+                    #    "set to the user provided scenario tree object when called "
+                    #    "by PySP (e.g., a Pyomo scenario tree model instance, "
+                    #    "a networkx tree, or a PySP ScenarioTree object.")
+                    scenario_instance = self._model_callback(scenario_name,
+                                                             node_name_list)
 
             elif self._model_object is not None:
 
-                assert self.data_directory() is not None
-                if scenario_tree._scenario_based_data:
-
+                if (not isinstance(self._model_object, AbstractModel)) or \
+                   (self._model_object.is_constructed()):
+                    scenario_instance = self._model_object.clone()
+                elif scenario_tree._scenario_based_data:
+                    assert self.data_directory() is not None
                     scenario_data_filename = \
                         os.path.join(self.data_directory(),
                                      str(scenario_name))
@@ -569,7 +669,7 @@ class ScenarioTreeInstanceFactory(object):
                                 profile_memory=profile_memory,
                                 report_timing=output_instance_construction_time)
                 else:
-
+                    assert self.data_directory() is not None
                     data_files = []
                     for node_name in node_name_list:
                         node_data_filename = \
@@ -685,8 +785,22 @@ class ScenarioTreeInstanceFactory(object):
                                verbose=True):
 
         scenario_tree_model = self._scenario_tree_model
+        if scenario_tree_model is not None:
+            if has_networkx and \
+               isinstance(scenario_tree_model, networkx.DiGraph):
+                scenario_tree_model = \
+                    ScenarioTreeModelFromNetworkX(scenario_tree_model)
+            else:
+                assert isinstance(scenario_tree_model, (_BlockData, Block)), \
+                    str(scenario_tree_model)+" "+str(type(scenario_tree_model))
+
         if bundles is not None:
             if isinstance(bundles, six.string_types):
+                if scenario_tree_model is None:
+                    raise ValueError(
+                        "A bundles file can not be used when the "
+                        "scenario tree input was not a Pyomo "
+                        "model or ScenarioStructure.dat file.")
                 logger.debug("attempting to locate bundle file for input: %s"
                              % (bundles))
                 # we interpret the scenario bundle specification in one of
@@ -727,8 +841,22 @@ class ScenarioTreeInstanceFactory(object):
         #
         # construct the scenario tree
         #
-        scenario_tree = ScenarioTree(scenariotreeinstance=scenario_tree_model,
-                                     scenariobundlelist=include_scenarios)
+        if scenario_tree_model is not None:
+            scenario_tree = ScenarioTree(scenariotreeinstance=scenario_tree_model,
+                                         scenariobundlelist=include_scenarios)
+        else:
+            assert self._scenario_tree is not None
+            if include_scenarios is None:
+                scenario_tree = copy.deepcopy(self._scenario_tree)
+            else:
+                # note: any bundles will be lost
+                if self._scenario_tree.contains_bundles():
+                    raise ValueError(
+                        "Can not compress a scenario tree that "
+                        "contains bundles")
+                scenario_tree = self._scenario_tree.make_compressed(
+                    include_scenarios,
+                    normalize=True)
 
         # compress/down-sample the scenario tree, if requested
         if (downsample_fraction is not None) and \
@@ -769,12 +897,12 @@ class ScenarioTreeInstanceFactory(object):
                 raise ValueError("Cannot create more random bundles "
                                  "than there are scenarios!")
 
-            print("Creating "+str(random_bundles)+
-                  " random bundles using seed="
-                  +str(random_seed))
+            if verbose:
+                print("Creating "+str(random_bundles)+
+                      " random bundles using seed="
+                      +str(random_seed))
 
-            scenario_tree.create_random_bundles(self._scenario_tree_model,
-                                                random_bundles,
+            scenario_tree.create_random_bundles(random_bundles,
                                                 random_seed)
 
         scenario_tree._scenario_instance_factory = self

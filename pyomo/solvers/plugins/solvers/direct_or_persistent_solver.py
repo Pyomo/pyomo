@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.base.PyomoModel import Model
+from pyomo.core.base.block import Block, _BlockData
 from pyomo.core.kernel.component_block import IBlockStorage
 from pyomo.opt.base.solvers import OptSolver
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
@@ -19,6 +20,7 @@ from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt.base.formats import ResultsFormat
 from pyutilib.misc import Options
+from collections import MutableMapping
 
 
 class DirectOrPersistentSolver(OptSolver):
@@ -56,9 +58,11 @@ class DirectOrPersistentSolver(OptSolver):
         """The labeler for creating names for the solver model components."""
 
         self._pyomo_var_to_solver_var_map = ComponentMap()
+        self._solver_var_to_pyomo_var_map = dict()
         """A dictionary mapping pyomo Var's to the solver variables."""
 
-        self._pyomo_con_to_solver_con_map = ComponentMap()
+        self._pyomo_con_to_solver_con_map = dict()
+        self._solver_con_to_pyomo_con_map = dict()
         """A dictionary mapping pyomo constraints to solver constraints."""
 
         self._vars_referenced_by_con = ComponentMap()
@@ -114,7 +118,7 @@ class DirectOrPersistentSolver(OptSolver):
         the results directly from the solver object. If False, the solution will not be loaded into the Solution
         object."""
 
-    def _presolve(self, *args, **kwds):
+    def _presolve(self, **kwds):
         warmstart_flag = kwds.pop('warmstart', False)
         self._keepfiles = kwds.pop('keepfiles', False)
         self._save_results = kwds.pop('save_results', True)
@@ -133,7 +137,7 @@ class DirectOrPersistentSolver(OptSolver):
         self._results_format = ResultsFormat.soln
         # use the base class _presolve to consume the
         # important keywords
-        OptSolver._presolve(self, *args, **kwds)
+        OptSolver._presolve(self, **kwds)
 
         # ***********************************************************
         # The following code is only needed for backwards compatability of load_solutions=False.
@@ -169,9 +173,9 @@ class DirectOrPersistentSolver(OptSolver):
 
     """ This method should be implemented by subclasses."""
     def _set_instance(self, model, kwds={}):
-        if not isinstance(model, (Model, IBlockStorage)):
+        if not isinstance(model, (Model, IBlockStorage, Block, _BlockData)):
             msg = "The problem instance supplied to the {0} plugin " \
-                  "'_presolve' method must be of type 'Model'".format(type(self))
+                  "'_presolve' method must be a Model or a Block".format(type(self))
             raise ValueError(msg)
         self._pyomo_model = model
         self._symbolic_solver_labels = kwds.pop('symbolic_solver_labels', self._symbolic_solver_labels)
@@ -179,7 +183,9 @@ class DirectOrPersistentSolver(OptSolver):
         self._output_fixed_variable_bounds = kwds.pop('output_fixed_variable_bounds',
                                                       self._output_fixed_variable_bounds)
         self._pyomo_var_to_solver_var_map = ComponentMap()
-        self._pyomo_con_to_solver_con_map = ComponentMap()
+        self._solver_var_to_pyomo_var_map = dict()
+        self._pyomo_con_to_solver_con_map = dict()
+        self._solver_con_to_pyomo_con_map = dict()
         self._vars_referenced_by_con = ComponentMap()
         self._vars_referenced_by_obj = ComponentSet()
         self._referenced_variables = ComponentMap()
@@ -194,54 +200,78 @@ class DirectOrPersistentSolver(OptSolver):
             self._labeler = NumericLabeler('x')
 
     def _add_block(self, block):
-        for var in block.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=True,
-                                                active=True, sort=True):
+        for var in block.component_data_objects(
+                ctype=pyomo.core.base.var.Var,
+                descend_into=True,
+                active=True,
+                sort=True):
             self._add_var(var)
 
-        for sub_block in block.block_data_objects(descend_into=True, active=True):
-            for con in sub_block.component_data_objects(ctype=pyomo.core.base.constraint.Constraint,
-                                                        descend_into=False, active=True, sort=True):
+        for sub_block in block.block_data_objects(descend_into=True,
+                                                  active=True):
+            for con in sub_block.component_data_objects(
+                    ctype=pyomo.core.base.constraint.Constraint,
+                    descend_into=False,
+                    active=True,
+                    sort=True):
+                if (not con.has_lb()) and \
+                   (not con.has_ub()):
+                    assert not con.equality
+                    continue  # non-binding, so skip
                 self._add_constraint(con)
 
-            for con in sub_block.component_data_objects(ctype=pyomo.core.base.sos.SOSConstraint,
-                                                        descend_into=False, active=True, sort=True):
+            for con in sub_block.component_data_objects(
+                    ctype=pyomo.core.base.sos.SOSConstraint,
+                    descend_into=False,
+                    active=True,
+                    sort=True):
                 self._add_sos_constraint(con)
 
             obj_counter = 0
-            for obj in sub_block.component_data_objects(ctype=pyomo.core.base.objective.Objective, descend_into=False,
-                                                        active=True):
+            for obj in sub_block.component_data_objects(
+                    ctype=pyomo.core.base.objective.Objective,
+                    descend_into=False,
+                    active=True):
                 obj_counter += 1
                 if obj_counter > 1:
-                    raise ValueError('Solver interface does not support multiple objectives.')
+                    raise ValueError("Solver interface does not "
+                                     "support multiple objectives.")
                 self._set_objective(obj)
 
     """ This method should be implemented by subclasses."""
     def _set_objective(self, obj):
-        raise NotImplementedError('This method should be implemented by subclasses')
+        raise NotImplementedError("This method should be implemented "
+                                  "by subclasses")
 
     """ This method should be implemented by subclasses."""
     def _add_constraint(self, con):
-        raise NotImplementedError('This method should be implemented by subclasses')
+        raise NotImplementedError("This method should be implemented "
+                                  "by subclasses")
 
     """ This method should be implemented by subclasses."""
     def _add_sos_constraint(self, con):
-        raise NotImplementedError('This method should be implemented by subclasses')
+        raise NotImplementedError("This method should be implemented "
+                                  "by subclasses")
 
     """ This method should be implemented by subclasses."""
     def _add_var(self, var):
-        raise NotImplementedError('This method should be implemented by subclasses')
+        raise NotImplementedError("This method should be implemented "
+                                  "by subclasses")
 
     """ This method should be implemented by subclasses."""
     def _get_expr_from_pyomo_repn(self, repn, max_degree=None):
-        raise NotImplementedError('This method should be implemented by subclasses')
+        raise NotImplementedError("This method should be implemented "
+                                  "by subclasses")
 
     """ This method should be implemented by subclasses."""
     def _get_expr_from_pyomo_expr(self, expr, max_degree=None):
-        raise NotImplementedError('This method should be implemented by subclasses')
+        raise NotImplementedError("This method should be implemented "
+                                  "by subclasses")
 
     """ This method should be implemented by subclasses."""
     def _load_vars(self, vars_to_load):
-        raise NotImplementedError('This method should be implemented by subclasses')
+        raise NotImplementedError("This method should be implemented "
+                                  "by subclasses")
 
     def load_vars(self, vars_to_load=None):
         """

@@ -21,8 +21,13 @@ import traceback
 import base64
 try:
     import cPickle as pickle
-except:
+except:                                           #pragma:nocover
     import pickle
+try:
+    import dill
+    dill_available = True
+except ImportError:                               #pragma:nocover
+    dill_available = False
 
 import pyutilib.misc
 from pyutilib.misc import PauseGC
@@ -31,14 +36,14 @@ from pyutilib.pyro import (TaskWorker,
                            shutdown_pyro_components,
                            TaskProcessingError,
                            using_pyro4)
-if using_pyro4:
+if using_pyro4:                                    #pragma:nocover
     import Pyro4
 
 from pyomo.util import pyomo_command
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
                        SolutionStatus)
-from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
+
 from pyomo.opt.parallel.manager import ActionManagerError
 from pyomo.pysp.util.misc import (parse_command_line,
                                   launch_command,
@@ -50,47 +55,20 @@ from pyomo.pysp.util.config import (PySPConfigValue,
                                     safe_register_unique_option,
                                     _domain_tuple_of_str)
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
+from pyomo.pysp.scenariotree.tree_structure import \
+    ScenarioTree
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
-from pyomo.pysp.scenariotree.server_pyro_utils import \
-    (WorkerInitType,
-     WorkerInit)
 
 import six
 from six import iteritems
 
 logger = logging.getLogger('pyomo.pysp')
 
-class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
+class ScenarioTreeServerPyro(TaskWorker):
 
     # Maps name to a registered worker class to instantiate
     _registered_workers = {}
-
-    _declared_options = \
-        PySPConfigBlock("Options declared for the "
-                        "ScenarioTreeServerPyro class")
-
-    #
-    # scenario instance construction
-    #
-    safe_declare_common_option(_declared_options,
-                               "model_location")
-    safe_declare_common_option(_declared_options,
-                               "scenario_tree_location")
-
-    #
-    # scenario tree generation
-    #
-    safe_declare_common_option(_declared_options,
-                               "scenario_tree_random_seed")
-    safe_declare_common_option(_declared_options,
-                               "scenario_tree_downsample_fraction")
-
-    #
-    # various
-    #
-    safe_declare_common_option(_declared_options,
-                               "verbose")
 
     @classmethod
     def get_registered_worker_type(cls, name):
@@ -101,10 +79,13 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
 
     def __init__(self, *args, **kwds):
 
-
+        mpi = kwds.pop('mpi', None)
         # add for purposes of diagnostic output.
         kwds["name"] = ("ScenarioTreeServerPyro_%d@%s"
                         % (os.getpid(), socket.gethostname()))
+        if mpi is not None:
+            assert len(mpi) == 2
+            kwds["name"] += "_MPIRank_"+str(mpi[1].rank)
         kwds["caller_name"] = kwds["name"]
         self._modules_imported = kwds.pop('modules_imported', {})
 
@@ -113,14 +94,25 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
         self._bulk_task_collection = True
         self._contiguous_task_processing = False
 
-        # This classes options get updated during the "setup" phase
-        options = self.register_options()
-        PySPConfiguredObject.__init__(self, options)
-
         self.type = self.WORKERNAME
         self.block = True
         self.timeout = None
         self._worker_map = {}
+        self._init_verbose = self._verbose
+
+        # A reference to the mpi4py.MPI namespace
+        self.MPI = None
+        # The communicator and group associated with all processors
+        self.mpi_comm_world = None
+        self.mpi_group_world = None
+        # The communicator associated with the workers assigned
+        # to the current current client
+        self.mpi_comm_workers = None
+        if mpi is not None:
+            assert len(mpi) == 2
+            self.MPI = mpi[0]
+            self.mpi_comm_world = mpi[1]
+            self.mpi_group_world = self.mpi_comm_world.Get_group()
 
         #
         # These will be used by all subsequent workers created
@@ -139,6 +131,10 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
         self._full_scenario_tree = None
         for worker_name in list(self._worker_map):
             self.remove_worker(worker_name)
+        if self.mpi_comm_workers is not None:
+            self.mpi_comm_workers.Free()
+            self.mpi_comm_workers = None
+        self._verbose = self._init_verbose
 
     def remove_worker(self, name):
         self._worker_map[name].close()
@@ -178,27 +174,33 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
                      (*data.args, **data.kwds)
 
         elif data.action == 'ScenarioTreeServerPyro_setup':
-            options = self.register_options()
-            for name, val in iteritems(data.options):
-                options.get(name).set_value(val)
-            self.set_options(options)
-            self._options.verbose = self._options.verbose | self._verbose
+            model_input = data.options.pop('model', None)
+            if model_input is None:
+                model_input = data.options.pop('model_callback')
+                assert dill_available
+                model_input = dill.loads(model_input)
+
+            scenario_tree_input = data.options.pop('scenario_tree')
+            data_input = data.options.pop('data')
+            mpi_group = data.options.pop("mpi_group",None)
+            verbose = data.options.pop("verbose", False)
+            assert len(data.options) == 0
+            self._verbose |= verbose
             assert self._scenario_instance_factory is None
             assert self._full_scenario_tree is None
-            if self._options.verbose:
+            if self._verbose:
                 print("Server %s received setup request."
                       % (self.WORKERNAME))
-                print("Options:")
-                self.display_options()
 
             # Make sure these are not archives
-            assert os.path.exists(self._options.model_location)
-            assert (self._options.scenario_tree_location is None) or \
-                os.path.exists(self._options.scenario_tree_location)
+            assert (not isinstance(model_input, six.string_types)) or \
+                os.path.exists(model_input)
+            assert isinstance(scenario_tree_input, ScenarioTree)
             self._scenario_instance_factory = \
                 ScenarioTreeInstanceFactory(
-                    self._options.model_location,
-                    self._options.scenario_tree_location)
+                    model_input,
+                    scenario_tree_input,
+                    data=data_input)
 
             #
             # Try to prevent unnecessarily re-importing the model module
@@ -209,16 +211,20 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
                 self._modules_imported[self._scenario_instance_factory.\
                                        _model_filename] = \
                     self._scenario_instance_factory._model_module
-            if self._scenario_instance_factory._scenario_tree_module is not None:
-                self._modules_imported[self._scenario_instance_factory.\
-                                       _scenario_tree_filename] = \
-                    self._scenario_instance_factory._scenario_tree_module
+            assert self._scenario_instance_factory._scenario_tree_module is None
 
             self._full_scenario_tree = \
-                self._scenario_instance_factory.generate_scenario_tree(
-                    downsample_fraction=self._options.scenario_tree_downsample_fraction,
-                    random_seed=self._options.scenario_tree_random_seed,
-                    verbose=self._options.verbose)
+                 self._scenario_instance_factory.generate_scenario_tree()
+
+            assert self.mpi_comm_workers is None
+            if self.mpi_comm_world is not None:
+                assert self.mpi_group_world is not None
+                assert mpi_group is not None
+                mpi_group = self.mpi_group_world.Incl(mpi_group)
+                self.mpi_comm_workers = \
+                    self.mpi_comm_world.Create_group(mpi_group)
+            else:
+                assert mpi_group is None
 
             if self._full_scenario_tree is None:
                  raise RuntimeError("Unable to launch scenario tree worker - "
@@ -229,7 +235,7 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
         elif data.action == "ScenarioTreeServerPyro_initialize":
 
             worker_name = data.worker_name
-            if self._options.verbose:
+            if self._verbose:
                 print("Server %s received request to initialize "
                       "scenario tree worker with name %s."
                       % (self.WORKERNAME, worker_name))
@@ -244,39 +250,17 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
                      % (self.WORKERNAME, worker_name))
 
             worker_type = self._registered_workers[data.worker_type]
-            options = worker_type.register_options()
-            for name, val in iteritems(data.options):
-                options.get(name).set_value(val)
 
-            #
-            # Depending on the Pyro serializer, the namedtuple
-            # may be been converted to a tuple
-            #
-            if not isinstance(data.worker_init, WorkerInit):
-                assert type(data.worker_init) is tuple
-                data.worker_init = WorkerInit(type_=data.worker_init[0],
-                                              names=data.worker_init[1],
-                                              data=data.worker_init[2])
-
-            # replace enum string representation with the actual enum
-            # object now that we've unserialized the Pyro data
-            worker_init = WorkerInit(type_=getattr(WorkerInitType,
-                                                   data.worker_init.type_),
-                                     names=data.worker_init.names,
-                                     data=data.worker_init.data)
-            self._worker_map[worker_name] = worker_type(options)
-            self._worker_map[worker_name].initialize(
-                self.WORKERNAME,
-                self._full_scenario_tree,
+            self._worker_map[worker_name] = worker_type(
+                self,
                 worker_name,
-                worker_init,
-                self._modules_imported)
-
+                *data.init_args,
+                **data.init_kwds)
             result = True
 
         elif data.action == "ScenarioTreeServerPyro_release":
 
-            if self._options.verbose:
+            if self._verbose:
                 print("Server %s releasing worker: %s"
                       % (self.WORKERNAME, data.worker_name))
             self.remove_worker(data.worker_name)
@@ -284,7 +268,7 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
 
         elif data.action == "ScenarioTreeServerPyro_reset":
 
-            if self._options.verbose:
+            if self._verbose:
                 print("Server %s received reset request"
                       % (self.WORKERNAME))
             self.reset()
@@ -292,7 +276,7 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
 
         elif data.action == "ScenarioTreeServerPyro_shutdown":
 
-            if self._options.verbose:
+            if self._verbose:
                 print("Server %s received shutdown request"
                       % (self.WORKERNAME))
             self.reset()
@@ -306,22 +290,11 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
         return result
 
 def RegisterWorker(name, class_type):
-    assert name not in ScenarioTreeServerPyro._registered_workers, \
-        ("The name %s is already registered for another worker class"
-         % (name))
+    if name in ScenarioTreeServerPyro._registered_workers:
+        raise ValueError("The name %s is already registered "
+                         "for another worker class"
+                         % (name))
     ScenarioTreeServerPyro._registered_workers[name] = class_type
-
-#
-# Register some known, trusted workers
-#
-from pyomo.pysp.scenariotree.manager_worker_pyro import \
-    ScenarioTreeManagerWorkerPyro
-RegisterWorker('ScenarioTreeManagerWorkerPyro',
-               ScenarioTreeManagerWorkerPyro)
-from pyomo.pysp.scenariotree.manager_solver_worker_pyro import \
-    ScenarioTreeManagerSolverWorkerPyro
-RegisterWorker('ScenarioTreeManagerSolverWorkerPyro',
-               ScenarioTreeManagerSolverWorkerPyro)
 
 #
 # utility method fill a PySPConfigBlock with options associated
@@ -337,6 +310,18 @@ def scenariotreeserver_register_options(options=None):
     safe_register_common_option(options, "verbose")
     safe_register_common_option(options, "pyro_host")
     safe_register_common_option(options, "pyro_port")
+    safe_register_unique_option(
+        options,
+        "mpi",
+        PySPConfigValue(
+            False,
+            domain=bool,
+            description=(
+                "Activate MPI based functionality. "
+                "Requires the mpi4py module."
+            ),
+            doc=None,
+            visibility=0))
     safe_register_unique_option(
         options,
         "import_module",
@@ -356,13 +341,22 @@ def scenariotreeserver_register_options(options=None):
 #
 def exec_scenariotreeserver(options):
 
+    mpi = None
+    if options.mpi:
+        import mpi4py
+        # This import calls MPI_Init
+        import mpi4py.MPI
+        mpi = (mpi4py.MPI, mpi4py.MPI.COMM_WORLD)
+
     modules_imported = {}
     for module_name in options.import_module:
         if module_name in sys.modules:
             modules_imported[module_name] = sys.modules[module_name]
         else:
             modules_imported[module_name] = \
-                load_external_module(module_name, clear_cache=True)[0]
+                load_external_module(module_name,
+                                     clear_cache=True,
+                                     verbose=True)[0]
 
     try:
         # spawn the daemon
@@ -370,7 +364,8 @@ def exec_scenariotreeserver(options):
                          host=options.pyro_host,
                          port=options.pyro_port,
                          verbose=options.verbose,
-                         modules_imported=modules_imported)
+                         modules_imported=modules_imported,
+                         mpi=mpi)
     except:
         # if an exception occurred, then we probably want to shut down
         # all Pyro components.  otherwise, the PH client may have

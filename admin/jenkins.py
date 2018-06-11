@@ -12,11 +12,7 @@ import glob
 import sys
 import os
 import subprocess
-try:
-    from subprocess import check_output as _run_cmd
-except:
-    # python 2.6
-    from subprocess import check_call as _run_cmd
+from subprocess import check_output as _run_cmd
 import driver
 
 config = sys.argv[1]
@@ -41,17 +37,9 @@ sys.argv = ['dummy', '--trunk', '--source', 'src', '-a', 'pyyaml']
 #
 # Machine-specific configurations
 #
-if hname == "snotra":
-    # Pick up CPLEX
-    _CPLEX = '/opt/ibm/ILOG/CPLEX_Studio126/cplex'
-    if sys.version_info[:2] < (3,0):
-        # Python bindings for 12.6 only support 2.6/2.7
-        sys.argv.append('-a')
-        sys.argv.append(_CPLEX+'/python/x86-64_linux')
-    os.environ['PATH'] += os.pathsep+_CPLEX+'/bin/x86-64_linux'
-    # Pick up the BARON license
-    os.environ['PATH'] += os.pathsep+os.environ['HOME']+'/bin'
-
+#if hname == "snotra":
+#    ### snotra configuration is now handled through local module files
+#
 
 
 if 'LD_LIBRARY_PATH' not in os.environ:

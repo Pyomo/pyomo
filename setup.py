@@ -39,7 +39,7 @@ def read(*rnames):
     return open(os.path.join(os.path.dirname(__file__), *rnames)).read()
 
 requires = [
-    'PyUtilib>=5.6',
+    'PyUtilib>=5.6.3',
     'appdirs',
     'ply',
     'six>=1.4',
@@ -62,7 +62,7 @@ setup(name='Pyomo',
       #     pyomo/pyomo/version/__init__.py
       #     pyomo/RELEASE.txt
       #
-      version='5.3',
+      version='5.5.1',
       maintainer='William E. Hart',
       maintainer_email='wehart@sandia.gov',
       url='http://pyomo.org',
@@ -81,7 +81,6 @@ setup(name='Pyomo',
         'Operating System :: Unix',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
@@ -94,15 +93,14 @@ setup(name='Pyomo',
         'Topic :: Software Development :: Libraries :: Python Modules' ],
       packages=packages,
       keywords=['optimization'],
-      namespace_packages=['pyomo'],
       install_requires=requires,
+      python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
       entry_points="""
         [console_scripts]
         runbenders=pyomo.pysp.benders:Benders_main
         evaluate_xhat=pyomo.pysp.evaluate_xhat:EvaluateXhat_main
         runph=pyomo.pysp.phinit:PH_main
         runef=pyomo.pysp.ef_writer_script:main
-        pysp2smps=pyomo.pysp.smps.pysp2smps:main
         phsolverserver=pyomo.pysp.phsolverserver:main
         scenariotreeserver=pyomo.pysp.scenariotree.server_pyro:main
         computeconf=pyomo.pysp.computeconf:main
@@ -126,7 +124,6 @@ setup(name='Pyomo',
         pyomo.evaluate_xhat=pyomo.pysp.evaluate_xhat
         pyomo.runph=pyomo.pysp.phinit
         pyomo.runef=pyomo.pysp.ef_writer_script
-        pyomo.pysp2smps=pyomo.pysp.smps.pysp2smps
         pyomo.phsolverserver=pyomo.pysp.phsolverserver
         pyomo.scenariotreeserver=pyomo.pysp.scenariotree.server_pyro
         pyomo.computeconf=pyomo.pysp.computeconf

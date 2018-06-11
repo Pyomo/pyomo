@@ -8,18 +8,27 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.util.deprecation import deprecated
 from pyomo.util.plugin import Plugin, implements
-from pyomo.core import *
+from pyomo.core import IPyomoScriptModifyInstance, TransformationFactory
 
+# This import ensures that gdp.bigm is registered, even if pyomo.environ
+# was never imported.
+import pyomo.gdp.plugins.bigm
 
-class BigM_Transformation_Plugin(Plugin):
+@deprecated('The GDP Pyomo script plugins are deprecated.  '
+            'Use BuildActions or the --transform option.')
+class BigM_Transformation_PyomoScript_Plugin(Plugin):
 
     implements(IPyomoScriptModifyInstance, service=True)
 
     def apply(self, **kwds):
         instance = kwds.pop('instance')
+        # Not sure why the ModifyInstance callback started passing the
+        # model along with the instance.  We will ignore it.
+        model = kwds.pop('model', None)
         xform = TransformationFactory('gdp.bigm')
-        return xform.apply(instance, **kwds)
+        return xform.apply_to(instance, **kwds)
 
 
-transform = BigM_Transformation_Plugin()
+transform = BigM_Transformation_PyomoScript_Plugin()

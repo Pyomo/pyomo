@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -15,9 +15,9 @@ import six
 from weakref import ref as weakref_ref
 import sys
 from copy import deepcopy
+from pickle import PickleError
 
 import pyomo.util
-from pyomo.core.base.plugin import register_component
 from pyomo.core.base.misc import tabular_writer
 
 from six import iteritems, string_types
@@ -129,6 +129,25 @@ class _ComponentBase(object):
                 ans = memo[id(self)] = self
                 return ans
 
+        #
+        # There is a particularly subtle bug with 'uncopyable'
+        # attributes: if the exception is thrown while copying a complex
+        # data structure, we can be in a state where objects have been
+        # created and assigned to the memo in the try block, but they
+        # haven't had their state set yet.  When the exception moves us
+        # into the except block, we need to effectively "undo" those
+        # partially copied classes.  The only way is to restore the memo
+        # to the state it was in before we started.  Right now, our
+        # solution is to make a (shallow) copy of the memo before each
+        # operation and restoring it in the case of exception.
+        # Unfortunately that is a lot of usually unnecessary work.
+        # Since *most* classes are copyable, we will avoid that
+        # "paranoia" unless the naive clone generated an error - in
+        # which case Block.clone() will switch over to the more
+        # "paranoid" mode.
+        #
+        paranoid = memo.get('__paranoid__', None)
+
         ans = memo[id(self)] = self.__class__.__new__(self.__class__)
         # We can't do the "obvious", since this is a (partially)
         # slot-ized class and the __dict__ structure is
@@ -151,18 +170,43 @@ class _ComponentBase(object):
         # attribute to prevent infinite recursion.
         state = self.__getstate__()
         try:
-            ans.__setstate__(deepcopy(state, memo))
+            if paranoid:
+                saved_memo = dict(memo)
+            new_state = deepcopy(state, memo)
         except:
+            if paranoid:
+                # Note: memo is intentionally pass-by-reference.  We
+                # need to clear and reset the object we were handed (and
+                # not overwrite it)
+                memo.clear()
+                memo.update(saved_memo)
+            elif paranoid is not None:
+                raise PickleError()
             new_state = {}
             for k,v in iteritems(state):
                 try:
+                    if paranoid:
+                        saved_memo = dict(memo)
                     new_state[k] = deepcopy(v, memo)
                 except:
+                    if paranoid:
+                        memo.clear()
+                        memo.update(saved_memo)
+                    elif paranoid is None:
+                        logger.warning("""
+                            Uncopyable field encountered when deep
+                            copying outside the scope of Block.clone().
+                            There is a distinct possibility that the new
+                            copy is not complete.  To avoid this
+                            situation, either use Block.clone() or set
+                            'paranoid' mode by adding '__paranoid__' ==
+                            True to the memo before calling
+                            copy.deepcopy.""")
                     logger.error(
                         "Unable to clone Pyomo component attribute.\n"
                         "Component '%s' contains an uncopyable field '%s' (%s)"
                         % ( self.name, k, type(v) ))
-            ans.__setstate__(new_state)
+        ans.__setstate__(new_state)
         return ans
 
     def cname(self, *args, **kwds):
@@ -430,26 +474,6 @@ class Component(_ComponentBase):
                 "is assigned to a Block.\nTriggered by attempting to set "
                 "component '%s' to name '%s'" % (self.name,val))
 
-    def pprint(self, ostream=None, verbose=False, prefix=""):
-        """Print component information"""
-        if ostream is None:
-            ostream = sys.stdout
-        tab="    "
-        ostream.write(prefix+self.local_name+" : ")
-        if self.doc is not None:
-            ostream.write(self.doc+'\n'+prefix+tab)
-
-        _attr, _data, _header, _fcn = self._pprint()
-
-        ostream.write(", ".join("%s=%s" % (k,v) for k,v in _attr))
-        ostream.write("\n")
-        if not self._constructed:
-            ostream.write(prefix+tab+"Not constructed\n")
-            return
-
-        if _data is not None:
-            tabular_writer( ostream, prefix+tab, _data, _header, _fcn )
-
     def is_indexed(self):
         """Return true if this component is indexed"""
         return False
@@ -536,12 +560,12 @@ class ComponentData(_ComponentBase):
 
     Private class attributes:
         _component      A weakref to the component that owns this data object
-    """
+        """
 
     __pickle_slots__ = ('_component',)
     __slots__ = __pickle_slots__ + ('__weakref__',)
 
-    def __init__(self, owner):
+    def __init__(self, component):
         #
         # ComponentData objects are typically *private* objects for
         # indexed / sparse indexed components.  As such, the (derived)
@@ -549,7 +573,7 @@ class ComponentData(_ComponentBase):
         # passed as the owner (and that owner is never None).  Not validating
         # this assumption is significantly faster.
         #
-        self._component = weakref_ref(owner)
+        self._component = weakref_ref(component)
 
     def __getstate__(self):
         """Prepare a picklable state of this instance for pickling.
@@ -626,6 +650,13 @@ class ComponentData(_ComponentBase):
                 # set the attribute using object.__setattr__() instead
                 # of setting self.__dict__[key] = val.
                 object.__setattr__(self, key, val)
+
+    def type(self):
+        """Return the class type for this component"""
+        _parent = self.parent_component()
+        if _parent is None:
+            return _parent
+        return _parent._type
 
     def parent_component(self):
         """Returns the component associated with this object."""
@@ -791,8 +822,8 @@ class ActiveComponentData(ComponentData):
 
     __slots__ = ( '_active', )
 
-    def __init__(self, owner):
-        super(ActiveComponentData, self).__init__(owner)
+    def __init__(self, component):
+        super(ActiveComponentData, self).__init__(component)
         self._active = True
 
     def __getstate__(self):

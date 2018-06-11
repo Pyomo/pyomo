@@ -159,7 +159,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             mst_file.write("<header/>\n")
             mst_file.write("<quality/>\n")
             mst_file.write("<variables>\n")
-            for var in instance.component_data_objects(Var, active=True):
+            for var in instance.component_data_objects(Var):
                 if (var.value is not None) and \
                    (id(var) in byObject):
                     name = byObject[id(var)]
@@ -274,8 +274,9 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         script = "set logfile %s\n" % (self._log_file,)
         if self._timelimit is not None and self._timelimit > 0.0:
             script += "set timelimit %s\n" % ( self._timelimit, )
+
         if (self.options.mipgap is not None) and \
-           (self.options.mipgap > 0.0):
+           (float(self.options.mipgap) > 0.0):
             script += ("set mip tolerances mipgap %s\n"
                        % (self.options.mipgap,))
         for key in self.options:

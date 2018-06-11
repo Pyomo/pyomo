@@ -76,18 +76,17 @@ class _MatrixConstraintData(IConstraint,
         """An iterator over the terms in the body of this
         constraint as (variable, coefficient) tuples"""
         parent = self.parent
-        variable_order = parent.variable_order
-        if variable_order is None:
+        x = parent.x
+        if x is None:
             raise ValueError(
                 "No variable order has been assigned")
         A = parent._A
         if parent._sparse:
             for k in xrange(A.indptr[self._index],
                             A.indptr[self._index+1]):
-                yield variable_order[A.indices[k]], A.data[k]
+                yield x[A.indices[k]], A.data[k]
         else:
-            for item in zip(variable_order,
-                            A[self._index,:].tolist()):
+            for item in zip(x, A[self._index,:].tolist()):
                 yield item
 
     #
@@ -98,7 +97,7 @@ class _MatrixConstraintData(IConstraint,
     def __call__(self, exception=True):
         # don't mask an exception in the terms
         # property method
-        if self.parent.variable_order is None:
+        if self.parent.x is None:
             raise ValueError(
                 "No variable order has been assigned")
         try:
@@ -236,23 +235,22 @@ class _MatrixConstraintData(IConstraint,
 
 class matrix_constraint(constraint_tuple):
     """
-    A container for constraints of the form L <= Ax <= b.
+    A container for constraints of the form lb <= Ax <= ub.
 
     Args:
         A: A scipy sparse matrix or 2D numpy array (always
             copied)
         lb: A scalar or array with the same number of rows
-            as A that is set to the lower bound of the
+            as A that defines the lower bound of the
             constraints
         ub: A scalar or array with the same number of rows
-            as A that is set to the upper bound of the
+            as A that defines the upper bound of the
             constraints
         rhs: A scalar or array with the same number of rows
-            as A that is set to the right-hand side the
+            as A that defines the right-hand side of the
             constraints (implies equality constraints)
-        variable_order: A list with the same number of
-            columns as A that stores the variable associated
-            with each column
+        x: A list with the same number of columns as A that
+            stores the variable associated with each column
         sparse: Indicates whether or not sparse storage (CSR
             format) should be used to store A. Default is
             :const:`True`.
@@ -262,13 +260,13 @@ class matrix_constraint(constraint_tuple):
                  "_lb",
                  "_ub",
                  "_equality",
-                 "_variable_order")
+                 "_x")
     def __init__(self,
                  A,
                  lb=None,
                  ub=None,
                  rhs=None,
-                 variable_order=None,
+                 x=None,
                  sparse=True):
         if (not has_numpy) or (not has_scipy):     #pragma:nocover
             raise ValueError("This class requires numpy and scipy")
@@ -296,7 +294,7 @@ class matrix_constraint(constraint_tuple):
         self._equality.fill(False)
 
         # now use the setters to fill the arrays
-        self.variable_order = variable_order
+        self.x = x
         if rhs is None:
             self.lb = lb
             self.ub = ub
@@ -316,22 +314,22 @@ class matrix_constraint(constraint_tuple):
         return self._sparse
 
     @property
-    def variable_order(self):
+    def x(self):
         """The list of variables associated with the columns
         of the constraint matrix"""
-        return self._variable_order
-    @variable_order.setter
-    def variable_order(self, variable_order):
-        if variable_order is None:
-            self._variable_order = None
+        return self._x
+    @x.setter
+    def x(self, x):
+        if x is None:
+            self._x = None
         else:
-            variable_order = tuple(variable_order)
+            x = tuple(x)
             m,n = self._A.shape
-            if len(variable_order) != n:
+            if len(x) != n:
                 raise ValueError(
                     "Argument length must be %s "
-                    "not %s" % (n, len(variable_order)))
-            self._variable_order = variable_order
+                    "not %s" % (n, len(x)))
+            self._x = x
 
     @property
     def lb(self):
@@ -431,10 +429,10 @@ class matrix_constraint(constraint_tuple):
 
     def __call__(self, exception=True):
         """Compute the value of the body of this constraint"""
-        if self.variable_order is None:
+        if self.x is None:
             raise ValueError(
                 "No variable order has been assigned")
-        values = numpy.array([v.value for v in self.variable_order],
+        values = numpy.array([v.value for v in self.x],
                              dtype=float)
         if numpy.isnan(values).any():
             if exception:

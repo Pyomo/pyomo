@@ -179,7 +179,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
             smap = instance.solutions.symbol_map[self._smap_id]
         byObject = smap.byObject
         with open(self._warm_start_file_name, 'w') as mst_file:
-            for vdata in instance.component_data_objects(Var, active=True):
+            for vdata in instance.component_data_objects(Var):
                 if (vdata.value is not None) and \
                    (id(vdata) in byObject):
                     name = byObject[id(vdata)]
@@ -324,10 +324,13 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         script += "sys.path.append(%r)\n" % os.path.dirname(__file__)
         script += "from GUROBI_RUN import *\n"
         script += "gurobi_run("
+        mipgap = float(self.options.mipgap) if \
+                 self.options.mipgap is not None else \
+                 None
         for x in ( problem_filename,
                    warmstart_filename,
                    solution_filename,
-                   self.options.mipgap,
+                   None,
                    options_dict,
                    self._suffixes ):
             script += "%r," % x

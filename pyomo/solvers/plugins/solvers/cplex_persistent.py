@@ -69,26 +69,30 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
             if tmp_ndx > ndx:
                 self._pyomo_var_to_ndx_map[tmp_var] -= 1
         self._ndx_count -= 1
-        del self._solver_var_to_pyomo_var_map[solver_var]
         del self._pyomo_var_to_ndx_map[pyomo_var]
         self._solver_model.variables.delete(solver_var)
 
     def _warm_start(self):
-        GurobiDirect._warm_start(self)
+        CPLEXDirect._warm_start(self)
 
     def update_var(self, var):
-        """
-        Update a variable in the solver's model. This will update bounds, fix/unfix the variable as needed, and update
-        the variable type.
+        """Update a single variable in the solver's model.
+
+        This will update bounds, fix/unfix the variable as needed, and
+        update the variable type.
 
         Parameters
         ----------
-        var: Var
+        var: Var (scalar Var or single _VarData)
+
         """
-        if var.is_indexed():
-            for child_var in var.values():
-                self.compile_var(child_var)
-            return
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
+        #if var.is_indexed():
+        #    for child_var in var.values():
+        #        self.compile_var(child_var)
+        #    return
         if var not in self._pyomo_var_to_solver_var_map:
             raise ValueError('The Var provided to compile_var needs to be added first: {0}'.format(var))
         cplex_var = self._pyomo_var_to_solver_var_map[var]
@@ -97,13 +101,12 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
             lb = var.value
             ub = var.value
         else:
-            lb = value(var.lb)
-            ub = value(var.ub)
-        if lb is None:
             lb = -self._cplex.infinity
-        if ub is None:
             ub = self._cplex.infinity
-
+            if var.has_lb():
+                lb = value(var.lb)
+            if var.has_ub():
+                ub = value(var.ub)
         self._solver_model.variables.set_lower_bounds(cplex_var, lb)
         self._solver_model.variables.set_upper_bounds(cplex_var, ub)
         self._solver_model.variables.set_types(cplex_var, vtype)

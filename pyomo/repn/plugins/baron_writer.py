@@ -302,8 +302,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
         vstring_to_var_dict = {}
         vstring_to_bar_dict = {}
         pstring_to_bar_dict = {}
+        _val_template = ' %'+self._precision_string+' '
         for block in all_blocks_list:
-
             for var_data in active_components_data_var[id(block)]:
                 variable_stream = StringIO()
                 var_data.to_string(ostream=variable_stream, verbose=False)
@@ -316,7 +316,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 else:
                     assert var_data.value is not None
                     vstring_to_bar_dict[variable_string] = \
-                        (' %.17r ' % (var_data.value))
+                        (_val_template % (var_data.value,))
 
             for param_data in mutable_param_gen(block):
                 param_stream = StringIO()
@@ -325,7 +325,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
                 param_string = ' '+param_string+' '
                 pstring_to_bar_dict[param_string] = \
-                    (' %.17r ' % (param_data()))
+                    (_val_template % (param_data(),))
 
         # Equation Definition
         string_template = '%'+self._precision_string
@@ -347,6 +347,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
             # Fill in the body of the equation
             body_string_buffer = StringIO()
 
+            if constraint_data.body is None:
+                continue
             as_numeric(constraint_data.body).to_string(
                 ostream=body_string_buffer,
                 verbose=False)
@@ -605,7 +607,6 @@ class ProblemWriter_bar(AbstractProblemWriter):
         for block in all_blocks_list:
             tmp = active_components_data_var[id(block)] = \
                   list(obj for obj in block.component_data_objects(Var,
-                                                                   active=True,
                                                                    sort=sorter,
                                                                    descend_into=False))
             create_symbols_func(symbol_map, tmp, labeler)

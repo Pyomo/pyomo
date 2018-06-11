@@ -1,9 +1,6 @@
 language: python
 matrix:
   include:
-    # NOTE: EXTRAS is not yet supported on Python 2.6.
-    - python: '2.6'
-      env:                             CATEGORY="nightly"
     - python: '2.7'
       env:                             CATEGORY="nightly"
     - python: '3.6'
@@ -36,8 +33,11 @@ matrix:
 
 
 install:
+  - sudo dpkg --add-architecture i386
   - sudo apt-get update --quiet
   - sudo apt-get install gfortran
+  # Needed to run 32-bit applications (GJH):
+  - sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386
   #
   # Setup miniconda and activate the testenv environment
   #
@@ -69,11 +69,6 @@ install:
   - which pip
   - pip --version
   #
-  - if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install 'cryptography<2.1.1'; fi
-  - if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install pyOpenSSL; fi
-  - if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install urllib3; fi
-  - if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then pip install ordereddict; fi
-  #
   - pip install coverage
   - pip install codecov
   - if [ -n "${YAML}" ]; then
@@ -85,9 +80,10 @@ install:
   - pip install --quiet xlrd
   - pip install --quiet openpyxl
   - pip install sphinx_rtd_theme
+  - pip install dill
   - conda install -q -y -c anaconda pandas networkx
 
-  - if [ "${TRAVIS_PYTHON_VERSION}" != "2.6" -a -n "${EXTRAS}" ]; then
+  - if [ -n "${EXTRAS}" ]; then
        conda install -q -y -c anaconda scipy;
     fi
 
@@ -97,18 +93,21 @@ install:
   - wget https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/linux/linux_x64_64_sfx.exe
   - chmod u+x linux_x64_64_sfx.exe
   - ./linux_x64_64_sfx.exe > /dev/null
-  # Only install GAMS API if EXTRAS is not being installed and Python is
-  # not 2.6, since those tests segfault on travis for an unknown reason.
-  - if [ "${TRAVIS_PYTHON_VERSION}" != "2.6" -a -z "${EXTRAS}" ]; then
+  # Only install GAMS API if EXTRAS is not being installed, 
+  # since those tests segfault on travis for an unknown reason.
+  - if [ -a -z "${EXTRAS}" ]; then
        bash ./.travis_install_gams_api.sh;
     fi
-  - export PATH=${PATH}:$PWD/gams24.8_linux_x64_64_sfx;
+  - export PATH="$PATH:$PWD/gams24.8_linux_x64_64_sfx"
 
   #
   # Install Pyomo extras
   #
+  # NOTE: We explicitly install all of the packages in pyomo.extras, since these this
+  # package is not kept up-to-date with Python 3.4
+  #
   - if [ -n "${EXTRAS}" ]; then
-       conda install -q -y -c conda-forge --no-update-dependencies pyomo.extras;
+        conda install -q -y -c conda-forge --no-update-dependencies numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill;
     fi
 
   #
@@ -118,7 +117,8 @@ install:
   - glpsol -v
   - conda install -q -y -c conda-forge --no-update-dependencies ipopt
   - ipopt -v
-
+  - conda install -q -y -c conda-forge --no-update-dependencies coincbc
+  - echo quit | cbc -
   #
   # Clone but don't install pyomo-model-libraries
   #
@@ -131,6 +131,14 @@ install:
   # Install this package
   #
   - python setup.py develop
+  #
+  # Fetch additional solvers
+  #
+  - mkdir $PWD/bin
+  - export PATH="$PWD/bin:$PATH"
+  - python pyomo/contrib/trustregion/getGJH.py $PWD/bin
+  - gjh -v
+  - python pyomo/util/getGSL.py $PWD/bin
   #
   # Verify that the Python interpreter hasn't changed (occasionally conda
   # installers will change the installed Python!!)
@@ -164,6 +172,9 @@ after_success:
 
   # Combine coverage reports over all subprocesses
   - cd $TRAVIS_BUILD_DIR
+  - ls -alh
+  - find . -maxdepth 1 -name ".cov*" | wc -l
+  - find . -maxdepth 10 -name ".cov*" | wc -l
   - ls -la .cov*
   - coverage combine $TRAVIS_BUILD_DIR
   - ls -la .cov*

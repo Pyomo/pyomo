@@ -48,7 +48,7 @@ from pyutilib.enum import Enum
 from pyutilib.misc import flatten_tuple
 
 from pyomo.util.timing import ConstructionTimer
-from pyomo.core.base.component import register_component
+from pyomo.core.base.plugin import register_component
 from pyomo.core.base.block import Block, _BlockData
 from pyomo.core.base.constraint import Constraint, ConstraintList
 from pyomo.core.base.sos import SOSConstraint
@@ -1194,7 +1194,7 @@ class Piecewise(Block):
                 self.add(index, _is_indexed=is_indexed)
         timer.report()
 
-    def _default(self, idx):
+    def _getitem_when_not_present(self, idx):
         return self._data.setdefault(idx, _PiecewiseData(self))
 
     def add(self, index, _is_indexed=None):

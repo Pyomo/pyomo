@@ -2,14 +2,17 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ("launch_command", "load_external_module")
+__all__ = ("launch_command",
+           "load_external_module",
+           "parse_command_line")
 
+import logging
 import time
 import sys
 import subprocess
@@ -39,6 +42,10 @@ from pyomo.util.plugin import (ExtensionPoint,
 from pyomo.pysp.util.config import PySPConfigBlock
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 
+import six
+
+logger = logging.getLogger('pyomo.pysp')
+
 def _generate_unique_module_name():
     import uuid
     name = str(uuid.uuid4())
@@ -46,7 +53,10 @@ def _generate_unique_module_name():
         name = str(uuid.uuid4())
     return name
 
-def load_external_module(module_name, unique=False, clear_cache=False):
+def load_external_module(module_name,
+                         unique=False,
+                         clear_cache=False,
+                         verbose=False):
     try:
         # make sure "." is in the PATH.
         original_path = list(sys.path)
@@ -67,33 +77,42 @@ def load_external_module(module_name, unique=False, clear_cache=False):
             if clear_cache:
                 if unique:
                     sys_modules_key = _generate_unique_module_name()
-                    print("Module="+module_name+" is already imported - "
-                          "forcing re-import using unique module id="
-                          +str(sys_modules_key))
+                    if verbose:
+                        print("Module="+module_name+" is already imported - "
+                              "forcing re-import using unique module id="
+                              +str(sys_modules_key))
                     module_to_find = import_file(module_name, name=sys_modules_key)
-                    print("Module successfully loaded")
+                    if verbose:
+                        print("Module successfully loaded")
                 else:
-                    print("Module="+module_name+" is already imported - "
-                          "forcing re-import")
+                    if verbose:
+                        print("Module="+module_name+" is already imported - "
+                              "forcing re-import")
                     module_to_find = import_file(module_name, clear_cache=True)
-                    print("Module successfully loaded")
+                    if verbose:
+                        print("Module successfully loaded")
             else:
-                print("Module="+module_name+" is already imported - skipping")
+                if verbose:
+                    print("Module="+module_name+" is already imported - skipping")
                 module_to_find = sys.modules[module_name]
         else:
             if unique:
                 sys_modules_key = _generate_unique_module_name()
-                print("Importing module="+module_name+" using "
-                      "unique module id="+str(sys_modules_key))
+                if verbose:
+                    print("Importing module="+module_name+" using "
+                          "unique module id="+str(sys_modules_key))
                 module_to_find = import_file(module_name, name=sys_modules_key)
-                print("Module successfully loaded")
+                if verbose:
+                    print("Module successfully loaded")
             else:
-                print("Importing module="+module_name)
+                if verbose:
+                    print("Importing module="+module_name)
                 _context = {}
                 module_to_find = import_file(module_name, context=_context, clear_cache=clear_cache)
                 assert len(_context) == 1
                 sys_modules_key = list(_context.keys())[0]
-                print("Module successfully loaded")
+                if verbose:
+                    print("Module successfully loaded")
 
     finally:
         # restore to what it was
@@ -183,6 +202,7 @@ def parse_command_line(args,
         ap.add_argument("-h", "--help", dest="show_help",
                         action="store_true", default=False,
                         help="show this help message and exit")
+
         return ap
 
     #
@@ -260,7 +280,15 @@ def launch_command(command,
                    error_label="",
                    disable_gc=False,
                    profile_count=0,
+                   log_level=logging.INFO,
                    traceback=False):
+    # This is not the effective level, but the
+    # level on the current logger. We want to
+    # return the logger to its original state
+    # before this function exits
+    prev_log_level = logger.level
+    logger.setLevel(log_level)
+
     if cmd_args is None:
         cmd_args = ()
     if cmd_kwds is None:
@@ -283,33 +311,39 @@ def launch_command(command,
             #
             # Call the main routine with profiling.
             #
-            tfile = TempfileManager.create_tempfile(suffix=".profile")
-            tmp = profile.runctx('command(options, *cmd_args, **cmd_kwds)',
-                                 globals(),
-                                 locals(),
-                                 tfile)
-            p = pstats.Stats(tfile).strip_dirs()
-            p.sort_stats('time', 'cumulative')
-            p = p.print_stats(profile_count)
-            p.print_callers(profile_count)
-            p.print_callees(profile_count)
-            p = p.sort_stats('cumulative','calls')
-            p.print_stats(profile_count)
-            p.print_callers(profile_count)
-            p.print_callees(profile_count)
-            p = p.sort_stats('calls')
-            p.print_stats(profile_count)
-            p.print_callers(profile_count)
-            p.print_callees(profile_count)
-            TempfileManager.clear_tempfiles()
-            rc = tmp
+            try:
+                tfile = TempfileManager.create_tempfile(suffix=".profile")
+                tmp = profile.runctx('command(options, *cmd_args, **cmd_kwds)',
+                                     globals(),
+                                     locals(),
+                                     tfile)
+                p = pstats.Stats(tfile).strip_dirs()
+                p.sort_stats('time', 'cumulative')
+                p = p.print_stats(profile_count)
+                p.print_callers(profile_count)
+                p.print_callees(profile_count)
+                p = p.sort_stats('cumulative','calls')
+                p.print_stats(profile_count)
+                p.print_callers(profile_count)
+                p.print_callees(profile_count)
+                p = p.sort_stats('calls')
+                p.print_stats(profile_count)
+                p.print_callers(profile_count)
+                p.print_callees(profile_count)
+                TempfileManager.clear_tempfiles()
+                rc = tmp
+            finally:
+                logger.setLevel(prev_log_level)
         else:
 
             #
             # Call the main PH routine without profiling.
             #
             if traceback:
-                rc = command(options, *cmd_args, **cmd_kwds)
+                try:
+                    rc = command(options, *cmd_args, **cmd_kwds)
+                finally:
+                    logger.setLevel(prev_log_level)
             else:
                 try:
                     try:
@@ -368,18 +402,9 @@ def launch_command(command,
     #       options object is always a PySPConfigBlock
     #
     if isinstance(options, PySPConfigBlock):
-        ignored_options = dict((_c._name, _c.value(False))
-                              for _c in options.unused_user_values())
-        if len(ignored_options):
-            print("")
-            print("*** WARNING: The following options were "
-                  "explicitly set but never accessed during "
-                  "execution of this command:")
-            for name in ignored_options:
-                print(" - %s: %s" % (name, ignored_options[name]))
-            print("*** If you believe this is a bug, please report it "
-                  "to the PySP developers.")
-            print("")
+        options.check_usage(error=False)
+
+    logger.setLevel(prev_log_level)
 
     return rc
 
@@ -401,15 +426,28 @@ def _kill(proc):
         proc.stdout.close()
     if proc.stderr is not None:
         proc.stderr.close()
-    if proc.returncode is None:
+    while proc.returncode is None:
         try:
             proc.terminate()
         except:
+            pass
+        if six.PY3:
+            proc.wait(timeout=1)
             if proc.returncode is None:
                 try:
                     proc.kill()
                 except:
                     pass
+            proc.wait(timeout=1)
+        else:
+            proc.poll()
+            if proc.returncode is None:
+                time.sleep(0.5)
+                try:
+                    proc.kill()
+                except:
+                    pass
+            proc.poll()
 
 def _get_test_nameserver(ns_host="127.0.0.1", num_tries=20):
     if not (using_pyro3 or using_pyro4):
