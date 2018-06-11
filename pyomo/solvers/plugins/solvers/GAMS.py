@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import StringIO, iteritems
+from six import StringIO, iteritems, string_types
 from tempfile import mkdtemp
 import os, sys, math, logging, shutil, time
 
@@ -21,7 +21,7 @@ import pyutilib.services
 
 from pyomo.opt.base.solvers import _extract_version
 import pyutilib.subprocess
-from pyutilib.misc import Options
+from pyutilib.misc import Options, quote_split
 
 from pyomo.core.kernel.component_block import IBlockStorage
 
@@ -70,6 +70,34 @@ class _GAMSSolver(pyomo.common.plugin.Plugin):
 
     def default_variable_value(self):
         return self._default_variable_value
+
+    def set_options(self, istr):
+        if isinstance(istr, string_types):
+            istr = self._options_string_to_dict(istr)
+        for key in istr:
+            if not istr[key] is None:
+                setattr(self.options, key, istr[key])
+
+    @staticmethod
+    def _options_string_to_dict(istr):
+        ans = {}
+        istr = istr.strip()
+        if not istr:
+            return ans
+        if istr[0] == "'" or istr[0] == '"':
+            istr = eval(istr)
+        tokens = quote_split('[ ]+',istr)
+        for token in tokens:
+            index = token.find('=')
+            if index is -1:
+                raise ValueError(
+                    "Solver options must have the form option=value: '%s'" % istr)
+            try:
+                val = eval(token[(index+1):])
+            except:
+                val = token[(index+1):]
+            ans[token[:index]] = val
+        return ans
 
 class GAMSSolver(_GAMSSolver):
     """
