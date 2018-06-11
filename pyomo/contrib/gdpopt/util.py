@@ -252,6 +252,7 @@ def _record_problem_statistics(model, solve_data, config):
     res = solve_data.results = SolverResults()
     prob = res.problem
     GDPopt = model.GDPopt_utils
+    origGDPopt = solve_data.original_model.GDPopt_utils
     res.problem.name = model.name
     res.problem.number_of_nonzeros = None  # TODO
     # TODO work on termination condition and message
@@ -264,9 +265,10 @@ def _record_problem_statistics(model, solve_data, config):
     res.solver.termination_message = None
 
     # Classify the variables
-    orig_binary = sum(1 for v in GDPopt.orig_var_list if v.is_binary())
-    orig_continuous = sum(1 for v in GDPopt.orig_var_list if v.is_continuous())
-    orig_integer = sum(1 for v in GDPopt.orig_var_list if v.is_integer())
+    orig_binary = sum(1 for v in origGDPopt.orig_var_list if v.is_binary())
+    orig_continuous = sum(
+        1 for v in origGDPopt.orig_var_list if v.is_continuous())
+    orig_integer = sum(1 for v in origGDPopt.orig_var_list if v.is_integer())
     now_binary = sum(1 for v in GDPopt.working_var_list if v.is_binary())
     now_continuous = sum(
         1 for v in GDPopt.working_var_list if v.is_continuous())
@@ -282,7 +284,8 @@ def _record_problem_statistics(model, solve_data, config):
     prob.number_of_integer_variables = orig_integer
 
     config.logger.info(
-        "Model has %s constraints (%s nonlinear) and %s disjunctions, "
+        "Original model has %s constraints (%s nonlinear) "
+        "and %s disjunctions, "
         "with %s variables, of which %s are binary, %s are integer, "
         "and %s are continuous." %
         (prob.number_of_constraints,
