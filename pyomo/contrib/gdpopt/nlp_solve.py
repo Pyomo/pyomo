@@ -134,11 +134,12 @@ def update_nlp_progress_indicators(solved_model, solve_data, config):
     solve_data.iteration_log[
         (solve_data.master_iteration,
          solve_data.mip_iteration,
-         solve_data.nlp_iteration)] = (
-             value(GDPopt.objective.expr),
-             value(GDPopt.objective.expr),
-             [v.value for v in GDPopt.working_var_list]
-         )
+         solve_data.nlp_iteration)
+    ] = (
+        value(GDPopt.objective.expr),
+        value(GDPopt.objective.expr),
+        [v.value for v in GDPopt.working_var_list]
+    )
 
     if solve_data.feasible_solution_improved:
         solve_data.best_solution_found = [
