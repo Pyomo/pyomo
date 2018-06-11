@@ -54,7 +54,7 @@ class _GAMSSolver(pyomo.common.plugin.Plugin):
         self._capabilities.sos1 = False
         self._capabilities.sos2 = False
 
-        self.options = Options() # ignored
+        self.options = Options()
 
         pyomo.common.plugin.Plugin.__init__(self, **kwds)
 
@@ -202,18 +202,22 @@ class GAMSDirect(_GAMSSolver):
                              'to solve method of GAMSSolver.')
         model = args[0]
 
-        load_solutions = kwds.pop("load_solutions", True)
-        tee            = kwds.pop("tee", False)
-        logfile        = kwds.pop("logfile", None)
-        keepfiles      = kwds.pop("keepfiles", False)
-        tmpdir         = kwds.pop("tmpdir", None)
-        report_timing  = kwds.pop("report_timing", False)
-        io_options     = kwds.pop("io_options", {})
+        # self.options are default for each run, overwritten by kwds
+        options = dict()
+        options.update(self.options)
+        options.update(kwds)
 
-        if len(kwds):
-            # Pass remaining keywords to writer, which will handle
-            # any unrecognized arguments
-            io_options.update(kwds)
+        load_solutions = options.pop("load_solutions", True)
+        tee            = options.pop("tee", False)
+        logfile        = options.pop("logfile", None)
+        keepfiles      = options.pop("keepfiles", False)
+        tmpdir         = options.pop("tmpdir", None)
+        report_timing  = options.pop("report_timing", False)
+        io_options     = options.pop("io_options", {})
+
+        # Pass remaining keywords to writer, which will handle
+        # any unrecognized arguments
+        io_options.update(options)
 
         initial_time = time.time()
 
@@ -632,19 +636,23 @@ class GAMSShell(_GAMSSolver):
                              'to solve method of GAMSSolver.')
         model = args[0]
 
-        load_solutions = kwds.pop("load_solutions", True)
-        tee            = kwds.pop("tee", False)
-        logfile        = kwds.pop("logfile", None)
-        keepfiles      = kwds.pop("keepfiles", False)
-        tmpdir         = kwds.pop("tmpdir", None)
-        report_timing  = kwds.pop("report_timing", False)
-        io_options     = kwds.pop("io_options", {})
+        # self.options are default for each run, overwritten by kwds
+        options = dict()
+        options.update(self.options)
+        options.update(kwds)
 
-        if len(kwds):
-            # Pass remaining keywords to writer, which will handle
-            # any unrecognized arguments
-            io_options.update(kwds)
+        load_solutions = options.pop("load_solutions", True)
+        tee            = options.pop("tee", False)
+        logfile        = options.pop("logfile", None)
+        keepfiles      = options.pop("keepfiles", False)
+        tmpdir         = options.pop("tmpdir", None)
+        report_timing  = options.pop("report_timing", False)
+        io_options     = options.pop("io_options", {})
 
+        io_options.update(options)
+
+        # Pass remaining keywords to writer, which will handle
+        # any unrecognized arguments
         initial_time = time.time()
 
         ####################################################################
