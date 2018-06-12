@@ -6309,6 +6309,63 @@ class WalkerTests3(unittest.TestCase):
         self.assertEqual("2*(2*w[4]*x[0] + 2*w[5]*x[1] + 2*w[6]*x[2])", str(f))
 
 
+#
+# Replace all mutable parameters with variables
+#
+class ReplacementWalker_ReplaceInternal(EXPR.ExpressionReplacementVisitor):
+
+    def __init__(self):
+        EXPR.ExpressionReplacementVisitor.__init__(self)
+
+    def visit(self, node, values):
+        if type(node) == EXPR.ProductExpression:
+            return sum(values)
+        else:
+            return node
+
+
+class WalkerTests_ReplaceInternal(unittest.TestCase):
+
+    def test_no_replacement(self):
+        m = ConcreteModel()
+        m.x = Param(mutable=True)
+        m.y = Var([1,2,3])
+
+        e = sum(m.y[i] for i in m.y) == 0
+        f = ReplacementWalker_ReplaceInternal().dfs_postorder_stack(e)
+        self.assertEqual("y[1] + y[2] + y[3]  ==  0.0", str(e))
+        self.assertEqual("y[1] + y[2] + y[3]  ==  0.0", str(f))
+        self.assertIs(e, f)
+
+    def test_replace(self):
+        m = ConcreteModel()
+        m.x = Param(mutable=True)
+        m.y = Var([1,2,3])
+
+        e = m.y[1]*m.y[2] + m.y[2]*m.y[3]  ==  0
+        f = ReplacementWalker_ReplaceInternal().dfs_postorder_stack(e)
+        self.assertEqual("y[1]*y[2] + y[2]*y[3]  ==  0.0", str(e))
+        self.assertEqual("y[1] + y[2] + y[2] + y[3]  ==  0.0", str(f))
+        self.assertIs(type(f.arg(0)), EXPR.SumExpression)
+        self.assertEqual(f.arg(0).nargs(), 2)
+        self.assertIs(type(f.arg(0).arg(0)), EXPR.SumExpression)
+        self.assertEqual(f.arg(0).arg(0).nargs(), 2)
+        self.assertIs(type(f.arg(0).arg(1)), EXPR.SumExpression)
+        self.assertEqual(f.arg(0).arg(1).nargs(), 2)
+
+    def test_replace_nested(self):
+        m = ConcreteModel()
+        m.x = Param(mutable=True)
+        m.y = Var([1,2,3])
+
+        e = m.y[1]*m.y[2]*m.y[2]*m.y[3]  ==  0
+        f = ReplacementWalker_ReplaceInternal().dfs_postorder_stack(e)
+        self.assertEqual("y[1]*y[2]*y[2]*y[3]  ==  0.0", str(e))
+        self.assertEqual("y[1] + y[2] + y[2] + y[3]  ==  0.0", str(f))
+        self.assertIs(type(f.arg(0)), EXPR.SumExpression)
+        self.assertEqual(f.arg(0).nargs(), 4)
+
+
 class TestEvaluateExpression(unittest.TestCase):
 
     def test_constant(self):
