@@ -48,47 +48,25 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             self.set_instance(self._pyomo_model, **kwds)
 
     def _remove_constraint(self, solver_con):
-        self._solver_model.remove(solver_con)
+        try:
+            self._solver_model.remove(solver_con)
+        except (self._gurobipy.GurobiError, AttributeError):
+            self._solver_model.update()
+            self._solver_model.remove(solver_con)
 
     def _remove_sos_constraint(self, solver_sos_con):
-        self._solver_model.remove(solver_sos_con)
+        try:
+            self._solver_model.remove(solver_sos_con)
+        except (self._gurobipy.GurobiError, AttributeError):
+            self._solver_model.update()
+            self._solver_model.remove(solver_sos_con)
 
     def _remove_var(self, solver_var):
-        self._solver_model.remove(solver_var)
-
-    def add_var(self, var):
-        """
-        Add a variable to the solver's model. This will keep any existing model components intact.
-
-        Parameters
-        ----------
-        var: Var
-            The variable to add to the solver's model.
-        """
-        PersistentSolver.add_var(self, var)
-        self._solver_model.update()
-
-    def add_constraint(self, con):
-        """
-        Add a constraint to the solver's model. This will keep any existing model components intact.
-
-        Parameters
-        ----------
-        con: Constraint
-        """
-        PersistentSolver.add_constraint(self, con)
-        self._solver_model.update()
-
-    def add_sos_constraint(self, con):
-        """
-        Add an SOS constraint to the solver's model (if supported). This will keep any existing model components intact.
-
-        Parameters
-        ----------
-        con: SOSConstraint
-        """
-        PersistentSolver.add_sos_constraint(self, con)
-        self._solver_model.update()
+        try:
+            self._solver_model.remove(solver_var)
+        except (self._gurobipy.GurobiError, AttributeError):
+            self._solver_model.update()
+            self._solver_model.remove(solver_var)
 
     def _warm_start(self):
         GurobiDirect._warm_start(self)

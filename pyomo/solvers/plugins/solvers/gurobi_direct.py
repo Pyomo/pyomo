@@ -210,15 +210,15 @@ class GurobiDirect(DirectSolver):
         else:
             ub = self._gurobipy.GRB.INFINITY
 
+        if var.is_fixed():
+            lb = var.value
+            ub = var.value
+
         gurobipy_var = self._solver_model.addVar(lb=lb, ub=ub, vtype=vtype, name=varname)
 
         self._pyomo_var_to_solver_var_map[var] = gurobipy_var
         self._solver_var_to_pyomo_var_map[gurobipy_var] = var
         self._referenced_variables[var] = 0
-
-        if var.is_fixed():
-            gurobipy_var.setAttr('lb', var.value)
-            gurobipy_var.setAttr('ub', var.value)
 
     def _set_instance(self, model, kwds={}):
         self._range_constraints = set()
@@ -258,7 +258,6 @@ class GurobiDirect(DirectSolver):
 
     def _add_block(self, block):
         DirectOrPersistentSolver._add_block(self, block)
-        self._solver_model.update()
 
     def _add_constraint(self, con):
         if not con.active:
@@ -686,9 +685,12 @@ class GurobiDirect(DirectSolver):
         return True
 
     def _warm_start(self):
+        if self._version_major < 7:
+            self._solver_model.update()
         for pyomo_var, gurobipy_var in self._pyomo_var_to_solver_var_map.items():
-            if pyomo_var.value is not None:
-                gurobipy_var.setAttr(self._gurobipy.GRB.Attr.Start, value(pyomo_var))
+            if pyomo_var.is_binary():
+                if pyomo_var.value is not None:
+                    gurobipy_var.setAttr(self._gurobipy.GRB.Attr.Start, value(pyomo_var))
 
     def _load_vars(self, vars_to_load=None):
         var_map = self._pyomo_var_to_solver_var_map
