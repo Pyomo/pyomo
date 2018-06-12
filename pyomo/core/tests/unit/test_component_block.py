@@ -6,6 +6,7 @@ import pyutilib.th as unittest
 from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.expr.symbol_map import SymbolMap
 import pyomo.kernel
+from pyomo.common.log import LoggingIntercept
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
 from pyomo.core.tests.unit.test_component_tuple import \
@@ -46,6 +47,9 @@ from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 from pyomo.opt.results import Solution
+
+import six
+from six import StringIO
 
 def _path_to_object_exists(obj, descendent):
     if descendent is obj:
@@ -731,6 +735,37 @@ class _Test_block_base(object):
     _blocks_no_descend = None
     _blocks = None
     _block = None
+
+
+    def test_overwrite_warning(self):
+        b = self._block.clone()
+        name = "x"
+        while hasattr(b,name):
+            name += "x"
+        out = StringIO()
+        with LoggingIntercept(out, 'pyomo.core'):
+            setattr(b,name,variable())
+            setattr(b,name,getattr(b,name))
+        assert out.getvalue() == "", str(out.getvalue())
+        with LoggingIntercept(out, 'pyomo.core'):
+            setattr(b,name,variable())
+        assert out.getvalue() == \
+            ("Implicitly replacing attribute %s (type=variable) "
+             "on block with new object (type=variable). This "
+             "is usually indicative of a modeling error. "
+             "To avoid this warning, delete the original "
+             "object from the block before assigning a new "
+             "object.\n" % (name))
+        out = StringIO()
+        with LoggingIntercept(out, 'pyomo.core'):
+            setattr(b,name,1.0)
+        assert out.getvalue() == \
+            ("Implicitly replacing attribute %s (type=variable) "
+             "on block with new object (type=float). This "
+             "is usually indicative of a modeling error. "
+             "To avoid this warning, delete the original "
+             "object from the block before assigning a new "
+             "object.\n" % (name))
 
     def test_clone(self):
         b = self._block
