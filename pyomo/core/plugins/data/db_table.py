@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -94,44 +94,18 @@ class db_Table(TableData):
             self.options.query = 'SELECT * FROM %s' % self.options.table
         elif self.options.query[0] in ("'", '"'):
             self.options.query = self.options.query[1:-1]
-        if not self.options.table is None:
-            try:
-                for row in cursor.columns(table=self.options.table):
-                    tmp.append(row.column_name)
-                tmp=[tmp]
-            except:
-                #
-                # TODO: is this only for SQLite?
-                #
-                cursor.execute("SELECT * FROM %s" % self.options.table)
-                for col in cursor.description:
-                    tmp.append(col[0])
-                tmp=[tmp]
-        else:
-            # TODO: extend this logic to create a header row for a SQL query
-            # FIXME: the current regex logic is pretty brittle...
-            match = re.search("SELECT (.*) FROM.*", self.options.query)
-            if match is not None:
-                fieldstr = match.group(1)
-                if fieldstr == "*":
-                    raise ValueError("Couldn't extract field names from query. Please specify database columns explicitly in query.")
-                else:
-                    fields = [f.strip() for f in fieldstr.split(",")]
-                #print "FOUND FIELDS", fields # XXX
-                tmp = [fields]
-                #self.options.index_name = fields[0]
-                #self.options.select = fields[1:]
-            else:
-                # TODO couldn't figure out field names from query; need another strategy!
-                raise ValueError("Couldn't extract field names from query. Please specify database columns explicitly in query.")
-        cursor.execute(self.options.query)
+
         try:
+            cursor.execute(self.options.query)
             rows = cursor.fetchall()
-        except:
+            for col in cursor.description:
+                tmp.append(col[0])
+            tmp = [tmp]
+        except sqlite3.OperationalError:
             import logging
             logging.getLogger('pyomo.core').error(
                 """Fatal error reading from an external ODBC data source.
-                
+
 This error was generated outside Pyomo by the Python connector to the
 external data source:
 
@@ -236,7 +210,7 @@ class pyodbc_db_Table(db_Table):
         try:
             conn = db_Table.connect(self, connection, options, extras)
         except TypeError:
-            raise 
+            raise
         except Exception:
             e = sys.exc_info()[1]
             code = e.args[0]
@@ -381,7 +355,7 @@ class ODBCConfig():
                 sections.update(self._get_sections(fileData))
         if data is not None:
             sections.update(self._get_sections(data))
-        
+
         if self.ODBC_DS_KEY in sections:
             self.sources.update(sections[self.ODBC_DS_KEY])
             del sections[self.ODBC_DS_KEY]
@@ -407,7 +381,7 @@ class ODBCConfig():
         """
 
         str = "[{0}]\n".format(self.ODBC_DS_KEY)
-        
+
         for name in self.sources:
             str += "{0} = {1}\n".format(name, self.sources[name])
 
@@ -475,7 +449,7 @@ class ODBCConfig():
             raise ODBCError("A source spec must have a corresponding source; call .add_source() first")
 
         self.source_specs[name] = dict(spec)
-    
+
     def del_source_spec(self, name):
         """
         Remove an ODBC data source specification from the
@@ -564,7 +538,7 @@ class pypyodbc_db_Table(pyodbc_db_Table):
 
     def connect(self, connection, options):
         assert(options['using'] == 'pypyodbc')
-        
+
         return pyodbc_db_Table.connect(self, connection, options)
 
 
@@ -584,7 +558,7 @@ class sqlite3_db_Table(db_Table):
 
     def connect(self, connection, options):
         assert(options['using'] == 'sqlite3')
-        
+
         filename = connection
         if not os.path.exists(filename):
             raise Exception("No such file: " + filename)
@@ -608,4 +582,3 @@ class pymysql_db_Table(db_Table):
 
     def requirements(self):
         return 'pymysql'
-
