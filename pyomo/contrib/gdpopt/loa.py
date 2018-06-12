@@ -10,7 +10,7 @@ from pyomo.core import (Block, Expression, Objective, TransformationFactory,
 from pyomo.gdp import Disjunct
 
 
-def solve_OA_master(solve_data, config):
+def solve_LOA_master(solve_data, config):
     """Solve the augmented lagrangean outer approximation master problem."""
     m = solve_data.linear_GDP.clone()
     GDPopt = m.GDPopt_utils

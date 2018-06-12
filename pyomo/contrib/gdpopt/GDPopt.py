@@ -30,7 +30,7 @@ from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue, In,
                                  NonNegativeFloat, NonNegativeInt)
 from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
                                                  add_outer_approximation_cuts)
-from pyomo.contrib.gdpopt.loa import solve_LOA_subproblem, solve_OA_master
+from pyomo.contrib.gdpopt.loa import solve_LOA_subproblem, solve_LOA_master
 from pyomo.contrib.gdpopt.master_initialize import (init_custom_disjuncts,
                                                     init_max_binaries,
                                                     init_set_covering)
@@ -363,7 +363,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 % solve_data.master_iteration)
             # solve MILP master problem
             if solve_data.current_strategy == 'LOA':
-                mip_results = solve_OA_master(solve_data, config)
+                mip_results = solve_LOA_master(solve_data, config)
                 if mip_results:
                     _, mip_var_values = mip_results
             # Check termination conditions
