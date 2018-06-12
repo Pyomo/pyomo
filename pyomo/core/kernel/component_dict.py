@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import collections
+import logging
 try:
     from collections import OrderedDict
 except ImportError:                         #pragma:nocover
@@ -20,6 +21,8 @@ from pyomo.core.kernel.component_interface import \
 
 import six
 from six import itervalues, iteritems
+
+logger = logging.getLogger('pyomo.core')
 
 # Note that prior to Python 3, collections.MutableMappping
 # is not defined with an empty __slots__
@@ -99,6 +102,15 @@ class ComponentDict(_SimpleContainerMixin,
         if item.ctype == self.ctype:
             if item._parent is None:
                 if key in self._data:
+                    logger.warning(
+                        "Implicitly replacing the entry %s (type=%s) "
+                        "with a new object (type=%s). This is usually "
+                        "indicative of a modeling error. To avoid this "
+                        "warning, delete the original object from the "
+                        "container before assigning a new object."
+                        % (self[key].name,
+                           self[key].__class__.__name__,
+                           item.__class__.__name__))
                     self._prepare_for_delete(
                         self._data[key])
                 self._fast_insert(key, item)

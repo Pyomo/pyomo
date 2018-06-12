@@ -412,13 +412,6 @@ class _ActiveObjectMixin(object):
                 if isinstance(child, _ActiveObjectMixin):
                     child.deactivate(shallow=False)
 
-#
-# I'm placing this class here for now to avoid
-# creating another file. As soon as we separate AML
-# from this core, I will move this to another file.
-# This class is simply used to reduce copy-pasted
-# code in component_dict and component_list.
-#
 # used frequently below, so I'm caching it here
 _active_flag_name = "active"
 class _SimpleContainerMixin(object):
