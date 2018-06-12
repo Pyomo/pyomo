@@ -83,7 +83,10 @@ class TestGDPopt(unittest.TestCase):
         cons_layout = build_constrained_layout_model()
 
         def print_binaries(model, solve_data):
-            print([(v.name, v.value) for v in model.GDPopt_utils.working_var_list])
+            from pprint import pprint
+            pprint([(v.name, v.value)
+                    for v in model.GDPopt_utils.working_var_list
+                    if v.is_binary()])
         SolverFactory('gdpopt').solve(
             cons_layout, strategy='LOA', init_strategy='max_binary',
             mip=required_solvers[1],
