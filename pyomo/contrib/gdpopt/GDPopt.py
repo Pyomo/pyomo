@@ -31,6 +31,7 @@ from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue, In,
 from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
                                                  add_outer_approximation_cuts)
 from pyomo.contrib.gdpopt.loa import solve_LOA_subproblem, solve_LOA_master
+from pyomo.contrib.gdpopt.gloa import solve_GLOA_master, solve_global_NLP
 from pyomo.contrib.gdpopt.master_initialize import (init_custom_disjuncts,
                                                     init_max_binaries,
                                                     init_set_covering)
@@ -66,7 +67,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         description="Iteration limit."
     ))
     CONFIG.declare("strategy", ConfigValue(
-        default="LOA", domain=In(["LOA"]),
+        default="LOA", domain=In(["LOA", "GLOA"]),
         description="Decomposition strategy to use."
     ))
     CONFIG.declare("init_strategy", ConfigValue(
@@ -364,18 +365,24 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             # solve MILP master problem
             if solve_data.current_strategy == 'LOA':
                 mip_results = solve_LOA_master(solve_data, config)
-                if mip_results:
-                    _, mip_var_values = mip_results
+            elif solve_data.current_strategy == 'GLOA':
+                mip_results = solve_GLOA_master(solve_data, config)
+            if mip_results:
+                _, mip_var_values = mip_results
             # Check termination conditions
             if algorithm_should_terminate(solve_data, config):
                 break
             # Solve NLP subproblem
-            nlp_result = solve_LOA_subproblem(
-                mip_var_values, solve_data, config)
-            nlp_feasible, nlp_var_values, nlp_duals = nlp_result
-            if nlp_feasible:
-                add_outer_approximation_cuts(
-                    nlp_var_values, nlp_duals, solve_data, config)
+            if solve_data.current_strategy == 'LOA':
+                nlp_result = solve_LOA_subproblem(
+                    mip_var_values, solve_data, config)
+                nlp_feasible, nlp_var_values, nlp_duals = nlp_result
+                if nlp_feasible:
+                    add_outer_approximation_cuts(
+                        nlp_var_values, nlp_duals, solve_data, config)
+            elif solve_data.current_strategy == 'GLOA':
+                nlp_result = solve_global_NLP(
+                    mip_var_values, solve_data, config)
             add_integer_cut(
                 mip_var_values, solve_data, config, feasible=nlp_feasible)
 
