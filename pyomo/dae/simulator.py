@@ -622,6 +622,14 @@ class Simulator:
                 return residual
             self._rhsfun = _rhsfun   
             
+        # Add any diffvars not added by expression walker to self._templatemap
+        if self._intpackage == 'casadi':
+            for _id in diffvars:
+                if _id not in templatemap:
+                    name = "%s[%s]" % (
+                        _id._base.name, ','.join(str(x) for x in _id._args))
+                    templatemap[_id] = casadi.SX.sym(name)
+
         self._contset = contset
         self._cstemplate = cstemplate
         self._diffvars = diffvars
