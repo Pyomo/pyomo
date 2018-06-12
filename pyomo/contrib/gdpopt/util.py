@@ -247,13 +247,13 @@ def build_ordered_component_lists(model, prefix='working'):
             if v.body.polynomial_degree() not in (0, 1)])
 
 
-def _record_problem_statistics(model, solve_data, config):
+def record_original_model_statistics(solve_data, config):
+    """Record problem statistics for original model and setup SolverResults."""
     # Create the solver results object
     res = solve_data.results = SolverResults()
     prob = res.problem
-    GDPopt = model.GDPopt_utils
     origGDPopt = solve_data.original_model.GDPopt_utils
-    res.problem.name = model.name
+    res.problem.name = solve_data.working_model.name
     res.problem.number_of_nonzeros = None  # TODO
     # TODO work on termination condition and message
     res.solver.termination_condition = None
@@ -269,16 +269,11 @@ def _record_problem_statistics(model, solve_data, config):
     orig_continuous = sum(
         1 for v in origGDPopt.orig_var_list if v.is_continuous())
     orig_integer = sum(1 for v in origGDPopt.orig_var_list if v.is_integer())
-    now_binary = sum(1 for v in GDPopt.working_var_list if v.is_binary())
-    now_continuous = sum(
-        1 for v in GDPopt.working_var_list if v.is_continuous())
-    now_integer = sum(1 for v in GDPopt.working_var_list if v.is_integer())
-    assert now_integer == 0, "Unreformulated, unfixed integer variables found."
 
     # Get count of constraints and variables
-    prob.number_of_constraints = len(GDPopt.orig_constraints_list)
-    prob.number_of_disjunctions = len(GDPopt.orig_disjunctions_list)
-    prob.number_of_variables = len(GDPopt.orig_var_list)
+    prob.number_of_constraints = len(origGDPopt.orig_constraints_list)
+    prob.number_of_disjunctions = len(origGDPopt.orig_disjunctions_list)
+    prob.number_of_variables = len(origGDPopt.orig_var_list)
     prob.number_of_binary_variables = orig_binary
     prob.number_of_continuous_variables = orig_continuous
     prob.number_of_integer_variables = orig_integer
@@ -289,12 +284,22 @@ def _record_problem_statistics(model, solve_data, config):
         "with %s variables, of which %s are binary, %s are integer, "
         "and %s are continuous." %
         (prob.number_of_constraints,
-         len(GDPopt.orig_nonlinear_constraints),
+         len(origGDPopt.orig_nonlinear_constraints),
          prob.number_of_disjunctions,
          prob.number_of_variables,
          orig_binary,
          orig_integer,
          orig_continuous))
+
+
+def record_working_model_statistics(solve_data, config):
+    """Record problem statistics for preprocessed model."""
+    GDPopt = solve_data.working_model.GDPopt_utils
+    now_binary = sum(1 for v in GDPopt.working_var_list if v.is_binary())
+    now_continuous = sum(
+        1 for v in GDPopt.working_var_list if v.is_continuous())
+    now_integer = sum(1 for v in GDPopt.working_var_list if v.is_integer())
+    assert now_integer == 0, "Unreformulated, unfixed integer variables found."
 
     config.logger.info(
         "After preprocessing, model has %s constraints (%s nonlinear) "
@@ -306,6 +311,36 @@ def _record_problem_statistics(model, solve_data, config):
          len(GDPopt.working_var_list),
          now_binary,
          now_continuous))
+
+
+def fix_unused_working_variables(solve_data, config):
+    """Find unused variables on the working model and fix them.
+
+    This uses the precomputed variable list objects, so it should not be used
+    in the general sense.
+
+    """
+    unused_variables = ComponentSet(
+        v for v in solve_data.working_model.component_data_objects(Var)
+        if not v.fixed
+    ) - ComponentSet(
+        solve_data.working_model.GDPopt_utils.working_var_list)
+    for v in unused_variables:
+        if v.value is None:
+            if v.has_lb():
+                v.fix(value(v.lb))
+            elif v.has_ub():
+                v.fix(value(v.ub))
+            else:
+                v.fix(0)
+        else:
+            # Make sure value is between bounds
+            if v.has_lb() and v.value < value(v.lb):
+                v.fix(value(v.lb))
+            elif v.has_ub() and v.value > value(v.ub):
+                v.fix(value(v.ub))
+            else:
+                v.fix()
 
 
 def reformulate_integer_variables(model, config):

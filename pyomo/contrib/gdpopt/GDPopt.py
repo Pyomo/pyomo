@@ -34,12 +34,14 @@ from pyomo.contrib.gdpopt.loa import solve_LOA_subproblem, solve_OA_master
 from pyomo.contrib.gdpopt.master_initialize import (init_custom_disjuncts,
                                                     init_max_binaries,
                                                     init_set_covering)
-from pyomo.contrib.gdpopt.util import (GDPoptSolveData, _DoNothing,
-                                       _record_problem_statistics, a_logger,
+from pyomo.contrib.gdpopt.util import (GDPoptSolveData, _DoNothing, a_logger,
                                        algorithm_should_terminate,
                                        build_ordered_component_lists,
                                        clone_orig_model_with_lists,
-                                       copy_var_list_values, model_is_valid,
+                                       copy_var_list_values,
+                                       fix_unused_variables, model_is_valid,
+                                       record_original_model_statistics,
+                                       record_working_model_statistics,
                                        reformulate_integer_variables)
 from pyomo.core.base import Block, ConstraintList, Suffix, value
 from pyomo.core.kernel import ComponentMap
@@ -198,6 +200,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
         solve_data = GDPoptSolveData()
+        created_GDPopt_block = False
 
         old_logger_level = config.logger.getEffectiveLevel()
         try:
@@ -214,6 +217,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                     "on the model object, but an attribute with that name "
                     "already exists.")
             else:
+                created_GDPopt_block = True
                 model.GDPopt_utils = Block(
                     doc="Container for GDPopt solver utility modeling objects")
 
@@ -221,17 +225,19 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
             solve_data.working_model = clone_orig_model_with_lists(model)
             GDPopt = solve_data.working_model.GDPopt_utils
+            record_original_model_statistics(solve_data, config)
 
             solve_data.current_strategy = config.strategy
 
             # Reformulate integer variables to binary
             reformulate_integer_variables(solve_data.working_model, config)
+            # Fix unused variables
+            fix_unused_variables(solve_data.working_model, config)
 
             # Save ordered lists of main modeling components, so that data can
             # be easily transferred between future model clones.
             build_ordered_component_lists(solve_data.working_model)
-            _record_problem_statistics(
-                solve_data.working_model, solve_data, config)
+            record_working_model_statistics(solve_data, config)
             solve_data.results.solver.name = 'GDPopt ' + str(self.version())
 
             # Save model initial values. These are used later to initialize NLP
@@ -304,6 +310,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
         finally:
             config.logger.setLevel(old_logger_level)
+            if created_GDPopt_block:
+                model.del_component('GDPopt_utils')
 
     def _GDPopt_initialize_master(self, solve_data, config):
         """Initialize the decomposition algorithm.
