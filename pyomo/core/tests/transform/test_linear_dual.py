@@ -20,7 +20,7 @@ exdir = normpath(join(currdir,'..', '..','..','..','examples','pyomo','core'))
 import pyutilib.th as unittest
 
 import pyomo.opt
-from pyomo.core import *
+from pyomo.environ import *
 from pyomo.scripting.util import cleanup
 import pyomo.scripting.pyomo_main as main
 

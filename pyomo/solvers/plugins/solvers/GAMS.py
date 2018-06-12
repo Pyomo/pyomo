@@ -530,6 +530,7 @@ class GAMSShell(pyomo.common.plugin.Plugin):
         doc='Shell interface to the GAMS modeling language')
 
     def __init__(self, **kwds):
+        self._metasolver = False
         self._version = None
         self._default_variable_value = None
         self._metasolver = False
