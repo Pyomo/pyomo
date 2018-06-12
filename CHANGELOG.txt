@@ -12,6 +12,7 @@ Current Development
 - Adding TerminationCondition and SolverStatus to pyomo.environ (#429)
 - Resolved problems with ExternalFunctions with fixed arguments (#442)
 - Adding the Pyomo5 expression system, which supports PyPy (#272)
+- Efficiency improvements when processing unhashable indexes (#467)
 - Bug fix processing exp() expressions in Pyomo5 (#471)
 - Resolving scaling issue with Pyomo expressions (#475)
 - Resolving issue when path names with spaces appear in CPLEX run file (#485)

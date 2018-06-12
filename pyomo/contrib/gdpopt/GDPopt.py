@@ -57,6 +57,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
     pyomo.common.plugin.alias(
         'gdpopt', doc='The GDPopt decomposition-based GDP solver')
 
+    _metasolver = False
+
     CONFIG = ConfigBlock("GDPopt")
     CONFIG.declare("bound_tolerance", ConfigValue(
         default=1E-6, domain=NonNegativeFloat,
