@@ -26,7 +26,7 @@ from pyomo.core.expr.numvalue import (ZeroConstant,
                                       native_numeric_types,
                                       _sub)
 from pyomo.core.base.plugin import register_component
-from pyomo.core.base.component import ActiveComponentData, ComponentData
+from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import \
     ( ActiveIndexedComponent,
       UnindexedComponent_set,
@@ -1162,7 +1162,6 @@ class ConstraintList(IndexedConstraint):
         next_idx = len(self._index) + 1
         self._index.add(next_idx)
         return self.__setitem__(next_idx, expr)
-
 
 register_component(Constraint, "General constraint expressions.")
 register_component(ConstraintList, "A list of constraint expressions.")
