@@ -232,12 +232,12 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
             # Reformulate integer variables to binary
             reformulate_integer_variables(solve_data.working_model, config)
-            # Fix unused variables
-            fix_unused_working_variables(solve_data, config)
 
             # Save ordered lists of main modeling components, so that data can
             # be easily transferred between future model clones.
             build_ordered_component_lists(solve_data.working_model)
+            # Fix unused variables
+            fix_unused_working_variables(solve_data, config)
             record_working_model_statistics(solve_data, config)
             solve_data.results.solver.name = 'GDPopt ' + str(self.version())
 
