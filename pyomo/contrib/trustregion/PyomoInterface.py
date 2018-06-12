@@ -4,11 +4,11 @@ from pyutilib.math import infinity
 from pyutilib.services import TempfileManager
 from pyomo.common.modeling import randint, unique_component_name
 from pyomo.core import Block, Var, Param, Set, VarList, ConstraintList, Constraint, Objective, RangeSet, value, ConcreteModel, Reals, sqrt, minimize, maximize
-# This line will cause an import error.  This contrib package needs
-# to be updated to use Pyomo5 expressions
-from pyomo.core.base import expr_coopr3, expr as EXPR
+from pyomo.core.expr import current as EXPR
+from pyomo.core.kernel import ComponentSet
+from pyomo.core.base.external import PythonCallbackFunction
 from pyomo.core.base.var import _VarData
-from pyomo.core.base.numvalue import native_types
+from pyomo.core.base.numvalue import nonpyomo_leaf_types
 from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
 from pyomo.contrib.trustregion.GeometryGenerator import (
     generate_quadratic_rom_geometry
@@ -19,6 +19,66 @@ from pyomo.contrib.trustregion.helper import *
 class ROMType:
     linear = 0
     quadratic = 1
+
+class ReplaceEFVisitor(EXPR.ExpressionReplacementVisitor):
+    def __init__(self, trf_block, efSet):
+        super(ReplaceEFVisitor, self).__init__(
+            descend_into_named_expressions=True,
+            remove_named_expressions=False)
+        self.trf = trf_block
+        self.efSet = efSet
+
+    def visit(self, node, values):
+        if node.__class__ is not EXPR.ExternalFunctionExpression:
+            return node
+        if id(node._fcn) not in self.efSet:
+            return node
+        # At this point we know this is an ExternalFunctionExpression
+        # node that we want to replace with an auliliary variable (y)
+        new_args = []
+        seen = ComponentSet()
+        # TODO: support more than PythonCallbackFunctions
+        assert isinstance(node._fcn, PythonCallbackFunction)
+        #
+        # Note: the first argument to PythonCallbackFunction is the
+        # function ID.  Since we are going to complain about constant
+        # parameters, we need to skip the first argument when processing
+        # the argument list.  This is really not good: we should allow
+        # for constant arguments to the functions, and we should relax
+        # the restriction that the external functions implement the
+        # PythonCallbackFunction API (that restriction leads unfortunate
+        # things later; i.e., accessing the private _fcn attribute
+        # below).
+        for arg in list(values)[1:]:
+            if type(arg) in nonpyomo_leaf_types or arg.is_fixed():
+                # We currently do not allow constants or parameters for
+                # the external functions.
+                raise RuntimeError(
+                    "TrustRegion does not support black boxes with "
+                    "constant or parameter inputs\n\tExpression: %s"
+                    % (node,) )
+            if arg.is_expression_type():
+                # All expressions (including simple linear expressions)
+                # are replaced with a single auxiliary variable (and
+                # eventually an additional constraint equating the
+                # auxiliary variable to the original expression)
+                _x = self.trf.x.add()
+                _x.set_value( value(arg) )
+                self.trf.conset.add(_x == arg)
+                new_args.append(_x)
+            else:
+                # The only thing left is bare variables: check for duplicates.
+                if arg in seen:
+                    raise RuntimeError(
+                        "TrustRegion does not support black boxes with "
+                        "duplicate input arguments\n\tExpression: %s"
+                        % (node,) )
+                seen.add(arg)
+                new_args.append(arg)
+        _y = self.trf.y.add()
+        self.trf.external_fcns.append(node)
+        self.trf.exfn_xvars.append(new_args)
+        return _y
 
 class PyomoInterface:
     '''
@@ -62,77 +122,22 @@ class PyomoInterface:
         self.pset = None
 
 
-    def substituteEF(self,expr,trf,efSet):
-    # Substitute out an External Function
-    #
-    # Arguments:
-    # expr : a pyomo expression. We will search this expression tree
-    # trf : a pyomo block. We will add tear variables y on this block
-    # efSet: the (pyomo) set of external functions for which we will use TRF method
-    #
-    # This function returns an expression after removing any ExternalFunction
-    # in the set efSet from the expression tree expr. New variables are declared on
-    # the trf block and replace the external function.
+    def substituteEF(self, expr, trf, efSet):
+        """Substitute out an External Function
 
-    ## Recursive calls of external function won't work, but won't raise an exception!!!!!!!
+        Arguments:
+            expr : a pyomo expression. We will search this expression tree
+            trf : a pyomo block. We will add tear variables y on this block
+            efSet: the (pyomo) set of external functions for which we will use TRF method
 
-        stack = [(None, [expr], 0, 1)]
-        while stack:
-            _node, _args, _idx, _len = stack.pop()
-            while _idx < _len:
+        This function returns an expression after removing any
+        ExternalFunction in the set efSet from the expression tree
+        expr. New variables are declared on the trf block and replace
+        the external function.
 
-                _sub = _args[_idx]
-                _idx += 1
-                if type(_sub) in native_types:
-                    pass
-                elif type(_sub) is EXPR._ExternalFunctionExpression and id(_sub._fcn) in efSet:
-                    _y = trf.y.add()
-                    trf.external_fcns.append(_sub)
-                    seen = set()
-                    ans = []
-                    # starts at 1, _sub._args[0] is ignored for some reason?!
-                    for _arg in _sub._args[1:]:
-                        if _arg.is_expression():
-                            # If one arg is an expression, a new variable is created and a new constraint is added
-                            _x = trf.x.add()
-                            _x.set_value(value(_arg))
-                            trf.conset.add(_x==_arg)
-                            ans.append(_x)
-                        elif isinstance(_arg, _VarData):
-                            if id(_arg) not in seen:
-                                seen.add(id(_arg))
-                                ans.append(_arg)
-                            else:
-                                raise Exception("We do not support a black box with duplicate input arguments\n")
-                        else:
-                            #TODO: Support constants and paramters here!
-                            raise Exception("We do not support a black box with constant or parameter inputs\n")
+        """
+        return ReplaceEFVisitor(trf, efSet).dfs_postorder_stack(expr)
 
-                    trf.exfn_xvars.append(ans)
-
-                    if type(_args) is list:
-                        # This covers the special case of _ProductExpression's numerator/denominator
-                        _args[_idx-1] = _y
-                    else: # this means _args is a tuple!
-                        try:
-                            _node._args = _args[:_idx-1] + (_y,) + _args[_idx:]
-                        except AttributeError:
-                            if type(_node._expr) is EXPR._ExternalFunctionExpression:
-                                _node._expr = _y
-                            else:
-                                raise AttributeError("Hacky code doesn't work!!")
-                elif _sub.is_expression():
-                    stack.append((_node, _args, _idx, _len))
-                    if type(_sub) is expr_coopr3._ProductExpression:
-                        stack.append((_sub, _sub._denominator, 0, len(_sub._denominator)))
-                        _args = _sub._numerator
-                    else:
-                        _args = _sub._args
-                    _idx = 0
-                    _len = len(_args)
-                    _node = _sub
-
-        return _args[0]
 
     def transformForTrustRegion(self,model,eflist):
         # transform and model into suitable form for TRF method
@@ -171,7 +176,6 @@ class PyomoInterface:
             obj.set_value(self.substituteEF(obj.expr,TRF,efSet))
             ## Assume only one ative objective function here
             self.objective=obj
-
 
         if self.objective.sense == maximize:
             self.objective.expr = -1* self.objective.expr
