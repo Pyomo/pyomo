@@ -157,9 +157,6 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         "Rounding is done before solving NLP subproblem"
     ))
 
-    def __init__(self):
-        self._metasolver = False
-
     def available(self, exception_flag=True):
         """Check if solver is available.
 
