@@ -4,8 +4,9 @@ in Logic-based outer approximation.
 from __future__ import division
 
 from pyomo.contrib.gdpopt.util import is_feasible
-from pyomo.core import Block, TransformationFactory, Var, minimize, value
-from pyomo.gdp import Disjunct
+from pyomo.core import Constraint, TransformationFactory, minimize, value
+from pyomo.core.expr import current as EXPR
+from pyomo.core.kernel import ComponentSet
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory, SolverStatus
 
@@ -15,14 +16,9 @@ def solve_NLP(nlp_model, solve_data, config):
     config.logger.info(
         'Solving nonlinear subproblem for '
         'fixed binaries and logical realizations.')
-    if any(True for v in nlp_model.component_data_objects(
-        ctype=Var, descend_into=(Block, Disjunct), active=True)
-        if (v.is_binary() or v.is_integer()) and not v.fixed
-    ):
-        discrete_var_names = list(
-            v.name for v in nlp_model.component_data_objects(
-                ctype=Var, descend_into=(Block, Disjunct), active=True)
-            if (v.is_binary() or v.is_integer()) and not v.fixed)
+    unfixed_discrete_vars = detect_unfixed_discrete_vars(nlp_model)
+    if unfixed_discrete_vars:
+        discrete_var_names = list(v.name for v in unfixed_discrete_vars)
         config.logger.warning(
             "Unfixed discrete variables exist on the NLP subproblem: %s"
             % (discrete_var_names,))
@@ -116,6 +112,18 @@ def solve_NLP(nlp_model, solve_data, config):
         # Dual values
         list(nlp_model.dual.get(c, None)
              for c in GDPopt.working_constraints_list))
+
+
+def detect_unfixed_discrete_vars(model):
+    """Detect unfixed discrete variables in use on the model."""
+    var_set = ComponentSet()
+    for constr in model.component_data_objects(
+            Constraint, active=True, descend_into=True):
+        var_set.update(
+            v for v in EXPR.identify_variables(
+                constr.body, include_fixed=False)
+            if v.is_binary())
+    return var_set
 
 
 def update_nlp_progress_indicators(solved_model, solve_data, config):

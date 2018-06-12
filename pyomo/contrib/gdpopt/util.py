@@ -460,3 +460,28 @@ def algorithm_should_terminate(solve_data, config):
             'Exiting iteration loop.')
         return True
     return False
+
+
+def copy_and_fix_mip_values_to_nlp(var_list, val_list, config):
+    """Copy MIP solution values to the corresponding NLP variable list.
+
+    Fix binary variables and optionally round their values.
+
+    """
+    for var, val in zip(var_list, val_list):
+        if val is None:
+            continue
+        if not var.is_binary():
+            var.value = val
+        elif ((fabs(val) > config.integer_tolerance and
+               fabs(val - 1) > config.integer_tolerance)):
+            raise ValueError(
+                "Binary variable %s value %s is not "
+                "within tolerance %s of 0 or 1." %
+                (var.name, var.value, config.integer_tolerance))
+        else:
+            # variable is binary and within tolerances
+            if config.round_NLP_binaries:
+                var.fix(int(round(val)))
+            else:
+                var.fix(val)

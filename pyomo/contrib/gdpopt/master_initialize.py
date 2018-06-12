@@ -11,6 +11,7 @@ from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
 from pyomo.contrib.gdpopt.nlp_solve import (solve_NLP,
                                             update_nlp_progress_indicators)
+from pyomo.contrib.gdpopt.util import copy_and_fix_mip_values_to_nlp
 from pyomo.core import (Block, Constraint, Objective, TransformationFactory,
                         Var, maximize, minimize)
 from pyomo.gdp import Disjunct
@@ -41,12 +42,9 @@ def init_custom_disjuncts(solve_data, config):
             # use the mip_var_values to create the NLP subproblem
             nlp_model = solve_data.working_model.clone()
             # copy in the discrete variable values
-            for var, val in zip(nlp_model.GDPopt_utils.working_var_list,
-                                mip_var_values):
-                if val is None:
-                    continue
-                else:
-                    var.value = val
+            copy_and_fix_mip_values_to_nlp(
+                nlp_model.GDPopt_utils.working_var_list,
+                mip_var_values, config)
             TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
             solve_data.nlp_iteration += 1
             nlp_result = solve_NLP(nlp_model, solve_data, config)
@@ -94,12 +92,8 @@ def init_max_binaries(solve_data, config):
         # use the mip_var_values to create the NLP subproblem
         nlp_model = solve_data.working_model.clone()
         # copy in the discrete variable values
-        for var, val in zip(nlp_model.GDPopt_utils.working_var_list,
-                            mip_var_values):
-            if val is None:
-                continue
-            else:
-                var.value = val
+        copy_and_fix_mip_values_to_nlp(nlp_model.GDPopt_utils.working_var_list,
+                                       mip_var_values, config)
         TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
         solve_data.nlp_iteration += 1
         nlp_result = solve_NLP(nlp_model, solve_data, config)
@@ -151,16 +145,9 @@ def init_set_covering(solve_data, config):
         # solve local NLP
         _, mip_var_values, mip_disjunct_values = mip_results
         nlp_model = solve_data.working_model.clone()
-        for disj, val in zip(nlp_model.GDPopt_utils.working_disjuncts_list,
-                             mip_disjunct_values):
-            if val is None:
-                continue
-            else:
-                disj.indicator_var.value = val
+        copy_and_fix_mip_values_to_nlp(nlp_model.GDPopt_utils.working_var_list,
+                                       mip_var_values, config)
         TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
-        for var in nlp_model.GDPopt_utils.working_var_list:
-            if var.is_binary():
-                var.fix()
         solve_data.nlp_iteration += 1
         nlp_result = solve_NLP(nlp_model, solve_data, config)
         nlp_feasible, nlp_var_values, nlp_duals = nlp_result
@@ -218,7 +205,6 @@ def solve_set_cover_MIP(linear_GDP_model, disj_needs_cover,
             constr.deactivate()
 
     mip_results = solve_linear_GDP(m, solve_data, config)
-
     if mip_results:
         config.logger.info('Solved set covering MIP')
         return mip_results + (
