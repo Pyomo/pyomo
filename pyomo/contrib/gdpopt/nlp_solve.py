@@ -47,17 +47,7 @@ def solve_NLP(nlp_model, solve_data, config):
     for xfrm in preprocessing_transformations:
         TransformationFactory(xfrm).apply_to(nlp_model)
 
-    # restore original variable values
-    for var, old_value in zip(GDPopt.working_var_list,
-                              GDPopt.initial_var_values):
-        if not var.fixed and not var.is_binary():
-            if old_value is not None:
-                if var.has_lb() and old_value < var.lb:
-                    old_value = var.lb
-                if var.has_ub() and old_value > var.ub:
-                    old_value = var.ub
-                # Set the value
-                var.set_value(old_value)
+    initialize_NLP(nlp_model)
 
     # Callback immediately before solving NLP subproblem
     config.subprob_presolve(nlp_model, solve_data)
@@ -129,6 +119,25 @@ def detect_unfixed_discrete_vars(model):
                 constr.body, include_fixed=False)
             if v.is_binary())
     return var_set
+
+
+def initialize_NLP(model):
+    """Perform initialization of the NLP.
+
+    Presently, this just restores the variable to the original model values.
+
+    """
+    # restore original variable values
+    for var, old_value in zip(model.GDPopt_utils.working_var_list,
+                              model.GDPopt_utils.initial_var_values):
+        if not var.fixed and not var.is_binary():
+            if old_value is not None:
+                if var.has_lb() and old_value < var.lb:
+                    old_value = var.lb
+                if var.has_ub() and old_value > var.ub:
+                    old_value = var.ub
+                # Set the value
+                var.set_value(old_value)
 
 
 def update_nlp_progress_indicators(solved_model, solve_data, config):
