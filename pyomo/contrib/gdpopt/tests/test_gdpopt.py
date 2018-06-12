@@ -81,10 +81,14 @@ class TestGDPopt(unittest.TestCase):
     def test_LOA_constrained_layout_maxBinary(self):
         """Test LOA with constrianed layout using max_binary initialization."""
         cons_layout = build_constrained_layout_model()
+
+        def print_binaries(model, solve_data):
+            print([(v.name, v.value) for v in model.GDPopt_utils.working_var_list])
         SolverFactory('gdpopt').solve(
             cons_layout, strategy='LOA', init_strategy='max_binary',
             mip=required_solvers[1],
-            nlp=required_solvers[0], tee=True)
+            nlp=required_solvers[0], tee=True,
+            subprob_postsolve=print_binaries)
         objective_value = value(cons_layout.min_dist_cost.expr)
         self.assertTrue(
             fabs(objective_value - 41573) <= 200,
