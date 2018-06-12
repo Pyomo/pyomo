@@ -6365,5 +6365,62 @@ class WalkerTests_ReplaceInternal(unittest.TestCase):
         self.assertIs(type(f.arg(0)), EXPR.SumExpression)
         self.assertEqual(f.arg(0).nargs(), 4)
 
+
+class TestEvaluateExpression(unittest.TestCase):
+
+    def test_constant(self):
+        m = ConcreteModel()
+        m.p = Param(initialize=1)
+
+        e = 1 + m.p
+        self.assertEqual(2, EXPR.evaluate_expression(e))
+        self.assertEqual(2, EXPR.evaluate_expression(e, constant=True))
+
+    def test_uninitialized_constant(self):
+        m = ConcreteModel()
+        m.p = Param(mutable=True)
+
+        e = 1 + m.p
+        self.assertRaises(ValueError, EXPR.evaluate_expression, e)
+        self.assertRaises(EXPR.FixedExpressionError, EXPR.evaluate_expression, e, constant=True)
+
+    def test_variable(self):
+        m = ConcreteModel()
+        m.p = Var()
+
+        e = 1 + m.p
+        self.assertRaises(ValueError, EXPR.evaluate_expression, e)
+        self.assertRaises(EXPR.NonConstantExpressionError, EXPR.evaluate_expression, e, constant=True)
+
+    def test_initialized_variable(self):
+        m = ConcreteModel()
+        m.p = Var(initialize=1)
+
+        e = 1 + m.p
+        self.assertTrue(2, EXPR.evaluate_expression(e))
+        self.assertRaises(EXPR.NonConstantExpressionError, EXPR.evaluate_expression, e, constant=True)
+
+    def test_fixed_variable(self):
+        m = ConcreteModel()
+        m.p = Var(initialize=1)
+        m.p.fixed = True
+
+        e = 1 + m.p
+        self.assertTrue(2, EXPR.evaluate_expression(e))
+        self.assertRaises(EXPR.FixedExpressionError, EXPR.evaluate_expression, e, constant=True)
+
+    def test_template_expr(self):
+        from pyomo.core.expr.current import TemplateExpressionError
+
+        m = ConcreteModel()
+        m.I = RangeSet(1,9)
+        m.x = Var(m.I, initialize=lambda m,i: i+1)
+        m.P = Param(m.I, initialize=lambda m,i: 10-i, mutable=True)
+        t = IndexTemplate(m.I)
+
+        e = m.x[t+m.P[t+1]] + 3
+        self.assertRaises(TemplateExpressionError, EXPR.evaluate_expression, e)
+        self.assertRaises(TemplateExpressionError, EXPR.evaluate_expression, e, constant=True)
+
 if __name__ == "__main__":
     unittest.main()
