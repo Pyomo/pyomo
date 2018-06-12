@@ -930,21 +930,26 @@ class block(_block_base, IBlockStorage):
     #
 
     def __setattr__(self, name, obj):
+        current = getattr(self, name, None)
+        needs_del = False
+        if hasattr(current,
+                   '_is_categorized_object'):
+            if (current is not obj) and \
+               (name != "_parent"):
+                logger.warning(
+                    "Implicitly replacing attribute %s (type=%s) "
+                    "on block with new object (type=%s). This "
+                    "is usually indicative of a modeling error. "
+                    "To avoid this warning, delete the original "
+                    "object from the block before assigning a new "
+                    "object."
+                    % (name,
+                       getattr(self, name).__class__.__name__,
+                       obj.__class__.__name__))
+                needs_del = True
         if hasattr(obj, '_is_categorized_object'):
             if obj._parent is None:
-                if hasattr(self, name) and \
-                   hasattr(getattr(self, name),
-                           '_is_categorized_object'):
-                    logger.warning(
-                        "Implicitly replacing the categorized attribute "
-                        "%s (type=%s) on block with a new object "
-                        "(type=%s).\nThis is usually indicative of a "
-                        "modeling error.\nTo avoid this warning, delete "
-                        "the original object from the block before "
-                        "assigning a new object with the same name."
-                        % (name,
-                           type(getattr(self, name)),
-                           type(obj)))
+                if needs_del:
                     delattr(self, name)
                 self._byctype[obj.ctype][name] = obj
                 self._order[name] = obj
@@ -1043,21 +1048,26 @@ class tiny_block(_block_base, IBlockStorage):
         self._order = []
 
     def __setattr__(self, name, obj):
+        current = getattr(self, name, None)
+        needs_del = False
+        if hasattr(current,
+                   '_is_categorized_object'):
+            if (current is not obj) and \
+               (name != "_parent"):
+                logger.warning(
+                    "Implicitly replacing attribute %s (type=%s) "
+                    "on block with new object (type=%s). This "
+                    "is usually indicative of a modeling error. "
+                    "To avoid this warning, delete the original "
+                    "object from the block before assigning a new "
+                    "object."
+                    % (name,
+                       getattr(self, name).__class__.__name__,
+                       obj.__class__.__name__))
+                needs_del = True
         if hasattr(obj, '_is_categorized_object'):
             if obj._parent is None:
-                if hasattr(self, name) and \
-                   hasattr(getattr(self,name),
-                           '_is_categorized_object'):
-                    logger.warning(
-                        "Implicitly replacing the categorized attribute "
-                        "%s (type=%s) on block with a new object "
-                        "(type=%s).\nThis is usually indicative of a "
-                        "modeling error.\nTo avoid this warning, delete "
-                        "the original object from the block before "
-                        "assigning a new object with the same name."
-                        % (name,
-                           type(getattr(self, name)),
-                           type(obj)))
+                if needs_del:
                     delattr(self, name)
                 obj._parent = weakref.ref(self)
                 obj._storage_key = name
