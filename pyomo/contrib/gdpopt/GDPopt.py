@@ -39,7 +39,6 @@ from pyomo.contrib.gdpopt.util import (GDPoptSolveData, _DoNothing, a_logger,
                                        build_ordered_component_lists,
                                        clone_orig_model_with_lists,
                                        copy_var_list_values,
-                                       fix_unused_working_variables,
                                        model_is_valid,
                                        record_original_model_statistics,
                                        record_working_model_statistics,
@@ -236,8 +235,6 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             # Save ordered lists of main modeling components, so that data can
             # be easily transferred between future model clones.
             build_ordered_component_lists(solve_data.working_model)
-            # Fix unused variables
-            fix_unused_working_variables(solve_data, config)
             record_working_model_statistics(solve_data, config)
             solve_data.results.solver.name = 'GDPopt ' + str(self.version())
 

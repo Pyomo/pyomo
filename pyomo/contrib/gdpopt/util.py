@@ -313,36 +313,6 @@ def record_working_model_statistics(solve_data, config):
          now_continuous))
 
 
-def fix_unused_working_variables(solve_data, config):
-    """Find unused variables on the working model and fix them.
-
-    This uses the precomputed variable list objects, so it should not be used
-    in the general sense.
-
-    """
-    unused_variables = ComponentSet(
-        v for v in solve_data.working_model.component_data_objects(Var)
-        if not v.fixed
-    ) - ComponentSet(
-        solve_data.working_model.GDPopt_utils.working_var_list)
-    for v in unused_variables:
-        if v.value is None:
-            if v.has_lb():
-                v.fix(value(v.lb))
-            elif v.has_ub():
-                v.fix(value(v.ub))
-            else:
-                v.fix(0)
-        else:
-            # Make sure value is between bounds
-            if v.has_lb() and v.value < value(v.lb):
-                v.fix(value(v.lb))
-            elif v.has_ub() and v.value > value(v.ub):
-                v.fix(value(v.ub))
-            else:
-                v.fix()
-
-
 def reformulate_integer_variables(model, config):
     integer_vars = list(
         v for v in model.component_data_objects(
