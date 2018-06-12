@@ -84,14 +84,12 @@ class TestGDPopt(unittest.TestCase):
 
         def print_binaries(model, solve_data):
             from pprint import pprint
-            from pyomo.core import Constraint
-            pprint([(c.name, str(c.expr)) for c in model.component_data_objects(Constraint)
-                    if 'GDPopt_OA_cuts' in c.name])
+            pprint([(v.name, v.value) for v in model.GDPopt_utils.working_var_list])
         SolverFactory('gdpopt').solve(
             cons_layout, strategy='LOA', init_strategy='max_binary',
             mip=required_solvers[1],
             nlp=required_solvers[0], tee=True,
-            master_postsolve=print_binaries)
+            subprob_postfeas=print_binaries)
         objective_value = value(cons_layout.min_dist_cost.expr)
         self.assertTrue(
             fabs(objective_value - 41573) <= 200,
