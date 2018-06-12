@@ -92,6 +92,11 @@ def solve_NLP(nlp_model, solve_data, config):
             nlp_feasible = True
         else:
             nlp_feasible = False
+    elif subprob_terminate_cond is tc.internalSolverError:
+        # Possible that IPOPT had a restoration failture
+        config.logger.info(
+            "NLP solver had an internal failure: %s" % results.solver.message)
+        nlp_feasible = False
     else:
         raise ValueError(
             'GDPopt unable to handle NLP subproblem termination '
