@@ -6,8 +6,6 @@ with full leverage of GDP framework.
 This is a convex MINLP problem that has been formulated as a GDP model. The
 expected optimal solution value is 68.0.
 
-Author: Qi Chen <https://github.com/qtothec>
-
 Ref:
     SELECT OPTIMAL PROCESS FROM WITHIN GIVEN SUPERSTRUCTURE.
     MARCO DURAN , PH.D. THESIS (EX3) , 1984.

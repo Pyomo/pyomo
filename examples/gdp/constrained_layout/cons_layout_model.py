@@ -4,8 +4,9 @@ Example based on: https://www.minlp.org/library/problem/index.php?i=107&lib=GDP
 Description can be found in: https://doi.org/10.1016/j.ejor.2011.10.002
 
 This model attempts to pack a set of rectangles within a set of circles while
-minimizing the cost of connecting the rectangles. It is assumed that the
-circles do not overlap with each other.
+minimizing the cost of connecting the rectangles, a function of the distance
+between the rectangle centers. It is assumed that the circles do not overlap
+with each other.
 
 """
 from __future__ import division
@@ -17,8 +18,8 @@ from pyomo.environ import (ConcreteModel, Objective, Param,
 def build_constrained_layout_model():
     """Build the model."""
     m = ConcreteModel(name="2-D constrained layout")
-    m.rectangles = RangeSet(3)
-    m.circles = RangeSet(2)
+    m.rectangles = RangeSet(3, doc="Three rectangles")
+    m.circles = RangeSet(2, doc="Two circles")
 
     m.rect_length = Param(
         m.rectangles, initialize={1: 5, 2: 7, 3: 3},

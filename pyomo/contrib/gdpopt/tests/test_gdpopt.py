@@ -3,15 +3,15 @@ from math import fabs
 
 import pyomo.core.base.symbolic
 import pyutilib.th as unittest
-from pyomo.contrib.gdpopt.tests.constrained_layout import \
-    build_constrained_layout_model
-from pyomo.contrib.gdpopt.tests.eight_process_problem import \
-    build_eight_process_flowsheet
-from pyomo.contrib.gdpopt.tests.strip_packing import \
-    build_rect_strip_packing_model
 from pyomo.environ import SolverFactory, value
 
-required_solvers = ('ipopt', 'cbc')
+from pyutilib.misc import import_file
+
+from os.path import abspath, dirname, normpath, join
+currdir = dirname(abspath(__file__))
+exdir = normpath(join(currdir, '..', '..', '..', '..', 'examples', 'gdp'))
+
+required_solvers = ('ipopt', 'glpk')
 if all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = True
 else:
@@ -28,7 +28,9 @@ class TestGDPopt(unittest.TestCase):
 
     def test_LOA_8PP_default_init(self):
         """Test logic-based outer approximation with 8PP."""
-        eight_process = build_eight_process_flowsheet()
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
         SolverFactory('gdpopt').solve(
             eight_process, strategy='LOA',
             mip=required_solvers[1],
@@ -38,7 +40,9 @@ class TestGDPopt(unittest.TestCase):
 
     def test_LOA_strip_pack_default_init(self):
         """Test logic-based outer approximation with strip packing."""
-        strip_pack = build_rect_strip_packing_model()
+        exfile = import_file(
+            join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
+        strip_pack = exfile.build_rect_strip_packing_model()
         SolverFactory('gdpopt').solve(
             strip_pack, strategy='LOA',
             mip=required_solvers[1],
@@ -48,7 +52,9 @@ class TestGDPopt(unittest.TestCase):
 
     def test_LOA_constrained_layout_default_init(self):
         """Test LOA with constrained layout."""
-        cons_layout = build_constrained_layout_model()
+        exfile = import_file(
+            join(exdir, 'constrained_layout', 'cons_layout_model.py'))
+        cons_layout = exfile.build_constrained_layout_model()
         SolverFactory('gdpopt').solve(
             cons_layout, strategy='LOA',
             mip=required_solvers[1],
@@ -60,7 +66,9 @@ class TestGDPopt(unittest.TestCase):
 
     def test_LOA_8PP_maxBinary(self):
         """Test logic-based OA with max_binary initialization."""
-        eight_process = build_eight_process_flowsheet()
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
         SolverFactory('gdpopt').solve(
             eight_process, strategy='LOA', init_strategy='max_binary',
             mip=required_solvers[1],
@@ -70,7 +78,9 @@ class TestGDPopt(unittest.TestCase):
 
     def test_LOA_strip_pack_maxBinary(self):
         """Test LOA with strip packing using max_binary initialization."""
-        strip_pack = build_rect_strip_packing_model()
+        exfile = import_file(
+            join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
+        strip_pack = exfile.build_rect_strip_packing_model()
         SolverFactory('gdpopt').solve(
             strip_pack, strategy='LOA', init_strategy='max_binary',
             mip=required_solvers[1],
@@ -80,20 +90,22 @@ class TestGDPopt(unittest.TestCase):
 
     def test_LOA_custom_disjuncts(self):
         """Test logic-based OA with custom disjuncts initialization."""
-        model = build_eight_process_flowsheet()
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
         initialize = [
             # Use units 1, 4, 7, 8
-            [model.use_unit_1or2.disjuncts[0],
-             model.use_unit_3ornot.disjuncts[1],
-             model.use_unit_4or5ornot.disjuncts[0],
-             model.use_unit_6or7ornot.disjuncts[1],
-             model.use_unit_8ornot.disjuncts[0]],
+            [eight_process.use_unit_1or2.disjuncts[0],
+             eight_process.use_unit_3ornot.disjuncts[1],
+             eight_process.use_unit_4or5ornot.disjuncts[0],
+             eight_process.use_unit_6or7ornot.disjuncts[1],
+             eight_process.use_unit_8ornot.disjuncts[0]],
             # Use units 2, 4, 6, 8
-            [model.use_unit_1or2.disjuncts[1],
-             model.use_unit_3ornot.disjuncts[1],
-             model.use_unit_4or5ornot.disjuncts[0],
-             model.use_unit_6or7ornot.disjuncts[0],
-             model.use_unit_8ornot.disjuncts[0]]
+            [eight_process.use_unit_1or2.disjuncts[1],
+             eight_process.use_unit_3ornot.disjuncts[1],
+             eight_process.use_unit_4or5ornot.disjuncts[0],
+             eight_process.use_unit_6or7ornot.disjuncts[0],
+             eight_process.use_unit_8ornot.disjuncts[0]]
         ]
 
         def assert_correct_disjuncts_active(nlp_model, solve_data):
@@ -109,13 +121,13 @@ class TestGDPopt(unittest.TestCase):
                     self.assertTrue(soln_disj.indicator_var.value == 1)
 
         SolverFactory('gdpopt').solve(
-            model, strategy='LOA', init_strategy='custom_disjuncts',
+            eight_process, strategy='LOA', init_strategy='custom_disjuncts',
             custom_init_disjuncts=initialize,
             mip=required_solvers[1],
             nlp=required_solvers[0],
             subprob_postfeas=assert_correct_disjuncts_active)
 
-        self.assertTrue(fabs(value(model.profit.expr) - 68) <= 1E-2)
+        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
 
 if __name__ == '__main__':
