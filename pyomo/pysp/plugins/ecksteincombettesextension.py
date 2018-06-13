@@ -90,7 +90,7 @@ class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
                 print(subproblem)
             print("")
 
-        scale_factor = 1.0               # This should be a command-line parameter
+        gamma = 1.0   # Scale factor. This should be a command-line parameter.
 
         self._total_projection_steps += 1
 
@@ -259,7 +259,7 @@ class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
 
         if phi > 0:
             tau = 1.0 # this is the over-relaxation parameter - we need to do something more useful
-            denominator = p_unorm*p_unorm + scale_factor*p_vnorm*p_vnorm
+            denominator = p_unorm*p_unorm + (1.0/gamma)*p_vnorm*p_vnorm
             if self._check_output :
                 print("denominator = " + str(denominator))
             theta = phi/denominator 
@@ -279,7 +279,7 @@ class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
                                 print("WEIGHT VALUE PRIOR TO MODIFICATION=",weight_values[variable_id])
                                 print("U VALUE PRIOR TO MODIFICATION=",scenario._u[variable_id])
 #                            print("SUBTRACTING TERM TO Z=%s" % (tau * theta * tree_node._v[variable_id]))
-                            tree_node._z[variable_id] -= (tau * theta * scale_factor * tree_node._v[variable_id])
+                            tree_node._z[variable_id] -= (tau * theta * (1.0/gamma) * tree_node._v[variable_id])
                             weight_values[variable_id] += (tau * theta *  scenario._u[variable_id])
                             if self._check_output:
                                 print("NEW WEIGHT FOR VARIABLE=",variable_id,"FOR SCENARIO=",scenario._name,"EQUALS",weight_values[variable_id])
