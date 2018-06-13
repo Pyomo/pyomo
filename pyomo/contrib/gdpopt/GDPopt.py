@@ -49,6 +49,15 @@ from pyomo.opt.base import IOptSolver
 
 __version__ = (0, 3, 0)
 
+# Valid initialization strategies
+valid_init_strategies = {
+    None: _DoNothing,
+    'set_covering': init_set_covering,
+    'max_binary': init_max_binaries,
+    'fixed_binary': None,
+    'custom_disjuncts': init_custom_disjuncts
+}
+
 
 class GDPoptSolver(pyomo.common.plugin.Plugin):
     """A decomposition-based GDP solver."""
@@ -71,8 +80,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         description="Decomposition strategy to use."
     ))
     CONFIG.declare("init_strategy", ConfigValue(
-        default="set_covering", domain=In([
-            "set_covering", "max_binary", "fixed_binary", "custom_disjuncts"]),
+        default="set_covering", domain=In(valid_init_strategies.keys()),
         description="Initialization strategy to use.",
         doc="""Selects the initialization strategy to use when generating
         the initial cuts to construct the master problem."""
@@ -332,12 +340,6 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             c.deactivate()
 
         # Initialization strategies
-        valid_init_strategies = {
-            'set_covering': init_set_covering,
-            'max_binary': init_max_binaries,
-            'fixed_binary': None,
-            'custom_disjuncts': init_custom_disjuncts
-        }
         init_strategy = valid_init_strategies.get(config.init_strategy, None)
         if init_strategy is not None:
             init_strategy(solve_data, config)
@@ -383,6 +385,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             elif solve_data.current_strategy == 'GLOA':
                 nlp_result = solve_global_NLP(
                     mip_var_values, solve_data, config)
+                # TODO add affine cuts
             add_integer_cut(
                 mip_var_values, solve_data, config, feasible=nlp_feasible)
 
