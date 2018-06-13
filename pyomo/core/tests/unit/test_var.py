@@ -390,9 +390,9 @@ class TestSimpleVar(PyomoModel):
     def test_len(self):
         """Test len method"""
         self.model.x = Var()
-        self.assertEqual(len(self.model.x),0)
+        self.assertRaises(TypeError, len, self.model.x)
         self.instance = self.model.create_instance()
-        self.assertEqual(len(self.instance.x),1)
+        self.assertRaises(TypeError, len, self.model.x)
 
     def test_value(self):
         """Check the value of the variable"""

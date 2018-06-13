@@ -22,17 +22,17 @@ class TestDisjunction(unittest.TestCase):
         m.e = Disjunct()
 
         m.x1 = Disjunction()
-        self.assertEqual(len(m.x1), 0)
+        self.assertEqual(len(m.x1._data), 0)
 
         m.x1 = [m.d, m.e]
-        self.assertEqual(len(m.x1), 1)
+        self.assertEqual(len(m.x1._data), 1)
         self.assertEqual(m.x1.disjuncts, [m.d, m.e])
 
         m.x2 = Disjunction([1,2,3,4])
-        self.assertEqual(len(m.x2), 0)
+        self.assertEqual(len(m.x2._data), 0)
 
         m.x2[2] = [m.d, m.e]
-        self.assertEqual(len(m.x2), 1)
+        self.assertEqual(len(m.x2._data), 1)
         self.assertEqual(m.x2[2].disjuncts, [m.d, m.e])
 
     def test_construct_implicit_disjuncts(self):

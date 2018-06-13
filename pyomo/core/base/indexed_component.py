@@ -417,11 +417,16 @@ class IndexedComponent(Component):
             return 0
         return getattr(self._index, 'dimen', 0)
 
+    def __bool__(self):
+        return self._index is UnindexedComponent_set or len(self) > 0
+
     def __len__(self):
         """
         Return the number of component data objects stored by this
         component.
         """
+        if self._index is UnindexedComponent_set:
+            raise TypeError("Cannot compute the length of type '%s'" % self.__class__)
         return len(self._data)
 
     def __contains__(self, idx):

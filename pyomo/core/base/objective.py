@@ -381,7 +381,7 @@ class Objective(ActiveIndexedComponent):
         Return data that will be printed for this component.
         """
         return (
-            [("Size", len(self)),
+            [("Size", len(self._data)),
              ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active)
              ],
@@ -402,7 +402,7 @@ class Objective(ActiveIndexedComponent):
             ostream = sys.stdout
         ostream.write(prefix+self.local_name+" : ")
         ostream.write(", ".join("%s=%s" % (k,v) for k,v in [
-                    ("Size", len(self)),
+                    ("Size", len(self._data)),
                     ("Index", self._index if self.is_indexed() else None),
                     ("Active", self.active),
                     ] ))

@@ -294,7 +294,7 @@ class TestExpression(unittest.TestCase):
     def test_unconstructed_singleton(self):
         a = Expression()
         self.assertEqual(a._constructed, False)
-        self.assertEqual(len(a), 0)
+        self.assertEqual(len(a._data), 0)
         try:
             a()
             self.fail("Component is unconstructed")
@@ -321,16 +321,17 @@ class TestExpression(unittest.TestCase):
         except ValueError:
             pass
         a.construct()
-        self.assertEqual(len(a), 1)
+        self.assertEqual(len(a._data), 1)
         self.assertEqual(a(), None)
         self.assertEqual(a.expr, None)
         self.assertEqual(a.is_constant(), False)
         a.set_value(5)
-        self.assertEqual(len(a), 1)
+        self.assertEqual(len(a._data), 1)
         self.assertEqual(a(), 5)
         self.assertEqual(a.expr(), 5)
         self.assertEqual(a.is_constant(), False)
         self.assertEqual(a.is_fixed(), True)
+        self.assertRaises(TypeError, len, a)
 
 
     def test_bad_init_wrong_type(self):
@@ -841,9 +842,9 @@ E : Size=2, Index=E_index
         model = AbstractModel()
         model.e = Expression()
 
-        self.assertEqual(len(model.e), 0)
+        self.assertEqual(len(model.e._data), 0)
         inst = model.create_instance()
-        self.assertEqual(len(inst.e), 1)
+        self.assertEqual(len(inst.e._data), 1)
 
     def test_None_key(self):
         model = AbstractModel()
@@ -854,7 +855,7 @@ E : Size=2, Index=E_index
     def test_singleton_get_set(self):
         model = ConcreteModel()
         model.e = Expression()
-        self.assertEqual(len(model.e), 1)
+        self.assertEqual(len(model.e._data), 1)
         self.assertEqual(model.e.expr, None)
         model.e.expr = 1
         self.assertEqual(model.e.expr(), 1)
@@ -864,7 +865,7 @@ E : Size=2, Index=E_index
     def test_singleton_get_set_value(self):
         model = ConcreteModel()
         model.e = Expression()
-        self.assertEqual(len(model.e), 1)
+        self.assertEqual(len(model.e._data), 1)
         self.assertEqual(model.e.expr, None)
         model.e.expr = 1
         self.assertEqual(model.e.expr(), 1)

@@ -2112,7 +2112,7 @@ class TestBlock(unittest.TestCase):
 
         self.assertTrue(hasattr(model, 'scalar_constraint'))
         self.assertIs(model.scalar_constraint._type, Constraint)
-        self.assertEqual(len(model.scalar_constraint), 1)
+        self.assertRaises(TypeError, len, model.scalar_constraint)
 
         @model.Constraint(model.I)
         def vector_constraint(m, i):

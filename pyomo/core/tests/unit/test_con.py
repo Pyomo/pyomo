@@ -721,7 +721,7 @@ class TestSimpleCon(unittest.TestCase):
         model = ConcreteModel()
         model.c = Constraint()
 
-        self.assertEqual(len(model.c), 0)
+        self.assertEqual(len(model.c._data), 0)
 
     def test_None_key(self):
         """Test keys method"""
@@ -736,23 +736,24 @@ class TestSimpleCon(unittest.TestCase):
         model = AbstractModel()
         model.x = Var()
         model.c = Constraint(rule=lambda m: m.x == 1)
-        self.assertEqual(len(model.c),0)
+        self.assertEqual(len(model.c._data),0)
         inst = model.create_instance()
-        self.assertEqual(len(inst.c),1)
+        self.assertEqual(len(inst.c._data),1)
+        self.assertRaises(TypeError, len, inst.c)
 
     def test_setitem(self):
         m = ConcreteModel()
         m.x = Var()
         m.c = Constraint()
-        self.assertEqual(len(m.c), 0)
+        self.assertEqual(len(m.c._data), 0)
 
         m.c = m.x**2 <= 4
-        self.assertEqual(len(m.c), 1)
+        self.assertEqual(len(m.c._data), 1)
         self.assertEqual(list(m.c.keys()), [None])
         self.assertEqual(m.c.upper, 4)
 
         m.c = Constraint.Skip
-        self.assertEqual(len(m.c), 0)
+        self.assertEqual(len(m.c._data), 0)
 
 class TestArrayCon(unittest.TestCase):
 
@@ -886,13 +887,13 @@ class TestArrayCon(unittest.TestCase):
         model.x = Var(model.B, initialize=2)
         model.c = Constraint(rule=f)
 
-        self.assertEqual(len(model.c),1)
+        self.assertEqual(len(model.c._data),1)
 
     def test_setitem(self):
         m = ConcreteModel()
         m.x = Var()
         m.c = Constraint(range(5))
-        self.assertEqual(len(m.c), 0)
+        self.assertEqual(len(m.c._data), 0)
 
         m.c[2] = m.x**2 <= 4
         self.assertEqual(len(m.c), 1)
@@ -901,7 +902,7 @@ class TestArrayCon(unittest.TestCase):
         self.assertEqual(m.c[2].upper, 4)
 
         m.c[3] = Constraint.Skip
-        self.assertEqual(len(m.c), 1)
+        self.assertEqual(len(m.c._data), 1)
         self.assertRaisesRegexp( KeyError, "3", m.c.__getitem__, 3)
 
         self.assertRaisesRegexp( ValueError, "'c\[3\]': rule returned None",
@@ -1116,7 +1117,7 @@ class Test2DArrayCon(unittest.TestCase):
         model.x = Var(model.B, initialize=2)
         model.c = Constraint(rule=f)
 
-        self.assertEqual(len(model.c),1)
+        self.assertEqual(len(model.c._data),1)
 
 class MiscConTests(unittest.TestCase):
 
@@ -1169,7 +1170,7 @@ class MiscConTests(unittest.TestCase):
         # something to the constraint.
         #
         self.assertEqual(a._constructed, True)
-        self.assertEqual(len(a), 0)
+        self.assertEqual(len(a._data), 0)
         try:
             a()
             self.fail("Component is empty")
@@ -1208,7 +1209,7 @@ class MiscConTests(unittest.TestCase):
         x = Var(initialize=1.0)
         x.construct()
         a.set_value((0, x, 2))
-        self.assertEqual(len(a), 1)
+        self.assertEqual(len(a._data), 1)
         self.assertEqual(a(), 1)
         self.assertEqual(a.body(), 1)
         self.assertEqual(a.lower(), 0)
@@ -1220,7 +1221,7 @@ class MiscConTests(unittest.TestCase):
     def test_unconstructed_singleton(self):
         a = Constraint()
         self.assertEqual(a._constructed, False)
-        self.assertEqual(len(a), 0)
+        self.assertEqual(len(a._data), 0)
         try:
             a()
             self.fail("Component is unconstructed")
@@ -1260,7 +1261,7 @@ class MiscConTests(unittest.TestCase):
         x.construct()
         a.construct()
         a.set_value((0, x, 2))
-        self.assertEqual(len(a), 1)
+        self.assertEqual(len(a._data), 1)
         self.assertEqual(a(), 1)
         self.assertEqual(a.body(), 1)
         self.assertEqual(a.lower(), 0)

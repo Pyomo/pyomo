@@ -782,7 +782,7 @@ class Constraint(ActiveIndexedComponent):
         Return data that will be printed for this component.
         """
         return (
-            [("Size", len(self)),
+            [("Size", len(self._data)),
              ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active),
              ],
@@ -807,7 +807,7 @@ class Constraint(ActiveIndexedComponent):
             ostream = sys.stdout
         tab="    "
         ostream.write(prefix+self.local_name+" : ")
-        ostream.write("Size="+str(len(self)))
+        ostream.write("Size="+str(len(self._data)))
 
         ostream.write("\n")
         tabular_writer( ostream, prefix+tab,

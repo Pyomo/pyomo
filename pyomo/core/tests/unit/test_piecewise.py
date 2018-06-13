@@ -438,9 +438,10 @@ class TestInvalidPiecewise(unittest.TestCase):
                     'pw_constr_type':'EQ',\
                     'f_rule':lambda model,x: x**2}
         model.con = Piecewise(*args,**keywords)
-        self.assertEqual(len(model.con), 0)
+        self.assertEqual(len(model.con._data), 0)
         instance = model.create_instance()
-        self.assertEqual(len(instance.con), 1)
+        self.assertEqual(len(instance.con._data), 1)
+        self.assertRaises(TypeError, len, instance.con)
 
     def test_None_key(self):
         model = ConcreteModel()

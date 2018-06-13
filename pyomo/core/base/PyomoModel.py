@@ -609,11 +609,11 @@ use the AbstractModel or ConcreteModel class instead.""")
         self.statistics.number_of_objectives = 0
         for block in self.block_data_objects(active=active):
             for data in self.component_map(Var, active=active).itervalues():
-                self.statistics.number_of_variables += len(data)
+                self.statistics.number_of_variables += len(data) if data.is_indexed() else 1
             for data in self.component_map(Objective, active=active).itervalues():
-                self.statistics.number_of_objectives += len(data)
+                self.statistics.number_of_objectives += len(data._data)
             for data in self.component_map(Constraint, active=active).itervalues():
-                self.statistics.number_of_constraints += len(data)
+                self.statistics.number_of_constraints += len(data._data)
 
     def nvariables(self):
         self.compute_statistics()

@@ -1233,7 +1233,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             if comp.is_indexed():
                 _items = comp.iteritems()
             # This is a hack (see _NOTE_ above).
-            elif len(comp) or not hasattr(comp, '_data'):
+            elif not hasattr(comp, '_data') or len(comp._data):
                 _items = ((None, comp),)
             else:
                 _items = tuple()
@@ -1828,11 +1828,11 @@ class Block(ActiveIndexedComponent):
             super(Block, self).pprint(ostream=ostream, verbose=verbose,
                                       prefix=prefix)
 
-        if not len(self):
-            return
         if not self.is_indexed():
             _BlockData.pprint(self, ostream=ostream, verbose=verbose,
                               prefix=prefix+'    ' if subblock else prefix)
+            return
+        if not len(self):
             return
 
         # Note: all indexed blocks must be sub-blocks (if they aren't
@@ -1847,7 +1847,7 @@ class Block(ActiveIndexedComponent):
                               prefix=prefix + '    ' if subblock else prefix)
 
     def _pprint(self):
-        return [("Size", len(self)),
+        return [("Size", len(self) if self.is_indexed() else 1),
                 ("Index", self._index if self.is_indexed() else None),
                 ('Active', self.active),
                 ], ().__iter__(), (), ()

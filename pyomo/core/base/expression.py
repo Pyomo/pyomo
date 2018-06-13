@@ -288,7 +288,7 @@ class Expression(IndexedComponent):
 
     def _pprint(self):
         return (
-            [('Size', len(self)),
+            [('Size', len(self._data)),
              ('Index', None if (not self.is_indexed())
                   else self._index)
              ],
@@ -306,7 +306,7 @@ class Expression(IndexedComponent):
             ostream = sys.stdout
         tab="    "
         ostream.write(prefix+self.local_name+" : ")
-        ostream.write("Size="+str(len(self)))
+        ostream.write("Size="+str(len(self._data)))
 
         ostream.write("\n")
         tabular_writer(

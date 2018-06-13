@@ -122,9 +122,9 @@ class Test(unittest.TestCase):
 
         # TODO: I think the correct answer should be zero before
         # construction
-        self.assertEqual(len(model.b), 1)
+        self.assertEqual(len(model.b._data), 1)
         inst = model.create_instance()
-        self.assertEqual(len(inst.b), 1)
+        self.assertEqual(len(inst.b._data), 1)
 
     def test_none_key(self):
 

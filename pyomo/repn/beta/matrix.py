@@ -147,7 +147,7 @@ def compile_block_linear_constraints(parent_block,
 
             assert not isinstance(constraint, MatrixConstraint)
 
-            if len(constraint) == 0:
+            if len(constraint._data) == 0:
 
                 empty_constraint_containers_to_remove.append((block, constraint))
 

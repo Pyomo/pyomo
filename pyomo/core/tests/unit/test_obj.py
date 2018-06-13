@@ -27,7 +27,7 @@ class TestSimpleObj(unittest.TestCase):
     def test_singleton_get_set(self):
         model = ConcreteModel()
         model.o = Objective(expr=1)
-        self.assertEqual(len(model.o), 1)
+        self.assertEqual(len(model.o._data), 1)
         self.assertEqual(model.o.expr, 1)
         model.o.expr = 2
         self.assertEqual(model.o.expr(), 2)
@@ -37,7 +37,7 @@ class TestSimpleObj(unittest.TestCase):
     def test_singleton_get_set_value(self):
         model = ConcreteModel()
         model.o = Objective(expr=1)
-        self.assertEqual(len(model.o), 1)
+        self.assertEqual(len(model.o._data), 1)
         self.assertEqual(model.o.expr, 1)
         model.o.expr = 2
         self.assertEqual(model.o.expr(), 2)
@@ -55,7 +55,7 @@ class TestSimpleObj(unittest.TestCase):
         # something to the objective.
         #
         self.assertEqual(a._constructed, True)
-        self.assertEqual(len(a), 0)
+        self.assertEqual(len(a._data), 0)
         try:
             a()
             self.fail("Component is empty")
@@ -74,7 +74,7 @@ class TestSimpleObj(unittest.TestCase):
         x = Var(initialize=1.0)
         x.construct()
         a.set_value(x + 1)
-        self.assertEqual(len(a), 1)
+        self.assertEqual(len(a._data), 1)
         self.assertEqual(a(), 2)
         self.assertEqual(a.expr(), 2)
         self.assertEqual(a.sense, minimize)
@@ -82,7 +82,7 @@ class TestSimpleObj(unittest.TestCase):
     def test_unconstructed_singleton(self):
         a = Objective()
         self.assertEqual(a._constructed, False)
-        self.assertEqual(len(a), 0)
+        self.assertEqual(len(a._data), 0)
         try:
             a()
             self.fail("Component is unconstructed")
@@ -100,12 +100,12 @@ class TestSimpleObj(unittest.TestCase):
             pass
         a.construct()
         a.set_sense(minimize)
-        self.assertEqual(len(a), 1)
+        self.assertEqual(len(a._data), 1)
         self.assertEqual(a(), None)
         self.assertEqual(a.expr, None)
         self.assertEqual(a.sense, minimize)
         a.sense = maximize
-        self.assertEqual(len(a), 1)
+        self.assertEqual(len(a._data), 1)
         self.assertEqual(a(), None)
         self.assertEqual(a.expr, None)
         self.assertEqual(a.sense, maximize)
@@ -234,9 +234,9 @@ class TestSimpleObj(unittest.TestCase):
         def rule(model):
             return 1.0
         model.obj = Objective(rule=rule)
-        self.assertEqual(len(model.obj),0)
+        self.assertEqual(len(model.obj._data),0)
         inst = model.create_instance()
-        self.assertEqual(len(inst.obj),1)
+        self.assertEqual(len(inst.obj._data),1)
 
         model = AbstractModel()
         """Test rule option"""
@@ -249,9 +249,9 @@ class TestSimpleObj(unittest.TestCase):
         model.x = Var(RangeSet(1,4),initialize=2)
         model.obj = Objective(rule=f)
 
-        self.assertEqual(len(model.obj),0)
+        self.assertEqual(len(model.obj._data),0)
         inst = model.create_instance()
-        self.assertEqual(len(inst.obj),1)
+        self.assertEqual(len(inst.obj._data),1)
 
     def test_keys_empty(self):
         """Test keys method"""
@@ -264,7 +264,7 @@ class TestSimpleObj(unittest.TestCase):
         """Test len method"""
         model = ConcreteModel()
         model.o = Objective()
-        self.assertEqual(len(model.o), 0)
+        self.assertEqual(len(model.o._data), 0)
 
 
 class TestArrayObj(unittest.TestCase):
@@ -468,7 +468,7 @@ class TestArrayObj(unittest.TestCase):
         model.x = Var(RangeSet(1,4),initialize=2)
         model.obj = Objective(rule=f)
 
-        self.assertEqual(len(model.obj),1)
+        self.assertEqual(len(model.obj._data),1)
 
 
 class Test2DArrayObj(unittest.TestCase):
@@ -559,7 +559,7 @@ class Test2DArrayObj(unittest.TestCase):
         model.x = Var(RangeSet(1,4),initialize=2)
         model.obj = Objective(rule=f)
 
-        self.assertEqual(len(model.obj),1)
+        self.assertEqual(len(model.obj._data),1)
 
 
 class TestObjList(unittest.TestCase):

@@ -388,7 +388,7 @@ class Disjunction(ActiveIndexedComponent):
         Return data that will be printed for this component.
         """
         return (
-            [("Size", len(self)),
+            [("Size", len(self._data)),
              ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active),
              ],

@@ -28,12 +28,12 @@ class TestConnector(unittest.TestCase):
     def test_default_scalar_constructor(self):
         model = ConcreteModel()
         model.c = Connector()
-        self.assertEqual(len(model.c), 1)
+        self.assertEqual(len(model.c._data), 1)
         self.assertEqual(len(model.c.vars), 0)
 
         model = AbstractModel()
         model.c = Connector()
-        self.assertEqual(len(model.c), 0)
+        self.assertEqual(len(model.c._data), 0)
         # FIXME: Not sure I like this behavior: but since this is
         # (currently) an attribute, there is no way to check for
         # construction withough converting it to a property.
@@ -43,7 +43,7 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(len(model.c.vars), 0)
 
         inst = model.create_instance()
-        self.assertEqual(len(inst.c), 1)
+        self.assertEqual(len(inst.c._data), 1)
         self.assertEqual(len(inst.c.vars), 0)
 
     def test_default_indexed_constructor(self):
@@ -70,14 +70,14 @@ class TestConnector(unittest.TestCase):
         pipe.OUT = Connector()
         pipe.OUT.add(pipe.flow, "flow")
         pipe.OUT.add(pipe.pOut, "pressure")
-        self.assertEqual(len(pipe.OUT), 1)
+        self.assertEqual(len(pipe.OUT._data), 1)
         self.assertEqual(len(pipe.OUT.vars), 2)
         self.assertFalse(pipe.OUT.vars['flow'].is_expression_type())
 
         pipe.IN = Connector()
         pipe.IN.add(-pipe.flow, "flow")
         pipe.IN.add(pipe.pIn, "pressure")
-        self.assertEqual(len(pipe.IN), 1)
+        self.assertEqual(len(pipe.IN._data), 1)
         self.assertEqual(len(pipe.IN.vars), 2)
         self.assertTrue(pipe.IN.vars['flow'].is_expression_type())
         
@@ -93,7 +93,7 @@ class TestConnector(unittest.TestCase):
         pipe.OUT.add(pipe.composition, "composition")
         pipe.OUT.add(pipe.pIn, "pressure")
 
-        self.assertEqual(len(pipe.OUT), 1)
+        self.assertEqual(len(pipe.OUT._data), 1)
         self.assertEqual(len(pipe.OUT.vars), 3)
 
 

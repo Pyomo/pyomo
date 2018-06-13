@@ -210,12 +210,12 @@ class Connector(IndexedComponent):
                     _len = '-'
                 elif _k in v.aggregators:
                     _len = '*'
-                elif hasattr(_v,'__len__'):
-                    _len = len(_v)
+                elif hasattr(_v,'_data'):
+                    _len = len(_v._data)
                 else:
                     _len = 1
                 yield _k, _len, str(_v)
-        return ( [("Size", len(self)),
+        return ( [("Size", len(self._data)),
                   ("Index", self._index if self.is_indexed() else None),
                   ],
                  iteritems(self._data),
@@ -236,7 +236,7 @@ class Connector(IndexedComponent):
             ostream = sys.stdout
         tab="    "
         ostream.write(prefix+self.local_name+" : ")
-        ostream.write("Size="+str(len(self)))
+        ostream.write("Size="+str(len(self._data)))
 
         ostream.write("\n")
         def _line_generator(k,v):

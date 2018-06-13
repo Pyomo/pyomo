@@ -270,7 +270,7 @@ class TwoTermDisj(unittest.TestCase):
 
         xorC = m._gdp_chull_relaxation_disjunction_xor
         self.assertIsInstance(xorC, Constraint)
-        self.assertEqual(len(xorC), 1)
+        self.assertEqual(len(xorC._data), 1)
 
         repn = generate_standard_repn(xorC.body)
         self.assertTrue(repn.is_linear())
