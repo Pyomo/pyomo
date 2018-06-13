@@ -6308,5 +6308,119 @@ class WalkerTests3(unittest.TestCase):
         self.assertEqual("2*(z[0]*x[0] + z[1]*x[1] + z[2]*x[2])", str(e))
         self.assertEqual("2*(2*w[4]*x[0] + 2*w[5]*x[1] + 2*w[6]*x[2])", str(f))
 
+
+#
+# Replace all mutable parameters with variables
+#
+class ReplacementWalker_ReplaceInternal(EXPR.ExpressionReplacementVisitor):
+
+    def __init__(self):
+        EXPR.ExpressionReplacementVisitor.__init__(self)
+
+    def visit(self, node, values):
+        if type(node) == EXPR.ProductExpression:
+            return sum(values)
+        else:
+            return node
+
+
+class WalkerTests_ReplaceInternal(unittest.TestCase):
+
+    def test_no_replacement(self):
+        m = ConcreteModel()
+        m.x = Param(mutable=True)
+        m.y = Var([1,2,3])
+
+        e = sum(m.y[i] for i in m.y) == 0
+        f = ReplacementWalker_ReplaceInternal().dfs_postorder_stack(e)
+        self.assertEqual("y[1] + y[2] + y[3]  ==  0.0", str(e))
+        self.assertEqual("y[1] + y[2] + y[3]  ==  0.0", str(f))
+        self.assertIs(e, f)
+
+    def test_replace(self):
+        m = ConcreteModel()
+        m.x = Param(mutable=True)
+        m.y = Var([1,2,3])
+
+        e = m.y[1]*m.y[2] + m.y[2]*m.y[3]  ==  0
+        f = ReplacementWalker_ReplaceInternal().dfs_postorder_stack(e)
+        self.assertEqual("y[1]*y[2] + y[2]*y[3]  ==  0.0", str(e))
+        self.assertEqual("y[1] + y[2] + y[2] + y[3]  ==  0.0", str(f))
+        self.assertIs(type(f.arg(0)), EXPR.SumExpression)
+        self.assertEqual(f.arg(0).nargs(), 2)
+        self.assertIs(type(f.arg(0).arg(0)), EXPR.SumExpression)
+        self.assertEqual(f.arg(0).arg(0).nargs(), 2)
+        self.assertIs(type(f.arg(0).arg(1)), EXPR.SumExpression)
+        self.assertEqual(f.arg(0).arg(1).nargs(), 2)
+
+    def test_replace_nested(self):
+        m = ConcreteModel()
+        m.x = Param(mutable=True)
+        m.y = Var([1,2,3])
+
+        e = m.y[1]*m.y[2]*m.y[2]*m.y[3]  ==  0
+        f = ReplacementWalker_ReplaceInternal().dfs_postorder_stack(e)
+        self.assertEqual("y[1]*y[2]*y[2]*y[3]  ==  0.0", str(e))
+        self.assertEqual("y[1] + y[2] + y[2] + y[3]  ==  0.0", str(f))
+        self.assertIs(type(f.arg(0)), EXPR.SumExpression)
+        self.assertEqual(f.arg(0).nargs(), 4)
+
+
+class TestEvaluateExpression(unittest.TestCase):
+
+    def test_constant(self):
+        m = ConcreteModel()
+        m.p = Param(initialize=1)
+
+        e = 1 + m.p
+        self.assertEqual(2, EXPR.evaluate_expression(e))
+        self.assertEqual(2, EXPR.evaluate_expression(e, constant=True))
+
+    def test_uninitialized_constant(self):
+        m = ConcreteModel()
+        m.p = Param(mutable=True)
+
+        e = 1 + m.p
+        self.assertRaises(ValueError, EXPR.evaluate_expression, e)
+        self.assertRaises(EXPR.FixedExpressionError, EXPR.evaluate_expression, e, constant=True)
+
+    def test_variable(self):
+        m = ConcreteModel()
+        m.p = Var()
+
+        e = 1 + m.p
+        self.assertRaises(ValueError, EXPR.evaluate_expression, e)
+        self.assertRaises(EXPR.NonConstantExpressionError, EXPR.evaluate_expression, e, constant=True)
+
+    def test_initialized_variable(self):
+        m = ConcreteModel()
+        m.p = Var(initialize=1)
+
+        e = 1 + m.p
+        self.assertTrue(2, EXPR.evaluate_expression(e))
+        self.assertRaises(EXPR.NonConstantExpressionError, EXPR.evaluate_expression, e, constant=True)
+
+    def test_fixed_variable(self):
+        m = ConcreteModel()
+        m.p = Var(initialize=1)
+        m.p.fixed = True
+
+        e = 1 + m.p
+        self.assertTrue(2, EXPR.evaluate_expression(e))
+        self.assertRaises(EXPR.FixedExpressionError, EXPR.evaluate_expression, e, constant=True)
+
+    def test_template_expr(self):
+        from pyomo.core.expr.current import TemplateExpressionError
+
+        m = ConcreteModel()
+        m.I = RangeSet(1,9)
+        m.x = Var(m.I, initialize=lambda m,i: i+1)
+        m.P = Param(m.I, initialize=lambda m,i: 10-i, mutable=True)
+        t = IndexTemplate(m.I)
+
+        e = m.x[t+m.P[t+1]] + 3
+        self.assertRaises(TemplateExpressionError, EXPR.evaluate_expression, e)
+        self.assertRaises(TemplateExpressionError, EXPR.evaluate_expression, e, constant=True)
+
 if __name__ == "__main__":
     unittest.main()
