@@ -232,7 +232,233 @@ class linear_expression(object):
 #
 #-------------------------------------------------------
 
+class GenericExpressionVisitor(object):
+    """This class implements a generic event-based expression walker.
+
+    The following events are triggered as expression trees are walked
+    (with a depth-first strategy):
+
+      enterNode(N1)
+      {for N2 in N1.args:}
+        beforeChild(N1, N2)
+          enterNode(N2)
+          exitNode(N2)
+        acceptData(N1, data, child_result)
+        afterChild(N1, N2)
+      exitNode(N1)
+
+    Individual event callbacks match the following signatures:
+
+    args, data = enterNode(self, node):
+
+        enterNode() is called when the walker first enters a node (from
+        above), and is passed the node being entered.  It is expected to
+        return a tuple of child `args` (as either a tuple or list) and a
+        user-specified data structure for collecting results.  If None
+        is returned for args, the node's args attribute is used for
+        expression types and the empty tuple for leaf nodes.  Returning
+        None is equivalent to returning (None,None).  If the callback is
+        not defined, the default behavior is equivalent to returning
+        (None, []).
+
+    node_result = exitNode(self, node, data):
+
+        exitNode() is called after the node is completely processed (as
+        the walker returns up the tree to the parent node).  It is
+        passed the node and the results data structure (defined by
+        enterNode()), and is expected to return the "result" for this
+        node.  If not specified, the default action is to return the
+        data object from enterNode().
+ 
+    descend, child_result = beforeChild(self, node, child):
+
+        beforeChild() is called by a node for every child before
+        entering the child node.  The node and child nodes are passed as
+        arguments.  beforeChild should return a tuple (descend,
+        child_result).  If descend is False, the child node will not be
+        entered and the value returned to child_result will be passed to
+        the node's acceptResult callback.  Returning None is equivalent
+        to (True, None).  The default behavior if not specified is
+        equivalent to (True, None).
+
+    acceptData(self, node, data, child_result):
+
+        acceptData() is called for each child result being returned to a
+        node.  This callback is responsible for recording the result for
+        later processing or passing up the tree.  It is passed the node,
+        the result data structure (see enterNode()), and the child
+        result.  No value is returned.  If acceptData is not specified,
+        it does nothing if data is None, otherwise it calls
+        data.append(result).
+
+    afterChild(self, node, child):
+
+        afterChild() is called by a node for every child node
+        immediately after processing the node is complete before control
+        moves to the next child or up to tge parent node.  The node and
+        child node are passed, and nothing is returned.  If afterChild
+        is not specified, no action takes place.
+
+    finalizeResult(self, result):
+
+        finalizeResult() is called once after the entire expression tree
+        has been walked.  It is passed the result returned by the root
+        node exitNode() callback.  If finalizeResult is not specified,
+        the walker returns the result obtained from the exitNode
+        callback on the root node.
+
+    Consumers interact with this class by either deriving from it and
+    implementing the necessary callbacks (see above), assigning callable
+    functions to an instance of this class, or passing the callback
+    functions as arguments to this class' constructor.
+
+    """
+
+    extentionPoints = ('enterNode','exitNode','beforeChild','afterChild',
+                       'acceptData','finalizeResult')
+    def __init__(self, **kwds):
+        # This is slightly tricky: We want derived classes to be able to
+        # override the "None" defaults here, and for keyword arguments
+        # to override both.  The hasattr check prevents the "None"
+        # defaults from overriding attributes or methods defined on
+        # derived classes.
+        for field in self.extentionPoints:
+            if field in kwds:
+                setattr(self, field, kwds.pop(field))
+            elif not hasattr(self, field):
+                setattr(self, field, None)
+        if kwds:
+            raise RuntimeError("Unrecognized keyword arguments: %s" % (kwds,))
+
+    def walk_expression(self, expr):
+        """Walk an expression, calling registered callbacks.
+        """
+        #
+        # This walker uses a linked list to store the stack (instead of
+        # an array).  The nodes of the linked list are 6-member tuples:
+        #
+        #    ( pointer to parent,
+        #      expression node,
+        #      tuple/list of child nodes (arguments),
+        #      data object to aggregate results from child nodes,
+        #      number of child nodes (arguments),
+        #      current child node )
+        #
+        # The walker only needs a single pointer to the end of the list
+        # (ptr).  The beginning of the list is indicated by a None
+        # parent pointer.
+        #
+        if self.enterNode is not None:
+            tmp = self.enterNode(expr)
+            if tmp is None:
+                args = data = None
+            else:
+                args, data = tmp
+        else:
+            args = None
+            data = []
+        if args is None:
+            if type(expr) in nonpyomo_leaf_types \
+                    or not expr.is_expression_type():
+                args = ()
+            else:
+                args = expr.args
+        ptr = (None, expr, args, data, len(args), 0)
+        node = ptr[1]
+
+        while 1:
+            i = ptr[5]
+            if i < ptr[4]:
+                # This node still has children to process
+                child = ptr[2][i]
+                # Update the child argument counter.  Because we are
+                # using tuples, we need to recreate the "ptr" object
+                # (linked list node)
+                ptr = ptr[:5] + (i+1,)
+
+                # Notify this node that we are about to descend into a
+                # child.
+                if self.beforeChild is not None:
+                    tmp = self.beforeChild(node, child)
+                    if tmp is None:
+                        descend = True
+                        child_result = None
+                    else:
+                        descend, child_result = tmp
+                    if not descend:
+                        # We are aborting processing of this child node.
+                        # Tell this node to accept the child result and
+                        # we will move along
+                        if self.acceptData:
+                            self.acceptData(node, ptr[3], child_result)
+                        else:
+                            ptr[3].append(child_result)
+                        # And let the node know that we are done with a
+                        # child node
+                        if self.afterChild is not None:
+                            self.afterChild(node, child)
+                        # Jump to the top to continue processing the
+                        # next child node
+                        continue
+
+                # We are now going to actually enter this node.  The
+                # node will tell us the list of its child nodes that we
+                # need to process
+                if self.enterNode is not None:
+                    tmp = self.enterNode(child)
+                    if tmp is None:
+                        args = data = None
+                    else:
+                        args, data = tmp
+                else:
+                    args = None
+                    data = []
+                if args is None:
+                    if type(child) in nonpyomo_leaf_types \
+                       or not child.is_expression_type():
+                        # Leaves (either non-pyomo types or
+                        # non-Expressions) have no child arguments, so
+                        # are just put on the stack
+                        args = ()
+                    else:
+                        args = child.args
+                ptr = (ptr, child, args, data, len(args), 0)
+                node = child
+
+            else:
+                # We are done with this node.  Call exitNode to compute
+                # any result
+                if self.exitNode is not None:
+                    node_result = self.exitNode(node, ptr[3])
+                else:
+                    node_result = ptr[3]
+
+                # Pop the node off the linked list
+                ptr = ptr[0]
+                # If we have returned to the beginning, return the final
+                # answer
+                if ptr is None:
+                    if self.finalizeResult is not None:
+                        return self.finalizeResult(node_result)
+                    else:
+                        return node_result
+                # Not done yet, update node to point to the new active
+                # node
+                node, child = ptr[1], node
+
+                # We need to alert the node to accept the child's result:
+                if self.acceptData is not None:
+                    self.acceptData(node, ptr[3], node_result)
+                elif ptr[3] is not None:
+                    ptr[3].append(node_result)
+
+                # And let the node know that we are done with a child node
+                if self.afterChild is not None:
+                    self.afterChild(node, child)
+
+
 class SimpleExpressionVisitor(object):
+
     """
     Note:
         This class is a customization of the PyUtilib :class:`SimpleVisitor
@@ -775,8 +1001,15 @@ def _sizeof_expression(expr):
         A non-negative integer that is the number of
         interior and leaf nodes in the expression tree.
     """
-    visitor = _SizeVisitor()
-    return visitor.xbfs(expr)
+    #visitor = _SizeVisitor()
+    #return visitor.xbfs(expr)
+
+    a = [0]
+    def count(node):
+        a[0] += 1
+    return GenericExpressionVisitor(
+        enterNode=count,
+        finalizeResult=lambda data: a[0]).walk_expression(expr)
 
 # =====================================================
 #  evaluate_expression
