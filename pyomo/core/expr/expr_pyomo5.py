@@ -1267,12 +1267,13 @@ class ExpressionBase(NumericValue):
     @property
     def args(self):
         """
-        A generator that yields the child nodes.
+        Return the child nodes
 
-        Yields:
-            Each child node in order.
+        Returns: Either a list or tuple (depending on the node storage
+            model) containing only the child nodes of this node
         """
-        return islice(self._args_, self.nargs())
+        return self._args_[:self.nargs()]
+
 
     def __getstate__(self):
         """
