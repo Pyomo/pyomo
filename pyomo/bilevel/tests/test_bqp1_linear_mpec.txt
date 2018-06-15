@@ -1,0 +1,100 @@
+6 Var Declarations
+    x1 : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :  None : False :  True :  Reals
+    x2 : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :     1 : False :  True : Binary
+    y1 : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     1 :  None :  None : False :  True :  Reals
+    y2 : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :  None :  None :     2 : False :  True :  Reals
+    y3 : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :  None :  None :  None : False :  True :  Reals
+    y4 : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     3 :  None :     4 : False :  True :  Reals
+
+1 Objective Declarations
+    o : Size=1, Index=None, Active=True
+        Key  : Active : Sense    : Expression
+        None :   True : minimize : x1 - 4*y1
+
+2 Block Declarations
+    sub : Size=1, Index=None, Active=True
+        1 Objective Declarations
+            o : Size=1, Index=None, Active=False
+                Key  : Active : Sense    : Expression
+                None :  False : minimize : 11*x2 + 12*x2*y1 + y2 + 9*y3
+
+        4 Constraint Declarations
+            c1 : Size=1, Index=None, Active=False
+                Key  : Lower : Body                         : Upper : Active
+                None :  -Inf : x1 + 13*x2*y1 + 5*y1 + 10*y3 :  19.0 :  False
+            c2 : Size=1, Index=None, Active=False
+                Key  : Lower : Body                   : Upper : Active
+                None :  20.0 : 2*x1 + 6*y1 + 14*x2*y2 :  +Inf :  False
+            c3 : Size=1, Index=None, Active=False
+                Key  : Lower : Body                   : Upper : Active
+                None :  21.0 : 4*x1 + 8*y1 + 15*x2*y4 :  21.0 :  False
+            c4 : Size=1, Index=None, Active=False
+                Key  : Lower : Body                   : Upper : Active
+                None :    22 : 3*x1 + 7*y1 + 16*x2*y3 :    23 :  False
+
+        5 Declarations: o c1 c2 c3 c4
+    sub_kkt : Size=1, Index=None, Active=True
+        5 Set Declarations
+            c1_index : Dim=0, Dimen=1, Size=4, Domain=None, Ordered=False, Bounds=None
+                [1, 2, 3, 4]
+            c2_index : Dim=0, Dimen=1, Size=4, Domain=None, Ordered=False, Bounds=None
+                [1, 2, 3, 4]
+            c3_index : Dim=0, Dimen=1, Size=4, Domain=None, Ordered=False, Bounds=None
+                [1, 2, 3, 4]
+            u_index : Dim=0, Dimen=1, Size=5, Domain=None, Ordered=False, Bounds=None
+                [1, 2, 3, 4, 5]
+            v_index : Dim=0, Dimen=1, Size=4, Domain=None, Ordered=False, Bounds=None
+                [1, 2, 3, 4]
+
+        2 Var Declarations
+            u : Size=5, Index=sub_kkt.u_index
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  1 :  None :  None :  None : False :  True :  Reals
+                  2 :  None :  None :  None : False :  True :  Reals
+                  3 :  None :  None :  None : False :  True :  Reals
+                  4 :  None :  None :  None : False :  True :  Reals
+                  5 :  None :  None :  None : False :  True :  Reals
+            v : Size=4, Index=sub_kkt.v_index
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  1 :  None :  None :  None : False :  True :  Reals
+                  2 :  None :  None :  None : False :  True :  Reals
+                  3 :  None :  None :  None : False :  True :  Reals
+                  4 :  None :  None :  None : False :  True :  Reals
+
+        1 Constraint Declarations
+            c1 : Size=4, Index=sub_kkt.c1_index, Active=True
+                Key : Lower : Body                                                                                                          : Upper : Active
+                  1 :   0.0 :                                                                         1 + sub_kkt.v[2] - 14*x2*sub_kkt.u[2] :   0.0 :   True
+                  2 :   0.0 :                                                 9 + 10*sub_kkt.u[1] - 16*x2*sub_kkt.u[4] + 16*x2*sub_kkt.u[5] :   0.0 :   True
+                  3 :   0.0 : 12*x2 - sub_kkt.v[1] + 13*x2*sub_kkt.u[1] - 6*sub_kkt.u[2] + 8*sub_kkt.u[3] - 7*sub_kkt.u[4] + 7*sub_kkt.u[5] :   0.0 :   True
+                  4 :   0.0 :                                                            - sub_kkt.v[3] + sub_kkt.v[4] + 15*x2*sub_kkt.u[3] :   0.0 :   True
+
+        2 Complementarity Declarations
+            c2 : Size=4, Index=sub_kkt.c2_index, Active=True
+                Key : Arg0                                   : Arg1                  : Active
+                  1 : x1 + 13*x2*y1 + 5*y1 + 10*y3  <=  19.0 : 0.0  <=  sub_kkt.u[1] :   True
+                  2 :  - (2*x1 + 6*y1 + 14*x2*y2)  <=  -20.0 : 0.0  <=  sub_kkt.u[2] :   True
+                  3 :  - (3*x1 + 7*y1 + 16*x2*y3)  <=  -22.0 : 0.0  <=  sub_kkt.u[4] :   True
+                  4 :       3*x1 + 7*y1 + 16*x2*y3  <=  23.0 : 0.0  <=  sub_kkt.u[5] :   True
+            c3 : Size=4, Index=sub_kkt.c3_index, Active=True
+                Key : Arg0        : Arg1                  : Active
+                  1 : 1.0  <=  y1 : 0.0  <=  sub_kkt.v[1] :   True
+                  2 : y2  <=  2.0 : 0.0  <=  sub_kkt.v[2] :   True
+                  3 : 3.0  <=  y4 : 0.0  <=  sub_kkt.v[3] :   True
+                  4 : y4  <=  4.0 : 0.0  <=  sub_kkt.v[4] :   True
+
+        10 Declarations: u_index u v_index v c1_index c1 c2_index c2 c3_index c3
+
+9 Declarations: x1 x2 y1 y2 y3 y4 o sub sub_kkt
