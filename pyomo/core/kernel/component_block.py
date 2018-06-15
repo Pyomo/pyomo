@@ -734,7 +734,7 @@ class _block_base(object):
         # Generate the list of active import suffixes on
         # this top level model
         valid_import_suffixes = \
-            dict((obj.local_name, obj)
+            dict((obj.storage_key, obj)
                  for obj in import_suffix_generator(self,
                                                     active=True))
 
