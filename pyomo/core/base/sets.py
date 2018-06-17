@@ -224,6 +224,10 @@ class _SetData(_SetDataBase):
 
         NOTE: This operation is probably expensive, as it should require a walk through a list.  An
         OrderedDict object might be more efficient, but it's notoriously slow in Python 2.x
+
+        NOTE: We could make this more efficient by mimicing the logic in the _OrderedSetData class.
+        But that would make the data() method expensive (since it is creating a set).  It's
+        not obvious which is the better choice.
         """
         try:
             self.value.remove(val)
