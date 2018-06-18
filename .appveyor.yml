@@ -69,6 +69,7 @@ install:
   - conda config --set always_yes yes
   - conda update -q -y conda
   - conda config --set auto_update_conda false
+  - conda install nomkl
   #
   - "%CONDAFORGE% setuptools pip coverage sphinx_rtd_theme"
   - python -m pip install codecov
@@ -81,7 +82,7 @@ install:
   #
   # Install pyomo.extras
   #
-  - "IF DEFINED EXTRAS (%CONDAFORGE% nomkl numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill)"
+  - "IF DEFINED EXTRAS (%CONDAFORGE% numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill)"
   #
   - "%CONDAFORGE% glpk"
   - "glpsol -v"
