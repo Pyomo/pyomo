@@ -17,11 +17,6 @@ with a diverse set of optimization capabilities.
    library_reference/index.rst
    pyomo_contrib.rst
    bibliography.rst
-..
-   core_components/index.rst
-   scripting/index.rst
-   problem_reference/index.rst
-
 
 Indices and Tables
 ------------------
