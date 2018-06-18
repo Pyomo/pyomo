@@ -586,7 +586,7 @@ class Collocation_Discretization_Transformation(Transformation):
             if ds not in var._index:
                 raise IndexError("ContinuousSet '%s' is not an indexing set of"
                                  " the variable '%s'" % (ds.name, var.name))
-        elif ds not in var._index_set:
+        elif ds not in var._implicit_subsets:
             raise IndexError("ContinuousSet '%s' is not an indexing set of the"
                              " variable '%s'" % (ds.name, var.name))
 
