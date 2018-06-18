@@ -13,8 +13,8 @@ import sys
 from six import iteritems, itervalues
 from weakref import ref as weakref_ref
 
-from pyomo.util.modeling import unique_component_name
-from pyomo.util.timing import ConstructionTimer
+from pyomo.common.modeling import unique_component_name
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core import (
     register_component, Binary, Block, Var, ConstraintList, Any
 )

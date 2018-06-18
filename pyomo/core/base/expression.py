@@ -14,7 +14,7 @@ import sys
 import logging
 from weakref import ref as weakref_ref
 
-from pyomo.util.timing import ConstructionTimer
+from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import ComponentData
@@ -157,7 +157,7 @@ class _GeneralExpressionDataImpl(_ExpressionData):
         self._expr = as_numeric(expr) if (expr is not None) else None
         self._is_owned = True
 
-    def create_node_with_local_data(self, values, memo=None):
+    def create_node_with_local_data(self, values):
         """
         Construct a simple expression after constructing the 
         contained expression.
@@ -165,8 +165,6 @@ class _GeneralExpressionDataImpl(_ExpressionData):
         This class provides a consistent interface for constructing a
         node, which is used in tree visitor scripts.
         """
-        if id(self) in memo:
-            return memo[id(self)]
         obj = SimpleExpression()
         obj.construct()
         obj.expr = values[0]

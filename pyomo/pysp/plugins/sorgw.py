@@ -18,7 +18,7 @@ OnlyRootNode = True
 
 import sys
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.core import *
 from pyomo.pysp import phextension
 from pyomo.pysp.phutils import *
@@ -26,14 +26,14 @@ from pyomo.pysp.generators import \
     scenario_tree_node_variables_generator_noinstances
 
 #==================================================
-class sorgwextension(pyomo.util.plugin.SingletonPlugin):
+class sorgwextension(pyomo.common.plugin.SingletonPlugin):
 
-    pyomo.util.plugin.implements(phextension.IPHExtension)
+    pyomo.common.plugin.implements(phextension.IPHExtension)
 
     # the below is a hack to get this extension into the
     # set of IPHExtension objects, so it can be queried
     # automagically by PH.
-    pyomo.util.plugin.alias("sorgwextension")
+    pyomo.common.plugin.alias("sorgwextension")
 
     def __init__(self, *args, **kwds):
 

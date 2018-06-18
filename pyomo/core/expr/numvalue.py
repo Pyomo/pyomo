@@ -444,6 +444,10 @@ class NumericValue(object):
         """Return True if this is a non-constant value that has been fixed"""
         return False
 
+    def is_parameter_type(self):
+        """Return False unless this class is a parameter object"""
+        return False
+
     def is_variable_type(self):
         """Return False unless this class is a variable object"""
         return False

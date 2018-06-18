@@ -8,7 +8,7 @@ from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 
 
 def _build_equality_set(m):
@@ -31,7 +31,8 @@ def _build_equality_set(m):
                 constr.body.polynomial_degree() == 1):
             repn = generate_standard_repn(constr.body)
             # only take the variables with nonzero coefficients
-            vars_ = [v for i, v in enumerate(repn.linear_vars) if repn.linear_coefs[i]]
+            vars_ = [v for i, v in enumerate(repn.linear_vars)
+                     if repn.linear_coefs[i]]
             if (len(vars_) == 2 and
                     sorted(l for l in repn.linear_coefs if l) == [-1, 1]):
                 # this is an a == b constraint.
@@ -78,10 +79,6 @@ class FixedVarPropagator(IsomorphicTransformation):
 
     alias('contrib.propagate_fixed_vars',
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
-
-    def __init__(self):
-        """Initialize the transformation."""
-        super(FixedVarPropagator, self).__init__()
 
     def _apply_to(self, instance, tmp=False):
         """Apply the transformation.
@@ -152,10 +149,6 @@ class VarBoundPropagator(IsomorphicTransformation):
 
     alias('contrib.propagate_eq_var_bounds',
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
-
-    def __init__(self):
-        """Initialize the transformation."""
-        super(VarBoundPropagator, self).__init__()
 
     def _apply_to(self, instance, tmp=False):
         """Apply the transformation.

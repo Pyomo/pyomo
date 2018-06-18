@@ -15,7 +15,7 @@ import copy
 import sys
 from collections import defaultdict
 
-from pyomo.util.plugin import SingletonPlugin
+from pyomo.common.plugin import SingletonPlugin
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
                                     safe_declare_option,
