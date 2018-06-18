@@ -26,10 +26,10 @@ environment:
     #  PYTHON: "C:\\Miniconda36-x64"
     #  CATEGORY: "nightly"
 
-    #- PYTHON_VERSION: 2.7
-    #  PYTHON: "C:\\Miniconda-x64"
-    #  CATEGORY: "nightly"
-    #  EXTRAS: YES
+    - PYTHON_VERSION: 2.7
+      PYTHON: "C:\\Miniconda-x64"
+      CATEGORY: "nightly"
+      EXTRAS: YES
 
     - PYTHON_VERSION: 3.4
       PYTHON: "C:\\Miniconda34-x64"
@@ -41,10 +41,10 @@ environment:
     #  CATEGORY: "nightly"
     #  EXTRAS: YES
 
-    #- PYTHON_VERSION: 3.6
-    #  PYTHON: "C:\\Miniconda36-x64"
-    #  CATEGORY: "nightly"
-    #  EXTRAS: YES
+    - PYTHON_VERSION: 3.6
+      PYTHON: "C:\\Miniconda36-x64"
+      CATEGORY: "nightly"
+      EXTRAS: YES
 
 
 install:
