@@ -81,8 +81,7 @@ install:
   #
   # Install pyomo.extras
   #
-  - "IF DEFINED EXTRAS python -m pip install numpy"
-  - "IF DEFINED EXTRAS (%CONDAFORGE% scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill)"
+  - "IF DEFINED EXTRAS (%CONDAFORGE% nomkl numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill)"
   #
   - "%CONDAFORGE% glpk"
   - "glpsol -v"
