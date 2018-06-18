@@ -65,7 +65,7 @@ class NonNumericValue(object):
 #: and instances of :class:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>`, which is commonly used in code that walks
 #: Pyomo expression trees.
 #:
-#: :data:`nonpyomo_leaf_types` = :data:`native_types <pyomo.core.expr.numvalue.native_types> + { :data:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>` }
+#: :data:`nonpyomo_leaf_types` = :data:`native_types <pyomo.core.expr.numvalue.native_types>` + { :data:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>` }
 nonpyomo_leaf_types = set([NonNumericValue])
 
 
@@ -100,7 +100,7 @@ except:
 #: native Python types as well as numeric types from Python packages
 #: like numpy.
 #:
-#: :data:`native_types` = :data:`native_numeric_types <pyomo.core.expr.numvalue.native_numeric_types> + { str }
+#: :data:`native_types` = :data:`native_numeric_types <pyomo.core.expr.numvalue.native_numeric_types>` + { str }
 native_types = set([ bool, str, type(None) ])
 if PY3:
     native_types.add(bytes)
