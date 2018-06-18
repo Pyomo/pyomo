@@ -3069,7 +3069,7 @@ class ProgressiveHedging(_PHBase):
                         extract_solve_times(bundle_results)
 
                     scenario_bundle = \
-                        self._scenario_tree._scenario_bundle_map[bundle_name]
+                        self._scenario_tree.get_bundle(bundle_name)
                     for scenario_name in scenario_bundle._scenario_names:
                         scenario = self._scenario_tree._scenario_map[scenario_name]
                         scenario.update_solution_from_instance()
