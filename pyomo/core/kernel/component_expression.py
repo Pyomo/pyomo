@@ -24,9 +24,9 @@ from pyomo.core.expr.numvalue import (NumericValue,
                                       is_fixed,
                                       is_constant,
                                       is_variable_type,
-                                      potentially_variable,
-                                      value,
-                                      as_numeric)
+                                      is_potentially_variable,
+                                      is_numeric_data,
+                                      value)
 
 import six
 
@@ -80,7 +80,7 @@ class IIdentityExpression(NumericValue):
     def is_potentially_variable(self):
         """A boolean indicating whether this expression can
         reference variables."""
-        return potentially_variable(self._expr)
+        return is_potentially_variable(self._expr)
 
     def is_named_expression_type(self):
         """A boolean indicating whether this in a named expression."""
@@ -298,8 +298,10 @@ class data_expression(expression):
         return self._expr
     @expr.setter
     def expr(self, expr):
-        if potentially_variable(expr):
-            raise ValueError("Expression is not restricted to data.")
+        if (expr is not None) and \
+           (not is_numeric_data(expr)):
+            raise ValueError("Expression is not restricted to "
+                             "numeric data.")
         self._expr = expr
 
 class expression_tuple(ComponentTuple):
