@@ -96,10 +96,12 @@ def build_model_size_report(model):
         1 for v in all_vars if v.is_integer())
     report.overall.continuous_variables = sum(
         1 for v in all_vars if v.is_continuous())
-    report.overall.disjunctions = len(
-        model.component_data_objects(Disjunction, descend_into=block_like))
-    report.disjuncts = len(
-        model.component_data_objects(Disjunct, descend_into=block_like))
+    report.overall.disjunctions = sum(
+        1 for d in model.component_data_objects(
+            Disjunction, descend_into=block_like))
+    report.disjuncts = sum(
+        1 for d in model.component_data_objects(
+            Disjunct, descend_into=block_like))
 
     report.warn = Bunch()
     report.warn.unassociated_disjuncts = sum(
