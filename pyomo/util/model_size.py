@@ -89,7 +89,8 @@ def build_model_size_report(model):
 
     report.overall = Bunch()
     block_like = (Block, Disjunct)
-    all_vars = set(model.component_data_objects(Var, descend_into=block_like))
+    all_vars = ComponentSet(
+        model.component_data_objects(Var, descend_into=block_like))
     report.overall.variables = len(all_vars)
     report.overall.binary_variables = sum(1 for v in all_vars if v.is_binary())
     report.overall.integer_variables = sum(
