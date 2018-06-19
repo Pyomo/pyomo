@@ -1,0 +1,37 @@
+from pyomo.pysp.annotations import StochasticConstraintBoundsAnnotation
+
+model = ConcreteModel()
+
+# data that is initialized on a per-scenario basis
+#p = ...
+#q = ...
+
+# a second-stage variable
+model.y = Var()
+
+# declare the annotation
+model.stoch_rhs = StochasticConstraintBoundsAnnotation()
+
+# equality constraint
+model.c = Constraint(expr= model.y == q)
+model.stoch_rhs.declare(model.c)
+
+# double-sided inequality constraint with
+# stochastic upper bound
+model.r = Constraint(expr= 0 <= model.y <= p)
+model.stoch_rhs.declare(model.r, lb=False)
+
+# indexed constraint using a BuildAction
+model.C_index = RangeSet(1,3)
+def C_rule(model, i):
+    if i == 1:
+        return model.y >= i * q
+    else:
+        return Constraint.Skip
+model.C = Constraint(model.C_index, rule=C_rule)
+def C_annotate_rule(model, i):
+    if i == 1:
+        model.stoch_rhs.declare(model.C[i])
+    else:
+        pass
+model.C_annotate = BuildAction(model.C_index, rule=C_annotate_rule)

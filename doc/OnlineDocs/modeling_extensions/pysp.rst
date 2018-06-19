@@ -19,4 +19,4 @@ leveraging the combination of a high-level programming language
 language (Pyomo), we are able to provide completely generic and highly
 configurable solver implementations.
 
-See the Pysp section :ref:`PySP-Overview` in Getting Started for more information.
+See the Pysp section :ref:`pysp-overview` in Getting Started for more information.

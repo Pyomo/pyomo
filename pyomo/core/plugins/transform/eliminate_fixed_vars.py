@@ -10,7 +10,8 @@
 
 from pyomo.common.plugin import alias
 from pyomo.core.expr.current import ExpressionBase
-from pyomo.core import Constraint, Objective, NumericConstant
+from pyomo.core.expr.numvalue import as_numeric
+from pyomo.core import Constraint, Objective
 from pyomo.core.base.var import Var, _VarData
 from pyomo.core.base.util import sequence
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
@@ -76,7 +77,7 @@ class EliminateFixedVars(IsomorphicTransformation):
                 _args.append( self._fix_vars(expr._args[i], model) )
             elif (isinstance(expr._args[i],Var) or isinstance(expr._args[i],_VarData)) and expr._args[i].fixed:
                 if expr._args[i].value != 0.0:
-                    _args.append( NumericConstant(None,None,expr._args[i].value) )
+                    _args.append( as_numeric(expr._args[i].value) )
             else:
                 _args.append( expr._args[i] )
         expr._args = _args
