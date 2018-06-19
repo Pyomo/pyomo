@@ -69,6 +69,9 @@ install:
   - conda config --set always_yes yes
   - conda update -q -y conda
   - conda config --set auto_update_conda false
+  - conda --version
+  - conda update anaconda
+  - CRASH HERE
   #
   - "%CONDAFORGE% setuptools pip coverage sphinx_rtd_theme"
   - python -m pip install codecov
