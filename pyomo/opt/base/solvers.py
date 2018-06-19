@@ -199,7 +199,8 @@ def __solver_call__(self, _name=None, args=[], **kwds):
         logger.warning("Failed to create solver with name '%s':\n%s"
                      % (_name, err))
         opt = None
-    if opt is not None and subsolver is not None:
+    if opt is not None and _name != "py" and subsolver is not None:
+        # py just creates instance of its subsolver, no need for this option
         opt.set_options('solver='+subsolver)
     if opt is None:
         opt = UnknownSolver( type=_name, *args, **kwds )
