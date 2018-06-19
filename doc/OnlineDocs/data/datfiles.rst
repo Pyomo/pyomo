@@ -4,7 +4,7 @@ Data Command Files
 .. note::
 
     The discussion and presentation below are adapted from Chapter 6
-    of the "Pyomo Book" [PyomoBook2Ed]_.  The discussion of the
+    of the "Pyomo Book" [PyomoBookII]_.  The discussion of the
     :class:`DataPortal <ref pyomo.core.base.DataPortal.DataPortal>`
     class uses these same examples to illustrate how data can be loaded
     into Pyomo models within Python scripts (see the :ref:`page-dataportals` section).

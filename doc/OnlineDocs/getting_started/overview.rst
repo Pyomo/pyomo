@@ -473,17 +473,3 @@ NOTE: There are two dashes before ``help``.
 
 For a concrete model, no data file is specified on the Pyomo command line.
 
-
-.. rubric:: References
-
-.. [AIMMS] http://www.aimms.com/
-
-.. [AMPL] http://www.ampl.com
-
-.. [GAMS] http://www.gams.com
-
-.. [PyomoBookI] Hart, W.E.; Laird, C.; Watson, J.-P.; Woodruff, D.L.: Pyomo – Optimization Modeling in Python, Springer, 2012.
-
-.. [PyomoBookII] Hart, W.E.; Laird, C.; Watson, J.-P.; Woodruff, D.L.; Hackebeil, G.A.; Nicholson, B.L.; Siirola, J.D.: Pyomo – Optimization Modeling in Python, Springer, 2017.
-
-.. [PyomoJournal] William E. Hart; Jean-Paul Watson; David L. Woodruff: "Pyomo: modeling and solving mathematical programs in Python," Mathematical Programming Computation, Volume 3, Number 3, August 2011

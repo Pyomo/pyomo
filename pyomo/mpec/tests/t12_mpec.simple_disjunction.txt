@@ -41,7 +41,7 @@ cc : Size=1, Index=None, Active=True
             2 Constraint Declarations
                 c0 : Size=1, Index=None, Active=True
                     Key  : Lower : Body   : Upper : Active
-                    None :     2 : y + x1 :     3 :   True
+                    None :   2.0 : y + x1 :   3.0 :   True
                 c1 : Size=1, Index=None, Active=True
                     Key  : Lower : Body : Upper : Active
                     None :   0.0 :   x1 :   0.0 :   True

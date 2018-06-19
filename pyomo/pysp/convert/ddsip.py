@@ -16,7 +16,7 @@ import filecmp
 import logging
 
 from pyomo.opt import WriterFactory
-from pyomo.core.base.numvalue import value
+from pyomo.core.base.numvalue import value, as_numeric
 from pyomo.core.base.block import (Block,
                                    _BlockData,
                                    SortComponents)
@@ -36,6 +36,7 @@ from pyomo.pysp.convert.smps import (map_variable_stages,
                                      _safe_remove_file,
                                      _no_negative_zero,
                                      _deterministic_check_value,
+                                     _deterministic_check_constant,
                                      ProblemStats)
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
@@ -471,10 +472,10 @@ def _convert_external_setup_without_cleanup(
                             # with all stochastic values set to zero. This will
                             # allow an easy test for missing user annotations.
                             modified_constraint_lb[con] = con.lower
-                            con._lower = _deterministic_check_value
+                            con._lower = _deterministic_check_constant
                             if con_label.startswith('c_e_'):
                                 modified_constraint_ub[con] = con.upper
-                                con._upper = _deterministic_check_value
+                                con._upper = _deterministic_check_constant
                         elif con_label.startswith('r_l_') :
                             if (include_bound is True) or \
                                (include_bound[0] is True):
@@ -488,7 +489,7 @@ def _convert_external_setup_without_cleanup(
                                 # with all stochastic values set to zero. This will
                                 # allow an easy test for missing user annotations.
                                 modified_constraint_lb[con] = con.lower
-                                con._lower = _deterministic_check_value
+                                con._lower = _deterministic_check_constant
                         elif con_label.startswith('c_u_'):
                             assert (include_bound is True) or \
                                    (include_bound[1] is True)
@@ -502,7 +503,7 @@ def _convert_external_setup_without_cleanup(
                             # with all stochastic values set to zero. This will
                             # allow an easy test for missing user annotations.
                             modified_constraint_ub[con] = con.upper
-                            con._upper = _deterministic_check_value
+                            con._upper = _deterministic_check_constant
                         elif con_label.startswith('r_u_'):
                             if (include_bound is True) or \
                                (include_bound[1] is True):
@@ -516,7 +517,7 @@ def _convert_external_setup_without_cleanup(
                                 # with all stochastic values set to zero. This will
                                 # allow an easy test for missing user annotations.
                                 modified_constraint_ub[con] = con.upper
-                                con._upper = _deterministic_check_value
+                                con._upper = _deterministic_check_constant
                         else:
                             assert False
 
@@ -695,9 +696,9 @@ def _convert_external_setup_without_cleanup(
 
     # reset bounds on any constraints that were modified
     for con, lower in iteritems(modified_constraint_lb):
-        con._lower = lower
+        con._lower = as_numeric(lower)
     for con, upper in iteritems(modified_constraint_ub):
-        con._upper = upper
+        con._upper = as_numeric(upper)
 
     return (firststage_variable_count,
             secondstage_variable_count,

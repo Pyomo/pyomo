@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.expr.numvalue import (NumericValue,
+                                      is_numeric_data,
                                       value)
 from pyomo.core.kernel.component_interface import \
     (IComponent,
@@ -364,6 +365,11 @@ class variable(IVariable):
         return self._lb
     @lb.setter
     def lb(self, lb):
+        if (lb is not None) and \
+           (not is_numeric_data(lb)):
+            raise ValueError(
+                    "Variable lower bounds must be numbers or "
+                    "expressions restricted to numeric data.")
         self._lb = lb
 
     @property
@@ -372,6 +378,11 @@ class variable(IVariable):
         return self._ub
     @ub.setter
     def ub(self, ub):
+        if (ub is not None) and \
+           (not is_numeric_data(ub)):
+            raise ValueError(
+                    "Variable upper bounds must be numbers or "
+                    "expressions restricted to numeric data.")
         self._ub = ub
 
     @property
