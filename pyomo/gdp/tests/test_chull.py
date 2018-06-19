@@ -135,6 +135,7 @@ class TwoTermDisj(unittest.TestCase):
         self.assertEqual(expr._coef[0], 1 - EPS)
         self.assertIs(expr._args[0], ind_var)
 
+    @unittest.category('fragile')
     def test_transformed_constraint_nonlinear(self):
         m = models.makeTwoTermDisj_Nonlinear()
         TransformationFactory('gdp.chull').apply_to(m)

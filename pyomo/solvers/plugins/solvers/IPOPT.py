@@ -52,13 +52,11 @@ class IPOPT(SystemCallSolver):
         # Note: Undefined capabilities default to 'None'
         self._capabilities = pyutilib.misc.Options()
         self._capabilities.linear = True
-        # Should we set this to False? Doing so might cause
-        # a headache for some folks.
-        self._capabilities.integer = True
+        self._capabilities.integer = False
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
-        self._capabilities.sos1 = True
-        self._capabilities.sos2 = True
+        self._capabilities.sos1 = False
+        self._capabilities.sos2 = False
 
     def _default_results_format(self, prob_format):
         return ResultsFormat.sol

@@ -13,19 +13,7 @@ Modeling Components:
 
 Member Documentation
 ~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: pyomo.core.base.sets.Set
-   :show-inheritance:
-   :members:
-   :inherited-members:
 .. autoclass:: pyomo.core.base.var.Var
-   :show-inheritance:
-   :members:
-   :inherited-members:
-.. autoclass:: pyomo.core.base.constraint.Constraint
-   :show-inheritance:
-   :members:
-   :inherited-members:
-.. autoclass:: pyomo.core.base.objective.Objective
    :show-inheritance:
    :members:
    :inherited-members:
