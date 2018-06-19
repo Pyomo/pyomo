@@ -84,10 +84,10 @@ for v in instance.component_objects(pyo.Var, active=True):
         print ("   ",index, pyo.value(v[index]))
 # @Display_all_variables&values
 
-# @Display_all_varaibles&values_data
+# @Display_all_variables&values_data
 for v in instance.component_data_objects(pyo.Var, active=True):
     print(v, pyo.value(v))
-# @Display_all_varaibles&values_data
+# @Display_all_variables&values_data
 
 
 instance.iVar = pyo.Var([1,2,3], initialize=1, domain=pyo.Boolean)

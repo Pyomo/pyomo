@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ('value', 'is_constant', 'is_fixed', 'is_variable_type', 'potentially_variable', 'update_KnownConstants', 'as_numeric', 'NumericValue', 'NumericConstant', 'ZeroConstant', 'native_numeric_types', 'native_types', 'polynomial_degree')
+__all__ = ('value', 'is_constant', 'is_fixed', 'is_variable_type', 'is_potentially_variable', 'NumericValue', 'ZeroConstant', 'native_numeric_types', 'native_types', 'polynomial_degree')
 
 import sys
 import logging
@@ -65,7 +65,7 @@ class NonNumericValue(object):
 #: and instances of :class:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>`, which is commonly used in code that walks
 #: Pyomo expression trees.
 #:
-#: :data:`nonpyomo_leaf_types` = :data:`native_types <pyomo.core.expr.numvalue.native_types> + { :data:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>` }
+#: :data:`nonpyomo_leaf_types` = :data:`native_types <pyomo.core.expr.numvalue.native_types>` + { :data:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>` }
 nonpyomo_leaf_types = set([NonNumericValue])
 
 
@@ -100,7 +100,7 @@ except:
 #: native Python types as well as numeric types from Python packages
 #: like numpy.
 #:
-#: :data:`native_types` = :data:`native_numeric_types <pyomo.core.expr.numvalue.native_numeric_types> + { str }
+#: :data:`native_types` = :data:`native_numeric_types <pyomo.core.expr.numvalue.native_numeric_types>` + { str }
 native_types = set([ bool, str, type(None) ])
 if PY3:
     native_types.add(bytes)
@@ -180,31 +180,51 @@ def value(obj, exception=True):
     """
     if obj.__class__ in native_types:
         return obj
+    if obj.__class__ is NumericConstant:
+        #
+        # I'm commenting this out for now, but I think we should never expect
+        # to see a numeric constant with value None.
+        #
+        #if exception and obj.value is None:
+        #    raise ValueError("No value for uninitialized NumericConstant object %s" % (obj.name,))
+        return obj.value
+    #
+    # Test if we have a duck types for Pyomo expressions
+    #
     try:
-        numeric = obj.as_numeric()
+        obj.is_expression_type()
     except AttributeError:
+        #
+        # If not, then try to coerce this into a numeric constant.  If that
+        # works, then return the object
+        #
         try:
-            numeric = as_numeric(obj)
-        except ValueError:
-            if isinstance( obj, string_types + (text_type, binary_type) ):
-                native_types.add(type(obj))
-                return obj
-            raise
-    try:
-        tmp = numeric(exception=exception)
-    except:
-        if exception:
+            check_if_numeric_type_and_cache(obj)
+            return obj
+        except:
+            raise TypeError("Cannot evaluate object with unknown type: %s" % str(obj.__class__))
+    #
+    # Evaluate the expression object
+    #
+    if exception:
+        #
+        # Here, we try to catch the exception
+        #
+        try:
+            tmp = obj(exception=True)
+            if tmp is None:
+                raise ValueError("No value for uninitialized NumericValue object %s" % (obj.name,))
+            return tmp
+        except:
             logger.error(
                 "evaluating object as numeric value: %s\n    (object: %s)\n%s"
                 % (obj, type(obj), sys.exc_info()[1]))
             raise
-        else:
-            return None
-
-    if exception and (tmp is None):
-        raise ValueError("No value for uninitialized NumericValue object %s"
-                         % (obj.name,))
-    return tmp
+    else:
+        #
+        # Here, we do not try to catch the exception
+        #
+        return obj(exception=False)
 
 
 def is_constant(obj):
@@ -227,7 +247,12 @@ def is_constant(obj):
         return obj.is_constant()
     except AttributeError:
         pass
-    return as_numeric(obj).is_constant()
+    try:
+        # Now we need to confirm that we have an unknown numeric type
+        check_if_numeric_type_and_cache(obj)
+        return True
+    except:
+        raise TypeError("Cannot assess properties of object with unknown type: %s" % str(obj.__class__))
 
 def is_fixed(obj):
     """
@@ -244,7 +269,12 @@ def is_fixed(obj):
         return obj.is_fixed()
     except AttributeError:
         pass
-    return as_numeric(obj).is_fixed()
+    try:
+        # Now we need to confirm that we have an unknown numeric type
+        check_if_numeric_type_and_cache(obj)
+        return True
+    except:
+        raise TypeError("Cannot assess properties of object with unknown type: %s" % str(obj.__class__))
 
 def is_variable_type(obj):
     """
@@ -256,10 +286,9 @@ def is_variable_type(obj):
     try:
         return obj.is_variable_type()
     except AttributeError:
-        pass
-    return as_numeric(obj).is_variable_type()
+        return False
 
-def potentially_variable(obj):
+def is_potentially_variable(obj):
     """
     A utility function that returns a boolean indicating
     whether the input object can reference variables.
@@ -269,89 +298,182 @@ def potentially_variable(obj):
     try:
         return obj.is_potentially_variable()
     except AttributeError:
+        return False
+
+def is_numeric_data(obj):
+    """
+    A utility function that returns a boolean indicating
+    whether the input object is numeric and not potentially
+    variable.
+    """
+    if obj.__class__ in native_numeric_types:
+        return True
+    elif obj.__class__ in native_types:
+        # this likely means it is a string
+        return False
+    try:
+        # Test if this is an expression object that 
+        # is not potentially variable
+        return not obj.is_potentially_variable()
+    except AttributeError:
         pass
-    return as_numeric(obj).is_potentially_variable()
+    try:
+        # Now we need to confirm that we have an unknown numeric type
+        check_if_numeric_type_and_cache(obj)
+        return True
+    except:
+        pass
+    return False
 
 def polynomial_degree(obj):
     """
-    A utility function that returns an integer 
+    A utility function that returns an integer
     that indicates the polynomial degree for an
     object. boolean indicating
     """
-    if obj.__class__ in native_types:
+    if obj.__class__ in native_numeric_types:
         return 0
+    elif obj.__class__ in native_types:
+        raise TypeError("Cannot evaluate the the polynomial degree of a non-numeric type: %s" % str(obj.__class__))
     try:
         return obj.polynomial_degree()
     except AttributeError:
         pass
-    return as_numeric(obj).polynomial_degree()
+    try:
+        # Now we need to confirm that we have an unknown numeric type
+        check_if_numeric_type_and_cache(obj)
+        return 0
+    except:
+        raise TypeError("Cannot assess properties of object with unknown type: %s" % str(obj.__class__))
 
+#
 # It is very common to have only a few constants in a model, but those
 # constants get repeated many times.  KnownConstants lets us re-use /
 # share constants we have seen before.
-KnownConstants = {}
-
-def update_KnownConstants(obj, val):
-    if len(KnownConstants) < 100:
-        KnownConstants[obj] = val
-
+#
+# Note:
+#   For now, all constants are coerced to floats.  This avoids integer division
+#   in Python 2.x.  (At least some of the time.)
+#
+#   When we eliminate support for Python 3.x, we will not need this coercion.  The main
+#   difference in the following code is that we will need to index
+#   KnownConstants by both the class type and value, since INT, FLOAT and LONG values
+#   sometimes hash the same.
+#
+_KnownConstants = {}
 
 def as_numeric(obj):
     """
-    Verify that this obj is a NumericValue or intrinsic value.
-    """
-    # int and float are *so* common that it pays to treat them specially
-    if obj.__class__ in native_numeric_types:
-        if obj in KnownConstants:
-            return KnownConstants[obj]
-        else:
-            # Because INT, FLOAT, and sometimes LONG hash the same, we
-            # want to convert them to a common type (at the very least,
-            # so that the order in which tests run does not change the
-            # results!)
-            try:
-                tmp = float(obj)
-                if tmp == obj:
-                    tmp = NumericConstant(tmp)
-                    update_KnownConstants(obj, tmp)
-                    return tmp
-            except:
-                pass
+    A function that creates a NumericConstant object that
+    wraps Python numeric values.
 
-            tmp = NumericConstant(obj)
-            update_KnownConstants(obj, tmp)
-            return tmp
+    This function also manages a cache of constants.
+
+    NOTE:  This function is only intended for use when
+        data is added to a component.
+
+    Args:
+        obj: The numeric value that may be wrapped.
+
+    Raises: TypeError if the object is in native_types and not in 
+        native_numeric_types
+
+    Returns: A NumericConstant object or the original object.
+    """
+    if obj.__class__ in native_numeric_types:
+        val = _KnownConstants.get(obj, None)
+        if val is not None:
+            return val 
+        #
+        # Coerce the value to a float, if possible
+        #
+        try:
+            obj = float(obj)
+        except:
+            pass
+        #
+        # Create the numeric constant.  This really
+        # should be the only place in the code
+        # where these objects are constructed.
+        #
+        retval = NumericConstant(obj)
+        #
+        # Cache the numeric constants.  We used a bounded the cache size to avoid
+        # unexpectedly large lists of constants.  There are typically a small number
+        # of constants that need to be cached.
+        #
+        # NOTE:  A LFU policy might be more sensible here, but that
+        # requires a more complex cache.  It's not clear that that
+        # is worth the extra cost.
+        #
+        if len(_KnownConstants) < 1024:
+            _KnownConstants[obj] = retval
+            return retval
+        #
+        return retval
+    #
+    # Ignore objects that are duck types to work with Pyomo expressions
+    #
     try:
-        return obj.as_numeric()
+        obj.is_expression_type()
+        return obj
     except AttributeError:
         pass
+    #
+    # Test if the object looks like a number.  If so, register that type with a
+    # warning.
+    #
     try:
-        if obj.__class__ is (obj + 0).__class__:
-            # obj may (or may not) be hashable, so we need this try
-            # block so that things proceed normally for non-hashable
-            # "numeric" types
-            try:
-                if obj in KnownConstants:
-                    return KnownConstants[obj]
-                else:
-                    tmp = NumericConstant(obj)
-                    update_KnownConstants(obj, tmp)
-
-                    # If we get here, this is a reasonably well-behaving
-                    # numeric type: add it to the native numeric types
-                    # so that future lookups will be faster.
-                    native_numeric_types.add(obj.__class__)
-                    # native numeric types are also native types
-                    native_types.add(obj.__class__)
-
-                    return tmp
-            except:
-                return NumericConstant(obj)
+        return check_if_numeric_type_and_cache(obj)
     except:
         pass
-    raise TypeError(
-        "Cannot convert object of type '%s' (value = %s) to a numeric value."
-        % (type(obj).__name__, obj, ))
+    #
+    # Generate errors
+    #
+    if obj.__class__ in native_types:
+        raise TypeError("Cannot treat the value '%s' as a constant" % str(obj))
+    raise TypeError("Cannot treat the value '%s' as a constant because it has unknown type '%s'" % (str(obj), obj.__class__))
+
+
+def check_if_numeric_type_and_cache(obj):
+    """
+    Test if the argument is a numeric type by checking if we can add zero to it.  If
+    that works, then we cache the value and return a NumericConstant object.
+    """
+    if obj.__class__ is (obj + 0).__class__:
+        #
+        # obj may (or may not) be hashable, so we need this try
+        # block so that things proceed normally for non-hashable
+        # "numeric" types
+        #
+        retval = NumericConstant(obj)
+        try:
+            #
+            # Create the numeric constant and add to the 
+            # list of known constants.
+            #
+            # Note: we don't worry about the size of the
+            # cache here, since we need to confirm that the
+            # object is hashable.
+            #
+            _KnownConstants[obj] = retval
+            #
+            # If we get here, this is a reasonably well-behaving
+            # numeric type: add it to the native numeric types
+            # so that future lookups will be faster.
+            #
+            native_numeric_types.add(obj.__class__)
+            native_types.add(obj.__class__)
+            nonpyomo_leaf_types.add(obj.__class__)
+            #
+            # Generate a warning, since Pyomo's management of third-party
+            # numeric types is more robust when registering explicitly.
+            #
+            logger.warning(
+                "Dynamically recognizing the following numeric type:\n    %s.\n\n  Dynamic registration is supported for convenience, but there\n  are known limitations to this approach.  We recommend explicitly registering numeric types using the \n  following functions: RegisterNumericType(), RegisterIntegerType(), RegisterBooleanType()." % str(type(obj)))
+        except:
+            pass
+        return retval
 
 
 class NumericValue(object):
@@ -473,9 +595,6 @@ class NumericValue(object):
     def is_indexed(self):
         """Return True if this numeric value is an indexed object"""
         return False
-
-    def as_numeric(self):
-        return self
 
     def polynomial_degree(self):
         """
