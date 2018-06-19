@@ -1,0 +1,18 @@
+model = ConcreteModel()
+
+# data that is initialized on a per-scenario basis
+# with q set to zero for this particular scenario
+p = ...
+q = 0
+
+model.x = Var()
+model.y = Var()
+
+model.c1 = Constraint(expr= p * model.x + q * model.y == 1)
+
+def c2_rule(model):
+    expr = p * model.x
+    if q != 0:
+       expr += model.y
+    return expr >= 0
+model.c2 = Constraint(rule=c2_rule)

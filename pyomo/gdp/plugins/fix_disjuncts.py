@@ -15,7 +15,7 @@ from math import fabs
 
 from six import itervalues
 
-from pyomo.common.config import ConfigBlock, ConfigValue
+from pyomo.common.config import ConfigBlock, ConfigValue, NonNegativeFloat
 from pyomo.common.plugin import alias
 from pyomo.core.base import Transformation
 from pyomo.core.base.component import _ComponentBase
@@ -56,7 +56,6 @@ class GDP_Disjunct_Fixer(Transformation):
     def __init__(self, *args, **kwargs):
         # TODO This uses an integer tolerance. At some point, these should be
         # standardized.
-        self.integer_tolerance = kwargs.pop('int_tol', 1E-6)
         super(GDP_Disjunct_Fixer, self).__init__(*args, **kwargs)
         self._transformedDisjuncts = ComponentSet()
 
@@ -68,6 +67,11 @@ class GDP_Disjunct_Fixer(Transformation):
         default=None,
         domain=target_list,
         description="target or list of targets that will be fixed",
+    ))
+    CONFIG.declare('integer_tolerance', ConfigValue(
+        default=1E-6,
+        domain=NonNegativeFloat,
+        description="tolerance on binary variable 0, 1 values"
     ))
 
     def _apply_to(self, instance, **kwds):
@@ -81,7 +85,7 @@ class GDP_Disjunct_Fixer(Transformation):
         the whole instance is transformed.
 
         """
-        config = self.CONFIG(kwds.pop('options', {}))
+        config = self.config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
 
         targets = config.targets if config.targets is not None else (instance,)
@@ -90,8 +94,8 @@ class GDP_Disjunct_Fixer(Transformation):
                 return  # do nothing for inactive containers
 
             # screen for allowable instance types
-            if (type(t) not in (_DisjunctData, _BlockData, _DisjunctionData) and
-                    t.type() not in (Disjunct, Block, Disjunction)):
+            if (type(t) not in (_DisjunctData, _BlockData, _DisjunctionData)
+                    and t.type() not in (Disjunct, Block, Disjunction)):
                 raise GDP_Error(
                     "Target %s was not a Block, Disjunct, or Disjunction. "
                     "It was of type %s and can't be transformed."
@@ -139,7 +143,8 @@ class GDP_Disjunct_Fixer(Transformation):
 
         # Process the disjuncts associatd with the disjunction that have not
         # already been transformed.
-        for disj in ComponentSet(disjunction.disjuncts) - self._transformedDisjuncts:
+        for disj in (ComponentSet(disjunction.disjuncts)
+                     - self._transformedDisjuncts):
             self._transformDisjunctData(disj)
         # Update the set of transformed disjuncts with those from this
         # disjunction
@@ -147,13 +152,13 @@ class GDP_Disjunct_Fixer(Transformation):
 
     def _transformDisjunctData(self, obj):
         """Fix the disjunct either to a Block or a deactivated Block."""
-        if fabs(value(obj.indicator_var) - 1) <= self.integer_tolerance:
+        if fabs(value(obj.indicator_var) - 1) <= self.config.integer_tolerance:
             # Disjunct is active. Convert to Block.
             obj.parent_block().reclassify_component_type(obj, Block)
             obj.indicator_var.fix(1)
             # Process the components attached to this disjunct.
             self._transformContainer(obj)
-        elif fabs(value(obj.indicator_var)) <= self.integer_tolerance:
+        elif fabs(value(obj.indicator_var)) <= self.config.integer_tolerance:
             obj.parent_block().reclassify_component_type(obj, Block)
             obj.indicator_var.fix(0)
             # Deactivate all constituent constraints and disjunctions

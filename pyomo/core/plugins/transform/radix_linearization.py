@@ -10,7 +10,7 @@
 
 from pyomo.common.plugin import alias
 from pyomo.core.expr.current import ProductExpression, PowExpression
-from pyomo.core import Binary, value, as_numeric
+from pyomo.core import Binary, value
 from pyomo.core.base import Transformation, Var, Constraint, ConstraintList, Block, RangeSet
 from pyomo.core.base.var import _VarData
 
@@ -263,7 +263,7 @@ class RadixLinearization(Transformation):
             tmp = ProductExpression()
             tmp._numerator = [ expr._args[0], expr._args[0] ]
             tmp._denominator = []
-            expr._args = (tmp, as_numeric(1))
+            expr._args = (tmp, as_numeric(1))       # THIS CODE DOES NOT WORK
             #quad.append( (tmp, tmp._args[0]) )
             self._collect_bilinear(tmp, bilin, quad)
             return
