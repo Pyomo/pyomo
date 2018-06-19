@@ -31,20 +31,20 @@ environment:
       CATEGORY: "nightly"
       EXTRAS: YES
 
-    - PYTHON_VERSION: 3.4
-      PYTHON: "C:\\Miniconda34-x64"
-      CATEGORY: "nightly"
-      EXTRAS: YES
+    #- PYTHON_VERSION: 3.4
+    #  PYTHON: "C:\\Miniconda34-x64"
+    #  CATEGORY: "nightly"
+    #  EXTRAS: YES
 
     #- PYTHON_VERSION: 3.5
     #  PYTHON: "C:\\Miniconda35-x64"
     #  CATEGORY: "nightly"
     #  EXTRAS: YES
 
-    - PYTHON_VERSION: 3.6
-      PYTHON: "C:\\Miniconda36-x64"
-      CATEGORY: "nightly"
-      EXTRAS: YES
+    #- PYTHON_VERSION: 3.6
+    #  PYTHON: "C:\\Miniconda36-x64"
+    #  CATEGORY: "nightly"
+    #  EXTRAS: YES
 
 
 install:
@@ -70,8 +70,6 @@ install:
   - conda update -q -y conda
   - conda config --set auto_update_conda false
   - conda install anaconda
-  - anaconda --version
-  - CRASH HERE
   #
   - "%CONDAFORGE% setuptools pip coverage sphinx_rtd_theme"
   - python -m pip install codecov
