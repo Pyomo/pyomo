@@ -14,6 +14,7 @@ Current Development
 - Adding the Pyomo5 expression system, which supports PyPy (#272)
 - Efficiency improvements when processing unhashable indexes (#467)
 - Bug fix processing exp() expressions in Pyomo5 (#471)
+- Optimizations to minimize use of NumericConstant objects (#469)
 - Resolving scaling issue with Pyomo expressions (#475)
 - Resolving issue when path names with spaces appear in CPLEX run file (#485)
 - Adding relative_to argument for getname() (#495)
