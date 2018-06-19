@@ -751,7 +751,11 @@ You can silence this warning by one of three ways:
                 ellipsis = i
                 continue
 
-            if hasattr(val, 'as_numeric'):
+            if hasattr(val, 'is_expression_type'):
+                _num_val = val
+                # Attempt to retrieve the numeric value .. if this
+                # is a template expression generation, then it
+                # should raise a TemplateExpressionError
                 try:
                     val = EXPR.evaluate_expression(val, constant=True)
                     _found_numeric = True
