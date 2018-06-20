@@ -13,3 +13,5 @@ The problem involves selection between two reactors, which have a certain
 linear flow-conversion relationship within separate conversion regimes. A
 bilinear maximum demand constraint exists on the product of flow and
 conversion.
+
+The example was originally based on an example from Lee and Grossmann, 2003.

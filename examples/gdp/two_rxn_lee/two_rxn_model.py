@@ -3,7 +3,7 @@ from __future__ import division
 
 from pyomo.core import (ConcreteModel, Constraint, Objective, Param, Var,
                         maximize)
-from pyomo.environ import *  # NOQA
+# from pyomo.environ import *  # NOQA
 from pyomo.gdp import Disjunction
 
 
@@ -43,3 +43,5 @@ def build_model():
     ], xor=True)
     m.profit = Objective(
         expr=m.c[1] * m.F * m.X - m.c[2] * m.F - m.C_rxn, sense=maximize)
+
+    return m
