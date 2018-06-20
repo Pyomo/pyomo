@@ -1,16 +1,22 @@
 """Tests for the model size report utility."""
-from pyomo.util.model_size import build_model_size_report
-import pyutilib.th as unittest
-from pyomo.core import ConcreteModel, Block ,Var, Constraint
+import logging
+from os.path import abspath, dirname, join, normpath
 
+from six import StringIO
+
+import pyutilib.th as unittest
+from pyomo.common.log import LoggingIntercept
+from pyomo.core import Binary, Block, ConcreteModel, Constraint, Integers, Var
+from pyomo.gdp import Disjunct, Disjunction
+from pyomo.util.model_size import (build_model_size_report,
+                                   log_model_size_report)
 from pyutilib.misc import import_file
 
-from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'gdp'))
 
 
-class TestGDPopt(unittest.TestCase):
+class TestModelSizeReport(unittest.TestCase):
     """Tests for model size report utility."""
 
     def test_empty_model(self):
@@ -27,19 +33,96 @@ class TestGDPopt(unittest.TestCase):
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
         model_size = build_model_size_report(eight_process)
-        self.assertEqual(model_size.active.variables, 30)
+        self.assertEqual(model_size.active.variables, 30)  # 30 is placeholder
 
     def test_nested_blocks(self):
         """Test with nested blocks."""
         m = ConcreteModel()
         m.b = Block()
         m.inactive_b = Block()
+        m.inactive_b.deactivate()
         m.b.x = Var()
-        m.b.x2 = Var()
+        m.b.x2 = Var(domain=Binary)
+        m.b.x3 = Var(domain=Integers)
         m.inactive_b.x = Var()
         m.b.c = Constraint(expr=m.b.x == m.b.x2)
         m.inactive_b.c = Constraint(expr=m.b.x == 1)
         m.inactive_b.c2 = Constraint(expr=m.inactive_b.x == 15)
+        model_size = build_model_size_report(m)
+        self.assertEqual(model_size.active.variables, 2)
+        self.assertEqual(model_size.overall.variables, 4)
+        self.assertEqual(model_size.active.binary_variables, 1)
+        self.assertEqual(model_size.overall.binary_variables, 1)
+        self.assertEqual(model_size.active.integer_variables, 0)
+        self.assertEqual(model_size.overall.integer_variables, 1)
+        self.assertEqual(model_size.active.constraints, 1)
+        self.assertEqual(model_size.overall.constraints, 3)
+        self.assertEqual(model_size.active.disjuncts, 0)
+        self.assertEqual(model_size.overall.disjuncts, 0)
+        self.assertEqual(model_size.active.disjunctions, 0)
+        self.assertEqual(model_size.overall.disjunctions, 0)
+
+    def test_disjunctive_model(self):
+        from pyomo.gdp.tests.models import makeNestedDisjunctions
+        m = makeNestedDisjunctions()
+        model_size = build_model_size_report(m)
+        self.assertEqual(model_size.active.variables, 9)
+        self.assertEqual(model_size.overall.variables, 10)
+        self.assertEqual(model_size.active.binary_variables, 7)
+        self.assertEqual(model_size.overall.binary_variables, 7)
+        self.assertEqual(model_size.active.integer_variables, 0)
+        self.assertEqual(model_size.overall.integer_variables, 0)
+        self.assertEqual(model_size.active.constraints, 6)
+        self.assertEqual(model_size.overall.constraints, 6)
+        self.assertEqual(model_size.active.disjuncts, 7)
+        self.assertEqual(model_size.overall.disjuncts, 7)
+        self.assertEqual(model_size.active.disjunctions, 3)
+        self.assertEqual(model_size.overall.disjunctions, 3)
+
+    def test_unassociated_disjunct(self):
+        m = ConcreteModel()
+        m.x = Var(domain=Integers)
+        m.d = Disjunct()
+        m.d.c = Constraint(expr=m.x == 1)
+        m.d2 = Disjunct()
+        m.d2.c = Constraint(expr=m.x == 5)
+        m.disj = Disjunction(expr=[m.d2])
+        model_size = build_model_size_report(m)
+        self.assertEqual(model_size.warn.unassociated_disjuncts, 1)
+
+    def test_log_model_size(self):
+        """Test logging functionality."""
+        m = ConcreteModel()
+        m.x = Var(domain=Integers)
+        m.d = Disjunct()
+        m.d.c = Constraint(expr=m.x == 1)
+        m.d2 = Disjunct()
+        m.d2.c = Constraint(expr=m.x == 5)
+        m.disj = Disjunction(expr=[m.d2])
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.util.model_size', logging.INFO):
+            log_model_size_report(m)
+        expected_output = """
+active:
+    binary_variables: 1
+    constraints: 1
+    continuous_variables: 0
+    disjunctions: 1
+    disjuncts: 1
+    integer_variables: 1
+    variables: 2
+overall:
+    binary_variables: 2
+    constraints: 2
+    continuous_variables: 0
+    disjunctions: 1
+    disjuncts: 2
+    integer_variables: 1
+    variables: 3
+warn:
+    unassociated_disjuncts: 1
+        """.strip()
+        self.assertEqual(output.getvalue().strip(), expected_output)
 
 
 if __name__ == '__main__':
