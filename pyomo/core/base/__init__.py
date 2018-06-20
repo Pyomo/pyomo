@@ -30,6 +30,7 @@ from pyomo.core.base.var import *
 from pyomo.core.base.constraint import *
 from pyomo.core.base.objective import *
 from pyomo.core.base.connector import *
+from pyomo.core.base.connection import *
 from pyomo.core.base.sos import *
 from pyomo.core.base.piecewise import *
 from pyomo.core.base.suffix import *

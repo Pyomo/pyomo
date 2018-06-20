@@ -16,116 +16,11 @@ from six import next, iteritems, iterkeys, itervalues
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.plugin import alias
 from pyomo.core.base import Transformation, Connector, Constraint, \
-    ConstraintList, Var, VarList, TraversalStrategy
+    ConstraintList, Var, VarList, TraversalStrategy, Connection
 from pyomo.core.base.connector import _ConnectorData, SimpleConnector
 
-class ExpandConnectors(Transformation):
-    alias('core.expand_connectors', 
-          doc="Expand all connectors in the model to simple constraints")
 
-    def _apply_to(self, instance, **kwds):
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
-            logger.debug("Calling ConnectorExpander")
-
-        connectorsFound = False
-        for c in instance.component_data_objects(Connector):
-            connectorsFound = True
-            break
-        if not connectorsFound:
-            return
-
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
-            logger.debug("   Connectors found!")
-
-        #
-        # At this point, there are connectors in the model, so we must
-        # look for constraints that involve connectors and expand them.
-        #
-        connector_types = set([SimpleConnector, _ConnectorData])
-        constraint_list = []
-        connector_list = []
-        matched_connectors = {}
-        found = dict()
-        for constraint in instance.component_data_objects(Constraint):
-            for c in EXPR.identify_components(constraint.body, connector_types):
-                if c.__class__ in connector_types:
-                    found[id(c)] = c
-            if not found:
-                continue
-
-            # Note that it is important to copy the set of found
-            # connectors, since the matching routine below will
-            # manipulate sets in place.
-            found_this_constraint = dict(found)
-            constraint_list.append( (constraint, found_this_constraint) )
-
-            # Find all the connectors that are used in the constraint,
-            # so we know which connectors to validate against each
-            # other.  Note that the validation must be transitive (that
-            # is, if con1 has a & b and con2 has b & c, then a,b, and c
-            # must all validate against each other.
-            for cId, c in iteritems(found_this_constraint):
-                if cId in matched_connectors:
-                    oldSet = matched_connectors[cId]
-                    found.update( oldSet )
-                    for _cId in oldSet:
-                        matched_connectors[_cId] = found
-                else:
-                    connector_list.append(c)
-                matched_connectors[cId] = found
-
-            # Reset found back to empty (this is more efficient as the
-            # bulk of the constraints in the model will not have
-            # connectors - so if we did this at the top of the loop, we
-            # would spend a lot of time clearing empty sets
-            found = {}
-
-        # Validate all connector sets and expand the empty ones
-        known_conn_sets = {}
-        for connector in connector_list:
-            conn_set = matched_connectors[id(connector)]
-            if id(conn_set) in known_conn_sets:
-                continue
-            known_conn_sets[id(conn_set)] \
-                = self._validate_and_expand_connector_set(conn_set)
-
-        # Expand each constraint
-        for constraint, conn_set in constraint_list:
-            cList = ConstraintList()
-            constraint.parent_block().add_component(
-                '%s.expanded' % ( constraint.local_name, ), cList )
-            connId = next(iterkeys(conn_set))
-            ref = known_conn_sets[id(matched_connectors[connId])]
-            for k,v in sorted(iteritems(ref)):
-                if v[1] >= 0:
-                    _iter = v[0]
-                else:
-                    _iter = (v[0],)
-                for idx in _iter:
-                    substitution = {}
-                    for c in itervalues(conn_set):
-                        if v[1] >= 0:
-                            new_v = c.vars[k][idx]
-                        elif k in c.aggregators:
-                            new_v = c.vars[k].add()
-                        else:
-                            new_v = c.vars[k]
-                        substitution[id(c)] = new_v
-                    cList.add((
-                        constraint.lower,
-                        EXPR.clone_expression( constraint.body, substitution ),
-                        constraint.upper ))
-            constraint.deactivate()
-
-        # Now, go back and implement VarList aggregators
-        for conn in connector_list:
-            block = conn.parent_block()
-            for var, aggregator in iteritems(conn.aggregators):
-                c = Constraint(expr=aggregator(block, conn.vars[var]))
-                block.add_component(
-                    '%s.%s.aggregate' % (conn.local_name, var), c )
-
-
+class _ConnExpansion(Transformation):
     def _validate_and_expand_connector_set(self, connectors):
         ref = {}
         # First, go through the connectors and get the superset of all fields
@@ -236,3 +131,167 @@ class ExpandConnectors(Transformation):
                 c.vars[k] = new_var
 
         return ref
+
+
+class ExpandConnectors(_ConnExpansion):
+    alias('core.expand_connectors',
+          doc="Expand all connectors in the model to simple constraints")
+
+    def _apply_to(self, instance, **kwds):
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
+            logger.debug("Calling ConnectorExpander")
+
+        connectorsFound = False
+        for c in instance.component_data_objects(Connector):
+            connectorsFound = True
+            break
+        if not connectorsFound:
+            return
+
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
+            logger.debug("   Connectors found!")
+
+        #
+        # At this point, there are connectors in the model, so we must
+        # look for constraints that involve connectors and expand them.
+        #
+        constraint_list, connector_list, matched_connectors = \
+            self._collect_connectors(instance)
+
+        # Validate all connector sets and expand the empty ones
+        known_conn_sets = {}
+        for connector in connector_list:
+            conn_set = matched_connectors[id(connector)]
+            if id(conn_set) in known_conn_sets:
+                continue
+            known_conn_sets[id(conn_set)] \
+                = self._validate_and_expand_connector_set(conn_set)
+
+        # Expand each constraint
+        for constraint, conn_set in constraint_list:
+            cList = ConstraintList()
+            constraint.parent_block().add_component(
+                '%s.expanded' % ( constraint.local_name, ), cList )
+            connId = next(iterkeys(conn_set))
+            ref = known_conn_sets[id(matched_connectors[connId])]
+            for k,v in sorted(iteritems(ref)):
+                if v[1] >= 0:
+                    _iter = v[0]
+                else:
+                    _iter = (v[0],)
+                for idx in _iter:
+                    substitution = {}
+                    for c in itervalues(conn_set):
+                        if v[1] >= 0:
+                            new_v = c.vars[k][idx]
+                        elif k in c.aggregators:
+                            new_v = c.vars[k].add()
+                        else:
+                            new_v = c.vars[k]
+                        substitution[id(c)] = new_v
+                    cList.add((
+                        constraint.lower,
+                        EXPR.clone_expression( constraint.body, substitution ),
+                        constraint.upper ))
+            constraint.deactivate()
+
+        # Now, go back and implement VarList aggregators
+        for conn in connector_list:
+            block = conn.parent_block()
+            for var, aggregator in iteritems(conn.aggregators):
+                c = Constraint(expr=aggregator(block, conn.vars[var]))
+                block.add_component(
+                    '%s.%s.aggregate' % (conn.local_name, var), c )
+
+    def _collect_connectors(self, instance):
+        connector_types = set([SimpleConnector, _ConnectorData])
+        constraint_list = []
+        connector_list = []
+        matched_connectors = {}
+        found = dict()
+        for constraint in instance.component_data_objects(Constraint):
+            for c in EXPR.identify_components(constraint.body, connector_types):
+                if c.__class__ in connector_types:
+                    found[id(c)] = c
+            if not found:
+                continue
+
+            # Note that it is important to copy the set of found
+            # connectors, since the matching routine below will
+            # manipulate sets in place.
+            found_this_constraint = dict(found)
+            constraint_list.append( (constraint, found_this_constraint) )
+
+            # Find all the connectors that are used in the constraint,
+            # so we know which connectors to validate against each
+            # other.  Note that the validation must be transitive (that
+            # is, if con1 has a & b and con2 has b & c, then a,b, and c
+            # must all validate against each other.
+            for cId, c in iteritems(found_this_constraint):
+                if cId in matched_connectors:
+                    oldSet = matched_connectors[cId]
+                    found.update( oldSet )
+                    for _cId in oldSet:
+                        matched_connectors[_cId] = found
+                else:
+                    connector_list.append(c)
+                matched_connectors[cId] = found
+
+            # Reset found back to empty (this is more efficient as the
+            # bulk of the constraints in the model will not have
+            # connectors - so if we did this at the top of the loop, we
+            # would spend a lot of time clearing empty sets
+            found = {}
+
+        return constraint_list, connector_list, matched_connectors
+
+
+class ExpandConnections(_ConnExpansion):
+    alias('core.expand_connections',
+          doc="Expand all Connections in the model to simple constraints")
+
+    def _apply_to(self, instance, **kwds):
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
+            logger.debug("Calling ConnectionExpander")
+
+        for ctn in instance.component_data_objects(Connection):
+            if ctn.directed:
+                connector_list = [ctn.source, ctn.destination]
+            else:
+                connector_list = list(ctn.connectors)
+                assert len(connector_list) == 2, "2 Connectors per Connection"
+            conn_set = {id(connector_list[0]): connector_list[0],
+                        id(connector_list[1]): connector_list[1]}
+
+            ref = self._validate_and_expand_connector_set(conn_set)
+
+            for k, v in sorted(iteritems(ref)):
+                cname = k + ".equality"
+                if v[1] >= 0:
+                    # indexed var
+                    cList = ConstraintList()
+                    ctn.add_component(cname, cList)
+                    for idx in v[0]:
+                        tmp = []
+                        for c in connector_list:
+                            tmp.append(c.vars[k][idx])
+                        cList.add(expr=tmp[0] == tmp[1])
+                else:
+                    # single var
+                    tmp = []
+                    for c in connector_list:
+                        if k in c.aggregators:
+                            new_v = c.vars[k].add()
+                        else:
+                            new_v = c.vars[k]
+                        tmp.append(new_v)
+                    con = Constraint(expr=tmp[0] == tmp[1])
+                    ctn.add_component(cname, con)
+
+        # Now, go back and implement VarList aggregators
+        for conn in connector_list:
+            block = conn.parent_block()
+            for var, aggregator in iteritems(conn.aggregators):
+                c = Constraint(expr=aggregator(block, conn.vars[var]))
+                block.add_component(
+                    '%s.%s.aggregate' % (conn.local_name, var), c )
