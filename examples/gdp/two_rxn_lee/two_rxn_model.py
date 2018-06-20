@@ -7,7 +7,7 @@ from pyomo.core import (ConcreteModel, Constraint, Objective, Param, Var,
 from pyomo.gdp import Disjunction
 
 
-def build_model():
+def build_model(use_mccormick=False):
     """Build the GDP model."""
     m = ConcreteModel()
     m.F = Var(bounds=(0, 8), doc="Flow into reactor")
@@ -28,7 +28,6 @@ def build_model():
     m.X_UB = Param(['I', 'II'], doc="Reactor conversion upper bound",
                    initialize={'I': 0.95, 'II': 0.99})
     m.C_rxn = Var(bounds=(1.5, 2.5), doc="Cost of reactor")
-    m.max_demand = Constraint(expr=m.F * m.X <= m.d, doc="product demand")
     m.reactor_choice = Disjunction(expr=[
         # Disjunct 1: Choose reactor I
         [m.F == m.alpha['I'] * m.X + m.beta['I'],
@@ -41,7 +40,20 @@ def build_model():
          m.X <= m.X_UB['II'],
          m.C_rxn == m.c['II']]
     ], xor=True)
-    m.profit = Objective(
-        expr=m.c[1] * m.F * m.X - m.c[2] * m.F - m.C_rxn, sense=maximize)
+    if use_mccormick:
+        m.P = Var(bounds=(0, 8), doc="McCormick approximation of F*X")
+        m.mccormick_1 = Constraint(
+            expr=m.P <= m.F.lb * m.X + m.F * m.X.ub - m.F.lb * m.X.ub,
+            doc="McCormick overestimator")
+        m.mccormick_2 = Constraint(
+            expr=m.P <= m.F.ub * m.X + m.F * m.X.lb - m.F.ub * m.X.lb,
+            doc="McCormick underestimator")
+        m.max_demand = Constraint(expr=m.P <= m.d, doc="product demand")
+        m.profit = Objective(
+            expr=m.c[1] * m.P - m.c[2] * m.F - m.C_rxn, sense=maximize)
+    else:
+        m.max_demand = Constraint(expr=m.F * m.X <= m.d, doc="product demand")
+        m.profit = Objective(
+            expr=m.c[1] * m.F * m.X - m.c[2] * m.F - m.C_rxn, sense=maximize)
 
     return m
