@@ -65,6 +65,7 @@ class sos(ISOS):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_variables",
                  "_weights",
@@ -72,6 +73,7 @@ class sos(ISOS):
                  "__weakref__")
     def __init__(self, variables, weights=None, level=1):
         self._parent = None
+        self._storage_key = None
         self._active = True
         self._variables = tuple(variables)
         self._weights = None
@@ -120,6 +122,7 @@ class sos_tuple(ComponentTuple,
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_data")
     if six.PY3:
@@ -131,6 +134,7 @@ class sos_tuple(ComponentTuple,
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         self._active = True
         super(sos_tuple, self).__init__(*args, **kwds)
 
@@ -141,6 +145,7 @@ class sos_list(ComponentList,
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_data")
     if six.PY3:
@@ -152,6 +157,7 @@ class sos_list(ComponentList,
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         self._active = True
         super(sos_list, self).__init__(*args, **kwds)
 
@@ -162,6 +168,7 @@ class sos_dict(ComponentDict,
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_data")
     if six.PY3:
@@ -173,5 +180,6 @@ class sos_dict(ComponentDict,
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         self._active = True
         super(sos_dict, self).__init__(*args, **kwds)

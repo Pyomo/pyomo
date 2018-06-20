@@ -308,12 +308,11 @@ class GAMSDirect(_GAMSSolver):
 
         # import suffixes must be on the top-level model
         if isinstance(model, IBlockStorage):
-            model_suffixes = list(name for (name,comp) \
+            model_suffixes = list(comp.storage_key for comp \
                                   in pyomo.core.kernel.component_suffix.\
                                   import_suffix_generator(model,
                                                           active=True,
-                                                          descend_into=False,
-                                                          return_key=True))
+                                                          descend_into=False))
         else:
             model_suffixes = list(name for (name,comp) \
                                   in pyomo.core.base.suffix.\
@@ -766,12 +765,11 @@ class GAMSShell(_GAMSSolver):
 
         # import suffixes must be on the top-level model
         if isinstance(model, IBlockStorage):
-            model_suffixes = list(name for (name,comp) \
+            model_suffixes = list(comp.storage_key for comp \
                                   in pyomo.core.kernel.component_suffix.\
                                   import_suffix_generator(model,
                                                           active=True,
-                                                          descend_into=False,
-                                                          return_key=True))
+                                                          descend_into=False))
         else:
             model_suffixes = list(name for (name,comp) \
                                   in pyomo.core.base.suffix.\

@@ -774,9 +774,6 @@ class _Test_block_base(object):
         self.assertEqual(
             [id(obj) for obj in self._block.preorder_traversal()],
             [id(obj) for obj in self._preorder])
-        self.assertEqual(
-            [(k,id(obj)) for k,obj in self._block.preorder_traversal(return_key=True)],
-            [((obj.parent.child_key(obj) if obj.parent is not None else None),id(obj)) for obj in self._preorder])
 
         # this first test makes failures a
         # little easier to debug
@@ -812,14 +809,14 @@ class _Test_block_base(object):
         self.assertEqual(
             [id(obj) for obj in visit.traversal],
             [id(obj) for obj in self._preorder])
-        def visit(k,x):
-            visit.traversal.append((k,x))
+        def visit(x):
+            visit.traversal.append(x)
             return True
         visit.traversal = []
-        self._block.preorder_visit(visit, include_key=True)
+        self._block.preorder_visit(visit)
         self.assertEqual(
-            [(k,id(obj)) for k,obj in visit.traversal],
-            [((obj.parent.child_key(obj) if obj.parent is not None else None),id(obj)) for obj in self._preorder])
+            [id(obj) for obj in visit.traversal],
+            [id(obj) for obj in self._preorder])
 
         def visit(x):
             visit.traversal.append(x)
@@ -858,9 +855,6 @@ class _Test_block_base(object):
         self.assertEqual(
             [id(obj) for obj in self._block.postorder_traversal()],
             [id(obj) for obj in self._postorder])
-        self.assertEqual(
-            [(k,id(obj)) for k,obj in self._block.postorder_traversal(return_key=True)],
-            [((obj.parent.child_key(obj) if obj.parent is not None else None),id(obj)) for obj in self._postorder])
 
         # this first test makes failures a
         # little easier to debug
@@ -882,18 +876,6 @@ class _Test_block_base(object):
                                                                include_all_parents=False)],
             [id(obj) for obj in self._postorder if obj.ctype is Var])
 
-    def test_child_key(self):
-        orphan = variable()
-        for child in self._child_key:
-            parent = child.parent
-            self.assertTrue(parent is not None)
-            self.assertTrue(id(child) in set(
-                id(_c) for _c in self._children[parent]))
-            self.assertEqual(self._child_key[child],
-                             parent.child_key(child))
-            with self.assertRaises(ValueError):
-                parent.child_key(orphan)
-
     def test_child(self):
         for child in self._child_key:
             parent = child.parent
@@ -904,11 +886,6 @@ class _Test_block_base(object):
                           child)
             with self.assertRaises(KeyError):
                 parent.child("_not_a_valid_child_key_")
-
-    def test_child_key_no_entry(self):
-        v = variable()
-        with self.assertRaises(ValueError):
-            self._block.child_key(v)
 
     def test_children(self):
         for obj in self._children:
@@ -926,9 +903,6 @@ class _Test_block_base(object):
                 self.assertEqual(
                     set(id(child) for child in obj.children()),
                     set(id(child) for child in self._children[obj]))
-                self.assertEqual(
-                    set((key,id(child)) for key,child in obj.children(return_key=True)),
-                    set((self._child_key[child],id(child)) for child in obj.children()))
                 # this first test makes failures a
                 # little easier to debug
                 self.assertEqual(
@@ -941,11 +915,6 @@ class _Test_block_base(object):
                     set(id(child) for child in obj.children(ctype=Block)),
                     set(id(child) for child in self._children[obj]
                         if child.ctype is Block))
-                self.assertEqual(
-                    set((key,id(child)) for key,child in obj.children(ctype=Block,
-                                                                      return_key=True)),
-                    set((self._child_key[child],id(child)) for child in obj.children(ctype=Block)
-                         if child.ctype is Block))
                 # this first test makes failures a
                 # little easier to debug
                 self.assertEqual(
@@ -958,20 +927,12 @@ class _Test_block_base(object):
                     set(id(child) for child in obj.children(ctype=Var)),
                     set(id(child) for child in self._children[obj]
                         if child.ctype is Var))
-                self.assertEqual(
-                    set((key,id(child)) for key,child in obj.children(ctype=Var,
-                                                                      return_key=True)),
-                    set((self._child_key[child],id(child)) for child in obj.children(ctype=Var)
-                         if child.ctype is Var))
             elif isinstance(obj, IComponentContainer):
                 for child in obj.children():
                     self.assertTrue(child.parent is obj)
                 self.assertEqual(
                     set(id(child) for child in obj.children()),
                     set(id(child) for child in self._children[obj]))
-                self.assertEqual(
-                    set((key,id(child)) for key,child in obj.children(return_key=True)),
-                    set((self._child_key[child],id(child)) for child in obj.children()))
             else:
                 self.assertEqual(len(self._children[obj]), 0)
 
@@ -1031,74 +992,6 @@ class _Test_block_base(object):
                 set(id(_c) for _c in
                     obj.components(active=None,
                                    descend_into=False)),
-                set(id(_c) for ctype in
-                    self._components_no_descend[obj]
-                    for _c in
-                    self._components_no_descend[obj][ctype]))
-
-    def test_components_no_descend_active_None_return_key(self):
-        for obj in self._components_no_descend:
-            self.assertTrue(isinstance(obj, IComponentContainer))
-            self.assertTrue(isinstance(obj, IBlockStorage))
-            for ckey, c in obj.components(descend_into=False, return_key=True):
-                self.assertTrue(
-                    _path_to_object_exists(obj, c))
-                self.assertEqual(ckey, self._child_key[c])
-            # test ctype=Block
-            self.assertEqual(
-                sorted(str(_b)
-                       for _bk, _b in
-                       obj.components(ctype=Block,
-                                      active=None,
-                                      descend_into=False,
-                                      return_key=True)),
-                sorted(str(_b)
-                       for _b in
-                       self._components_no_descend[obj][Block]))
-            self.assertEqual(
-                set(id(_b) for _bk, _b in
-                    obj.components(ctype=Block,
-                                   active=None,
-                                   descend_into=False,
-                                   return_key=True)),
-                set(id(_b) for _b in
-                    self._components_no_descend[obj][Block]))
-            # test ctype=Var
-            self.assertEqual(
-                sorted(str(_v)
-                       for _vk, _v in
-                       obj.components(ctype=Var,
-                                      active=None,
-                                      descend_into=False,
-                                      return_key=True)),
-                sorted(str(_v)
-                       for _v in
-                       self._components_no_descend[obj][Var]))
-            self.assertEqual(
-                set(id(_v) for _vk, _v in
-                    obj.components(ctype=Var,
-                                   active=None,
-                                   descend_into=False,
-                                   return_key=True)),
-                set(id(_v) for _v in
-                    self._components_no_descend[obj][Var]))
-            # test no ctype
-            self.assertEqual(
-                sorted(str(_c)
-                       for _ck, _c in
-                       obj.components(active=None,
-                                      descend_into=False,
-                                      return_key=True)),
-                sorted(str(_c)
-                       for ctype in
-                       self._components_no_descend[obj]
-                       for _c in
-                       self._components_no_descend[obj][ctype]))
-            self.assertEqual(
-                set(id(_c) for _ck, _c in
-                    obj.components(active=None,
-                                   descend_into=False,
-                                   return_key=True)),
                 set(id(_c) for ctype in
                     self._components_no_descend[obj]
                     for _c in
@@ -1172,80 +1065,6 @@ class _Test_block_base(object):
                     if getattr(_c, "active", True))
                 if getattr(obj, 'active', True) else set())
 
-    def test_components_no_descend_active_True_return_key(self):
-        for obj in self._components_no_descend:
-            self.assertTrue(isinstance(obj, IComponentContainer))
-            self.assertTrue(isinstance(obj, IBlockStorage))
-            # test ctype=Block
-            self.assertEqual(
-                sorted(str(_b)
-                       for _bk, _b in
-                       obj.components(ctype=Block,
-                                      active=True,
-                                      descend_into=False,
-                                      return_key=True)),
-                sorted(str(_b)
-                       for _b in
-                       self._components_no_descend[obj][Block]
-                       if _b.active)
-                if getattr(obj, 'active', True) else [])
-            self.assertEqual(
-                set(id(_b) for _bk, _b in
-                    obj.components(ctype=Block,
-                                   active=True,
-                                   descend_into=False,
-                                   return_key=True)),
-                set(id(_b) for _b in
-                    self._components_no_descend[obj][Block]
-                    if _b.active)
-                if getattr(obj, 'active', True) else set())
-            # test ctype=Var
-            self.assertEqual(
-                sorted(str(_v)
-                       for _vk, _v in
-                       obj.components(ctype=Var,
-                                      active=True,
-                                      descend_into=False,
-                                      return_key=True)),
-                sorted(str(_v)
-                       for _v in
-                       self._components_no_descend[obj][Var])
-                if getattr(obj, 'active', True) else [])
-            self.assertEqual(
-                set(id(_v) for _vk, _v in
-                    obj.components(ctype=Var,
-                                   active=True,
-                                   descend_into=False,
-                                   return_key=True)),
-                set(id(_v) for _v in
-                    self._components_no_descend[obj][Var])
-                if getattr(obj, 'active', True) else set())
-            # test no ctype
-            self.assertEqual(
-                sorted(str(_c)
-                       for _ck, _c in
-                       obj.components(active=True,
-                                      descend_into=False,
-                                      return_key=True)),
-                sorted(str(_c)
-                       for ctype in
-                       self._components_no_descend[obj]
-                       for _c in
-                       self._components_no_descend[obj][ctype]
-                       if getattr(_c, "active", True))
-                if getattr(obj, 'active', True) else [])
-            self.assertEqual(
-                set(id(_c) for _ck, _c in
-                    obj.components(active=True,
-                                   descend_into=False,
-                                   return_key=True)),
-                set(id(_c) for ctype in
-                    self._components_no_descend[obj]
-                    for _c in
-                    self._components_no_descend[obj][ctype]
-                    if getattr(_c, "active", True))
-                if getattr(obj, 'active', True) else set())
-
     def test_components_active_None(self):
         for obj in self._components:
             self.assertTrue(isinstance(obj, IComponentContainer))
@@ -1302,74 +1121,6 @@ class _Test_block_base(object):
                 set(id(_c) for _c in
                     obj.components(active=None,
                                    descend_into=True)),
-                set(id(_c) for ctype in
-                    self._components[obj]
-                    for _c in
-                    self._components[obj][ctype]))
-
-    def test_components_active_None_return_key(self):
-        for obj in self._components:
-            self.assertTrue(isinstance(obj, IComponentContainer))
-            self.assertTrue(isinstance(obj, IBlockStorage))
-            for ckey, c in obj.components(descend_into=True, return_key=True):
-                self.assertTrue(
-                    _path_to_object_exists(obj, c))
-                self.assertEqual(ckey, self._child_key[c])
-            # test ctype=Block
-            self.assertEqual(
-                sorted(str(_b)
-                       for _bk, _b in
-                       obj.components(ctype=Block,
-                                      active=None,
-                                      descend_into=True,
-                                      return_key=True)),
-                sorted(str(_b)
-                       for _b in
-                       self._components[obj][Block]))
-            self.assertEqual(
-                set(id(_b) for _bk, _b in
-                    obj.components(ctype=Block,
-                                   active=None,
-                                   descend_into=True,
-                                   return_key=True)),
-                set(id(_b) for _b in
-                    self._components[obj][Block]))
-            # test ctype=Var
-            self.assertEqual(
-                sorted(str(_v)
-                       for _vk, _v in
-                       obj.components(ctype=Var,
-                                      active=None,
-                                      descend_into=True,
-                                      return_key=True)),
-                sorted(str(_v)
-                       for _v in
-                       self._components[obj][Var]))
-            self.assertEqual(
-                set(id(_v) for _vk, _v in
-                    obj.components(ctype=Var,
-                                   active=None,
-                                   descend_into=True,
-                                   return_key=True)),
-                set(id(_v) for _v in
-                    self._components[obj][Var]))
-            # test no ctype
-            self.assertEqual(
-                sorted(str(_c)
-                       for _ck, _c in
-                       obj.components(active=None,
-                                      descend_into=True,
-                                      return_key=True)),
-                sorted(str(_c)
-                       for ctype in
-                       self._components[obj]
-                       for _c in
-                       self._components[obj][ctype]))
-            self.assertEqual(
-                set(id(_c) for _ck, _c in
-                    obj.components(active=None,
-                                   descend_into=True,
-                                   return_key=True)),
                 set(id(_c) for ctype in
                     self._components[obj]
                     for _c in
@@ -1438,82 +1189,6 @@ class _Test_block_base(object):
                 set(id(_c) for _c in
                     obj.components(active=True,
                                    descend_into=True)),
-                set(id(_c) for ctype in
-                    self._components[obj]
-                    for _c in
-                    self._components[obj][ctype]
-                    if _active_path_to_object_exists(obj, _c))
-                if getattr(obj, 'active', True) else set())
-
-    def test_components_active_True_return_key(self):
-        for obj in self._components:
-            self.assertTrue(isinstance(obj, IComponentContainer))
-            self.assertTrue(isinstance(obj, IBlockStorage))
-            # test ctype=Block
-            self.assertEqual(
-                sorted(str(_b)
-                       for _bk, _b in
-                       obj.components(ctype=Block,
-                                      active=True,
-                                      descend_into=True,
-                                      return_key=True)),
-                sorted(str(_b)
-                       for _b in
-                       self._components[obj][Block]
-                       if _b.active)
-                if getattr(obj, 'active', True) else [])
-            self.assertEqual(
-                set(id(_b) for _bk, _b in
-                    obj.components(ctype=Block,
-                                   active=True,
-                                   descend_into=True,
-                                   return_key=True)),
-                set(id(_b) for _b in
-                    self._components[obj][Block]
-                    if _b.active)
-                if getattr(obj, 'active', True) else set())
-            # test ctype=Var
-            self.assertEqual(
-                sorted(str(_v)
-                       for _vk, _v in
-                       obj.components(ctype=Var,
-                                      active=True,
-                                      descend_into=True,
-                                      return_key=True)),
-                sorted(str(_v)
-                       for _v in
-                       self._components[obj][Var]
-                       if _active_path_to_object_exists(obj, _v))
-                if getattr(obj, 'active', True) else [])
-            self.assertEqual(
-                set(id(_v) for _vk, _v in
-                    obj.components(ctype=Var,
-                                   active=True,
-                                   descend_into=True,
-                                   return_key=True)),
-                set(id(_v) for _v in
-                    self._components[obj][Var]
-                    if _active_path_to_object_exists(obj, _v))
-                if getattr(obj, 'active', True) else set())
-            # test no ctype
-            self.assertEqual(
-                sorted(str(_c)
-                       for _ck, _c in
-                       obj.components(active=True,
-                                      descend_into=True,
-                                      return_key=True)),
-                sorted(str(_c)
-                       for ctype in
-                       self._components[obj]
-                       for _c in
-                       self._components[obj][ctype]
-                       if _active_path_to_object_exists(obj, _c))
-                if getattr(obj, 'active', True) else [])
-            self.assertEqual(
-                set(id(_c) for _ck, _c in
-                    obj.components(active=True,
-                                   descend_into=True,
-                                   return_key=True)),
                 set(id(_c) for ctype in
                     self._components[obj]
                     for _c in

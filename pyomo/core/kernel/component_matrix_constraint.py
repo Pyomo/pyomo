@@ -55,20 +55,20 @@ class _MatrixConstraintData(IConstraint,
     _ctype = None
     _linear_canonical_form = True
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
-                 "_index",
                  "__weakref__")
 
     def __init__(self, index):
         assert index >= 0
         self._parent = None
+        self._storage_key = index
         self._active = True
-        self._index = index
 
     @property
     def index(self):
         """The row index of this constraint in the parent matrix"""
-        return self._index
+        return self._storage_key
 
     @property
     def terms(self):
@@ -81,11 +81,11 @@ class _MatrixConstraintData(IConstraint,
                 "No variable order has been assigned")
         A = parent._A
         if parent._sparse:
-            for k in xrange(A.indptr[self._index],
-                            A.indptr[self._index+1]):
+            for k in xrange(A.indptr[self._storage_key],
+                            A.indptr[self._storage_key+1]):
                 yield x[A.indices[k]], A.data[k]
         else:
-            for item in zip(x, A[self._index,:].tolist()):
+            for item in zip(x, A[self._storage_key,:].tolist()):
                 yield item
 
     #
@@ -118,7 +118,7 @@ class _MatrixConstraintData(IConstraint,
     @property
     def lb(self):
         """The lower bound of the constraint"""
-        return self.parent.lb[self._index]
+        return self.parent.lb[self._storage_key]
     @lb.setter
     def lb(self, lb):
         if self.equality:
@@ -131,12 +131,12 @@ class _MatrixConstraintData(IConstraint,
             raise ValueError("lb must be set to "
                              "a simple numeric type "
                              "or None")
-        self.parent.lb[self._index] = lb
+        self.parent.lb[self._storage_key] = lb
 
     @property
     def ub(self):
         """The upper bound of the constraint"""
-        return self.parent.ub[self._index]
+        return self.parent.ub[self._storage_key]
     @ub.setter
     def ub(self, ub):
         if self.equality:
@@ -149,7 +149,7 @@ class _MatrixConstraintData(IConstraint,
             raise ValueError("ub must be set to "
                              "a simple numeric type "
                              "or None")
-        self.parent.ub[self._index] = ub
+        self.parent.ub[self._storage_key] = ub
 
     @property
     def rhs(self):
@@ -162,7 +162,7 @@ class _MatrixConstraintData(IConstraint,
             raise ValueError(
                 "The rhs property can not be read "
                 "when the equality property is False.")
-        return self.parent.lb[self._index]
+        return self.parent.lb[self._storage_key]
     @rhs.setter
     def rhs(self, rhs):
         if rhs is None:
@@ -176,15 +176,15 @@ class _MatrixConstraintData(IConstraint,
             raise ValueError("rhs must be set to "
                              "a simple numeric type "
                              "or None")
-        self.parent.lb[self._index] = rhs
-        self.parent.ub[self._index] = rhs
-        self.parent.equality[self._index] = True
+        self.parent.lb[self._storage_key] = rhs
+        self.parent.ub[self._storage_key] = rhs
+        self.parent.equality[self._storage_key] = True
 
     @property
     def bounds(self):
         """The bounds of the constraint as a tuple (lb, ub)"""
-        return (self.parent.lb[self._index],
-                self.parent.ub[self._index])
+        return (self.parent.lb[self._storage_key],
+                self.parent.ub[self._storage_key])
     @bounds.setter
     def bounds(self, bounds_tuple):
         self.lb, self.ub = bounds_tuple
@@ -197,7 +197,7 @@ class _MatrixConstraintData(IConstraint,
         Disable equality by assigning
         :const:`False`. Equality can only be activated by
         assigning a value to the .rhs property."""
-        return self.parent.equality[self._index]
+        return self.parent.equality[self._storage_key]
     @equality.setter
     def equality(self, equality):
         if equality:
@@ -207,7 +207,7 @@ class _MatrixConstraintData(IConstraint,
                 "a value to the rhs property "
                 "(e.g., con.rhs = con.lb).")
         assert not equality
-        self.parent.equality[self._index] = False
+        self.parent.equality[self._storage_key] = False
 
     #
     # Define methods that writers expect when the
