@@ -79,6 +79,22 @@ class TestModelSizeReport(unittest.TestCase):
         self.assertEqual(model_size.active.disjunctions, 3)
         self.assertEqual(model_size.overall.disjunctions, 3)
 
+    def test_nonlinear(self):
+        """Test nonlinear constraint detection."""
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.z = Var()
+        m.z.fix(3)
+        m.c = Constraint(expr=m.x ** 2 == 4)
+        m.c2 = Constraint(expr=m.x / m.y == 3)
+        m.c3 = Constraint(expr=m.x * m.z == 5)
+        m.c4 = Constraint(expr=m.x * m.y == 5)
+        m.c4.deactivate()
+        model_size = build_model_size_report(m)
+        self.assertEqual(model_size.active.nonlinear_constraints, 2)
+        self.assertEqual(model_size.overall.nonlinear_constraints, 3)
+
     def test_unassociated_disjunct(self):
         m = ConcreteModel()
         m.x = Var(domain=Integers)
@@ -110,6 +126,7 @@ active:
     disjunctions: 1
     disjuncts: 1
     integer_variables: 1
+    nonlinear_constraints: 0
     variables: 2
 overall:
     binary_variables: 2
@@ -118,6 +135,7 @@ overall:
     disjunctions: 1
     disjuncts: 2
     integer_variables: 1
+    nonlinear_constraints: 0
     variables: 3
 warn:
     unassociated_disjuncts: 1

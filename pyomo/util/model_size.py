@@ -87,6 +87,9 @@ def build_model_size_report(model):
     report.active.disjunctions = len(active_disjunctions)
     report.active.disjuncts = len(active_disjuncts)
     report.active.constraints = len(active_constraints)
+    report.active.nonlinear_constraints = sum(
+        1 for c in active_constraints
+        if c.body.polynomial_degree() not in (1, 0))
 
     report.overall = Container()
     block_like = (Block, Disjunct)
@@ -107,6 +110,10 @@ def build_model_size_report(model):
     report.overall.constraints = sum(
         1 for c in model.component_data_objects(
             Constraint, descend_into=block_like))
+    report.overall.nonlinear_constraints = sum(
+        1 for c in model.component_data_objects(
+            Constraint, descend_into=block_like)
+        if c.body.polynomial_degree() not in (1, 0))
 
     report.warn = Container()
     report.warn.unassociated_disjuncts = sum(
