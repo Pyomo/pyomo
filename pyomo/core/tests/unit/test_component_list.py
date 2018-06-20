@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -14,6 +14,7 @@ import collections
 
 import pyutilib.th as unittest
 import pyomo.environ
+from pyomo.common.log import LoggingIntercept
 from pyomo.core.kernel.component_interface import \
     (ICategorizedObject,
      IComponent,
@@ -26,6 +27,7 @@ from pyomo.core.kernel.component_block import (IBlockStorage,
                                                block_list)
 
 import six
+from six import StringIO
 
 #
 # There are no fully implemented test suites in this
@@ -48,6 +50,25 @@ class _TestComponentListBase(object):
     # set by derived class
     _container_type = None
     _ctype_factory = None
+
+    def test_overwrite_warning(self):
+        c = self._container_type()
+        out = StringIO()
+        with LoggingIntercept(out, 'pyomo.core'):
+            c.append(self._ctype_factory())
+            c[0] = c[0]
+        assert out.getvalue() == ""
+        with LoggingIntercept(out, 'pyomo.core'):
+            c[0] = self._ctype_factory()
+        assert out.getvalue() == \
+            ("Implicitly replacing the entry [0] "
+             "(type=%s) with a new object (type=%s). "
+             "This is usually indicative of a modeling "
+             "error. To avoid this warning, delete the "
+             "original object from the container before "
+             "assigning a new object.\n"
+             % (self._ctype_factory().__class__.__name__,
+                self._ctype_factory().__class__.__name__))
 
     def test_ctype(self):
         c = self._container_type()
