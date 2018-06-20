@@ -21,8 +21,7 @@ from pyomo.core.expr.numvalue import (ZeroConstant,
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.component_interface import \
     (IComponent,
-     _ActiveComponentMixin,
-     _ActiveComponentContainerMixin,
+     _ActiveObjectMixin,
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.kernel.component_dict import ComponentDict
@@ -36,7 +35,7 @@ from six.moves import zip
 _pos_inf = float('inf')
 _neg_inf = float('-inf')
 
-class IConstraint(IComponent, _ActiveComponentMixin):
+class IConstraint(IComponent, _ActiveObjectMixin):
     """The interface for constraints"""
     __slots__ = ()
 
@@ -329,6 +328,7 @@ class constraint(_MutableBoundsConstraintMixin,
     _ctype = None
     _linear_canonical_form = False
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_body",
                  "_lb",
@@ -343,6 +343,7 @@ class constraint(_MutableBoundsConstraintMixin,
                  ub=None,
                  rhs=None):
         self._parent = None
+        self._storage_key = None
         self._active = True
         self._body = None
         self._lb = None
@@ -676,6 +677,7 @@ class linear_constraint(_MutableBoundsConstraintMixin,
     _ctype = None
     _linear_canonical_form = False
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_variables",
                  "_coefficients",
@@ -692,6 +694,7 @@ class linear_constraint(_MutableBoundsConstraintMixin,
                  ub=None,
                  rhs=None):
         self._parent = None
+        self._storage_key = None
         self._active = True
         self._variables = None
         self._coefficients = None
@@ -808,12 +811,13 @@ class linear_constraint(_MutableBoundsConstraintMixin,
         return repn
 
 class constraint_tuple(ComponentTuple,
-                       _ActiveComponentContainerMixin):
+                       _ActiveObjectMixin):
     """A tuple-style container for constraints."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_data")
     if six.PY3:
@@ -824,16 +828,18 @@ class constraint_tuple(ComponentTuple,
         __slots__ = list(__slots__) + ["__weakref__"]
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         self._active = True
         super(constraint_tuple, self).__init__(*args, **kwds)
 
 class constraint_list(ComponentList,
-                      _ActiveComponentContainerMixin):
+                      _ActiveObjectMixin):
     """A list-style container for constraints."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_data")
     if six.PY3:
@@ -844,16 +850,18 @@ class constraint_list(ComponentList,
         __slots__ = list(__slots__) + ["__weakref__"]
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         self._active = True
         super(constraint_list, self).__init__(*args, **kwds)
 
 class constraint_dict(ComponentDict,
-                      _ActiveComponentContainerMixin):
+                      _ActiveObjectMixin):
     """A dict-style container for constraints."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_data")
     if six.PY3:
@@ -864,5 +872,6 @@ class constraint_dict(ComponentDict,
         __slots__ = list(__slots__) + ["__weakref__"]
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         self._active = True
         super(constraint_dict, self).__init__(*args, **kwds)

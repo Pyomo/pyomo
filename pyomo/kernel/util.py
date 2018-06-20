@@ -15,7 +15,7 @@ from pyomo.core.expr.numvalue import \
     NumericValue
 from pyomo.core.kernel.component_interface import \
     (ICategorizedObject,
-     _ActiveComponentContainerMixin)
+     _ActiveObjectMixin)
 
 import six
 
@@ -39,7 +39,7 @@ def pprint(obj, indent=0, stream=sys.stdout):
         prefix = ""
         if indent > 0:
             prefix = (" "*indent)+" - "
-        if isinstance(obj, _ActiveComponentContainerMixin):
+        if isinstance(obj, _ActiveObjectMixin):
             stream.write(prefix+"%s: container(size=%s, active=%s, ctype=%s)\n"
                   % (str(obj), len(obj), obj.active, obj.ctype.__name__))
         else:

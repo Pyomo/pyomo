@@ -11,10 +11,9 @@ from pyomo.core.tests.unit.test_component_tuple import \
 from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
 from pyomo.core.kernel.component_interface import (ICategorizedObject,
-                                                   IActiveObject,
                                                    IComponent,
-                                                   _ActiveComponentMixin,
-                                                   IComponentContainer)
+                                                   IComponentContainer,
+                                                   _ActiveObjectMixin)
 from pyomo.core.kernel.component_constraint import (IConstraint,
                                                     constraint,
                                                     linear_constraint,
@@ -300,9 +299,8 @@ class Test_constraint(unittest.TestCase):
     def test_type(self):
         c = constraint()
         self.assertTrue(isinstance(c, ICategorizedObject))
-        self.assertTrue(isinstance(c, IActiveObject))
         self.assertTrue(isinstance(c, IComponent))
-        self.assertTrue(isinstance(c, _ActiveComponentMixin))
+        self.assertTrue(isinstance(c, _ActiveObjectMixin))
         self.assertTrue(isinstance(c, IConstraint))
 
     def test_active(self):
@@ -1739,9 +1737,8 @@ class Test_linear_constraint(unittest.TestCase):
     def test_type(self):
         c = linear_constraint([],[])
         self.assertTrue(isinstance(c, ICategorizedObject))
-        self.assertTrue(isinstance(c, IActiveObject))
         self.assertTrue(isinstance(c, IComponent))
-        self.assertTrue(isinstance(c, _ActiveComponentMixin))
+        self.assertTrue(isinstance(c, _ActiveObjectMixin))
         self.assertTrue(isinstance(c, IConstraint))
 
     def test_active(self):

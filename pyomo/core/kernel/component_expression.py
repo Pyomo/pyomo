@@ -249,10 +249,12 @@ class expression(IExpression):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_expr",
                  "__weakref__")
     def __init__(self, expr=None):
         self._parent = None
+        self._storage_key = None
         self._expr = None
 
         # call the setter
@@ -308,6 +310,7 @@ class expression_tuple(ComponentTuple):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_data")
     if six.PY3:
         # This has to do with a bug in the abc module
@@ -318,6 +321,7 @@ class expression_tuple(ComponentTuple):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         super(expression_tuple, self).__init__(*args, **kwds)
 
 class expression_list(ComponentList):
@@ -326,6 +330,7 @@ class expression_list(ComponentList):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_data")
     if six.PY3:
         # This has to do with a bug in the abc module
@@ -336,6 +341,7 @@ class expression_list(ComponentList):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         super(expression_list, self).__init__(*args, **kwds)
 
 class expression_dict(ComponentDict):
@@ -344,6 +350,7 @@ class expression_dict(ComponentDict):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_data")
     if six.PY3:
         # This has to do with a bug in the abc module
@@ -354,4 +361,5 @@ class expression_dict(ComponentDict):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         super(expression_dict, self).__init__(*args, **kwds)
