@@ -55,7 +55,7 @@ def build_model_size_report(model):
             (next_active_disjunctions,
              next_fixed_true_disjuncts,
              next_active_disjuncts,
-             next_active_constraints) = _process_active_container(model)
+             next_active_constraints) = _process_active_container(container)
             new_active_disjunctions.update(next_active_disjunctions)
             new_active_disjuncts.update(next_active_disjuncts)
             new_fixed_true_disjuncts.update(next_fixed_true_disjuncts)
@@ -86,6 +86,7 @@ def build_model_size_report(model):
         1 for v in active_vars if v.is_continuous())
     report.active.disjunctions = len(active_disjunctions)
     report.active.disjuncts = len(active_disjuncts)
+    report.active.constraints = len(active_constraints)
 
     report.overall = Container()
     block_like = (Block, Disjunct)
@@ -103,6 +104,9 @@ def build_model_size_report(model):
     report.overall.disjuncts = sum(
         1 for d in model.component_data_objects(
             Disjunct, descend_into=block_like))
+    report.overall.constraints = sum(
+        1 for c in model.component_data_objects(
+            Constraint, descend_into=block_like))
 
     report.warn = Container()
     report.warn.unassociated_disjuncts = sum(
