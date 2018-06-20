@@ -1,7 +1,8 @@
 """Two reactor model from literature. See README.md."""
 from __future__ import division
 
-from pyomo.core import ConcreteModel, Objective, Param, Var, maximize
+from pyomo.core import (ConcreteModel, Constraint, Objective, Param, Var,
+                        maximize)
 from pyomo.environ import *  # NOQA
 from pyomo.gdp import Disjunction
 
@@ -27,6 +28,7 @@ def build_model():
     m.X_UB = Param(['I', 'II'], doc="Reactor conversion upper bound",
                    initialize={'I': 0.95, 'II': 0.99})
     m.C_rxn = Var(bounds=(1.5, 2.5), doc="Cost of reactor")
+    m.max_demand = Constraint(expr=m.F * m.X <= m.d, doc="product demand")
     m.reactor_choice = Disjunction(expr=[
         # Disjunct 1: Choose reactor I
         [m.F == m.alpha['I'] * m.X + m.beta['I'],
@@ -39,5 +41,5 @@ def build_model():
          m.X <= m.X_UB['II'],
          m.C_rxn == m.c['II']]
     ], xor=True)
-    m.profit = Objective(expr=m.c[1] * m.F * m.X - m.c[2] * m.F - m.C_rxn,
-                         sense=maximize)
+    m.profit = Objective(
+        expr=m.c[1] * m.F * m.X - m.c[2] * m.F - m.C_rxn, sense=maximize)
