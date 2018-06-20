@@ -9,9 +9,8 @@ from pyomo.core.tests.unit.test_component_dict import \
 from pyomo.core.tests.unit.test_component_list import \
     _TestComponentListBase
 from pyomo.core.kernel.component_interface import (ICategorizedObject,
-                                                   IActiveObject,
                                                    IComponent,
-                                                   _ActiveComponentMixin,
+                                                   _ActiveObjectMixin,
                                                    IComponentContainer)
 from pyomo.core.kernel.component_suffix import (suffix,
                                                 export_suffix_generator,
@@ -107,9 +106,8 @@ class Test_suffix(unittest.TestCase):
     def test_type(self):
         s = suffix()
         self.assertTrue(isinstance(s, ICategorizedObject))
-        self.assertTrue(isinstance(s, IActiveObject))
         self.assertTrue(isinstance(s, IComponent))
-        self.assertTrue(isinstance(s, _ActiveComponentMixin))
+        self.assertTrue(isinstance(s, _ActiveObjectMixin))
         self.assertTrue(isinstance(s, collections.Mapping))
         self.assertTrue(isinstance(s, collections.MutableMapping))
         self.assertTrue(issubclass(type(s), collections.Mapping))
@@ -262,8 +260,7 @@ class Test_suffix(unittest.TestCase):
         self.assertEqual(model.active, True)
         self.assertEqual(s.active, True)
 
-        m.deactivate(shallow=False,
-                     descend_into=True)
+        m.deactivate(shallow=False)
 
         self.assertEqual(m.active, False)
         self.assertEqual(bdict.active, False)
@@ -272,8 +269,7 @@ class Test_suffix(unittest.TestCase):
         self.assertEqual(model.active, False)
         self.assertEqual(s.active, False)
 
-        m.activate(shallow=False,
-                   descend_into=True)
+        m.activate(shallow=False)
 
         self.assertEqual(m.active, True)
         self.assertEqual(bdict.active, True)
@@ -282,18 +278,34 @@ class Test_suffix(unittest.TestCase):
         self.assertEqual(model.active, True)
         self.assertEqual(s.active, True)
 
-        m.deactivate(shallow=True,
-                     descend_into=True)
+        m.deactivate()
 
         self.assertEqual(m.active, False)
         self.assertEqual(bdict.active, True)
+        self.assertEqual(bdict[None].active, True)
+        self.assertEqual(b.active, True)
+        self.assertEqual(model.active, True)
+        self.assertEqual(s.active, True)
+
+        m.deactivate(shallow=False)
+
+        self.assertEqual(m.active, False)
+        self.assertEqual(bdict.active, False)
         self.assertEqual(bdict[None].active, False)
         self.assertEqual(b.active, False)
         self.assertEqual(model.active, False)
-        self.assertEqual(s.active, True)
+        self.assertEqual(s.active, False)
 
-        m.activate(shallow=True,
-                   descend_into=True)
+        m.activate()
+
+        self.assertEqual(m.active, True)
+        self.assertEqual(bdict.active, False)
+        self.assertEqual(bdict[None].active, False)
+        self.assertEqual(b.active, False)
+        self.assertEqual(model.active, False)
+        self.assertEqual(s.active, False)
+
+        m.activate(shallow=False)
 
         self.assertEqual(m.active, True)
         self.assertEqual(bdict.active, True)

@@ -9,10 +9,9 @@ from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
 from pyomo.core.kernel.component_interface import \
     (ICategorizedObject,
-     IActiveObject,
      IComponent,
      IComponentContainer,
-     _ActiveComponentContainerMixin)
+     _ActiveObjectMixin)
 from pyomo.core.kernel.component_block import (IBlockStorage,
                                                block,
                                                block_dict,
@@ -328,10 +327,9 @@ class Test_piecewise(unittest.TestCase):
             self.assertTrue(isinstance(p, TransformedPiecewiseLinearFunction))
             self.assertTrue(isinstance(p, transforms.registered_transforms[key]))
             self.assertTrue(isinstance(p, ICategorizedObject))
-            self.assertTrue(isinstance(p, IActiveObject))
             self.assertTrue(isinstance(p, IComponent))
             self.assertTrue(isinstance(p, IComponentContainer))
-            self.assertTrue(isinstance(p, _ActiveComponentContainerMixin))
+            self.assertTrue(isinstance(p, _ActiveObjectMixin))
             self.assertTrue(isinstance(p, tiny_block))
             self.assertTrue(isinstance(p, IBlockStorage))
 
@@ -711,10 +709,9 @@ class Test_piecewise_nd(unittest.TestCase):
             self.assertTrue(isinstance(p, TransformedPiecewiseLinearFunctionND))
             self.assertTrue(isinstance(p, transforms_nd.registered_transforms[key]))
             self.assertTrue(isinstance(p, ICategorizedObject))
-            self.assertTrue(isinstance(p, IActiveObject))
             self.assertTrue(isinstance(p, IComponent))
             self.assertTrue(isinstance(p, IComponentContainer))
-            self.assertTrue(isinstance(p, _ActiveComponentContainerMixin))
+            self.assertTrue(isinstance(p, _ActiveObjectMixin))
             self.assertTrue(isinstance(p, tiny_block))
             self.assertTrue(isinstance(p, IBlockStorage))
 

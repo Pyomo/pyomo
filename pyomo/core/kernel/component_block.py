@@ -21,11 +21,10 @@ except ImportError:                         #pragma:nocover
 
 from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.kernel.component_interface import \
-    (IActiveObject,
-     ICategorizedObject,
+    (ICategorizedObject,
      IComponent,
      IComponentContainer,
-     _ActiveComponentContainerMixin)
+     _ActiveObjectMixin)
 from pyomo.core.kernel.component_objective import IObjective
 from pyomo.core.kernel.component_variable import IVariable, variable
 from pyomo.core.kernel.component_constraint import IConstraint
@@ -49,7 +48,7 @@ _active_flag_name = "active"
 
 class IBlockStorage(IComponent,
                     IComponentContainer,
-                    _ActiveComponentContainerMixin):
+                    _ActiveObjectMixin):
     """A container that stores multiple types.
 
     This class is abstract, but it partially implements the
@@ -126,84 +125,6 @@ class _block_base(object):
     :class:`IBlockStorage` abstract methods.
     """
     __slots__ = ()
-
-    # Blocks do not change their active status
-    # based on changes in status of their children
-    def _increment_active(self):
-        pass
-    def _decrement_active(self):
-        pass
-
-    def activate(self,
-                 shallow=True,
-                 descend_into=False,
-                 _from_parent_=False):
-        """Activates this block.
-
-        Args:
-            shallow (bool): If :const:`False`, all children
-                of the block will be activated. By default,
-                the active status of children are not
-                changed.
-            descend_into (bool): Indicates whether or not to
-                perform the same action on sub-blocks. The
-                default is :const:`False`, as a shallow
-                operation on the top-level block is
-                sufficient.
-        """
-        block_ctype = self.ctype
-        if (not self.active) and \
-           (not _from_parent_):
-            # inform the parent
-            parent = self.parent
-            if parent is not None:
-                parent._increment_active()
-        self._active = True
-        if not shallow:
-            for child in self.children():
-                if isinstance(child, IActiveObject):
-                    child.activate(_from_parent_=True)
-        if descend_into:
-            for obj in self.components(ctype=block_ctype):
-                obj.activate(shallow=shallow,
-                             descend_into=False,
-                             _from_parent_=True)
-
-    def deactivate(self,
-                   shallow=True,
-                   descend_into=False,
-                   _from_parent_=False):
-        """Deactivates this block.
-
-        Args:
-            shallow (bool): If :const:`False`, all children
-                of the block will be deactivated. By
-                default, the active status of children are
-                not changed, but they become effectively
-                inactive for anything above this block.
-            descend_into (bool): Indicates whether or not to
-                perform the same action on sub-blocks. The
-                default is :const:`False`, as a shallow
-                operation on the top-level block is
-                sufficient.
-        """
-        block_ctype = self.ctype
-        if self.active and \
-           (not _from_parent_):
-            # inform the parent
-            parent = self.parent
-            if parent is not None:
-                parent._decrement_active()
-        self._active = False
-        if not shallow:
-            for child in self.children():
-                if isinstance(child, IActiveObject):
-                    child.deactivate(_from_parent_=True)
-        if descend_into:
-            for obj in self.components(ctype=block_ctype):
-                obj.deactivate(shallow=shallow,
-                               descend_into=False,
-                               _from_parent_=True)
 
     def child(self, key):
         """Get the child object associated with a given
@@ -686,7 +607,7 @@ class _block_base(object):
                 assert child._is_container
                 # child is a container (but not a block)
                 if (active is not None) and \
-                   isinstance(child, _ActiveComponentContainerMixin):
+                   isinstance(child, _ActiveObjectMixin):
                     for component_key, component in child.components(return_key=True):
                         if getattr(component,
                                    _active_flag_name,
@@ -1168,12 +1089,6 @@ class block(_block_base, IBlockStorage):
                 self._byctype[obj.ctype][name] = obj
                 self._order[name] = obj
                 obj._parent = weakref.ref(self)
-                # children that are not of type
-                # _ActiveComponentMixin retain the active status
-                # of their parent, which is why the default
-                # return value from getattr is False
-                if getattr(obj, _active_flag_name, False):
-                    self._increment_active()
             elif hasattr(self, name) and \
                  (getattr(self, name) is obj):
                 # a very special case that makes sense to handle
@@ -1202,12 +1117,6 @@ class block(_block_base, IBlockStorage):
             if len(self._byctype[obj.ctype]) == 0:
                 del self._byctype[obj.ctype]
             obj._parent = None
-            # children that are not of type
-            # IActiveObject retain the active status
-            # of their parent, which is why the default
-            # return value from getattr is False
-            if getattr(obj, _active_flag_name, False):
-                self._decrement_active()
         super(block, self).__delattr__(name)
 
     def collect_ctypes(self,
@@ -1289,12 +1198,6 @@ class tiny_block(_block_base, IBlockStorage):
                     delattr(self, name)
                 obj._parent = weakref.ref(self)
                 self._order.append(name)
-                # children that are not of type
-                # IActiveObject retain the active status
-                # of their parent, which is why the default
-                # return value from getattr is False
-                if getattr(obj, _active_flag_name, False):
-                    self._increment_active()
             elif hasattr(self, name) and \
                  (getattr(self, name) is obj):
                 # a very special case that makes sense to handle
@@ -1326,12 +1229,6 @@ class tiny_block(_block_base, IBlockStorage):
                 # shouldn't happen
                 assert False
             del self._order[ndx]
-            # children that are not of type
-            # IActiveObject retain the active status
-            # of their parent, which is why the default
-            # return value from getattr is False
-            if getattr(obj, _active_flag_name, False):
-                self._decrement_active()
         super(tiny_block, self).__delattr__(name)
 
     #
@@ -1432,7 +1329,7 @@ class tiny_block(_block_base, IBlockStorage):
         return ctypes
 
 class block_tuple(ComponentTuple,
-                  _ActiveComponentContainerMixin):
+                  _ActiveObjectMixin):
     """A tuple-style container for blocks."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
@@ -1453,7 +1350,7 @@ class block_tuple(ComponentTuple,
         super(block_tuple, self).__init__(*args, **kwds)
 
 class block_list(ComponentList,
-                 _ActiveComponentContainerMixin):
+                 _ActiveObjectMixin):
     """A list-style container for blocks."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
@@ -1474,7 +1371,7 @@ class block_list(ComponentList,
         super(block_list, self).__init__(*args, **kwds)
 
 class block_dict(ComponentDict,
-                 _ActiveComponentContainerMixin):
+                 _ActiveObjectMixin):
     """A dict-style container for blocks."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
