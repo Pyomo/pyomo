@@ -88,6 +88,7 @@ def apply_basic_step(disjunctions_or_constraints):
                 ans.disjuncts[idx].improper_constraints.add(
                     (constr[indx].lower, constr[indx].body, constr[indx].upper)
                 )
+                constr[indx].deactivate()
 
     #
     # Link the new disjunct indicator_var's to the original
