@@ -116,8 +116,8 @@ def build_model_size_report(model):
             Constraint, descend_into=block_like)
         if c.body.polynomial_degree() not in (1, 0))
 
-    report.warn = Container()
-    report.warn.unassociated_disjuncts = sum(
+    report.warning = Container()
+    report.warning.unassociated_disjuncts = sum(
         1 for d in model.component_data_objects(
             Disjunct, descend_into=block_like)
         if not d.indicator_var.fixed and d not in activated_disjuncts)
