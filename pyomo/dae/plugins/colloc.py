@@ -33,7 +33,6 @@ try:
     numpy_available = True
 except ImportError:
     numpy_available = False
-    from pyomo.dae.utilities import *
 
 logger = logging.getLogger('pyomo.core')
 
@@ -265,6 +264,8 @@ class Collocation_Discretization_Transformation(Transformation):
             if self._ncp[currentds] > 10:
                 raise ValueError("Numpy was not found so the maximum number "
                                  "of collocation points is 10")
+            from pyomo.dae.utilities import (radau_tau_dict, radau_adot_dict,
+                                             radau_adotdot_dict)
             self._tau[currentds] = radau_tau_dict[self._ncp[currentds]]
             self._adot[currentds] = radau_adot_dict[self._ncp[currentds]]
             self._adotdot[currentds] = radau_adotdot_dict[self._ncp[currentds]]
@@ -294,6 +295,8 @@ class Collocation_Discretization_Transformation(Transformation):
             if self._ncp[currentds] > 10:
                 raise ValueError("Numpy was not found so the maximum number "
                                  "of collocation points is 10")
+            from pyomo.dae.utilities import (legendre_tau_dict, legendre_adot_dict,
+                                             legendre_adotdot_dict, legendre_afinal_dict)
             self._tau[currentds] = legendre_tau_dict[self._ncp[currentds]]
             self._adot[currentds] = legendre_adot_dict[self._ncp[currentds]]
             self._adotdot[currentds] = \
