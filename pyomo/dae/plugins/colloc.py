@@ -114,10 +114,6 @@ def _lagrange_legendre_transform_order2(v, s):
     return _fun
 
 
-def _hermite_cubic_transform(v, s):
-    pass
-
-
 def conv(a, b):
     if len(a) == 0 or len(b) == 0:
         raise ValueError("Cannot convolve an empty list")
@@ -252,8 +248,7 @@ class Collocation_Discretization_Transformation(Transformation):
             'LAGRANGE-RADAU': (_lagrange_radau_transform,
                                _lagrange_radau_transform_order2),
             'LAGRANGE-LEGENDRE': (_lagrange_legendre_transform,
-                                  _lagrange_legendre_transform_order2),
-            'HERMITE-CUBIC': _hermite_cubic_transform}
+                                  _lagrange_legendre_transform_order2)}
 
     def _setup(self, instance):
         instance = instance.clone()
@@ -320,9 +315,6 @@ class Collocation_Discretization_Transformation(Transformation):
             self._adotdot[currentds] = adotdot
             self._afinal[currentds] = afinal
 
-    def _get_hermite_constants(self, currentds):
-        # TODO: finish this
-        raise DAE_Error("Not Implemented")
 
     def _apply_to(self, instance, **kwds):
         """
@@ -338,9 +330,8 @@ class Collocation_Discretization_Transformation(Transformation):
                       specified then the same scheme will be applied to all
                       ContinuousSets.
         scheme        Indicates which finite difference method to apply.
-                      Options are LAGRANGE-RADAU, LAGRANGE-LEGENDRE, or
-                      HERMITE-CUBIC. The default scheme is Lagrange polynomials
-                      with Radau roots.
+                      Options are 'LAGRANGE-RADAU' and 'LAGRANGE-LEGENDRE'. 
+                      The default scheme is Lagrange polynomials with Radau roots.
         """
 
         tmpnfe = kwds.pop('nfe', 10)
@@ -390,8 +381,8 @@ class Collocation_Discretization_Transformation(Transformation):
         if self._scheme is None:
             raise ValueError("Unknown collocation scheme '%s' specified using "
                              "the 'scheme' keyword. Valid schemes are "
-                             "'LAGRANGE-RADAU', 'LAGRANGE-LEGENDRE', and "
-                             "'HERMITE-CUBIC'" % tmpscheme)
+                             "'LAGRANGE-RADAU' and 'LAGRANGE-LEGENDRE'"
+                              % tmpscheme)
 
         if self._scheme_name == 'LAGRANGE-RADAU':
             self._get_radau_constants(currentds)
