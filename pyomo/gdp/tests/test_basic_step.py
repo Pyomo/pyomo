@@ -26,6 +26,7 @@ class TestBasicStep(unittest.TestCase):
                 disj.improper_constraints[1].upper, 2)
             self.assertEqual(
                 len(disj.improper_constraints), 1)
+        self.assertFalse(m.max_demand.active)
 
     def test_improper_basic_step_linear(self):
         model_builder = import_file(
@@ -54,6 +55,9 @@ class TestBasicStep(unittest.TestCase):
                 disj.improper_constraints[3].upper, 0)
             self.assertEqual(
                 len(disj.improper_constraints), 3)
+        self.assertFalse(m.max_demand.active)
+        self.assertFalse(m.mccormick_1.active)
+        self.assertFalse(m.mccormick_2.active)
 
 
 if __name__ == '__main__':
