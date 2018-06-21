@@ -360,15 +360,13 @@ class Collocation_Discretization_Transformation(Transformation):
         if None in self._nfe:
             raise ValueError(
                 "A general discretization scheme has already been applied to "
-                "to every differential set in the model. If you would like to "
+                "to every ContinuousSet in the model. If you would like to "
                 "specify a specific discretization scheme for one of the "
-                "differential sets you must discretize each differential set "
-                "individually. If you would like to apply a different "
-                "discretization scheme to all differential sets you must "
-                "declare a new transformation object")
+                "ContinuousSets you must discretize each ContinuousSet "
+                "separately.")
 
         if len(self._nfe) == 0 and tmpds is None:
-            # Same discretization on all differentialsets
+            # Same discretization on all ContinuousSets
             self._nfe[None] = tmpnfe
             self._ncp[None] = tmpncp
             currentds = None
@@ -469,10 +467,10 @@ class Collocation_Discretization_Transformation(Transformation):
 
     def _get_idx(self, l, t, n, i, k):
         """
-        This function returns the appropriate index for the differential
+        This function returns the appropriate index for the ContinuousSet
         and the derivative variables. It's needed because the collocation
         constraints are indexed by finite element and collocation point
-        however a differentialset contains a list of all the discretization
+        however a ContinuousSet contains a list of all the discretization
         points and is not separated into finite elements and collocation
         points.
         """
