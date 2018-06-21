@@ -162,29 +162,34 @@ def calc_cp(alpha, beta, k):
     cp = numpy.roots(poly)
     return cp
 
-
-def calc_omega(cp):
-
-    a = []
-    for i in range(len(cp)):
-        ptmp = []
-        tmp = 0
-        for j in range(len(cp)):
-            if j != i:
-                row = []
-                row.insert(0, 1 / (cp[i] - cp[j]))
-                row.insert(1, -cp[j] / (cp[i] - cp[j]))
-                ptmp.insert(tmp, row)
-                tmp += 1
-        p = [1]
-        for j in range(len(cp) - 1):
-            p = conv(p, ptmp[j])
-        pint = numpy.polyint(p)
-        arow = []
-        for j in range(len(cp)):
-            arow.append(numpy.polyval(pint, cp[j]))
-        a.append(arow)
-    return a
+# BLN: This is a legacy function that was used to calculate the collocation
+# constants for an alternative form of the collocation equations described
+# in Biegler's nonlinear programming book. The difference being whether the 
+# state or the derivative is approximated using lagrange polynomials. With 
+# the addition of PDE support and chained discretizations in Pyomo.DAE 2.0
+# this function is no longer used but kept here for future reference.
+#
+# def calc_omega(cp):
+#     a = []
+#     for i in range(len(cp)):
+#         ptmp = []
+#         tmp = 0
+#         for j in range(len(cp)):
+#             if j != i:
+#                 row = []
+#                 row.insert(0, 1 / (cp[i] - cp[j]))
+#                 row.insert(1, -cp[j] / (cp[i] - cp[j]))
+#                 ptmp.insert(tmp, row)
+#                 tmp += 1
+#         p = [1]
+#         for j in range(len(cp) - 1):
+#             p = conv(p, ptmp[j])
+#         pint = numpy.polyint(p)
+#         arow = []
+#         for j in range(len(cp)):
+#             arow.append(numpy.polyval(pint, cp[j]))
+#         a.append(arow)
+#     return a
 
 
 def calc_adot(cp, order=1):
