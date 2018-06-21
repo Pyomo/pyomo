@@ -15,21 +15,21 @@ default_logger.setLevel(logging.INFO)
 class ModelSizeReport(Container):
     """Stores model size information.
 
-    Active blocks are those who have an active flag of True and whose parent,
-    if exists, is an active block or an active Disjunct.
+    Activated blocks are those who have an active flag of True and whose
+    parent, if exists, is an activated block or an activated Disjunct.
 
-    Active constraints are those with an active flag of True and: are reachable
-    via an active Block, are on an active Disjunct, or are on a disjunct with
-    indicator_var fixed to 1 with active flag True.
+    Activated constraints are those with an active flag of True and: are
+    reachable via an activated Block, are on an activated Disjunct, or are on a
+    disjunct with indicator_var fixed to 1 with active flag True.
 
-    Active variables refer to the presence of the variable on an active
-    constraint, or that the variable is an indicator_var for an active
+    Activated variables refer to the presence of the variable on an activated
+    constraint, or that the variable is an indicator_var for an activated
     Disjunct.
 
-    Active disjuncts refer to disjuncts with an active flag of True, have an
-    unfixed indicator_var, and who participate in an active Disjunction.
+    Activated disjuncts refer to disjuncts with an active flag of True, have an
+    unfixed indicator_var, and who participate in an activated Disjunction.
 
-    Active disjunctions follow the same rules as active constraints.
+    Activated disjunctions follow the same rules as activated constraints.
 
     """
     pass
@@ -38,57 +38,58 @@ class ModelSizeReport(Container):
 def build_model_size_report(model):
     """Build a model size report object."""
     report = ModelSizeReport()
-    active_disjunctions = ComponentSet()
-    active_disjuncts = ComponentSet()
+    activated_disjunctions = ComponentSet()
+    activated_disjuncts = ComponentSet()
     fixed_true_disjuncts = ComponentSet()
-    active_constraints = ComponentSet()
-    active_vars = ComponentSet()
+    activated_constraints = ComponentSet()
+    activated_vars = ComponentSet()
     new_containers = (model,)
 
     while new_containers:
-        new_active_disjunctions = ComponentSet()
-        new_active_disjuncts = ComponentSet()
+        new_activated_disjunctions = ComponentSet()
+        new_activated_disjuncts = ComponentSet()
         new_fixed_true_disjuncts = ComponentSet()
-        new_active_constraints = ComponentSet()
+        new_activated_constraints = ComponentSet()
 
         for container in new_containers:
-            (next_active_disjunctions,
+            (next_activated_disjunctions,
              next_fixed_true_disjuncts,
-             next_active_disjuncts,
-             next_active_constraints) = _process_active_container(container)
-            new_active_disjunctions.update(next_active_disjunctions)
-            new_active_disjuncts.update(next_active_disjuncts)
+             next_activated_disjuncts,
+             next_activated_constraints
+             ) = _process_activated_container(container)
+            new_activated_disjunctions.update(next_activated_disjunctions)
+            new_activated_disjuncts.update(next_activated_disjuncts)
             new_fixed_true_disjuncts.update(next_fixed_true_disjuncts)
-            new_active_constraints.update(next_active_constraints)
+            new_activated_constraints.update(next_activated_constraints)
 
-        new_containers = ((new_active_disjuncts - active_disjuncts) |
+        new_containers = ((new_activated_disjuncts - activated_disjuncts) |
                           (new_fixed_true_disjuncts - fixed_true_disjuncts))
 
-        active_disjunctions.update(new_active_disjunctions)
-        active_disjuncts.update(new_active_disjuncts)
+        activated_disjunctions.update(new_activated_disjunctions)
+        activated_disjuncts.update(new_activated_disjuncts)
         fixed_true_disjuncts.update(new_fixed_true_disjuncts)
-        active_constraints.update(new_active_constraints)
+        activated_constraints.update(new_activated_constraints)
 
-    active_vars.update(
-        var for constr in new_active_constraints
+    activated_vars.update(
+        var for constr in new_activated_constraints
         for var in EXPR.identify_variables(
             constr.body, include_fixed=False))
-    active_vars.update(
-        disj.indicator_var for disj in active_disjuncts)
+    activated_vars.update(
+        disj.indicator_var for disj in activated_disjuncts)
 
-    report.active = Container()
-    report.active.variables = len(active_vars)
-    report.active.binary_variables = sum(
-        1 for v in active_vars if v.is_binary())
-    report.active.integer_variables = sum(
-        1 for v in active_vars if v.is_integer())
-    report.active.continuous_variables = sum(
-        1 for v in active_vars if v.is_continuous())
-    report.active.disjunctions = len(active_disjunctions)
-    report.active.disjuncts = len(active_disjuncts)
-    report.active.constraints = len(active_constraints)
-    report.active.nonlinear_constraints = sum(
-        1 for c in active_constraints
+    report.activated = Container()
+    report.activated.variables = len(activated_vars)
+    report.activated.binary_variables = sum(
+        1 for v in activated_vars if v.is_binary())
+    report.activated.integer_variables = sum(
+        1 for v in activated_vars if v.is_integer())
+    report.activated.continuous_variables = sum(
+        1 for v in activated_vars if v.is_continuous())
+    report.activated.disjunctions = len(activated_disjunctions)
+    report.activated.disjuncts = len(activated_disjuncts)
+    report.activated.constraints = len(activated_constraints)
+    report.activated.nonlinear_constraints = sum(
+        1 for c in activated_constraints
         if c.body.polynomial_degree() not in (1, 0))
 
     report.overall = Container()
@@ -119,7 +120,7 @@ def build_model_size_report(model):
     report.warn.unassociated_disjuncts = sum(
         1 for d in model.component_data_objects(
             Disjunct, descend_into=block_like)
-        if not d.indicator_var.fixed and d not in active_disjuncts)
+        if not d.indicator_var.fixed and d not in activated_disjuncts)
 
     return report
 
@@ -129,27 +130,27 @@ def log_model_size_report(model, logger=default_logger):
     logger.info(build_model_size_report(model))
 
 
-def _process_active_container(blk):
+def _process_activated_container(blk):
     """Process a container object, returning the new components found."""
     new_fixed_true_disjuncts = ComponentSet(
         disj for disj in blk.component_data_objects(Disjunct, active=True)
         if disj.indicator_var.value == 1 and disj.indicator_var.fixed)
-    new_active_disjunctions = ComponentSet(
+    new_activated_disjunctions = ComponentSet(
         blk.component_data_objects(Disjunction, active=True))
-    new_active_disjuncts = ComponentSet(
-        disj for disjtn in new_active_disjunctions
-        for disj in _active_disjuncts_in_disjunction(disjtn))
-    new_active_constraints = ComponentSet(
+    new_activated_disjuncts = ComponentSet(
+        disj for disjtn in new_activated_disjunctions
+        for disj in _activated_disjuncts_in_disjunction(disjtn))
+    new_activated_constraints = ComponentSet(
         blk.component_data_objects(Constraint, active=True))
     return (
-        new_active_disjunctions,
+        new_activated_disjunctions,
         new_fixed_true_disjuncts,
-        new_active_disjuncts,
-        new_active_constraints
+        new_activated_disjuncts,
+        new_activated_constraints
     )
 
 
-def _active_disjuncts_in_disjunction(disjtn):
-    """Retrieve generator of active disjuncts on disjunction."""
+def _activated_disjuncts_in_disjunction(disjtn):
+    """Retrieve generator of activated disjuncts on disjunction."""
     return (disj for disj in disjtn.disjuncts
             if disj.active and not disj.indicator_var.fixed)

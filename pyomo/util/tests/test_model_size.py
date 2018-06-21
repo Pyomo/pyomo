@@ -23,17 +23,27 @@ class TestModelSizeReport(unittest.TestCase):
         """Test with an empty model."""
         empty_model = ConcreteModel()
         model_size = build_model_size_report(empty_model)
-        for obj in model_size.active.values():
+        for obj in model_size.activated.values():
             self.assertEqual(obj, 0)
 
-    @unittest.skip("Example file is not where it should be yet.")
     def test_eight_process(self):
         """Test with the eight process problem model."""
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
         model_size = build_model_size_report(eight_process)
-        self.assertEqual(model_size.active.variables, 30)  # 30 is placeholder
+        self.assertEqual(model_size.activated.variables, 38)
+        self.assertEqual(model_size.overall.variables, 44)
+        self.assertEqual(model_size.activated.binary_variables, 12)
+        self.assertEqual(model_size.overall.binary_variables, 12)
+        self.assertEqual(model_size.activated.integer_variables, 0)
+        self.assertEqual(model_size.overall.integer_variables, 0)
+        self.assertEqual(model_size.activated.constraints, 52)
+        self.assertEqual(model_size.overall.constraints, 52)
+        self.assertEqual(model_size.activated.disjuncts, 12)
+        self.assertEqual(model_size.overall.disjuncts, 12)
+        self.assertEqual(model_size.activated.disjunctions, 5)
+        self.assertEqual(model_size.overall.disjunctions, 5)
 
     def test_nested_blocks(self):
         """Test with nested blocks."""
@@ -49,34 +59,34 @@ class TestModelSizeReport(unittest.TestCase):
         m.inactive_b.c = Constraint(expr=m.b.x == 1)
         m.inactive_b.c2 = Constraint(expr=m.inactive_b.x == 15)
         model_size = build_model_size_report(m)
-        self.assertEqual(model_size.active.variables, 2)
+        self.assertEqual(model_size.activated.variables, 2)
         self.assertEqual(model_size.overall.variables, 4)
-        self.assertEqual(model_size.active.binary_variables, 1)
+        self.assertEqual(model_size.activated.binary_variables, 1)
         self.assertEqual(model_size.overall.binary_variables, 1)
-        self.assertEqual(model_size.active.integer_variables, 0)
+        self.assertEqual(model_size.activated.integer_variables, 0)
         self.assertEqual(model_size.overall.integer_variables, 1)
-        self.assertEqual(model_size.active.constraints, 1)
+        self.assertEqual(model_size.activated.constraints, 1)
         self.assertEqual(model_size.overall.constraints, 3)
-        self.assertEqual(model_size.active.disjuncts, 0)
+        self.assertEqual(model_size.activated.disjuncts, 0)
         self.assertEqual(model_size.overall.disjuncts, 0)
-        self.assertEqual(model_size.active.disjunctions, 0)
+        self.assertEqual(model_size.activated.disjunctions, 0)
         self.assertEqual(model_size.overall.disjunctions, 0)
 
     def test_disjunctive_model(self):
         from pyomo.gdp.tests.models import makeNestedDisjunctions
         m = makeNestedDisjunctions()
         model_size = build_model_size_report(m)
-        self.assertEqual(model_size.active.variables, 9)
+        self.assertEqual(model_size.activated.variables, 9)
         self.assertEqual(model_size.overall.variables, 10)
-        self.assertEqual(model_size.active.binary_variables, 7)
+        self.assertEqual(model_size.activated.binary_variables, 7)
         self.assertEqual(model_size.overall.binary_variables, 7)
-        self.assertEqual(model_size.active.integer_variables, 0)
+        self.assertEqual(model_size.activated.integer_variables, 0)
         self.assertEqual(model_size.overall.integer_variables, 0)
-        self.assertEqual(model_size.active.constraints, 6)
+        self.assertEqual(model_size.activated.constraints, 6)
         self.assertEqual(model_size.overall.constraints, 6)
-        self.assertEqual(model_size.active.disjuncts, 7)
+        self.assertEqual(model_size.activated.disjuncts, 7)
         self.assertEqual(model_size.overall.disjuncts, 7)
-        self.assertEqual(model_size.active.disjunctions, 3)
+        self.assertEqual(model_size.activated.disjunctions, 3)
         self.assertEqual(model_size.overall.disjunctions, 3)
 
     def test_nonlinear(self):
@@ -92,7 +102,7 @@ class TestModelSizeReport(unittest.TestCase):
         m.c4 = Constraint(expr=m.x * m.y == 5)
         m.c4.deactivate()
         model_size = build_model_size_report(m)
-        self.assertEqual(model_size.active.nonlinear_constraints, 2)
+        self.assertEqual(model_size.activated.nonlinear_constraints, 2)
         self.assertEqual(model_size.overall.nonlinear_constraints, 3)
 
     def test_unassociated_disjunct(self):
@@ -119,7 +129,7 @@ class TestModelSizeReport(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.util.model_size', logging.INFO):
             log_model_size_report(m)
         expected_output = """
-active:
+activated:
     binary_variables: 1
     constraints: 1
     continuous_variables: 0
