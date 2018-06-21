@@ -4,7 +4,7 @@ import pyutilib.th as unittest
 from pyomo.core.expr.numvalue import (NumericValue,
                                         is_fixed,
                                         is_constant,
-                                        potentially_variable,
+                                        is_potentially_variable,
                                         value)
 import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
@@ -14,7 +14,6 @@ from pyomo.core.tests.unit.test_component_tuple import \
 from pyomo.core.tests.unit.test_component_list import \
     _TestComponentListBase
 from pyomo.core.kernel.component_interface import (ICategorizedObject,
-                                                   IActiveObject,
                                                    IComponent,
                                                    IComponentContainer)
 from pyomo.core.kernel.component_expression import (IIdentityExpression,
@@ -83,22 +82,23 @@ class Test_noclone(unittest.TestCase):
             self.assertIs(noclone(obj).expr, obj)
 
     def test_pprint(self):
+        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
         v = variable()
         e = noclone(v**2)
-        pyomo.core.kernel.pprint(e)
-        pyomo.core.kernel.pprint(e, indent=1)
+        pyomo.kernel.pprint(e)
+        pyomo.kernel.pprint(e, indent=1)
         b = block()
         b.e = expression(expr=e)
-        pyomo.core.kernel.pprint(e)
-        pyomo.core.kernel.pprint(b)
+        pyomo.kernel.pprint(e)
+        pyomo.kernel.pprint(b)
         m = block()
         m.b = b
-        pyomo.core.kernel.pprint(e)
-        pyomo.core.kernel.pprint(b)
-        pyomo.core.kernel.pprint(m)
+        pyomo.kernel.pprint(e)
+        pyomo.kernel.pprint(b)
+        pyomo.kernel.pprint(m)
 
     def test_pickle(self):
         v = variable()
@@ -179,16 +179,16 @@ class Test_noclone(unittest.TestCase):
     def testis_potentially_variable(self):
         e = noclone(variable())
         self.assertEqual(e.is_potentially_variable(), True)
-        self.assertEqual(potentially_variable(e), True)
+        self.assertEqual(is_potentially_variable(e), True)
         e = noclone(parameter())
         self.assertEqual(e.is_potentially_variable(), False)
-        self.assertEqual(potentially_variable(e), False)
+        self.assertEqual(is_potentially_variable(e), False)
         e = noclone(expression())
         self.assertEqual(e.is_potentially_variable(), True)
-        self.assertEqual(potentially_variable(e), True)
+        self.assertEqual(is_potentially_variable(e), True)
         e = noclone(data_expression())
         self.assertEqual(e.is_potentially_variable(), False)
-        self.assertEqual(potentially_variable(e), False)
+        self.assertEqual(is_potentially_variable(e), False)
 
     def test_polynomial_degree(self):
         e = noclone(parameter())
@@ -270,21 +270,22 @@ class _Test_expression_base(object):
     _ctype_factory = None
 
     def test_pprint(self):
+        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
         p = parameter()
         e = self._ctype_factory(p**2)
-        pyomo.core.kernel.pprint(e)
+        pyomo.kernel.pprint(e)
         b = block()
         b.e = e
-        pyomo.core.kernel.pprint(e)
-        pyomo.core.kernel.pprint(b)
+        pyomo.kernel.pprint(e)
+        pyomo.kernel.pprint(b)
         m = block()
         m.b = b
-        pyomo.core.kernel.pprint(e)
-        pyomo.core.kernel.pprint(b)
-        pyomo.core.kernel.pprint(m)
+        pyomo.kernel.pprint(e)
+        pyomo.kernel.pprint(b)
+        pyomo.kernel.pprint(m)
 
     def test_pickle(self):
         e = self._ctype_factory(expr=1.0)
@@ -567,19 +568,19 @@ class Test_expression(_Test_expression_base,
     def testis_potentially_variable(self):
         e = self._ctype_factory()
         self.assertEqual(e.is_potentially_variable(), True)
-        self.assertEqual(potentially_variable(e), True)
+        self.assertEqual(is_potentially_variable(e), True)
         e.expr = 1
         self.assertEqual(e.is_potentially_variable(), True)
-        self.assertEqual(potentially_variable(e), True)
+        self.assertEqual(is_potentially_variable(e), True)
         v = variable()
         v.value = 2
         e.expr = v + 1
         self.assertEqual(e.is_potentially_variable(), True)
-        self.assertEqual(potentially_variable(e), True)
+        self.assertEqual(is_potentially_variable(e), True)
         v.fix()
         e.expr = v + 1
         self.assertEqual(e.is_potentially_variable(), True)
-        self.assertEqual(potentially_variable(e), True)
+        self.assertEqual(is_potentially_variable(e), True)
         self.assertEqual(e(), 3)
 
     def test_polynomial_degree(self):
@@ -654,22 +655,22 @@ class Test_data_expression(_Test_expression_base,
     def testis_potentially_variable(self):
         e = self._ctype_factory()
         self.assertEqual(e.is_potentially_variable(), False)
-        self.assertEqual(potentially_variable(e), False)
+        self.assertEqual(is_potentially_variable(e), False)
         e.expr = 1
         self.assertEqual(e.is_potentially_variable(), False)
-        self.assertEqual(potentially_variable(e), False)
+        self.assertEqual(is_potentially_variable(e), False)
         p = parameter()
         e.expr = p**2
         self.assertEqual(e.is_potentially_variable(), False)
-        self.assertEqual(potentially_variable(e), False)
+        self.assertEqual(is_potentially_variable(e), False)
         a = self._ctype_factory()
         e.expr = (a*p)**2/(p + 5)
         self.assertEqual(e.is_potentially_variable(), False)
-        self.assertEqual(potentially_variable(e), False)
+        self.assertEqual(is_potentially_variable(e), False)
         a.expr = 2.0
         p.value = 5.0
         self.assertEqual(e.is_potentially_variable(), False)
-        self.assertEqual(potentially_variable(e), False)
+        self.assertEqual(is_potentially_variable(e), False)
         self.assertEqual(e(), 10.0)
 
         v = variable()

@@ -16,9 +16,11 @@ detect variables inside of Disjuncts or deactivated Blocks.
 
 import logging
 import textwrap
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 from pyomo.core.base import Transformation, Block, Constraint
-from pyomo.gdp import Disjunct
+from pyomo.gdp import Disjunct, GDP_Error
+from pyomo.core import TraversalStrategy
+from pyomo.common.deprecation import deprecated
 
 from six import itervalues
 
@@ -35,6 +37,8 @@ class HACK_GDP_Var_Mover(Transformation):
 
     alias('gdp.varmover', doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
+    @deprecated(msg="The gdp.varmover transformation has been deprecated in "
+                "favor of the gdp.reclassify transformation.")
     def _apply_to(self, instance, **kwds):
         assert not kwds
         count = 0
@@ -61,13 +65,19 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, instance, **kwds):
-        assert not kwds
+        assert not kwds  # no keywords expected to the transformation
         disjunct_generator = instance.component_objects(
-            Disjunct, descend_into=(Block, Disjunct))
+            Disjunct, descend_into=(Block, Disjunct),
+            descent_order=TraversalStrategy.PostfixDFS)
         for disjunct_component in disjunct_generator:
+            # Check that the disjuncts being reclassified are all relaxed or
+            # are not on an active block.
             for disjunct in itervalues(disjunct_component._data):
-                if disjunct.active:
-                    logger.error("""
+                if (disjunct.active and
+                        self._disjunct_not_relaxed(disjunct) and
+                        self._disjunct_on_active_block(disjunct) and
+                        self._disjunct_not_fixed_true(disjunct)):
+                    raise GDP_Error("""
                     Reclassifying active Disjunct "%s" as a Block.  This
                     is generally an error as it indicates that the model
                     was not completely relaxed before applying the
@@ -91,3 +101,31 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
                     Constraint, descend_into=Block, active=True)
                 for con in cons_in_disjunct:
                     con.deactivate()
+
+    def _disjunct_not_fixed_true(self, disjunct):
+        # Return true if the disjunct indicator variable is not fixed to True
+        return not (disjunct.indicator_var.fixed and
+                    disjunct.indicator_var.value == 1)
+
+    def _disjunct_not_relaxed(self, disjunct):
+        # Return True if the disjunct was not relaxed by a transformation.
+        return not getattr(
+            disjunct, '_gdp_transformation_info', {}).get('relaxed', False)
+
+    def _disjunct_on_active_block(self, disjunct):
+        # Check first to make sure that the disjunct is not a
+        # descendent of an inactive Block or fixed and deactivated
+        # Disjunct, before raising a warning.
+        parent_block = disjunct.parent_block()
+        while parent_block is not None:
+            if parent_block.type() is Block and not parent_block.active:
+                return False
+            elif (parent_block.type() is Disjunct and not parent_block.active
+                  and parent_block.indicator_var.value == 0
+                  and parent_block.indicator_var.fixed):
+                return False
+            else:
+                # Step up one level in the hierarchy
+                parent_block = parent_block.parent_block()
+                continue
+        return True

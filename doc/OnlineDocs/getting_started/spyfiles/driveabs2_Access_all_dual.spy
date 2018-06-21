@@ -1,0 +1,6 @@
+# display all duals
+print ("Duals")
+for c in instance.component_objects(pyo.Constraint, active=True):
+    print ("   Constraint",c)
+    for index in c:
+        print ("      ", index, instance.dual[c[index]])

@@ -4,7 +4,7 @@ import pyutilib.th as unittest
 from pyomo.core.expr.numvalue import (NumericValue,
                                         is_fixed,
                                         is_constant,
-                                        potentially_variable)
+                                        is_potentially_variable)
 import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
@@ -28,20 +28,21 @@ from pyomo.core.base.param import Param
 class Test_parameter(unittest.TestCase):
 
     def test_pprint(self):
+        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
         p = parameter()
-        pyomo.core.kernel.pprint(p)
+        pyomo.kernel.pprint(p)
         b = block()
         b.p = p
-        pyomo.core.kernel.pprint(p)
-        pyomo.core.kernel.pprint(b)
+        pyomo.kernel.pprint(p)
+        pyomo.kernel.pprint(b)
         m = block()
         m.b = b
-        pyomo.core.kernel.pprint(p)
-        pyomo.core.kernel.pprint(b)
-        pyomo.core.kernel.pprint(m)
+        pyomo.kernel.pprint(p)
+        pyomo.kernel.pprint(b)
+        pyomo.kernel.pprint(m)
 
     def test_ctype(self):
         p = parameter()
@@ -102,10 +103,10 @@ class Test_parameter(unittest.TestCase):
     def test_potentially_variable(self):
         p = parameter()
         self.assertEqual(p.is_potentially_variable(), False)
-        self.assertEqual(potentially_variable(p), False)
+        self.assertEqual(is_potentially_variable(p), False)
         p.value = 1.0
         self.assertEqual(p.is_potentially_variable(), False)
-        self.assertEqual(potentially_variable(p), False)
+        self.assertEqual(is_potentially_variable(p), False)
 
     def test_polynomial_degree(self):
         p = parameter()

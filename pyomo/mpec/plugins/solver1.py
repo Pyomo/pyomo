@@ -16,7 +16,7 @@ from pyomo.core import TransformationFactory
 
 class MPEC_Solver1(pyomo.opt.OptSolver):
 
-    pyomo.util.plugin.alias('mpec_nlp', doc='MPEC solver that optimizes a nonlinear transformation')
+    pyomo.common.plugin.alias('mpec_nlp', doc='MPEC solver that optimizes a nonlinear transformation')
 
     def __init__(self, **kwds):
         kwds['type'] = 'mpec_nlp'

@@ -1,187 +1,103 @@
-language: python
-matrix:
-  include:
-    - python: '2.7'
-      env:                             CATEGORY="nightly"
-    - python: '3.6'
-      env:                             CATEGORY="nightly"
-    #
-    - python: '2.7'
-      env:                             CATEGORY="nightly"  EXTRAS="yes"  KEY_JOB="yes"
-    - python: '3.4'
-      env:                             CATEGORY="nightly"  EXTRAS="yes"
-    - python: '3.5'
-      env:                             CATEGORY="nightly"  EXTRAS="yes"
-    - python: '3.6'
-      env:                             CATEGORY="nightly"  EXTRAS="yes"
-    #
-    # NOTE: EXTRAS is not yet supported on Python 3.6.  Until it is,
-    #   parallel tests will be restricted to Python 3.5
-    - python: '2.7'
-      env:                             CATEGORY="parallel" EXTRAS="yes"
-    - python: '3.5'
-      env:                             CATEGORY="parallel" EXTRAS="yes"
-    #
-    #- python: pypy
-    #  env:                             CATEGORY="nightly"
-    #- python: '2.7'
-    #  env: PYRO="Pyro" JYTHON="org.python:jython-installer:2.7.0"
-    #- python: pypy
-    #  env: PYRO="Pyro"  YAML="pyyaml"
-    #- python: pypy3
-    #  env: PYRO="Pyro4" YAML="pyyaml"
+branches:
+  only:
+  - master
+cache: false
+language: generic
+services:
+- docker
+env:
+  global:
+  - DOCKERHUB_USERNAME=qkjqvazeqfjqftchxlgw
+  matrix:
+  - IMAGE_NAME=test-builds:python_3.7-rc CATEGORY="nightly"
+  - IMAGE_NAME=test-builds:python_3.6    CATEGORY="nightly"
+  - IMAGE_NAME=test-builds:python_3.6    CATEGORY="nightly" SLIM=1
+  - IMAGE_NAME=test-builds:python_3.5    CATEGORY="nightly"
+  - IMAGE_NAME=test-builds:python_2.7    CATEGORY="nightly" KEY_JOB=1
+  - IMAGE_NAME=test-builds:pypy_3        CATEGORY="nightly" DISABLE_COVERAGE=1
+  - IMAGE_NAME=test-builds:pypy_2        CATEGORY="nightly" DISABLE_COVERAGE=1
+  - IMAGE_NAME=test-builds:anaconda_3    CATEGORY="nightly" DISABLE_COVERAGE=1
+  - IMAGE_NAME=test-builds:anaconda_2    CATEGORY="nightly" DISABLE_COVERAGE=1
+  - IMAGE_NAME=test-builds:python_3.6    CATEGORY="parallel"
+  - IMAGE_NAME=test-builds:python_2.7    CATEGORY="parallel"
 
-
-install:
-  - sudo dpkg --add-architecture i386
-  - sudo apt-get update --quiet
-  - sudo apt-get install gfortran
-  # Needed to run 32-bit applications (GJH):
-  - sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386
-  #
-  # Setup miniconda and activate the testenv environment
-  #
-  - if [[ "${TRAVIS_PYTHON_VERSION:0:1}" == "2" ]]; then
-       wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
-    else
-       wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-    fi
-  - bash miniconda.sh -b -p $HOME/miniconda
-  - export PATH="$HOME/miniconda/bin:$PATH"
-  - hash -r
-  #
-  # Update conda, then force it to NOT update itself again
-  #
-  - conda config --set always_yes yes
-  - conda update -q -y -c anaconda conda
-  - conda config --set auto_update_conda false
-  #
-  - conda create -f -q -y -n testenv python=${TRAVIS_PYTHON_VERSION}
-  - source activate testenv
-  #- if [ -n "${JYTHON}" ]; then source install_jython.sh; fi
-  #
-  # Install supporting packages
-  #
-  - conda install -q -y -c conda-forge --no-update-dependencies setuptools pip
-  #
-  - which python
-  - python --version
-  - which pip
-  - pip --version
-  #
-  - pip install coverage
-  - pip install codecov
-  - if [ -n "${YAML}" ]; then
-       pip install --quiet pyyaml;
-    fi
-  - if [ -n "${PYRO}" ]; then
-       pip install --quiet $PYRO;
-    fi
-  - pip install --quiet xlrd
-  - pip install --quiet openpyxl
-  - pip install sphinx sphinx_rtd_theme
-  - pip install dill
-  - conda install -q -y -c anaconda pandas networkx
-
-  - if [ -n "${EXTRAS}" ]; then
-       conda install -q -y -c anaconda scipy;
-    fi
-
-  #
-  # Install GAMS
-  #
-  - wget https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/linux/linux_x64_64_sfx.exe
-  - chmod u+x linux_x64_64_sfx.exe
-  - ./linux_x64_64_sfx.exe > /dev/null
-  # Only install GAMS API if EXTRAS is not being installed, 
-  # since those tests segfault on travis for an unknown reason.
-  - if [ -a -z "${EXTRAS}" ]; then
-       bash ./.travis_install_gams_api.sh;
-    fi
-  - export PATH="$PATH:$PWD/gams24.8_linux_x64_64_sfx"
-
-  #
-  # Install Pyomo extras
-  #
-  # NOTE: We explicitly install all of the packages in pyomo.extras, since these this
-  # package is not kept up-to-date with Python 3.4
-  #
-  - if [ -n "${EXTRAS}" ]; then
-        conda install -q -y -c conda-forge --no-update-dependencies numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill;
-    fi
-
-  #
-  # Install freely available solvers
-  #
-  - conda install -q -y -c conda-forge --no-update-dependencies glpk
-  - glpsol -v
-  - conda install -q -y -c conda-forge --no-update-dependencies ipopt
-  - ipopt -v
-  - conda install -q -y -c conda-forge --no-update-dependencies coincbc
-  - echo quit | cbc -
-  #
-  # Clone but don't install pyomo-model-libraries
-  #
-  - git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
-  #
-  # Install PyUtilib (master branch)
-  #
-  - pip install --quiet git+https://github.com/PyUtilib/pyutilib
-  #
-  # Install this package
-  #
-  - python setup.py develop
-  #
-  # Fetch additional solvers
-  #
-  - mkdir $PWD/bin
-  - export PATH="$PWD/bin:$PATH"
-  - python pyomo/contrib/trustregion/getGJH.py $PWD/bin
-  - gjh -v
-  - python pyomo/util/getGSL.py $PWD/bin
-  #
-  # Verify that the Python interpreter hasn't changed (occasionally conda
-  # installers will change the installed Python!!)
-  #
-  - which python
-  - python --version
-  - if [ `python --version |& grep "Python ${TRAVIS_PYTHON_VERSION}" | wc -l` -eq 0 ]; then
-       exit 1;
-    fi
-
-
-script:
-  # This block of commands enable tracking of coverage for any
-  # subprocesses launched by tests
+before_install:
+  - docker pull ${DOCKERHUB_USERNAME}/${IMAGE_NAME}
+ # (1) We are mounting the current directory onto the
+ #     docker container and giving it a mount location with
+ #     an identical name, which avoids issues with file
+ #     paths in coverage reports.
+ # (2) We are starting a container in detached mode that
+ #     runs a semi-infinite sleep call. This allows us to
+ #     run separate docker exec commands that keep the state
+ #     of the container between calls.
+  - export DOC_ID=`docker run -d -v $(pwd):$(pwd) -w $(pwd) ${DOCKERHUB_USERNAME}/${IMAGE_NAME} sleep 10000000000`
+ # used by codecov when uploading the coverage report
+  - export CI_ENV=`bash <(curl -s https://codecov.io/env)`
+ # enable tracking of coverage for subprocesses launched
+ # during tests
   - export COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/coveragerc
   - cp ${TRAVIS_BUILD_DIR}/.coveragerc ${COVERAGE_PROCESS_START}
   - echo "data_file=${TRAVIS_BUILD_DIR}/.coverage" >> ${COVERAGE_PROCESS_START}
-  - SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
-  - echo "import coverage; coverage.process_startup()" > ${SITE_PACKAGES}/run_coverage_at_startup.pth
+ # commands prefixed by ${DOC} will execute inside the
+ # running docker container
+  - export DOC="docker exec ${CI_ENV} -e IMAGE_NAME -e COVERAGE_PROCESS_START ${DOC_ID}"
 
-  # Run Pyomo tests
-  - test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
+install:
+  - ${DOC} pip install -U pip setuptools wheel
+  - |
+    if [ -n "$SLIM" ]
+    then
+        ${DOC} pip uninstall -y numpy scipy matplotlib numba \
+                                mpi4py ipython openpyxl \
+                                sympy pymysql pyodbc pyro4 pyyaml \
+                                networkx xlrd pandas matplotlib dill
+    fi
+  - ${DOC} pip install nose coverage codecov
+ # Clone but don't install pyomo-model-libraries
+  - ${DOC} git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
+ # Install PyUtilib (master branch)
+  - ${DOC} pip install --quiet git+https://github.com/PyUtilib/pyutilib
+ # Install this package
+  - ${DOC} python setup.py develop
+ # Finish setting up coverage tracking for subprocesses
+  - DOCKER_SITE_PACKAGES=`${DOC} python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
+  - |
+    if [ -z "$DISABLE_COVERAGE" ]
+    then
+        ${DOC} bash -c "echo 'import coverage; coverage.process_startup()' > ${DOCKER_SITE_PACKAGES}/run_coverage_at_startup.pth"
+    fi
 
-  # Run documentation tests
-  - cd doc/OnlineDocs && make doctest -d && cd ../..
-  # nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
+script:
+  - ${DOC} python --version
+  - ${DOC} pip --version
+  - ${DOC} bash -c 'echo CPLEX_VERSION="$CPLEX_VERSION"'
+  - ${DOC} bash -c 'echo CPLEX_AMPL_VERSION="$CPLEX_AMPL_VERSION"'
+  - ${DOC} bash -c 'echo GUROBI_AMPL_VERSION="$GUROBI_AMPL_VERSION"'
+  - ${DOC} bash -c 'echo BARON_VERSION="$BARON_VERSION"'
+  - ${DOC} bash -c 'echo GLPK_VERSION="$GLPK_VERSION"'
+  - ${DOC} bash -c 'echo IPOPT_VERSION="$IPOPT_VERSION"'
+  - ${DOC} bash -c 'echo CBC_VERSION="$CBC_VERSION"'
+  - ${DOC} bash -c 'echo GAMS_VERSION="$GAMS_VERSION"'
+  - ${DOC} bash -c 'echo GSL_VERSION="$GSL_VERSION"'
+  - ${DOC} bash -c 'echo GJH_VERSION="$GJH_VERSION"'
+  - ${DOC} bash -c 'echo GJH_ASL_JSON_VERSION="$GJH_ASL_JSON_VERSION"'
+  - ${DOC} pip list
+  - ${DOC} test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
+ # Run documentation tests
+  - if [[ "$IMAGE_NAME" != "test-builds:python_3.7-rc" ]]; then ${DOC} make -C doc/OnlineDocs doctest -d; fi
 
+after_script:
+ # Kill the docker container
+  - docker kill ${DOC_ID}
 
 after_success:
-  # Trigger PyomoGallery build
+ # Combine coverage reports over all subprocesses and upload
+  - ${DOC} find . -maxdepth 10 -name ".cov*"
+  - ${DOC} coverage combine
+  - ${DOC} codecov --env IMAGE_NAME -X gcov
+ # Trigger PyomoGallery build
   - "if [ -n \"${KEY_JOB}\" ]; then curl -s -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Travis-API-Version: 3' -H 'Authorization: token 4DadIB521uUPyBXMtvQVOw' -d '{\"request\": {\"branch\": \"master\"}}' https://api.travis-ci.org/repo/Pyomo%2FPyomoGallery/requests; fi"
-
-  # Combine coverage reports over all subprocesses
-  - cd $TRAVIS_BUILD_DIR
-  - ls -alh
-  - find . -maxdepth 1 -name ".cov*" | wc -l
-  - find . -maxdepth 10 -name ".cov*" | wc -l
-  - ls -la .cov*
-  - coverage combine $TRAVIS_BUILD_DIR
-  - ls -la .cov*
-  - codecov -X gcov
-  #- bash <(curl -s https://codecov.io/bash)
-
 
 deploy:
   - provider: pypi

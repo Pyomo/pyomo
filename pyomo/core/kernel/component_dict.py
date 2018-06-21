@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import collections
+import logging
 try:
     from collections import OrderedDict
 except ImportError:                         #pragma:nocover
@@ -20,6 +21,8 @@ from pyomo.core.kernel.component_interface import \
 
 import six
 from six import itervalues, iteritems
+
+logger = logging.getLogger('pyomo.core')
 
 # Note that prior to Python 3, collections.MutableMappping
 # is not defined with an empty __slots__
@@ -73,20 +76,6 @@ class ComponentDict(_SimpleContainerMixin,
     # Define the IComponentContainer abstract methods
     #
 
-    def child_key(self, child):
-        """Get the lookup key associated with a child of
-        this container.
-
-        Raises:
-            ValueError: if the argument is not a child of
-                this container
-        """
-        if getattr(child, "parent", None) is self:
-            for key, val in iteritems(self._data):
-                if val is child:
-                    return key
-        raise ValueError
-
     def child(self, key):
         """Get the child object associated with a given
         storage key for this container.
@@ -97,26 +86,12 @@ class ComponentDict(_SimpleContainerMixin,
         """
         return self[key]
 
-    def children(self, return_key=False):
-        """Iterate over the children of this container.
-
-        Args:
-            return_key (bool): Set to :const:`True` to
-                indicate that the return type should be a
-                2-tuple consisting of the child storage key
-                and the child object. By default, only the
-                child objects are returned.
-
-        Returns:
-            iterator of objects or (key,object) tuples
-        """
-        if return_key:
-            return iteritems(self._data)
-        else:
-            return itervalues(self._data)
+    def children(self):
+        """A generator over the children of this container."""
+        return itervalues(self._data)
 
     def _fast_insert(self, key, item):
-        self._prepare_for_add(item)
+        self._prepare_for_add(key, item)
         self._data[key] = item
 
     #
@@ -127,6 +102,15 @@ class ComponentDict(_SimpleContainerMixin,
         if item.ctype == self.ctype:
             if item._parent is None:
                 if key in self._data:
+                    logger.warning(
+                        "Implicitly replacing the entry %s (type=%s) "
+                        "with a new object (type=%s). This is usually "
+                        "indicative of a modeling error. To avoid this "
+                        "warning, delete the original object from the "
+                        "container before assigning a new object."
+                        % (self[key].name,
+                           self[key].__class__.__name__,
+                           item.__class__.__name__))
                     self._prepare_for_delete(
                         self._data[key])
                 self._fast_insert(key, item)

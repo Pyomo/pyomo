@@ -1,0 +1,16 @@
+model = AbstractModel()
+
+# a first-stage variable
+model.x = Var()
+
+# a second-stage variable
+model.y = Var()
+
+# a param initialized with scenario-specific data
+model.p = Param()
+
+# a second-stage constraint with a stochastic upper bound
+# hidden in the left-hand-side expression
+def c_rule(m):
+    return (m.x - m.p) + m.y <= 10
+model.c = Constraint(rule=c_rule)

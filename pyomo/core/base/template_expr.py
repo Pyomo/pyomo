@@ -16,13 +16,6 @@ from pyomo.core.expr.numvalue import (
 import pyomo.core.base
 
 
-class TemplateExpressionError(ValueError):
-
-    def __init__(self, template, *args, **kwds):
-        self.template = template
-        super(TemplateExpressionError, self).__init__(*args, **kwds)
-
-
 class IndexTemplate(NumericValue):
     """A "placeholder" for an index value in template expressions.
 
@@ -81,7 +74,7 @@ class IndexTemplate(NumericValue):
         """
         if self._value is None:
             if exception:
-                raise TemplateExpressionError(self)
+                raise EXPR.TemplateExpressionError(self)
             return None
         else:
             return self._value
@@ -110,8 +103,8 @@ class IndexTemplate(NumericValue):
     def __str__(self):
         return self.getname()
 
-    def getname(self, fully_qualified=False, name_buffer=None):
-        return "{"+self._set.getname(fully_qualified, name_buffer)+"}"
+    def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
+        return "{"+self._set.getname(fully_qualified, name_buffer, relative_to)+"}"
 
     def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         return self.name
@@ -126,7 +119,7 @@ class IndexTemplate(NumericValue):
 class ReplaceTemplateExpression(EXPR.ExpressionReplacementVisitor):
 
     def __init__(self, substituter, *args):
-        super(ReplaceTemplateExpression,self).__init__(self)
+        super(ReplaceTemplateExpression, self).__init__()
         self.substituter = substituter
         self.substituter_args = args
 
@@ -134,10 +127,8 @@ class ReplaceTemplateExpression(EXPR.ExpressionReplacementVisitor):
         if type(node) is EXPR.GetItemExpression or type(node) is IndexTemplate:
             return True, self.substituter(node, *self.substituter_args)
 
-        if type(node) in native_numeric_types or not node.is_expression_type():
-            return True, node
-
-        return False, None
+        return super(
+            ReplaceTemplateExpression, self).visiting_potential_leaf(node)
 
 
 def substitute_template_expression(expr, substituter, *args):
@@ -173,7 +164,7 @@ class _GetItemIndexer(object):
                 val = value(x)
                 self._args.append(val)
                 _hash.append(val)
-            except TemplateExpressionError as e:
+            except EXPR.TemplateExpressionError as e:
                 if x is not e.template:
                     raise TypeError(
                         "Cannot use the param substituter with expression "

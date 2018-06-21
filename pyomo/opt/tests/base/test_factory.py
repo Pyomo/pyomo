@@ -19,19 +19,19 @@ currdir = dirname(abspath(__file__))+os.sep
 import pyutilib.th as unittest
 import pyutilib.services
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 import pyomo.opt
 import pyomo.opt.plugins.sol
 from pyomo.opt.base.solvers import UnknownSolver
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
-pyomo.util.plugin.push('pyomo.opt')
+pyomo.common.plugin.push('pyomo.opt')
 
 
 class TestWriter(pyomo.opt.AbstractProblemWriter):
 
-    pyomo.util.plugin.alias('wtest')
+    pyomo.common.plugin.alias('wtest')
 
     def __init__(self, name=None):
         pyomo.opt.AbstractProblemWriter.__init__(self,name)
@@ -39,7 +39,7 @@ class TestWriter(pyomo.opt.AbstractProblemWriter):
 
 class TestReader(pyomo.opt.AbstractResultsReader):
 
-    pyomo.util.plugin.alias('rtest')
+    pyomo.common.plugin.alias('rtest')
 
     def __init__(self, name=None):
         pyomo.opt.AbstractResultsReader.__init__(self,name)
@@ -47,7 +47,7 @@ class TestReader(pyomo.opt.AbstractResultsReader):
 
 class TestSolver(pyomo.opt.OptSolver):
 
-    pyomo.util.plugin.alias('stest')
+    pyomo.common.plugin.alias('stest')
 
     def __init__(self, **kwds):
         kwds['type'] = 'stest_type'
@@ -58,7 +58,7 @@ class TestSolver(pyomo.opt.OptSolver):
         return False
 
 
-pyomo.util.plugin.pop()
+pyomo.common.plugin.pop()
 
 
 class Test(unittest.TestCase):

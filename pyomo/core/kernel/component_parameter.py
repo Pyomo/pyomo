@@ -47,6 +47,15 @@ class IParameter(IComponent, NumericValue):
         """A boolean indicating that this parameter is constant."""
         return False
 
+    def is_parameter_type(self):
+        """A boolean indicating that this is a parameter object."""
+        #
+        # The semantics of ParamData and parameter are different.
+        # By default, ParamData are immutable.  Hence, we treat the
+        # parameter objects as non-parameter data ... for now.
+        #
+        return False
+
     def is_variable_type(self):
         """A boolean indicating that this is a variable object."""
         return False
@@ -72,10 +81,12 @@ class parameter(IParameter):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_value",
                  "__weakref__")
     def __init__(self, value=None):
         self._parent = None
+        self._storage_key = None
         self._value = value
 
     #
@@ -96,6 +107,7 @@ class parameter_tuple(ComponentTuple):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_data")
     if six.PY3:
         # This has to do with a bug in the abc module
@@ -106,6 +118,7 @@ class parameter_tuple(ComponentTuple):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         super(parameter_tuple, self).__init__(*args, **kwds)
 
 class parameter_list(ComponentList):
@@ -114,6 +127,7 @@ class parameter_list(ComponentList):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_data")
     if six.PY3:
         # This has to do with a bug in the abc module
@@ -124,6 +138,7 @@ class parameter_list(ComponentList):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         super(parameter_list, self).__init__(*args, **kwds)
 
 class parameter_dict(ComponentDict):
@@ -132,6 +147,7 @@ class parameter_dict(ComponentDict):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_data")
     if six.PY3:
         # This has to do with a bug in the abc module
@@ -142,4 +158,5 @@ class parameter_dict(ComponentDict):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         super(parameter_dict, self).__init__(*args, **kwds)
