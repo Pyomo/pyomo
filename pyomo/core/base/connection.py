@@ -29,7 +29,10 @@ class _ConnectionData(_BlockData):
         # because IndexedComponent._setitem_when_not_present creates this with
         # no arguments except component. Thus we must rely on always using
         # set_connection to set these attributes so that _validate_conns is
-        # called, especially if it is after instantiating the class.
+        # called, especially if it is after instantiating the class. There is a
+        # check in the ConnectionExpander to make sure each Connection is
+        # initialized before it is expanded, but this would probably only
+        # happen if the user passed a bad custom IndexedConnection rule.
         if len(kwds):
             self.set_connection(**kwds)
 

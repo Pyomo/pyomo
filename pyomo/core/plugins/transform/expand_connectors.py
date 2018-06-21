@@ -254,7 +254,17 @@ class ExpandConnections(_ConnExpansion):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
             logger.debug("Calling ConnectionExpander")
 
+        # first make sure every Connection is initialized before expanding any
+        connection_list = []
         for ctn in instance.component_data_objects(Connection):
+            if not hasattr(ctn, "directed"):
+                raise RuntimeError(
+                    "Found uninitialized Connection '%s' in instance. This is "
+                    "indicative of an IndexedConnection rule that does not "
+                    "initialize its _ConnectionData objects." % ctn)
+            connection_list.append(ctn)
+
+        for ctn in connection_list:
             if ctn.directed:
                 connector_list = [ctn.source, ctn.destination]
             else:
