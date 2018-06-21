@@ -118,16 +118,6 @@ def _hermite_cubic_transform(v, s):
     pass
 
 
-def factorial(n):
-    if n < 0 or not isinstance(n, int):
-        raise ValueError(
-            "Can only take the factorial of a non-negative integer")
-    elif n > 0:
-        return n * factorial(n - 1)
-    else:
-        return 1
-
-
 def conv(a, b):
     if len(a) == 0 or len(b) == 0:
         raise ValueError("Cannot convolve an empty list")
@@ -151,6 +141,8 @@ def conv(a, b):
 
 def calc_cp(alpha, beta, k):
     gamma = []
+    factorial = numpy.math.factorial
+    
     for i in range(k + 1):
         num = factorial(alpha + k) * factorial(alpha + beta + k + i)
         denom = factorial(alpha + i) * factorial(k - i) * factorial(i)
