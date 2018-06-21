@@ -13,8 +13,8 @@ from six.moves import xrange
 
 from pyomo.core.base.plugin import alias
 from pyomo.core.base import Transformation
-from pyomo.core import *
-from pyomo.dae import *
+from pyomo.core import Var
+from pyomo.dae import ContinuousSet, DerivativeVar, Integral
 from pyomo.dae.misc import generate_finite_elements
 from pyomo.dae.misc import generate_colloc_points
 from pyomo.dae.misc import expand_components
