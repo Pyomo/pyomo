@@ -250,11 +250,6 @@ class Collocation_Discretization_Transformation(Transformation):
             'LAGRANGE-LEGENDRE': (_lagrange_legendre_transform,
                                   _lagrange_legendre_transform_order2)}
 
-    def _setup(self, instance):
-        instance = instance.clone()
-        instance.construct()
-        return instance
-
     def _get_radau_constants(self, currentds):
         """
         This function sets the radau collocation points and a values depending
