@@ -10,7 +10,9 @@
 
 __all__ = [ 'Connection' ]
 
-from pyomo.core.base.block import Block, _BlockData
+from pyomo.core.base.component import ActiveComponentData
+from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
+    UnindexedComponent_set)
 from pyomo.core.base.connector import (SimpleConnector, IndexedConnector,
     _ConnectorData)
 from pyomo.core.base.plugin import (register_component,
@@ -19,22 +21,19 @@ from pyomo.common.plugin import Plugin, implements
 from six import iteritems
 
 
-class _ConnectionData(_BlockData):
+class _ConnectionData(ActiveComponentData):
 
-    def __init__(self, component, **kwds):
+    def __init__(self, component=None, **kwds):
 
-        super(_ConnectionData, self).__init__(component)
-
-        # We have to be ok with not setting these attributes when initialized,
-        # because IndexedComponent._setitem_when_not_present creates this with
-        # no arguments except component. Thus we must rely on always using
-        # set_connection to set these attributes so that _validate_conns is
-        # called, especially if it is after instantiating the class. There is a
-        # check in the ConnectionExpander to make sure each Connection is
-        # initialized before it is expanded, but this would probably only
-        # happen if the user passed a bad custom IndexedConnection rule.
+        self._component = weakref_ref(component) if (component is not None) \
+                          else None
+        self._active = True
+        self._source = None
+        self._destination = None
+        self._connectors = None
+        self._directed = None
         if len(kwds):
-            self.set_connection(**kwds)
+            self.set_value(**kwds)
 
     @property
     def source(self):
@@ -52,18 +51,13 @@ class _ConnectionData(_BlockData):
     def directed(self):
         return self._directed
 
-    def set_connection(self, **kwds):
-        if not hasattr(self, "_source"):
-            # if not yet defined, use None for default
-            source = kwds.pop("source", None)
-            destination = kwds.pop("destination", None)
-            connectors = kwds.pop("connectors", None)
-        else:
-            # if this is resetting them, use previous setting as default so you
-            # can change only source and not have to pass destination again
-            source = kwds.pop("source", self._source)
-            destination = kwds.pop("destination", self._destination)
-            connectors = kwds.pop("connectors", self._connectors)
+    def set_value(self, **kwds):
+        """Set the connection attributes on this connection."""
+
+        # allow user to change source without having to repass destination
+        source = kwds.pop("source", self._source)
+        destination = kwds.pop("destination", self._destination)
+        connectors = kwds.pop("connectors", self._connectors)
 
         if len(kwds):
             raise ValueError(
@@ -76,7 +70,7 @@ class _ConnectionData(_BlockData):
         object.__setattr__(self, "_source", source)
         object.__setattr__(self, "_destination", destination)
         self._connectors = connectors # lists do not go through add_component
-        self._directed = self.source is not None
+        self._directed = self._source is not None
 
     def _validate_conns(self, source, destination, connectors):
         connector_types = set([SimpleConnector, _ConnectorData])
@@ -116,34 +110,123 @@ class _ConnectionData(_BlockData):
                                  "Connector." % str(destination))
 
 
-class Connection(Block):
+class Connection(ActiveIndexedComponent):
+    """
+    Component used for equating the members of two Connector objects.
+
+    Constructor arguments:
+        source          A single Connector for a directed connection
+        destination     A single Connector for a directed connection
+        connectors      A two-member iterable of single Connectors for an
+                            undirected connection
+        rule            A function that returns either a dictionary of the
+                            connection arguments or a two-member iterable
+        doc             A text string describing this component
+        name            A name for this component
+    """
 
     _ComponentDataClass = _ConnectionData
 
     def __new__(cls, *args, **kwds):
         if cls != Connection:
             return super(Connection, cls).__new__(cls)
-        if args == ():
-            return SimpleConnection.__new__(SimpleConnection)
+        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
+            return SimpleConstraint.__new__(SimpleConstraint)
         else:
-            return IndexedConnection.__new__(IndexedConnection)
-
-    def __init__(self, *args, **kwds):
-        kwds.setdefault("ctype", Connection)
-        super(Connection, self).__init__(*args, **kwds)
-
-
-class SimpleConnection(_ConnectionData, Connection):
+            return IndexedConstraint.__new__(IndexedConstraint)
 
     def __init__(self, *args, **kwds):
         tmp = dict()
         tmp["source"] = kwds.pop("source", None)
         tmp["destination"] = kwds.pop("destination", None)
         tmp["connectors"] = kwds.pop("connectors", None)
+        self._directed = kwds.pop("directed", None)
+        self._init_vals = tmp
+        self._rule = kwargs.pop('rule', None)
+        kwds.setdefault("ctype", Connection)
+        super(Connection, self).__init__(*args, **kwds)
 
-        _ConnectionData.__init__(self, self, **tmp)
+    def construct(self, data=None):
+        """
+        Initialize the Connection
+        """
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+            logger.debug("Constructing Connection %s" % (self.name))
+
+        if self._constructed:
+            return
+
+        timer = ConstructionTimer(self)
+        self._constructed = True
+        init_rule = self._rule
+        init_vals = self._init_vals
+        self_parent = self._parent()
+
+        if not self.is_indexed():
+            if init_rule is None:
+                tmp = init_vals
+            else:
+                try:
+                    tmp = init_rule(self_parent)
+                except Exception:
+                    err = sys.exc_info()[1]
+                    logger.error(
+                        "Rule failed when generating expression for "
+                        "connection %s:\n%s: %s"
+                        % (self.name,
+                           type(err).__name__,
+                           err))
+                    raise
+                if type(tmp) is not dict:
+                    if len(tmp) != 2:
+                        raise ValueError("")
+                    if self._directed is True:
+                        tmp = {"source": tmp[0], "destination": tmp[1]}
+                    else:
+                        tmp = {"connectors": tmp}
+            self.set_value(**tmp)
+
+        else:
+            if _init_expr is not None:
+                raise IndexError(
+                    "Constraint '%s': Cannot initialize multiple indices "
+                    "of a constraint with a single expression" %
+                    (self.name,) )
+
+            for ndx in self._index:
+                try:
+                    tmp = apply_indexed_rule(self,
+                                             init_rule,
+                                             self_parent,
+                                             ndx)
+                except Exception:
+                    err = sys.exc_info()[1]
+                    logger.error(
+                        "Rule failed when generating expression for "
+                        "constraint %s with index %s:\n%s: %s"
+                        % (self.name,
+                           str(ndx),
+                           type(err).__name__,
+                           err))
+                    raise
+                self._setitem_when_not_present(ndx, tmp)
+        timer.report()
+
+
+class SimpleConnection(_ConnectionData, Connection):
+
+    def __init__(self, *args, **kwds):
+        _ConnectionData.__init__(self, self)
         Connection.__init__(self, *args, **kwds)
-        self._data[None] = self
+
+    def set_value(self, *args, **kwds):
+        """Set the connection attributes on this connection."""
+        if not self._constructed:
+            raise ValueError(
+                "Setting the value of connection '%s' before "
+                "the Connection has been constructed (there "
+                "is currently no object to set)." % (self.name))
+        return super(SimpleConnection, self).set_value(*args, **kwds)
 
     def pprint(self, filename=None, ostream=None, verbose=False, prefix=""):
         Connection.pprint(self, filename=filename, ostream=ostream,
@@ -222,7 +305,7 @@ class IndexedConnection(Connection):
         return generate_connections
 
 
-register_component(Connection, "Connection block equating two Connectors.")
+register_component(Connection, "Connection used for equating two Connectors.")
 
 
 class ConnectionExpander(Plugin):
