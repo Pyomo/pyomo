@@ -194,7 +194,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                     raise ValueError(
                         "Space detected in CPLEX warm start file path/name and "
                         "CPLEX older than version 12.8.  Please either upgrade "
-                        "CPLEX or remove the space from the logfile path.")
+                        "CPLEX or remove the space from the warm start path.")
 
             user_warmstart = True
 
@@ -295,7 +295,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 raise ValueError(
                     "Space detected in CPLEX solution file path/name and "
                     "CPLEX older than version 12.8.  Please either upgrade "
-                    "CPLEX or remove the space from the logfile path.")
+                    "CPLEX or remove the space from the solution file path.")
 
         #
         # Write the CPLEX execution script
@@ -326,7 +326,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 raise ValueError(
                     "Space detected in CPLEX LP file path/name and "
                     "CPLEX older than version 12.8.  Please either upgrade "
-                    "CPLEX or remove the space from the logfile path.")
+                    "CPLEX or remove the space from the LP file path.")
 
         script += 'read %s\n' % ( _lp_file, )
 
