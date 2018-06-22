@@ -80,40 +80,46 @@ class _ConnectionData(ActiveComponentData):
 
     def _validate_conns(self, source, destination, connectors):
         connector_types = set([SimpleConnector, _ConnectorData])
+        msg = "Connection %s: " % self.name
         if connectors is not None:
             if source is not None or destination is not None:
-                raise ValueError("Cannot specify 'source' or 'destination' "
-                                 "when using 'connectors' argument.")
+                raise ValueError(msg +
+                    "cannot specify 'source' or 'destination' "
+                    "when using 'connectors' argument.")
             if (type(connectors) not in (list, tuple) or
                 len(connectors) != 2):
-                raise ValueError("Argument 'connectors' must be list or tuple "
-                                 "containing exactly 2 Connectors.")
+                raise ValueError(msg +
+                    "argument 'connectors' must be list or tuple "
+                    "containing exactly 2 Connectors.")
             for c in connectors:
                 if type(c) not in connector_types:
                     if type(c) is IndexedConnector:
-                        raise ValueError(
-                            "Found IndexedConnector '%s' in 'connectors', "
+                        raise ValueError(msg +
+                            "found IndexedConnector '%s' in 'connectors', "
                             "must use single Connectors for Connection." % c)
-                    raise ValueError("Found object '%s' in 'connectors' not "
-                                     "of type Connector." % str(c))
+                    raise ValueError(msg +
+                        "found object '%s' in 'connectors' not "
+                        "of type Connector." % str(c))
         else:
             if source is None or destination is None:
-                raise ValueError("Must specify both 'source' and "
-                                 "'destination' for directed Connection.")
+                raise ValueError(msg +
+                    "must specify both 'source' and 'destination' "
+                    "for directed Connection.")
             if type(source) not in connector_types:
                 if type(source) is IndexedConnector:
-                    raise ValueError(
-                        "Found IndexedConnector '%s' as source, must use "
+                    raise ValueError(msg +
+                        "found IndexedConnector '%s' as source, must use "
                         "single Connectors for Connection." % source)
-                raise ValueError("Source object '%s' not of type "
-                                 "Connector." % str(source))
+                raise ValueError(msg +
+                    "source object '%s' not of type Connector." % str(source))
             if type(destination) not in connector_types:
                 if type(destination) is IndexedConnector:
-                    raise ValueError(
-                        "Found IndexedConnector '%s' as destination, must use "
+                    raise ValueError(msg +
+                        "found IndexedConnector '%s' as destination, must use "
                         "single Connectors for Connection." % destination)
-                raise ValueError("Destination object '%s' not of type "
-                                 "Connector." % str(destination))
+                raise ValueError(msg +
+                    "destination object '%s' not of type Connector."
+                    % str(destination))
 
 
 class Connection(ActiveIndexedComponent):
