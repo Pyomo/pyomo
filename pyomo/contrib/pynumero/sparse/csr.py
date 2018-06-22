@@ -115,7 +115,7 @@ class CSRSymMatrix(CSRMatrix):
 
     def __init__(self, arg1, shape=None, dtype=None, copy=False):
 
-        super().__init__(arg1, shape=shape, dtype=dtype, copy=copy)
+        super(CSRSymMatrix, self).__init__(arg1, shape=shape, dtype=dtype, copy=copy)
 
         # add check to veryfy square matrix
         if self.shape[0] != self.shape[1]:
