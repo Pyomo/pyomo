@@ -12,8 +12,12 @@ import itertools
 from six import iteritems
 from six.moves import xrange
 
-from pyomo.core import Block, ConstraintList, Set
+from pyomo.core import Block, ConstraintList, Set, Constraint
 from pyomo.gdp.disjunct import Disjunct, Disjunction
+
+import logging
+logger = logging.getLogger('pyomo.gdp')
+
 
 def _pseudo_clone(self):
     """Clone everything in a Disjunct except for the indicator_var"""
@@ -26,10 +30,23 @@ def _pseudo_clone(self):
     return new_block
 
 
-def apply_basic_step( disjunctions ):
+def _squish_singletons(tuple_iter):
+    """Squish all singleton tuples into their non-tuple values."""
+    for tup in tuple_iter:
+        if len(tup) == 1:
+            yield tup[0]
+        else:
+            yield tup
+
+
+def apply_basic_step(disjunctions_or_constraints):
     #
     # Basic steps only apply to XOR'd disjunctions
     #
+    disjunctions = list(obj for obj in disjunctions_or_constraints
+                        if obj.type() == Disjunction)
+    constraints = list(obj for obj in disjunctions_or_constraints
+                       if obj.type() == Constraint)
     for d in disjunctions:
         if not d.parent_component().xor:
             raise ValueError(
@@ -43,8 +60,8 @@ def apply_basic_step( disjunctions ):
     ans.DISJUNCTIONS = Set(initialize=xrange(len(disjunctions)))
     ans.INDEX = Set(
         dimen=len(disjunctions),
-        initialize=itertools.product(
-            *tuple( xrange(len(d.disjuncts)) for d in disjunctions )))
+        initialize=_squish_singletons(itertools.product(
+            *tuple( xrange(len(d.disjuncts)) for d in disjunctions ))))
 
     #
     # Form the individual disjuncts for the new basic step
@@ -57,12 +74,21 @@ def apply_basic_step( disjunctions ):
         #
         ans.disjuncts[idx].src = Block(ans.DISJUNCTIONS)
         for i in ans.DISJUNCTIONS:
-            tmp = _pseudo_clone(disjunctions[i].disjuncts[idx[i]])
+            tmp = _pseudo_clone(disjunctions[i].disjuncts[
+                idx[i] if isinstance(idx, tuple) else idx])
             for k,v in list(iteritems( tmp.component_map() )):
                 if k == 'indicator_var':
                     continue
                 tmp.del_component(k)
                 ans.disjuncts[idx].src[i].add_component(k,v)
+        # Copy in the constraints corresponding to the improper disjunctions
+        ans.disjuncts[idx].improper_constraints = ConstraintList()
+        for constr in constraints:
+            for indx in constr:
+                ans.disjuncts[idx].improper_constraints.add(
+                    (constr[indx].lower, constr[indx].body, constr[indx].upper)
+                )
+                constr[indx].deactivate()
 
     #
     # Link the new disjunct indicator_var's to the original
@@ -74,7 +100,7 @@ def apply_basic_step( disjunctions ):
             ans.indicator_links.add(
                 disjunctions[i].disjuncts[j].indicator_var ==
                 sum( ans.disjuncts[idx].indicator_var for idx in ans.INDEX
-                     if idx[i] == j ))
+                     if (idx[i] if isinstance(idx, tuple) else idx) == j ))
 
     # Form the new disjunction
     ans.disjunction = Disjunction(expr=[ans.disjuncts[i] for i in ans.INDEX])
