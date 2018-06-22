@@ -413,7 +413,6 @@ def as_numeric(obj):
         val = _KnownConstants.get(obj, None)
         if val is not None:
             return val 
-        print ".",
         #
         # Coerce the value to a float, if possible
         #
