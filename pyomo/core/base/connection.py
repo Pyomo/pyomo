@@ -236,9 +236,9 @@ class Connection(ActiveIndexedComponent):
                     "Connection rule for '%s' did not return either a "
                     "dict or a two-member iterable." % self.name)
             if self._directed is True:
-                vals = {"source": vals[0], "destination": vals[1]}
+                vals = {"source": conns[0], "destination": conns[1]}
             else:
-                vals = {"connectors": vals}
+                vals = {"connectors": conns}
         elif self._directed is not None:
             # if for some reason they specified directed, check it
             s = vals.get("source", None)
