@@ -76,9 +76,7 @@ class CuttingPlane_Transformation(Transformation):
     ))
     CONFIG.declare('stream_solver', ConfigValue(
         default=False,
-        # TODO: Qi's looks like this but this doesn't work here... Is it Python
-        #3??  
-        #domain=In([True, False]),
+        domain=bool,
         description="""If true, sets tee=True for every solve performed over 
         "the course of the algorithm"""
     ))
