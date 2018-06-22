@@ -260,7 +260,7 @@ def is_constant(obj):
         # Now we need to confirm that we have an unknown numeric type
         check_if_numeric_type_and_cache(obj)
         # As this branch is only hit for previously unknown (to Pyomo)
-        # types that behave reasonably like numbers, we know that *must*
+        # types that behave reasonably like numbers, we know they *must*
         # be constant.
         return True
     except:
@@ -287,7 +287,7 @@ def is_fixed(obj):
         # Now we need to confirm that we have an unknown numeric type
         check_if_numeric_type_and_cache(obj)
         # As this branch is only hit for previously unknown (to Pyomo)
-        # types that behave reasonably like numbers, we know that *must*
+        # types that behave reasonably like numbers, we know they *must*
         # be fixed.
         return True
     except:
@@ -340,7 +340,7 @@ def is_numeric_data(obj):
         # Now we need to confirm that we have an unknown numeric type
         check_if_numeric_type_and_cache(obj)
         # As this branch is only hit for previously unknown (to Pyomo)
-        # types that behave reasonably like numbers, we know that *must*
+        # types that behave reasonably like numbers, we know they *must*
         # be numeric data (unless an exception is raised).
         return True
     except:
@@ -367,7 +367,7 @@ def polynomial_degree(obj):
         # Now we need to confirm that we have an unknown numeric type
         check_if_numeric_type_and_cache(obj)
         # As this branch is only hit for previously unknown (to Pyomo)
-        # types that behave reasonably like numbers, we know that *must*
+        # types that behave reasonably like numbers, we know they *must*
         # be a numeric constant.
         return 0
     except:
@@ -384,7 +384,7 @@ def polynomial_degree(obj):
 #   For now, all constants are coerced to floats.  This avoids integer
 #   division in Python 2.x.  (At least some of the time.)
 #
-#   When we eliminate support for Python 3.x, we will not need this
+#   When we eliminate support for Python 2.x, we will not need this
 #   coercion.  The main difference in the following code is that we will
 #   need to index KnownConstants by both the class type and value, since
 #   INT, FLOAT and LONG values sometimes hash the same.
@@ -427,7 +427,7 @@ def as_numeric(obj):
         #
         retval = NumericConstant(obj)
         #
-        # Cache the numeric constants.  We used a bounded the cache size
+        # Cache the numeric constants.  We used a bounded cache size
         # to avoid unexpectedly large lists of constants.  There are
         # typically a small number of constants that need to be cached.
         #
