@@ -1,22 +1,21 @@
-import unittest
 import sys
-
+import pyutilib.th as unittest
 try:
-    from pyomo.contrib.pynumero.sparse import (COOMatrix,
-                                               COOSymMatrix,
-                                               SparseBase,
-                                               IdentityMatrix,
-                                               EmptyMatrix)
-
-    from pyomo.contrib.pynumero.sparse.csr import CSRMatrix, CSRSymMatrix
-    from pyomo.contrib.pynumero.sparse.csc import CSCMatrix, CSCSymMatrix
-
     from scipy.sparse.csr import csr_matrix
     from scipy.sparse.csc import csc_matrix
     from scipy.sparse.coo import coo_matrix
     import numpy as np
-except:
+except ImportError:
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
+
+from pyomo.contrib.pynumero.sparse import (COOMatrix,
+                                           COOSymMatrix,
+                                           SparseBase,
+                                           IdentityMatrix,
+                                           EmptyMatrix)
+
+from pyomo.contrib.pynumero.sparse.csr import CSRMatrix, CSRSymMatrix
+from pyomo.contrib.pynumero.sparse.csc import CSCMatrix, CSCSymMatrix
 
 
 class TestCOOMatrix(unittest.TestCase):

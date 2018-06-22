@@ -1,13 +1,12 @@
-import pyomo.environ as pe
-import unittest
-
+import pyutilib.th as unittest
 try:
-    from pyomo.contrib.pynumero.interfaces.nlp import PyomoNLP, AmplNLP
     import scipy.sparse as spa
     import numpy as np
-except:
+except ImportError:
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
+import pyomo.environ as pe
+from pyomo.contrib.pynumero.interfaces.nlp import PyomoNLP, AmplNLP
 
 def create_basic_model():
 
