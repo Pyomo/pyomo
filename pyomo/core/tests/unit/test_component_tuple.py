@@ -16,11 +16,9 @@ import pyutilib.th as unittest
 import pyomo.environ
 from pyomo.core.kernel.component_interface import \
     (ICategorizedObject,
-     IActiveObject,
      IComponent,
-     _ActiveComponentMixin,
      IComponentContainer,
-     _ActiveComponentContainerMixin)
+     _ActiveObjectMixin)
 from pyomo.core.kernel.component_tuple import (ComponentTuple,
                                                create_component_tuple)
 from pyomo.core.kernel.component_block import (IBlockStorage,
@@ -233,14 +231,6 @@ class _TestComponentTupleBase(object):
         self.assertNotEqual(ctuple1, dict())
         self.assertFalse(ctuple1 == dict())
 
-    def test_child_key(self):
-        ctuple = self._container_type()
-        c = self._ctype_factory()
-        with self.assertRaises(ValueError):
-            ctuple.child_key(c)
-        ctuple = self._container_type([c])
-        self.assertEqual(ctuple.child_key(c), 0)
-
     def test_child(self):
         ctuple = self._container_type()
         with self.assertRaises(KeyError):
@@ -438,23 +428,17 @@ class _TestComponentTupleBase(object):
              self._ctype_factory()])
 
         traversal = []
-        traversal.append((None,ctuple))
-        traversal.append((0,ctuple[0]))
-        traversal.append((1,ctuple[1]))
-        traversal.append((0,ctuple[1][0]))
-        traversal.append((2,ctuple[2]))
+        traversal.append(ctuple)
+        traversal.append(ctuple[0])
+        traversal.append(ctuple[1])
+        traversal.append(ctuple[1][0])
+        traversal.append(ctuple[2])
 
-        self.assertEqual([c.name for k,c in traversal],
+        self.assertEqual([c.name for c in traversal],
                          [c.name for c in ctuple.preorder_traversal()])
-        self.assertEqual([id(c) for k,c in traversal],
+        self.assertEqual([id(c) for c in traversal],
                          [id(c) for c in ctuple.preorder_traversal()])
 
-        self.assertEqual([(k,c.name) for k,c in traversal],
-                         [(k,c.name) for k,c in ctuple.preorder_traversal(
-                             return_key=True)])
-        self.assertEqual([(k,id(c)) for k,c in traversal],
-                         [(k,id(c)) for k,c in ctuple.preorder_traversal(
-                             return_key=True)])
         return ctuple, traversal
 
     def test_preorder_visit(self):
@@ -467,11 +451,11 @@ class _TestComponentTupleBase(object):
              self._ctype_factory()])
 
         traversal = []
-        traversal.append((None,ctuple))
-        traversal.append((0,ctuple[0]))
-        traversal.append((1,ctuple[1]))
-        traversal.append((0,ctuple[1][0]))
-        traversal.append((2,ctuple[2]))
+        traversal.append(ctuple)
+        traversal.append(ctuple[0])
+        traversal.append(ctuple[1])
+        traversal.append(ctuple[1][0])
+        traversal.append(ctuple[2])
 
         def visit(x):
             visit.traversal.append(x)
@@ -486,20 +470,20 @@ class _TestComponentTupleBase(object):
             return True
         visit.traversal = []
         ctuple.preorder_visit(visit)
-        self.assertEqual([c.name for k,c in traversal],
+        self.assertEqual([c.name for c in traversal],
                          [c.name for c in visit.traversal])
-        self.assertEqual([id(c) for k,c in traversal],
+        self.assertEqual([id(c) for c in traversal],
                          [id(c) for c in visit.traversal])
 
-        def visit(k,x):
-            visit.traversal.append((k,x))
+        def visit(x):
+            visit.traversal.append(x)
             return True
         visit.traversal = []
-        ctuple.preorder_visit(visit, include_key=True)
-        self.assertEqual([(k,c.name) for k,c in traversal],
-                         [(k,c.name) for k,c in visit.traversal])
-        self.assertEqual([(k,id(c)) for k,c in traversal],
-                         [(k,id(c)) for k,c in visit.traversal])
+        ctuple.preorder_visit(visit)
+        self.assertEqual([c.name for c in traversal],
+                         [c.name for c in visit.traversal])
+        self.assertEqual([id(c) for c in traversal],
+                         [id(c) for c in visit.traversal])
         return ctuple, traversal
 
     def test_postorder_traversal(self):
@@ -512,23 +496,17 @@ class _TestComponentTupleBase(object):
              self._ctype_factory()])
 
         traversal = []
-        traversal.append((0,ctuple[0]))
-        traversal.append((0,ctuple[1][0]))
-        traversal.append((1,ctuple[1]))
-        traversal.append((2,ctuple[2]))
-        traversal.append((None,ctuple))
+        traversal.append(ctuple[0])
+        traversal.append(ctuple[1][0])
+        traversal.append(ctuple[1])
+        traversal.append(ctuple[2])
+        traversal.append(ctuple)
 
-        self.assertEqual([c.name for k,c in traversal],
+        self.assertEqual([c.name for c in traversal],
                          [c.name for c in ctuple.postorder_traversal()])
-        self.assertEqual([id(c) for k,c in traversal],
+        self.assertEqual([id(c) for c in traversal],
                          [id(c) for c in ctuple.postorder_traversal()])
 
-        self.assertEqual([(k,c.name) for k,c in traversal],
-                         [(k,c.name) for k,c in ctuple.postorder_traversal(
-                             return_key=True)])
-        self.assertEqual([(k,id(c)) for k,c in traversal],
-                         [(k,id(c)) for k,c in ctuple.postorder_traversal(
-                             return_key=True)])
         return ctuple, traversal
 
     def test_create_component_tuple(self):
@@ -565,10 +543,9 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
     def test_active_type(self):
         ctuple = self._container_type()
         self.assertTrue(isinstance(ctuple, IComponentContainer))
-        self.assertTrue(isinstance(ctuple, _ActiveComponentContainerMixin))
         self.assertTrue(isinstance(ctuple, ICategorizedObject))
+        self.assertTrue(isinstance(ctuple, _ActiveObjectMixin))
         self.assertFalse(isinstance(ctuple, IComponent))
-        self.assertFalse(isinstance(ctuple, _ActiveComponentMixin))
 
     def test_active(self):
         index = list(range(4))
@@ -606,8 +583,7 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
         self.assertEqual(len(list(ctuple.components())),
                          len(list(ctuple.components(active=True))))
 
-        m.deactivate(shallow=False,
-                     descend_into=True)
+        m.deactivate(shallow=False)
 
         self.assertEqual(m.active, False)
         self.assertEqual(blist.active, False)
@@ -623,6 +599,13 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
 
         test_c = ctuple[0]
         test_c.activate()
+        self.assertEqual(m.active, False)
+        self.assertEqual(blist.active, False)
+        self.assertEqual(blist[1].active, False)
+        self.assertEqual(b.active, False)
+        self.assertEqual(model.active, False)
+        self.assertEqual(ctuple.active, False)
+        ctuple.activate()
         self.assertEqual(m.active, False)
         self.assertEqual(blist.active, False)
         self.assertEqual(blist[1].active, False)
@@ -645,8 +628,7 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
                             len(list(ctuple.components(active=True))))
         self.assertEqual(len(list(ctuple.components(active=True))), 1)
 
-        m.activate(shallow=False,
-                   descend_into=True)
+        m.activate(shallow=False)
 
         self.assertEqual(m.active, True)
         self.assertEqual(blist.active, True)
@@ -664,8 +646,7 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
         self.assertEqual(len(list(ctuple.components())),
                          len(list(ctuple.components(active=True))))
 
-        m.deactivate(shallow=False,
-                     descend_into=True)
+        m.deactivate(shallow=False)
 
         self.assertEqual(m.active, False)
         self.assertEqual(blist.active, False)
@@ -679,7 +660,7 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
                             len(list(ctuple.components(active=True))))
         self.assertEqual(len(list(ctuple.components(active=True))), 0)
 
-        ctuple.activate()
+        ctuple.activate(shallow=False)
 
         self.assertEqual(m.active, False)
         self.assertEqual(blist.active, False)
@@ -697,7 +678,7 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
         self.assertEqual(len(list(ctuple.components())),
                          len(list(ctuple.components(active=True))))
 
-        ctuple.deactivate()
+        ctuple.deactivate(shallow=False)
 
         self.assertEqual(m.active, False)
         self.assertEqual(blist.active, False)
@@ -713,6 +694,13 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
 
         ctuple[-1].activate()
 
+        self.assertEqual(m.active, False)
+        self.assertEqual(blist.active, False)
+        self.assertEqual(blist[1].active, False)
+        self.assertEqual(b.active, False)
+        self.assertEqual(model.active, False)
+        self.assertEqual(ctuple.active, False)
+        ctuple.activate()
         self.assertEqual(m.active, False)
         self.assertEqual(blist.active, False)
         self.assertEqual(blist[1].active, False)
@@ -735,8 +723,8 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
                             len(list(ctuple.components(active=True))))
         self.assertEqual(len(list(ctuple.components(active=True))), 1)
 
-        ctuple.deactivate()
-        ctuple.activate()
+        ctuple.deactivate(shallow=False)
+        ctuple.activate(shallow=False)
 
         self.assertEqual(m.active, False)
         self.assertEqual(blist.active, False)
@@ -760,10 +748,18 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
             test_preorder_traversal()
 
         ctuple[1].deactivate()
-        self.assertEqual([c.name for k,c in traversal if c.active],
+        self.assertEqual([None, '[0]', '[2]'],
                          [c.name for c in ctuple.preorder_traversal(
                              active=True)])
-        self.assertEqual([id(c) for k,c in traversal if c.active],
+        self.assertEqual([id(ctuple),id(ctuple[0]),id(ctuple[2])],
+                         [id(c) for c in ctuple.preorder_traversal(
+                             active=True)])
+
+        ctuple[1].deactivate(shallow=False)
+        self.assertEqual([c.name for c in traversal if c.active],
+                         [c.name for c in ctuple.preorder_traversal(
+                             active=True)])
+        self.assertEqual([id(c) for c in traversal if c.active],
                          [id(c) for c in ctuple.preorder_traversal(
                              active=True)])
 
@@ -784,9 +780,30 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
             return True
         visit.traversal = []
         ctuple.preorder_visit(visit, active=True)
-        self.assertEqual([c.name for k,c in traversal if c.active],
+        self.assertEqual([None, '[0]', '[2]'],
                          [c.name for c in visit.traversal])
-        self.assertEqual([id(c) for k,c in traversal if c.active],
+        self.assertEqual([id(ctuple),id(ctuple[0]),id(ctuple[2])],
+                         [id(c) for c in visit.traversal])
+
+        def visit(x):
+            visit.traversal.append(x)
+            return x.active
+        visit.traversal = []
+        ctuple.preorder_visit(visit)
+        self.assertEqual([None,'[0]','[1]','[2]'],
+                         [c.name for c in visit.traversal])
+        self.assertEqual([id(ctuple),id(ctuple[0]),id(ctuple[1]),id(ctuple[2])],
+                         [id(c) for c in visit.traversal])
+
+        ctuple[1].deactivate(shallow=False)
+        def visit(x):
+            visit.traversal.append(x)
+            return True
+        visit.traversal = []
+        ctuple.preorder_visit(visit, active=True)
+        self.assertEqual([c.name for c in traversal if c.active],
+                         [c.name for c in visit.traversal])
+        self.assertEqual([id(c) for c in traversal if c.active],
                          [id(c) for c in visit.traversal])
 
         def visit(x):
@@ -817,16 +834,42 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
         self.assertEqual(len(visit.traversal), 1)
         self.assertIs(visit.traversal[0], ctuple)
 
+        ctuple.deactivate(shallow=False)
+        def visit(x):
+            visit.traversal.append(x)
+            return True
+        visit.traversal = []
+        ctuple.preorder_visit(visit, active=True)
+        self.assertEqual(len(visit.traversal), 0)
+        self.assertEqual(len(list(ctuple.generate_names(active=True))),
+                         0)
+
+        def visit(x):
+            visit.traversal.append(x)
+            return x.active
+        visit.traversal = []
+        ctuple.preorder_visit(visit)
+        self.assertEqual(len(visit.traversal), 1)
+        self.assertIs(visit.traversal[0], ctuple)
+
     def test_postorder_traversal(self):
         ctuple, traversal = \
             super(_TestActiveComponentTupleBase, self).\
             test_postorder_traversal()
 
         ctuple[1].deactivate()
-        self.assertEqual([c.name for k,c in traversal if c.active],
+        self.assertEqual(['[0]', '[2]', None],
                          [c.name for c in ctuple.postorder_traversal(
                              active=True)])
-        self.assertEqual([id(c) for k,c in traversal if c.active],
+        self.assertEqual([id(ctuple[0]),id(ctuple[2]),id(ctuple)],
+                         [id(c) for c in ctuple.postorder_traversal(
+                             active=True)])
+
+        ctuple[1].deactivate(shallow=False)
+        self.assertEqual([c.name for c in traversal if c.active],
+                         [c.name for c in ctuple.postorder_traversal(
+                             active=True)])
+        self.assertEqual([id(c) for c in traversal if c.active],
                          [id(c) for c in ctuple.postorder_traversal(
                              active=True)])
 

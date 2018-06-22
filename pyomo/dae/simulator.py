@@ -12,7 +12,7 @@ from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 
 from pyomo.core.expr import current as EXPR
-from pyomo.core.expr.numvalue import NumericValue, native_numeric_types, as_numeric
+from pyomo.core.expr.numvalue import NumericValue, native_numeric_types
 from pyomo.core.base.plugin import register_component
 from pyomo.core.base.template_expr import IndexTemplate, _GetItemIndexer
 
@@ -622,6 +622,14 @@ class Simulator:
                 return residual
             self._rhsfun = _rhsfun   
             
+        # Add any diffvars not added by expression walker to self._templatemap
+        if self._intpackage == 'casadi':
+            for _id in diffvars:
+                if _id not in templatemap:
+                    name = "%s[%s]" % (
+                        _id._base.name, ','.join(str(x) for x in _id._args))
+                    templatemap[_id] = casadi.SX.sym(name)
+
         self._contset = contset
         self._cstemplate = cstemplate
         self._diffvars = diffvars

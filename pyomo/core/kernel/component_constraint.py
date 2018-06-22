@@ -13,14 +13,15 @@ import pyutilib.math
 from pyomo.core.expr.numvalue import (ZeroConstant,
                                       is_constant,
                                       as_numeric,
-                                      potentially_variable,
+                                      native_types,
+                                      is_potentially_variable,
+                                      is_numeric_data,
                                       value,
                                       _sub)
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.component_interface import \
     (IComponent,
-     _ActiveComponentMixin,
-     _ActiveComponentContainerMixin,
+     _ActiveObjectMixin,
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.kernel.component_dict import ComponentDict
@@ -34,7 +35,7 @@ from six.moves import zip
 _pos_inf = float('inf')
 _neg_inf = float('-inf')
 
-class IConstraint(IComponent, _ActiveComponentMixin):
+class IConstraint(IComponent, _ActiveObjectMixin):
     """The interface for constraints"""
     __slots__ = ()
 
@@ -187,12 +188,11 @@ class _MutableBoundsConstraintMixin(object):
             raise ValueError(
                 "The lb property can not be set "
                 "when the equality property is True.")
-        if lb is not None:
-            tmp = as_numeric(lb)
-            if tmp.is_potentially_variable():
-                raise ValueError(
+        if (lb is not None) and \
+           (not is_numeric_data(lb)):
+            raise TypeError(
                     "Constraint lower bounds must be "
-                    "expressions restricted to data.")
+                    "expressions restricted to numeric data.")
         self._lb = lb
 
     @property
@@ -205,12 +205,11 @@ class _MutableBoundsConstraintMixin(object):
             raise ValueError(
                 "The ub property can not be set "
                 "when the equality property is True.")
-        if ub is not None:
-            tmp = as_numeric(ub)
-            if tmp.is_potentially_variable():
-                raise ValueError(
-                    "Constraint lower bounds must be "
-                    "expressions restricted to data.")
+        if (ub is not None) and \
+           (not is_numeric_data(ub)):
+            raise TypeError(
+                    "Constraint upper bounds must be "
+                    "expressions restricted to numeric data.")
         self._ub = ub
 
     @property
@@ -230,12 +229,10 @@ class _MutableBoundsConstraintMixin(object):
             raise ValueError(
                 "Constraint right-hand side can not "
                 "be assigned a value of None.")
-        else:
-            tmp = as_numeric(rhs)
-            if tmp.is_potentially_variable():
-                raise ValueError(
-                    "Constraint right-hand side must be "
-                    "expressions restricted to data.")
+        elif not is_numeric_data(rhs):
+            raise TypeError(
+                    "Constraint right-hand side must be numbers "
+                    "or expressions restricted to data.")
         self._lb = rhs
         self._ub = rhs
         self._equality = True
@@ -331,6 +328,7 @@ class constraint(_MutableBoundsConstraintMixin,
     _ctype = None
     _linear_canonical_form = False
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_body",
                  "_lb",
@@ -345,6 +343,7 @@ class constraint(_MutableBoundsConstraintMixin,
                  ub=None,
                  rhs=None):
         self._parent = None
+        self._storage_key = None
         self._active = True
         self._body = None
         self._lb = None
@@ -432,18 +431,13 @@ class constraint(_MutableBoundsConstraintMixin,
             #
             if len(expr) == 2:
                 arg0 = expr[0]
-                if arg0 is not None:
-                    arg0 = as_numeric(arg0)
                 arg1 = expr[1]
-                if arg1 is not None:
-                    arg1 = as_numeric(arg1)
-
                 # assigning to the rhs property
                 # will set the equality flag to True
-                if (arg1 is None) or (not arg1.is_potentially_variable()):
+                if not is_potentially_variable(arg1):
                     self.rhs = arg1
                     self.body = arg0
-                elif (arg0 is None) or (not arg0.is_potentially_variable()):
+                elif not is_potentially_variable(arg0):
                     self.rhs = arg0
                     self.body = arg1
                 else:
@@ -457,12 +451,13 @@ class constraint(_MutableBoundsConstraintMixin,
             elif len(expr) == 3:
                 arg0 = expr[0]
                 if arg0 is not None:
-                    if potentially_variable(arg0):
+                    if not is_numeric_data(arg0):
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the lower "
-                            "value was not data or an expression "
-                            "restricted to storage of data."
+                            "value was not numeric data or an "
+                            "expression restricted to storage of "
+                            "numeric data."
                             % (self.name))
 
                 arg1 = expr[1]
@@ -471,12 +466,13 @@ class constraint(_MutableBoundsConstraintMixin,
 
                 arg2 = expr[2]
                 if arg2 is not None:
-                    if potentially_variable(arg2):
+                    if not is_numeric_data(arg2):
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the upper "
-                            "value was not data or an expression "
-                            "restricted to storage of data."
+                            "value was not numeric data or an "
+                            "expression restricted to storage of "
+                            "numeric data."
                             % (self.name))
 
                 self.lb = arg0
@@ -540,10 +536,10 @@ class constraint(_MutableBoundsConstraintMixin,
             if _expr_type is EXPR.EqualityExpression:
                 # assigning to the rhs property
                 # will set the equality flag to True
-                if not potentially_variable(expr.arg(1)):
+                if not is_potentially_variable(expr.arg(1)):
                     self.rhs = expr.arg(1)
                     self.body = expr.arg(0)
-                elif not potentially_variable(expr.arg(0)):
+                elif not is_potentially_variable(expr.arg(0)):
                     self.rhs = expr.arg(0)
                     self.body = expr.arg(1)
                 else:
@@ -559,13 +555,13 @@ class constraint(_MutableBoundsConstraintMixin,
                         " constraints must be formulated using "
                         "using '<=', '>=', or '=='."
                         % (self.name))
-                if not potentially_variable(expr.arg(1)):
+                if not is_potentially_variable(expr.arg(1)):
                     self.lb = None
-                    self.body  = expr.arg(0)
+                    self.body = expr.arg(0)
                     self.ub = expr.arg(1)
-                elif not potentially_variable(expr.arg(0)):
+                elif not is_potentially_variable(expr.arg(0)):
                     self.lb = expr.arg(0)
-                    self.body  = expr.arg(1)
+                    self.body = expr.arg(1)
                     self.ub = None
                 else:
                     self.lb = None
@@ -582,21 +578,23 @@ class constraint(_MutableBoundsConstraintMixin,
                         "using '<=', '>=', or '=='."
                         % (self.name))
 
-                if potentially_variable(expr.arg(0)):
+                if not is_numeric_data(expr.arg(0)):
                     raise ValueError(
                         "Constraint '%s' found a double-sided "
                         "inequality expression (lower <= "
                         "expression <= upper) but the lower "
-                        "bound was not data or an expression "
-                        "restricted to storage of data."
+                        "bound was not numeric data or an "
+                        "expression restricted to storage of "
+                        "numeric data."
                         % (self.name))
-                if potentially_variable(expr.arg(2)):
+                if not is_numeric_data(expr.arg(2)):
                     raise ValueError(
                         "Constraint '%s' found a double-sided "\
                         "inequality expression (lower <= "
                         "expression <= upper) but the upper "
-                        "bound was not data or an expression "
-                        "restricted to storage of data."
+                        "bound was not numeric data or an "
+                        "expression restricted to storage of "
+                        "numeric data."
                         % (self.name))
 
                 self.lb = expr.arg(0)
@@ -679,6 +677,7 @@ class linear_constraint(_MutableBoundsConstraintMixin,
     _ctype = None
     _linear_canonical_form = False
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_variables",
                  "_coefficients",
@@ -695,6 +694,7 @@ class linear_constraint(_MutableBoundsConstraintMixin,
                  ub=None,
                  rhs=None):
         self._parent = None
+        self._storage_key = None
         self._active = True
         self._variables = None
         self._coefficients = None
@@ -811,12 +811,13 @@ class linear_constraint(_MutableBoundsConstraintMixin,
         return repn
 
 class constraint_tuple(ComponentTuple,
-                       _ActiveComponentContainerMixin):
+                       _ActiveObjectMixin):
     """A tuple-style container for constraints."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_data")
     if six.PY3:
@@ -827,16 +828,18 @@ class constraint_tuple(ComponentTuple,
         __slots__ = list(__slots__) + ["__weakref__"]
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         self._active = True
         super(constraint_tuple, self).__init__(*args, **kwds)
 
 class constraint_list(ComponentList,
-                      _ActiveComponentContainerMixin):
+                      _ActiveObjectMixin):
     """A list-style container for constraints."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_data")
     if six.PY3:
@@ -847,16 +850,18 @@ class constraint_list(ComponentList,
         __slots__ = list(__slots__) + ["__weakref__"]
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         self._active = True
         super(constraint_list, self).__init__(*args, **kwds)
 
 class constraint_dict(ComponentDict,
-                      _ActiveComponentContainerMixin):
+                      _ActiveObjectMixin):
     """A dict-style container for constraints."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_data")
     if six.PY3:
@@ -867,5 +872,6 @@ class constraint_dict(ComponentDict,
         __slots__ = list(__slots__) + ["__weakref__"]
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         self._active = True
         super(constraint_dict, self).__init__(*args, **kwds)
