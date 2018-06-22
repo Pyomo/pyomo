@@ -287,7 +287,12 @@ class SimpleConnection(_ConnectionData, Connection):
                              "is currently no object to set)." % self.name)
         if len(self._data) == 0:
             self._data[None] = self
-        return super(SimpleConnection, self).set_value(vals)
+        try:
+            super(SimpleConnection, self).set_value(vals)
+        except:
+            # don't allow model walker to find poorly constructed connections
+            del self._data[None]
+            raise
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
         Connection.pprint(self, ostream=ostream, verbose=verbose, prefix=prefix)

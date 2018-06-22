@@ -16,7 +16,7 @@ from six import next, iteritems, iterkeys, itervalues
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.plugin import alias
 from pyomo.core.base import Transformation, Connector, Constraint, \
-    ConstraintList, Var, VarList, TraversalStrategy, Connection
+    ConstraintList, Var, VarList, TraversalStrategy, Connection, Block
 from pyomo.core.base.connector import _ConnectorData, SimpleConnector
 
 
@@ -254,17 +254,7 @@ class ExpandConnections(_ConnExpansion):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
             logger.debug("Calling ConnectionExpander")
 
-        # first make sure every Connection is initialized before expanding any
-        connection_list = []
         for ctn in instance.component_data_objects(Connection):
-            if not hasattr(ctn, "directed"):
-                raise RuntimeError(
-                    "Found uninitialized Connection '%s' in instance. This is "
-                    "indicative of an IndexedConnection rule that does not "
-                    "initialize its _ConnectionData objects." % ctn)
-            connection_list.append(ctn)
-
-        for ctn in connection_list:
             if ctn.directed:
                 connector_list = [ctn.source, ctn.destination]
             else:
@@ -275,12 +265,16 @@ class ExpandConnections(_ConnExpansion):
 
             ref = self._validate_and_expand_connector_set(conn_set)
 
+            blk = Block()
+            ctn.parent_block().add_component(
+                "%s.exp" % ctn.local_name, blk)
+
             for k, v in sorted(iteritems(ref)):
                 cname = k + ".equality"
                 if v[1] >= 0:
                     # indexed var
                     cList = ConstraintList()
-                    ctn.add_component(cname, cList)
+                    blk.add_component(cname, cList)
                     for idx in v[0]:
                         tmp = []
                         for c in connector_list:
@@ -291,12 +285,12 @@ class ExpandConnections(_ConnExpansion):
                     tmp = []
                     for c in connector_list:
                         if k in c.aggregators:
-                            new_v = c.vars[k].add()
+                            tmp.append(c.vars[k].add())
                         else:
-                            new_v = c.vars[k]
-                        tmp.append(new_v)
+                            tmp.append(c.vars[k])
                     con = Constraint(expr=tmp[0] == tmp[1])
-                    ctn.add_component(cname, con)
+                    blk.add_component(cname, con)
+            ctn.deactivate()
 
         # Now, go back and implement VarList aggregators
         for conn in connector_list:
