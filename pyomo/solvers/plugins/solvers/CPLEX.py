@@ -55,7 +55,7 @@ def _validate_file_name(cplex, filename, description):
     # CPLEX only supports quoting spaces starting in v12.8.
     if ' ' in filename:
         if cplex.version()[:2] >= (12,8):
-            filename = '"'+self._warm_start_file_name+'"'
+            filename = '"'+filename+'"'
         else:
             raise ValueError(
                 "Space detected in CPLEX %s file path/name\n\t%s\nand "
