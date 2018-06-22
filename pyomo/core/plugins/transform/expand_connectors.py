@@ -283,12 +283,12 @@ class ExpandConnections(_ConnExpansion):
                     blk.add_component(cname, cList)
                     for idx in v[0]:
                         tmp = []
-                        for c in connector_list:
+                        for c in itervalues(conn_set):
                             tmp.append(c.vars[k][idx])
                         cList.add(expr=tmp[0] == tmp[1])
                 else:
                     tmp = []
-                    for c in connector_list:
+                    for c in itervalues(conn_set):
                         if k in c.aggregators:
                             tmp.append(c.vars[k].add())
                         else:
