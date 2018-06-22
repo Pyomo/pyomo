@@ -57,17 +57,21 @@ class _ConnectionData(ActiveComponentData):
     def directed(self):
         return self._directed
 
-    def set_value(self, **kwds):
-        """Set the connector attributes on this connection."""
-        # allow user to change source without having to repass destination
-        source = kwds.pop("source", self._source)
-        destination = kwds.pop("destination", self._destination)
-        connectors = kwds.pop("connectors", self._connectors)
+    def set_value(self, vals):
+        """
+        Set the connector attributes on this connection.
 
-        if len(kwds):
+        If these values are being reassigned, note that the defaults
+        are still None, so you may need to repass some attributes.
+        """
+        source = vals.pop("source", None)
+        destination = vals.pop("destination", None)
+        connectors = vals.pop("connectors", None)
+
+        if len(vals):
             raise ValueError(
                 "set_args passed unrecognized keyword arguments:\n\t" +
-                "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(kwds)))
+                "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(vals)))
 
         self._validate_conns(source, destination, connectors)
 
@@ -205,8 +209,7 @@ class Connection(ActiveIndexedComponent):
             if self._init_vals is not None:
                 raise IndexError(
                     "Connection '%s': Cannot initialize multiple indices "
-                    "of a connection with a single connectors" %
-                    (self.name,) )
+                    "of a connection with single connectors" % self.name)
             for idx in self._index:
                 try:
                     tmp = apply_indexed_rule(self, self._rule, self_parent, idx)
@@ -238,27 +241,32 @@ class Connection(ActiveIndexedComponent):
                 vals = {"connectors": vals}
         elif self._directed is not None:
             # if for some reason they specified directed, check it
-            if (((vals["source"] is not None or vals["destination"] is not None)
-                 and self._directed is False) or
-                (vals["connectors"] is not None and self._directed is True)):
+            s = vals.get("source", None)
+            d = vals.get("destination", None)
+            c = vals.get("connectors", None)
+            if (((s is not None or d is not None) and self._directed is False)
+                or (c is not None and self._directed is True)):
                 raise ValueError(
                     "Passed incorrect value for 'directed' for connection "
                     "'%s'. Value is set automatically when using keywords."
                     % self.name)
         return vals
 
-    def _setitem_when_not_present(self, index, value):
-        # value should be a dict which gets unpacked and passed to set_value
-        if index is None and not self.is_indexed():
-            obj = self._data[index] = self
-        else:
-            obj = self._data[index] = self._ComponentDataClass(component=self)
-        try:
-            obj.set_value(**value)
-            return obj
-        except:
-            del self._data[index]
-            raise
+    def _pprint(self):
+        """Return data that will be printed for this component."""
+        return (
+            [("Size", len(self)),
+             ("Index", self._index if self.is_indexed() else None),
+             ("Active", self.active)],
+            iteritems(self),
+            ("Source", "Destination", "Connectors", "Directed", "Active"),
+            lambda k, v: [v.source,
+                          v.destination,
+                          "(%s, %s)" % v.connectors if v.connectors is not None
+                            else None,
+                          v.directed,
+                          v.active])
+
 
 class SimpleConnection(_ConnectionData, Connection):
 
@@ -266,17 +274,23 @@ class SimpleConnection(_ConnectionData, Connection):
         _ConnectionData.__init__(self, self)
         Connection.__init__(self, *args, **kwds)
 
-    def set_value(self, *args, **kwds):
-        """Set the connection attributes on this connection."""
+    def set_value(self, vals):
+        """
+        Set the connector attributes on this connection.
+
+        If these values are being reassigned, note that the defaults
+        are still None, so you may need to repass some attributes.
+        """
         if not self._constructed:
             raise ValueError("Setting the value of connection '%s' before "
                              "the Connection has been constructed (there "
-                             "is currently no object to set)." % (self.name))
-        return super(SimpleConnection, self).set_value(*args, **kwds)
+                             "is currently no object to set)." % self.name)
+        if len(self._data) == 0:
+            self._data[None] = self
+        return super(SimpleConnection, self).set_value(vals)
 
-    def pprint(self, filename=None, ostream=None, verbose=False, prefix=""):
-        Connection.pprint(self, filename=filename, ostream=ostream,
-                          verbose=verbose, prefix=prefix)
+    def pprint(self, ostream=None, verbose=False, prefix=""):
+        Connection.pprint(self, ostream=ostream, verbose=verbose, prefix=prefix)
 
 
 class IndexedConnection(Connection):
