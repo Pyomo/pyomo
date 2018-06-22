@@ -2021,6 +2021,7 @@ class Test_linear_constraint(unittest.TestCase):
         p = parameter(value=1)
 
         c = linear_constraint()
+        self.assertEqual(c._linear_canonical_form, True)
 
         #
         # compute_values = True
