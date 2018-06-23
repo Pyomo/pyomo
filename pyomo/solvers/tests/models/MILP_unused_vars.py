@@ -169,9 +169,9 @@ class MILP_unused_vars_kernel(MILP_unused_vars):
         model.b = pmo.block()
         model.B = pmo.block_dict()
         model.b.b = flat_model.clone()
-        model.B[1] = pmo.tiny_block()
+        model.B[1] = pmo.block()
         model.B[1].b = flat_model.clone()
-        model.B[2] = pmo.tiny_block()
+        model.B[2] = pmo.block()
         model.B[2].b = flat_model.clone()
 
         model.b.deactivate()

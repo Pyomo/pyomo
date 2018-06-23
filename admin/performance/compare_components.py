@@ -17,7 +17,6 @@ import time
 import pickle
 
 from pyomo.kernel import (block,
-                          tiny_block,
                           block_list,
                           variable,
                           variable_list,
@@ -324,9 +323,12 @@ def build_BlockData():
     return obj
 build_BlockData.owner = Block()
 
-build_block = block
+def build_block():
+    b = block()
+    b._activate_large_storage_mode()
+    return b
 
-build_tiny_block = tiny_block
+build_tiny_block = block
 
 def build_Block_with_objects():
     """Build an empty Block"""
@@ -352,6 +354,7 @@ build_BlockData_with_objects.owner = Block()
 def build_block_with_objects():
     """Build an empty block."""
     b = block()
+    b._activate_large_storage_mode()
     b.x = build_variable()
     b.c = constraint()
     b.o = objective()
@@ -359,7 +362,7 @@ def build_block_with_objects():
 
 def build_tiny_block_with_objects():
     """Build an empty block."""
-    b = tiny_block()
+    b = block()
     b.x = build_variable()
     b.c = constraint()
     b.o = objective()
@@ -376,12 +379,6 @@ def _indexed_Block_rule(b, i):
     b.x4._domain = None
     b.x5 = Var()
     b.x5._domain = None
-    b.x6 = Var()
-    b.x6._domain = None
-    b.x7 = Var()
-    b.x7._domain = None
-    b.x8 = Var()
-    b.x8._domain = None
     return b
 def _reset():
     build_indexed_BlockWVars.model = Block(concrete=True)
@@ -399,27 +396,22 @@ def build_block_list_with_variables():
     blist = block_list()
     for i in range(N):
         b = block()
+        b._activate_large_storage_mode()
         b.x1 = variable(domain_type=None, lb=None, ub=None)
         b.x2 = variable(domain_type=None, lb=None, ub=None)
         b.x3 = variable(domain_type=None, lb=None, ub=None)
         b.x4 = variable(domain_type=None, lb=None, ub=None)
         b.x5 = variable(domain_type=None, lb=None, ub=None)
-        b.x6 = variable(domain_type=None, lb=None, ub=None)
-        b.x7 = variable(domain_type=None, lb=None, ub=None)
-        b.x8 = variable(domain_type=None, lb=None, ub=None)
         blist.append(b)
     return blist
 
 def _get_tiny_block():
-    b = tiny_block()
+    b = block()
     b.x1 = variable(domain_type=None, lb=None, ub=None)
     b.x2 = variable(domain_type=None, lb=None, ub=None)
     b.x3 = variable(domain_type=None, lb=None, ub=None)
     b.x4 = variable(domain_type=None, lb=None, ub=None)
     b.x5 = variable(domain_type=None, lb=None, ub=None)
-    b.x6 = variable(domain_type=None, lb=None, ub=None)
-    b.x7 = variable(domain_type=None, lb=None, ub=None)
-    b.x8 = variable(domain_type=None, lb=None, ub=None)
     return b
 
 def build_tiny_block_list_with_variables():
@@ -430,15 +422,12 @@ build_tiny_block_list_with_variables.myblock = _get_tiny_block
 
 def _get_tiny_block_wstaticvars():
     myvar = _staticvariable
-    b = tiny_block()
+    b = block()
     b.x1 = myvar()
     b.x2 = myvar()
     b.x3 = myvar()
     b.x4 = myvar()
     b.x5 = myvar()
-    b.x6 = myvar()
-    b.x7 = myvar()
-    b.x8 = myvar()
     return b
 
 def build_tiny_block_list_with_staticvariables():
@@ -526,12 +515,12 @@ if __name__ == "__main__":
     # container implementations
     #
     results = []
-    results.append(("AML", "Indexed Block (%s) w/ Vars (8)" % N,
+    results.append(("AML", "Indexed Block (%s) w/ Vars (5)" % N,
                     measure(build_indexed_BlockWVars)))
-    results.append(("Kernel", "block_list (%s) w/ variables (8)" % N,
+    results.append(("Kernel", "block_list (%s) w/ variables (5)" % N,
                     measure(build_block_list_with_variables)))
-    results.append(("Kernel", "tiny_block_list (%s) w/ variables (8)" % N,
+    results.append(("Kernel", "tiny_block_list (%s) w/ variables (5)" % N,
                     measure(build_tiny_block_list_with_variables)))
-    results.append(("<locals>", "tiny_block_list (%s) w/ staticvariables (8)" % N,
+    results.append(("<locals>", "tiny_block_list (%s) w/ staticvariables (5)" % N,
                     measure(build_tiny_block_list_with_staticvariables)))
     summarize(results)

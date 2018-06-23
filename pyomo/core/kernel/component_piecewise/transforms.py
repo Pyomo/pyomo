@@ -30,8 +30,9 @@ import logging
 
 from pyomo.core.expr.numvalue import value
 from pyomo.core.kernel.set_types import Binary
-from pyomo.core.kernel.component_block import tiny_block
-from pyomo.core.kernel.component_expression import expression
+from pyomo.core.kernel.component_block import block
+from pyomo.core.kernel.component_expression import (expression,
+                                                    expression_tuple)
 from pyomo.core.kernel.component_variable import (IVariable,
                                                   variable_list,
                                                   variable_tuple,
@@ -344,7 +345,7 @@ class PiecewiseLinearFunction(object):
                             value(self.breakpoints[0]),
                             value(self.breakpoints[-1])))
 
-class TransformedPiecewiseLinearFunction(tiny_block):
+class TransformedPiecewiseLinearFunction(block):
     """Base class for transformed piecewise linear functions
 
     A transformed piecewise linear functions is a block of
@@ -395,8 +396,8 @@ class TransformedPiecewiseLinearFunction(tiny_block):
                              % (bound))
         self._bound = bound
         self._f = f
-        self._input = expression(input)
-        self._output = expression(output)
+        self._inout = expression_tuple([expression(input),
+                                        expression(output)])
         if validate:
             self.validate(**kwds)
 
@@ -406,7 +407,7 @@ class TransformedPiecewiseLinearFunction(tiny_block):
         piecewise function. The returned object can be
         updated by assigning to its :attr:`expr`
         attribute."""
-        return self._input
+        return self._inout[0]
 
     @property
     def output(self):
@@ -414,7 +415,7 @@ class TransformedPiecewiseLinearFunction(tiny_block):
         piecewise function. The returned object can be
         updated by assigning to its :attr:`expr`
         attribute."""
-        return self._output
+        return self._inout[1]
 
     @property
     def bound(self):
@@ -465,7 +466,7 @@ class TransformedPiecewiseLinearFunction(tiny_block):
             equal_slopes_tolerance=equal_slopes_tolerance)
         assert ftype in (1,2,3,4,5)
 
-        input_var = self._input.expr
+        input_var = self.input.expr
         if not isinstance(input_var, IVariable):
             input_var = None
 
@@ -618,9 +619,9 @@ class piecewise_sos2(TransformedPiecewiseLinearFunction):
         super(piecewise_sos2, self).__init__(*args, **kwds)
 
         # create vars
-        y = self.v = variable_tuple(
-            variable(lb=0) for i in xrange(len(self.breakpoints)))
-        y_tuple = tuple(y)
+        y_tuple = tuple(variable(lb=0)
+                        for i in xrange(len(self.breakpoints)))
+        y = self.v = variable_tuple(y_tuple)
 
         # create piecewise constraints
         self.c = constraint_list()

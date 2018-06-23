@@ -23,7 +23,6 @@ block._ctype = Block
 block_tuple._ctype = Block
 block_list._ctype = Block
 block_dict._ctype = Block
-tiny_block._ctype = Block
 del Block
 
 # set up the Var ctype

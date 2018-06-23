@@ -67,8 +67,7 @@ import pyomo.core.kernel.component_block
 from pyomo.core.kernel.component_block import (block,
                                                block_tuple,
                                                block_list,
-                                               block_dict,
-                                               tiny_block)
+                                               block_dict)
 import pyomo.core.kernel.component_piecewise
 import pyomo.core.kernel.component_piecewise.util
 import pyomo.core.kernel.component_piecewise.transforms

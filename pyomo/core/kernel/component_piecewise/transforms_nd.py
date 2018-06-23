@@ -21,7 +21,7 @@ Nemhauser 2008)
 import logging
 import collections
 
-from pyomo.core.kernel.component_block import tiny_block
+from pyomo.core.kernel.component_block import block
 from pyomo.core.kernel.set_types import Binary
 from pyomo.core.kernel.component_variable import (variable,
                                                   variable_dict,
@@ -230,7 +230,7 @@ class PiecewiseLinearFunctionND(object):
             val += (1-b.sum())*self._values[s[ndim]]
             return val
 
-class TransformedPiecewiseLinearFunctionND(tiny_block):
+class TransformedPiecewiseLinearFunctionND(block):
     """Base class for transformed multi-variate piecewise
     linear functions
 

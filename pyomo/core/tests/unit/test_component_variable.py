@@ -63,6 +63,23 @@ class Test_variable(unittest.TestCase):
         pyomo.kernel.pprint(b)
         pyomo.kernel.pprint(m)
 
+    def test_bad_bounds(self):
+        v = variable()
+        self.assertIs(v.lb, None)
+        self.assertIs(v.ub, None)
+        v.lb = 1.0
+        v.ub = 1.0
+        self.assertEqual(v.lb, 1.0)
+        self.assertEqual(v.ub, 1.0)
+        with self.assertRaises(ValueError):
+            v.lb = "string"
+        self.assertEqual(v.lb, 1.0)
+        self.assertEqual(v.ub, 1.0)
+        with self.assertRaises(ValueError):
+            v.ub = "string"
+        self.assertEqual(v.lb, 1.0)
+        self.assertEqual(v.ub, 1.0)
+
     def test_extract_domain_type_and_bounds(self):
         # test an edge case
         domain_type, lb, ub = _extract_domain_type_and_bounds(None,

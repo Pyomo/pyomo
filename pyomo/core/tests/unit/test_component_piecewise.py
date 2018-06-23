@@ -15,8 +15,7 @@ from pyomo.core.kernel.component_interface import \
 from pyomo.core.kernel.component_block import (IBlockStorage,
                                                block,
                                                block_dict,
-                                               block_list,
-                                               tiny_block)
+                                               block_list)
 from pyomo.core.kernel.component_variable import (variable,
                                                   variable_list)
 from pyomo.core.kernel.component_piecewise.transforms import \
@@ -324,13 +323,14 @@ class Test_piecewise(unittest.TestCase):
                                      [1,2,1],
                                      repn=key,
                                      validate=False)
+            self.assertTrue(len(list(p.children())) <= 4)
             self.assertTrue(isinstance(p, TransformedPiecewiseLinearFunction))
             self.assertTrue(isinstance(p, transforms.registered_transforms[key]))
             self.assertTrue(isinstance(p, ICategorizedObject))
             self.assertTrue(isinstance(p, IComponent))
             self.assertTrue(isinstance(p, IComponentContainer))
             self.assertTrue(isinstance(p, _ActiveObjectMixin))
-            self.assertTrue(isinstance(p, tiny_block))
+            self.assertTrue(isinstance(p, block))
             self.assertTrue(isinstance(p, IBlockStorage))
 
     def test_bad_repn(self):
@@ -706,13 +706,15 @@ class Test_piecewise_nd(unittest.TestCase):
             p = transforms_nd.piecewise_nd(_test_tri,
                                            _test_values,
                                            repn=key)
+            # small block storage
+            self.assertTrue(len(list(p.children())) <= 4)
             self.assertTrue(isinstance(p, TransformedPiecewiseLinearFunctionND))
             self.assertTrue(isinstance(p, transforms_nd.registered_transforms[key]))
             self.assertTrue(isinstance(p, ICategorizedObject))
             self.assertTrue(isinstance(p, IComponent))
             self.assertTrue(isinstance(p, IComponentContainer))
             self.assertTrue(isinstance(p, _ActiveObjectMixin))
-            self.assertTrue(isinstance(p, tiny_block))
+            self.assertTrue(isinstance(p, block))
             self.assertTrue(isinstance(p, IBlockStorage))
 
     def test_bad_repn(self):

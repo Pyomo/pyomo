@@ -29,7 +29,6 @@ from pyomo.core.kernel.component_parameter import parameter
 from pyomo.core.kernel.component_expression import (expression,
                                                     data_expression)
 from pyomo.core.kernel.component_block import (block,
-                                               tiny_block,
                                                block_list)
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet)
@@ -1142,7 +1141,7 @@ class Test_matrix_constraint(unittest.TestCase):
         m = block()
         m.c = matrix_constraint(A)
         m.B = block_list()
-        m.B.append(tiny_block())
+        m.B.append(block())
         m.B[0].c = matrix_constraint(A)
         m.b = block()
         m.b.c = constraint_dict()

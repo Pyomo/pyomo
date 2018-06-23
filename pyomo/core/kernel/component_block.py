@@ -8,16 +8,21 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import sys
 import copy
 import abc
 import logging
 import weakref
 import math
-from collections import defaultdict
-try:
-    from collections import OrderedDict
-except ImportError:                         #pragma:nocover
-    from ordereddict import OrderedDict
+import collections
+if sys.version_info[:2] >= (3,6):
+    _ordered_dict_ = dict
+else:
+    try:
+        _ordered_dict_ = collections.OrderedDict
+    except ImportError:                         #pragma:nocover
+        import ordereddict
+        _ordered_dict_ = ordereddict.OrderedDict
 
 from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.kernel.component_interface import \
@@ -120,9 +125,9 @@ class IBlockStorage(IComponent,
 
 class _block_base(object):
     """
-    A base class shared by :class:`block` and
-    :class:`tiny_block` that implements a few
-    :class:`IBlockStorage` abstract methods.
+    This class implements a few of the
+    :class:`IBlockStorage` abstract methods without getting
+    into exactly how the underlying storage is implemented.
     """
     __slots__ = ()
 
@@ -884,26 +889,99 @@ class _block_base(object):
                 var.stale = False
 
 class block(_block_base, IBlockStorage):
-    """An implementation of the :class:`IBlockStorage` interface."""
+    _large_storage_threshold = 4
     # To avoid a circular import, for the time being, this
     # property will be set externally
     _ctype = None
+
     def __init__(self):
-        self._parent = None
-        self._storage_key = None
-        self._active = True
-        # This implementation is quite piggish at the
-        # moment. It can probably be streamlined by doing
-        # something similar to what _BlockData does in
-        # block.py (e.g., using _ctypes, _decl, and
-        # _decl_order). However, considering that we now
-        # have other means of producing lightweight blocks
-        # (tiny_block) as well as the more lightweight
-        # implementation of singleton types, it is hard to
-        # justify making this implementation harder to
-        # follow until we do some more concrete profiling.
-        self._byctype = defaultdict(OrderedDict)
-        self._order = OrderedDict()
+        # bypass __setatrr__ for this class
+        d = self.__dict__
+        d['_parent'] = None
+        d['_storage_key'] = None
+        d['_active'] = True
+        d['_byctype'] = 0
+        d['_order'] = _ordered_dict_()
+
+    def _activate_large_storage_mode(self):
+        if self._byctype.__class__ is not collections.defaultdict:
+            self._byctype = collections.defaultdict(_ordered_dict_)
+            for key,obj in self._order.items():
+                self._byctype[obj.ctype][key] = obj
+
+    def __setattr__(self, name, obj):
+        needs_del = False
+        same_obj = False
+        if name in self._order:
+            # to avoid an edge case, we need to delay
+            # deleting the current object until we
+            # check the parent of the new object
+            needs_del = True
+            if self._order[name] is not obj:
+                logger.warning(
+                    "Implicitly replacing attribute %s (type=%s) "
+                    "on block with new object (type=%s). This "
+                    "is usually indicative of a modeling error. "
+                    "To avoid this warning, delete the original "
+                    "object from the block before assigning a new "
+                    "object."
+                    % (name,
+                       getattr(self, name).__class__.__name__,
+                       obj.__class__.__name__))
+            else:
+                same_obj = True
+                assert obj.parent is self
+
+        try:
+            ctype = obj.ctype
+        except AttributeError:
+            if needs_del:
+                delattr(self, name)
+        else:
+            if (obj.parent is None) or same_obj:
+                if needs_del:
+                    delattr(self, name)
+                obj._parent = weakref.ref(self)
+                obj._storage_key = name
+                self._order[name] = obj
+                if self._byctype.__class__ is not collections.defaultdict:
+                    # small-block storage
+                    ctype_hash = hash(ctype)
+                    if (len(self._order) > self._large_storage_threshold) and \
+                       (self._byctype != ctype_hash):
+                        # activate the large storage format if
+                        # we have exceeded the threshold AND we are storing
+                        # more than one component type
+                        self._activate_large_storage_mode()
+                    else:
+                        self._byctype |= ctype_hash
+                else:
+                    # large-block storage
+                    self._byctype[ctype][name] = obj
+            else:
+                raise ValueError(
+                    "Invalid assignment to %s type with name '%s' "
+                    "at entry %s. A parent container has already "
+                    "been assigned to the object being inserted: %s"
+                    % (self.__class__.__name__,
+                       self.name,
+                       name,
+                       obj.parent.name))
+        super(block, self).__setattr__(name, obj)
+
+    def __delattr__(self, name):
+        if name in self._order:
+            obj = self._order[name]
+            del self._order[name]
+            obj._parent = None
+            obj._storage_key = None
+            if self._byctype.__class__ is collections.defaultdict:
+                # large-block storage
+                ctype = obj.ctype
+                del self._byctype[ctype][name]
+                if len(self._byctype[ctype]) == 0:
+                    del self._byctype[ctype]
+        super(block, self).__delattr__(name)
 
     #
     # Define the IBlockStorage abstract methods
@@ -921,210 +999,20 @@ class block(_block_base, IBlockStorage):
             iterator of child objects
         """
         if ctype is _no_ctype:
-            return itervalues(self._order)
-        else:
-            return itervalues(self._byctype.get(ctype,{}))
-
-    #
-    # Interface
-    #
-
-    def __setattr__(self, name, obj):
-        current = getattr(self, name, None)
-        needs_del = False
-        if hasattr(current,
-                   '_is_categorized_object'):
-            if (current is not obj) and \
-               (name != "_parent"):
-                logger.warning(
-                    "Implicitly replacing attribute %s (type=%s) "
-                    "on block with new object (type=%s). This "
-                    "is usually indicative of a modeling error. "
-                    "To avoid this warning, delete the original "
-                    "object from the block before assigning a new "
-                    "object."
-                    % (name,
-                       getattr(self, name).__class__.__name__,
-                       obj.__class__.__name__))
-                needs_del = True
-        if hasattr(obj, '_is_categorized_object'):
-            if obj._parent is None:
-                if needs_del:
-                    delattr(self, name)
-                self._byctype[obj.ctype][name] = obj
-                self._order[name] = obj
-                obj._parent = weakref.ref(self)
-                obj._storage_key = name
-            elif hasattr(self, name) and \
-                 (getattr(self, name) is obj):
-                # a very special case that makes sense to handle
-                # because the implied order should be: (1) delete
-                # the object at the current index, (2) insert the
-                # the new object. This performs both without any
-                # actions, but it is an extremely rare case, so
-                # it should go last.
-                pass
-            else:
-                raise ValueError(
-                    "Invalid assignment to %s type with name '%s' "
-                    "at entry %s. A parent container has already "
-                    "been assigned to the object being inserted: %s"
-                    % (self.__class__.__name__,
-                       self.name,
-                       name,
-                       obj.parent.name))
-        super(block, self).__setattr__(name, obj)
-
-    def __delattr__(self, name):
-        obj = getattr(self, name)
-        if hasattr(obj, '_is_categorized_object'):
-            del self._order[name]
-            del self._byctype[obj.ctype][name]
-            if len(self._byctype[obj.ctype]) == 0:
-                del self._byctype[obj.ctype]
-            obj._parent = None
-            obj._storage_key = None
-        super(block, self).__delattr__(name)
-
-    def collect_ctypes(self,
-                       active=None,
-                       descend_into=True):
-        """
-        Count all object category types stored on or under
-        this block.
-
-        Args:
-            active (:const:`True`/:const:`None`): Set to
-                :const:`True` to indicate that only active
-                categorized objects should be counted. The
-                default value of :const:`None` indicates
-                that all categorized objects (including
-                those that have been deactivated) should be
-                counted. *Note*: This flag is ignored for
-                any objects that do not have an active flag.
-            descend_into (bool): Indicates whether or not
-                category types should be counted on
-                sub-blocks. Default is :const:`True`.
-
-        Returns:
-            set of category types
-        """
-        assert active in (None, True)
-        ctypes = set()
-        if not descend_into:
-            if active is None:
-                ctypes.update(ctype for ctype in self._byctype)
-            else:
-                assert active is True
-                for ctype in self._byctype:
-                    for component in self.components(
-                            ctype=ctype,
-                            active=True,
-                            descend_into=False):
-                        ctypes.add(ctype)
-                        # just need 1 to appear in order to
-                        # count the ctype
-                        break
-        else:
-            for blk in self.blocks(active=active,
-                                   descend_into=True):
-                ctypes.update(blk.collect_ctypes(
-                    active=active,
-                    descend_into=False))
-        return ctypes
-
-class tiny_block(_block_base, IBlockStorage):
-    """
-    A memory efficient block for storing a small number
-    of child components.
-    """
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
-    def __init__(self):
-        self._parent = None
-        self._storage_key = None
-        self._active = True
-        self._order = []
-
-    def __setattr__(self, name, obj):
-        current = getattr(self, name, None)
-        needs_del = False
-        if hasattr(current,
-                   '_is_categorized_object'):
-            if (current is not obj) and \
-               (name != "_parent"):
-                logger.warning(
-                    "Implicitly replacing attribute %s (type=%s) "
-                    "on block with new object (type=%s). This "
-                    "is usually indicative of a modeling error. "
-                    "To avoid this warning, delete the original "
-                    "object from the block before assigning a new "
-                    "object."
-                    % (name,
-                       getattr(self, name).__class__.__name__,
-                       obj.__class__.__name__))
-                needs_del = True
-        if hasattr(obj, '_is_categorized_object'):
-            if obj._parent is None:
-                if needs_del:
-                    delattr(self, name)
-                obj._parent = weakref.ref(self)
-                obj._storage_key = name
-                self._order.append(name)
-            elif hasattr(self, name) and \
-                 (getattr(self, name) is obj):
-                # a very special case that makes sense to handle
-                # because the implied order should be: (1) delete
-                # the object at the current index, (2) insert the
-                # the new object. This performs both without any
-                # actions, but it is an extremely rare case, so
-                # it should go last.
-                pass
-            else:
-                raise ValueError(
-                    "Invalid assignment to %s type with name '%s' "
-                    "at entry %s. A parent container has already "
-                    "been assigned to the object being inserted: %s"
-                    % (self.__class__.__name__,
-                       self.name,
-                       name,
-                       obj.parent.name))
-        super(tiny_block, self).__setattr__(name, obj)
-
-    def __delattr__(self, name):
-        obj = getattr(self, name)
-        if hasattr(obj, '_is_categorized_object'):
-            obj._parent = None
-            obj._storage_key = None
-            for ndx, key in enumerate(self._order):
-                if getattr(self, key) is obj:
-                    break
-            else:        #pragma:nocover
-                # shouldn't happen
-                assert False
-            del self._order[ndx]
-        super(tiny_block, self).__delattr__(name)
-
-    #
-    # Define the IBlockStorage abstract methods
-    #
-
-    def children(self, ctype=_no_ctype):
-        """Iterate over the children of this block.
-
-        Args:
-            ctype: Indicate the type of children to iterate
-                over. The default value indicates that all
-                types should be included.
-
-        Returns:
-            iterator of child objects
-        """
-        for key in self._order:
-            child = getattr(self, key)
-            if (ctype is _no_ctype) or (child.ctype == ctype):
+            for child in self._order.values():
                 yield child
+        elif self._byctype.__class__ is not collections.defaultdict:
+            # small-block storage
+            h_ = hash(ctype)
+            if (self._byctype & h_) == h_:
+                for child in self._order.values():
+                    if child.ctype == ctype:
+                        yield child
+        else:
+            # large-block storage
+            if ctype in self._byctype:
+                for child in self._byctype[ctype].values():
+                    yield child
 
     # implemented by _block_base
     # def components(...)
@@ -1158,9 +1046,26 @@ class tiny_block(_block_base, IBlockStorage):
         assert active in (None, True)
         ctypes = set()
         if not descend_into:
-            for component in self.components(active=active,
-                                             descend_into=False):
-                ctypes.add(component.ctype)
+            if self._byctype.__class__ is not collections.defaultdict:
+                # small-block storage
+                for component in self.components(active=active,
+                                                 descend_into=False):
+                    ctypes.add(component.ctype)
+            else:
+                # large-block storage
+                if active is None:
+                    ctypes.update(ctype for ctype in self._byctype)
+                else:
+                    assert active
+                    for ctype in self._byctype:
+                        for component in self.components(
+                                ctype=ctype,
+                                active=True,
+                                descend_into=False):
+                            ctypes.add(ctype)
+                            # just need 1 to appear in order to
+                            # count the ctype
+                            break
         else:
             for blk in self.blocks(active=active,
                                    descend_into=True):

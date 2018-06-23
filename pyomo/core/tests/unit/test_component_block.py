@@ -1,6 +1,8 @@
 import tempfile
 import os
 import pickle
+import random
+import collections
 
 import pyutilib.th as unittest
 from pyomo.core.expr.numvalue import native_numeric_types
@@ -40,8 +42,7 @@ from pyomo.core.kernel.component_block import (IBlockStorage,
                                                block,
                                                block_dict,
                                                block_tuple,
-                                               block_list,
-                                               tiny_block)
+                                               block_list)
 from pyomo.core.kernel.component_sos import sos
 from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
@@ -92,10 +93,11 @@ class TestMisc(unittest.TestCase):
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
-        B = tiny_block()
+        B = block()
         B.s = suffix()
         B.b = block()
         B.v = variable()
+        pyomo.kernel.pprint(B)
         B.c = constraint()
         B.e = expression()
         B.o = objective()
@@ -117,10 +119,6 @@ class TestMisc(unittest.TestCase):
         self.assertIs(b.ctype, Block)
         self.assertIs(type(b).ctype, Block)
         self.assertIs(block.ctype, Block)
-        b = tiny_block()
-        self.assertIs(b.ctype, Block)
-        self.assertIs(type(b).ctype, Block)
-        self.assertIs(tiny_block.ctype, Block)
 
     def test_write(self):
         b = block()
@@ -272,7 +270,6 @@ class TestMisc(unittest.TestCase):
         b.dual = suffix(direction=suffix.IMPORT)
 
         import pyomo.environ
-        #import pyomo.opt.base
         from pyomo.opt.base.solvers import UnknownSolver
         from pyomo.opt import SolverFactory
         from pyomo.opt import SolverStatus, TerminationCondition
@@ -338,10 +335,11 @@ class TestMisc(unittest.TestCase):
         b.c2.append(constraint_list())
         b.B = block_list()
         b.B.append(block_list())
-        b.B[0].append(tiny_block())
+        b.B[0].append(block())
         b.B[0][0].c = constraint()
         b.B[0][0].b = block()
         b.B[0].deactivate()
+        b._activate_large_storage_mode()
 
         self.assertEqual(
             [obj.name for obj in b.preorder_traversal()],
@@ -726,6 +724,38 @@ class TestMisc(unittest.TestCase):
         self.assertEqual(b.active, False)
         self.assertEqual(bdict.active, False)
 
+    # this is a randomized test
+    def test_ordering(self):
+        b = block()
+        attr_types = [variable,
+                      constraint,
+                      parameter,
+                      expression,
+                      data_expression,
+                      objective,
+                      variable,
+                      block]
+        key_types = [float, int]
+        keys = collections.deque()
+        objs = collections.deque()
+        for i in range(100):
+            obj = random.choice(attr_types)()
+            key = str(random.choice(key_types)(i))
+            setattr(b, key, obj)
+            keys.append(key)
+            objs.append(obj)
+            self.assertEqual(len(list(b.children())), len(objs))
+
+        for i in range(100):
+            children = list(b.children())
+            for key, obj, child in zip(keys, objs, children):
+                assert obj is child
+                assert getattr(b, key) is child
+                assert key == child.storage_key
+            setattr(b, children[0].storage_key, children[0])
+            keys.rotate(-1)
+            objs.rotate(-1)
+
 class _Test_block_base(object):
 
     _children = None
@@ -735,7 +765,6 @@ class _Test_block_base(object):
     _blocks_no_descend = None
     _blocks = None
     _block = None
-
 
     def test_overwrite_warning(self):
         b = self._block.clone()
@@ -1626,7 +1655,7 @@ class _Test_block(_Test_block_base):
         del b.x
         self.assertTrue(not hasattr(b, 'x'))
 
-    def test_collect_ctypes(self):
+    def test_collect_ctypes_small_block_storage(self):
         b = block()
         self.assertEqual(b.collect_ctypes(),
                          set())
@@ -1679,8 +1708,74 @@ class _Test_block(_Test_block_base):
         self.assertEqual(B.collect_ctypes(active=True),
                          set([Var]))
         del b.y
+        self.assertEqual(b.collect_ctypes(),
+                         set([Var]))
+        self.assertEqual(b.collect_ctypes(active=True),
+                         set([]))
+        b.activate()
+        self.assertEqual(b.collect_ctypes(),
+                         set([Var]))
+        self.assertEqual(b.collect_ctypes(active=True),
+                         set([Var]))
 
-        # a block DOES check its own .active flag apparently
+        del b.x
+        self.assertEqual(b.collect_ctypes(), set())
+
+    def test_collect_ctypes_large_block_storage(self):
+        b = block()
+        b._activate_large_storage_mode()
+        self.assertEqual(b.collect_ctypes(),
+                         set())
+        self.assertEqual(b.collect_ctypes(active=True),
+                         set())
+        b.x = variable()
+        self.assertEqual(b.collect_ctypes(),
+                         set([Var]))
+        self.assertEqual(b.collect_ctypes(active=True),
+                         set([Var]))
+        b.y = constraint()
+        self.assertEqual(b.collect_ctypes(),
+                         set([Var, Constraint]))
+        self.assertEqual(b.collect_ctypes(active=True),
+                         set([Var, Constraint]))
+        b.y.deactivate()
+        self.assertEqual(b.collect_ctypes(),
+                         set([Var, Constraint]))
+        self.assertEqual(b.collect_ctypes(active=True),
+                         set([Var]))
+        B = block()
+        b._activate_large_storage_mode()
+        B.b = b
+        self.assertEqual(B.collect_ctypes(descend_into=False),
+                         set([Block]))
+        self.assertEqual(B.collect_ctypes(descend_into=False,
+                                          active=True),
+                         set([Block]))
+        self.assertEqual(B.collect_ctypes(),
+                         set([Block, Var, Constraint]))
+        self.assertEqual(B.collect_ctypes(active=True),
+                         set([Block, Var]))
+        b.deactivate()
+        self.assertEqual(B.collect_ctypes(descend_into=False),
+                         set([Block]))
+        self.assertEqual(B.collect_ctypes(descend_into=False,
+                                          active=True),
+                         set([]))
+        self.assertEqual(B.collect_ctypes(),
+                         set([Block, Var, Constraint]))
+        self.assertEqual(B.collect_ctypes(active=True),
+                         set([]))
+        B.x = variable()
+        self.assertEqual(B.collect_ctypes(descend_into=False),
+                         set([Block, Var]))
+        self.assertEqual(B.collect_ctypes(descend_into=False,
+                                          active=True),
+                         set([Var]))
+        self.assertEqual(B.collect_ctypes(),
+                         set([Block, Var, Constraint]))
+        self.assertEqual(B.collect_ctypes(active=True),
+                         set([Var]))
+        del b.y
         self.assertEqual(b.collect_ctypes(),
                          set([Var]))
         self.assertEqual(b.collect_ctypes(active=True),
@@ -1700,13 +1795,13 @@ class Test_block_noclone(_Test_block, unittest.TestCase):
 class Test_block_clone(_Test_block, unittest.TestCase):
     _do_clone = True
 
-class _MyBlockBaseBase(tiny_block):
+class _MyBlockBaseBase(block):
     __slots__ = ()
     def __init__(self):
         super(_MyBlockBaseBase, self).__init__()
 
 class _MyBlockBase(_MyBlockBaseBase):
-    __slots__ = ("b")
+    __slots__ = ("b",)
     def __init__(self):
         super(_MyBlockBase, self).__init__()
         self.b = block()
@@ -1721,7 +1816,7 @@ class _MyBlock(_MyBlockBase):
         self.v = variable()
         self.n = 2.0
 
-class _Test_tiny_block(_Test_block_base):
+class _Test_small_block(_Test_block_base):
 
     _do_clone = None
 
@@ -1832,7 +1927,7 @@ class _Test_tiny_block(_Test_block_base):
                          set([Var]))
         self._block.b.activate()
 
-    def test_staticblock_delattr(self):
+    def test_customblock_delattr(self):
         b = _MyBlock()
         with self.assertRaises(AttributeError):
             del b.not_an_attribute
@@ -1848,7 +1943,7 @@ class _Test_tiny_block(_Test_block_base):
         del b.x
         self.assertTrue(not hasattr(b, 'x'))
 
-    def test_staticblock_setattr(self):
+    def test_customblock_setattr(self):
         b = _MyBlockBase()
         self.assertIs(b.b.parent, b)
         self.assertIs(b.b.v.parent, b.b)
@@ -1856,20 +1951,26 @@ class _Test_tiny_block(_Test_block_base):
             b.b = b.b.v
         self.assertIs(b.b.parent, b)
         self.assertIs(b.b.v.parent, b.b)
-# added a __dict__ in recent commit
-#        with self.assertRaises(AttributeError):
-#            b.not_an_attribute = 2
         c = b.b
         self.assertIs(c.parent, b)
         # test the edge case in setattr
         b.b = c
         self.assertIs(c.parent, b)
+        assert not hasattr(b,"g")
+        with self.assertRaises(ValueError):
+            b.g = b.b
+        self.assertIs(b.b.parent, b)
+        b.g = 1
+        with self.assertRaises(ValueError):
+            b.g = b.b
+        self.assertEqual(b.g, 1)
+        self.assertIs(b.b.parent, b)
         # test an overwrite
         b.b = block()
         self.assertIs(c.parent, None)
         self.assertIs(b.b.parent, b)
 
-    def test_staticblock__with_dict_setattr(self):
+    def test_customblock__with_dict_setattr(self):
         # This one was given a __dict__
         b = _MyBlock()
         self.assertIs(b.v.parent, b)
@@ -1924,10 +2025,10 @@ class _Test_tiny_block(_Test_block_base):
         self.assertNotEqual(len(list(b.generate_names())), 0)
         self.assertEqual(len(list(b.generate_names(active=True))), 0)
 
-class Test_tiny_block_noclone(_Test_tiny_block, unittest.TestCase):
+class Test_small_block_noclone(_Test_small_block, unittest.TestCase):
     _do_clone = False
 
-class Test_tiny_block_clone(_Test_tiny_block, unittest.TestCase):
+class Test_small_block_clone(_Test_small_block, unittest.TestCase):
     _do_clone = True
 
 class Test_block_dict(_TestActiveComponentDictBase,
