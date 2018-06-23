@@ -1067,6 +1067,8 @@ class Test_matrix_constraint(unittest.TestCase):
         vlist = create_variable_list(2)
         ctuple = matrix_constraint(A, x=vlist)
         self.assertEqual(ctuple.sparse, True)
+        for c in ctuple:
+            self.assertEqual(c._linear_canonical_form, True)
         terms = list(ctuple[0].terms)
         vs,cs = zip(*terms)
         self.assertEqual(len(terms), 1)
@@ -1099,6 +1101,8 @@ class Test_matrix_constraint(unittest.TestCase):
         ctuple = matrix_constraint(A, x=vlist,
                                    sparse=False)
         self.assertEqual(ctuple.sparse, False)
+        for c in ctuple:
+            self.assertEqual(c._linear_canonical_form, True)
         terms = list(ctuple[0].terms)
         vs,cs = zip(*terms)
         self.assertEqual(len(terms), 2)
