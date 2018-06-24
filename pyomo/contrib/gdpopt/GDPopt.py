@@ -34,7 +34,8 @@ from pyomo.contrib.gdpopt.loa import solve_LOA_subproblem, solve_LOA_master
 from pyomo.contrib.gdpopt.gloa import solve_GLOA_master, solve_global_NLP
 from pyomo.contrib.gdpopt.master_initialize import (init_custom_disjuncts,
                                                     init_max_binaries,
-                                                    init_set_covering)
+                                                    init_set_covering,
+                                                    init_fixed_disjuncts)
 from pyomo.contrib.gdpopt.util import (GDPoptSolveData, _DoNothing, a_logger,
                                        algorithm_should_terminate,
                                        build_ordered_component_lists,
@@ -51,10 +52,10 @@ __version__ = (0, 3, 0)
 
 # Valid initialization strategies
 valid_init_strategies = {
-    None: _DoNothing,
+    'no_init': _DoNothing,
     'set_covering': init_set_covering,
     'max_binary': init_max_binaries,
-    'fixed_binary': None,
+    'fix_disjuncts': init_fixed_disjuncts,
     'custom_disjuncts': init_custom_disjuncts
 }
 

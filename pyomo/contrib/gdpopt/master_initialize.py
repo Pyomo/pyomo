@@ -63,6 +63,43 @@ def init_custom_disjuncts(solve_data, config):
                 % list(disj.name for disj in active_disjunct_set))
 
 
+def init_fixed_disjuncts(solve_data, config):
+    """Initialize by solving the problem with the current disjunct values."""
+    # TODO error checking to make sure that the user gave proper disjuncts
+
+    # fix the disjuncts in the linear GDP and send for solution.
+    solve_data.mip_iteration += 1
+    linear_GDP = solve_data.linear_GDP.clone()
+    config.logger.info(
+        "Generating initial linear GDP approximation by "
+        "solving subproblem with original user-specified disjunct values.")
+    TransformationFactory('gdp.fix_disjuncts').apply_to(linear_GDP)
+    mip_result = solve_linear_GDP(linear_GDP, solve_data, config)
+    if mip_result:
+        _, mip_var_values = mip_result
+        # use the mip_var_values to create the NLP subproblem
+        nlp_model = solve_data.working_model.clone()
+        # copy in the discrete variable values
+        copy_and_fix_mip_values_to_nlp(
+            nlp_model.GDPopt_utils.working_var_list,
+            mip_var_values, config)
+        TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
+        solve_data.nlp_iteration += 1
+        nlp_result = solve_NLP(nlp_model, solve_data, config)
+        nlp_feasible, nlp_var_values, nlp_duals = nlp_result
+        if nlp_feasible:
+            update_nlp_progress_indicators(nlp_model, solve_data, config)
+            add_outer_approximation_cuts(
+                nlp_var_values, nlp_duals, solve_data, config)
+        add_integer_cut(
+            mip_var_values, solve_data, config, feasible=nlp_feasible)
+    else:
+        config.logger.error(
+            'Linear GDP infeasible for initial user-specified '
+            'disjunct values. '
+            'Skipping initialization.')
+
+
 def init_max_binaries(solve_data, config):
     """Initialize by maximizing binary variables and disjuncts.
 
