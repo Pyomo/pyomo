@@ -675,7 +675,7 @@ class linear_constraint(_MutableBoundsConstraintMixin,
     # To avoid a circular import, for the time being, this
     # property will be set externally
     _ctype = None
-    _linear_canonical_form = False
+    _linear_canonical_form = True
     __slots__ = ("_parent",
                  "_storage_key",
                  "_active",
