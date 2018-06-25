@@ -675,7 +675,7 @@ class TestConnection(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
-        x_equality : Size=2, Index=a1_index, Active=True
+        x_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body         : Upper : Active
               1 :   0.0 : x[1] - a2[1] :   0.0 :   True
               2 :   0.0 : x[2] - a2[2] :   0.0 :   True
@@ -691,7 +691,7 @@ class TestConnection(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """d_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
-        x_equality : Size=2, Index=a1_index, Active=True
+        x_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body          : Upper : Active
               1 :   0.0 : a1[1] - a2[1] :   0.0 :   True
               2 :   0.0 : a1[2] - a2[2] :   0.0 :   True

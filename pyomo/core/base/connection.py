@@ -57,6 +57,15 @@ class _ConnectionData(ActiveComponentData):
     def directed(self):
         return self._directed
 
+    def both_connectors(self):
+        """
+        Returns a tuple containing both connectors, whether directed or not.
+        """
+        if not self._directed:
+            return tuple(self._connectors)
+        else:
+            return (self._source, self._destination)
+
     def set_value(self, vals):
         """
         Set the connector attributes on this connection.
