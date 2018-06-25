@@ -10,7 +10,7 @@
 
 import pyomo.common.plugin
 
-from six import iteritems, itervalues, print_
+from six import iteritems, itervalues, print_, iterkeys
 
 import random
 
@@ -23,7 +23,7 @@ import math
 
 # the converger for the class - everything (primal and dual) is 
 # contained in the (u,v) vector of the Eckstein-Combettes extension.
-class EcksteinCombettesConverger(ConvergenceBase):
+class AsynchronousProjectiveHedgingConverger(ConvergenceBase):
 
     def __init__(self, *args, **kwds):
         ConvergenceBase.__init__(self, *args, **kwds)
@@ -39,7 +39,7 @@ class EcksteinCombettesConverger(ConvergenceBase):
 
 # the primary Eckstein-Combettes extension class
 
-class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
+class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin):
 
     pyomo.common.plugin.implements(phextension.IPHExtension)
 
@@ -53,6 +53,9 @@ class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
 
         self._check_output = False
         self._JName = "PhiSummary.csv"
+
+        # TBD - this is hard-coded!!!! WATCH OUT!!!
+        self._number_of_subproblems_to_queue = 4
 
         self._subproblems_to_queue = []
 
@@ -89,6 +92,8 @@ class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
             for subproblem in subproblems:
                 print(subproblem)
             print("")
+
+        print("PENDING SUBPROBLEMS=",ph.pending_subproblems())
 
         gamma = 1.0   # Scale factor. This should be a command-line parameter.
 
@@ -400,12 +405,14 @@ class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
 
         negative_sub_phis = [sub_phi for sub_phi in sub_phi_to_scenario_map if sub_phi < 0.0]
 
+#TBD        ph.pending_subproblems()
+
         if len(negative_sub_phis) == 0:
             print("**** YIKES! QUEUING SUBPROBLEMS AT RANDOM****")
             # TBD - THIS ASSUMES UNIQUE PHIS, WHICH IS NOT ALWAYS THE CASE.
-            all_phis = sub_phi_to_scenario_map.keys()
+            all_phis = list(six.iterkeys(sub_phi_to_scenario_map))
             random.shuffle(all_phis)
-            for phi in all_phis[0:ph._async_buffer_length]:
+            for phi in all_phis[0:self._number_of_subproblems_to_queue]:
                 scenario_name = sub_phi_to_scenario_map[phi][0]
 
                 if ph._scenario_tree.contains_bundles():
@@ -425,7 +432,7 @@ class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
                 else:
                     print("Queueing sub-problems whose scenarios possess the smallest phi values:")
             sorted_phis = sorted(sub_phi_to_scenario_map.keys())
-            for phi in sorted_phis[0:ph._async_buffer_length]:
+            for phi in sorted_phis[0:self._number_of_subproblems_to_queue]:
                 if ((self._queue_only_negative_subphi_subproblems) and (phi < 0.0)) or (not self._queue_only_negative_subphi_subproblems):
                     scenario_name = sub_phi_to_scenario_map[phi][0] 
                     if ph._verbose:
@@ -479,7 +486,7 @@ class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
         #       variable - similar to what is done in the bounds extension.
 
         # the convergence threshold should obviously be parameterized
-        self._converger = EcksteinCombettesConverger(convergence_threshold=1e-5)
+        self._converger = AsynchronousProjectiveHedgingConverger(convergence_threshold=1e-5)
         ph._convergers.append(self._converger)
 
     ##########################################################
@@ -542,10 +549,10 @@ class EcksteinCombettesExtension(pyomo.common.plugin.SingletonPlugin):
 
         # pick subproblems at random - we need a number equal to the async buffer length,
         # although we need all of them initially (PH does - not this particular plugin).
-        async_buffer_length = ph._async_buffer_length
+        async_buffer_length = self._number_of_subproblems_to_queue
         all_subproblems = [subproblem.name for subproblem in ph._scenario_tree.subproblems]
         random.shuffle(all_subproblems)
-        self._subproblems_to_queue = all_subproblems[0:ph._async_buffer_length]
+        self._subproblems_to_queue = all_subproblems[0:self._number_of_subproblems_to_queue]
 
     def pre_iteration_k_solves(self, ph):
         """Called before each iteration k solve"""
