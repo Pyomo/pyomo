@@ -52,7 +52,7 @@ class _ConnExpansion(Transformation):
             if comp.type() is Constraint:
                 itr = EXPR.identify_components(comp.body, connector_types)
             else: # Connection
-                itr = comp.both_connectors()
+                itr = comp.connectors
             ref = None
             for c in itr:
                 found.add(c)

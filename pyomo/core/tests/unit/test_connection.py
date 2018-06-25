@@ -68,7 +68,8 @@ class TestConnection(unittest.TestCase):
         self.assertTrue(m.c1.directed)
         self.assertIs(m.c1.source, m.con1)
         self.assertIs(m.c1.destination, m.con2)
-        self.assertIsNone(m.c1.connectors)
+        self.assertIs(m.c1.connectors[0], m.con1)
+        self.assertIs(m.c1.connectors[1], m.con2)
         m.c2 = Connection(connectors=(m.con1, m.con2))
         self.assertEqual(len(m.c2), 1)
         self.assertFalse(m.c2.directed)
@@ -100,7 +101,8 @@ class TestConnection(unittest.TestCase):
         self.assertTrue(inst.c1.directed)
         self.assertIs(inst.c1.source, inst.con1)
         self.assertIs(inst.c1.destination, inst.con2)
-        self.assertIsNone(inst.c1.connectors)
+        self.assertIs(inst.c1.connectors[0], inst.con1)
+        self.assertIs(inst.c1.connectors[1], inst.con2)
         self.assertEqual(len(inst.c2), 1)
         self.assertFalse(inst.c2.directed)
         self.assertIsInstance(inst.c2.connectors, tuple)
@@ -128,7 +130,8 @@ class TestConnection(unittest.TestCase):
         self.assertTrue(m.c1[4].directed)
         self.assertIs(m.c1[4].source, m.con1[4])
         self.assertIs(m.c1[4].destination, m.con2[4])
-        self.assertIsNone(m.c1[4].connectors)
+        self.assertIs(m.c1[4].connectors[0], m.con1[4])
+        self.assertIs(m.c1[4].connectors[1], m.con2[4])
         m.c2 = Connection(m.s, rule=rule2)
         self.assertEqual(len(m.c2), 5)
         self.assertFalse(m.c2[4].directed)
@@ -143,7 +146,8 @@ class TestConnection(unittest.TestCase):
         self.assertTrue(m.c3[4].directed)
         self.assertIs(m.c3[4].source, m.con1[4])
         self.assertIs(m.c3[4].destination, m.con2[4])
-        self.assertIsNone(m.c3[4].connectors)
+        self.assertIs(m.c3[4].connectors[0], m.con1[4])
+        self.assertIs(m.c3[4].connectors[1], m.con2[4])
         m.c4 = Connection(m.s, rule=rule3)
         self.assertEqual(len(m.c4), 5)
         self.assertFalse(m.c4[4].directed)
@@ -170,7 +174,8 @@ class TestConnection(unittest.TestCase):
         self.assertTrue(inst.c1[4].directed)
         self.assertIs(inst.c1[4].source, inst.con1[4])
         self.assertIs(inst.c1[4].destination, inst.con2[4])
-        self.assertIsNone(inst.c1[4].connectors)
+        self.assertIs(inst.c2[4].connectors[0], inst.con1[4])
+        self.assertIs(inst.c2[4].connectors[1], inst.con2[4])
         self.assertEqual(len(inst.c2), 5)
         self.assertFalse(inst.c2[4].directed)
         self.assertIs(inst.c2[4].connectors[0], inst.con1[4])
@@ -192,12 +197,12 @@ class TestConnection(unittest.TestCase):
         m.friend.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """friend : Size=5, Index=s, Active=True
-    Key : Source  : Destination : Connectors : Directed : Active
-      1 : con1[1] :     con2[1] :       None :     True :   True
-      2 : con1[2] :     con2[2] :       None :     True :   True
-      3 : con1[3] :     con2[3] :       None :     True :   True
-      4 : con1[4] :     con2[4] :       None :     True :   True
-      5 : con1[5] :     con2[5] :       None :     True :   True
+    Key : Connectors         : Directed : Active
+      1 : (con1[1], con2[1]) :     True :   True
+      2 : (con1[2], con2[2]) :     True :   True
+      3 : (con1[3], con2[3]) :     True :   True
+      4 : (con1[4], con2[4]) :     True :   True
+      5 : (con1[5], con2[5]) :     True :   True
 """)
 
         m = ConcreteModel()
@@ -215,9 +220,9 @@ class TestConnection(unittest.TestCase):
         m.pal.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """pal : Size=2, Index=z, Active=True
-    Key : Source : Destination : Connectors         : Directed : Active
-      1 :   None :        None : (con1[1], con2[1]) :    False :   True
-      2 :   None :        None : (con1[2], con2[2]) :    False :  False
+    Key : Connectors         : Directed : Active
+      1 : (con1[1], con2[1]) :    False :   True
+      2 : (con1[2], con2[2]) :    False :  False
 """)
 
 

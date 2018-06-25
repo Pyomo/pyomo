@@ -39,7 +39,7 @@ class _ConnectionData(ActiveComponentData):
         self._connectors = None
         self._directed = None
         if len(kwds):
-            self.set_value(**kwds)
+            self.set_value(kwds)
 
     @property
     def source(self):
@@ -56,15 +56,6 @@ class _ConnectionData(ActiveComponentData):
     @property
     def directed(self):
         return self._directed
-
-    def both_connectors(self):
-        """
-        Returns a tuple containing both connectors, whether directed or not.
-        """
-        if not self._directed:
-            return tuple(self._connectors)
-        else:
-            return (self._source, self._destination)
 
     def set_value(self, vals):
         """
@@ -88,8 +79,9 @@ class _ConnectionData(ActiveComponentData):
         object.__setattr__(self, "_source", source)
         object.__setattr__(self, "_destination", destination)
         # tuples do not go through add_component
-        self._connectors = tuple(connectors) if connectors is not None else None
-        self._directed = self._source is not None
+        self._connectors = tuple(connectors) if connectors is not None \
+            else (source, destination)
+        self._directed = source is not None
 
     def _validate_conns(self, source, destination, connectors):
         connector_types = set([SimpleConnector, _ConnectorData])
@@ -150,6 +142,13 @@ class Connection(ActiveIndexedComponent):
                             connection arguments or a two-member iterable
         doc             A text string describing this component
         name            A name for this component
+
+    Public attributes
+        source          The source Connector of a directed connection, or None
+        destination     The source Connector of a directed connection, or None
+        connectors      A tuple containing both connectors. If directed, this
+                            is in the order (source, destination)
+        directed        True if directed, False if not
     """
 
     _ComponentDataClass = _ConnectionData
@@ -239,6 +238,8 @@ class Connection(ActiveIndexedComponent):
             # check that it's a two-member iterable
             conns = None
             if hasattr(vals, "__iter__"):
+                # note: every iterable except strings has an __iter__ attribute
+                # but strings are not valid anyway
                 conns = tuple(vals)
             if conns is None or len(conns) != 2:
                 raise ValueError(
@@ -268,10 +269,8 @@ class Connection(ActiveIndexedComponent):
              ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active)],
             iteritems(self),
-            ("Source", "Destination", "Connectors", "Directed", "Active"),
-            lambda k, v: [v.source,
-                          v.destination,
-                          "(%s, %s)" % v.connectors if v.connectors is not None
+            ("Connectors", "Directed", "Active"),
+            lambda k, v: ["(%s, %s)" % v.connectors if v.connectors is not None
                             else None,
                           v.directed,
                           v.active])
