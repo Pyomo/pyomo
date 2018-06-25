@@ -23,6 +23,69 @@ from pyomo.core.base.connection import SimpleConnection
 from pyomo.common.modeling import unique_component_name
 
 class _ConnExpansion(Transformation):
+    def _collect_connectors(self, instance, ctype):
+        connector_types = set([SimpleConnector, _ConnectorData])
+        constraint_list = []
+        connection_list = []
+        connector_list = []
+        matched_connectors = {}
+        found = dict()
+        for comp in instance.component_data_objects(ctype):
+            if comp.type() is Constraint:
+                for c in EXPR.identify_components(comp.body, connector_types):
+                    if c.__class__ in connector_types:
+                        found[id(c)] = c
+                if not found:
+                    continue
+                found_this_comp = dict(found)
+                constraint_list.append( (comp, found_this_comp) )
+            else: # Connection
+                if comp.directed:
+                    cons = [comp.source, comp.destination]
+                else:
+                    cons = list(comp.connectors)
+                    assert len(cons) == 2, "2 Connectors per Connection"
+                found = {id(cons[0]): cons[0], id(cons[1]): cons[1]}
+                found_this_comp = dict(found)
+                connection_list.append( (comp, found_this_comp) )
+
+            # Note that it is important to copy the set of found
+            # connectors, since the matching routine below will
+            # manipulate sets in place.
+
+            # Find all the connectors that are used in the comp,
+            # so we know which connectors to validate against each
+            # other.  Note that the validation must be transitive (that
+            # is, if con1 has a & b and con2 has b & c, then a,b, and c
+            # must all validate against each other.
+            for cId, c in iteritems(found_this_comp):
+                if cId in matched_connectors:
+                    oldSet = matched_connectors[cId]
+                    found.update( oldSet )
+                    for _cId in oldSet:
+                        matched_connectors[_cId] = found
+                else:
+                    connector_list.append(c)
+                matched_connectors[cId] = found
+
+            # Reset found back to empty (this is more efficient as the
+            # bulk of the constraints in the model will not have
+            # connectors - so if we did this at the top of the loop, we
+            # would spend a lot of time clearing empty sets
+            found = {}
+
+        # Validate all connector sets and expand the empty ones
+        known_conn_sets = {}
+        for connector in connector_list:
+            conn_set = matched_connectors[id(connector)]
+            if id(conn_set) in known_conn_sets:
+                continue
+            known_conn_sets[id(conn_set)] \
+                = self._validate_and_expand_connector_set(conn_set)
+
+        return (constraint_list, connection_list, connector_list,
+                matched_connectors, known_conn_sets)
+
     def _validate_and_expand_connector_set(self, connectors):
         ref = {}
         # First, go through the connectors and get the superset of all fields
@@ -134,64 +197,58 @@ class _ConnExpansion(Transformation):
 
         return ref
 
-    def _collect_connectors(self, instance, ctype):
-        connector_types = set([SimpleConnector, _ConnectorData])
-        comp_list = []
-        connector_list = []
-        matched_connectors = {}
-        found = dict()
-        for comp in instance.component_data_objects(ctype):
-            if ctype is Constraint:
-                for c in EXPR.identify_components(comp.body, connector_types):
-                    if c.__class__ in connector_types:
-                        found[id(c)] = c
-                if not found:
-                    continue
-            else: # Connection
-                if comp.directed:
-                    cons = [comp.source, comp.destination]
-                else:
-                    cons = list(comp.connectors)
-                    assert len(cons) == 2, "2 Connectors per Connection"
-                found = {id(cons[0]): cons[0], id(cons[1]): cons[1]}
-
-            # Note that it is important to copy the set of found
-            # connectors, since the matching routine below will
-            # manipulate sets in place.
-            found_this_comp = dict(found)
-            comp_list.append( (comp, found_this_comp) )
-
-            # Find all the connectors that are used in the comp,
-            # so we know which connectors to validate against each
-            # other.  Note that the validation must be transitive (that
-            # is, if con1 has a & b and con2 has b & c, then a,b, and c
-            # must all validate against each other.
-            for cId, c in iteritems(found_this_comp):
-                if cId in matched_connectors:
-                    oldSet = matched_connectors[cId]
-                    found.update( oldSet )
-                    for _cId in oldSet:
-                        matched_connectors[_cId] = found
-                else:
-                    connector_list.append(c)
-                matched_connectors[cId] = found
-
-            # Reset found back to empty (this is more efficient as the
-            # bulk of the constraints in the model will not have
-            # connectors - so if we did this at the top of the loop, we
-            # would spend a lot of time clearing empty sets
-            found = {}
-
-        # Validate all connector sets and expand the empty ones
-        known_conn_sets = {}
-        for connector in connector_list:
-            conn_set = matched_connectors[id(connector)]
-            if id(conn_set) in known_conn_sets:
+    def _build_connections(self, connection_list, matched_connectors,
+                           known_conn_sets):
+        indexed_ctns = OrderedDict() # maintain deterministic order we have
+        for ctn, conn_set in connection_list:
+            if not isinstance(ctn, SimpleConnection):
+                # create indexed blocks later for indexed connections
+                lst = indexed_ctns.get(ctn.parent_component(), [])
+                lst.append( (ctn, conn_set) )
+                indexed_ctns[ctn.parent_component()] = lst
                 continue
-            known_conn_sets[id(conn_set)] \
-                = self._validate_and_expand_connector_set(conn_set)
+            blk = Block()
+            bname = unique_component_name(
+                ctn.parent_block(), "%s_expanded" % ctn.local_name)
+            ctn.parent_block().add_component(bname, blk)
+            self._add_connections(
+                blk, conn_set, matched_connectors, known_conn_sets)
+            ctn.deactivate()
 
-        return comp_list, connector_list, matched_connectors, known_conn_sets
+        for ictn in indexed_ctns:
+            blk = Block(ictn.index_set())
+            bname = unique_component_name(
+                ictn.parent_block(), "%s_expanded" % ictn.local_name)
+            ictn.parent_block().add_component(bname, blk)
+            for ctn, conn_set in indexed_ctns[ictn]:
+                i = ctn.index()
+                self._add_connections(
+                    blk[i], conn_set, matched_connectors, known_conn_sets)
+            ictn.deactivate()
+
+    def _add_connections(self, blk, conn_set, matched_connectors,
+                         known_conn_sets):
+        connId = next(iterkeys(conn_set))
+        ref = known_conn_sets[id(matched_connectors[connId])]
+        for k, v in sorted(iteritems(ref)):
+            cname = k + "_equality"
+            if v[1] >= 0:
+                # v[0] is an indexed var
+                def rule(m, i):
+                    tmp = []
+                    for c in itervalues(conn_set):
+                        tmp.append(c.vars[k][i])
+                    return tmp[0] == tmp[1]
+                con = Constraint(v[0].index_set(), rule=rule)
+            else:
+                tmp = []
+                for c in itervalues(conn_set):
+                    if k in c.aggregators:
+                        tmp.append(c.vars[k].add())
+                    else:
+                        tmp.append(c.vars[k])
+                con = Constraint(expr=tmp[0] == tmp[1])
+            blk.add_component(cname, con)
 
     def _implement_aggregators(self, connector_list):
         for conn in connector_list:
@@ -224,8 +281,9 @@ class ExpandConnectors(_ConnExpansion):
         # At this point, there are connectors in the model, so we must
         # look for constraints that involve connectors and expand them.
         #
-        constraint_list, connector_list, matched_connectors, known_conn_sets = \
-            self._collect_connectors(instance, Constraint)
+        (constraint_list, connection_list, connector_list, matched_connectors,
+            known_conn_sets) = self._collect_connectors(instance,
+            (Constraint, Connection))
 
         # Expand each constraint
         for constraint, conn_set in constraint_list:
@@ -255,6 +313,9 @@ class ExpandConnectors(_ConnExpansion):
                         constraint.upper ))
             constraint.deactivate()
 
+        self._build_connections(connection_list, matched_connectors,
+            known_conn_sets)
+
         # Now, go back and implement VarList aggregators
         self._implement_aggregators(connector_list)
 
@@ -269,59 +330,11 @@ class ExpandConnections(_ConnExpansion):
 
         # need to collect all connectors to see every connector each
         # is related to so that we can expand empty connectors
-        connection_list, connector_list, matched_connectors, known_conn_sets = \
-            self._collect_connectors(instance, Connection)
+        (_, connection_list, connector_list, matched_connectors,
+            known_conn_sets) = self._collect_connectors(instance, Connection)
 
-        indexed_ctns = OrderedDict() # maintain deterministic order we have
-        for ctn, conn_set in connection_list:
-            if not isinstance(ctn, SimpleConnection):
-                # create indexed blocks later for indexed connections
-                lst = indexed_ctns.get(ctn.parent_component(), [])
-                lst.append( (ctn, conn_set) )
-                indexed_ctns[ctn.parent_component()] = lst
-                continue
-            blk = Block()
-            bname = unique_component_name(
-                ctn.parent_block(), "%s_expanded" % ctn.local_name)
-            ctn.parent_block().add_component(bname, blk)
-            self._add_constraints(
-                blk, conn_set, matched_connectors, known_conn_sets)
-            ctn.deactivate()
-
-        for ictn in indexed_ctns:
-            blk = Block(ictn.index_set())
-            bname = unique_component_name(
-                ictn.parent_block(), "%s_expanded" % ictn.local_name)
-            ictn.parent_block().add_component(bname, blk)
-            for ctn, conn_set in indexed_ctns[ictn]:
-                i = ctn.index()
-                self._add_constraints(
-                    blk[i], conn_set, matched_connectors, known_conn_sets)
-            ictn.deactivate()
+        self._build_connections(connection_list, matched_connectors,
+            known_conn_sets)
 
         # Now, go back and implement VarList aggregators
         self._implement_aggregators(connector_list)
-
-    def _add_constraints(self, blk, conn_set, matched_connectors,
-                         known_conn_sets):
-        connId = next(iterkeys(conn_set))
-        ref = known_conn_sets[id(matched_connectors[connId])]
-        for k, v in sorted(iteritems(ref)):
-            cname = k + "_equality"
-            if v[1] >= 0:
-                # v[0] is an indexed var
-                def rule(m, i):
-                    tmp = []
-                    for c in itervalues(conn_set):
-                        tmp.append(c.vars[k][i])
-                    return tmp[0] == tmp[1]
-                con = Constraint(v[0].index_set(), rule=rule)
-            else:
-                tmp = []
-                for c in itervalues(conn_set):
-                    if k in c.aggregators:
-                        tmp.append(c.vars[k].add())
-                    else:
-                        tmp.append(c.vars[k])
-                con = Constraint(expr=tmp[0] == tmp[1])
-            blk.add_component(cname, con)

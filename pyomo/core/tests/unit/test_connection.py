@@ -921,10 +921,10 @@ class TestConnection(unittest.TestCase):
         m.con2 = Connector()
         m.con2.add(m.y, "v")
 
-        # The connection should be deactivated and expanded,
-        # the constraint should be left untouched.
+        # The connection should be deactivated and expanded, but this transform
+        # should not expand constraints with connectors, only connections
         m.c = Connection(source=m.con1, destination=m.con2)
-        m.nocon = Constraint(expr = m.x == 2)
+        m.nocon = Constraint(expr = m.con1 >= 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
