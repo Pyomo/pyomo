@@ -43,7 +43,7 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
 
     pyomo.common.plugin.implements(phextension.IPHExtension)
 
-    pyomo.common.plugin.alias("ecksteincombettesextension")
+    pyomo.common.plugin.alias("aphextension")
 
     def __init__(self):
 
@@ -55,7 +55,7 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
         self._JName = "PhiSummary.csv"
 
         # TBD - this is hard-coded!!!! WATCH OUT!!!
-        self._number_of_subproblems_to_queue = 4
+        self._num_initial_subproblems_to_queue = 3
 
         self._subproblems_to_queue = []
 
@@ -93,8 +93,8 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
                 print(subproblem)
             print("")
 
-        print("PENDING SUBPROBLEMS=",ph.pending_subproblems())
-
+#        print("PENDING SUBPROBLEMS=",ph.pending_subproblems())
+            
         gamma = 1.0   # Scale factor. This should be a command-line parameter.
 
         self._total_projection_steps += 1
@@ -412,7 +412,7 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
             # TBD - THIS ASSUMES UNIQUE PHIS, WHICH IS NOT ALWAYS THE CASE.
             all_phis = list(six.iterkeys(sub_phi_to_scenario_map))
             random.shuffle(all_phis)
-            for phi in all_phis[0:self._number_of_subproblems_to_queue]:
+            for phi in all_phis[0:ph._async_buffer_length]:
                 scenario_name = sub_phi_to_scenario_map[phi][0]
 
                 if ph._scenario_tree.contains_bundles():
@@ -432,7 +432,7 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
                 else:
                     print("Queueing sub-problems whose scenarios possess the smallest phi values:")
             sorted_phis = sorted(sub_phi_to_scenario_map.keys())
-            for phi in sorted_phis[0:self._number_of_subproblems_to_queue]:
+            for phi in sorted_phis[0:ph._async_buffer_length]:
                 if ((self._queue_only_negative_subphi_subproblems) and (phi < 0.0)) or (not self._queue_only_negative_subphi_subproblems):
                     scenario_name = sub_phi_to_scenario_map[phi][0] 
                     if ph._verbose:
@@ -547,12 +547,12 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
         for subproblem in ph._scenario_tree.subproblems:
             self.asynchronous_pre_scenario_queue(ph, subproblem.name)
 
-        # pick subproblems at random - we need a number equal to the async buffer length,
+        # TBD - why are we doing this at all? we could just take a projection step.
+        # pick subproblems at random - we need to send out some number.
         # although we need all of them initially (PH does - not this particular plugin).
-        async_buffer_length = self._number_of_subproblems_to_queue
         all_subproblems = [subproblem.name for subproblem in ph._scenario_tree.subproblems]
         random.shuffle(all_subproblems)
-        self._subproblems_to_queue = all_subproblems[0:self._number_of_subproblems_to_queue]
+        self._subproblems_to_queue = all_subproblems[0:self._num_initial_subproblems_to_queue]
 
     def pre_iteration_k_solves(self, ph):
         """Called before each iteration k solve"""

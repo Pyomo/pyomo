@@ -2710,9 +2710,10 @@ class ProgressiveHedging(_PHBase):
     # 
             
     def pending_subproblems(self):
-        print("TOP OF CALL TO pending_subproblems")
-        print("queued_action_handles:", self._queued_solve_action_handles)
-        print("number of queued action handles:", len(self._queued_solve_action_handles))
+        pass
+#        print("TOP OF CALL TO pending_subproblems")
+#        print("queued_action_handles:", self._queued_solve_action_handles)
+#        print("number of queued action handles:", len(self._queued_solve_action_handles))
 #        queued_subproblems = []
 #        for ah in self._queued_solve_action_handles:
 #            if ah in action_handle_scenario_map:
@@ -2960,8 +2961,8 @@ class ProgressiveHedging(_PHBase):
                                          action_handle_bundle_map,
                                          bundle_action_handle_map):
 
-        print("TOP OF WAIT FOR AND PROCESS FUNCTION")
-        print("START QUEUED ACTION HANDLES=",self._queued_solve_action_handles,"COUNT=",len(self._queued_solve_action_handles))
+#        print("TOP OF WAIT FOR AND PROCESS FUNCTION")
+#        print("START QUEUED ACTION HANDLES=",self._queued_solve_action_handles,"COUNT=",len(self._queued_solve_action_handles))
         failures = []
         subproblems = []
 
@@ -3271,8 +3272,8 @@ class ProgressiveHedging(_PHBase):
                      max(result_load_times),
                      std_dev))
 
-        print("BOTTOM OF WAIT FOR AND PROCESS FUNCTION")
-        print("END QUEUED ACTION HANDLES=",self._queued_solve_action_handles,"COUNT=",len(self._queued_solve_action_handles))
+#        print("BOTTOM OF WAIT FOR AND PROCESS FUNCTION")
+#        print("END QUEUED ACTION HANDLES=",self._queued_solve_action_handles,"COUNT=",len(self._queued_solve_action_handles))
 
         return subproblems, failures
 
@@ -3826,9 +3827,9 @@ class ProgressiveHedging(_PHBase):
 
         while(True):
 
-            print("-----------------------------")
-            print("TOP OF ASYNC PH LOOP")
-            print("QUEUED SOLVE ACTION HANDLES=",self._queued_solve_action_handles)
+#            print("-----------------------------")
+#            print("TOP OF ASYNC PH LOOP")
+#            print("QUEUED SOLVE ACTION HANDLES=",self._queued_solve_action_handles)
 
             # TBD - revisit the below - why are we doing anything one-at-a-time?
             solved_subproblems, failures = self.wait_for_and_process_subproblems(1, # we're doing these one at a time
@@ -3866,7 +3867,7 @@ class ProgressiveHedging(_PHBase):
 
             subproblem_buffer.append(solved_subproblem_name)
 
-            print("SOLVED SUBPROBLEM BUFFER=",subproblem_buffer)
+#            print("SOLVED SUBPROBLEM BUFFER=",subproblem_buffer)
 
             if len(subproblem_buffer) == self._async_buffer_length:
                 if self._verbose:
@@ -4038,7 +4039,7 @@ class ProgressiveHedging(_PHBase):
                 # this is not a speed issue, is there a memory issue?
                 subproblem_buffer = []
 
-            print("-----------------------------")
+#            print("-----------------------------")
 
     def solve(self):
         # return None unless a solve failure was detected in iter0,
