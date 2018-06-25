@@ -20,7 +20,7 @@ from pyomo.core.base import Transformation, Connector, Constraint, \
     ConstraintList, Var, VarList, TraversalStrategy, Connection, Block
 from pyomo.core.base.connector import _ConnectorData, SimpleConnector
 from pyomo.core.base.connection import SimpleConnection
-
+from pyomo.common.modeling import unique_component_name
 
 class _ConnExpansion(Transformation):
     def _validate_and_expand_connector_set(self, connectors):
@@ -281,14 +281,18 @@ class ExpandConnections(_ConnExpansion):
                 indexed_ctns[ctn.parent_component()] = lst
                 continue
             blk = Block()
-            ctn.parent_block().add_component("%s_exp" % ctn.local_name, blk)
+            bname = unique_component_name(
+                ctn.parent_block(), "%s_expanded" % ctn.local_name)
+            ctn.parent_block().add_component(bname, blk)
             self._add_constraints(
                 blk, conn_set, matched_connectors, known_conn_sets)
             ctn.deactivate()
 
         for ictn in indexed_ctns:
             blk = Block(ictn.index_set())
-            ictn.parent_block().add_component("%s_exp" % ictn.local_name, blk)
+            bname = unique_component_name(
+                ictn.parent_block(), "%s_expanded" % ictn.local_name)
+            ictn.parent_block().add_component(bname, blk)
             for ctn, conn_set in indexed_ctns[ictn]:
                 i = ctn.index()
                 self._add_constraints(

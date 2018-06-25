@@ -244,14 +244,14 @@ class TestConnection(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        blk = m.component('c_exp')
+        blk = m.component('c_expanded')
         self.assertTrue(blk.active)
         self.assertTrue(blk.component('v_equality').active)
 
         os = StringIO()
         blk.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c_exp : Size=1, Index=None, Active=True
+"""c_expanded : Size=1, Index=None, Active=True
     1 Constraint Declarations
         v_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body  : Upper : Active
@@ -288,7 +288,7 @@ class TestConnection(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        blk = m.component('c_exp')
+        blk = m.component('c_expanded')
         self.assertTrue(blk.active)
         self.assertTrue(blk.component('a_equality').active)
         self.assertTrue(blk.component('b_equality').active)
@@ -296,7 +296,7 @@ class TestConnection(unittest.TestCase):
         os = StringIO()
         blk.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c_exp : Size=1, Index=None, Active=True
+"""c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         a_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body  : Upper : Active
@@ -336,7 +336,7 @@ class TestConnection(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        blk = m.component('c_exp')
+        blk = m.component('c_expanded')
         self.assertTrue(blk.active)
         self.assertTrue(blk.component('expr1_equality').active)
         self.assertTrue(blk.component('expr2_equality').active)
@@ -344,7 +344,7 @@ class TestConnection(unittest.TestCase):
         os = StringIO()
         blk.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c_exp : Size=1, Index=None, Active=True
+"""c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         expr1_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body    : Upper : Active
@@ -384,7 +384,7 @@ class TestConnection(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        blk = m.component('c_exp')
+        blk = m.component('c_expanded')
         self.assertTrue(blk.active)
         self.assertTrue(blk.component('a_equality').active)
         self.assertTrue(blk.component('a_equality').active)
@@ -392,7 +392,7 @@ class TestConnection(unittest.TestCase):
         os = StringIO()
         blk.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c_exp : Size=1, Index=None, Active=True
+"""c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         a_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body        : Upper : Active
@@ -429,7 +429,7 @@ class TestConnection(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        blk = m.component('c_exp')
+        blk = m.component('c_expanded')
         self.assertTrue(blk.component('x_equality').active)
         self.assertTrue(blk.component('y_equality').active)
 
@@ -441,7 +441,7 @@ class TestConnection(unittest.TestCase):
         os = StringIO()
         blk.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c_exp : Size=1, Index=None, Active=True
+"""c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         x_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body            : Upper : Active
@@ -477,14 +477,14 @@ class TestConnection(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        blk = m.component('c_exp')
+        blk = m.component('c_expanded')
         self.assertTrue(blk.component('x_equality').active)
         self.assertTrue(blk.component('y_equality').active)
 
         os = StringIO()
         blk.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c_exp : Size=1, Index=None, Active=True
+"""c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         x_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body              : Upper : Active
@@ -520,7 +520,7 @@ class TestConnection(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        blk = m.component('c_exp')
+        blk = m.component('c_expanded')
         self.assertTrue(blk.component('x_equality').active)
         self.assertTrue(blk.component('y_equality').active)
 
@@ -534,7 +534,7 @@ class TestConnection(unittest.TestCase):
         os = StringIO()
         blk.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c_exp : Size=1, Index=None, Active=True
+"""c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         x_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body                  : Upper : Active
@@ -574,11 +574,11 @@ class TestConnection(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 7)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        blk_c = m.component('c_exp')
+        blk_c = m.component('c_expanded')
         self.assertTrue(blk_c.component('x_equality').active)
         self.assertTrue(blk_c.component('y_equality').active)
         self.assertFalse(m.d.active)
-        blk_d = m.component('d_exp')
+        blk_d = m.component('d_expanded')
         self.assertTrue(blk_d.component('x_equality').active)
         self.assertTrue(blk_d.component('y_equality').active)
 
@@ -599,7 +599,7 @@ class TestConnection(unittest.TestCase):
         os = StringIO()
         blk_c.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c_exp : Size=1, Index=None, Active=True
+"""c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         x_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body                   : Upper : Active
@@ -615,7 +615,7 @@ class TestConnection(unittest.TestCase):
         os = StringIO()
         blk_d.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""d_exp : Size=1, Index=None, Active=True
+"""d_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         x_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body                              : Upper : Active
@@ -662,18 +662,18 @@ class TestConnection(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 7)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        blk_c = m.component('c_exp')
+        blk_c = m.component('c_expanded')
         self.assertTrue(blk_c.component('x_equality').active)
         self.assertTrue(blk_c.component('y_equality').active)
         self.assertFalse(m.d.active)
-        blk_d = m.component('d_exp')
+        blk_d = m.component('d_expanded')
         self.assertTrue(blk_d.component('x_equality').active)
         self.assertTrue(blk_d.component('y_equality').active)
 
         os = StringIO()
         blk_c.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c_exp : Size=1, Index=None, Active=True
+"""c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         x_equality : Size=2, Index=a1_index, Active=True
             Key : Lower : Body         : Upper : Active
@@ -689,7 +689,7 @@ class TestConnection(unittest.TestCase):
         os = StringIO()
         blk_d.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""d_exp : Size=1, Index=None, Active=True
+"""d_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         x_equality : Size=2, Index=a1_index, Active=True
             Key : Lower : Body          : Upper : Active
@@ -750,18 +750,18 @@ class TestConnection(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 7)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        blk_c = m.component('c_exp')
+        blk_c = m.component('c_expanded')
         self.assertTrue(blk_c.component('x_equality').active)
         self.assertTrue(blk_c.component('y_equality').active)
         self.assertFalse(m.d.active)
-        blk_d = m.component('d_exp')
+        blk_d = m.component('d_expanded')
         self.assertTrue(blk_d.component('x_equality').active)
         self.assertTrue(blk_d.component('y_equality').active)
 
         os = StringIO()
         blk_c.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c_exp : Size=1, Index=None, Active=True
+"""c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         x_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body         : Upper : Active
@@ -777,7 +777,7 @@ class TestConnection(unittest.TestCase):
         os = StringIO()
         blk_d.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""d_exp : Size=1, Index=None, Active=True
+"""d_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         x_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body                   : Upper : Active
@@ -813,11 +813,11 @@ class TestConnection(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 5)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 5)
         self.assertFalse(m.c.active)
-        blk_c = m.component('c_exp')
+        blk_c = m.component('c_expanded')
         self.assertTrue(blk_c.component('flow_equality').active)
         self.assertTrue(blk_c.component('phase_equality').active)
         self.assertFalse(m.d.active)
-        blk_d = m.component('d_exp')
+        blk_d = m.component('d_expanded')
         self.assertTrue(blk_d.component('flow_equality').active)
         self.assertTrue(blk_d.component('phase_equality').active)
 
@@ -826,7 +826,7 @@ class TestConnection(unittest.TestCase):
         os = StringIO()
         blk_c.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c_exp : Size=1, Index=None, Active=True
+"""c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         flow_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body                      : Upper : Active
@@ -841,7 +841,7 @@ class TestConnection(unittest.TestCase):
         os = StringIO()
         blk_d.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""d_exp : Size=1, Index=None, Active=True
+"""d_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
         flow_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body                      : Upper : Active
@@ -892,17 +892,17 @@ class TestConnection(unittest.TestCase):
         TransformationFactory('core.expand_connections').apply_to(m)
 
         os = StringIO()
-        m.component('eq_exp').pprint(ostream=os)
+        m.component('eq_expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""eq_exp : Size=2, Index=eq_index, Active=True
-    eq_exp[1] : Active=True
+"""eq_expanded : Size=2, Index=eq_index, Active=True
+    eq_expanded[1] : Active=True
         1 Constraint Declarations
             v_equality : Size=1, Index=None, Active=True
                 Key  : Lower : Body  : Upper : Active
                 None :   0.0 : x - z :   0.0 :   True
 
         1 Declarations: v_equality
-    eq_exp[2] : Active=True
+    eq_expanded[2] : Active=True
         1 Constraint Declarations
             t_equality : Size=1, Index=None, Active=True
                 Key  : Lower : Body  : Upper : Active
@@ -935,14 +935,14 @@ class TestConnection(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
-        blk = m.component('c_exp')
+        blk = m.component('c_expanded')
         self.assertTrue(blk.active)
         self.assertTrue(blk.component('v_equality').active)
 
         os = StringIO()
         blk.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""c_exp : Size=1, Index=None, Active=True
+"""c_expanded : Size=1, Index=None, Active=True
     1 Constraint Declarations
         v_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body  : Upper : Active
