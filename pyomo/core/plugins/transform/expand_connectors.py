@@ -278,14 +278,13 @@ class ExpandConnections(_ConnExpansion):
             for k, v in sorted(iteritems(ref)):
                 cname = k + ".equality"
                 if v[1] >= 0:
-                    # indexed var
-                    cList = ConstraintList()
-                    blk.add_component(cname, cList)
-                    for idx in v[0]:
+                    # v[0] is an indexed var
+                    def rule(m, i):
                         tmp = []
                         for c in itervalues(conn_set):
-                            tmp.append(c.vars[k][idx])
-                        cList.add(expr=tmp[0] == tmp[1])
+                            tmp.append(c.vars[k][i])
+                        return tmp[0] == tmp[1]
+                    con = Constraint(v[0].index_set(), rule=rule)
                 else:
                     tmp = []
                     for c in itervalues(conn_set):
@@ -294,7 +293,7 @@ class ExpandConnections(_ConnExpansion):
                         else:
                             tmp.append(c.vars[k])
                     con = Constraint(expr=tmp[0] == tmp[1])
-                    blk.add_component(cname, con)
+                blk.add_component(cname, con)
             ctn.deactivate()
 
         # Now, go back and implement VarList aggregators

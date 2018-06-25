@@ -393,12 +393,8 @@ class TestConnection(unittest.TestCase):
         blk.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """c.exp : Size=1, Index=None, Active=True
-    1 Set Declarations
-        a.equality_index : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=None
-            [1, 2]
-
     2 Constraint Declarations
-        a.equality : Size=2, Index=c.exp.a.equality_index, Active=True
+        a.equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body        : Upper : Active
               1 :   0.0 : x[1] - z[1] :   0.0 :   True
               2 :   0.0 : x[2] - z[2] :   0.0 :   True
@@ -406,7 +402,7 @@ class TestConnection(unittest.TestCase):
             Key  : Lower : Body  : Upper : Active
             None :   0.0 : y - w :   0.0 :   True
 
-    3 Declarations: a.equality_index a.equality b.equality
+    2 Declarations: a.equality b.equality
 """)
 
 
@@ -539,12 +535,8 @@ class TestConnection(unittest.TestCase):
         blk.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """c.exp : Size=1, Index=None, Active=True
-    1 Set Declarations
-        x.equality_index : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=None
-            [1, 2]
-
     2 Constraint Declarations
-        x.equality : Size=2, Index=c.exp.x.equality_index, Active=True
+        x.equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body                  : Upper : Active
               1 :   0.0 : x[1] - ECON.auto.x[1] :   0.0 :   True
               2 :   0.0 : x[2] - ECON.auto.x[2] :   0.0 :   True
@@ -552,7 +544,7 @@ class TestConnection(unittest.TestCase):
             Key  : Lower : Body            : Upper : Active
             None :   0.0 : y - ECON.auto.y :   0.0 :   True
 
-    3 Declarations: x.equality_index x.equality y.equality
+    2 Declarations: x.equality y.equality
 """)
 
 
@@ -608,12 +600,8 @@ class TestConnection(unittest.TestCase):
         blk_c.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """c.exp : Size=1, Index=None, Active=True
-    1 Set Declarations
-        x.equality_index : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=None
-            [1, 2]
-
     2 Constraint Declarations
-        x.equality : Size=2, Index=c.exp.x.equality_index, Active=True
+        x.equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body                   : Upper : Active
               1 :   0.0 : x[1] - ECON1.auto.x[1] :   0.0 :   True
               2 :   0.0 : x[2] - ECON1.auto.x[2] :   0.0 :   True
@@ -621,19 +609,15 @@ class TestConnection(unittest.TestCase):
             Key  : Lower : Body             : Upper : Active
             None :   0.0 : y - ECON1.auto.y :   0.0 :   True
 
-    3 Declarations: x.equality_index x.equality y.equality
+    2 Declarations: x.equality y.equality
 """)
 
         os = StringIO()
         blk_d.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """d.exp : Size=1, Index=None, Active=True
-    1 Set Declarations
-        x.equality_index : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=None
-            [1, 2]
-
     2 Constraint Declarations
-        x.equality : Size=2, Index=d.exp.x.equality_index, Active=True
+        x.equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body                              : Upper : Active
               1 :   0.0 : ECON2.auto.x[1] - ECON1.auto.x[1] :   0.0 :   True
               2 :   0.0 : ECON2.auto.x[2] - ECON1.auto.x[2] :   0.0 :   True
@@ -641,7 +625,7 @@ class TestConnection(unittest.TestCase):
             Key  : Lower : Body                        : Upper : Active
             None :   0.0 : ECON2.auto.y - ECON1.auto.y :   0.0 :   True
 
-    3 Declarations: x.equality_index x.equality y.equality
+    2 Declarations: x.equality y.equality
 """)
 
 
@@ -690,12 +674,8 @@ class TestConnection(unittest.TestCase):
         blk_c.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """c.exp : Size=1, Index=None, Active=True
-    1 Set Declarations
-        x.equality_index : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=None
-            [1, 2]
-
     2 Constraint Declarations
-        x.equality : Size=2, Index=c.exp.x.equality_index, Active=True
+        x.equality : Size=2, Index=a1_index, Active=True
             Key : Lower : Body         : Upper : Active
               1 :   0.0 : x[1] - a2[1] :   0.0 :   True
               2 :   0.0 : x[2] - a2[2] :   0.0 :   True
@@ -703,19 +683,15 @@ class TestConnection(unittest.TestCase):
             Key  : Lower : Body   : Upper : Active
             None :   0.0 : y - b2 :   0.0 :   True
 
-    3 Declarations: x.equality_index x.equality y.equality
+    2 Declarations: x.equality y.equality
 """)
 
         os = StringIO()
         blk_d.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """d.exp : Size=1, Index=None, Active=True
-    1 Set Declarations
-        x.equality_index : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=None
-            [1, 2]
-
     2 Constraint Declarations
-        x.equality : Size=2, Index=d.exp.x.equality_index, Active=True
+        x.equality : Size=2, Index=a1_index, Active=True
             Key : Lower : Body          : Upper : Active
               1 :   0.0 : a1[1] - a2[1] :   0.0 :   True
               2 :   0.0 : a1[2] - a2[2] :   0.0 :   True
@@ -723,7 +699,7 @@ class TestConnection(unittest.TestCase):
             Key  : Lower : Body    : Upper : Active
             None :   0.0 : b1 - b2 :   0.0 :   True
 
-    3 Declarations: x.equality_index x.equality y.equality
+    2 Declarations: x.equality y.equality
 """)
 
 
@@ -786,12 +762,8 @@ class TestConnection(unittest.TestCase):
         blk_c.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """c.exp : Size=1, Index=None, Active=True
-    1 Set Declarations
-        x.equality_index : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=None
-            [1, 2]
-
     2 Constraint Declarations
-        x.equality : Size=2, Index=c.exp.x.equality_index, Active=True
+        x.equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body         : Upper : Active
               1 :   0.0 : x[1] - a2[1] :   0.0 :   True
               2 :   0.0 : x[2] - a2[2] :   0.0 :   True
@@ -799,19 +771,15 @@ class TestConnection(unittest.TestCase):
             Key  : Lower : Body             : Upper : Active
             None :   0.0 : y - ECON1.auto.y :   0.0 :   True
 
-    3 Declarations: x.equality_index x.equality y.equality
+    2 Declarations: x.equality y.equality
 """)
 
         os = StringIO()
         blk_d.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """d.exp : Size=1, Index=None, Active=True
-    1 Set Declarations
-        x.equality_index : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=None
-            [1, 2]
-
     2 Constraint Declarations
-        x.equality : Size=2, Index=d.exp.x.equality_index, Active=True
+        x.equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body                   : Upper : Active
               1 :   0.0 : ECON2.auto.x[1] - x[1] :   0.0 :   True
               2 :   0.0 : ECON2.auto.x[2] - x[2] :   0.0 :   True
@@ -819,7 +787,7 @@ class TestConnection(unittest.TestCase):
             Key  : Lower : Body   : Upper : Active
             None :   0.0 : b1 - y :   0.0 :   True
 
-    3 Declarations: x.equality_index x.equality y.equality
+    2 Declarations: x.equality y.equality
 """)
 
 
