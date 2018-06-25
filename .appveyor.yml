@@ -82,7 +82,7 @@ install:
   #
   # Install pyomo.extras
   #
-  - "IF DEFINED EXTRAS (%ANACONDA% numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill)"
+  - "IF DEFINED EXTRAS (%ANACONDA% numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill mkl)"
   # These packages are not in anaconda, need to get them from conda-forge
   - "IF DEFINED EXTRAS (%CONDAFORGE% pymysql pyro4)"
   #- "IF DEFINED EXTRAS (%CONDAFORGE% numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill)"
