@@ -12,12 +12,14 @@ import logging
 logger = logging.getLogger('pyomo.core')
 
 from six import next, iteritems, iterkeys, itervalues
+from collections import OrderedDict
 
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.plugin import alias
 from pyomo.core.base import Transformation, Connector, Constraint, \
     ConstraintList, Var, VarList, TraversalStrategy, Connection, Block
 from pyomo.core.base.connector import _ConnectorData, SimpleConnector
+from pyomo.core.base.connection import SimpleConnection
 
 
 class _ConnExpansion(Transformation):
@@ -270,31 +272,52 @@ class ExpandConnections(_ConnExpansion):
         connection_list, connector_list, matched_connectors, known_conn_sets = \
             self._collect_connectors(instance, Connection)
 
+        indexed_ctns = OrderedDict() # maintain deterministic order we have
         for ctn, conn_set in connection_list:
+            if not isinstance(ctn, SimpleConnection):
+                # create indexed blocks later for indexed connections
+                lst = indexed_ctns.get(ctn.parent_component(), [])
+                lst.append( (ctn, conn_set) )
+                indexed_ctns[ctn.parent_component()] = lst
+                continue
             blk = Block()
-            ctn.parent_block().add_component("%s.exp" % ctn.local_name, blk)
-            connId = next(iterkeys(conn_set))
-            ref = known_conn_sets[id(matched_connectors[connId])]
-            for k, v in sorted(iteritems(ref)):
-                cname = k + ".equality"
-                if v[1] >= 0:
-                    # v[0] is an indexed var
-                    def rule(m, i):
-                        tmp = []
-                        for c in itervalues(conn_set):
-                            tmp.append(c.vars[k][i])
-                        return tmp[0] == tmp[1]
-                    con = Constraint(v[0].index_set(), rule=rule)
-                else:
-                    tmp = []
-                    for c in itervalues(conn_set):
-                        if k in c.aggregators:
-                            tmp.append(c.vars[k].add())
-                        else:
-                            tmp.append(c.vars[k])
-                    con = Constraint(expr=tmp[0] == tmp[1])
-                blk.add_component(cname, con)
+            ctn.parent_block().add_component("%s_exp" % ctn.local_name, blk)
+            self._add_constraints(
+                blk, conn_set, matched_connectors, known_conn_sets)
             ctn.deactivate()
+
+        for ictn in indexed_ctns:
+            blk = Block(ictn.index_set())
+            ictn.parent_block().add_component("%s_exp" % ictn.local_name, blk)
+            for ctn, conn_set in indexed_ctns[ictn]:
+                i = ctn.index()
+                self._add_constraints(
+                    blk[i], conn_set, matched_connectors, known_conn_sets)
+            ictn.deactivate()
 
         # Now, go back and implement VarList aggregators
         self._implement_aggregators(connector_list)
+
+    def _add_constraints(self, blk, conn_set, matched_connectors,
+                         known_conn_sets):
+        connId = next(iterkeys(conn_set))
+        ref = known_conn_sets[id(matched_connectors[connId])]
+        for k, v in sorted(iteritems(ref)):
+            cname = k + "_equality"
+            if v[1] >= 0:
+                # v[0] is an indexed var
+                def rule(m, i):
+                    tmp = []
+                    for c in itervalues(conn_set):
+                        tmp.append(c.vars[k][i])
+                    return tmp[0] == tmp[1]
+                con = Constraint(v[0].index_set(), rule=rule)
+            else:
+                tmp = []
+                for c in itervalues(conn_set):
+                    if k in c.aggregators:
+                        tmp.append(c.vars[k].add())
+                    else:
+                        tmp.append(c.vars[k])
+                con = Constraint(expr=tmp[0] == tmp[1])
+            blk.add_component(cname, con)
