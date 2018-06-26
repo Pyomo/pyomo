@@ -414,18 +414,16 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
 #TBD        ph.pending_subproblems()
 
         if len(negative_sub_phis) == 0:
-            print("**** YIKES! QUEUING SUBPROBLEMS AT RANDOM****")
+            print("No scenarios have a negative sub-phi - queuing subproblems at random")
             # TBD - THIS ASSUMES UNIQUE PHIS, WHICH IS NOT ALWAYS THE CASE.
             all_phis = list(iterkeys(sub_phi_to_scenario_map))
             random.shuffle(all_phis)
             for phi in all_phis[0:ph._async_buffer_length]:
                 scenario_name = sub_phi_to_scenario_map[phi][0]
-
                 if ph._scenario_tree.contains_bundles():
-                    # TBD: Eliminate print redundancy here.
                     if ph._verbose:
-                        print("Queueing sub-problem=%s" % ph._scenario_tree.get_bundle(scenario_name))
-                    self._subproblems_to_queue.append(ph._scenario_tree.get_bundle(scenario_name))
+                        print("Queueing sub-problem=%s" % ph._scenario_tree.get_scenario_bundles(scenario_name)[0])
+                    self._subproblems_to_queue.append(ph._scenario_tree.get_scenario_bundles(scenario_name)[0])
                 else:
                     if ph._verbose:
                         print("Queueing sub-problem=%s" % scenario_name)
