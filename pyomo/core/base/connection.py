@@ -34,8 +34,6 @@ class _ConnectionData(ActiveComponentData):
         self._component = weakref_ref(component) if (component is not None) \
                           else None
         self._active = True
-        self._source = None
-        self._destination = None
         self._connectors = None
         self._directed = None
         if len(kwds):
@@ -43,11 +41,15 @@ class _ConnectionData(ActiveComponentData):
 
     @property
     def source(self):
-        return self._source
+        # directed can be true before construction
+        # so make sure connectors is not None
+        return self._connectors[0] if self._directed is True and \
+            self._connectors is not None else None
 
     @property
     def destination(self):
-        return self._destination
+        return self._connectors[1] if self._directed is True and \
+            self._connectors is not None else None
 
     @property
     def connectors(self):
@@ -70,14 +72,11 @@ class _ConnectionData(ActiveComponentData):
 
         if len(vals):
             raise ValueError(
-                "set_args passed unrecognized keyword arguments:\n\t" +
+                "set_value passed unrecognized keyword arguments:\n\t" +
                 "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(vals)))
 
         self._validate_conns(source, destination, connectors)
 
-        # bypass add_component
-        object.__setattr__(self, "_source", source)
-        object.__setattr__(self, "_destination", destination)
         # tuples do not go through add_component
         self._connectors = tuple(connectors) if connectors is not None \
             else (source, destination)
@@ -144,8 +143,8 @@ class Connection(ActiveIndexedComponent):
         name            A name for this component
 
     Public attributes
-        source          The source Connector of a directed connection, or None
-        destination     The source Connector of a directed connection, or None
+        source          The source Connector when directed, else None
+        destination     The destination Connector when directed, else None
         connectors      A tuple containing both connectors. If directed, this
                             is in the order (source, destination)
         directed        True if directed, False if not
