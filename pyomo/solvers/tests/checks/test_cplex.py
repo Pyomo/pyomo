@@ -53,3 +53,6 @@ class CPLEX_utils(unittest.TestCase):
             _validate_file_name(_126, fname, 'xxx')
         with self.assertRaisesRegexp(ValueError, msg):
             _validate_file_name(_128, fname, 'xxx')
+
+if __name__ == "__main__":
+    unittest.main()
