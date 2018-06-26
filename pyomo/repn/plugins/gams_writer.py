@@ -18,19 +18,16 @@ from six.moves import xrange
 from pyutilib.misc import PauseGC
 
 from pyomo.core.expr import current as EXPR
-from pyomo.core.expr.numvalue import is_fixed, value, as_numeric, native_types, native_numeric_types
+from pyomo.core.expr.numvalue import (
+    is_fixed, value, as_numeric, native_types, native_numeric_types)
 from pyomo.core.base import (
-    SymbolMap, ShortNameLabeler, NumericLabeler,
-    Block, Constraint, Expression, Objective, Var, Set, RangeSet, Param,
-    minimize, Suffix, SortComponents, Connector)
+    SymbolMap, ShortNameLabeler, NumericLabeler, Block, Constraint, Expression,
+    Objective, Var, Param, minimize, Suffix, SortComponents)
 
-from pyomo.core.base.component import ComponentData
+from pyomo.core.base.component import ActiveComponent
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
 import pyomo.common.plugin
-
-from pyomo.core.kernel.component_block import IBlockStorage
-from pyomo.core.kernel.component_interface import ICategorizedObject
 
 import logging
 
@@ -91,6 +88,15 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
 
         if node.__class__ in native_types:
             return True, str(node)
+
+        # Make sure all components in active constraints are basic ctypes we
+        # know how to deal with. This means anything with a type() method must
+        # be one of the following allowable types.
+        if hasattr(node, "type") and node.type() not in (Var,Param,Expression):
+            raise RuntimeError(
+                "Unallowable component '%s' of type %s found in an active "
+                "constraint.\nThe GAMS writer cannot export constraints with "
+                "this component type." % (node.name, node.type().__name__))
 
         if node.is_variable_type():
             if node.fixed:
@@ -327,29 +333,20 @@ class ProblemWriter_gams(AbstractProblemWriter):
         linear = True
         linear_degree = set([0,1])
 
+        # Make sure there are no strange ActiveComponents. The expression
+        # walker will handle strange things in constraints later.
         model_ctypes = model.collect_ctypes(active=True)
-        if False:
-            #
-            # WEH - Disabling this check.  For now, we're allowing
-            # variables defined on non-block objects.
-            #
-            # Sanity check: all active components better be things we know
-            # how to deal with, plus Suffix if solving
-            valid_ctypes = set([
-                Block, Constraint, Expression, Objective, Param,
-                Set, RangeSet, Var, Suffix, Connector ])
-            if not model_ctypes.issubset(valid_ctypes):
-                invalids = [t.__name__ for t in (model_ctypes - valid_ctypes)]
-                raise RuntimeError(
-                    "Unallowable component(s) %s.\nThe GAMS writer cannot "
-                    "export models with this component type" %
-                    ", ".join(invalids))
-
-        # HACK: Temporary check for Connectors in active constriants.
-        # This should be removed after the writer is moved to an
-        # explicit GAMS-specific expression walker for generating the
-        # constraint strings.
-        has_Connectors = Connector in model_ctypes
+        valid_ctypes = set([Block, Constraint, Objective, Suffix])
+        invalids = set()
+        for t in (model_ctypes - valid_ctypes):
+            if issubclass(t, ActiveComponent):
+                invalids.add(t)
+        if len(invalids):
+            invalids = [t.__name__ for t in invalids]
+            raise RuntimeError(
+                "Unallowable active component(s) %s.\nThe GAMS writer cannot "
+                "export models with this component type" %
+                ", ".join(invalids))
 
         # Walk through the model and generate the constraint definition
         # for all active constraints.  Any Vars / Expressions that are
@@ -359,15 +356,9 @@ class ProblemWriter_gams(AbstractProblemWriter):
                                                 active=True,
                                                 sort=sort):
 
-            if (not con.has_lb()) and \
-               (not con.has_ub()):
+            if not con.has_lb() and not con.has_ub():
                 assert not con.equality
                 continue # non-binding, so skip
-
-            # HACK: Temporary check for Connectors in active constriants.
-            if has_Connectors:
-                raise RuntimeError("Cannot handle connectors right now.")
-                #_check_for_connectors(con)
 
             con_body = as_numeric(con.body)
             if skip_trivial_constraints and con_body.is_fixed():
