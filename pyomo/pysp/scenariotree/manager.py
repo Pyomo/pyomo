@@ -1882,10 +1882,10 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
 
     def _close_impl(self):
         # copy the list of bundle names as the next loop will modify
-        # the scenario_tree._scenario_bundles list
+        # the scenario_tree._bundles list
         if self._scenario_tree is not None:
             bundle_names = \
-                [bundle.name for bundle in self._scenario_tree._scenario_bundles]
+                [bundle.name for bundle in self._scenario_tree._bundles]
             for bundle_name in bundle_names:
                 self._release_bundle(bundle_name)
         self._instances = None
@@ -2209,7 +2209,7 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
             if self._options.verbose:
                 print("Construction extensive form instances for all bundles.")
 
-            for bundle in self._scenario_tree._scenario_bundles:
+            for bundle in self._scenario_tree._bundles:
                 self._init_bundle(bundle.name, bundle._scenario_names)
 
             end_time = time.time()
@@ -2929,7 +2929,7 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
         self.pause_transmit()
         if self._scenario_tree.contains_bundles():
 
-            for bundle in self._scenario_tree._scenario_bundles:
+            for bundle in self._scenario_tree._bundles:
 
                 object_names = {}
                 object_names['nodes'] = \
@@ -3230,9 +3230,9 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
     def _init_client(self):
         assert self._scenario_tree is not None
         if self._scenario_tree.contains_bundles():
-            for bundle in self._scenario_tree._scenario_bundles:
+            for bundle in self._scenario_tree._bundles:
                 self._init_bundle(bundle.name, bundle._scenario_names)
-            num_jobs = len(self._scenario_tree._scenario_bundles)
+            num_jobs = len(self._scenario_tree._bundles)
             if self._options.verbose:
                 print("Bundle jobs available: %s"
                       % (str(num_jobs)))

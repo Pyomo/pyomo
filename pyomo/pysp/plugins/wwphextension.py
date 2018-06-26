@@ -348,7 +348,7 @@ class wwphextension(pyomo.common.plugin.SingletonPlugin):
                     if not tree_node.is_leaf_node():
                         representative_scenario = tree_node._scenarios[0]._name
                         representative_bundle = None
-                        for bundle in ph._scenario_tree._scenario_bundles:
+                        for bundle in ph._scenario_tree._bundles:
                             if representative_scenario in bundle._scenario_names:
                                 representative_bundle = bundle._name
                                 break

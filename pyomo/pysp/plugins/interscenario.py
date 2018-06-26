@@ -908,7 +908,7 @@ class InterScenarioPlugin(SingletonPlugin):
         action_handles = []
 
         if ph._scenario_tree.contains_bundles():
-            subproblems = ph._scenario_tree._scenario_bundles
+            subproblems = ph._scenario_tree._bundles
         else:
             subproblems = ph._scenario_tree._scenarios
 
@@ -976,7 +976,7 @@ class InterScenarioPlugin(SingletonPlugin):
         distributed = isinstance( ph._solver_manager, SolverManager_PHPyro )
 
         if ph._scenario_tree.contains_bundles():
-            subproblems = ph._scenario_tree._scenario_bundles
+            subproblems = ph._scenario_tree._bundles
             get_scenarios = lambda x: x._scenario_names
         else:
             subproblems = ph._scenario_tree._scenarios

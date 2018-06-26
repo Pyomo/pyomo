@@ -452,7 +452,7 @@ class _PHBoundBase(object):
         # is available.
         if ph._scenario_tree.contains_bundles():
 
-            for scenario_bundle in ph._scenario_tree._scenario_bundles:
+            for scenario_bundle in ph._scenario_tree._bundles:
 
                 bundle_gap = ph._gaps[scenario_bundle._name]
                 bundle_objective_value = 0.0

@@ -569,7 +569,7 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
                 self._preprocessor.add_scenario(scenario,
                                                 scenario._instance,
                                                 solver)
-        for bundle in self.manager.scenario_tree._scenario_bundles:
+        for bundle in self.manager.scenario_tree._bundles:
             solver = self._bundle_solvers[bundle.name] = \
                 SolverFactory(self.get_option("solver"),
                               solver_io=self.get_option("solver_io"))
@@ -593,7 +593,7 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
         if (self._manager is not None) and \
            (self._manager.preprocessor is not None):
             assert self.preprocessor is self._manager.preprocessor
-            for bundle in self.manager.scenario_tree._scenario_bundles:
+            for bundle in self.manager.scenario_tree._bundles:
                 self._preprocessor.remove_bundle(bundle)
             for scenario in self.manager.scenario_tree._scenarios:
                 assert scenario._instance is not None

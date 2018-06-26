@@ -919,7 +919,7 @@ class ddextension(pyomo.common.plugin.SingletonPlugin):
 
                 scenario_to_bundle_map = {}
                 for scenario_index, scenario_name in enumerate(self._ScenarioVector, 1):
-                    for bundle in ph._scenario_tree._scenario_bundles:
+                    for bundle in ph._scenario_tree._bundles:
                         if scenario_name in bundle._scenario_names:
                             scenario_to_bundle_map[scenario_name] = bundle._name
 

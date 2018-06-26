@@ -55,7 +55,7 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
         self._JName = "PhiSummary.csv"
 
         # TBD - this is hard-coded!!!! WATCH OUT!!!
-        self._num_initial_subproblems_to_queue = 3
+        self._num_initial_subproblems_to_queue = 10
 
         self._subproblems_to_queue = []
 
@@ -410,7 +410,7 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
         if len(negative_sub_phis) == 0:
             print("**** YIKES! QUEUING SUBPROBLEMS AT RANDOM****")
             # TBD - THIS ASSUMES UNIQUE PHIS, WHICH IS NOT ALWAYS THE CASE.
-            all_phis = list(six.iterkeys(sub_phi_to_scenario_map))
+            all_phis = list(iterkeys(sub_phi_to_scenario_map))
             random.shuffle(all_phis)
             for phi in all_phis[0:ph._async_buffer_length]:
                 scenario_name = sub_phi_to_scenario_map[phi][0]
