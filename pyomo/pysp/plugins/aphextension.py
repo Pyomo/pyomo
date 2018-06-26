@@ -59,7 +59,7 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
             self._num_initial_subproblems_to_queue = \
                 os.environ["APH_INITIAL_SUBPROBLEMS_TO_QUEUE"]
         else:
-            self._num_initial_subproblems_to_queue = 5
+            self._num_initial_subproblems_to_queue = 3
             print ("APH_INITIAL_SUBPROBLEMS_TO_QUEUE was not set, using",
                     self._num_initial_subproblems_to_queue)
 
