@@ -23,7 +23,7 @@ from pyomo.core.base import minimize, maximize
 import math
 
 # the converger for the class - everything (primal and dual) is 
-# contained in the (u,v) vector of the Eckstein-Combettes extension.
+# contained in the (u,v) vector of the APH extension.
 class AsynchronousProjectiveHedgingConverger(ConvergenceBase):
 
     def __init__(self, *args, **kwds):
@@ -38,7 +38,7 @@ class AsynchronousProjectiveHedgingConverger(ConvergenceBase):
 
         return self._last_computed_uv_norm_value 
 
-# the primary Eckstein-Combettes extension class
+# the primary APH extension class
 
 class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin):
 
@@ -81,7 +81,7 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
 
     def check_optimality_conditions(self, ph):
 
-        print("Checking optimality conditions for Eckstein-Combettes plugin")
+        print("Checking optimality conditions for APH plugin")
         for stage in ph._scenario_tree._stages[:-1]:
             for tree_node in stage._tree_nodes:
                 for variable_id in tree_node._standard_variable_ids:
@@ -93,7 +93,7 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
     def compute_updates(self, ph, subproblems, subproblem_solve_counts):
 
         if ph._verbose:
-            print("Computing updates in Eckstein-Combettes PH extension")
+            print("Computing updates in APH extension")
             print("Subproblems:")
             for subproblem in subproblems:
                 print(subproblem)
@@ -435,7 +435,10 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
                     print("Queueing sub-problems whose scenarios possess the most negative phi values:")
                 else:
                     print("Queueing sub-problems whose scenarios possess the smallest phi values:")
-            sorted_phis = sorted(sub_phi_to_scenario_map.keys())
+            sorted_phis = []
+            for this_phi in sorted(sub_phi_to_scenario_map.keys()):
+                num_occurrences_this_phi = len(sub_phi_to_scenario_map[this_phi])
+                sorted_phis.extend([this_phi]*num_occurrences_this_phi)
             for phi in sorted_phis[0:ph._async_buffer_length]:
                 if ((self._queue_only_negative_subphi_subproblems) and (phi < 0.0)) or (not self._queue_only_negative_subphi_subproblems):
                     scenario_name = sub_phi_to_scenario_map[phi][0] 
@@ -452,6 +455,9 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
                         if ph._verbose:
                             print(" - queueing corresponding sub-problem=%s" % scenario_name)
                         self._subproblems_to_queue.append(scenario_name)
+                else:
+                    print("***SHOULD NOT BE HERE***")
+                    foobar
         if ph._verbose:
             print("")
 
@@ -475,11 +481,10 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
     def post_ph_initialization(self, ph):
         """Called after PH initialization"""
         
-        # IMPORTANT: if the Eckstein-Combettes extension plugin is enabled,
-        #            then make sure PH is in async mode - otherwise, nothing
-        #            will work!
+        # IMPORTANT: if the APH extension plugin is enabled, then make 
+        # sure PH is in async mode - otherwise, nothing will work!
         if not ph._async_mode:
-            raise RuntimeError("PH is not in async mode - this is required for the Eckstein-Combettes extension")
+            raise RuntimeError("PH is not in async mode - this is required for the APH extension")
 
         self._total_projection_steps = 0
         for scenario in ph._scenario_tree._scenarios:
@@ -510,7 +515,7 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
     def post_iteration_0(self, ph):
         """Called after the iteration 0 solves, averages computation, and weight computation"""
         if ph._verbose:
-            print("Starting Eckstein-Combettes PH extension post iteration 0 callback")
+            print("Starting APH extension post iteration 0 callback")
 
         # define y and u parameters for each non-leaf variable in each scenario.
         for scenario in ph._scenario_tree._scenarios:
