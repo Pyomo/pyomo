@@ -59,7 +59,7 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
             self._num_initial_subproblems_to_queue = \
                 os.environ["APH_INITIAL_SUBPROBLEMS_TO_QUEUE"]
         else:
-            self._num_initial_subproblems_to_queue = 3
+            self._num_initial_subproblems_to_queue = 5
             print ("APH_INITIAL_SUBPROBLEMS_TO_QUEUE was not set, using",
                     self._num_initial_subproblems_to_queue)
 
@@ -413,50 +413,48 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
 
 #TBD        ph.pending_subproblems()
 
+        scenario_phis = []
+        scenario_names = []
+        for this_phi in sorted(sub_phi_to_scenario_map.keys()):
+            num_occurrences_this_phi = len(sub_phi_to_scenario_map[this_phi])
+            scenario_phis.extend([this_phi]*num_occurrences_this_phi)
+            scenario_names.extend(sub_phi_to_scenario_map[this_phi])
+
         if len(negative_sub_phis) == 0:
             print("No scenarios have a negative sub-phi - queuing subproblems at random")
-            all_phis = []
-            for this_phi in sorted(sub_phi_to_scenario_map.keys()):
-                num_occurrences_this_phi = len(sub_phi_to_scenario_map[this_phi])
-                all_phis.extend([this_phi]*num_occurrences_this_phi)
-            random.shuffle(all_phis)
-            for phi in all_phis[0:ph._async_buffer_length]:
-                scenario_name = sub_phi_to_scenario_map[phi][0]
+            random.shuffle(scenario_names)
+            for this_scenario_name in scenario_names[0:ph._async_buffer_length]:
                 if ph._scenario_tree.contains_bundles():
                     if ph._verbose:
-                        print("Queueing sub-problem=%s" % ph._scenario_tree.get_scenario_bundles(scenario_name)[0])
-                    self._subproblems_to_queue.append(ph._scenario_tree.get_scenario_bundles(scenario_name)[0])
+                        print("Queueing sub-problem=%s" % ph._scenario_tree.get_scenario_bundles(this_scenario_name)[0])
+                    self._subproblems_to_queue.append(ph._scenario_tree.get_scenario_bundles(this_scenario_name)[0])
                 else:
                     if ph._verbose:
-                        print("Queueing sub-problem=%s" % scenario_name)
-                    self._subproblems_to_queue.append(scenario_name)
+                        print("Queueing sub-problem=%s" % this_scenario_name)
+                    self._subproblems_to_queue.append(this_scenario_name)
 
         else:
             if ph._verbose:
                 if self._queue_only_negative_subphi_subproblems:
-                    print("Queueing sub-problems whose scenarios possess the most negative phi values:")
+                    print("Queueing sub-problems whose scenarios possess the most negative phi values")
                 else:
-                    print("Queueing sub-problems whose scenarios possess the smallest phi values:")
-            sorted_phis = []
-            for this_phi in sorted(sub_phi_to_scenario_map.keys()):
-                num_occurrences_this_phi = len(sub_phi_to_scenario_map[this_phi])
-                sorted_phis.extend([this_phi]*num_occurrences_this_phi)
-            for phi in sorted_phis[0:ph._async_buffer_length]:
-                if ((self._queue_only_negative_subphi_subproblems) and (phi < 0.0)) or (not self._queue_only_negative_subphi_subproblems):
-                    scenario_name = sub_phi_to_scenario_map[phi][0] 
-                    if ph._verbose:
-                        print_("%30s %16e" % (scenario_name,phi), end="")
+                    print("Queueing sub-problems whose scenarios possess the smallest phi values")
 
-                    # TBD: THIS IS NOT DONE - WORK ON DUPLICATE DETECTION, SO WE DON'T QUEUE SUBPROBLEMS MULTIPLE TIMES.
+            for i in range(0,ph._async_buffer_length):
+                this_scenario_phi = scenario_phis[i]
+                this_scenario_name = scenario_names[i]
+                if ((self._queue_only_negative_subphi_subproblems) and (this_phi < 0.0)) or (not self._queue_only_negative_subphi_subproblems):
+                    if ph._verbose:
+                        print_("%30s %16e" % (this_scenario_name,this_scenario_phi), end="")
                     if ph._scenario_tree.contains_bundles():
                         # TBD - not properly handling lists below - fix!!!
                         if ph._verbose:
-                            print(" - queueing corresponding sub-problem=%s" % ph._scenario_tree.get_scenario_bundles(scenario_name)[0])
-                        self._subproblems_to_queue.append(ph._scenario_tree.get_scenario_bundles(scenario_name)[0])
+                            print(" - queueing corresponding sub-problem=%s" % ph._scenario_tree.get_scenario_bundles(this_scenario_name)[0])
+                        self._subproblems_to_queue.append(ph._scenario_tree.get_scenario_bundles(this_scenario_name)[0])
                     else:
                         if ph._verbose:
-                            print(" - queueing corresponding sub-problem=%s" % scenario_name)
-                        self._subproblems_to_queue.append(scenario_name)
+                            print(" - queueing corresponding sub-problem=%s" % this_scenario_name)
+                        self._subproblems_to_queue.append(this_scenario_name)
                 else:
                     print("***SHOULD NOT BE HERE***")
                     foobar
