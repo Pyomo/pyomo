@@ -424,8 +424,6 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
 
         negative_sub_phis = [sub_phi for sub_phi in sub_phi_to_scenario_map if sub_phi < 0.0]
 
-#TBD        ph.pending_subproblems()
-
         scenario_phis = []
         scenario_names = []
         for this_phi in sorted(sub_phi_to_scenario_map.keys()):
@@ -437,9 +435,16 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
             print("")
 
         if len(negative_sub_phis) == 0:
+
             print("No scenarios have a negative sub-phi - queuing subproblems at random")
-            random.shuffle(scenario_names)
-            for this_scenario_name in scenario_names[0:ph._async_buffer_length]:
+
+            scenario_indices = list(range(0, len(scenario_names)))
+            random.shuffle(scenario_indices)
+
+            for this_scenario_index in scenario_indices:
+                this_scenario_phi = scenario_phis[this_scenario_index]
+                this_scenario_name = scenario_names[this_scenario_index]
+
                 if ph._scenario_tree.contains_bundles():
                     if ph._verbose:
                         print("Queueing sub-problem=%s" % ph._scenario_tree.get_scenario_bundles(this_scenario_name)[0])
@@ -449,14 +454,18 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
                         print("Queueing sub-problem=%s" % this_scenario_name)
                     self._subproblems_to_queue.append(this_scenario_name)
 
+                if len(self._subproblems_to_queue) == ph._async_buffer_length:
+                    break
+
         else:
+
             if ph._verbose:
                 if self._queue_only_negative_subphi_subproblems:
                     print("Queueing sub-problems whose scenarios possess the most negative phi values")
                 else:
                     print("Queueing sub-problems whose scenarios possess the smallest phi values")
 
-            for i in range(0,ph._async_buffer_length):
+            for i in range(0,len(scenario_names)):
                 this_scenario_phi = scenario_phis[i]
                 this_scenario_name = scenario_names[i]
                 if ((self._queue_only_negative_subphi_subproblems) and (this_phi < 0.0)) or (not self._queue_only_negative_subphi_subproblems):
@@ -474,6 +483,12 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
                 else:
                     print("***SHOULD NOT BE HERE***")
                     foobar
+
+                if len(self._subproblems_to_queue) == ph._async_buffer_length:
+                    break
+
+        assert len(self._subproblems_to_queue) == ph._async_buffer_length
+
         if ph._verbose:
             print("")
 
