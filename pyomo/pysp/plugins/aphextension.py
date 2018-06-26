@@ -104,14 +104,14 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
     def compute_updates(self, ph, subproblems, subproblem_solve_counts):
 
         if ph._verbose:
+            print("")
             print("Computing updates in APH extension")
-            print("Subproblems:")
+            print("")
+            print("Subproblems received:")
             for subproblem in subproblems:
                 print(subproblem)
             print("")
 
-#        print("PENDING SUBPROBLEMS=",ph.pending_subproblems())
-            
         gamma = 1.0   # Scale factor. This should be a command-line parameter.
 
         self._total_projection_steps += 1
@@ -131,10 +131,10 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
                 scenarios_to_process.add(subproblem)
 
         if ph._verbose:
+            print("")
             print("Computing updates given solutions to the following scenarios:")
             for this_scenario in scenarios_to_process:
                 print("%s" % this_scenario)
-            print("")
 
         for this_scenario in scenarios_to_process:
             self._projection_step_of_last_update[this_scenario] = self._total_projection_steps
@@ -272,6 +272,7 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
             f.write("\n")
 
         if ph._verbose:
+            print("")
             print("Computed sub-phi values, by scenario:")
             for scenario_name in sorted(sub_phi_map.keys()):
                 print("  %30s %16e" % (scenario_name, sub_phi_map[scenario_name]))
@@ -407,6 +408,7 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
             phi += cumulative_sub_phi
 
         if ph._verbose:
+            print("")
             print("Computed sub-phi values (scenario, phi, iters-since-last-incorporated):")
             for sub_phi in sorted(sub_phi_to_scenario_map.keys()):
                 print_("  %16e: " % sub_phi, end="")
@@ -430,6 +432,9 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
             num_occurrences_this_phi = len(sub_phi_to_scenario_map[this_phi])
             scenario_phis.extend([this_phi]*num_occurrences_this_phi)
             scenario_names.extend(sub_phi_to_scenario_map[this_phi])
+
+        if ph._verbose:
+            print("")
 
         if len(negative_sub_phis) == 0:
             print("No scenarios have a negative sub-phi - queuing subproblems at random")

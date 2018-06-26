@@ -3871,7 +3871,8 @@ class ProgressiveHedging(_PHBase):
 
             if len(subproblem_buffer) == self._async_buffer_length:
                 if self._verbose:
-                    print("Processing async buffer")
+                    print("")
+                    print("Processing subproblems in async buffer")
 
                 # update variable statistics and compute new weights
                 self.update_variable_statistics()
