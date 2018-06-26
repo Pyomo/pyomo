@@ -12,6 +12,7 @@ import pyomo.common.plugin
 
 from six import iteritems, itervalues, print_, iterkeys
 
+import os
 import random
 
 from pyomo.pysp import phextension
@@ -54,8 +55,13 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
         self._check_output = False
         self._JName = "PhiSummary.csv"
 
-        # TBD - this is hard-coded!!!! WATCH OUT!!!
-        self._num_initial_subproblems_to_queue = 10
+        if "APH_INITIAL_SUBPROBLEMS_TO_QUEUE" in os.environ:
+            self._num_initial_subproblems_to_queue = \
+                os.environ["APH_INITIAL_SUBPROBLEMS_TO_QUEUE"]
+        else:
+            self._num_initial_subproblems_to_queue = 3
+            print ("APH_INITIAL_SUBPROBLEMS_TO_QUEUE was not set, using",
+                    self._num_initial_subproblems_to_queue)
 
         self._subproblems_to_queue = []
 
