@@ -46,6 +46,8 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
 
     pyomo.common.plugin.alias("aphextension")
 
+    INITIAL_SUBPROBLEMS_TO_QUEUE_KEYWORD = "APH_INITIAL_SUBPROBLEMS_TO_QUEUE"
+
     def __init__(self):
 
         import random
@@ -55,13 +57,22 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
         self._check_output = False
         self._JName = "PhiSummary.csv"
 
-        if "APH_INITIAL_SUBPROBLEMS_TO_QUEUE" in os.environ:
-            self._num_initial_subproblems_to_queue = \
-                os.environ["APH_INITIAL_SUBPROBLEMS_TO_QUEUE"]
+        if self.INITIAL_SUBPROBLEMS_TO_QUEUE_KEYWORD in os.environ:
+            try:
+                self._num_initial_subproblems_to_queue = \
+                    int(os.environ[self.INITIAL_SUBPROBLEMS_TO_QUEUE_KEYWORD])
+                print("APH extension using supplied value=%d for initial number of subproblems to queue" % 
+                      self._num_initial_subproblems_to_queue)
+            except TypeError:
+                raise RuntimeError("Illegal value=%s of type=%s supplied for APH environment variable=%s" % 
+                                   (os.environ[self.INITIAL_SUBPROBLEMS_TO_QUEUE_KEYWORD],
+                                    type(os.environ[self.INITIAL_SUBPROBLEMS_TO_QUEUE_KEYWORD]),
+                                    self.INITIAL_SUBPROBLEMS_TO_QUEUE_KEYWORD))
         else:
-            self._num_initial_subproblems_to_queue = 3
-            print ("APH_INITIAL_SUBPROBLEMS_TO_QUEUE was not set, using",
-                    self._num_initial_subproblems_to_queue)
+            self._num_initial_subproblems_to_queue = 5
+            print("%s was not set, using %d as a default" % 
+                  (self.INITIAL_SUBPROBLEMS_TO_QUEUE_KEYWORD,
+                   self._num_initial_subproblems_to_queue))
 
         self._subproblems_to_queue = []
 
