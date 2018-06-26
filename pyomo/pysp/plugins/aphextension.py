@@ -424,8 +424,8 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
                 if ph._scenario_tree.contains_bundles():
                     # TBD: Eliminate print redundancy here.
                     if ph._verbose:
-                        print("Queueing sub-problem=%s" % ph._scenario_tree.get_scenario_bundle(scenario_name))
-                    self._subproblems_to_queue.append(ph._scenario_tree.get_scenario_bundle(scenario_name))
+                        print("Queueing sub-problem=%s" % ph._scenario_tree.get_bundle(scenario_name))
+                    self._subproblems_to_queue.append(ph._scenario_tree.get_bundle(scenario_name))
                 else:
                     if ph._verbose:
                         print("Queueing sub-problem=%s" % scenario_name)
@@ -454,7 +454,8 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
                         if ph._verbose:
                             print(" - queueing corresponding sub-problem=%s" % scenario_name)
                         self._subproblems_to_queue.append(scenario_name)
-        print("")
+        if ph._verbose:
+            print("")
 
     def reset(self, ph):
         self.__init__()
