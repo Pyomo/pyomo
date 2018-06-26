@@ -48,7 +48,7 @@ class _ConnExpansion(Transformation):
 
         connector_types = set([SimpleConnector, _ConnectorData])
         for comp in instance.component_data_objects(
-                ctype, sort=SortComponents.deterministic):
+                ctype, sort=SortComponents.deterministic, active=True):
             if comp.type() is Constraint:
                 itr = EXPR.identify_components(comp.body, connector_types)
             else: # Connection

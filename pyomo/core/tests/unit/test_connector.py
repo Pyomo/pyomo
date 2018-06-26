@@ -817,19 +817,28 @@ class TestConnector(unittest.TestCase):
 
         # Must simulataneously expand all connectors including the connection
         # in order to properly expand empty connectors, so we define d first
-        # to test that it finds out how to populate ECON2
+        # to test that it finds out how to populate ECON2. Also make sure it
+        # does not expand inactive Constraints or Connections.
         m.d = Connection(connectors=(m.ECON2, m.ECON1))
         m.c = Constraint(expr= m.CON == m.ECON1)
+        m.e = Connection(connectors=(m.CON, m.CON))
+        m.f = Constraint(expr= m.ECON1 == m.ECON1)
         m.nocon = Constraint(expr = m.x[1] == 2)
+        m.e.deactivate()
+        m.f.deactivate()
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 2)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 3)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
 
         TransformationFactory('core.expand_connectors').apply_to(m)
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 5)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 8)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 6)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 9)
         self.assertTrue(m.nocon.active)
+        self.assertFalse(m.e.active)
+        self.assertIsNone(m.component('e_expanded'))
+        self.assertFalse(m.f.active)
+        self.assertIsNone(m.component('f.expanded'))
         self.assertFalse(m.c.active)
         self.assertTrue(m.component('c.expanded').active)
         self.assertFalse(m.d.active)

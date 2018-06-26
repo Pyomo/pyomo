@@ -921,15 +921,21 @@ class TestConnection(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
+        m.z = Var()
         m.con1 = Connector()
         m.con1.add(m.x, "v")
         m.con2 = Connector()
         m.con2.add(m.y, "v")
+        m.con3 = Connector()
+        m.con3.add(m.z, "v")
 
-        # The connection should be deactivated and expanded, but this transform
-        # should not expand constraints with connectors, only connections
+        # The active connection should be deactivated and expanded, but this
+        # transform should not expand constraints with connectors, only
+        # connections, and it should not expand inactive Connections.
         m.c = Connection(source=m.con1, destination=m.con2)
+        m.inactive = Connection(connectors=(m.con3, m.con2))
         m.nocon = Constraint(expr = m.con1 >= 2)
+        m.inactive.deactivate()
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
@@ -939,6 +945,8 @@ class TestConnection(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
         self.assertTrue(m.nocon.active)
+        self.assertFalse(m.inactive.active)
+        self.assertIsNone(m.component('inactive_expanded'))
         self.assertFalse(m.c.active)
         blk = m.component('c_expanded')
         self.assertTrue(blk.active)
