@@ -99,8 +99,8 @@ class _ConnectionData(ActiveComponentData):
                 if type(c) not in connector_types:
                     if type(c) is IndexedConnector:
                         raise ValueError(msg +
-                            "found IndexedConnector '%s' in 'connectors', "
-                            "must use single Connectors for Connection." % c)
+                            "found IndexedConnector '%s' in 'connectors', must "
+                            "use single Connectors for Connection." % c.name)
                     raise ValueError(msg +
                         "found object '%s' in 'connectors' not "
                         "of type Connector." % str(c))
@@ -113,14 +113,14 @@ class _ConnectionData(ActiveComponentData):
                 if type(source) is IndexedConnector:
                     raise ValueError(msg +
                         "found IndexedConnector '%s' as source, must use "
-                        "single Connectors for Connection." % source)
+                        "single Connectors for Connection." % source.name)
                 raise ValueError(msg +
                     "source object '%s' not of type Connector." % str(source))
             if type(destination) not in connector_types:
                 if type(destination) is IndexedConnector:
                     raise ValueError(msg +
                         "found IndexedConnector '%s' as destination, must use "
-                        "single Connectors for Connection." % destination)
+                        "single Connectors for Connection." % destination.name)
                 raise ValueError(msg +
                     "destination object '%s' not of type Connector."
                     % str(destination))
