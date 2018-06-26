@@ -444,13 +444,18 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
             for this_scenario_index in scenario_indices:
                 this_scenario_phi = scenario_phis[this_scenario_index]
                 this_scenario_name = scenario_names[this_scenario_index]
-
                 if ph._scenario_tree.contains_bundles():
+                    scenario_bundle_name = ph._scenario_tree.get_scenario_bundles(this_scenario_name)[0]
+                    # if the bundle has already been selected in this projection step, don't add it again
+                    if scenario_bundle_name in self._subproblems_to_queue:
+                        continue
                     if ph._verbose:
-                        print("Queueing sub-problem=%s" % ph._scenario_tree.get_scenario_bundles(this_scenario_name)[0])
-                    self._subproblems_to_queue.append(ph._scenario_tree.get_scenario_bundles(this_scenario_name)[0])
+                        print_("%30s %16e" % (this_scenario_name,this_scenario_phi), end="")
+                        print("Queueing sub-problem=%s" % scenario_bundle_name)
+                    self._subproblems_to_queue.append(scenario_bundle_name)
                 else:
                     if ph._verbose:
+                        print_("%30s %16e" % (this_scenario_name,this_scenario_phi), end="")
                         print("Queueing sub-problem=%s" % this_scenario_name)
                     self._subproblems_to_queue.append(this_scenario_name)
 
@@ -469,15 +474,19 @@ class AsynchronousProjectiveHedgingExtension(pyomo.common.plugin.SingletonPlugin
                 this_scenario_phi = scenario_phis[i]
                 this_scenario_name = scenario_names[i]
                 if ((self._queue_only_negative_subphi_subproblems) and (this_phi < 0.0)) or (not self._queue_only_negative_subphi_subproblems):
-                    if ph._verbose:
-                        print_("%30s %16e" % (this_scenario_name,this_scenario_phi), end="")
                     if ph._scenario_tree.contains_bundles():
                         # TBD - not properly handling lists below - fix!!!
+                        scenario_bundle_name = ph._scenario_tree.get_scenario_bundles(this_scenario_name)[0]
+                        # if the bundle has already been selected in this projection step, don't add it again
+                        if scenario_bundle_name in self._subproblems_to_queue:
+                            continue
                         if ph._verbose:
-                            print(" - queueing corresponding sub-problem=%s" % ph._scenario_tree.get_scenario_bundles(this_scenario_name)[0])
-                        self._subproblems_to_queue.append(ph._scenario_tree.get_scenario_bundles(this_scenario_name)[0])
+                            print_("%30s %16e" % (this_scenario_name,this_scenario_phi), end="")
+                            print(" - queueing corresponding sub-problem=%s" % scenario_bundle_name)
+                        self._subproblems_to_queue.append(scenario_bundle_name)
                     else:
                         if ph._verbose:
+                            print_("%30s %16e" % (this_scenario_name,this_scenario_phi), end="")
                             print(" - queueing corresponding sub-problem=%s" % this_scenario_name)
                         self._subproblems_to_queue.append(this_scenario_name)
                 else:
