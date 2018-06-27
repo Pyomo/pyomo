@@ -53,6 +53,9 @@ def readgjh(fname=None):
         data = f.readline()
     f.close()
 
+    #
+    # TODO: Parse the Hessian information
+    #
 
     f = open(fname[:-3]+'col',"r")
     data = f.read()

@@ -78,6 +78,11 @@ class GJHSolver(ASL):
         TempfileManager.add_tempfile(self._gjh_file, exists=False)
 
     def _postsolve(self):
+        #
+        # TODO: We should return the information using a better data
+        # structure (ComponentMap? so that the GJH solver does not need
+        # to be called with symbolic_solver_labels=True
+        #
         self._model._gjh_info = readgjh(self._gjh_file)
         self._model = None
         return super(GJHSolver, self)._postsolve()
