@@ -628,6 +628,9 @@ def split_long_line(line):
         while line[i] != ' ':
             # Walk backwards to find closest space,
             # where it is safe to split to a new line
+            if i < 0:
+                raise RuntimeError(
+                    "Found an 80,000+ character string with no spaces")
             i -= 1
         new_lines += line[:i] + '\n'
         line = line[i + 1:]

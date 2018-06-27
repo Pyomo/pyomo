@@ -12,7 +12,7 @@ import pyutilib.th as unittest
 from pyomo.core.base import NumericLabeler, SymbolMap
 from pyomo.environ import (Block, ConcreteModel, Connector, Constraint,
                            Objective, Var)
-from pyomo.repn.plugins.gams_writer import expression_to_string, replace_power
+from pyomo.repn.plugins.gams_writer import expression_to_string, split_long_line
 
 
 class GAMSTests(unittest.TestCase):
@@ -64,6 +64,14 @@ class GAMSTests(unittest.TestCase):
         m.o = Objective(expr=m.b1.x)
         with self.assertRaises(RuntimeError):
             m.write('testgmsfile.gms')
+
+    def test_split_long_line(self):
+        pat = "var1 + log(var2 / 9) - "
+        line = (pat * 10000) + "x"
+        self.assertEqual(split_long_line(line),
+            pat * 3478 + "var1 +\nlog(var2 / 9) - " +
+            pat * 3477 + "var1 +\nlog(var2 / 9) - " +
+            pat * 3043 + "x")
 
 
 if __name__ == "__main__":
