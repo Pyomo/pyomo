@@ -48,7 +48,7 @@ from pyomo.core.base import Block, ConstraintList, Suffix, value
 from pyomo.core.kernel import ComponentMap
 from pyomo.opt.base import IOptSolver
 
-__version__ = (0, 3, 0)
+__version__ = (0, 4, 0)
 
 # Valid initialization strategies
 valid_init_strategies = {
