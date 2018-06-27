@@ -444,6 +444,10 @@ class ProblemWriter_gams(AbstractProblemWriter):
         warn_int_bounds = False
         for category, var_name in categorized_vars:
             var = symbolMap.getObject(var_name)
+            if var.model() is not model.model():
+                raise RuntimeError(
+                    "GAMS writer: found variable '%s' not on same model tree.\n"
+                    "All variables must have the same parent model." % var.name)
             if category == 'positive':
                 if var.has_ub():
                     output_file.write("%s.up = %s;\n" %
