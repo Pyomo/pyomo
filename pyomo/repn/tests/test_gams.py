@@ -11,8 +11,10 @@
 import pyutilib.th as unittest
 from pyomo.core.base import NumericLabeler, SymbolMap
 from pyomo.environ import (Block, ConcreteModel, Connector, Constraint,
-                           Objective, Var)
+                           Objective, Var, TransformationFactory)
 from pyomo.repn.plugins.gams_writer import expression_to_string, split_long_line
+from pyomo.opt import ProblemFormat
+from six import StringIO
 
 
 class GAMSTests(unittest.TestCase):
@@ -50,7 +52,6 @@ class GAMSTests(unittest.TestCase):
             m.x * m.z - m.y, smap=smap), "x1*(-8.8) - x2")
 
     def test_gams_connector_in_active_constraint(self):
-        """Test connector in active constraint for GAMS writer."""
         m = ConcreteModel()
         m.b1 = Block()
         m.b2 = Block()
@@ -64,6 +65,23 @@ class GAMSTests(unittest.TestCase):
         m.o = Objective(expr=m.b1.x)
         with self.assertRaises(RuntimeError):
             m.write('testgmsfile.gms')
+
+    def test_gams_expanded_connectors(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.CON1 = Connector()
+        m.CON1.add(m.x, 'v')
+        m.CON2 = Connector()
+        m.CON2.add(m.y, 'v')
+        m.c = Constraint(expr=m.CON1 + m.CON2 >= 10)
+        TransformationFactory("core.expand_connectors").apply_to(m)
+        m.o = Objective(expr=m.x)
+        os = StringIO()
+        io_options = dict(symbolic_solver_labels=True)
+        m.write(os, format=ProblemFormat.gams, io_options=io_options)
+        # no error if we're here, but check for some identifying string
+        self.assertIn("x + y", os.getvalue())
 
     def test_split_long_line(self):
         pat = "var1 + log(var2 / 9) - "
