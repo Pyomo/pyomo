@@ -123,6 +123,68 @@ def expression_to_string(expr, labeler=None, smap=None):
     return visitor.dfs_postorder_stack(expr)
 
 
+class Categorizer(object):
+    """Class for representing categorized variables.
+
+    Given a list of variable names and a symbol map, categorizes the variable
+    names into the categories: binary, ints, positive and reals.
+
+    """
+
+    def __init__(self, var_list, symbol_map):
+        self.binary = []
+        self.ints = []
+        self.positive = []
+        self.reals = []
+
+        # categorize variables
+        for var in var_list:
+            v = symbol_map.getObject(var)
+            if v.is_binary():
+                self.binary.append(var)
+            elif v.is_integer():
+                if (v.has_lb() and (value(v.lb) >= 0)) and \
+                   (v.has_ub() and (value(v.ub) <= 1)):
+                    self.binary.append(var)
+                else:
+                    self.ints.append(var)
+            elif value(v.lb) == 0:
+                self.positive.append(var)
+            else:
+                self.reals.append(var)
+
+    def __iter__(self):
+        """Iterate over all variables.
+
+        Yield a tuple containing the variables category and its name.
+        """
+        for category in ['binary', 'ints', 'positive', 'reals']:
+            var_list = getattr(self, category)
+            for var_name in var_list:
+                yield category, var_name
+
+
+def split_long_line(line):
+    """
+    GAMS has an 80,000 character limit for lines, so split as many
+    times as needed so as to not have illegal lines.
+    """
+    new_lines = ''
+    while len(line) > 80000:
+        i = 80000
+        while line[i] != ' ':
+            # Walk backwards to find closest space,
+            # where it is safe to split to a new line
+            if i < 0:
+                raise RuntimeError(
+                    "Found an 80,000+ character string with no spaces")
+            i -= 1
+        new_lines += line[:i] + '\n'
+        line = line[i + 1:]
+    new_lines += line
+    return new_lines
+
+
 def _get_bound(exp):
     if exp is None:
         return None
@@ -587,68 +649,6 @@ class ProblemWriter_gams(AbstractProblemWriter):
             output_file.write("\nput 'SYMBOL   :   VALUE' /;")
             for stat in stat_vars:
                 output_file.write("\nput '%s' %s /;\n" % (stat, stat))
-
-
-class Categorizer(object):
-    """Class for representing categorized variables.
-
-    Given a list of variable names and a symbol map, categorizes the variable
-    names into the categories: binary, ints, positive and reals.
-
-    """
-
-    def __init__(self, var_list, symbol_map):
-        self.binary = []
-        self.ints = []
-        self.positive = []
-        self.reals = []
-
-        # categorize variables
-        for var in var_list:
-            v = symbol_map.getObject(var)
-            if v.is_binary():
-                self.binary.append(var)
-            elif v.is_integer():
-                if (v.has_lb() and (value(v.lb) >= 0)) and \
-                   (v.has_ub() and (value(v.ub) <= 1)):
-                    self.binary.append(var)
-                else:
-                    self.ints.append(var)
-            elif value(v.lb) == 0:
-                self.positive.append(var)
-            else:
-                self.reals.append(var)
-
-    def __iter__(self):
-        """Iterate over all variables.
-
-        Yield a tuple containing the variables category and its name.
-        """
-        for category in ['binary', 'ints', 'positive', 'reals']:
-            var_list = getattr(self, category)
-            for var_name in var_list:
-                yield category, var_name
-
-
-def split_long_line(line):
-    """
-    GAMS has an 80,000 character limit for lines, so split as many
-    times as needed so as to not have illegal lines.
-    """
-    new_lines = ''
-    while len(line) > 80000:
-        i = 80000
-        while line[i] != ' ':
-            # Walk backwards to find closest space,
-            # where it is safe to split to a new line
-            if i < 0:
-                raise RuntimeError(
-                    "Found an 80,000+ character string with no spaces")
-            i -= 1
-        new_lines += line[:i] + '\n'
-        line = line[i + 1:]
-    new_lines += line
-    return new_lines
 
 
 valid_solvers = {
