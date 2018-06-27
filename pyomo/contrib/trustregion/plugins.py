@@ -60,6 +60,7 @@ class GJHSolver(ASL):
 
     def __init__(self, **kwds):
         kwds['type'] = 'gjh'
+        kwds['symbolic_solver_labels'] = True
         super(GJHSolver, self).__init__(**kwds)
         self.options.solver = 'gjh'
         self._metasolver = False
