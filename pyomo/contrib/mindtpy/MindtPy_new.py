@@ -27,19 +27,19 @@ from six import iteritems
 
 from pyutilib.misc.config import ConfigBlock, ConfigValue
 from pyomo.contrib.mindtpy.util import MindtPySolveData, _DoNothing, a_logger
-import pyomo.util.plugin
-from pyomo.core.base import expr as EXPR
+import pyomo.common.plugin
+from pyomo.core.expr import current as EXPR
 from pyomo.core.base import (Block, ComponentUID, Constraint, ConstraintList,
                              Expression, Objective, RangeSet, Set, Suffix, Var,
                              maximize, minimize, value)
-from pyomo.core.base.expr_common import clone_expression
+from pyomo.core.expr.current import clone_expression
 from pyomo.core.base.numvalue import NumericConstant
 from pyomo.core.base.symbolic import differentiate
 from pyomo.core.kernel import Binary, NonNegativeReals, Reals
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory, SolverStatus
 from pyomo.opt.base import IOptSolver
-from pyomo.repn.canonical_repn import generate_canonical_repn
+from pyomo.repn import generate_standard_repn
 from pyomo.opt.results import ProblemSense, SolverResults
 
 from pyomo.core import TransformationFactory
@@ -77,12 +77,12 @@ class _In(object):
         raise ValueError("%s not in %s" % (value, self._allowable))
 
 
-class MindtPySolver(pyomo.util.plugin.Plugin):
+class MindtPySolver(pyomo.common.plugin.Plugin):
     """A decomposition-based MINLP solver.
     """
 
-    pyomo.util.plugin.implements(IOptSolver)
-    pyomo.util.plugin.alias('mindtpy',
+    pyomo.common.plugin.implements(IOptSolver)
+    pyomo.common.plugin.alias('mindtpy',
                             doc='MindtPy: Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo')
 
     # _metasolver = False
@@ -239,7 +239,8 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         domain=bool
     ))
 
-    __doc__ += CONFIG.generate_yaml_template()
+    # Qi: this causes issues. I'm not sure exactly why, but commenting for now.
+    # __doc__ += CONFIG.generate_yaml_template()
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -329,7 +330,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
 
             # Maps in order to keep track of certain generated constraints
             # MindtPy.cut_map = Suffix(direction=Suffix.LOCAL, datatype=None)
-   
+
 
             # Create a model block in which to store the generated linear
             # constraints. Do not leave the constraints on by default.
@@ -442,7 +443,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
 
         finally:
             config.logger.setLevel(old_logger_level)
-    
+
     def _copy_values(self, from_model, to_model, config):
         """Copy variable values from one model to another."""
         for v_from, v_to in zip(from_model.MindtPy_utils.initial_var_list,
@@ -545,7 +546,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             m.ipopt_zL_out = Suffix(direction=Suffix.IMPORT)
         if not hasattr(m, 'ipopt_zU_out'):
             m.ipopt_zU_out = Suffix(direction=Suffix.IMPORT)
-        
+
         if config.strategy == 'OA':
             # Map Constraint, nlp_iter -> generated OA Constraint
             MindtPy.OA_constr_map = {}
@@ -808,15 +809,15 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         MindtPy.MindtPy_penalty_expr = Expression(
             expr=sign_adjust * config.OA_penalty_factor * sum(
                 v for v in MindtPy.MindtPy_linear_cuts.slack_vars[...]))
-        
+
         MindtPy.MindtPy_oa_obj = Objective(
             expr=MindtPy.obj.expr + MindtPy.MindtPy_penalty_expr,
             sense=MindtPy.obj.sense)
 
-        # Deactivate extraneous IMPORT/EXPORT suffixes        
+        # Deactivate extraneous IMPORT/EXPORT suffixes
         getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
         getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
-        
+
         # m.pprint() #print oa master problem for debugging
         results = solve_data.mip_solver.solve(m, load_solutions=False,
                                         options=config.mip_solver_kwargs)
@@ -848,7 +849,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             m.solutions.load_from(results)
             self._copy_values(m, solve_data.working_model, config)
             self._copy_dual_suffixes(m, solve_data.working_model)
-            
+
             if MindtPy.obj.sense == minimize:
                 solve_data.LB = max(value(MindtPy.MindtPy_oa_obj.expr), solve_data.LB)
                 solve_data.LB_progress.append(solve_data.LB)
@@ -1419,7 +1420,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         for constr in MindtPy.nonlinear_constraints:
             rhs = ((0 if constr.upper is None else constr.upper) +
                    (0 if constr.lower is None else constr.lower))
-            print MindtPy
+            MindtPy.pprint()
             c = MindtPy.MindtPy_linear_cuts.oa_cuts.add(
                 expr=copysign(1, sign_adjust * m.dual[constr]) * (sum(
                     value(MindtPy.jacs[constr][id(var)]) * (var - value(var))
@@ -1501,7 +1502,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         coef_dict = {}
         constr_vars = {}
         for constr in lin_cons:
-            repn = generate_canonical_repn(constr.body)
+            repn = generate_standard_repn(constr.body)
             if repn.variables is None or repn.linear is None:
                 repn.variables = []
                 repn.linear = []
@@ -1659,5 +1660,3 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
                         MindtPy.nonlinear_variables.append(var)
         MindtPy.nonlinear_variable_IDs = set(
             id(v) for v in MindtPy.nonlinear_variables)
-
-
