@@ -30,7 +30,7 @@ class _DoNothing(object):
         return _do_nothing
 
 
-class MidtPySolveData(object):
+class MindtPySolveData(object):
     """Data container to hold solve-instance data.
     Key attributes:
         - original_model: the original model that the user gave us to solve
