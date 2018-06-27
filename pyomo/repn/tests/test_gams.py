@@ -22,11 +22,11 @@ class GAMSTests(unittest.TestCase):
         m.x = Var()
         lbl = NumericLabeler('x')
         smap = SymbolMap(lbl)
-        self.assertEquals(expression_to_string(
+        self.assertEqual(expression_to_string(
             m.x ** -3, lbl, smap=smap), "power(x1, -3)")
-        self.assertEquals(expression_to_string(
+        self.assertEqual(expression_to_string(
             m.x ** 0.33, smap=smap), "x1 ** 0.33")
-        self.assertEquals(expression_to_string(
+        self.assertEqual(expression_to_string(
             pow(m.x, 2), smap=smap), "power(x1, 2)")
 
     def test_fixed_var_to_string(self):
@@ -37,16 +37,16 @@ class GAMSTests(unittest.TestCase):
         m.z.fix(-3)
         lbl = NumericLabeler('x')
         smap = SymbolMap(lbl)
-        self.assertEquals(expression_to_string(
+        self.assertEqual(expression_to_string(
             m.x + m.y - m.z, lbl, smap=smap), "x1 + x2 - (-3)")
         m.z.fix(-400)
-        self.assertEquals(expression_to_string(
+        self.assertEqual(expression_to_string(
             m.z + m.y - m.z, smap=smap), "(-400) + x2 - (-400)")
         m.z.fix(8.8)
-        self.assertEquals(expression_to_string(
+        self.assertEqual(expression_to_string(
             m.x + m.z - m.y, smap=smap), "x1 + (8.8) - x2")
         m.z.fix(-8.8)
-        self.assertEquals(expression_to_string(
+        self.assertEqual(expression_to_string(
             m.x * m.z - m.y, smap=smap), "x1*(-8.8) - x2")
 
     def test_gams_connector_in_active_constraint(self):
