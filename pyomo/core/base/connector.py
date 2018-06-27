@@ -58,6 +58,15 @@ class _ConnectorData(ComponentData, NumericValue):
     # don't need to implement a specialized __setstate__ method, and
     # can quietly rely on the super() class's implementation.
 
+    def __getattr__(self, name):
+        """Returns self.vars[name] if it exists"""
+        if name in self.vars:
+            return self.vars[name]
+        # Since the base classes don't support getattr, we can just
+        # throw the "normal" AttributeError
+        raise AttributeError("'%s' object has no attribute '%s'"
+                             % (self.__class__.__name__, name))
+
     def set_value(self, value):
         msg = "Cannot specify the value of a connector '%s'"
         raise ValueError(msg % self.name)
