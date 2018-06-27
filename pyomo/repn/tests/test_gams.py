@@ -13,7 +13,6 @@ from pyomo.core.base import NumericLabeler, SymbolMap
 from pyomo.environ import (Block, ConcreteModel, Connector, Constraint,
                            Objective, Var, TransformationFactory)
 from pyomo.repn.plugins.gams_writer import expression_to_string, split_long_line
-from pyomo.opt import ProblemFormat
 from six import StringIO
 
 
@@ -65,7 +64,7 @@ class GAMSTests(unittest.TestCase):
         m.o = Objective(expr=m.b1.x)
         os = StringIO()
         with self.assertRaises(RuntimeError):
-            m.write(os, format=ProblemFormat.gams)
+            m.write(os, format="gams")
 
     def test_gams_expanded_connectors(self):
         m = ConcreteModel()
@@ -80,7 +79,7 @@ class GAMSTests(unittest.TestCase):
         m.o = Objective(expr=m.x)
         os = StringIO()
         io_options = dict(symbolic_solver_labels=True)
-        m.write(os, format=ProblemFormat.gams, io_options=io_options)
+        m.write(os, format="gams", io_options=io_options)
         # no error if we're here, but check for some identifying string
         self.assertIn("x + y", os.getvalue())
 
