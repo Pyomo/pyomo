@@ -67,7 +67,6 @@ class GJHSolver(ASL):
     # A hackish way to hold on to the model so that we can parse the
     # results.
     def _initialize_callbacks(self, model):
-        print "SETUP", self._keepfiles, type(model)
         self._model = model
         self._model._gjh_info = None
         super(GJHSolver, self)._initialize_callbacks(model)

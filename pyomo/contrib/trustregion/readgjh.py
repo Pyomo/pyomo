@@ -10,7 +10,6 @@ import os, glob, six
 
 
 def readgjh(fname=None):
-    print "FNAME", fname
     if fname is None:
         files = list(glob.glob("*.gjh"))
         fname = files.pop(0)
