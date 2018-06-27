@@ -57,10 +57,12 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
                 tmp.append("'{0}'".format(val))
             elif arg.is_variable_type():
                 if arg.is_fixed():
+                    # bind fixed var values in parens to avoid double negatives
                     tmp.append("(%s)" % val)
                 else:
                     tmp.append(val)
-            elif arg.is_expression_type() and node._precedence() < arg._precedence():
+            elif (arg.is_expression_type() and
+                  node._precedence() < arg._precedence()):
                 tmp.append("({0})".format(val))
             else:
                 tmp.append(val)
@@ -432,11 +434,6 @@ class ProblemWriter_gams(AbstractProblemWriter):
         output_file.write(";\n\n")
 
         for line in ConstraintIO.getvalue().splitlines():
-            #if '**' in line:
-            #    # Investigate power functions for an integer exponent, in which
-            #    # case replace with power(x, int) function to improve domain
-            #    # issues. Skip first term since it's always "con_name.."
-            #    line = replace_power(line) + ';'
             if len(line) > 80000:
                 line = split_long_line(line)
             output_file.write(line + "\n")
@@ -490,12 +487,6 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 raise KeyError('Category %s not supported' % category)
             if warmstart and var.value is not None:
                 output_file.write("%s.l = %s;\n" % (var_name, var.value))
-            if var.is_fixed():
-                # This probably doesn't run, since all fixed vars are by default
-                # replaced with their value and not assigned a symbol.
-                # But leave this here in case we change handling of fixed vars
-                assert var.value is not None, "Cannot fix variable at None"
-                output_file.write("%s.fx = %s;\n" % (var_name, var.value))
 
         if warn_int_bounds:
             logger.warning(
@@ -624,93 +615,6 @@ class Categorizer(object):
             var_list = getattr(self, category)
             for var_name in var_list:
                 yield category, var_name
-
-
-def split_terms(line):
-    """
-    Take line from GAMS model file and return list of terms split by space
-    but grouping together parentheses-bound expressions.
-    """
-    terms = []
-    begin = 0
-    inparens = 0
-    for i in xrange(len(line)):
-        if line[i] == '(':
-            inparens += 1
-        elif line[i] == ')':
-            assert inparens > 0, "Unexpected close parenthesis ')'"
-            inparens -= 1
-        elif not inparens:
-            if line[i] == ' ':
-                if i > begin:
-                    terms.append(line[begin:i])
-                begin = i + 1
-            elif (line[i] == '/' or
-                  (line[i] in ('+', '-') and not (line[i-1] == 'e' and
-                                                  line[i-2].isdigit())) or
-                  (line[i] == '*' and line[i-1] != '*' and line[i+1] != '*')):
-                # Keep power functions together
-                if i > begin:
-                    terms.append(line[begin:i])
-                terms.append(line[i])
-                begin = i + 1
-    assert inparens == 0, "Missing close parenthesis in line '%s'" % line
-    if begin < len(line):
-        terms.append(line[begin:len(line)])
-    return terms
-
-
-def split_args(term):
-    """
-    Split a term by the ** operator but keep parenthesis-bound
-    expressions grouped togeter.
-    """
-    args = []
-    begin = 0
-    inparens = 0
-    for i in xrange(len(term)):
-        if term[i] == '(':
-            inparens += 1
-        elif term[i] == ')':
-            assert inparens > 0, "Unexpected close parenthesis ')'"
-            inparens -= 1
-        elif not inparens and term[i:i + 2] == '**':
-            assert i > begin, "Invalid syntax around '**' operator"
-            args.append(term[begin:i])
-            begin = i + 2
-    assert inparens == 0, "Missing close parenthesis in term '%s'" % term
-    args.append(term[begin:len(term)])
-    return args
-
-
-def replace_power(line):
-    new_line = ''
-    for term in split_terms(line):
-        if '**' in term:
-            args = split_args(term)
-            for i in xrange(len(args)):
-                if '**' in args[i]:
-                    first_paren = args[i].find('(')
-                    assert ((first_paren != -1) and (args[i][-1] == ')')), (
-                        "Assumed arg '%s' was a parenthesis-bound expression "
-                        "or function" % args[i])
-                    arg = args[i][first_paren + 1:-1]
-                    args[i] = '%s( %s )' % (args[i][:first_paren],
-                                            replace_power(arg))
-            try:
-                if float(args[-1]) == int(float(args[-1])):
-                    term = ''
-                    for arg in args[:-2]:
-                        term += arg + '**'
-                    term += 'power(%s, %s)' % (args[-2], args[-1])
-            except ValueError:
-                term = ''
-                for arg in args[:-1]:
-                    term += arg + '**'
-                term += args[-1]
-        new_line += term + ' '
-    # Remove trailing space
-    return new_line[:-1]
 
 
 def split_long_line(line):
