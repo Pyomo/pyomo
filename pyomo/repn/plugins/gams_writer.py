@@ -94,11 +94,13 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
         # Make sure all components in active constraints are basic ctypes we
         # know how to deal with. This means anything with a type() method must
         # be one of the following allowable types.
-        if hasattr(node, "type") and node.type() not in (Var,Param,Expression):
+        if (hasattr(node, "type") and
+            node.type() not in (Var, Param, Expression, Objective)):
             raise RuntimeError(
                 "Unallowable component '%s' of type %s found in an active "
-                "constraint.\nThe GAMS writer cannot export constraints with "
-                "this component type." % (node.name, node.type().__name__))
+                "constraint or objective.\nThe GAMS writer cannot export "
+                "expressions with this component type."
+                % (node.name, node.type().__name__))
 
         if node.is_variable_type():
             if node.fixed:
