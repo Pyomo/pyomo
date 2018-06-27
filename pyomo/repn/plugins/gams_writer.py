@@ -444,7 +444,15 @@ class ProblemWriter_gams(AbstractProblemWriter):
         warn_int_bounds = False
         for category, var_name in categorized_vars:
             var = symbolMap.getObject(var_name)
-            if var.model() is not model.model():
+            not_on_model = False
+            try:
+                if var.model() is not model.model():
+                    not_on_model = True
+            except AttributeError:
+                # kernel, and although Var.root_block is thing, it's a method
+                if var.root_block is not model.root_block:
+                    not_on_model = True
+            if not_on_model:
                 raise RuntimeError(
                     "GAMS writer: found variable '%s' not on same model tree.\n"
                     "All variables must have the same parent model." % var.name)
