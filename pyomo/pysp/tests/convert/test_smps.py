@@ -237,7 +237,6 @@ class _SMPSTesterBase(object):
         if _run_verbose:
             options['--verbose'] = None
         options['--output-times'] = None
-        options['--explicit'] = None
         options['--traceback'] = None
         options['--keep-scenario-files'] = None
         options['--keep-auxiliary-files'] = None

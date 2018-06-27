@@ -146,7 +146,7 @@ model.DemandServiceThreshold = Constraint(model.Nodes, model.Nodes, rule=demand_
 
 # establish the value for delta
 def establish_delta_rule(model):
-   return summation(model.UnmetDemand) <= model.BigM * (1-model.delta)
+   return sum_product(model.UnmetDemand) <= model.BigM * (1-model.delta)
 model.Establishdelta = Constraint(rule=establish_delta_rule)
 
 #
@@ -154,11 +154,11 @@ model.Establishdelta = Constraint(rule=establish_delta_rule)
 #
 
 def compute_first_stage_cost_rule(model):
-    return (model.FirstStageCost - summation(model.CapCost, model.x) - summation(model.b0Cost, model.b0)) == 0.0
+    return (model.FirstStageCost - sum_product(model.CapCost, model.x) - sum_product(model.b0Cost, model.b0)) == 0.0
 model.ComputeFirstStageCost = Constraint(rule=compute_first_stage_cost_rule)
 
 def compute_second_stage_cost_rule(model):
-    return model.SecondStageCost == summation(model.FCost, model.b) - (model.lambdaMult * model.delta)
+    return model.SecondStageCost == sum_product(model.FCost, model.b) - (model.lambdaMult * model.delta)
 model.ComputeSecondStageCost = Constraint(rule=compute_second_stage_cost_rule)
 
 def fofx_rule(model):

@@ -31,7 +31,7 @@ def f4(model, j, xp):
 model.ComputeObj = Piecewise(model.J, model.y, model.x, pw_pts=bpts, pw_constr_type='EQ', f_rule=f4)
 
 def obj_expression(model):
-    return summation(model.c, model.y)
+    return sum_product(model.c, model.y)
 
 model.OBJ = Objective(rule=obj_expression)
 

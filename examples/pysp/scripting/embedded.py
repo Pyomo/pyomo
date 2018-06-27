@@ -51,7 +51,7 @@ model.d = Param(mutable=True)
 model.cost = Expression([1,2], initialize=0.0)
 model.cost[1].expr = 0
 model.cost[2].expr = model.t
-model.obj = Objective(expr= summation(model.cost))
+model.obj = Objective(expr= sum_product(model.cost))
 model.cons = ConstraintList()
 model.cons.add(model.t >= (model.c-model.b)*model.x + model.b*model.d)
 model.cons.add(model.t >= (model.c+model.h)*model.x - model.h*model.d)

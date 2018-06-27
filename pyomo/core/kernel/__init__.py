@@ -2,29 +2,18 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from  pyomo.core.kernel.expr import *
+from pyomo.core.expr import *
 import pyomo.core.kernel.register_numpy_types
 import pyomo.core.kernel.component_interface
 
-import pyomo.opt
-from pyomo.opt import (SolverFactory,
-                       SolverStatus,
-                       TerminationCondition)
-import pyomo.opt.base
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
-import pyomo.core.kernel.component_block
-from pyomo.core.kernel.component_block import (block,
-                                               tiny_block,
-                                               block_tuple,
-                                               block_list,
-                                               block_dict)
 import pyomo.core.kernel.component_variable
 from pyomo.core.kernel.component_variable import (variable,
                                                   variable_tuple,
@@ -74,6 +63,12 @@ from pyomo.core.kernel.component_suffix import (suffix,
                                                 import_suffix_generator,
                                                 local_suffix_generator,
                                                 suffix_generator)
+import pyomo.core.kernel.component_block
+from pyomo.core.kernel.component_block import (block,
+                                               block_tuple,
+                                               block_list,
+                                               block_dict,
+                                               tiny_block)
 import pyomo.core.kernel.component_piecewise
 import pyomo.core.kernel.component_piecewise.util
 import pyomo.core.kernel.component_piecewise.transforms
@@ -100,8 +95,6 @@ from pyomo.core.kernel.set_types import (RealSet,
                                          Binary,
                                          RealInterval,
                                          IntegerInterval)
-from pyomo.core.kernel.numvalue import value
-from pyomo.core.kernel.util import pprint
 
 #
 # Collecting all of the hacks that needed to be added into
@@ -109,9 +102,10 @@ from pyomo.core.kernel.util import pprint
 # interface into the code below:
 #
 
-#
+
 #
 # Ducktyping to work with a few solver interfaces
+# Ideally, everything below here could be deleted one day
 #
 from pyomo.core.kernel.component_block import _block_base
 
@@ -122,13 +116,12 @@ from pyomo.core.kernel.component_block import _block_base
 # this method in most places.
 def _component_map(self, *args, **kwds):
     import six
-    kwds['return_key'] = True
     kwds['include_all_parents'] = False
     traversal = self.preorder_traversal(*args, **kwds)
     d = {}
-    for key, obj in traversal:
+    for obj in traversal:
         if obj._is_component:
-            d[key] = obj
+            d[obj.storage_key] = obj
     return d
 _block_base.component_map = _component_map
 del _component_map

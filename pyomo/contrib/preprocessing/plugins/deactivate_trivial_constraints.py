@@ -1,13 +1,13 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 """Transformation to deactivate trivial constraints."""
 import textwrap
 from math import fabs
 
 from pyomo.core.base.constraint import Constraint
+from pyomo.core.expr.numvalue import value
 from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.core.kernel.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 
 
 class TrivialConstraintDeactivator(IsomorphicTransformation):
@@ -22,10 +22,6 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
         'contrib.deactivate_trivial_constraints',
         doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
-    def __init__(self):
-        """Initialize the transformation."""
-        super(TrivialConstraintDeactivator, self).__init__()
-
     def _apply_to(self, instance, **kwargs):
         """Apply the transformation.
 
@@ -37,11 +33,14 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
                 reversion of the transformation
             ignore_infeasible: True to skip over trivial constraints that are
                 infeasible instead of raising a ValueError.
-            tol: tolerance on constraint violations
+            return_trivial: a list to which the deactivated trivial
+                constraints are appended (side effect)
+            tolerance: tolerance on constraint violations
         """
         tmp = kwargs.pop('tmp', False)
         ignore_infeasible = kwargs.pop('ignore_infeasible', False)
         tol = kwargs.pop('tolerance', 1E-13)
+        trivial = kwargs.pop('return_trivial', [])
         if tmp and not hasattr(instance, '_tmp_trivial_deactivated_constrs'):
             instance._tmp_trivial_deactivated_constrs = ComponentSet()
 
@@ -85,6 +84,7 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
             # Constraint is not infeasible. Deactivate it.
             if tmp:
                 instance._tmp_trivial_deactivated_constrs.add(constr)
+            trivial.append(constr)
             constr.deactivate()
 
     def revert(self, instance):

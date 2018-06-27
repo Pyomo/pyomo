@@ -8,12 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+# TODO: Remove this file.  This doesn't seem be used anywhere.
 
 import pyomo.opt
 from pyomo.core.base import expr, Var, Constraint, Objective
 from pyomo.core.base.var import _VarData
 from pyomo.core.base.param import _ParamData
-from pyomo.core.base.expr import *
+from pyomo.core.expr import current as EXPR
 from pyomo.core.base.numvalue import *
 from pyomo.core.base import _ExpressionData
 
@@ -55,13 +56,13 @@ class ProblemWriterUtils(pyomo.opt.AbstractProblemWriter):
         #
         # Expression
         #
-        if isinstance(exp,expr._ExpressionBase):
+        if isinstance(exp,EXPR.ExpressionBase):
             #
-            # SumExpression
+            # Sum
             #
-            if isinstance(exp,expr._SumExpression):
-                for i in xrange(len(exp._args)):
-                    self._Collect1(exp._args[i])
+            if isinstance(exp,expr.SumExpressionBase):
+                self._Collect1(exp._args[0])
+                self._Collect1(exp._args[1])
             #
             # Identity
             #
@@ -122,11 +123,11 @@ class ProblemWriterUtils(pyomo.opt.AbstractProblemWriter):
         #
         # Expression
         #
-        if isinstance(exp,expr._ExpressionBase):
+        if isinstance(exp,EXPR.ExpressionBase):
                 #
                 # Sum
                 #
-            if isinstance(exp,expr._SumExpression):
+            if isinstance(exp,expr.SumExpressionBase):
                 for i in xrange(len(exp._args)):
                     x = self._Collect2(exp._args[i], x, scale)
             #

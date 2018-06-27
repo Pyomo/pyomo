@@ -11,8 +11,8 @@
 from pyomo.core.base.PyomoModel import ConcreteModel
 from pyomo.solvers.plugins.solvers.gurobi_direct import GurobiDirect
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-from pyomo.util.plugin import alias
-from pyomo.core.kernel.numvalue import value
+from pyomo.common.plugin import alias
+from pyomo.core.expr.numvalue import value
 
 
 class GurobiPersistent(PersistentSolver, GurobiDirect):

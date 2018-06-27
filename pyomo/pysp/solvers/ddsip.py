@@ -345,7 +345,7 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
         #        thisfile,
         #        invocation_type=InvocationType.OnScenario(scenario.name),
         #        function_args=(solution_filename, scenario_id),
-        #        async=True))
+        #        async_call=True))
 
         xhat, results = self._read_solution(sp,
                                             input_files["symbols"],

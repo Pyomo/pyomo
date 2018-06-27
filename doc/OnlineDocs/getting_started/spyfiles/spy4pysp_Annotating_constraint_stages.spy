@@ -1,0 +1,21 @@
+from pyomo.pysp.annotations import PySP_ConstraintStageAnnotation()
+
+# declare the annotation
+model.constraint_stage = PySP_ConstraintStageAnnotation()
+
+# all constraints on this Block are first-stage
+model.B = Block()
+...
+model.constraint_stage.declare(model.B, 1)
+
+# all indices of this indexed constraint are first-stage
+model.C1 = Constraint(..., rule=...)
+model.constraint_stage.declare(model.C1, 1)
+
+# all but one index in this indexed constraint are second-stage
+model.C2 = Constraint(..., rule=...)
+for index in model.C2:
+    if index == 'a':
+        model.constraint_stage.declare(model.C2[index], 1)
+    else:
+        model.constraint_stage.declare(model.C2[index], 2)

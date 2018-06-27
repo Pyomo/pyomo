@@ -15,7 +15,7 @@ import types
 import logging
 from weakref import ref as weakref_ref
 
-from pyomo.util.timing import ConstructionTimer
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import register_component
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent, \
@@ -109,11 +109,15 @@ class _ParamData(ComponentData, NumericValue):
         Return the value of this object.
         """
         if self._value is _NotValid:
-            raise ValueError(
-                "Error evaluating Param value (%s):\n\tThe Param value is "
-                "currently set to an invalid value.\n\tThis is typically from "
-                "a scalar Param without an initial or default value."
-                % ( self.name, ))
+            if exception:
+                raise ValueError(
+                    "Error evaluating Param value (%s):\n\tThe Param value is "
+                    "currently set to an invalid value.  This is\n\ttypically "
+                    "from a scalar Param or mutable Indexed Param without\n"
+                    "\tan initial or default value."
+                    % ( self.name, ))
+            else:
+                return None
         return self._value
 
     @property
@@ -138,13 +142,29 @@ class _ParamData(ComponentData, NumericValue):
         """
         return False
 
-    def _potentially_variable(self):
+    def is_parameter_type(self):
+        """
+        Returns True because this is a parameter object.
+        """
+        return True
+
+    def is_variable_type(self):
+        """
+        Returns False because this is not a variable object.
+        """
+        return False
+
+    def is_expression_type(self):
+        """Returns False because this is not an expression"""
+        return False
+
+    def is_potentially_variable(self):
         """
         Returns False because this object can never reference variables.
         """
         return False
 
-    def _polynomial_degree(self, result):
+    def _compute_polynomial_degree(self, result):
         """
         Returns 0 because this object can never reference variables.
         """
@@ -234,6 +254,10 @@ class Param(IndexedComponent):
         if self._default_val is _NotValid:
             return self._data.__iter__()
         return self._index.__iter__()
+
+    def is_expression_type(self):
+        """Returns False because this is not an expression"""
+        return False
 
     #
     # These are "sparse equivalent" access / iteration methods that
@@ -432,13 +456,20 @@ class Param(IndexedComponent):
         #
         val = self._default_val
         if val is _NotValid:
+            # We should allow the creation of mutable params without
+            # a default value, as long as *solving* a model without
+            # reasonable values produces an informative error.
+            if self._mutable:
+                # Note: _ParamData defaults to _NotValid
+                ans = self._data[index] = _ParamData(self)
+                return ans
             if self.is_indexed():
                 idx_str = '%s[%s]' % (self.name, index,)
             else:
                 idx_str = '%s' % (self.name,)
             raise ValueError(
-                "Error retrieving Param value (%s):\n\tThe Param value is "
-                "undefined and no default value is specified"
+                "Error retrieving immutable Param value (%s):\n\tThe Param "
+                "value is undefined and no default value is specified."
                 % ( idx_str,) )
 
         _default_type = type(val)
@@ -888,6 +919,10 @@ This has resulted in the conversion of the source to dense form.
             default = "(function)"
         else:
             default = str(self._default_val)
+        if self._mutable or not self.is_indexed():
+            dataGen = lambda k, v: [ v._value, ]
+        else:
+            dataGen = lambda k, v: [ v, ]
         return ( [("Size", len(self)),
                   ("Index", self._index if self.is_indexed() else None),
                   ("Domain", self.domain.name),
@@ -896,8 +931,7 @@ This has resulted in the conversion of the source to dense form.
                   ],
                  self.sparse_iteritems(),
                  ("Value",),
-                 lambda k, v: [ value(v)
-                                ]
+                 dataGen,
                  )
 
 

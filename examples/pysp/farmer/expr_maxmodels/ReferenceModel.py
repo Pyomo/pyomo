@@ -63,7 +63,7 @@ model.QuantityPurchased = Var(model.CROPS, bounds=(0.0, None))
 #
 
 def ConstrainTotalAcreage_rule(model):
-    return summation(model.DevotedAcreage) <= model.TOTAL_ACREAGE
+    return sum_product(model.DevotedAcreage) <= model.TOTAL_ACREAGE
 
 model.ConstrainTotalAcreage = Constraint(rule=ConstrainTotalAcreage_rule)
 
@@ -87,13 +87,13 @@ model.EnforceQuotas = Constraint(model.CROPS, rule=EnforceQuotas_rule)
 #
 
 def ComputeFirstStageCost_rule(model):
-    return -summation(model.PlantingCostPerAcre, model.DevotedAcreage)
+    return -sum_product(model.PlantingCostPerAcre, model.DevotedAcreage)
 model.FirstStageCost = Expression(rule=ComputeFirstStageCost_rule)
 
 def ComputeSecondStageCost_rule(model):
-    expr = summation(model.PurchasePrice, model.QuantityPurchased)
-    expr -= summation(model.SubQuotaSellingPrice, model.QuantitySubQuotaSold)
-    expr -= summation(model.SuperQuotaSellingPrice, model.QuantitySuperQuotaSold)
+    expr = sum_product(model.PurchasePrice, model.QuantityPurchased)
+    expr -= sum_product(model.SubQuotaSellingPrice, model.QuantitySubQuotaSold)
+    expr -= sum_product(model.SuperQuotaSellingPrice, model.QuantitySuperQuotaSold)
     return -expr
 model.SecondStageCost = Expression(rule=ComputeSecondStageCost_rule)
 

@@ -10,7 +10,11 @@
 
 import pyomo.environ
 from pyomo.version import version_info, __version__
-
+import pyomo.opt
+from pyomo.opt import (SolverFactory,
+                       SolverStatus,
+                       TerminationCondition)
+from pyomo.kernel.util import pprint
 from pyomo.core.kernel import *
 
 # set up the Block ctype
@@ -104,8 +108,4 @@ del component_sos
 del component_suffix
 del component_matrix_constraint
 del util
-del expr
-del expr_common
-del expr_coopr3
-del expr_pyomo4
 del pyomo

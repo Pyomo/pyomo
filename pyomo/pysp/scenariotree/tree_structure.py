@@ -34,8 +34,7 @@ from pyomo.core.base.suffix import ComponentMap
 from pyomo.core.base.block import (_BlockData,
                                    generate_cuid_names)
 from pyomo.core.base.sos import _SOSConstraintData
-from pyomo.repn import (generate_canonical_repn,
-                        GeneralCanonicalRepn)
+from pyomo.repn import generate_standard_repn
 from pyomo.pysp.phutils import (BasicSymbolMap,
                                 indexToString,
                                 isVariableNameIndexed,
@@ -1063,7 +1062,7 @@ class Scenario(object):
                 scenario_stale.clear()
                 for variable_id in tree_node._variable_ids:
                     vardata = scenariotree_sm_bySymbol[variable_id]
-                    if vardata.is_expression():
+                    if vardata.is_expression_type():
                         continue
                     if vardata.fixed:
                         scenario_fixed.add(variable_id)
@@ -1086,16 +1085,16 @@ class Scenario(object):
             stage_cost_component = \
                 self._instance.find_component(cost_variable_name)[cost_variable_index]
             # Some of these might be Expression objects so we check
-            # for is_expression before changing.value
-            if not stage_cost_component.is_expression():
+            # for is_expression_type before changing.value
+            if not stage_cost_component.is_expression_type():
                 stage_cost_component.value = self._stage_costs[stage_name]
 
         for tree_node in self._node_list:
             # Some of these might be Expression objects so we check
-            # for is_expression before changing.value
+            # for is_expression_type before changing.value
             for variable_id, var_value in iteritems(self._x[tree_node._name]):
                 compdata = scenariotree_sm_bySymbol[variable_id]
-                if not compdata.is_expression():
+                if not compdata.is_expression_type():
                     compdata.value = var_value
 
             for variable_id in self._fixed[tree_node._name]:
@@ -1236,7 +1235,7 @@ class Scenario(object):
     # constraint - which might be None in the case of non-indexed constraints.
     # currently doesn't deal with SOS constraints, for no real good reason.
     # returns an instance of a ScenarioTreeStage object.
-    # IMPT: this method works on the canonical representation ("repn" attribute)
+    # IMPT: this method works on the standard representation ("repn" attribute)
     #       of a constraint. this implies that pre-processing of the instance
     #       has been performed.
     # NOTE: there is still the issue of whether the contained variables really
@@ -1247,7 +1246,7 @@ class Scenario(object):
 
     def constraintNode(self,
                        constraintdata,
-                       canonical_repn=None,
+                       repn=None,
                        instance=None,
                        assume_last_stage_if_missing=False):
 
@@ -1259,17 +1258,12 @@ class Scenario(object):
             vardata_list = constraintdata.get_variables()
 
         else:
-            if canonical_repn is None:
-                canonical_repn = generate_canonical_repn(constraintdata.body)
+            if repn is None:
+                repn = generate_standard_repn(constraintdata.body, quadratic=False)
 
-            # TODO: Is this necessary?
-            if isinstance(canonical_repn, GeneralCanonicalRepn):
-                raise RuntimeError("Method constraintNode in class "
-                                   "ScenarioTree encountered a constraint "
-                                   "with a general canonical encoding - "
-                                   "only linear canonical encodings are expected!")
-
-            vardata_list = canonical_repn.variables
+            vardata_list = repn.linear_vars
+            if len(repn.nonlinear_vars):
+                vardata_list += repn.nonlinear_vars
 
         for var_data in vardata_list:
 
@@ -1911,6 +1905,18 @@ class ScenarioTree(object):
 
     def get_bundle(self, name):
         return self._scenario_bundle_map[name]
+
+    def get_subproblem(self, name):
+        if self.contains_bundles():
+            return self._scenario_bundle_map[name]
+        else:
+            return self._scenario_map[name]
+
+    def get_scenario_bundle(self, name):
+        if not self.contains_bundles():
+            return None
+        else:
+            return self._scenario_bundle_map[name]
 
     # there are many contexts where manipulators of a scenario
     # tree simply need an arbitrary scenario to proceed...

@@ -10,7 +10,7 @@
 
 import ast
 
-from pyomo.util.plugin import *
+from pyomo.common.plugin import *
 from pyomo.checker.hooks import *
 
 

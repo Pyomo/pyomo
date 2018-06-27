@@ -23,9 +23,9 @@ from weakref import ref as weakref_ref
 
 from pyutilib.misc import flatten_tuple as pyutilib_misc_flatten_tuple
 
-from pyomo.util.timing import ConstructionTimer
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.misc import apply_indexed_rule, \
-    apply_parameterized_indexed_rule
+    apply_parameterized_indexed_rule, sorted_robust
 from pyomo.core.base.plugin import register_component
 from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent, \
@@ -110,70 +110,20 @@ def simple_set_rule( fn ):
     return wrapper_function
 
 
-class _robust_sort_keys(object):
-    """Class for robustly generating sortable keys for arbitrary data.
-
-    Generates keys (for use with Python `sorted()` that are
-    (str(type_name), val), where val is the actual value (if the type
-    is comparable), otherwise is the string representation of the value.
-    If str() also fails, we fall back on id().
-
-    This allows sorting lists with mixed types in Python3
-
-    We implement this as a callable object so that we can store the
-    _typemap without resorting to global variables.
-
-    """
-    def __init__(self):
-        self._typemap = {}
-
-    def __call__(self, val):
-        """Generate a tuple ( str(type_name), val ) for sorting the value.
-
-        `key=` expects a function.  We are generating a functor so we
-        have a convenient place to store the _typemap, which converts
-        the type-specific functions for converting a value to the second
-        argument of the sort key.
-
-        """
-        _type = type(val)
-        if _type not in self._typemap:
-            # If this is not a type we have seen before, determine what
-            # to use for the second value in the tuple.
-            try:
-                # 1: Check if the type is comparable 
-                val < val
-                self._typemap[_type] = lambda x:x
-            except:
-                try:
-                    # 2: try converting the value to string
-                    str(val)
-                    self._typemap[_type] = lambda x:str(x)
-                except:
-                    # 3: fallback on id().  Not deterministic
-                    # (run-to-run), but at least is consistent within
-                    # this run.
-                    self._typemap[_type] = lambda x:id(x)
-        return _type.__name__, self._typemap[_type](val)
-
-
-
 def _value_sorter(self, obj):
     """Utility to sort the values of a Set.
 
     This returns the values of the Set in a consistent order.  For
     ordered Sets, simply return the ordered list.  For unordered Sets,
     first try the standard sorted order, and if that fails (for example
-    with mixed-type Sets in Python3), use the _robust_sorter utility
-    (above) to generate sortable keys.
+    with mixed-type Sets in Python3), use the sorted_robust utility to
+    generate sortable keys.
 
     """
     if self.ordered:
         return obj.value
-    try:
-        return sorted(obj)
-    except:
-        return sorted(obj, key=_robust_sort_keys())
+    else:
+        return sorted_robust(obj)
 
 
 # A trivial class that we can use to test if an object is a "legitimate"
@@ -191,11 +141,12 @@ class _SetData(_SetDataBase):
         bounds      A tuple of bounds for set values: (lower, upper)
 
     Public Class Attributes:
-        value       The set values
+        value_list  The list of values
+        value       The set of values
         _bounds     The tuple of bound values
     """
 
-    __slots__ = ('value', '_bounds')
+    __slots__ = ('value_list', 'value', '_bounds')
 
     def __init__(self, owner, bounds):
         #
@@ -252,6 +203,7 @@ class _SetData(_SetDataBase):
         Reset the set data
         """
         self.value = set()
+        self.value_list = []
 
     def _add(self, val, verify=True):
         """
@@ -261,14 +213,27 @@ class _SetData(_SetDataBase):
         """
         if verify:
             self._component()._verify(val)
-        self.value.add(val)
+        if not val in self.value:
+            self.value.add(val)
+            self.value_list.append(val)
 
     def _discard(self, val):
         """
         Discard an element of this set.  This does not return an error
         if the element does not already exist.
+
+        NOTE: This operation is probably expensive, as it should require a walk through a list.  An
+        OrderedDict object might be more efficient, but it's notoriously slow in Python 2.x
+
+        NOTE: We could make this more efficient by mimicing the logic in the _OrderedSetData class.
+        But that would make the data() method expensive (since it is creating a set).  It's
+        not obvious which is the better choice.
         """
-        self.value.discard(val)
+        try:
+            self.value.remove(val)
+            self.value_list.remove(val)
+        except KeyError:
+            pass
 
     def __len__(self):
         """
@@ -280,7 +245,7 @@ class _SetData(_SetDataBase):
         """
         Return an iterator for the set.
         """
-        return self.value.__iter__()
+        return self.value_list.__iter__()
 
     def __contains__(self, val):
         """

@@ -21,7 +21,7 @@ import time
 import logging
 
 from pyutilib.misc.config import ConfigBlock, ConfigList, ConfigValue
-from pyomo.util.plugin import *
+from pyomo.common.plugin import *
 import pyutilib.common
 import pyutilib.misc
 import pyutilib.services
@@ -199,7 +199,8 @@ def __solver_call__(self, _name=None, args=[], **kwds):
         logger.warning("Failed to create solver with name '%s':\n%s"
                      % (_name, err))
         opt = None
-    if opt is not None and subsolver is not None:
+    if opt is not None and _name != "py" and subsolver is not None:
+        # py just creates instance of its subsolver, no need for this option
         opt.set_options('solver='+subsolver)
     if opt is None:
         opt = UnknownSolver( type=_name, *args, **kwds )
@@ -564,12 +565,11 @@ class OptSolver(Plugin):
                                           active_import_suffix_generator(arg))
                 else:
                     assert isinstance(arg, IBlockStorage)
-                    model_suffixes = list(name for (name,comp) \
+                    model_suffixes = list(comp.storage_key for comp
                                           in pyomo.core.kernel.component_suffix.\
                                           import_suffix_generator(arg,
                                                                   active=True,
-                                                                  descend_into=False,
-                                                                  return_key=True))
+                                                                  descend_into=False))
 
                 if len(model_suffixes) > 0:
                     kwds_suffixes = kwds.setdefault('suffixes',[])
@@ -640,7 +640,6 @@ class OptSolver(Plugin):
                             self._default_variable_value
                         if self._load_solutions:
                             _model.load_solution(result.solution(0))
-                            result.solution.clear()
                     else:
                         assert len(result.solution) == 0
                     # see the hack in the write method
@@ -649,6 +648,9 @@ class OptSolver(Plugin):
                     assert len(getattr(_model, "._symbol_maps")) == 1
                     delattr(_model, "._symbol_maps")
                     del result._smap_id
+                    if self._load_solutions and \
+                       (len(result.solution) == 0):
+                        logger.error("No solution is available")
                 else:
                     if self._load_solutions:
                         _model.solutions.load_from(
@@ -663,7 +665,8 @@ class OptSolver(Plugin):
             postsolve_completion_time = time.time()
 
             if self._report_timing:
-                print("      %6.2f seconds required for postsolve" % (postsolve_completion_time - solve_completion_time))
+                print("      %6.2f seconds required for postsolve"
+                      % (postsolve_completion_time - solve_completion_time))
 
         finally:
             #

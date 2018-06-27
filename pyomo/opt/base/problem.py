@@ -10,7 +10,7 @@
 
 __all__ = [ 'IProblemWriter', 'AbstractProblemWriter', 'WriterFactory', 'ProblemConfigFactory', 'BaseProblemConfig' ]
 
-from pyomo.util.plugin import *
+from pyomo.common.plugin import *
 
 
 class IProblemConfig(Interface):

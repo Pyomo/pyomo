@@ -352,9 +352,10 @@ class PersistentSolver(DirectOrPersistentSolver):
 
         else:
             assert isinstance(self._pyomo_model, IBlockStorage)
-            model_suffixes = list(name for (name, comp) in
-                                  import_suffix_generator(self._pyomo_model, active=True,
-                                                          descend_into=False, return_key=True))
+            model_suffixes = list(comp.storage_key for comp in
+                                  import_suffix_generator(self._pyomo_model,
+                                                          active=True,
+                                                          descend_into=False))
 
         if len(model_suffixes) > 0:
             kwds_suffixes = kwds.setdefault('suffixes', [])
@@ -429,7 +430,6 @@ class PersistentSolver(DirectOrPersistentSolver):
                                 self._default_variable_value
                             if self._load_solutions:
                                 _model.load_solution(result.solution(0))
-                                result.solution.clear()
                         else:
                             assert len(result.solution) == 0
                         # see the hack in the write method
@@ -438,6 +438,9 @@ class PersistentSolver(DirectOrPersistentSolver):
                         assert len(getattr(_model, "._symbol_maps")) == 1
                         delattr(_model, "._symbol_maps")
                         del result._smap_id
+                        if self._load_solutions and \
+                           (len(result.solution) == 0):
+                            logger.error("No solution is available")
                     else:
                         if self._load_solutions:
                             _model.solutions.load_from(

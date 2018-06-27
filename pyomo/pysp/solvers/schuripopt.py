@@ -224,12 +224,12 @@ def EXTERNAL_collect_solution(worker, node_name):
         #    stage._cost_variable
         #stage_cost_obj = instance.find_component(cost_variable_name)\
         #                 [cost_variable_index]
-        #if not stage_cost_obj.is_expression():
+        #if not stage_cost_obj.is_expression_type():
         #    solution[ComponentUID(stage_cost_obj,cuid_buffer=tmp)] = \
         #        (stage_cost_obj.value, stage_cost_obj.stale)
         for variable_id in node._variable_ids:
             var = bySymbol[variable_id]
-            if var.is_expression():
+            if var.is_expression_type():
                 continue
             solution[ComponentUID(var, cuid_buffer=tmp)] = \
                 (var.value, var.stale)
@@ -550,6 +550,9 @@ def runschuripopt(options):
             output_solver_log=options.output_solver_log,
             keep_solver_files=options.keep_solver_files,
             symbolic_solver_labels=options.symbolic_solver_labels)
+        xhat = results.xhat
+        del results.xhat
+        print("")
         print(results)
 
         if options.output_scenario_tree_solution:

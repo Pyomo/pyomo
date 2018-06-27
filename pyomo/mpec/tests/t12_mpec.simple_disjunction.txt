@@ -1,6 +1,6 @@
 cc : Size=1, Index=None, Active=True
-    Key  : Arg0 : Arg1                     : Active
-    None :   x1 : 2.0  <=  y + x1  <=  3.0 :   True
+    Key  : Arg0 : Arg1                 : Active
+    None :   x1 : 2  <=  y + x1  <=  3 :   True
     3 Disjunct Declarations
         expr1 : Size=1, Index=None, Active=True
             1 Var Declarations

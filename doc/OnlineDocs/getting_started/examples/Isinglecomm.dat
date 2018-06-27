@@ -1,0 +1,27 @@
+# Isinglecomm.dat: data for Isinglecomm.py
+
+set Nodes := CityA CityB CityC ;
+
+set Arcs :=
+CityA CityB
+CityA CityC
+CityC CityB
+;
+
+param : FlowCost :=
+CityA CityB 1.4
+CityA CityC 2.7
+CityC CityB 1.6
+ ;
+
+param Demand :=
+CityA 0
+CityB 1
+CityC 1
+;
+
+param Supply :=
+CityA 2
+CityB 0
+CityC 0
+;

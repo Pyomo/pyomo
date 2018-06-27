@@ -14,7 +14,7 @@ cc : Size=1, Index=None, Active=True
                     None :   0.0 : y + x3 :  +Inf :   True
                 c1 : Size=1, Index=None, Active=True
                     Key  : Lower : Body          : Upper : Active
-                    None :   0.0 : 1.0 + x1 + x2 :   0.0 :   True
+                    None :   0.0 : x1 + x2 + 1.0 :   0.0 :   True
 
             3 Declarations: indicator_var c0 c1
         expr2 : Size=1, Index=None, Active=True
@@ -29,7 +29,7 @@ cc : Size=1, Index=None, Active=True
                     None :   0.0 : y + x3 :   0.0 :   True
                 c1 : Size=1, Index=None, Active=True
                     Key  : Lower : Body          : Upper : Active
-                    None :   0.0 : 1.0 + x1 + x2 :  +Inf :   True
+                    None :   0.0 : x1 + x2 + 1.0 :  +Inf :   True
 
             3 Declarations: indicator_var c0 c1
 

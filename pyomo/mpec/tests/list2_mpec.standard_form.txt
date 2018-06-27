@@ -3,19 +3,19 @@ cc : Size=3, Index=cc_index, Active=True
       1 : y + x3 : x1 + 2*x2  ==  0.0 :   True
       2 : y + x3 : x1 + 2*x2  ==  1.0 :  False
       3 : y + x3 : x1 + 2*x2  ==  2.0 :   True
-cc[1] : Active=True
-    1 Constraint Declarations
-        c : Size=1, Index=None, Active=True
-            Key  : Lower : Body      : Upper : Active
-            None :   0.0 : x1 + 2*x2 :   0.0 :   True
+    cc[1] : Active=True
+        1 Constraint Declarations
+            c : Size=1, Index=None, Active=True
+                Key  : Lower : Body      : Upper : Active
+                None :   0.0 : x1 + 2*x2 :   0.0 :   True
 
-    1 Declarations: c
-cc[2] : Active=False
-    0 Declarations: 
-cc[3] : Active=True
-    1 Constraint Declarations
-        c : Size=1, Index=None, Active=True
-            Key  : Lower : Body      : Upper : Active
-            None :   2.0 : x1 + 2*x2 :   2.0 :   True
+        1 Declarations: c
+    cc[2] : Active=False
+        0 Declarations: 
+    cc[3] : Active=True
+        1 Constraint Declarations
+            c : Size=1, Index=None, Active=True
+                Key  : Lower : Body      : Upper : Active
+                None :   2.0 : x1 + 2*x2 :   2.0 :   True
 
-    1 Declarations: c
+        1 Declarations: c
