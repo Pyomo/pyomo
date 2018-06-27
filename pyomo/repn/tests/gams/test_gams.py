@@ -121,27 +121,27 @@ class Test(unittest.TestCase):
 
         expr = M.abc**2.0
         self.assertEqual(str(expr), "abc**2.0")
-        self.assertEqual(expression_to_string(expr, smap=smap), "power(abc, 2.0)")
+        self.assertEqual(expression_to_string(expr, M, smap=smap), "power(abc, 2.0)")
 
         expr = log( M.abc**2.0 )
         self.assertEqual(str(expr), "log(abc**2.0)")
-        self.assertEqual(expression_to_string(expr, smap=smap), "log(power(abc, 2.0))")
+        self.assertEqual(expression_to_string(expr, M, smap=smap), "log(power(abc, 2.0))")
 
         expr = log( M.abc**2.0 ) + 5
         self.assertEqual(str(expr), "log(abc**2.0) + 5")
-        self.assertEqual(expression_to_string(expr, smap=smap), "log(power(abc, 2.0)) + 5")
+        self.assertEqual(expression_to_string(expr, M, smap=smap), "log(power(abc, 2.0)) + 5")
 
         expr = exp( M.abc**2.0 ) + 5
         self.assertEqual(str(expr), "exp(abc**2.0) + 5")
-        self.assertEqual(expression_to_string(expr, smap=smap), "exp(power(abc, 2.0)) + 5")
+        self.assertEqual(expression_to_string(expr, M, smap=smap), "exp(power(abc, 2.0)) + 5")
 
         expr = log( M.abc**2.0 )**4
         self.assertEqual(str(expr), "log(abc**2.0)**4")
-        self.assertEqual(expression_to_string(expr, smap=smap), "power(log(power(abc, 2.0)), 4)")
+        self.assertEqual(expression_to_string(expr, M, smap=smap), "power(log(power(abc, 2.0)), 4)")
 
         expr = log( M.abc**2.0 )**4.5
         self.assertEqual(str(expr), "log(abc**2.0)**4.5")
-        self.assertEqual(expression_to_string(expr, smap=smap), "log(power(abc, 2.0)) ** 4.5")
+        self.assertEqual(expression_to_string(expr, M, smap=smap), "log(power(abc, 2.0)) ** 4.5")
 
 
 

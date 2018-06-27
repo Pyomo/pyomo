@@ -23,8 +23,8 @@ from pyomo.core.expr.numvalue import (
 from pyomo.core.base import (
     SymbolMap, ShortNameLabeler, NumericLabeler, Block, Constraint, Expression,
     Objective, Var, Param, minimize, Suffix, SortComponents)
-
 from pyomo.core.base.component import ActiveComponent
+from pyomo.core.kernel.component_interface import IComponent
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
 import pyomo.common.plugin
@@ -39,9 +39,10 @@ logger = logging.getLogger('pyomo.core')
 #
 class ToGamsVisitor(EXPR.ExpressionValueVisitor):
 
-    def __init__(self, smap):
+    def __init__(self, smap, model):
         super(ToGamsVisitor, self).__init__()
         self.smap = smap
+        self.model = model
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
@@ -94,13 +95,17 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
         # Make sure all components in active constraints are basic ctypes we
         # know how to deal with. This means anything with a type() method must
         # be one of the following allowable types.
-        if (hasattr(node, "type") and
-            node.type() not in (Var, Param, Expression, Objective)):
-            raise RuntimeError(
-                "Unallowable component '%s' of type %s found in an active "
-                "constraint or objective.\nThe GAMS writer cannot export "
-                "expressions with this component type."
-                % (node.name, node.type().__name__))
+        if hasattr(node, "type"):
+            if node.type() not in (Var, Param, Expression, Objective):
+                raise RuntimeError(
+                    "Unallowable component '%s' of type %s found in an active "
+                    "constraint or objective.\nThe GAMS writer cannot export "
+                    "expressions with this component type."
+                    % (node.name, node.type().__name__))
+            if node.type() in (Param, Expression):
+                # For these, make sure it's on the right model. We can check
+                # Vars later since they don't disappear from the expressions
+                check_on_model(self.model, node)
 
         if node.is_variable_type():
             if node.fixed:
@@ -114,12 +119,12 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
         return False, None
 
 
-def expression_to_string(expr, labeler=None, smap=None):
+def expression_to_string(expr, model, labeler=None, smap=None):
     if labeler is not None:
         if smap is None:
             smap = SymbolMap()
         smap.default_labeler = labeler
-    visitor = ToGamsVisitor(smap)
+    visitor = ToGamsVisitor(smap, model)
     return visitor.dfs_postorder_stack(expr)
 
 
@@ -183,6 +188,51 @@ def split_long_line(line):
         line = line[i + 1:]
     new_lines += line
     return new_lines
+
+
+def check_on_model(model, comp):
+    def parent_block(comp):
+        pb = comp.parent_block
+        if isinstance(comp, IComponent):
+            return pb
+        else:
+            return pb()
+
+    if comp is model:
+        return
+
+    # walk up tree until there are no more parents, simultaneously
+    # checking parents against the other's tree
+    mparent = parent_block(model)
+    cparent = parent_block(comp)
+    mseen = {model}
+    cseen = set()
+    keep_going = False
+    if mparent is not None:
+        mseen.add(mparent)
+        keep_going = True
+    if cparent is not None:
+        cseen.add(cparent)
+        keep_going = True
+
+    while keep_going:
+        keep_going = False
+        if cparent in mseen or mparent in cseen:
+            # found each other, good to go
+            return
+        if mparent is not None:
+            mparent = parent_block(mparent)
+            if mparent is not None:
+                mseen.add(mparent)
+                keep_going = True
+        if cparent is not None:
+            cparent = parent_block(cparent)
+            if cparent is not None:
+                cseen.add(cparent)
+                keep_going = True
+    raise RuntimeError(
+        "GAMS writer: found component '%s' not on same model tree.\n"
+        "All variables must have the same parent model." % comp.name)
 
 
 def _get_bound(exp):
@@ -437,7 +487,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 constraint_names.append('%s' % cName)
                 ConstraintIO.write('%s.. %s =e= %s ;\n' % (
                     constraint_names[-1],
-                    expression_to_string(con_body, smap=symbolMap),
+                    expression_to_string(con_body, model, smap=symbolMap),
                     _get_bound(con.upper)
                 ))
             else:
@@ -446,13 +496,13 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     ConstraintIO.write('%s.. %s =l= %s ;\n' % (
                         constraint_names[-1],
                         _get_bound(con.lower),
-                        expression_to_string(con_body, smap=symbolMap)
+                        expression_to_string(con_body, model, smap=symbolMap)
                     ))
                 if con.has_ub():
                     constraint_names.append('%s_hi' % cName)
                     ConstraintIO.write('%s.. %s =l= %s ;\n' % (
                         constraint_names[-1],
-                        expression_to_string(con_body, smap=symbolMap),
+                        expression_to_string(con_body, model, smap=symbolMap),
                         _get_bound(con.upper)
                     ))
 
@@ -471,7 +521,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         constraint_names.append(oName)
         ConstraintIO.write('%s.. GAMS_OBJECTIVE =e= %s ;\n' % (
             oName,
-            expression_to_string(obj.expr, smap=symbolMap)
+            expression_to_string(obj.expr, model, smap=symbolMap)
         ))
 
         # Categorize the variables that we found
@@ -506,18 +556,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         warn_int_bounds = False
         for category, var_name in categorized_vars:
             var = symbolMap.getObject(var_name)
-            not_on_model = False
-            try:
-                if var.model() is not model.model():
-                    not_on_model = True
-            except AttributeError:
-                # kernel, and although Var.root_block is thing, it's a method
-                if var.root_block is not model.root_block:
-                    not_on_model = True
-            if not_on_model:
-                raise RuntimeError(
-                    "GAMS writer: found variable '%s' not on same model tree.\n"
-                    "All variables must have the same parent model." % var.name)
+            check_on_model(model, var)
             if category == 'positive':
                 if var.has_ub():
                     output_file.write("%s.up = %s;\n" %
