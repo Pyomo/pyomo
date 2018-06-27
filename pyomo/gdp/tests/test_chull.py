@@ -135,7 +135,6 @@ class TwoTermDisj(unittest.TestCase):
         self.assertEqual(expr._coef[0], 1 - EPS)
         self.assertIs(expr._args[0], ind_var)
 
-    @unittest.category('fragile')
     def test_transformed_constraint_nonlinear(self):
         m = models.makeTwoTermDisj_Nonlinear()
         TransformationFactory('gdp.chull').apply_to(m)
@@ -163,7 +162,8 @@ class TwoTermDisj(unittest.TestCase):
             "(1/(%s*d[0].indicator_var + %s)) + "
             "(_pyomo_gdp_chull_relaxation.relaxedDisjuncts[0].y*"
             "(1/(%s*d[0].indicator_var + %s)))**2) - "
-            "%s*(0 + 0**2)*(1 - d[0].indicator_var) - 14.0*d[0].indicator_var"
+            "%s*(0.0 + 0.0**2)*(1 - d[0].indicator_var) "
+            "- 14.0*d[0].indicator_var"
             % (EPS_1, EPS, EPS_1, EPS, EPS_1, EPS, EPS))
 
     def test_transformed_constraints_linear(self):
