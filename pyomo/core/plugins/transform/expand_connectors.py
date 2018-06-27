@@ -255,16 +255,21 @@ class _ConnExpansion(Transformation):
 
     def _add_connections(self, blk, conn_set, matched_connectors,
                          known_conn_sets):
-        connId = next(iter(conn_set))
-        ref = known_conn_sets[id(matched_connectors[connId])]
+        if len(conn_set) == 1:
+            # possible to have a connection equating a connector to itself
+            # emit the trivial constraint, as opposed to skipping it
+            # conn_set is a set, so make a list that contains itself repeated
+            conn_set = [k for k in conn_set] * 2
+        conn = next(iter(conn_set))
+        ref = known_conn_sets[id(matched_connectors[conn])]
         for k, v in sorted(iteritems(ref)):
             cname = k + "_equality"
             if v[1] >= 0:
                 # v[0] is an indexed var
-                def rule(m, i):
+                def rule(m, *args):
                     tmp = []
                     for c in conn_set:
-                        tmp.append(c.vars[k][i])
+                        tmp.append(c.vars[k][args])
                     return tmp[0] == tmp[1]
                 con = Constraint(v[0].index_set(), rule=rule)
             else:

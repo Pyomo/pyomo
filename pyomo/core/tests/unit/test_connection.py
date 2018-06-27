@@ -365,15 +365,19 @@ class TestConnection(unittest.TestCase):
     def test_expand_indexed(self):
         m = ConcreteModel()
         m.x = Var([1,2])
-        m.y = Var()
-        m.z = Var([1,2])
-        m.w = Var()
+        m.y = Var([1,2], [1,2])
+        m.z = Var()
+        m.t = Var([1,2])
+        m.u = Var([1,2], [1,2])
+        m.v = Var()
         m.con1 = Connector()
         m.con1.add(m.x, "a")
         m.con1.add(m.y, "b")
+        m.con1.add(m.z, "c")
         m.con2 = Connector()
-        m.con2.add(m.z, "a")
-        m.con2.add(m.w, "b")
+        m.con2.add(m.t, "a")
+        m.con2.add(m.u, "b")
+        m.con2.add(m.v, "c")
 
         # The connection should be deactivated and expanded,
         # the constraint should be left untouched.
@@ -385,29 +389,71 @@ class TestConnection(unittest.TestCase):
 
         TransformationFactory('core.expand_connections').apply_to(m)
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 3)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 4)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 8)
         self.assertTrue(m.nocon.active)
         self.assertFalse(m.c.active)
         blk = m.component('c_expanded')
         self.assertTrue(blk.active)
-        self.assertTrue(blk.component('a_equality').active)
         self.assertTrue(blk.component('a_equality').active)
 
         os = StringIO()
         blk.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """c_expanded : Size=1, Index=None, Active=True
-    2 Constraint Declarations
+    3 Constraint Declarations
         a_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body        : Upper : Active
-              1 :   0.0 : x[1] - z[1] :   0.0 :   True
-              2 :   0.0 : x[2] - z[2] :   0.0 :   True
-        b_equality : Size=1, Index=None, Active=True
+              1 :   0.0 : x[1] - t[1] :   0.0 :   True
+              2 :   0.0 : x[2] - t[2] :   0.0 :   True
+        b_equality : Size=4, Index=y_index, Active=True
+            Key    : Lower : Body            : Upper : Active
+            (1, 1) :   0.0 : y[1,1] - u[1,1] :   0.0 :   True
+            (1, 2) :   0.0 : y[1,2] - u[1,2] :   0.0 :   True
+            (2, 1) :   0.0 : y[2,1] - u[2,1] :   0.0 :   True
+            (2, 2) :   0.0 : y[2,2] - u[2,2] :   0.0 :   True
+        c_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body  : Upper : Active
-            None :   0.0 : y - w :   0.0 :   True
+            None :   0.0 : z - v :   0.0 :   True
 
-    2 Declarations: a_equality b_equality
+    3 Declarations: a_equality b_equality c_equality
+""")
+
+
+    def test_expand_trivial(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.con = Connector()
+        m.con.add(m.x, "a")
+
+        # The connection should be deactivated and expanded,
+        # the constraint should be left untouched.
+        m.c = Connection(connectors=(m.con, m.con))
+        m.nocon = Constraint(expr = m.x == 2)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 1)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
+
+        TransformationFactory('core.expand_connections').apply_to(m)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 2)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
+        self.assertTrue(m.nocon.active)
+        self.assertFalse(m.c.active)
+        blk = m.component('c_expanded')
+        self.assertTrue(blk.active)
+        self.assertTrue(blk.component('a_equality').active)
+
+        os = StringIO()
+        blk.pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""c_expanded : Size=1, Index=None, Active=True
+    1 Constraint Declarations
+        a_equality : Size=1, Index=None, Active=True
+            Key  : Lower : Body  : Upper : Active
+            None :   0.0 : x - x :   0.0 :   True
+
+    1 Declarations: a_equality
 """)
 
 
