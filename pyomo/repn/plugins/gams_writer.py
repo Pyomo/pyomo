@@ -225,24 +225,24 @@ class ProblemWriter_gams(AbstractProblemWriter):
 
         if len(io_options):
             raise ValueError(
-                "ProblemWriter_gams passed unrecognized io_options:\n\t" +
+                "GAMS writer passed unrecognized io_options:\n\t" +
                 "\n\t".join("%s = %s"
                             % (k,v) for k,v in iteritems(io_options)))
 
         if solver is not None and solver.upper() not in valid_solvers:
             raise ValueError(
-                "ProblemWriter_gams passed unrecognized solver: %s" % solver)
+                "GAMS writer passed unrecognized solver: %s" % solver)
 
         if mtype is not None:
             valid_mtypes = set([
                 'lp', 'qcp', 'nlp', 'dnlp', 'rmip', 'mip', 'rmiqcp', 'rminlp',
                 'miqcp', 'minlp', 'rmpec', 'mpec', 'mcp', 'cns', 'emp'])
             if mtype.lower() not in valid_mtypes:
-                raise ValueError("ProblemWriter_gams passed unrecognized "
+                raise ValueError("GAMS writer passed unrecognized "
                                  "model type: %s" % mtype)
             if (solver is not None and
                 mtype.upper() not in valid_solvers[solver.upper()]):
-                raise ValueError("ProblemWriter_gams passed solver (%s) "
+                raise ValueError("GAMS writer passed solver (%s) "
                                  "unsuitable for given model type (%s)"
                                  % (solver, mtype))
 
@@ -250,7 +250,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             output_filename = model.name + ".gms"
 
         if symbolic_solver_labels and (labeler is not None):
-            raise ValueError("ProblemWriter_gams: Using both the "
+            raise ValueError("GAMS writer: Using both the "
                              "'symbolic_solver_labels' and 'labeler' "
                              "I/O options is forbidden")
 
@@ -348,7 +348,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             invalids = [t.__name__ for t in invalids]
             raise RuntimeError(
                 "Unallowable active component(s) %s.\nThe GAMS writer cannot "
-                "export models with this component type" %
+                "export models with this component type." %
                 ", ".join(invalids))
 
         # Walk through the model and generate the constraint definition
@@ -512,7 +512,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
 
         if (solver is not None and
             mtype.upper() not in valid_solvers[solver.upper()]):
-            raise ValueError("ProblemWriter_gams passed solver (%s) "
+            raise ValueError("GAMS writer passed solver (%s) "
                              "unsuitable for model type (%s)"
                              % (solver, mtype))
             output_file.write("option %s=%s;\n" % (mtype, solver))
