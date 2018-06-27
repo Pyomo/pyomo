@@ -349,7 +349,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 'Unknown initialization strategy: %s. '
                 'Valid strategies include: %s'
                 % (config.init_strategy,
-                   ", ".join(valid_init_strategies.keys())))
+                   ", ".join(k for (k, v) in valid_init_strategies.items()
+                             if v is not None)))
 
     def _GDPopt_iteration_loop(self, solve_data, config):
         """Algorithm main loop.
