@@ -1,13 +1,13 @@
 """Tests for the GDPopt solver plugin."""
 from math import fabs
+from os.path import abspath, dirname, join, normpath
 
 import pyomo.core.base.symbolic
 import pyutilib.th as unittest
 from pyomo.environ import SolverFactory, value
-
+from pyomo.gdp import Disjunct
 from pyutilib.misc import import_file
 
-from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', '..', 'examples', 'gdp'))
 
@@ -87,6 +87,31 @@ class TestGDPopt(unittest.TestCase):
             nlp=required_solvers[0])
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
+
+    def test_LOA_8PP_fixed_disjuncts(self):
+        """Test LOA with 8PP using fixed disjuncts initialization."""
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+        initialize = [
+            # Use units 1, 4, 7, 8
+            eight_process.use_unit_1or2.disjuncts[0],
+            eight_process.use_unit_3ornot.disjuncts[1],
+            eight_process.use_unit_4or5ornot.disjuncts[0],
+            eight_process.use_unit_6or7ornot.disjuncts[1],
+            eight_process.use_unit_8ornot.disjuncts[0]
+        ]
+        for disj in eight_process.component_data_objects(Disjunct):
+            if disj in initialize:
+                disj.indicator_var.set_value(1)
+            else:
+                disj.indicator_var.set_value(0)
+        SolverFactory('gdpopt').solve(
+            eight_process, strategy='LOA', init_strategy='fix_disjuncts',
+            mip=required_solvers[1],
+            nlp=required_solvers[0])
+
+        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
     def test_LOA_custom_disjuncts(self):
         """Test logic-based OA with custom disjuncts initialization."""
