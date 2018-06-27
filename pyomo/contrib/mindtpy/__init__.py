@@ -1,1 +1,1 @@
-import pyomo.contrib.mindtpy.MindtPy
+import pyomo.contrib.mindtpy.MindtPy_new

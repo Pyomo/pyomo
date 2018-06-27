@@ -1100,8 +1100,12 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
             rhs = ((0 if c.upper is None else c.upper) +
                    (0 if c.lower is None else c.lower))
             sign_adjust = 1 if value(c.upper) is None else -1
+            try:
+                c_body = value(c.body)
+            except:
+                c_body = 0
             m.tmp_duals[c] = sign_adjust * max(0,
-                                               sign_adjust * (rhs - value(c.body)))
+                                               sign_adjust * (rhs - c_body))
             # TODO check sign_adjust
         t = TransformationFactory('contrib.deactivate_trivial_constraints')
         t.apply_to(m, tmp=True, ignore_infeasible=True)
@@ -1109,7 +1113,7 @@ class MindtPySolver(pyomo.util.plugin.Plugin):
         # m.pprint() # print nlp problem for debugging
         results = self.nlp_solver.solve(m, load_solutions=False,
                                         options=config.nlp_solver_kwargs)
-        t.revert(m)
+        # t.revert(m)
         for v in self.binary_vars:
             v.unfix()
         subprob_terminate_cond = results.solver.termination_condition
