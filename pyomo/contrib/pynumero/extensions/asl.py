@@ -11,20 +11,28 @@ import os
 #TODO: ask about freeing memory
 
 class AmplInterface(object):
+    if os.name in ['nt', 'dos']:
+        libname = 'lib/Windows/libpynumero_ASL.dll'
+    elif sys.platform in ['darwin']:
+        libname = 'lib/Darwin/libpynumero_ASL.so'
+    else:
+        libname = 'lib/Linux/libpynumero_ASL.so'
+    libname = resource_filename(__name__, libname)
+
+    @classmethod
+    def available(cls):
+        return os.path.exists(cls.libname)
+
     def __init__(self, filename=None, nl_buffer=None):
 
         #TODO: check for 32 or 64 bit and raise error if not supported
 
-        if os.name in ['nt', 'dos']:
-            libasl = resource_filename(__name__, 'lib/Windows/libpynumero_ASL.dll')
-            raise RuntimeError("Not supported yet")
-        elif sys.platform in ['darwin']:
-            libasl = resource_filename(__name__, 'lib/Darwin/libpynumero_ASL.so')
-        else:
-            libasl = resource_filename(__name__, 'lib/Linux/libpynumero_ASL.so')
+        if not AmplInterface.available():
+            raise RuntimeError(
+                "ASL interface is not supported on this platform (%s)"
+                % (os.name,) )
 
-
-        self.ASLib = ctypes.cdll.LoadLibrary(libasl)
+        self.ASLib = ctypes.cdll.LoadLibrary(AmplInterface.libname)
 
         # define 1d array
         array_1d_double = npct.ndpointer(dtype=np.double, ndim=1, flags='CONTIGUOUS')

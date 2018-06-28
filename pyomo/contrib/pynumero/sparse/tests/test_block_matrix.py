@@ -3,7 +3,13 @@ try:
     from scipy.sparse import bmat
     import numpy as np
 except ImportError:
-    raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
+    raise unittest.SkipTest(
+        "Pynumero needs scipy and numpy to run block matrix tests")
+
+from pyomo.contrib.pynumero.extensions.sparseutils import SparseLib
+if not SparseLib.available():
+    raise unittest.SkipTest(
+        "Pynumero needs the SparseUtils extension to run block matrix tests")
 
 from pyomo.contrib.pynumero.sparse import (COOMatrix,
                                            COOSymMatrix,

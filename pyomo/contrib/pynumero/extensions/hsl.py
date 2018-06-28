@@ -11,20 +11,28 @@ import os
 #TODO: ask about freeing memory
 
 class MA27_LinearSolver(object):
+    if os.name in ['nt', 'dos']:
+        libname = 'lib/Windows/libpynumero_HSL.dll'
+    elif sys.platform in ['darwin']:
+        libname = 'lib/Darwin/libpynumero_HSL.so'
+    else:
+        libname = 'lib/Linux/libpynumero_HSL.so'
+    libname = resource_filename(__name__, libname)
+
+    @classmethod
+    def available(cls):
+        return os.path.exists(cls.libname)
+
     def __init__(self, pivottol=1e-8):
 
         #TODO: check for 32 or 64 bit and raise error if not supported
 
-        if os.name in ['nt', 'dos']:
-            libhsl = resource_filename(__name__, 'lib/Windows/libpynumero_HSL.dll')
-            raise RuntimeError("Not supported yet")
-        elif sys.platform in ['darwin']:
-            libhsl = resource_filename(__name__, 'lib/Darwin/libpynumero_HSL.so')
-        else:
-            libhsl = resource_filename(__name__, 'lib/Linux/libpynumero_HSL.so')
+        if not MA27_LinearSolver.available():
+            raise RuntimeError(
+                "HSL interface is not supported on this platform (%s)"
+                % (os.name,) )
 
-
-        self.HSLib = ctypes.cdll.LoadLibrary(libhsl)
+        self.HSLib = ctypes.cdll.LoadLibrary(MA27_LinearSolver.libname)
 
         # define 1d array
         array_1d_double = npct.ndpointer(dtype=np.double, ndim=1, flags='CONTIGUOUS')

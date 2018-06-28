@@ -5,6 +5,11 @@ try:
 except ImportError:
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
+from pyomo.contrib.pynumero.extensions.asl import AmplInterface
+if not AmplInterface.available():
+    raise unittest.SkipTest(
+        "Pynumero needs the ASL extension to run NLP tests")
+
 import pyomo.environ as pe
 from pyomo.contrib.pynumero.interfaces.nlp import PyomoNLP, AmplNLP
 

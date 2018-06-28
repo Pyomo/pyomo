@@ -6,7 +6,14 @@ try:
     from scipy.sparse.coo import coo_matrix
     import numpy as np
 except ImportError:
-    raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
+    raise unittest.SkipTest(
+        "Pynumero needs scipy and numpy to run COO matrix tests")
+
+from pyomo.contrib.pynumero.extensions.sparseutils import SparseLib
+if not SparseLib.available():
+    raise unittest.SkipTest(
+        "Pynumero needs the SparseUtils extension to run COO matrix tests")
+
 
 from pyomo.contrib.pynumero.sparse import (COOMatrix,
                                            COOSymMatrix,
