@@ -50,7 +50,7 @@ def solve_NLP(nlp_model, solve_data, config):
     initialize_NLP(nlp_model)
 
     # Callback immediately before solving NLP subproblem
-    config.subprob_presolve(nlp_model, solve_data)
+    config.call_before_subproblem_solve(nlp_model, solve_data)
 
     nlp_solver = SolverFactory(config.nlp)
     if not nlp_solver.available():
@@ -94,11 +94,11 @@ def solve_NLP(nlp_model, solve_data, config):
             % (subprob_terminate_cond, results))
 
     # Call the NLP post-solve callback
-    config.subprob_postsolve(nlp_model, solve_data)
+    config.call_after_subproblem_solve(nlp_model, solve_data)
 
     # if feasible, call the NLP post-feasible callback
     if nlp_feasible:
-        config.subprob_postfeas(nlp_model, solve_data)
+        config.call_after_subproblem_feasible(nlp_model, solve_data)
 
     return (
         nlp_feasible,  # If solution is feasible.

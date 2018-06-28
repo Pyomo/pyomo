@@ -62,7 +62,7 @@ def solve_LOA_master(solve_data, config):
         else:
             solve_data.UB = float('-inf')
     # Call the MILP post-solve callback
-    config.master_postsolve(m, solve_data)
+    config.call_after_master_solve(m, solve_data)
 
     return mip_results
 

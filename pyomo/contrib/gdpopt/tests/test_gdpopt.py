@@ -150,7 +150,7 @@ class TestGDPopt(unittest.TestCase):
             custom_init_disjuncts=initialize,
             mip=required_solvers[1],
             nlp=required_solvers[0],
-            subprob_postfeas=assert_correct_disjuncts_active)
+            call_after_subproblem_feasible=assert_correct_disjuncts_active)
 
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 

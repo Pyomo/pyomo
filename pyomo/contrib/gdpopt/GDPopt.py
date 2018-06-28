@@ -113,20 +113,20 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         default="ipopt",
         description="Nonlinear solver to use"))
     nlp_options = CONFIG.declare("nlp_options", ConfigBlock(implicit=True))
-    CONFIG.declare("master_postsolve", ConfigValue(
+    CONFIG.declare("call_after_master_solve", ConfigValue(
         default=_DoNothing,
         description="callback hook after a solution of the master problem"
     ))
-    CONFIG.declare("subprob_presolve", ConfigValue(
+    CONFIG.declare("call_before_subproblem_solve", ConfigValue(
         default=_DoNothing,
         description="callback hook before calling the subproblem solver"
     ))
-    CONFIG.declare("subprob_postsolve", ConfigValue(
+    CONFIG.declare("call_after_subproblem_solve", ConfigValue(
         default=_DoNothing,
         description="callback hook after a solution of the "
         "nonlinear subproblem"
     ))
-    CONFIG.declare("subprob_postfeas", ConfigValue(
+    CONFIG.declare("call_after_subproblem_feasible", ConfigValue(
         default=_DoNothing,
         description="callback hook after feasible solution of "
         "the nonlinear subproblem"
