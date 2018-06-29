@@ -8,14 +8,12 @@ from pyomo.core.expr.numvalue import (NumericValue,
                                         value)
 import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
-    _TestComponentDictBase
+    _TestActiveComponentDictBase
 from pyomo.core.tests.unit.test_component_tuple import \
-    _TestComponentTupleBase
+    _TestActiveComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
-    _TestComponentListBase
-from pyomo.core.kernel.component_interface import (ICategorizedObject,
-                                                   IComponent,
-                                                   IComponentContainer)
+    _TestActiveComponentListBase
+from pyomo.core.kernel.component_interface import ICategorizedObject
 from pyomo.core.kernel.component_expression import (IIdentityExpression,
                                                     noclone,
                                                     IExpression,
@@ -30,7 +28,6 @@ from pyomo.core.kernel.component_objective import objective
 from pyomo.core.kernel.component_block import block
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet)
-from pyomo.core.base.expression import Expression
 
 import six
 from six import StringIO
@@ -310,19 +307,18 @@ class _Test_expression_base(object):
     def test_init_no_args(self):
         e = self._ctype_factory()
         self.assertTrue(e.parent is None)
-        self.assertEqual(e.ctype, Expression)
+        self.assertEqual(e.ctype, IExpression)
         self.assertTrue(e.expr is None)
 
     def test_init_args(self):
         e = self._ctype_factory(1.0)
         self.assertTrue(e.parent is None)
-        self.assertEqual(e.ctype, Expression)
+        self.assertEqual(e.ctype, IExpression)
         self.assertTrue(e.expr is not None)
 
     def test_type(self):
         e = self._ctype_factory()
         self.assertTrue(isinstance(e, ICategorizedObject))
-        self.assertTrue(isinstance(e, IComponent))
         self.assertTrue(isinstance(e, IExpression))
         self.assertTrue(isinstance(e, NumericValue))
         self.assertTrue(isinstance(e, IIdentityExpression))
@@ -544,9 +540,9 @@ class Test_expression(_Test_expression_base,
 
     def test_ctype(self):
         e = expression()
-        self.assertIs(e.ctype, Expression)
-        self.assertIs(type(e).ctype, Expression)
-        self.assertIs(expression.ctype, Expression)
+        self.assertIs(e.ctype, IExpression)
+        self.assertIs(type(e).ctype, IExpression)
+        self.assertIs(expression.ctype, IExpression)
 
     def test_is_fixed(self):
         e = self._ctype_factory()
@@ -607,9 +603,9 @@ class Test_data_expression(_Test_expression_base,
 
     def test_ctype(self):
         e = data_expression()
-        self.assertIs(e.ctype, Expression)
-        self.assertIs(type(e).ctype, Expression)
-        self.assertIs(data_expression.ctype, Expression)
+        self.assertIs(e.ctype, IExpression)
+        self.assertIs(type(e).ctype, IExpression)
+        self.assertIs(data_expression.ctype, IExpression)
 
     def test_bad_init(self):
         e = self._ctype_factory(expr=1.0)
@@ -697,17 +693,17 @@ class Test_data_expression(_Test_expression_base,
         with self.assertRaises(ValueError):
             e.expr = v + 1
 
-class Test_expression_dict(_TestComponentDictBase,
+class Test_expression_dict(_TestActiveComponentDictBase,
                            unittest.TestCase):
     _container_type = expression_dict
     _ctype_factory = lambda self: expression()
 
-class Test_expression_tuple(_TestComponentTupleBase,
+class Test_expression_tuple(_TestActiveComponentTupleBase,
                            unittest.TestCase):
     _container_type = expression_tuple
     _ctype_factory = lambda self: expression()
 
-class Test_expression_list(_TestComponentListBase,
+class Test_expression_list(_TestActiveComponentListBase,
                            unittest.TestCase):
     _container_type = expression_list
     _ctype_factory = lambda self: expression()

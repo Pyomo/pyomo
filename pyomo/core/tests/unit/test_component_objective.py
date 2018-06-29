@@ -9,10 +9,7 @@ from pyomo.core.tests.unit.test_component_tuple import \
     _TestActiveComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
-from pyomo.core.kernel.component_interface import (ICategorizedObject,
-                                                   IComponent,
-                                                   IComponentContainer,
-                                                   _ActiveObjectMixin)
+from pyomo.core.kernel.component_interface import ICategorizedObject
 from pyomo.core.kernel.component_objective import (IObjective,
                                                    objective,
                                                    objective_dict,
@@ -24,7 +21,6 @@ from pyomo.core.kernel.component_variable import variable
 from pyomo.core.kernel.component_block import block
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet)
-from pyomo.core.base.objective import Objective
 
 class Test_objective(unittest.TestCase):
 
@@ -48,9 +44,9 @@ class Test_objective(unittest.TestCase):
 
     def test_ctype(self):
         o = objective()
-        self.assertIs(o.ctype, Objective)
-        self.assertIs(type(o).ctype, Objective)
-        self.assertIs(objective.ctype, Objective)
+        self.assertIs(o.ctype, IObjective)
+        self.assertIs(type(o).ctype, IObjective)
+        self.assertIs(objective.ctype, IObjective)
 
     def test_pickle(self):
         o = objective(sense=maximize,
@@ -76,7 +72,7 @@ class Test_objective(unittest.TestCase):
     def test_init(self):
         o = objective()
         self.assertTrue(o.parent is None)
-        self.assertEqual(o.ctype, Objective)
+        self.assertEqual(o.ctype, IObjective)
         self.assertEqual(o.expr, None)
         self.assertEqual(o.sense, minimize)
         self.assertEqual(o.is_minimizing(), True)
@@ -94,8 +90,6 @@ class Test_objective(unittest.TestCase):
     def test_type(self):
         o = objective()
         self.assertTrue(isinstance(o, ICategorizedObject))
-        self.assertTrue(isinstance(o, IComponent))
-        self.assertTrue(isinstance(o, _ActiveObjectMixin))
         self.assertTrue(isinstance(o, IObjective))
         self.assertTrue(isinstance(o, NumericValue))
 

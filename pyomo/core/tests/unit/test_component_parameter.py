@@ -2,18 +2,17 @@ import pickle
 
 import pyutilib.th as unittest
 from pyomo.core.expr.numvalue import (NumericValue,
-                                        is_fixed,
-                                        is_constant,
-                                        is_potentially_variable)
+                                      is_fixed,
+                                      is_constant,
+                                      is_potentially_variable)
 import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
-    _TestComponentDictBase
+    _TestActiveComponentDictBase
 from pyomo.core.tests.unit.test_component_tuple import \
-    _TestComponentTupleBase
+    _TestActiveComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
-    _TestComponentListBase
-from pyomo.core.kernel.component_interface import (ICategorizedObject,
-                                                   IComponent)
+    _TestActiveComponentListBase
+from pyomo.core.kernel.component_interface import ICategorizedObject
 from pyomo.core.kernel.component_parameter import (IParameter,
                                                    parameter,
                                                    parameter_dict,
@@ -23,7 +22,6 @@ from pyomo.core.kernel.component_variable import variable
 from pyomo.core.kernel.component_block import block
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet)
-from pyomo.core.base.param import Param
 
 class Test_parameter(unittest.TestCase):
 
@@ -46,9 +44,9 @@ class Test_parameter(unittest.TestCase):
 
     def test_ctype(self):
         p = parameter()
-        self.assertIs(p.ctype, Param)
-        self.assertIs(type(p).ctype, Param)
-        self.assertIs(parameter.ctype, Param)
+        self.assertIs(p.ctype, IParameter)
+        self.assertIs(type(p).ctype, IParameter)
+        self.assertIs(parameter.ctype, IParameter)
 
     def test_pickle(self):
         p = parameter(value=1.0)
@@ -70,7 +68,7 @@ class Test_parameter(unittest.TestCase):
     def test_init(self):
         p = parameter()
         self.assertTrue(p.parent is None)
-        self.assertEqual(p.ctype, Param)
+        self.assertEqual(p.ctype, IParameter)
         self.assertEqual(p.value, None)
         self.assertEqual(p(), None)
         p.value = 1
@@ -80,7 +78,6 @@ class Test_parameter(unittest.TestCase):
     def test_type(self):
         p = parameter()
         self.assertTrue(isinstance(p, ICategorizedObject))
-        self.assertTrue(isinstance(p, IComponent))
         self.assertTrue(isinstance(p, IParameter))
         self.assertTrue(isinstance(p, NumericValue))
 
@@ -121,17 +118,17 @@ class Test_parameter(unittest.TestCase):
         self.assertEqual(p.value, 1.0)
         self.assertEqual((p**2)(), 1.0)
 
-class Test_parameter_dict(_TestComponentDictBase,
+class Test_parameter_dict(_TestActiveComponentDictBase,
                           unittest.TestCase):
     _container_type = parameter_dict
     _ctype_factory = lambda self: parameter()
 
-class Test_parameter_tuple(_TestComponentTupleBase,
+class Test_parameter_tuple(_TestActiveComponentTupleBase,
                            unittest.TestCase):
     _container_type = parameter_tuple
     _ctype_factory = lambda self: parameter()
 
-class Test_parameter_list(_TestComponentListBase,
+class Test_parameter_list(_TestActiveComponentListBase,
                            unittest.TestCase):
     _container_type = parameter_list
     _ctype_factory = lambda self: parameter()

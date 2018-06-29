@@ -8,9 +8,7 @@ from pyomo.core.tests.unit.test_component_tuple import \
     _TestActiveComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
-from pyomo.core.kernel.component_interface import (ICategorizedObject,
-                                                   IComponent,
-                                                   _ActiveObjectMixin)
+from pyomo.core.kernel.component_interface import ICategorizedObject
 from pyomo.core.kernel.component_sos import (ISOS,
                                              sos,
                                              sos1,
@@ -24,7 +22,6 @@ from pyomo.core.kernel.component_variable import (variable,
 from pyomo.core.kernel.component_parameter import parameter
 from pyomo.core.kernel.component_expression import (expression,
                                                     data_expression)
-from pyomo.core.base.sos import SOSConstraint
 
 class Test_sos(unittest.TestCase):
 
@@ -48,9 +45,9 @@ class Test_sos(unittest.TestCase):
 
     def test_ctype(self):
         s = sos([])
-        self.assertIs(s.ctype, SOSConstraint)
-        self.assertIs(type(s).ctype, SOSConstraint)
-        self.assertIs(sos.ctype, SOSConstraint)
+        self.assertIs(s.ctype, ISOS)
+        self.assertIs(type(s).ctype, ISOS)
+        self.assertIs(sos.ctype, ISOS)
 
     def test_pickle(self):
         v = variable()
@@ -88,7 +85,7 @@ class Test_sos(unittest.TestCase):
     def test_init(self):
         s = sos([])
         self.assertTrue(s.parent is None)
-        self.assertEqual(s.ctype, SOSConstraint)
+        self.assertEqual(s.ctype, ISOS)
         self.assertEqual(len(s), 0)
         self.assertEqual(s.variables, ())
         self.assertEqual(s.weights, ())
@@ -97,7 +94,7 @@ class Test_sos(unittest.TestCase):
         vlist = tuple([variable(), variable()])
         s = sos(vlist)
         self.assertTrue(s.parent is None)
-        self.assertEqual(s.ctype, SOSConstraint)
+        self.assertEqual(s.ctype, ISOS)
         self.assertEqual(len(s), 2)
         self.assertEqual(len(s.variables), 2)
         for v in vlist:
@@ -108,7 +105,7 @@ class Test_sos(unittest.TestCase):
         vlist = tuple([variable(), variable()])
         s = sos(vlist, weights=[3.5,4.5], level=2)
         self.assertTrue(s.parent is None)
-        self.assertEqual(s.ctype, SOSConstraint)
+        self.assertEqual(s.ctype, ISOS)
         self.assertEqual(len(s), 2)
         self.assertEqual(len(s.variables), 2)
         for v in vlist:
@@ -122,20 +119,14 @@ class Test_sos(unittest.TestCase):
     def test_type(self):
         s = sos([])
         self.assertTrue(isinstance(s, ICategorizedObject))
-        self.assertTrue(isinstance(s, IComponent))
-        self.assertTrue(isinstance(s, _ActiveObjectMixin))
         self.assertTrue(isinstance(s, ISOS))
 
         s = sos1([])
         self.assertTrue(isinstance(s, ICategorizedObject))
-        self.assertTrue(isinstance(s, IComponent))
-        self.assertTrue(isinstance(s, _ActiveObjectMixin))
         self.assertTrue(isinstance(s, ISOS))
 
         s = sos2([])
         self.assertTrue(isinstance(s, ICategorizedObject))
-        self.assertTrue(isinstance(s, IComponent))
-        self.assertTrue(isinstance(s, _ActiveObjectMixin))
         self.assertTrue(isinstance(s, ISOS))
 
     def test_bad_weights(self):

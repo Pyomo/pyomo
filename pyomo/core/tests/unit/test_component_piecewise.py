@@ -9,10 +9,9 @@ from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
 from pyomo.core.kernel.component_interface import \
     (ICategorizedObject,
-     IComponent,
-     IComponentContainer,
-     _ActiveObjectMixin)
-from pyomo.core.kernel.component_block import (IBlockStorage,
+     ICategorizedObjectContainer,
+     IHeterogeneousContainer)
+from pyomo.core.kernel.component_block import (IBlock,
                                                block,
                                                block_dict,
                                                block_list)
@@ -269,7 +268,7 @@ class Test_piecewise(unittest.TestCase):
         f = TransformedPiecewiseLinearFunction(
             g, require_bounded_input_variable=False)
         self.assertTrue(f.parent is None)
-        self.assertEqual(f.ctype, Block)
+        self.assertEqual(f.ctype, IBlock)
         self.assertEqual(f(1), 1)
         self.assertEqual(f(1.5), 1.5)
         self.assertEqual(f(2), 2)
@@ -286,7 +285,7 @@ class Test_piecewise(unittest.TestCase):
         f = TransformedPiecewiseLinearFunction(
             g, require_bounded_input_variable=False)
         self.assertTrue(f.parent is None)
-        self.assertEqual(f.ctype, Block)
+        self.assertEqual(f.ctype, IBlock)
         self.assertEqual(f(1), 1)
         self.assertEqual(f(1.5), 1.5)
         self.assertEqual(f(2), 2) # lower semicontinuous
@@ -306,7 +305,7 @@ class Test_piecewise(unittest.TestCase):
             require_bounded_input_variable=False,
             equal_slopes_tolerance=-1)
         self.assertTrue(f.parent is None)
-        self.assertEqual(f.ctype, Block)
+        self.assertEqual(f.ctype, IBlock)
         self.assertEqual(f(1), 1)
         self.assertEqual(f(1.5), 2.5)
         self.assertEqual(f(2), 3) # lower semicontinuous
@@ -327,11 +326,10 @@ class Test_piecewise(unittest.TestCase):
             self.assertTrue(isinstance(p, TransformedPiecewiseLinearFunction))
             self.assertTrue(isinstance(p, transforms.registered_transforms[key]))
             self.assertTrue(isinstance(p, ICategorizedObject))
-            self.assertTrue(isinstance(p, IComponent))
-            self.assertTrue(isinstance(p, IComponentContainer))
-            self.assertTrue(isinstance(p, _ActiveObjectMixin))
+            self.assertTrue(isinstance(p, ICategorizedObjectContainer))
+            self.assertTrue(isinstance(p, IHeterogeneousContainer))
+            self.assertTrue(isinstance(p, IBlock))
             self.assertTrue(isinstance(p, block))
-            self.assertTrue(isinstance(p, IBlockStorage))
 
     def test_bad_repn(self):
         repn = list(transforms.registered_transforms.keys())[0]
@@ -675,7 +673,7 @@ class Test_piecewise_nd(unittest.TestCase):
         g = PiecewiseLinearFunctionND(tri, values)
         f = TransformedPiecewiseLinearFunctionND(g)
         self.assertTrue(f.parent is None)
-        self.assertEqual(f.ctype, Block)
+        self.assertEqual(f.ctype, IBlock)
         self.assertTrue(util.numpy.isclose(f(tri.points), values).all())
         self.assertAlmostEqual(f([0,0]), 0.0)
         self.assertAlmostEqual(f(util.numpy.array([0,0])), 0.0)
@@ -694,7 +692,7 @@ class Test_piecewise_nd(unittest.TestCase):
         g = PiecewiseLinearFunctionND(tri, values)
         f = TransformedPiecewiseLinearFunctionND(g)
         self.assertTrue(f.parent is None)
-        self.assertEqual(f.ctype, Block)
+        self.assertEqual(f.ctype, IBlock)
         self.assertTrue(util.numpy.isclose(f(tri.points), values).all())
         self.assertAlmostEqual(f([0,0,0]), 0.0)
         self.assertAlmostEqual(f(util.numpy.array([0,0,0])), 0.0)
@@ -711,11 +709,10 @@ class Test_piecewise_nd(unittest.TestCase):
             self.assertTrue(isinstance(p, TransformedPiecewiseLinearFunctionND))
             self.assertTrue(isinstance(p, transforms_nd.registered_transforms[key]))
             self.assertTrue(isinstance(p, ICategorizedObject))
-            self.assertTrue(isinstance(p, IComponent))
-            self.assertTrue(isinstance(p, IComponentContainer))
-            self.assertTrue(isinstance(p, _ActiveObjectMixin))
+            self.assertTrue(isinstance(p, ICategorizedObjectContainer))
+            self.assertTrue(isinstance(p, IHeterogeneousContainer))
+            self.assertTrue(isinstance(p, IBlock))
             self.assertTrue(isinstance(p, block))
-            self.assertTrue(isinstance(p, IBlockStorage))
 
     def test_bad_repn(self):
         repn = list(transforms_nd.registered_transforms.keys())[0]

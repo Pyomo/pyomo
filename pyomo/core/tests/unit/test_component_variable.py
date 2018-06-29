@@ -2,29 +2,24 @@ import pickle
 
 import pyutilib.th as unittest
 from pyomo.core.expr.numvalue import (NumericValue,
-                                        is_fixed,
-                                        is_constant,
-                                        is_potentially_variable)
+                                      is_fixed,
+                                      is_constant,
+                                      is_potentially_variable)
 import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
-    _TestComponentDictBase
+    _TestActiveComponentDictBase
 from pyomo.core.tests.unit.test_component_tuple import \
-    _TestComponentTupleBase
+    _TestActiveComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
-    _TestComponentListBase
-from pyomo.core.kernel.component_interface import (ICategorizedObject,
-                                                   IComponent,
-                                                   IComponentContainer)
+    _TestActiveComponentListBase
+from pyomo.core.kernel.component_interface import ICategorizedObject
 from pyomo.core.kernel.component_parameter import parameter
 from pyomo.core.kernel.component_variable import \
     (IVariable,
      variable,
      variable_dict,
-     create_variable_dict,
      variable_tuple,
-     create_variable_tuple,
      variable_list,
-     create_variable_list,
      _extract_domain_type_and_bounds)
 from pyomo.core.kernel.component_block import block
 from pyomo.core.kernel.set_types import (RealSet,
@@ -39,7 +34,6 @@ from pyomo.core.kernel.set_types import (RealSet,
                                          NegativeIntegers,
                                          IntegerInterval,
                                          BooleanSet)
-from pyomo.core.base.var import Var
 
 import six
 from six import StringIO
@@ -100,9 +94,9 @@ class Test_variable(unittest.TestCase):
 
     def test_ctype(self):
         v = variable()
-        self.assertIs(v.ctype, Var)
-        self.assertIs(type(v).ctype, Var)
-        self.assertIs(variable.ctype, Var)
+        self.assertIs(v.ctype, IVariable)
+        self.assertIs(type(v).ctype, IVariable)
+        self.assertIs(variable.ctype, IVariable)
 
     def test_pickle(self):
         v = variable(lb=1,
@@ -140,7 +134,7 @@ class Test_variable(unittest.TestCase):
     def test_init(self):
         v = variable()
         self.assertTrue(v.parent is None)
-        self.assertEqual(v.ctype, Var)
+        self.assertEqual(v.ctype, IVariable)
         self.assertEqual(v.domain_type, RealSet)
         self.assertEqual(v.lb, None)
         self.assertEqual(v.ub, None)
@@ -159,7 +153,7 @@ class Test_variable(unittest.TestCase):
                      ub=2,
                      fixed=True)
         self.assertTrue(v.parent is None)
-        self.assertEqual(v.ctype, Var)
+        self.assertEqual(v.ctype, IVariable)
         self.assertEqual(v.domain_type, IntegerSet)
         self.assertEqual(v.lb, 0)
         self.assertEqual(v.ub, 2)
@@ -170,7 +164,6 @@ class Test_variable(unittest.TestCase):
     def test_type(self):
         v = variable()
         self.assertTrue(isinstance(v, ICategorizedObject))
-        self.assertTrue(isinstance(v, IComponent))
         self.assertTrue(isinstance(v, IVariable))
         self.assertTrue(isinstance(v, NumericValue))
 
@@ -1059,74 +1052,20 @@ class Test_variable(unittest.TestCase):
 class _variable_subclass(variable):
     pass
 
-class Test_variable_dict(_TestComponentDictBase,
+class Test_variable_dict(_TestActiveComponentDictBase,
                          unittest.TestCase):
     _container_type = variable_dict
     _ctype_factory = lambda self: variable()
 
-    def test_create_variable_dict(self):
-        vdict = create_variable_dict(range(5),
-                                     lb=1, ub=10)
-        self.assertEqual(len(vdict), 5)
-        for v in vdict.values():
-            self.assertIs(v.parent, vdict)
-            self.assertEqual(v.bounds, (1,10))
-            self.assertIs(type(v), variable)
-
-        vdict = create_variable_dict(range(5),
-                                     type_=_variable_subclass,
-                                     lb=1, ub=10)
-        self.assertEqual(len(vdict), 5)
-        for v in vdict.values():
-            self.assertIs(v.parent, vdict)
-            self.assertEqual(v.bounds, (1,10))
-            self.assertIs(type(v), _variable_subclass)
-
-class Test_variable_tuple(_TestComponentTupleBase,
+class Test_variable_tuple(_TestActiveComponentTupleBase,
                           unittest.TestCase):
     _container_type = variable_tuple
     _ctype_factory = lambda self: variable()
 
-    def test_create_variable_tuple(self):
-        vtuple = create_variable_tuple(5,
-                                       lb=1, ub=10)
-        self.assertEqual(len(vtuple), 5)
-        for v in vtuple:
-            self.assertIs(v.parent, vtuple)
-            self.assertEqual(v.bounds, (1,10))
-            self.assertIs(type(v), variable)
-
-        vtuple = create_variable_tuple(5,
-                                       type_=_variable_subclass,
-                                       lb=1, ub=10)
-        self.assertEqual(len(vtuple), 5)
-        for v in vtuple:
-            self.assertIs(v.parent, vtuple)
-            self.assertEqual(v.bounds, (1,10))
-            self.assertIs(type(v), _variable_subclass)
-
-class Test_variable_list(_TestComponentListBase,
+class Test_variable_list(_TestActiveComponentListBase,
                          unittest.TestCase):
     _container_type = variable_list
     _ctype_factory = lambda self: variable()
-
-    def test_create_variable_list(self):
-        vlist = create_variable_list(5,
-                                     lb=1, ub=10)
-        self.assertEqual(len(vlist), 5)
-        for v in vlist:
-            self.assertIs(v.parent, vlist)
-            self.assertEqual(v.bounds, (1,10))
-            self.assertIs(type(v), variable)
-
-        vlist = create_variable_list(5,
-                                     type_=_variable_subclass,
-                                     lb=1, ub=10)
-        self.assertEqual(len(vlist), 5)
-        for v in vlist:
-            self.assertIs(v.parent, vlist)
-            self.assertEqual(v.bounds, (1,10))
-            self.assertIs(type(v), _variable_subclass)
 
 if __name__ == "__main__":
     unittest.main()

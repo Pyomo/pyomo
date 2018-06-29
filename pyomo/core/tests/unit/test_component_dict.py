@@ -10,25 +10,18 @@
 
 import pickle
 import collections
-try:
-    from collections import OrderedDict
-except ImportError:                         #pragma:nocover
-    from ordereddict import OrderedDict
 
 import pyutilib.th as unittest
-import pyomo.environ
+import pyomo.kernel as pmo
 from pyomo.common.log import LoggingIntercept
 from pyomo.core.kernel.component_interface import \
     (ICategorizedObject,
-     IComponent,
-     IComponentContainer,
-     _ActiveObjectMixin)
-from pyomo.core.kernel.component_dict import (ComponentDict,
-                                              create_component_dict)
-from pyomo.core.kernel.component_block import (IBlockStorage,
+     ICategorizedObjectContainer,
+     IHomogeneousContainer)
+from pyomo.core.kernel.component_dict import ComponentDict
+from pyomo.core.kernel.component_block import (IBlock,
                                                block,
                                                block_dict)
-from pyomo.core.kernel.component_variable import variable
 
 import six
 from six import StringIO
@@ -110,36 +103,33 @@ class _TestComponentDictBase(object):
         with self.assertRaises(TypeError):
             self._container_type(*tuple((i, self._ctype_factory())
                                         for i in index))
-        with self.assertRaises(ValueError):
-            self._container_type(((i, self._ctype_factory())
-                                  for i in index),
-                                 definately_should_not_be_a_keyword_for_this_class=True)
+        c = self._container_type(a=self._ctype_factory(),
+                                 b=self._ctype_factory())
+        self.assertEqual(len(c), 2)
+        self.assertTrue('a' in c)
+        self.assertTrue('b' in c)
 
     def test_ordered_init(self):
         cdict = self._container_type()
-        self.assertEqual(type(cdict._data), OrderedDict)
-        self.assertNotEqual(type(cdict._data), dict)
-        cdict = self._container_type(ordered=False)
-        self.assertEqual(type(cdict._data), dict)
-        self.assertNotEqual(type(cdict._data), OrderedDict)
-        cdict = self._container_type(ordered=True)
-        self.assertNotEqual(type(cdict._data), dict)
-        self.assertEqual(type(cdict._data), OrderedDict)
         cdict[None] = self._ctype_factory()
         cdict[1] = self._ctype_factory()
         cdict['a'] = self._ctype_factory()
+        del cdict[None]
         cdict[2] = self._ctype_factory()
         cdict[3] = self._ctype_factory()
+        del cdict[3]
+        cdict[None] = self._ctype_factory()
         cdict[-1] = self._ctype_factory()
         cdict['bc'] = self._ctype_factory()
+        cdict[3] = self._ctype_factory()
         self.assertEqual(list(cdict.keys()),
-                         [None,1,'a',2,3,-1,'bc'])
+                         [1,'a',2,None,-1,'bc',3])
 
     def test_type(self):
         cdict = self._container_type()
         self.assertTrue(isinstance(cdict, ICategorizedObject))
-        self.assertTrue(isinstance(cdict, IComponentContainer))
-        self.assertFalse(isinstance(cdict, IComponent))
+        self.assertTrue(isinstance(cdict, ICategorizedObjectContainer))
+        self.assertTrue(isinstance(cdict, IHomogeneousContainer))
         self.assertTrue(isinstance(cdict, ComponentDict))
         self.assertTrue(isinstance(cdict, collections.Mapping))
         self.assertTrue(isinstance(cdict, collections.MutableMapping))
@@ -400,29 +390,17 @@ class _TestComponentDictBase(object):
 
         for key, c in children.items():
             self.assertTrue(c.parent is None)
-            self.assertTrue(c.parent_block is None)
-            if isinstance(c, IBlockStorage):
-                self.assertTrue(c.root_block is c)
-            else:
-                self.assertTrue(c.root_block is None)
             self.assertEqual(c.local_name, None)
             self.assertEqual(c.name, None)
 
         cdict = self._container_type()
         self.assertTrue(cdict.parent is None)
-        self.assertTrue(cdict.parent_block is None)
-        self.assertTrue(cdict.root_block is None)
         self.assertEqual(cdict.local_name, None)
         self.assertEqual(cdict.name, None)
         cdict.update(children)
-        names = cdict.generate_names()
+        names = pmo.generate_names(cdict)
         for key, c in children.items():
             self.assertTrue(c.parent is cdict)
-            self.assertTrue(c.parent_block is None)
-            if isinstance(c, IBlockStorage):
-                self.assertTrue(c.root_block is c)
-            else:
-                self.assertTrue(c.root_block is None)
             self.assertEqual(c.getname(fully_qualified=False, convert=str),
                              "[%s]" % (str(key)))
             self.assertEqual(c.getname(fully_qualified=False, convert=repr),
@@ -439,18 +417,12 @@ class _TestComponentDictBase(object):
         model = block()
         model.cdict = cdict
         self.assertTrue(model.parent is None)
-        self.assertTrue(model.parent_block is None)
-        self.assertTrue(model.root_block is model)
         self.assertTrue(cdict.parent is model)
-        self.assertTrue(cdict.parent_block is model)
-        self.assertTrue(cdict.root_block is model)
         self.assertEqual(cdict.local_name, "cdict")
         self.assertEqual(cdict.name, "cdict")
-        names = model.generate_names()
+        names = pmo.generate_names(model)
         for key, c in children.items():
             self.assertTrue(c.parent is cdict)
-            self.assertTrue(c.parent_block is model)
-            self.assertTrue(c.root_block is model)
             self.assertEqual(c.getname(fully_qualified=False, convert=str),
                              "[%s]" % (str(key)))
             self.assertEqual(c.getname(fully_qualified=False, convert=repr),
@@ -467,21 +439,13 @@ class _TestComponentDictBase(object):
         b = block()
         b.model = model
         self.assertTrue(b.parent is None)
-        self.assertTrue(b.parent_block is None)
-        self.assertTrue(b.root_block is b)
         self.assertTrue(model.parent is b)
-        self.assertTrue(model.parent_block is b)
-        self.assertTrue(model.root_block is b)
         self.assertTrue(cdict.parent is model)
-        self.assertTrue(cdict.parent_block is model)
-        self.assertTrue(cdict.root_block is b)
         self.assertEqual(cdict.local_name, "cdict")
         self.assertEqual(cdict.name, "model.cdict")
-        names = b.generate_names()
+        names = pmo.generate_names(b)
         for key, c in children.items():
             self.assertTrue(c.parent is cdict)
-            self.assertTrue(c.parent_block is model)
-            self.assertTrue(c.root_block is b)
             self.assertEqual(c.getname(fully_qualified=False, convert=str),
                              "[%s]" % (str(key)))
             self.assertEqual(c.getname(fully_qualified=False, convert=repr),
@@ -498,23 +462,13 @@ class _TestComponentDictBase(object):
         bdict = block_dict()
         bdict[0] = b
         self.assertTrue(bdict.parent is None)
-        self.assertTrue(bdict.parent_block is None)
-        self.assertTrue(bdict.root_block is None)
         self.assertTrue(b.parent is bdict)
-        self.assertTrue(b.parent_block is None)
-        self.assertTrue(b.root_block is b)
         self.assertTrue(model.parent is b)
-        self.assertTrue(model.parent_block is b)
-        self.assertTrue(model.root_block is b)
         self.assertTrue(cdict.parent is model)
-        self.assertTrue(cdict.parent_block is model)
-        self.assertTrue(cdict.root_block is b)
         self.assertEqual(cdict.local_name, "cdict")
         self.assertEqual(cdict.name, "[0].model.cdict")
         for key, c in children.items():
             self.assertTrue(c.parent is cdict)
-            self.assertTrue(c.parent_block is model)
-            self.assertTrue(c.root_block is b)
             self.assertEqual(c.getname(fully_qualified=False, convert=str),
                              "[%s]" % (str(key)))
             self.assertEqual(c.getname(fully_qualified=False, convert=repr),
@@ -527,27 +481,15 @@ class _TestComponentDictBase(object):
         m = block()
         m.bdict = bdict
         self.assertTrue(m.parent is None)
-        self.assertTrue(m.parent_block is None)
-        self.assertTrue(m.root_block is m)
         self.assertTrue(bdict.parent is m)
-        self.assertTrue(bdict.parent_block is m)
-        self.assertTrue(bdict.root_block is m)
         self.assertTrue(b.parent is bdict)
-        self.assertTrue(b.parent_block is m)
-        self.assertTrue(b.root_block is m)
         self.assertTrue(model.parent is b)
-        self.assertTrue(model.parent_block is b)
-        self.assertTrue(model.root_block is m)
         self.assertTrue(cdict.parent is model)
-        self.assertTrue(cdict.parent_block is model)
-        self.assertTrue(cdict.root_block is m)
         self.assertEqual(cdict.local_name, "cdict")
         self.assertEqual(cdict.name, "bdict[0].model.cdict")
-        names = m.generate_names()
+        names = pmo.generate_names(m)
         for key, c in children.items():
             self.assertTrue(c.parent is cdict)
-            self.assertTrue(c.parent_block is model)
-            self.assertTrue(c.root_block is m)
             self.assertEqual(c.getname(fully_qualified=False, convert=str),
                              "[%s]" % (str(key)))
             self.assertEqual(c.getname(fully_qualified=False, convert=repr),
@@ -560,25 +502,17 @@ class _TestComponentDictBase(object):
         for c in cdict.components():
             self.assertNotEqual(c.name, None)
             self.assertEqual(c.name, names[c])
-        names = m.generate_names(descend_into=False)
-        self.assertEqual(len(names), len(list(m.children())))
+        names = pmo.generate_names(m)
         for c in m.children():
             self.assertEqual(c.name, names[c])
 
-    def test_getname_relativeto(self):
-        m = block()
-        m.b = block()
-        m.b.v = variable()
-        self.assertEqual(m.b.v.getname(fully_qualified=True), 'b.v')
-        self.assertEqual(m.b.v.getname(fully_qualified=True, relative_to=m.b), 'v')
-
     def test_preorder_traversal(self):
         traversal = []
-        cdict = self._container_type(ordered=True)
+        cdict = self._container_type()
         traversal.append(cdict)
         cdict[0] = self._ctype_factory()
         traversal.append(cdict[0])
-        cdict[1] = self._container_type(ordered=True)
+        cdict[1] = self._container_type()
         traversal.append(cdict[1])
         cdict[1][0] = self._ctype_factory()
         traversal.append(cdict[1][0])
@@ -591,105 +525,73 @@ class _TestComponentDictBase(object):
                          [id(c) for c in cdict.preorder_traversal()])
         return cdict, traversal
 
-    def test_preorder_visit(self):
+    def test_preorder_traversal_descend_check(self):
         traversal = []
-        cdict = self._container_type(ordered=True)
+        cdict = self._container_type()
         traversal.append(cdict)
         cdict[0] = self._ctype_factory()
         traversal.append(cdict[0])
-        cdict[1] = self._container_type(ordered=True)
+        cdict[1] = self._container_type()
         traversal.append(cdict[1])
         cdict[1][0] = self._ctype_factory()
         traversal.append(cdict[1][0])
         cdict[2] = self._ctype_factory()
         traversal.append(cdict[2])
 
-        def visit(x):
-            visit.traversal.append(x)
+        def descend(x):
+            self.assertTrue(x._is_container)
+            descend.seen.append(x)
             return False
-        visit.traversal = []
-        cdict.preorder_visit(visit)
-        self.assertEqual(len(visit.traversal), 1)
-        self.assertIs(visit.traversal[0], cdict)
+        descend.seen = []
+        order = list(cdict.preorder_traversal(descend=descend))
+        self.assertEqual(len(order), 1)
+        self.assertIs(order[0], cdict)
+        self.assertEqual(len(descend.seen), 1)
+        self.assertIs(descend.seen[0], cdict)
 
-        def visit(x):
-            visit.traversal.append(x)
+        def descend(x):
+            self.assertTrue(x._is_container)
+            descend.seen.append(x)
             return True
-        visit.traversal = []
-        cdict.preorder_visit(visit)
+        descend.seen = []
+        order = list(cdict.preorder_traversal(descend=descend))
         self.assertEqual([c.name for c in traversal],
-                         [c.name for c in visit.traversal])
+                         [c.name for c in order])
         self.assertEqual([id(c) for c in traversal],
-                         [id(c) for c in visit.traversal])
+                         [id(c) for c in order])
+        if self._ctype_factory()._ctype._is_heterogeneous_container:
+            self.assertEqual([c.name for c in traversal],
+                             [c.name for c in descend.seen])
+            self.assertEqual([id(c) for c in traversal],
+                             [id(c) for c in descend.seen])
 
-        def visit(x):
-            visit.traversal.append(x)
+        def descend(x):
+            self.assertTrue(x._is_container)
+            descend.seen.append(x)
             return True
-        visit.traversal = []
-        cdict.preorder_visit(visit)
+        descend.seen = []
+        order = list(cdict.preorder_traversal(descend=descend))
         self.assertEqual([c.name for c in traversal],
-                         [c.name for c in visit.traversal])
+                         [c.name for c in order])
         self.assertEqual([id(c) for c in traversal],
-                         [id(c) for c in visit.traversal])
+                         [id(c) for c in order])
+        if self._ctype_factory()._ctype._is_heterogeneous_container:
+            self.assertEqual([c.name for c in traversal],
+                             [c.name for c in descend.seen])
+            self.assertEqual([id(c) for c in traversal],
+                             [id(c) for c in descend.seen])
         return cdict, traversal
-
-    def test_postorder_traversal(self):
-        traversal = []
-        cdict = self._container_type(ordered=True)
-        cdict[0] = self._ctype_factory()
-        traversal.append(cdict[0])
-        cdict[1] = self._container_type(ordered=True)
-        cdict[1][0] = self._ctype_factory()
-        traversal.append(cdict[1][0])
-        traversal.append(cdict[1])
-        cdict[2] = self._ctype_factory()
-        traversal.append(cdict[2])
-        traversal.append(cdict)
-
-        self.assertEqual([c.name for c in traversal],
-                         [c.name for c in cdict.postorder_traversal()])
-        self.assertEqual([id(c) for c in traversal],
-                         [id(c) for c in cdict.postorder_traversal()])
-        return cdict, traversal
-
-    def test_create_component_dict(self):
-        cdict1 = self._container_type(
-            (i, self._ctype_factory())
-            for i in range(5))
-        self.assertEqual(len(cdict1), 5)
-        for obj in cdict1.values():
-            self.assertIs(obj.parent, cdict1)
-        objects = iter(cdict1.values())
-        def type_(x, y=None):
-            self.assertEqual(x, 1)
-            self.assertEqual(y, 'a')
-        type_ = lambda x, y=None: six.next(objects)
-        type_.ctype = cdict1.ctype
-        # this will result in cdict1 and cdict2
-        # being "equal" in that they both store the
-        # same objects, except that cdict2 has stolen
-        # ownership of the objects from cdict1 (all of the
-        # .parent weakrefs have been changed)
-        cdict2 = create_component_dict(self._container_type,
-                                       type_,
-                                       range(5),
-                                       1, y='a')
-        self.assertEqual(len(cdict2), 5)
-        self.assertEqual(cdict1, cdict2)
-        self.assertIsNot(cdict1, cdict2)
-        for obj in cdict1.values():
-            self.assertIs(obj.parent, cdict2)
-        for obj in cdict2.values():
-            self.assertIs(obj.parent, cdict2)
 
 class _TestActiveComponentDictBase(_TestComponentDictBase):
 
     def test_active_type(self):
         cdict = self._container_type()
-        self.assertTrue(isinstance(cdict, IComponentContainer))
         self.assertTrue(isinstance(cdict, ICategorizedObject))
-        self.assertTrue(isinstance(cdict, _ActiveObjectMixin))
-        self.assertFalse(isinstance(cdict, IComponent))
+        self.assertTrue(isinstance(cdict, ICategorizedObjectContainer))
+        self.assertTrue(isinstance(cdict, IHomogeneousContainer))
+        self.assertTrue(isinstance(cdict, ComponentDict))
+        self.assertTrue(isinstance(cdict, collections.Mapping))
+        self.assertTrue(isinstance(cdict, collections.MutableMapping))
 
     def test_active(self):
         children = {}
@@ -906,100 +808,98 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
         cdict.deactivate()
         self.assertEqual(len(list(cdict.preorder_traversal(active=True))),
                          0)
-        self.assertEqual(len(list(cdict.generate_names(active=True))),
+        self.assertEqual(len(list(pmo.generate_names(cdict, active=True))),
                          0)
 
-    def test_preorder_visit(self):
+    def test_preorder_traversal_descend_check(self):
         cdict, traversal = \
             super(_TestActiveComponentDictBase, self).\
-            test_preorder_visit()
+            test_preorder_traversal_descend_check()
 
         cdict[1].deactivate()
-        def visit(x):
-            visit.traversal.append(x)
+        def descend(x):
+            self.assertTrue(x._is_container)
+            descend.seen.append(x)
             return True
-        visit.traversal = []
-        cdict.preorder_visit(visit, active=True)
+        descend.seen = []
+        order = list(cdict.preorder_traversal(active=True,
+                                              descend=descend))
         self.assertEqual([None, '[0]', '[2]'],
-                         [c.name for c in visit.traversal])
+                         [c.name for c in order])
         self.assertEqual([id(cdict),id(cdict[0]),id(cdict[2])],
-                         [id(c) for c in visit.traversal])
+                         [id(c) for c in order])
+        if self._ctype_factory()._ctype._is_heterogeneous_container:
+            self.assertEqual([None, '[0]', '[2]'],
+                             [c.name for c in descend.seen])
+            self.assertEqual([id(cdict),id(cdict[0]),id(cdict[2])],
+                             [id(c) for c in descend.seen])
 
-        def visit(x):
-            visit.traversal.append(x)
+        def descend(x):
+            self.assertTrue(x._is_container)
+            descend.seen.append(x)
             return x.active
-        visit.traversal = []
-        cdict.preorder_visit(visit)
+        descend.seen = []
+        order = list(cdict.preorder_traversal(descend=descend))
         self.assertEqual([None,'[0]','[1]','[2]'],
-                         [c.name for c in visit.traversal])
+                         [c.name for c in order])
         self.assertEqual([id(cdict),id(cdict[0]),id(cdict[1]),id(cdict[2])],
-                         [id(c) for c in visit.traversal])
+                         [id(c) for c in order])
+        if self._ctype_factory()._ctype._is_heterogeneous_container:
+            self.assertEqual([None,'[0]','[1]','[2]'],
+                             [c.name for c in descend.seen])
+            self.assertEqual([id(cdict),id(cdict[0]),id(cdict[1]),id(cdict[2])],
+                             [id(c) for c in descend.seen])
 
         cdict[1].deactivate(shallow=False)
-        def visit(x):
-            visit.traversal.append(x)
+        def descend(x):
+            descend.seen.append(x)
             return True
-        visit.traversal = []
-        cdict.preorder_visit(visit, active=True)
+        descend.seen = []
+        order = list(cdict.preorder_traversal(active=True,
+                                              descend=descend))
         self.assertEqual([c.name for c in traversal if c.active],
-                         [c.name for c in visit.traversal])
+                         [c.name for c in order])
         self.assertEqual([id(c) for c in traversal if c.active],
-                         [id(c) for c in visit.traversal])
+                         [id(c) for c in order])
+        if self._ctype_factory()._ctype._is_heterogeneous_container:
+            self.assertEqual([c.name for c in traversal if c.active],
+                             [c.name for c in descend.seen])
+            self.assertEqual([id(c) for c in traversal if c.active],
+                             [id(c) for c in descend.seen])
 
-        def visit(x):
-            visit.traversal.append(x)
+        def descend(x):
+            descend.seen.append(x)
             return x.active
-        visit.traversal = []
-        cdict.preorder_visit(visit)
+        descend.seen = []
+        order = list(cdict.preorder_traversal(descend=descend))
         self.assertEqual([None,'[0]','[1]','[2]'],
-                         [c.name for c in visit.traversal])
+                         [c.name for c in order])
         self.assertEqual([id(cdict),id(cdict[0]),id(cdict[1]),id(cdict[2])],
-                         [id(c) for c in visit.traversal])
+                         [id(c) for c in order])
+        if self._ctype_factory()._ctype._is_heterogeneous_container:
+            self.assertEqual([None,'[0]','[1]','[2]'],
+                             [c.name for c in descend.seen])
+            self.assertEqual([id(cdict),id(cdict[0]),id(cdict[1]),id(cdict[2])],
+                             [id(c) for c in descend.seen])
 
         cdict.deactivate()
-        def visit(x):
-            visit.traversal.append(x)
+        def descend(x):
+            descend.seen.append(x)
             return True
-        visit.traversal = []
-        cdict.preorder_visit(visit, active=True)
-        self.assertEqual(len(visit.traversal), 0)
-        self.assertEqual(len(list(cdict.generate_names(active=True))),
+        descend.seen = []
+        order = list(cdict.preorder_traversal(active=True,
+                                              descend=descend))
+        self.assertEqual(len(descend.seen), 0)
+        self.assertEqual(len(list(pmo.generate_names(cdict, active=True))),
                          0)
 
-        def visit(x):
-            visit.traversal.append(x)
+        def descend(x):
+            descend.seen.append(x)
             return x.active
-        visit.traversal = []
-        cdict.preorder_visit(visit)
-        self.assertEqual(len(visit.traversal), 1)
-        self.assertIs(visit.traversal[0], cdict)
-
-    def test_postorder_traversal(self):
-        cdict, traversal = \
-            super(_TestActiveComponentDictBase, self).\
-            test_postorder_traversal()
-
-        cdict[1].deactivate()
-        self.assertEqual(['[0]', '[2]', None],
-                         [c.name for c in cdict.postorder_traversal(
-                             active=True)])
-        self.assertEqual([id(cdict[0]),id(cdict[2]),id(cdict)],
-                         [id(c) for c in cdict.postorder_traversal(
-                             active=True)])
-
-        cdict[1].deactivate(shallow=False)
-        self.assertEqual([c.name for c in traversal if c.active],
-                         [c.name for c in cdict.postorder_traversal(
-                             active=True)])
-        self.assertEqual([id(c) for c in traversal if c.active],
-                         [id(c) for c in cdict.postorder_traversal(
-                             active=True)])
-
-        cdict.deactivate()
-        self.assertEqual(len(list(cdict.postorder_traversal(active=True))),
-                         0)
-        self.assertEqual(len(list(cdict.generate_names(active=True))),
-                         0)
+        descend.seen = []
+        order = list(cdict.preorder_traversal(descend=descend))
+        self.assertEqual(len(descend.seen), 1)
+        self.assertIs(descend.seen[0], cdict)
 
 if __name__ == "__main__":
     unittest.main()

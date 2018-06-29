@@ -10,10 +10,7 @@ from pyomo.core.tests.unit.test_component_tuple import \
     _TestActiveComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
-from pyomo.core.kernel.component_interface import (ICategorizedObject,
-                                                   IComponent,
-                                                   IComponentContainer,
-                                                   _ActiveObjectMixin)
+from pyomo.core.kernel.component_interface import ICategorizedObject
 from pyomo.core.kernel.component_constraint import (IConstraint,
                                                     constraint,
                                                     linear_constraint,
@@ -27,8 +24,6 @@ from pyomo.core.kernel.component_expression import (expression,
 from pyomo.core.kernel.component_block import block
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet)
-from pyomo.core.base.constraint import Constraint
-
 
 class Test_constraint(unittest.TestCase):
 
@@ -52,9 +47,9 @@ class Test_constraint(unittest.TestCase):
 
     def test_ctype(self):
         c = constraint()
-        self.assertIs(c.ctype, Constraint)
-        self.assertIs(type(c).ctype, Constraint)
-        self.assertIs(constraint.ctype, Constraint)
+        self.assertIs(c.ctype, IConstraint)
+        self.assertIs(type(c).ctype, IConstraint)
+        self.assertIs(constraint.ctype, IConstraint)
 
     def test_pickle(self):
         c = constraint()
@@ -82,7 +77,7 @@ class Test_constraint(unittest.TestCase):
     def test_init(self):
         c = constraint()
         self.assertTrue(c.parent is None)
-        self.assertEqual(c.ctype, Constraint)
+        self.assertEqual(c.ctype, IConstraint)
         self.assertIs(c.body, None)
         self.assertIs(c.lb, None)
         self.assertIs(c.ub, None)
@@ -299,8 +294,6 @@ class Test_constraint(unittest.TestCase):
     def test_type(self):
         c = constraint()
         self.assertTrue(isinstance(c, ICategorizedObject))
-        self.assertTrue(isinstance(c, IComponent))
-        self.assertTrue(isinstance(c, _ActiveObjectMixin))
         self.assertTrue(isinstance(c, IConstraint))
 
     def test_active(self):
@@ -1609,9 +1602,9 @@ class Test_linear_constraint(unittest.TestCase):
 
     def test_ctype(self):
         c = linear_constraint([],[])
-        self.assertIs(c.ctype, Constraint)
-        self.assertIs(type(c).ctype, Constraint)
-        self.assertIs(linear_constraint.ctype, Constraint)
+        self.assertIs(c.ctype, IConstraint)
+        self.assertIs(type(c).ctype, IConstraint)
+        self.assertIs(linear_constraint.ctype, IConstraint)
 
     def test_pickle(self):
         c = linear_constraint([],[])
@@ -1639,7 +1632,7 @@ class Test_linear_constraint(unittest.TestCase):
     def test_init(self):
         c = linear_constraint([],[])
         self.assertTrue(c.parent is None)
-        self.assertEqual(c.ctype, Constraint)
+        self.assertEqual(c.ctype, IConstraint)
         self.assertEqual(c.body, 0)
         self.assertIs(c.lb, None)
         self.assertIs(c.ub, None)
@@ -1737,8 +1730,6 @@ class Test_linear_constraint(unittest.TestCase):
     def test_type(self):
         c = linear_constraint([],[])
         self.assertTrue(isinstance(c, ICategorizedObject))
-        self.assertTrue(isinstance(c, IComponent))
-        self.assertTrue(isinstance(c, _ActiveObjectMixin))
         self.assertTrue(isinstance(c, IConstraint))
 
     def test_active(self):

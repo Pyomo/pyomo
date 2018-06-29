@@ -5,14 +5,11 @@ import pickle
 import pyutilib.th as unittest
 import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
-    _TestComponentDictBase
-from pyomo.core.tests.unit.test_component_list import \
-    _TestComponentListBase
-from pyomo.core.kernel.component_interface import (ICategorizedObject,
-                                                   IComponent,
-                                                   _ActiveObjectMixin,
-                                                   IComponentContainer)
-from pyomo.core.kernel.component_suffix import (suffix,
+    _TestActiveComponentDictBase
+from pyomo.core.kernel.component_interface import ICategorizedObject
+from pyomo.core.kernel.component_suffix import (ISuffix,
+                                                suffix,
+                                                suffix_dict,
                                                 export_suffix_generator,
                                                 import_suffix_generator,
                                                 local_suffix_generator,
@@ -25,7 +22,6 @@ from pyomo.core.kernel.component_block import (block,
                                                block_dict)
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet)
-from pyomo.core.base.suffix import Suffix
 
 import six
 from six import StringIO
@@ -64,9 +60,9 @@ class Test_suffix(unittest.TestCase):
 
     def test_ctype(self):
         s = suffix()
-        self.assertIs(s.ctype, Suffix)
-        self.assertIs(type(s).ctype, Suffix)
-        self.assertIs(suffix.ctype, Suffix)
+        self.assertIs(s.ctype, ISuffix)
+        self.assertIs(type(s).ctype, ISuffix)
+        self.assertIs(suffix.ctype, ISuffix)
 
     def test_pickle(self):
         s = suffix(direction=suffix.EXPORT,
@@ -99,15 +95,13 @@ class Test_suffix(unittest.TestCase):
     def test_init(self):
         s = suffix()
         self.assertTrue(s.parent is None)
-        self.assertEqual(s.ctype, Suffix)
+        self.assertEqual(s.ctype, ISuffix)
         self.assertEqual(s.direction, suffix.LOCAL)
         self.assertEqual(s.datatype, suffix.FLOAT)
 
     def test_type(self):
         s = suffix()
         self.assertTrue(isinstance(s, ICategorizedObject))
-        self.assertTrue(isinstance(s, IComponent))
-        self.assertTrue(isinstance(s, _ActiveObjectMixin))
         self.assertTrue(isinstance(s, collections.Mapping))
         self.assertTrue(isinstance(s, collections.MutableMapping))
         self.assertTrue(issubclass(type(s), collections.Mapping))
@@ -170,70 +164,40 @@ class Test_suffix(unittest.TestCase):
     def test_name(self):
         s = suffix()
         self.assertTrue(s.parent is None)
-        self.assertTrue(s.parent_block is None)
-        self.assertTrue(s.root_block is None)
         self.assertEqual(s.local_name, None)
         self.assertEqual(s.name, None)
 
         model = block()
         model.s = s
         self.assertTrue(model.parent is None)
-        self.assertTrue(model.parent_block is None)
-        self.assertTrue(model.root_block is model)
         self.assertTrue(s.parent is model)
-        self.assertTrue(s.parent_block is model)
-        self.assertTrue(s.root_block is model)
         self.assertEqual(s.local_name, "s")
         self.assertEqual(s.name, "s")
 
         b = block()
         b.model = model
         self.assertTrue(b.parent is None)
-        self.assertTrue(b.parent_block is None)
-        self.assertTrue(b.root_block is b)
         self.assertTrue(model.parent is b)
-        self.assertTrue(model.parent_block is b)
-        self.assertTrue(model.root_block is b)
         self.assertTrue(s.parent is model)
-        self.assertTrue(s.parent_block is model)
-        self.assertTrue(s.root_block is b)
         self.assertEqual(s.local_name, "s")
         self.assertEqual(s.name, "model.s")
 
         bdict = block_dict()
         bdict[0] = b
         self.assertTrue(bdict.parent is None)
-        self.assertTrue(bdict.parent_block is None)
-        self.assertTrue(bdict.root_block is None)
         self.assertTrue(b.parent is bdict)
-        self.assertTrue(b.parent_block is None)
-        self.assertTrue(b.root_block is b)
         self.assertTrue(model.parent is b)
-        self.assertTrue(model.parent_block is b)
-        self.assertTrue(model.root_block is b)
         self.assertTrue(s.parent is model)
-        self.assertTrue(s.parent_block is model)
-        self.assertTrue(s.root_block is b)
         self.assertEqual(s.local_name, "s")
         self.assertEqual(s.name, "[0].model.s")
 
         m = block()
         m.bdict = bdict
         self.assertTrue(m.parent is None)
-        self.assertTrue(m.parent_block is None)
-        self.assertTrue(m.root_block is m)
         self.assertTrue(bdict.parent is m)
-        self.assertTrue(bdict.parent_block is m)
-        self.assertTrue(bdict.root_block is m)
         self.assertTrue(b.parent is bdict)
-        self.assertTrue(b.parent_block is m)
-        self.assertTrue(b.root_block is m)
         self.assertTrue(model.parent is b)
-        self.assertTrue(model.parent_block is b)
-        self.assertTrue(model.root_block is m)
         self.assertTrue(s.parent is model)
-        self.assertTrue(s.parent_block is model)
-        self.assertTrue(s.root_block is m)
         self.assertEqual(s.local_name, "s")
         self.assertEqual(s.name, "bdict[0].model.s")
 
@@ -611,6 +575,11 @@ class Test_suffix(unittest.TestCase):
         self.assertEqual(s.get_datatype(), suffix.INT)
         with self.assertRaises(ValueError):
             s.set_datatype('something')
+
+class Test_constraint_dict(_TestActiveComponentDictBase,
+                           unittest.TestCase):
+    _container_type = suffix_dict
+    _ctype_factory = lambda self: suffix()
 
 if __name__ == "__main__":
     unittest.main()

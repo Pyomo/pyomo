@@ -2,26 +2,23 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import random
 import pickle
 import collections
 
 import pyutilib.th as unittest
-import pyomo.environ
+import pyomo.kernel as pmo
 from pyomo.core.kernel.component_interface import \
     (ICategorizedObject,
-     IComponent,
-     IComponentContainer,
-     _ActiveObjectMixin)
-from pyomo.core.kernel.component_tuple import (ComponentTuple,
-                                               create_component_tuple)
-from pyomo.core.kernel.component_block import (IBlockStorage,
+     ICategorizedObjectContainer,
+     IHomogeneousContainer)
+from pyomo.core.kernel.component_tuple import ComponentTuple
+from pyomo.core.kernel.component_block import (IBlock,
                                                block,
                                                block_list)
 
@@ -70,8 +67,8 @@ class _TestComponentTupleBase(object):
     def test_type(self):
         ctuple = self._container_type()
         self.assertTrue(isinstance(ctuple, ICategorizedObject))
-        self.assertTrue(isinstance(ctuple, IComponentContainer))
-        self.assertFalse(isinstance(ctuple, IComponent))
+        self.assertTrue(isinstance(ctuple, ICategorizedObjectContainer))
+        self.assertTrue(isinstance(ctuple, IHomogeneousContainer))
         self.assertTrue(isinstance(ctuple, ComponentTuple))
         self.assertTrue(isinstance(ctuple, collections.Sequence))
         self.assertTrue(issubclass(type(ctuple), collections.Sequence))
@@ -246,28 +243,16 @@ class _TestComponentTupleBase(object):
 
         for c in children:
             self.assertTrue(c.parent is None)
-            self.assertTrue(c.parent_block is None)
-            if isinstance(c, IBlockStorage):
-                self.assertTrue(c.root_block is c)
-            else:
-                self.assertTrue(c.root_block is None)
             self.assertEqual(c.local_name, None)
             self.assertEqual(c.name, None)
 
         ctuple = self._container_type(children)
         self.assertTrue(ctuple.parent is None)
-        self.assertTrue(ctuple.parent_block is None)
-        self.assertTrue(ctuple.root_block is None)
         self.assertEqual(ctuple.local_name, None)
         self.assertEqual(ctuple.name, None)
-        names = ctuple.generate_names()
+        names = pmo.generate_names(ctuple)
         for i, c in enumerate(children):
             self.assertTrue(c.parent is ctuple)
-            self.assertTrue(c.parent_block is None)
-            if isinstance(c, IBlockStorage):
-                self.assertTrue(c.root_block is c)
-            else:
-                self.assertTrue(c.root_block is None)
             self.assertEqual(c.local_name, "[%s]" % (i))
             self.assertEqual(c.name, "[%s]" % (i))
             self.assertEqual(c.name, names[c])
@@ -278,18 +263,12 @@ class _TestComponentTupleBase(object):
         model = block()
         model.ctuple = ctuple
         self.assertTrue(model.parent is None)
-        self.assertTrue(model.parent_block is None)
-        self.assertTrue(model.root_block is model)
         self.assertTrue(ctuple.parent is model)
-        self.assertTrue(ctuple.parent_block is model)
-        self.assertTrue(ctuple.root_block is model)
         self.assertEqual(ctuple.local_name, "ctuple")
         self.assertEqual(ctuple.name, "ctuple")
-        names = model.generate_names()
+        names = pmo.generate_names(model)
         for i, c in enumerate(children):
             self.assertTrue(c.parent is ctuple)
-            self.assertTrue(c.parent_block is model)
-            self.assertTrue(c.root_block is model)
             self.assertEqual(c.local_name, "[%s]" % (i))
             self.assertEqual(c.name, "ctuple[%s]" % (i))
             self.assertEqual(c.name, names[c])
@@ -300,21 +279,13 @@ class _TestComponentTupleBase(object):
         b = block()
         b.model = model
         self.assertTrue(b.parent is None)
-        self.assertTrue(b.parent_block is None)
-        self.assertTrue(b.root_block is b)
         self.assertTrue(model.parent is b)
-        self.assertTrue(model.parent_block is b)
-        self.assertTrue(model.root_block is b)
         self.assertTrue(ctuple.parent is model)
-        self.assertTrue(ctuple.parent_block is model)
-        self.assertTrue(ctuple.root_block is b)
         self.assertEqual(ctuple.local_name, "ctuple")
         self.assertEqual(ctuple.name, "model.ctuple")
-        names = b.generate_names()
+        names = pmo.generate_names(b)
         for i, c in enumerate(children):
             self.assertTrue(c.parent is ctuple)
-            self.assertTrue(c.parent_block is model)
-            self.assertTrue(c.root_block is b)
             self.assertEqual(c.local_name, "[%s]" % (i))
             self.assertEqual(c.name, "model.ctuple[%s]" % (i))
             self.assertEqual(c.name, names[c])
@@ -325,23 +296,13 @@ class _TestComponentTupleBase(object):
         blist = block_list()
         blist.append(b)
         self.assertTrue(blist.parent is None)
-        self.assertTrue(blist.parent_block is None)
-        self.assertTrue(blist.root_block is None)
         self.assertTrue(b.parent is blist)
-        self.assertTrue(b.parent_block is None)
-        self.assertTrue(b.root_block is b)
         self.assertTrue(model.parent is b)
-        self.assertTrue(model.parent_block is b)
-        self.assertTrue(model.root_block is b)
         self.assertTrue(ctuple.parent is model)
-        self.assertTrue(ctuple.parent_block is model)
-        self.assertTrue(ctuple.root_block is b)
         self.assertEqual(ctuple.local_name, "ctuple")
         self.assertEqual(ctuple.name, "[0].model.ctuple")
         for i, c in enumerate(children):
             self.assertTrue(c.parent is ctuple)
-            self.assertTrue(c.parent_block is model)
-            self.assertTrue(c.root_block is b)
             self.assertEqual(c.local_name, "[%s]" % (i))
             self.assertEqual(c.name,
                              "[0].model.ctuple[%s]" % (i))
@@ -349,27 +310,15 @@ class _TestComponentTupleBase(object):
         m = block()
         m.blist = blist
         self.assertTrue(m.parent is None)
-        self.assertTrue(m.parent_block is None)
-        self.assertTrue(m.root_block is m)
         self.assertTrue(blist.parent is m)
-        self.assertTrue(blist.parent_block is m)
-        self.assertTrue(blist.root_block is m)
         self.assertTrue(b.parent is blist)
-        self.assertTrue(b.parent_block is m)
-        self.assertTrue(b.root_block is m)
         self.assertTrue(model.parent is b)
-        self.assertTrue(model.parent_block is b)
-        self.assertTrue(model.root_block is m)
         self.assertTrue(ctuple.parent is model)
-        self.assertTrue(ctuple.parent_block is model)
-        self.assertTrue(ctuple.root_block is m)
         self.assertEqual(ctuple.local_name, "ctuple")
         self.assertEqual(ctuple.name, "blist[0].model.ctuple")
-        names = m.generate_names()
+        names = pmo.generate_names(m)
         for i, c in enumerate(children):
             self.assertTrue(c.parent is ctuple)
-            self.assertTrue(c.parent_block is model)
-            self.assertTrue(c.root_block is m)
             self.assertEqual(c.local_name, "[%s]" % (i))
             self.assertEqual(c.name,
                              "blist[0].model.ctuple[%s]" % (i))
@@ -377,8 +326,7 @@ class _TestComponentTupleBase(object):
         for c in ctuple.components():
             self.assertNotEqual(c.name, None)
             self.assertEqual(c.name, names[c])
-        names = m.generate_names(descend_into=False)
-        self.assertEqual(len(names), len(list(m.children())))
+        names = pmo.generate_names(m)
         for c in m.children():
             self.assertEqual(c.name, names[c])
 
@@ -441,7 +389,7 @@ class _TestComponentTupleBase(object):
 
         return ctuple, traversal
 
-    def test_preorder_visit(self):
+    def test_preorder_traversal_descend_check(self):
 
         csubtuple = self._container_type(
             [self._ctype_factory()])
@@ -457,95 +405,60 @@ class _TestComponentTupleBase(object):
         traversal.append(ctuple[1][0])
         traversal.append(ctuple[2])
 
-        def visit(x):
-            visit.traversal.append(x)
+        def descend(x):
+            self.assertTrue(x._is_container)
+            descend.seen.append(x)
             return False
-        visit.traversal = []
-        ctuple.preorder_visit(visit)
-        self.assertEqual(len(visit.traversal), 1)
-        self.assertIs(visit.traversal[0], ctuple)
+        descend.seen = []
+        order = list(ctuple.preorder_traversal(descend=descend))
+        self.assertEqual(len(order), 1)
+        self.assertIs(order[0], ctuple)
+        self.assertEqual(len(descend.seen), 1)
+        self.assertIs(descend.seen[0], ctuple)
 
-        def visit(x):
-            visit.traversal.append(x)
+        def descend(x):
+            self.assertTrue(x._is_container)
+            descend.seen.append(x)
             return True
-        visit.traversal = []
-        ctuple.preorder_visit(visit)
+        descend.seen = []
+        order = list(ctuple.preorder_traversal(descend=descend))
         self.assertEqual([c.name for c in traversal],
-                         [c.name for c in visit.traversal])
+                         [c.name for c in order])
         self.assertEqual([id(c) for c in traversal],
-                         [id(c) for c in visit.traversal])
+                         [id(c) for c in order])
+        if self._ctype_factory()._ctype._is_heterogeneous_container:
+            self.assertEqual([c.name for c in traversal],
+                             [c.name for c in descend.seen])
+            self.assertEqual([id(c) for c in traversal],
+                             [id(c) for c in descend.seen])
 
-        def visit(x):
-            visit.traversal.append(x)
+        def descend(x):
+            self.assertTrue(x._is_container)
+            descend.seen.append(x)
             return True
-        visit.traversal = []
-        ctuple.preorder_visit(visit)
+        descend.seen = []
+        order = list(ctuple.preorder_traversal(descend=descend))
         self.assertEqual([c.name for c in traversal],
-                         [c.name for c in visit.traversal])
+                         [c.name for c in order])
         self.assertEqual([id(c) for c in traversal],
-                         [id(c) for c in visit.traversal])
+                         [id(c) for c in order])
+        if self._ctype_factory()._ctype._is_heterogeneous_container:
+            self.assertEqual([c.name for c in traversal],
+                             [c.name for c in descend.seen])
+            self.assertEqual([id(c) for c in traversal],
+                             [id(c) for c in descend.seen])
         return ctuple, traversal
-
-    def test_postorder_traversal(self):
-
-        csubtuple = self._container_type(
-            [self._ctype_factory()])
-        ctuple = self._container_type(
-            [self._ctype_factory(),
-             csubtuple,
-             self._ctype_factory()])
-
-        traversal = []
-        traversal.append(ctuple[0])
-        traversal.append(ctuple[1][0])
-        traversal.append(ctuple[1])
-        traversal.append(ctuple[2])
-        traversal.append(ctuple)
-
-        self.assertEqual([c.name for c in traversal],
-                         [c.name for c in ctuple.postorder_traversal()])
-        self.assertEqual([id(c) for c in traversal],
-                         [id(c) for c in ctuple.postorder_traversal()])
-
-        return ctuple, traversal
-
-    def test_create_component_tuple(self):
-        ctuple1 = self._container_type(
-            self._ctype_factory()
-            for i in range(5))
-        self.assertEqual(len(ctuple1), 5)
-        for obj in ctuple1:
-            self.assertIs(obj.parent, ctuple1)
-        objects = iter(ctuple1)
-        def type_(x, y=None):
-            self.assertEqual(x, 1)
-            self.assertEqual(y, 'a')
-        type_ = lambda x, y=None: six.next(objects)
-        type_.ctype = ctuple1.ctype
-        # this will result in ctuple1 and ctuple2
-        # being "equal" in that they both store the
-        # same objects, except that ctuple2 has stolen
-        # ownership of the objects from ctuple1 (all of the
-        # .parent weakrefs have been changed)
-        ctuple2 = create_component_tuple(self._container_type,
-                                       type_,
-                                       5, 1, y='a')
-        self.assertEqual(len(ctuple2), 5)
-        self.assertEqual(ctuple1, ctuple2)
-        self.assertIsNot(ctuple1, ctuple2)
-        for obj in ctuple1:
-            self.assertIs(obj.parent, ctuple2)
-        for obj in ctuple2:
-            self.assertIs(obj.parent, ctuple2)
 
 class _TestActiveComponentTupleBase(_TestComponentTupleBase):
 
     def test_active_type(self):
         ctuple = self._container_type()
-        self.assertTrue(isinstance(ctuple, IComponentContainer))
         self.assertTrue(isinstance(ctuple, ICategorizedObject))
-        self.assertTrue(isinstance(ctuple, _ActiveObjectMixin))
-        self.assertFalse(isinstance(ctuple, IComponent))
+        self.assertTrue(isinstance(ctuple, ICategorizedObjectContainer))
+        self.assertTrue(isinstance(ctuple, IHomogeneousContainer))
+        self.assertTrue(isinstance(ctuple, ComponentTuple))
+        self.assertTrue(isinstance(ctuple, collections.Sequence))
+        self.assertTrue(issubclass(type(ctuple), collections.Sequence))
 
     def test_active(self):
         index = list(range(4))
@@ -766,118 +679,125 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
         ctuple.deactivate()
         self.assertEqual(len(list(ctuple.preorder_traversal(active=True))),
                          0)
-        self.assertEqual(len(list(ctuple.generate_names(active=True))),
+        self.assertEqual(len(list(pmo.generate_names(ctuple, active=True))),
                          0)
 
-    def test_preorder_visit(self):
+    def test_preorder_traversal_descend_check(self):
         ctuple, traversal = \
             super(_TestActiveComponentTupleBase, self).\
-            test_preorder_visit()
+            test_preorder_traversal_descend_check()
 
         ctuple[1].deactivate()
-        def visit(x):
-            visit.traversal.append(x)
+        def descend(x):
+            self.assertTrue(x._is_container)
+            descend.seen.append(x)
             return True
-        visit.traversal = []
-        ctuple.preorder_visit(visit, active=True)
+        descend.seen = []
+        order = list(ctuple.preorder_traversal(active=True,
+                                               descend=descend))
         self.assertEqual([None, '[0]', '[2]'],
-                         [c.name for c in visit.traversal])
+                         [c.name for c in order])
         self.assertEqual([id(ctuple),id(ctuple[0]),id(ctuple[2])],
-                         [id(c) for c in visit.traversal])
+                         [id(c) for c in order])
+        if self._ctype_factory()._ctype._is_heterogeneous_container:
+            self.assertEqual([None, '[0]', '[2]'],
+                             [c.name for c in descend.seen])
+            self.assertEqual([id(ctuple),id(ctuple[0]),id(ctuple[2])],
+                             [id(c) for c in descend.seen])
 
-        def visit(x):
-            visit.traversal.append(x)
+        def descend(x):
+            self.assertTrue(x._is_container)
+            descend.seen.append(x)
             return x.active
-        visit.traversal = []
-        ctuple.preorder_visit(visit)
+        descend.seen = []
+        order = list(ctuple.preorder_traversal(descend=descend))
         self.assertEqual([None,'[0]','[1]','[2]'],
-                         [c.name for c in visit.traversal])
+                         [c.name for c in order])
         self.assertEqual([id(ctuple),id(ctuple[0]),id(ctuple[1]),id(ctuple[2])],
-                         [id(c) for c in visit.traversal])
+                         [id(c) for c in order])
+        if self._ctype_factory()._ctype._is_heterogeneous_container:
+            self.assertEqual([None,'[0]','[1]','[2]'],
+                             [c.name for c in descend.seen])
+            self.assertEqual([id(ctuple),id(ctuple[0]),id(ctuple[1]),id(ctuple[2])],
+                             [id(c) for c in descend.seen])
 
         ctuple[1].deactivate(shallow=False)
-        def visit(x):
-            visit.traversal.append(x)
+        def descend(x):
+            self.assertTrue(x._is_container)
+            descend.seen.append(x)
             return True
-        visit.traversal = []
-        ctuple.preorder_visit(visit, active=True)
+        descend.seen = []
+        order = list(ctuple.preorder_traversal(active=True,
+                                               descend=descend))
         self.assertEqual([c.name for c in traversal if c.active],
-                         [c.name for c in visit.traversal])
+                         [c.name for c in order])
         self.assertEqual([id(c) for c in traversal if c.active],
-                         [id(c) for c in visit.traversal])
+                         [id(c) for c in order])
+        if self._ctype_factory()._ctype._is_heterogeneous_container:
+            self.assertEqual([c.name for c in traversal if c.active],
+                             [c.name for c in descend.seen])
+            self.assertEqual([id(c) for c in traversal if c.active],
+                             [id(c) for c in descend.seen])
 
-        def visit(x):
-            visit.traversal.append(x)
+        def descend(x):
+            self.assertTrue(x._is_container)
+            descend.seen.append(x)
             return x.active
-        visit.traversal = []
-        ctuple.preorder_visit(visit)
+        descend.seen = []
+        order = list(ctuple.preorder_traversal(descend=descend))
         self.assertEqual([None,'[0]','[1]','[2]'],
-                         [c.name for c in visit.traversal])
+                         [c.name for c in order])
         self.assertEqual([id(ctuple),id(ctuple[0]),id(ctuple[1]),id(ctuple[2])],
-                         [id(c) for c in visit.traversal])
+                         [id(c) for c in order])
+        if self._ctype_factory()._ctype._is_heterogeneous_container:
+            self.assertEqual([None,'[0]','[1]','[2]'],
+                             [c.name for c in descend.seen])
+            self.assertEqual([id(ctuple),id(ctuple[0]),id(ctuple[1]),id(ctuple[2])],
+                             [id(c) for c in descend.seen])
 
         ctuple.deactivate()
-        def visit(x):
-            visit.traversal.append(x)
+        def descend(x):
+            self.assertTrue(x._is_container)
+            descend.seen.append(x)
             return True
-        visit.traversal = []
-        ctuple.preorder_visit(visit, active=True)
-        self.assertEqual(len(visit.traversal), 0)
-        self.assertEqual(len(list(ctuple.generate_names(active=True))),
+        descend.seen = []
+        order = list(ctuple.preorder_traversal(active=True,
+                                               descend=descend))
+        self.assertEqual(len(descend.seen), 0)
+        self.assertEqual(len(list(pmo.generate_names(ctuple,
+                                                     active=True))),
                          0)
 
-        def visit(x):
-            visit.traversal.append(x)
+        def descend(x):
+            self.assertTrue(x._is_container)
+            descend.seen.append(x)
             return x.active
-        visit.traversal = []
-        ctuple.preorder_visit(visit)
-        self.assertEqual(len(visit.traversal), 1)
-        self.assertIs(visit.traversal[0], ctuple)
+        descend.seen = []
+        order = list(ctuple.preorder_traversal(descend=descend))
+        self.assertEqual(len(descend.seen), 1)
+        self.assertIs(descend.seen[0], ctuple)
 
         ctuple.deactivate(shallow=False)
-        def visit(x):
-            visit.traversal.append(x)
+        def descend(x):
+            self.assertTrue(x._is_container)
+            descend.seen.append(x)
             return True
-        visit.traversal = []
-        ctuple.preorder_visit(visit, active=True)
-        self.assertEqual(len(visit.traversal), 0)
-        self.assertEqual(len(list(ctuple.generate_names(active=True))),
+        descend.seen = []
+        order = list(ctuple.preorder_traversal(active=True,
+                                               descend=descend))
+        self.assertEqual(len(descend.seen), 0)
+        self.assertEqual(len(list(pmo.generate_names(ctuple,
+                                                     active=True))),
                          0)
 
-        def visit(x):
-            visit.traversal.append(x)
+        def descend(x):
+            self.assertTrue(x._is_container)
+            descend.seen.append(x)
             return x.active
-        visit.traversal = []
-        ctuple.preorder_visit(visit)
-        self.assertEqual(len(visit.traversal), 1)
-        self.assertIs(visit.traversal[0], ctuple)
-
-    def test_postorder_traversal(self):
-        ctuple, traversal = \
-            super(_TestActiveComponentTupleBase, self).\
-            test_postorder_traversal()
-
-        ctuple[1].deactivate()
-        self.assertEqual(['[0]', '[2]', None],
-                         [c.name for c in ctuple.postorder_traversal(
-                             active=True)])
-        self.assertEqual([id(ctuple[0]),id(ctuple[2]),id(ctuple)],
-                         [id(c) for c in ctuple.postorder_traversal(
-                             active=True)])
-
-        ctuple[1].deactivate(shallow=False)
-        self.assertEqual([c.name for c in traversal if c.active],
-                         [c.name for c in ctuple.postorder_traversal(
-                             active=True)])
-        self.assertEqual([id(c) for c in traversal if c.active],
-                         [id(c) for c in ctuple.postorder_traversal(
-                             active=True)])
-
-        ctuple.deactivate()
-        self.assertEqual(len(list(ctuple.postorder_traversal(active=True))),
-                         0)
-        self.assertEqual(len(list(ctuple.generate_names(active=True))),
-                         0)
+        descend.seen = []
+        order = list(ctuple.preorder_traversal(descend=descend))
+        self.assertEqual(len(descend.seen), 1)
+        self.assertIs(descend.seen[0], ctuple)
 
 if __name__ == "__main__":
     unittest.main()
