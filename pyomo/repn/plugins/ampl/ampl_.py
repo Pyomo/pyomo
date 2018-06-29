@@ -45,7 +45,7 @@ import pyomo.core.base.suffix
 from pyomo.repn.standard_repn import StandardRepn, generate_standard_repn
 
 import pyomo.core.kernel.component_suffix
-from pyomo.core.kernel.component_block import IBlockStorage
+from pyomo.core.kernel.component_block import IBlock
 from pyomo.core.kernel.component_expression import IIdentityExpression
 from pyomo.core.kernel.component_variable import IVariable
 
@@ -1397,7 +1397,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         obj_tag = 2
         prob_tag = 3
         suffix_dict = {}
-        if isinstance(model, IBlockStorage):
+        if isinstance(model, IBlock):
             suffix_gen = lambda b: ((suf.storage_key, suf) \
                                     for suf in pyomo.core.kernel.component_suffix.\
                                     export_suffix_generator(b,

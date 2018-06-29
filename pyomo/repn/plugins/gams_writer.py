@@ -29,7 +29,7 @@ from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
 import pyomo.common.plugin
 
-from pyomo.core.kernel.component_block import IBlockStorage
+from pyomo.core.kernel.component_block import IBlock
 from pyomo.core.kernel.component_interface import ICategorizedObject
 
 import logging
