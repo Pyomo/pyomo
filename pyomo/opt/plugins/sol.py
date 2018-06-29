@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -213,8 +213,11 @@ class ResultsReader_sol(results.AbstractResultsReader):
                     if kind == 0: # Var
                         for cnt in xrange(nvalues):
                             suf_line = fin.readline().split()
-                            soln_variable["v"+suf_line[0]][suffix_name] = \
-                                convert_function(suf_line[1])
+                            # make sure an entry exists (solvers sometimes
+                            # return suffixes but not values)
+                            sol_var = soln_variable \
+                                .setdefault("v"+suf_line[0], {'Value': None})
+                            sol_var[suffix_name] = convert_function(suf_line[1])
                     elif kind == 1: # Con
                         for cnt in xrange(nvalues):
                             suf_line = fin.readline().split()
