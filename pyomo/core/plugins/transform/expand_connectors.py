@@ -23,6 +23,7 @@ from pyomo.core.base.connector import _ConnectorData, SimpleConnector
 from pyomo.core.base.connection import SimpleConnection
 from pyomo.common.modeling import unique_component_name
 
+
 class _ConnExpansion(Transformation):
     def _collect_connectors(self, instance, ctype):
         self._name_buffer = {}
@@ -237,6 +238,8 @@ class _ConnExpansion(Transformation):
                 ctn.parent_block(), "%s_expanded" % ctn.getname(
                     fully_qualified=False, name_buffer=self._name_buffer))
             ctn.parent_block().add_component(bname, blk)
+            # add reference to this block onto the Connection object
+            ctn._expanded_block = blk
             self._add_connections(
                 blk, conn_set, matched_connectors, known_conn_sets)
             ctn.deactivate()
@@ -247,6 +250,7 @@ class _ConnExpansion(Transformation):
                 ictn.parent_block(), "%s_expanded" % ictn.getname(
                     fully_qualified=False, name_buffer=self._name_buffer))
             ictn.parent_block().add_component(bname, blk)
+            ictn._expanded_block = blk
             for ctn, conn_set in indexed_ctns[ictn]:
                 i = ctn.index()
                 self._add_connections(
@@ -263,23 +267,41 @@ class _ConnExpansion(Transformation):
         conn = next(iter(conn_set))
         ref = known_conn_sets[id(matched_connectors[conn])]
         for k, v in sorted(iteritems(ref)):
+            # if one of them is extensive, make the new variable
+            # if both are, skip the constraint since both use the same var
+            # name is k, conflicts are prevented by a check in add function
+            # the new var will mirror the original var and have same index set
+            cont = once = False
+            for c in conn_set:
+                for etype in c.extensives:
+                    if k in c.extensives[etype]:
+                        if once:
+                            cont = True
+                            c.extensives[etype][k].append(evar)
+                        else:
+                            once = True
+                            evar = Var(c.vars[k].index_set())
+                            blk.add_component(k, evar)
+                            c.extensives[etype][k].append(evar)
+                        break
+            if cont:
+                continue
+
             cname = k + "_equality"
-            if v[1] >= 0:
-                # v[0] is an indexed var
-                def rule(m, *args):
-                    tmp = []
-                    for c in conn_set:
-                        tmp.append(c.vars[k][args])
-                    return tmp[0] == tmp[1]
-                con = Constraint(v[0].index_set(), rule=rule)
-            else:
+            def rule(m, *args):
+                if len(args) == 0:
+                    # scalar, use None as index
+                    args = None
                 tmp = []
                 for c in conn_set:
                     if k in c.aggregators:
                         tmp.append(c.vars[k].add())
+                    elif k in c.extensives:
+                        tmp.append(evar)
                     else:
-                        tmp.append(c.vars[k])
-                con = Constraint(expr=tmp[0] == tmp[1])
+                        tmp.append(c.vars[k][args])
+                return tmp[0] == tmp[1]
+            con = Constraint(v[0].index_set(), rule=rule)
             blk.add_component(cname, con)
 
     def _implement_aggregators(self, connector_list):
@@ -290,6 +312,21 @@ class _ConnExpansion(Transformation):
                 cname = '%s.%s.aggregate' % (conn.getname(
                     fully_qualified=True, name_buffer=self._name_buffer), var)
                 block.add_component(cname, c)
+
+    def _implement_extensives(self, connector_list):
+        for ctr in connector_list:
+            unit = ctr.parent_block()
+            for etype in ctr.extensives:
+                if etype not in c.extensive_aggregators:
+                    raise KeyError(
+                        "No aggregator in extensive_aggregators for extensive "
+                        "type '%s' in Connector '%s'" % (etype, ctr.name))
+                fcn = ctr.extensive_aggregators[etype]
+                # build list of connections using the parent blocks of all
+                # the evars in one of the lists in ctr.extensives[etype]
+                ctns = [evar.parent_block() for evar in
+                        next(itervalues(ctr.extensives[etype]))]
+                fcn(unit, ctns, ctr, etype)
 
 
 class ExpandConnectors(_ConnExpansion):
@@ -370,5 +407,6 @@ class ExpandConnections(_ConnExpansion):
         self._build_connections(connection_list, matched_connectors,
             known_conn_sets)
 
-        # Now, go back and implement VarList aggregators
+        # Now, go back and implement aggregators
         self._implement_aggregators(connector_list)
+        self._implement_extensives(connector_list)

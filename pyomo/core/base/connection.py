@@ -15,11 +15,13 @@ from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
     UnindexedComponent_set)
 from pyomo.core.base.connector import (SimpleConnector, IndexedConnector,
     _ConnectorData)
+from pyomo.core.base.label import alphanum_label_from_name
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.plugin import (register_component,
     IPyomoScriptModifyInstance, TransformationFactory)
 from pyomo.common.plugin import Plugin, implements
 from pyomo.common.timing import ConstructionTimer
+from pyomo.common.modeling import unique_component_name
 from six import iteritems
 from weakref import ref as weakref_ref
 import logging, sys
@@ -164,15 +166,23 @@ class Connection(ActiveIndexedComponent):
         source = kwds.pop("source", None)
         destination = kwds.pop("destination", None)
         connectors = kwds.pop("connectors", None)
+        self._directed = kwds.pop("directed", None)
+        self._rule = kwds.pop('rule', None)
+        kwds.setdefault("ctype", Connection)
+
+        super(Connection, self).__init__(*args, **kwds)
+
         if source is destination is connectors is None:
             self._init_vals = None
         else:
             self._init_vals = dict(
                 source=source, destination=destination, connectors=connectors)
-        self._directed = kwds.pop("directed", None)
-        self._rule = kwds.pop('rule', None)
-        kwds.setdefault("ctype", Connection)
-        super(Connection, self).__init__(*args, **kwds)
+
+        self._expanded_block = None
+
+    @property
+    def expanded_block(self):
+        return self._expanded_block
 
     def construct(self, data=None):
         """
@@ -273,6 +283,54 @@ class Connection(ActiveIndexedComponent):
                             else None,
                           v.directed,
                           v.active])
+
+    def SplitFrac(unit, ctns, ctr, etype):
+        # create and potentially initialize split fraction variables
+        for ctn in ctns:
+            ctn.splitfrac = Var()
+            if hasattr(unit, "splitfrac") and ctn.name in unit.splitfrac:
+                d = unit.splitfrac[ctn.name]
+                if type(d) is dict:
+                    val, fix = d["val"], d["fix"]
+                else:
+                    val, fix = d, True
+                ctn.splitfrac = val
+                if fix:
+                    ctn.splitfrac.fix()
+
+        # create constraints for each extensive variable using splitfrac
+        for name, lst in iteritems(ctr.extensives[etype]):
+            cname = "%s_split" % name
+            var = ctr.vars[name]
+            for evar in lst:
+                ctn = evar.parent_block()
+                def rule(m, *args):
+                    if len(args) == 0:
+                        args = None
+                    return evar[args] == ctn.splitfrac * var
+                con = Constraint(var.index_set(), rule=rule)
+                ctn.add_component(cname, con)
+
+        # create constraint on splitfrac vars: sum == 1
+        # need to alphanum connector name in case it is indexed
+        cname = unique_component_name(
+            "%s_frac_sum" % alphanum_label_from_name(ctr.local_name))
+        con = Constraint(expr=sum(c.splitfrac for c in ctns) == 1)
+        unit.add_component(cname, con)
+
+    def Balance(unit, ctns, ctr, etype):
+        # create constraint: sum of parts == the whole
+        # need to alphanum connector name in case it is indexed
+        for name, lst in iteritems(ctr.extensives[etype]):
+            cname = unique_component_name(
+                "%s_%s_bal" % (alphanum_label_from_name(ctr.local_name), name))
+            var = ctr.vars[name]
+            def rule(m, *args):
+                if len(args) == 0:
+                    args = None
+                return sum(evar[args] for evar in lst) == var[args]
+            con = Constraint(var.index_set(), rule=rule)
+            unit.add_component(cname, con)
 
 
 class SimpleConnection(_ConnectionData, Connection):

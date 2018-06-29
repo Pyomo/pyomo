@@ -19,6 +19,7 @@ from weakref import ref as weakref_ref
 from pyomo.common.timing import ConstructionTimer
 from pyomo.common.plugin import Plugin, implements
 
+from pyomo.core.base.var import VarList
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
@@ -32,7 +33,7 @@ logger = logging.getLogger('pyomo.core')
 class _ConnectorData(ComponentData, NumericValue):
     """Holds the actual connector information"""
 
-    __slots__ = ('vars','aggregators')
+    __slots__ = ('vars', 'aggregators', 'extensives', 'extensive_aggregators')
 
     def __init__(self, component=None):
         """Constructor"""
@@ -46,7 +47,11 @@ class _ConnectorData(ComponentData, NumericValue):
 
         self.vars = {}
         self.aggregators = {}
-    
+        self.extensives = {}
+        # default aggregation functions for extensive variables in connections
+        from pyomo.core.base.connection import Connection
+        self.extensive_aggregators = {"split" : Connection.SplitFrac,
+                                      "mix"   : Connection.Balance}
 
     def __getstate__(self):
         state = super(_ConnectorData, self).__getstate__()
@@ -105,8 +110,7 @@ class _ConnectorData(ComponentData, NumericValue):
     def is_continuous(self):
         return len(self) and all(v.is_continuous() for v in self._iter_vars())
 
-
-    def add(self, var, name=None, aggregate=None):
+    def add(self, var, name=None, aggregate=None, extensive=None):
         if name is None:
             name = var.local_name
         if name in self.vars:
@@ -114,8 +118,25 @@ class _ConnectorData(ComponentData, NumericValue):
                              "'%s' into Connector '%s'" % (name, self.name))
         self.vars[name] = var
         if aggregate is not None:
+            if extensive is not None:
+                raise ValueError(
+                    "Cannot specify aggregator for extensive variable '%s' on "
+                    "Connector '%s'" % (name, self.name))
+            if type(var) is not VarList:
+                raise ValueError(
+                    "Aggregated variable '%s' must be a VarList "
+                    "in Connector '%s'" % (name, self.name))
             self.aggregators[name] = aggregate
-
+        elif extensive is not None:
+            # avoid name collisions
+            if name.endswith("_split") or name.endswith("_equality"):
+                raise ValueError(
+                    "Extensive variable '%s' on Connector '%s' may not end "
+                    "with '_split' or '_equality'" % (name, self.name))
+            if extensive not in self.extensives:
+                # initialize new dict if this is the first of its kind
+                self.extensives[extensive] = {}
+            self.extensives[extensive][name] = []
 
     def _iter_vars(self):
         for var in itervalues(self.vars):
@@ -124,7 +145,6 @@ class _ConnectorData(ComponentData, NumericValue):
             else:
                 for v in itervalues(var):
                     yield v
-
 
 
 class Connector(IndexedComponent):
