@@ -39,10 +39,10 @@ logger = logging.getLogger('pyomo.core')
 #
 class ToGamsVisitor(EXPR.ExpressionValueVisitor):
 
-    def __init__(self, smap, model):
+    def __init__(self, smap, treechecker):
         super(ToGamsVisitor, self).__init__()
         self.smap = smap
-        self.model = model
+        self.treechecker = treechecker
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
@@ -105,7 +105,7 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
             if node.type() in (Param, Expression):
                 # For these, make sure it's on the right model. We can check
                 # Vars later since they don't disappear from the expressions
-                check_on_model(self.model, node)
+                self.treechecker.on_tree(node)
 
         if node.is_variable_type():
             if node.fixed:
@@ -119,12 +119,12 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
         return False, None
 
 
-def expression_to_string(expr, model, labeler=None, smap=None):
+def expression_to_string(expr, treechecker, labeler=None, smap=None):
     if labeler is not None:
         if smap is None:
             smap = SymbolMap()
         smap.default_labeler = labeler
-    visitor = ToGamsVisitor(smap, model)
+    visitor = ToGamsVisitor(smap, treechecker)
     return visitor.dfs_postorder_stack(expr)
 
 
@@ -169,6 +169,49 @@ class Categorizer(object):
                 yield category, var_name
 
 
+class StorageTreeChecker(object):
+    def __init__(self, model):
+        # blocks are hashable so we can use a normal set
+        self.tree = {model}
+        self.model = model
+        # add everything above the model
+        pb = self.parent_block(model)
+        while pb is not None:
+            self.tree.add(pb)
+            pb = self.parent_block(pb)
+
+    def on_tree(self, comp, exception_flag=True):
+        if comp is self.model:
+            return True
+
+        # walk up tree until there are no more parents
+        seen = set()
+        pb = self.parent_block(comp)
+        while pb is not None:
+            if pb in self.tree:
+                self.tree.update(seen)
+                return True
+            seen.add(pb)
+            pb = self.parent_block(pb)
+
+        if exception_flag:
+            self.raise_error(comp)
+        else:
+            return False
+
+    def parent_block(self, c):
+        pb = c.parent_block
+        if isinstance(c, IComponent):
+            return pb
+        else:
+            return pb()
+
+    def raise_error(self, comp):
+        raise RuntimeError(
+            "GAMS writer: found component '%s' not on same model tree.\n"
+            "All components must have the same parent model." % comp.name)
+
+
 def split_long_line(line):
     """
     GAMS has an 80,000 character limit for lines, so split as many
@@ -188,51 +231,6 @@ def split_long_line(line):
         line = line[i + 1:]
     new_lines += line
     return new_lines
-
-
-def check_on_model(model, comp):
-    def parent_block(comp):
-        pb = comp.parent_block
-        if isinstance(comp, IComponent):
-            return pb
-        else:
-            return pb()
-
-    if comp is model:
-        return
-
-    # walk up tree until there are no more parents, simultaneously
-    # checking parents against the other's tree
-    mparent = parent_block(model)
-    cparent = parent_block(comp)
-    mseen = {model}
-    cseen = set()
-    keep_going = False
-    if mparent is not None:
-        mseen.add(mparent)
-        keep_going = True
-    if cparent is not None:
-        cseen.add(cparent)
-        keep_going = True
-
-    while keep_going:
-        keep_going = False
-        if cparent in mseen or mparent in cseen:
-            # found each other, good to go
-            return
-        if mparent is not None:
-            mparent = parent_block(mparent)
-            if mparent is not None:
-                mseen.add(mparent)
-                keep_going = True
-        if cparent is not None:
-            cparent = parent_block(cparent)
-            if cparent is not None:
-                cseen.add(cparent)
-                keep_going = True
-    raise RuntimeError(
-        "GAMS writer: found component '%s' not on same model tree.\n"
-        "All variables must have the same parent model." % comp.name)
 
 
 def _get_bound(exp):
@@ -463,6 +461,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 "export models with this component type." %
                 ", ".join(invalids))
 
+        tc = StorageTreeChecker(model)
+
         # Walk through the model and generate the constraint definition
         # for all active constraints.  Any Vars / Expressions that are
         # encountered will be added to the var_list due to the labeler
@@ -487,7 +487,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 constraint_names.append('%s' % cName)
                 ConstraintIO.write('%s.. %s =e= %s ;\n' % (
                     constraint_names[-1],
-                    expression_to_string(con_body, model, smap=symbolMap),
+                    expression_to_string(con_body, tc, smap=symbolMap),
                     _get_bound(con.upper)
                 ))
             else:
@@ -496,13 +496,13 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     ConstraintIO.write('%s.. %s =l= %s ;\n' % (
                         constraint_names[-1],
                         _get_bound(con.lower),
-                        expression_to_string(con_body, model, smap=symbolMap)
+                        expression_to_string(con_body, tc, smap=symbolMap)
                     ))
                 if con.has_ub():
                     constraint_names.append('%s_hi' % cName)
                     ConstraintIO.write('%s.. %s =l= %s ;\n' % (
                         constraint_names[-1],
-                        expression_to_string(con_body, model, smap=symbolMap),
+                        expression_to_string(con_body, tc, smap=symbolMap),
                         _get_bound(con.upper)
                     ))
 
@@ -521,7 +521,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         constraint_names.append(oName)
         ConstraintIO.write('%s.. GAMS_OBJECTIVE =e= %s ;\n' % (
             oName,
-            expression_to_string(obj.expr, model, smap=symbolMap)
+            expression_to_string(obj.expr, tc, smap=symbolMap)
         ))
 
         # Categorize the variables that we found
@@ -556,7 +556,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         warn_int_bounds = False
         for category, var_name in categorized_vars:
             var = symbolMap.getObject(var_name)
-            check_on_model(model, var)
+            tc.on_tree(var)
             if category == 'positive':
                 if var.has_ub():
                     output_file.write("%s.up = %s;\n" %
