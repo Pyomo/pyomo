@@ -13,13 +13,11 @@ import sys
 from pyomo.core.expr import expr_common
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.component_interface import \
-    (IComponent,
+    (ICategorizedObject,
      _abstract_readwrite_property,
      _abstract_readonly_property)
-from pyomo.core.kernel.component_dict import ComponentDict
-from pyomo.core.kernel.component_tuple import ComponentTuple
-from pyomo.core.kernel.component_list import ComponentList
-
+from pyomo.core.kernel.container_utils import \
+    define_simple_containers
 from pyomo.core.expr.numvalue import (NumericValue,
                                       is_fixed,
                                       is_constant,
@@ -198,7 +196,7 @@ class noclone(IIdentityExpression):
         """Return a clone of this expression (no-op)."""
         return self
 
-class IExpression(IComponent, IIdentityExpression):
+class IExpression(ICategorizedObject, IIdentityExpression):
     """
     The interface for mutable expressions.
     """
@@ -245,16 +243,16 @@ class IExpression(IComponent, IIdentityExpression):
 
 class expression(IExpression):
     """A named, mutable expression."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
+    _ctype = IExpression
     __slots__ = ("_parent",
                  "_storage_key",
+                 "_active",
                  "_expr",
                  "__weakref__")
     def __init__(self, expr=None):
         self._parent = None
         self._storage_key = None
+        self._active = True
         self._expr = None
 
         # call the setter
@@ -304,62 +302,8 @@ class data_expression(expression):
                              "numeric data.")
         self._expr = expr
 
-class expression_tuple(ComponentTuple):
-    """A tuple-style container for expressions."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_data")
-    if six.PY3:
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-        __slots__ = list(__slots__) + ["__weakref__"]
-
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._storage_key = None
-        super(expression_tuple, self).__init__(*args, **kwds)
-
-class expression_list(ComponentList):
-    """A list-style container for expressions."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_data")
-    if six.PY3:
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-        __slots__ = list(__slots__) + ["__weakref__"]
-
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._storage_key = None
-        super(expression_list, self).__init__(*args, **kwds)
-
-class expression_dict(ComponentDict):
-    """A dict-style container for expressions."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_data")
-    if six.PY3:
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-        __slots__ = list(__slots__) + ["__weakref__"]
-
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._storage_key = None
-        super(expression_dict, self).__init__(*args, **kwds)
+# inserts class definitions for simple _tuple, _list, and
+# _dict containers into this module
+define_simple_containers(globals(),
+                         "expression",
+                         IExpression)

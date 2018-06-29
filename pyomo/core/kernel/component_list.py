@@ -20,17 +20,17 @@ logger = logging.getLogger('pyomo.core')
 class ComponentList(ComponentTuple,
                     collections.MutableSequence):
     """
-    A partial implementation of the IComponentContainer
-    interface that presents list-like storage functionality.
+    A partial implementation of the IHomogeneousContainer
+    interface that provides list-like storage functionality.
 
     Complete implementations need to set the _ctype property
-    at the class level, declare the remaining required
-    abstract properties of the IComponentContainer base
-    class, and declare a slot or attribute named _data.
+    at the class level and initialize the remaining
+    ICategorizedObject attributes during object creation. If
+    using __slots__, a slot named "_data" must be included.
 
     Note that this implementation allows nested storage of
-    other IComponentContainer implementations that are
-    defined with the same ctype.
+    other ICategorizedObjectContainer implementations that
+    are defined with the same ctype.
     """
     __slots__ = ()
 
@@ -43,7 +43,7 @@ class ComponentList(ComponentTuple,
     #
 
     def __setitem__(self, i, item):
-        if item.ctype == self.ctype:
+        if item.ctype is self.ctype:
             if item._parent is None:
                 # be sure the current object is properly
                 # removed
@@ -56,8 +56,11 @@ class ComponentList(ComponentTuple,
                     % (self[i].name,
                        self[i].__class__.__name__,
                        item.__class__.__name__))
-                self._prepare_for_delete(self._data[i])
-                self._prepare_for_add(i, item)
+                obj_ = self._data[i]
+                item._parent = obj_._parent
+                item._storage_key = obj_._storage_key
+                obj_._parent = None
+                obj_._storage_key = None
                 self._data[i] = item
                 return
             elif self._data[i] is item:
@@ -68,12 +71,12 @@ class ComponentList(ComponentTuple,
                 # actions, but it is an extremely rare case, so
                 # it should go last.
                 return
-            # see note about allowing components to live in more than
+            # see note about allowing objects to live in more than
             # one container
             raise ValueError(
                 "Invalid assignment to %s type with name '%s' "
                 "at index %s. A parent container has already been "
-                "assigned to the component being inserted: %s"
+                "assigned to the object being inserted: %s"
                 % (self.__class__.__name__,
                    self.name,
                    i,
@@ -81,8 +84,8 @@ class ComponentList(ComponentTuple,
         else:
             raise TypeError(
                 "Invalid assignment to type %s with index %s. "
-                "The component being inserted has the wrong "
-                "component type: %s"
+                "The object being inserted has the wrong "
+                "category type: %s"
                 % (self.__class__.__name__,
                    i,
                    item.ctype))
@@ -93,7 +96,8 @@ class ComponentList(ComponentTuple,
 
     def __delitem__(self, i):
         obj = self._data[i]
-        self._prepare_for_delete(obj)
+        obj._parent = None
+        obj._storage_key = None
         del self._data[i]
 
     #
@@ -108,35 +112,3 @@ class ComponentList(ComponentTuple,
         data = self._data
         for i in range(n//2):
             data[i], data[n-i-1] = data[n-i-1], data[i]
-
-def create_component_list(container, type_, size, *args, **kwds):
-    """A utility function for constructing a ComponentList
-    container of objects with the same initialization data.
-
-    Note that this function bypasses a few safety checks
-    when adding the objects into the container, so it should
-    only be used in cases where this is okay.
-
-    Args:
-        container: The container type. Must be a subclass of
-            ComponentList.
-        type_: The object type to populate the container
-            with. Must have the same ctype as the container
-            argument.
-        size (int): The number of objects to place in the
-            ComponentList.
-        *args: arguments used to construct the objects
-            placed in the container.
-        **kwds: keywords used to construct the objects
-            placed in the container.
-
-    Returns:
-        A fully populated container.
-    """
-    assert size >= 0
-    assert container.ctype == type_.ctype
-    assert issubclass(container, ComponentList)
-    clist = container()
-    for i in range(size):
-        clist._fast_insert(i, type_(*args, **kwds))
-    return clist

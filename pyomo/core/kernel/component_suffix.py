@@ -14,10 +14,12 @@ import pyutilib.math
 
 from pyomo.core.expr.numvalue import NumericValue
 from pyomo.core.kernel.component_interface import \
-    (IComponent,
-     _ActiveObjectMixin,
+    (ICategorizedObject,
      _abstract_readwrite_property,
      _abstract_readonly_property)
+from pyomo.core.kernel.component_dict import ComponentDict
+from pyomo.core.kernel.container_utils import \
+    define_homogeneous_container_type
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet)
@@ -34,15 +36,34 @@ _noarg = object()
 #       for the AML-Suffix object as well (hopefully,
 #       temporary). As a result, we need to override the
 #       __str__ method on this class so that suffix behaves
-#       like IComponent instead of ComponentMap
-class suffix(ComponentMap,
-             IComponent,
-             _ActiveObjectMixin):
+#       like ICategorizedObject instead of ComponentMap
+class ISuffix(ComponentMap,
+              ICategorizedObject):
+    """The interface for suffixes."""
+    __slots__ = ()
+
+    #
+    # Implementations can choose to define these
+    # properties as using __slots__, __dict__, or
+    # by overriding the @property method
+    #
+
+    direction = _abstract_readonly_property(
+        doc="The suffix direction")
+    datatype = _abstract_readonly_property(
+        doc="The suffix datatype")
+
+    #
+    # Interface
+    #
+
+    def __str__(self):
+        return ICategorizedObject.__str__(self)
+
+class suffix(ISuffix):
     """A container for storing extraneous model data that
     can be imported to or exported from a solver."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
+    _ctype = ISuffix
     __slots__ = ("_parent",
                  "_storage_key",
                  "_active",
@@ -87,9 +108,6 @@ class suffix(ComponentMap,
     #
     # Interface
     #
-
-    def __str__(self):
-        return IComponent.__str__(self)
 
     @property
     def export_enabled(self):
@@ -324,3 +342,14 @@ def suffix_generator(blk,
                                      active=active,
                                      descend_into=descend_into)):
         yield suf
+
+# inserts class definition for simple a
+# simple suffix_dict into this module
+define_homogeneous_container_type(
+    globals(),
+    "suffix_dict",
+    ComponentDict,
+    ISuffix,
+    doc=("A dict-style container for objects "
+         "with category type "+ISuffix.__name__),
+    use_slots=True)

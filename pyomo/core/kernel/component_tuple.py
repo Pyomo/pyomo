@@ -8,32 +8,32 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import weakref
 import collections
 
 from pyomo.core.kernel.component_interface import \
-    (IComponentContainer,
-     _SimpleContainerMixin)
+    IHomogeneousContainer
 
 from six.moves import xrange as range
 
-class ComponentTuple(_SimpleContainerMixin,
-                     IComponentContainer,
+class ComponentTuple(IHomogeneousContainer,
                      collections.Sequence):
     """
-    A partial implementation of the IComponentContainer
-    interface that presents tuple-like storage
-    functionality.
+    A partial implementation of the IHomogeneousContainer
+    interface that provides tuple-like storage functionality.
 
     Complete implementations need to set the _ctype property
-    at the class level, declare the remaining required
-    abstract properties of the IComponentContainer base
-    class, and declare a slot or attribute named _data.
+    at the class level and initialize the remaining
+    ICategorizedObject attributes during object creation. If
+    using __slots__, a slot named "_data" must be included.
 
     Note that this implementation allows nested storage of
-    other IComponentContainer implementations that are
-    defined with the same ctype.
+    other ICategorizedObjectContainer implementations that
+    are defined with the same ctype.
     """
     __slots__ = ()
+    _child_storage_delimiter_string = ""
+    _child_storage_entry_string = "[%s]"
 
     def __init__(self, *args):
         self._data = []
@@ -51,34 +51,35 @@ class ComponentTuple(_SimpleContainerMixin,
                 self._insert(len(self), item)
 
     def _fast_insert(self, i, item):
-        self._prepare_for_add(i, item)
+        item._parent = weakref.ref(self)
+        item._storage_key = i
         self._data.insert(i, item)
 
     def _insert(self, i, item):
-        if item.ctype == self.ctype:
+        if item.ctype is self.ctype:
             if item._parent is None:
                 self._fast_insert(i, item)
                 return
-            # see note about allowing components to live
+            # see note about allowing objects to live
             # in more than one container
             raise ValueError(
                 "Invalid assignment to type %s with index %s. "
                 "A parent container has already been "
-                "assigned to the component being inserted: %s"
+                "assigned to the object being inserted: %s"
                 % (self.__class__.__name__,
                    i,
                    item.parent.name))
         else:
             raise TypeError(
                 "Invalid assignment to type %s with index %s. "
-                "The component being inserted has the wrong "
-                "component type: %s"
+                "The object being inserted has the wrong "
+                "category type: %s"
                 % (self.__class__.__name__,
                    i,
                    item.ctype))
 
     #
-    # Define the IComponentContainer abstract methods
+    # Define the ICategorizedObjectContainer abstract methods
     #
 
     def child(self, key):
@@ -167,37 +168,3 @@ class ComponentTuple(_SimpleContainerMixin,
         cnt = sum(1 for _v in self._data if id(_v) == item_id)
         assert cnt == 1
         return cnt
-
-def create_component_tuple(container, type_, size, *args, **kwds):
-    """A utility function for constructing a ComponentTuple
-    container of objects with the same initialization data.
-
-    Note that this function bypasses a few safety checks
-    when adding the objects into the container, so it should
-    only be used in cases where this is okay.
-
-    Args:
-        container: The container type. Must be a subclass of
-            ComponentTuple.
-        type_: The object type to populate the container
-            with. Must have the same ctype as the container
-            argument.
-        size (int): The number of objects to place in the
-            ComponentTuple.
-        *args: arguments used to construct the objects
-            placed in the container.
-        **kwds: keywords used to construct the objects
-            placed in the container.
-
-    Returns:
-        A fully populated container.
-    """
-    assert size >= 0
-    assert container.ctype == type_.ctype
-    assert issubclass(container, ComponentTuple)
-    ctuple = container()
-    ctuple._data = []
-    for i in range(size):
-        ctuple._fast_insert(i, type_(*args, **kwds))
-    ctuple._data = tuple(ctuple._data)
-    return ctuple

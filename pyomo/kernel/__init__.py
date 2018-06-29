@@ -14,80 +14,121 @@ import pyomo.opt
 from pyomo.opt import (SolverFactory,
                        SolverStatus,
                        TerminationCondition)
-from pyomo.kernel.util import pprint
+from pyomo.kernel.util import (generate_names,
+                               pprint)
 from pyomo.core.kernel import *
 
-# set up the Block ctype
-from pyomo.core.base import Block
-block._ctype = Block
-block_tuple._ctype = Block
-block_list._ctype = Block
-block_dict._ctype = Block
-del Block
+# allow the use of standard kernel modeling components
+# as the ctype argument for the general iterator method
+from pyomo.core.kernel.component_interface import _convert_ctype
+_convert_ctype[block] = \
+    pyomo.core.kernel.component_block.IBlock
+_convert_ctype[variable] = \
+    pyomo.core.kernel.component_variable.IVariable
+_convert_ctype[constraint] = \
+    pyomo.core.kernel.component_constraint.IConstraint
+_convert_ctype[parameter] = \
+    pyomo.core.kernel.component_parameter.IParameter
+_convert_ctype[expression] = \
+    pyomo.core.kernel.component_expression.IExpression
+_convert_ctype[objective] = \
+    pyomo.core.kernel.component_objective.IObjective
+_convert_ctype[sos] = \
+    pyomo.core.kernel.component_sos.ISOS
+_convert_ctype[suffix] = \
+    pyomo.core.kernel.component_suffix.ISuffix
+del _convert_ctype
 
-# set up the Var ctype
-from pyomo.core.base import Var
-variable._ctype = Var
-variable_tuple._ctype = Var
-variable_list._ctype = Var
-variable_dict._ctype = Var
-del Var
+#
+#
+# Hacks needed for this interface to work with Pyomo solvers
+#
+#
 
-# set up the Constraint ctype
-from pyomo.core.base import Constraint
-from pyomo.core.kernel.component_matrix_constraint \
-    import _MatrixConstraintData
-constraint._ctype = Constraint
-linear_constraint._ctype = Constraint
-constraint_tuple._ctype = Constraint
-constraint_list._ctype = Constraint
-constraint_dict._ctype = Constraint
-_MatrixConstraintData._ctype = Constraint
-matrix_constraint._ctype = Constraint
-del _MatrixConstraintData
-del Constraint
+#
+# Set up mappings between AML and Kernel ctypes
+#
 
-# set up the Param ctype
-from pyomo.core.base import Param
-parameter._ctype = Param
-parameter_tuple._ctype = Param
-parameter_list._ctype = Param
-parameter_dict._ctype = Param
-del Param
+from pyomo.core.kernel.component_interface import _convert_ctype
+_convert_ctype[pyomo.environ.Block] = \
+    pyomo.core.kernel.component_block.IBlock
+_convert_ctype[pyomo.environ.Var] = \
+    pyomo.core.kernel.component_variable.IVariable
+_convert_ctype[pyomo.environ.Constraint] = \
+    pyomo.core.kernel.component_constraint.IConstraint
+_convert_ctype[pyomo.environ.Param] = \
+    pyomo.core.kernel.component_parameter.IParameter
+_convert_ctype[pyomo.environ.Expression] = \
+    pyomo.core.kernel.component_expression.IExpression
+_convert_ctype[pyomo.environ.Objective] = \
+    pyomo.core.kernel.component_objective.IObjective
+_convert_ctype[pyomo.environ.SOSConstraint] = \
+    pyomo.core.kernel.component_sos.ISOS
+_convert_ctype[pyomo.environ.Suffix] = \
+    pyomo.core.kernel.component_suffix.ISuffix
+del _convert_ctype
 
-# set up the Expression ctype
-from pyomo.core.base import Expression
-expression._ctype = Expression
-data_expression._ctype = Expression
-expression_tuple._ctype = Expression
-expression_list._ctype = Expression
-expression_dict._ctype = Expression
-del Expression
+#
+# Ducktyping to work with a few solver interfaces
+# Ideally, everything below here could be deleted one day
+#
 
-# set up the Objective ctype
-from pyomo.core.base import Objective
-objective._ctype = Objective
-objective_tuple._ctype = Objective
-objective_list._ctype = Objective
-objective_dict._ctype = Objective
-del Objective
+def _component_data_objects(self, *args, **kwds):
+    # this is not yet handled
+    kwds.pop('sort', None)
+    for component in self.components(*args, **kwds):
+        yield component
+block.component_data_objects = _component_data_objects
+del _component_data_objects
 
-# set up the SOSConstraint ctype
-from pyomo.core.base import SOSConstraint
-sos._ctype = SOSConstraint
-sos_tuple._ctype = SOSConstraint
-sos_list._ctype = SOSConstraint
-sos_dict._ctype = SOSConstraint
-del SOSConstraint
+def _block_data_objects(self, **kwds):
+    # this is not yet handled
+    kwds.pop('sort', None)
+    active = kwds.get("active", None)
+    assert active in (None, True)
+    # if not active, then nothing below is active
+    if (active is not None) and \
+       (not self.active):
+        return
+    yield self
+    for component in self.components(
+            ctype=self.ctype,
+            **kwds):
+        yield component
+block.block_data_objects = _block_data_objects
+del _block_data_objects
 
-# set up the Suffix ctype
-from pyomo.core.base import Suffix
-suffix._ctype = Suffix
-del Suffix
+# This method no longer makes sense
+def _component_objects(self, *args, **kwds):
+    # this is not yet handled
+    kwds.pop('sort', None)
+    for component in self.components(*args, **kwds):
+        yield component
+block.component_objects = _component_objects
+del _component_objects
+
+# This method no longer makes sense
+def _component(self, name):
+    return getattr(self, name, None)
+block.component = _component
+del _component
+
+# Note sure where this gets used or why we need it
+def _valid_problem_types(self):
+    import pyomo.opt
+    return [pyomo.opt.base.ProblemFormat.pyomo]
+block.valid_problem_types = _valid_problem_types
+del _valid_problem_types
+
+# canonical repn checks type instead of ctype
+from pyomo.core.kernel.component_interface import _ICategorizedObjectMeta
+_ICategorizedObjectMeta.type = _ICategorizedObjectMeta.ctype
+del _ICategorizedObjectMeta
 
 #
 # Now cleanup the namespace a bit
 #
+
 import pyomo.core.kernel.component_piecewise.util as \
     piecewise_util
 del component_interface

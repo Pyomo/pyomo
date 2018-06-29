@@ -10,13 +10,11 @@
 
 from pyomo.core.expr.numvalue import as_numeric
 from pyomo.core.kernel.component_interface import \
-    (IComponent,
-     _ActiveObjectMixin,
+    (ICategorizedObject,
      _abstract_readwrite_property,
      _abstract_readonly_property)
-from pyomo.core.kernel.component_dict import ComponentDict
-from pyomo.core.kernel.component_tuple import ComponentTuple
-from pyomo.core.kernel.component_list import ComponentList
+from pyomo.core.kernel.container_utils import \
+    define_simple_containers
 from pyomo.core.kernel.component_expression import IExpression
 
 import six
@@ -25,7 +23,7 @@ import six
 minimize=1
 maximize=-1
 
-class IObjective(IExpression, _ActiveObjectMixin):
+class IObjective(IExpression):
     """
     The interface for optimization objectives.
     """
@@ -50,9 +48,7 @@ class IObjective(IExpression, _ActiveObjectMixin):
 
 class objective(IObjective):
     """An optimization objective."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
+    _ctype = IObjective
     __slots__ = ("_parent",
                  "_storage_key",
                  "_active",
@@ -100,68 +96,8 @@ class objective(IObjective):
                 "[minimize (%s), maximize (%s)]. Invalid "
                 "value: %s'" % (minimize, maximize, sense))
 
-class objective_tuple(ComponentTuple, _ActiveObjectMixin):
-    """A tuple-style container for objectives."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_data")
-    if six.PY3:
-        __slots__ = list(__slots__) + ["__weakref__"]
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._storage_key = None
-        self._active = True
-        super(objective_tuple, self).__init__(*args, **kwds)
-
-class objective_list(ComponentList, _ActiveObjectMixin):
-    """A list-style container for objectives."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_data")
-    if six.PY3:
-        __slots__ = list(__slots__) + ["__weakref__"]
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._storage_key = None
-        self._active = True
-        super(objective_list, self).__init__(*args, **kwds)
-
-class objective_dict(ComponentDict, _ActiveObjectMixin):
-    """A dict-style container for objectives."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_data")
-    if six.PY3:
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-        __slots__ = list(__slots__) + ["__weakref__"]
-
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._storage_key = None
-        self._active = True
-        super(objective_dict, self).__init__(*args, **kwds)
+# inserts class definitions for simple _tuple, _list, and
+# _dict containers into this module
+define_simple_containers(globals(),
+                         "objective",
+                         IObjective)

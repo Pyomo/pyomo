@@ -11,18 +11,16 @@
 import pyomo.core.expr
 from pyomo.core.expr.numvalue import is_numeric_data
 from pyomo.core.kernel.component_interface import \
-    (IComponent,
-     _ActiveObjectMixin,
+    (ICategorizedObject,
      _abstract_readwrite_property,
      _abstract_readonly_property)
-from pyomo.core.kernel.component_dict import ComponentDict
-from pyomo.core.kernel.component_tuple import ComponentTuple
-from pyomo.core.kernel.component_list import ComponentList
+from pyomo.core.kernel.container_utils import \
+    define_simple_containers
 
 import six
 from six.moves import zip
 
-class ISOS(IComponent, _ActiveObjectMixin):
+class ISOS(ICategorizedObject):
     """
     The interface for Special Ordered Sets.
     """
@@ -61,9 +59,7 @@ class ISOS(IComponent, _ActiveObjectMixin):
 
 class sos(ISOS):
     """A Special Ordered Set of type n."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
+    _ctype = ISOS
     __slots__ = ("_parent",
                  "_storage_key",
                  "_active",
@@ -115,71 +111,8 @@ def sos2(variables, weights=None):
     """
     return sos(variables, weights=weights, level=2)
 
-class sos_tuple(ComponentTuple,
-                _ActiveObjectMixin):
-    """A tuple-style container for Special Ordered Sets."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_data")
-    if six.PY3:
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-        __slots__ = list(__slots__) + ["__weakref__"]
-
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._storage_key = None
-        self._active = True
-        super(sos_tuple, self).__init__(*args, **kwds)
-
-class sos_list(ComponentList,
-               _ActiveObjectMixin):
-    """A list-style container for Special Ordered Sets."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_data")
-    if six.PY3:
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-        __slots__ = list(__slots__) + ["__weakref__"]
-
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._storage_key = None
-        self._active = True
-        super(sos_list, self).__init__(*args, **kwds)
-
-class sos_dict(ComponentDict,
-               _ActiveObjectMixin):
-    """A dict-style container for Special Ordered Sets."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_data")
-    if six.PY3:
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-        __slots__ = list(__slots__) + ["__weakref__"]
-
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._storage_key = None
-        self._active = True
-        super(sos_dict, self).__init__(*args, **kwds)
+# inserts class definitions for simple _tuple, _list, and
+# _dict containers into this module
+define_simple_containers(globals(),
+                         "sos",
+                         ISOS)

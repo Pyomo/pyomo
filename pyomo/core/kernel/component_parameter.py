@@ -11,16 +11,15 @@
 import pyomo.core.expr
 from pyomo.core.expr.numvalue import NumericValue
 from pyomo.core.kernel.component_interface import \
-    (IComponent,
+    (ICategorizedObject,
      _abstract_readwrite_property,
      _abstract_readonly_property)
-from pyomo.core.kernel.component_dict import ComponentDict
-from pyomo.core.kernel.component_tuple import ComponentTuple
-from pyomo.core.kernel.component_list import ComponentList
+from pyomo.core.kernel.container_utils import \
+    define_simple_containers
 
 import six
 
-class IParameter(IComponent, NumericValue):
+class IParameter(ICategorizedObject, NumericValue):
     """
     The interface for mutable parameters.
     """
@@ -77,16 +76,16 @@ class IParameter(IComponent, NumericValue):
 
 class parameter(IParameter):
     """A placeholder for a mutable, numeric value."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
+    _ctype = IParameter
     __slots__ = ("_parent",
                  "_storage_key",
+                 "_active",
                  "_value",
                  "__weakref__")
     def __init__(self, value=None):
         self._parent = None
         self._storage_key = None
+        self._active = True
         self._value = value
 
     #
@@ -101,62 +100,8 @@ class parameter(IParameter):
     def value(self, value):
         self._value = value
 
-class parameter_tuple(ComponentTuple):
-    """A tuple-style container for parameters."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_data")
-    if six.PY3:
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-        __slots__ = list(__slots__) + ["__weakref__"]
-
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._storage_key = None
-        super(parameter_tuple, self).__init__(*args, **kwds)
-
-class parameter_list(ComponentList):
-    """A list-style container for parameters."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_data")
-    if six.PY3:
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-        __slots__ = list(__slots__) + ["__weakref__"]
-
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._storage_key = None
-        super(parameter_list, self).__init__(*args, **kwds)
-
-class parameter_dict(ComponentDict):
-    """A dict-style container for parameters."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_data")
-    if six.PY3:
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-        __slots__ = list(__slots__) + ["__weakref__"]
-
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._storage_key = None
-        super(parameter_dict, self).__init__(*args, **kwds)
+# inserts class definitions for simple _tuple, _list, and
+# _dict containers into this module
+define_simple_containers(globals(),
+                         "parameter",
+                         IParameter)

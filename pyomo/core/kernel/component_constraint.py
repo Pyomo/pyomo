@@ -8,8 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.math
-
 from pyomo.core.expr.numvalue import (ZeroConstant,
                                       is_constant,
                                       as_numeric,
@@ -20,14 +18,11 @@ from pyomo.core.expr.numvalue import (ZeroConstant,
                                       _sub)
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.component_interface import \
-    (IComponent,
-     _ActiveObjectMixin,
+    (ICategorizedObject,
      _abstract_readwrite_property,
      _abstract_readonly_property)
-from pyomo.core.kernel.component_dict import ComponentDict
-from pyomo.core.kernel.component_tuple import ComponentTuple
-from pyomo.core.kernel.component_list import ComponentList
-
+from pyomo.core.kernel.container_utils import \
+    define_simple_containers
 
 import six
 from six.moves import zip
@@ -35,7 +30,7 @@ from six.moves import zip
 _pos_inf = float('inf')
 _neg_inf = float('-inf')
 
-class IConstraint(IComponent, _ActiveObjectMixin):
+class IConstraint(ICategorizedObject):
     """The interface for constraints"""
     __slots__ = ()
 
@@ -323,9 +318,7 @@ class constraint(_MutableBoundsConstraintMixin,
         >>> # (equivalent form)
         >>> c = pmo.constraint(body=x**2, rhs=1)
     """
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
+    _ctype = IConstraint
     _linear_canonical_form = False
     __slots__ = ("_parent",
                  "_storage_key",
@@ -672,9 +665,7 @@ class linear_constraint(_MutableBoundsConstraintMixin,
         >>> # (equivalent form using a general constraint)
         >>> c = pmo.constraint(x + 2*y <= 1)
     """
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
+    _ctype = IConstraint
     _linear_canonical_form = True
     __slots__ = ("_parent",
                  "_storage_key",
@@ -810,68 +801,8 @@ class linear_constraint(_MutableBoundsConstraintMixin,
         repn.constant = constant
         return repn
 
-class constraint_tuple(ComponentTuple,
-                       _ActiveObjectMixin):
-    """A tuple-style container for constraints."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_data")
-    if six.PY3:
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-        __slots__ = list(__slots__) + ["__weakref__"]
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._storage_key = None
-        self._active = True
-        super(constraint_tuple, self).__init__(*args, **kwds)
-
-class constraint_list(ComponentList,
-                      _ActiveObjectMixin):
-    """A list-style container for constraints."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_data")
-    if six.PY3:
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-        __slots__ = list(__slots__) + ["__weakref__"]
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._storage_key = None
-        self._active = True
-        super(constraint_list, self).__init__(*args, **kwds)
-
-class constraint_dict(ComponentDict,
-                      _ActiveObjectMixin):
-    """A dict-style container for constraints."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_active",
-                 "_data")
-    if six.PY3:
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-        __slots__ = list(__slots__) + ["__weakref__"]
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._storage_key = None
-        self._active = True
-        super(constraint_dict, self).__init__(*args, **kwds)
+# inserts class definitions for simple _tuple, _list, and
+# _dict containers into this module
+define_simple_containers(globals(),
+                         "constraint",
+                         IConstraint)

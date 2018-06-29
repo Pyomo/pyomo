@@ -12,23 +12,16 @@ from pyomo.core.expr.numvalue import (NumericValue,
                                       is_numeric_data,
                                       value)
 from pyomo.core.kernel.component_interface import \
-    (IComponent,
+    (ICategorizedObject,
      _abstract_readwrite_property,
      _abstract_readonly_property)
-from pyomo.core.kernel.component_dict import (ComponentDict,
-                                              create_component_dict)
-from pyomo.core.kernel.component_tuple import (ComponentTuple,
-                                               create_component_tuple)
-from pyomo.core.kernel.component_list import (ComponentList,
-                                              create_component_list)
+from pyomo.core.kernel.container_utils import \
+    define_simple_containers
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet,
                                          BooleanSet,
                                          RealInterval,
                                          IntegerInterval)
-
-import six
-from six.moves import xrange
 
 _pos_inf = float('inf')
 _neg_inf = float('-inf')
@@ -77,7 +70,7 @@ def _extract_domain_type_and_bounds(domain_type,
     return domain_type, lb, ub
 
 
-class IVariable(IComponent, NumericValue):
+class IVariable(ICategorizedObject, NumericValue):
     """The interface for decision variables"""
     __slots__ = ()
 
@@ -326,12 +319,11 @@ class variable(IVariable):
         >>> # Also a binary variable
         >>> x = pmo.variable(domain_type=pmo.IntegerSet, lb=0, ub=1)
     """
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
+    _ctype = IVariable
     __slots__ = ("_parent",
                  "_storage_key",
                  "_domain_type",
+                 "_active",
                  "_lb",
                  "_ub",
                  "_value",
@@ -348,6 +340,7 @@ class variable(IVariable):
                  fixed=False):
         self._parent = None
         self._storage_key = None
+        self._active = True
         self._domain_type = RealSet
         self._lb = lb
         self._ub = ub
@@ -437,137 +430,8 @@ class variable(IVariable):
     domain = property(fset=_set_domain,
                       doc=_set_domain.__doc__)
 
-class variable_tuple(ComponentTuple):
-    """A tuple-style container for variables."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_data")
-    if six.PY3:
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-        __slots__ = list(__slots__) + ["__weakref__"]
-
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._storage_key = None
-        super(variable_tuple, self).__init__(*args, **kwds)
-
-def create_variable_tuple(size, *args, **kwds):
-    """
-    Generates a full :class:`variable_tuple`.
-
-    Args:
-        size (int): The number of objects to place in the
-            variable_tuple.
-        type_: The object type to populate the container
-            with. Must have the same ctype as
-            variable_tuple. Default: :class:`variable`
-        *args: arguments used to construct the objects
-            placed in the container.
-        **kwds: keywords used to construct the objects
-            placed in the container.
-
-    Returns:
-        a fully populated :class:'variable_tuple`
-    """
-    type_ = kwds.pop('type_', variable)
-    return create_component_tuple(variable_tuple,
-                                  type_,
-                                  size,
-                                  *args,
-                                  **kwds)
-
-class variable_list(ComponentList):
-    """A list-style container for variables."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_data")
-    if six.PY3:
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-        __slots__ = list(__slots__) + ["__weakref__"]
-
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._storage_key = None
-        super(variable_list, self).__init__(*args, **kwds)
-
-def create_variable_list(size, *args, **kwds):
-    """
-    Generates a full :class:`variable_list`.
-
-    Args:
-        size (int): The number of objects to place in the
-            variable_list.
-        type_: The object type to populate the container
-            with. Must have the same ctype as
-            variable_list. Default: :class:`variable`
-        *args: arguments used to construct the objects
-            placed in the container.
-        **kwds: keywords used to construct the objects
-            placed in the container.
-
-    Returns:
-        a fully populated :class:`variable_list`
-    """
-    type_ = kwds.pop('type_', variable)
-    return create_component_list(variable_list,
-                                 type_,
-                                 size,
-                                 *args,
-                                 **kwds)
-
-class variable_dict(ComponentDict):
-    """A dict-style container for variables."""
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_storage_key",
-                 "_data")
-    if six.PY3:
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-        __slots__ = list(__slots__) + ["__weakref__"]
-
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._storage_key = None
-        super(variable_dict, self).__init__(*args, **kwds)
-
-def create_variable_dict(keys, *args, **kwds):
-    """
-    Generates a full :class:`variable_dict`.
-
-    Args:
-        keys: The set of keys to used to populate the
-            variable_dict.
-        type_: The object type to populate the container
-            with. Must have the same ctype as
-            variable_dict. Default: :class:`variable`
-        *args: arguments used to construct the objects
-            placed in the container.
-        **kwds: keywords used to construct the objects
-            placed in the container.
-
-    Returns:
-        a fully populated :class:`variable_dict`
-    """
-    type_ = kwds.pop('type_', variable)
-    return create_component_dict(variable_dict,
-                                 type_,
-                                 keys,
-                                 *args,
-                                 **kwds)
+# inserts class definitions for simple _tuple, _list, and
+# _dict containers into this module
+define_simple_containers(globals(),
+                         "variable",
+                         IVariable)

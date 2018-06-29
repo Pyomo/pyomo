@@ -127,17 +127,18 @@ def build_variable():
 
 class _staticvariable(IVariable):
     """An _example_ of a more lightweight variable."""
-    _ctype = Var
+    _ctype = IVariable
     domain_type = None
     lb = None
     ub = None
     fixed = False
     stale = False
-    __slots__ = ("value","_parent","_storage_key")
+    __slots__ = ("value","_parent","_storage_key","_active")
     def __init__(self):
         self.value = None
         self._parent = None
         self._storage_key = None
+        self._active = True
 
 def build_staticvariable():
     """Build a static variable with no references to
@@ -213,16 +214,7 @@ def build_variable_dict():
     objects so its size can be computed."""
     return variable_dict(
         ((i, variable(domain_type=None, lb=None, ub=None, value=None))
-         for i in range(N)),
-        ordered=True)
-
-def build_unordered_variable_dict():
-    """Build an unordered variable_dict with no references to external
-    objects so its size can be computed."""
-    return variable_dict(
-        ((i, variable(domain_type=None, lb=None, ub=None, value=None))
-         for i in range(N)),
-        ordered=False)
+         for i in range(N)))
 
 def build_variable_list():
     """Build a variable_list with no references to external
@@ -276,17 +268,7 @@ def build_constraint_dict():
     return constraint_dict(
         ((i, constraint(rhs=1, body=sum(A_data[p]*X_kernel[A_indices[p]]
                                         for p in range(A_indptr[i], A_indptr[i+1]))))
-         for i in range(N)),
-        ordered=True)
-
-def build_unordered_constraint_dict():
-    """Build an unordered constraint_dict with no references to external
-    objects so its size can be computed."""
-    return constraint_dict(
-        ((i, constraint(rhs=1, body=sum(A_data[p]*X_kernel[A_indices[p]]
-                                        for p in range(A_indptr[i], A_indptr[i+1]))))
-         for i in range(N)),
-        ordered=False)
+         for i in range(N)))
 
 def build_constraint_list():
     """Build a constraint_list with no references to external
@@ -328,7 +310,7 @@ def build_block():
     b._activate_large_storage_mode()
     return b
 
-build_tiny_block = block
+build_small_block = block
 
 def build_Block_with_objects():
     """Build an empty Block"""
@@ -360,7 +342,7 @@ def build_block_with_objects():
     b.o = objective()
     return b
 
-def build_tiny_block_with_objects():
+def build_small_block_with_objects():
     """Build an empty block."""
     b = block()
     b.x = build_variable()
@@ -405,7 +387,7 @@ def build_block_list_with_variables():
         blist.append(b)
     return blist
 
-def _get_tiny_block():
+def _get_small_block():
     b = block()
     b.x1 = variable(domain_type=None, lb=None, ub=None)
     b.x2 = variable(domain_type=None, lb=None, ub=None)
@@ -414,13 +396,13 @@ def _get_tiny_block():
     b.x5 = variable(domain_type=None, lb=None, ub=None)
     return b
 
-def build_tiny_block_list_with_variables():
+def build_small_block_list_with_variables():
     return block_list(
-        build_tiny_block_list_with_variables.myblock()
+        build_small_block_list_with_variables.myblock()
         for i in range(N))
-build_tiny_block_list_with_variables.myblock = _get_tiny_block
+build_small_block_list_with_variables.myblock = _get_small_block
 
-def _get_tiny_block_wstaticvars():
+def _get_small_block_wstaticvars():
     myvar = _staticvariable
     b = block()
     b.x1 = myvar()
@@ -430,11 +412,11 @@ def _get_tiny_block_wstaticvars():
     b.x5 = myvar()
     return b
 
-def build_tiny_block_list_with_staticvariables():
+def build_small_block_list_with_staticvariables():
     return block_list(
-        build_tiny_block_list_with_staticvariables.myblock()
+        build_small_block_list_with_staticvariables.myblock()
         for i in range(N))
-build_tiny_block_list_with_staticvariables.myblock = _get_tiny_block_wstaticvars
+build_small_block_list_with_staticvariables.myblock = _get_small_block_wstaticvars
 
 
 if __name__ == "__main__":
@@ -458,7 +440,6 @@ if __name__ == "__main__":
     results = []
     results.append(("AML", "Indexed Var (%s)" % N, measure(build_indexed_Var)))
     results.append(("Kernel", "variable_dict (%s)" % N, measure(build_variable_dict)))
-    results.append(("Kernel", "variable_dict(unordered) (%s)" % N, measure(build_unordered_variable_dict)))
     results.append(("Kernel", "variable_list (%s)" % N, measure(build_variable_list)))
     results.append(("<locals>", "staticvariable_list (%s)" % N, measure(build_staticvariable_list)))
     summarize(results)
@@ -483,7 +464,6 @@ if __name__ == "__main__":
     results = []
     results.append(("AML", "Indexed Constraint (%s)" % N, measure(build_indexed_Constraint)))
     results.append(("Kernel", "constraint_dict (%s)" % N, measure(build_constraint_dict)))
-    results.append(("Kernel", "constraint_dict(unordered) (%s)" % N, measure(build_unordered_constraint_dict)))
     results.append(("Kernel", "constraint_list (%s)" % N, measure(build_constraint_list)))
     results.append(("Kernel", "linear_constraint_list (%s)" % N, measure(build_linear_constraint_list)))
     results.append(("Kernel", "matrix_constraint (%s)" % N, measure(build_matrix_constraint)))
@@ -498,7 +478,7 @@ if __name__ == "__main__":
     results.append(("AML", "Block", measure(build_Block)))
     results.append(("AML", "_BlockData", measure(build_BlockData)))
     results.append(("Kernel", "block", measure(build_block)))
-    results.append(("Kernel", "tiny_block", measure(build_tiny_block)))
+    results.append(("Kernel", "small_block", measure(build_small_block)))
     summarize(results)
     print("")
 
@@ -506,7 +486,7 @@ if __name__ == "__main__":
     results.append(("AML", "Block w/ 3 components", measure(build_Block_with_objects)))
     results.append(("AML", "_BlockData w/ 3 components", measure(build_BlockData_with_objects)))
     results.append(("Kernel", "block w/ 3 components", measure(build_block_with_objects)))
-    results.append(("Kernel", "tiny_block w/ 3 components", measure(build_tiny_block_with_objects)))
+    results.append(("Kernel", "small_block w/ 3 components", measure(build_small_block_with_objects)))
     summarize(results)
     print("")
 
@@ -519,8 +499,8 @@ if __name__ == "__main__":
                     measure(build_indexed_BlockWVars)))
     results.append(("Kernel", "block_list (%s) w/ variables (5)" % N,
                     measure(build_block_list_with_variables)))
-    results.append(("Kernel", "tiny_block_list (%s) w/ variables (5)" % N,
-                    measure(build_tiny_block_list_with_variables)))
-    results.append(("<locals>", "tiny_block_list (%s) w/ staticvariables (5)" % N,
-                    measure(build_tiny_block_list_with_staticvariables)))
+    results.append(("Kernel", "small_block_list (%s) w/ variables (5)" % N,
+                    measure(build_small_block_list_with_variables)))
+    results.append(("<locals>", "small_block_list (%s) w/ staticvariables (5)" % N,
+                    measure(build_small_block_list_with_staticvariables)))
     summarize(results)

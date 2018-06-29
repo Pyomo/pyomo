@@ -8,16 +8,21 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import collections
+import sys
 import logging
-try:
-    from collections import OrderedDict
-except ImportError:                         #pragma:nocover
-    from ordereddict import OrderedDict
+import weakref
+import collections
+if sys.version_info[:2] >= (3,6):
+    _ordered_dict_ = dict
+else:
+    try:
+        _ordered_dict_ = collections.OrderedDict
+    except ImportError:                         #pragma:nocover
+        import ordereddict
+        _ordered_dict_ = ordereddict.OrderedDict
 
 from pyomo.core.kernel.component_interface import \
-    (IComponentContainer,
-     _SimpleContainerMixin)
+    IHomogeneousContainer
 
 import six
 from six import itervalues, iteritems
@@ -30,40 +35,29 @@ logger = logging.getLogger('pyomo.core')
 # this class will have a __dict__ member whether or not they
 # declare __slots__. I don't believe it is worth trying to
 # code a work around for the Python 2 case as we are moving
-# closer to a Python 3-only world and indexed component
-# storage containers are not really memory bottlenecks.
-class ComponentDict(_SimpleContainerMixin,
-                    IComponentContainer,
+# closer to a Python 3-only world these types of objects are
+# not memory bottlenecks.
+class ComponentDict(IHomogeneousContainer,
                     collections.MutableMapping):
     """
-    A partial implementation of the IComponentContainer
-    interface that presents dict-like storage functionality.
+    A partial implementation of the IHomogeneousContainer
+    interface that provides dict-like storage functionality.
 
     Complete implementations need to set the _ctype property
-    at the class level, declare the remaining required
-    abstract properties of the IComponentContainer base
-    class, and declare a slot or attribute named _data.
+    at the class level and initialize the remaining
+    ICategorizedObject attributes during object creation. If
+    using __slots__, a slot named "_data" must be included.
 
     Note that this implementation allows nested storage of
-    other IComponentContainer implementations that are
-    defined with the same ctype.
-
-    The optional keyword 'ordered' can be set to :const:`True`/:const:`False`
-    to enable/disable the use of an OrderedDict as the
-    underlying storage dictionary (default is :const:`True`).
+    other ICategorizedObjectContainer implementations that
+    are defined with the same ctype.
     """
     __slots__ = ()
+    _child_storage_delimiter_string = ""
+    _child_storage_entry_string = "[%s]"
 
     def __init__(self, *args, **kwds):
-        ordered = kwds.pop('ordered', True)
-        if len(kwds):
-            raise ValueError("Unexpected keywords used "
-                             "to initialize class: %s"
-                             % (str(list(kwds.keys()))))
-        if ordered:
-            self._data = OrderedDict()
-        else:
-            self._data = {}
+        self._data = _ordered_dict_()
         if len(args) > 0:
             if len(args) > 1:
                 raise TypeError(
@@ -71,9 +65,11 @@ class ComponentDict(_SimpleContainerMixin,
                     "got %s" % (self.__class__.__name__,
                                 len(args)))
             self.update(args[0])
+        if len(kwds):
+            self.update(**kwds)
 
     #
-    # Define the IComponentContainer abstract methods
+    # Define the ICategorizedObjectContainer abstract methods
     #
 
     def child(self, key):
@@ -91,7 +87,8 @@ class ComponentDict(_SimpleContainerMixin,
         return itervalues(self._data)
 
     def _fast_insert(self, key, item):
-        self._prepare_for_add(key, item)
+        item._parent = weakref.ref(self)
+        item._storage_key = key
         self._data[key] = item
 
     #
@@ -99,7 +96,7 @@ class ComponentDict(_SimpleContainerMixin,
     #
 
     def __setitem__(self, key, item):
-        if item.ctype == self.ctype:
+        if item.ctype is self.ctype:
             if item._parent is None:
                 if key in self._data:
                     logger.warning(
@@ -111,8 +108,9 @@ class ComponentDict(_SimpleContainerMixin,
                         % (self[key].name,
                            self[key].__class__.__name__,
                            item.__class__.__name__))
-                    self._prepare_for_delete(
-                        self._data[key])
+                    obj_ = self._data[key]
+                    obj_._parent = None
+                    obj_._storage_key = None
                 self._fast_insert(key, item)
                 return
             elif (key in self._data) and (self._data[key] is item):
@@ -123,12 +121,12 @@ class ComponentDict(_SimpleContainerMixin,
                 # actions, but it is an extremely rare case, so
                 # it should go last.
                 return
-            # see note about allowing components to live in more than
-            # one container
+            # see note about allowing categorized objects to
+            # live in more than one container
             raise ValueError(
                 "Invalid assignment to %s type with name '%s' "
                 "at key %s. A parent container has already been "
-                "assigned to the component being inserted: %s"
+                "assigned to the object being inserted: %s"
                 % (self.__class__.__name__,
                    self.name,
                    key,
@@ -136,16 +134,16 @@ class ComponentDict(_SimpleContainerMixin,
         else:
             raise TypeError(
                 "Invalid assignment to type %s with index %s. "
-                "The component being inserted has the wrong "
-                "component type: %s"
+                "The object being inserted has the wrong "
+                "category type: %s"
                 % (self.__class__.__name__,
                    key,
                    item.ctype))
 
-
     def __delitem__(self, key):
         obj = self._data[key]
-        self._prepare_for_delete(obj)
+        obj._parent = None
+        obj._storage_key = None
         del self._data[key]
 
     def __getitem__(self, key):
@@ -178,34 +176,3 @@ class ComponentDict(_SimpleContainerMixin,
 
     def __ne__(self, other):
         return not (self == other)
-
-def create_component_dict(container, type_, keys, *args, **kwds):
-    """A utility function for constructing a ComponentDict
-    container of objects with the same initialization data.
-
-    Note that this function bypasses a few safety checks
-    when adding the objects into the container, so it should
-    only be used in cases where this is okay.
-
-    Args:
-        container: The container type. Must be a subclass of
-            ComponentDict.
-        type_: The object type to populate the container
-            with. Must have the same ctype as the container
-            argument.
-        keys: The set of keys to used to populate the
-            ComponentDict.
-        *args: arguments used to construct the objects
-            placed in the container.
-        **kwds: keywords used to construct the objects
-            placed in the container.
-
-    Returns:
-        A fully populated container.
-    """
-    assert container.ctype == type_.ctype
-    assert issubclass(container, ComponentDict)
-    cdict = container()
-    for key in keys:
-        cdict._fast_insert(key, type_(*args, **kwds))
-    return cdict

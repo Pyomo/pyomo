@@ -9,17 +9,10 @@
 #  ___________________________________________________________________________
 
 import pyomo.core.expr
-from pyomo.core.expr.numvalue import NumericValue, value
-from pyomo.core.kernel.component_interface import \
-    (IComponent,
-     _ActiveObjectMixin,
-     _abstract_readwrite_property,
-     _abstract_readonly_property)
-from pyomo.core.kernel.component_dict import ComponentDict
-from pyomo.core.kernel.component_tuple import ComponentTuple
-from pyomo.core.kernel.component_list import ComponentList
-from pyomo.core.kernel.component_constraint import (IConstraint,
-                                                    constraint_tuple)
+from pyomo.core.expr.numvalue import NumericValue
+from pyomo.core.kernel.component_constraint import \
+    (IConstraint,
+     constraint_tuple)
 
 import six
 from six.moves import zip, xrange
@@ -43,16 +36,13 @@ _noarg = object()
 #       change or it may go away.
 #
 
-class _MatrixConstraintData(IConstraint,
-                            _ActiveObjectMixin):
+class _MatrixConstraintData(IConstraint):
     """
     A placeholder object for linear constraints in a
     matrix_constraint container. A user should not
     directly instantiate this class.
     """
-    # To avoid a circular import, for the time being, this
-    # property will be set externally
-    _ctype = None
+    _ctype = IConstraint
     _linear_canonical_form = True
     __slots__ = ("_parent",
                  "_storage_key",
