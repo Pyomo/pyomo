@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -120,7 +120,11 @@ class TableData(Plugin):
                 header_index.append(i)
         else:
             for i in self.options.select:
-                header_index.append(headers.index(str(i)))
+                try:
+                    header_index.append(headers.index(str(i)))
+                except:
+                    print("Model declaration '%s' not found in returned query columns" %str(i))
+                    raise
         self.options.ncolumns = len(headers)
 
         if not self.options.param is None:
@@ -268,4 +272,3 @@ class TableData(Plugin):
                     cols.append(param)
                 tmp = [cols] + tmp
         return tmp
-

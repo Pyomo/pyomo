@@ -134,10 +134,11 @@ class _staticvariable(IVariable):
     ub = None
     fixed = False
     stale = False
-    __slots__ = ("value","_parent")
+    __slots__ = ("value","_parent","_storage_key")
     def __init__(self):
         self.value = None
         self._parent = None
+        self._storage_key = None
 
 def build_staticvariable():
     """Build a static variable with no references to

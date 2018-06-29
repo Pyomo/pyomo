@@ -10,10 +10,9 @@ from pyomo.core.tests.unit.test_component_tuple import \
 from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
 from pyomo.core.kernel.component_interface import (ICategorizedObject,
-                                                   IActiveObject,
                                                    IComponent,
-                                                   _ActiveComponentMixin,
-                                                   IComponentContainer)
+                                                   IComponentContainer,
+                                                   _ActiveObjectMixin)
 from pyomo.core.kernel.component_objective import (IObjective,
                                                    objective,
                                                    objective_dict,
@@ -95,9 +94,8 @@ class Test_objective(unittest.TestCase):
     def test_type(self):
         o = objective()
         self.assertTrue(isinstance(o, ICategorizedObject))
-        self.assertTrue(isinstance(o, IActiveObject))
         self.assertTrue(isinstance(o, IComponent))
-        self.assertTrue(isinstance(o, _ActiveComponentMixin))
+        self.assertTrue(isinstance(o, _ActiveObjectMixin))
         self.assertTrue(isinstance(o, IObjective))
         self.assertTrue(isinstance(o, NumericValue))
 

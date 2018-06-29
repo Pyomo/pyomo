@@ -11,7 +11,7 @@
 # Imports
 #
 
-from pyomo.core import *
+from pyomo.environ import *
 
 #
 # Model
@@ -62,7 +62,7 @@ model.FinalWealth = Var()
 # Constraints
 #
 
-def force_wealth_distribution(t, model):
+def force_wealth_distribution(model, t):
     if t == 1:
         return (sum([model.AmountInvested[i,1] for i in model.Investments]) - model.InitialWealth) == 0.0
     else:
@@ -80,7 +80,7 @@ model.ComputeSurplusDeficitConstraint = Constraint(rule=compute_surplus_deficit)
 # Stage-specific cost computations
 #
 
-def stage_profit_rule(t, model):
+def stage_profit_rule(model,t ):
     return model.Wealth[t] == 0.0
 
 model.ComputeStageProfit = Constraint(model.Times, rule=stage_profit_rule)

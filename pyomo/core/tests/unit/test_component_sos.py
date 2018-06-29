@@ -10,7 +10,7 @@ from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
 from pyomo.core.kernel.component_interface import (ICategorizedObject,
                                                    IComponent,
-                                                   _ActiveComponentMixin)
+                                                   _ActiveObjectMixin)
 from pyomo.core.kernel.component_sos import (ISOS,
                                              sos,
                                              sos1,
@@ -123,19 +123,19 @@ class Test_sos(unittest.TestCase):
         s = sos([])
         self.assertTrue(isinstance(s, ICategorizedObject))
         self.assertTrue(isinstance(s, IComponent))
-        self.assertTrue(isinstance(s, _ActiveComponentMixin))
+        self.assertTrue(isinstance(s, _ActiveObjectMixin))
         self.assertTrue(isinstance(s, ISOS))
 
         s = sos1([])
         self.assertTrue(isinstance(s, ICategorizedObject))
         self.assertTrue(isinstance(s, IComponent))
-        self.assertTrue(isinstance(s, _ActiveComponentMixin))
+        self.assertTrue(isinstance(s, _ActiveObjectMixin))
         self.assertTrue(isinstance(s, ISOS))
 
         s = sos2([])
         self.assertTrue(isinstance(s, ICategorizedObject))
         self.assertTrue(isinstance(s, IComponent))
-        self.assertTrue(isinstance(s, _ActiveComponentMixin))
+        self.assertTrue(isinstance(s, _ActiveObjectMixin))
         self.assertTrue(isinstance(s, ISOS))
 
     def test_bad_weights(self):

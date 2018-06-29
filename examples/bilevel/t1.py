@@ -8,8 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.environ
-from pyomo.core import *
+from pyomo.environ import *
 from pyomo.bilevel import *
 
 def pyomo_create_model(options, model_options):

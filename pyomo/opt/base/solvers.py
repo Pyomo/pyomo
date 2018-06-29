@@ -199,7 +199,8 @@ def __solver_call__(self, _name=None, args=[], **kwds):
         logger.warning("Failed to create solver with name '%s':\n%s"
                      % (_name, err))
         opt = None
-    if opt is not None and subsolver is not None:
+    if opt is not None and _name != "py" and subsolver is not None:
+        # py just creates instance of its subsolver, no need for this option
         opt.set_options('solver='+subsolver)
     if opt is None:
         opt = UnknownSolver( type=_name, *args, **kwds )
@@ -564,12 +565,11 @@ class OptSolver(Plugin):
                                           active_import_suffix_generator(arg))
                 else:
                     assert isinstance(arg, IBlockStorage)
-                    model_suffixes = list(name for (name,comp) \
+                    model_suffixes = list(comp.storage_key for comp
                                           in pyomo.core.kernel.component_suffix.\
                                           import_suffix_generator(arg,
                                                                   active=True,
-                                                                  descend_into=False,
-                                                                  return_key=True))
+                                                                  descend_into=False))
 
                 if len(model_suffixes) > 0:
                     kwds_suffixes = kwds.setdefault('suffixes',[])

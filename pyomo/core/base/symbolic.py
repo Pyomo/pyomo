@@ -14,6 +14,7 @@ from pyomo import core
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr import native_types
 from pyomo.common import DeveloperError
+from pyomo.core.expr.numvalue import value
 
 _sympy_available = True
 try:
