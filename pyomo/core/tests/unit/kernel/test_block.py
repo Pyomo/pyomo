@@ -271,8 +271,8 @@ class TestMisc(unittest.TestCase):
     def test_ctype(self):
         b = block()
         self.assertIs(b.ctype, IBlock)
-        self.assertIs(type(b).ctype, IBlock)
-        self.assertIs(block.ctype, IBlock)
+        self.assertIs(type(b), block)
+        self.assertIs(type(b)._ctype, IBlock)
 
     def test_write(self):
         b = block()

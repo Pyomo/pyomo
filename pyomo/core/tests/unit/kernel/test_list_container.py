@@ -71,8 +71,8 @@ class _TestListContainerBase(object):
         c = self._container_type()
         ctype = self._ctype_factory().ctype
         self.assertIs(c.ctype, ctype)
-        self.assertIs(type(c).ctype, ctype)
-        self.assertIs(self._container_type.ctype, ctype)
+        self.assertIs(type(c)._ctype, ctype)
+        self.assertIs(self._container_type._ctype, ctype)
 
     def test_init1(self):
         clist = self._container_type()

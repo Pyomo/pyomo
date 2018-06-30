@@ -541,8 +541,8 @@ class Test_expression(_Test_expression_base,
     def test_ctype(self):
         e = expression()
         self.assertIs(e.ctype, IExpression)
-        self.assertIs(type(e).ctype, IExpression)
-        self.assertIs(expression.ctype, IExpression)
+        self.assertIs(type(e), expression)
+        self.assertIs(type(e)._ctype, IExpression)
 
     def test_is_fixed(self):
         e = self._ctype_factory()
@@ -604,8 +604,8 @@ class Test_data_expression(_Test_expression_base,
     def test_ctype(self):
         e = data_expression()
         self.assertIs(e.ctype, IExpression)
-        self.assertIs(type(e).ctype, IExpression)
-        self.assertIs(data_expression.ctype, IExpression)
+        self.assertIs(type(e), data_expression)
+        self.assertIs(type(e)._ctype, IExpression)
 
     def test_bad_init(self):
         e = self._ctype_factory(expr=1.0)

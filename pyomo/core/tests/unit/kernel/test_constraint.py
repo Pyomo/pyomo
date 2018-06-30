@@ -48,8 +48,8 @@ class Test_constraint(unittest.TestCase):
     def test_ctype(self):
         c = constraint()
         self.assertIs(c.ctype, IConstraint)
-        self.assertIs(type(c).ctype, IConstraint)
-        self.assertIs(constraint.ctype, IConstraint)
+        self.assertIs(type(c), constraint)
+        self.assertIs(type(c)._ctype, IConstraint)
 
     def test_pickle(self):
         c = constraint()
@@ -1603,8 +1603,8 @@ class Test_linear_constraint(unittest.TestCase):
     def test_ctype(self):
         c = linear_constraint([],[])
         self.assertIs(c.ctype, IConstraint)
-        self.assertIs(type(c).ctype, IConstraint)
-        self.assertIs(linear_constraint.ctype, IConstraint)
+        self.assertIs(type(c), linear_constraint)
+        self.assertIs(type(c)._ctype, IConstraint)
 
     def test_pickle(self):
         c = linear_constraint([],[])

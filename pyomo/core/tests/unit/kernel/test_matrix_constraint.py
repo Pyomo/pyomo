@@ -14,19 +14,19 @@ from pyomo.core.kernel.base import \
      IHomogeneousContainer)
 from pyomo.core.kernel.tuple_container import TupleContainer
 from pyomo.core.kernel.constraint import (IConstraint,
-                                                    constraint,
-                                                    linear_constraint,
-                                                    constraint_dict,
-                                                    constraint_tuple,
-                                                    constraint_list)
+                                          constraint,
+                                          linear_constraint,
+                                          constraint_dict,
+                                          constraint_tuple,
+                                          constraint_list)
 from pyomo.core.kernel.matrix_constraint import \
     (matrix_constraint,
      _MatrixConstraintData)
 from pyomo.core.kernel.variable import (variable,
-                                                  variable_list)
+                                        variable_list)
 from pyomo.core.kernel.parameter import parameter
 from pyomo.core.kernel.expression import (expression,
-                                                    data_expression)
+                                          data_expression)
 from pyomo.core.kernel.block import (block,
                                      block_list)
 from pyomo.core.kernel.set_types import (RealSet,
@@ -81,10 +81,10 @@ class Test_matrix_constraint(unittest.TestCase):
     def test_ctype(self):
         ctuple = matrix_constraint(numpy.random.rand(3,3))
         self.assertIs(ctuple.ctype, IConstraint)
-        self.assertIs(type(ctuple).ctype, IConstraint)
-        self.assertIs(matrix_constraint.ctype, IConstraint)
+        self.assertIs(type(ctuple), matrix_constraint)
+        self.assertIs(type(ctuple)._ctype, IConstraint)
         self.assertIs(ctuple[0].ctype, IConstraint)
-        self.assertIs(type(ctuple[0]).ctype, IConstraint)
+        self.assertIs(type(ctuple[0])._ctype, IConstraint)
 
     def test_pickle(self):
         vlist = _create_variable_list(3)
@@ -1187,7 +1187,7 @@ class Test_matrix_constraint(unittest.TestCase):
         self.assertEqual(mc_child_cnt, 12)
 
         self.assertEqual(
-            len(list(m.components(ctype=constraint.ctype))),
+            len(list(m.components(ctype=IConstraint))),
             13)
 
 if __name__ == "__main__":

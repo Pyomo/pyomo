@@ -45,8 +45,8 @@ class Test_parameter(unittest.TestCase):
     def test_ctype(self):
         p = parameter()
         self.assertIs(p.ctype, IParameter)
-        self.assertIs(type(p).ctype, IParameter)
-        self.assertIs(parameter.ctype, IParameter)
+        self.assertIs(type(p), parameter)
+        self.assertIs(type(p)._ctype, IParameter)
 
     def test_pickle(self):
         p = parameter(value=1.0)

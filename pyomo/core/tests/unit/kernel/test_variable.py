@@ -95,8 +95,8 @@ class Test_variable(unittest.TestCase):
     def test_ctype(self):
         v = variable()
         self.assertIs(v.ctype, IVariable)
-        self.assertIs(type(v).ctype, IVariable)
-        self.assertIs(variable.ctype, IVariable)
+        self.assertIs(type(v), variable)
+        self.assertIs(type(v)._ctype, IVariable)
 
     def test_pickle(self):
         v = variable(lb=1,

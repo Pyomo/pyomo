@@ -46,8 +46,8 @@ class Test_sos(unittest.TestCase):
     def test_ctype(self):
         s = sos([])
         self.assertIs(s.ctype, ISOS)
-        self.assertIs(type(s).ctype, ISOS)
-        self.assertIs(sos.ctype, ISOS)
+        self.assertIs(type(s), sos)
+        self.assertIs(type(s)._ctype, ISOS)
 
     def test_pickle(self):
         v = variable()

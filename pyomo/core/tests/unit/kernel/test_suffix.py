@@ -61,8 +61,8 @@ class Test_suffix(unittest.TestCase):
     def test_ctype(self):
         s = suffix()
         self.assertIs(s.ctype, ISuffix)
-        self.assertIs(type(s).ctype, ISuffix)
-        self.assertIs(suffix.ctype, ISuffix)
+        self.assertIs(type(s), suffix)
+        self.assertIs(type(s)._ctype, ISuffix)
 
     def test_pickle(self):
         s = suffix(direction=suffix.EXPORT,

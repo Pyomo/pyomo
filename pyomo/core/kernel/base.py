@@ -12,22 +12,20 @@ import abc
 import copy
 import weakref
 
-import six
-
-def _not_implemented(*args, **kwds):
-    raise NotImplementedError     #pragma:nocover
+def _not_implemented_property(*args, **kwds):
+    raise NotImplementedError("This property is abstract")     #pragma:nocover
 
 def _abstract_readwrite_property(**kwds):
-    p = abc.abstractproperty(fget=_not_implemented,
-                             fset=_not_implemented,
-                             **kwds)
+    p = property(fget=_not_implemented_property,
+                 fset=_not_implemented_property,
+                 **kwds)
     if 'doc' in kwds:
         p.__doc__ = kwds['doc']
     return p
 
 def _abstract_readonly_property(**kwds):
-    p = abc.abstractproperty(fget=_not_implemented,
-                             **kwds)
+    p = property(fget=_not_implemented_property,
+                 **kwds)
     if 'doc' in kwds:
         p.__doc__ = kwds['doc']
     return p
@@ -41,20 +39,6 @@ class _no_ctype(object):
 # solver interfaces) to Kernel classes
 _convert_ctype = {}
 
-class _ICategorizedObjectMeta(abc.ABCMeta):
-    # This allows the _ctype property on the
-    # ICategorizedObject class to "officially" remain
-    # private (starts with _, so if anyone attempts to
-    # change it, they get what they deserve), while still
-    # allowing users to access it via the class or the
-    # instance level. If the property below were removed,
-    # then ICategorizedObject.ctype would return the
-    # property method itself and not the value of the _ctype
-    # attribute.
-    @property
-    def ctype(cls):
-        return cls._ctype
-@six.add_metaclass(_ICategorizedObjectMeta)
 class ICategorizedObject(object):
     """
     Interface for objects that maintain a weak reference to
@@ -76,9 +60,8 @@ class ICategorizedObject(object):
     """
     __slots__ = ()
 
-    # These flags can be used by implementations to speed up
-    # code. The use of ABCMeta as a metaclass slows down
-    # isinstance calls by an order of magnitude!
+    # These flags can be used by implementations
+    # to avoid isinstance calls.
     _is_container = False
     """A flag used to indicate that the class is an instance
     of ICategorizedObjectContainer."""

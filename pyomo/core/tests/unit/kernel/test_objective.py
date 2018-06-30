@@ -45,8 +45,8 @@ class Test_objective(unittest.TestCase):
     def test_ctype(self):
         o = objective()
         self.assertIs(o.ctype, IObjective)
-        self.assertIs(type(o).ctype, IObjective)
-        self.assertIs(objective.ctype, IObjective)
+        self.assertIs(type(o), objective)
+        self.assertIs(type(o)._ctype, IObjective)
 
     def test_pickle(self):
         o = objective(sense=maximize,
