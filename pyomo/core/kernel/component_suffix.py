@@ -15,7 +15,7 @@ import pyutilib.math
 from pyomo.core.expr.numvalue import NumericValue
 from pyomo.core.kernel.component_interface import \
     (IComponent,
-     _ActiveComponentMixin,
+     _ActiveObjectMixin,
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.kernel.component_map import ComponentMap
@@ -37,13 +37,14 @@ _noarg = object()
 #       like IComponent instead of ComponentMap
 class suffix(ComponentMap,
              IComponent,
-             _ActiveComponentMixin):
+             _ActiveObjectMixin):
     """A container for storing extraneous model data that
     can be imported to or exported from a solver."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_direction",
                  "_datatype")
@@ -73,6 +74,7 @@ class suffix(ComponentMap,
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         self._active = True
         self._direction = None
         self._datatype = None
@@ -191,8 +193,7 @@ class suffix(ComponentMap,
 def export_suffix_generator(blk,
                             datatype=_noarg,
                             active=None,
-                            descend_into=True,
-                            return_key=False):
+                            descend_into=True):
     """
     Generates an efficient traversal of all suffixes that
     have been declared for exporting data.
@@ -211,33 +212,22 @@ def export_suffix_generator(blk,
         descend_into (bool): Indicates whether or not to
             include suffixes on sub-blocks. Default is
             :const:`True`.
-        return_key (bool): Set to :const:`True` to indicate
-            that the return type should be a 2-tuple
-            consisting of the local storage key of the
-            suffix within its parent and the suffix
-            itself. By default, only the suffixes are
-            returned.
 
     Returns:
         iterator of suffixes or (key,suffix) tuples
     """
-    for name, suf in filter(lambda x: (x[1].export_enabled and \
-                                       ((datatype is _noarg) or \
-                                        (x[1].datatype is datatype))),
-                            blk.components(ctype=suffix._ctype,
-                                           return_key=True,
-                                           active=active,
-                                           descend_into=descend_into)):
-        if return_key:
-            yield name, suf
-        else:
-            yield suf
+    for suf in filter(lambda x: (x.export_enabled and \
+                                 ((datatype is _noarg) or \
+                                  (x.datatype is datatype))),
+                      blk.components(ctype=suffix._ctype,
+                                     active=active,
+                                     descend_into=descend_into)):
+        yield suf
 
 def import_suffix_generator(blk,
                             datatype=_noarg,
                             active=None,
-                            descend_into=True,
-                            return_key=False):
+                            descend_into=True):
     """
     Generates an efficient traversal of all suffixes that
     have been declared for importing data.
@@ -256,33 +246,22 @@ def import_suffix_generator(blk,
         descend_into (bool): Indicates whether or not to
             include suffixes on sub-blocks. Default is
             :const:`True`.
-        return_key (bool): Set to :const:`True` to indicate
-            that the return type should be a 2-tuple
-            consisting of the local storage key of the
-            suffix within its parent and the suffix
-            itself. By default, only the suffixes are
-            returned.
 
     Returns:
         iterator of suffixes or (key,suffix) tuples
     """
-    for name, suf in filter(lambda x: (x[1].import_enabled and \
-                                       ((datatype is _noarg) or \
-                                        (x[1].datatype is datatype))),
-                            blk.components(ctype=suffix._ctype,
-                                           return_key=True,
-                                           active=active,
-                                           descend_into=descend_into)):
-        if return_key:
-            yield name, suf
-        else:
-            yield suf
+    for suf in filter(lambda x: (x.import_enabled and \
+                                 ((datatype is _noarg) or \
+                                  (x.datatype is datatype))),
+                      blk.components(ctype=suffix._ctype,
+                                     active=active,
+                                     descend_into=descend_into)):
+        yield suf
 
 def local_suffix_generator(blk,
                            datatype=_noarg,
                            active=None,
-                           descend_into=True,
-                           return_key=False):
+                           descend_into=True):
     """
     Generates an efficient traversal of all suffixes that
     have been declared local data storage.
@@ -301,33 +280,22 @@ def local_suffix_generator(blk,
         descend_into (bool): Indicates whether or not to
             include suffixes on sub-blocks. Default is
             :const:`True`.
-        return_key (bool): Set to :const:`True` to indicate
-            that the return type should be a 2-tuple
-            consisting of the local storage key of the
-            suffix within its parent and the suffix
-            itself. By default, only the suffixes are
-            returned.
 
     Returns:
         iterator of suffixes or (key,suffix) tuples
     """
-    for name, suf in filter(lambda x: (x[1].direction is suffix.LOCAL and \
-                                       ((datatype is _noarg) or \
-                                        (x[1].datatype is datatype))),
-                            blk.components(ctype=suffix._ctype,
-                                           return_key=True,
-                                           active=active,
-                                           descend_into=descend_into)):
-        if return_key:
-            yield name, suf
-        else:
-            yield suf
+    for suf in filter(lambda x: (x.direction is suffix.LOCAL and \
+                                 ((datatype is _noarg) or \
+                                  (x.datatype is datatype))),
+                      blk.components(ctype=suffix._ctype,
+                                     active=active,
+                                     descend_into=descend_into)):
+        yield suf
 
 def suffix_generator(blk,
                      datatype=_noarg,
                      active=None,
-                     descend_into=True,
-                     return_key=False):
+                     descend_into=True):
     """
     Generates an efficient traversal of all suffixes that
     have been declared.
@@ -346,23 +314,13 @@ def suffix_generator(blk,
         descend_into (bool): Indicates whether or not to
             include suffixes on sub-blocks. Default is
             :const:`True`.
-        return_key (bool): Set to :const:`True` to indicate
-            that the return type should be a 2-tuple
-            consisting of the local storage key of the
-            suffix within its parent and the suffix
-            itself. By default, only the suffixes are
-            returned.
 
     Returns:
         iterator of suffixes or (key,suffix) tuples
     """
-    for name, suf in filter(lambda x: ((datatype is _noarg) or \
-                                       (x[1].datatype is datatype)),
-                            blk.components(ctype=suffix._ctype,
-                                           return_key=True,
-                                           active=active,
-                                           descend_into=descend_into)):
-        if return_key:
-            yield name, suf
-        else:
-            yield suf
+    for suf in filter(lambda x: ((datatype is _noarg) or \
+                                 (x.datatype is datatype)),
+                      blk.components(ctype=suffix._ctype,
+                                     active=active,
+                                     descend_into=descend_into)):
+        yield suf

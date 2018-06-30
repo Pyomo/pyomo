@@ -51,7 +51,7 @@ class ComponentTuple(_SimpleContainerMixin,
                 self._insert(len(self), item)
 
     def _fast_insert(self, i, item):
-        self._prepare_for_add(item)
+        self._prepare_for_add(i, item)
         self._data.insert(i, item)
 
     def _insert(self, i, item):
@@ -81,18 +81,6 @@ class ComponentTuple(_SimpleContainerMixin,
     # Define the IComponentContainer abstract methods
     #
 
-    def child_key(self, child):
-        """Get the lookup key associated with a child of
-        this container.
-
-        Raises:
-            ValueError: if the argument is not a child of
-                this container
-        """
-        if getattr(child, "parent", None) is self:
-            return self.index(child)
-        raise ValueError
-
     def child(self, key):
         """Get the child object associated with a given
         storage key for this container.
@@ -106,23 +94,9 @@ class ComponentTuple(_SimpleContainerMixin,
         except (IndexError, TypeError):
             raise KeyError(str(key))
 
-    def children(self, return_key=False):
-        """Iterate over the children of this container.
-
-        Args:
-            return_key (bool): Set to :const:`True` to
-                indicate that the return type should be a
-                2-tuple consisting of the child storage key
-                and the child object. By default, only the
-                child objects are returned.
-
-        Returns:
-            iterator of objects or (key,object) tuples
-        """
-        if return_key:
-            return enumerate(self._data)
-        else:
-            return self._data.__iter__()
+    def children(self):
+        """A generator over the children of this container."""
+        return self._data.__iter__()
 
     #
     # Define the Sequence abstract methods

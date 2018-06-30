@@ -175,7 +175,7 @@ class MILP_unused_vars_kernel(MILP_unused_vars):
         model.B[2].b = flat_model.clone()
 
         model.b.deactivate()
-        model.B.deactivate()
+        model.B.deactivate(shallow=False)
         model.b.b.activate()
         model.B[1].b.activate()
         model.B[2].b.deactivate()

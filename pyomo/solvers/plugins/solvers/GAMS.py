@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import StringIO, iteritems
+from six import StringIO, iteritems, string_types
 from tempfile import mkdtemp
 import os, sys, math, logging, shutil, time
 
@@ -21,7 +21,7 @@ import pyutilib.services
 
 from pyomo.opt.base.solvers import _extract_version
 import pyutilib.subprocess
-from pyutilib.misc import Options
+from pyutilib.misc import Options, quote_split
 
 from pyomo.core.kernel.component_block import IBlockStorage
 
@@ -36,7 +36,70 @@ logger = logging.getLogger('pyomo.solvers')
 
 pyutilib.services.register_executable(name="gams")
 
-class GAMSSolver(pyomo.common.plugin.Plugin):
+class _GAMSSolver(pyomo.common.plugin.Plugin):
+    """Aggregate of common methods for GAMS interfaces"""
+
+    pyomo.common.plugin.implements(IOptSolver)
+
+    def __init__(self, **kwds):
+        self._version = None
+        self._default_variable_value = None
+        self._metasolver = False
+
+        self._capabilities = Options()
+        self._capabilities.linear = True
+        self._capabilities.quadratic_objective = True
+        self._capabilities.quadratic_constraint = True
+        self._capabilities.integer = True
+        self._capabilities.sos1 = False
+        self._capabilities.sos2 = False
+
+        self.options = Options()
+
+        pyomo.common.plugin.Plugin.__init__(self, **kwds)
+
+    def version(self):
+        """Returns a 4-tuple describing the solver executable version."""
+        if self._version is None:
+            self._version = self._get_version()
+        return self._version
+
+    def warm_start_capable(self):
+        """True is the solver can accept a warm-start solution."""
+        return True
+
+    def default_variable_value(self):
+        return self._default_variable_value
+
+    def set_options(self, istr):
+        if isinstance(istr, string_types):
+            istr = self._options_string_to_dict(istr)
+        for key in istr:
+            if not istr[key] is None:
+                setattr(self.options, key, istr[key])
+
+    @staticmethod
+    def _options_string_to_dict(istr):
+        ans = {}
+        istr = istr.strip()
+        if not istr:
+            return ans
+        if istr[0] == "'" or istr[0] == '"':
+            istr = eval(istr)
+        tokens = quote_split('[ ]+',istr)
+        for token in tokens:
+            index = token.find('=')
+            if index is -1:
+                raise ValueError(
+                    "Solver options must have the form option=value: '%s'" % istr)
+            try:
+                val = eval(token[(index+1):])
+            except:
+                val = token[(index+1):]
+            ans[token[:index]] = val
+        return ans
+
+class GAMSSolver(_GAMSSolver):
     """
     A generic interface to GAMS solvers.
 
@@ -46,7 +109,6 @@ class GAMSSolver(pyomo.common.plugin.Plugin):
         solver_io='shell' or 'gms' to use command line to call gams
             Requires the gams executable be on your system PATH.
     """
-    pyomo.common.plugin.implements(IOptSolver)
     pyomo.common.plugin.alias('gams', doc='The GAMS modeling language')
 
     def __new__(cls, *args, **kwds):
@@ -67,32 +129,14 @@ class GAMSSolver(pyomo.common.plugin.Plugin):
             return
 
 
-class GAMSDirect(pyomo.common.plugin.Plugin):
+class GAMSDirect(_GAMSSolver):
     """
     A generic python interface to GAMS solvers.
 
     Visit Python API page on gams.com for installation help.
     """
-    pyomo.common.plugin.implements(IOptSolver)
     pyomo.common.plugin.alias('_gams_direct',
         doc='Direct python interface to the GAMS modeling language')
-
-    def __init__(self, **kwds):
-        self._version = None
-        self._default_variable_value = None
-        self._metasolver = False
-
-        self._capabilities = Options()
-        self._capabilities.linear = True
-        self._capabilities.quadratic_objective = True
-        self._capabilities.quadratic_constraint = True
-        self._capabilities.integer = True
-        self._capabilities.sos1 = False
-        self._capabilities.sos2 = False
-
-        self.options = Options() # ignored
-
-        pyomo.common.plugin.Plugin.__init__(self, **kwds)
 
     def available(self, exception_flag=True):
         """True if the solver is available."""
@@ -118,19 +162,6 @@ class GAMSDirect(pyomo.common.plugin.Plugin):
             version += (0,)
         version = version[:4]
         return version
-
-    def version(self):
-        """Returns a 4-tuple describing the solver executable version."""
-        if self._version is None:
-            self._version = self._get_version()
-        return self._version
-
-    def warm_start_capable(self):
-        """True is the solver can accept a warm-start solution."""
-        return True
-
-    def default_variable_value(self):
-        return self._default_variable_value
 
     def solve(self, *args, **kwds):
         """
@@ -171,18 +202,22 @@ class GAMSDirect(pyomo.common.plugin.Plugin):
                              'to solve method of GAMSSolver.')
         model = args[0]
 
-        load_solutions = kwds.pop("load_solutions", True)
-        tee            = kwds.pop("tee", False)
-        logfile        = kwds.pop("logfile", None)
-        keepfiles      = kwds.pop("keepfiles", False)
-        tmpdir         = kwds.pop("tmpdir", None)
-        report_timing  = kwds.pop("report_timing", False)
-        io_options     = kwds.pop("io_options", {})
+        # self.options are default for each run, overwritten by kwds
+        options = dict()
+        options.update(self.options)
+        options.update(kwds)
 
-        if len(kwds):
-            # Pass remaining keywords to writer, which will handle
-            # any unrecognized arguments
-            io_options.update(kwds)
+        load_solutions = options.pop("load_solutions", True)
+        tee            = options.pop("tee", False)
+        logfile        = options.pop("logfile", None)
+        keepfiles      = options.pop("keepfiles", False)
+        tmpdir         = options.pop("tmpdir", None)
+        report_timing  = options.pop("report_timing", False)
+        io_options     = options.pop("io_options", {})
+
+        # Pass remaining keywords to writer, which will handle
+        # any unrecognized arguments
+        io_options.update(options)
 
         initial_time = time.time()
 
@@ -273,12 +308,11 @@ class GAMSDirect(pyomo.common.plugin.Plugin):
 
         # import suffixes must be on the top-level model
         if isinstance(model, IBlockStorage):
-            model_suffixes = list(name for (name,comp) \
+            model_suffixes = list(comp.storage_key for comp \
                                   in pyomo.core.kernel.component_suffix.\
                                   import_suffix_generator(model,
                                                           active=True,
-                                                          descend_into=False,
-                                                          return_key=True))
+                                                          descend_into=False))
         else:
             model_suffixes = list(name for (name,comp) \
                                   in pyomo.core.base.suffix.\
@@ -523,29 +557,10 @@ class GAMSDirect(pyomo.common.plugin.Plugin):
         return results
 
 
-class GAMSShell(pyomo.common.plugin.Plugin):
+class GAMSShell(_GAMSSolver):
     """A generic shell interface to GAMS solvers."""
-    pyomo.common.plugin.implements(IOptSolver)
     pyomo.common.plugin.alias('_gams_shell',
         doc='Shell interface to the GAMS modeling language')
-
-    def __init__(self, **kwds):
-        self._metasolver = False
-        self._version = None
-        self._default_variable_value = None
-        self._metasolver = False
-
-        self._capabilities = Options()
-        self._capabilities.linear = True
-        self._capabilities.quadratic_objective = True
-        self._capabilities.quadratic_constraint = True
-        self._capabilities.integer = True
-        self._capabilities.sos1 = False
-        self._capabilities.sos2 = False
-
-        self.options = Options() # ignored
-
-        pyomo.common.plugin.Plugin.__init__(self, **kwds)
 
     def available(self, exception_flag=True):
         """True if the solver is available."""
@@ -582,19 +597,6 @@ class GAMSShell(pyomo.common.plugin.Plugin):
         else:
             results = pyutilib.subprocess.run([solver_exec])
             return _extract_version(results[1])
-
-    def version(self):
-        """Returns a 4-tuple describing the solver executable version."""
-        if self._version is None:
-            self._version = self._get_version()
-        return self._version
-
-    def warm_start_capable(self):
-        """True is the solver can accept a warm-start solution."""
-        return True
-
-    def default_variable_value(self):
-        return self._default_variable_value
 
     def solve(self, *args, **kwds):
         """
@@ -633,19 +635,23 @@ class GAMSShell(pyomo.common.plugin.Plugin):
                              'to solve method of GAMSSolver.')
         model = args[0]
 
-        load_solutions = kwds.pop("load_solutions", True)
-        tee            = kwds.pop("tee", False)
-        logfile        = kwds.pop("logfile", None)
-        keepfiles      = kwds.pop("keepfiles", False)
-        tmpdir         = kwds.pop("tmpdir", None)
-        report_timing  = kwds.pop("report_timing", False)
-        io_options     = kwds.pop("io_options", {})
+        # self.options are default for each run, overwritten by kwds
+        options = dict()
+        options.update(self.options)
+        options.update(kwds)
 
-        if len(kwds):
-            # Pass remaining keywords to writer, which will handle
-            # any unrecognized arguments
-            io_options.update(kwds)
+        load_solutions = options.pop("load_solutions", True)
+        tee            = options.pop("tee", False)
+        logfile        = options.pop("logfile", None)
+        keepfiles      = options.pop("keepfiles", False)
+        tmpdir         = options.pop("tmpdir", None)
+        report_timing  = options.pop("report_timing", False)
+        io_options     = options.pop("io_options", {})
 
+        io_options.update(options)
+
+        # Pass remaining keywords to writer, which will handle
+        # any unrecognized arguments
         initial_time = time.time()
 
         ####################################################################
@@ -759,12 +765,11 @@ class GAMSShell(pyomo.common.plugin.Plugin):
 
         # import suffixes must be on the top-level model
         if isinstance(model, IBlockStorage):
-            model_suffixes = list(name for (name,comp) \
+            model_suffixes = list(comp.storage_key for comp \
                                   in pyomo.core.kernel.component_suffix.\
                                   import_suffix_generator(model,
                                                           active=True,
-                                                          descend_into=False,
-                                                          return_key=True))
+                                                          descend_into=False))
         else:
             model_suffixes = list(name for (name,comp) \
                                   in pyomo.core.base.suffix.\

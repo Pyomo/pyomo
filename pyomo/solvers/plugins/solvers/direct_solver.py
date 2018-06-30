@@ -85,9 +85,10 @@ class DirectSolver(DirectOrPersistentSolver):
                     model_suffixes = list(name for (name,comp) in active_import_suffix_generator(arg))
                 else:
                     assert isinstance(arg, IBlockStorage)
-                    model_suffixes = list(name for (name,comp) in import_suffix_generator(arg, active=True,
-                                                                                          descend_into=False,
-                                                                                          return_key=True))
+                    model_suffixes = list(comp.storage_key for comp in
+                                          import_suffix_generator(arg,
+                                                                  active=True,
+                                                                  descend_into=False))
 
                 if len(model_suffixes) > 0:
                     kwds_suffixes = kwds.setdefault('suffixes',[])
