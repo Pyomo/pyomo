@@ -339,6 +339,9 @@ class Connection(ActiveIndexedComponent):
             con = Constraint(var.index_set(), rule=rule)
             unit.add_component(cname, con)
 
+    SplitFrac = staticmethod(SplitFrac)
+    Balance = staticmethod(Balance)
+
 
 class SimpleConnection(_ConnectionData, Connection):
 
