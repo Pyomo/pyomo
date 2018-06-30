@@ -21,7 +21,7 @@ from pyomo.common.plugin import *
 from pyomo.opt.base import *
 from pyomo.solvers.plugins.converter.pico import PicoMIPConverter
 
-from pyomo.core.kernel.component_block import IBlock
+from pyomo.core.kernel.block import IBlock
 
 class PyomoMIPConverter(SingletonPlugin):
 

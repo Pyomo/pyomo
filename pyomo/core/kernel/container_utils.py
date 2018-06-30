@@ -8,9 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.kernel.component_dict import ComponentDict
-from pyomo.core.kernel.component_tuple import ComponentTuple
-from pyomo.core.kernel.component_list import ComponentList
+from pyomo.core.kernel.dict_container import DictContainer
+from pyomo.core.kernel.tuple_container import TupleContainer
+from pyomo.core.kernel.list_container import ListContainer
 
 import six
 
@@ -22,8 +22,8 @@ def define_homogeneous_container_type(namespace,
                                       use_slots=True):
     """
     This function is designed to be called for the simple
-    container implementations (ComponentDict, ComponentTuple,
-    and ComponentList) as the container_class argument.
+    container implementations (DictContainer, TupleContainer,
+    and ListContainer) as the container_class argument.
 
     When called using the globals() namespace within a module, it
     is equivalent to placing the following class definition
@@ -84,9 +84,9 @@ def define_simple_containers(namespace,
     container definitions for a new object category type."""
     doc_ = ("A %s-style container for objects "
             "with category type "+ctype.__name__)
-    for suffix, container_class in (('tuple', ComponentTuple),
-                                    ('list', ComponentList),
-                                    ('dict', ComponentDict)):
+    for suffix, container_class in (('tuple', TupleContainer),
+                                    ('list', ListContainer),
+                                    ('dict', DictContainer)):
         doc = doc_ % (suffix,)
         define_homogeneous_container_type(namespace,
                                           prefix+"_"+suffix,

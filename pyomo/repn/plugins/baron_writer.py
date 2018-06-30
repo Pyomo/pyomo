@@ -34,8 +34,8 @@ from pyomo.core.base.set_types import *
 #CLH: EXPORT suffixes "constraint_types" and "branching_priorities"
 #     pass their respective information to the .bar file
 import pyomo.core.base.suffix
-import pyomo.core.kernel.component_suffix
-from pyomo.core.kernel.component_block import IBlock
+import pyomo.core.kernel.suffix
+from pyomo.core.kernel.block import IBlock
 
 logger = logging.getLogger('pyomo.core')
 
@@ -199,7 +199,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         #
         if isinstance(model, IBlock):
             suffix_gen = lambda b: ((suf.storage_key, suf) \
-                                    for suf in pyomo.core.kernel.component_suffix.\
+                                    for suf in pyomo.core.kernel.suffix.\
                                     export_suffix_generator(b,
                                                             active=True,
                                                             descend_into=False))

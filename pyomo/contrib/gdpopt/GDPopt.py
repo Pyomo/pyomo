@@ -44,7 +44,7 @@ from pyomo.contrib.gdpopt.util import (GDPoptSolveData, _DoNothing, a_logger,
                                        record_working_model_statistics,
                                        reformulate_integer_variables)
 from pyomo.core.base import Block, ConstraintList, Suffix, value
-from pyomo.core.kernel import ComponentMap
+from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt.base import IOptSolver
 
 __version__ = (0, 3, 0)

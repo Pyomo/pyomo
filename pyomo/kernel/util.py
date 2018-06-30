@@ -15,10 +15,10 @@ import pyomo.core
 from pyomo.core.expr.numvalue import \
     NumericValue
 from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_interface import \
+from pyomo.core.kernel.base import \
     (ICategorizedObject,
      _no_ctype)
-from pyomo.core.kernel.component_block import block
+from pyomo.core.kernel.block import block
 
 import six
 
@@ -119,7 +119,7 @@ def pprint(obj, indent=0, stream=sys.stdout):
             prefix = (" "*indent)+" - "
         # not a block
         clsname = obj.__class__.__name__
-        if obj.ctype is pyomo.core.kernel.component_variable.IVariable:
+        if obj.ctype is pyomo.core.kernel.variable.IVariable:
             stream.write(prefix+"%s: %s(active=%s, value=%s, bounds=(%s,%s), domain_type=%s, fixed=%s, stale=%s)\n"
                   % (str(obj),
                      clsname,
@@ -130,22 +130,22 @@ def pprint(obj, indent=0, stream=sys.stdout):
                      obj.domain_type.__name__,
                      obj.fixed,
                      obj.stale))
-        elif obj.ctype is pyomo.core.kernel.component_constraint.IConstraint:
+        elif obj.ctype is pyomo.core.kernel.constraint.IConstraint:
               stream.write(prefix+"%s: %s(active=%s, expr=%s)\n"
                   % (str(obj),
                      clsname,
                      obj.active,
                      str(obj.expr)))
-        elif obj.ctype is pyomo.core.kernel.component_objective.IObjective:
+        elif obj.ctype is pyomo.core.kernel.objective.IObjective:
             stream.write(prefix+"%s: %s(active=%s, expr=%s)\n"
                   % (str(obj), clsname, obj.active, str(obj.expr)))
-        elif obj.ctype is pyomo.core.kernel.component_expression.IExpression:
+        elif obj.ctype is pyomo.core.kernel.expression.IExpression:
             stream.write(prefix+"%s: %s(active=%s, expr=%s)\n"
                   % (str(obj), clsname, obj.active, str(obj.expr)))
-        elif obj.ctype is pyomo.core.kernel.component_parameter.IParameter:
+        elif obj.ctype is pyomo.core.kernel.parameter.IParameter:
             stream.write(prefix+"%s: %s(active=%s, value=%s)\n"
                   % (str(obj), clsname, obj.active, str(obj.value)))
-        elif obj.ctype is pyomo.core.kernel.component_sos.ISOS:
+        elif obj.ctype is pyomo.core.kernel.sos.ISOS:
             stream.write(prefix+"%s: %s(active=%s, level=%s, entries=%s)\n"
                   % (str(obj),
                      clsname,
@@ -155,7 +155,7 @@ def pprint(obj, indent=0, stream=sys.stdout):
                           for v,w in zip(obj.variables,
                                          obj.weights)])))
         else:
-            assert obj.ctype is pyomo.core.kernel.component_suffix.ISuffix
+            assert obj.ctype is pyomo.core.kernel.suffix.ISuffix
             stream.write(prefix+"%s: %s(active=%s, size=%s)\n"
                   % (str(obj.name), clsname, obj.active, str(len(obj))))
     else:

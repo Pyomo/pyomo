@@ -15,7 +15,7 @@ from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.solvers import test_solver_cases
 import pyomo.kernel
-from pyomo.core.kernel.component_block import IBlock
+from pyomo.core.kernel.block import IBlock
 
 # For expected failures that appear in all known version
 _trunk_version =  (float('inf'), float('inf'), float('inf'), float('inf'))

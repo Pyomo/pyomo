@@ -22,7 +22,7 @@ import pyutilib.th as unittest
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.testcases import test_scenarios
-from pyomo.core.kernel.component_block import IBlock
+from pyomo.core.kernel.block import IBlock
 
 # The test directory
 thisDir = dirname(abspath( __file__ ))

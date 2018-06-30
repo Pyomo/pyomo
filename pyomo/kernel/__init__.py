@@ -8,35 +8,122 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.environ
 from pyomo.version import version_info, __version__
+
+#
+# Load solver functionality
+#
+import pyomo.environ
 import pyomo.opt
 from pyomo.opt import (SolverFactory,
                        SolverStatus,
                        TerminationCondition)
+
+#
+# Define the modeling namespace
+#
+from pyomo.core.expr import *
+import pyomo.core.kernel
 from pyomo.kernel.util import (generate_names,
                                pprint)
-from pyomo.core.kernel import *
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.core.kernel.variable import \
+    (variable,
+     variable_tuple,
+     variable_list,
+     variable_dict)
+from pyomo.core.kernel.constraint import \
+    (constraint,
+     linear_constraint,
+     constraint_tuple,
+     constraint_list,
+     constraint_dict)
+from pyomo.core.kernel.matrix_constraint import \
+    matrix_constraint
+from pyomo.core.kernel.parameter import \
+    (parameter,
+     parameter_tuple,
+     parameter_list,
+     parameter_dict)
+from pyomo.core.kernel.expression import \
+    (noclone,
+     expression,
+     data_expression,
+     expression_tuple,
+     expression_list,
+     expression_dict)
+from pyomo.core.kernel.objective import \
+    (maximize,
+     minimize,
+     objective,
+     objective_tuple,
+     objective_list,
+     objective_dict)
+from pyomo.core.kernel.sos import \
+    (sos,
+     sos1,
+     sos2,
+     sos_tuple,
+     sos_list,
+     sos_dict)
+from pyomo.core.kernel.suffix import \
+    (suffix,
+     export_suffix_generator,
+     import_suffix_generator,
+     local_suffix_generator,
+     suffix_generator)
+from pyomo.core.kernel.block import \
+    (block,
+     block_tuple,
+     block_list,
+     block_dict)
+from pyomo.core.kernel.piecewise_library.transforms import \
+    piecewise
+from pyomo.core.kernel.piecewise_library.transforms_nd import \
+    piecewise_nd
+from pyomo.core.kernel.set_types import \
+    (RealSet,
+     IntegerSet,
+     Reals,
+     PositiveReals,
+     NonPositiveReals,
+     NegativeReals,
+     NonNegativeReals,
+     PercentFraction,
+     UnitInterval,
+     Integers,
+     PositiveIntegers,
+     NonPositiveIntegers,
+     NegativeIntegers,
+     NonNegativeIntegers,
+     Boolean,
+     Binary,
+     RealInterval,
+     IntegerInterval)
 
+#
 # allow the use of standard kernel modeling components
 # as the ctype argument for the general iterator method
-from pyomo.core.kernel.component_interface import _convert_ctype
+#
+
+from pyomo.core.kernel.base import _convert_ctype
 _convert_ctype[block] = \
-    pyomo.core.kernel.component_block.IBlock
+    pyomo.core.kernel.block.IBlock
 _convert_ctype[variable] = \
-    pyomo.core.kernel.component_variable.IVariable
+    pyomo.core.kernel.variable.IVariable
 _convert_ctype[constraint] = \
-    pyomo.core.kernel.component_constraint.IConstraint
+    pyomo.core.kernel.constraint.IConstraint
 _convert_ctype[parameter] = \
-    pyomo.core.kernel.component_parameter.IParameter
+    pyomo.core.kernel.parameter.IParameter
 _convert_ctype[expression] = \
-    pyomo.core.kernel.component_expression.IExpression
+    pyomo.core.kernel.expression.IExpression
 _convert_ctype[objective] = \
-    pyomo.core.kernel.component_objective.IObjective
+    pyomo.core.kernel.objective.IObjective
 _convert_ctype[sos] = \
-    pyomo.core.kernel.component_sos.ISOS
+    pyomo.core.kernel.sos.ISOS
 _convert_ctype[suffix] = \
-    pyomo.core.kernel.component_suffix.ISuffix
+    pyomo.core.kernel.suffix.ISuffix
 del _convert_ctype
 
 #
@@ -49,23 +136,23 @@ del _convert_ctype
 # Set up mappings between AML and Kernel ctypes
 #
 
-from pyomo.core.kernel.component_interface import _convert_ctype
+from pyomo.core.kernel.base import _convert_ctype
 _convert_ctype[pyomo.environ.Block] = \
-    pyomo.core.kernel.component_block.IBlock
+    pyomo.core.kernel.block.IBlock
 _convert_ctype[pyomo.environ.Var] = \
-    pyomo.core.kernel.component_variable.IVariable
+    pyomo.core.kernel.variable.IVariable
 _convert_ctype[pyomo.environ.Constraint] = \
-    pyomo.core.kernel.component_constraint.IConstraint
+    pyomo.core.kernel.constraint.IConstraint
 _convert_ctype[pyomo.environ.Param] = \
-    pyomo.core.kernel.component_parameter.IParameter
+    pyomo.core.kernel.parameter.IParameter
 _convert_ctype[pyomo.environ.Expression] = \
-    pyomo.core.kernel.component_expression.IExpression
+    pyomo.core.kernel.expression.IExpression
 _convert_ctype[pyomo.environ.Objective] = \
-    pyomo.core.kernel.component_objective.IObjective
+    pyomo.core.kernel.objective.IObjective
 _convert_ctype[pyomo.environ.SOSConstraint] = \
-    pyomo.core.kernel.component_sos.ISOS
+    pyomo.core.kernel.sos.ISOS
 _convert_ctype[pyomo.environ.Suffix] = \
-    pyomo.core.kernel.component_suffix.ISuffix
+    pyomo.core.kernel.suffix.ISuffix
 del _convert_ctype
 
 #
@@ -121,7 +208,7 @@ block.valid_problem_types = _valid_problem_types
 del _valid_problem_types
 
 # canonical repn checks type instead of ctype
-from pyomo.core.kernel.component_interface import _ICategorizedObjectMeta
+from pyomo.core.kernel.base import _ICategorizedObjectMeta
 _ICategorizedObjectMeta.type = _ICategorizedObjectMeta.ctype
 del _ICategorizedObjectMeta
 
@@ -129,23 +216,7 @@ del _ICategorizedObjectMeta
 # Now cleanup the namespace a bit
 #
 
-import pyomo.core.kernel.component_piecewise.util as \
+import pyomo.core.kernel.piecewise_library.util as \
     piecewise_util
-del component_interface
-del component_map
-del component_set
-del component_dict
-del component_tuple
-del component_list
-del component_block
-del component_variable
-del component_constraint
-del component_objective
-del component_expression
-del component_parameter
-del component_piecewise
-del component_sos
-del component_suffix
-del component_matrix_constraint
 del util
 del pyomo

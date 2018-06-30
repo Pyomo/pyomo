@@ -12,9 +12,9 @@ from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPe
 from pyomo.core.base.PyomoModel import ConcreteModel
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.objective import Objective
-from pyomo.core.kernel.component_block import IBlock
+from pyomo.core.kernel.block import IBlock
 from pyomo.core.base.suffix import active_import_suffix_generator
-from pyomo.core.kernel.component_suffix import import_suffix_generator
+from pyomo.core.kernel.suffix import import_suffix_generator
 import pyutilib.misc
 import pyutilib.common
 import time

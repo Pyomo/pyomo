@@ -23,12 +23,12 @@ from pyomo.opt.base.solvers import _extract_version
 import pyutilib.subprocess
 from pyutilib.misc import Options, quote_split
 
-from pyomo.core.kernel.component_block import IBlock
-from pyomo.core.kernel.component_objective import IObjective
-from pyomo.core.kernel.component_variable import IVariable
+from pyomo.core.kernel.block import IBlock
+from pyomo.core.kernel.objective import IObjective
+from pyomo.core.kernel.variable import IVariable
 
 import pyomo.core.base.suffix
-import pyomo.core.kernel.component_suffix
+import pyomo.core.kernel.suffix
 
 from pyomo.opt.results import (SolverResults, SolverStatus, Solution,
     SolutionStatus, TerminationCondition, ProblemSense)
@@ -311,7 +311,7 @@ class GAMSDirect(_GAMSSolver):
         # import suffixes must be on the top-level model
         if isinstance(model, IBlock):
             model_suffixes = list(comp.storage_key for comp \
-                                  in pyomo.core.kernel.component_suffix.\
+                                  in pyomo.core.kernel.suffix.\
                                   import_suffix_generator(model,
                                                           active=True,
                                                           descend_into=False))
@@ -768,7 +768,7 @@ class GAMSShell(_GAMSSolver):
         # import suffixes must be on the top-level model
         if isinstance(model, IBlock):
             model_suffixes = list(comp.storage_key for comp \
-                                  in pyomo.core.kernel.component_suffix.\
+                                  in pyomo.core.kernel.suffix.\
                                   import_suffix_generator(model,
                                                           active=True,
                                                           descend_into=False))

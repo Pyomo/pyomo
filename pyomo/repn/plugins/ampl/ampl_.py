@@ -44,10 +44,10 @@ from pyomo.core.base import param
 import pyomo.core.base.suffix
 from pyomo.repn.standard_repn import StandardRepn, generate_standard_repn
 
-import pyomo.core.kernel.component_suffix
-from pyomo.core.kernel.component_block import IBlock
-from pyomo.core.kernel.component_expression import IIdentityExpression
-from pyomo.core.kernel.component_variable import IVariable
+import pyomo.core.kernel.suffix
+from pyomo.core.kernel.block import IBlock
+from pyomo.core.kernel.expression import IIdentityExpression
+from pyomo.core.kernel.variable import IVariable
 
 from six import itervalues, iteritems
 from six.moves import xrange, zip
@@ -1399,7 +1399,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         suffix_dict = {}
         if isinstance(model, IBlock):
             suffix_gen = lambda b: ((suf.storage_key, suf) \
-                                    for suf in pyomo.core.kernel.component_suffix.\
+                                    for suf in pyomo.core.kernel.suffix.\
                                     export_suffix_generator(b,
                                                             active=True,
                                                             descend_into=False))

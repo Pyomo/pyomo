@@ -7,7 +7,7 @@ from math import fabs, floor, log
 from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
                         Objective, Reals, Var, minimize, value)
 from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel import ComponentSet
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverFactory
 from pyomo.opt.results import ProblemSense, SolverResults

@@ -30,8 +30,8 @@ from pyomo.opt.parallel.pyro import PyroAsynchronousActionManager
 from pyomo.core.base import Block
 import pyomo.core.base.suffix
 
-from pyomo.core.kernel.component_block import IBlock
-import pyomo.core.kernel.component_suffix
+from pyomo.core.kernel.block import IBlock
+import pyomo.core.kernel.suffix
 
 import six
 
@@ -100,7 +100,7 @@ class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManage
                 else:
                     assert isinstance(arg, IBlock)
                     model_suffixes = list(comp.storage_key for comp \
-                                          in pyomo.core.base.component_suffix.\
+                                          in pyomo.core.base.suffix.\
                                           import_suffix_generator(arg,
                                                                   active=True,
                                                                   descend_into=False))

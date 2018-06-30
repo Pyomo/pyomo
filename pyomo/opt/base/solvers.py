@@ -546,8 +546,8 @@ class OptSolver(Plugin):
         #
         from pyomo.core.base.block import _BlockData
         import pyomo.core.base.suffix
-        from pyomo.core.kernel.component_block import IBlock
-        import pyomo.core.kernel.component_suffix
+        from pyomo.core.kernel.block import IBlock
+        import pyomo.core.kernel.suffix
         _model = None
         for arg in args:
             if isinstance(arg, (_BlockData, IBlock)):
@@ -566,7 +566,7 @@ class OptSolver(Plugin):
                 else:
                     assert isinstance(arg, IBlock)
                     model_suffixes = list(comp.storage_key for comp
-                                          in pyomo.core.kernel.component_suffix.\
+                                          in pyomo.core.kernel.suffix.\
                                           import_suffix_generator(arg,
                                                                   active=True,
                                                                   descend_into=False))

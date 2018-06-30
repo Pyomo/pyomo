@@ -10,7 +10,7 @@
 
 from pyomo.core.base.PyomoModel import Model
 from pyomo.core.base.block import Block, _BlockData
-from pyomo.core.kernel.component_block import IBlock
+from pyomo.core.kernel.block import IBlock
 from pyomo.opt.base.solvers import OptSolver
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 import pyutilib.common

@@ -24,7 +24,7 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.solvers.mockmip import MockMIP
-from pyomo.core.kernel.component_block import IBlock
+from pyomo.core.kernel.block import IBlock
 
 logger = logging.getLogger('pyomo.solvers')
 

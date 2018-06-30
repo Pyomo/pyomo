@@ -13,7 +13,7 @@ import json
 import six
 
 import pyomo.kernel as pmo
-from pyomo.core.kernel.component_block import IBlock
+from pyomo.core.kernel.block import IBlock
 from pyomo.core import Suffix, Var, Constraint, Objective
 from pyomo.opt import ProblemFormat, SolverFactory, TerminationCondition
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
