@@ -21,6 +21,7 @@ else:
     except ImportError:                         #pragma:nocover
         import ordereddict
         _ordered_dict_ = ordereddict.OrderedDict
+from collections import defaultdict
 
 from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.kernel.base import \
@@ -73,7 +74,7 @@ class block(IBlock):
     """A generalized container for defining hierarchical
     models."""
 
-    _large_storage_threshold = 4
+    _lbs_count = 4
     _ctype = IBlock
 
     def __init__(self):
@@ -82,12 +83,12 @@ class block(IBlock):
         d['_parent'] = None
         d['_storage_key'] = None
         d['_active'] = True
-        d['_byctype'] = 0
+        d['_byctype'] = None
         d['_order'] = _ordered_dict_()
 
     def _activate_large_storage_mode(self):
-        if self._byctype.__class__ is not collections.defaultdict:
-            self._byctype = collections.defaultdict(_ordered_dict_)
+        if self._byctype.__class__ is not defaultdict:
+            self.__dict__['_byctype'] = defaultdict(_ordered_dict_)
             for key,obj in self._order.items():
                 self._byctype[obj.ctype][key] = obj
 
@@ -97,8 +98,12 @@ class block(IBlock):
 
     def child_ctypes(self):
         """Collect all object category types stored on this block."""
-        if self._byctype.__class__ is not collections.defaultdict:
-            # small-block storage
+        if self._byctype is None:
+            # empty
+            return ()
+        elif self._byctype.__class__ is int:
+            # small block storage
+            # (_byctype is a union of hash bytes)
             ctypes_set = set()
             ctypes = []
             for child in self._order.values():
@@ -107,9 +112,12 @@ class block(IBlock):
                     ctypes_set.add(child_ctype)
                     ctypes.append(child_ctype)
             return tuple(ctypes)
-        else:
+        elif self._byctype.__class__ is defaultdict:
             # large-block storage
             return tuple(self._byctype)
+        else:
+            # storing a single ctype
+            return (self._byctype,)
 
     #
     # Define the ICategorizedObjectContainer abstract methods
@@ -126,6 +134,9 @@ class block(IBlock):
         Returns:
             iterator of child objects
         """
+        if self._byctype is None:
+            # empty
+            return
 
         # convert AML types into Kernel types (hack for the
         # solver interfaces)
@@ -134,18 +145,23 @@ class block(IBlock):
         if ctype is _no_ctype:
             for child in self._order.values():
                 yield child
-        elif self._byctype.__class__ is not collections.defaultdict:
+        elif self._byctype.__class__ is defaultdict:
+            # large-block storage
+            if ctype in self._byctype:
+                for child in self._byctype[ctype].values():
+                    yield child
+        elif self._byctype.__class__ is int:
             # small-block storage
+            # (_byctype is a union of hash bytes)
             h_ = hash(ctype)
             if (self._byctype & h_) == h_:
                 for child in self._order.values():
                     if child.ctype is ctype:
                         yield child
-        else:
-            # large-block storage
-            if ctype in self._byctype:
-                for child in self._byctype[ctype].values():
-                    yield child
+        elif self._byctype is ctype:
+            # storing a single ctype
+            for child in self._order.values():
+                yield child
 
     #
     # Interface
@@ -186,20 +202,31 @@ class block(IBlock):
                 obj._parent = weakref.ref(self)
                 obj._storage_key = name
                 self._order[name] = obj
-                if self._byctype.__class__ is not collections.defaultdict:
-                    # small-block storage
-                    ctype_hash = hash(ctype)
-                    if (len(self._order) > self._large_storage_threshold) and \
-                       (self._byctype != ctype_hash):
-                        # activate the large storage format if
-                        # we have exceeded the threshold AND we are storing
-                        # more than one component type
-                        self._activate_large_storage_mode()
-                    else:
-                        self._byctype |= ctype_hash
-                else:
+                if self._byctype is None:
+                    # storing a single ctype
+                    self.__dict__['_byctype'] = ctype
+                elif self._byctype.__class__ is defaultdict:
                     # large-block storage
                     self._byctype[ctype][name] = obj
+                elif self._byctype.__class__ is int:
+                    # small-block storage
+                    # (_byctype is a union of hash bytes)
+                    if len(self._order) > self._lbs_count:
+                        # activate the large storage format
+                        # if we have exceeded the threshold
+                        self._activate_large_storage_mode()
+                    else:
+                        self.__dict__['_byctype'] |= hash(ctype)
+                else:
+                    # currently storing a single ctype
+                    if ctype is not self._byctype:
+                        if len(self._order) > self._lbs_count:
+                            # activate the large storage format
+                            # if we have exceeded the threshold
+                            self._activate_large_storage_mode()
+                        else:
+                            self.__dict__['_byctype'] = \
+                                hash(self._byctype) | hash(ctype)
             else:
                 raise ValueError(
                     "Invalid assignment to %s type with name '%s' "
@@ -217,7 +244,7 @@ class block(IBlock):
             del self._order[name]
             obj._parent = None
             obj._storage_key = None
-            if self._byctype.__class__ is collections.defaultdict:
+            if self._byctype.__class__ is defaultdict:
                 # large-block storage
                 ctype = obj.ctype
                 del self._byctype[ctype][name]
