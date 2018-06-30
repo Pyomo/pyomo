@@ -8,7 +8,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import collections
+try:
+    # python 3.7+
+    from collections.abc import MutableSequence as _MutableSequence
+except:
+    from collections import MutableSequence as _MutableSequence
 import logging
 
 from pyomo.core.kernel.tuple_container import TupleContainer
@@ -18,7 +22,7 @@ from six.moves import xrange as range
 logger = logging.getLogger('pyomo.core')
 
 class ListContainer(TupleContainer,
-                    collections.MutableSequence):
+                    _MutableSequence):
     """
     A partial implementation of the IHomogeneousContainer
     interface that provides list-like storage functionality.

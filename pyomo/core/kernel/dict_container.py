@@ -20,6 +20,13 @@ else:
     except ImportError:                         #pragma:nocover
         import ordereddict
         _ordered_dict_ = ordereddict.OrderedDict
+try:
+    # python 3.7+
+    from collections.abc import MutableMapping as _MutableMapping
+    from collections.abc import Mapping as _Mapping
+except:
+    from collections import MutableMapping as _MutableMapping
+    from collections import Mapping as _Mapping
 
 from pyomo.core.kernel.base import \
     IHomogeneousContainer
@@ -29,7 +36,7 @@ from six import itervalues, iteritems
 
 logger = logging.getLogger('pyomo.core')
 
-# Note that prior to Python 3, collections.MutableMappping
+# Note that prior to Python 3, collections
 # is not defined with an empty __slots__
 # attribute. Therefore, in Python 2, all implementations of
 # this class will have a __dict__ member whether or not they
@@ -38,7 +45,7 @@ logger = logging.getLogger('pyomo.core')
 # closer to a Python 3-only world these types of objects are
 # not memory bottlenecks.
 class DictContainer(IHomogeneousContainer,
-                    collections.MutableMapping):
+                    _MutableMapping):
     """
     A partial implementation of the IHomogeneousContainer
     interface that provides dict-like storage functionality.
@@ -167,7 +174,7 @@ class DictContainer(IHomogeneousContainer,
     # plain dictionary mapping key->(type(val), id(val)) and
     # compare that instead.
     def __eq__(self, other):
-        if not isinstance(other, collections.Mapping):
+        if not isinstance(other, _Mapping):
             return False
         return dict((key, (type(val), id(val)))
                     for key, val in self.items()) == \

@@ -9,7 +9,13 @@
 #  ___________________________________________________________________________
 
 import weakref
-import collections
+try:
+    # python 3.7+
+    from collections.abc import Sequence as _Sequence
+    from collections.abc import Set as _Set
+except:
+    from collections import Sequence as _Sequence
+    from collections import Set as _Set
 
 from pyomo.core.kernel.base import \
     IHomogeneousContainer
@@ -17,7 +23,7 @@ from pyomo.core.kernel.base import \
 from six.moves import xrange as range
 
 class TupleContainer(IHomogeneousContainer,
-                     collections.Sequence):
+                     _Sequence):
     """
     A partial implementation of the IHomogeneousContainer
     interface that provides tuple-like storage functionality.
@@ -118,8 +124,7 @@ class TupleContainer(IHomogeneousContainer,
     # Convert both objects to a plain tuple of (type(val),
     # id(val)) tuples and compare that instead.
     def __eq__(self, other):
-        if not isinstance(other, (collections.Set,
-                                  collections.Sequence)):
+        if not isinstance(other, (_Set, _Sequence)):
             return False
         return tuple((type(val), id(val))
                      for val in self) == \
