@@ -15,6 +15,8 @@ from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
     UnindexedComponent_set)
 from pyomo.core.base.connector import (SimpleConnector, IndexedConnector,
     _ConnectorData)
+from pyomo.core.base.var import Var
+from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.label import alphanum_label_from_name
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.plugin import (register_component,
@@ -288,8 +290,12 @@ class Connection(ActiveIndexedComponent):
         # create and potentially initialize split fraction variables
         for ctn in ctns:
             ctn.splitfrac = Var()
-            if hasattr(unit, "splitfrac") and ctn.name in unit.splitfrac:
-                d = unit.splitfrac[ctn.name]
+            bname = ctn.name
+            # get name of Connection by chopping off "_expanded"
+            # full name since they might be on sub blocks
+            cname = bname[:bname.rfind("_expanded")]
+            if hasattr(unit, "splitfrac") and cname in unit.splitfrac:
+                d = unit.splitfrac[cname]
                 if type(d) is dict:
                     val, fix = d["val"], d["fix"]
                 else:
@@ -305,15 +311,16 @@ class Connection(ActiveIndexedComponent):
             for evar in lst:
                 ctn = evar.parent_block()
                 def rule(m, *args):
-                    if len(args) == 0:
-                        args = None
-                    return evar[args] == ctn.splitfrac * var
-                con = Constraint(var.index_set(), rule=rule)
+                    if evar.is_indexed():
+                        return evar[args] == ctn.splitfrac * var[args]
+                    else:
+                        return evar == ctn.splitfrac * var
+                con = Constraint(evar.index_set(), rule=rule)
                 ctn.add_component(cname, con)
 
         # create constraint on splitfrac vars: sum == 1
         # need to alphanum connector name in case it is indexed
-        cname = unique_component_name(
+        cname = unique_component_name(unit,
             "%s_frac_sum" % alphanum_label_from_name(ctr.local_name))
         con = Constraint(expr=sum(c.splitfrac for c in ctns) == 1)
         unit.add_component(cname, con)
@@ -322,7 +329,7 @@ class Connection(ActiveIndexedComponent):
         # create constraint: sum of parts == the whole
         # need to alphanum connector name in case it is indexed
         for name, lst in iteritems(ctr.extensives[etype]):
-            cname = unique_component_name(
+            cname = unique_component_name(unit,
                 "%s_%s_bal" % (alphanum_label_from_name(ctr.local_name), name))
             var = ctr.vars[name]
             def rule(m, *args):

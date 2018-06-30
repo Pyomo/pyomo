@@ -922,6 +922,199 @@ class TestConnection(unittest.TestCase):
 """)
 
 
+    def test_extensive_aggregator(self):
+        m = ConcreteModel()
+        m.comp = Set(initialize=["a", "b", "c"])
+        Feed = Tru = Prod = Block
+
+        # Feed
+        m.feed = Feed()
+        m.feed.flow = Var(m.comp)
+        m.feed.mass = Var()
+        m.feed.temp = Var()
+
+        m.feed.outlet = Connector()
+        m.feed.outlet.add(m.feed.flow, "flow", extensive="split")
+        m.feed.outlet.add(m.feed.mass, "mass", extensive="split")
+        m.feed.outlet.add(m.feed.temp, "temp")
+
+        # Treatment Unit
+        m.tru = Tru()
+        m.tru.flow_in = Var(m.comp)
+        m.tru.flow_out = Var(m.comp)
+        m.tru.mass = Var()
+        m.tru.temp = Var()
+
+        m.tru.inlet = Connector()
+        m.tru.inlet.add(m.tru.flow_in, "flow", extensive="mix")
+        m.tru.inlet.add(m.tru.mass, "mass", extensive="mix")
+        m.tru.inlet.add(m.tru.temp, "temp")
+
+        m.tru.outlet = Connector()
+        m.tru.outlet.add(m.tru.flow_out, "flow", extensive="split")
+        m.tru.outlet.add(m.tru.mass, "mass", extensive="split")
+        m.tru.outlet.add(m.tru.temp, "temp")
+
+        # Product
+        m.prod = Prod()
+        m.prod.flow = Var(m.comp)
+        m.prod.mass = Var()
+        m.prod.temp = Var()
+
+        m.prod.inlet = Connector()
+        m.prod.inlet.add(m.prod.flow, "flow", extensive="mix")
+        m.prod.inlet.add(m.prod.mass, "mass", extensive="mix")
+        m.prod.inlet.add(m.prod.temp, "temp")
+
+        # SplitFrac specifications (optional)
+        m.feed.splitfrac = dict()
+        m.feed.splitfrac["stream1"] = .6 # fix by default
+        m.tru.splitfrac = dict()
+        m.tru.splitfrac["stream3"] = dict(val=1, fix=False) # just initialize
+
+        # Connections
+        m.stream1 = Connection(source=m.feed.outlet, destination=m.tru.inlet)
+        m.stream2 = Connection(source=m.feed.outlet, destination=m.prod.inlet)
+        m.stream3 = Connection(source=m.tru.outlet, destination=m.prod.inlet)
+
+        TransformationFactory('core.expand_connections').apply_to(m)
+
+        self.assertFalse(m.stream1.active)
+        self.assertFalse(m.stream2.active)
+        self.assertFalse(m.stream3.active)
+
+        self.assertEqual(m.feed.outlet_frac_sum.expr.to_string(),
+            "stream1_expanded.splitfrac + stream2_expanded.splitfrac  ==  1.0")
+
+        self.assertEqual(m.tru.outlet_frac_sum.expr.to_string(),
+            "stream3_expanded.splitfrac  ==  1.0")
+
+        os = StringIO()
+        m.prod.inlet_flow_bal.pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""inlet_flow_bal : Size=3, Index=comp, Active=True
+    Key : Lower : Body                                                               : Upper : Active
+      a :   0.0 : stream2_expanded.flow[a] + stream3_expanded.flow[a] - prod.flow[a] :   0.0 :   True
+      b :   0.0 : stream2_expanded.flow[b] + stream3_expanded.flow[b] - prod.flow[b] :   0.0 :   True
+      c :   0.0 : stream2_expanded.flow[c] + stream3_expanded.flow[c] - prod.flow[c] :   0.0 :   True
+""")
+
+        self.assertEqual(m.prod.inlet_mass_bal.expr.to_string(),
+            "stream2_expanded.mass + stream3_expanded.mass - prod.mass  ==  0.0")
+
+        os = StringIO()
+        m.tru.inlet_flow_bal.pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""inlet_flow_bal : Size=3, Index=comp, Active=True
+    Key : Lower : Body                                      : Upper : Active
+      a :   0.0 : stream1_expanded.flow[a] - tru.flow_in[a] :   0.0 :   True
+      b :   0.0 : stream1_expanded.flow[b] - tru.flow_in[b] :   0.0 :   True
+      c :   0.0 : stream1_expanded.flow[c] - tru.flow_in[c] :   0.0 :   True
+""")
+
+        self.assertEqual(m.tru.inlet_mass_bal.expr.to_string(),
+            "stream1_expanded.mass - tru.mass  ==  0.0")
+
+        os = StringIO()
+        m.stream1_expanded.pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""stream1_expanded : Size=1, Index=None, Active=True
+    3 Var Declarations
+        flow : Size=3, Index=comp
+            Key : Lower : Value : Upper : Fixed : Stale : Domain
+              a :  None :  None :  None : False :  True :  Reals
+              b :  None :  None :  None : False :  True :  Reals
+              c :  None :  None :  None : False :  True :  Reals
+        mass : Size=1, Index=None
+            Key  : Lower : Value : Upper : Fixed : Stale : Domain
+            None :  None :  None :  None : False :  True :  Reals
+        splitfrac : Size=1, Index=None
+            Key  : Lower : Value : Upper : Fixed : Stale : Domain
+            None :  None :   0.6 :  None :  True : False :  Reals
+
+    3 Constraint Declarations
+        flow_split : Size=3, Index=comp, Active=True
+            Key : Lower : Body                                                               : Upper : Active
+              a :   0.0 : stream1_expanded.flow[a] - stream1_expanded.splitfrac*feed.flow[a] :   0.0 :   True
+              b :   0.0 : stream1_expanded.flow[b] - stream1_expanded.splitfrac*feed.flow[b] :   0.0 :   True
+              c :   0.0 : stream1_expanded.flow[c] - stream1_expanded.splitfrac*feed.flow[c] :   0.0 :   True
+        mass_split : Size=1, Index=None, Active=True
+            Key  : Lower : Body                                                         : Upper : Active
+            None :   0.0 : stream1_expanded.mass - stream1_expanded.splitfrac*feed.mass :   0.0 :   True
+        temp_equality : Size=1, Index=None, Active=True
+            Key  : Lower : Body                 : Upper : Active
+            None :   0.0 : feed.temp - tru.temp :   0.0 :   True
+
+    6 Declarations: flow mass temp_equality splitfrac flow_split mass_split
+""")
+
+        os = StringIO()
+        m.stream2_expanded.pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""stream2_expanded : Size=1, Index=None, Active=True
+    3 Var Declarations
+        flow : Size=3, Index=comp
+            Key : Lower : Value : Upper : Fixed : Stale : Domain
+              a :  None :  None :  None : False :  True :  Reals
+              b :  None :  None :  None : False :  True :  Reals
+              c :  None :  None :  None : False :  True :  Reals
+        mass : Size=1, Index=None
+            Key  : Lower : Value : Upper : Fixed : Stale : Domain
+            None :  None :  None :  None : False :  True :  Reals
+        splitfrac : Size=1, Index=None
+            Key  : Lower : Value : Upper : Fixed : Stale : Domain
+            None :  None :  None :  None : False :  True :  Reals
+
+    3 Constraint Declarations
+        flow_split : Size=3, Index=comp, Active=True
+            Key : Lower : Body                                                               : Upper : Active
+              a :   0.0 : stream2_expanded.flow[a] - stream2_expanded.splitfrac*feed.flow[a] :   0.0 :   True
+              b :   0.0 : stream2_expanded.flow[b] - stream2_expanded.splitfrac*feed.flow[b] :   0.0 :   True
+              c :   0.0 : stream2_expanded.flow[c] - stream2_expanded.splitfrac*feed.flow[c] :   0.0 :   True
+        mass_split : Size=1, Index=None, Active=True
+            Key  : Lower : Body                                                         : Upper : Active
+            None :   0.0 : stream2_expanded.mass - stream2_expanded.splitfrac*feed.mass :   0.0 :   True
+        temp_equality : Size=1, Index=None, Active=True
+            Key  : Lower : Body                  : Upper : Active
+            None :   0.0 : feed.temp - prod.temp :   0.0 :   True
+
+    6 Declarations: flow mass temp_equality splitfrac flow_split mass_split
+""")
+
+        os = StringIO()
+        m.stream3_expanded.pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""stream3_expanded : Size=1, Index=None, Active=True
+    3 Var Declarations
+        flow : Size=3, Index=comp
+            Key : Lower : Value : Upper : Fixed : Stale : Domain
+              a :  None :  None :  None : False :  True :  Reals
+              b :  None :  None :  None : False :  True :  Reals
+              c :  None :  None :  None : False :  True :  Reals
+        mass : Size=1, Index=None
+            Key  : Lower : Value : Upper : Fixed : Stale : Domain
+            None :  None :  None :  None : False :  True :  Reals
+        splitfrac : Size=1, Index=None
+            Key  : Lower : Value : Upper : Fixed : Stale : Domain
+            None :  None :     1 :  None : False : False :  Reals
+
+    3 Constraint Declarations
+        flow_split : Size=3, Index=comp, Active=True
+            Key : Lower : Body                                                                  : Upper : Active
+              a :   0.0 : stream3_expanded.flow[a] - stream3_expanded.splitfrac*tru.flow_out[a] :   0.0 :   True
+              b :   0.0 : stream3_expanded.flow[b] - stream3_expanded.splitfrac*tru.flow_out[b] :   0.0 :   True
+              c :   0.0 : stream3_expanded.flow[c] - stream3_expanded.splitfrac*tru.flow_out[c] :   0.0 :   True
+        mass_split : Size=1, Index=None, Active=True
+            Key  : Lower : Body                                                        : Upper : Active
+            None :   0.0 : stream3_expanded.mass - stream3_expanded.splitfrac*tru.mass :   0.0 :   True
+        temp_equality : Size=1, Index=None, Active=True
+            Key  : Lower : Body                 : Upper : Active
+            None :   0.0 : tru.temp - prod.temp :   0.0 :   True
+
+    6 Declarations: flow mass temp_equality splitfrac flow_split mass_split
+""")
+
+
     def test_expand_indexed_connection(self):
         def rule(m, i):
             return (m.c1[i], m.c2[i])

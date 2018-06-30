@@ -288,10 +288,18 @@ class _ConnExpansion(Transformation):
                 continue
 
             cname = k + "_equality"
-            def rule(m, *args):
-                if len(args) == 0:
-                    # scalar, use None as index
-                    args = None
+            if v[1] >= 0:
+                # v[0] is an indexed var
+                def rule(m, *args):
+                    tmp = []
+                    for c in conn_set:
+                        if k in c.extensives:
+                            tmp.append(evar[args])
+                        else:
+                            tmp.append(c.vars[k][args])
+                    return tmp[0] == tmp[1]
+                con = Constraint(v[0].index_set(), rule=rule)
+            else:
                 tmp = []
                 for c in conn_set:
                     if k in c.aggregators:
@@ -299,9 +307,8 @@ class _ConnExpansion(Transformation):
                     elif k in c.extensives:
                         tmp.append(evar)
                     else:
-                        tmp.append(c.vars[k][args])
-                return tmp[0] == tmp[1]
-            con = Constraint(v[0].index_set(), rule=rule)
+                        tmp.append(c.vars[k])
+                con = Constraint(expr=tmp[0] == tmp[1])
             blk.add_component(cname, con)
 
     def _implement_aggregators(self, connector_list):
@@ -317,7 +324,7 @@ class _ConnExpansion(Transformation):
         for ctr in connector_list:
             unit = ctr.parent_block()
             for etype in ctr.extensives:
-                if etype not in c.extensive_aggregators:
+                if etype not in ctr.extensive_aggregators:
                     raise KeyError(
                         "No aggregator in extensive_aggregators for extensive "
                         "type '%s' in Connector '%s'" % (etype, ctr.name))
