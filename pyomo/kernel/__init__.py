@@ -156,6 +156,15 @@ _convert_ctype[pyomo.environ.Suffix] = \
 del _convert_ctype
 
 #
+# Now cleanup the namespace a bit
+#
+
+import pyomo.core.kernel.piecewise_library.util as \
+    piecewise_util
+del util
+del pyomo
+
+#
 # Ducktyping to work with a few solver interfaces
 # Ideally, everything below here could be deleted one day
 #
@@ -185,21 +194,6 @@ def _block_data_objects(self, **kwds):
 block.block_data_objects = _block_data_objects
 del _block_data_objects
 
-# This method no longer makes sense
-def _component_objects(self, *args, **kwds):
-    # this is not yet handled
-    kwds.pop('sort', None)
-    for component in self.components(*args, **kwds):
-        yield component
-block.component_objects = _component_objects
-del _component_objects
-
-# This method no longer makes sense
-def _component(self, name):
-    return getattr(self, name, None)
-block.component = _component
-del _component
-
 # Note sure where this gets used or why we need it
 def _valid_problem_types(self):
     import pyomo.opt
@@ -207,16 +201,8 @@ def _valid_problem_types(self):
 block.valid_problem_types = _valid_problem_types
 del _valid_problem_types
 
-# canonical repn checks type instead of ctype
-from pyomo.core.kernel.base import _ICategorizedObjectMeta
-_ICategorizedObjectMeta.type = _ICategorizedObjectMeta.ctype
-del _ICategorizedObjectMeta
-
-#
-# Now cleanup the namespace a bit
-#
-
-import pyomo.core.kernel.piecewise_library.util as \
-    piecewise_util
-del util
-del pyomo
+from pyomo.core.kernel.base import ICategorizedObject
+def _type(self):
+    return self._ctype
+ICategorizedObject.type = _type
+del ICategorizedObject
