@@ -19,15 +19,11 @@ def _abstract_readwrite_property(**kwds):
     p = property(fget=_not_implemented_property,
                  fset=_not_implemented_property,
                  **kwds)
-    if 'doc' in kwds:
-        p.__doc__ = kwds['doc']
     return p
 
 def _abstract_readonly_property(**kwds):
     p = property(fget=_not_implemented_property,
                  **kwds)
-    if 'doc' in kwds:
-        p.__doc__ = kwds['doc']
     return p
 
 class _no_ctype(object):
