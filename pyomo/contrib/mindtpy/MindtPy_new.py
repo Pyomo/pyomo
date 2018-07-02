@@ -616,13 +616,13 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
                 % (solve_data.nlp_iter, value(MindtPy.obj.expr),
                    solve_data.LB, solve_data.UB))
             if config.strategy == 'OA':
-                self._add_oa_cut(m, solve_data, config)
+                self._add_oa_cut(solve_data, config)
             elif config.strategy == 'PSC':
-                self._add_psc_cut(m, solve_data, config)
+                self._add_psc_cut(solve_data, config)
             elif config.strategy == 'GBD':
-                self._add_gbd_cut(m, solve_data, config)
+                self._add_gbd_cut(solve_data, config)
             elif config.strategy == 'ECP':
-                self._add_ecp_cut(m, solve_data, config)
+                self._add_ecp_cut(solve_data, config)
                 self._add_objective_linearization(m, solve_data, config)
         elif subprob_terminate_cond is tc.infeasible:
             # TODO fail? try something else?
