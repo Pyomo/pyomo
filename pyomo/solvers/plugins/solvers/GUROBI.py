@@ -27,7 +27,7 @@ from pyomo.core.kernel.component_block import IBlockStorage
 
 logger = logging.getLogger('pyomo.solvers')
 
-from six import iteritems
+from six import iteritems, StringIO
 
 try:
     unicode
@@ -262,17 +262,14 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        outname = pyutilib.services.TempfileManager.create_tempfile(suffix = '.gurobi.version')
-        with open(outname,'w') as f:
-            # **Note, adding a 'timelimit' keyword here results in empty output for some reason
-            results = pyutilib.subprocess.run([solver_exec],
-                                              stdin=('from gurobipy import *; '
-                                                     'print(gurobi.version()); exit()'),
-                                              ostream=f)
+        f = StringIO()
+        results = pyutilib.subprocess.run([solver_exec],
+                                          stdin=('from gurobipy import *; '
+                                                 'print(gurobi.version()); exit()'),
+                                          ostream=f)
         tmp = None
         try:
-            with open(outname,'r') as f:
-                tmp = tuple(eval(f.read().strip()))
+            tmp = tuple(eval(f.getvalue().strip()))
             while(len(tmp) < 4):
                 tmp += (0,)
         except SyntaxError:

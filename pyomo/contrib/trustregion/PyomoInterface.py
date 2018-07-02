@@ -1,7 +1,6 @@
 import os
 import numpy as np
 from pyutilib.math import infinity
-from pyutilib.services import TempfileManager
 from pyomo.common.modeling import randint, unique_component_name
 from pyomo.core import Block, Var, Param, Set, VarList, ConstraintList, Constraint, Objective, RangeSet, value, ConcreteModel, Reals, sqrt, minimize, maximize
 from pyomo.core.expr import current as EXPR
@@ -13,7 +12,6 @@ from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
 from pyomo.contrib.trustregion.GeometryGenerator import (
     generate_quadratic_rom_geometry
 )
-from pyomo.contrib.trustregion.readgjh import *
 from pyomo.contrib.trustregion.helper import *
 
 class ROMType:
@@ -96,7 +94,6 @@ class PyomoInterface:
 
     '''
 
-    TempfileManager.tempdir = "."
     solver = 'ipopt'
     solver_io = 'nl'
     stream_solver = False # True prints solver output to screen
@@ -474,12 +471,9 @@ class PyomoInterface:
         self.deactiveExtraConObj()
         self.activateRomCons(x, rom_params)
 
-        optGJH = SolverFactory('gjh', solver_io='nl')
-
-        optGJH.solve(
-            model, keepfiles=True, tee=False, symbolic_solver_labels=True)
-
-        g, J, varlist, conlist = readgjh()
+        optGJH = SolverFactory('contrib.gjh')
+        optGJH.solve(model, tee=False, symbolic_solver_labels=True)
+        g, J, varlist, conlist = model._gjh_info
 
         l = ConcreteModel()
         l.v = Var(varlist, domain=Reals)
