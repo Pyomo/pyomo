@@ -304,7 +304,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
                 to_list=GDPopt.working_var_list,
                 config=config)
             GDPopt.objective_value.set_value(
-                value(solve_data.working_objective_expr))
+                value(solve_data.working_objective_expr, exception=False))
 
             # Update values in original model
             copy_var_list_values(
