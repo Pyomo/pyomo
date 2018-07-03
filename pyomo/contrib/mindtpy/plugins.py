@@ -1,2 +1,2 @@
 def load():
-	import pyomo.contrib.mindtpy.MindtPy_new
+	import pyomo.contrib.mindtpy.MindtPy
