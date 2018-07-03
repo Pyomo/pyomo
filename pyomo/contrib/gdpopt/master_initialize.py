@@ -216,7 +216,6 @@ def solve_set_cover_MIP(linear_GDP_model, disj_needs_cover,
             'Problem may have no more feasible '
             'binary configurations.')
         if solve_data.mip_iteration <= 1:
-            # TODO need to test this branch
             config.logger.warning(
                 'Set covering problem was infeasible. '
                 'Check your linear and logical constraints '
