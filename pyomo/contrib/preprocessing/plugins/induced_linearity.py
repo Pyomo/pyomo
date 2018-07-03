@@ -54,11 +54,11 @@ def _bilinear_expressions(model):
     pass
 
 
-def _effectively_discrete_vars(model, constraint_bound_tolerance):
+def _effectively_discrete_vars(block, constraint_bound_tolerance):
     """Yield variables that are effectively discrete because they are the
     sum of discrete variables.
     """
-    for constr in model.component_data_objects(
+    for constr in block.component_data_objects(
             Constraint, descend_into=True):
         if constr.lower is None or constr.upper is None:
             continue  # skip inequality constraints
