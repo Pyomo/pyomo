@@ -219,3 +219,17 @@ def calc_jacobians(solve_data, config):
         MindtPy.jacs[c] = {
             id(var): jac
             for var, jac in zip(constraint_vars, jac_list)}
+
+
+def add_feas_slacks(solve_data, config):
+    m = solve_data.working_model
+    MindtPy = m.MindtPy_utils
+    # generate new constraints
+    for constr in m.component_data_objects(
+            ctype=Constraint, active=True, descend_into=True):
+        rhs = ((0 if constr.upper is None else constr.upper) +
+               (0 if constr.lower is None else constr.lower))
+        c = MindtPy.MindtPy_feas.feas_constraints.add(
+            constr.body - rhs
+            <= MindtPy.MindtPy_feas.slack_var[solve_data.feas_map[constr]])
+        MindtPy.feas_constr_map[constr, solve_data.nlp_iter] = c

@@ -235,7 +235,7 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
         description="Tolerance on variable bounds."
     ))
     CONFIG.declare("initial_feas", ConfigValue(
-        default=1,
+        default=True,
         description="Apply an initial feasibility step.",
         domain=bool
     ))
@@ -370,7 +370,8 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
             MindtPy.nl_inverse_map = {}
             # Generate the two maps. These maps may be helpful for later
             # interpreting indices on the slack variables or generated cuts.
-            for c, n in zip(MindtPy.nonlinear_constraints, lin.nl_constraint_set):
+            for c, n in zip(MindtPy.nonlinear_constraints,
+                            lin.nl_constraint_set):
                 MindtPy.nl_map[c] = n
                 MindtPy.nl_inverse_map[n] = c
 
@@ -392,8 +393,8 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
             feas.slack_var = Var(feas.constraint_set,
                                  domain=NonNegativeReals, initialize=1)
 
-            # Flag indicating whether the solution improved in the past iteration
-            # or not
+            # Flag indicating whether the solution improved in the past
+            # iteration or not
             solve_data.solution_improved = False
 
             # Set up solvers
@@ -883,184 +884,6 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
         # Call the MILP post-solve callback
         config.master_postsolve(m, solve_data)
 
-    def _solve_NLP_subproblem(self, solve_data, config):
-        m = solve_data.working_model.clone()
-        MindtPy = m.MindtPy_utils
-        solve_data.nlp_iter += 1
-        config.logger.info('NLP %s: Solve subproblem for fixed binaries.'
-                           % (solve_data.nlp_iter,))
-        # Set up NLP
-        for v in MindtPy.binary_vars:
-            v.fix(int(value(v) + 0.5))
-
-        # restore original variable values
-        for v in m.component_data_objects(ctype=Var, descend_into=True):
-            if not v.fixed and not v.is_binary():
-                try:
-                    v.set_value(self.initial_variable_values[id(v)])
-                except KeyError:
-                    continue
-        #
-        MindtPy.MindtPy_linear_cuts.deactivate()
-        m.tmp_duals = ComponentMap()
-        for c in m.component_data_objects(ctype=Constraint, active=True,
-                                          descend_into=True):
-            rhs = ((0 if c.upper is None else c.upper) +
-                   (0 if c.lower is None else c.lower))
-            sign_adjust = 1 if value(c.upper) is None else -1
-            m.tmp_duals[c] = sign_adjust * max(0,
-                                               sign_adjust * (rhs - value(c.body)))
-            # TODO check sign_adjust
-        t = TransformationFactory('contrib.deactivate_trivial_constraints')
-        t.apply_to(m, tmp=True, ignore_infeasible=True)
-        # Solve the NLP
-        # m.pprint() # print nlp problem for debugging
-        results = config.nlp_solver.solve(m, load_solutions=False,
-                                        options=config.nlp_solver_kwargs)
-        t.revert(m)
-        for v in MindtPy.binary_vars:
-            v.unfix()
-        subprob_terminate_cond = results.solver.termination_condition
-        if subprob_terminate_cond is tc.optimal:
-            m.solutions.load_from(results)
-            self._copy_values(m, solve_data.working_model, config)
-            for c in m.tmp_duals:
-                if m.dual.get(c, None) is None:
-                    m.dual[c] = m.tmp_duals[c]
-            if MindtPy.obj.sense == minimize:
-                solve_data.UB = min(value(MindtPy.obj.expr), solve_data.UB)
-                self.solution_improved = solve_data.UB < solve_data.UB_progress[-1]
-                solve_data.UB_progress.append(solve_data.UB)
-            else:
-                solve_data.LB = max(value(MindtPy.obj.expr), solve_data.LB)
-                self.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
-                solve_data.LB_progress.append(solve_data.LB)
-            print('NLP {}: OBJ: {}  LB: {}  UB: {}'
-                  .format(solve_data.nlp_iter, value(MindtPy.obj.expr), solve_data.LB,
-                          solve_data.UB))
-            if self.solution_improved:
-                solve_data.best_solution_found = m.clone()
-            # Add the linear cut
-            if config.strategy == 'OA':
-                self._add_oa_cut(solve_data, config)
-            elif config.strategy == 'PSC':
-                self._add_psc_cut(solve_data, config)
-            elif config.strategy == 'GBD':
-                self._add_gbd_cut(solve_data, config)
-
-            # This adds an integer cut to the feasible_integer_cuts
-            # ConstraintList, which is not activated by default. However, it
-            # may be activated as needed in certain situations or for certain
-            # values of option flags.
-            self._add_int_cut(feasible=True)
-
-            config.subproblem_postfeasible(m, self)
-        elif subprob_terminate_cond is tc.infeasible:
-            # TODO try something else? Reinitialize with different initial
-            # value?
-            print('NLP subproblem was locally infeasible.')
-            # load the solution and suppress the warning message by setting
-            # solver status to ok.
-            results.solver.status = SolverStatus.ok
-            m.solutions.load_from(results)
-            for c in m.component_data_objects(ctype=Constraint, active=True,
-                                              descend_into=True):
-                rhs = ((0 if c.upper is None else c.upper) +
-                       (0 if c.lower is None else c.lower))
-                sign_adjust = 1 if value(c.upper) is None else -1
-                m.dual[c] = sign_adjust * max(0,
-                                              sign_adjust * (rhs - value(c.body)))
-            for var in m.component_data_objects(ctype=Var,
-                                                descend_into=True):
-
-                if config.strategy == 'PSC' or config.strategy == 'GBD':
-                    m.ipopt_zL_out[var] = 0
-                    m.ipopt_zU_out[var] = 0
-                    if var.ub is not None and abs(var.ub - value(var)) < self.bound_tolerance:
-                        m.ipopt_zL_out[var] = 1
-                    elif var.lb is not None and abs(value(var) - var.lb) < self.bound_tolerance:
-                        m.ipopt_zU_out[var] = -1
-            # m.pprint() #print infeasible nlp problem for debugging
-            if config.strategy == 'PSC':
-                print('Adding PSC feasibility cut.')
-                self._add_psc_cut(m, solve_data, config, nlp_feasible=False)
-            elif config.strategy == 'GBD':
-                print('Adding GBD feasibility cut.')
-                self._add_gbd_cut(m, solve_data, config, nlp_feasible=False)
-            elif config.strategy == 'OA':
-                print('Solving feasibility problem')
-                if self.initial_feas == 1:
-                    self._add_feas_slacks(m, solve_data, config)
-                    self.initial_feas = 0
-                self._solve_NLP_feas(solve_data, config)
-                self._add_oa_cut(solve_data, config)
-            # Add an integer cut to exclude this discrete option
-            self._add_int_cut(solve_data, config)
-        elif subprob_terminate_cond is tc.maxIterations:
-            # TODO try something else? Reinitialize with different initial
-            # value?
-            print('NLP subproblem failed to converge within iteration limit.')
-            # Add an integer cut to exclude this discrete option
-            self._add_int_cut(solve_data, config)
-        else:
-            raise ValueError(
-                'MindtPy unable to handle NLP subproblem termination '
-                'condition of {}'.format(subprob_terminate_cond))
-
-        # Call the NLP post-solve callback
-        config.subproblem_postsolve(m, solve_data)
-
-    def _solve_NLP_feas(self, solve_data, config):
-        m = solve_data.working_model.clone()
-        MindtPy = m.MindtPy_utils
-        MindtPy.MindtPy_objective.deactivate()
-        for constr in m.component_data_objects(
-                ctype=Constraint, active=True, descend_into=True):
-            constr.deactivate()
-        MindtPy.MindtPy_feas.activate()
-        MindtPy.MindtPy_feas_obj = Objective(
-            expr=sum(s for s in MindtPy.MindtPy_feas.slack_var[...]), sense=minimize)
-        for v in MindtPy.binary_vars:
-            if value(v) > 0.5:
-                v.fix(1)
-            else:
-                v.fix(0)
-        # m.pprint()  #print nlp feasibility problem for debugging
-        feas_soln = config.nlp_solver.solve(
-            m, load_solutions=False, options=config.nlp_solver_kwargs)
-        subprob_terminate_cond = feas_soln.solver.termination_condition
-        if subprob_terminate_cond is tc.optimal:
-            m.solutions.load_from(feas_soln)
-            self._copy_values(m, solve_data.working_model, config)
-        elif subprob_terminate_cond is tc.infeasible:
-            raise ValueError('Feasibility NLP infeasible. '
-                             'This should never happen.')
-        else:
-            raise ValueError(
-                'MindtPy unable to handle feasibility NLP termination condition '
-                'of {}'.format(subprob_terminate_cond))
-
-        for v in MindtPy.binary_vars:
-            v.unfix()
-
-        MindtPy.MindtPy_feas.deactivate()
-        MindtPy.MindtPy_feas_obj.deactivate()
-        # MindtPy.MindtPy_objective_expr.activate()
-        MindtPy.MindtPy_objective.activate()
-
-        for constr in m.component_data_objects(
-                ctype=Constraint, descend_into=True):
-            constr.activate()
-            rhs = ((0 if constr.upper is None else constr.upper) +
-                   (0 if constr.lower is None else constr.lower))
-            sign_adjust = 1 if value(constr.upper) is None else -1
-            m.dual[constr] = sign_adjust * max(0,
-                                               sign_adjust * (rhs - value(constr.body)))
-
-        if value(MindtPy.MindtPy_feas_obj.expr) == 0:
-            raise ValueError(
-                'Problem is not infeasible, check NLP solver')
-
     def _solve_LP_subproblem(self, solve_data, config):
         m = solve_data.working_model.clone()
         MindtPy = m.MindtPy_utils
@@ -1104,15 +927,3 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
                 'of {}'.format(subprob_terminate_cond))
         # Call the LP post-solve callback
         config.subproblem_postsolve(m, solve_data)
-
-    def _add_feas_slacks(self, solve_data, config):
-        m = solve_data.working_model
-        MindtPy = m.MindtPy_utils
-        # generate new constraints
-        for constr in m.component_data_objects(
-                ctype=Constraint, active=True, descend_into=True):
-            rhs = ((0 if constr.upper is None else constr.upper) +
-                   (0 if constr.lower is None else constr.lower))
-            c = MindtPy.MindtPy_feas.feas_constraints.add(constr.body - rhs
-                                                    <= MindtPy.MindtPy_feas.slack_var[self.feas_map[constr]])
-            MindtPy.feas_constr_map[constr, solve_data.nlp_iter] = c
