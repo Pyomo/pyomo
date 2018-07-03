@@ -452,12 +452,12 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
                 v_to.set_value(v_from.value)
             except ValueError as err:
                 if 'is not in domain Binary' in err.message:
-                    # Check to see if this is just a tolerance issue
-                    if (fabs(v_from.value - 1) <= config.integer_tolerance or
-                            fabs(v_from.value) <= config.integer_tolerance):
-                        v_to.set_value(round(v_from.value))
-                    else:
-                        raise
+                    # # Check to see if this is just a tolerance issue
+                    # if (fabs(v_from.value - 1) <= config.integer_tolerance or
+                    #         fabs(v_from.value) <= config.integer_tolerance):
+                    #     v_to.set_value(round(v_from.value))
+                    # else:
+                    pass
 
     def _copy_dual_suffixes(self, from_model, to_model,
                             from_map=None, to_map=None):
@@ -606,6 +606,8 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
             v.domain = Binary
         subprob_terminate_cond = results.solver.termination_condition
         if subprob_terminate_cond is tc.optimal:
+            m.solutions.load_from(results)
+            self._copy_values(m, solve_data.working_model, config)
             # Add OA cut
             if MindtPy.obj.sense == minimize:
                 solve_data.LB = value(MindtPy.obj.expr)
@@ -1236,11 +1238,11 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
                 solve_data.best_solution_found = m.clone()
             # Add the linear cut
             if config.strategy == 'OA':
-                self._add_oa_cut(m, solve_data, config)
+                self._add_oa_cut(solve_data, config)
             elif config.strategy == 'PSC':
-                self._add_psc_cut(m, solve_data, config)
+                self._add_psc_cut(solve_data, config)
             elif config.strategy == 'GBD':
-                self._add_gbd_cut(m, solve_data, config)
+                self._add_gbd_cut(solve_data, config)
 
             # This adds an integer cut to the feasible_integer_cuts
             # ConstraintList, which is not activated by default. However, it
@@ -1420,7 +1422,7 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
         for constr in MindtPy.nonlinear_constraints:
             rhs = ((0 if constr.upper is None else constr.upper) +
                    (0 if constr.lower is None else constr.lower))
-            MindtPy.pprint()
+            m.dual.display()
             c = MindtPy.MindtPy_linear_cuts.oa_cuts.add(
                 expr=copysign(1, sign_adjust * m.dual[constr]) * (sum(
                     value(MindtPy.jacs[constr][id(var)]) * (var - value(var))
