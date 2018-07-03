@@ -29,19 +29,18 @@ from pyutilib.misc.config import ConfigBlock, ConfigValue
 from pyomo.contrib.mindtpy.util import MindtPySolveData, _DoNothing, a_logger
 from pyomo.contrib.mindtpy.util import (
     build_ordered_component_lists, model_is_valid, copy_values)
+from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_master
+from pyomo.contrib.mindtpy.initialization import init_rNLP, init_max_binaries
 import pyomo.common.plugin
-from pyomo.core.expr import current as EXPR
 from pyomo.core.base import (Block, ComponentUID, Constraint, ConstraintList,
                              Expression, Objective, RangeSet, Set, Suffix, Var,
                              maximize, minimize, value)
 from pyomo.core.expr.current import clone_expression
 from pyomo.core.base.numvalue import NumericConstant
-from pyomo.core.base.symbolic import differentiate
 from pyomo.core.kernel import Binary, NonNegativeReals, Reals
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory, SolverStatus
 from pyomo.opt.base import IOptSolver
-from pyomo.repn import generate_standard_repn
 from pyomo.opt.results import ProblemSense, SolverResults
 
 from pyomo.core import TransformationFactory
@@ -402,7 +401,7 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
             solve_data.mip_solver = SolverFactory(config.mip_solver)
 
             # Initialize the master problem
-            self._MindtPy_initialize_master(solve_data, config)
+            MindtPy_initialize_master(solve_data, config)
 
             # Algorithm main loop
             self._MindtPy_iteration_loop(solve_data, config)
@@ -419,188 +418,6 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
             config.logger.setLevel(old_logger_level)
             if created_MindtPy_block:
                 model.del_component('MindtPy_utils')
-
-    def _MindtPy_initialize_master(self, solve_data, config):
-        """Initialize the decomposition algorithm.
-        This includes generating the initial cuts require to build the master
-        problem.
-        """
-        m = solve_data.working_model
-        MindtPy = m.MindtPy_utils
-        MindtPy.feas_constr_map = {}
-
-        m.dual.activate()
-        if not hasattr(m, 'ipopt_zL_out'):
-            m.ipopt_zL_out = Suffix(direction=Suffix.IMPORT)
-        if not hasattr(m, 'ipopt_zU_out'):
-            m.ipopt_zU_out = Suffix(direction=Suffix.IMPORT)
-
-        if config.strategy == 'OA':
-            # Map Constraint, nlp_iter -> generated OA Constraint
-            MindtPy.OA_constr_map = {}
-            self._calc_jacobians(solve_data, config)  # preload jacobians
-            MindtPy.MindtPy_linear_cuts.oa_cuts = ConstraintList(
-                doc='Outer approximation cuts')
-        elif config.strategy == 'ECP':
-            # Map Constraint, nlp_iter -> generated ECP Constraint
-            MindtPy.ECP_constr_map = {}
-            self._calc_jacobians(solve_data, config)  # preload jacobians
-            MindtPy.MindtPy_linear_cuts.ecp_cuts = ConstraintList(
-                doc='Extended Cutting Planes')
-        elif config.strategy == 'PSC':
-            self._detect_nonlinear_vars(solve_data, config)
-            MindtPy.MindtPy_linear_cuts.psc_cuts = ConstraintList(
-                doc='Partial surrogate cuts')
-        elif config.strategy == 'GBD':
-            MindtPy.MindtPy_linear_cuts.gbd_cuts = ConstraintList(
-                doc='Generalized Benders cuts')
-
-        # Set default initialization_strategy
-        if config.init_strategy is None:
-            if config.strategy == 'OA':
-                config.init_strategy = 'rNLP'
-            else:
-                config.init_strategy = 'initial_binary'
-        # Do the initialization
-        elif config.init_strategy == 'rNLP':
-            self._init_rNLP(solve_data, config)
-        elif config.init_strategy == 'max_binary':
-            self._init_max_binaries(solve_data, config)
-            if config.strategy == 'ECP':
-                self._add_ecp_cut(solve_data, config)
-            else:
-                self._solve_NLP_subproblem(solve_data, config)
-        elif config.init_strategy == 'initial_binary':
-            self._init_initial_binaries(solve_data, config)
-            if config.strategy == 'ECP':
-                self._add_ecp_cut(solve_data, config)
-            else:
-                self._solve_NLP_subproblem(solve_data, config)
-
-    def _init_rNLP(self, solve_data, config):
-        """Initialize by solving the rNLP (relaxed binary variables)."""
-        solve_data.nlp_iter += 1
-        m = solve_data.working_model.clone()
-        config.logger.info(
-            "NLP %s: Solve relaxed integrality" % (solve_data.nlp_iter,))
-        MindtPy = m.MindtPy_utils
-        for v in MindtPy.binary_vars:
-            v.domain = NonNegativeReals
-            v.setlb(0)
-            v.setub(1)
-        results = solve_data.nlp_solver.solve(m, options=config.nlp_solver_kwargs)
-        for v in MindtPy.binary_vars:
-            v.domain = Binary
-        subprob_terminate_cond = results.solver.termination_condition
-        if subprob_terminate_cond is tc.optimal:
-            m.solutions.load_from(results)
-            copy_values(m, solve_data.working_model, config)
-            # Add OA cut
-            if MindtPy.objective.sense == minimize:
-                solve_data.LB = value(MindtPy.objective.expr)
-            else:
-                solve_data.UB = value(MindtPy.objective.expr)
-            config.logger.info(
-                'NLP %s: OBJ: %s  LB: %s  UB: %s'
-                % (solve_data.nlp_iter, value(MindtPy.objective.expr),
-                   solve_data.LB, solve_data.UB))
-            if config.strategy == 'OA':
-                self._add_oa_cut(solve_data, config)
-            elif config.strategy == 'PSC':
-                self._add_psc_cut(solve_data, config)
-            elif config.strategy == 'GBD':
-                self._add_gbd_cut(solve_data, config)
-            elif config.strategy == 'ECP':
-                self._add_ecp_cut(solve_data, config)
-                self._add_objective_linearization(m, solve_data, config)
-        elif subprob_terminate_cond is tc.infeasible:
-            # TODO fail? try something else?
-            config.logger.info(
-                'Initial relaxed NLP problem is infeasible. '
-                'Problem may be infeasible.')
-        else:
-            raise ValueError(
-                'MindtPy unable to handle relaxed NLP termination condition '
-                'of %s. Solver message: %s' %
-                (subprob_terminate_cond, results.solver.message))
-
-    def _init_max_binaries(self, solve_data, config):
-        """Initialize by turning on as many binary variables as possible.
-
-        The user would usually want to call _solve_NLP_subproblem after an
-        invocation of this function.
-
-        """
-        m = solve_data.working_model
-        MindtPy = m.MindtPy_utils
-        solve_data.mip_subiter += 1
-        config.logger.info(
-            "MILP %s: maximize value of binaries" %
-                    (solve_data.mip_iter))
-        for c in MindtPy.nonlinear_constraints:
-            c.deactivate()
-        MindtPy.obj.deactivate()
-        MindtPy.MindtPy_max_binary_obj = Objective(
-            expr=sum(v for v in MindtPy.binary_vars), sense=maximize)
-
-        getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
-        getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
-
-        results = solve_data.mip_solver.solve(m, options=config.mip_solver_kwargs)
-
-        getattr(m, 'ipopt_zL_out', _DoNothing()).activate()
-        getattr(m, 'ipopt_zU_out', _DoNothing()).activate()
-
-        MindtPy.MindtPy_max_binary_obj.deactivate()
-
-        MindtPy.obj.activate()
-        for c in MindtPy.nonlinear_constraints:
-            c.activate()
-        solve_terminate_cond = results.solver.termination_condition
-        if solve_terminate_cond is tc.optimal:
-            pass  # good
-        elif solve_terminate_cond is tc.infeasible:
-            raise ValueError(
-                'MILP master problem is infeasible. '
-                'Problem may have no more feasible '
-                'binary configurations.')
-        else:
-            raise ValueError(
-                'MindtPy unable to handle MILP master termination condition '
-                'of %s. Solver message: %s' %
-                (solve_terminate_cond, results.solver.message))
-
-    def _init_initial_binaries(self, solve_data, config):
-        """Initialize by using the intial values of the binary variables.
-
-        The user would usually want to call _solve_NLP_subproblem after an
-        invocation of this function.
-
-        """
-        pass
-
-    def _add_objective_linearization(self, solve_data, config):
-        """Adds initial linearized objective in case it is nonlinear.
-
-        This should be done for initializing the ECP method.
-
-        """
-        m = solve_data.working_model
-        MindtPy = m.MindtPy_utils
-        solve_data.mip_iter += 1
-        gen = (obj for obj in MindtPy.jacs
-               if obj is MindtPy.MindtPy_objective_expr)
-        MindtPy.MindtPy_linear_cuts.mip_iters.add(solve_data.mip_iter)
-        sign_adjust = 1 if MindtPy.obj.sense == minimize else -1
-        # generate new constraints
-        # TODO some kind of special handling if the dual is phenomenally small?
-        for obj in gen:
-            c = MindtPy.MindtPy_linear_cuts.ecp_cuts.add(
-                expr=sign_adjust * sum(
-                    value(MindtPy.jacs[obj][id(var)]) * (var - value(var))
-                    for var in list(EXPR.identify_variables(obj.body))) +
-                value(obj.body) <= 0)
-            MindtPy.ECP_constr_map[obj, solve_data.mip_iter] = c
 
     def _MindtPy_iteration_loop(self, solve_data, config):
         m = solve_data.working_model
@@ -970,7 +787,7 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
         # Call the MILP post-solve callback
         config.master_postsolve(m, solve_data)
 
-    def _solve_GBD_master(self, leave_linear_active=True):
+    def _solve_GBD_master(self, solve_data, config, leave_linear_active=True):
         solve_data.mip_iter += 1
         m = solve_data.working_model.clone()
         MindtPy = m.MindtPy_utils
@@ -1288,37 +1105,6 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
         # Call the LP post-solve callback
         config.subproblem_postsolve(m, solve_data)
 
-    def _calc_jacobians(self, solve_data, config):
-        m = solve_data.working_model
-        MindtPy = m.MindtPy_utils
-        MindtPy.jacs = {}
-        for c in MindtPy.nonlinear_constraints:
-            constraint_vars = list(EXPR.identify_variables(c.body))
-            jac_list = differentiate(c.body, wrt_list=constraint_vars)
-            MindtPy.jacs[c] = {id(var): jac
-                            for var, jac in zip(constraint_vars, jac_list)}
-
-    def _add_oa_cut(self, solve_data, config):
-        m = solve_data.working_model
-        MindtPy = m.MindtPy_utils
-        MindtPy.MindtPy_linear_cuts.nlp_iters.add(solve_data.nlp_iter)
-        sign_adjust = -1 if MindtPy.objective.sense == minimize else 1
-
-        # generate new constraints
-        # TODO some kind of special handling if the dual is phenomenally small?
-        for constr in MindtPy.nonlinear_constraints:
-            rhs = ((0 if constr.upper is None else constr.upper) +
-                   (0 if constr.lower is None else constr.lower))
-            m.dual.display()
-            c = MindtPy.MindtPy_linear_cuts.oa_cuts.add(
-                expr=copysign(1, sign_adjust * m.dual[constr]) * (sum(
-                    value(MindtPy.jacs[constr][id(var)]) * (var - value(var))
-                    for var in list(EXPR.identify_variables(constr.body))) +
-                    value(constr.body) - rhs) +
-                MindtPy.MindtPy_linear_cuts.slack_vars[solve_data.nlp_iter,
-                                                 MindtPy.nl_map[constr]] <= 0)
-            MindtPy.OA_constr_map[constr, solve_data.nlp_iter] = c
-
     def _add_feas_slacks(self, solve_data, config):
         m = solve_data.working_model
         MindtPy = m.MindtPy_utils
@@ -1330,222 +1116,3 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
             c = MindtPy.MindtPy_feas.feas_constraints.add(constr.body - rhs
                                                     <= MindtPy.MindtPy_feas.slack_var[self.feas_map[constr]])
             MindtPy.feas_constr_map[constr, solve_data.nlp_iter] = c
-
-    def _add_ecp_cut(self, solve_data, config):
-        m = solve_data.working_model
-        MindtPy = m.MindtPy_utils
-        MindtPy.MindtPy_linear_cuts.mip_iters.add(solve_data.mip_iter)
-        sign_adjust = -1 if MindtPy.obj.sense == minimize else 1
-        # generate new constraints
-        # TODO some kind of special handling if the dual is phenomenally small?
-        gen = (constr for constr in MindtPy.jacs
-               if (0 if constr.upper is None
-                   else abs(value(constr.body) - constr.upper)) +
-               (0 if constr.lower is None
-                else abs(constr.lower - value(constr.body)))
-               > config.ECP_tolerance)
-        for constr in gen:
-            constr_dir = -1 if value(constr.upper) is None else 1
-            rhs = ((0 if constr.upper is None else constr.upper) +
-                   (0 if constr.lower is None else constr.lower))
-            # this only happens if a constraint is >=
-            c = MindtPy.MindtPy_linear_cuts.ecp_cuts.add(
-                expr=copysign(1, constr_dir)
-                * (sum(value(MindtPy.jacs[constr][id(var)]) * (var - value(var))
-                       for var in list(EXPR.identify_variables(constr.body))) +
-                   value(constr.body) - rhs) <= 0)
-            MindtPy.ECP_constr_map[constr, solve_data.mip_iter] = c
-
-    def _add_psc_cut(self, solve_data, config, nlp_feasible=True):
-        m = solve_data.working_model
-        MindtPy = m.MindtPy_utils
-
-        sign_adjust = 1 if MindtPy.obj.sense == minimize else -1
-
-        # generate the sum of all multipliers with the nonlinear constraints
-        var_to_val = {id(var): NumericConstant(value(var))
-                      for var in MindtPy.nonlinear_variables}
-        sum_nonlinear = (
-            # Address constraints of form f(x) <= upper
-            sum(value(m.dual[c]) * -1 *
-                (clone_expression(c.body, substitute=var_to_val) - c.upper)
-                for c in MindtPy.nonlinear_constraints
-                if value(fabs(m.dual[c])) > config.small_dual_tolerance
-                and c.upper is not None) +
-            # Address constraints of form f(x) >= lower
-            sum(value(m.dual[c]) *
-                (c.lower - clone_expression(c.body, substitute=var_to_val))
-                for c in MindtPy.nonlinear_constraints
-                if value(fabs(m.dual[c])) > config.small_dual_tolerance
-                and c.lower is not None))
-        # Generate the sum of all multipliers with linear constraints
-        # containing nonlinear variables
-        #
-        # For now, need to generate canonical representation in order to get
-        # the coefficients on the linear terms.
-        lin_cons = [c for c in m.component_data_objects(
-            ctype=Constraint, active=True, descend_into=True)
-            if c.body.polynomial_degree() in (0, 1)]
-        # Create a coefficient dictionary mapping variables to their
-        # coefficient in the expression. Constraint -> (id(Var) -> coefficient)
-        coef_dict = {}
-        constr_vars = {}
-        for constr in lin_cons:
-            repn = generate_standard_repn(constr.body)
-            if repn.variables is None or repn.linear is None:
-                repn.variables = []
-                repn.linear = []
-            coef_dict[constr] = {id(var): coef for var, coef in
-                                 zip(repn.variables, repn.linear)}
-            constr_vars[constr] = repn.variables
-        sum_linear = sum(
-            m.dual[c] *
-            sum(coef_dict[c][id(var)] * (var - value(var))
-                for var in constr_vars[c]
-                if id(var) in solve_data.nonlinear_variable_IDs)
-            for c in lin_cons
-            if value(fabs(m.dual[c])) > config.small_dual_tolerance)
-
-        # Generate the sum of all bound multipliers with nonlinear variables
-        sum_var_bounds = (
-            sum(m.ipopt_zL_out.get(var, 0) * (var - value(var))
-                for var in MindtPy.nonlinear_variables
-                if value(fabs(m.ipopt_zL_out.get(var, 0))) >
-                config.small_dual_tolerance) +
-            sum(m.ipopt_zU_out.get(var, 0) * (var - value(var))
-                for var in MindtPy.nonlinear_variables
-                if value(fabs(m.ipopt_zU_out.get(var, 0))) >
-                config.small_dual_tolerance))
-
-        if nlp_feasible:
-            # Optimality cut (for feasible NLP)
-            MindtPy.MindtPy_linear_cuts.psc_cuts.add(
-                expr=MindtPy.obj.expr * sign_adjust >= sign_adjust * (
-                    MindtPy.obj.expr + sum_nonlinear + sum_linear +
-                    sum_var_bounds))
-        else:
-            # Feasibility cut (for infeasible NLP)
-            MindtPy.MindtPy_linear_cuts.psc_cuts.add(
-                expr=(sum_nonlinear + sum_linear + sum_var_bounds) <= 0)
-
-    def _add_gbd_cut(self, solve_data, config, nlp_feasible=True):
-        m = solve_data.working_model
-        MindtPy = m.MindtPy_utils
-
-        sign_adjust = 1 if MindtPy.obj.sense == minimize else -1
-
-        for c in m.component_data_objects(ctype=Constraint, active=True,
-                                          descend_into=True):
-            if value(c.upper) is None and value(c.lower) is None:
-                raise ValueError(
-                    'Oh no, Pyomo did something MindtPy does not expect. '
-                    'The value of c.upper for {} is None: {} <= {} <= {}'
-                    .format(c.name, c.lower, c.body, c.upper))
-        # TODO handle the case where constraint upper and lower is None
-
-        # only substitute non-binary variables to their values
-        binary_var_ids = set(id(var) for var in MindtPy.binary_vars)
-        var_to_val = {id(var): NumericConstant(value(var))
-                      for var in m.component_data_objects(ctype=Var,
-                                                          descend_into=True)
-                      if id(var) not in binary_var_ids}
-        # generate the sum of all multipliers with the active (from a duality
-        # sense) constraints
-        sum_constraints = (
-            sum(value(m.dual[c]) * -1 *
-                (clone_expression(c.body, substitute=var_to_val) - c.upper)
-                for c in m.component_data_objects(
-                    ctype=Constraint, active=True, descend_into=True)
-                if value(fabs(m.dual[c])) > config.small_dual_tolerance
-                and c.upper is not None) +
-            sum(value(m.dual[c]) *
-                (c.lower - clone_expression(c.body, substitute=var_to_val))
-                for c in m.component_data_objects(
-                    ctype=Constraint, active=True, descend_into=True)
-                if value(fabs(m.dual[c])) > config.small_dual_tolerance
-                and c.lower is not None))
-        # and not c.upper == c.lower
-
-        # add in variable bound dual contributions
-        #
-        # Generate the sum of all bound multipliers with nonlinear variables
-        sum_var_bounds = (
-            sum(m.ipopt_zL_out.get(var, 0) * (var - value(var))
-                for var in m.component_data_objects(ctype=Var,
-                                                    descend_into=True)
-                if (id(var) not in binary_var_ids and
-                    value(abs(m.ipopt_zL_out.get(var, 0))) >
-                    config.small_dual_tolerance)) +
-            sum(m.ipopt_zU_out.get(var, 0) * (var - value(var))
-                for var in m.component_data_objects(ctype=Var,
-                                                    descend_into=True)
-                if (id(var) not in binary_var_ids and
-                    value(abs(m.ipopt_zU_out.get(var, 0))) >
-                    config.small_dual_tolerance)))
-
-        if nlp_feasible:
-            MindtPy.MindtPy_linear_cuts.gbd_cuts.add(
-                expr=MindtPy.obj.expr * sign_adjust >= sign_adjust * (
-                    value(MindtPy.obj.expr) + sum_constraints + sum_var_bounds))
-        else:
-            if sum_constraints + sum_var_bounds != 0:
-                MindtPy.MindtPy_linear_cuts.gbd_cuts.add(
-                    expr=(sum_constraints + sum_var_bounds) <= 0)
-
-    def _add_int_cut(self, solve_data, config, feasible=False):
-        if config.integer_cuts:
-            m = solve_data.working_model
-            MindtPy = m.MindtPy_utils
-            # check to make sure that binary variables are all 0 or 1
-            for v in MindtPy.binary_vars:
-                if value(abs(v - 1)) > int_tol and value(abs(v)) > int_tol:
-                    raise ValueError('Binary {} = {} is not 0 or 1'.format(
-                        v.name, value(v)))
-
-            if not MindtPy.binary_vars:  # if no binary variables, skip.
-                return
-
-            int_cut = (sum(1 - v for v in MindtPy.binary_vars
-                           if value(abs(v - 1)) <= int_tol) +
-                       sum(v for v in MindtPy.binary_vars
-                           if value(abs(v)) <= int_tol) >= 1)
-
-            if not feasible:
-                # Add the integer cut
-                MindtPy.MindtPy_linear_cuts.integer_cuts.add(expr=int_cut)
-            else:
-                MindtPy.MindtPy_linear_cuts.feasible_integer_cuts.add(expr=int_cut)
-
-    def _detect_nonlinear_vars(self, solve_data, config):
-        m = solve_data.working_model
-        MindtPy = m.MindtPy_utils
-        """Identify the variables that participate in nonlinear terms."""
-        MindtPy.nonlinear_variables = []
-        # This is a workaround because Var is not hashable, and I do not want
-        # duplicates in self.nonlinear_variables.
-        seen = set()
-        for constr in MindtPy.nonlinear_constraints:
-            if isinstance(constr.body, EXPR._SumExpression):
-                # go through each term and check to see if the term is
-                # nonlinear
-                for expr in constr.body._args:
-                    # Check to see if the expression is nonlinear
-                    if expr.polynomial_degree() not in (0, 1):
-                        # collect variables
-                        for var in EXPR.identify_variables(
-                                expr, include_fixed=False):
-                            if id(var) not in seen:
-                                seen.add(id(var))
-                                MindtPy.nonlinear_variables.append(var)
-            # if the root expression object is not a summation, then something
-            # else is the cause of the nonlinearity. Collect all participating
-            # variables.
-            else:
-                # collect variables
-                for var in EXPR.identify_variables(constr.body,
-                                                   include_fixed=False):
-                    if id(var) not in seen:
-                        seen.add(id(var))
-                        MindtPy.nonlinear_variables.append(var)
-        MindtPy.nonlinear_variable_IDs = set(
-            id(v) for v in MindtPy.nonlinear_variables)

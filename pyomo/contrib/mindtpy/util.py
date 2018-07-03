@@ -5,12 +5,12 @@ import logging
 from math import fabs, floor, log
 
 from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
-                        Objective, Reals, Var, minimize, value, Suffix)
+                        Objective, Reals, Suffix, Var, minimize, value)
+from pyomo.core.base.symbolic import differentiate
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel import ComponentSet
-from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverFactory
-from pyomo.opt.results import ProblemSense, SolverResults
+from pyomo.opt.results import ProblemSense
 
 
 class _DoNothing(object):
@@ -144,8 +144,7 @@ def build_ordered_component_lists(model):
     # We use component_data_objects rather than list(var_set) in order to
     # preserve a deterministic ordering.
     MindtPy.var_list = list(
-        v for v in model.component_data_objects(
-            ctype=Var, descend_into=(Block, Disjunct))
+        v for v in model.component_data_objects(ctype=Var, descend_into=True)
         if v in var_set)
     MindtPy.binary_vars = list(v for v in MindtPy.var_list if v.is_binary())
     MindtPy.nonlinear_constraints = list(
@@ -181,3 +180,42 @@ def copy_var_list_values(from_list, to_list, config, skip_stale=False):
                     continue
             else:
                 raise
+
+
+def detect_nonlinear_vars(solve_data, config):
+    """Identify the variables that participate in nonlinear terms."""
+    m = solve_data.working_model
+    MindtPy = m.MindtPy_utils
+    nonlinear_var_set = ComponentSet()
+
+    for constr in MindtPy.nonlinear_constraints:
+        if isinstance(constr.body, EXPR.SumExpression):
+            # go through each term and check to see if the term is
+            # nonlinear
+            for expr in constr.body.args():
+                # Check to see if the expression is nonlinear
+                if expr.polynomial_degree() not in (0, 1):
+                    # collect variables
+                    nonlinear_var_set.update(
+                        EXPR.identify_variables(expr, include_fixed=False))
+        # if the root expression object is not a summation, then something
+        # else is the cause of the nonlinearity. Collect all participating
+        # variables.
+        else:
+            # collect variables
+            nonlinear_var_set.update(
+                EXPR.identify_variables(constr.body, include_fixed=False))
+
+    MindtPy.nonlinear_variables = list(nonlinear_var_set)
+
+
+def calc_jacobians(solve_data, config):
+    m = solve_data.working_model
+    MindtPy = m.MindtPy_utils
+    MindtPy.jacs = {}
+    for c in MindtPy.nonlinear_constraints:
+        constraint_vars = list(EXPR.identify_variables(c.body))
+        jac_list = differentiate(c.body, wrt_list=constraint_vars)
+        MindtPy.jacs[c] = {
+            id(var): jac
+            for var, jac in zip(constraint_vars, jac_list)}
