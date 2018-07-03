@@ -10,6 +10,7 @@ from pyomo.core.base import (Objective, TransformationFactory, maximize,
                              minimize, value, Suffix, ConstraintList)
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.util import calc_jacobians, detect_nonlinear_vars
+from pyomo.contrib.mindtpy.solve_NLP import solve_NLP_subproblem
 
 
 def MindtPy_initialize_master(solve_data, config):
@@ -77,6 +78,8 @@ def init_rNLP(solve_data, config):
     if subprob_terminate_cond is tc.optimal:
         m.solutions.load_from(results)
         copy_values(m, solve_data.working_model, config)
+        nlp_solution_values = list(v.value for v in MindtPy.var_list)
+        dual_values = list(m.dual[c] for c in MindtPy.constraints)
         # Add OA cut
         if MindtPy.objective.sense == minimize:
             solve_data.LB = value(MindtPy.objective.expr)
@@ -87,7 +90,7 @@ def init_rNLP(solve_data, config):
             % (solve_data.nlp_iter, value(MindtPy.objective.expr),
                solve_data.LB, solve_data.UB))
         if config.strategy == 'OA':
-            add_oa_cut(solve_data, config)
+            add_oa_cut(nlp_solution_values, dual_values, solve_data, config)
         elif config.strategy == 'PSC':
             add_psc_cut(solve_data, config)
         elif config.strategy == 'GBD':

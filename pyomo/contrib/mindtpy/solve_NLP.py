@@ -8,7 +8,7 @@ from pyomo.core import (Constraint, Objective, TransformationFactory, Var,
                         minimize, value)
 from pyomo.core.kernel import ComponentMap
 from pyomo.opt import TerminationCondition as tc
-from pyomo.opt import SolverStatus
+from pyomo.opt import SolverStatus, SolverFactory
 
 
 def solve_NLP_subproblem(solve_data, config):
@@ -22,13 +22,12 @@ def solve_NLP_subproblem(solve_data, config):
         v.fix(int(value(v) + 0.5))
 
     # restore original variable values
-    for v in m.component_data_objects(ctype=Var, descend_into=True):
-        if not v.fixed and not v.is_binary():
-            try:
-                v.set_value(solve_data.initial_variable_values[id(v)])
-            except KeyError:
-                continue
-    #
+    for nlp_var, orig_var in zip(
+            MindtPy.var_list,
+            solve_data.original_model.MindtPy_utils.var_list):
+        if not nlp_var.fixed and not nlp_var.is_binary():
+            nlp_var.value = orig_var.value
+
     MindtPy.MindtPy_linear_cuts.deactivate()
     m.tmp_duals = ComponentMap()
     for c in m.component_data_objects(ctype=Constraint, active=True,
@@ -43,8 +42,9 @@ def solve_NLP_subproblem(solve_data, config):
     t.apply_to(m, tmp=True, ignore_infeasible=True)
     # Solve the NLP
     # m.pprint() # print nlp problem for debugging
-    results = config.nlp_solver.solve(m, load_solutions=False,
-                                      options=config.nlp_solver_kwargs)
+    results = SolverFactory(config.nlp_solver).solve(
+        m, load_solutions=False,
+        options=config.nlp_solver_kwargs)
     t.revert(m)
     for v in MindtPy.binary_vars:
         v.unfix()
@@ -52,25 +52,27 @@ def solve_NLP_subproblem(solve_data, config):
     if subprob_terminate_cond is tc.optimal:
         m.solutions.load_from(results)
         copy_values(m, solve_data.working_model, config)
+        var_values = list(v.value for v in MindtPy.var_list)
         for c in m.tmp_duals:
             if m.dual.get(c, None) is None:
                 m.dual[c] = m.tmp_duals[c]
-        if MindtPy.obj.sense == minimize:
-            solve_data.UB = min(value(MindtPy.obj.expr), solve_data.UB)
+        duals = list(m.dual[c] for c in MindtPy.constraints)
+        if MindtPy.objective.sense == minimize:
+            solve_data.UB = min(value(MindtPy.objective.expr), solve_data.UB)
             solve_data.solution_improved = solve_data.UB < solve_data.UB_progress[-1]
             solve_data.UB_progress.append(solve_data.UB)
         else:
-            solve_data.LB = max(value(MindtPy.obj.expr), solve_data.LB)
+            solve_data.LB = max(value(MindtPy.objective.expr), solve_data.LB)
             solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
             solve_data.LB_progress.append(solve_data.LB)
         print('NLP {}: OBJ: {}  LB: {}  UB: {}'
-              .format(solve_data.nlp_iter, value(MindtPy.obj.expr), solve_data.LB,
+              .format(solve_data.nlp_iter, value(MindtPy.objective.expr), solve_data.LB,
                       solve_data.UB))
         if solve_data.solution_improved:
             solve_data.best_solution_found = m.clone()
         # Add the linear cut
         if config.strategy == 'OA':
-            add_oa_cut(solve_data, config)
+            add_oa_cut(var_values, duals, solve_data, config)
         elif config.strategy == 'PSC':
             add_psc_cut(solve_data, config)
         elif config.strategy == 'GBD':
@@ -80,9 +82,9 @@ def solve_NLP_subproblem(solve_data, config):
         # ConstraintList, which is not activated by default. However, it
         # may be activated as needed in certain situations or for certain
         # values of option flags.
-        add_int_cut(feasible=True)
+        add_int_cut(var_values, solve_data, config, feasible=True)
 
-        config.subproblem_postfeasible(m, self)
+        config.subproblem_postfeasible(m, solve_data)
     elif subprob_terminate_cond is tc.infeasible:
         # TODO try something else? Reinitialize with different initial
         # value?

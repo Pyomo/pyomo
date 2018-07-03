@@ -34,18 +34,26 @@ def add_objective_linearization(solve_data, config):
         MindtPy.ECP_constr_map[obj, solve_data.mip_iter] = c
 
 
-def add_oa_cut(solve_data, config):
+def add_oa_cut(var_values, duals, solve_data, config):
     m = solve_data.working_model
     MindtPy = m.MindtPy_utils
     MindtPy.MindtPy_linear_cuts.nlp_iters.add(solve_data.nlp_iter)
     sign_adjust = -1 if MindtPy.objective.sense == minimize else 1
+
+    # Copy values over
+    for var, val in zip(MindtPy.var_list, var_values):
+        if val is not None and not var.fixed:
+            var.value = val
+
+    # Copy duals over
+    for constr, dual_value in zip(MindtPy.constraints, duals):
+        m.dual[constr] = dual_value
 
     # generate new constraints
     # TODO some kind of special handling if the dual is phenomenally small?
     for constr in MindtPy.nonlinear_constraints:
         rhs = ((0 if constr.upper is None else constr.upper) +
                (0 if constr.lower is None else constr.lower))
-        m.dual.display()
         c = MindtPy.MindtPy_linear_cuts.oa_cuts.add(
             expr=copysign(1, sign_adjust * m.dual[constr]) * (sum(
                 value(MindtPy.jacs[constr][id(var)]) * (var - value(var))
@@ -230,27 +238,36 @@ def add_gbd_cut(solve_data, config, nlp_feasible=True):
                 expr=(sum_constraints + sum_var_bounds) <= 0)
 
 
-def add_int_cut(solve_data, config, feasible=False):
-    if config.integer_cuts:
-        m = solve_data.working_model
-        MindtPy = m.MindtPy_utils
-        int_tol = config.integer_tolerance
-        # check to make sure that binary variables are all 0 or 1
-        for v in MindtPy.binary_vars:
-            if value(abs(v - 1)) > int_tol and value(abs(v)) > int_tol:
-                raise ValueError('Binary {} = {} is not 0 or 1'.format(
-                    v.name, value(v)))
+def add_int_cut(var_values, solve_data, config, feasible=False):
+    if not config.integer_cuts:
+        return
 
-        if not MindtPy.binary_vars:  # if no binary variables, skip.
-            return
+    m = solve_data.working_model
+    MindtPy = m.MindtPy_utils
+    int_tol = config.integer_tolerance
 
-        int_cut = (sum(1 - v for v in MindtPy.binary_vars
-                       if value(abs(v - 1)) <= int_tol) +
-                   sum(v for v in MindtPy.binary_vars
-                       if value(abs(v)) <= int_tol) >= 1)
+    # copy variable values over
+    for var, val in zip(MindtPy.var_list, var_values):
+        if not var.is_binary():
+            continue
+        var.value = val
 
-        if not feasible:
-            # Add the integer cut
-            MindtPy.MindtPy_linear_cuts.integer_cuts.add(expr=int_cut)
-        else:
-            MindtPy.MindtPy_linear_cuts.feasible_integer_cuts.add(expr=int_cut)
+    # check to make sure that binary variables are all 0 or 1
+    for v in MindtPy.binary_vars:
+        if value(abs(v - 1)) > int_tol and value(abs(v)) > int_tol:
+            raise ValueError('Binary {} = {} is not 0 or 1'.format(
+                v.name, value(v)))
+
+    if not MindtPy.binary_vars:  # if no binary variables, skip.
+        return
+
+    int_cut = (sum(1 - v for v in MindtPy.binary_vars
+                   if value(abs(v - 1)) <= int_tol) +
+               sum(v for v in MindtPy.binary_vars
+                   if value(abs(v)) <= int_tol) >= 1)
+
+    if not feasible:
+        # Add the integer cut
+        MindtPy.MindtPy_linear_cuts.integer_cuts.add(expr=int_cut)
+    else:
+        MindtPy.MindtPy_linear_cuts.feasible_integer_cuts.add(expr=int_cut)

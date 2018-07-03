@@ -178,6 +178,12 @@ def copy_var_list_values(from_list, to_list, config, skip_stale=False):
                 else:
                     # Simply do not copy if there is a binary domain violation.
                     continue
+            if 'is not in domain NonNegativeReals' in str(err):
+                v_from_val = value(v_from, exception=False)
+                if fabs(v_from_val) <= config.zero_tolerance:
+                    v_to.set_value(0)
+                else:
+                    raise
             else:
                 raise
 

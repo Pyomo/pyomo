@@ -35,6 +35,7 @@ import pyomo.common.plugin
 from pyomo.core.base import (Block, ComponentUID, Constraint, ConstraintList,
                              Expression, Objective, RangeSet, Set, Suffix, Var,
                              maximize, minimize, value)
+from pyomo.contrib.mindtpy.solve_NLP import solve_NLP_subproblem
 from pyomo.core.expr.current import clone_expression
 from pyomo.core.base.numvalue import NumericConstant
 from pyomo.core.kernel import Binary, NonNegativeReals, Reals
@@ -234,6 +235,9 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
         default=1E-8,
         description="Tolerance on variable bounds."
     ))
+    CONFIG.declare("zero_tolerance", ConfigValue(
+        default=1E-15,
+        description="Tolerance on variable equal to zero."))
     CONFIG.declare("initial_feas", ConfigValue(
         default=True,
         description="Apply an initial feasibility step.",
@@ -464,11 +468,11 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
                 self._add_ecp_cut(solve_data, config)
             else:
                 # Solve NLP subproblem
-                self._solve_NLP_subproblem(solve_data, config)
+                solve_NLP_subproblem(solve_data, config)
 
             # If the hybrid algorithm is not making progress, switch to OA.
             progress_required = 1E-6
-            if MindtPy.obj.sense == minimize:
+            if MindtPy.objective.sense == minimize:
                 log = solve_data.LB_progress
                 sign_adjust = 1
             else:
@@ -510,16 +514,16 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
             c.deactivate()
 
         MindtPy.MindtPy_linear_cuts.activate()
-        MindtPy.obj.deactivate()
+        MindtPy.objective.deactivate()
 
-        sign_adjust = 1 if MindtPy.obj.sense == minimize else -1
+        sign_adjust = 1 if MindtPy.objective.sense == minimize else -1
         MindtPy.MindtPy_penalty_expr = Expression(
             expr=sign_adjust * config.OA_penalty_factor * sum(
                 v for v in MindtPy.MindtPy_linear_cuts.slack_vars[...]))
 
         MindtPy.MindtPy_oa_obj = Objective(
-            expr=MindtPy.obj.expr + MindtPy.MindtPy_penalty_expr,
-            sense=MindtPy.obj.sense)
+            expr=MindtPy.objective.expr + MindtPy.MindtPy_penalty_expr,
+            sense=MindtPy.objective.sense)
 
         # Deactivate extraneous IMPORT/EXPORT suffixes
         getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
@@ -542,7 +546,7 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
             master_terminate_cond = results.solver.termination_condition
             solve_data.mip_solver.options.update(old_options)
 
-        MindtPy.obj.activate()
+        MindtPy.objective.activate()
         for c in MindtPy.nonlinear_constraints:
             c.activate()
         MindtPy.MindtPy_linear_cuts.deactivate()
@@ -554,10 +558,9 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
         if master_terminate_cond is tc.optimal:
             # proceed. Just need integer values
             m.solutions.load_from(results)
-            self._copy_values(m, solve_data.working_model, config)
-            self._copy_dual_suffixes(m, solve_data.working_model)
+            copy_values(m, solve_data.working_model, config)
 
-            if MindtPy.obj.sense == minimize:
+            if MindtPy.objective.sense == minimize:
                 solve_data.LB = max(value(MindtPy.MindtPy_oa_obj.expr), solve_data.LB)
                 solve_data.LB_progress.append(solve_data.LB)
             else:
