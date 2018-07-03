@@ -27,6 +27,8 @@ from six import iteritems
 
 from pyutilib.misc.config import ConfigBlock, ConfigValue
 from pyomo.contrib.mindtpy.util import MindtPySolveData, _DoNothing, a_logger
+from pyomo.contrib.mindtpy.util import (
+    build_ordered_component_lists, model_is_valid, copy_values)
 import pyomo.common.plugin
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base import (Block, ComponentUID, Constraint, ConstraintList,
@@ -239,7 +241,8 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
         domain=bool
     ))
 
-    # Qi: this causes issues. I'm not sure exactly why, but commenting for now.
+    # From Qi: this causes issues.
+    # I'm not sure exactly why, but commenting for now.
     # __doc__ += CONFIG.generate_yaml_template()
 
     def available(self, exception_flag=True):
@@ -266,10 +269,9 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
             model (Block): a Pyomo model or block to be solved
         """
         config = self.CONFIG(kwds.pop('options', {}))
-
         config.set_value(kwds)
-
         solve_data = MindtPySolveData()
+        created_MindtPy_block = False
 
 
         old_logger_level = config.logger.getEffectiveLevel()
@@ -277,38 +279,29 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
             if config.tee and old_logger_level > logging.INFO:
                 # If the logger does not already include INFO, include it.
                 config.logger.setLevel(logging.INFO)
-
-            # Modify in place decides whether to run the algorithm on a copy of
-            # the originally model passed to the solver, or whether to
-            # manipulate the original model directly.
-            solve_data.working_model = m = model
-
-            solve_data.current_strategy = config.strategy
+            config.logger.info("Starting MindtPy")
 
             # Create a model block on which to store MindtPy-specific utility
             # modeling objects.
-            # TODO check if name is taken already
-            MindtPy = m.MindtPy_utils = Block()
+            if hasattr(model, 'MindtPy_utils'):
+                raise RuntimeError("MindtPy_utils already exists.")
+            else:
+                created_MindtPy_block = True
+                model.MindtPy_utils = Block()
 
-            MindtPy.initial_var_list = list(v for v in m.component_data_objects(
-                ctype=Var, descend_into=True
-            ))
-            MindtPy.initial_var_values = list(
-                v.value for v in MindtPy.initial_var_list)
+            solve_data.original_model = model
+
+            build_ordered_component_lists(model)
+            solve_data.working_model = model.clone()
+            MindtPy = solve_data.working_model.MindtPy_utils
 
             # Store the initial model state as the best solution found. If we
             # find no better solution, then we will restore from this copy.
-            # print('Initial clone for best_solution_found')
             solve_data.best_solution_found = model.clone()
 
-            # Save model initial values. These are used later to initialize NLP
-            # subproblems.
-            MindtPy.initial_var_values = list(
-                v.value for v in MindtPy.initial_var_list)
-
-           # Create the solver results object
+            # Create the solver results object
             res = solve_data.results = SolverResults()
-            res.problem.name = m.name
+            res.problem.name = model.name
             res.problem.number_of_nonzeros = None  # TODO
             res.solver.name = 'MindtPy' + str(config.strategy)
             # TODO work on termination condition and message
@@ -321,21 +314,8 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
             res.solver.termination_message = None
 
             # Validate the model to ensure that MindtPy is able to solve it.
-            #
-            # This needs to take place before the detection of nonlinear
-            # constraints, because if the objective is nonlinear, it will be moved
-            # to the constraints.
-            assert(not hasattr(self, 'nonlinear_constraints'))
-            self._validate_model(config, solve_data)
-
-            # Maps in order to keep track of certain generated constraints
-            # MindtPy.cut_map = Suffix(direction=Suffix.LOCAL, datatype=None)
-
-
-            # Create a model block in which to store the generated linear
-            # constraints. Do not leave the constraints on by default.
-            lin = MindtPy.MindtPy_linear_cuts = Block()
-            lin.deactivate()
+            if not model_is_valid(solve_data, config):
+                return
 
             # Create a model block in which to store the generated feasibility slack
             # constraints. Do not leave the constraints on by default.
@@ -343,6 +323,11 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
             feas.deactivate()
             feas.feas_constraints = ConstraintList(
                 doc='Feasibility Problem Constraints')
+
+            # Create a model block in which to store the generated linear
+            # constraints. Do not leave the constraints on by default.
+            lin = MindtPy.MindtPy_linear_cuts = Block()
+            lin.deactivate()
 
             # Integer cuts exclude particular discrete decisions
             lin.integer_cuts = ConstraintList(doc='integer cuts')
@@ -356,22 +341,6 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
             # already in the primary integer_cuts ConstraintList.
             lin.feasible_integer_cuts = ConstraintList(doc='explored integer cuts')
             lin.feasible_integer_cuts.deactivate()
-
-            # Build a list of binary variables
-            MindtPy.binary_vars = [v for v in m.component_data_objects(
-                ctype=Var, descend_into=True)
-                if v.is_binary() and not v.fixed]
-
-            # Build list of nonlinear constraints
-            MindtPy.nonlinear_constraints = [
-                v for v in m.component_data_objects(
-                    ctype=Constraint, active=True, descend_into=True)
-                if v.body.polynomial_degree() not in (0, 1)]
-
-            # Build list of  constraints
-            MindtPy.constraints = [
-                v for v in m.component_data_objects(
-                    ctype=Constraint, active=True, descend_into=True)]
 
             # Set up iteration counters
             solve_data.nlp_iter = 0
@@ -390,10 +359,12 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
             # Set of MIP iterations for which cuts were generated in ECP
             lin.mip_iters = Set(dimen=1)
 
-            # Create an integer index set over the nonlinear constraints
-            lin.nl_constraint_set = RangeSet(len(MindtPy.nonlinear_constraints))
-            # Create an integer index set over the constraints
-            feas.constraint_set = RangeSet(len(MindtPy.constraints))
+            lin.nl_constraint_set = RangeSet(
+                len(MindtPy.nonlinear_constraints),
+                doc="Integer index set over the nonlinear constraints")
+            feas.constraint_set = RangeSet(
+                len(MindtPy.constraints),
+                doc="integer index set over the constraints")
             # Mapping Constraint -> integer index
             MindtPy.nl_map = {}
             # Mapping integer index -> Constraint
@@ -438,99 +409,16 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
 
             # Update values in original model
             if config.load_solutions:
-                self._copy_values(solve_data.best_solution_found, model, config)
-
+                # Update values in original model
+                copy_values(
+                    solve_data.best_solution_found,
+                    solve_data.original_model,
+                    config)
 
         finally:
             config.logger.setLevel(old_logger_level)
-
-    def _copy_values(self, from_model, to_model, config):
-        """Copy variable values from one model to another."""
-        for v_from, v_to in zip(from_model.MindtPy_utils.initial_var_list,
-                                to_model.MindtPy_utils.initial_var_list):
-            try:
-                v_to.set_value(v_from.value)
-            except ValueError as err:
-                if 'is not in domain Binary' in err.message:
-                    # # Check to see if this is just a tolerance issue
-                    # if (fabs(v_from.value - 1) <= config.integer_tolerance or
-                    #         fabs(v_from.value) <= config.integer_tolerance):
-                    #     v_to.set_value(round(v_from.value))
-                    # else:
-                    pass
-
-    def _copy_dual_suffixes(self, from_model, to_model,
-                            from_map=None, to_map=None):
-        """Copy suffix values from one model to another."""
-        self._copy_suffix(from_model.dual, to_model.dual,
-                          from_map=from_map, to_map=to_map)
-        if hasattr(from_model, 'ipopt_zL_out'):
-            self._copy_suffix(from_model.ipopt_zL_out, to_model.ipopt_zL_out,
-                              from_map=from_map, to_map=to_map)
-        if hasattr(from_model, 'ipopt_zU_out'):
-            self._copy_suffix(from_model.ipopt_zU_out, to_model.ipopt_zU_out,
-                              from_map=from_map, to_map=to_map)
-
-    def _copy_suffix(self, from_suffix, to_suffix, from_map=None, to_map=None):
-        """Copy suffix values from one model to another."""
-        if from_map is None:
-            from_map = generate_cuid_names(from_suffix.model(),
-                                           ctype=(Var, Constraint),
-                                           descend_into=True)
-        if to_map is None:
-            tm_obj_to_uid = generate_cuid_names(
-                to_suffix.model(), ctype=(Var, Constraint),
-                descend_into=True)
-            to_map = dict((cuid, obj)
-                          for obj, cuid in iteritems(tm_obj_to_uid))
-
-    def _validate_model(self, config, solve_data):
-        """Validate that the model is solveable by MindtPy.
-        Also populates results object with problem information.
-        """
-        m = solve_data.working_model
-        MindtPy = m.MindtPy_utils
-        # Check for any integer variables
-        if any(True for v in m.component_data_objects(
-                ctype=Var, descend_into=True)
-                if v.is_integer() and not v.fixed):
-            raise ValueError('Model contains unfixed integer variables. '
-                             'MindtPy does not currently support solution of '
-                             'such problems.')
-            # TODO add in the reformulation using base 2
-
-        # Handle missing or multiple objectives
-        objs = m.component_data_objects(
-            ctype=Objective, active=True, descend_into=True)
-        # Fetch the first active objective in the model
-        main_obj = next(objs, None)
-        if main_obj is None:
-            raise ValueError('Model has no active objectives.')
-        # Fetch the next active objective in the model
-        if next(objs, None) is not None:
-            raise ValueError('Model has multiple active objectives.')
-
-        if not hasattr(m, 'dual'):  # Set up dual value reporting
-            m.dual = Suffix(direction=Suffix.IMPORT)
-
-        # Move the objective to the constraints
-        MindtPy.MindtPy_objective_value = Var(domain=Reals, initialize=0)
-        if main_obj.sense == minimize:
-            MindtPy.MindtPy_objective_expr = Constraint(
-                expr=MindtPy.MindtPy_objective_value >= main_obj.expr)
-            m.dual[MindtPy.MindtPy_objective_expr] = 1
-            solve_data.results.problem.sense = ProblemSense.minimize
-        else:
-            MindtPy.MindtPy_objective_expr = Constraint(
-                expr=MindtPy.MindtPy_objective_value <= main_obj.expr)
-            m.dual[MindtPy.MindtPy_objective_expr] = -1
-            solve_data.results.problem.sense = ProblemSense.maximize
-        main_obj.deactivate()
-        MindtPy.obj = Objective(
-            expr=MindtPy.MindtPy_objective_value, sense=main_obj.sense)
-
-        # TODO if any continuous variables are multipled with binary ones, need
-        # to do some kind of transformation (Glover?) or throw an error message
+            if created_MindtPy_block:
+                model.del_component('MindtPy_utils')
 
     def _MindtPy_initialize_master(self, solve_data, config):
         """Initialize the decomposition algorithm.
@@ -594,8 +482,7 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
         solve_data.nlp_iter += 1
         m = solve_data.working_model.clone()
         config.logger.info(
-            "NLP %s: Solve relaxed integrality" %
-                    (solve_data.nlp_iter))
+            "NLP %s: Solve relaxed integrality" % (solve_data.nlp_iter,))
         MindtPy = m.MindtPy_utils
         for v in MindtPy.binary_vars:
             v.domain = NonNegativeReals
@@ -607,15 +494,15 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
         subprob_terminate_cond = results.solver.termination_condition
         if subprob_terminate_cond is tc.optimal:
             m.solutions.load_from(results)
-            self._copy_values(m, solve_data.working_model, config)
+            copy_values(m, solve_data.working_model, config)
             # Add OA cut
-            if MindtPy.obj.sense == minimize:
-                solve_data.LB = value(MindtPy.obj.expr)
+            if MindtPy.objective.sense == minimize:
+                solve_data.LB = value(MindtPy.objective.expr)
             else:
-                solve_data.UB = value(MindtPy.obj.expr)
+                solve_data.UB = value(MindtPy.objective.expr)
             config.logger.info(
                 'NLP %s: OBJ: %s  LB: %s  UB: %s'
-                % (solve_data.nlp_iter, value(MindtPy.obj.expr),
+                % (solve_data.nlp_iter, value(MindtPy.objective.expr),
                    solve_data.LB, solve_data.UB))
             if config.strategy == 'OA':
                 self._add_oa_cut(solve_data, config)
@@ -1288,8 +1175,8 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
                 if self.initial_feas == 1:
                     self._add_feas_slacks(m, solve_data, config)
                     self.initial_feas = 0
-                self._solve_NLP_feas(m, solve_data, config)
-                self._add_oa_cut(m, solve_data, config)
+                self._solve_NLP_feas(solve_data, config)
+                self._add_oa_cut(solve_data, config)
             # Add an integer cut to exclude this discrete option
             self._add_int_cut(solve_data, config)
         elif subprob_terminate_cond is tc.maxIterations:
@@ -1415,7 +1302,7 @@ class MindtPySolver(pyomo.common.plugin.Plugin):
         m = solve_data.working_model
         MindtPy = m.MindtPy_utils
         MindtPy.MindtPy_linear_cuts.nlp_iters.add(solve_data.nlp_iter)
-        sign_adjust = -1 if MindtPy.obj.sense == minimize else 1
+        sign_adjust = -1 if MindtPy.objective.sense == minimize else 1
 
         # generate new constraints
         # TODO some kind of special handling if the dual is phenomenally small?
