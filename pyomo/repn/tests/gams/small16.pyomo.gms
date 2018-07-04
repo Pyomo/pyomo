@@ -3,17 +3,16 @@ $offdigit
 EQUATIONS
 	c1;
 
-POSITIVE VARIABLES
+VARIABLES
+	GAMS_OBJECTIVE
 	x1
 	x2;
 
-VARIABLES
-	GAMS_OBJECTIVE
-	;
-
 c1.. GAMS_OBJECTIVE =e= x1 + x2 ;
 
+x1.lo = 2;
 x1.l = 1.0;
+x2.lo = 1;
 x2.l = 1.0;
 
 MODEL GAMS_MODEL /all/ ;

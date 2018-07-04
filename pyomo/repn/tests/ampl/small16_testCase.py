@@ -19,8 +19,11 @@ from pyomo.environ import *
 
 model = ConcreteModel()
 
-model.A = Set(initialize=[1, '1'], within=Any)
-model.x = Var(model.A, initialize=1.0, within=NonNegativeReals)
+model.A = Set(initialize=[2, '1'], within=Any)
+def x_bounds(model, i):
+    if i == 2:
+        return (2, None)
+    return (1, None)
+model.x = Var(model.A, initialize=1.0, bounds=x_bounds)
 
-model.OBJ = Objective(expr=model.x[1]+model.x['1'])
-
+model.OBJ = Objective(expr=model.x[2]+model.x['1'])

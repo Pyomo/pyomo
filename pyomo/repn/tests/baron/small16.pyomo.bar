@@ -5,8 +5,8 @@ Summary: 0;
 POSITIVE_VARIABLES ONE_VAR_CONST__, x1, x2;
 
 LOWER_BOUNDS{
-x1: 0;
-x2: 0;
+x1: 2;
+x2: 1;
 }
 
 EQUATIONS c_e_FIX_ONE_VAR_CONST__;
