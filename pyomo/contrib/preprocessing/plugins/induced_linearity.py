@@ -18,6 +18,7 @@ from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
 from pyomo.common.plugin import alias
+from pyomo.gdp import Disjunct
 import logging
 
 logger = logging.getLogger('pyomo.contrib.preprocessing')
@@ -40,6 +41,7 @@ class InducedLinearity(IsomorphicTransformation):
         constraint_bound_tolerance = 1E-6
         effectively_discrete_vars = ComponentSet(
             _effectively_discrete_vars(model, constraint_bound_tolerance))
+        # TODO will need to go through this for each disjunct
 
         # Collect find bilinear expressions that can be reformulated using
         # knowledge of effectively discrete variables
@@ -51,7 +53,19 @@ class InducedLinearity(IsomorphicTransformation):
 
 
 def _bilinear_expressions(model):
+    # TODO for now, we look for only expressions where the bilinearities are
+    # exposed on the root level SumExpression, and thus accessible via
+    # generate_standard_repn. This will not detect exp(x*y). We require a
+    # factorization transformation to be applied beforehand in order to pick
+    # these constraints up.
     pass
+    for constr in model.component_data_objects(
+            Constraint, active=True, descend_into=(Block, Disjunct)):
+        if constr.body.polynomial_degree() in (1, 0):
+            continue  # Skip trivial and linear constraints
+        repn = generate_standard_repn(constr.body)
+        pass
+        # TODO what information do I need to store?
 
 
 def _effectively_discrete_vars(block, constraint_bound_tolerance):
@@ -59,7 +73,7 @@ def _effectively_discrete_vars(block, constraint_bound_tolerance):
     sum of discrete variables.
     """
     for constr in block.component_data_objects(
-            Constraint, descend_into=True):
+            Constraint, active=True, descend_into=True):
         if constr.lower is None or constr.upper is None:
             continue  # skip inequality constraints
         if fabs(value(constr.lower) - value(constr.upper)
