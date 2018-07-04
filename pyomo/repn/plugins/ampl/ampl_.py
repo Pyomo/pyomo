@@ -671,8 +671,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
         output_fixed_variable_bounds = self._output_fixed_variable_bounds
         symbolic_solver_labels = self._symbolic_solver_labels
 
+        # TODO - Remove references to sorter
         sorter = SortComponents.unsorted
-        if file_determinism >= 1:
+        if False and file_determinism >= 1:
             sorter = sorter | SortComponents.indices
             if file_determinism >= 2:
                 sorter = sorter | SortComponents.alphabetical
