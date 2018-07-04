@@ -408,6 +408,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             sortOrder = sortOrder | SortComponents.indices
             if file_determinism >= 2:
                 sortOrder = sortOrder | SortComponents.alphabetical
+        # TODO - remove sortOrder logic
+        sortOrder = SortComponents.unsorted
 
         #
         # Create variable symbols (and cache the block list)
