@@ -2571,7 +2571,72 @@ class TestMisc(PyomoModel):
         self.assertEqual(len(tmp),9)
 
 
+class TestSetOrderedRepn(unittest.TestCase):
+
+    def test_indexed_not_comparable1(self):
+        # In Python3, we cannot sort an indexed set that contains both integers and strings.
+        # Hence, we print using the insertion order.
+        m = ConcreteModel()
+        m.A = Set(initialize=[1, '2'], within=Any)
+        m.x = Var(m.A)
+        buf = StringIO()
+        m.pprint(ostream=buf)
+        self.assertEqual("""1 Set Declarations
+    A : Dim=0, Dimen=1, Size=2, Domain=Any, Ordered=False, Bounds=None
+        [1, '2']
+
+1 Var Declarations
+    x : Size=2, Index=A
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          1 :  None :  None :  None : False :  True :  Reals
+          2 :  None :  None :  None : False :  True :  Reals
+
+2 Declarations: A x
+""", buf.getvalue())
+
+    def test_indexed_not_comparable2(self):
+        # If the set is unordered but comparable, we print using the insertion order.
+        m = ConcreteModel()
+        m.A = Set(initialize=['2', '1'])
+        m.x = Var(m.A)
+        buf = StringIO()
+        m.pprint(ostream=buf)
+        self.assertEqual("""1 Set Declarations
+    A : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=None
+        ['2', '1']
+
+1 Var Declarations
+    x : Size=2, Index=A
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          1 :  None :  None :  None : False :  True :  Reals
+          2 :  None :  None :  None : False :  True :  Reals
+
+2 Declarations: A x
+""", buf.getvalue())
+
+    def test_indexed_not_comparable3(self):
+        # If the set is ordered, then we print using the sorted order.
+        m = ConcreteModel()
+        m.A = Set(initialize=['2', '1'], ordered=True)
+        m.x = Var(m.A)
+        buf = StringIO()
+        m.pprint(ostream=buf)
+        self.assertEqual("""1 Set Declarations
+    A : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=Insertion, Bounds=None
+        ['2', '1']
+
+1 Var Declarations
+    x : Size=2, Index=A
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          1 :  None :  None :  None : False :  True :  Reals
+          2 :  None :  None :  None : False :  True :  Reals
+
+2 Declarations: A x
+""", buf.getvalue())
+
+
 class TestSetsInPython3(unittest.TestCase):
+
     def test_pprint_mixed(self):
         # In Python3, sorting a mixed string fails.  We have added a
         # fallback more "robust" sorter, and this exercises that code
