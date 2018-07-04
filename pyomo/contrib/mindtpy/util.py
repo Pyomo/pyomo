@@ -8,7 +8,7 @@ from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
                         Objective, Reals, Suffix, Var, minimize, value)
 from pyomo.core.base.symbolic import differentiate
 from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel import ComponentSet
+from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.opt import SolverFactory
 from pyomo.opt.results import ProblemSense
 
@@ -216,15 +216,16 @@ def detect_nonlinear_vars(solve_data, config):
 
 
 def calc_jacobians(solve_data, config):
-    m = solve_data.working_model
-    MindtPy = m.MindtPy_utils
-    MindtPy.jacs = {}
-    for c in MindtPy.nonlinear_constraints:
-        constraint_vars = list(EXPR.identify_variables(c.body))
-        jac_list = differentiate(c.body, wrt_list=constraint_vars)
-        MindtPy.jacs[c] = {
-            id(var): jac
-            for var, jac in zip(constraint_vars, jac_list)}
+    """Generate a map of jacobians."""
+    # Map nonlinear_constraint --> Map(
+    #     variable --> jacobian of constraint wrt. variable)
+    solve_data.jacobians = ComponentMap()
+    for c in solve_data.mip.MindtPy_utils.nonlinear_constraints:
+        vars_in_constr = list(EXPR.identify_variables(c.body))
+        jac_list = differentiate(c.body, wrt_list=vars_in_constr)
+        solve_data.jacobians[c] = ComponentMap(
+            (var, jac_wrt_var)
+            for var, jac_wrt_var in zip(vars_in_constr, jac_list))
 
 
 def add_feas_slacks(solve_data, config):

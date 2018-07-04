@@ -62,7 +62,6 @@ def add_oa_cut(var_values, duals, solve_data, config):
             MindtPy.MindtPy_linear_cuts.slack_vars[
                 solve_data.nlp_iter,
                 MindtPy.nl_map[constr]] <= 0)
-        MindtPy.OA_constr_map[constr, solve_data.nlp_iter] = c
 
 
 def add_ecp_cut(solve_data, config):

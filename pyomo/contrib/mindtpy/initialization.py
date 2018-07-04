@@ -18,25 +18,16 @@ def MindtPy_initialize_master(solve_data, config):
     This includes generating the initial cuts require to build the master
     problem.
     """
-    m = solve_data.working_model
+    m = solve_data.mip = solve_data.working_model.clone()
     MindtPy = m.MindtPy_utils
-    MindtPy.feas_constr_map = {}
 
     m.dual.activate()
-    if not hasattr(m, 'ipopt_zL_out'):
-        m.ipopt_zL_out = Suffix(direction=Suffix.IMPORT)
-    if not hasattr(m, 'ipopt_zU_out'):
-        m.ipopt_zU_out = Suffix(direction=Suffix.IMPORT)
 
     if config.strategy == 'OA':
-        # Map Constraint, nlp_iter -> generated OA Constraint
-        MindtPy.OA_constr_map = {}
         calc_jacobians(solve_data, config)  # preload jacobians
         MindtPy.MindtPy_linear_cuts.oa_cuts = ConstraintList(
             doc='Outer approximation cuts')
     elif config.strategy == 'ECP':
-        # Map Constraint, nlp_iter -> generated ECP Constraint
-        MindtPy.ECP_constr_map = {}
         calc_jacobians(solve_data, config)  # preload jacobians
         MindtPy.MindtPy_linear_cuts.ecp_cuts = ConstraintList(
             doc='Extended Cutting Planes')
@@ -76,8 +67,6 @@ def init_rNLP(solve_data, config):
     results = solve_data.nlp_solver.solve(m, options=config.nlp_solver_kwargs)
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
-        m.solutions.load_from(results)
-        copy_values(m, solve_data.working_model, config)
         nlp_solution_values = list(v.value for v in MindtPy.var_list)
         dual_values = list(m.dual[c] for c in MindtPy.constraints)
         # Add OA cut
