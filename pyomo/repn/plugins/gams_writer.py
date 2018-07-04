@@ -205,6 +205,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
                       1:SortComponents.deterministic,
                       2:SortComponents.sortBoth}
         sort = sorter_map[file_determinism]
+        # TODO: disable sorting logic
+        sort = SortComponents.unsorted
 
         # Warmstart by initializing model's variables to their values.
         warmstart = io_options.pop("warmstart", True)

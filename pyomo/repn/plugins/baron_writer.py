@@ -525,6 +525,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
             sorter = sorter | SortComponents.indices
             if file_determinism >= 2:
                 sorter = sorter | SortComponents.alphabetical
+        # TODO: disable sorter logic
+        sorter = SortComponents.unsorted
 
         output_fixed_variable_bounds = \
             io_options.pop("output_fixed_variable_bounds", False)
