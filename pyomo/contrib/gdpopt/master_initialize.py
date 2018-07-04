@@ -11,10 +11,44 @@ from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
 from pyomo.contrib.gdpopt.nlp_solve import (solve_NLP,
                                             update_nlp_progress_indicators)
-from pyomo.contrib.gdpopt.util import copy_and_fix_mip_values_to_nlp
-from pyomo.core import (Block, Constraint, Objective, TransformationFactory,
-                        Var, maximize, minimize)
+from pyomo.contrib.gdpopt.util import (_DoNothing,
+                                       copy_and_fix_mip_values_to_nlp)
+from pyomo.core import (Block, Constraint, Objective, Suffix,
+                        TransformationFactory, Var, maximize, minimize)
 from pyomo.gdp import Disjunct
+
+
+def GDPopt_initialize_master(solve_data, config):
+    """Initialize the decomposition algorithm.
+
+    This includes generating the initial cuts require to build the master
+    problem.
+
+    """
+    config.logger.info("---Starting GDPopt initialization---")
+    m = solve_data.working_model
+    if not hasattr(m, 'dual'):  # Set up dual value reporting
+        m.dual = Suffix(direction=Suffix.IMPORT)
+    m.dual.activate()
+
+    # Set up the linear GDP model
+    solve_data.linear_GDP = m.clone()
+    # deactivate nonlinear constraints
+    for c in solve_data.linear_GDP.GDPopt_utils.\
+            working_nonlinear_constraints:
+        c.deactivate()
+
+    # Initialization strategies
+    init_strategy = valid_init_strategies.get(config.init_strategy, None)
+    if init_strategy is not None:
+        init_strategy(solve_data, config)
+    else:
+        raise ValueError(
+            'Unknown initialization strategy: %s. '
+            'Valid strategies include: %s'
+            % (config.init_strategy,
+               ", ".join(k for (k, v) in valid_init_strategies.items()
+                         if v is not None)))
 
 
 def init_custom_disjuncts(solve_data, config):
@@ -262,3 +296,13 @@ def solve_set_cover_MIP(linear_GDP_model, disj_needs_cover,
         else:
             solve_data.UB = float('-inf')
         return False
+
+
+# Valid initialization strategies
+valid_init_strategies = {
+    'no_init': _DoNothing,
+    'set_covering': init_set_covering,
+    'max_binary': init_max_binaries,
+    'fix_disjuncts': init_fixed_disjuncts,
+    'custom_disjuncts': init_custom_disjuncts
+}
