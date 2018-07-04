@@ -5,12 +5,13 @@ from pyomo.contrib.mindtpy.cut_generation import (add_ecp_cut, add_gbd_cut,
                                                   add_oa_cut,
                                                   add_objective_linearization,
                                                   add_psc_cut)
-from pyomo.contrib.mindtpy.util import _DoNothing, copy_values
-from pyomo.core.base import (Objective, TransformationFactory, maximize,
-                             minimize, value, Suffix, ConstraintList)
-from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.mindtpy.util import calc_jacobians, detect_nonlinear_vars
 from pyomo.contrib.mindtpy.solve_NLP import solve_NLP_subproblem
+from pyomo.contrib.mindtpy.util import (_DoNothing, calc_jacobians,
+                                        copy_values, detect_nonlinear_vars)
+from pyomo.core import (ConstraintList, Objective, Suffix,
+                        TransformationFactory, maximize, minimize, value)
+from pyomo.opt import TerminationCondition as tc
+from pyomo.opt import SolverFactory
 
 
 def MindtPy_initialize_master(solve_data, config):
@@ -64,7 +65,8 @@ def init_rNLP(solve_data, config):
         "NLP %s: Solve relaxed integrality" % (solve_data.nlp_iter,))
     MindtPy = m.MindtPy_utils
     TransformationFactory('core.relax_integrality').apply_to(m)
-    results = solve_data.nlp_solver.solve(m, options=config.nlp_solver_kwargs)
+    results = SolverFactory(config.nlp_solver).solve(
+        m, options=config.nlp_solver_kwargs)
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
         nlp_solution_values = list(v.value for v in MindtPy.var_list)

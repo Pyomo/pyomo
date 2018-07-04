@@ -35,7 +35,7 @@ def add_objective_linearization(solve_data, config):
 
 
 def add_oa_cut(var_values, duals, solve_data, config):
-    m = solve_data.working_model
+    m = solve_data.mip
     MindtPy = m.MindtPy_utils
     MindtPy.MindtPy_linear_cuts.nlp_iters.add(solve_data.nlp_iter)
     sign_adjust = -1 if MindtPy.objective.sense == minimize else 1
@@ -51,12 +51,13 @@ def add_oa_cut(var_values, duals, solve_data, config):
 
     # generate new constraints
     # TODO some kind of special handling if the dual is phenomenally small?
+    jacs = solve_data.jacobians
     for constr in MindtPy.nonlinear_constraints:
         rhs = ((0 if constr.upper is None else constr.upper) +
                (0 if constr.lower is None else constr.lower))
-        c = MindtPy.MindtPy_linear_cuts.oa_cuts.add(
+        MindtPy.MindtPy_linear_cuts.oa_cuts.add(
             expr=copysign(1, sign_adjust * m.dual[constr]) * (sum(
-                value(MindtPy.jacs[constr][id(var)]) * (var - value(var))
+                value(jacs[constr][var]) * (var - value(var))
                 for var in list(EXPR.identify_variables(constr.body))) +
                 value(constr.body) - rhs) +
             MindtPy.MindtPy_linear_cuts.slack_vars[

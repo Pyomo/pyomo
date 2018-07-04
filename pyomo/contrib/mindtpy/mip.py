@@ -1,15 +1,18 @@
 """Master problem functions."""
 from __future__ import division
-from pyomo.opt import TerminationCondition as tc
-from pyomo.core import value, minimize, Constraint, Objective, Expression
-from pyomo.contrib.mindtpy.util import _DoNothing, copy_values
+
 from copy import deepcopy
-from pyomo.opt import SolverStatus, SolutionStatus
+
+from pyomo.contrib.mindtpy.initialization import init_max_binaries
+from pyomo.contrib.mindtpy.util import _DoNothing, copy_values
+from pyomo.core import Constraint, Expression, Objective, minimize, value
+from pyomo.opt import TerminationCondition as tc
+from pyomo.opt import SolutionStatus, SolverStatus, SolverFactory
 
 
-def _solve_OA_master(self, solve_data, config):
+def solve_OA_master(solve_data, config):
     solve_data.mip_iter += 1
-    m = solve_data.working_model.clone()
+    m = solve_data.mip.clone()
     MindtPy = m.MindtPy_utils
     config.logger.info(
         'MIP %s: Solve master problem.' %
@@ -35,21 +38,22 @@ def _solve_OA_master(self, solve_data, config):
     getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
 
     # m.pprint() #print oa master problem for debugging
-    results = solve_data.mip_solver.solve(m, load_solutions=False,
-                                    options=config.mip_solver_kwargs)
+    results = SolverFactory(config.mip_solver).solve(
+        m, load_solutions=False,
+        options=config.mip_solver_kwargs)
     master_terminate_cond = results.solver.termination_condition
     if master_terminate_cond is tc.infeasibleOrUnbounded:
         # Linear solvers will sometimes tell me that it's infeasible or
         # unbounded during presolve, but fails to distinguish. We need to
         # resolve with a solver option flag on.
         from copy import deepcopy
-        old_options = deepcopy(solve_data.mip_solver.options)
+        changed_options = deepcopy(config.mip_solver_kwargs)
         # This solver option is specific to Gurobi.
-        solve_data.mip_solver.options['DualReductions'] = 0
-        results = solve_data.mip_solver.solve(m, load_solutions=False,
-                                        options=config.mip_solver_kwargs)
+        changed_options['DualReductions'] = 0
+        results = SolverFactory(config.mip_solver).solve(
+            m, load_solutions=False,
+            options=changed_options)
         master_terminate_cond = results.solver.termination_condition
-        solve_data.mip_solver.options.update(old_options)
 
     MindtPy.objective.activate()
     for c in MindtPy.nonlinear_constraints:
@@ -66,10 +70,12 @@ def _solve_OA_master(self, solve_data, config):
         copy_values(m, solve_data.working_model, config)
 
         if MindtPy.objective.sense == minimize:
-            solve_data.LB = max(value(MindtPy.MindtPy_oa_obj.expr), solve_data.LB)
+            solve_data.LB = max(
+                value(MindtPy.MindtPy_oa_obj.expr), solve_data.LB)
             solve_data.LB_progress.append(solve_data.LB)
         else:
-            solve_data.UB = min(value(MindtPy.MindtPy_oa_obj.expr), solve_data.UB)
+            solve_data.UB = min(
+                value(MindtPy.MindtPy_oa_obj.expr), solve_data.UB)
             solve_data.UB_progress.append(solve_data.UB)
         config.logger.info(
             'MIP %s: OBJ: %s  LB: %s  UB: %s'
@@ -89,7 +95,7 @@ def _solve_OA_master(self, solve_data, config):
             'Using current solver feasible solution.')
         results.solver.status = SolverStatus.ok
         m.solutions.load_from(results)
-        self._copy_values(m, solve_data.working_model)
+        copy_values(m, solve_data.working_model)
         if MindtPy.obj.sense == minimize:
             solve_data.LB = max(
                 value(MindtPy.obj.expr), solve_data.LB)
@@ -111,12 +117,14 @@ def _solve_OA_master(self, solve_data, config):
             'but not guaranteed to be optimal.')
         results.solver.status = SolverStatus.ok
         m.solutions.load_from(results)
-        self._copy_values(m, solve_data.working_model)
+        copy_values(m, solve_data.working_model)
         if MindtPy.obj.sense == minimize:
-            solve_data.LB = max(value(MindtPy.MindtPy_oa_obj.expr), solve_data.LB)
+            solve_data.LB = max(
+                value(MindtPy.MindtPy_oa_obj.expr), solve_data.LB)
             solve_data.LB_progress.append(solve_data.LB)
         else:
-            solve_data.UB = min(value(MindtPy.MindtPy_oa_obj.expr), solve_data.UB)
+            solve_data.UB = min(
+                value(MindtPy.MindtPy_oa_obj.expr), solve_data.UB)
             solve_data.UB_progress.append(solve_data.UB)
         config.logger.info(
             'MIP %s: OBJ: %s  LB: %s  UB: %s'
@@ -147,7 +155,8 @@ def _solve_OA_master(self, solve_data, config):
     # Call the MILP post-solve callback
     config.master_postsolve(m, solve_data)
 
-def _solve_ECP_master(self, solve_data, config):
+
+def solve_ECP_master(solve_data, config):
     solve_data.mip_iter += 1
     m = solve_data.working_model.clone()
     MindtPy = m.MindtPy_utils
@@ -166,7 +175,7 @@ def _solve_ECP_master(self, solve_data, config):
     getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
 
     results = solve_data.mip_solver.solve(m, load_solutions=False,
-                                    options=config.mip_solver_kwargs)
+                                          options=config.mip_solver_kwargs)
     master_terminate_cond = results.solver.termination_condition
     if master_terminate_cond is tc.infeasibleOrUnbounded:
         # Linear solvers will sometimes tell that it's infeasible or
@@ -177,7 +186,7 @@ def _solve_ECP_master(self, solve_data, config):
         # This solver option is specific to Gurobi.
         solve_data.mip_solver.options['DualReductions'] = 0
         results = solve_data.mip_solver.solve(m, load_solutions=False,
-                                        options=config.mip_solver_kwargs)
+                                              options=config.mip_solver_kwargs)
         master_terminate_cond = results.solver.termination_condition
         solve_data.mip_solver.options.update(old_options)
     for c in MindtPy.nonlinear_constraints:
@@ -188,7 +197,7 @@ def _solve_ECP_master(self, solve_data, config):
     if master_terminate_cond is tc.optimal:
         # proceed. Just need integer values
         m.solutions.load_from(results)
-        self._copy_values(m, solve_data.working_model, config)
+        copy_values(m, solve_data.working_model, config)
 
         if all(
             (0 if c.upper is None
@@ -235,7 +244,8 @@ def _solve_ECP_master(self, solve_data, config):
     # Call the MILP post-solve callback
     config.master_postsolve(m, solve_data)
 
-def _solve_PSC_master(self, solve_data, config):
+
+def solve_PSC_master(solve_data, config):
     solve_data.mip_iter += 1
     m = solve_data.working_model.clone()
     MindtPy = m.MindtPy_utils
@@ -251,7 +261,7 @@ def _solve_PSC_master(self, solve_data, config):
     getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
     # m.pprint() #print psc master problem for debugging
     results = solve_data.mip_solver.solve(m, load_solutions=False,
-                                    options=config.mip_solver_kwargs)
+                                          options=config.mip_solver_kwargs)
     for c in MindtPy.nonlinear_constraints:
         c.activate()
     MindtPy.MindtPy_linear_cuts.deactivate()
@@ -263,7 +273,7 @@ def _solve_PSC_master(self, solve_data, config):
     if master_terminate_cond is tc.optimal:
         # proceed. Just need integer values
         m.solutions.load_from(results)
-        self._copy_values(m, solve_data.working_model, config)
+        copy_values(m, solve_data.working_model, config)
 
         if MindtPy.obj.sense == minimize:
             solve_data.LB = max(value(MindtPy.obj.expr), solve_data.LB)
@@ -296,7 +306,8 @@ def _solve_PSC_master(self, solve_data, config):
     # Call the MILP post-solve callback
     config.master_postsolve(m, solve_data)
 
-def _solve_GBD_master(self, solve_data, config, leave_linear_active=True):
+
+def solve_GBD_master(solve_data, config, leave_linear_active=True):
     solve_data.mip_iter += 1
     m = solve_data.working_model.clone()
     MindtPy = m.MindtPy_utils
@@ -323,7 +334,7 @@ def _solve_GBD_master(self, solve_data, config, leave_linear_active=True):
     getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
     # m.pprint() #print gbd master problem for debugging
     results = solve_data.mip_solver.solve(m, load_solutions=False,
-                                    options=config.mip_solver_kwargs)
+                                          options=config.mip_solver_kwargs)
     master_terminate_cond = results.solver.termination_condition
     if master_terminate_cond is tc.infeasibleOrUnbounded:
         # Linear solvers will sometimes tell me that it is infeasible or
@@ -333,7 +344,7 @@ def _solve_GBD_master(self, solve_data, config, leave_linear_active=True):
         # This solver option is specific to Gurobi.
         solve_data.mip_solver.options['DualReductions'] = 0
         results = solve_data.mip_solver.solve(m, load_solutions=False,
-                                        options=config.mip_solver_kwargs)
+                                              options=config.mip_solver_kwargs)
         master_terminate_cond = results.solver.termination_condition
         solve_data.mip_solver.options.update(old_options)
     if not leave_linear_active:
@@ -350,7 +361,7 @@ def _solve_GBD_master(self, solve_data, config, leave_linear_active=True):
     if master_terminate_cond is tc.optimal:
         # proceed. Just need integer values
         m.solutions.load_from(results)
-        self._copy_values(m, solve_data.working_model, config)
+        copy_values(m, solve_data.working_model, config)
 
         if MindtPy.obj.sense == minimize:
             solve_data.LB = max(value(MindtPy.obj.expr), solve_data.LB)
@@ -378,7 +389,7 @@ def _solve_GBD_master(self, solve_data, config, leave_linear_active=True):
         # Change the integer values to something new, re-solve.
         MindtPy.MindtPy_linear_cuts.activate()
         MindtPy.MindtPy_linear_cuts.feasible_integer_cuts.activate()
-        self._init_max_binaries()
+        init_max_binaries()
         MindtPy.MindtPy_linear_cuts.deactivate()
         MindtPy.MindtPy_linear_cuts.feasible_integer_cuts.deactivate()
     else:

@@ -111,9 +111,9 @@ def algorithm_should_terminate(solve_data, config):
             % (solve_data.LB, solve_data.UB))
         return True
 
-    if not algorithm_is_making_progress(solve_data, config):
-        config.logger.debug(
-            'Algorithm is not making enough progress. '
-            'Exiting iteration loop.')
-        return True
+    # if not algorithm_is_making_progress(solve_data, config):
+    #     config.logger.debug(
+    #         'Algorithm is not making enough progress. '
+    #         'Exiting iteration loop.')
+    #     return True
     return False
