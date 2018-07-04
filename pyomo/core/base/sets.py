@@ -247,6 +247,12 @@ class _SetData(_SetDataBase):
         """
         return self.value_list.__iter__()
 
+    def base_iterator(self):
+        """
+        Return an iterator for the set.
+        """
+        return self.value_list.__iter__()
+
     def __contains__(self, val):
         """
         Return True if the set contains a given value.
@@ -382,6 +388,14 @@ class _OrderedSetData(_SetDataBase):
         return len(self.value)
 
     def __iter__(self):
+        """
+        Return an iterator for the set.
+        """
+        if self._is_sorted == 2:
+            self._sort()
+        return self.value.__iter__()
+
+    def base_iterator(self):
         """
         Return an iterator for the set.
         """
@@ -882,6 +896,7 @@ class SimpleSetBase(Set):
                 "been constructed (initialized)." % (self.name,) )
         if not self.concrete:
             raise TypeError("Cannot iterate over a non-concrete set '%s'" % self.name)
+        return self.base_iterator()
         return self.value.__iter__()
 
     def __reversed__(self):
