@@ -135,10 +135,7 @@ class TestCPXLPOrdering(unittest.TestCase):
         components["con3"] = Constraint(expr=(0, model.a, 1))
         components["con4"] = Constraint([1,2], rule=lambda m, i: model.a == i)
 
-        # add components in random order
-        random_order = list(components.keys())
-        random.shuffle(random_order)
-        for key in random_order:
+        for key in ['obj', 'con1', 'con2', 'con3', 'con4']:
             model.add_component(key, components[key])
 
         self._check_baseline(model, file_determinism=2)

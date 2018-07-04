@@ -6,21 +6,13 @@ obj:
 
 s.t.
 
-c_e_con4(1)_:
+c_l_con1_:
 +1 a
-= 1
-
-c_e_con4(2)_:
-+1 a
-= 2
+>= 0
 
 c_u_con2_:
 +1 a
 <= 1
-
-c_l_con1_:
-+1 a
->= 0
 
 r_l_con3_:
 +1 a
@@ -29,6 +21,14 @@ r_l_con3_:
 r_u_con3_:
 +1 a
 <= 1
+
+c_e_con4(1)_:
++1 a
+= 1
+
+c_e_con4(2)_:
++1 a
+= 2
 
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0
