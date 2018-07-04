@@ -170,7 +170,7 @@ class Test(unittest.TestCase):
 
 
 #class TestGams_writer(unittest.TestCase):
-class TestGams_writer(object):
+class XTestGams_writer(object):
 
     def _cleanup(self, fname):
         try:

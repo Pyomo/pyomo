@@ -1,0 +1,23 @@
+OPTIONS {
+Summary: 0;
+}
+
+POSITIVE_VARIABLES ONE_VAR_CONST__, x1, x2;
+
+LOWER_BOUNDS{
+x1: 0;
+x2: 0;
+}
+
+EQUATIONS c_e_FIX_ONE_VAR_CONST__;
+
+c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;
+
+OBJ: minimize x1 + x2;
+
+STARTING_POINT{
+ONE_VAR_CONST__: 1;
+x1: 1;
+x2: 1;
+}
+
