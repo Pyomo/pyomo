@@ -8,9 +8,7 @@ from pyomo.contrib.gdpopt.util import _DoNothing
 from pyomo.core import TransformationFactory
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory
-from six import StringIO
-from pyomo.common.log import LoggingIntercept
-import logging
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
 from pyomo.contrib.gdpopt.data_class import MasterProblemResult
 
 
@@ -53,8 +51,7 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
         raise RuntimeError("MIP solver %s is not available." % config.mip)
     # We use LoggingIntercept in order to suppress the stupid "Loading a
     # SolverResults object with a warning status" warning message.
-    output = StringIO()
-    with LoggingIntercept(output, 'pyomo.core', logging.WARNING):
+    with SuppressInfeasibleWarning():
         results = mip_solver.solve(m, **config.mip_options)
     terminate_cond = results.solver.termination_condition
     if terminate_cond is tc.infeasibleOrUnbounded:
@@ -64,7 +61,7 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
         tmp_options = deepcopy(config.mip_options)
         # TODO This solver option is specific to Gurobi.
         tmp_options['DualReductions'] = 0
-        with LoggingIntercept(output, 'pyomo.core', logging.WARNING):
+        with SuppressInfeasibleWarning():
             results = mip_solver.solve(m, **tmp_options)
         terminate_cond = results.solver.termination_condition
 

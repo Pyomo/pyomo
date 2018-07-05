@@ -11,6 +11,8 @@ from pyomo.core.kernel import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverFactory
 from pyomo.opt.results import ProblemSense, SolverResults
+from six import StringIO
+from pyomo.common.log import LoggingIntercept
 
 
 class _DoNothing(object):
@@ -29,6 +31,20 @@ class _DoNothing(object):
         def _do_nothing(*args, **kwargs):
             pass
         return _do_nothing
+
+
+class SuppressInfeasibleWarning(LoggingIntercept):
+    """Suppress the infeasible model warning message from solve().
+
+    The "WARNING: Loading a SolverResults object with a warning status" warning
+    message from calling solve() is often unwanted, but there is no clear way
+    to suppress it.
+
+    """
+
+    def __init__(self):
+        super(SuppressInfeasibleWarning, self).__init__(
+            StringIO(), 'pyomo.core', logging.WARNING)
 
 
 def model_is_valid(solve_data, config):
