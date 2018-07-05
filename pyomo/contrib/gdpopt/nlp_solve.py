@@ -3,7 +3,8 @@ in Logic-based outer approximation.
 """
 from __future__ import division
 
-from pyomo.contrib.gdpopt.util import is_feasible
+from pyomo.contrib.gdpopt.data_class import SubproblemResult
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, is_feasible
 from pyomo.core import Constraint, TransformationFactory, minimize, value
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel import ComponentSet
@@ -55,18 +56,24 @@ def solve_NLP(nlp_model, solve_data, config):
     nlp_solver = SolverFactory(config.nlp)
     if not nlp_solver.available():
         raise RuntimeError("NLP solver %s is not available." % config.nlp)
-    results = nlp_solver.solve(nlp_model, load_solutions=False,
-                               **config.nlp_options)
+    with SuppressInfeasibleWarning():
+        results = nlp_solver.solve(nlp_model, **config.nlp_options)
+
+    nlp_result = SubproblemResult()
+    nlp_result.feasible = True
+    nlp_result.var_values = list(v.value for v in GDPopt.working_var_list)
+    nlp_result.pyomo_results = results
+    nlp_result.dual_values = list(
+        nlp_model.dual.get(c, None)
+        for c in GDPopt.working_constraints_list)
 
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
         nlp_feasible = True
-        nlp_model.solutions.load_from(results)
     elif subprob_terminate_cond is tc.infeasible:
         config.logger.info('NLP subproblem was locally infeasible.')
         # Suppress the warning message by setting solver status to ok.
         results.solver.status = SolverStatus.ok
-        nlp_model.solutions.load_from(results)
         nlp_feasible = False
     elif subprob_terminate_cond is tc.maxIterations:
         # TODO try something else? Reinitialize with different initial
@@ -74,7 +81,6 @@ def solve_NLP(nlp_model, solve_data, config):
         config.logger.info(
             'NLP subproblem failed to converge within iteration limit.')
         results.solver.status = SolverStatus.ok
-        nlp_model.solutions.load_from(results)
         if is_feasible(nlp_model, config):
             config.logger.info(
                 'NLP solution is still feasible. '

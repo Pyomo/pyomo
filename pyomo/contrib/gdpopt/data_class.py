@@ -32,6 +32,7 @@ class SubproblemResult(object):
     Key attributes:
         - feasible: True/False if feasible solution obtained
         - var_values: list of variable values
+        - dual_values: list of constraint dual values
         - pyomo_results: results object from solve() statement
 
     """
