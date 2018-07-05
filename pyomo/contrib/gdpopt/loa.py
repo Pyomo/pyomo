@@ -28,8 +28,8 @@ def solve_LOA_master(solve_data, config):
         sense=GDPopt.objective.sense)
     solve_data.mip_iteration += 1
 
-    mip_results = solve_linear_GDP(m, solve_data, config)
-    if mip_results:
+    mip_result = solve_linear_GDP(m, solve_data, config)
+    if mip_result.feasible:
         if GDPopt.objective.sense == minimize:
             solve_data.LB = max(value(GDPopt.oa_obj.expr), solve_data.LB)
         else:
@@ -41,7 +41,7 @@ def solve_LOA_master(solve_data, config):
         ] = (
             value(GDPopt.oa_obj.expr),
             value(GDPopt.objective.expr),
-            mip_results[1]  # mip_var_values
+            mip_result.var_values
         )
         config.logger.info(
             'ITER %s.%s.%s-MIP: OBJ: %s  LB: %s  UB: %s'
@@ -64,7 +64,7 @@ def solve_LOA_master(solve_data, config):
     # Call the MILP post-solve callback
     config.call_after_master_solve(m, solve_data)
 
-    return mip_results
+    return mip_result
 
 
 def solve_LOA_subproblem(mip_var_values, solve_data, config):

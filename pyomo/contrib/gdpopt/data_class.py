@@ -14,5 +14,24 @@ class GDPoptSolveData(object):
 
 
 class MasterProblemResult(object):
-    """Data class for master problem results data."""
+    """Data class for master problem results data.
+
+    Key attributes:
+        - feasible: True/False if feasible solution obtained
+        - var_values: list of variable values
+        - pyomo_results: results object from solve() statement
+        - disjunct_values: list of disjunct values
+
+    """
     pass
+
+
+class SubproblemResult(object):
+    """Data class for subproblem results data.
+
+    Key attributes:
+        - feasible: True/False if feasible solution obtained
+        - var_values: list of variable values
+        - pyomo_results: results object from solve() statement
+
+    """

@@ -26,28 +26,30 @@ def GDPopt_iteration_loop(solve_data, config):
 
         # solve linear master problem
         if solve_data.current_strategy == 'LOA':
-            mip_results = solve_LOA_master(solve_data, config)
+            mip_result = solve_LOA_master(solve_data, config)
         elif solve_data.current_strategy == 'GLOA':
-            mip_results = solve_GLOA_master(solve_data, config)
-        if mip_results:
-            _, mip_var_values = mip_results
+            mip_result = solve_GLOA_master(solve_data, config)
+
         # Check termination conditions
         if algorithm_should_terminate(solve_data, config):
             break
+
         # Solve NLP subproblem
         if solve_data.current_strategy == 'LOA':
             nlp_result = solve_LOA_subproblem(
-                mip_var_values, solve_data, config)
+                mip_result.var_values, solve_data, config)
             nlp_feasible, nlp_var_values, nlp_duals = nlp_result
             if nlp_feasible:
                 add_outer_approximation_cuts(
                     nlp_var_values, nlp_duals, solve_data, config)
         elif solve_data.current_strategy == 'GLOA':
             nlp_result = solve_global_NLP(
-                mip_var_values, solve_data, config)
+                mip_result.var_values, solve_data, config)
             # TODO add affine cuts
+
+        # Add integer cut
         add_integer_cut(
-            mip_var_values, solve_data, config, feasible=nlp_feasible)
+            mip_result.var_values, solve_data, config, feasible=nlp_feasible)
 
         # Check termination conditions
         if algorithm_should_terminate(solve_data, config):
