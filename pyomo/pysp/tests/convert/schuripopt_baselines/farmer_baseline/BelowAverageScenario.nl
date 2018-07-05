@@ -11,43 +11,43 @@ g3 1 1 0	# problem BelowAverageScenario
 S7 1 schurip_objective_weight
 0 0.33333333
 S0 3 schurip_variable_id
-0 2021786751
-1 1561833761
-2 1002958202
+0 1002958202
+1 2021786751
+2 1561833761
 C0	#ConstrainTotalAcreage
 n0
-C1	#EnforceCattleFeedRequirement[CORN]
+C1	#EnforceCattleFeedRequirement[WHEAT]
 n0
-C2	#EnforceCattleFeedRequirement[SUGAR_BEETS]
+C2	#EnforceCattleFeedRequirement[CORN]
 n0
-C3	#EnforceCattleFeedRequirement[WHEAT]
+C3	#EnforceCattleFeedRequirement[SUGAR_BEETS]
 n0
-C4	#LimitAmountSold[CORN]
+C4	#LimitAmountSold[WHEAT]
 n0
-C5	#LimitAmountSold[SUGAR_BEETS]
+C5	#LimitAmountSold[CORN]
 n0
-C6	#LimitAmountSold[WHEAT]
+C6	#LimitAmountSold[SUGAR_BEETS]
 n0
-C7	#EnforceQuotas[CORN]
+C7	#EnforceQuotas[WHEAT]
 n0
-C8	#EnforceQuotas[SUGAR_BEETS]
+C8	#EnforceQuotas[CORN]
 n0
-C9	#EnforceQuotas[WHEAT]
+C9	#EnforceQuotas[SUGAR_BEETS]
 n0
 O0 0	#Total_Cost_Objective
 n0
 x0	# initial guess
 r	#10 ranges (rhs's)
-1 500
+1 500.0
+2 200.0
 2 240.0
 2 0.0
-2 200.0
 1 0.0
 1 0.0
 1 0.0
+0 0.0 100000.0
 0 0.0 100000.0
 0 0.0 6000.0
-0 0.0 100000.0
 b	#12 bounds (on variables)
 0 0.0 500
 0 0.0 500
@@ -78,30 +78,30 @@ J0 3
 1 1
 2 1
 J1 4
-0 2.4
+0 2.0
 3 -1
 6 -1
 9 1
 J2 4
-1 16
+1 2.4
 4 -1
 7 -1
 10 1
 J3 4
-2 2.0
+2 16
 5 -1
 8 -1
 11 1
 J4 3
-0 -2.4
+0 -2.0
 3 1
 6 1
 J5 3
-1 -16
+1 -2.4
 4 1
 7 1
 J6 3
-2 -2.0
+2 -16
 5 1
 8 1
 J7 1
@@ -111,13 +111,13 @@ J8 1
 J9 1
 5 1
 G0 10
-0 230
-1 260
-2 150
-3 -150
-4 -36
-5 -170
-7 -10
-9 210
-10 100000
-11 238
+0 150
+1 230
+2 260
+3 -170
+4 -150
+5 -36
+8 -10
+9 238
+10 210
+11 100000
