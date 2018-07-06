@@ -32,16 +32,34 @@ logger = logging.getLogger('pyomo.core')
 
 
 class _ConnectionData(ActiveComponentData):
+    """This class defines the data for a single connection."""
+
+    __slots__ = ('_connectors', '_directed')
 
     def __init__(self, component=None, **kwds):
-
+        #
+        # These lines represent in-lining of the
+        # following constructors:
+        #   - ActiveComponentData
+        #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) \
                           else None
         self._active = True
+
         self._connectors = None
         self._directed = None
         if len(kwds):
             self.set_value(kwds)
+
+    def __getstate__(self):
+        state = super(_ConnectionData, self).__getstate__()
+        for i in _ConnectionData.__slots__:
+            state[i] = getattr(self, i)
+        return state
+
+    # Note: None of the slots on this class need to be edited, so we
+    # don't need to implement a specialized __setstate__ method, and
+    # can quietly rely on the super() class's implementation.
 
     @property
     def source(self):
@@ -191,7 +209,7 @@ class Connection(ActiveIndexedComponent):
         Initialize the Connection
         """
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
-            logger.debug("Constructing Connection %s" % (self.name))
+            logger.debug("Constructing Connection %s" % self.name)
 
         if self._constructed:
             return

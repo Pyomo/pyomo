@@ -49,6 +49,7 @@ class _ConnectorData(ComponentData, NumericValue):
         self.aggregators = {}
         self.extensives = {}
         # default aggregation functions for extensive variables in connections
+        # can't import at top of file because of a circular import
         from pyomo.core.base.connection import Connection
         self.extensive_aggregators = {"split" : Connection.SplitFrac,
                                       "mix"   : Connection.Balance}
