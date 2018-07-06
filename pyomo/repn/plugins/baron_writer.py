@@ -12,6 +12,7 @@
 # Problem Writer for BARON .bar Format Files
 #
 
+import sys
 import logging
 import itertools
 from six import iteritems, StringIO, iterkeys
@@ -518,15 +519,16 @@ class ProblemWriter_bar(AbstractProblemWriter):
         #    0 : None
         #    1 : sort keys of indexed components (default)
         #    2 : sort keys AND sort names (over declaration order)
-        file_determinism = io_options.pop("file_determinism", 1)
+        if sys.version_info < (3,6):
+            file_determinism = io_options.pop("file_determinism", 1)
+        else:
+            file_determinism = io_options.pop("file_determinism", 0)
 
         sorter = SortComponents.unsorted
         if file_determinism >= 1:
             sorter = sorter | SortComponents.indices
             if file_determinism >= 2:
                 sorter = sorter | SortComponents.alphabetical
-        # TODO: disable sorter logic
-        sorter = SortComponents.unsorted
 
         output_fixed_variable_bounds = \
             io_options.pop("output_fixed_variable_bounds", False)

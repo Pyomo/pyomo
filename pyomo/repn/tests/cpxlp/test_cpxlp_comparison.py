@@ -11,6 +11,7 @@
 # Test the Pyomo LP writer
 #
 
+import sys
 import re
 import glob
 import os
@@ -25,6 +26,9 @@ import pyomo.scripting.pyomo_main as main
 
 
 skip_tests = ['small12', 'small13', 'small14']
+if sys.version_info < (3,6):
+    skip_tests.append('small16')
+    skip_tests.append('small17')
 
 class Tests(unittest.TestCase):
 

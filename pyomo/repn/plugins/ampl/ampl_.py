@@ -19,6 +19,7 @@ try:
 except:
     basestring = str
 
+import sys
 import itertools
 import logging
 import operator
@@ -306,7 +307,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #    0 : None
         #    1 : sort keys of indexed components (default)
         #    2 : sort keys AND sort names (over declaration order)
-        file_determinism = io_options.pop("file_determinism", 1)
+        if sys.version_info < (3,6):
+            file_determinism = io_options.pop("file_determinism", 1)
+        else:
+            file_determinism = io_options.pop("file_determinism", 0)
 
         # Write the corresponding .row and .col files for the NL files
         # identifying variable and constraint indices in the NLP
@@ -671,9 +675,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
         output_fixed_variable_bounds = self._output_fixed_variable_bounds
         symbolic_solver_labels = self._symbolic_solver_labels
 
-        # TODO - Remove references to sorter
         sorter = SortComponents.unsorted
-        if False and file_determinism >= 1:
+        if file_determinism >= 1:
             sorter = sorter | SortComponents.indices
             if file_determinism >= 2:
                 sorter = sorter | SortComponents.alphabetical

@@ -11,6 +11,7 @@
 # Test the Pyomo BAR writer
 #
 
+import sys
 import re
 import glob
 import os
@@ -22,6 +23,11 @@ import pyutilib.th as unittest
 import pyutilib.subprocess
 
 import pyomo.scripting.pyomo_main as main
+
+skip_tests = []
+if sys.version_info < (3,6):
+    skip_tests.append("small16")
+    skip_tests.append("small17")
 
 
 class Tests(unittest.TestCase):
@@ -66,6 +72,8 @@ ASLTests = unittest.category('smoke','nightly','expensive')(ASLTests)
 # add test methods to classes
 for f in glob.glob(datadir+'*_testCase.py'):
     name = re.split('[._]',os.path.basename(f))[0]
+    if name in skip_tests:
+        continue
     BaselineTests.add_fn_test(fn=barwriter_baseline_test, name=name)
     #ASLTests.add_fn_test(fn=nlwriter_asl_test, name=name)
 

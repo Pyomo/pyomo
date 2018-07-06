@@ -12,6 +12,7 @@
 # Problem Writer for (Free) MPS Format Files
 #
 
+import sys
 import logging
 import math
 import operator
@@ -110,7 +111,10 @@ class ProblemWriter_mps(AbstractProblemWriter):
         #    0 : None
         #    1 : sort keys of indexed components (default)
         #    2 : sort keys AND sort names (over declaration order)
-        file_determinism = io_options.pop("file_determinism", 1)
+        if sys.version_info < (3,6):
+            file_determinism = io_options.pop("file_determinism", 1)
+        else:
+            file_determinism = io_options.pop("file_determinism", 0)
 
         # user defined orderings for variable and constraint
         # output

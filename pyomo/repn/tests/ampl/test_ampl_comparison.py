@@ -11,6 +11,7 @@
 # Test the Pyomo NL writer against the AMPL NL writer
 #
 
+import sys
 import re
 import glob
 import os
@@ -21,6 +22,12 @@ import pyutilib.th as unittest
 import pyutilib.subprocess
 
 import pyomo.scripting.pyomo_main as main
+
+skip_tests = []
+if sys.version_info < (3,6):
+    skip_tests.append("small16")
+    skip_tests.append("small17")
+
 
 # https://github.com/ghackebeil/gjh_asl_json
 has_gjh_asl_json = False
@@ -126,6 +133,8 @@ def nlwriter_asl_test(self, name):
 # add test methods to classes
 for f in glob.glob(currdir+'*_testCase.py'):
     name = re.split('[._]',os.path.basename(f))[0]
+    if name in skip_tests:
+        continue
     BaselineTests.add_fn_test(fn=nlwriter_baseline_test, name=name)
     ASLTests.add_fn_test(fn=nlwriter_asl_test, name=name)
 

@@ -12,6 +12,7 @@
 # Problem Writer for GAMS Format Files
 #
 
+import sys
 from six import StringIO, string_types, iteritems
 from six.moves import xrange
 
@@ -200,13 +201,14 @@ class ProblemWriter_gams(AbstractProblemWriter):
         #    0 : None
         #    1 : sort keys of indexed components (default)
         #    2 : sort keys AND sort names (over declaration order)
-        file_determinism = io_options.pop("file_determinism", 1)
+        if sys.version_info < (3,6):
+            file_determinism = io_options.pop("file_determinism", 1)
+        else:
+            file_determinism = io_options.pop("file_determinism", 0)
         sorter_map = {0:SortComponents.unsorted,
                       1:SortComponents.deterministic,
                       2:SortComponents.sortBoth}
         sort = sorter_map[file_determinism]
-        # TODO: disable sorting logic
-        sort = SortComponents.unsorted
 
         # Warmstart by initializing model's variables to their values.
         warmstart = io_options.pop("warmstart", True)
