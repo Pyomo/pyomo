@@ -23,7 +23,7 @@ import pyutilib.subprocess
 
 import pyomo.scripting.pyomo_main as main
 
-skip_tests = []
+skip_tests = ["small16", "small17"]
 if sys.version_info < (3,6):
     skip_tests.append("small16")
     skip_tests.append("small17")
@@ -133,10 +133,10 @@ def nlwriter_asl_test(self, name):
 # add test methods to classes
 for f in glob.glob(currdir+'*_testCase.py'):
     name = re.split('[._]',os.path.basename(f))[0]
-    if name in skip_tests:
-        continue
-    BaselineTests.add_fn_test(fn=nlwriter_baseline_test, name=name)
-    ASLTests.add_fn_test(fn=nlwriter_asl_test, name=name)
+    if not (name in skip_tests and sys.version_info < (3,6)):
+        BaselineTests.add_fn_test(fn=nlwriter_baseline_test, name=name)
+    if name not in skip_tests:
+        ASLTests.add_fn_test(fn=nlwriter_asl_test, name=name)
 
 if __name__ == "__main__":
     unittest.main()
