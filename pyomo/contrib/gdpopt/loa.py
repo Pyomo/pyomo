@@ -77,6 +77,6 @@ def solve_LOA_subproblem(mip_var_values, solve_data, config):
     TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
 
     nlp_result = solve_NLP(nlp_model, solve_data, config)
-    if nlp_result[0]:  # NLP is feasible
+    if nlp_result.feasible:  # NLP is feasible
         update_nlp_progress_indicators(nlp_model, solve_data, config)
     return nlp_result

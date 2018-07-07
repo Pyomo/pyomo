@@ -38,10 +38,8 @@ def GDPopt_iteration_loop(solve_data, config):
         if solve_data.current_strategy == 'LOA':
             nlp_result = solve_LOA_subproblem(
                 mip_result.var_values, solve_data, config)
-            nlp_feasible, nlp_var_values, nlp_duals = nlp_result
-            if nlp_feasible:
-                add_outer_approximation_cuts(
-                    nlp_var_values, nlp_duals, solve_data, config)
+            if nlp_result.feasible:
+                add_outer_approximation_cuts(nlp_result, solve_data, config)
         elif solve_data.current_strategy == 'GLOA':
             nlp_result = solve_global_NLP(
                 mip_result.var_values, solve_data, config)
@@ -49,7 +47,8 @@ def GDPopt_iteration_loop(solve_data, config):
 
         # Add integer cut
         add_integer_cut(
-            mip_result.var_values, solve_data, config, feasible=nlp_feasible)
+            mip_result.var_values, solve_data, config,
+            feasible=nlp_result.feasible)
 
         # Check termination conditions
         if algorithm_should_terminate(solve_data, config):

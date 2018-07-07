@@ -81,14 +81,12 @@ def init_custom_disjuncts(solve_data, config):
             TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
             solve_data.nlp_iteration += 1
             nlp_result = solve_NLP(nlp_model, solve_data, config)
-            nlp_feasible, nlp_var_values, nlp_duals = nlp_result
-            if nlp_feasible:
+            if nlp_result.feasible:
                 update_nlp_progress_indicators(nlp_model, solve_data, config)
-                add_outer_approximation_cuts(
-                    nlp_var_values, nlp_duals, solve_data, config)
+                add_outer_approximation_cuts(nlp_result, solve_data, config)
             add_integer_cut(
                 mip_result.var_values, solve_data,
-                config, feasible=nlp_feasible)
+                config, feasible=nlp_result.feasible)
         else:
             config.logger.error(
                 'Linear GDP infeasible for user-specified '
@@ -119,13 +117,12 @@ def init_fixed_disjuncts(solve_data, config):
         TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
         solve_data.nlp_iteration += 1
         nlp_result = solve_NLP(nlp_model, solve_data, config)
-        nlp_feasible, nlp_var_values, nlp_duals = nlp_result
-        if nlp_feasible:
+        if nlp_result.feasible:
             update_nlp_progress_indicators(nlp_model, solve_data, config)
-            add_outer_approximation_cuts(
-                nlp_var_values, nlp_duals, solve_data, config)
+            add_outer_approximation_cuts(nlp_result, solve_data, config)
         add_integer_cut(
-            mip_result.var_values, solve_data, config, feasible=nlp_feasible)
+            mip_result.var_values, solve_data, config,
+            feasible=nlp_result.feasible)
     else:
         config.logger.error(
             'Linear GDP infeasible for initial user-specified '
@@ -166,13 +163,13 @@ def init_max_binaries(solve_data, config):
         TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
         solve_data.nlp_iteration += 1
         nlp_result = solve_NLP(nlp_model, solve_data, config)
-        nlp_feasible, nlp_var_values, nlp_duals = nlp_result
-        if nlp_feasible:
+        if nlp_result.feasible:
             update_nlp_progress_indicators(nlp_model, solve_data, config)
             add_outer_approximation_cuts(
-                nlp_var_values, nlp_duals, solve_data, config)
+                nlp_result, solve_data, config)
         add_integer_cut(
-            mip_results.var_values, solve_data, config, feasible=nlp_feasible)
+            mip_results.var_values, solve_data, config,
+            feasible=nlp_result.feasible)
     else:
         config.logger.info(
             "Linear relaxation for initialization was infeasible. "
@@ -220,8 +217,7 @@ def init_set_covering(solve_data, config):
         TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
         solve_data.nlp_iteration += 1
         nlp_result = solve_NLP(nlp_model, solve_data, config)
-        nlp_feasible, nlp_var_values, nlp_duals = nlp_result
-        if nlp_feasible:
+        if nlp_result.feasible:
             # if successful, updated sets
             active_disjuncts = list(
                 fabs(val - 1) <= config.integer_tolerance
@@ -231,10 +227,10 @@ def init_set_covering(solve_data, config):
                 for (needed_cover, was_active) in zip(disjunct_needs_cover,
                                                       active_disjuncts))
             update_nlp_progress_indicators(nlp_model, solve_data, config)
-            add_outer_approximation_cuts(
-                nlp_var_values, nlp_duals, solve_data, config)
+            add_outer_approximation_cuts(nlp_result, solve_data, config)
         add_integer_cut(
-            mip_result.var_values, solve_data, config, feasible=nlp_feasible)
+            mip_result.var_values, solve_data, config,
+            feasible=nlp_result.feasible)
 
         iter_count += 1
 

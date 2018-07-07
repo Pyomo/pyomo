@@ -69,30 +69,26 @@ def solve_NLP(nlp_model, solve_data, config):
 
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
-        nlp_feasible = True
+        pass
     elif subprob_terminate_cond is tc.infeasible:
         config.logger.info('NLP subproblem was locally infeasible.')
-        # Suppress the warning message by setting solver status to ok.
-        results.solver.status = SolverStatus.ok
-        nlp_feasible = False
+        nlp_result.feasible = False
     elif subprob_terminate_cond is tc.maxIterations:
         # TODO try something else? Reinitialize with different initial
         # value?
         config.logger.info(
             'NLP subproblem failed to converge within iteration limit.')
-        results.solver.status = SolverStatus.ok
         if is_feasible(nlp_model, config):
             config.logger.info(
                 'NLP solution is still feasible. '
                 'Using potentially suboptimal feasible solution.')
-            nlp_feasible = True
         else:
-            nlp_feasible = False
+            nlp_result.feasible = False
     elif subprob_terminate_cond is tc.internalSolverError:
         # Possible that IPOPT had a restoration failture
         config.logger.info(
             "NLP solver had an internal failure: %s" % results.solver.message)
-        nlp_feasible = False
+        nlp_result.feasible = False
     else:
         raise ValueError(
             'GDPopt unable to handle NLP subproblem termination '
@@ -103,16 +99,10 @@ def solve_NLP(nlp_model, solve_data, config):
     config.call_after_subproblem_solve(nlp_model, solve_data)
 
     # if feasible, call the NLP post-feasible callback
-    if nlp_feasible:
+    if nlp_result.feasible:
         config.call_after_subproblem_feasible(nlp_model, solve_data)
 
-    return (
-        nlp_feasible,  # If solution is feasible.
-        # Variable values
-        list(v.value for v in GDPopt.working_var_list),
-        # Dual values
-        list(nlp_model.dual.get(c, None)
-             for c in GDPopt.working_constraints_list))
+    return nlp_result
 
 
 def detect_unfixed_discrete_vars(model):
