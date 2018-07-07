@@ -307,10 +307,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #    0 : None
         #    1 : sort keys of indexed components (default)
         #    2 : sort keys AND sort names (over declaration order)
-        if sys.version_info < (3,6):
-            file_determinism = io_options.pop("file_determinism", 1)
-        else:
-            file_determinism = io_options.pop("file_determinism", 0)
+        file_determinism = io_options.pop("file_determinism", 1)
 
         # Write the corresponding .row and .col files for the NL files
         # identifying variable and constraint indices in the NLP

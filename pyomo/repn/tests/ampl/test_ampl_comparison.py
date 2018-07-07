@@ -72,6 +72,7 @@ class ASLTests(Tests):
         Tests.__init__(self, *args, **kwds)
 ASLTests = unittest.category('smoke','nightly','expensive')(ASLTests)
 
+determinism=3
 #
 # The following test calls the gjh_asl_json executable to
 # generate JSON files corresponding to both the
@@ -81,18 +82,19 @@ ASLTests = unittest.category('smoke','nightly','expensive')(ASLTests)
 #
 @unittest.nottest
 def nlwriter_asl_test(self, name):
+    determinism = self.get_options(name)['determinism']
     if not has_gjh_asl_json:
         self.skipTest("'gjh_asl_json' executable not available")
         return
     if os.path.exists(currdir+name+'.dat'):
         self.pyomo(['--output='+currdir+name+'.test.nl',
-                    '--file-determinism=3',
+                    '--file-determinism=%d' % determinism,
                     '--symbolic-solver-labels',
                     currdir+name+'_testCase.py',
                     currdir+name+'.dat'])
     else:
         self.pyomo(['--output='+currdir+name+'.test.nl',
-                    '--file-determinism=3',
+                    '--file-determinism=%d' % determinism,
                     '--symbolic-solver-labels',
                     currdir+name+'_testCase.py'])
 
@@ -134,9 +136,9 @@ def nlwriter_asl_test(self, name):
 for f in glob.glob(currdir+'*_testCase.py'):
     name = re.split('[._]',os.path.basename(f))[0]
     if not (name in skip_tests and sys.version_info < (3,6)):
-        BaselineTests.add_fn_test(fn=nlwriter_baseline_test, name=name)
+        ASLTests.add_fn_test(fn=nlwriter_asl_test, name=name, options={'determinism':0})
     if name not in skip_tests:
-        ASLTests.add_fn_test(fn=nlwriter_asl_test, name=name)
+        BaselineTests.add_fn_test(fn=nlwriter_baseline_test, name=name, options={'determinism':3})
 
 if __name__ == "__main__":
     unittest.main()

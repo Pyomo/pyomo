@@ -48,12 +48,15 @@ BaselineTests = unittest.category('smoke', 'nightly','expensive')(BaselineTests)
 #
 @unittest.nottest
 def lp_writer_baseline_test(self, name):
+    determinism = self.get_options(name)['determinism']
     if os.path.exists(datadir+name+'.dat'):
         self.pyomo(['--output='+currdir+name+'.test.lp',
+                    '--file-determinism=%d' % determinism,
                     datadir+name+'_testCase.py',
                     datadir+name+'.dat'])
     else:
         self.pyomo(['--output='+currdir+name+'.test.lp',
+                    '--file-determinism=%d' % determinism,
                     datadir+name+'_testCase.py'])
 
     # Check that the pyomo lp file matches its own baseline
@@ -74,7 +77,10 @@ for f in glob.glob(datadir+'*_testCase.py'):
     name = re.split('[._]',os.path.basename(f))[0]
     if name in skip_tests:
         continue
-    BaselineTests.add_fn_test(fn=lp_writer_baseline_test, name=name)
+    if name in ['small16', 'small17']:
+        BaselineTests.add_fn_test(fn=lp_writer_baseline_test, name=name, options={"determinism":0})
+    else:
+        BaselineTests.add_fn_test(fn=lp_writer_baseline_test, name=name, options={"determinism":1})
 
 if __name__ == "__main__":
     unittest.main()
