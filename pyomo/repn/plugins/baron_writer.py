@@ -12,7 +12,6 @@
 # Problem Writer for BARON .bar Format Files
 #
 
-import sys
 import logging
 import itertools
 from six import iteritems, StringIO, iterkeys
