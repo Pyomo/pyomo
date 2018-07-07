@@ -12,7 +12,6 @@
 # Problem Writer for CPLEX LP Format Files
 #
 
-import sys
 import logging
 import math
 import operator
