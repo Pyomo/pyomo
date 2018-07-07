@@ -12,7 +12,6 @@
 # Problem Writer for GAMS Format Files
 #
 
-import sys
 from six import StringIO, string_types, iteritems
 from six.moves import xrange
 
