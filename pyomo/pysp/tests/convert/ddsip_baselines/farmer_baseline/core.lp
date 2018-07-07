@@ -99,22 +99,22 @@ c_e_ONE_VAR_CONSTANT:
 ONE_VAR_CONSTANT = 1.0
 
 bounds
-   0 <= DevotedAcreage(WHEAT)__DDSIP_FIRSTSTAGE <= 500
    0 <= DevotedAcreage(CORN)__DDSIP_FIRSTSTAGE <= 500
    0 <= DevotedAcreage(SUGAR_BEETS)__DDSIP_FIRSTSTAGE <= 500
-   0 <= QuantitySubQuotaSold(WHEAT) <= +inf
+   0 <= DevotedAcreage(WHEAT)__DDSIP_FIRSTSTAGE <= 500
    0 <= QuantitySubQuotaSold(CORN) <= +inf
    0 <= QuantitySubQuotaSold(SUGAR_BEETS) <= +inf
-   0 <= QuantitySuperQuotaSold(WHEAT) <= +inf
+   0 <= QuantitySubQuotaSold(WHEAT) <= +inf
    0 <= QuantitySuperQuotaSold(CORN) <= +inf
    0 <= QuantitySuperQuotaSold(SUGAR_BEETS) <= +inf
-   0 <= QuantityPurchased(WHEAT) <= +inf
+   0 <= QuantitySuperQuotaSold(WHEAT) <= +inf
    0 <= QuantityPurchased(CORN) <= +inf
    0 <= QuantityPurchased(SUGAR_BEETS) <= +inf
+   0 <= QuantityPurchased(WHEAT) <= +inf
     -inf <= FirstStageCost <= +inf
     -inf <= SecondStageCost <= +inf
 general
-  DevotedAcreage(WHEAT)__DDSIP_FIRSTSTAGE
   DevotedAcreage(CORN)__DDSIP_FIRSTSTAGE
   DevotedAcreage(SUGAR_BEETS)__DDSIP_FIRSTSTAGE
+  DevotedAcreage(WHEAT)__DDSIP_FIRSTSTAGE
 end
