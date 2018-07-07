@@ -72,7 +72,6 @@ class ASLTests(Tests):
         Tests.__init__(self, *args, **kwds)
 ASLTests = unittest.category('smoke','nightly','expensive')(ASLTests)
 
-determinism=3
 #
 # The following test calls the gjh_asl_json executable to
 # generate JSON files corresponding to both the

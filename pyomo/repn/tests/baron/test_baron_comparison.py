@@ -11,7 +11,6 @@
 # Test the Pyomo BAR writer
 #
 
-import sys
 import re
 import glob
 import os
