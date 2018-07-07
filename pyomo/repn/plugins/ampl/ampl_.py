@@ -19,7 +19,6 @@ try:
 except:
     basestring = str
 
-import sys
 import itertools
 import logging
 import operator
