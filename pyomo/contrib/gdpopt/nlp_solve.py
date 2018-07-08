@@ -57,7 +57,7 @@ def solve_NLP(nlp_model, solve_data, config):
     if not nlp_solver.available():
         raise RuntimeError("NLP solver %s is not available." % config.nlp)
     with SuppressInfeasibleWarning():
-        results = nlp_solver.solve(nlp_model, **config.nlp_options)
+        results = nlp_solver.solve(nlp_model, **config.nlp_solve_args)
 
     nlp_result = SubproblemResult()
     nlp_result.feasible = True

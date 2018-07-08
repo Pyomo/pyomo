@@ -94,11 +94,13 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         default="gurobi",
         description="Mixed integer linear solver to use."
     ))
-    mip_options = CONFIG.declare("mip_options", ConfigBlock(implicit=True))
+    mip_solve_args = CONFIG.declare(
+        "mip_solve_args", ConfigBlock(implicit=True))
     CONFIG.declare("nlp", ConfigValue(
         default="ipopt",
         description="Nonlinear solver to use"))
-    nlp_options = CONFIG.declare("nlp_options", ConfigBlock(implicit=True))
+    nlp_solve_args = CONFIG.declare(
+        "nlp_solve_args", ConfigBlock(implicit=True))
     CONFIG.declare("call_after_master_solve", ConfigValue(
         default=_DoNothing,
         description="callback hook after a solution of the master problem"

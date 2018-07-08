@@ -52,17 +52,19 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
     # We use LoggingIntercept in order to suppress the stupid "Loading a
     # SolverResults object with a warning status" warning message.
     with SuppressInfeasibleWarning():
-        results = mip_solver.solve(m, **config.mip_options)
+        results = mip_solver.solve(m, **config.mip_solve_args)
     terminate_cond = results.solver.termination_condition
     if terminate_cond is tc.infeasibleOrUnbounded:
         # Linear solvers will sometimes tell me that it's infeasible or
         # unbounded during presolve, but fails to distinguish. We need to
         # resolve with a solver option flag on.
-        tmp_options = deepcopy(config.mip_options)
+        tmp_args = deepcopy(config.mip_solve_args)
+        tmp_options = deepcopy(tmp_args.get('options', {}))
+        tmp_args['options'] = tmp_options
         # TODO This solver option is specific to Gurobi.
         tmp_options['DualReductions'] = 0
         with SuppressInfeasibleWarning():
-            results = mip_solver.solve(m, **tmp_options)
+            results = mip_solver.solve(m, **tmp_args)
         terminate_cond = results.solver.termination_condition
 
     # Build and return results object
