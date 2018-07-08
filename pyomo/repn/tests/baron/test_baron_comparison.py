@@ -11,6 +11,7 @@
 # Test the Pyomo BAR writer
 #
 
+import sys
 import re
 import glob
 import os
@@ -70,7 +71,8 @@ ASLTests = unittest.category('smoke','nightly','expensive')(ASLTests)
 for f in glob.glob(datadir+'*_testCase.py'):
     name = re.split('[._]',os.path.basename(f))[0]
     if name in ['small16', 'small17']:
-        BaselineTests.add_fn_test(fn=barwriter_baseline_test, name=name, options={'determinism':0})
+        if sys.version_info >= (3,6):
+            BaselineTests.add_fn_test(fn=barwriter_baseline_test, name=name, options={'determinism':0})
     else:
         BaselineTests.add_fn_test(fn=barwriter_baseline_test, name=name, options={'determinism':1})
 
