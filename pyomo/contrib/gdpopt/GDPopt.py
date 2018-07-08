@@ -237,12 +237,12 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
             # Save model initial values. These are used later to initialize NLP
             # subproblems.
-            GDPopt.initial_var_values = list(
+            solve_data.initial_var_values = list(
                 v.value for v in GDPopt.working_var_list)
 
             # Store the initial model state as the best solution found. If we
             # find no better solution, then we will restore from this copy.
-            solve_data.best_solution_found = list(GDPopt.initial_var_values)
+            solve_data.best_solution_found = solve_data.initial_var_values
 
             # Validate the model to ensure that GDPopt is able to solve it.
             if not model_is_valid(solve_data, config):
