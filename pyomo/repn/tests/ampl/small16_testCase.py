@@ -8,11 +8,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 #
-# Author:  Gabe Hackebeil
+# Author:  William Hart
 # Purpose: For regression testing to ensure that the Pyomo
-#          NL writer properly reports the values corresponding
-#          to the nl file header line with the label
-#          '# nonlinear vars in constraints, objectives, both'
+#          writers generate files in a consistent manner when
+#          using index sets with strings and integers.
 #
 
 from pyomo.environ import *
