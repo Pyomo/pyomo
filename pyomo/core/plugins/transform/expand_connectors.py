@@ -255,6 +255,7 @@ class _ConnExpansion(Transformation):
                 i = ctn.index()
                 self._add_connections(
                     blk[i], conn_set, matched_connectors, known_conn_sets)
+                ctn._expanded_block = blk
             ictn.deactivate()
 
     def _add_connections(self, blk, conn_set, matched_connectors,

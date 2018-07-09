@@ -34,7 +34,7 @@ logger = logging.getLogger('pyomo.core')
 class _ConnectionData(ActiveComponentData):
     """This class defines the data for a single connection."""
 
-    __slots__ = ('_connectors', '_directed')
+    __slots__ = ('_connectors', '_directed', '_expanded_block')
 
     def __init__(self, component=None, **kwds):
         #
@@ -48,6 +48,7 @@ class _ConnectionData(ActiveComponentData):
 
         self._connectors = None
         self._directed = None
+        self._expanded_block = None
         if len(kwds):
             self.set_value(kwds)
 
@@ -80,6 +81,10 @@ class _ConnectionData(ActiveComponentData):
     @property
     def directed(self):
         return self._directed
+
+    @property
+    def expanded_block(self):
+        return self._expanded_block
 
     def set_value(self, vals):
         """
@@ -197,12 +202,6 @@ class Connection(ActiveIndexedComponent):
         else:
             self._init_vals = dict(
                 source=source, destination=destination, connectors=connectors)
-
-        self._expanded_block = None
-
-    @property
-    def expanded_block(self):
-        return self._expanded_block
 
     def construct(self, data=None):
         """
@@ -392,7 +391,14 @@ class SimpleConnection(_ConnectionData, Connection):
 
 
 class IndexedConnection(Connection):
-    pass
+    def __init__(self, *args, **kwds):
+        self._expanded_block = None
+        super(IndexedConnection, self).__init__(*args, **kwds)
+
+    @property
+    def expanded_block(self):
+        # indexed block that contains all the blocks for this connection
+        return self._expanded_block
 
 
 register_component(Connection, "Connection used for equating two Connectors.")
