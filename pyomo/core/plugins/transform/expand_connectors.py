@@ -294,9 +294,13 @@ class _ConnExpansion(Transformation):
                 def rule(m, *args):
                     tmp = []
                     for c in conn_set:
-                        if k in c.extensives:
-                            tmp.append(evar[args])
-                        else:
+                        e = False
+                        for etype in c.extensives:
+                            if k in c.extensives[etype]:
+                                e = True
+                                tmp.append(evar[args])
+                                break
+                        if not e:
                             tmp.append(c.vars[k][args])
                     return tmp[0] == tmp[1]
                 con = Constraint(v[0].index_set(), rule=rule)
