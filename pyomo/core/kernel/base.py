@@ -739,3 +739,81 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
                             active=active,
                             descend=descend):
                         yield obj
+
+    def heterogeneous_containers(self,
+                                 ctype=_no_ctype,
+                                 active=None,
+                                 descend_into=True):
+        """
+        A generator that visits each heterogeneous container
+        in the storage tree. Heterogeneous containers are
+        categorized objects, such as blocks, with a category
+        type different from their children.
+
+        Args:
+            ctype: Indicates the category of objects to
+                include. The default value indicates that
+                all categories should be included.
+            active (:const:`True`/:const:`None`): Set to
+                :const:`True` to indicate that only active
+                objects should be included. The default
+                value of :const:`None` indicates that all
+                components (including those that have been
+                deactivated) should be included. *Note*:
+                This flag is ignored for any objects that do
+                not have an active flag.
+            descend_into (bool): Indicates whether or not to
+                descend into heterogeneous containers.
+                Default is True.
+
+        Returns:
+            iterator of objects in the storage tree
+        """
+        assert active in (None, True)
+        # if not active, then nothing below is active
+        if (active is not None) and \
+           (not self.active):
+            return
+
+        # convert AML types into Kernel types (hack for the
+        # solver interfaces)
+        ctype = _convert_ctype.get(ctype, ctype)
+
+        if (ctype is _no_ctype) or \
+           (self.ctype is ctype):
+            yield self
+
+        for child_ctype in self.child_ctypes():
+
+            if not child_ctype._is_heterogeneous_container:
+                continue
+
+            for child in self.children(ctype=child_ctype):
+                assert child._is_container
+                if child._is_heterogeneous_container:
+                    if not descend_into:
+                        if (active is None) or \
+                           child.active:
+                            if (ctype is _no_ctype) or \
+                               (child_ctype is ctype):
+                                yield child
+                    else:
+                        for obj in child.heterogeneous_containers(
+                                ctype=ctype,
+                                active=active,
+                                descend_into=True):
+                            yield obj
+                else:
+                    # a homogeneous container
+                    for obj in child.components(active=active):
+                        assert obj._is_heterogeneous_container
+                        if not descend_into:
+                            if (ctype is _no_ctype) or \
+                               (child_ctype is ctype):
+                                yield obj
+                        else:
+                            for item in obj.heterogeneous_containers(
+                                    ctype=ctype,
+                                    active=active,
+                                    descend_into=True):
+                                yield item

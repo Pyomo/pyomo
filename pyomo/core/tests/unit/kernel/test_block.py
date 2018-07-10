@@ -27,8 +27,8 @@ from pyomo.core.kernel.constraint import (IConstraint,
                                           constraint_dict,
                                           constraint_list)
 from pyomo.core.kernel.parameter import (parameter,
-                                                   parameter_dict,
-                                                   parameter_list)
+                                         parameter_dict,
+                                         parameter_list)
 from pyomo.core.kernel.expression import (expression,
                                           data_expression,
                                           expression_dict,
@@ -85,138 +85,237 @@ def _collect_expr_components(exp):
             ans.update(_collect_expr_components(subexp))
     return ans
 
-class TestMisc(unittest.TestCase):
+class IJunk(IBlock):
+    __slots__ = ()
+class junk(pmo.block):
+    _ctype = IJunk
+class junk_list(pmo.block_list):
+    __slots__ = ()
+    _ctype = IJunk
 
-    def test_new_heterogeneous_container_type(self):
-        class IJunk(IBlock):
-            __slots__ = ()
-        class junk(pmo.block):
-            _ctype = IJunk
-        class junk_list(pmo.block_list):
-            __slots__ = ()
-            _ctype = IJunk
+class TestHeterogeneousContainer(unittest.TestCase):
 
-        b = pmo.block()
-        b.v = pmo.variable()
-        b.V = pmo.variable_list()
-        b.V.append(pmo.variable())
-        b.V.append(pmo.variable_list())
-        b.V[1].append(pmo.variable())
-        b.c = pmo.constraint()
-        b.C = pmo.constraint_list()
-        b.C.append(pmo.constraint())
-        b.C.append(pmo.constraint_list())
-        b.C[1].append(pmo.constraint())
-        b_clone = b.clone()
-        b.b = b_clone.clone()
-        b.B = pmo.block_list()
-        b.B.append(b_clone.clone())
-        b.B.append(pmo.block_list())
-        b.B[1].append(b_clone.clone())
-        del b_clone
-        b.j = junk()
-        b.J = junk_list()
-        b.J.append(junk())
-        b.J.append(junk_list())
-        b.J[1].append(junk())
-        b.J[1][0].b = block()
-        b.J[1][0].b.v = pmo.variable()
-        order = list(str(obj) for obj in b.preorder_traversal())
+    model = pmo.block()
+    model.v = pmo.variable()
+    model.V = pmo.variable_list()
+    model.V.append(pmo.variable())
+    model.V.append(pmo.variable_list())
+    model.V[1].append(pmo.variable())
+    model.c = pmo.constraint()
+    model.C = pmo.constraint_list()
+    model.C.append(pmo.constraint())
+    model.C.append(pmo.constraint_list())
+    model.C[1].append(pmo.constraint())
+    b_clone = model.clone()
+    model.b = b_clone.clone()
+    model.B = pmo.block_list()
+    model.B.append(b_clone.clone())
+    model.B.append(pmo.block_list())
+    model.B[1].append(b_clone.clone())
+    del b_clone
+    model.j = junk()
+    model.J = junk_list()
+    model.J.append(junk())
+    model.J.append(junk_list())
+    model.J[1].append(junk())
+    model.J[1][0].b = pmo.block()
+    model.J[1][0].b.v = pmo.variable()
+    model_clone = model.clone()
+    model.k = pmo.block()
+    model.K = pmo.block_list()
+    model.K.append(model_clone.clone())
+    del model_clone
+
+    def test_preorder_traversal(self):
+        model = self.model.clone()
+
+        order = list(str(obj) for obj in model.preorder_traversal())
         self.assertEqual(order,
                          ['<block>',
-                          'v',
-                          'V',
-                          'V[0]',
-                          'V[1]',
-                          'V[1][0]',
-                          'c',
-                          'C',
-                          'C[0]',
-                          'C[1]',
-                          'C[1][0]',
+                          'v','V','V[0]','V[1]','V[1][0]',
+                          'c','C','C[0]','C[1]','C[1][0]',
                           'b',
-                          'b.v',
-                          'b.V',
-                          'b.V[0]',
-                          'b.V[1]',
-                          'b.V[1][0]',
-                          'b.c',
-                          'b.C',
-                          'b.C[0]',
-                          'b.C[1]',
-                          'b.C[1][0]',
+                          'b.v','b.V','b.V[0]','b.V[1]','b.V[1][0]',
+                          'b.c','b.C','b.C[0]','b.C[1]','b.C[1][0]',
                           'B',
                           'B[0]',
-                          'B[0].v',
-                          'B[0].V',
-                          'B[0].V[0]',
-                          'B[0].V[1]',
-                          'B[0].V[1][0]',
-                          'B[0].c',
-                          'B[0].C',
-                          'B[0].C[0]',
-                          'B[0].C[1]',
-                          'B[0].C[1][0]',
+                          'B[0].v','B[0].V','B[0].V[0]','B[0].V[1]','B[0].V[1][0]',
+                          'B[0].c','B[0].C','B[0].C[0]','B[0].C[1]','B[0].C[1][0]',
                           'B[1]',
                           'B[1][0]',
-                          'B[1][0].v',
-                          'B[1][0].V',
-                          'B[1][0].V[0]',
-                          'B[1][0].V[1]',
-                          'B[1][0].V[1][0]',
-                          'B[1][0].c',
-                          'B[1][0].C',
-                          'B[1][0].C[0]',
-                          'B[1][0].C[1]',
-                          'B[1][0].C[1][0]',
+                          'B[1][0].v','B[1][0].V','B[1][0].V[0]','B[1][0].V[1]','B[1][0].V[1][0]',
+                          'B[1][0].c','B[1][0].C','B[1][0].C[0]','B[1][0].C[1]','B[1][0].C[1][0]',
                           'j',
                           'J',
                           'J[0]',
                           'J[1]',
                           'J[1][0]',
                           'J[1][0].b',
-                          'J[1][0].b.v'])
-        order = list(str(obj) for obj in b.components())
+                          'J[1][0].b.v',
+                          'k',
+                          'K',
+                          'K[0]',
+                          'K[0].v','K[0].V','K[0].V[0]','K[0].V[1]','K[0].V[1][0]',
+                          'K[0].c','K[0].C','K[0].C[0]','K[0].C[1]','K[0].C[1][0]',
+                          'K[0].b',
+                          'K[0].b.v','K[0].b.V','K[0].b.V[0]','K[0].b.V[1]','K[0].b.V[1][0]',
+                          'K[0].b.c','K[0].b.C','K[0].b.C[0]','K[0].b.C[1]','K[0].b.C[1][0]',
+                          'K[0].B',
+                          'K[0].B[0]',
+                          'K[0].B[0].v','K[0].B[0].V','K[0].B[0].V[0]','K[0].B[0].V[1]','K[0].B[0].V[1][0]',
+                          'K[0].B[0].c','K[0].B[0].C','K[0].B[0].C[0]','K[0].B[0].C[1]','K[0].B[0].C[1][0]',
+                          'K[0].B[1]',
+                          'K[0].B[1][0]',
+                          'K[0].B[1][0].v','K[0].B[1][0].V','K[0].B[1][0].V[0]','K[0].B[1][0].V[1]','K[0].B[1][0].V[1][0]',
+                          'K[0].B[1][0].c','K[0].B[1][0].C','K[0].B[1][0].C[0]','K[0].B[1][0].C[1]','K[0].B[1][0].C[1][0]',
+                          'K[0].j',
+                          'K[0].J',
+                          'K[0].J[0]',
+                          'K[0].J[1]',
+                          'K[0].J[1][0]',
+                          'K[0].J[1][0].b',
+                          'K[0].J[1][0].b.v'])
+
+        order = list(str(obj) for obj in model.preorder_traversal(
+            descend=lambda x: (x is not model.k) and (x is not model.K)))
         self.assertEqual(order,
-                         ['v',
-                          'V[0]',
-                          'V[1][0]',
-                          'c',
-                          'C[0]',
-                          'C[1][0]',
+                         ['<block>',
+                          'v','V','V[0]','V[1]','V[1][0]',
+                          'c','C','C[0]','C[1]','C[1][0]',
                           'b',
-                          'b.v',
-                          'b.V[0]',
-                          'b.V[1][0]',
-                          'b.c',
-                          'b.C[0]',
-                          'b.C[1][0]',
+                          'b.v','b.V','b.V[0]','b.V[1]','b.V[1][0]',
+                          'b.c','b.C','b.C[0]','b.C[1]','b.C[1][0]',
+                          'B',
                           'B[0]',
-                          'B[0].v',
-                          'B[0].V[0]',
-                          'B[0].V[1][0]',
-                          'B[0].c',
-                          'B[0].C[0]',
-                          'B[0].C[1][0]',
+                          'B[0].v','B[0].V','B[0].V[0]','B[0].V[1]','B[0].V[1][0]',
+                          'B[0].c','B[0].C','B[0].C[0]','B[0].C[1]','B[0].C[1][0]',
+                          'B[1]',
                           'B[1][0]',
-                          'B[1][0].v',
-                          'B[1][0].V[0]',
-                          'B[1][0].V[1][0]',
-                          'B[1][0].c',
-                          'B[1][0].C[0]',
-                          'B[1][0].C[1][0]',
+                          'B[1][0].v','B[1][0].V','B[1][0].V[0]','B[1][0].V[1]','B[1][0].V[1][0]',
+                          'B[1][0].c','B[1][0].C','B[1][0].C[0]','B[1][0].C[1]','B[1][0].C[1][0]',
+                          'j',
+                          'J',
+                          'J[0]',
+                          'J[1]',
+                          'J[1][0]',
+                          'J[1][0].b',
+                          'J[1][0].b.v',
+                          'k',
+                          'K'])
+
+        order = list(str(obj) for obj in model.preorder_traversal(ctype=IBlock))
+        self.assertEqual(order,
+                         ['<block>',
+                          'b',
+                          'B',
+                          'B[0]',
+                          'B[1]',
+                          'B[1][0]',
+                          'j',
+                          'J',
+                          'J[0]',
+                          'J[1]',
+                          'J[1][0]',
+                          'J[1][0].b',
+                          'k',
+                          'K',
+                          'K[0]',
+                          'K[0].b',
+                          'K[0].B',
+                          'K[0].B[0]',
+                          'K[0].B[1]',
+                          'K[0].B[1][0]',
+                          'K[0].j',
+                          'K[0].J',
+                          'K[0].J[0]',
+                          'K[0].J[1]',
+                          'K[0].J[1][0]',
+                          'K[0].J[1][0].b'])
+
+        order = list(str(obj) for obj in model.preorder_traversal(ctype=IVariable))
+        self.assertEqual(order,
+                         ['<block>',
+                          'v','V','V[0]','V[1]','V[1][0]',
+                          'b',
+                          'b.v','b.V','b.V[0]','b.V[1]','b.V[1][0]',
+                          'B',
+                          'B[0]',
+                          'B[0].v','B[0].V','B[0].V[0]','B[0].V[1]','B[0].V[1][0]',
+                          'B[1]',
+                          'B[1][0]',
+                          'B[1][0].v','B[1][0].V','B[1][0].V[0]','B[1][0].V[1]','B[1][0].V[1][0]',
+                          'j',
+                          'J',
+                          'J[0]',
+                          'J[1]',
+                          'J[1][0]',
+                          'J[1][0].b',
+                          'J[1][0].b.v',
+                          'k',
+                          'K',
+                          'K[0]',
+                          'K[0].v','K[0].V','K[0].V[0]','K[0].V[1]','K[0].V[1][0]',
+                          'K[0].b',
+                          'K[0].b.v','K[0].b.V','K[0].b.V[0]','K[0].b.V[1]','K[0].b.V[1][0]',
+                          'K[0].B',
+                          'K[0].B[0]',
+                          'K[0].B[0].v','K[0].B[0].V','K[0].B[0].V[0]','K[0].B[0].V[1]','K[0].B[0].V[1][0]',
+                          'K[0].B[1]',
+                          'K[0].B[1][0]',
+                          'K[0].B[1][0].v','K[0].B[1][0].V','K[0].B[1][0].V[0]','K[0].B[1][0].V[1]','K[0].B[1][0].V[1][0]',
+                          'K[0].j',
+                          'K[0].J',
+                          'K[0].J[0]',
+                          'K[0].J[1]',
+                          'K[0].J[1][0]',
+                          'K[0].J[1][0].b',
+                          'K[0].J[1][0].b.v'])
+
+    def test_components(self):
+        model = self.model.clone()
+        order = list(str(obj) for obj in model.components())
+        self.assertEqual(order,
+                         ['v','V[0]','V[1][0]',
+                          'c','C[0]','C[1][0]',
+                          'b',
+                          'b.v','b.V[0]','b.V[1][0]',
+                          'b.c','b.C[0]','b.C[1][0]',
+                          'B[0]',
+                          'B[0].v','B[0].V[0]','B[0].V[1][0]',
+                          'B[0].c','B[0].C[0]','B[0].C[1][0]',
+                          'B[1][0]',
+                          'B[1][0].v','B[1][0].V[0]','B[1][0].V[1][0]',
+                          'B[1][0].c','B[1][0].C[0]','B[1][0].C[1][0]',
                           'j',
                           'J[0]',
                           'J[1][0]',
                           'J[1][0].b',
-                          'J[1][0].b.v'])
-        vlist = [str(obj) for obj in b.components(ctype=IVariable)]
+                          'J[1][0].b.v',
+                          'k',
+                          'K[0]',
+                          'K[0].v','K[0].V[0]','K[0].V[1][0]',
+                          'K[0].c','K[0].C[0]','K[0].C[1][0]',
+                          'K[0].b',
+                          'K[0].b.v','K[0].b.V[0]','K[0].b.V[1][0]',
+                          'K[0].b.c','K[0].b.C[0]','K[0].b.C[1][0]',
+                          'K[0].B[0]',
+                          'K[0].B[0].v','K[0].B[0].V[0]','K[0].B[0].V[1][0]',
+                          'K[0].B[0].c','K[0].B[0].C[0]','K[0].B[0].C[1][0]',
+                          'K[0].B[1][0]',
+                          'K[0].B[1][0].v','K[0].B[1][0].V[0]','K[0].B[1][0].V[1][0]',
+                          'K[0].B[1][0].c','K[0].B[1][0].C[0]','K[0].B[1][0].C[1][0]',
+                          'K[0].j',
+                          'K[0].J[0]',
+                          'K[0].J[1][0]',
+                          'K[0].J[1][0].b',
+                          'K[0].J[1][0].b.v'])
+        vlist = [str(obj) for obj in model.components(ctype=IVariable)]
         self.assertEqual(len(vlist), len(set(vlist)))
-        clist = [str(obj) for obj in b.components(ctype=IConstraint)]
+        clist = [str(obj) for obj in model.components(ctype=IConstraint)]
         self.assertEqual(len(clist), len(set(clist)))
-        blist = [str(obj) for obj in b.components(ctype=IBlock)]
+        blist = [str(obj) for obj in model.components(ctype=IBlock)]
         self.assertEqual(len(blist), len(set(blist)))
-        jlist = [str(obj) for obj in b.components(ctype=IJunk)]
+        jlist = [str(obj) for obj in model.components(ctype=IJunk)]
         self.assertEqual(len(jlist), len(set(jlist)))
 
         for l1, l2 in itertools.product([vlist, clist, blist, jlist],
@@ -227,20 +326,80 @@ class TestMisc(unittest.TestCase):
         self.assertEqual(len(vlist)+len(clist)+len(blist)+len(jlist),
                          len(order))
 
-        self.assertEqual(b.J[1][0].b.v.getname(fully_qualified=True),
+    def test_getname(self):
+        model = self.model.clone()
+        self.assertEqual(model.J[1][0].b.v.getname(fully_qualified=True),
                          'J[1][0].b.v')
-        self.assertEqual(b.J[1][0].b.v.getname(fully_qualified=True,
-                                               relative_to=b.J[1][0]),
+        self.assertEqual(model.J[1][0].b.v.getname(fully_qualified=True,
+                                                   relative_to=model.J[1][0]),
                          'b.v')
-        self.assertEqual(b.J[1][0].b.v.getname(fully_qualified=True,
-                                               relative_to=b.J[1]),
+        self.assertEqual(model.J[1][0].b.v.getname(fully_qualified=True,
+                                                   relative_to=model.J[1]),
                          '[0].b.v')
-        self.assertEqual(b.J[1][0].b.v.getname(fully_qualified=True,
-                                               relative_to=b.J),
+        self.assertEqual(model.J[1][0].b.v.getname(fully_qualified=True,
+                                                   relative_to=model.J),
                          '[1][0].b.v')
-        self.assertEqual(b.J[1][0].b.v.getname(fully_qualified=True,
-                                               relative_to=b),
+        self.assertEqual(model.J[1][0].b.v.getname(fully_qualified=True,
+                                                   relative_to=model),
                          'J[1][0].b.v')
+
+    def test_heterogeneous_containers(self):
+        order = list(str(obj) for obj in self.model.heterogeneous_containers())
+        self.assertEqual(order,
+                         ['<block>',
+                          'b',
+                          'B[0]',
+                          'B[1][0]',
+                          'k',
+                          'K[0]',
+                          'K[0].b',
+                          'K[0].B[0]',
+                          'K[0].B[1][0]',
+                          'K[0].j',
+                          'K[0].J[0]',
+                          'K[0].J[1][0]',
+                          'K[0].J[1][0].b',
+                          'j',
+                          'J[0]',
+                          'J[1][0]',
+                          'J[1][0].b'])
+        order = list(str(obj) for obj in self.model.heterogeneous_containers(
+            descend_into=False))
+        self.assertEqual(order,
+                         ['<block>',
+                          'b',
+                          'B[0]',
+                          'B[1][0]',
+                          'k',
+                          'K[0]',
+                          'j',
+                          'J[0]',
+                          'J[1][0]'])
+        order = list(str(obj) for obj in self.model.heterogeneous_containers(
+            ctype=IBlock))
+        self.assertEqual(order,
+                         ['<block>',
+                          'b',
+                          'B[0]',
+                          'B[1][0]',
+                          'k',
+                          'K[0]',
+                          'K[0].b',
+                          'K[0].B[0]',
+                          'K[0].B[1][0]',
+                          'K[0].J[1][0].b',
+                          'J[1][0].b'])
+        order = list(str(obj) for obj in self.model.heterogeneous_containers(
+            ctype=IJunk))
+        self.assertEqual(order,
+                         ['K[0].j',
+                          'K[0].J[0]',
+                          'K[0].J[1][0]',
+                          'j',
+                          'J[0]',
+                          'J[1][0]'])
+
+class TestMisc(unittest.TestCase):
 
     def test_pprint(self):
         import pyomo.kernel
