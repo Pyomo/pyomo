@@ -27,6 +27,7 @@ from pyomo.core.base.component import ActiveComponent
 from pyomo.core.kernel.component_interface import IComponent
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
+from pyomo.repn.plugins.problem_utils import valid_ctypes_minlp
 import pyomo.common.plugin
 
 import logging
@@ -92,20 +93,25 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
         if node.__class__ in native_types:
             return True, str(node)
 
-        # Make sure all components in active constraints are basic ctypes we
-        # know how to deal with. This means anything with a type() method must
-        # be one of the following allowable types.
-        if hasattr(node, "type"):
-            if node.type() not in (Var, Param, Expression, Objective):
+        if node.is_expression_type():
+            # we will descend into this, so type checking will happen later
+            if node.is_component_type():
+                self.treechecker(node)
+            return False, None
+
+        if node.is_component_type():
+            if self.ctype(node) not in valid_ctypes_minlp:
+                # Make sure all components in active constraints
+                # are basic ctypes we know how to deal with.
                 raise RuntimeError(
                     "Unallowable component '%s' of type %s found in an active "
                     "constraint or objective.\nThe GAMS writer cannot export "
                     "expressions with this component type."
-                    % (node.name, node.type().__name__))
-            if node.type() in (Param, Expression):
+                    % (node.name, self.ctype(node).__name__))
+            if self.ctype(node) is not Var:
                 # For these, make sure it's on the right model. We can check
                 # Vars later since they don't disappear from the expressions
-                self.treechecker.on_tree(node)
+                self.treechecker(node)
 
         if node.is_variable_type():
             if node.fixed:
@@ -113,10 +119,13 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
             label = self.smap.getSymbol(node)
             return True, label
 
-        if not node.is_expression_type():
-            return True, str(value(node))
+        return True, str(value(node))
 
-        return False, None
+    def ctype(self, comp):
+        if isinstance(comp, IComponent):
+            return comp.ctype
+        else:
+            return comp.type()
 
 
 def expression_to_string(expr, treechecker, labeler=None, smap=None):
@@ -180,7 +189,7 @@ class StorageTreeChecker(object):
             self.tree.add(pb)
             pb = self.parent_block(pb)
 
-    def on_tree(self, comp, exception_flag=True):
+    def __call__(self, comp, exception_flag=True):
         if comp is self.model:
             return True
 
@@ -199,9 +208,9 @@ class StorageTreeChecker(object):
         else:
             return False
 
-    def parent_block(self, c):
-        pb = c.parent_block
-        if isinstance(c, IComponent):
+    def parent_block(self, comp):
+        pb = comp.parent_block
+        if isinstance(comp, IComponent):
             return pb
         else:
             return pb()
@@ -556,7 +565,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         warn_int_bounds = False
         for category, var_name in categorized_vars:
             var = symbolMap.getObject(var_name)
-            tc.on_tree(var)
+            tc(var)
             if category == 'positive':
                 if var.has_ub():
                     output_file.write("%s.up = %s;\n" %
