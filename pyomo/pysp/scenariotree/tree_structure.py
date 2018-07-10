@@ -1159,7 +1159,22 @@ class Scenario(object):
         self._weight_term_cost = solution['weight term cost']
         self._proximal_term_cost = solution['proximal term cost']
         assert set(solution['x'].keys()) == set(self._x.keys())
-        self._x = copy.deepcopy(solution['x'])
+
+        # IMPT:
+        # the following is the most expensive operation in this method, taking 
+        # basically all of the run time. the original implementation was simply
+        #         self._x = copy.deepcopy(solution['x'])
+        # but the overhead of deepcopy (and the associated memoization) is 
+        # empirically non-trivial. further, we do not really need (at least to
+        # date) a fully general deepcopy implementation, as the structure of 
+        # the 'x' attribute is static - a two-level nested dictionary, first
+        # key node name, second key variable identifier - which maps to floats
+        # or other primitive types.
+
+        self._x = {}
+        for node_name, node_dict in six.iteritems(solution['x']):
+            self._x[node_name] = {var_name:var_value for var_name, var_value in six.iteritems(node_dict)}
+
         assert set(solution['fixed'].keys()) == set(self._fixed.keys())
         assert set(solution['stale'].keys()) == set(self._stale.keys())
         # See note in copy_solution method about converting
