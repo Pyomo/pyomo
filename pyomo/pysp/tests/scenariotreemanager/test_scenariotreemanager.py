@@ -13,6 +13,7 @@ import os
 import time
 import subprocess
 import sys
+import collections
 if sys.version_info[:2] >= (3,6):
     _ordered_dict_ = dict
 else:
