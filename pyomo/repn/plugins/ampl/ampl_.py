@@ -726,7 +726,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # Tabulate the External Function definitions
         self.external_byFcn = {}
         external_Libs = set()
-        for fcn in model.component_data_objects(ExternalFunction, active=True):
+        for fcn in model.component_objects(ExternalFunction, active=True):
             if fcn._function in self.external_byFcn:
                 if self.external_byFcn[fcn._function][0]._library != fcn._library:
                     raise RuntimeError(

@@ -165,17 +165,43 @@ del util
 del pyomo
 
 #
-# Ducktyping to work with a few solver interfaces
-# Ideally, everything below here could be deleted one day
+# Ducktyping to work with a solver interfaces. Ideally,
+# everything below here could be deleted one day.
 #
-
+from pyomo.core.kernel.base import IHeterogeneousContainer
 def _component_data_objects(self, *args, **kwds):
     # this is not yet handled
     kwds.pop('sort', None)
     for component in self.components(*args, **kwds):
         yield component
-block.component_data_objects = _component_data_objects
+IHeterogeneousContainer.component_data_objects = \
+    _component_data_objects
 del _component_data_objects
+
+def _component_objects(self, *args, **kwds):
+    # this is not yet handled
+    kwds.pop('sort', None)
+    # not handled
+    assert kwds.pop('descent_order', None) is None
+    active = kwds.pop('active', None)
+    descend_into = kwds.pop('descend_into', True)
+    if not descend_into:
+        assert active in (None, True)
+        # if not active, then nothing below is active
+        if (active is not None) and \
+           (not self.active):
+            return
+        items = (self,)
+    else:
+        items = self.heterogeneous_containers(active=active,
+                                              descend_into=True)
+    for item in items:
+        for child in item.children(*args, **kwds):
+            yield child
+IHeterogeneousContainer.component_objects = \
+    _component_objects
+del _component_objects
+del IHeterogeneousContainer
 
 def _block_data_objects(self, **kwds):
     # this is not yet handled
