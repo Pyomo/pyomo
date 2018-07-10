@@ -21,7 +21,6 @@ else:
     except ImportError:                         #pragma:nocover
         import ordereddict
         _ordered_dict_ = ordereddict.OrderedDict
-from collections import defaultdict
 
 from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.kernel.base import \
@@ -87,10 +86,13 @@ class block(IBlock):
         d['_order'] = _ordered_dict_()
 
     def _activate_large_storage_mode(self):
-        if self._byctype.__class__ is not defaultdict:
-            self.__dict__['_byctype'] = defaultdict(_ordered_dict_)
-            for key,obj in self._order.items():
-                self._byctype[obj.ctype][key] = obj
+        if self._byctype.__class__ is not _ordered_dict_:
+            self.__dict__['_byctype'] = _ordered_dict_()
+            for key, obj in self._order.items():
+                ctype = obj.ctype
+                if ctype not in self._byctype:
+                    self._byctype[ctype] = _ordered_dict_()
+                self._byctype[ctype][key] = obj
 
     #
     # Define the IHeterogeneousContainer abstract methods
@@ -112,7 +114,7 @@ class block(IBlock):
                     ctypes_set.add(child_ctype)
                     ctypes.append(child_ctype)
             return tuple(ctypes)
-        elif self._byctype.__class__ is defaultdict:
+        elif self._byctype.__class__ is _ordered_dict_:
             # large-block storage
             return tuple(self._byctype)
         else:
@@ -145,7 +147,7 @@ class block(IBlock):
         if ctype is _no_ctype:
             for child in self._order.values():
                 yield child
-        elif self._byctype.__class__ is defaultdict:
+        elif self._byctype.__class__ is _ordered_dict_:
             # large-block storage
             if ctype in self._byctype:
                 for child in self._byctype[ctype].values():
@@ -205,8 +207,10 @@ class block(IBlock):
                 if self._byctype is None:
                     # storing a single ctype
                     self.__dict__['_byctype'] = ctype
-                elif self._byctype.__class__ is defaultdict:
+                elif self._byctype.__class__ is _ordered_dict_:
                     # large-block storage
+                    if ctype not in self._byctype:
+                        self._byctype[ctype] = _ordered_dict_()
                     self._byctype[ctype][name] = obj
                 elif self._byctype.__class__ is int:
                     # small-block storage
@@ -244,7 +248,7 @@ class block(IBlock):
             del self._order[name]
             obj._parent = None
             obj._storage_key = None
-            if self._byctype.__class__ is defaultdict:
+            if self._byctype.__class__ is _ordered_dict_:
                 # large-block storage
                 ctype = obj.ctype
                 del self._byctype[ctype][name]
