@@ -45,6 +45,11 @@ class InducedLinearity(IsomorphicTransformation):
 
         # Collect find bilinear expressions that can be reformulated using
         # knowledge of effectively discrete variables
+        bilinear_map = _bilinear_expressions(model)
+        for v, pairs in bilinear_map.items():
+            for v2, constrs in pairs.items():
+                print('%s --> %s --> %s' % (
+                    v.name, v2.name, [c.name for c in constrs]))
         pass
         # Categorize the constraint as Case 1 or Case 2
         pass
@@ -59,13 +64,29 @@ def _bilinear_expressions(model):
     # factorization transformation to be applied beforehand in order to pick
     # these constraints up.
     pass
+    # Bilinear map will be stored in the format:
+    # x --> (y --> [constr1, constr2, ...], z --> [constr2, constr3])
+    bilinear_map = ComponentMap()
     for constr in model.component_data_objects(
             Constraint, active=True, descend_into=(Block, Disjunct)):
         if constr.body.polynomial_degree() in (1, 0):
             continue  # Skip trivial and linear constraints
         repn = generate_standard_repn(constr.body)
-        pass
-        # TODO what information do I need to store?
+        for pair in repn.quadratic_vars:
+            v1, v2 = pair
+            v1_pairs = bilinear_map.get(v1, ComponentMap())
+            if v2 in v1_pairs:
+                # bilinear term has been found before. Simply add constraint to
+                # the set associated with the bilinear term.
+                v1_pairs[v2].add(constr)
+            else:
+                # We encounter the bilinear term for the first time.
+                bilinear_map[v1] = v1_pairs
+                bilinear_map[v2] = bilinear_map.get(v2, ComponentMap())
+                constraints_with_bilinear_pair = ComponentSet([constr])
+                bilinear_map[v1][v2] = constraints_with_bilinear_pair
+                bilinear_map[v2][v1] = constraints_with_bilinear_pair
+    return bilinear_map
 
 
 def _effectively_discrete_vars(block, constraint_bound_tolerance):
@@ -93,3 +114,5 @@ def _effectively_discrete_vars(block, constraint_bound_tolerance):
             # We know that this is an effectively discrete continuous
             # variable. Add it to our identified variable list.
             yield non_discrete_vars[0]
+        # TODO we should eventually also look at cases where all other
+        # non_discrete_vars are effectively_discrete_vars
