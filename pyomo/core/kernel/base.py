@@ -378,7 +378,10 @@ class IHomogeneousContainer(ICategorizedObjectContainer):
                    active=None):
         """
         Generates an efficient traversal of all components
-        stored under this container. Components are ...TODO
+        stored under this container. Components are
+        categorized objects that are either not containers,
+        or are heterogeneous containers having a category
+        type different from their children.
 
         Args:
             active (:const:`True`/:const:`None`): Set to
@@ -401,12 +404,8 @@ class IHomogeneousContainer(ICategorizedObjectContainer):
             return
 
         for child in self.children():
-
             if (not child._is_container) or \
                child._is_heterogeneous_container:
-                # it is either not a container or
-                # it is a hetergeneous container, so
-                # we treat it is a leaf node
                 if (active is None) or \
                    child.active:
                     yield child
@@ -452,18 +451,13 @@ class IHomogeneousContainer(ICategorizedObjectContainer):
             yield self
 
         for child in self.children():
-
-            if not child._is_container:
+            if (not child._is_container) or \
+               child._is_heterogeneous_container:
                 if (active is None) or \
                    child.active:
-                    yield child
-            elif child._is_heterogeneous_container:
-                if (active is None) or \
-                   child.active:
-                    if descend is not None:
-                        descend(child)
                     yield child
             else:
+                assert child._is_container
                 for obj in child.preorder_traversal(
                         active=active,
                         descend=descend):
@@ -561,7 +555,10 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
                    descend_into=True):
         """
         Generates an efficient traversal of all components
-        stored under this container. Components are ...TODO
+        stored under this container. Components are
+        categorized objects that are either not containers,
+        or are heterogeneous containers having a category
+        type different from their children.
 
         Args:
             ctype: Indicates the category of components to
@@ -583,16 +580,16 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
             iterator of objects in the storage tree
         """
         assert active in (None, True)
-        # if not active, then nothing below is active
-        if (active is not None) and \
-           (not self.active):
-            return
-
         # convert AML types into Kernel types (hack for the
         # solver interfaces)
         ctype = _convert_ctype.get(ctype, ctype)
 
         if ctype is _no_ctype:
+
+            # if not active, then nothing below is active
+            if (active is not None) and \
+               (not self.active):
+                return
 
             for child in self.children():
 
@@ -625,46 +622,29 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
                     assert child._is_container
                     for obj in child.components(active=active):
                         yield obj
-
         else:
 
-            # Generate components from immediate children first
-            for child in self.children(ctype=ctype):
+            if not descend_into:
+                # if not active, then nothing below is active
+                if (active is not None) and \
+                   (not self.active):
+                    return
+                items = (self,)
+            else:
+                items = self.heterogeneous_containers(active=active,
+                                                      descend_into=True)
 
-                if (not child._is_container) or \
-                   child._is_heterogeneous_container:
-                    if (active is None) or \
-                       child.active:
-                        yield child
-                else:
-                    assert child._is_container
-                    for obj in child.components(active=active):
-                        yield obj
-
-            if descend_into:
-                for child_ctype in self.child_ctypes():
-                    if child_ctype._is_heterogeneous_container:
-                        # yield components on all
-                        # heterogeneous containers
-                        for child in self.children(ctype=child_ctype):
-                            assert child._is_container
-                            if not child._is_heterogeneous_container:
-                                for obj in child.components(
-                                        active=active):
-                                    assert obj.ctype is child_ctype
-                                    assert obj._is_container and \
-                                        obj._is_heterogeneous_container
-                                    for item in obj.components(
-                                            ctype=ctype,
-                                            active=active,
-                                            descend_into=True):
-                                        yield item
-                            else:
-                                for obj in child.components(
-                                        ctype=ctype,
-                                        active=active,
-                                        descend_into=True):
-                                    yield obj
+            for item in items:
+                for child in item.children(ctype=ctype):
+                    if (not child._is_container) or \
+                       child._is_heterogeneous_container:
+                        if (active is None) or \
+                           child.active:
+                            yield child
+                    else:
+                        assert child._is_container
+                        for obj in child.components(active=active):
+                            yield obj
 
     def preorder_traversal(self,
                            ctype=_no_ctype,
@@ -724,7 +704,7 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
                        (child_ctype is ctype):
                         yield child
             elif child._is_heterogeneous_container:
-                # a non-homegenous container, so use
+                # a heterogeneous container, so use
                 # its traversal method
                 for obj in child.preorder_traversal(
                         ctype=ctype,
@@ -746,7 +726,7 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
                         if not obj._is_heterogeneous_container:
                             yield obj
                         else:
-                            # a non-homegenous container, so use
+                            # a heterogeneous container, so use
                             # its traversal method
                             for item in obj.preorder_traversal(
                                     ctype=ctype,

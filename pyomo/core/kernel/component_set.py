@@ -12,7 +12,7 @@ try:
     # python 3.7+
     from collections.abc import MutableSet as _MutableSet
     from collections.abc import Set as _Set
-except:
+except:                                           #pragma:nocover
     from collections import MutableSet as _MutableSet
     from collections import Set as _Set
 

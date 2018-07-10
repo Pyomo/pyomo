@@ -11,7 +11,7 @@
 try:
     # python 3.7+
     from collections.abc import MutableSequence as _MutableSequence
-except:
+except:                                           #pragma:nocover
     from collections import MutableSequence as _MutableSequence
 import logging
 

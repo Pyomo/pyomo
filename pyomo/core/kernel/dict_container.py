@@ -17,14 +17,14 @@ if sys.version_info[:2] >= (3,6):
 else:
     try:
         _ordered_dict_ = collections.OrderedDict
-    except ImportError:                         #pragma:nocover
+    except ImportError:                           #pragma:nocover
         import ordereddict
         _ordered_dict_ = ordereddict.OrderedDict
 try:
     # python 3.7+
     from collections.abc import MutableMapping as _MutableMapping
     from collections.abc import Mapping as _Mapping
-except:
+except:                                           #pragma:nocover
     from collections import MutableMapping as _MutableMapping
     from collections import Mapping as _Mapping
 

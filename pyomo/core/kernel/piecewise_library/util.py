@@ -75,7 +75,7 @@ def log2floor(n):
     assert n > 0
     try:
         return n.bit_length() - 1
-    except AttributeError:
+    except AttributeError:                        #pragma:nocover
         # int.bit_length() was introduced in Python 2.7.  Fallback to a
         # brute-force calculation if bit_length is not available.
         s = bin(n)         # binary representation:  bin(37) --> '0b100101'

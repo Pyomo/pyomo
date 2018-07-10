@@ -13,7 +13,7 @@ try:
     # python 3.7+
     from collections.abc import Sequence as _Sequence
     from collections.abc import Set as _Set
-except:
+except:                                           #pragma:nocover
     from collections import Sequence as _Sequence
     from collections import Set as _Set
 

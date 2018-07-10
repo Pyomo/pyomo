@@ -12,7 +12,7 @@ try:
     # python 3.7+
     from collections.abc import MutableMapping as _MutableMapping
     from collections.abc import Mapping as _Mapping
-except:
+except:                                           #pragma:nocover
     from collections import MutableMapping as _MutableMapping
     from collections import Mapping as _Mapping
 
