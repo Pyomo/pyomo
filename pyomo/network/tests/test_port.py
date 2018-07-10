@@ -805,5 +805,88 @@ class TestConnector(unittest.TestCase):
 """)
 
 
+    def test_expand_with_connection(self):
+        m = ConcreteModel()
+        m.x = Var([1,2], domain=Binary)
+        m.y = Var(bounds=(1,3))
+        m.CON = Connector()
+        m.CON.add(m.x)
+        m.CON.add(m.y)
+        m.ECON2 = Connector()
+        m.ECON1 = Connector()
+
+        # Must simulataneously expand all connectors including the connection
+        # in order to properly expand empty connectors, so we define d first
+        # to test that it finds out how to populate ECON2. Also make sure it
+        # does not expand inactive Constraints or Connections.
+        m.d = Connection(connectors=(m.ECON2, m.ECON1))
+        m.c = Constraint(expr= m.CON == m.ECON1)
+        m.e = Connection(connectors=(m.CON, m.CON))
+        m.f = Constraint(expr= m.ECON1 == m.ECON1)
+        m.nocon = Constraint(expr = m.x[1] == 2)
+        m.e.deactivate()
+        m.f.deactivate()
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 3)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
+
+        TransformationFactory('core.expand_connectors').apply_to(m)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 6)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 9)
+        self.assertTrue(m.nocon.active)
+        self.assertFalse(m.e.active)
+        self.assertIsNone(m.component('e_expanded'))
+        self.assertFalse(m.f.active)
+        self.assertIsNone(m.component('f.expanded'))
+        self.assertFalse(m.c.active)
+        self.assertTrue(m.component('c.expanded').active)
+        self.assertFalse(m.d.active)
+        blk = m.component('d_expanded')
+        self.assertTrue(blk.active)
+        self.assertTrue(blk.component('x_equality').active)
+        self.assertTrue(blk.component('y_equality').active)
+
+        self.assertIs( m.x[1].domain, m.component('ECON1.auto.x')[1].domain )
+        self.assertIs( m.x[2].domain, m.component('ECON1.auto.x')[2].domain )
+        self.assertIs( m.y.domain, m.component('ECON1.auto.y').domain )
+        self.assertEqual( m.x[1].bounds, m.component('ECON1.auto.x')[1].bounds )
+        self.assertEqual( m.x[2].bounds, m.component('ECON1.auto.x')[2].bounds )
+        self.assertEqual( m.y.bounds, m.component('ECON1.auto.y').bounds )
+
+        self.assertIs( m.x[1].domain, m.component('ECON2.auto.x')[1].domain )
+        self.assertIs( m.x[2].domain, m.component('ECON2.auto.x')[2].domain )
+        self.assertIs( m.y.domain, m.component('ECON2.auto.y').domain )
+        self.assertEqual( m.x[1].bounds, m.component('ECON2.auto.x')[1].bounds )
+        self.assertEqual( m.x[2].bounds, m.component('ECON2.auto.x')[2].bounds )
+        self.assertEqual( m.y.bounds, m.component('ECON2.auto.y').bounds )
+
+        os = StringIO()
+        m.component('c.expanded').pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""c.expanded : Size=3, Index=c.expanded_index, Active=True
+    Key : Lower : Body                   : Upper : Active
+      1 :   0.0 : x[1] - ECON1.auto.x[1] :   0.0 :   True
+      2 :   0.0 : x[2] - ECON1.auto.x[2] :   0.0 :   True
+      3 :   0.0 :       y - ECON1.auto.y :   0.0 :   True
+""")
+
+        os = StringIO()
+        blk.pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""d_expanded : Size=1, Index=None, Active=True
+    2 Constraint Declarations
+        x_equality : Size=2, Index=x_index, Active=True
+            Key : Lower : Body                              : Upper : Active
+              1 :   0.0 : ECON2.auto.x[1] - ECON1.auto.x[1] :   0.0 :   True
+              2 :   0.0 : ECON2.auto.x[2] - ECON1.auto.x[2] :   0.0 :   True
+        y_equality : Size=1, Index=None, Active=True
+            Key  : Lower : Body                        : Upper : Active
+            None :   0.0 : ECON2.auto.y - ECON1.auto.y :   0.0 :   True
+
+    2 Declarations: x_equality y_equality
+""")
+
+
 if __name__ == "__main__":
     unittest.main()
