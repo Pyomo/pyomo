@@ -20,7 +20,7 @@ from pyomo.core.kernel.constraint import (IConstraint,
 from pyomo.core.kernel.variable import variable
 from pyomo.core.kernel.parameter import parameter
 from pyomo.core.kernel.expression import (expression,
-                                                    data_expression)
+                                          data_expression)
 from pyomo.core.kernel.block import block
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet)

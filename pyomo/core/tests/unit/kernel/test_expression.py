@@ -2,10 +2,10 @@ import pickle
 
 import pyutilib.th as unittest
 from pyomo.core.expr.numvalue import (NumericValue,
-                                        is_fixed,
-                                        is_constant,
-                                        is_potentially_variable,
-                                        value)
+                                      is_fixed,
+                                      is_constant,
+                                      is_potentially_variable,
+                                      value)
 import pyomo.kernel
 from pyomo.core.tests.unit.kernel.test_dict_container import \
     _TestActiveDictContainerBase
@@ -15,13 +15,13 @@ from pyomo.core.tests.unit.kernel.test_list_container import \
     _TestActiveListContainerBase
 from pyomo.core.kernel.base import ICategorizedObject
 from pyomo.core.kernel.expression import (IIdentityExpression,
-                                                    noclone,
-                                                    IExpression,
-                                                    expression,
-                                                    data_expression,
-                                                    expression_dict,
-                                                    expression_tuple,
-                                                    expression_list)
+                                          noclone,
+                                          IExpression,
+                                          expression,
+                                          data_expression,
+                                          expression_dict,
+                                          expression_tuple,
+                                          expression_list)
 from pyomo.core.kernel.variable import variable
 from pyomo.core.kernel.parameter import parameter
 from pyomo.core.kernel.objective import objective
@@ -210,6 +210,11 @@ class Test_noclone(unittest.TestCase):
                     expression(), data_expression()):
             self.assertEqual(noclone(obj).is_expression_type(), True)
 
+    def test_is_parameter_type(self):
+        for obj in (variable(), parameter(), objective(),
+                    expression(), data_expression()):
+            self.assertEqual(noclone(obj).is_parameter_type(), False)
+
     def test_args(self):
         e = noclone(parameter() + 1)
         self.assertEqual(e.nargs(), 1)
@@ -351,6 +356,10 @@ class _Test_expression_base(object):
     def test_is_expression_type(self):
         e = self._ctype_factory()
         self.assertEqual(e.is_expression_type(), True)
+
+    def test_is_parameter_type(self):
+        e = self._ctype_factory()
+        self.assertEqual(e.is_parameter_type(), False)
 
     def test_args(self):
         e = self._ctype_factory()

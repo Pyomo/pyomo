@@ -118,6 +118,16 @@ class Test_parameter(unittest.TestCase):
         self.assertEqual(p.value, 1.0)
         self.assertEqual((p**2)(), 1.0)
 
+    def test_is_expression_type(self):
+        p = parameter()
+        self.assertEqual(p.is_expression_type(), False)
+
+    def test_is_parameter_type(self):
+        p = parameter()
+        # GH: apparently is_parameter_type has something
+        #     to do with mutability...
+        self.assertEqual(p.is_parameter_type(), False)
+
 class Test_parameter_dict(_TestActiveDictContainerBase,
                           unittest.TestCase):
     _container_type = parameter_dict

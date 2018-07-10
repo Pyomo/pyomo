@@ -426,11 +426,14 @@ class _TestTupleContainerBase(object):
                          [c.name for c in order])
         self.assertEqual([id(c) for c in traversal],
                          [id(c) for c in order])
-        if self._ctype_factory()._ctype._is_heterogeneous_container:
-            self.assertEqual([c.name for c in traversal],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(c) for c in traversal],
-                             [id(c) for c in descend.seen])
+        self.assertEqual([c.name for c in traversal
+                          if c._is_container and \
+                          (not c._is_heterogeneous_container)],
+                         [c.name for c in descend.seen])
+        self.assertEqual([id(c) for c in traversal
+                          if c._is_container and \
+                          (not c._is_heterogeneous_container)],
+                         [id(c) for c in descend.seen])
 
         def descend(x):
             self.assertTrue(x._is_container)
@@ -442,11 +445,14 @@ class _TestTupleContainerBase(object):
                          [c.name for c in order])
         self.assertEqual([id(c) for c in traversal],
                          [id(c) for c in order])
-        if self._ctype_factory()._ctype._is_heterogeneous_container:
-            self.assertEqual([c.name for c in traversal],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(c) for c in traversal],
-                             [id(c) for c in descend.seen])
+        self.assertEqual([c.name for c in traversal
+                          if c._is_container and \
+                          (not c._is_heterogeneous_container)],
+                         [c.name for c in descend.seen])
+        self.assertEqual([id(c) for c in traversal
+                          if c._is_container and \
+                          (not c._is_heterogeneous_container)],
+                         [id(c) for c in descend.seen])
         return ctuple, traversal
 
 class _TestActiveTupleContainerBase(_TestTupleContainerBase):
@@ -699,11 +705,10 @@ class _TestActiveTupleContainerBase(_TestTupleContainerBase):
                          [c.name for c in order])
         self.assertEqual([id(ctuple),id(ctuple[0]),id(ctuple[2])],
                          [id(c) for c in order])
-        if self._ctype_factory()._ctype._is_heterogeneous_container:
-            self.assertEqual([None, '[0]', '[2]'],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(ctuple),id(ctuple[0]),id(ctuple[2])],
-                             [id(c) for c in descend.seen])
+        self.assertEqual([None],
+                         [c.name for c in descend.seen])
+        self.assertEqual([id(ctuple)],
+                         [id(c) for c in descend.seen])
 
         def descend(x):
             self.assertTrue(x._is_container)
@@ -715,11 +720,10 @@ class _TestActiveTupleContainerBase(_TestTupleContainerBase):
                          [c.name for c in order])
         self.assertEqual([id(ctuple),id(ctuple[0]),id(ctuple[1]),id(ctuple[2])],
                          [id(c) for c in order])
-        if self._ctype_factory()._ctype._is_heterogeneous_container:
-            self.assertEqual([None,'[0]','[1]','[2]'],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(ctuple),id(ctuple[0]),id(ctuple[1]),id(ctuple[2])],
-                             [id(c) for c in descend.seen])
+        self.assertEqual([None,'[1]'],
+                         [c.name for c in descend.seen])
+        self.assertEqual([id(ctuple),id(ctuple[1])],
+                         [id(c) for c in descend.seen])
 
         ctuple[1].deactivate(shallow=False)
         def descend(x):
@@ -733,11 +737,16 @@ class _TestActiveTupleContainerBase(_TestTupleContainerBase):
                          [c.name for c in order])
         self.assertEqual([id(c) for c in traversal if c.active],
                          [id(c) for c in order])
-        if self._ctype_factory()._ctype._is_heterogeneous_container:
-            self.assertEqual([c.name for c in traversal if c.active],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(c) for c in traversal if c.active],
-                             [id(c) for c in descend.seen])
+        self.assertEqual([c.name for c in traversal
+                          if c.active and \
+                          c._is_container and \
+                          (not c._is_heterogeneous_container)],
+                         [c.name for c in descend.seen])
+        self.assertEqual([id(c) for c in traversal
+                          if c.active and \
+                          c._is_container and \
+                          (not c._is_heterogeneous_container)],
+                         [id(c) for c in descend.seen])
 
         def descend(x):
             self.assertTrue(x._is_container)
@@ -749,11 +758,10 @@ class _TestActiveTupleContainerBase(_TestTupleContainerBase):
                          [c.name for c in order])
         self.assertEqual([id(ctuple),id(ctuple[0]),id(ctuple[1]),id(ctuple[2])],
                          [id(c) for c in order])
-        if self._ctype_factory()._ctype._is_heterogeneous_container:
-            self.assertEqual([None,'[0]','[1]','[2]'],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(ctuple),id(ctuple[0]),id(ctuple[1]),id(ctuple[2])],
-                             [id(c) for c in descend.seen])
+        self.assertEqual([None,'[1]'],
+                         [c.name for c in descend.seen])
+        self.assertEqual([id(ctuple),id(ctuple[1])],
+                         [id(c) for c in descend.seen])
 
         ctuple.deactivate()
         def descend(x):

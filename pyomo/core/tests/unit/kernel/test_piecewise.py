@@ -20,11 +20,13 @@ from pyomo.core.kernel.variable import (variable,
 from pyomo.core.kernel.piecewise_library.transforms import \
     (PiecewiseLinearFunction,
      TransformedPiecewiseLinearFunction)
-import pyomo.core.kernel.piecewise_library.transforms as transforms
+import pyomo.core.kernel.piecewise_library.transforms as \
+    transforms
 from pyomo.core.kernel.piecewise_library.transforms_nd import \
     (PiecewiseLinearFunctionND,
      TransformedPiecewiseLinearFunctionND)
-import pyomo.core.kernel.piecewise_library.transforms_nd as transforms_nd
+import pyomo.core.kernel.piecewise_library.transforms_nd as \
+    transforms_nd
 import pyomo.core.kernel.piecewise_library.util as util
 from pyomo.core.base.block import Block
 

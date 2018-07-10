@@ -559,11 +559,14 @@ class _TestDictContainerBase(object):
                          [c.name for c in order])
         self.assertEqual([id(c) for c in traversal],
                          [id(c) for c in order])
-        if self._ctype_factory()._ctype._is_heterogeneous_container:
-            self.assertEqual([c.name for c in traversal],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(c) for c in traversal],
-                             [id(c) for c in descend.seen])
+        self.assertEqual([c.name for c in traversal
+                          if c._is_container and \
+                          (not c._is_heterogeneous_container)],
+                         [c.name for c in descend.seen])
+        self.assertEqual([id(c) for c in traversal
+                          if c._is_container and \
+                          (not c._is_heterogeneous_container)],
+                         [id(c) for c in descend.seen])
 
         def descend(x):
             self.assertTrue(x._is_container)
@@ -575,11 +578,14 @@ class _TestDictContainerBase(object):
                          [c.name for c in order])
         self.assertEqual([id(c) for c in traversal],
                          [id(c) for c in order])
-        if self._ctype_factory()._ctype._is_heterogeneous_container:
-            self.assertEqual([c.name for c in traversal],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(c) for c in traversal],
-                             [id(c) for c in descend.seen])
+        self.assertEqual([c.name for c in traversal
+                          if c._is_container and \
+                          (not c._is_heterogeneous_container)],
+                         [c.name for c in descend.seen])
+        self.assertEqual([id(c) for c in traversal
+                          if c._is_container and \
+                          (not c._is_heterogeneous_container)],
+                         [id(c) for c in descend.seen])
         return cdict, traversal
 
 class _TestActiveDictContainerBase(_TestDictContainerBase):
@@ -828,11 +834,10 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
                          [c.name for c in order])
         self.assertEqual([id(cdict),id(cdict[0]),id(cdict[2])],
                          [id(c) for c in order])
-        if self._ctype_factory()._ctype._is_heterogeneous_container:
-            self.assertEqual([None, '[0]', '[2]'],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(cdict),id(cdict[0]),id(cdict[2])],
-                             [id(c) for c in descend.seen])
+        self.assertEqual([None],
+                         [c.name for c in descend.seen])
+        self.assertEqual([id(cdict)],
+                         [id(c) for c in descend.seen])
 
         def descend(x):
             self.assertTrue(x._is_container)
@@ -844,11 +849,10 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
                          [c.name for c in order])
         self.assertEqual([id(cdict),id(cdict[0]),id(cdict[1]),id(cdict[2])],
                          [id(c) for c in order])
-        if self._ctype_factory()._ctype._is_heterogeneous_container:
-            self.assertEqual([None,'[0]','[1]','[2]'],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(cdict),id(cdict[0]),id(cdict[1]),id(cdict[2])],
-                             [id(c) for c in descend.seen])
+        self.assertEqual([None,'[1]'],
+                         [c.name for c in descend.seen])
+        self.assertEqual([id(cdict),id(cdict[1])],
+                         [id(c) for c in descend.seen])
 
         cdict[1].deactivate(shallow=False)
         def descend(x):
@@ -861,11 +865,16 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
                          [c.name for c in order])
         self.assertEqual([id(c) for c in traversal if c.active],
                          [id(c) for c in order])
-        if self._ctype_factory()._ctype._is_heterogeneous_container:
-            self.assertEqual([c.name for c in traversal if c.active],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(c) for c in traversal if c.active],
-                             [id(c) for c in descend.seen])
+        self.assertEqual([c.name for c in traversal
+                          if c.active and \
+                          c._is_container and \
+                          (not c._is_heterogeneous_container)],
+                         [c.name for c in descend.seen])
+        self.assertEqual([id(c) for c in traversal
+                          if c.active and \
+                          c._is_container and \
+                          (not c._is_heterogeneous_container)],
+                         [id(c) for c in descend.seen])
 
         def descend(x):
             descend.seen.append(x)
@@ -876,11 +885,10 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
                          [c.name for c in order])
         self.assertEqual([id(cdict),id(cdict[0]),id(cdict[1]),id(cdict[2])],
                          [id(c) for c in order])
-        if self._ctype_factory()._ctype._is_heterogeneous_container:
-            self.assertEqual([None,'[0]','[1]','[2]'],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(cdict),id(cdict[0]),id(cdict[1]),id(cdict[2])],
-                             [id(c) for c in descend.seen])
+        self.assertEqual([None,'[1]'],
+                         [c.name for c in descend.seen])
+        self.assertEqual([id(cdict),id(cdict[1])],
+                         [id(c) for c in descend.seen])
 
         cdict.deactivate()
         def descend(x):
@@ -890,7 +898,8 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
         order = list(cdict.preorder_traversal(active=True,
                                               descend=descend))
         self.assertEqual(len(descend.seen), 0)
-        self.assertEqual(len(list(pmo.generate_names(cdict, active=True))),
+        self.assertEqual(len(list(pmo.generate_names(cdict,
+                                                     active=True))),
                          0)
 
         def descend(x):

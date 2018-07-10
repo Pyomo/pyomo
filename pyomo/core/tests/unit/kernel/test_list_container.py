@@ -604,11 +604,14 @@ class _TestListContainerBase(object):
                          [c.name for c in order])
         self.assertEqual([id(c) for c in traversal],
                          [id(c) for c in order])
-        if self._ctype_factory()._ctype._is_heterogeneous_container:
-            self.assertEqual([c.name for c in traversal],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(c) for c in traversal],
-                             [id(c) for c in descend.seen])
+        self.assertEqual([c.name for c in traversal
+                          if c._is_container and \
+                          (not c._is_heterogeneous_container)],
+                         [c.name for c in descend.seen])
+        self.assertEqual([id(c) for c in traversal
+                          if c._is_container and \
+                          (not c._is_heterogeneous_container)],
+                         [id(c) for c in descend.seen])
 
         def descend(x):
             self.assertTrue(x._is_container)
@@ -620,11 +623,14 @@ class _TestListContainerBase(object):
                          [c.name for c in order])
         self.assertEqual([id(c) for c in traversal],
                          [id(c) for c in order])
-        if self._ctype_factory()._ctype._is_heterogeneous_container:
-            self.assertEqual([c.name for c in traversal],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(c) for c in traversal],
-                             [id(c) for c in descend.seen])
+        self.assertEqual([c.name for c in traversal
+                          if c._is_container and \
+                          (not c._is_heterogeneous_container)],
+                         [c.name for c in descend.seen])
+        self.assertEqual([id(c) for c in traversal
+                          if c._is_container and \
+                          (not c._is_heterogeneous_container)],
+                         [id(c) for c in descend.seen])
         return clist, traversal
 
 class _TestActiveListContainerBase(_TestListContainerBase):
@@ -930,11 +936,10 @@ class _TestActiveListContainerBase(_TestListContainerBase):
                          [c.name for c in order])
         self.assertEqual([id(clist),id(clist[0]),id(clist[2])],
                          [id(c) for c in order])
-        if self._ctype_factory()._ctype._is_heterogeneous_container:
-            self.assertEqual([None,'[0]','[2]'],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(clist),id(clist[0]),id(clist[2])],
-                             [id(c) for c in descend.seen])
+        self.assertEqual([None],
+                         [c.name for c in descend.seen])
+        self.assertEqual([id(clist)],
+                         [id(c) for c in descend.seen])
 
         def descend(x):
             self.assertTrue(x._is_container)
@@ -946,11 +951,10 @@ class _TestActiveListContainerBase(_TestListContainerBase):
                          [c.name for c in order])
         self.assertEqual([id(clist),id(clist[0]),id(clist[1]),id(clist[2])],
                          [id(c) for c in order])
-        if self._ctype_factory()._ctype._is_heterogeneous_container:
-            self.assertEqual([None,'[0]','[1]','[2]'],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(clist),id(clist[0]),id(clist[1]),id(clist[2])],
-                             [id(c) for c in descend.seen])
+        self.assertEqual([None,'[1]'],
+                         [c.name for c in descend.seen])
+        self.assertEqual([id(clist),id(clist[1])],
+                         [id(c) for c in descend.seen])
 
         clist[1].deactivate(shallow=False)
         def descend(x):
@@ -964,11 +968,16 @@ class _TestActiveListContainerBase(_TestListContainerBase):
                          [c.name for c in order])
         self.assertEqual([id(c) for c in traversal if c.active],
                          [id(c) for c in order])
-        if self._ctype_factory()._ctype._is_heterogeneous_container:
-            self.assertEqual([c.name for c in traversal if c.active],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(c) for c in traversal if c.active],
-                             [id(c) for c in descend.seen])
+        self.assertEqual([c.name for c in traversal
+                          if c.active and \
+                          c._is_container and \
+                          (not c._is_heterogeneous_container)],
+                         [c.name for c in descend.seen])
+        self.assertEqual([id(c) for c in traversal
+                          if c.active and \
+                          c._is_container and \
+                          (not c._is_heterogeneous_container)],
+                         [id(c) for c in descend.seen])
 
         def descend(x):
             self.assertTrue(x._is_container)
@@ -980,11 +989,10 @@ class _TestActiveListContainerBase(_TestListContainerBase):
                          [c.name for c in order])
         self.assertEqual([id(clist),id(clist[0]),id(clist[1]),id(clist[2])],
                          [id(c) for c in order])
-        if self._ctype_factory()._ctype._is_heterogeneous_container:
-            self.assertEqual([None,'[0]','[1]','[2]'],
-                             [c.name for c in descend.seen])
-            self.assertEqual([id(clist),id(clist[0]),id(clist[1]),id(clist[2])],
-                             [id(c) for c in descend.seen])
+        self.assertEqual([None,'[1]'],
+                         [c.name for c in descend.seen])
+        self.assertEqual([id(clist),id(clist[1])],
+                         [id(c) for c in descend.seen])
 
         clist.deactivate()
         def descend(x):
@@ -995,7 +1003,8 @@ class _TestActiveListContainerBase(_TestListContainerBase):
         order = list(clist.preorder_traversal(active=True,
                                               descend=descend))
         self.assertEqual(len(descend.seen), 0)
-        self.assertEqual(len(list(pmo.generate_names(clist, active=True))),
+        self.assertEqual(len(list(pmo.generate_names(clist,
+                                                     active=True))),
                          0)
 
         def descend(x):
