@@ -244,7 +244,7 @@ class TestArc(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        TransformationFactory('core.expand_arcs').apply_to(m)
+        TransformationFactory('network.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
@@ -288,7 +288,7 @@ class TestArc(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        TransformationFactory('core.expand_arcs').apply_to(m)
+        TransformationFactory('network.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
@@ -336,7 +336,7 @@ class TestArc(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        TransformationFactory('core.expand_arcs').apply_to(m)
+        TransformationFactory('network.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
@@ -388,7 +388,7 @@ class TestArc(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        TransformationFactory('core.expand_arcs').apply_to(m)
+        TransformationFactory('network.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 4)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 8)
@@ -435,7 +435,7 @@ class TestArc(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        TransformationFactory('core.expand_arcs').apply_to(m)
+        TransformationFactory('network.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
@@ -475,7 +475,7 @@ class TestArc(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        TransformationFactory('core.expand_arcs').apply_to(m)
+        TransformationFactory('network.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
@@ -523,7 +523,7 @@ class TestArc(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        TransformationFactory('core.expand_arcs').apply_to(m)
+        TransformationFactory('network.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
@@ -566,7 +566,7 @@ class TestArc(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        TransformationFactory('core.expand_arcs').apply_to(m)
+        TransformationFactory('network.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
@@ -620,7 +620,7 @@ class TestArc(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        TransformationFactory('core.expand_arcs').apply_to(m)
+        TransformationFactory('network.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 5)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 7)
@@ -708,7 +708,7 @@ class TestArc(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        TransformationFactory('core.expand_arcs').apply_to(m)
+        TransformationFactory('network.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 5)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 7)
@@ -787,7 +787,7 @@ class TestArc(unittest.TestCase):
          :    y :    - :     None
 """)
 
-        TransformationFactory('core.expand_arcs').apply_to(m)
+        TransformationFactory('network.expand_arcs').apply_to(m)
 
         os = StringIO()
         m.ECON1.pprint(ostream=os)
@@ -860,7 +860,7 @@ class TestArc(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 0)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 0)
 
-        TransformationFactory('core.expand_arcs').apply_to(m)
+        TransformationFactory('network.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 5)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 5)
@@ -970,7 +970,7 @@ class TestArc(unittest.TestCase):
         m.stream2 = Arc(source=m.feed.outlet, destination=m.prod.inlet)
         m.stream3 = Arc(source=m.tru.outlet, destination=m.prod.inlet)
 
-        TransformationFactory('core.expand_arcs').apply_to(m)
+        TransformationFactory('network.expand_arcs').apply_to(m)
 
         self.assertFalse(m.stream1.active)
         self.assertFalse(m.stream2.active)
@@ -1106,7 +1106,7 @@ class TestArc(unittest.TestCase):
         m.stream2 = Arc(source=m.feed.outlet, destination=m.prod.inlet)
         m.stream3 = Arc(source=m.tru.outlet, destination=m.prod.inlet)
 
-        TransformationFactory('core.expand_arcs').apply_to(m)
+        TransformationFactory('network.expand_arcs').apply_to(m)
 
         self.assertFalse(m.stream1.active)
         self.assertFalse(m.stream2.active)
@@ -1238,7 +1238,7 @@ class TestArc(unittest.TestCase):
 
         m.eq = Arc([1, 2], rule=rule)
 
-        TransformationFactory('core.expand_arcs').apply_to(m)
+        TransformationFactory('network.expand_arcs').apply_to(m)
 
         os = StringIO()
         m.component('eq_expanded').pprint(ostream=os)

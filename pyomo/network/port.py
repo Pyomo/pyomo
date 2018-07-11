@@ -314,7 +314,7 @@ class PortExpander(Plugin):
 
     def apply(self, **kwds):
         instance = kwds.pop('instance')
-        xform = TransformationFactory('core.expand_ports')
+        xform = TransformationFactory('network.expand_ports')
         xform.apply_to(instance, **kwds)
         return instance
 

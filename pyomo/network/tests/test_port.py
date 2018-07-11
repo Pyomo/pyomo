@@ -273,7 +273,7 @@ class TestPort(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
 
-        TransformationFactory('core.expand_ports').apply_to(m)
+        TransformationFactory('network.expand_ports').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
@@ -307,7 +307,7 @@ class TestPort(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
 
-        TransformationFactory('core.expand_ports').apply_to(m)
+        TransformationFactory('network.expand_ports').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
@@ -342,7 +342,7 @@ class TestPort(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
 
-        TransformationFactory('core.expand_ports').apply_to(m)
+        TransformationFactory('network.expand_ports').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
@@ -377,7 +377,7 @@ class TestPort(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
 
-        TransformationFactory('core.expand_ports').apply_to(m)
+        TransformationFactory('network.expand_ports').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 5)
@@ -414,7 +414,7 @@ class TestPort(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
 
-        TransformationFactory('core.expand_ports').apply_to(m)
+        TransformationFactory('network.expand_ports').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
@@ -455,7 +455,7 @@ class TestPort(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
 
-        TransformationFactory('core.expand_ports').apply_to(m)
+        TransformationFactory('network.expand_ports').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
@@ -491,7 +491,7 @@ class TestPort(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
 
-        TransformationFactory('core.expand_ports').apply_to(m)
+        TransformationFactory('network.expand_ports').apply_to(m)
         #m.pprint()
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
@@ -537,7 +537,7 @@ class TestPort(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
 
-        TransformationFactory('core.expand_ports').apply_to(m)
+        TransformationFactory('network.expand_ports').apply_to(m)
         #m.pprint()
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 5)
@@ -611,7 +611,7 @@ class TestPort(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
 
-        TransformationFactory('core.expand_ports').apply_to(m)
+        TransformationFactory('network.expand_ports').apply_to(m)
         #m.pprint()
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 5)
@@ -676,7 +676,7 @@ class TestPort(unittest.TestCase):
          :    y :    - :     None
 """)
 
-        TransformationFactory('core.expand_ports').apply_to(m)
+        TransformationFactory('network.expand_ports').apply_to(m)
         #m.pprint()
 
         os = StringIO()
@@ -737,7 +737,7 @@ class TestPort(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
 
-        TransformationFactory('core.expand_ports').apply_to(m)
+        TransformationFactory('network.expand_ports').apply_to(m)
         #m.pprint()
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 5)
@@ -795,7 +795,7 @@ class TestPort(unittest.TestCase):
 
         m.eq = Constraint(expr=m.c[1] == m.c[2])
 
-        TransformationFactory('core.expand_ports').apply_to(m)
+        TransformationFactory('network.expand_ports').apply_to(m)
 
         os = StringIO()
         m.component('eq.expanded').pprint(ostream=os)
@@ -831,7 +831,7 @@ class TestPort(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
 
-        TransformationFactory('core.expand_ports').apply_to(m)
+        TransformationFactory('network.expand_ports').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 6)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 9)

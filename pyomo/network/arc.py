@@ -418,7 +418,7 @@ class ArcExpander(Plugin):
 
     def apply(self, **kwds):
         instance = kwds.pop('instance')
-        xform = TransformationFactory('core.expand_arcs')
+        xform = TransformationFactory('network.expand_arcs')
         xform.apply_to(instance, **kwds)
         return instance
 

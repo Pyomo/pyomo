@@ -342,7 +342,7 @@ class _PortExpansion(Transformation):
 
 
 class ExpandPorts(_PortExpansion):
-    alias('core.expand_ports',
+    alias('network.expand_ports',
           doc="Expand all ports in the model to simple constraints")
 
     def _apply_to(self, instance, **kwds):
@@ -404,7 +404,7 @@ class ExpandPorts(_PortExpansion):
 
 
 class ExpandArcs(_PortExpansion):
-    alias('core.expand_arcs',
+    alias('network.expand_arcs',
           doc="Expand all Arcs in the model to simple constraints")
 
     def _apply_to(self, instance, **kwds):
