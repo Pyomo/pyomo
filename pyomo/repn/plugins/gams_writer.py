@@ -27,7 +27,8 @@ from pyomo.core.base.component import ActiveComponent
 from pyomo.core.kernel.component_interface import IComponent
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
-from pyomo.repn.plugins.problem_utils import valid_ctypes_minlp
+from pyomo.repn.plugins.problem_utils import valid_expr_ctypes_minlp, \
+    valid_active_ctypes_minlp
 import pyomo.common.plugin
 
 import logging
@@ -100,7 +101,7 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
             return False, None
 
         if node.is_component_type():
-            if self.ctype(node) not in valid_ctypes_minlp:
+            if self.ctype(node) not in valid_expr_ctypes_minlp:
                 # Make sure all components in active constraints
                 # are basic ctypes we know how to deal with.
                 raise RuntimeError(
@@ -458,9 +459,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # Make sure there are no strange ActiveComponents. The expression
         # walker will handle strange things in constraints later.
         model_ctypes = model.collect_ctypes(active=True)
-        valid_ctypes = set([Block, Constraint, Objective, Suffix])
         invalids = set()
-        for t in (model_ctypes - valid_ctypes):
+        for t in (model_ctypes - valid_active_ctypes_minlp):
             if issubclass(t, ActiveComponent):
                 invalids.add(t)
         if len(invalids):

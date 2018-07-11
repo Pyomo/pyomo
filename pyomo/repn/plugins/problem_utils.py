@@ -8,6 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.base import Var, Param, Expression, Objective
+from pyomo.core.base import Var, Param, Expression, Objective, Block, \
+    Constraint, Suffix
 
-valid_ctypes_minlp = {Var, Param, Expression, Objective}
+valid_expr_ctypes_minlp = {Var, Param, Expression, Objective}
+valid_active_ctypes_minlp = {Block, Constraint, Objective, Suffix}
