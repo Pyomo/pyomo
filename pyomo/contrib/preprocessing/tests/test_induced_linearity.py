@@ -3,9 +3,10 @@ import pyutilib.th as unittest
 from pyomo.core.kernel import ComponentSet
 from pyomo.environ import (ConcreteModel, Constraint, ConstraintList,
                            Objective, RangeSet, SolverFactory,
-                           TransformationFactory, Var, exp)
+                           TransformationFactory, Var, exp, Binary, Integers, summation, NonNegativeReals)
 from pyomo.contrib.preprocessing.plugins.induced_linearity import (
-    _bilinear_expressions)
+    _bilinear_expressions, _effectively_discrete_vars, _reformulate_case_1)
+from pyomo.gdp import Disjunct
 
 
 class TestInducedLinearity(unittest.TestCase):
@@ -30,6 +31,36 @@ class TestInducedLinearity(unittest.TestCase):
         self.assertEqual(bilinear_map[m.y][m.x], ComponentSet([m.c, m.c2]))
         self.assertEqual(bilinear_map[m.y][m.z], ComponentSet([m.c]))
         self.assertEqual(bilinear_map[m.z][m.y], ComponentSet([m.c]))
+
+    def test_detect_effectively_discrete_vars(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var(domain=Binary)
+        m.z = Var(domain=Integers)
+        m.constr = Constraint(expr=m.x == m.y + m.z)
+        m.a = Var()
+        m.b = Var(domain=Binary)
+        m.c = Var(domain=Integers)
+        m.disj = Disjunct()
+        m.disj.constr = Constraint(expr=m.a == m.b + m.c)
+        effectively_discrete = list(_effectively_discrete_vars(m, 1E-6))
+        self.assertEqual(effectively_discrete, [(m.x, m.constr)])
+        effectively_discrete = list(_effectively_discrete_vars(m.disj, 1E-6))
+        self.assertEqual(effectively_discrete, [(m.a, m.disj.constr)])
+
+    def test_induced_linearity_case1(self):
+        m = ConcreteModel()
+        m.x = Var(domain=NonNegativeReals)
+        m.v = Var()
+        m.y = Var([1, 2, 3], domain=Binary)
+        m.c = Constraint(expr=m.v * m.x <= 0)
+        m.c2 = Constraint(expr=m.x == m.y[1] + 2 * m.y[2] + 3 * m.y[3])
+        m.c3 = Constraint(expr=summation(m.y) == 1)
+        with self.assertRaises(NotImplementedError):
+            _reformulate_case_1(m.x, m.v, m.c2, m.c)
+
+    def test_induced_linearity_case2(self):
+        pass
 
 
 if __name__ == '__main__':
