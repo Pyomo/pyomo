@@ -31,12 +31,11 @@ logger = logging.getLogger('pyomo.network')
 
 
 class _PortData(ComponentData, NumericValue):
-    """Holds the actual port information"""
+    """This class defines the data for a single Port."""
 
     __slots__ = ('vars', 'aggregators', 'extensives', 'extensive_aggregators')
 
     def __init__(self, component=None):
-        """Constructor"""
         #
         # These lines represent in-lining of the
         # following constructors:
@@ -149,24 +148,27 @@ class _PortData(ComponentData, NumericValue):
 
 
 class Port(IndexedComponent):
-    """A collection of variables, which may be defined over an index
+    """
+    A collection of variables, which may be connected to other ports.
 
-    The idea behind a Port is to create a bundle of variables that
-    can be manipulated as a single variable within constraints.  While
-    Ports inherit from variable (mostly so that the expression
-    infrastucture can manipulate them), they are not actual variables
-    that are exposed to the solver.  Instead, a preprocessor
-    (PortExpander) will look for expressions that involve
-    ports and replace the single constraint with a list of
-    constraints that involve the original variables contained within the
-    Port.
+    The idea behind Ports is to create a bundle of variables that can
+    be manipulated together by connecting them to other ports via Arcs.
+    A preprocess transformation will look for Arcs and expand them into
+    a series of constraints that involve the original variables contained
+    within the Port. The way these constraints are built can be specified
+    for each Port member when adding things to the port, but by default
+    the Port members will be equated to each other. Additionally, other
+    objects such as expressions can be added to Ports as long as they, or
+    their indexed members, can be manipulated within constraint expressions.
 
-    Constructor
-        Arguments:
-           name         The name of this port
-           index        The index set that defines the distinct ports.
-                          By default, this is None, indicating that there
-                          is a single port.
+    Constructor arguments:
+        rule            A function that returns a dictionary of name, var
+                            pairs to be initially added to the Port
+        doc             A text string describing this component
+        name            A name for this component
+
+    Public attributes
+        vars            A dictionary mapping added names to variables
     """
 
     def __new__(cls, *args, **kwds):
@@ -178,7 +180,6 @@ class Port(IndexedComponent):
             return IndexedPort.__new__(IndexedPort)
 
 
-    # TODO: default keyword is  not used?  Need to talk to Bill ...?
     def __init__(self, *args, **kwd):
         kwd.setdefault('ctype', Port)
         self._rule = kwd.pop('rule', None)
@@ -290,23 +291,13 @@ class SimplePort(Port, _PortData):
         _PortData.__init__(self, component=self)
         Port.__init__(self, *args, **kwd)
 
-    #
-    # Since this class derives from Component and Component.__getstate__
-    # just packs up the entire __dict__ into the state dict, we do not
-    # need to define the __getstate__ or __setstate__ methods.
-    # We just defer to the super() get/set state.  Since all of our
-    # get/set state methods rely on super() to traverse the MRO, this
-    # will automatically pick up both the Component and Data base classes.
-    #
-
 
 class IndexedPort(Port):
-    """An array of ports"""
     pass
 
 
 register_component(
-    Port, "A bundle of variables that can be manipilated together.")
+    Port, "A bundle of variables that can be connected to other ports.")
 
 
 class PortExpander(Plugin):

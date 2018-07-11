@@ -31,7 +31,7 @@ logger = logging.getLogger('pyomo.network')
 
 
 class _ArcData(ActiveComponentData):
-    """This class defines the data for a single arc."""
+    """This class defines the data for a single Arc."""
 
     __slots__ = ('_ports', '_directed', '_expanded_block')
 
