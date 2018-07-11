@@ -15,204 +15,205 @@ import pyutilib.th as unittest
 from six import StringIO
 
 from pyomo.environ import *
-from pyomo.core.base.connection import ConnectionExpander
+from pyomo.network import Arc, Port
+from pyomo.network.arc import ArcExpander
 
-class TestConnection(unittest.TestCase):
+class TestArc(unittest.TestCase):
 
     def test_default_scalar_constructor(self):
         m = ConcreteModel()
-        m.c1 = Connection()
+        m.c1 = Arc()
         self.assertEqual(len(m.c1), 0)
         self.assertIsNone(m.c1.directed)
-        self.assertIsNone(m.c1.connectors)
+        self.assertIsNone(m.c1.ports)
         self.assertIsNone(m.c1.source)
         self.assertIsNone(m.c1.destination)
 
         m = AbstractModel()
-        m.c1 = Connection()
+        m.c1 = Arc()
         self.assertEqual(len(m.c1), 0)
         self.assertIsNone(m.c1.directed)
-        self.assertIsNone(m.c1.connectors)
+        self.assertIsNone(m.c1.ports)
         self.assertIsNone(m.c1.source)
         self.assertIsNone(m.c1.destination)
 
         inst = m.create_instance()
         self.assertEqual(len(inst.c1), 0)
         self.assertIsNone(inst.c1.directed)
-        self.assertIsNone(inst.c1.connectors)
+        self.assertIsNone(inst.c1.ports)
         self.assertIsNone(inst.c1.source)
         self.assertIsNone(inst.c1.destination)
 
     def test_default_indexed_constructor(self):
         m = ConcreteModel()
-        m.c1 = Connection([1, 2, 3])
+        m.c1 = Arc([1, 2, 3])
         self.assertEqual(len(m.c1), 0)
-        self.assertIs(m.c1.type(), Connection)
+        self.assertIs(m.c1.type(), Arc)
 
         m = AbstractModel()
-        m.c1 = Connection([1, 2, 3])
+        m.c1 = Arc([1, 2, 3])
         self.assertEqual(len(m.c1), 0)
-        self.assertIs(m.c1.type(), Connection)
+        self.assertIs(m.c1.type(), Arc)
 
 
         inst = m.create_instance()
         self.assertEqual(len(m.c1), 0)
-        self.assertIs(m.c1.type(), Connection)
+        self.assertIs(m.c1.type(), Arc)
 
-    def test_with_scalar_conns(self):
+    def test_with_scalar_ports(self):
         m = ConcreteModel()
-        m.con1 = Connector()
-        m.con2 = Connector()
-        m.c1 = Connection(source=m.con1, destination=m.con2)
+        m.prt1 = Port()
+        m.prt2 = Port()
+        m.c1 = Arc(source=m.prt1, destination=m.prt2)
         self.assertEqual(len(m.c1), 1)
         self.assertTrue(m.c1.directed)
-        self.assertIs(m.c1.source, m.con1)
-        self.assertIs(m.c1.destination, m.con2)
-        self.assertIs(m.c1.connectors[0], m.con1)
-        self.assertIs(m.c1.connectors[1], m.con2)
-        m.c2 = Connection(connectors=(m.con1, m.con2))
+        self.assertIs(m.c1.source, m.prt1)
+        self.assertIs(m.c1.destination, m.prt2)
+        self.assertIs(m.c1.ports[0], m.prt1)
+        self.assertIs(m.c1.ports[1], m.prt2)
+        m.c2 = Arc(ports=(m.prt1, m.prt2))
         self.assertEqual(len(m.c2), 1)
         self.assertFalse(m.c2.directed)
-        self.assertIsInstance(m.c2.connectors, tuple)
-        self.assertEqual(len(m.c2.connectors), 2)
-        self.assertIs(m.c2.connectors[0], m.con1)
-        self.assertIs(m.c2.connectors[1], m.con2)
+        self.assertIsInstance(m.c2.ports, tuple)
+        self.assertEqual(len(m.c2.ports), 2)
+        self.assertIs(m.c2.ports[0], m.prt1)
+        self.assertIs(m.c2.ports[1], m.prt2)
         self.assertIsNone(m.c2.source)
         self.assertIsNone(m.c2.destination)
 
         m = AbstractModel()
-        m.con1 = Connector()
-        m.con2 = Connector()
-        m.c1 = Connection(source=m.con1, destination=m.con2)
+        m.prt1 = Port()
+        m.prt2 = Port()
+        m.c1 = Arc(source=m.prt1, destination=m.prt2)
         self.assertEqual(len(m.c1), 0)
         self.assertIsNone(m.c1.directed)
-        self.assertIsNone(m.c1.connectors)
+        self.assertIsNone(m.c1.ports)
         self.assertIsNone(m.c1.source)
         self.assertIsNone(m.c1.destination)
-        m.c2 = Connection(connectors=(m.con1, m.con2))
+        m.c2 = Arc(ports=(m.prt1, m.prt2))
         self.assertEqual(len(m.c2), 0)
         self.assertIsNone(m.c2.directed)
-        self.assertIsNone(m.c2.connectors)
+        self.assertIsNone(m.c2.ports)
         self.assertIsNone(m.c2.source)
         self.assertIsNone(m.c2.destination)
 
         inst = m.create_instance()
         self.assertEqual(len(inst.c1), 1)
         self.assertTrue(inst.c1.directed)
-        self.assertIs(inst.c1.source, inst.con1)
-        self.assertIs(inst.c1.destination, inst.con2)
-        self.assertIs(inst.c1.connectors[0], inst.con1)
-        self.assertIs(inst.c1.connectors[1], inst.con2)
+        self.assertIs(inst.c1.source, inst.prt1)
+        self.assertIs(inst.c1.destination, inst.prt2)
+        self.assertIs(inst.c1.ports[0], inst.prt1)
+        self.assertIs(inst.c1.ports[1], inst.prt2)
         self.assertEqual(len(inst.c2), 1)
         self.assertFalse(inst.c2.directed)
-        self.assertIsInstance(inst.c2.connectors, tuple)
-        self.assertEqual(len(inst.c2.connectors), 2)
-        self.assertIs(inst.c2.connectors[0], inst.con1)
-        self.assertIs(inst.c2.connectors[1], inst.con2)
+        self.assertIsInstance(inst.c2.ports, tuple)
+        self.assertEqual(len(inst.c2.ports), 2)
+        self.assertIs(inst.c2.ports[0], inst.prt1)
+        self.assertIs(inst.c2.ports[1], inst.prt2)
         self.assertIsNone(inst.c2.source)
         self.assertIsNone(inst.c2.destination)
 
-    def test_with_indexed_conns(self):
+    def test_with_indexed_ports(self):
         def rule1(m, i):
-            return dict(source=m.con1[i], destination=m.con2[i])
+            return dict(source=m.prt1[i], destination=m.prt2[i])
         def rule2(m, i):
-            return dict(connectors=(m.con1[i], m.con2[i]))
+            return dict(ports=(m.prt1[i], m.prt2[i]))
         def rule3(m, i):
             # should accept any two-member iterable
-            return (c for c in (m.con1[i], m.con2[i]))
+            return (c for c in (m.prt1[i], m.prt2[i]))
 
         m = ConcreteModel()
         m.s = RangeSet(1, 5)
-        m.con1 = Connector(m.s)
-        m.con2 = Connector(m.s)
-        m.c1 = Connection(m.s, rule=rule1)
+        m.prt1 = Port(m.s)
+        m.prt2 = Port(m.s)
+        m.c1 = Arc(m.s, rule=rule1)
         self.assertEqual(len(m.c1), 5)
         self.assertTrue(m.c1[4].directed)
-        self.assertIs(m.c1[4].source, m.con1[4])
-        self.assertIs(m.c1[4].destination, m.con2[4])
-        self.assertIs(m.c1[4].connectors[0], m.con1[4])
-        self.assertIs(m.c1[4].connectors[1], m.con2[4])
-        m.c2 = Connection(m.s, rule=rule2)
+        self.assertIs(m.c1[4].source, m.prt1[4])
+        self.assertIs(m.c1[4].destination, m.prt2[4])
+        self.assertIs(m.c1[4].ports[0], m.prt1[4])
+        self.assertIs(m.c1[4].ports[1], m.prt2[4])
+        m.c2 = Arc(m.s, rule=rule2)
         self.assertEqual(len(m.c2), 5)
         self.assertFalse(m.c2[4].directed)
-        self.assertIsInstance(m.c2[4].connectors, tuple)
-        self.assertEqual(len(m.c2[4].connectors), 2)
-        self.assertIs(m.c2[4].connectors[0], m.con1[4])
-        self.assertIs(m.c2[4].connectors[1], m.con2[4])
+        self.assertIsInstance(m.c2[4].ports, tuple)
+        self.assertEqual(len(m.c2[4].ports), 2)
+        self.assertIs(m.c2[4].ports[0], m.prt1[4])
+        self.assertIs(m.c2[4].ports[1], m.prt2[4])
         self.assertIsNone(m.c2[4].source)
         self.assertIsNone(m.c2[4].destination)
-        m.c3 = Connection(m.s, rule=rule3, directed=True)
+        m.c3 = Arc(m.s, rule=rule3, directed=True)
         self.assertEqual(len(m.c3), 5)
         self.assertTrue(m.c3[4].directed)
-        self.assertIs(m.c3[4].source, m.con1[4])
-        self.assertIs(m.c3[4].destination, m.con2[4])
-        self.assertIs(m.c3[4].connectors[0], m.con1[4])
-        self.assertIs(m.c3[4].connectors[1], m.con2[4])
-        m.c4 = Connection(m.s, rule=rule3)
+        self.assertIs(m.c3[4].source, m.prt1[4])
+        self.assertIs(m.c3[4].destination, m.prt2[4])
+        self.assertIs(m.c3[4].ports[0], m.prt1[4])
+        self.assertIs(m.c3[4].ports[1], m.prt2[4])
+        m.c4 = Arc(m.s, rule=rule3)
         self.assertEqual(len(m.c4), 5)
         self.assertFalse(m.c4[4].directed)
-        self.assertIsInstance(m.c4[4].connectors, tuple)
-        self.assertEqual(len(m.c4[4].connectors), 2)
-        self.assertIs(m.c4[4].connectors[0], m.con1[4])
-        self.assertIs(m.c4[4].connectors[1], m.con2[4])
+        self.assertIsInstance(m.c4[4].ports, tuple)
+        self.assertEqual(len(m.c4[4].ports), 2)
+        self.assertIs(m.c4[4].ports[0], m.prt1[4])
+        self.assertIs(m.c4[4].ports[1], m.prt2[4])
         self.assertIsNone(m.c4[4].source)
         self.assertIsNone(m.c4[4].destination)
 
         m = AbstractModel()
         m.s = RangeSet(1, 5)
-        m.con1 = Connector(m.s)
-        m.con2 = Connector(m.s)
-        m.c1 = Connection(m.s, rule=rule1)
+        m.prt1 = Port(m.s)
+        m.prt2 = Port(m.s)
+        m.c1 = Arc(m.s, rule=rule1)
         self.assertEqual(len(m.c1), 0)
-        self.assertIs(m.c1.type(), Connection)
-        m.c2 = Connection(m.s, rule=rule2)
+        self.assertIs(m.c1.type(), Arc)
+        m.c2 = Arc(m.s, rule=rule2)
         self.assertEqual(len(m.c2), 0)
-        self.assertIs(m.c1.type(), Connection)
+        self.assertIs(m.c1.type(), Arc)
 
         inst = m.create_instance()
         self.assertEqual(len(inst.c1), 5)
         self.assertTrue(inst.c1[4].directed)
-        self.assertIs(inst.c1[4].source, inst.con1[4])
-        self.assertIs(inst.c1[4].destination, inst.con2[4])
-        self.assertIs(inst.c2[4].connectors[0], inst.con1[4])
-        self.assertIs(inst.c2[4].connectors[1], inst.con2[4])
+        self.assertIs(inst.c1[4].source, inst.prt1[4])
+        self.assertIs(inst.c1[4].destination, inst.prt2[4])
+        self.assertIs(inst.c2[4].ports[0], inst.prt1[4])
+        self.assertIs(inst.c2[4].ports[1], inst.prt2[4])
         self.assertEqual(len(inst.c2), 5)
         self.assertFalse(inst.c2[4].directed)
-        self.assertIs(inst.c2[4].connectors[0], inst.con1[4])
-        self.assertIs(inst.c2[4].connectors[1], inst.con2[4])
+        self.assertIs(inst.c2[4].ports[0], inst.prt1[4])
+        self.assertIs(inst.c2[4].ports[1], inst.prt2[4])
         self.assertIsNone(inst.c2[4].source)
         self.assertIsNone(inst.c2[4].destination)
 
     def test_pprint(self):
         m = ConcreteModel()
         m.s = RangeSet(1, 5)
-        m.con1 = Connector(m.s)
-        m.con2 = Connector(m.s)
+        m.prt1 = Port(m.s)
+        m.prt2 = Port(m.s)
 
-        @m.Connection(m.s)
+        @m.Arc(m.s)
         def friend(m, i):
-            return dict(source=m.con1[i], destination=m.con2[i])
+            return dict(source=m.prt1[i], destination=m.prt2[i])
 
         os = StringIO()
         m.friend.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """friend : Size=5, Index=s, Active=True
-    Key : Connectors         : Directed : Active
-      1 : (con1[1], con2[1]) :     True :   True
-      2 : (con1[2], con2[2]) :     True :   True
-      3 : (con1[3], con2[3]) :     True :   True
-      4 : (con1[4], con2[4]) :     True :   True
-      5 : (con1[5], con2[5]) :     True :   True
+    Key : Ports              : Directed : Active
+      1 : (prt1[1], prt2[1]) :     True :   True
+      2 : (prt1[2], prt2[2]) :     True :   True
+      3 : (prt1[3], prt2[3]) :     True :   True
+      4 : (prt1[4], prt2[4]) :     True :   True
+      5 : (prt1[5], prt2[5]) :     True :   True
 """)
 
         m = ConcreteModel()
         m.z = RangeSet(1, 2)
-        m.con1 = Connector(m.z)
-        m.con2 = Connector(m.z)
+        m.prt1 = Port(m.z)
+        m.prt2 = Port(m.z)
 
-        @m.Connection(m.z)
+        @m.Arc(m.z)
         def pal(m, i):
-            return (m.con1[i], m.con2[i])
+            return (m.prt1[i], m.prt2[i])
 
         m.pal[2].deactivate()
 
@@ -220,9 +221,9 @@ class TestConnection(unittest.TestCase):
         m.pal.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """pal : Size=2, Index=z, Active=True
-    Key : Connectors         : Directed : Active
-      1 : (con1[1], con2[1]) :    False :   True
-      2 : (con1[2], con2[2]) :    False :  False
+    Key : Ports              : Directed : Active
+      1 : (prt1[1], prt2[1]) :    False :   True
+      2 : (prt1[2], prt2[2]) :    False :  False
 """)
 
 
@@ -230,20 +231,20 @@ class TestConnection(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
-        m.con1 = Connector()
-        m.con1.add(m.x, "v")
-        m.con2 = Connector()
-        m.con2.add(m.y, "v")
+        m.prt1 = Port()
+        m.prt1.add(m.x, "v")
+        m.prt2 = Port()
+        m.prt2.add(m.y, "v")
 
-        # The connection should be deactivated and expanded,
+        # The arc should be deactivated and expanded,
         # the constraint should be left untouched.
-        m.c = Connection(source=m.con1, destination=m.con2)
+        m.c = Arc(source=m.prt1, destination=m.prt2)
         m.nocon = Constraint(expr = m.x == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        TransformationFactory('core.expand_connections').apply_to(m)
+        TransformationFactory('core.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
@@ -272,22 +273,22 @@ class TestConnection(unittest.TestCase):
         m.y = Var()
         m.z = Var()
         m.w = Var()
-        m.con1 = Connector()
-        m.con1.add(m.x, "a")
-        m.con1.add(m.y, "b")
-        m.con2 = Connector()
-        m.con2.add(m.z, "a")
-        m.con2.add(m.w, "b")
+        m.prt1 = Port()
+        m.prt1.add(m.x, "a")
+        m.prt1.add(m.y, "b")
+        m.prt2 = Port()
+        m.prt2.add(m.z, "a")
+        m.prt2.add(m.w, "b")
 
-        # The connection should be deactivated and expanded,
+        # The arc should be deactivated and expanded,
         # the constraint should be left untouched.
-        m.c = Connection(connectors=(m.con1, m.con2))
+        m.c = Arc(ports=(m.prt1, m.prt2))
         m.nocon = Constraint(expr = m.x == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        TransformationFactory('core.expand_connections').apply_to(m)
+        TransformationFactory('core.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
@@ -320,22 +321,22 @@ class TestConnection(unittest.TestCase):
         m.y = Var()
         m.z = Var()
         m.w = Var()
-        m.con1 = Connector()
-        m.con1.add(-m.x, name='expr1')
-        m.con1.add(1 + m.y, name='expr2')
-        m.con2 = Connector()
-        m.con2.add(-m.z, name='expr1')
-        m.con2.add(1 + m.w, name='expr2')
+        m.prt1 = Port()
+        m.prt1.add(-m.x, name='expr1')
+        m.prt1.add(1 + m.y, name='expr2')
+        m.prt2 = Port()
+        m.prt2.add(-m.z, name='expr1')
+        m.prt2.add(1 + m.w, name='expr2')
 
-        # The connection should be deactivated and expanded,
+        # The arc should be deactivated and expanded,
         # the constraint should be left untouched.
-        m.c = Connection(connectors=(m.con1, m.con2))
+        m.c = Arc(ports=(m.prt1, m.prt2))
         m.nocon = Constraint(expr = m.x == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        TransformationFactory('core.expand_connections').apply_to(m)
+        TransformationFactory('core.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
@@ -370,24 +371,24 @@ class TestConnection(unittest.TestCase):
         m.t = Var([1,2])
         m.u = Var([1,2], [1,2])
         m.v = Var()
-        m.con1 = Connector()
-        m.con1.add(m.x, "a")
-        m.con1.add(m.y, "b")
-        m.con1.add(m.z, "c")
-        m.con2 = Connector()
-        m.con2.add(m.t, "a")
-        m.con2.add(m.u, "b")
-        m.con2.add(m.v, "c")
+        m.prt1 = Port()
+        m.prt1.add(m.x, "a")
+        m.prt1.add(m.y, "b")
+        m.prt1.add(m.z, "c")
+        m.prt2 = Port()
+        m.prt2.add(m.t, "a")
+        m.prt2.add(m.u, "b")
+        m.prt2.add(m.v, "c")
 
-        # The connection should be deactivated and expanded,
+        # The arc should be deactivated and expanded,
         # the constraint should be left untouched.
-        m.c = Connection(connectors=(m.con1, m.con2))
+        m.c = Arc(ports=(m.prt1, m.prt2))
         m.nocon = Constraint(expr = m.x[1] == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        TransformationFactory('core.expand_connections').apply_to(m)
+        TransformationFactory('core.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 4)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 8)
@@ -423,18 +424,18 @@ class TestConnection(unittest.TestCase):
     def test_expand_trivial(self):
         m = ConcreteModel()
         m.x = Var()
-        m.con = Connector()
-        m.con.add(m.x, "a")
+        m.prt = Port()
+        m.prt.add(m.x, "a")
 
-        # The connection should be deactivated and expanded,
+        # The arc should be deactivated and expanded,
         # the constraint should be left untouched.
-        m.c = Connection(connectors=(m.con, m.con))
+        m.c = Arc(ports=(m.prt, m.prt))
         m.nocon = Constraint(expr = m.x == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        TransformationFactory('core.expand_connections').apply_to(m)
+        TransformationFactory('core.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
@@ -461,20 +462,20 @@ class TestConnection(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(bounds=(1,3))
         m.y = Var(domain=Binary)
-        m.CON = Connector()
+        m.CON = Port()
         m.CON.add(m.x)
         m.CON.add(m.y)
-        m.ECON = Connector()
+        m.ECON = Port()
 
-        # The connection should be deactivated and expanded,
+        # The arc should be deactivated and expanded,
         # the constraint should be left untouched.
-        m.c = Connection(connectors=(m.CON, m.ECON))
+        m.c = Arc(ports=(m.CON, m.ECON))
         m.nocon = Constraint(expr = m.x == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        TransformationFactory('core.expand_connections').apply_to(m)
+        TransformationFactory('core.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
@@ -509,20 +510,20 @@ class TestConnection(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
-        m.CON = Connector()
+        m.CON = Port()
         m.CON.add(-m.x, 'x')
         m.CON.add(1 + m.y, 'y')
-        m.ECON = Connector()
+        m.ECON = Port()
 
-        # The connection should be deactivated and expanded,
+        # The arc should be deactivated and expanded,
         # the constraint should be left untouched.
-        m.c = Connection(connectors=(m.CON, m.ECON))
+        m.c = Arc(ports=(m.CON, m.ECON))
         m.nocon = Constraint(expr = m.x == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        TransformationFactory('core.expand_connections').apply_to(m)
+        TransformationFactory('core.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
@@ -552,20 +553,20 @@ class TestConnection(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var([1,2], domain=Binary)
         m.y = Var(bounds=(1,3))
-        m.CON = Connector()
+        m.CON = Port()
         m.CON.add(m.x)
         m.CON.add(m.y)
-        m.ECON = Connector()
+        m.ECON = Port()
 
-        # The connection should be deactivated and expanded,
+        # The arc should be deactivated and expanded,
         # the constraint should be left untouched.
-        m.c = Connection(connectors=(m.CON, m.ECON))
+        m.c = Arc(ports=(m.CON, m.ECON))
         m.nocon = Constraint(expr = m.x[1] == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        TransformationFactory('core.expand_connections').apply_to(m)
+        TransformationFactory('core.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
@@ -603,23 +604,23 @@ class TestConnection(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var([1,2], domain=Binary)
         m.y = Var(bounds=(1,3))
-        m.CON = Connector()
+        m.CON = Port()
         m.CON.add(m.x)
         m.CON.add(m.y)
-        m.ECON2 = Connector()
-        m.ECON1 = Connector()
+        m.ECON2 = Port()
+        m.ECON1 = Port()
 
-        # The connection should be deactivated and expanded,
+        # The arc should be deactivated and expanded,
         # the constraint should be left untouched.
         # Define d first to test that it knows how to expand the ECONs
-        m.d = Connection(connectors=(m.ECON2, m.ECON1))
-        m.c = Connection(connectors=(m.CON, m.ECON1))
+        m.d = Arc(ports=(m.ECON2, m.ECON1))
+        m.c = Arc(ports=(m.CON, m.ECON1))
         m.nocon = Constraint(expr = m.x[1] == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        TransformationFactory('core.expand_connections').apply_to(m)
+        TransformationFactory('core.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 5)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 7)
@@ -684,30 +685,30 @@ class TestConnection(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var([1,2], domain=Binary)
         m.y = Var(bounds=(1,3))
-        m.CON = Connector()
+        m.CON = Port()
         m.CON.add(m.x)
         m.CON.add(m.y)
         m.a1 = Var([1,2])
         m.a2 = Var([1,2])
         m.b1 = Var()
         m.b2 = Var()
-        m.ECON2 = Connector()
+        m.ECON2 = Port()
         m.ECON2.add(m.a1,'x')
         m.ECON2.add(m.b1,'y')
-        m.ECON1 = Connector()
+        m.ECON1 = Port()
         m.ECON1.add(m.a2,'x')
         m.ECON1.add(m.b2,'y')
 
-        # The connection should be deactivated and expanded,
+        # The arc should be deactivated and expanded,
         # the constraint should be left untouched.
-        m.c = Connection(connectors=(m.CON, m.ECON1))
-        m.d = Connection(connectors=(m.ECON2, m.ECON1))
+        m.c = Arc(ports=(m.CON, m.ECON1))
+        m.d = Arc(ports=(m.ECON2, m.ECON1))
         m.nocon = Constraint(expr = m.x[1] == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        TransformationFactory('core.expand_connections').apply_to(m)
+        TransformationFactory('core.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 5)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 7)
@@ -758,20 +759,20 @@ class TestConnection(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var([1,2], domain=Binary)
         m.y = Var(bounds=(1,3))
-        m.CON = Connector()
+        m.CON = Port()
         m.CON.add(m.x)
         m.CON.add(m.y)
         m.a2 = Var([1,2])
         m.b1 = Var()
-        m.ECON2 = Connector(implicit=['x'])
+        m.ECON2 = Port(implicit=['x'])
         m.ECON2.add(m.b1,'y')
-        m.ECON1 = Connector(implicit=['y'])
+        m.ECON1 = Port(implicit=['y'])
         m.ECON1.add(m.a2,'x')
 
-        # The connection should be deactivated and expanded,
+        # The arc should be deactivated and expanded,
         # the constraint should be left untouched.
-        m.c = Connection(connectors=(m.CON, m.ECON1))
-        m.d = Connection(connectors=(m.ECON2, m.CON))
+        m.c = Arc(ports=(m.CON, m.ECON1))
+        m.d = Arc(ports=(m.ECON2, m.CON))
         m.nocon = Constraint(expr = m.x[1] == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
@@ -786,7 +787,7 @@ class TestConnection(unittest.TestCase):
          :    y :    - :     None
 """)
 
-        TransformationFactory('core.expand_connections').apply_to(m)
+        TransformationFactory('core.expand_arcs').apply_to(m)
 
         os = StringIO()
         m.ECON1.pprint(ostream=os)
@@ -846,20 +847,20 @@ class TestConnection(unittest.TestCase):
         m = ConcreteModel()
         m.flow = VarList()
         m.phase = Var(bounds=(1,3))
-        m.CON = Connector()
+        m.CON = Port()
         m.CON.add( m.flow,
                    aggregate=lambda m,v: sum(v[i] for i in v) == 0 )
         m.CON.add(m.phase)
-        m.ECON2 = Connector()
-        m.ECON1 = Connector()
+        m.ECON2 = Port()
+        m.ECON1 = Port()
 
-        m.c = Connection(connectors=(m.CON, m.ECON1))
-        m.d = Connection(connectors=(m.ECON2, m.CON))
+        m.c = Arc(ports=(m.CON, m.ECON1))
+        m.d = Arc(ports=(m.ECON2, m.CON))
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 0)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 0)
 
-        TransformationFactory('core.expand_connections').apply_to(m)
+        TransformationFactory('core.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 5)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 5)
@@ -932,7 +933,7 @@ class TestConnection(unittest.TestCase):
         m.feed.mass = Var()
         m.feed.temp = Var()
 
-        m.feed.outlet = Connector()
+        m.feed.outlet = Port()
         m.feed.outlet.add(m.feed.mass, "mass", extensive="split")
         m.feed.outlet.add(m.feed.temp, "temp")
 
@@ -941,11 +942,11 @@ class TestConnection(unittest.TestCase):
         m.tru.mass = Var()
         m.tru.temp = Var()
 
-        m.tru.inlet = Connector()
+        m.tru.inlet = Port()
         m.tru.inlet.add(m.tru.mass, "mass", extensive="mix")
         m.tru.inlet.add(m.tru.temp, "temp")
 
-        m.tru.outlet = Connector()
+        m.tru.outlet = Port()
         m.tru.outlet.add(m.tru.mass, "mass", extensive="split")
         m.tru.outlet.add(m.tru.temp, "temp")
 
@@ -954,7 +955,7 @@ class TestConnection(unittest.TestCase):
         m.prod.mass = Var()
         m.prod.temp = Var()
 
-        m.prod.inlet = Connector()
+        m.prod.inlet = Port()
         m.prod.inlet.add(m.prod.mass, "mass", extensive="mix")
         m.prod.inlet.add(m.prod.temp, "temp")
 
@@ -964,12 +965,12 @@ class TestConnection(unittest.TestCase):
         m.tru.splitfrac = dict()
         m.tru.splitfrac["stream3"] = dict(val=1, fix=False) # just initialize
 
-        # Connections
-        m.stream1 = Connection(source=m.feed.outlet, destination=m.tru.inlet)
-        m.stream2 = Connection(source=m.feed.outlet, destination=m.prod.inlet)
-        m.stream3 = Connection(source=m.tru.outlet, destination=m.prod.inlet)
+        # Arcs
+        m.stream1 = Arc(source=m.feed.outlet, destination=m.tru.inlet)
+        m.stream2 = Arc(source=m.feed.outlet, destination=m.prod.inlet)
+        m.stream3 = Arc(source=m.tru.outlet, destination=m.prod.inlet)
 
-        TransformationFactory('core.expand_connections').apply_to(m)
+        TransformationFactory('core.expand_arcs').apply_to(m)
 
         self.assertFalse(m.stream1.active)
         self.assertFalse(m.stream2.active)
@@ -1067,7 +1068,7 @@ class TestConnection(unittest.TestCase):
         m.feed.flow = Var(m.comp)
         m.feed.temp = Var()
 
-        m.feed.outlet = Connector()
+        m.feed.outlet = Port()
         m.feed.outlet.add(m.feed.flow, "flow", extensive="split")
         m.feed.outlet.add(m.feed.temp, "temp")
 
@@ -1077,11 +1078,11 @@ class TestConnection(unittest.TestCase):
         m.tru.flow_out = Var(m.comp)
         m.tru.temp = Var()
 
-        m.tru.inlet = Connector()
+        m.tru.inlet = Port()
         m.tru.inlet.add(m.tru.flow_in, "flow", extensive="mix")
         m.tru.inlet.add(m.tru.temp, "temp")
 
-        m.tru.outlet = Connector()
+        m.tru.outlet = Port()
         m.tru.outlet.add(m.tru.flow_out, "flow", extensive="split")
         m.tru.outlet.add(m.tru.temp, "temp")
 
@@ -1090,7 +1091,7 @@ class TestConnection(unittest.TestCase):
         m.prod.flow = Var(m.comp)
         m.prod.temp = Var()
 
-        m.prod.inlet = Connector()
+        m.prod.inlet = Port()
         m.prod.inlet.add(m.prod.flow, "flow", extensive="mix")
         m.prod.inlet.add(m.prod.temp, "temp")
 
@@ -1100,12 +1101,12 @@ class TestConnection(unittest.TestCase):
         m.tru.splitfrac = dict()
         m.tru.splitfrac["stream3"] = dict(val=1, fix=False) # just initialize
 
-        # Connections
-        m.stream1 = Connection(source=m.feed.outlet, destination=m.tru.inlet)
-        m.stream2 = Connection(source=m.feed.outlet, destination=m.prod.inlet)
-        m.stream3 = Connection(source=m.tru.outlet, destination=m.prod.inlet)
+        # Arcs
+        m.stream1 = Arc(source=m.feed.outlet, destination=m.tru.inlet)
+        m.stream2 = Arc(source=m.feed.outlet, destination=m.prod.inlet)
+        m.stream3 = Arc(source=m.tru.outlet, destination=m.prod.inlet)
 
-        TransformationFactory('core.expand_connections').apply_to(m)
+        TransformationFactory('core.expand_arcs').apply_to(m)
 
         self.assertFalse(m.stream1.active)
         self.assertFalse(m.stream2.active)
@@ -1219,25 +1220,25 @@ class TestConnection(unittest.TestCase):
 """)
 
 
-    def test_expand_indexed_connection(self):
+    def test_expand_indexed_arc(self):
         def rule(m, i):
             return (m.c1[i], m.c2[i])
 
         m = ConcreteModel()
         m.x = Var(initialize=1, domain=Reals)
         m.y = Var(initialize=2, domain=Reals)
-        m.c1 = Connector([1, 2])
+        m.c1 = Port([1, 2])
         m.c1[1].add(m.x, name='v')
         m.c1[2].add(m.y, name='t')
         m.z = Var(initialize=1, domain=Reals)
         m.w = Var(initialize=2, domain=Reals)
-        m.c2 = Connector([1, 2])
+        m.c2 = Port([1, 2])
         m.c2[1].add(m.z, name='v')
         m.c2[2].add(m.w, name='t')
 
-        m.eq = Connection([1, 2], rule=rule)
+        m.eq = Arc([1, 2], rule=rule)
 
-        TransformationFactory('core.expand_connections').apply_to(m)
+        TransformationFactory('core.expand_arcs').apply_to(m)
 
         os = StringIO()
         m.component('eq_expanded').pprint(ostream=os)
@@ -1260,30 +1261,30 @@ class TestConnection(unittest.TestCase):
 """)
 
 
-    def test_connectionexpander(self):
+    def test_arcexpander(self):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
         m.z = Var()
-        m.con1 = Connector()
-        m.con1.add(m.x, "v")
-        m.con2 = Connector()
-        m.con2.add(m.y, "v")
-        m.con3 = Connector()
-        m.con3.add(m.z, "v")
+        m.prt1 = Port()
+        m.prt1.add(m.x, "v")
+        m.prt2 = Port()
+        m.prt2.add(m.y, "v")
+        m.prt3 = Port()
+        m.prt3.add(m.z, "v")
 
-        # The active connection should be deactivated and expanded, but this
-        # transform should not expand constraints with connectors, only
-        # connections, and it should not expand inactive Connections.
-        m.c = Connection(source=m.con1, destination=m.con2)
-        m.inactive = Connection(connectors=(m.con3, m.con2))
-        m.nocon = Constraint(expr = m.con1 >= 2)
+        # The active arc should be deactivated and expanded, but this
+        # transform should not expand constraints with ports, only
+        # arcs, and it should not expand inactive Arcs.
+        m.c = Arc(source=m.prt1, destination=m.prt2)
+        m.inactive = Arc(ports=(m.prt3, m.prt2))
+        m.nocon = Constraint(expr = m.prt1 >= 2)
         m.inactive.deactivate()
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
 
-        ConnectionExpander().apply(instance=m)
+        ArcExpander().apply(instance=m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)

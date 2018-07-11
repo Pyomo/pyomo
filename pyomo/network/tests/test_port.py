@@ -22,17 +22,18 @@ import pyutilib.th as unittest
 from six import StringIO
 
 from pyomo.environ import *
+from pyomo.network import Arc, Port
 
-class TestConnector(unittest.TestCase):
+class TestPort(unittest.TestCase):
 
     def test_default_scalar_constructor(self):
         model = ConcreteModel()
-        model.c = Connector()
+        model.c = Port()
         self.assertEqual(len(model.c), 1)
         self.assertEqual(len(model.c.vars), 0)
 
         model = AbstractModel()
-        model.c = Connector()
+        model.c = Port()
         self.assertEqual(len(model.c), 0)
         # FIXME: Not sure I like this behavior: but since this is
         # (currently) an attribute, there is no way to check for
@@ -48,12 +49,12 @@ class TestConnector(unittest.TestCase):
 
     def test_default_indexed_constructor(self):
         model = ConcreteModel()
-        model.c = Connector([1,2,3])
+        model.c = Port([1,2,3])
         self.assertEqual(len(model.c), 3)
         self.assertEqual(len(model.c[1].vars), 0)
 
         model = AbstractModel()
-        model.c = Connector([1,2,3])
+        model.c = Port([1,2,3])
         self.assertEqual(len(model.c), 0)
         self.assertRaises(ValueError, model.c.__getitem__, 1)
 
@@ -67,14 +68,14 @@ class TestConnector(unittest.TestCase):
         pipe.pIn  = Var( within=NonNegativeReals )
         pipe.pOut  = Var( within=NonNegativeReals )
   
-        pipe.OUT = Connector()
+        pipe.OUT = Port()
         pipe.OUT.add(pipe.flow, "flow")
         pipe.OUT.add(pipe.pOut, "pressure")
         self.assertEqual(len(pipe.OUT), 1)
         self.assertEqual(len(pipe.OUT.vars), 2)
         self.assertFalse(pipe.OUT.vars['flow'].is_expression_type())
 
-        pipe.IN = Connector()
+        pipe.IN = Port()
         pipe.IN.add(-pipe.flow, "flow")
         pipe.IN.add(pipe.pIn, "pressure")
         self.assertEqual(len(pipe.IN), 1)
@@ -88,7 +89,7 @@ class TestConnector(unittest.TestCase):
         pipe.composition = Var(pipe.SPECIES)
         pipe.pIn  = Var( within=NonNegativeReals )
 
-        pipe.OUT = Connector()
+        pipe.OUT = Port()
         pipe.OUT.add(pipe.flow, "flow")
         pipe.OUT.add(pipe.composition, "composition")
         pipe.OUT.add(pipe.pIn, "pressure")
@@ -104,7 +105,7 @@ class TestConnector(unittest.TestCase):
         pipe.composition = Var(pipe.SPECIES)
         pipe.pIn  = Var( within=NonNegativeReals )
 
-        pipe.OUT = Connector()
+        pipe.OUT = Port()
         self.assertTrue( pipe.OUT.is_fixed())
 
         pipe.OUT.add(pipe.flow, "flow")
@@ -137,7 +138,7 @@ class TestConnector(unittest.TestCase):
         pipe.composition = Var(pipe.SPECIES)
         pipe.pIn  = Var( within=NonNegativeReals )
 
-        pipe.OUT = Connector()
+        pipe.OUT = Port()
         self.assertEqual( pipe.OUT.polynomial_degree(), 0)
 
         pipe.OUT.add(pipe.flow, "flow")
@@ -181,7 +182,7 @@ class TestConnector(unittest.TestCase):
         pipe.composition = Var(pipe.SPECIES)
         pipe.pIn  = Var( within=NonNegativeReals )
 
-        pipe.OUT = Connector()
+        pipe.OUT = Port()
         pipe.OUT.add(-pipe.flow, "flow")
         pipe.OUT.add(pipe.composition, "composition")
         pipe.OUT.add(pipe.composition['a'], "comp_a")
@@ -202,7 +203,7 @@ class TestConnector(unittest.TestCase):
             return { 'pressure': pipe.pIn,
                      'flow': pipe.composition[i] * pipe.flow }
 
-        pipe.IN = Connector(pipe.SPECIES, rule=_IN)
+        pipe.IN = Port(pipe.SPECIES, rule=_IN)
         os = StringIO()
         pipe.IN.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
@@ -224,7 +225,7 @@ class TestConnector(unittest.TestCase):
                                 initialize=lambda m,i: ord(i)-ord('a') )
         pipe.pIn  = Var( within=NonNegativeReals, initialize=3.14 )
 
-        pipe.OUT = Connector()
+        pipe.OUT = Port()
         pipe.OUT.add(-pipe.flow, "flow")
         pipe.OUT.add(pipe.composition, "composition")
         pipe.OUT.add(pipe.pIn, "pressure")
@@ -243,7 +244,7 @@ class TestConnector(unittest.TestCase):
             return { 'pressure': pipe.pIn,
                      'flow': pipe.composition[i] * pipe.flow }
 
-        pipe.IN = Connector(pipe.SPECIES, rule=_IN)
+        pipe.IN = Port(pipe.SPECIES, rule=_IN)
         os = StringIO()
         pipe.IN.display(ostream=os)
         self.assertEqual(os.getvalue(),
@@ -260,19 +261,19 @@ class TestConnector(unittest.TestCase):
     def test_expand_single_scalar(self):
         m = ConcreteModel()
         m.x = Var()
-        m.CON = Connector()
-        m.CON.add(m.x, "x")
+        m.PRT = Port()
+        m.PRT.add(m.x, "x")
 
-        # 2 constraints: one has a connector, the other doesn't.  The
+        # 2 constraints: one has a port, the other doesn't.  The
         # former should be deactivated and expanded, the latter should
         # be left untouched.
-        m.c = Constraint(expr= m.CON == 1)
+        m.c = Constraint(expr= m.PRT == 1)
         m.nocon = Constraint(expr = m.x == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
 
-        TransformationFactory('core.expand_connectors').apply_to(m)
+        TransformationFactory('core.expand_ports').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
@@ -293,20 +294,20 @@ class TestConnector(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
-        m.CON = Connector()
-        m.CON.add(m.x)
-        m.CON.add(m.y)
+        m.PRT = Port()
+        m.PRT.add(m.x)
+        m.PRT.add(m.y)
 
-        # 2 constraints: one has a connector, the other doesn't.  The
+        # 2 constraints: one has a port, the other doesn't.  The
         # former should be deactivated and expanded, the latter should
         # be left untouched.
-        m.c = Constraint(expr= m.CON == 1)
+        m.c = Constraint(expr= m.PRT == 1)
         m.nocon = Constraint(expr = m.x == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
 
-        TransformationFactory('core.expand_connectors').apply_to(m)
+        TransformationFactory('core.expand_ports').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
@@ -328,20 +329,20 @@ class TestConnector(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
-        m.CON = Connector()
-        m.CON.add(-m.x, name='expr1')
-        m.CON.add(1 + m.y, name='expr2')
+        m.PRT = Port()
+        m.PRT.add(-m.x, name='expr1')
+        m.PRT.add(1 + m.y, name='expr2')
 
-        # 2 constraints: one has a connector, the other doesn't.  The
+        # 2 constraints: one has a port, the other doesn't.  The
         # former should be deactivated and expanded, the latter should
         # be left untouched.
-        m.c = Constraint(expr= m.CON == 1)
+        m.c = Constraint(expr= m.PRT == 1)
         m.nocon = Constraint(expr = m.x == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
 
-        TransformationFactory('core.expand_connectors').apply_to(m)
+        TransformationFactory('core.expand_ports').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
@@ -363,20 +364,20 @@ class TestConnector(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var([1,2])
         m.y = Var()
-        m.CON = Connector()
-        m.CON.add(m.x)
-        m.CON.add(m.y)
+        m.PRT = Port()
+        m.PRT.add(m.x)
+        m.PRT.add(m.y)
 
-        # 2 constraints: one has a connector, the other doesn't.  The
+        # 2 constraints: one has a port, the other doesn't.  The
         # former should be deactivated and expanded, the latter should
         # be left untouched.
-        m.c = Constraint(expr= m.CON == 1)
+        m.c = Constraint(expr= m.PRT == 1)
         m.nocon = Constraint(expr = m.x[1] == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
 
-        TransformationFactory('core.expand_connectors').apply_to(m)
+        TransformationFactory('core.expand_ports').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 5)
@@ -399,21 +400,21 @@ class TestConnector(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(bounds=(1,3))
         m.y = Var(domain=Binary)
-        m.CON = Connector()
-        m.CON.add(m.x)
-        m.CON.add(m.y)
-        m.ECON = Connector()
+        m.PRT = Port()
+        m.PRT.add(m.x)
+        m.PRT.add(m.y)
+        m.EPRT = Port()
 
-        # 2 constraints: one has a connector, the other doesn't.  The
+        # 2 constraints: one has a port, the other doesn't.  The
         # former should be deactivated and expanded, the latter should
         # be left untouched.
-        m.c = Constraint(expr= m.CON == m.ECON)
+        m.c = Constraint(expr= m.PRT == m.EPRT)
         m.nocon = Constraint(expr = m.x == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
 
-        TransformationFactory('core.expand_connectors').apply_to(m)
+        TransformationFactory('core.expand_ports').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
@@ -421,18 +422,18 @@ class TestConnector(unittest.TestCase):
         self.assertFalse(m.c.active)
         self.assertTrue(m.component('c.expanded').active)
 
-        self.assertIs( m.x.domain, m.component('ECON.auto.x').domain )
-        self.assertIs( m.y.domain, m.component('ECON.auto.y').domain )
-        self.assertEqual( m.x.bounds, m.component('ECON.auto.x').bounds )
-        self.assertEqual( m.y.bounds, m.component('ECON.auto.y').bounds )
+        self.assertIs( m.x.domain, m.component('EPRT.auto.x').domain )
+        self.assertIs( m.y.domain, m.component('EPRT.auto.y').domain )
+        self.assertEqual( m.x.bounds, m.component('EPRT.auto.x').bounds )
+        self.assertEqual( m.y.bounds, m.component('EPRT.auto.y').bounds )
 
         os = StringIO()
         m.component('c.expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=2, Index=c.expanded_index, Active=True
     Key : Lower : Body            : Upper : Active
-      1 :   0.0 : x - ECON.auto.x :   0.0 :   True
-      2 :   0.0 : y - ECON.auto.y :   0.0 :   True
+      1 :   0.0 : x - EPRT.auto.x :   0.0 :   True
+      2 :   0.0 : y - EPRT.auto.y :   0.0 :   True
 """)
 
 
@@ -440,21 +441,21 @@ class TestConnector(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
-        m.CON = Connector()
-        m.CON.add(-m.x, 'x')
-        m.CON.add(1 + m.y, 'y')
-        m.ECON = Connector()
+        m.PRT = Port()
+        m.PRT.add(-m.x, 'x')
+        m.PRT.add(1 + m.y, 'y')
+        m.EPRT = Port()
 
-        # 2 constraints: one has a connector, the other doesn't.  The
+        # 2 constraints: one has a port, the other doesn't.  The
         # former should be deactivated and expanded, the latter should
         # be left untouched.
-        m.c = Constraint(expr= m.CON == m.ECON)
+        m.c = Constraint(expr= m.PRT == m.EPRT)
         m.nocon = Constraint(expr = m.x == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
 
-        TransformationFactory('core.expand_connectors').apply_to(m)
+        TransformationFactory('core.expand_ports').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
@@ -467,8 +468,8 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=2, Index=c.expanded_index, Active=True
     Key : Lower : Body                : Upper : Active
-      1 :   0.0 :   - x - ECON.auto.x :   0.0 :   True
-      2 :   0.0 : 1 + y - ECON.auto.y :   0.0 :   True
+      1 :   0.0 :   - x - EPRT.auto.x :   0.0 :   True
+      2 :   0.0 : 1 + y - EPRT.auto.y :   0.0 :   True
 """)
 
 
@@ -476,21 +477,21 @@ class TestConnector(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var([1,2], domain=Binary)
         m.y = Var(bounds=(1,3))
-        m.CON = Connector()
-        m.CON.add(m.x)
-        m.CON.add(m.y)
-        m.ECON = Connector()
+        m.PRT = Port()
+        m.PRT.add(m.x)
+        m.PRT.add(m.y)
+        m.EPRT = Port()
 
-        # 2 constraints: one has a connector, the other doesn't.  The
+        # 2 constraints: one has a port, the other doesn't.  The
         # former should be deactivated and expanded, the latter should
         # be left untouched.
-        m.c = Constraint(expr= m.CON == m.ECON)
+        m.c = Constraint(expr= m.PRT == m.EPRT)
         m.nocon = Constraint(expr = m.x[1] == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
 
-        TransformationFactory('core.expand_connectors').apply_to(m)
+        TransformationFactory('core.expand_ports').apply_to(m)
         #m.pprint()
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
@@ -499,44 +500,44 @@ class TestConnector(unittest.TestCase):
         self.assertFalse(m.c.active)
         self.assertTrue(m.component('c.expanded').active)
 
-        self.assertIs( m.x[1].domain, m.component('ECON.auto.x')[1].domain )
-        self.assertIs( m.x[2].domain, m.component('ECON.auto.x')[2].domain )
-        self.assertIs( m.y.domain, m.component('ECON.auto.y').domain )
-        self.assertEqual( m.x[1].bounds, m.component('ECON.auto.x')[1].bounds )
-        self.assertEqual( m.x[2].bounds, m.component('ECON.auto.x')[2].bounds )
-        self.assertEqual( m.y.bounds, m.component('ECON.auto.y').bounds )
+        self.assertIs( m.x[1].domain, m.component('EPRT.auto.x')[1].domain )
+        self.assertIs( m.x[2].domain, m.component('EPRT.auto.x')[2].domain )
+        self.assertIs( m.y.domain, m.component('EPRT.auto.y').domain )
+        self.assertEqual( m.x[1].bounds, m.component('EPRT.auto.x')[1].bounds )
+        self.assertEqual( m.x[2].bounds, m.component('EPRT.auto.x')[2].bounds )
+        self.assertEqual( m.y.bounds, m.component('EPRT.auto.y').bounds )
 
         os = StringIO()
         m.component('c.expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=3, Index=c.expanded_index, Active=True
     Key : Lower : Body                  : Upper : Active
-      1 :   0.0 : x[1] - ECON.auto.x[1] :   0.0 :   True
-      2 :   0.0 : x[2] - ECON.auto.x[2] :   0.0 :   True
-      3 :   0.0 :       y - ECON.auto.y :   0.0 :   True
+      1 :   0.0 : x[1] - EPRT.auto.x[1] :   0.0 :   True
+      2 :   0.0 : x[2] - EPRT.auto.x[2] :   0.0 :   True
+      3 :   0.0 :       y - EPRT.auto.y :   0.0 :   True
 """)
 
     def test_expand_multiple_empty_indexed(self):
         m = ConcreteModel()
         m.x = Var([1,2], domain=Binary)
         m.y = Var(bounds=(1,3))
-        m.CON = Connector()
-        m.CON.add(m.x)
-        m.CON.add(m.y)
-        m.ECON2 = Connector()
-        m.ECON1 = Connector()
+        m.PRT = Port()
+        m.PRT.add(m.x)
+        m.PRT.add(m.y)
+        m.EPRT2 = Port()
+        m.EPRT1 = Port()
 
-        # 2 constraints: one has a connector, the other doesn't.  The
+        # 2 constraints: one has a port, the other doesn't.  The
         # former should be deactivated and expanded, the latter should
         # be left untouched.
-        m.c = Constraint(expr= m.CON == m.ECON1)
-        m.d = Constraint(expr= m.ECON2 == m.ECON1)
+        m.c = Constraint(expr= m.PRT == m.EPRT1)
+        m.d = Constraint(expr= m.EPRT2 == m.EPRT1)
         m.nocon = Constraint(expr = m.x[1] == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
 
-        TransformationFactory('core.expand_connectors').apply_to(m)
+        TransformationFactory('core.expand_ports').apply_to(m)
         #m.pprint()
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 5)
@@ -547,28 +548,28 @@ class TestConnector(unittest.TestCase):
         self.assertFalse(m.d.active)
         self.assertTrue(m.component('d.expanded').active)
 
-        self.assertIs( m.x[1].domain, m.component('ECON1.auto.x')[1].domain )
-        self.assertIs( m.x[2].domain, m.component('ECON1.auto.x')[2].domain )
-        self.assertIs( m.y.domain, m.component('ECON1.auto.y').domain )
-        self.assertEqual( m.x[1].bounds, m.component('ECON1.auto.x')[1].bounds )
-        self.assertEqual( m.x[2].bounds, m.component('ECON1.auto.x')[2].bounds )
-        self.assertEqual( m.y.bounds, m.component('ECON1.auto.y').bounds )
+        self.assertIs( m.x[1].domain, m.component('EPRT1.auto.x')[1].domain )
+        self.assertIs( m.x[2].domain, m.component('EPRT1.auto.x')[2].domain )
+        self.assertIs( m.y.domain, m.component('EPRT1.auto.y').domain )
+        self.assertEqual( m.x[1].bounds, m.component('EPRT1.auto.x')[1].bounds )
+        self.assertEqual( m.x[2].bounds, m.component('EPRT1.auto.x')[2].bounds )
+        self.assertEqual( m.y.bounds, m.component('EPRT1.auto.y').bounds )
 
-        self.assertIs( m.x[1].domain, m.component('ECON2.auto.x')[1].domain )
-        self.assertIs( m.x[2].domain, m.component('ECON2.auto.x')[2].domain )
-        self.assertIs( m.y.domain, m.component('ECON2.auto.y').domain )
-        self.assertEqual( m.x[1].bounds, m.component('ECON2.auto.x')[1].bounds )
-        self.assertEqual( m.x[2].bounds, m.component('ECON2.auto.x')[2].bounds )
-        self.assertEqual( m.y.bounds, m.component('ECON2.auto.y').bounds )
+        self.assertIs( m.x[1].domain, m.component('EPRT2.auto.x')[1].domain )
+        self.assertIs( m.x[2].domain, m.component('EPRT2.auto.x')[2].domain )
+        self.assertIs( m.y.domain, m.component('EPRT2.auto.y').domain )
+        self.assertEqual( m.x[1].bounds, m.component('EPRT2.auto.x')[1].bounds )
+        self.assertEqual( m.x[2].bounds, m.component('EPRT2.auto.x')[2].bounds )
+        self.assertEqual( m.y.bounds, m.component('EPRT2.auto.y').bounds )
 
         os = StringIO()
         m.component('c.expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=3, Index=c.expanded_index, Active=True
     Key : Lower : Body                   : Upper : Active
-      1 :   0.0 : x[1] - ECON1.auto.x[1] :   0.0 :   True
-      2 :   0.0 : x[2] - ECON1.auto.x[2] :   0.0 :   True
-      3 :   0.0 :       y - ECON1.auto.y :   0.0 :   True
+      1 :   0.0 : x[1] - EPRT1.auto.x[1] :   0.0 :   True
+      2 :   0.0 : x[2] - EPRT1.auto.x[2] :   0.0 :   True
+      3 :   0.0 :       y - EPRT1.auto.y :   0.0 :   True
 """)
 
         os = StringIO()
@@ -576,9 +577,9 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """d.expanded : Size=3, Index=d.expanded_index, Active=True
     Key : Lower : Body                              : Upper : Active
-      1 :   0.0 : ECON2.auto.x[1] - ECON1.auto.x[1] :   0.0 :   True
-      2 :   0.0 : ECON2.auto.x[2] - ECON1.auto.x[2] :   0.0 :   True
-      3 :   0.0 :       ECON2.auto.y - ECON1.auto.y :   0.0 :   True
+      1 :   0.0 : EPRT2.auto.x[1] - EPRT1.auto.x[1] :   0.0 :   True
+      2 :   0.0 : EPRT2.auto.x[2] - EPRT1.auto.x[2] :   0.0 :   True
+      3 :   0.0 :       EPRT2.auto.y - EPRT1.auto.y :   0.0 :   True
 """)
 
 
@@ -586,31 +587,31 @@ class TestConnector(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var([1,2], domain=Binary)
         m.y = Var(bounds=(1,3))
-        m.CON = Connector()
-        m.CON.add(m.x)
-        m.CON.add(m.y)
+        m.PRT = Port()
+        m.PRT.add(m.x)
+        m.PRT.add(m.y)
         m.a1 = Var([1,2])
         m.a2 = Var([1,2])
         m.b1 = Var()
         m.b2 = Var()
-        m.ECON2 = Connector()
-        m.ECON2.add(m.a1,'x')
-        m.ECON2.add(m.b1,'y')
-        m.ECON1 = Connector()
-        m.ECON1.add(m.a2,'x')
-        m.ECON1.add(m.b2,'y')
+        m.EPRT2 = Port()
+        m.EPRT2.add(m.a1,'x')
+        m.EPRT2.add(m.b1,'y')
+        m.EPRT1 = Port()
+        m.EPRT1.add(m.a2,'x')
+        m.EPRT1.add(m.b2,'y')
 
-        # 2 constraints: one has a connector, the other doesn't.  The
+        # 2 constraints: one has a port, the other doesn't.  The
         # former should be deactivated and expanded, the latter should
         # be left untouched.
-        m.c = Constraint(expr= m.CON == m.ECON1)
-        m.d = Constraint(expr= m.ECON2 == m.ECON1)
+        m.c = Constraint(expr= m.PRT == m.EPRT1)
+        m.d = Constraint(expr= m.EPRT2 == m.EPRT1)
         m.nocon = Constraint(expr = m.x[1] == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
 
-        TransformationFactory('core.expand_connectors').apply_to(m)
+        TransformationFactory('core.expand_ports').apply_to(m)
         #m.pprint()
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 5)
@@ -646,45 +647,45 @@ class TestConnector(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var([1,2], domain=Binary)
         m.y = Var(bounds=(1,3))
-        m.CON = Connector()
-        m.CON.add(m.x)
-        m.CON.add(m.y)
+        m.PRT = Port()
+        m.PRT.add(m.x)
+        m.PRT.add(m.y)
         m.a2 = Var([1,2])
         m.b1 = Var()
-        m.ECON2 = Connector(implicit=['x'])
-        m.ECON2.add(m.b1,'y')
-        m.ECON1 = Connector(implicit=['y'])
-        m.ECON1.add(m.a2,'x')
+        m.EPRT2 = Port(implicit=['x'])
+        m.EPRT2.add(m.b1,'y')
+        m.EPRT1 = Port(implicit=['y'])
+        m.EPRT1.add(m.a2,'x')
 
-        # 2 constraints: one has a connector, the other doesn't.  The
+        # 2 constraints: one has a port, the other doesn't.  The
         # former should be deactivated and expanded, the latter should
         # be left untouched.
-        m.c = Constraint(expr= m.CON == m.ECON1)
-        m.d = Constraint(expr= m.ECON2 == m.CON)
+        m.c = Constraint(expr= m.PRT == m.EPRT1)
+        m.d = Constraint(expr= m.EPRT2 == m.PRT)
         m.nocon = Constraint(expr = m.x[1] == 2)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
 
         os = StringIO()
-        m.ECON1.pprint(ostream=os)
+        m.EPRT1.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""ECON1 : Size=1, Index=None
+"""EPRT1 : Size=1, Index=None
     Key  : Name : Size : Variable
     None :    x :    2 :       a2
          :    y :    - :     None
 """)
 
-        TransformationFactory('core.expand_connectors').apply_to(m)
+        TransformationFactory('core.expand_ports').apply_to(m)
         #m.pprint()
 
         os = StringIO()
-        m.ECON1.pprint(ostream=os)
+        m.EPRT1.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""ECON1 : Size=1, Index=None
+"""EPRT1 : Size=1, Index=None
     Key  : Name : Size : Variable
     None :    x :    2 :           a2
-         :    y :    1 : ECON1.auto.y
+         :    y :    1 : EPRT1.auto.y
 """)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 5)
@@ -702,7 +703,7 @@ class TestConnector(unittest.TestCase):
     Key : Lower : Body             : Upper : Active
       1 :   0.0 :     x[1] - a2[1] :   0.0 :   True
       2 :   0.0 :     x[2] - a2[2] :   0.0 :   True
-      3 :   0.0 : y - ECON1.auto.y :   0.0 :   True
+      3 :   0.0 : y - EPRT1.auto.y :   0.0 :   True
 """)
 
         os = StringIO()
@@ -710,8 +711,8 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """d.expanded : Size=3, Index=d.expanded_index, Active=True
     Key : Lower : Body                   : Upper : Active
-      1 :   0.0 : ECON2.auto.x[1] - x[1] :   0.0 :   True
-      2 :   0.0 : ECON2.auto.x[2] - x[2] :   0.0 :   True
+      1 :   0.0 : EPRT2.auto.x[1] - x[1] :   0.0 :   True
+      2 :   0.0 : EPRT2.auto.x[2] - x[2] :   0.0 :   True
       3 :   0.0 :                 b1 - y :   0.0 :   True
 """)
 
@@ -720,23 +721,23 @@ class TestConnector(unittest.TestCase):
         m = ConcreteModel()
         m.flow = VarList()
         m.phase = Var(bounds=(1,3))
-        m.CON = Connector()
-        m.CON.add( m.flow,
+        m.PRT = Port()
+        m.PRT.add( m.flow,
                    aggregate=lambda m,v: sum(v[i] for i in v) == 0 )
-        m.CON.add(m.phase)
-        m.ECON2 = Connector()
-        m.ECON1 = Connector()
+        m.PRT.add(m.phase)
+        m.EPRT2 = Port()
+        m.EPRT1 = Port()
 
-        # 2 constraints: one has a connector, the other doesn't.  The
+        # 2 constraints: one has a port, the other doesn't.  The
         # former should be deactivated and expanded, the latter should
         # be left untouched.
-        m.c = Constraint(expr= m.CON == m.ECON1)
-        m.d = Constraint(expr= m.ECON2 == m.CON)
+        m.c = Constraint(expr= m.PRT == m.EPRT1)
+        m.d = Constraint(expr= m.EPRT2 == m.PRT)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 2)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
 
-        TransformationFactory('core.expand_connectors').apply_to(m)
+        TransformationFactory('core.expand_ports').apply_to(m)
         #m.pprint()
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 5)
@@ -753,8 +754,8 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=2, Index=c.expanded_index, Active=True
     Key : Lower : Body                      : Upper : Active
-      1 :   0.0 : flow[1] - ECON1.auto.flow :   0.0 :   True
-      2 :   0.0 :  phase - ECON1.auto.phase :   0.0 :   True
+      1 :   0.0 : flow[1] - EPRT1.auto.flow :   0.0 :   True
+      2 :   0.0 :  phase - EPRT1.auto.phase :   0.0 :   True
 """)
 
         os = StringIO()
@@ -762,39 +763,39 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """d.expanded : Size=2, Index=d.expanded_index, Active=True
     Key : Lower : Body                      : Upper : Active
-      1 :   0.0 : ECON2.auto.flow - flow[2] :   0.0 :   True
-      2 :   0.0 :  ECON2.auto.phase - phase :   0.0 :   True
+      1 :   0.0 : EPRT2.auto.flow - flow[2] :   0.0 :   True
+      2 :   0.0 :  EPRT2.auto.phase - phase :   0.0 :   True
 """)
 
         os = StringIO()
-        m.component('CON.flow.aggregate').pprint(ostream=os)
+        m.component('PRT.flow.aggregate').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""CON.flow.aggregate : Size=1, Index=None, Active=True
+"""PRT.flow.aggregate : Size=1, Index=None, Active=True
     Key  : Lower : Body              : Upper : Active
     None :   0.0 : flow[1] + flow[2] :   0.0 :   True
 """)
 
         os = StringIO()
-        m.CON.pprint(ostream=os)
+        m.PRT.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""CON : Size=1, Index=None
+"""PRT : Size=1, Index=None
     Key  : Name  : Size : Variable
     None :  flow :    * :     flow
          : phase :    1 :    phase
 """)
 
 
-    def test_indexed_connector(self):
+    def test_indexed_port(self):
         m = ConcreteModel()
         m.x = Var(initialize=1, domain=Reals)
         m.y = Var(initialize=2, domain=Reals)
-        m.c = Connector([1,2])
+        m.c = Port([1,2])
         m.c[1].add(m.x, name='v')
         m.c[2].add(m.y, name='v')
 
         m.eq = Constraint(expr=m.c[1] == m.c[2])
 
-        TransformationFactory('core.expand_connectors').apply_to(m)
+        TransformationFactory('core.expand_ports').apply_to(m)
 
         os = StringIO()
         m.component('eq.expanded').pprint(ostream=os)
@@ -805,24 +806,24 @@ class TestConnector(unittest.TestCase):
 """)
 
 
-    def test_expand_with_connection(self):
+    def test_expand_with_arc(self):
         m = ConcreteModel()
         m.x = Var([1,2], domain=Binary)
         m.y = Var(bounds=(1,3))
-        m.CON = Connector()
-        m.CON.add(m.x)
-        m.CON.add(m.y)
-        m.ECON2 = Connector()
-        m.ECON1 = Connector()
+        m.PRT = Port()
+        m.PRT.add(m.x)
+        m.PRT.add(m.y)
+        m.EPRT2 = Port()
+        m.EPRT1 = Port()
 
-        # Must simulataneously expand all connectors including the connection
-        # in order to properly expand empty connectors, so we define d first
-        # to test that it finds out how to populate ECON2. Also make sure it
-        # does not expand inactive Constraints or Connections.
-        m.d = Connection(connectors=(m.ECON2, m.ECON1))
-        m.c = Constraint(expr= m.CON == m.ECON1)
-        m.e = Connection(connectors=(m.CON, m.CON))
-        m.f = Constraint(expr= m.ECON1 == m.ECON1)
+        # Must simulataneously expand all ports including the arc
+        # in order to properly expand empty ports, so we define d first
+        # to test that it finds out how to populate EPRT2. Also make sure it
+        # does not expand inactive Constraints or Arcs.
+        m.d = Arc(ports=(m.EPRT2, m.EPRT1))
+        m.c = Constraint(expr= m.PRT == m.EPRT1)
+        m.e = Arc(ports=(m.PRT, m.PRT))
+        m.f = Constraint(expr= m.EPRT1 == m.EPRT1)
         m.nocon = Constraint(expr = m.x[1] == 2)
         m.e.deactivate()
         m.f.deactivate()
@@ -830,7 +831,7 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
 
-        TransformationFactory('core.expand_connectors').apply_to(m)
+        TransformationFactory('core.expand_ports').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 6)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 9)
@@ -847,28 +848,28 @@ class TestConnector(unittest.TestCase):
         self.assertTrue(blk.component('x_equality').active)
         self.assertTrue(blk.component('y_equality').active)
 
-        self.assertIs( m.x[1].domain, m.component('ECON1.auto.x')[1].domain )
-        self.assertIs( m.x[2].domain, m.component('ECON1.auto.x')[2].domain )
-        self.assertIs( m.y.domain, m.component('ECON1.auto.y').domain )
-        self.assertEqual( m.x[1].bounds, m.component('ECON1.auto.x')[1].bounds )
-        self.assertEqual( m.x[2].bounds, m.component('ECON1.auto.x')[2].bounds )
-        self.assertEqual( m.y.bounds, m.component('ECON1.auto.y').bounds )
+        self.assertIs( m.x[1].domain, m.component('EPRT1.auto.x')[1].domain )
+        self.assertIs( m.x[2].domain, m.component('EPRT1.auto.x')[2].domain )
+        self.assertIs( m.y.domain, m.component('EPRT1.auto.y').domain )
+        self.assertEqual( m.x[1].bounds, m.component('EPRT1.auto.x')[1].bounds )
+        self.assertEqual( m.x[2].bounds, m.component('EPRT1.auto.x')[2].bounds )
+        self.assertEqual( m.y.bounds, m.component('EPRT1.auto.y').bounds )
 
-        self.assertIs( m.x[1].domain, m.component('ECON2.auto.x')[1].domain )
-        self.assertIs( m.x[2].domain, m.component('ECON2.auto.x')[2].domain )
-        self.assertIs( m.y.domain, m.component('ECON2.auto.y').domain )
-        self.assertEqual( m.x[1].bounds, m.component('ECON2.auto.x')[1].bounds )
-        self.assertEqual( m.x[2].bounds, m.component('ECON2.auto.x')[2].bounds )
-        self.assertEqual( m.y.bounds, m.component('ECON2.auto.y').bounds )
+        self.assertIs( m.x[1].domain, m.component('EPRT2.auto.x')[1].domain )
+        self.assertIs( m.x[2].domain, m.component('EPRT2.auto.x')[2].domain )
+        self.assertIs( m.y.domain, m.component('EPRT2.auto.y').domain )
+        self.assertEqual( m.x[1].bounds, m.component('EPRT2.auto.x')[1].bounds )
+        self.assertEqual( m.x[2].bounds, m.component('EPRT2.auto.x')[2].bounds )
+        self.assertEqual( m.y.bounds, m.component('EPRT2.auto.y').bounds )
 
         os = StringIO()
         m.component('c.expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=3, Index=c.expanded_index, Active=True
     Key : Lower : Body                   : Upper : Active
-      1 :   0.0 : x[1] - ECON1.auto.x[1] :   0.0 :   True
-      2 :   0.0 : x[2] - ECON1.auto.x[2] :   0.0 :   True
-      3 :   0.0 :       y - ECON1.auto.y :   0.0 :   True
+      1 :   0.0 : x[1] - EPRT1.auto.x[1] :   0.0 :   True
+      2 :   0.0 : x[2] - EPRT1.auto.x[2] :   0.0 :   True
+      3 :   0.0 :       y - EPRT1.auto.y :   0.0 :   True
 """)
 
         os = StringIO()
@@ -878,11 +879,11 @@ class TestConnector(unittest.TestCase):
     2 Constraint Declarations
         x_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body                              : Upper : Active
-              1 :   0.0 : ECON2.auto.x[1] - ECON1.auto.x[1] :   0.0 :   True
-              2 :   0.0 : ECON2.auto.x[2] - ECON1.auto.x[2] :   0.0 :   True
+              1 :   0.0 : EPRT2.auto.x[1] - EPRT1.auto.x[1] :   0.0 :   True
+              2 :   0.0 : EPRT2.auto.x[2] - EPRT1.auto.x[2] :   0.0 :   True
         y_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body                        : Upper : Active
-            None :   0.0 : ECON2.auto.y - ECON1.auto.y :   0.0 :   True
+            None :   0.0 : EPRT2.auto.y - EPRT1.auto.y :   0.0 :   True
 
     2 Declarations: x_equality y_equality
 """)

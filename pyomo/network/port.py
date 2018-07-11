@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = [ 'Connector' ]
+__all__ = [ 'Port' ]
 
 import logging
 import sys
@@ -27,11 +27,11 @@ from pyomo.core.base.numvalue import NumericValue, value
 from pyomo.core.base.plugin import register_component, \
     IPyomoScriptModifyInstance, TransformationFactory
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.network')
 
 
-class _ConnectorData(ComponentData, NumericValue):
-    """Holds the actual connector information"""
+class _PortData(ComponentData, NumericValue):
+    """Holds the actual port information"""
 
     __slots__ = ('vars', 'aggregators', 'extensives', 'extensive_aggregators')
 
@@ -48,15 +48,15 @@ class _ConnectorData(ComponentData, NumericValue):
         self.vars = {}
         self.aggregators = {}
         self.extensives = {}
-        # default aggregation functions for extensive variables in connections
+        # default aggregation functions for extensive variables in arcs
         # can't import at top of file because of a circular import
-        from pyomo.core.base.connection import Connection
-        self.extensive_aggregators = {"split" : Connection.SplitFrac,
-                                      "mix"   : Connection.Balance}
+        from pyomo.network.arc import Arc
+        self.extensive_aggregators = {"split" : Arc.SplitFrac,
+                                      "mix"   : Arc.Balance}
 
     def __getstate__(self):
-        state = super(_ConnectorData, self).__getstate__()
-        for i in _ConnectorData.__slots__:
+        state = super(_PortData, self).__getstate__()
+        for i in _PortData.__slots__:
             state[i] = getattr(self, i)
         return state
 
@@ -74,23 +74,23 @@ class _ConnectorData(ComponentData, NumericValue):
                              % (self.__class__.__name__, name))
 
     def set_value(self, value):
-        msg = "Cannot specify the value of a connector '%s'"
+        msg = "Cannot specify the value of a port '%s'"
         raise ValueError(msg % self.name)
 
     def is_fixed(self):
-        """Return True if all vars/expressions in the Connector are fixed"""
+        """Return True if all vars/expressions in the Port are fixed"""
         return all(v.is_fixed() for v in self._iter_vars())
 
     def is_constant(self):
         """Return False
 
         Because the expression generation logic will attempt to evaluate
-        constant subexpressions, a Connector can never be constant.
+        constant subexpressions, a Port can never be constant.
         """
         return False
 
     def is_potentially_variable(self):
-        """Return True as connectors may (should!) contain variables"""
+        """Return True as ports may (should!) contain variables"""
         return True
 
     def polynomial_degree(self):
@@ -116,23 +116,23 @@ class _ConnectorData(ComponentData, NumericValue):
             name = var.local_name
         if name in self.vars:
             raise ValueError("Cannot insert duplicate variable name "
-                             "'%s' into Connector '%s'" % (name, self.name))
+                             "'%s' into Port '%s'" % (name, self.name))
         self.vars[name] = var
         if aggregate is not None:
             if extensive is not None:
                 raise ValueError(
                     "Cannot specify aggregator for extensive variable '%s' on "
-                    "Connector '%s'" % (name, self.name))
+                    "Port '%s'" % (name, self.name))
             if type(var) is not VarList:
                 raise ValueError(
                     "Aggregated variable '%s' must be a VarList "
-                    "in Connector '%s'" % (name, self.name))
+                    "in Port '%s'" % (name, self.name))
             self.aggregators[name] = aggregate
         elif extensive is not None:
             # avoid name collisions
             if name.endswith("_split") or name.endswith("_equality"):
                 raise ValueError(
-                    "Extensive variable '%s' on Connector '%s' may not end "
+                    "Extensive variable '%s' on Port '%s' may not end "
                     "with '_split' or '_equality'" % (name, self.name))
             if extensive not in self.extensives:
                 # initialize new dict if this is the first of its kind
@@ -148,39 +148,39 @@ class _ConnectorData(ComponentData, NumericValue):
                     yield v
 
 
-class Connector(IndexedComponent):
-    """A collection of variables, which may be defined over a index
+class Port(IndexedComponent):
+    """A collection of variables, which may be defined over an index
 
-    The idea behind a Connector is to create a bundle of variables that
+    The idea behind a Port is to create a bundle of variables that
     can be manipulated as a single variable within constraints.  While
-    Connectors inherit from variable (mostly so that the expression
+    Ports inherit from variable (mostly so that the expression
     infrastucture can manipulate them), they are not actual variables
     that are exposed to the solver.  Instead, a preprocessor
-    (ConnectorExpander) will look for expressions that involve
-    connectors and replace the single constraint with a list of
+    (PortExpander) will look for expressions that involve
+    ports and replace the single constraint with a list of
     constraints that involve the original variables contained within the
-    Connector.
+    Port.
 
     Constructor
         Arguments:
-           name         The name of this connector
-           index        The index set that defines the distinct connectors.
+           name         The name of this port
+           index        The index set that defines the distinct ports.
                           By default, this is None, indicating that there
-                          is a single connector.
+                          is a single port.
     """
 
     def __new__(cls, *args, **kwds):
-        if cls != Connector:
-            return super(Connector, cls).__new__(cls)
+        if cls != Port:
+            return super(Port, cls).__new__(cls)
         if args == ():
-            return SimpleConnector.__new__(SimpleConnector)
+            return SimplePort.__new__(SimplePort)
         else:
-            return IndexedConnector.__new__(IndexedConnector)
+            return IndexedPort.__new__(IndexedPort)
 
 
     # TODO: default keyword is  not used?  Need to talk to Bill ...?
     def __init__(self, *args, **kwd):
-        kwd.setdefault('ctype', Connector)
+        kwd.setdefault('ctype', Port)
         self._rule = kwd.pop('rule', None)
         self._initialize = kwd.pop('initialize', {})
         self._implicit = kwd.pop('implicit', {})
@@ -193,20 +193,20 @@ class Connector(IndexedComponent):
     # IndexedComponent
     #
     def _getitem_when_not_present(self, idx):
-        _conval = self._data[idx] = _ConnectorData(component=self)
+        _conval = self._data[idx] = _PortData(component=self)
         return _conval
 
 
     def construct(self, data=None):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):  #pragma:nocover
-            logger.debug( "Constructing Connector, name=%s, from data=%s"
+            logger.debug( "Constructing Port, name=%s, from data=%s"
                           % (self.name, data) )
         if self._constructed:
             return
         timer = ConstructionTimer(self)
         self._constructed=True
         #
-        # Construct _ConnectorData objects for all index values
+        # Construct _PortData objects for all index values
         #
         if self.is_indexed():
             self._initialize_members(self._index)
@@ -284,11 +284,11 @@ class Connector(IndexedComponent):
                         ( "Name","Value" ), _line_generator )
 
 
-class SimpleConnector(Connector, _ConnectorData):
+class SimplePort(Port, _PortData):
 
     def __init__(self, *args, **kwd):
-        _ConnectorData.__init__(self, component=self)
-        Connector.__init__(self, *args, **kwd)
+        _PortData.__init__(self, component=self)
+        Port.__init__(self, *args, **kwd)
 
     #
     # Since this class derives from Component and Component.__getstate__
@@ -300,22 +300,22 @@ class SimpleConnector(Connector, _ConnectorData):
     #
 
 
-class IndexedConnector(Connector):
-    """An array of connectors"""
+class IndexedPort(Port):
+    """An array of ports"""
     pass
 
 
 register_component(
-    Connector, "A bundle of variables that can be manipilated together.")
+    Port, "A bundle of variables that can be manipilated together.")
 
 
-class ConnectorExpander(Plugin):
+class PortExpander(Plugin):
     implements(IPyomoScriptModifyInstance)
 
     def apply(self, **kwds):
         instance = kwds.pop('instance')
-        xform = TransformationFactory('core.expand_connectors')
+        xform = TransformationFactory('core.expand_ports')
         xform.apply_to(instance, **kwds)
         return instance
 
-transform = ConnectorExpander()
+transform = PortExpander()

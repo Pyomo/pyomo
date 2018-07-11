@@ -34,6 +34,7 @@ _packages = [
     'pyomo.dae',
     'pyomo.bilevel',
     'pyomo.scripting',
+    'pyomo.network',
 ]
 #
 #
