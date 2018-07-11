@@ -64,8 +64,12 @@ class _ArcData(ActiveComponentData):
     def __getattr__(self, name):
         """Returns self.expanded_block.name if it exists"""
         eb = self.expanded_block
-        if eb is not None and hasattr(eb, name):
-            return getattr(eb, name)
+        if eb is not None:
+            try:
+                return getattr(eb, name)
+            except AttributeError:
+                # if it didn't work, throw our own error below
+                pass
         # Since the base classes don't support getattr, we can just
         # throw the "normal" AttributeError
         raise AttributeError("'%s' object has no attribute '%s'"
