@@ -15,7 +15,7 @@ import os
 from os.path import abspath, dirname, normpath, join
 
 currdir = dirname(abspath(__file__))
-exdir = normpath(join(currdir,'..', '..','..','..','examples','pyomo','core'))
+exdir = normpath(join(currdir,'..','..','..','examples','pyomo','core'))
 
 import pyutilib.th as unittest
 

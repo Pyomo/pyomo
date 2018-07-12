@@ -24,6 +24,7 @@ else:
 _packages = [
     'pyomo.opt',
     'pyomo.core',
+    'pyomo.dualize',
     'pyomo.checker',
     'pyomo.repn',
     'pyomo.pysp',

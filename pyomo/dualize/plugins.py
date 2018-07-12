@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import logging
-
+from six import iteritems
 
 import pyomo.common
 from pyomo.common.plugin import alias
@@ -25,9 +25,10 @@ from pyomo.core.base import (Transformation,
                              Block,
                              Model,
                              ConcreteModel)
-from pyomo.repn.collect import collect_linear_terms
+from pyomo.dualize.collect import collect_linear_terms
 
-from six import iteritems
+def load():
+    pass
 
 logger = logging.getLogger('pyomo.core')
 
