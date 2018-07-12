@@ -24,29 +24,29 @@ import pyomo.core.base.symbolic
 
 class TestMindtPy(unittest.TestCase):
     """Tests for the MINDT solver plugin."""
-    
+
     def test_OA(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
             print('\n Solving problem with Outer Approximation')
             opt.solve(model, strategy='OA', init_strategy = 'initial_binary')
-    
+
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
             self.assertTrue(abs(value(model.cost.expr) - 3.5) <= 1E-2)
-    
+
     def test_PSC(self):
         """Test the partial surrogate cuts decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
             print('\n Solving problem with Partial Surrogate Cuts')
             opt.solve(model, strategy='PSC', init_strategy = 'initial_binary')
-    
+
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
             self.assertTrue(abs(value(model.cost.expr) - 3.5) <= 1E-2)
-    
+
     def test_GBD(self):
         """Test the generalized Benders Decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
@@ -65,7 +65,7 @@ class TestMindtPy(unittest.TestCase):
             print('\n Solving problem with Extended Cutting Planes')
             opt.solve(model, strategy='ECP', init_strategy = 'initial_binary',
             ECP_tolerance=1E-4)
-    
+
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
             self.assertTrue(abs(value(model.cost.expr) - 3.5) <= 1E-2)
