@@ -12,7 +12,7 @@ import textwrap
 from math import fabs
 
 from pyomo.core.base import Block, Constraint, VarList, Objective
-from pyomo.core.expr.current import ExpressionReplacementVisitor
+from pyomo.core.expr.current import ExpressionReplacementVisitor, identify_variables
 from pyomo.core.expr.numvalue import value
 from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
@@ -47,11 +47,14 @@ class InducedLinearity(IsomorphicTransformation):
 
     def _apply_to(self, model):
         """Apply the transformation to the given model."""
-        constraint_bound_tolerance = 1E-6
-        effectively_discrete_vars = ComponentSet(
-            _effectively_discrete_vars(model, constraint_bound_tolerance))
+        equality_tolerance = 1E-6
+        eff_discr_vars = detect_effectively_discrete_vars(
+            model, equality_tolerance)
         # TODO will need to go through this for each disjunct, since it does
         # not (should not) descend into Disjuncts.
+
+        # Determine the valid values for the effectively discrete variables
+        determine_valid_values(eff_discr_vars)
 
         # Collect find bilinear expressions that can be reformulated using
         # knowledge of effectively discrete variables
@@ -72,6 +75,45 @@ class InducedLinearity(IsomorphicTransformation):
 
         # Reformulate the bilinear terms
         pass
+
+
+def determine_valid_values(block, discr_var_to_constrs_map):
+    """Calculate valid values for each effectively discrete variable.
+
+    We need the set of possible values for the effectively discrete variable in
+    order to do the reformulations.
+
+    Right now, we select a naive approach where we look for variables in the
+    discreteness-inducing constraints. We then adjust their values and see if
+    things are stil feasible. Based on their coefficient values, we can infer a
+    set of allowable values for the effectively discrete variable.
+
+    We try to make this more efficient by first constructing a mapping of
+    variables to the constraints that they participate in.
+
+    Args:
+        block: The model or a disjunct on the model.
+
+    """
+    var_to_constraints_map = ComponentMap()
+    if block.type() == Disjunct:
+        # Get constraints from the disjunct's parent model
+        add_constraints_to_map(var_to_constraints_map, block.model())
+    # Get constraints from the disjunct (or model)
+    add_constraints_to_map(var_to_constraints_map, block)
+
+    # Go through
+    for eff_discr_var, constrs in discr_var_to_constrs_map.items():
+        pass
+
+
+def add_constraints_to_map(var_to_constraints_map, block):
+    for constr in block.model().component_data_objects(
+            Constraint, active=True):
+        for var in identify_variables(constr.body, include_fixed=False):
+            constr_list = var_to_constraints_map.get(var, [])
+            constr_list.append(constr)
+            var_to_constraints_map[var] = constr_list
 
 
 def _process_bilinear_constraints(v1, v2, discrete_constr, bilinear_constrs):
@@ -136,18 +178,14 @@ def _bilinear_expressions(model):
     return bilinear_map
 
 
-def _detect_effectively_discrete_vars(block, equality_tolerance):
-    """Detect effectively discrete variables and their set of valid values.
+def detect_effectively_discrete_vars(block, equality_tolerance):
+    """Detect effectively discrete variables.
 
     These continuous variables are the sum of discrete variables.
 
     """
-    # Map of effectively_discrete var --> set(possible values)
+    # Map of effectively_discrete var --> inducing constraints
     effectively_discrete = ComponentMap()
-
-    # Find SOS sets
-    for constr in block.component_data_objects(Constraint, active=True):
-        pass
 
     for constr in block.component_data_objects(Constraint, active=True):
         if constr.lower is None or constr.upper is None:
@@ -158,7 +196,6 @@ def _detect_effectively_discrete_vars(block, equality_tolerance):
         if constr.body.polynomial_degree() not in (1, 0):
             continue  # skip nonlinear expressions
         repn = generate_standard_repn(constr.body)
-        constant_term = NoneToZero(repn.constant) - NoneToZero(constr.lower)
         if len(repn.linear_vars) < 2:
             # TODO should this be < 2 or < 1?
             # TODO we should make sure that trivial equality relations are
@@ -167,47 +204,14 @@ def _detect_effectively_discrete_vars(block, equality_tolerance):
             continue
         non_discrete_vars = list(v for v in repn.linear_vars
                                  if v.is_continuous())
-        discrete_vars = list(v for v in repn.linear_vars
-                             if v.is_binary() or v.is_integer())
         if len(non_discrete_vars) == 1:
             # We know that this is an effectively discrete continuous
             # variable. Add it to our identified variable list.
-            yield non_discrete_vars[0], constr
+            var = non_discrete_vars[0]
+            inducing_constraints = effectively_discrete.get(var, [])
+            inducing_constraints.append(constr)
+            effectively_discrete[var] = inducing_constraints
         # TODO we should eventually also look at cases where all other
         # non_discrete_vars are effectively_discrete_vars
 
-
-def NoneToZero(val):
-    return 0 if val is None else val
-
-
-def _effectively_discrete_vars(block, constraint_bound_tolerance):
-    """Yield variables that are effectively discrete, with relevant constraint.
-
-    These continuous variables are the sum of discrete variables. The
-    constraint is the one which links the variables together.
-
-    """
-    for constr in block.component_data_objects(
-            Constraint, active=True, descend_into=True):
-        if constr.lower is None or constr.upper is None:
-            continue  # skip inequality constraints
-        if fabs(value(constr.lower) - value(constr.upper)
-                ) > constraint_bound_tolerance:
-            continue  # not equality constriant. Skip.
-        if constr.body.polynomial_degree() not in (1, 0):
-            continue  # skip nonlinear expressions
-        repn = generate_standard_repn(constr.body)
-        if len(repn.linear_vars) < 2:
-            # TODO we should make sure that trivial equality relations are
-            # preprocessed before this, or we will end up reformulating
-            # expressions that we do not need to here.
-            continue
-        non_discrete_vars = list(v for v in repn.linear_vars
-                                 if v.is_continuous())
-        if len(non_discrete_vars) == 1:
-            # We know that this is an effectively discrete continuous
-            # variable. Add it to our identified variable list.
-            yield non_discrete_vars[0], constr
-        # TODO we should eventually also look at cases where all other
-        # non_discrete_vars are effectively_discrete_vars
+    return effectively_discrete

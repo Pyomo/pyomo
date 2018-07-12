@@ -5,7 +5,7 @@ from pyomo.environ import (ConcreteModel, Constraint, ConstraintList,
                            Objective, RangeSet, SolverFactory,
                            TransformationFactory, Var, exp, Binary, Integers, summation, NonNegativeReals)
 from pyomo.contrib.preprocessing.plugins.induced_linearity import (
-    _bilinear_expressions, _effectively_discrete_vars, _reformulate_case_1)
+    _bilinear_expressions, detect_effectively_discrete_vars, _reformulate_case_1, determine_valid_values)
 from pyomo.gdp import Disjunct
 
 
@@ -43,24 +43,38 @@ class TestInducedLinearity(unittest.TestCase):
         m.c = Var(domain=Integers)
         m.disj = Disjunct()
         m.disj.constr = Constraint(expr=m.a == m.b + m.c)
-        effectively_discrete = list(_effectively_discrete_vars(m, 1E-6))
-        self.assertEqual(effectively_discrete, [(m.x, m.constr)])
-        effectively_discrete = list(_effectively_discrete_vars(m.disj, 1E-6))
-        self.assertEqual(effectively_discrete, [(m.a, m.disj.constr)])
+        effectively_discrete = detect_effectively_discrete_vars(m, 1E-6)
+        self.assertEqual(len(effectively_discrete), 1)
+        self.assertEqual(effectively_discrete[m.x], [m.constr])
+        effectively_discrete = detect_effectively_discrete_vars(m.disj, 1E-6)
+        self.assertEqual(len(effectively_discrete), 1)
+        self.assertEqual(effectively_discrete[m.a], [m.disj.constr])
 
-    def test_induced_linearity_case1(self):
+    def test_determine_valid_values(self):
         m = ConcreteModel()
-        m.x = Var(domain=NonNegativeReals)
-        m.v = Var()
-        m.y = Var([1, 2, 3], domain=Binary)
-        m.c = Constraint(expr=m.v * m.x <= 0)
-        m.c2 = Constraint(expr=m.x == m.y[1] + 2 * m.y[2] + 3 * m.y[3])
-        m.c3 = Constraint(expr=summation(m.y) == 1)
-        with self.assertRaises(NotImplementedError):
-            _reformulate_case_1(m.x, m.v, m.c2, m.c)
+        m.x = Var()
+        m.y = Var(RangeSet(4), domain=Binary)
+        m.z = Var(domain=Integers, bounds=(-1, 2))
+        m.constr = Constraint(
+            expr=m.x == m.y[1] + 2 * m.y[2] + m.y[3] + 2 * m.y[4] + m.z)
+        var_to_values_map = determine_valid_values(
+            detect_effectively_discrete_vars(m, 1E-6))
+        valid_values = set([1, 2, 3, 4, 5, 6])
+        self.assertEqual(set(var_to_values_map[m.x]), valid_values)
 
-    def test_induced_linearity_case2(self):
-        pass
+    # def test_induced_linearity_case1(self):
+    #     m = ConcreteModel()
+    #     m.x = Var(domain=NonNegativeReals)
+    #     m.v = Var()
+    #     m.y = Var([1, 2, 3], domain=Binary)
+    #     m.c = Constraint(expr=m.v * m.x <= 0)
+    #     m.c2 = Constraint(expr=m.x == m.y[1] + 2 * m.y[2] + 3 * m.y[3])
+    #     m.c3 = Constraint(expr=summation(m.y) == 1)
+    #     with self.assertRaises(NotImplementedError):
+    #         _reformulate_case_1(m.x, m.v, m.c2, m.c)
+    #
+    # def test_induced_linearity_case2(self):
+    #     pass
 
 
 if __name__ == '__main__':
