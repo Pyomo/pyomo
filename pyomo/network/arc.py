@@ -14,15 +14,11 @@ from pyomo.network.port import (SimplePort, IndexedPort, _PortData)
 from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
     UnindexedComponent_set)
-from pyomo.core.base.var import Var
-from pyomo.core.base.constraint import Constraint
-from pyomo.core.base.label import alphanum_label_from_name
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.plugin import (register_component,
     IPyomoScriptModifyInstance, TransformationFactory)
 from pyomo.common.plugin import Plugin, implements
 from pyomo.common.timing import ConstructionTimer
-from pyomo.common.modeling import unique_component_name
 from six import iteritems
 from weakref import ref as weakref_ref
 import logging, sys
@@ -82,10 +78,14 @@ class _ArcData(ActiveComponentData):
         return self._ports[0] if self._directed is True and \
             self._ports is not None else None
 
+    src = source
+
     @property
     def destination(self):
         return self._ports[1] if self._directed is True and \
             self._ports is not None else None
+
+    dest = destination
 
     @property
     def ports(self):
@@ -117,13 +117,17 @@ class _ArcData(ActiveComponentData):
 
         self._validate_ports(source, destination, ports)
 
-        # tuples do not go through add_component
         self._ports = tuple(ports) if ports is not None \
             else (source, destination)
         self._directed = source is not None
+        for port in self._ports:
+            port._arcs.append(self)
+        if self._directed:
+            source._dests.append(self)
+            destination._sources.append(self)
 
     def _validate_ports(self, source, destination, ports):
-        port_types = set([SimplePort, _PortData])
+        port_types = {SimplePort, _PortData}
         msg = "Arc %s: " % self.name
         if ports is not None:
             if source is not None or destination is not None:
@@ -201,8 +205,8 @@ class Arc(ActiveIndexedComponent):
             return IndexedArc.__new__(IndexedArc)
 
     def __init__(self, *args, **kwds):
-        source = kwds.pop("source", None)
-        destination = kwds.pop("destination", None)
+        source = kwds.pop("source", kwds.pop("src", None))
+        destination = kwds.pop("destination", kwds.pop("dest", None))
         ports = kwds.pop("ports", None)
         self._directed = kwds.pop("directed", None)
         self._rule = kwds.pop('rule', None)
@@ -217,9 +221,7 @@ class Arc(ActiveIndexedComponent):
                 source=source, destination=destination, ports=ports)
 
     def construct(self, data=None):
-        """
-        Initialize the Arc
-        """
+        """Initialize the Arc"""
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             logger.debug("Constructing Arc %s" % self.name)
 
@@ -273,6 +275,14 @@ class Arc(ActiveIndexedComponent):
                 self._setitem_when_not_present(idx, tmp)
         timer.report()
 
+    def deconstruct(self):
+        """Remove self from port lists"""
+        for port in self.ports:
+            port._arcs.remove(self)
+        if self._directed:
+            self.source._dests.remove(self)
+            self.destination._sources.remove(self)
+
     def _validate_init_vals(self, vals):
         # returns dict version of vals if not already dict
         if type(vals) is not dict:
@@ -311,66 +321,9 @@ class Arc(ActiveIndexedComponent):
              ("Active", self.active)],
             iteritems(self),
             ("Ports", "Directed", "Active"),
-            lambda k, v: ["(%s, %s)" % v.ports if v.ports is not None
-                            else None,
+            lambda k, v: ["(%s, %s)" % v.ports if v.ports is not None else None,
                           v.directed,
                           v.active])
-
-    def SplitFrac(unit, ctns, ctr, etype):
-        # create and potentially initialize split fraction variables
-        for ctn in ctns:
-            ctn.splitfrac = Var()
-            bname = ctn.name
-            # get name of Arc by chopping off "_expanded"
-            # full name since they might be on sub blocks
-            cname = bname[:bname.rfind("_expanded")]
-            if hasattr(unit, "splitfrac") and cname in unit.splitfrac:
-                d = unit.splitfrac[cname]
-                if type(d) is dict:
-                    val, fix = d["val"], d["fix"]
-                else:
-                    val, fix = d, True
-                ctn.splitfrac = val
-                if fix:
-                    ctn.splitfrac.fix()
-
-        # create constraints for each extensive variable using splitfrac
-        for name, lst in iteritems(ctr.extensives[etype]):
-            cname = "%s_split" % name
-            var = ctr.vars[name]
-            for evar in lst:
-                ctn = evar.parent_block()
-                def rule(m, *args):
-                    if evar.is_indexed():
-                        return evar[args] == ctn.splitfrac * var[args]
-                    else:
-                        return evar == ctn.splitfrac * var
-                con = Constraint(evar.index_set(), rule=rule)
-                ctn.add_component(cname, con)
-
-        # create constraint on splitfrac vars: sum == 1
-        # need to alphanum port name in case it is indexed
-        cname = unique_component_name(unit,
-            "%s_frac_sum" % alphanum_label_from_name(ctr.local_name))
-        con = Constraint(expr=sum(c.splitfrac for c in ctns) == 1)
-        unit.add_component(cname, con)
-
-    def Balance(unit, ctns, ctr, etype):
-        # create constraint: sum of parts == the whole
-        # need to alphanum port name in case it is indexed
-        for name, lst in iteritems(ctr.extensives[etype]):
-            cname = unique_component_name(unit,
-                "%s_%s_bal" % (alphanum_label_from_name(ctr.local_name), name))
-            var = ctr.vars[name]
-            def rule(m, *args):
-                if len(args) == 0:
-                    args = None
-                return sum(evar[args] for evar in lst) == var[args]
-            con = Constraint(var.index_set(), rule=rule)
-            unit.add_component(cname, con)
-
-    SplitFrac = staticmethod(SplitFrac)
-    Balance = staticmethod(Balance)
 
 
 class SimpleArc(_ArcData, Arc):

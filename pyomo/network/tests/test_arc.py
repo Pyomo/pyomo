@@ -236,19 +236,15 @@ class TestArc(unittest.TestCase):
         m.prt2 = Port()
         m.prt2.add(m.y, "v")
 
-        # The arc should be deactivated and expanded,
-        # the constraint should be left untouched.
         m.c = Arc(source=m.prt1, destination=m.prt2)
-        m.nocon = Constraint(expr = m.x == 2)
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 1)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 0)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 0)
 
         TransformationFactory('network.expand_arcs').apply_to(m)
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 2)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
-        self.assertTrue(m.nocon.active)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 1)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
         self.assertFalse(m.c.active)
         blk = m.component('c_expanded')
         self.assertTrue(blk.active)
@@ -280,19 +276,15 @@ class TestArc(unittest.TestCase):
         m.prt2.add(m.z, "a")
         m.prt2.add(m.w, "b")
 
-        # The arc should be deactivated and expanded,
-        # the constraint should be left untouched.
         m.c = Arc(ports=(m.prt1, m.prt2))
-        m.nocon = Constraint(expr = m.x == 2)
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 1)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 0)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 0)
 
         TransformationFactory('network.expand_arcs').apply_to(m)
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 3)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
-        self.assertTrue(m.nocon.active)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 2)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
         self.assertFalse(m.c.active)
         blk = m.component('c_expanded')
         self.assertTrue(blk.active)
@@ -328,19 +320,15 @@ class TestArc(unittest.TestCase):
         m.prt2.add(-m.z, name='expr1')
         m.prt2.add(1 + m.w, name='expr2')
 
-        # The arc should be deactivated and expanded,
-        # the constraint should be left untouched.
         m.c = Arc(ports=(m.prt1, m.prt2))
-        m.nocon = Constraint(expr = m.x == 2)
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 1)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 0)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 0)
 
         TransformationFactory('network.expand_arcs').apply_to(m)
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 3)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
-        self.assertTrue(m.nocon.active)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 2)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
         self.assertFalse(m.c.active)
         blk = m.component('c_expanded')
         self.assertTrue(blk.active)
@@ -380,19 +368,15 @@ class TestArc(unittest.TestCase):
         m.prt2.add(m.u, "b")
         m.prt2.add(m.v, "c")
 
-        # The arc should be deactivated and expanded,
-        # the constraint should be left untouched.
         m.c = Arc(ports=(m.prt1, m.prt2))
-        m.nocon = Constraint(expr = m.x[1] == 2)
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 1)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 0)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 0)
 
         TransformationFactory('network.expand_arcs').apply_to(m)
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 4)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 8)
-        self.assertTrue(m.nocon.active)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 3)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 7)
         self.assertFalse(m.c.active)
         blk = m.component('c_expanded')
         self.assertTrue(blk.active)
@@ -427,19 +411,15 @@ class TestArc(unittest.TestCase):
         m.prt = Port()
         m.prt.add(m.x, "a")
 
-        # The arc should be deactivated and expanded,
-        # the constraint should be left untouched.
         m.c = Arc(ports=(m.prt, m.prt))
-        m.nocon = Constraint(expr = m.x == 2)
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 1)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 0)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 0)
 
         TransformationFactory('network.expand_arcs').apply_to(m)
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 2)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
-        self.assertTrue(m.nocon.active)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 1)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
         self.assertFalse(m.c.active)
         blk = m.component('c_expanded')
         self.assertTrue(blk.active)
@@ -462,33 +442,29 @@ class TestArc(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(bounds=(1,3))
         m.y = Var(domain=Binary)
-        m.CON = Port()
-        m.CON.add(m.x)
-        m.CON.add(m.y)
-        m.ECON = Port()
+        m.PRT = Port()
+        m.PRT.add(m.x)
+        m.PRT.add(m.y)
+        m.EPRT = Port()
 
-        # The arc should be deactivated and expanded,
-        # the constraint should be left untouched.
-        m.c = Arc(ports=(m.CON, m.ECON))
-        m.nocon = Constraint(expr = m.x == 2)
+        m.c = Arc(ports=(m.PRT, m.EPRT))
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 1)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 0)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 0)
 
         TransformationFactory('network.expand_arcs').apply_to(m)
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 3)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
-        self.assertTrue(m.nocon.active)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 2)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
         self.assertFalse(m.c.active)
         blk = m.component('c_expanded')
         self.assertTrue(blk.component('x_equality').active)
         self.assertTrue(blk.component('y_equality').active)
 
-        self.assertIs( m.x.domain, m.component('ECON.auto.x').domain )
-        self.assertIs( m.y.domain, m.component('ECON.auto.y').domain )
-        self.assertEqual( m.x.bounds, m.component('ECON.auto.x').bounds )
-        self.assertEqual( m.y.bounds, m.component('ECON.auto.y').bounds )
+        self.assertIs( m.x.domain, m.component('EPRT_auto_x').domain )
+        self.assertIs( m.y.domain, m.component('EPRT_auto_y').domain )
+        self.assertEqual( m.x.bounds, m.component('EPRT_auto_x').bounds )
+        self.assertEqual( m.y.bounds, m.component('EPRT_auto_y').bounds )
 
         os = StringIO()
         blk.pprint(ostream=os)
@@ -497,10 +473,10 @@ class TestArc(unittest.TestCase):
     2 Constraint Declarations
         x_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body            : Upper : Active
-            None :   0.0 : x - ECON.auto.x :   0.0 :   True
+            None :   0.0 : x - EPRT_auto_x :   0.0 :   True
         y_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body            : Upper : Active
-            None :   0.0 : y - ECON.auto.y :   0.0 :   True
+            None :   0.0 : y - EPRT_auto_y :   0.0 :   True
 
     2 Declarations: x_equality y_equality
 """)
@@ -510,24 +486,20 @@ class TestArc(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
-        m.CON = Port()
-        m.CON.add(-m.x, 'x')
-        m.CON.add(1 + m.y, 'y')
-        m.ECON = Port()
+        m.PRT = Port()
+        m.PRT.add(-m.x, 'x')
+        m.PRT.add(1 + m.y, 'y')
+        m.EPRT = Port()
 
-        # The arc should be deactivated and expanded,
-        # the constraint should be left untouched.
-        m.c = Arc(ports=(m.CON, m.ECON))
-        m.nocon = Constraint(expr = m.x == 2)
+        m.c = Arc(ports=(m.PRT, m.EPRT))
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 1)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 0)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 0)
 
         TransformationFactory('network.expand_arcs').apply_to(m)
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 3)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
-        self.assertTrue(m.nocon.active)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 2)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
         self.assertFalse(m.c.active)
         blk = m.component('c_expanded')
         self.assertTrue(blk.component('x_equality').active)
@@ -540,10 +512,10 @@ class TestArc(unittest.TestCase):
     2 Constraint Declarations
         x_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body              : Upper : Active
-            None :   0.0 : - x - ECON.auto.x :   0.0 :   True
+            None :   0.0 : - x - EPRT_auto_x :   0.0 :   True
         y_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body                : Upper : Active
-            None :   0.0 : 1 + y - ECON.auto.y :   0.0 :   True
+            None :   0.0 : 1 + y - EPRT_auto_y :   0.0 :   True
 
     2 Declarations: x_equality y_equality
 """)
@@ -553,35 +525,31 @@ class TestArc(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var([1,2], domain=Binary)
         m.y = Var(bounds=(1,3))
-        m.CON = Port()
-        m.CON.add(m.x)
-        m.CON.add(m.y)
-        m.ECON = Port()
+        m.PRT = Port()
+        m.PRT.add(m.x)
+        m.PRT.add(m.y)
+        m.EPRT = Port()
 
-        # The arc should be deactivated and expanded,
-        # the constraint should be left untouched.
-        m.c = Arc(ports=(m.CON, m.ECON))
-        m.nocon = Constraint(expr = m.x[1] == 2)
+        m.c = Arc(ports=(m.PRT, m.EPRT))
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 1)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 0)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 0)
 
         TransformationFactory('network.expand_arcs').apply_to(m)
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 3)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
-        self.assertTrue(m.nocon.active)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 2)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
         self.assertFalse(m.c.active)
         blk = m.component('c_expanded')
         self.assertTrue(blk.component('x_equality').active)
         self.assertTrue(blk.component('y_equality').active)
 
-        self.assertIs( m.x[1].domain, m.component('ECON.auto.x')[1].domain )
-        self.assertIs( m.x[2].domain, m.component('ECON.auto.x')[2].domain )
-        self.assertIs( m.y.domain, m.component('ECON.auto.y').domain )
-        self.assertEqual( m.x[1].bounds, m.component('ECON.auto.x')[1].bounds )
-        self.assertEqual( m.x[2].bounds, m.component('ECON.auto.x')[2].bounds )
-        self.assertEqual( m.y.bounds, m.component('ECON.auto.y').bounds )
+        self.assertIs( m.x[1].domain, m.component('EPRT_auto_x')[1].domain )
+        self.assertIs( m.x[2].domain, m.component('EPRT_auto_x')[2].domain )
+        self.assertIs( m.y.domain, m.component('EPRT_auto_y').domain )
+        self.assertEqual( m.x[1].bounds, m.component('EPRT_auto_x')[1].bounds )
+        self.assertEqual( m.x[2].bounds, m.component('EPRT_auto_x')[2].bounds )
+        self.assertEqual( m.y.bounds, m.component('EPRT_auto_y').bounds )
 
         os = StringIO()
         blk.pprint(ostream=os)
@@ -590,11 +558,11 @@ class TestArc(unittest.TestCase):
     2 Constraint Declarations
         x_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body                  : Upper : Active
-              1 :   0.0 : x[1] - ECON.auto.x[1] :   0.0 :   True
-              2 :   0.0 : x[2] - ECON.auto.x[2] :   0.0 :   True
+              1 :   0.0 : x[1] - EPRT_auto_x[1] :   0.0 :   True
+              2 :   0.0 : x[2] - EPRT_auto_x[2] :   0.0 :   True
         y_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body            : Upper : Active
-            None :   0.0 : y - ECON.auto.y :   0.0 :   True
+            None :   0.0 : y - EPRT_auto_y :   0.0 :   True
 
     2 Declarations: x_equality y_equality
 """)
@@ -604,27 +572,23 @@ class TestArc(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var([1,2], domain=Binary)
         m.y = Var(bounds=(1,3))
-        m.CON = Port()
-        m.CON.add(m.x)
-        m.CON.add(m.y)
-        m.ECON2 = Port()
-        m.ECON1 = Port()
+        m.PRT = Port()
+        m.PRT.add(m.x)
+        m.PRT.add(m.y)
+        m.EPRT2 = Port()
+        m.EPRT1 = Port()
 
-        # The arc should be deactivated and expanded,
-        # the constraint should be left untouched.
-        # Define d first to test that it knows how to expand the ECONs
-        m.d = Arc(ports=(m.ECON2, m.ECON1))
-        m.c = Arc(ports=(m.CON, m.ECON1))
-        m.nocon = Constraint(expr = m.x[1] == 2)
+        # Define d first to test that it knows how to expand the EPRTs
+        m.d = Arc(ports=(m.EPRT2, m.EPRT1))
+        m.c = Arc(ports=(m.PRT, m.EPRT1))
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 1)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 0)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 0)
 
         TransformationFactory('network.expand_arcs').apply_to(m)
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 5)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 7)
-        self.assertTrue(m.nocon.active)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 4)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 6)
         self.assertFalse(m.c.active)
         blk_c = m.component('c_expanded')
         self.assertTrue(blk_c.component('x_equality').active)
@@ -634,19 +598,19 @@ class TestArc(unittest.TestCase):
         self.assertTrue(blk_d.component('x_equality').active)
         self.assertTrue(blk_d.component('y_equality').active)
 
-        self.assertIs( m.x[1].domain, m.component('ECON1.auto.x')[1].domain )
-        self.assertIs( m.x[2].domain, m.component('ECON1.auto.x')[2].domain )
-        self.assertIs( m.y.domain, m.component('ECON1.auto.y').domain )
-        self.assertEqual( m.x[1].bounds, m.component('ECON1.auto.x')[1].bounds )
-        self.assertEqual( m.x[2].bounds, m.component('ECON1.auto.x')[2].bounds )
-        self.assertEqual( m.y.bounds, m.component('ECON1.auto.y').bounds )
+        self.assertIs( m.x[1].domain, m.component('EPRT1_auto_x')[1].domain )
+        self.assertIs( m.x[2].domain, m.component('EPRT1_auto_x')[2].domain )
+        self.assertIs( m.y.domain, m.component('EPRT1_auto_y').domain )
+        self.assertEqual( m.x[1].bounds, m.component('EPRT1_auto_x')[1].bounds )
+        self.assertEqual( m.x[2].bounds, m.component('EPRT1_auto_x')[2].bounds )
+        self.assertEqual( m.y.bounds, m.component('EPRT1_auto_y').bounds )
 
-        self.assertIs( m.x[1].domain, m.component('ECON2.auto.x')[1].domain )
-        self.assertIs( m.x[2].domain, m.component('ECON2.auto.x')[2].domain )
-        self.assertIs( m.y.domain, m.component('ECON2.auto.y').domain )
-        self.assertEqual( m.x[1].bounds, m.component('ECON2.auto.x')[1].bounds )
-        self.assertEqual( m.x[2].bounds, m.component('ECON2.auto.x')[2].bounds )
-        self.assertEqual( m.y.bounds, m.component('ECON2.auto.y').bounds )
+        self.assertIs( m.x[1].domain, m.component('EPRT2_auto_x')[1].domain )
+        self.assertIs( m.x[2].domain, m.component('EPRT2_auto_x')[2].domain )
+        self.assertIs( m.y.domain, m.component('EPRT2_auto_y').domain )
+        self.assertEqual( m.x[1].bounds, m.component('EPRT2_auto_x')[1].bounds )
+        self.assertEqual( m.x[2].bounds, m.component('EPRT2_auto_x')[2].bounds )
+        self.assertEqual( m.y.bounds, m.component('EPRT2_auto_y').bounds )
 
         os = StringIO()
         blk_c.pprint(ostream=os)
@@ -655,11 +619,11 @@ class TestArc(unittest.TestCase):
     2 Constraint Declarations
         x_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body                   : Upper : Active
-              1 :   0.0 : x[1] - ECON1.auto.x[1] :   0.0 :   True
-              2 :   0.0 : x[2] - ECON1.auto.x[2] :   0.0 :   True
+              1 :   0.0 : x[1] - EPRT1_auto_x[1] :   0.0 :   True
+              2 :   0.0 : x[2] - EPRT1_auto_x[2] :   0.0 :   True
         y_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body             : Upper : Active
-            None :   0.0 : y - ECON1.auto.y :   0.0 :   True
+            None :   0.0 : y - EPRT1_auto_y :   0.0 :   True
 
     2 Declarations: x_equality y_equality
 """)
@@ -671,11 +635,11 @@ class TestArc(unittest.TestCase):
     2 Constraint Declarations
         x_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body                              : Upper : Active
-              1 :   0.0 : ECON2.auto.x[1] - ECON1.auto.x[1] :   0.0 :   True
-              2 :   0.0 : ECON2.auto.x[2] - ECON1.auto.x[2] :   0.0 :   True
+              1 :   0.0 : EPRT2_auto_x[1] - EPRT1_auto_x[1] :   0.0 :   True
+              2 :   0.0 : EPRT2_auto_x[2] - EPRT1_auto_x[2] :   0.0 :   True
         y_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body                        : Upper : Active
-            None :   0.0 : ECON2.auto.y - ECON1.auto.y :   0.0 :   True
+            None :   0.0 : EPRT2_auto_y - EPRT1_auto_y :   0.0 :   True
 
     2 Declarations: x_equality y_equality
 """)
@@ -685,34 +649,30 @@ class TestArc(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var([1,2], domain=Binary)
         m.y = Var(bounds=(1,3))
-        m.CON = Port()
-        m.CON.add(m.x)
-        m.CON.add(m.y)
+        m.PRT = Port()
+        m.PRT.add(m.x)
+        m.PRT.add(m.y)
         m.a1 = Var([1,2])
         m.a2 = Var([1,2])
         m.b1 = Var()
         m.b2 = Var()
-        m.ECON2 = Port()
-        m.ECON2.add(m.a1,'x')
-        m.ECON2.add(m.b1,'y')
-        m.ECON1 = Port()
-        m.ECON1.add(m.a2,'x')
-        m.ECON1.add(m.b2,'y')
+        m.EPRT1 = Port()
+        m.EPRT1.add(m.a1,'x')
+        m.EPRT1.add(m.b1,'y')
+        m.EPRT2 = Port()
+        m.EPRT2.add(m.a2,'x')
+        m.EPRT2.add(m.b2,'y')
 
-        # The arc should be deactivated and expanded,
-        # the constraint should be left untouched.
-        m.c = Arc(ports=(m.CON, m.ECON1))
-        m.d = Arc(ports=(m.ECON2, m.ECON1))
-        m.nocon = Constraint(expr = m.x[1] == 2)
+        m.c = Arc(ports=(m.PRT, m.EPRT1))
+        m.d = Arc(ports=(m.EPRT2, m.EPRT1))
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 1)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 0)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 0)
 
         TransformationFactory('network.expand_arcs').apply_to(m)
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 5)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 7)
-        self.assertTrue(m.nocon.active)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 4)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 6)
         self.assertFalse(m.c.active)
         blk_c = m.component('c_expanded')
         self.assertTrue(blk_c.component('x_equality').active)
@@ -729,11 +689,11 @@ class TestArc(unittest.TestCase):
     2 Constraint Declarations
         x_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body         : Upper : Active
-              1 :   0.0 : x[1] - a2[1] :   0.0 :   True
-              2 :   0.0 : x[2] - a2[2] :   0.0 :   True
+              1 :   0.0 : x[1] - a1[1] :   0.0 :   True
+              2 :   0.0 : x[2] - a1[2] :   0.0 :   True
         y_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body   : Upper : Active
-            None :   0.0 : y - b2 :   0.0 :   True
+            None :   0.0 : y - b1 :   0.0 :   True
 
     2 Declarations: x_equality y_equality
 """)
@@ -745,11 +705,11 @@ class TestArc(unittest.TestCase):
     2 Constraint Declarations
         x_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body          : Upper : Active
-              1 :   0.0 : a1[1] - a2[1] :   0.0 :   True
-              2 :   0.0 : a1[2] - a2[2] :   0.0 :   True
+              1 :   0.0 : a2[1] - a1[1] :   0.0 :   True
+              2 :   0.0 : a2[2] - a1[2] :   0.0 :   True
         y_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body    : Upper : Active
-            None :   0.0 : b1 - b2 :   0.0 :   True
+            None :   0.0 : b2 - b1 :   0.0 :   True
 
     2 Declarations: x_equality y_equality
 """)
@@ -759,29 +719,26 @@ class TestArc(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var([1,2], domain=Binary)
         m.y = Var(bounds=(1,3))
-        m.CON = Port()
-        m.CON.add(m.x)
-        m.CON.add(m.y)
+        m.PRT = Port()
+        m.PRT.add(m.x)
+        m.PRT.add(m.y)
         m.a2 = Var([1,2])
         m.b1 = Var()
-        m.ECON2 = Port(implicit=['x'])
-        m.ECON2.add(m.b1,'y')
-        m.ECON1 = Port(implicit=['y'])
-        m.ECON1.add(m.a2,'x')
+        m.EPRT2 = Port(implicit=['x'])
+        m.EPRT2.add(m.b1,'y')
+        m.EPRT1 = Port(implicit=['y'])
+        m.EPRT1.add(m.a2,'x')
 
-        # The arc should be deactivated and expanded,
-        # the constraint should be left untouched.
-        m.c = Arc(ports=(m.CON, m.ECON1))
-        m.d = Arc(ports=(m.ECON2, m.CON))
-        m.nocon = Constraint(expr = m.x[1] == 2)
+        m.c = Arc(ports=(m.PRT, m.EPRT1))
+        m.d = Arc(ports=(m.EPRT2, m.PRT))
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 1)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 0)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 0)
 
         os = StringIO()
-        m.ECON1.pprint(ostream=os)
+        m.EPRT1.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""ECON1 : Size=1, Index=None
+"""EPRT1 : Size=1, Index=None
     Key  : Name : Size : Variable
     None :    x :    2 :       a2
          :    y :    - :     None
@@ -790,17 +747,16 @@ class TestArc(unittest.TestCase):
         TransformationFactory('network.expand_arcs').apply_to(m)
 
         os = StringIO()
-        m.ECON1.pprint(ostream=os)
+        m.EPRT1.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
-"""ECON1 : Size=1, Index=None
+"""EPRT1 : Size=1, Index=None
     Key  : Name : Size : Variable
     None :    x :    2 :           a2
-         :    y :    1 : ECON1.auto.y
+         :    y :    1 : EPRT1_auto_y
 """)
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 5)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 7)
-        self.assertTrue(m.nocon.active)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 4)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 6)
         self.assertFalse(m.c.active)
         blk_c = m.component('c_expanded')
         self.assertTrue(blk_c.component('x_equality').active)
@@ -821,7 +777,7 @@ class TestArc(unittest.TestCase):
               2 :   0.0 : x[2] - a2[2] :   0.0 :   True
         y_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body             : Upper : Active
-            None :   0.0 : y - ECON1.auto.y :   0.0 :   True
+            None :   0.0 : y - EPRT1_auto_y :   0.0 :   True
 
     2 Declarations: x_equality y_equality
 """)
@@ -833,390 +789,13 @@ class TestArc(unittest.TestCase):
     2 Constraint Declarations
         x_equality : Size=2, Index=x_index, Active=True
             Key : Lower : Body                   : Upper : Active
-              1 :   0.0 : ECON2.auto.x[1] - x[1] :   0.0 :   True
-              2 :   0.0 : ECON2.auto.x[2] - x[2] :   0.0 :   True
+              1 :   0.0 : EPRT2_auto_x[1] - x[1] :   0.0 :   True
+              2 :   0.0 : EPRT2_auto_x[2] - x[2] :   0.0 :   True
         y_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body   : Upper : Active
             None :   0.0 : b1 - y :   0.0 :   True
 
     2 Declarations: x_equality y_equality
-""")
-
-
-    def test_varlist_aggregator(self):
-        m = ConcreteModel()
-        m.flow = VarList()
-        m.phase = Var(bounds=(1,3))
-        m.CON = Port()
-        m.CON.add( m.flow,
-                   aggregate=lambda m,v: sum(v[i] for i in v) == 0 )
-        m.CON.add(m.phase)
-        m.ECON2 = Port()
-        m.ECON1 = Port()
-
-        m.c = Arc(ports=(m.CON, m.ECON1))
-        m.d = Arc(ports=(m.ECON2, m.CON))
-
-        self.assertEqual(len(list(m.component_objects(Constraint))), 0)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 0)
-
-        TransformationFactory('network.expand_arcs').apply_to(m)
-
-        self.assertEqual(len(list(m.component_objects(Constraint))), 5)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 5)
-        self.assertFalse(m.c.active)
-        blk_c = m.component('c_expanded')
-        self.assertTrue(blk_c.component('flow_equality').active)
-        self.assertTrue(blk_c.component('phase_equality').active)
-        self.assertFalse(m.d.active)
-        blk_d = m.component('d_expanded')
-        self.assertTrue(blk_d.component('flow_equality').active)
-        self.assertTrue(blk_d.component('phase_equality').active)
-
-        self.assertEqual( len(m.flow), 2 )
-
-        os = StringIO()
-        blk_c.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""c_expanded : Size=1, Index=None, Active=True
-    2 Constraint Declarations
-        flow_equality : Size=1, Index=None, Active=True
-            Key  : Lower : Body                      : Upper : Active
-            None :   0.0 : ECON1.auto.flow - flow[1] :   0.0 :   True
-        phase_equality : Size=1, Index=None, Active=True
-            Key  : Lower : Body                     : Upper : Active
-            None :   0.0 : phase - ECON1.auto.phase :   0.0 :   True
-
-    2 Declarations: flow_equality phase_equality
-""")
-
-        os = StringIO()
-        blk_d.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""d_expanded : Size=1, Index=None, Active=True
-    2 Constraint Declarations
-        flow_equality : Size=1, Index=None, Active=True
-            Key  : Lower : Body                      : Upper : Active
-            None :   0.0 : ECON2.auto.flow - flow[2] :   0.0 :   True
-        phase_equality : Size=1, Index=None, Active=True
-            Key  : Lower : Body                     : Upper : Active
-            None :   0.0 : ECON2.auto.phase - phase :   0.0 :   True
-
-    2 Declarations: flow_equality phase_equality
-""")
-
-        os = StringIO()
-        m.component('CON.flow.aggregate').pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""CON.flow.aggregate : Size=1, Index=None, Active=True
-    Key  : Lower : Body              : Upper : Active
-    None :   0.0 : flow[1] + flow[2] :   0.0 :   True
-""")
-
-        os = StringIO()
-        m.CON.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""CON : Size=1, Index=None
-    Key  : Name  : Size : Variable
-    None :  flow :    * :     flow
-         : phase :    1 :    phase
-""")
-
-
-    def test_extensive_aggregator_scalar(self):
-        m = ConcreteModel()
-        m.comp = Set(initialize=["a", "b", "c"])
-        Feed = Tru = Prod = Block
-
-        # Feed
-        m.feed = Feed()
-        m.feed.mass = Var()
-        m.feed.temp = Var()
-
-        m.feed.outlet = Port()
-        m.feed.outlet.add(m.feed.mass, "mass", extensive="split")
-        m.feed.outlet.add(m.feed.temp, "temp")
-
-        # Treatment Unit
-        m.tru = Tru()
-        m.tru.mass = Var()
-        m.tru.temp = Var()
-
-        m.tru.inlet = Port()
-        m.tru.inlet.add(m.tru.mass, "mass", extensive="mix")
-        m.tru.inlet.add(m.tru.temp, "temp")
-
-        m.tru.outlet = Port()
-        m.tru.outlet.add(m.tru.mass, "mass", extensive="split")
-        m.tru.outlet.add(m.tru.temp, "temp")
-
-        # Product
-        m.prod = Prod()
-        m.prod.mass = Var()
-        m.prod.temp = Var()
-
-        m.prod.inlet = Port()
-        m.prod.inlet.add(m.prod.mass, "mass", extensive="mix")
-        m.prod.inlet.add(m.prod.temp, "temp")
-
-        # SplitFrac specifications (optional)
-        m.feed.splitfrac = dict()
-        m.feed.splitfrac["stream1"] = .6 # fix by default
-        m.tru.splitfrac = dict()
-        m.tru.splitfrac["stream3"] = dict(val=1, fix=False) # just initialize
-
-        # Arcs
-        m.stream1 = Arc(source=m.feed.outlet, destination=m.tru.inlet)
-        m.stream2 = Arc(source=m.feed.outlet, destination=m.prod.inlet)
-        m.stream3 = Arc(source=m.tru.outlet, destination=m.prod.inlet)
-
-        TransformationFactory('network.expand_arcs').apply_to(m)
-
-        self.assertFalse(m.stream1.active)
-        self.assertFalse(m.stream2.active)
-        self.assertFalse(m.stream3.active)
-
-        self.assertEqual(m.feed.outlet_frac_sum.expr.to_string(),
-            "stream1_expanded.splitfrac + stream2_expanded.splitfrac  ==  1.0")
-
-        self.assertEqual(m.tru.outlet_frac_sum.expr.to_string(),
-            "stream3_expanded.splitfrac  ==  1.0")
-
-        self.assertEqual(m.prod.inlet_mass_bal.expr.to_string(),
-            "stream2_expanded.mass + stream3_expanded.mass - prod.mass  ==  0.0")
-
-        self.assertEqual(m.tru.inlet_mass_bal.expr.to_string(),
-            "stream1_expanded.mass - tru.mass  ==  0.0")
-
-        os = StringIO()
-        m.stream1_expanded.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""stream1_expanded : Size=1, Index=None, Active=True
-    2 Var Declarations
-        mass : Size=1, Index=None
-            Key  : Lower : Value : Upper : Fixed : Stale : Domain
-            None :  None :  None :  None : False :  True :  Reals
-        splitfrac : Size=1, Index=None
-            Key  : Lower : Value : Upper : Fixed : Stale : Domain
-            None :  None :   0.6 :  None :  True : False :  Reals
-
-    2 Constraint Declarations
-        mass_split : Size=1, Index=None, Active=True
-            Key  : Lower : Body                                                         : Upper : Active
-            None :   0.0 : stream1_expanded.mass - stream1_expanded.splitfrac*feed.mass :   0.0 :   True
-        temp_equality : Size=1, Index=None, Active=True
-            Key  : Lower : Body                 : Upper : Active
-            None :   0.0 : feed.temp - tru.temp :   0.0 :   True
-
-    4 Declarations: mass temp_equality splitfrac mass_split
-""")
-
-        os = StringIO()
-        m.stream2_expanded.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""stream2_expanded : Size=1, Index=None, Active=True
-    2 Var Declarations
-        mass : Size=1, Index=None
-            Key  : Lower : Value : Upper : Fixed : Stale : Domain
-            None :  None :  None :  None : False :  True :  Reals
-        splitfrac : Size=1, Index=None
-            Key  : Lower : Value : Upper : Fixed : Stale : Domain
-            None :  None :  None :  None : False :  True :  Reals
-
-    2 Constraint Declarations
-        mass_split : Size=1, Index=None, Active=True
-            Key  : Lower : Body                                                         : Upper : Active
-            None :   0.0 : stream2_expanded.mass - stream2_expanded.splitfrac*feed.mass :   0.0 :   True
-        temp_equality : Size=1, Index=None, Active=True
-            Key  : Lower : Body                  : Upper : Active
-            None :   0.0 : feed.temp - prod.temp :   0.0 :   True
-
-    4 Declarations: mass temp_equality splitfrac mass_split
-""")
-
-        os = StringIO()
-        m.stream3_expanded.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""stream3_expanded : Size=1, Index=None, Active=True
-    2 Var Declarations
-        mass : Size=1, Index=None
-            Key  : Lower : Value : Upper : Fixed : Stale : Domain
-            None :  None :  None :  None : False :  True :  Reals
-        splitfrac : Size=1, Index=None
-            Key  : Lower : Value : Upper : Fixed : Stale : Domain
-            None :  None :     1 :  None : False : False :  Reals
-
-    2 Constraint Declarations
-        mass_split : Size=1, Index=None, Active=True
-            Key  : Lower : Body                                                        : Upper : Active
-            None :   0.0 : stream3_expanded.mass - stream3_expanded.splitfrac*tru.mass :   0.0 :   True
-        temp_equality : Size=1, Index=None, Active=True
-            Key  : Lower : Body                 : Upper : Active
-            None :   0.0 : tru.temp - prod.temp :   0.0 :   True
-
-    4 Declarations: mass temp_equality splitfrac mass_split
-""")
-
-
-    def test_extensive_aggregator_indexed(self):
-        m = ConcreteModel()
-        m.comp = Set(initialize=["a", "b", "c"])
-        Feed = Tru = Prod = Block
-
-        # Feed
-        m.feed = Feed()
-        m.feed.flow = Var(m.comp)
-        m.feed.temp = Var()
-
-        m.feed.outlet = Port()
-        m.feed.outlet.add(m.feed.flow, "flow", extensive="split")
-        m.feed.outlet.add(m.feed.temp, "temp")
-
-        # Treatment Unit
-        m.tru = Tru()
-        m.tru.flow_in = Var(m.comp)
-        m.tru.flow_out = Var(m.comp)
-        m.tru.temp = Var()
-
-        m.tru.inlet = Port()
-        m.tru.inlet.add(m.tru.flow_in, "flow", extensive="mix")
-        m.tru.inlet.add(m.tru.temp, "temp")
-
-        m.tru.outlet = Port()
-        m.tru.outlet.add(m.tru.flow_out, "flow", extensive="split")
-        m.tru.outlet.add(m.tru.temp, "temp")
-
-        # Product
-        m.prod = Prod()
-        m.prod.flow = Var(m.comp)
-        m.prod.temp = Var()
-
-        m.prod.inlet = Port()
-        m.prod.inlet.add(m.prod.flow, "flow", extensive="mix")
-        m.prod.inlet.add(m.prod.temp, "temp")
-
-        # SplitFrac specifications (optional)
-        m.feed.splitfrac = dict()
-        m.feed.splitfrac["stream1"] = .6 # fix by default
-        m.tru.splitfrac = dict()
-        m.tru.splitfrac["stream3"] = dict(val=1, fix=False) # just initialize
-
-        # Arcs
-        m.stream1 = Arc(source=m.feed.outlet, destination=m.tru.inlet)
-        m.stream2 = Arc(source=m.feed.outlet, destination=m.prod.inlet)
-        m.stream3 = Arc(source=m.tru.outlet, destination=m.prod.inlet)
-
-        TransformationFactory('network.expand_arcs').apply_to(m)
-
-        self.assertFalse(m.stream1.active)
-        self.assertFalse(m.stream2.active)
-        self.assertFalse(m.stream3.active)
-
-        self.assertEqual(m.feed.outlet_frac_sum.expr.to_string(),
-            "stream1_expanded.splitfrac + stream2_expanded.splitfrac  ==  1.0")
-
-        self.assertEqual(m.tru.outlet_frac_sum.expr.to_string(),
-            "stream3_expanded.splitfrac  ==  1.0")
-
-        os = StringIO()
-        m.prod.inlet_flow_bal.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""inlet_flow_bal : Size=3, Index=comp, Active=True
-    Key : Lower : Body                                                               : Upper : Active
-      a :   0.0 : stream2_expanded.flow[a] + stream3_expanded.flow[a] - prod.flow[a] :   0.0 :   True
-      b :   0.0 : stream2_expanded.flow[b] + stream3_expanded.flow[b] - prod.flow[b] :   0.0 :   True
-      c :   0.0 : stream2_expanded.flow[c] + stream3_expanded.flow[c] - prod.flow[c] :   0.0 :   True
-""")
-
-        os = StringIO()
-        m.tru.inlet_flow_bal.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""inlet_flow_bal : Size=3, Index=comp, Active=True
-    Key : Lower : Body                                      : Upper : Active
-      a :   0.0 : stream1_expanded.flow[a] - tru.flow_in[a] :   0.0 :   True
-      b :   0.0 : stream1_expanded.flow[b] - tru.flow_in[b] :   0.0 :   True
-      c :   0.0 : stream1_expanded.flow[c] - tru.flow_in[c] :   0.0 :   True
-""")
-
-        os = StringIO()
-        m.stream1_expanded.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""stream1_expanded : Size=1, Index=None, Active=True
-    2 Var Declarations
-        flow : Size=3, Index=comp
-            Key : Lower : Value : Upper : Fixed : Stale : Domain
-              a :  None :  None :  None : False :  True :  Reals
-              b :  None :  None :  None : False :  True :  Reals
-              c :  None :  None :  None : False :  True :  Reals
-        splitfrac : Size=1, Index=None
-            Key  : Lower : Value : Upper : Fixed : Stale : Domain
-            None :  None :   0.6 :  None :  True : False :  Reals
-
-    2 Constraint Declarations
-        flow_split : Size=3, Index=comp, Active=True
-            Key : Lower : Body                                                               : Upper : Active
-              a :   0.0 : stream1_expanded.flow[a] - stream1_expanded.splitfrac*feed.flow[a] :   0.0 :   True
-              b :   0.0 : stream1_expanded.flow[b] - stream1_expanded.splitfrac*feed.flow[b] :   0.0 :   True
-              c :   0.0 : stream1_expanded.flow[c] - stream1_expanded.splitfrac*feed.flow[c] :   0.0 :   True
-        temp_equality : Size=1, Index=None, Active=True
-            Key  : Lower : Body                 : Upper : Active
-            None :   0.0 : feed.temp - tru.temp :   0.0 :   True
-
-    4 Declarations: flow temp_equality splitfrac flow_split
-""")
-
-        os = StringIO()
-        m.stream2_expanded.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""stream2_expanded : Size=1, Index=None, Active=True
-    2 Var Declarations
-        flow : Size=3, Index=comp
-            Key : Lower : Value : Upper : Fixed : Stale : Domain
-              a :  None :  None :  None : False :  True :  Reals
-              b :  None :  None :  None : False :  True :  Reals
-              c :  None :  None :  None : False :  True :  Reals
-        splitfrac : Size=1, Index=None
-            Key  : Lower : Value : Upper : Fixed : Stale : Domain
-            None :  None :  None :  None : False :  True :  Reals
-
-    2 Constraint Declarations
-        flow_split : Size=3, Index=comp, Active=True
-            Key : Lower : Body                                                               : Upper : Active
-              a :   0.0 : stream2_expanded.flow[a] - stream2_expanded.splitfrac*feed.flow[a] :   0.0 :   True
-              b :   0.0 : stream2_expanded.flow[b] - stream2_expanded.splitfrac*feed.flow[b] :   0.0 :   True
-              c :   0.0 : stream2_expanded.flow[c] - stream2_expanded.splitfrac*feed.flow[c] :   0.0 :   True
-        temp_equality : Size=1, Index=None, Active=True
-            Key  : Lower : Body                  : Upper : Active
-            None :   0.0 : feed.temp - prod.temp :   0.0 :   True
-
-    4 Declarations: flow temp_equality splitfrac flow_split
-""")
-
-        os = StringIO()
-        m.stream3_expanded.pprint(ostream=os)
-        self.assertEqual(os.getvalue(),
-"""stream3_expanded : Size=1, Index=None, Active=True
-    2 Var Declarations
-        flow : Size=3, Index=comp
-            Key : Lower : Value : Upper : Fixed : Stale : Domain
-              a :  None :  None :  None : False :  True :  Reals
-              b :  None :  None :  None : False :  True :  Reals
-              c :  None :  None :  None : False :  True :  Reals
-        splitfrac : Size=1, Index=None
-            Key  : Lower : Value : Upper : Fixed : Stale : Domain
-            None :  None :     1 :  None : False : False :  Reals
-
-    2 Constraint Declarations
-        flow_split : Size=3, Index=comp, Active=True
-            Key : Lower : Body                                                                  : Upper : Active
-              a :   0.0 : stream3_expanded.flow[a] - stream3_expanded.splitfrac*tru.flow_out[a] :   0.0 :   True
-              b :   0.0 : stream3_expanded.flow[b] - stream3_expanded.splitfrac*tru.flow_out[b] :   0.0 :   True
-              c :   0.0 : stream3_expanded.flow[c] - stream3_expanded.splitfrac*tru.flow_out[c] :   0.0 :   True
-        temp_equality : Size=1, Index=None, Active=True
-            Key  : Lower : Body                 : Upper : Active
-            None :   0.0 : tru.temp - prod.temp :   0.0 :   True
-
-    4 Declarations: flow temp_equality splitfrac flow_split
 """)
 
 
@@ -1239,6 +818,10 @@ class TestArc(unittest.TestCase):
         m.eq = Arc([1, 2], rule=rule)
 
         TransformationFactory('network.expand_arcs').apply_to(m)
+
+        self.assertFalse(m.eq.active)
+        self.assertFalse(m.eq[1].active)
+        self.assertFalse(m.eq[2].active)
 
         os = StringIO()
         m.component('eq_expanded').pprint(ostream=os)
@@ -1273,22 +856,19 @@ class TestArc(unittest.TestCase):
         m.prt3 = Port()
         m.prt3.add(m.z, "v")
 
-        # The active arc should be deactivated and expanded, but this
-        # transform should not expand constraints with ports, only
-        # arcs, and it should not expand inactive Arcs.
+        # The active arc should be deactivated and expanded,
+        # but not the inactive Arc
         m.c = Arc(source=m.prt1, destination=m.prt2)
         m.inactive = Arc(ports=(m.prt3, m.prt2))
-        m.nocon = Constraint(expr = m.prt1 >= 2)
         m.inactive.deactivate()
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 1)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 0)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 0)
 
         ArcExpander().apply(instance=m)
 
-        self.assertEqual(len(list(m.component_objects(Constraint))), 2)
-        self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
-        self.assertTrue(m.nocon.active)
+        self.assertEqual(len(list(m.component_objects(Constraint))), 1)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
         self.assertFalse(m.inactive.active)
         self.assertIsNone(m.component('inactive_expanded'))
         self.assertFalse(m.c.active)
@@ -1306,6 +886,402 @@ class TestArc(unittest.TestCase):
             None :   0.0 : x - y :   0.0 :   True
 
     1 Declarations: v_equality
+""")
+
+    def test_extensive_expansion(self):
+        m = ConcreteModel()
+        m.comp = Set(initialize=["a", "b", "c"])
+        Feed = Tru = Prod = Block
+
+        # Feed
+        m.feed = Feed()
+        m.feed.flow = Var(m.comp)
+        m.feed.mass = Var()
+        m.feed.temp = Var()
+
+        m.feed.outlet = Port()
+        m.feed.outlet.add(m.feed.flow, "flow", rule=Port.Extensive,
+                          write_var_sum=False)
+        m.feed.outlet.add(m.feed.mass, "mass", rule=Port.Extensive)
+        m.feed.outlet.add(m.feed.temp, "temp")
+
+        # Treatment Unit
+        m.tru = Tru()
+        m.tru.flow_in = Var(m.comp)
+        m.tru.flow_out = Var(m.comp)
+        m.tru.mass = Var()
+        m.tru.temp = Var()
+
+        m.tru.inlet = Port()
+        m.tru.inlet.add(m.tru.flow_in, "flow", rule=Port.Extensive)
+        m.tru.inlet.add(m.tru.mass, "mass", rule=Port.Extensive)
+        m.tru.inlet.add(m.tru.temp, "temp")
+
+        m.tru.outlet = Port()
+        m.tru.outlet.add(m.tru.flow_out, "flow", rule=Port.Extensive)
+        m.tru.outlet.add(m.tru.mass, "mass", rule=Port.Extensive)
+        m.tru.outlet.add(m.tru.temp, "temp")
+
+        # A Port with both in and out
+        m.node = Block()
+        m.node.flow = Var(m.comp)
+        m.node.mass = Var()
+        m.node.temp = Var()
+
+        m.node.port = Port(initialize=[(m.node.flow, Port.Extensive),
+                                       (m.node.mass, Port.Extensive),
+                                       m.node.temp])
+
+        # Product
+        m.prod = Prod()
+        m.prod.flow = Var(m.comp)
+        m.prod.mass = Var()
+        m.prod.temp = Var()
+
+        m.prod.inlet = Port()
+        m.prod.inlet.add(m.prod.flow, "flow", rule=Port.Extensive)
+        m.prod.inlet.add(m.prod.mass, "mass", rule=Port.Extensive)
+        m.prod.inlet.add(m.prod.temp, "temp")
+
+        # Arcs
+        m.stream1 = Arc(source=m.feed.outlet, destination=m.tru.inlet)
+        m.stream2 = Arc(source=m.feed.outlet, destination=m.prod.inlet)
+        m.stream3 = Arc(source=m.feed.outlet, destination=m.node.port)
+        m.stream4 = Arc(source=m.tru.outlet, destination=m.prod.inlet)
+        m.stream5 = Arc(source=m.node.port, destination=m.prod.inlet)
+
+        # SplitFrac specifications
+        m.feed.outlet.set_split_fraction(m.stream1, .6, fix=True)
+
+        TransformationFactory('network.expand_arcs').apply_to(m)
+
+        os = StringIO()
+        m.pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""1 Set Declarations
+    comp : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['a', 'b', 'c']
+
+9 Block Declarations
+    feed : Size=1, Index=None, Active=True
+        3 Var Declarations
+            flow : Size=3, Index=comp
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
+            mass : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+            temp : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        2 Constraint Declarations
+            outlet_frac_sum : Size=1, Index=None, Active=True
+                Key  : Lower : Body                                                                                 : Upper : Active
+                None :   1.0 : stream1_expanded.splitfrac + stream2_expanded.splitfrac + stream3_expanded.splitfrac :   1.0 :   True
+            outlet_mass_outsum : Size=1, Index=None, Active=True
+                Key  : Lower : Body                                                                              : Upper : Active
+                None :   0.0 : stream1_expanded.mass + stream2_expanded.mass + stream3_expanded.mass - feed.mass :   0.0 :   True
+
+        1 Port Declarations
+            outlet : Size=1, Index=None
+                Key  : Name : Size : Variable
+                None : flow :    3 : feed.flow
+                     : mass :    1 : feed.mass
+                     : temp :    1 : feed.temp
+
+        6 Declarations: flow mass temp outlet outlet_frac_sum outlet_mass_outsum
+    node : Size=1, Index=None, Active=True
+        3 Var Declarations
+            flow : Size=3, Index=comp
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
+            mass : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+            temp : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        6 Constraint Declarations
+            port_flow_bal : Size=3, Index=comp, Active=True
+                Key : Lower : Body                                                : Upper : Active
+                  a :   0.0 : stream3_expanded.flow[a] - stream5_expanded.flow[a] :   0.0 :   True
+                  b :   0.0 : stream3_expanded.flow[b] - stream5_expanded.flow[b] :   0.0 :   True
+                  c :   0.0 : stream3_expanded.flow[c] - stream5_expanded.flow[c] :   0.0 :   True
+            port_flow_insum : Size=3, Index=comp, Active=True
+                Key : Lower : Body                                    : Upper : Active
+                  a :   0.0 : stream3_expanded.flow[a] - node.flow[a] :   0.0 :   True
+                  b :   0.0 : stream3_expanded.flow[b] - node.flow[b] :   0.0 :   True
+                  c :   0.0 : stream3_expanded.flow[c] - node.flow[c] :   0.0 :   True
+            port_flow_outsum : Size=3, Index=comp, Active=True
+                Key : Lower : Body                                    : Upper : Active
+                  a :   0.0 : stream5_expanded.flow[a] - node.flow[a] :   0.0 :   True
+                  b :   0.0 : stream5_expanded.flow[b] - node.flow[b] :   0.0 :   True
+                  c :   0.0 : stream5_expanded.flow[c] - node.flow[c] :   0.0 :   True
+            port_mass_bal : Size=1, Index=None, Active=True
+                Key  : Lower : Body                                          : Upper : Active
+                None :   0.0 : stream3_expanded.mass - stream5_expanded.mass :   0.0 :   True
+            port_mass_insum : Size=1, Index=None, Active=True
+                Key  : Lower : Body                              : Upper : Active
+                None :   0.0 : stream3_expanded.mass - node.mass :   0.0 :   True
+            port_mass_outsum : Size=1, Index=None, Active=True
+                Key  : Lower : Body                              : Upper : Active
+                None :   0.0 : stream5_expanded.mass - node.mass :   0.0 :   True
+
+        1 Port Declarations
+            port : Size=1, Index=None
+                Key  : Name : Size : Variable
+                None : flow :    3 : node.flow
+                     : mass :    1 : node.mass
+                     : temp :    1 : node.temp
+
+        10 Declarations: flow mass temp port port_flow_insum port_flow_outsum port_flow_bal port_mass_insum port_mass_outsum port_mass_bal
+    prod : Size=1, Index=None, Active=True
+        3 Var Declarations
+            flow : Size=3, Index=comp
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
+            mass : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+            temp : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        2 Constraint Declarations
+            inlet_flow_insum : Size=3, Index=comp, Active=True
+                Key : Lower : Body                                                                                          : Upper : Active
+                  a :   0.0 : stream2_expanded.flow[a] + stream4_expanded.flow[a] + stream5_expanded.flow[a] - prod.flow[a] :   0.0 :   True
+                  b :   0.0 : stream2_expanded.flow[b] + stream4_expanded.flow[b] + stream5_expanded.flow[b] - prod.flow[b] :   0.0 :   True
+                  c :   0.0 : stream2_expanded.flow[c] + stream4_expanded.flow[c] + stream5_expanded.flow[c] - prod.flow[c] :   0.0 :   True
+            inlet_mass_insum : Size=1, Index=None, Active=True
+                Key  : Lower : Body                                                                              : Upper : Active
+                None :   0.0 : stream2_expanded.mass + stream4_expanded.mass + stream5_expanded.mass - prod.mass :   0.0 :   True
+
+        1 Port Declarations
+            inlet : Size=1, Index=None
+                Key  : Name : Size : Variable
+                None : flow :    3 : prod.flow
+                     : mass :    1 : prod.mass
+                     : temp :    1 : prod.temp
+
+        6 Declarations: flow mass temp inlet inlet_flow_insum inlet_mass_insum
+    stream1_expanded : Size=1, Index=None, Active=True
+        3 Var Declarations
+            flow : Size=3, Index=comp
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
+            mass : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+            splitfrac : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :   0.6 :  None :  True : False :  Reals
+
+        3 Constraint Declarations
+            flow_split : Size=3, Index=comp, Active=True
+                Key : Lower : Body                                                               : Upper : Active
+                  a :   0.0 : stream1_expanded.flow[a] - stream1_expanded.splitfrac*feed.flow[a] :   0.0 :   True
+                  b :   0.0 : stream1_expanded.flow[b] - stream1_expanded.splitfrac*feed.flow[b] :   0.0 :   True
+                  c :   0.0 : stream1_expanded.flow[c] - stream1_expanded.splitfrac*feed.flow[c] :   0.0 :   True
+            mass_split : Size=1, Index=None, Active=True
+                Key  : Lower : Body                                                         : Upper : Active
+                None :   0.0 : stream1_expanded.mass - stream1_expanded.splitfrac*feed.mass :   0.0 :   True
+            temp_equality : Size=1, Index=None, Active=True
+                Key  : Lower : Body                 : Upper : Active
+                None :   0.0 : feed.temp - tru.temp :   0.0 :   True
+
+        6 Declarations: flow splitfrac flow_split mass mass_split temp_equality
+    stream2_expanded : Size=1, Index=None, Active=True
+        3 Var Declarations
+            flow : Size=3, Index=comp
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
+            mass : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+            splitfrac : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        3 Constraint Declarations
+            flow_split : Size=3, Index=comp, Active=True
+                Key : Lower : Body                                                               : Upper : Active
+                  a :   0.0 : stream2_expanded.flow[a] - stream2_expanded.splitfrac*feed.flow[a] :   0.0 :   True
+                  b :   0.0 : stream2_expanded.flow[b] - stream2_expanded.splitfrac*feed.flow[b] :   0.0 :   True
+                  c :   0.0 : stream2_expanded.flow[c] - stream2_expanded.splitfrac*feed.flow[c] :   0.0 :   True
+            mass_split : Size=1, Index=None, Active=True
+                Key  : Lower : Body                                                         : Upper : Active
+                None :   0.0 : stream2_expanded.mass - stream2_expanded.splitfrac*feed.mass :   0.0 :   True
+            temp_equality : Size=1, Index=None, Active=True
+                Key  : Lower : Body                  : Upper : Active
+                None :   0.0 : feed.temp - prod.temp :   0.0 :   True
+
+        6 Declarations: flow splitfrac flow_split mass mass_split temp_equality
+    stream3_expanded : Size=1, Index=None, Active=True
+        3 Var Declarations
+            flow : Size=3, Index=comp
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
+            mass : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+            splitfrac : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        3 Constraint Declarations
+            flow_split : Size=3, Index=comp, Active=True
+                Key : Lower : Body                                                               : Upper : Active
+                  a :   0.0 : stream3_expanded.flow[a] - stream3_expanded.splitfrac*feed.flow[a] :   0.0 :   True
+                  b :   0.0 : stream3_expanded.flow[b] - stream3_expanded.splitfrac*feed.flow[b] :   0.0 :   True
+                  c :   0.0 : stream3_expanded.flow[c] - stream3_expanded.splitfrac*feed.flow[c] :   0.0 :   True
+            mass_split : Size=1, Index=None, Active=True
+                Key  : Lower : Body                                                         : Upper : Active
+                None :   0.0 : stream3_expanded.mass - stream3_expanded.splitfrac*feed.mass :   0.0 :   True
+            temp_equality : Size=1, Index=None, Active=True
+                Key  : Lower : Body                  : Upper : Active
+                None :   0.0 : feed.temp - node.temp :   0.0 :   True
+
+        6 Declarations: flow splitfrac flow_split mass mass_split temp_equality
+    stream4_expanded : Size=1, Index=None, Active=True
+        3 Var Declarations
+            flow : Size=3, Index=comp
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
+            mass : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+            splitfrac : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        3 Constraint Declarations
+            flow_split : Size=3, Index=comp, Active=True
+                Key : Lower : Body                                                                  : Upper : Active
+                  a :   0.0 : stream4_expanded.flow[a] - stream4_expanded.splitfrac*tru.flow_out[a] :   0.0 :   True
+                  b :   0.0 : stream4_expanded.flow[b] - stream4_expanded.splitfrac*tru.flow_out[b] :   0.0 :   True
+                  c :   0.0 : stream4_expanded.flow[c] - stream4_expanded.splitfrac*tru.flow_out[c] :   0.0 :   True
+            mass_split : Size=1, Index=None, Active=True
+                Key  : Lower : Body                                                        : Upper : Active
+                None :   0.0 : stream4_expanded.mass - stream4_expanded.splitfrac*tru.mass :   0.0 :   True
+            temp_equality : Size=1, Index=None, Active=True
+                Key  : Lower : Body                 : Upper : Active
+                None :   0.0 : tru.temp - prod.temp :   0.0 :   True
+
+        6 Declarations: flow mass temp_equality splitfrac flow_split mass_split
+    stream5_expanded : Size=1, Index=None, Active=True
+        3 Var Declarations
+            flow : Size=3, Index=comp
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
+            mass : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+            splitfrac : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        3 Constraint Declarations
+            flow_split : Size=3, Index=comp, Active=True
+                Key : Lower : Body                                                               : Upper : Active
+                  a :   0.0 : stream5_expanded.flow[a] - stream5_expanded.splitfrac*node.flow[a] :   0.0 :   True
+                  b :   0.0 : stream5_expanded.flow[b] - stream5_expanded.splitfrac*node.flow[b] :   0.0 :   True
+                  c :   0.0 : stream5_expanded.flow[c] - stream5_expanded.splitfrac*node.flow[c] :   0.0 :   True
+            mass_split : Size=1, Index=None, Active=True
+                Key  : Lower : Body                                                         : Upper : Active
+                None :   0.0 : stream5_expanded.mass - stream5_expanded.splitfrac*node.mass :   0.0 :   True
+            temp_equality : Size=1, Index=None, Active=True
+                Key  : Lower : Body                  : Upper : Active
+                None :   0.0 : node.temp - prod.temp :   0.0 :   True
+
+        6 Declarations: flow mass temp_equality splitfrac flow_split mass_split
+    tru : Size=1, Index=None, Active=True
+        4 Var Declarations
+            flow_in : Size=3, Index=comp
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
+            flow_out : Size=3, Index=comp
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
+            mass : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+            temp : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        4 Constraint Declarations
+            inlet_flow_insum : Size=3, Index=comp, Active=True
+                Key : Lower : Body                                      : Upper : Active
+                  a :   0.0 : stream1_expanded.flow[a] - tru.flow_in[a] :   0.0 :   True
+                  b :   0.0 : stream1_expanded.flow[b] - tru.flow_in[b] :   0.0 :   True
+                  c :   0.0 : stream1_expanded.flow[c] - tru.flow_in[c] :   0.0 :   True
+            inlet_mass_insum : Size=1, Index=None, Active=True
+                Key  : Lower : Body                             : Upper : Active
+                None :   0.0 : stream1_expanded.mass - tru.mass :   0.0 :   True
+            outlet_flow_outsum : Size=3, Index=comp, Active=True
+                Key : Lower : Body                                       : Upper : Active
+                  a :   0.0 : stream4_expanded.flow[a] - tru.flow_out[a] :   0.0 :   True
+                  b :   0.0 : stream4_expanded.flow[b] - tru.flow_out[b] :   0.0 :   True
+                  c :   0.0 : stream4_expanded.flow[c] - tru.flow_out[c] :   0.0 :   True
+            outlet_mass_outsum : Size=1, Index=None, Active=True
+                Key  : Lower : Body                             : Upper : Active
+                None :   0.0 : stream4_expanded.mass - tru.mass :   0.0 :   True
+
+        2 Port Declarations
+            inlet : Size=1, Index=None
+                Key  : Name : Size : Variable
+                None : flow :    3 : tru.flow_in
+                     : mass :    1 :    tru.mass
+                     : temp :    1 :    tru.temp
+            outlet : Size=1, Index=None
+                Key  : Name : Size : Variable
+                None : flow :    3 : tru.flow_out
+                     : mass :    1 :     tru.mass
+                     : temp :    1 :     tru.temp
+
+        10 Declarations: flow_in flow_out mass temp inlet outlet inlet_flow_insum inlet_mass_insum outlet_flow_outsum outlet_mass_outsum
+
+5 Arc Declarations
+    stream1 : Size=1, Index=None, Active=False
+        Key  : Ports                    : Directed : Active
+        None : (feed.outlet, tru.inlet) :     True :  False
+    stream2 : Size=1, Index=None, Active=False
+        Key  : Ports                     : Directed : Active
+        None : (feed.outlet, prod.inlet) :     True :  False
+    stream3 : Size=1, Index=None, Active=False
+        Key  : Ports                    : Directed : Active
+        None : (feed.outlet, node.port) :     True :  False
+    stream4 : Size=1, Index=None, Active=False
+        Key  : Ports                    : Directed : Active
+        None : (tru.outlet, prod.inlet) :     True :  False
+    stream5 : Size=1, Index=None, Active=False
+        Key  : Ports                   : Directed : Active
+        None : (node.port, prod.inlet) :     True :  False
+
+15 Declarations: comp feed tru node prod stream1 stream2 stream3 stream4 stream5 stream1_expanded stream2_expanded stream3_expanded stream4_expanded stream5_expanded
 """)
 
 

@@ -10,30 +10,33 @@
 
 __all__ = [ 'Port' ]
 
-import logging
-import sys
-from six import iteritems, itervalues, iterkeys
-from six.moves import xrange
+import logging, sys
+from six import iteritems, itervalues
 from weakref import ref as weakref_ref
 
 from pyomo.common.timing import ConstructionTimer
 from pyomo.common.plugin import Plugin, implements
+from pyomo.common.modeling import unique_component_name
 
-from pyomo.core.base.var import VarList
+from pyomo.core.base.var import Var
+from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.component import ComponentData
-from pyomo.core.base.indexed_component import IndexedComponent
+from pyomo.core.base.indexed_component import \
+    IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.numvalue import NumericValue, value
+from pyomo.core.base.label import alphanum_label_from_name
 from pyomo.core.base.plugin import register_component, \
     IPyomoScriptModifyInstance, TransformationFactory
+from pyomo.core.kernel.component_map import ComponentMap
 
 logger = logging.getLogger('pyomo.network')
 
 
-class _PortData(ComponentData, NumericValue):
+class _PortData(ComponentData):
     """This class defines the data for a single Port."""
 
-    __slots__ = ('vars', 'aggregators', 'extensives', 'extensive_aggregators')
+    __slots__ = ('vars', '_arcs', '_sources', '_dests', '_rules', '_splitfracs')
 
     def __init__(self, component=None):
         #
@@ -45,13 +48,11 @@ class _PortData(ComponentData, NumericValue):
                           else None
 
         self.vars = {}
-        self.aggregators = {}
-        self.extensives = {}
-        # default aggregation functions for extensive variables in arcs
-        # can't import at top of file because of a circular import
-        from pyomo.network.arc import Arc
-        self.extensive_aggregators = {"split" : Arc.SplitFrac,
-                                      "mix"   : Arc.Balance}
+        self._arcs = []
+        self._sources = []
+        self._dests = []
+        self._rules = {}
+        self._splitfracs = ComponentMap()
 
     def __getstate__(self):
         state = super(_PortData, self).__getstate__()
@@ -72,25 +73,39 @@ class _PortData(ComponentData, NumericValue):
         raise AttributeError("'%s' object has no attribute '%s'"
                              % (self.__class__.__name__, name))
 
+    def arcs(self, active=True):
+        """A list of Arcs in which this Port is a member"""
+        if not active:
+            return list(self._arcs)
+        tmp = []
+        for a in self._arcs:
+            if a.active:
+                tmp.append(a)
+        return tmp
+
+    def sources(self, active=True):
+        """A list of Arcs in which this Port is a destination"""
+        if not active:
+            return list(self._sources)
+        tmp = []
+        for a in self._sources:
+            if a.active:
+                tmp.append(a)
+        return tmp
+
+    def dests(self, active=True):
+        """A list of Arcs in which this Port is a source"""
+        if not active:
+            return list(self._dests)
+        tmp = []
+        for a in self._dests:
+            if a.active:
+                tmp.append(a)
+        return tmp
+
     def set_value(self, value):
-        msg = "Cannot specify the value of a port '%s'"
-        raise ValueError(msg % self.name)
-
-    def is_fixed(self):
-        """Return True if all vars/expressions in the Port are fixed"""
-        return all(v.is_fixed() for v in self._iter_vars())
-
-    def is_constant(self):
-        """Return False
-
-        Because the expression generation logic will attempt to evaluate
-        constant subexpressions, a Port can never be constant.
-        """
-        return False
-
-    def is_potentially_variable(self):
-        """Return True as ports may (should!) contain variables"""
-        return True
+        """Cannot specify the value of a port"""
+        raise ValueError("Cannot specify the value of a port: '%s'" % self.name)
 
     def polynomial_degree(self):
         ans = 0
@@ -101,6 +116,14 @@ class _PortData(ComponentData, NumericValue):
             ans = max(ans, tmp)
         return ans
 
+    def is_fixed(self):
+        """Return True if all vars/expressions in the Port are fixed"""
+        return all(v.is_fixed() for v in self._iter_vars())
+
+    def is_potentially_variable(self):
+        """Return True as ports may (should!) contain variables"""
+        return True
+
     def is_binary(self):
         return len(self) and all(v.is_binary() for v in self._iter_vars())
 
@@ -110,33 +133,43 @@ class _PortData(ComponentData, NumericValue):
     def is_continuous(self):
         return len(self) and all(v.is_continuous() for v in self._iter_vars())
 
-    def add(self, var, name=None, aggregate=None, extensive=None):
+    def add(self, var, name=None, rule=None, **kwds):
+        """
+        Add a variable to this Port.
+
+        Arguments:
+            var         A variable or some NumericValue like an expression
+            name        Name to associate with this member of the Port
+            rule        Function implementing the desired expansion procedure 
+                            for this member. Port.Equality by default, other
+                            options include Port.Extensive. Customs are allowed
+            **kwds      Keyword arguments that will be passed to rule
+        """
         if name is None:
             name = var.local_name
-        if name in self.vars:
-            raise ValueError("Cannot insert duplicate variable name "
-                             "'%s' into Port '%s'" % (name, self.name))
+        if name in self.vars and self.vars[name] is not None:
+            # don't throw warning if replacing an implicit (None) var
+            logger.warning("Implicitly replacing variable '%s' in Port '%s'.\n"
+                           "To avoid this warning, use Port.remove() first."
+                           % (name, self.name))
         self.vars[name] = var
-        if aggregate is not None:
-            if extensive is not None:
-                raise ValueError(
-                    "Cannot specify aggregator for extensive variable '%s' on "
-                    "Port '%s'" % (name, self.name))
-            if type(var) is not VarList:
-                raise ValueError(
-                    "Aggregated variable '%s' must be a VarList "
-                    "in Port '%s'" % (name, self.name))
-            self.aggregators[name] = aggregate
-        elif extensive is not None:
+        if rule is None:
+            rule = Port.Equality
+        if rule is Port.Extensive:
             # avoid name collisions
             if name.endswith("_split") or name.endswith("_equality"):
                 raise ValueError(
                     "Extensive variable '%s' on Port '%s' may not end "
                     "with '_split' or '_equality'" % (name, self.name))
-            if extensive not in self.extensives:
-                # initialize new dict if this is the first of its kind
-                self.extensives[extensive] = {}
-            self.extensives[extensive][name] = []
+        self._rules[name] = (rule, kwds)
+
+    def remove(self, name):
+        """Remove this member from the port"""
+        if name not in self.vars:
+            raise ValueError("Cannot remove member '%s' not in Port '%s'"
+                             % (name, self.name))
+        self.vars.pop(name)
+        self._rules.pop(name)
 
     def _iter_vars(self):
         for var in itervalues(self.vars):
@@ -145,6 +178,26 @@ class _PortData(ComponentData, NumericValue):
             else:
                 for v in itervalues(var):
                     yield v
+
+    def set_split_fraction(self, arc, val, fix=True):
+        """
+        Set the split fraction value for an arc when using Port.Extensive
+        """
+        if arc not in self.dests(active=False):
+            raise ValueError("Port '%s' is not a source of Arc '%s', cannot "
+                             "set split fraction" % (self.name, arc.name))
+        self._splitfracs[arc] = dict(val=val, fix=fix)
+
+    def get_split_fraction(self, arc):
+        """
+        Returns a tuple (val, fix) for the split fraction of
+        this arc if it exists, and otherwise None
+        """
+        d = self._splitfracs.get(arc, None)
+        if d is None:
+            return None
+        else:
+            return d["val"], d["fix"]
 
 
 class Port(IndexedComponent):
@@ -162,41 +215,46 @@ class Port(IndexedComponent):
     their indexed members, can be manipulated within constraint expressions.
 
     Constructor arguments:
-        rule            A function that returns a dictionary of name, var
-                            pairs to be initially added to the Port
+        rule            A function that returns a dictionary of name: var
+                            pairs to be initially added to the Port. Instead
+                            of var it could also be a tuple of (var, rule).
+                            Or it could return an iterable of either vars or
+                            tuples of (var, rule) for implicit names
+        initialize      Follows same specifications as rule's return value,
+                            gets initially added to the Port
+        implicit        An iterable of implicit names to be initially
+                            added to the Port
+        extends         A Port whose vars will be added to this Port
+                            upon construction
         doc             A text string describing this component
         name            A name for this component
 
-    Public attributes
+    Public attributes (do not edit):
         vars            A dictionary mapping added names to variables
     """
 
     def __new__(cls, *args, **kwds):
         if cls != Port:
             return super(Port, cls).__new__(cls)
-        if args == ():
+        if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
             return SimplePort.__new__(SimplePort)
         else:
             return IndexedPort.__new__(IndexedPort)
 
-
     def __init__(self, *args, **kwd):
-        kwd.setdefault('ctype', Port)
         self._rule = kwd.pop('rule', None)
         self._initialize = kwd.pop('initialize', {})
         self._implicit = kwd.pop('implicit', {})
         self._extends = kwd.pop('extends', None)
+        kwd.setdefault('ctype', Port)
         IndexedComponent.__init__(self, *args, **kwd)
-        self._conval = {}
 
-    #
     # This method must be defined on subclasses of
-    # IndexedComponent
-    #
+    # IndexedComponent that support implicit definition
     def _getitem_when_not_present(self, idx):
-        _conval = self._data[idx] = _PortData(component=self)
-        return _conval
-
+        """Returns the default component data value."""
+        tmp = self._data[idx] = _PortData(component=self)
+        return tmp
 
     def construct(self, data=None):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):  #pragma:nocover
@@ -206,9 +264,8 @@ class Port(IndexedComponent):
             return
         timer = ConstructionTimer(self)
         self._constructed=True
-        #
+
         # Construct _PortData objects for all index values
-        #
         if self.is_indexed():
             self._initialize_members(self._index)
         else:
@@ -220,40 +277,48 @@ class Port(IndexedComponent):
         for idx in initSet:
             tmp = self[idx]
             for key in self._implicit:
-                tmp.add(None,key)
+                tmp.add(None, key)
             if self._extends:
                 for key, val in iteritems(self._extends.vars):
-                    tmp.add(val,key)
-            for key, val in iteritems(self._initialize):
-                tmp.add(val,key)
+                    tmp.add(val, key, self._extends._rules[key])
+            if self._initialize:
+                self._add_from_container(tmp, self._initialize)
             if self._rule:
                 items = apply_indexed_rule(
                     self, self._rule, self._parent(), idx)
-                for key, val in iteritems(items):
-                    tmp.add(val,key)
+                self._add_from_container(tmp, items)
 
+    def _add_from_container(self, port, items):
+        if type(items) is dict:
+            for key, val in iteritems(items):
+                if type(val) is tuple:
+                    port.add(val[0], key, val[1])
+                else:
+                    port.add(val, key)
+        else:
+            for val in self._initialize:
+                if type(val) is tuple:
+                    port.add(val[0], rule=val[1])
+                else:
+                    port.add(val)
 
     def _pprint(self, ostream=None, verbose=False):
         """Print component information."""
-        def _line_generator(k,v):
+        def _line_generator(k, v):
             for _k, _v in sorted(iteritems(v.vars)):
                 if _v is None:
                     _len = '-'
-                elif _k in v.aggregators:
-                    _len = '*'
-                elif hasattr(_v,'__len__'):
+                elif hasattr(_v, '__len__'):
                     _len = len(_v)
                 else:
                     _len = 1
                 yield _k, _len, str(_v)
-        return ( [("Size", len(self)),
-                  ("Index", self._index if self.is_indexed() else None),
-                  ],
-                 iteritems(self._data),
-                 ( "Name","Size", "Variable", ),
-                 _line_generator
-             )
-
+        return (
+            [("Size", len(self)),
+             ("Index", self._index if self.is_indexed() else None)],
+             iteritems(self._data),
+             ( "Name", "Size", "Variable"),
+             _line_generator)
 
     def display(self, prefix="", ostream=None):
         """
@@ -283,6 +348,141 @@ class Port(IndexedComponent):
         tabular_writer( ostream, prefix+tab,
                         ((k,v) for k,v in iteritems(self._data)),
                         ( "Name","Value" ), _line_generator )
+
+    def Equality(port, name, index_set):
+        cname = name + "_equality"
+        # Iterate over every arc off this port. Since this function will
+        # be called for every port, we need to check if it already exists.
+        for arc in port.arcs():
+            eblock = arc.expanded_block
+            if eblock.component(cname) is not None:
+                continue
+            port1, port2 = arc.ports
+            def rule(m, *args):
+                if len(args):
+                    return port1.vars[name][args] == port2.vars[name][args]
+                else:
+                    return port1.vars[name] == port2.vars[name]
+            con = Constraint(index_set, rule=rule)
+            arc.expanded_block.add_component(cname, con)
+
+    def Extensive(port, name, index_set, write_var_sum=True):
+        port_parent = port.parent_block()
+        in_vars = Port.Combine(port, name, index_set)
+        out_vars = Port.Split(port, name, index_set, write_var_sum)
+
+        if len(in_vars) and len(out_vars):
+            # Create balance constraint: sum of in == sum of out
+            cname = unique_component_name(port_parent,
+                "%s_%s_bal" % (alphanum_label_from_name(port.local_name), name))
+            def rule(m, *args):
+                if len(args) == 0:
+                    args = None
+                return (sum(evar[args] for evar in in_vars) ==
+                        sum(evar[args] for evar in out_vars))
+            con = Constraint(index_set, rule=rule)
+            port_parent.add_component(cname, con)
+
+    def Combine(port, name, index_set):
+        port_parent = port.parent_block()
+        var = port.vars[name]
+        in_vars = []
+
+        for arc in port.sources():
+            eblock = arc.expanded_block
+
+            # Same as Port.Split
+            evar = eblock.component(name)
+            if evar is None:
+                evar = Var(index_set)
+                eblock.add_component(name, evar)
+            in_vars.append(evar)
+
+        # Create constraint: var == sum of evars
+        if len(in_vars):
+            # Same logic as Port.Split
+            cname = unique_component_name(port_parent, "%s_%s_insum" %
+                (alphanum_label_from_name(port.local_name), name))
+            def rule(m, *args):
+                if len(args):
+                    return sum(evar[args] for evar in in_vars) == var[args]
+                else:
+                    return sum(evar for evar in in_vars) == var
+            con = Constraint(index_set, rule=rule)
+            port_parent.add_component(cname, con)
+
+        return in_vars
+
+    def Split(port, name, index_set, write_var_sum=True):
+        port_parent = port.parent_block()
+        var = port.vars[name]
+        out_vars = []
+
+        for arc in port.dests():
+            eblock = arc.expanded_block
+
+            # Make and record new variables for every arc with this member.
+            # Name is same, conflicts are prevented by a check in Port.add.
+            # The new var will mirror the original var and have same index set.
+            # This function will be called for both the source and destination
+            # of each arc, but we only need one evar per arc, so check if it
+            # already exists before making a new one.
+            evar = eblock.component(name)
+            if evar is None:
+                evar = Var(index_set)
+                eblock.add_component(name, evar)
+            out_vars.append(evar)
+
+            # Create and potentially initialize split fraction variables.
+            # This function will be called for every Extensive member of this
+            # port, but we only need one splitfrac variable per arc, so check
+            # if it already exists before making a new one.
+            if eblock.component("splitfrac") is None:
+                eblock.splitfrac = Var()
+                splitfracspec = port.get_split_fraction(arc)
+                if splitfracspec is not None:
+                    eblock.splitfrac = splitfracspec[0]
+                    if splitfracspec[1]:
+                        eblock.splitfrac.fix()
+
+            # Create constraint for this member using splitfrac.
+            cname = "%s_split" % name
+            def rule(m, *args):
+                if len(args):
+                    return evar[args] == eblock.splitfrac * var[args]
+                else:
+                    return evar == eblock.splitfrac * var
+            con = Constraint(index_set, rule=rule)
+            eblock.add_component(cname, con)
+
+        if len(out_vars):
+            if write_var_sum:
+                # Create var total sum constraint: var == sum of evars
+                # Need to alphanum port name in case it is indexed.
+                cname = unique_component_name(port_parent, "%s_%s_outsum" %
+                    (alphanum_label_from_name(port.local_name), name))
+                def rule(m, *args):
+                    if len(args):
+                        return sum(evar[args] for evar in out_vars) == var[args]
+                    else:
+                        return sum(evar for evar in out_vars) == var
+                con = Constraint(index_set, rule=rule)
+                port_parent.add_component(cname, con)
+            else:
+                # OR create constraint on splitfrac vars: sum == 1
+                cname = unique_component_name(port_parent,
+                    "%s_frac_sum" % alphanum_label_from_name(port.local_name))
+                con = Constraint(expr=
+                    sum(a.expanded_block.splitfrac for a in port.dests()) == 1)
+                port_parent.add_component(cname, con)
+
+        return out_vars
+
+    # Python 2 compatibility
+    Equality = staticmethod(Equality)
+    Extensive = staticmethod(Extensive)
+    Combine = staticmethod(Combine)
+    Split = staticmethod(Split)
 
 
 class SimplePort(Port, _PortData):
