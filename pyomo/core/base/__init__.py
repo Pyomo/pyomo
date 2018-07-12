@@ -16,7 +16,6 @@ from pyomo.core.base.config import PyomoOptions
 
 from pyomo.core.base.expression import *
 from pyomo.core.base.label import *
-from pyomo.core.base.DataPortal import *
 
 #
 # Components
