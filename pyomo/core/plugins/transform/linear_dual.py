@@ -62,13 +62,6 @@ class LinearDual_PyomoTransformation(Transformation):
         if block is None:
             raise RuntimeError("Missing block: "+bname)
         #
-        # Collect variables
-        #
-        var = {}
-        for (name, data) in block.component_map(active=True).items():
-            if isinstance(data,Var):
-                var[name] = data
-        #
         # Generate the dual
         #
         instance_ = self._dualize(block)
@@ -83,6 +76,14 @@ class LinearDual_PyomoTransformation(Transformation):
         # Collect linear terms from the block
         #
         A, b_coef, c_rhs, c_sense, d_sense, vnames, cnames, v_domain = collect_linear_terms(block, unfixed)
+        ##print(A)
+        ##print(vnames)
+        ##print(cnames)
+        ##print(list(A.keys()))
+        ##print("---")
+        ##print(A.keys())
+        ##print(c_sense)
+        ##print(c_rhs)
         #
         # Construct the block
         #
@@ -90,80 +91,62 @@ class LinearDual_PyomoTransformation(Transformation):
             dual = ConcreteModel()
         else:
             dual = Block()
-        for v, is_indexed in vnames:
-            if is_indexed:
-                setattr(dual, v+'_Index', Set(dimen=None))
-                setattr(dual, v, Var(getattr(dual, v+'_Index')))
-            else:
-                setattr(dual, v, Var())
-        for cname, is_indexed in cnames:
-            if is_indexed:
-                setattr(dual, cname+'_Index', Set(dimen=None))
-                setattr(dual, cname, Constraint(getattr(dual, cname+'_Index')))
-                setattr(dual, cname+'_lower_', Var(getattr(dual, cname+'_Index')))
-                setattr(dual, cname+'_upper_', Var(getattr(dual, cname+'_Index')))
-            else:
-                setattr(dual, cname, Constraint())
-                setattr(dual, cname+'_lower_', Var())
-                setattr(dual, cname+'_upper_', Var())
         dual.construct()
-        #
-        # Add variables
-        #
-        # TODO: revisit this hack.  We shouldn't be calling
-        # _getitem_when_not_present()
-        #
-        for name, ndx in b_coef:
-            v = getattr(dual, name)
-            if not ndx in v:
-                v._getitem_when_not_present(ndx)
+        _vars = {}
+        def getvar(name, ndx=None):
+            v = _vars.get((name,ndx), None)
+            if v is None:
+                v = Var()
+                if ndx is None:
+                    v_name = name
+                elif type(ndx) is tuple:
+                    v_name = "%s[%s]" % (name, ','.join(map(str,ndx)))
+                else:
+                    v_name = "%s[%s]" % (name, str(ndx))
+                setattr(dual, v_name, v)
+                _vars[name,ndx] = v
+            return v
         #
         # Construct the objective
         #
         if d_sense == minimize:
-            dual.o = Objective(expr=sum(- b_coef[name,ndx]*getattr(dual,name)[ndx] for name,ndx in b_coef), sense=d_sense)
+            dual.o = Objective(expr=sum(- b_coef[name,ndx]*getvar(name,ndx) for name,ndx in b_coef), sense=d_sense)
         else:
-            dual.o = Objective(expr=sum(b_coef[name,ndx]*getattr(dual,name)[ndx] for name,ndx in b_coef), sense=d_sense)
+            dual.o = Objective(expr=sum(b_coef[name,ndx]*getvar(name,ndx) for name,ndx in b_coef), sense=d_sense)
         #
         # Construct the constraints
         #
         for cname in A:
-            c = getattr(dual, cname)
-            c_index = getattr(dual, cname+"_Index") if c.is_indexed() else None
-            for ndx,terms in iteritems(A[cname]):
-                if not c_index is None and not ndx in c_index:
-                    c_index.add(ndx)
+            for ndx, terms in iteritems(A[cname]):
                 expr = 0
                 for term in terms:
-                    v = getattr(dual,term.var)
-                    if not term.ndx in v:
-                        v.add(term.ndx)
-                    expr += term.coef * v[term.ndx]
+                    expr += term.coef * getvar(term.var, term.ndx)
                 if not (cname, ndx) in c_rhs:
                     c_rhs[cname, ndx] = 0.0
-                if c_sense[cname,ndx] == 'e':
-                    c.add(ndx, expr - c_rhs[cname,ndx] == 0)
-                elif c_sense[cname,ndx] == 'l':
-                    c.add(ndx, expr - c_rhs[cname,ndx] <= 0)
+                if c_sense[cname, ndx] == 'e':
+                    e = expr - c_rhs[cname,ndx] == 0
+                elif c_sense[cname, ndx] == 'l':
+                    e = expr - c_rhs[cname,ndx] <= 0
                 else:
-                    c.add(ndx, expr - c_rhs[cname,ndx] >= 0)
+                    e = expr - c_rhs[cname,ndx] >= 0
+                c = Constraint(expr=e)
+                if ndx is None:
+                    c_name = cname
+                elif type(ndx) is tuple:
+                    c_name = "%s[%s]" % (cname, ','.join(map(str,ndx)))
+                else:
+                    c_name = "%s[%s]" % (cname, str(ndx))
+                setattr(dual, c_name, c)
+            #
             for (name, ndx), domain in iteritems(v_domain):
-                v = getattr(dual, name)
+                v = getvar(name, ndx)
                 flag = type(ndx) is tuple and (ndx[-1] == 'lb' or ndx[-1] == 'ub')
                 if domain == 1:
-                    if flag:
-                        v[ndx].domain = NonNegativeReals
-                    else:
-                        v.domain = NonNegativeReals
+                    v.domain = NonNegativeReals
                 elif domain == -1:
-                    if flag:
-                        v[ndx].domain = NonPositiveReals
-                    else:
-                        v.domain = NonPositiveReals
+                    v.domain = NonPositiveReals
                 else:
-                    if flag:
-                        # TODO: verify that this case is possible
-                        v[ndx].domain = Reals
-                    else:
-                        v.domain = Reals
+                    # TODO: verify that this case is possible
+                    v.domain = Reals
+
         return dual

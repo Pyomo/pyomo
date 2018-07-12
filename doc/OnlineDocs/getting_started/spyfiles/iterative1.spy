@@ -24,7 +24,6 @@ instance.display()
 
 # Iterate to eliminate the previously found solution
 for i in range(5):
-    instance.solutions.load_from(results)
     expr = 0
     for j in instance.x:
         if pyo.value(instance.x[j]) == 0:

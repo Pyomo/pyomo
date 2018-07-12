@@ -31,15 +31,15 @@ environment:
       CATEGORY: "nightly"
       EXTRAS: YES
 
-    - PYTHON_VERSION: 3.4
-      PYTHON: "C:\\Miniconda34-x64"
-      CATEGORY: "nightly"
-      EXTRAS: YES
-
-    #- PYTHON_VERSION: 3.5
-    #  PYTHON: "C:\\Miniconda35-x64"
+    #- PYTHON_VERSION: 3.4
+    #  PYTHON: "C:\\Miniconda34-x64"
     #  CATEGORY: "nightly"
     #  EXTRAS: YES
+
+    - PYTHON_VERSION: 3.5
+      PYTHON: "C:\\Miniconda35-x64"
+      CATEGORY: "nightly"
+      EXTRAS: YES
 
     - PYTHON_VERSION: 3.6
       PYTHON: "C:\\Miniconda36-x64"
@@ -69,6 +69,7 @@ install:
   - conda config --set always_yes yes
   - conda update -q -y conda
   - conda config --set auto_update_conda false
+  - conda install anaconda
   #
   - "%CONDAFORGE% setuptools pip coverage sphinx_rtd_theme"
   - python -m pip install codecov
@@ -81,7 +82,9 @@ install:
   #
   # Install pyomo.extras
   #
-  - "IF DEFINED EXTRAS (%CONDAFORGE% mkl numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill)"
+  - "IF DEFINED EXTRAS (%CONDAFORGE% pymysql pyro4)"
+  #- "IF DEFINED EXTRAS (%CONDAFORGE% numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill)"
+  #- "IF DEFINED EXTRAS (%CONDAFORGE% mkl)"
   #
   - "%CONDAFORGE% glpk"
   - "glpsol -v"

@@ -4,7 +4,7 @@ import pyutilib.th as unittest
 from pyomo.core.expr.numvalue import (NumericValue,
                                         is_fixed,
                                         is_constant,
-                                        potentially_variable)
+                                        is_potentially_variable)
 import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
@@ -13,7 +13,6 @@ from pyomo.core.tests.unit.test_component_tuple import \
 from pyomo.core.tests.unit.test_component_list import \
     _TestComponentListBase
 from pyomo.core.kernel.component_interface import (ICategorizedObject,
-                                                   IActiveObject,
                                                    IComponent,
                                                    IComponentContainer)
 from pyomo.core.kernel.component_parameter import parameter
@@ -94,14 +93,18 @@ class Test_variable(unittest.TestCase):
                      domain_type=IntegerSet,
                      fixed=True)
         self.assertEqual(v.lb, 1)
+        self.assertEqual(type(v.lb), int)
         self.assertEqual(v.ub, 2)
+        self.assertEqual(type(v.ub), int)
         self.assertEqual(v.domain_type, IntegerSet)
         self.assertEqual(v.fixed, True)
         self.assertEqual(v.parent, None)
         vup = pickle.loads(
             pickle.dumps(v))
         self.assertEqual(vup.lb, 1)
+        self.assertEqual(type(vup.lb), int)
         self.assertEqual(vup.ub, 2)
+        self.assertEqual(type(vup.ub), int)
         self.assertEqual(vup.domain_type, IntegerSet)
         self.assertEqual(vup.fixed, True)
         self.assertEqual(vup.parent, None)
@@ -211,27 +214,27 @@ class Test_variable(unittest.TestCase):
     def test_potentially_variable(self):
         v = variable()
         self.assertEqual(v.is_potentially_variable(), True)
-        self.assertEqual(potentially_variable(v), True)
+        self.assertEqual(is_potentially_variable(v), True)
         self.assertEqual(v.fixed, False)
         self.assertEqual(v.value, None)
         v.value = 1.0
         self.assertEqual(v.is_potentially_variable(), True)
-        self.assertEqual(potentially_variable(v), True)
+        self.assertEqual(is_potentially_variable(v), True)
         self.assertEqual(v.fixed, False)
         self.assertEqual(v.value, 1.0)
         v.fix()
         self.assertEqual(v.is_potentially_variable(), True)
-        self.assertEqual(potentially_variable(v), True)
+        self.assertEqual(is_potentially_variable(v), True)
         self.assertEqual(v.fixed, True)
         self.assertEqual(v.value, 1.0)
         v.value = None
         self.assertEqual(v.is_potentially_variable(), True)
-        self.assertEqual(potentially_variable(v), True)
+        self.assertEqual(is_potentially_variable(v), True)
         self.assertEqual(v.fixed, True)
         self.assertEqual(v.value, None)
         v.free()
         self.assertEqual(v.is_potentially_variable(), True)
-        self.assertEqual(potentially_variable(v), True)
+        self.assertEqual(is_potentially_variable(v), True)
         self.assertEqual(v.fixed, False)
         self.assertEqual(v.value, None)
 
@@ -459,7 +462,9 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(v.is_binary(), True)
         self.assertEqual(v.is_integer(), True)
         self.assertEqual(v.lb, 0)
+        self.assertEqual(type(v.lb), int)
         self.assertEqual(v.ub, 1)
+        self.assertEqual(type(v.ub), int)
         self.assertEqual(v.bounds, (0,1))
 
         v.lb = 0

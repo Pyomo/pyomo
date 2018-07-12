@@ -9,7 +9,7 @@ env:
   global:
   - DOCKERHUB_USERNAME=qkjqvazeqfjqftchxlgw
   matrix:
-  - IMAGE_NAME=test-builds:python_3.7-rc CATEGORY="nightly"
+  - IMAGE_NAME=test-builds:python_3.7    CATEGORY="nightly"
   - IMAGE_NAME=test-builds:python_3.6    CATEGORY="nightly"
   - IMAGE_NAME=test-builds:python_3.6    CATEGORY="nightly" SLIM=1
   - IMAGE_NAME=test-builds:python_3.5    CATEGORY="nightly"
@@ -85,7 +85,7 @@ script:
   - ${DOC} pip list
   - ${DOC} test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
  # Run documentation tests
-  - if [[ "$IMAGE_NAME" != "test-builds:python_3.7-rc" ]]; then ${DOC} make -C doc/OnlineDocs doctest -d; fi
+  - if [[ "$IMAGE_NAME" != "test-builds:python_3.7" ]]; then ${DOC} make -C doc/OnlineDocs doctest -d; fi
 
 after_script:
  # Kill the docker container

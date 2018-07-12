@@ -1,16 +1,15 @@
-
 Core Classes
 ============
 
 The following are the two core classes documented here:
 
-* :class:`NumericValue <pyomo.core.expr.numvalue.NumericValue>`
-* :class:`ExpressionBase <pyomo.core.expr.current.ExpressionBase>`
+   * :class:`NumericValue<pyomo.core.expr.numvalue.NumericValue>`
+   * :class:`ExpressionBase<pyomo.core.expr.current.ExpressionBase>`
 
 The remaining classes are the public classes for expressions, which
-developers may need to know about.  The methods for these classes
-are not documented because they are described in the :class:`ExpressionBase
-<pyomo.core.expr.current.ExpressionBase>` class.
+developers may need to know about. The methods for these classes are not
+documented because they are described in the
+:class:`ExpressionBase<pyomo.core.expr.current.ExpressionBase>` class.
 
 Sets with Expression Types
 --------------------------
@@ -104,5 +103,3 @@ Other Public Classes
     :show-inheritance:
     :undoc-members:
     :private-members:
-
-

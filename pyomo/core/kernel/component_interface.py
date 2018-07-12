@@ -61,31 +61,33 @@ class ICategorizedObject(object):
         _ctype: The objects category type.
         _parent: A weak reference to the object's parent or
             :const:`None`.
-        _is_categorized_object (bool): A flag used to
-            indicate the class is an instance of
-            ICategorized object. This is a workaround for
-            the slow behavior of isinstance on classes that
-            use abc.ABCMeta as a metaclass.
-        _is_component (bool): A flag used to indicate that
-            the class is an instance of IComponent. This is
-            a workaround for the slow behavior of isinstance
-            on classes that use abc.ABCMeta as a metaclass.
-        _is_container (bool): A flag used to indicate that
-            the class is an instance IComponentContainer.
-            This is a workaround for the slow behavior of
-            isinstance on classes that use abc.ABCMeta as a
-            metaclass.
+        _storage_key: The key this object is stored under
+            within the parent container.
     """
     __slots__ = ()
 
     # These flags can be used by implementations to speed up
     # code. The use of ABCMeta as a metaclass slows down
     # isinstance calls by an order of magnitude! So for
-    # instance, use hasattr(obj, '_is_categorized') as
+    # instance, use hasattr(obj, '_is_categorized_object') as
     # opposed to isinstance(obj, ICategorizedObject)
     _is_categorized_object = True
+    """A flag used to indicate the class is an instance of
+    ICategorized object. This is a workaround for the slow
+    behavior of isinstance on classes that use abc.ABCMeta
+    as a metaclass."""
+
     _is_component = False
+    """A flag used to indicate that the class is an instance
+    of IComponent. This is a workaround for the slow
+    behavior of isinstance on classes that use abc.ABCMeta
+    as a metaclass."""
+
     _is_container = False
+    """A flag used to indicate that the class is an instance
+    IComponentContainer.  This is a workaround for the slow
+    behavior of isinstance on classes that use abc.ABCMeta
+    as a metaclass."""
 
     #
     # Interface
@@ -105,8 +107,13 @@ class ICategorizedObject(object):
             return self._parent
 
     @property
+    def storage_key(self):
+        """The object's storage key within its parent"""
+        return self._storage_key
+
+    @property
     def parent_block(self):
-        """The first ancestor block above this object"""
+        """The first block above this object in the storage tree"""
         parent = self.parent
         while (parent is not None) and \
               (not parent._is_component):
@@ -160,11 +167,13 @@ class ICategorizedObject(object):
         if parent is None:
             return None
 
-        key = parent.child_key(self)
+        key = self.storage_key
         name = parent._child_storage_entry_string % convert(key)
         if fully_qualified:
             parent_name = parent.getname(fully_qualified=True)
-            if parent_name is not None and (relative_to is None or parent is not relative_to):
+            if (parent_name is not None) and \
+               ((relative_to is None) or \
+                (parent is not relative_to)):
                 return (parent_name +
                         parent._child_storage_delimiter_string +
                         name)
@@ -283,34 +292,6 @@ class ICategorizedObject(object):
         if self._parent is not None:
             self._parent = weakref.ref(self._parent)
 
-@six.add_metaclass(abc.ABCMeta)
-class IActiveObject(object):
-    """
-    Interface for objects that support activate/deactivate
-    semantics.
-
-    This class is abstract.
-    """
-    __slots__ = ()
-
-    #
-    # Interface
-    #
-
-    active = _abstract_readonly_property(
-        doc=("A boolean indicating whether or "
-             "not this object is active."))
-
-    @abc.abstractmethod
-    def activate(self, *args, **kwds):
-        """Set the active attribute to :const:`True`"""
-        raise NotImplementedError     #pragma:nocover
-
-    @abc.abstractmethod
-    def deactivate(self, *args, **kwds):
-        """Set the active attribute to :const:`False`"""
-        raise NotImplementedError     #pragma:nocover
-
 class IComponent(ICategorizedObject):
     """
     Interface for components that can be stored inside
@@ -327,61 +308,6 @@ class IComponent(ICategorizedObject):
     _is_component = True
     _is_container = False
     __slots__ = ()
-
-class _ActiveComponentMixin(IActiveObject):
-    """
-    To be used as an additional base class in IComponent
-    implementations to add fuctionality for activating and
-    deactivating the component.
-
-    Any container that stores implementations of this type
-    should use _ActiveComponentContainerMixin as a base
-    class.
-
-    This class is abstract. It assumes any derived class
-    declares the attributes below at the class or instance
-    level (with or without __slots__):
-
-    Attributes:
-        _active (bool): A boolean indicating whethor or not
-            this component is active.
-    """
-    __slots__ = ()
-
-    #
-    # Interface
-    #
-
-    @property
-    def active(self):
-        """The active status of this container."""
-        return self._active
-
-    @active.setter
-    def active(self, value):
-        raise AttributeError(
-            "Assignment not allowed. Use the "
-            "(de)activate method")
-
-    def activate(self, _from_parent_=False):
-        """Activate this component."""
-        if (not self._active) and \
-           (not _from_parent_):
-            # inform the parent
-            parent = self.parent
-            if parent is not None:
-                parent._increment_active()
-        self._active = True
-
-    def deactivate(self, _from_parent_=False):
-        """Deactivate this component."""
-        if self._active and \
-           (not _from_parent_):
-            # inform the parent
-            parent = self.parent
-            if parent is not None:
-                parent._decrement_active()
-        self._active = False
 
 class IComponentContainer(ICategorizedObject):
     """
@@ -413,12 +339,6 @@ class IComponentContainer(ICategorizedObject):
         raise NotImplementedError     #pragma:nocover
 
     @abc.abstractmethod
-    def child_key(self, *args, **kwds):
-        """Returns the lookup key associated with a child of
-        this container."""
-        raise NotImplementedError     #pragma:nocover
-
-    @abc.abstractmethod
     def child(self, *args, **kwds):
         """Returns a child of this container given a storage
         key."""
@@ -444,49 +364,21 @@ class IComponentContainer(ICategorizedObject):
         """A generator over all descendents in postfix order."""
         raise NotImplementedError     #pragma:nocover
 
-class _ActiveComponentContainerMixin(IActiveObject):
+class _ActiveObjectMixin(object):
     """
-    To be used as an additional base class in
+    To be used as an additional base class in IComponent or
     IComponentContainer implementations to add fuctionality
-    for activating and deactivating the container and its
-    children.
+    for activating and deactivating the component.
 
-    .. note::
-        This class is abstract. It assumes any derived class
-        declares the attributes below at the class or
-        instance level (with or without __slots__):
+    This class is abstract. It assumes any derived class
+    declares the attributes below at the class or instance
+    level (with or without __slots__):
 
-        Attributes:
-            _active (int): A integer that keeps track of the
-                number of active children stored under this
-                container.
+    Attributes:
+        _active (bool): A boolean indicating whethor or not
+            this component is active.
     """
     __slots__ = ()
-
-    def _increment_active(self):
-        """This method must be called any time a new active
-        child is added or any time an existing child's
-        active status changes from :const:`False` to
-        :const:`True`."""
-        assert self._active >= 0
-        if self._active == 0:
-            # the container itself is currently
-            # inactive, so activate it
-            self._active = 1
-            # this includes notifying any parent
-            # of the change in status
-            parent = self.parent
-            if parent is not None:
-                parent._increment_active()
-        self._active += 1
-
-    def _decrement_active(self):
-        """This method must be called any time an active is
-        child removed or any time an existing child's active
-        status changes from :const:`True` to
-        :const:`False`."""
-        self._active -= 1
-        assert self._active >= 1
 
     #
     # Interface
@@ -495,55 +387,31 @@ class _ActiveComponentContainerMixin(IActiveObject):
     @property
     def active(self):
         """The active status of this container."""
-        return bool(self._active)
-
+        return self._active
     @active.setter
     def active(self, value):
         raise AttributeError(
             "Assignment not allowed. Use the "
-            "(de)activate method.")
+            "(de)activate method")
 
-    def activate(self, _from_parent_=False):
-        """Activate this container. All children of this
-        container will be activated and the active flag on
-        all ancestors of this container will be set to
-        :const:`True`."""
-        assert self._active >= 0
-        if (not self.active) and \
-           (not _from_parent_):
-            # inform the parent
-            parent = self.parent
-            if parent is not None:
-                parent._increment_active()
-        # activate all children
-        self._active = 1
-        for child in self.children():
-            self._active += 1
-            if isinstance(child, IActiveObject):
-                child.activate(_from_parent_=True)
+    def activate(self, shallow=True):
+        """Activate this component."""
+        self._active = True
+        if (not shallow) and \
+           (self._is_container):
+            for child in self.children():
+                if isinstance(child, _ActiveObjectMixin):
+                    child.activate(shallow=False)
 
-    def deactivate(self, _from_parent_=False):
-        """Deactivate this container and all of its children."""
-        assert self._active >= 0
-        if self.active and \
-           (not _from_parent_):
-            # inform the parent
-            parent = self.parent
-            if parent is not None:
-                parent._decrement_active()
-        self._active = 0
-        # deactivate all children
-        for child in self.children():
-            if isinstance(child, IActiveObject):
-                child.deactivate(_from_parent_=True)
+    def deactivate(self, shallow=True):
+        """Deactivate this component."""
+        self._active = False
+        if (not shallow) and \
+           (self._is_container):
+            for child in self.children():
+                if isinstance(child, _ActiveObjectMixin):
+                    child.deactivate(shallow=False)
 
-#
-# I'm placing this class here for now to avoid
-# creating another file. As soon as we separate AML
-# from this core, I will move this to another file.
-# This class is simply used to reduce copy-pasted
-# code in component_dict and component_list.
-#
 # used frequently below, so I'm caching it here
 _active_flag_name = "active"
 class _SimpleContainerMixin(object):
@@ -563,31 +431,20 @@ class _SimpleContainerMixin(object):
     """
     __slots__ = ()
 
-    def _prepare_for_add(self, obj):
+    def _prepare_for_add(self, key, obj):
         """This method must be called any time a new child
         is inserted into this container."""
         obj._parent = weakref.ref(self)
-        # children that are not of type
-        # IActiveObject retain the active status
-        # of their parent, which is why the default
-        # return value from getattr is False
-        if getattr(obj, _active_flag_name, False):
-            self._increment_active()
+        obj._storage_key = key
 
     def _prepare_for_delete(self, obj):
         """This method must be called any time a new child
         is removed from this container."""
         obj._parent = None
-        # children that are not of type
-        # IActiveObject retain the active status
-        # of their parent, which is why the default
-        # return value from getattr is False
-        if getattr(obj, _active_flag_name, False):
-            self._decrement_active()
+        obj._storage_key = None
 
     def components(self,
-                   active=None,
-                   return_key=False):
+                   active=None):
         """
         Generates an efficient traversal of all components
         stored under this container. Components are leaf
@@ -603,15 +460,9 @@ class _SimpleContainerMixin(object):
                 deactivated) should be included. *Note*:
                 This flag is ignored for any objects that do
                 not have an active flag.
-            return_key (bool): Set to :const:`True` to
-                indicate that the return type should be a
-                2-tuple consisting of the local storage key
-                of the object within its parent and the
-                object itself. By default, only the objects
-                are returned.
 
         Returns:
-            iterator of objects or (key,object) tuples
+            iterator of objects in the storage tree
         """
         assert active in (None, True)
 
@@ -620,7 +471,7 @@ class _SimpleContainerMixin(object):
            not getattr(self, _active_flag_name, True):
             return
 
-        for child_key, child in self.children(return_key=True):
+        for child in self.children():
 
             # check active status (if appropriate)
             if (active is not None) and \
@@ -628,19 +479,13 @@ class _SimpleContainerMixin(object):
                 continue
 
             if child._is_component:
-                if return_key:
-                    yield child_key, child
-                else:
-                    yield child
+                yield child
             else:
-                for item in child.components(return_key=return_key,
-                                             active=active):
+                for item in child.components(active=active):
                     yield item
 
     def preorder_traversal(self,
-                           active=None,
-                           return_key=False,
-                           root_key=None):
+                           active=None):
         """
         Generates a preorder traversal of the storage tree.
 
@@ -653,18 +498,9 @@ class _SimpleContainerMixin(object):
                 deactivated) should be included. *Note*:
                 This flag is ignored for any objects that do
                 not have an active flag.
-            return_key (bool): Set to :const:`True` to
-                indicate that the return type should be a
-                2-tuple consisting of the local storage key
-                of the object within its parent and the
-                object itself. By default, only the objects
-                are returned.
-            root_key: The key to return with this object.
-                Ignored when :attr:`return_key` is
-                :const:`False`.
 
         Returns:
-            iterator of objects or (key,object) tuples
+            iterator of objects in the storage tree
         """
         assert active in (None, True)
 
@@ -673,11 +509,8 @@ class _SimpleContainerMixin(object):
            not getattr(self, _active_flag_name, True):
             return
 
-        if return_key:
-            yield root_key, self
-        else:
-            yield self
-        for key, child in self.children(return_key=True):
+        yield self
+        for child in self.children():
 
             # check active status (if appropriate)
             if (active is not None) and \
@@ -686,42 +519,28 @@ class _SimpleContainerMixin(object):
 
             if child._is_component:
                 # this is a leaf node
-                if return_key:
-                    yield key, child
-                else:
-                    yield child
+                yield child
             else:
                 assert child._is_container
                 for item in child.preorder_traversal(
-                        active=active,
-                        return_key=return_key,
-                        root_key=key):
+                        active=active):
                     yield item
 
     def preorder_visit(self,
                        visit,
-                       active=None,
-                       include_key=False,
-                       root_key=None):
+                       active=None):
         """
         Visits each node in the storage tree using a
         preorder traversal.
 
         Args:
             visit: A function that is called on each node in
-                the storage tree. When the
-                :attr:`include_key` keyword is
-                :const:`False`, the function signature
-                should be `visit(node) -> [True|False]`.
-                When the :attr:`include_key` keyword is
-                :const:`True`, the function signature should
-                be `visit(key,node) -> [True|False]`. When
-                the return value of the function evaluates
-                to to :const:`True`, this indicates that the
-                traversal should continue with the children
-                of the current node; otherwise, the
-                traversal does not go below the current
-                node.
+                the storage tree. When the return value of
+                the function evaluates to to :const:`True`,
+                this indicates that the traversal should
+                continue with the children of the current
+                node; otherwise, the traversal does not go
+                below the current node.
             active (:const:`True`/:const:`None`): Set to
                 :const:`True` to indicate that only active
                 objects should be included. The default
@@ -730,16 +549,6 @@ class _SimpleContainerMixin(object):
                 deactivated) should be included. *Note*:
                 This flag is ignored for any objects that do
                 not have an active flag.
-            include_key (bool): Set to :const:`True` to
-                indicate that 2 arguments should be passed
-                to the visit function, with the first being
-                the local storage key of the object within
-                its parent and the second being the object
-                itself. By default, only the objects are
-                passed to the function.
-            root_key: The key to pass with this object.
-                Ignored when :attr:`include_key` is
-                :const:`False`.
         """
         assert active in (None, True)
 
@@ -748,14 +557,9 @@ class _SimpleContainerMixin(object):
            not getattr(self, _active_flag_name, True):
             return
 
-        go = True
-        if include_key:
-            go = visit(root_key, self)
-        else:
-            go = visit(self)
-        if not go:
+        if not visit(self):
             return
-        for key, child in self.children(return_key=True):
+        for child in self.children():
 
             # check active status (if appropriate)
             if (active is not None) and \
@@ -763,23 +567,13 @@ class _SimpleContainerMixin(object):
                 continue
 
             if child._is_component:
-                # this is a leaf node
-                if include_key:
-                    visit(key, child)
-                else:
-                    visit(child)
+                visit(child)
             else:
                 assert child._is_container
-                child.preorder_visit(
-                    visit,
-                    active=active,
-                    include_key=include_key,
-                    root_key=key)
+                child.preorder_visit(visit,
+                                     active=active)
 
-    def postorder_traversal(self,
-                            active=None,
-                            return_key=False,
-                            root_key=None):
+    def postorder_traversal(self, active=None):
         """
         Generates a postorder traversal of the storage tree.
 
@@ -792,18 +586,9 @@ class _SimpleContainerMixin(object):
                 deactivated) should be included. *Note*:
                 This flag is ignored for any objects that do
                 not have an active flag.
-            return_key (bool): Set to :const:`True` to
-                indicate that the return type should be a
-                2-tuple consisting of the local storage key
-                of the object within its parent and the
-                object itself. By default, only the objects
-                are returned.
-            root_key: The key to return with this object.
-                Ignored when :attr:`return_key` is
-                :const:`False`.
 
         Returns:
-            iterator of objects or (key,object) tuples
+            iterator of objects in storage tree
         """
         assert active in (None, True)
 
@@ -812,7 +597,7 @@ class _SimpleContainerMixin(object):
            not getattr(self, _active_flag_name, True):
             return
 
-        for key, child in self.children(return_key=True):
+        for child in self.children():
 
             # check active status (if appropriate)
             if (active is not None) and \
@@ -821,22 +606,14 @@ class _SimpleContainerMixin(object):
 
             if child._is_component:
                 # this is a leaf node
-                if return_key:
-                    yield key, child
-                else:
-                    yield child
+                yield child
             else:
                 assert child._is_container
                 for item in child.postorder_traversal(
-                        active=active,
-                        return_key=return_key,
-                        root_key=key):
+                        active=active):
                     yield item
 
-        if return_key:
-            yield root_key, self
-        else:
-            yield self
+        yield self
 
     def generate_names(self,
                        active=None,
@@ -882,10 +659,11 @@ class _SimpleContainerMixin(object):
         name_template = (prefix +
                          self._child_storage_delimiter_string +
                          self._child_storage_entry_string)
-        for key, child in self.children(return_key=True):
+        for child in self.children():
             if (active is None) or \
                getattr(child, _active_flag_name, True):
-                names[child] = name_template % convert(key)
+                names[child] = (name_template
+                                % convert(child.storage_key))
                 if descend_into and child._is_container and \
                    (not child._is_component):
                     names.update(child.generate_names(
