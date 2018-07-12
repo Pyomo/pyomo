@@ -20,6 +20,8 @@ from pyomo.repn import generate_standard_repn
 from pyomo.common.plugin import alias
 from pyomo.gdp import Disjunct
 import logging
+from pyomo.opt import TerminationCondition as tc
+from pyomo.opt import SolverFactory
 
 logger = logging.getLogger('pyomo.contrib.preprocessing')
 
@@ -96,7 +98,6 @@ def determine_valid_values(block, discr_var_to_constrs_map):
     if block.type() == Disjunct:
         raise NotImplementedError()
 
-    # Go through
     for eff_discr_var, constrs in discr_var_to_constrs_map.items():
         # get the superset of possible values by looking through the
         # constraints
@@ -125,6 +126,29 @@ def determine_valid_values(block, discr_var_to_constrs_map):
                 possible_values[eff_discr_var] = old_possible_vals & possible_vals
             else:
                 possible_values[eff_discr_var] = possible_vals
+
+    block._possible_values = possible_values
+    block._possible_value_vars = list(v for v in possible_values)
+    model = block.clone()
+    for obj in model.component_data_objects(Objective, active=True):
+        obj.deactivate()
+    for constr in model.component_data_objects(Constraint, active=True):
+        if constr.body.polynomial_degree() not in (1, 0):
+            constr.deactivate()
+    model.test_feasible = Constraint()
+    model._obj = Objective(expr=1)
+    for eff_discr_var, vals in model._possible_values.items():
+        val_feasible = {}
+        for val in vals:
+            model.test_feasible.set_value(eff_discr_var == val)
+            res = SolverFactory('glpk').solve(model)
+            if res.solver.termination_condition is tc.infeasible:
+                val_feasible[val] = False
+        model._possible_values[eff_discr_var] = frozenset(
+            v for v in model._possible_values[eff_discr_var]
+            if val_feasible.get(v, True))
+    for i, var in enumerate(block._possible_value_vars):
+        possible_values[var] = model._possible_values[model._possible_value_vars[i]]
 
     return possible_values
 
