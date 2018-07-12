@@ -1,11 +1,13 @@
 """Tests the induced linearity module."""
 import pyutilib.th as unittest
+from pyomo.contrib.preprocessing.plugins.induced_linearity import (_bilinear_expressions,
+                                                                   detect_effectively_discrete_vars,
+                                                                   determine_valid_values)
 from pyomo.core.kernel import ComponentSet
-from pyomo.environ import (ConcreteModel, Constraint, ConstraintList,
-                           Objective, RangeSet, SolverFactory,
-                           TransformationFactory, Var, exp, Binary, Integers, summation, NonNegativeReals)
-from pyomo.contrib.preprocessing.plugins.induced_linearity import (
-    _bilinear_expressions, detect_effectively_discrete_vars, _reformulate_case_1, determine_valid_values)
+from pyomo.environ import (Binary, ConcreteModel, Constraint, ConstraintList,
+                           Integers, NonNegativeReals, Objective, RangeSet,
+                           SolverFactory, TransformationFactory, Var, exp,
+                           summation)
 from pyomo.gdp import Disjunct
 
 
@@ -67,24 +69,13 @@ class TestInducedLinearity(unittest.TestCase):
         # valid_values = set([1, 2, 3, 4, 5, 6])
         # self.assertEqual(set(var_to_values_map[m.x]), valid_values)
 
-    # def test_induced_linearity_case1(self):
-    #     m = ConcreteModel()
-    #     m.x = Var(domain=NonNegativeReals)
-    #     m.v = Var()
-    #     m.y = Var([1, 2, 3], domain=Binary)
-    #     m.c = Constraint(expr=m.v * m.x <= 0)
-    #     m.c2 = Constraint(expr=m.x == m.y[1] + 2 * m.y[2] + 3 * m.y[3])
-    #     m.c3 = Constraint(expr=summation(m.y) == 1)
-    #     with self.assertRaises(NotImplementedError):
-    #         _reformulate_case_1(m.x, m.v, m.c2, m.c)
-    #
     def test_induced_linearity_case2(self):
         m = ConcreteModel()
-        m.x = Var(bounds=(-3, 8))
+        m.x = Var([0], bounds=(-3, 8))
         m.y = Var(RangeSet(4), domain=Binary)
         m.z = Var(domain=Integers, bounds=(-1, 2))
         m.constr = Constraint(
-            expr=m.x == m.y[1] + 2 * m.y[2] + m.y[3] + 2 * m.y[4] + m.z)
+            expr=m.x[0] == m.y[1] + 2 * m.y[2] + m.y[3] + 2 * m.y[4] + m.z)
         m.logical = ConstraintList()
         m.logical.add(expr=m.y[1] + m.y[2] == 1)
         m.logical.add(expr=m.y[3] + m.y[4] == 1)
@@ -92,8 +83,8 @@ class TestInducedLinearity(unittest.TestCase):
         m.b = Var(bounds=(-2, 7))
         m.c = Var()
         m.c = Constraint(
-            expr=(m.x - 3) * (m.b + 2) - (m.c + 4) * m.b +
-            exp(m.b ** 2) * m.x <= m.c)
+            expr=(m.x[0] - 3) * (m.b + 2) - (m.c + 4) * m.b +
+            exp(m.b ** 2) * m.x[0] <= m.c)
         TransformationFactory('contrib.induced_linearity').apply_to(m)
         m.pprint()
 

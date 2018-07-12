@@ -21,6 +21,7 @@ from pyomo.gdp import Disjunct
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
 from pyomo.repn import generate_standard_repn
+from pyomo.common.modeling import unique_component_name
 
 logger = logging.getLogger('pyomo.contrib.preprocessing')
 
@@ -49,6 +50,7 @@ class InducedLinearity(IsomorphicTransformation):
     def _apply_to(self, model):
         """Apply the transformation to the given model."""
         equality_tolerance = 1E-6
+        model._induced_linearity_info = Block()
         eff_discr_vars = detect_effectively_discrete_vars(
             model, equality_tolerance)
         # TODO will need to go through this for each disjunct, since it does
@@ -70,7 +72,7 @@ class InducedLinearity(IsomorphicTransformation):
                 if (v1, v2) in processed_pairs:
                     continue
                 _process_bilinear_constraints(
-                    v1, v2, var_values, bilinear_constrs)
+                    model, v1, v2, var_values, bilinear_constrs)
                 processed_pairs.add((v2, v1))
                 processed_pairs.add((v1, v2))  # TODO is this necessary?
 
@@ -152,7 +154,27 @@ def determine_valid_values(block, discr_var_to_constrs_map):
     return possible_values
 
 
-def _process_bilinear_constraints(v1, v2, var_values, bilinear_constrs):
+def _process_bilinear_constraints(block, v1, v2, var_values, bilinear_constrs):
+    blk = Block()
+    unique_name = unique_component_name(
+        block, ("%s_%s_bilinear" % (v1.local_name, v2.local_name))
+        .translate({ord(c): '' for c in "[]"}))
+    block._induced_linearity_info.add_component(unique_name, blk)
+    blk.valid_values = Set(initialize=var_values)
+    blk.x_active = Var(blk.valid_values, domain=Binary, initialize=1)
+    blk.v_increment = Var(
+        blk.valid_values, domain=v2.domain,
+        bounds=(v2.lb, v2.ub), initialize=v2.value)
+    blk.v_defn = Constraint(expr=v2 == summation(blk.v_increment))
+
+    @blk.Constraint(blk.valid_values)
+    def v_lb(blk, val):
+        return v2.lb * blk.x_active[val] <= blk.v_increment[val]
+
+    @blk.Constraint(blk.valid_values)
+    def v_ub(blk, val):
+        return blk.v_increment[val] <= v2.ub * blk.x_active[val]
+    blk.select_one_value = Constraint(expr=summation(blk.x_active) == 1)
     # Categorize as case 1 or case 2
     for bilinear_constr in bilinear_constrs:
         # repn = generate_standard_repn(bilinear_constr.body)
@@ -169,33 +191,12 @@ def _process_bilinear_constraints(v1, v2, var_values, bilinear_constrs):
         # Case 2: this is everything else, but do we want to have a special
         # case if there are nonlinear expressions involved with the constraint?
         pass
-        if True:
-            _reformulate_case_2(v1, v2, var_values, bilinear_constr)
+        _reformulate_case_2(blk, v1, v2, bilinear_constr)
     pass
 
 
-def _reformulate_case_1(v1, v2, discrete_constr, bilinear_constr):
-    raise NotImplementedError()
-
-
-def _reformulate_case_2(v1, v2, var_values, bilinear_constr):
+def _reformulate_case_2(blk, v1, v2, bilinear_constr):
     repn = generate_standard_repn(bilinear_constr.body)
-    blk = bilinear_constr.parent_block()
-    blk.valid_values = Set(initialize=var_values)
-    blk.x_active = Var(blk.valid_values, domain=Binary, initialize=1)
-    blk.v_increment = Var(
-        blk.valid_values, domain=v2.domain,
-        bounds=(v2.lb, v2.ub), initialize=v2.value)
-    blk.v_defn = Constraint(expr=v2 == summation(blk.v_increment))
-
-    @blk.Constraint(blk.valid_values)
-    def v_lb(blk, val):
-        return v2.lb * blk.x_active[val] <= blk.v_increment[val]
-
-    @blk.Constraint(blk.valid_values)
-    def v_ub(blk, val):
-        return blk.v_increment[val] <= v2.ub * blk.x_active[val]
-    blk.select_one_value = Constraint(expr=summation(blk.x_active) == 1)
     replace_index = next(
         i for i, var_tup in enumerate(repn.quadratic_vars)
         if (var_tup[0] is v1 and var_tup[1] is v2) or
@@ -205,7 +206,7 @@ def _reformulate_case_2(v1, v2, var_values, bilinear_constr):
         sum(coef * repn.linear_vars[i]
             for i, coef in enumerate(repn.linear_coefs)) +
         repn.quadratic_coefs[replace_index] * sum(
-            val * blk.v_increment[val] for val in var_values) +
+            val * blk.v_increment[val] for val in blk.valid_values) +
         sum(repn.quadratic_coefs[i] * var_tup[0] * var_tup[1]
             for i, var_tup in enumerate(repn.quadratic_vars)
             if not i == replace_index) +
