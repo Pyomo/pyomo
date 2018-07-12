@@ -8,20 +8,19 @@ reformulations for some nonlinear discrete design optimization problems.
 
 from __future__ import division
 
+import logging
 import textwrap
 from math import fabs
 
-from pyomo.core.base import Block, Constraint, VarList, Objective
-from pyomo.core.expr.current import ExpressionReplacementVisitor, identify_variables
-from pyomo.core.expr.numvalue import value
+from pyomo.common.plugin import alias
+from pyomo.core import (Binary, Block, Constraint, Objective, Set, Var,
+                        summation, value)
 from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.repn import generate_standard_repn
-from pyomo.common.plugin import alias
 from pyomo.gdp import Disjunct
-import logging
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
+from pyomo.repn import generate_standard_repn
 
 logger = logging.getLogger('pyomo.contrib.preprocessing')
 
@@ -56,7 +55,7 @@ class InducedLinearity(IsomorphicTransformation):
         # not (should not) descend into Disjuncts.
 
         # Determine the valid values for the effectively discrete variables
-        determine_valid_values(eff_discr_vars)
+        possible_var_values = determine_valid_values(model, eff_discr_vars)
 
         # Collect find bilinear expressions that can be reformulated using
         # knowledge of effectively discrete variables
@@ -65,13 +64,13 @@ class InducedLinearity(IsomorphicTransformation):
         # Relevant constraints are those with bilinear terms that involve
         # effectively_discrete_vars
         processed_pairs = ComponentSet()
-        for v1, discrete_constr in effectively_discrete_vars:
+        for v1, var_values in possible_var_values.items():
             v1_pairs = bilinear_map.get(v1, ())
             for v2, bilinear_constrs in v1_pairs.items():
                 if (v1, v2) in processed_pairs:
                     continue
                 _process_bilinear_constraints(
-                    v1, v2, discrete_constr, bilinear_constrs)
+                    v1, v2, var_values, bilinear_constrs)
                 processed_pairs.add((v2, v1))
                 processed_pairs.add((v1, v2))  # TODO is this necessary?
 
@@ -153,7 +152,7 @@ def determine_valid_values(block, discr_var_to_constrs_map):
     return possible_values
 
 
-def _process_bilinear_constraints(v1, v2, discrete_constr, bilinear_constrs):
+def _process_bilinear_constraints(v1, v2, var_values, bilinear_constrs):
     # Categorize as case 1 or case 2
     for bilinear_constr in bilinear_constrs:
         # repn = generate_standard_repn(bilinear_constr.body)
@@ -171,7 +170,7 @@ def _process_bilinear_constraints(v1, v2, discrete_constr, bilinear_constrs):
         # case if there are nonlinear expressions involved with the constraint?
         pass
         if True:
-            _reformulate_case_2(v1, v2, discrete_constr, bilinear_constr)
+            _reformulate_case_2(v1, v2, var_values, bilinear_constr)
     pass
 
 
@@ -179,8 +178,41 @@ def _reformulate_case_1(v1, v2, discrete_constr, bilinear_constr):
     raise NotImplementedError()
 
 
-def _reformulate_case_2(v1, v2, discrete_constr, bilinear_constr):
-    pass
+def _reformulate_case_2(v1, v2, var_values, bilinear_constr):
+    repn = generate_standard_repn(bilinear_constr.body)
+    blk = bilinear_constr.parent_block()
+    blk.valid_values = Set(initialize=var_values)
+    blk.x_active = Var(blk.valid_values, domain=Binary, initialize=1)
+    blk.v_increment = Var(
+        blk.valid_values, domain=v2.domain,
+        bounds=(v2.lb, v2.ub), initialize=v2.value)
+    blk.v_defn = Constraint(expr=v2 == summation(blk.v_increment))
+
+    @blk.Constraint(blk.valid_values)
+    def v_lb(blk, val):
+        return v2.lb * blk.x_active[val] <= blk.v_increment[val]
+
+    @blk.Constraint(blk.valid_values)
+    def v_ub(blk, val):
+        return blk.v_increment[val] <= v2.ub * blk.x_active[val]
+    blk.select_one_value = Constraint(expr=summation(blk.x_active) == 1)
+    replace_index = next(
+        i for i, var_tup in enumerate(repn.quadratic_vars)
+        if (var_tup[0] is v1 and var_tup[1] is v2) or
+           (var_tup[0] is v2 and var_tup[1] is v1))
+    bilinear_constr.set_value((
+        bilinear_constr.lower,
+        sum(coef * repn.linear_vars[i]
+            for i, coef in enumerate(repn.linear_coefs)) +
+        repn.quadratic_coefs[replace_index] * sum(
+            val * blk.v_increment[val] for val in var_values) +
+        sum(repn.quadratic_coefs[i] * var_tup[0] * var_tup[1]
+            for i, var_tup in enumerate(repn.quadratic_vars)
+            if not i == replace_index) +
+        repn.constant +
+        repn.nonlinear_expr,
+        bilinear_constr.upper
+    ))
 
 
 def _bilinear_expressions(model):

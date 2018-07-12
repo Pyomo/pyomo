@@ -63,7 +63,7 @@ class TestInducedLinearity(unittest.TestCase):
         m.logical.add(expr=m.y[2] + m.y[4] <= 1)
         var_to_values_map = determine_valid_values(
             m, detect_effectively_discrete_vars(m, 1E-6))
-        print(var_to_values_map)
+        # print(var_to_values_map)
         # valid_values = set([1, 2, 3, 4, 5, 6])
         # self.assertEqual(set(var_to_values_map[m.x]), valid_values)
 
@@ -78,8 +78,24 @@ class TestInducedLinearity(unittest.TestCase):
     #     with self.assertRaises(NotImplementedError):
     #         _reformulate_case_1(m.x, m.v, m.c2, m.c)
     #
-    # def test_induced_linearity_case2(self):
-    #     pass
+    def test_induced_linearity_case2(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(-3, 8))
+        m.y = Var(RangeSet(4), domain=Binary)
+        m.z = Var(domain=Integers, bounds=(-1, 2))
+        m.constr = Constraint(
+            expr=m.x == m.y[1] + 2 * m.y[2] + m.y[3] + 2 * m.y[4] + m.z)
+        m.logical = ConstraintList()
+        m.logical.add(expr=m.y[1] + m.y[2] == 1)
+        m.logical.add(expr=m.y[3] + m.y[4] == 1)
+        m.logical.add(expr=m.y[2] + m.y[4] <= 1)
+        m.b = Var(bounds=(-2, 7))
+        m.c = Var()
+        m.c = Constraint(
+            expr=(m.x - 3) * (m.b + 2) - (m.c + 4) * m.b +
+            exp(m.b ** 2) * m.x <= m.c)
+        TransformationFactory('contrib.induced_linearity').apply_to(m)
+        m.pprint()
 
 
 if __name__ == '__main__':
