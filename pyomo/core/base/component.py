@@ -357,6 +357,10 @@ class Component(_ComponentBase):
         """API definition for constructing components"""
         pass
 
+    def deconstruct(self):                     #pragma:nocover
+        """API definition for deconstructing components"""
+        pass
+
     def is_constructed(self):                           #pragma:nocover
         """Return True if this class has been constructed"""
         return self._constructed
