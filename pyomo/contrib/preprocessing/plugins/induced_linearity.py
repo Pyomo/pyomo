@@ -88,32 +88,45 @@ def determine_valid_values(block, discr_var_to_constrs_map):
     things are stil feasible. Based on their coefficient values, we can infer a
     set of allowable values for the effectively discrete variable.
 
-    We try to make this more efficient by first constructing a mapping of
-    variables to the constraints that they participate in.
-
     Args:
         block: The model or a disjunct on the model.
 
     """
-    var_to_constraints_map = ComponentMap()
+    possible_values = ComponentMap()
     if block.type() == Disjunct:
-        # Get constraints from the disjunct's parent model
-        add_constraints_to_map(var_to_constraints_map, block.model())
-    # Get constraints from the disjunct (or model)
-    add_constraints_to_map(var_to_constraints_map, block)
+        raise NotImplementedError()
 
     # Go through
     for eff_discr_var, constrs in discr_var_to_constrs_map.items():
-        pass
+        # get the superset of possible values by looking through the
+        # constraints
+        for constr in constrs:
+            repn = generate_standard_repn(constr.body)
+            var_coef = sum(coef for i, coef in enumerate(repn.linear_coefs)
+                           if repn.linear_vars[i] is eff_discr_var)
+            const = -(repn.constant - constr.upper) / var_coef
+            possible_vals = frozenset((const,))
+            for i, var in enumerate(repn.linear_vars):
+                if var is eff_discr_var:
+                    continue
+                coef = -repn.linear_coefs[i] / var_coef
+                if var.is_binary():
+                    var_values = (0, coef)
+                elif var.is_integer():
+                    var_values = range(var.lb, var.ub + 1)
+                else:
+                    raise ValueError(
+                        '%s has unacceptable variable domain: %s' %
+                        (var.name, var.domain))
+                possible_vals = frozenset(
+                    (v1 + v2 for v1 in possible_vals for v2 in var_values))
+            old_possible_vals = possible_values.get(eff_discr_var, None)
+            if old_possible_vals is not None:
+                possible_values[eff_discr_var] = old_possible_vals & possible_vals
+            else:
+                possible_values[eff_discr_var] = possible_vals
 
-
-def add_constraints_to_map(var_to_constraints_map, block):
-    for constr in block.model().component_data_objects(
-            Constraint, active=True):
-        for var in identify_variables(constr.body, include_fixed=False):
-            constr_list = var_to_constraints_map.get(var, [])
-            constr_list.append(constr)
-            var_to_constraints_map[var] = constr_list
+    return possible_values
 
 
 def _process_bilinear_constraints(v1, v2, discrete_constr, bilinear_constrs):
