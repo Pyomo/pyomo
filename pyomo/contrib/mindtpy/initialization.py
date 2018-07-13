@@ -68,7 +68,7 @@ def init_rNLP(solve_data, config):
     TransformationFactory('core.relax_integrality').apply_to(m)
     with SuppressInfeasibleWarning():
         results = SolverFactory(config.nlp_solver).solve(
-            m, **config.nlp_solve_args)
+            m, **config.nlp_solver_args)
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
         nlp_solution_values = list(v.value for v in MindtPy.var_list)
@@ -125,7 +125,7 @@ def init_max_binaries(solve_data, config):
     getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
     getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
 
-    results = solve_data.mip_solver.solve(m, options=config.mip_solve_args)
+    results = solve_data.mip_solver.solve(m, options=config.mip_solver_args)
 
     getattr(m, 'ipopt_zL_out', _DoNothing()).activate()
     getattr(m, 'ipopt_zU_out', _DoNothing()).activate()

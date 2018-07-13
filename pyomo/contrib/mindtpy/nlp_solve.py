@@ -45,7 +45,7 @@ def solve_NLP_subproblem(solve_data, config):
     # m.pprint() # print nlp problem for debugging
     with SuppressInfeasibleWarning():
         results = SolverFactory(config.nlp_solver).solve(
-            m, **config.nlp_solve_args)
+            m, **config.nlp_solver_args)
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
         copy_values(m, solve_data.working_model, config)
@@ -153,7 +153,7 @@ def solve_NLP_feas(solve_data, config):
     # m.pprint()  #print nlp feasibility problem for debugging
     with SuppressInfeasibleWarning():
         feas_soln = config.nlp_solver.solve(
-            m, **config.nlp_solve_args)
+            m, **config.nlp_solver_args)
     subprob_terminate_cond = feas_soln.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
         copy_values(m, solve_data.working_model, config)

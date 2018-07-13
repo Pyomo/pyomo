@@ -118,7 +118,7 @@ class MindtPySolver(Plugin):
         doc="Which NLP subsolver is going to be used for solving the nonlinear"
             "subproblems"
     ))
-    CONFIG.declare("nlp_solve_args", ConfigBlock(
+    CONFIG.declare("nlp_solver_args", ConfigBlock(
         implicit=True,
         description="NLP subsolver options",
         doc="Which NLP subsolver options to be passed to the solver while "
@@ -131,7 +131,7 @@ class MindtPySolver(Plugin):
         doc="Which MIP subsolver is going to be used for solving the mixed-"
             "integer master problems"
     ))
-    CONFIG.declare("mip_solve_args", ConfigBlock(
+    CONFIG.declare("mip_solver_args", ConfigBlock(
         implicit=True,
         description="MIP subsolver options",
         doc="Which MIP subsolver options to be passed to the solver while "

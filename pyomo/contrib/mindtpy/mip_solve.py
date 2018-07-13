@@ -41,14 +41,14 @@ def solve_OA_master(solve_data, config):
     # m.pprint() #print oa master problem for debugging
     with SuppressInfeasibleWarning():
         results = SolverFactory(config.mip_solver).solve(
-            m, **config.mip_solve_args)
+            m, **config.mip_solver_args)
     master_terminate_cond = results.solver.termination_condition
     if master_terminate_cond is tc.infeasibleOrUnbounded:
         # Linear solvers will sometimes tell me that it's infeasible or
         # unbounded during presolve, but fails to distinguish. We need to
         # resolve with a solver option flag on.
         from copy import deepcopy
-        changed_options = deepcopy(config.mip_solve_args)
+        changed_options = deepcopy(config.mip_solver_args)
         # This solver option is specific to Gurobi.
         changed_options['options']['DualReductions'] = 0
         with SuppressInfeasibleWarning():
@@ -163,7 +163,7 @@ def solve_ECP_master(solve_data, config):
     getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
 
     results = solve_data.mip_solver.solve(m, load_solutions=False,
-                                          options=config.mip_solve_args)
+                                          options=config.mip_solver_args)
     master_terminate_cond = results.solver.termination_condition
     if master_terminate_cond is tc.infeasibleOrUnbounded:
         # Linear solvers will sometimes tell that it's infeasible or
@@ -174,7 +174,7 @@ def solve_ECP_master(solve_data, config):
         # This solver option is specific to Gurobi.
         solve_data.mip_solver.options['DualReductions'] = 0
         results = solve_data.mip_solver.solve(m, load_solutions=False,
-                                              options=config.mip_solve_args)
+                                              options=config.mip_solver_args)
         master_terminate_cond = results.solver.termination_condition
         solve_data.mip_solver.options.update(old_options)
     for c in MindtPy.nonlinear_constraints:
@@ -249,7 +249,7 @@ def solve_PSC_master(solve_data, config):
     getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
     # m.pprint() #print psc master problem for debugging
     results = solve_data.mip_solver.solve(m, load_solutions=False,
-                                          options=config.mip_solve_args)
+                                          options=config.mip_solver_args)
     for c in MindtPy.nonlinear_constraints:
         c.activate()
     MindtPy.MindtPy_linear_cuts.deactivate()
@@ -322,7 +322,7 @@ def solve_GBD_master(solve_data, config, leave_linear_active=True):
     getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
     # m.pprint() #print gbd master problem for debugging
     results = solve_data.mip_solver.solve(m, load_solutions=False,
-                                          options=config.mip_solve_args)
+                                          options=config.mip_solver_args)
     master_terminate_cond = results.solver.termination_condition
     if master_terminate_cond is tc.infeasibleOrUnbounded:
         # Linear solvers will sometimes tell me that it is infeasible or
@@ -332,7 +332,7 @@ def solve_GBD_master(solve_data, config, leave_linear_active=True):
         # This solver option is specific to Gurobi.
         solve_data.mip_solver.options['DualReductions'] = 0
         results = solve_data.mip_solver.solve(m, load_solutions=False,
-                                              options=config.mip_solve_args)
+                                              options=config.mip_solver_args)
         master_terminate_cond = results.solver.termination_condition
         solve_data.mip_solver.options.update(old_options)
     if not leave_linear_active:
