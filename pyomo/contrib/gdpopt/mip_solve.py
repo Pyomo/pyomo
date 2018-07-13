@@ -46,26 +46,21 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
     getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
 
     # Create solver, check availability
-    mip_solver = SolverFactory(config.mip)
-    if not mip_solver.available():
-        raise RuntimeError("MIP solver %s is not available." % config.mip)
+    if not SolverFactory(config.mip_solver).available():
+        raise RuntimeError(
+            "MIP solver %s is not available." % config.mip_solver)
     # We use LoggingIntercept in order to suppress the stupid "Loading a
     # SolverResults object with a warning status" warning message.
     with SuppressInfeasibleWarning():
-        results = mip_solver.solve(m, **config.mip_solve_args)
+        results = SolverFactory(config.mip_solver).solve(
+            m, **config.mip_solver_args)
     terminate_cond = results.solver.termination_condition
     if terminate_cond is tc.infeasibleOrUnbounded:
         # Linear solvers will sometimes tell me that it's infeasible or
         # unbounded during presolve, but fails to distinguish. We need to
         # resolve with a solver option flag on.
-        tmp_args = deepcopy(config.mip_solve_args)
-        tmp_options = deepcopy(tmp_args.get('options', {}))
-        tmp_args['options'] = tmp_options
-        # TODO This solver option is specific to Gurobi.
-        tmp_options['DualReductions'] = 0
-        with SuppressInfeasibleWarning():
-            results = mip_solver.solve(m, **tmp_args)
-        terminate_cond = results.solver.termination_condition
+        results, terminate_cond = distinguish_mip_infeasible_or_unbounded(
+            m, config)
 
     # Build and return results object
     mip_result = MasterProblemResult()
@@ -102,3 +97,20 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
             (terminate_cond, results.solver.message))
 
     return mip_result
+
+
+def distinguish_mip_infeasible_or_unbounded(m, config):
+    """Distinguish between an infeasible or unbounded solution.
+
+    Linear solvers will sometimes tell me that a problem is infeasible or
+    unbounded during presolve, but not distinguish between the two cases. We
+    address this by solving again with a solver option flag on.
+
+    """
+    tmp_args = deepcopy(config.mip_solver_args)
+    # TODO This solver option is specific to Gurobi.
+    tmp_args['options']['DualReductions'] = 0
+    with SuppressInfeasibleWarning():
+        results = SolverFactory(config.mip_solver).solve(m, **tmp_args)
+    termination_condition = results.solver.termination_condition
+    return results, termination_condition

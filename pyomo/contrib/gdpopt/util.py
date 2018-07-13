@@ -66,15 +66,15 @@ def model_is_valid(solve_data, config):
         if len(GDPopt.working_nonlinear_constraints) > 0:
             config.logger.info(
                 "Your model is an NLP (nonlinear program). "
-                "Using NLP solver %s to solve." % config.nlp)
-            SolverFactory(config.nlp).solve(
+                "Using NLP solver %s to solve." % config.nlp_solver)
+            SolverFactory(config.nlp_solver).solve(
                 solve_data.original_model, **config.nlp_options)
             return False
         else:
             config.logger.info(
                 "Your model is an LP (linear program). "
-                "Using LP solver %s to solve." % config.mip)
-            SolverFactory(config.mip).solve(
+                "Using LP solver %s to solve." % config.mip_solver)
+            SolverFactory(config.mip_solver).solve(
                 solve_data.original_model, **config.mip_options)
             return False
 

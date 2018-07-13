@@ -53,11 +53,11 @@ def solve_NLP(nlp_model, solve_data, config):
     # Callback immediately before solving NLP subproblem
     config.call_before_subproblem_solve(nlp_model, solve_data)
 
-    nlp_solver = SolverFactory(config.nlp)
+    nlp_solver = SolverFactory(config.nlp_solver)
     if not nlp_solver.available():
-        raise RuntimeError("NLP solver %s is not available." % config.nlp)
+        raise RuntimeError("NLP solver %s is not available." % config.nlp_solver)
     with SuppressInfeasibleWarning():
-        results = nlp_solver.solve(nlp_model, **config.nlp_solve_args)
+        results = nlp_solver.solve(nlp_model, **config.nlp_solver_args)
 
     nlp_result = SubproblemResult()
     nlp_result.feasible = True
