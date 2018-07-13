@@ -119,6 +119,14 @@ class _ArcData(ActiveComponentData):
 
         self._validate_ports(source, destination, ports)
 
+        if self.ports is not None:
+            # we are reassigning this arc's values, clean up port lists
+            for port in self.ports:
+                port._arcs.remove(self)
+            if self._directed:
+                self.source._dests.remove(self)
+                self.destination._sources.remove(self)
+
         self._ports = tuple(ports) if ports is not None \
             else (source, destination)
         self._directed = source is not None
