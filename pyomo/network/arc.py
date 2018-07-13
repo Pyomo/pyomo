@@ -370,15 +370,3 @@ class IndexedArc(Arc):
 
 
 register_component(Arc, "Component used for connecting two Ports.")
-
-
-class ArcExpander(Plugin):
-    implements(IPyomoScriptModifyInstance)
-
-    def apply(self, **kwds):
-        instance = kwds.pop('instance')
-        xform = TransformationFactory('network.expand_arcs')
-        xform.apply_to(instance, **kwds)
-        return instance
-
-transform = ArcExpander()
