@@ -72,9 +72,6 @@ class ExpandArcs(Transformation):
 
         for arc in instance.component_data_objects(**obj_iter_kwds):
             ports = ComponentSet(arc.ports)
-            if not len(ports):
-                # skip uninitialized arcs
-                continue
             ref = None
 
             for p in arc.ports:

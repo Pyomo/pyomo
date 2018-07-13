@@ -166,6 +166,56 @@ class TestPort(unittest.TestCase):
         pipe.OUT.add(pipe.flow/pipe.pIn, "nonLin")
         self.assertEqual( pipe.OUT.polynomial_degree(), None)
 
+    def test_potentially_variable(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.p = Port()
+        self.assertTrue(m.p.is_potentially_variable())
+        m.p.add(-m.x)
+        self.assertTrue(m.p.is_potentially_variable())
+
+    def test_binary(self):
+        m = ConcreteModel()
+        m.x = Var(domain=Binary)
+        m.y = Var(domain=Reals)
+        m.p = Port()
+
+        self.assertTrue(m.p.is_binary())
+
+        m.p.add(m.x)
+        self.assertTrue(m.p.is_binary())
+
+        m.p.add(m.y)
+        self.assertFalse(m.p.is_binary())
+
+    def test_integer(self):
+        m = ConcreteModel()
+        m.x = Var(domain=Integers)
+        m.y = Var(domain=Reals)
+        m.p = Port()
+
+        self.assertTrue(m.p.is_integer())
+
+        m.p.add(m.x)
+        self.assertTrue(m.p.is_integer())
+
+        m.p.add(m.y)
+        self.assertFalse(m.p.is_integer())
+
+    def test_continuous(self):
+        m = ConcreteModel()
+        m.x = Var(domain=Reals)
+        m.y = Var(domain=Integers)
+        m.p = Port()
+
+        self.assertTrue(m.p.is_continuous())
+
+        m.p.add(m.x)
+        self.assertTrue(m.p.is_continuous())
+
+        m.p.add(m.y)
+        self.assertFalse(m.p.is_continuous())
+
     def test_getattr(self):
         m = ConcreteModel()
         m.x = Var()
@@ -206,6 +256,8 @@ class TestPort(unittest.TestCase):
         self.assertNotIn(m.a2, m.p3.sources())
         self.assertIn(m.a2, m.p1.dests(active=False))
         self.assertIn(m.a2, m.p3.sources(active=False))
+        self.assertIn(m.a2, m.p1.arcs(active=False))
+        self.assertIn(m.a2, m.p3.arcs(active=False))
 
     def test_remove(self):
         m = ConcreteModel()

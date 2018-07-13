@@ -205,6 +205,31 @@ class TestArc(unittest.TestCase):
         with self.assertRaises(AttributeError):
             m.a.something
 
+    def test_set_value(self):
+        m = ConcreteModel()
+        m.p1 = Port()
+        m.p2 = Port()
+        m.p3 = Port()
+        m.p4 = Port()
+        m.a = Arc(source=m.p1, destination=m.p2)
+
+        self.assertIn(m.a, m.p1.dests())
+        self.assertIn(m.a, m.p2.sources())
+        self.assertIn(m.a, m.p1.arcs())
+        self.assertIn(m.a, m.p2.arcs())
+
+        m.a = dict(ports=(m.p3, m.p4))
+
+        self.assertEqual(len(m.p1.dests()), 0)
+        self.assertEqual(len(m.p2.sources()), 0)
+        self.assertEqual(len(m.p1.arcs()), 0)
+        self.assertEqual(len(m.p2.arcs()), 0)
+
+        self.assertEqual(len(m.p3.dests()), 0)
+        self.assertEqual(len(m.p4.sources()), 0)
+        self.assertIn(m.a, m.p3.arcs())
+        self.assertIn(m.a, m.p4.arcs())
+
     def test_pprint(self):
         m = ConcreteModel()
         m.s = RangeSet(1, 5)
@@ -257,7 +282,9 @@ class TestArc(unittest.TestCase):
         m.prt2 = Port()
         m.prt2.add(m.y, "v")
 
+        # Both should be expanded, but for d all we get is an empty block
         m.c = Arc(source=m.prt1, destination=m.prt2)
+        m.d = Arc()
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 0)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 0)
@@ -270,6 +297,8 @@ class TestArc(unittest.TestCase):
         blk = m.component('c_expanded')
         self.assertTrue(blk.active)
         self.assertTrue(blk.component('v_equality').active)
+        self.assertTrue(m.d_expanded.active)
+        self.assertEqual(len(list(m.d_expanded.component_objects())), 0)
 
         os = StringIO()
         blk.pprint(ostream=os)
