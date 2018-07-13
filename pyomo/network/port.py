@@ -216,15 +216,16 @@ class Port(IndexedComponent):
     their indexed members, can be manipulated within constraint expressions.
 
     Constructor arguments:
-        rule            A function that returns a dictionary of name: var
-                            pairs to be initially added to the Port. Instead
-                            of var it could also be a tuple of (var, rule).
-                            Or it could return an iterable of either vars or
-                            tuples of (var, rule) for implicit names
-        initialize      Follows same specifications as rule's return value,
-                            gets initially added to the Port
-        implicit        An iterable of implicit names to be initially
-                            added to the Port
+        rule            A function that returns a dict of (name: var)
+                            pairs to be initially added to the Port.
+                            Instead of var it could also be a tuples of
+                            (var, rule). Or it could return an iterable
+                            of either vars or tuples of (var, rule) for
+                            implied names
+        initialize      Follows same specifications as rule's return
+                            value, gets initially added to the Port
+        implicit        An iterable of names to be initially added to
+                            the Port as implicit vars
         extends         A Port whose vars will be added to this Port
                             upon construction
         doc             A text string describing this component
