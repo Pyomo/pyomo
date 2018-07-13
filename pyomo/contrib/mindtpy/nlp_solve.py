@@ -84,7 +84,7 @@ def solve_NLP_subproblem(solve_data, config):
         # values of option flags.
         add_int_cut(var_values, solve_data, config, feasible=True)
 
-        config.subproblem_postfeasible(m, solve_data)
+        config.call_after_subproblem_feasible(m, solve_data)
     elif subprob_terminate_cond is tc.infeasible:
         # TODO try something else? Reinitialize with different initial
         # value?
@@ -138,7 +138,7 @@ def solve_NLP_subproblem(solve_data, config):
             'condition of {}'.format(subprob_terminate_cond))
 
     # Call the NLP post-solve callback
-    config.subproblem_postsolve(m, solve_data)
+    config.call_after_subproblem_solve(m, solve_data)
 
 
 def solve_NLP_feas(solve_data, config):
@@ -163,7 +163,7 @@ def solve_NLP_feas(solve_data, config):
     subprob_terminate_cond = feas_soln.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
         m.solutions.load_from(feas_soln)
-        self._copy_values(m, solve_data.working_model, config)
+        copy_values(m, solve_data.working_model, config)
     elif subprob_terminate_cond is tc.infeasible:
         raise ValueError('Feasibility NLP infeasible. '
                          'This should never happen.')

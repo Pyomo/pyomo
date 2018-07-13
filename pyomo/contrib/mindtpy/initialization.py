@@ -5,7 +5,7 @@ from pyomo.contrib.mindtpy.cut_generation import (add_ecp_cut, add_gbd_cut,
                                                   add_oa_cut,
                                                   add_objective_linearization,
                                                   add_psc_cut)
-from pyomo.contrib.mindtpy.solve_NLP import solve_NLP_subproblem
+from pyomo.contrib.mindtpy.nlp_solve import solve_NLP_subproblem
 from pyomo.contrib.mindtpy.util import (_DoNothing, calc_jacobians,
                                         copy_values, detect_nonlinear_vars)
 from pyomo.core import (ConstraintList, Objective, Suffix,

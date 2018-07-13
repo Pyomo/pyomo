@@ -32,36 +32,11 @@ from pyomo.contrib.mindtpy.util import (MindtPySolveData, _DoNothing, a_logger,
 from pyomo.core import (Block, ConstraintList, NonNegativeReals, RangeSet, Set,
                         Suffix, Var)
 from pyomo.opt import IOptSolver, SolverResults
-from pyutilib.misc.config import ConfigBlock, ConfigValue
+from pyomo.common.config import ConfigBlock, ConfigValue, PositiveFloat, PositiveInt, In
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 __version__ = (0, 1, 0)
-
-
-def _positiveFloat(val):
-    ans = float(val)
-    if ans <= 0:
-        raise ValueError("Expected positive float (got %s)" % (val,))
-    return ans
-
-
-def _positiveInt(val):
-    ans = int(val)
-    if ans <= 0:
-        raise ValueError("Expected positive int (got %s)" % (val,))
-    return ans
-
-
-class _In(object):
-
-    def __init__(self, allowable):
-        self.allowable = allowable
-
-    def __call__(self, value):
-        if value in self.allowable:
-            return value
-        raise ValueError("%s not in %s" % (value, self._allowable))
 
 
 class MindtPySolver(Plugin):
@@ -78,19 +53,19 @@ class MindtPySolver(Plugin):
     CONFIG = ConfigBlock("MindtPy")
     CONFIG.declare("bound_tolerance", ConfigValue(
         default=1E-5,
-        domain=_positiveFloat,
+        domain=PositiveFloat,
         description="Bound tolerance",
         doc="Relative tolerance for bound feasibility checks"
     ))
     CONFIG.declare("iteration_limit", ConfigValue(
         default=30,
-        domain=_positiveInt,
+        domain=PositiveInt,
         description="Iteration limit",
         doc="Number of maximum iterations in the decomposition methods"
     ))
     CONFIG.declare("strategy", ConfigValue(
         default="OA",
-        domain=_In(["OA", "GBD", "ECP", "PSC"]),
+        domain=In(["OA", "GBD", "ECP", "PSC"]),
         description="Decomposition strategy",
         doc="MINLP Decomposition strategy to be applied to the method. "
             "Currently available Outer Approximation (OA), Extended Cutting "
@@ -99,7 +74,7 @@ class MindtPySolver(Plugin):
     ))
     CONFIG.declare("init_strategy", ConfigValue(
         default="rNLP",
-        domain=_In(["rNLP", "initial_binary", "max_binary"]),
+        domain=In(["rNLP", "initial_binary", "max_binary"]),
         description="Initialization strategy",
         doc="Initialization strategy used by any method. Currently the "
             "continuous relaxation of the MINLP (rNLP), solve a maximal "
@@ -114,14 +89,14 @@ class MindtPySolver(Plugin):
     ))
     CONFIG.declare("max_slack", ConfigValue(
         default=1000.0,
-        domain=_positiveFloat,
+        domain=PositiveFloat,
         description="Maximum slack variable",
         doc="Maximum slack variable value allowed for the Outer Approximation "
             "cuts"
     ))
     CONFIG.declare("OA_penalty_factor", ConfigValue(
         default=1000.0,
-        domain=_positiveFloat,
+        domain=PositiveFloat,
         description="Outer Approximation slack penalty factor",
         doc="In the objective function of the Outer Approximation method, the "
             "slack variables correcponding to all the constraints get "
@@ -129,7 +104,7 @@ class MindtPySolver(Plugin):
     ))
     CONFIG.declare("ECP_tolerance", ConfigValue(
         default=1E-4,
-        domain=_positiveFloat,
+        domain=PositiveFloat,
         description="ECP tolerance",
         doc="Feasibility tolerance used to determine the stopping criterion in"
             "the ECP method. As long as nonlinear constraint are violated for "
@@ -137,7 +112,7 @@ class MindtPySolver(Plugin):
     ))
     CONFIG.declare("nlp_solver", ConfigValue(
         default="ipopt",
-        domain=_In(["ipopt"]),
+        domain=In(["ipopt"]),
         description="NLP subsolver name",
         doc="Which NLP subsolver is going to be used for solving the nonlinear"
             "subproblems"
@@ -150,7 +125,7 @@ class MindtPySolver(Plugin):
     ))
     CONFIG.declare("mip_solver", ConfigValue(
         default="gurobi",
-        domain=_In(["gurobi", "cplex", "cbc", "glpk"]),
+        domain=In(["gurobi", "cplex", "cbc", "glpk"]),
         description="MIP subsolver name",
         doc="Which MIP subsolver is going to be used for solving the mixed-"
             "integer master problems"
@@ -161,39 +136,24 @@ class MindtPySolver(Plugin):
         doc="Which MIP subsolver options to be passed to the solver while "
             "solving the mixed-integer master problems"
     ))
-    CONFIG.declare("modify_in_place", ConfigValue(
-        default=True,
-        domain=bool,
-        description="Solve subproblems directly upon the model",
-        doc="If true, MindtPy manipulations are performed directly upon "
-            "the model. Otherwise, the model is first copied and solution "
-            "values are copied over afterwards."
-    ))
-    CONFIG.declare("master_postsolve", ConfigValue(
+    CONFIG.declare("call_after_master_solve", ConfigValue(
         default=_DoNothing(),
         domain=None,
         description="Function to be executed after every master problem",
         doc="Callback hook after a solution of the master problem."
     ))
-    CONFIG.declare("subproblem_postsolve", ConfigValue(
+    CONFIG.declare("call_after_subproblem_solve", ConfigValue(
         default=_DoNothing(),
         domain=None,
         description="Function to be executed after every subproblem",
         doc="Callback hook after a solution of the nonlinear subproblem."
     ))
-    CONFIG.declare("subproblem_postfeasible", ConfigValue(
+    CONFIG.declare("call_after_subproblem_feasible", ConfigValue(
         default=_DoNothing(),
         domain=None,
         description="Function to be executed after every feasible subproblem",
         doc="Callback hook after a feasible solution"
         " of the nonlinear subproblem."
-    ))
-    CONFIG.declare("load_solutions", ConfigValue(
-        default=True,
-        domain=bool,
-        description="Solve subproblems directly upon the model",
-        doc="if True, load solutions back into the model."
-            "This is only relevant if solve_in_place is not True."
     ))
     CONFIG.declare("tee", ConfigValue(
         default=False,
@@ -403,12 +363,10 @@ class MindtPySolver(Plugin):
             MindtPy_iteration_loop(solve_data, config)
 
             # Update values in original model
-            if config.load_solutions:
-                # Update values in original model
-                copy_values(
-                    solve_data.best_solution_found,
-                    solve_data.original_model,
-                    config)
+            copy_values(
+                solve_data.best_solution_found,
+                solve_data.original_model,
+                config)
 
         finally:
             config.logger.setLevel(old_logger_level)

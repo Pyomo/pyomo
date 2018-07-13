@@ -153,7 +153,7 @@ def solve_OA_master(solve_data, config):
             (master_terminate_cond, results.solver.message))
 
     # Call the MILP post-solve callback
-    config.master_postsolve(m, solve_data)
+    config.call_after_master_solve(m, solve_data)
 
 
 def solve_ECP_master(solve_data, config):
@@ -242,7 +242,7 @@ def solve_ECP_master(solve_data, config):
                 master_terminate_cond, results.solver.message))
 
     # Call the MILP post-solve callback
-    config.master_postsolve(m, solve_data)
+    config.call_after_master_solve(m, solve_data)
 
 
 def solve_PSC_master(solve_data, config):
@@ -304,7 +304,7 @@ def solve_PSC_master(solve_data, config):
                 master_terminate_cond, results.solver.message))
 
     # Call the MILP post-solve callback
-    config.master_postsolve(m, solve_data)
+    config.call_after_master_solve(m, solve_data)
 
 
 def solve_GBD_master(solve_data, config, leave_linear_active=True):
@@ -401,4 +401,4 @@ def solve_GBD_master(solve_data, config, leave_linear_active=True):
     #
     # MindtPy.MindtPy_linear_cuts.deactivate()
     # Call the MILP post-solve callback
-    config.master_postsolve(m, solve_data)
+    config.call_after_master_solve(m, solve_data)

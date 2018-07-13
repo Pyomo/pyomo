@@ -4,7 +4,7 @@ from __future__ import division
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cut
 from pyomo.contrib.mindtpy.mip import (solve_ECP_master, solve_GBD_master,
                                        solve_OA_master, solve_PSC_master)
-from pyomo.contrib.mindtpy.solve_NLP import solve_NLP_subproblem
+from pyomo.contrib.mindtpy.nlp_solve import solve_NLP_subproblem
 from pyomo.core import minimize
 
 
