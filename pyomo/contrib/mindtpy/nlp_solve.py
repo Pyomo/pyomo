@@ -9,6 +9,7 @@ from pyomo.core import (Constraint, Objective, TransformationFactory, Var,
 from pyomo.core.kernel import ComponentMap
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverStatus, SolverFactory
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
 
 
 def solve_NLP_subproblem(solve_data, config):
@@ -42,12 +43,11 @@ def solve_NLP_subproblem(solve_data, config):
     t.apply_to(m, tmp=True, ignore_infeasible=True)
     # Solve the NLP
     # m.pprint() # print nlp problem for debugging
-    results = SolverFactory(config.nlp_solver).solve(
-        m, load_solutions=False,
-        options=config.nlp_solver_kwargs)
+    with SuppressInfeasibleWarning():
+        results = SolverFactory(config.nlp_solver).solve(
+            m, **config.nlp_solver_kwargs)
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
-        m.solutions.load_from(results)
         copy_values(m, solve_data.working_model, config)
         var_values = list(v.value for v in MindtPy.var_list)
         for c in m.tmp_duals:
@@ -86,10 +86,6 @@ def solve_NLP_subproblem(solve_data, config):
         # TODO try something else? Reinitialize with different initial
         # value?
         print('NLP subproblem was locally infeasible.')
-        # load the solution and suppress the warning message by setting
-        # solver status to ok.
-        results.solver.status = SolverStatus.ok
-        m.solutions.load_from(results)
         for c in m.component_data_objects(ctype=Constraint, active=True,
                                           descend_into=True):
             rhs = ((0 if c.upper is None else c.upper) +
@@ -155,11 +151,11 @@ def solve_NLP_feas(solve_data, config):
         else:
             v.fix(0)
     # m.pprint()  #print nlp feasibility problem for debugging
-    feas_soln = config.nlp_solver.solve(
-        m, load_solutions=False, options=config.nlp_solver_kwargs)
+    with SuppressInfeasibleWarning():
+        feas_soln = config.nlp_solver.solve(
+            m, **config.nlp_solver_kwargs)
     subprob_terminate_cond = feas_soln.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
-        m.solutions.load_from(feas_soln)
         copy_values(m, solve_data.working_model, config)
     elif subprob_terminate_cond is tc.infeasible:
         raise ValueError('Feasibility NLP infeasible. '

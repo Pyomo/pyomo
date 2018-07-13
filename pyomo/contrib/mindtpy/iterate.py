@@ -2,8 +2,9 @@
 from __future__ import division
 
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cut
-from pyomo.contrib.mindtpy.mip import (solve_ECP_master, solve_GBD_master,
-                                       solve_OA_master, solve_PSC_master)
+from pyomo.contrib.mindtpy.mip_solve import (solve_ECP_master,
+                                             solve_GBD_master, solve_OA_master,
+                                             solve_PSC_master)
 from pyomo.contrib.mindtpy.nlp_solve import solve_NLP_subproblem
 from pyomo.core import minimize
 
@@ -15,20 +16,10 @@ def MindtPy_iteration_loop(solve_data, config):
         config.logger.info(
             '---MindtPy Master Iteration %s---'
             % solve_data.mip_iter)
-        # Check bound convergence
-        if solve_data.LB + config.bound_tolerance >= solve_data.UB:
-            print('MindtPy exiting on bound convergence. '
-                  'LB: {} + (tol {}) >= UB: {}'.format(
-                      solve_data.LB, config.bound_tolerance, solve_data.UB) + '\n')
-            # res.solver.termination_condition = tc.optimal
+
+        if algorithm_should_terminate(solve_data, config):
             break
-        # Check iteration limit
-        if solve_data.mip_iter >= config.iteration_limit:
-            print('MindtPy unable to converge bounds '
-                  'after {} master iterations.'.format(solve_data.mip_iter))
-            print('Final bound values: LB: {}  UB: {}'.
-                  format(solve_data.LB, solve_data.UB))
-            break
+
         solve_data.mip_subiter = 0
         # solve MILP master problem
         if config.strategy == 'OA':
@@ -39,13 +30,11 @@ def MindtPy_iteration_loop(solve_data, config):
             solve_GBD_master(solve_data, config)
         elif config.strategy == 'ECP':
             solve_ECP_master(solve_data, config)
-        # Check bound convergence
-        if solve_data.LB + config.bound_tolerance >= solve_data.UB:
-            print('MindtPy exiting on bound convergence. '
-                  'LB: {} + (tol {}) >= UB: {}'.format(
-                      solve_data.LB, config.bound_tolerance, solve_data.UB))
+
+        if algorithm_should_terminate(solve_data, config):
             break
-        elif config.strategy == 'ECP':
+
+        if config.strategy == 'ECP':
             # Add ECP cut
             add_ecp_cut(solve_data, config)
         else:
@@ -94,21 +83,20 @@ def algorithm_should_terminate(solve_data, config):
     # Check bound convergence
     if solve_data.LB + config.bound_tolerance >= solve_data.UB:
         config.logger.info(
-            'GDPopt exiting on bound convergence. '
-            'LB: %s + (tol %s) >= UB: %s' %
-            (solve_data.LB, config.bound_tolerance,
-             solve_data.UB))
+            'MindtPy exiting on bound convergence. '
+            'LB: {} + (tol {}) >= UB: {}\n'.format(
+                solve_data.LB, config.bound_tolerance, solve_data.UB))
+        # res.solver.termination_condition = tc.optimal
         return True
 
     # Check iteration limit
-    if solve_data.master_iteration >= config.iterlim:
+    if solve_data.mip_iter >= config.iteration_limit:
         config.logger.info(
-            'GDPopt unable to converge bounds '
-            'after %s master iterations.'
-            % (solve_data.master_iteration,))
+            'MindtPy unable to converge bounds '
+            'after {} master iterations.'.format(solve_data.mip_iter))
         config.logger.info(
-            'Final bound values: LB: %s  UB: %s'
-            % (solve_data.LB, solve_data.UB))
+            'Final bound values: LB: {}  UB: {}'.
+            format(solve_data.LB, solve_data.UB))
         return True
 
     # if not algorithm_is_making_progress(solve_data, config):
