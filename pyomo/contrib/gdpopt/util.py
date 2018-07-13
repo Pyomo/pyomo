@@ -11,6 +11,8 @@ from pyomo.core.kernel import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverFactory
 from pyomo.opt.results import ProblemSense, SolverResults
+from six import StringIO
+from pyomo.common.log import LoggingIntercept
 
 
 class _DoNothing(object):
@@ -31,16 +33,18 @@ class _DoNothing(object):
         return _do_nothing
 
 
-class GDPoptSolveData(object):
-    """Data container to hold solve-instance data.
+class SuppressInfeasibleWarning(LoggingIntercept):
+    """Suppress the infeasible model warning message from solve().
 
-    Key attributes:
-        - original_model: the original model that the user gave us to solve
-        - working_model: the original model after preprocessing
-        - linear_GDP: the linear-discrete master problem
+    The "WARNING: Loading a SolverResults object with a warning status" warning
+    message from calling solve() is often unwanted, but there is no clear way
+    to suppress it.
 
     """
-    pass
+
+    def __init__(self):
+        super(SuppressInfeasibleWarning, self).__init__(
+            StringIO(), 'pyomo.core', logging.WARNING)
 
 
 def model_is_valid(solve_data, config):
@@ -62,15 +66,15 @@ def model_is_valid(solve_data, config):
         if len(GDPopt.working_nonlinear_constraints) > 0:
             config.logger.info(
                 "Your model is an NLP (nonlinear program). "
-                "Using NLP solver %s to solve." % config.nlp)
-            SolverFactory(config.nlp).solve(
+                "Using NLP solver %s to solve." % config.nlp_solver)
+            SolverFactory(config.nlp_solver).solve(
                 solve_data.original_model, **config.nlp_options)
             return False
         else:
             config.logger.info(
                 "Your model is an LP (linear program). "
-                "Using LP solver %s to solve." % config.mip)
-            SolverFactory(config.mip).solve(
+                "Using LP solver %s to solve." % config.mip_solver)
+            SolverFactory(config.mip_solver).solve(
                 solve_data.original_model, **config.mip_options)
             return False
 
@@ -392,74 +396,6 @@ def validate_disjunctions(model, config):
                 "Expected disjunct values to add up to at least 1 for "
                 "OR disjunction %s. "
                 "Instead, values add up to %s." % (disjtn.name, sum_disj_vals))
-
-
-def algorithm_is_making_progress(solve_data, config):
-    """Make sure that the algorithm is making sufficient progress
-    at each iteration to continue."""
-
-    # TODO if backtracking is turned on, and algorithm visits the same point
-    # twice without improvement in objective value, turn off backtracking.
-
-    # TODO stop iterations if feasible solutions not progressing for a number
-    # of iterations.
-
-    # If the hybrid algorithm is not making progress, switch to OA.
-    # required_feas_prog = 1E-6
-    # if solve_data.working_model.GDPopt_utils.objective.sense == minimize:
-    #     sign_adjust = 1
-    # else:
-    #     sign_adjust = -1
-
-    # Maximum number of iterations in which feasible bound does not
-    # improve before terminating algorithm
-    # if (len(feas_prog_log) > config.algorithm_stall_after and
-    #     (sign_adjust * (feas_prog_log[-1] + required_feas_prog)
-    #      >= sign_adjust *
-    #      feas_prog_log[-1 - config.algorithm_stall_after])):
-    #     config.logger.info(
-    #         'Feasible solutions not making enough progress '
-    #         'for %s iterations. Algorithm stalled. Exiting.\n'
-    #         'To continue, increase value of parameter '
-    #         'algorithm_stall_after.'
-    #         % (config.algorithm_stall_after,))
-    #     return False
-
-    return True
-
-
-def algorithm_should_terminate(solve_data, config):
-    """Check if the algorithm should terminate.
-
-    Termination conditions based on solver options and progress.
-
-    """
-    # Check bound convergence
-    if solve_data.LB + config.bound_tolerance >= solve_data.UB:
-        config.logger.info(
-            'GDPopt exiting on bound convergence. '
-            'LB: %s + (tol %s) >= UB: %s' %
-            (solve_data.LB, config.bound_tolerance,
-             solve_data.UB))
-        return True
-
-    # Check iteration limit
-    if solve_data.master_iteration >= config.iterlim:
-        config.logger.info(
-            'GDPopt unable to converge bounds '
-            'after %s master iterations.'
-            % (solve_data.master_iteration,))
-        config.logger.info(
-            'Final bound values: LB: %s  UB: %s'
-            % (solve_data.LB, solve_data.UB))
-        return True
-
-    if not algorithm_is_making_progress(solve_data, config):
-        config.logger.debug(
-            'Algorithm is not making enough progress. '
-            'Exiting iteration loop.')
-        return True
-    return False
 
 
 def copy_and_fix_mip_values_to_nlp(var_list, val_list, config):
