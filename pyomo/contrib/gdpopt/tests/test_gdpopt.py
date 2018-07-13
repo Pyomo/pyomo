@@ -42,8 +42,8 @@ class TestGDPopt(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
             SolverFactory('gdpopt').solve(
-                m, strategy='LOA', mip=required_solvers[1],
-                nlp=required_solvers[0])
+                m, strategy='LOA', mip_solver=required_solvers[1],
+                nlp_solver=required_solvers[0])
             self.assertIn("Set covering problem was infeasible.",
                           output.getvalue().strip())
 
@@ -54,8 +54,8 @@ class TestGDPopt(unittest.TestCase):
         eight_process = exfile.build_eight_process_flowsheet()
         SolverFactory('gdpopt').solve(
             eight_process, strategy='LOA',
-            mip=required_solvers[1],
-            nlp=required_solvers[0])
+            mip_solver=required_solvers[1],
+            nlp_solver=required_solvers[0])
 
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
@@ -66,8 +66,8 @@ class TestGDPopt(unittest.TestCase):
         strip_pack = exfile.build_rect_strip_packing_model()
         SolverFactory('gdpopt').solve(
             strip_pack, strategy='LOA',
-            mip=required_solvers[1],
-            nlp=required_solvers[0])
+            mip_solver=required_solvers[1],
+            nlp_solver=required_solvers[0])
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
@@ -78,8 +78,8 @@ class TestGDPopt(unittest.TestCase):
         cons_layout = exfile.build_constrained_layout_model()
         SolverFactory('gdpopt').solve(
             cons_layout, strategy='LOA',
-            mip=required_solvers[1],
-            nlp=required_solvers[0])
+            mip_solver=required_solvers[1],
+            nlp_solver=required_solvers[0])
         objective_value = value(cons_layout.min_dist_cost.expr)
         self.assertTrue(
             fabs(objective_value - 41573) <= 200,
@@ -92,8 +92,8 @@ class TestGDPopt(unittest.TestCase):
         eight_process = exfile.build_eight_process_flowsheet()
         SolverFactory('gdpopt').solve(
             eight_process, strategy='LOA', init_strategy='max_binary',
-            mip=required_solvers[1],
-            nlp=required_solvers[0])
+            mip_solver=required_solvers[1],
+            nlp_solver=required_solvers[0])
 
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
@@ -104,8 +104,8 @@ class TestGDPopt(unittest.TestCase):
         strip_pack = exfile.build_rect_strip_packing_model()
         SolverFactory('gdpopt').solve(
             strip_pack, strategy='LOA', init_strategy='max_binary',
-            mip=required_solvers[1],
-            nlp=required_solvers[0])
+            mip_solver=required_solvers[1],
+            nlp_solver=required_solvers[0])
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
@@ -129,8 +129,8 @@ class TestGDPopt(unittest.TestCase):
                 disj.indicator_var.set_value(0)
         SolverFactory('gdpopt').solve(
             eight_process, strategy='LOA', init_strategy='fix_disjuncts',
-            mip=required_solvers[1],
-            nlp=required_solvers[0])
+            mip_solver=required_solvers[1],
+            nlp_solver=required_solvers[0])
 
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
@@ -169,8 +169,8 @@ class TestGDPopt(unittest.TestCase):
         SolverFactory('gdpopt').solve(
             eight_process, strategy='LOA', init_strategy='custom_disjuncts',
             custom_init_disjuncts=initialize,
-            mip=required_solvers[1],
-            nlp=required_solvers[0],
+            mip_solver=required_solvers[1],
+            nlp_solver=required_solvers[0],
             call_after_subproblem_feasible=assert_correct_disjuncts_active)
 
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)

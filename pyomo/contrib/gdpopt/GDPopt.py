@@ -90,17 +90,17 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         default=8, domain=NonNegativeInt,
         description="Limit on the number of set covering iterations."
     ))
-    CONFIG.declare("mip", ConfigValue(
+    CONFIG.declare("mip_solver", ConfigValue(
         default="gurobi",
         description="Mixed integer linear solver to use."
     ))
-    mip_solve_args = CONFIG.declare(
-        "mip_solve_args", ConfigBlock(implicit=True))
-    CONFIG.declare("nlp", ConfigValue(
+    mip_solver_args = CONFIG.declare(
+        "mip_solver_args", ConfigBlock(implicit=True))
+    CONFIG.declare("nlp_solver", ConfigValue(
         default="ipopt",
         description="Nonlinear solver to use"))
-    nlp_solve_args = CONFIG.declare(
-        "nlp_solve_args", ConfigBlock(implicit=True))
+    nlp_solver_args = CONFIG.declare(
+        "nlp_solver_args", ConfigBlock(implicit=True))
     CONFIG.declare("call_after_master_solve", ConfigValue(
         default=_DoNothing,
         description="callback hook after a solution of the master problem"
