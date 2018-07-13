@@ -12,17 +12,17 @@ import logging
 import textwrap
 from math import fabs
 
+from pyomo.common.modeling import unique_component_name
 from pyomo.common.plugin import alias
-from pyomo.core import (Binary, Block, Constraint, Objective, Set, Var,
-                        summation, value)
+from pyomo.contrib.preprocessing.util import SuppressConstantObjectiveWarning
+from pyomo.core import (Binary, Block, Constraint, Objective, Set,
+                        TransformationFactory, Var, summation, value)
 from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.gdp import Disjunct
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
 from pyomo.repn import generate_standard_repn
-from pyomo.common.modeling import unique_component_name
-from pyomo.contrib.preprocessing.util import SuppressConstantObjectiveWarning
 
 logger = logging.getLogger('pyomo.contrib.preprocessing')
 
@@ -107,8 +107,6 @@ def determine_valid_values(block, discr_var_to_constrs_map):
 
     """
     possible_values = ComponentMap()
-    if block.type() == Disjunct:
-        raise NotImplementedError()
 
     for eff_discr_var, constrs in discr_var_to_constrs_map.items():
         # get the superset of possible values by looking through the
@@ -139,16 +137,29 @@ def determine_valid_values(block, discr_var_to_constrs_map):
             else:
                 possible_values[eff_discr_var] = possible_vals
 
+    possible_values = prune_possible_values(block, possible_values)
+
+    return possible_values
+
+
+def prune_possible_values(block_scope, possible_values):
     # Prune the set of possible values by solving a series of feasibility
     # problems
-    block._possible_values = possible_values
-    block._possible_value_vars = list(v for v in possible_values)
-    model = block.clone()
+    top_level_scope = block_scope.model()
+    top_level_scope._possible_values = possible_values
+    top_level_scope._possible_value_vars = list(v for v in possible_values)
+    top_level_scope._tmp_block_scope = (block_scope,)
+    model = top_level_scope.clone()
     for obj in model.component_data_objects(Objective, active=True):
         obj.deactivate()
-    for constr in model.component_data_objects(Constraint, active=True):
+    for constr in model.component_data_objects(
+            Constraint, active=True, descend_into=(Block, Disjunct)):
         if constr.body.polynomial_degree() not in (1, 0):
             constr.deactivate()
+    if block_scope.type() == Disjunct:
+        disj = model._tmp_block_scope[0]
+        disj.indicator_var.fix(1)
+        TransformationFactory('gdp.bigm').apply_to(model)
     model.test_feasible = Constraint()
     model._obj = Objective(expr=1)
     for eff_discr_var, vals in model._possible_values.items():
@@ -162,7 +173,7 @@ def determine_valid_values(block, discr_var_to_constrs_map):
         model._possible_values[eff_discr_var] = frozenset(
             v for v in model._possible_values[eff_discr_var]
             if val_feasible.get(v, True))
-    for i, var in enumerate(block._possible_value_vars):
+    for i, var in enumerate(top_level_scope._possible_value_vars):
         possible_values[var] = model._possible_values[model._possible_value_vars[i]]
 
     return possible_values
@@ -234,9 +245,13 @@ def _reformulate_case_2(blk, v1, v2, bilinear_constr):
             for i, var_tup in enumerate(repn.quadratic_vars)
             if not i == replace_index) +
         repn.constant +
-        repn.nonlinear_expr,
+        zero_if_None(repn.nonlinear_expr),
         bilinear_constr.upper
     ))
+
+
+def zero_if_None(val):
+    return val if val is not None else 0
 
 
 def _bilinear_expressions(model):
