@@ -941,6 +941,84 @@ class TestArc(unittest.TestCase):
     1 Declarations: v_equality
 """)
 
+
+    def test_extensive_single_var(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.z = Var()
+        m.p1 = Port(initialize={'v': (m.x, Port.Extensive)})
+        m.p2 = Port(initialize={'v': (m.y, Port.Extensive)})
+        m.p3 = Port(initialize={'v': (m.z, Port.Extensive)})
+        m.a1 = Arc(source=m.p1, destination=m.p2)
+        m.a2 = Arc(source=m.p1, destination=m.p3)
+
+        TransformationFactory('network.expand_arcs').apply_to(m)
+
+        os = StringIO()
+        m.pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""3 Var Declarations
+    x : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :  None :  None :  None : False :  True :  Reals
+    y : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :  None :  None :  None : False :  True :  Reals
+    z : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :  None :  None :  None : False :  True :  Reals
+
+3 Constraint Declarations
+    p1_v_outsum : Size=1, Index=None, Active=True
+        Key  : Lower : Body                              : Upper : Active
+        None :   0.0 : a1_expanded.v + a2_expanded.v - x :   0.0 :   True
+    p2_v_insum : Size=1, Index=None, Active=True
+        Key  : Lower : Body              : Upper : Active
+        None :   0.0 : a1_expanded.v - y :   0.0 :   True
+    p3_v_insum : Size=1, Index=None, Active=True
+        Key  : Lower : Body              : Upper : Active
+        None :   0.0 : a2_expanded.v - z :   0.0 :   True
+
+2 Block Declarations
+    a1_expanded : Size=1, Index=None, Active=True
+        1 Var Declarations
+            v : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        1 Declarations: v
+    a2_expanded : Size=1, Index=None, Active=True
+        1 Var Declarations
+            v : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        1 Declarations: v
+
+2 Arc Declarations
+    a1 : Size=1, Index=None, Active=False
+        Key  : Ports    : Directed : Active
+        None : (p1, p2) :     True :  False
+    a2 : Size=1, Index=None, Active=False
+        Key  : Ports    : Directed : Active
+        None : (p1, p3) :     True :  False
+
+3 Port Declarations
+    p1 : Size=1, Index=None
+        Key  : Name : Size : Variable
+        None :    v :    1 :        x
+    p2 : Size=1, Index=None
+        Key  : Name : Size : Variable
+        None :    v :    1 :        y
+    p3 : Size=1, Index=None
+        Key  : Name : Size : Variable
+        None :    v :    1 :        z
+
+13 Declarations: x y z p1 p2 p3 a1 a2 a1_expanded a2_expanded p1_v_outsum p2_v_insum p3_v_insum
+""")
+
+
     def test_extensive_expansion(self):
         m = ConcreteModel()
         m.comp = Set(initialize=["a", "b", "c"])

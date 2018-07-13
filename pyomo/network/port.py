@@ -502,7 +502,6 @@ class Port(IndexedComponent):
                             num_data_objs += 1
 
                 if num_data_objs == 1:
-                    print(6)
                     # Do not make splitfrac, do not make split constraints.
                     no_splitfrac = True
                     continue
