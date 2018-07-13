@@ -499,15 +499,3 @@ class IndexedPort(Port):
 
 register_component(
     Port, "A bundle of variables that can be connected to other ports.")
-
-
-class PortExpander(Plugin):
-    implements(IPyomoScriptModifyInstance)
-
-    def apply(self, **kwds):
-        instance = kwds.pop('instance')
-        xform = TransformationFactory('network.expand_ports')
-        xform.apply_to(instance, **kwds)
-        return instance
-
-transform = PortExpander()
