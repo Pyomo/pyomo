@@ -129,6 +129,8 @@ def determine_valid_values(block, discr_var_to_constrs_map):
             else:
                 possible_values[eff_discr_var] = possible_vals
 
+    # Prune the set of possible values by solving a series of feasibility
+    # problems
     block._possible_values = possible_values
     block._possible_value_vars = list(v for v in possible_values)
     model = block.clone()
