@@ -43,7 +43,11 @@ from pyomo.core.kernel import expr_common as common
 UNREFERENCED_EXPR_COUNT = 11
 UNREFERENCED_INTRINSIC_EXPR_COUNT = -2
 UNREFERENCED_EXPR_IF_COUNT = -3
-if sys.version_info[:2] >= (3, 6):
+if sys.version_info[:2] >= (3, 7):
+    UNREFERENCED_EXPR_COUNT -= 2
+    UNREFERENCED_INTRINSIC_EXPR_COUNT += 2
+    UNREFERENCED_EXPR_IF_COUNT += 3
+elif sys.version_info[:2] == (3, 6):
     UNREFERENCED_EXPR_COUNT -= 1
     UNREFERENCED_INTRINSIC_EXPR_COUNT += 1
     UNREFERENCED_EXPR_IF_COUNT += 2

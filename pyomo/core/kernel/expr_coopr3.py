@@ -1382,8 +1382,10 @@ def generate_expression(etype, _self, other, targetRefs=None):
 # error to hit _clone_if_needed() with fewer than
 # UNREFERENCED_EXPR_COUNT references.
 UNREFERENCED_EXPR_COUNT = 9
-if sys.version_info[:2] >= (3, 6):
+if sys.version_info[:2] == (3, 6):
     UNREFERENCED_EXPR_COUNT -= 1
+elif sys.version_info[:2] >= (3, 7):
+    UNREFERENCED_EXPR_COUNT -= 2
 
 
 
@@ -1600,8 +1602,10 @@ generate_relational_expression.call_info = None
 # inner expression is *always* cloned when forming the first half of the
 # compound inequality.
 UNREFERENCED_RELATIONAL_EXPR_COUNT = 9
-if sys.version_info[:2] >= (3, 6):
+if sys.version_info[:2] == (3, 6):
     UNREFERENCED_RELATIONAL_EXPR_COUNT -= 1
+elif sys.version_info[:2] >= (3, 7):
+    UNREFERENCED_RELATIONAL_EXPR_COUNT -= 2
 
 
 
