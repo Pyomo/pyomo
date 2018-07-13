@@ -45,9 +45,6 @@ def solve_NLP_subproblem(solve_data, config):
     results = SolverFactory(config.nlp_solver).solve(
         m, load_solutions=False,
         options=config.nlp_solver_kwargs)
-    t.revert(m)
-    for v in MindtPy.binary_vars:
-        v.unfix()
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
         m.solutions.load_from(results)
