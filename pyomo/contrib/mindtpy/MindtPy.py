@@ -26,9 +26,10 @@ import pyomo
 from pyomo.common.plugin import Plugin
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_master
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
-from pyomo.contrib.mindtpy.util import (MindtPySolveData, _DoNothing, a_logger,
+from pyomo.contrib.mindtpy.util import (MindtPySolveData, a_logger,
                                         build_ordered_component_lists,
                                         copy_values, model_is_valid)
+from pyomo.contrib.gdpopt.util import _DoNothing
 from pyomo.core import (Block, ConstraintList, NonNegativeReals, RangeSet, Set,
                         Suffix, Var)
 from pyomo.opt import IOptSolver, SolverResults
@@ -117,7 +118,7 @@ class MindtPySolver(Plugin):
         doc="Which NLP subsolver is going to be used for solving the nonlinear"
             "subproblems"
     ))
-    CONFIG.declare("nlp_solver_kwargs", ConfigBlock(
+    CONFIG.declare("nlp_solve_args", ConfigBlock(
         implicit=True,
         description="NLP subsolver options",
         doc="Which NLP subsolver options to be passed to the solver while "
@@ -130,7 +131,7 @@ class MindtPySolver(Plugin):
         doc="Which MIP subsolver is going to be used for solving the mixed-"
             "integer master problems"
     ))
-    CONFIG.declare("mip_solver_kwargs", ConfigBlock(
+    CONFIG.declare("mip_solve_args", ConfigBlock(
         implicit=True,
         description="MIP subsolver options",
         doc="Which MIP subsolver options to be passed to the solver while "

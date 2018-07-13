@@ -28,7 +28,7 @@ class TestMindtPy(unittest.TestCase):
             opt.solve(build_model(),
                       strategy='OA', init_strategy='initial_binary',
                       mip_solver=required_solvers[1], iteration_limit=13,
-                      mip_solver_kwargs={'options': mip_options},
+                      mip_solve_args={'options': mip_options},
                       nlp_solver=required_solvers[0])
             # model.pprint()
 

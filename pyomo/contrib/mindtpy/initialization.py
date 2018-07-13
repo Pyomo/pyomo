@@ -1,13 +1,14 @@
 """Initialization functions."""
 from __future__ import division
 
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing
 from pyomo.contrib.mindtpy.cut_generation import (add_ecp_cut, add_gbd_cut,
                                                   add_oa_cut,
                                                   add_objective_linearization,
                                                   add_psc_cut)
 from pyomo.contrib.mindtpy.nlp_solve import solve_NLP_subproblem
-from pyomo.contrib.mindtpy.util import (_DoNothing, calc_jacobians,
-                                        copy_values, detect_nonlinear_vars)
+from pyomo.contrib.mindtpy.util import (calc_jacobians, copy_values,
+                                        detect_nonlinear_vars)
 from pyomo.core import (ConstraintList, Objective, Suffix,
                         TransformationFactory, maximize, minimize, value)
 from pyomo.opt import TerminationCondition as tc
@@ -65,8 +66,9 @@ def init_rNLP(solve_data, config):
         "NLP %s: Solve relaxed integrality" % (solve_data.nlp_iter,))
     MindtPy = m.MindtPy_utils
     TransformationFactory('core.relax_integrality').apply_to(m)
-    results = SolverFactory(config.nlp_solver).solve(
-        m, options=config.nlp_solver_kwargs)
+    with SuppressInfeasibleWarning():
+        results = SolverFactory(config.nlp_solver).solve(
+            m, **config.nlp_solve_args)
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
         nlp_solution_values = list(v.value for v in MindtPy.var_list)
@@ -123,7 +125,7 @@ def init_max_binaries(solve_data, config):
     getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
     getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
 
-    results = solve_data.mip_solver.solve(m, options=config.mip_solver_kwargs)
+    results = solve_data.mip_solver.solve(m, options=config.mip_solve_args)
 
     getattr(m, 'ipopt_zL_out', _DoNothing()).activate()
     getattr(m, 'ipopt_zU_out', _DoNothing()).activate()
