@@ -157,7 +157,8 @@ class _PortData(ComponentData):
             rule = Port.Equality
         if rule is Port.Extensive:
             # avoid name collisions
-            if name.endswith("_split") or name.endswith("_equality"):
+            if (name.endswith("_split") or name.endswith("_equality") or
+                    name == "splitfrac"):
                 raise ValueError(
                     "Extensive variable '%s' on Port '%s' may not end "
                     "with '_split' or '_equality'" % (name, self.name))
