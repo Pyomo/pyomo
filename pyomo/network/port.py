@@ -281,7 +281,7 @@ class Port(IndexedComponent):
                 tmp.add(None, key)
             if self._extends:
                 for key, val in iteritems(self._extends.vars):
-                    tmp.add(val, key, self._extends._rules[key])
+                    tmp.add(val, key, self._extends._rules[key][0])
             if self._initialize:
                 self._add_from_container(tmp, self._initialize)
             if self._rule:
@@ -331,9 +331,9 @@ class Port(IndexedComponent):
             return
         if ostream is None:
             ostream = sys.stdout
-        tab="    "
-        ostream.write(prefix+self.local_name+" : ")
-        ostream.write("Size="+str(len(self)))
+        tab = "    "
+        ostream.write(prefix + self.local_name + " : ")
+        ostream.write("Size=" + str(len(self)))
 
         ostream.write("\n")
         def _line_generator(k,v):
@@ -341,14 +341,15 @@ class Port(IndexedComponent):
                 if _v is None:
                     _val = '-'
                 elif not hasattr(_v, 'is_indexed') or not _v.is_indexed():
-                    _val = str(value( _v ))
+                    _val = str(value(_v))
                 else:
-                    _val = "{%s}" % (', '.join('%r: %r' % (
-                        x, value(_v[x])) for x in sorted(_v._data) ),)
+                    _val = "{%s}" % (
+                        ', '.join('%r: %r' % (
+                            x, value(_v[x])) for x in sorted(_v._data)))
                 yield _k, _val
-        tabular_writer( ostream, prefix+tab,
-                        ((k,v) for k,v in iteritems(self._data)),
-                        ( "Name","Value" ), _line_generator )
+        tabular_writer(ostream, prefix+tab,
+                       ((k, v) for k, v in iteritems(self._data)),
+                       ("Name", "Value"), _line_generator)
 
     def Equality(port, name, index_set):
         cname = name + "_equality"

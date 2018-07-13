@@ -8,21 +8,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 #
-# Unit Tests for Elements of a Model
+# Unit Tests for Port
 #
-# TestSimpleVar                Class for testing single variables
-# TestArrayVar                Class for testing array of variables
-#
-
-import os
-from os.path import abspath, dirname
-currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 from six import StringIO
 
 from pyomo.environ import *
-from pyomo.network import Arc, Port
+from pyomo.network import *
 
 class TestPort(unittest.TestCase):
 
@@ -97,7 +90,6 @@ class TestPort(unittest.TestCase):
         self.assertEqual(len(pipe.OUT), 1)
         self.assertEqual(len(pipe.OUT.vars), 3)
 
-
     def test_fixed(self):
         pipe = ConcreteModel()
         pipe.SPECIES = Set(initialize=['a','b','c'])
@@ -129,7 +121,6 @@ class TestPort(unittest.TestCase):
         pipe.composition['b'].fix(1)
         pipe.composition['c'].fix(1)
         self.assertTrue( pipe.OUT.is_fixed())
-
 
     def test_polynomial_degree(self):
         pipe = ConcreteModel()
@@ -175,6 +166,90 @@ class TestPort(unittest.TestCase):
         pipe.OUT.add(pipe.flow/pipe.pIn, "nonLin")
         self.assertEqual( pipe.OUT.polynomial_degree(), None)
 
+    def test_getattr(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.port = Port()
+        m.port.add(m.x)
+        self.assertIs(m.port.x, m.x)
+
+    def test_arc_lists(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.p1 = Port()
+        m.p2 = Port()
+        m.p3 = Port()
+        m.p4 = Port()
+        m.p5 = Port()
+        m.p1.add(m.x)
+        m.p2.add(m.x)
+        m.p3.add(m.x)
+        m.p4.add(m.x)
+        m.p5.add(m.x)
+        m.a1 = Arc(source=m.p1, destination=m.p2)
+        m.a2 = Arc(source=m.p1, destination=m.p3)
+        m.a3 = Arc(source=m.p4, destination=m.p1)
+        m.a4 = Arc(source=m.p5, destination=m.p1)
+
+        self.assertEqual(len(m.p1.dests()), 2)
+        self.assertEqual(len(m.p1.sources()), 2)
+        self.assertEqual(len(m.p2.dests()), 0)
+        self.assertEqual(len(m.p2.sources()), 1)
+        self.assertIn(m.a1, m.p1.dests())
+        self.assertIn(m.a1, m.p2.sources())
+        self.assertNotIn(m.a1, m.p1.sources())
+        self.assertNotIn(m.a1, m.p2.dests())
+
+        m.a2.deactivate()
+
+        self.assertNotIn(m.a2, m.p1.dests())
+        self.assertNotIn(m.a2, m.p3.sources())
+        self.assertIn(m.a2, m.p1.dests(active=False))
+        self.assertIn(m.a2, m.p3.sources(active=False))
+
+    def test_remove(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.port = Port()
+        m.port.add(m.x)
+        self.assertIn('x', m.port.vars)
+        self.assertIn('x', m.port._rules)
+        m.port.remove('x')
+        self.assertNotIn('x', m.port.vars)
+        self.assertNotIn('x', m.port._rules)
+
+    def test_extends(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.p1 = Port()
+        m.p1.add(m.x, rule=Port.Extensive)
+        m.p2 = Port(extends=m.p1)
+        self.assertIs(m.p2.x, m.x)
+        self.assertIs(m.p2._rules['x'][0], Port.Extensive)
+
+    def test_add_from_containers(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.p1 = Port(initialize=[m.x, m.y])
+        m.p2 = Port(initialize=[(m.x, Port.Equality), (m.y, Port.Extensive)])
+        m.p3 = Port(initialize=dict(this=m.x, that=m.y))
+        m.p4 = Port(initialize=dict(this=(m.x, Port.Equality),
+                                    that=(m.y, Port.Extensive)))
+
+        self.assertIs(m.p1.x, m.x)
+        self.assertIs(m.p1.y, m.y)
+        self.assertIs(m.p2.x, m.x)
+        self.assertIs(m.p2._rules['x'][0], Port.Equality)
+        self.assertIs(m.p2.y, m.y)
+        self.assertIs(m.p2._rules['y'][0], Port.Extensive)
+        self.assertIs(m.p3.this, m.x)
+        self.assertIs(m.p3.that, m.y)
+        self.assertIs(m.p4.this, m.x)
+        self.assertIs(m.p4._rules['this'][0], Port.Equality)
+        self.assertIs(m.p4.that, m.y)
+        self.assertIs(m.p4._rules['that'][0], Port.Extensive)
+
     def test_pprint(self):
         pipe = ConcreteModel()
         pipe.SPECIES = Set(initialize=['a','b','c'])
@@ -182,7 +257,7 @@ class TestPort(unittest.TestCase):
         pipe.composition = Var(pipe.SPECIES)
         pipe.pIn  = Var( within=NonNegativeReals )
 
-        pipe.OUT = Port()
+        pipe.OUT = Port(implicit=['imp'])
         pipe.OUT.add(-pipe.flow, "flow")
         pipe.OUT.add(pipe.composition, "composition")
         pipe.OUT.add(pipe.composition['a'], "comp_a")
@@ -196,6 +271,7 @@ class TestPort(unittest.TestCase):
     None :      comp_a :    1 : composition[a]
          : composition :    3 : composition
          :        flow :    1 : - flow
+         :         imp :    - : None
          :    pressure :    1 : pIn
 """)
 
@@ -225,7 +301,7 @@ class TestPort(unittest.TestCase):
                                 initialize=lambda m,i: ord(i)-ord('a') )
         pipe.pIn  = Var( within=NonNegativeReals, initialize=3.14 )
 
-        pipe.OUT = Port()
+        pipe.OUT = Port(implicit=['imp'])
         pipe.OUT.add(-pipe.flow, "flow")
         pipe.OUT.add(pipe.composition, "composition")
         pipe.OUT.add(pipe.pIn, "pressure")
@@ -237,6 +313,7 @@ class TestPort(unittest.TestCase):
     Key  : Name        : Value
     None : composition : {'a': 0, 'b': 1, 'c': 2}
          :        flow : -10
+         :         imp : -
          :    pressure : 3.14
 """)
 

@@ -8,15 +8,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 #
-# Unit Tests for Elements of a Model
+# Unit Tests for Arc
 #
 
 import pyutilib.th as unittest
 from six import StringIO
+import logging
 
 from pyomo.environ import *
-from pyomo.network import Arc, Port
-from pyomo.network.arc import ArcExpander
+from pyomo.network import *
 
 class TestArc(unittest.TestCase):
 
@@ -61,10 +61,13 @@ class TestArc(unittest.TestCase):
         self.assertIs(m.c1.type(), Arc)
 
     def test_with_scalar_ports(self):
+        def rule(m):
+            return dict(source=m.prt1, destination=m.prt2)
+
         m = ConcreteModel()
         m.prt1 = Port()
         m.prt2 = Port()
-        m.c1 = Arc(source=m.prt1, destination=m.prt2)
+        m.c1 = Arc(rule=rule)
         self.assertEqual(len(m.c1), 1)
         self.assertTrue(m.c1.directed)
         self.assertIs(m.c1.source, m.prt1)
@@ -159,6 +162,11 @@ class TestArc(unittest.TestCase):
         self.assertIsNone(m.c4[4].source)
         self.assertIsNone(m.c4[4].destination)
 
+        logging.disable(logging.ERROR)
+        with self.assertRaises(ValueError):
+            m.c5 = Arc(m.s, rule=rule1, directed=False)
+        logging.disable(logging.NOTSET)
+
         m = AbstractModel()
         m.s = RangeSet(1, 5)
         m.prt1 = Port(m.s)
@@ -183,6 +191,19 @@ class TestArc(unittest.TestCase):
         self.assertIs(inst.c2[4].ports[1], inst.prt2[4])
         self.assertIsNone(inst.c2[4].source)
         self.assertIsNone(inst.c2[4].destination)
+
+    def test_getattr(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.p1 = Port(initialize=[m.x])
+        m.p2 = Port(extends=m.p1)
+        m.a = Arc(ports=(m.p1, m.p2))
+
+        TransformationFactory('network.expand_arcs').apply_to(m)
+
+        self.assertIs(m.a.x_equality, m.a.expanded_block.x_equality)
+        with self.assertRaises(AttributeError):
+            m.a.something
 
     def test_pprint(self):
         m = ConcreteModel()
@@ -729,7 +750,7 @@ class TestArc(unittest.TestCase):
         m.EPRT1 = Port(implicit=['y'])
         m.EPRT1.add(m.a2,'x')
 
-        m.c = Arc(ports=(m.PRT, m.EPRT1))
+        m.c = Arc(ports=(m.EPRT1, m.PRT))
         m.d = Arc(ports=(m.EPRT2, m.PRT))
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 0)
@@ -771,13 +792,13 @@ class TestArc(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """c_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
-        x_equality : Size=2, Index=x_index, Active=True
+        x_equality : Size=2, Index=a2_index, Active=True
             Key : Lower : Body         : Upper : Active
-              1 :   0.0 : x[1] - a2[1] :   0.0 :   True
-              2 :   0.0 : x[2] - a2[2] :   0.0 :   True
+              1 :   0.0 : a2[1] - x[1] :   0.0 :   True
+              2 :   0.0 : a2[2] - x[2] :   0.0 :   True
         y_equality : Size=1, Index=None, Active=True
             Key  : Lower : Body             : Upper : Active
-            None :   0.0 : y - EPRT1_auto_y :   0.0 :   True
+            None :   0.0 : EPRT1_auto_y - y :   0.0 :   True
 
     2 Declarations: x_equality y_equality
 """)
@@ -787,7 +808,7 @@ class TestArc(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """d_expanded : Size=1, Index=None, Active=True
     2 Constraint Declarations
-        x_equality : Size=2, Index=x_index, Active=True
+        x_equality : Size=2, Index=a2_index, Active=True
             Key : Lower : Body                   : Upper : Active
               1 :   0.0 : EPRT2_auto_x[1] - x[1] :   0.0 :   True
               2 :   0.0 : EPRT2_auto_x[2] - x[2] :   0.0 :   True
@@ -822,6 +843,9 @@ class TestArc(unittest.TestCase):
         self.assertFalse(m.eq.active)
         self.assertFalse(m.eq[1].active)
         self.assertFalse(m.eq[2].active)
+        self.assertIs(m.eq.expanded_block, m.eq_expanded)
+        self.assertIs(m.eq.expanded_block[1], m.eq_expanded[1])
+        self.assertIs(m.eq.expanded_block[2], m.eq_expanded[2])
 
         os = StringIO()
         m.component('eq_expanded').pprint(ostream=os)
@@ -844,7 +868,7 @@ class TestArc(unittest.TestCase):
 """)
 
 
-    def test_arcexpander(self):
+    def test_inactive(self):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
@@ -865,7 +889,7 @@ class TestArc(unittest.TestCase):
         self.assertEqual(len(list(m.component_objects(Constraint))), 0)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 0)
 
-        ArcExpander().apply(instance=m)
+        TransformationFactory('network.expand_arcs').apply_to(m)
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 1)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
