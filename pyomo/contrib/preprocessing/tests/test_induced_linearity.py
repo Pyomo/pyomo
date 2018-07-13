@@ -82,7 +82,7 @@ class TestInducedLinearity(unittest.TestCase):
         m.logical.add(expr=m.y[2] + m.y[4] <= 1)
         m.b = Var(bounds=(-2, 7))
         m.c = Var()
-        m.c = Constraint(
+        m.bilinear = Constraint(
             expr=(m.x[0] - 3) * (m.b + 2) - (m.c + 4) * m.b +
             exp(m.b ** 2) * m.x[0] <= m.c)
         TransformationFactory('contrib.induced_linearity').apply_to(m)

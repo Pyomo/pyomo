@@ -22,6 +22,7 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
 from pyomo.repn import generate_standard_repn
 from pyomo.common.modeling import unique_component_name
+from pyomo.contrib.preprocessing.util import SuppressConstantObjectiveWarning
 
 logger = logging.getLogger('pyomo.contrib.preprocessing')
 
@@ -142,7 +143,8 @@ def determine_valid_values(block, discr_var_to_constrs_map):
         val_feasible = {}
         for val in vals:
             model.test_feasible.set_value(eff_discr_var == val)
-            res = SolverFactory('glpk').solve(model)
+            with SuppressConstantObjectiveWarning():
+                res = SolverFactory('glpk').solve(model)
             if res.solver.termination_condition is tc.infeasible:
                 val_feasible[val] = False
         model._possible_values[eff_discr_var] = frozenset(
@@ -160,6 +162,7 @@ def _process_bilinear_constraints(block, v1, v2, var_values, bilinear_constrs):
         block, ("%s_%s_bilinear" % (v1.local_name, v2.local_name))
         .translate({ord(c): '' for c in "[]"}))
     block._induced_linearity_info.add_component(unique_name, blk)
+    # TODO think about not using floats as indices in a set
     blk.valid_values = Set(initialize=var_values)
     blk.x_active = Var(blk.valid_values, domain=Binary, initialize=1)
     blk.v_increment = Var(
