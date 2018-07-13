@@ -51,7 +51,8 @@ class InducedLinearity(IsomorphicTransformation):
     def _apply_to(self, model):
         """Apply the transformation to the given model."""
         equality_tolerance = 1E-6
-        model._induced_linearity_info = Block()
+        if not hasattr(model, '_induced_linearity_info'):
+            model._induced_linearity_info = Block()
         eff_discr_vars = detect_effectively_discrete_vars(
             model, equality_tolerance)
         # TODO will need to go through this for each disjunct, since it does
