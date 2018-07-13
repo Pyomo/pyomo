@@ -1,6 +1,13 @@
+
+from pyutilib.services import TempfileManager
+from pyutilib.services import register_executable
+
 from pyomo.common import plugin
 from pyomo.opt.base import IOptSolver
+from pyomo.solvers.plugins.solvers.ASL import ASL
+
 from pyomo.contrib.trustregion.TRF import TRF
+from pyomo.contrib.trustregion.readgjh import readgjh
 import pyomo.contrib.trustregion.param as param
 
 def load():
@@ -42,3 +49,40 @@ class TrustRegionSolver(plugin.Plugin):
         assert not kwds
         #config = param.CONFIG(kwds)
         return TRF(model, eflist)#, config)
+
+class GJHSolver(ASL):
+    """An interface to the AMPL GJH "solver" for evaluating a model at a
+    point."""
+
+    plugin.implements(IOptSolver)
+    plugin.alias(
+        'contrib.gjh', doc='Interface to the AMPL GJH "solver"')
+
+    def __init__(self, **kwds):
+        kwds['type'] = 'gjh'
+        kwds['symbolic_solver_labels'] = True
+        super(GJHSolver, self).__init__(**kwds)
+        self.options.solver = 'gjh'
+        self._metasolver = False
+
+    # A hackish way to hold on to the model so that we can parse the
+    # results.
+    def _initialize_callbacks(self, model):
+        self._model = model
+        self._model._gjh_info = None
+        super(GJHSolver, self)._initialize_callbacks(model)
+
+    def _presolve(self, *args, **kwds):
+        super(GJHSolver, self)._presolve(*args, **kwds)
+        self._gjh_file = self._soln_file[:-3]+'gjh'
+        TempfileManager.add_tempfile(self._gjh_file, exists=False)
+
+    def _postsolve(self):
+        #
+        # TODO: We should return the information using a better data
+        # structure (ComponentMap? so that the GJH solver does not need
+        # to be called with symbolic_solver_labels=True
+        #
+        self._model._gjh_info = readgjh(self._gjh_file)
+        self._model = None
+        return super(GJHSolver, self)._postsolve()

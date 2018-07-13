@@ -231,18 +231,20 @@ class ModelSolutions(object):
         # If there is a warning, then print a warning message.
         #
         if (results.solver.status == pyomo.opt.SolverStatus.warning):
-            logger.warn('Loading a SolverResults object with a '
-                        'warning status into model=%s;\n'
-                        '    message from solver=%s'
-                        % (instance.name, results.solver.Message))
+            logger.warning(
+                'Loading a SolverResults object with a '
+                'warning status into model=%s;\n'
+                '    message from solver=%s'
+                % (instance.name, results.solver.Message))
         #
         # If the solver status not one of either OK or Warning, then generate an error.
         #
         elif results.solver.status != pyomo.opt.SolverStatus.ok:
             if (results.solver.status == pyomo.opt.SolverStatus.aborted) and \
                (len(results.solution) > 0):
-                logger.warn("Loading a SolverResults object with "
-                            "an 'aborted' status, but containing a solution")
+                logger.warning(
+                    "Loading a SolverResults object with "
+                    "an 'aborted' status, but containing a solution")
             else:
                 raise ValueError("Cannot load a SolverResults object "
                                  "with bad status: %s"
