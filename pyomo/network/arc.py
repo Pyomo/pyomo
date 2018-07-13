@@ -75,15 +75,17 @@ class _ArcData(ActiveComponentData):
     def source(self):
         # directed can be true before construction
         # so make sure ports is not None
-        return self._ports[0] if self._directed is True and \
-            self._ports is not None else None
+        return self._ports[0] if (
+            self._directed is True and self._ports is not None
+            ) else None
 
     src = source
 
     @property
     def destination(self):
-        return self._ports[1] if self._directed is True and \
-            self._ports is not None else None
+        return self._ports[1] if (
+            self._directed is True and self._ports is not None
+            ) else None
 
     dest = destination
 
