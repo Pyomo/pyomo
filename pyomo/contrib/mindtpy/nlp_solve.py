@@ -8,7 +8,7 @@ from pyomo.core import (Constraint, Objective, TransformationFactory, Var,
                         minimize, value)
 from pyomo.core.kernel import ComponentMap
 from pyomo.opt import TerminationCondition as tc
-from pyomo.opt import SolverStatus, SolverFactory
+from pyomo.opt import SolverFactory
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
 
 

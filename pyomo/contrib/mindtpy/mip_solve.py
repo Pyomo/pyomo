@@ -1,14 +1,13 @@
 """Master problem functions."""
 from __future__ import division
 
-from copy import deepcopy
-
 from pyomo.contrib.mindtpy.initialization import init_max_binaries
 from pyomo.contrib.mindtpy.util import copy_values
 from pyomo.core import Constraint, Expression, Objective, minimize, value
 from pyomo.opt import TerminationCondition as tc
-from pyomo.opt import SolutionStatus, SolverStatus, SolverFactory
+from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing
+from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
 
 
 def solve_OA_master(solve_data, config):
@@ -47,14 +46,8 @@ def solve_OA_master(solve_data, config):
         # Linear solvers will sometimes tell me that it's infeasible or
         # unbounded during presolve, but fails to distinguish. We need to
         # resolve with a solver option flag on.
-        from copy import deepcopy
-        changed_options = deepcopy(config.mip_solver_args)
-        # This solver option is specific to Gurobi.
-        changed_options['options']['DualReductions'] = 0
-        with SuppressInfeasibleWarning():
-            results = SolverFactory(config.mip_solver).solve(
-                m, **changed_options)
-        master_terminate_cond = results.solver.termination_condition
+        results, master_terminate_cond = distinguish_mip_infeasible_or_unbounded(
+            m, config)
 
     # Process master problem result
     if master_terminate_cond is tc.optimal:
@@ -162,21 +155,16 @@ def solve_ECP_master(solve_data, config):
     getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
     getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
 
-    results = solve_data.mip_solver.solve(m, load_solutions=False,
-                                          options=config.mip_solver_args)
+    with SuppressInfeasibleWarning():
+        results = SolverFactory(config.mip_solver).solve(
+            m, **config.mip_solver_args)
     master_terminate_cond = results.solver.termination_condition
     if master_terminate_cond is tc.infeasibleOrUnbounded:
         # Linear solvers will sometimes tell that it's infeasible or
         # unbounded during presolve, but fails to distinguish. We need to
         # resolve with a solver option flag on.
-        from copy import deepcopy
-        old_options = deepcopy(solve_data.mip_solver.options)
-        # This solver option is specific to Gurobi.
-        solve_data.mip_solver.options['DualReductions'] = 0
-        results = solve_data.mip_solver.solve(m, load_solutions=False,
-                                              options=config.mip_solver_args)
-        master_terminate_cond = results.solver.termination_condition
-        solve_data.mip_solver.options.update(old_options)
+        results, master_terminate_cond = distinguish_mip_infeasible_or_unbounded(
+            m, config)
     for c in MindtPy.nonlinear_constraints:
         c.activate()
         MindtPy.MindtPy_linear_cuts.deactivate()
@@ -184,7 +172,6 @@ def solve_ECP_master(solve_data, config):
     # Process master problem result
     if master_terminate_cond is tc.optimal:
         # proceed. Just need integer values
-        m.solutions.load_from(results)
         copy_values(m, solve_data.working_model, config)
 
         if all(
@@ -248,8 +235,9 @@ def solve_PSC_master(solve_data, config):
     getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
     getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
     # m.pprint() #print psc master problem for debugging
-    results = solve_data.mip_solver.solve(m, load_solutions=False,
-                                          options=config.mip_solver_args)
+    with SuppressInfeasibleWarning():
+        results = SolverFactory(config.mip_solver).solve(
+            m, **config.mip_solver_args)
     for c in MindtPy.nonlinear_constraints:
         c.activate()
     MindtPy.MindtPy_linear_cuts.deactivate()
@@ -260,7 +248,6 @@ def solve_PSC_master(solve_data, config):
     master_terminate_cond = results.solver.termination_condition
     if master_terminate_cond is tc.optimal:
         # proceed. Just need integer values
-        m.solutions.load_from(results)
         copy_values(m, solve_data.working_model, config)
 
         if MindtPy.obj.sense == minimize:
@@ -285,7 +272,6 @@ def solve_PSC_master(solve_data, config):
         else:
             solve_data.UB = float('-inf')
     else:
-        m.solutions.load_from(results)
         raise ValueError(
             'MindtPy unable to handle MILP master termination condition '
             'of {}. Solver message: {}'.format(
@@ -321,20 +307,16 @@ def solve_GBD_master(solve_data, config, leave_linear_active=True):
     getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
     getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
     # m.pprint() #print gbd master problem for debugging
-    results = solve_data.mip_solver.solve(m, load_solutions=False,
-                                          options=config.mip_solver_args)
+    with SuppressInfeasibleWarning():
+        results = SolverFactory(config.mip_solver).solve(
+            m, **config.mip_solver_args)
     master_terminate_cond = results.solver.termination_condition
     if master_terminate_cond is tc.infeasibleOrUnbounded:
         # Linear solvers will sometimes tell me that it is infeasible or
         # unbounded during presolve, but fails to distinguish. We need to
         # resolve with a solver option flag on.
-        old_options = deepcopy(solve_data.mip_solver.options)
-        # This solver option is specific to Gurobi.
-        solve_data.mip_solver.options['DualReductions'] = 0
-        results = solve_data.mip_solver.solve(m, load_solutions=False,
-                                              options=config.mip_solver_args)
-        master_terminate_cond = results.solver.termination_condition
-        solve_data.mip_solver.options.update(old_options)
+        results, master_terminate_cond = distinguish_mip_infeasible_or_unbounded(
+            m, config)
     if not leave_linear_active:
         for c in to_deactivate:
             c.activate()
@@ -348,7 +330,6 @@ def solve_GBD_master(solve_data, config, leave_linear_active=True):
     # Process master problem result
     if master_terminate_cond is tc.optimal:
         # proceed. Just need integer values
-        m.solutions.load_from(results)
         copy_values(m, solve_data.working_model, config)
 
         if MindtPy.obj.sense == minimize:
