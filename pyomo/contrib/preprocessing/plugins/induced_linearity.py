@@ -50,36 +50,45 @@ class InducedLinearity(IsomorphicTransformation):
 
     def _apply_to(self, model):
         """Apply the transformation to the given model."""
-        equality_tolerance = 1E-6
-        if not hasattr(model, '_induced_linearity_info'):
-            model._induced_linearity_info = Block()
-        eff_discr_vars = detect_effectively_discrete_vars(
-            model, equality_tolerance)
-        # TODO will need to go through this for each disjunct, since it does
-        # not (should not) descend into Disjuncts.
+        _process_container(model)
+        _process_subcontainers(model)
 
-        # Determine the valid values for the effectively discrete variables
-        possible_var_values = determine_valid_values(model, eff_discr_vars)
 
-        # Collect find bilinear expressions that can be reformulated using
-        # knowledge of effectively discrete variables
-        bilinear_map = _bilinear_expressions(model)
+def _process_subcontainers(blk):
+    for disj in blk.component_data_objects(
+            Disjunct, active=True, descend_into=True):
+        _process_container(disj)
+        _process_subcontainers(disj)
 
-        # Relevant constraints are those with bilinear terms that involve
-        # effectively_discrete_vars
-        processed_pairs = ComponentSet()
-        for v1, var_values in possible_var_values.items():
-            v1_pairs = bilinear_map.get(v1, ())
-            for v2, bilinear_constrs in v1_pairs.items():
-                if (v1, v2) in processed_pairs:
-                    continue
-                _process_bilinear_constraints(
-                    model, v1, v2, var_values, bilinear_constrs)
-                processed_pairs.add((v2, v1))
-                processed_pairs.add((v1, v2))  # TODO is this necessary?
 
-        # Reformulate the bilinear terms
-        pass
+def _process_container(blk):
+    equality_tolerance = 1E-6
+    if not hasattr(blk, '_induced_linearity_info'):
+        blk._induced_linearity_info = Block()
+    eff_discr_vars = detect_effectively_discrete_vars(
+        blk, equality_tolerance)
+    # TODO will need to go through this for each disjunct, since it does
+    # not (should not) descend into Disjuncts.
+
+    # Determine the valid values for the effectively discrete variables
+    possible_var_values = determine_valid_values(blk, eff_discr_vars)
+
+    # Collect find bilinear expressions that can be reformulated using
+    # knowledge of effectively discrete variables
+    bilinear_map = _bilinear_expressions(blk)
+
+    # Relevant constraints are those with bilinear terms that involve
+    # effectively_discrete_vars
+    processed_pairs = ComponentSet()
+    for v1, var_values in possible_var_values.items():
+        v1_pairs = bilinear_map.get(v1, ())
+        for v2, bilinear_constrs in v1_pairs.items():
+            if (v1, v2) in processed_pairs:
+                continue
+            _process_bilinear_constraints(
+                blk, v1, v2, var_values, bilinear_constrs)
+            processed_pairs.add((v2, v1))
+            # processed_pairs.add((v1, v2))  # TODO is this necessary?
 
 
 def determine_valid_values(block, discr_var_to_constrs_map):
@@ -160,6 +169,14 @@ def determine_valid_values(block, discr_var_to_constrs_map):
 
 
 def _process_bilinear_constraints(block, v1, v2, var_values, bilinear_constrs):
+    # TODO check that the appropriate variable bounds exist.
+    if not (v2.has_lb() and v2.has_lb()):
+        logger.warning(textwrap.dedent("""\
+            Attempting to transform bilinear term {v1} * {v2} using effectively
+            discrete variable {v1}, but {v2} is missing a lower or upper bound:
+            ({v2lb}, {v2ub}).
+            """.format(v1=v1, v2=v2, v2lb=v2.lb, v2ub=v2.ub)).strip())
+        return False
     blk = Block()
     unique_name = unique_component_name(
         block, ("%s_%s_bilinear" % (v1.local_name, v2.local_name))
