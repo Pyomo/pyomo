@@ -245,8 +245,7 @@ class ExpandArcs(Transformation):
         for arc in instance.component_objects(**obj_iter_kwds):
             blk = Block(arc.index_set())
             bname = unique_component_name(
-                arc.parent_block(), "%s_expanded" % arc.getname(
-                    fully_qualified=False, name_buffer=self._name_buffer))
+                arc.parent_block(), "%s_expanded" % arc.local_name)
             arc.parent_block().add_component(bname, blk)
             arc._expanded_block = blk
             if arc.is_indexed():
