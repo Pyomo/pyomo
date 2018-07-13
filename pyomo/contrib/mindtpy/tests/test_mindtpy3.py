@@ -3,7 +3,7 @@ from math import fabs
 
 import pyomo.core.base.symbolic
 import pyutilib.th as unittest
-from pyomo.contrib.mindtpy.tests.fo9 import *
+from pyomo.contrib.mindtpy.tests.fo9 import build_model
 from pyomo.environ import SolverFactory, value
 
 # from pyomo.contrib.mindtpy.tests.eight_process_problem import EightProcessFlowsheet
@@ -17,7 +17,6 @@ else:
     subsolvers_available = False
 
 
-
 class TestMindtPy(unittest.TestCase):
     """Tests for the MINDT solver plugin."""
 
@@ -26,9 +25,10 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             print('\n Solving problem with selected decomposition strategy')
             mip_options = {'threads': 4}
-            opt.solve(model, strategy='OA', init_strategy='initial_binary',
+            opt.solve(build_model(),
+                      strategy='OA', init_strategy='initial_binary',
                       mip_solver=required_solvers[1], iteration_limit=13,
-                      mip_solver_kwargs=mip_options,
+                      mip_solver_kwargs={'options': mip_options},
                       nlp_solver=required_solvers[0])
             # model.pprint()
 
