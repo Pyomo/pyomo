@@ -1,13 +1,17 @@
 """Tests for the GDPopt solver plugin."""
+import logging
 from math import fabs
+from os.path import abspath, dirname, join, normpath
+
+from six import StringIO
 
 import pyomo.core.base.symbolic
 import pyutilib.th as unittest
-from pyomo.environ import SolverFactory, value
-
+from pyomo.common.log import LoggingIntercept
+from pyomo.environ import ConcreteModel, Objective, SolverFactory, Var, value
+from pyomo.gdp import Disjunction
 from pyutilib.misc import import_file
 
-from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', '..', 'examples', 'gdp'))
 
@@ -25,6 +29,23 @@ else:
                  "Symbolic differentiation is not available")
 class TestGDPopt(unittest.TestCase):
     """Tests for the GDPopt solver plugin."""
+
+    def test_infeasible_GDP(self):
+        """Test for infeasible GDP."""
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 2))
+        m.d = Disjunction(expr=[
+            [m.x ** 2 >= 3, m.x >= 3],
+            [m.x ** 2 <= -1, m.x <= -1]])
+        m.o = Objective(expr=m.x)
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
+            SolverFactory('gdpopt').solve(
+                m, strategy='LOA', mip=required_solvers[1],
+                nlp=required_solvers[0])
+            self.assertIn("Set covering problem was infeasible.",
+                          output.getvalue().strip())
 
     def test_LOA_8PP_default_init(self):
         """Test logic-based outer approximation with 8PP."""
