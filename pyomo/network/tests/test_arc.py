@@ -944,22 +944,20 @@ class TestArc(unittest.TestCase):
     def test_extensive_expansion(self):
         m = ConcreteModel()
         m.comp = Set(initialize=["a", "b", "c"])
-        Feed = Tru = Prod = Block
 
         # Feed
-        m.feed = Feed()
+        m.feed = Block()
         m.feed.flow = Var(m.comp)
         m.feed.mass = Var()
         m.feed.temp = Var()
 
         m.feed.outlet = Port()
-        m.feed.outlet.add(m.feed.flow, "flow", rule=Port.Extensive,
-                          write_var_sum=False)
+        m.feed.outlet.add(m.feed.flow, "flow", rule=Port.Extensive, write_var_sum=False)
         m.feed.outlet.add(m.feed.mass, "mass", rule=Port.Extensive)
         m.feed.outlet.add(m.feed.temp, "temp")
 
         # Treatment Unit
-        m.tru = Tru()
+        m.tru = Block()
         m.tru.flow_in = Var(m.comp)
         m.tru.flow_out = Var(m.comp)
         m.tru.mass = Var()
@@ -975,18 +973,37 @@ class TestArc(unittest.TestCase):
         m.tru.outlet.add(m.tru.mass, "mass", rule=Port.Extensive)
         m.tru.outlet.add(m.tru.temp, "temp")
 
-        # A Port with both in and out
-        m.node = Block()
-        m.node.flow = Var(m.comp)
-        m.node.mass = Var()
-        m.node.temp = Var()
+        # Ports with both in and out, connected to each other 1-to-1
+        m.node1 = Block()
+        m.node1.flow = Var(m.comp)
+        m.node1.mass = Var()
+        m.node1.temp = Var()
 
-        m.node.port = Port(initialize=[(m.node.flow, Port.Extensive),
-                                       (m.node.mass, Port.Extensive),
-                                       m.node.temp])
+        m.node1.port = Port(initialize=[(m.node1.flow, Port.Extensive),
+                                        (m.node1.mass, Port.Extensive),
+                                        m.node1.temp])
+
+        m.node2 = Block()
+        m.node2.flow = Var(m.comp)
+        m.node2.mass = Var()
+        m.node2.temp = Var()
+
+        m.node2.port = Port(initialize=[(m.node2.flow, Port.Extensive),
+                                        (m.node2.mass, Port.Extensive),
+                                        m.node2.temp])
+
+        # Port with multiple inlets and outlets
+        m.multi = Block()
+        m.multi.flow = Var(m.comp)
+        m.multi.mass = Var()
+        m.multi.temp = Var()
+
+        m.multi.port = Port(initialize=[(m.multi.flow, Port.Extensive),
+                                        (m.multi.mass, Port.Extensive),
+                                        m.multi.temp])
 
         # Product
-        m.prod = Prod()
+        m.prod = Block()
         m.prod.flow = Var(m.comp)
         m.prod.mass = Var()
         m.prod.temp = Var()
@@ -999,9 +1016,14 @@ class TestArc(unittest.TestCase):
         # Arcs
         m.stream1 = Arc(source=m.feed.outlet, destination=m.tru.inlet)
         m.stream2 = Arc(source=m.feed.outlet, destination=m.prod.inlet)
-        m.stream3 = Arc(source=m.feed.outlet, destination=m.node.port)
-        m.stream4 = Arc(source=m.tru.outlet, destination=m.prod.inlet)
-        m.stream5 = Arc(source=m.node.port, destination=m.prod.inlet)
+        m.stream3 = Arc(source=m.feed.outlet, destination=m.node1.port)
+        m.stream4 = Arc(source=m.node1.port, destination=m.node2.port)
+        m.stream5 = Arc(source=m.tru.outlet, destination=m.prod.inlet)
+        m.stream6 = Arc(source=m.node2.port, destination=m.prod.inlet)
+        m.stream7 = Arc(source=m.feed.outlet, destination=m.multi.port)
+        m.stream8 = Arc(source=m.tru.outlet, destination=m.multi.port)
+        m.stream9 = Arc(source=m.multi.port, destination=m.prod.inlet)
+        m.stream10 = Arc(source=m.multi.port, destination=m.tru.inlet)
 
         # SplitFrac specifications
         m.feed.outlet.set_split_fraction(m.stream1, .6, fix=True)
@@ -1015,7 +1037,7 @@ class TestArc(unittest.TestCase):
     comp : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
         ['a', 'b', 'c']
 
-9 Block Declarations
+16 Block Declarations
     feed : Size=1, Index=None, Active=True
         3 Var Declarations
             flow : Size=3, Index=comp
@@ -1032,11 +1054,11 @@ class TestArc(unittest.TestCase):
 
         2 Constraint Declarations
             outlet_frac_sum : Size=1, Index=None, Active=True
-                Key  : Lower : Body                                                                                 : Upper : Active
-                None :   1.0 : stream1_expanded.splitfrac + stream2_expanded.splitfrac + stream3_expanded.splitfrac :   1.0 :   True
+                Key  : Lower : Body                                                                                                              : Upper : Active
+                None :   1.0 : stream1_expanded.splitfrac + stream2_expanded.splitfrac + stream3_expanded.splitfrac + stream7_expanded.splitfrac :   1.0 :   True
             outlet_mass_outsum : Size=1, Index=None, Active=True
-                Key  : Lower : Body                                                                              : Upper : Active
-                None :   0.0 : stream1_expanded.mass + stream2_expanded.mass + stream3_expanded.mass - feed.mass :   0.0 :   True
+                Key  : Lower : Body                                                                                                      : Upper : Active
+                None :   0.0 : stream1_expanded.mass + stream2_expanded.mass + stream3_expanded.mass + stream7_expanded.mass - feed.mass :   0.0 :   True
 
         1 Port Declarations
             outlet : Size=1, Index=None
@@ -1046,7 +1068,7 @@ class TestArc(unittest.TestCase):
                      : temp :    1 : feed.temp
 
         6 Declarations: flow mass temp outlet outlet_frac_sum outlet_mass_outsum
-    node : Size=1, Index=None, Active=True
+    multi : Size=1, Index=None, Active=True
         3 Var Declarations
             flow : Size=3, Index=comp
                 Key : Lower : Value : Upper : Fixed : Stale : Domain
@@ -1062,38 +1084,102 @@ class TestArc(unittest.TestCase):
 
         6 Constraint Declarations
             port_flow_bal : Size=3, Index=comp, Active=True
-                Key : Lower : Body                                                : Upper : Active
-                  a :   0.0 : stream3_expanded.flow[a] - stream5_expanded.flow[a] :   0.0 :   True
-                  b :   0.0 : stream3_expanded.flow[b] - stream5_expanded.flow[b] :   0.0 :   True
-                  c :   0.0 : stream3_expanded.flow[c] - stream5_expanded.flow[c] :   0.0 :   True
+                Key : Lower : Body                                                                                                         : Upper : Active
+                  a :   0.0 : stream7_expanded.flow[a] + stream8_expanded.flow[a] - (stream9_expanded.flow[a] + stream10_expanded.flow[a]) :   0.0 :   True
+                  b :   0.0 : stream7_expanded.flow[b] + stream8_expanded.flow[b] - (stream9_expanded.flow[b] + stream10_expanded.flow[b]) :   0.0 :   True
+                  c :   0.0 : stream7_expanded.flow[c] + stream8_expanded.flow[c] - (stream9_expanded.flow[c] + stream10_expanded.flow[c]) :   0.0 :   True
             port_flow_insum : Size=3, Index=comp, Active=True
-                Key : Lower : Body                                    : Upper : Active
-                  a :   0.0 : stream3_expanded.flow[a] - node.flow[a] :   0.0 :   True
-                  b :   0.0 : stream3_expanded.flow[b] - node.flow[b] :   0.0 :   True
-                  c :   0.0 : stream3_expanded.flow[c] - node.flow[c] :   0.0 :   True
+                Key : Lower : Body                                                                : Upper : Active
+                  a :   0.0 : stream7_expanded.flow[a] + stream8_expanded.flow[a] - multi.flow[a] :   0.0 :   True
+                  b :   0.0 : stream7_expanded.flow[b] + stream8_expanded.flow[b] - multi.flow[b] :   0.0 :   True
+                  c :   0.0 : stream7_expanded.flow[c] + stream8_expanded.flow[c] - multi.flow[c] :   0.0 :   True
             port_flow_outsum : Size=3, Index=comp, Active=True
-                Key : Lower : Body                                    : Upper : Active
-                  a :   0.0 : stream5_expanded.flow[a] - node.flow[a] :   0.0 :   True
-                  b :   0.0 : stream5_expanded.flow[b] - node.flow[b] :   0.0 :   True
-                  c :   0.0 : stream5_expanded.flow[c] - node.flow[c] :   0.0 :   True
+                Key : Lower : Body                                                                 : Upper : Active
+                  a :   0.0 : stream9_expanded.flow[a] + stream10_expanded.flow[a] - multi.flow[a] :   0.0 :   True
+                  b :   0.0 : stream9_expanded.flow[b] + stream10_expanded.flow[b] - multi.flow[b] :   0.0 :   True
+                  c :   0.0 : stream9_expanded.flow[c] + stream10_expanded.flow[c] - multi.flow[c] :   0.0 :   True
             port_mass_bal : Size=1, Index=None, Active=True
-                Key  : Lower : Body                                          : Upper : Active
-                None :   0.0 : stream3_expanded.mass - stream5_expanded.mass :   0.0 :   True
+                Key  : Lower : Body                                                                                             : Upper : Active
+                None :   0.0 : stream7_expanded.mass + stream8_expanded.mass - (stream9_expanded.mass + stream10_expanded.mass) :   0.0 :   True
             port_mass_insum : Size=1, Index=None, Active=True
-                Key  : Lower : Body                              : Upper : Active
-                None :   0.0 : stream3_expanded.mass - node.mass :   0.0 :   True
+                Key  : Lower : Body                                                       : Upper : Active
+                None :   0.0 : stream7_expanded.mass + stream8_expanded.mass - multi.mass :   0.0 :   True
             port_mass_outsum : Size=1, Index=None, Active=True
-                Key  : Lower : Body                              : Upper : Active
-                None :   0.0 : stream5_expanded.mass - node.mass :   0.0 :   True
+                Key  : Lower : Body                                                        : Upper : Active
+                None :   0.0 : stream9_expanded.mass + stream10_expanded.mass - multi.mass :   0.0 :   True
 
         1 Port Declarations
             port : Size=1, Index=None
                 Key  : Name : Size : Variable
-                None : flow :    3 : node.flow
-                     : mass :    1 : node.mass
-                     : temp :    1 : node.temp
+                None : flow :    3 : multi.flow
+                     : mass :    1 : multi.mass
+                     : temp :    1 : multi.temp
 
-        10 Declarations: flow mass temp port port_flow_insum port_flow_outsum port_flow_bal port_mass_insum port_mass_outsum port_mass_bal
+        10 Declarations: flow mass temp port port_flow_outsum port_flow_insum port_flow_bal port_mass_outsum port_mass_insum port_mass_bal
+    node1 : Size=1, Index=None, Active=True
+        3 Var Declarations
+            flow : Size=3, Index=comp
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
+            mass : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+            temp : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        2 Constraint Declarations
+            port_flow_insum : Size=3, Index=comp, Active=True
+                Key : Lower : Body                                     : Upper : Active
+                  a :   0.0 : stream3_expanded.flow[a] - node1.flow[a] :   0.0 :   True
+                  b :   0.0 : stream3_expanded.flow[b] - node1.flow[b] :   0.0 :   True
+                  c :   0.0 : stream3_expanded.flow[c] - node1.flow[c] :   0.0 :   True
+            port_mass_insum : Size=1, Index=None, Active=True
+                Key  : Lower : Body                               : Upper : Active
+                None :   0.0 : stream3_expanded.mass - node1.mass :   0.0 :   True
+
+        1 Port Declarations
+            port : Size=1, Index=None
+                Key  : Name : Size : Variable
+                None : flow :    3 : node1.flow
+                     : mass :    1 : node1.mass
+                     : temp :    1 : node1.temp
+
+        6 Declarations: flow mass temp port port_flow_insum port_mass_insum
+    node2 : Size=1, Index=None, Active=True
+        3 Var Declarations
+            flow : Size=3, Index=comp
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
+            mass : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+            temp : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        2 Constraint Declarations
+            port_flow_outsum : Size=3, Index=comp, Active=True
+                Key : Lower : Body                                     : Upper : Active
+                  a :   0.0 : stream6_expanded.flow[a] - node2.flow[a] :   0.0 :   True
+                  b :   0.0 : stream6_expanded.flow[b] - node2.flow[b] :   0.0 :   True
+                  c :   0.0 : stream6_expanded.flow[c] - node2.flow[c] :   0.0 :   True
+            port_mass_outsum : Size=1, Index=None, Active=True
+                Key  : Lower : Body                               : Upper : Active
+                None :   0.0 : stream6_expanded.mass - node2.mass :   0.0 :   True
+
+        1 Port Declarations
+            port : Size=1, Index=None
+                Key  : Name : Size : Variable
+                None : flow :    3 : node2.flow
+                     : mass :    1 : node2.mass
+                     : temp :    1 : node2.temp
+
+        6 Declarations: flow mass temp port port_flow_outsum port_mass_outsum
     prod : Size=1, Index=None, Active=True
         3 Var Declarations
             flow : Size=3, Index=comp
@@ -1110,13 +1196,13 @@ class TestArc(unittest.TestCase):
 
         2 Constraint Declarations
             inlet_flow_insum : Size=3, Index=comp, Active=True
-                Key : Lower : Body                                                                                          : Upper : Active
-                  a :   0.0 : stream2_expanded.flow[a] + stream4_expanded.flow[a] + stream5_expanded.flow[a] - prod.flow[a] :   0.0 :   True
-                  b :   0.0 : stream2_expanded.flow[b] + stream4_expanded.flow[b] + stream5_expanded.flow[b] - prod.flow[b] :   0.0 :   True
-                  c :   0.0 : stream2_expanded.flow[c] + stream4_expanded.flow[c] + stream5_expanded.flow[c] - prod.flow[c] :   0.0 :   True
+                Key : Lower : Body                                                                                                                     : Upper : Active
+                  a :   0.0 : stream2_expanded.flow[a] + stream5_expanded.flow[a] + stream6_expanded.flow[a] + stream9_expanded.flow[a] - prod.flow[a] :   0.0 :   True
+                  b :   0.0 : stream2_expanded.flow[b] + stream5_expanded.flow[b] + stream6_expanded.flow[b] + stream9_expanded.flow[b] - prod.flow[b] :   0.0 :   True
+                  c :   0.0 : stream2_expanded.flow[c] + stream5_expanded.flow[c] + stream6_expanded.flow[c] + stream9_expanded.flow[c] - prod.flow[c] :   0.0 :   True
             inlet_mass_insum : Size=1, Index=None, Active=True
-                Key  : Lower : Body                                                                              : Upper : Active
-                None :   0.0 : stream2_expanded.mass + stream4_expanded.mass + stream5_expanded.mass - prod.mass :   0.0 :   True
+                Key  : Lower : Body                                                                                                      : Upper : Active
+                None :   0.0 : stream2_expanded.mass + stream5_expanded.mass + stream6_expanded.mass + stream9_expanded.mass - prod.mass :   0.0 :   True
 
         1 Port Declarations
             inlet : Size=1, Index=None
@@ -1126,6 +1212,34 @@ class TestArc(unittest.TestCase):
                      : temp :    1 : prod.temp
 
         6 Declarations: flow mass temp inlet inlet_flow_insum inlet_mass_insum
+    stream10_expanded : Size=1, Index=None, Active=True
+        3 Var Declarations
+            flow : Size=3, Index=comp
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
+            mass : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+            splitfrac : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        3 Constraint Declarations
+            flow_split : Size=3, Index=comp, Active=True
+                Key : Lower : Body                                                                  : Upper : Active
+                  a :   0.0 : stream10_expanded.flow[a] - stream10_expanded.splitfrac*multi.flow[a] :   0.0 :   True
+                  b :   0.0 : stream10_expanded.flow[b] - stream10_expanded.splitfrac*multi.flow[b] :   0.0 :   True
+                  c :   0.0 : stream10_expanded.flow[c] - stream10_expanded.splitfrac*multi.flow[c] :   0.0 :   True
+            mass_split : Size=1, Index=None, Active=True
+                Key  : Lower : Body                                                            : Upper : Active
+                None :   0.0 : stream10_expanded.mass - stream10_expanded.splitfrac*multi.mass :   0.0 :   True
+            temp_equality : Size=1, Index=None, Active=True
+                Key  : Lower : Body                  : Upper : Active
+                None :   0.0 : multi.temp - tru.temp :   0.0 :   True
+
+        6 Declarations: flow mass temp_equality splitfrac flow_split mass_split
     stream1_expanded : Size=1, Index=None, Active=True
         3 Var Declarations
             flow : Size=3, Index=comp
@@ -1206,38 +1320,25 @@ class TestArc(unittest.TestCase):
                 Key  : Lower : Body                                                         : Upper : Active
                 None :   0.0 : stream3_expanded.mass - stream3_expanded.splitfrac*feed.mass :   0.0 :   True
             temp_equality : Size=1, Index=None, Active=True
-                Key  : Lower : Body                  : Upper : Active
-                None :   0.0 : feed.temp - node.temp :   0.0 :   True
+                Key  : Lower : Body                   : Upper : Active
+                None :   0.0 : feed.temp - node1.temp :   0.0 :   True
 
         6 Declarations: flow splitfrac flow_split mass mass_split temp_equality
     stream4_expanded : Size=1, Index=None, Active=True
-        3 Var Declarations
-            flow : Size=3, Index=comp
-                Key : Lower : Value : Upper : Fixed : Stale : Domain
-                  a :  None :  None :  None : False :  True :  Reals
-                  b :  None :  None :  None : False :  True :  Reals
-                  c :  None :  None :  None : False :  True :  Reals
-            mass : Size=1, Index=None
-                Key  : Lower : Value : Upper : Fixed : Stale : Domain
-                None :  None :  None :  None : False :  True :  Reals
-            splitfrac : Size=1, Index=None
-                Key  : Lower : Value : Upper : Fixed : Stale : Domain
-                None :  None :  None :  None : False :  True :  Reals
-
         3 Constraint Declarations
-            flow_split : Size=3, Index=comp, Active=True
-                Key : Lower : Body                                                                  : Upper : Active
-                  a :   0.0 : stream4_expanded.flow[a] - stream4_expanded.splitfrac*tru.flow_out[a] :   0.0 :   True
-                  b :   0.0 : stream4_expanded.flow[b] - stream4_expanded.splitfrac*tru.flow_out[b] :   0.0 :   True
-                  c :   0.0 : stream4_expanded.flow[c] - stream4_expanded.splitfrac*tru.flow_out[c] :   0.0 :   True
-            mass_split : Size=1, Index=None, Active=True
-                Key  : Lower : Body                                                        : Upper : Active
-                None :   0.0 : stream4_expanded.mass - stream4_expanded.splitfrac*tru.mass :   0.0 :   True
+            flow_equality : Size=3, Index=comp, Active=True
+                Key : Lower : Body                          : Upper : Active
+                  a :   0.0 : node1.flow[a] - node2.flow[a] :   0.0 :   True
+                  b :   0.0 : node1.flow[b] - node2.flow[b] :   0.0 :   True
+                  c :   0.0 : node1.flow[c] - node2.flow[c] :   0.0 :   True
+            mass_equality : Size=1, Index=None, Active=True
+                Key  : Lower : Body                    : Upper : Active
+                None :   0.0 : node1.mass - node2.mass :   0.0 :   True
             temp_equality : Size=1, Index=None, Active=True
-                Key  : Lower : Body                 : Upper : Active
-                None :   0.0 : tru.temp - prod.temp :   0.0 :   True
+                Key  : Lower : Body                    : Upper : Active
+                None :   0.0 : node1.temp - node2.temp :   0.0 :   True
 
-        6 Declarations: flow mass temp_equality splitfrac flow_split mass_split
+        3 Declarations: flow_equality mass_equality temp_equality
     stream5_expanded : Size=1, Index=None, Active=True
         3 Var Declarations
             flow : Size=3, Index=comp
@@ -1254,16 +1355,117 @@ class TestArc(unittest.TestCase):
 
         3 Constraint Declarations
             flow_split : Size=3, Index=comp, Active=True
+                Key : Lower : Body                                                                  : Upper : Active
+                  a :   0.0 : stream5_expanded.flow[a] - stream5_expanded.splitfrac*tru.flow_out[a] :   0.0 :   True
+                  b :   0.0 : stream5_expanded.flow[b] - stream5_expanded.splitfrac*tru.flow_out[b] :   0.0 :   True
+                  c :   0.0 : stream5_expanded.flow[c] - stream5_expanded.splitfrac*tru.flow_out[c] :   0.0 :   True
+            mass_split : Size=1, Index=None, Active=True
+                Key  : Lower : Body                                                        : Upper : Active
+                None :   0.0 : stream5_expanded.mass - stream5_expanded.splitfrac*tru.mass :   0.0 :   True
+            temp_equality : Size=1, Index=None, Active=True
+                Key  : Lower : Body                 : Upper : Active
+                None :   0.0 : tru.temp - prod.temp :   0.0 :   True
+
+        6 Declarations: flow mass temp_equality splitfrac flow_split mass_split
+    stream6_expanded : Size=1, Index=None, Active=True
+        2 Var Declarations
+            flow : Size=3, Index=comp
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
+            mass : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        1 Constraint Declarations
+            temp_equality : Size=1, Index=None, Active=True
+                Key  : Lower : Body                   : Upper : Active
+                None :   0.0 : node2.temp - prod.temp :   0.0 :   True
+
+        3 Declarations: flow mass temp_equality
+    stream7_expanded : Size=1, Index=None, Active=True
+        3 Var Declarations
+            flow : Size=3, Index=comp
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
+            mass : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+            splitfrac : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        3 Constraint Declarations
+            flow_split : Size=3, Index=comp, Active=True
                 Key : Lower : Body                                                               : Upper : Active
-                  a :   0.0 : stream5_expanded.flow[a] - stream5_expanded.splitfrac*node.flow[a] :   0.0 :   True
-                  b :   0.0 : stream5_expanded.flow[b] - stream5_expanded.splitfrac*node.flow[b] :   0.0 :   True
-                  c :   0.0 : stream5_expanded.flow[c] - stream5_expanded.splitfrac*node.flow[c] :   0.0 :   True
+                  a :   0.0 : stream7_expanded.flow[a] - stream7_expanded.splitfrac*feed.flow[a] :   0.0 :   True
+                  b :   0.0 : stream7_expanded.flow[b] - stream7_expanded.splitfrac*feed.flow[b] :   0.0 :   True
+                  c :   0.0 : stream7_expanded.flow[c] - stream7_expanded.splitfrac*feed.flow[c] :   0.0 :   True
             mass_split : Size=1, Index=None, Active=True
                 Key  : Lower : Body                                                         : Upper : Active
-                None :   0.0 : stream5_expanded.mass - stream5_expanded.splitfrac*node.mass :   0.0 :   True
+                None :   0.0 : stream7_expanded.mass - stream7_expanded.splitfrac*feed.mass :   0.0 :   True
+            temp_equality : Size=1, Index=None, Active=True
+                Key  : Lower : Body                   : Upper : Active
+                None :   0.0 : feed.temp - multi.temp :   0.0 :   True
+
+        6 Declarations: flow splitfrac flow_split mass mass_split temp_equality
+    stream8_expanded : Size=1, Index=None, Active=True
+        3 Var Declarations
+            flow : Size=3, Index=comp
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
+            mass : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+            splitfrac : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        3 Constraint Declarations
+            flow_split : Size=3, Index=comp, Active=True
+                Key : Lower : Body                                                                  : Upper : Active
+                  a :   0.0 : stream8_expanded.flow[a] - stream8_expanded.splitfrac*tru.flow_out[a] :   0.0 :   True
+                  b :   0.0 : stream8_expanded.flow[b] - stream8_expanded.splitfrac*tru.flow_out[b] :   0.0 :   True
+                  c :   0.0 : stream8_expanded.flow[c] - stream8_expanded.splitfrac*tru.flow_out[c] :   0.0 :   True
+            mass_split : Size=1, Index=None, Active=True
+                Key  : Lower : Body                                                        : Upper : Active
+                None :   0.0 : stream8_expanded.mass - stream8_expanded.splitfrac*tru.mass :   0.0 :   True
             temp_equality : Size=1, Index=None, Active=True
                 Key  : Lower : Body                  : Upper : Active
-                None :   0.0 : node.temp - prod.temp :   0.0 :   True
+                None :   0.0 : tru.temp - multi.temp :   0.0 :   True
+
+        6 Declarations: flow splitfrac flow_split mass mass_split temp_equality
+    stream9_expanded : Size=1, Index=None, Active=True
+        3 Var Declarations
+            flow : Size=3, Index=comp
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
+            mass : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+            splitfrac : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        3 Constraint Declarations
+            flow_split : Size=3, Index=comp, Active=True
+                Key : Lower : Body                                                                : Upper : Active
+                  a :   0.0 : stream9_expanded.flow[a] - stream9_expanded.splitfrac*multi.flow[a] :   0.0 :   True
+                  b :   0.0 : stream9_expanded.flow[b] - stream9_expanded.splitfrac*multi.flow[b] :   0.0 :   True
+                  c :   0.0 : stream9_expanded.flow[c] - stream9_expanded.splitfrac*multi.flow[c] :   0.0 :   True
+            mass_split : Size=1, Index=None, Active=True
+                Key  : Lower : Body                                                          : Upper : Active
+                None :   0.0 : stream9_expanded.mass - stream9_expanded.splitfrac*multi.mass :   0.0 :   True
+            temp_equality : Size=1, Index=None, Active=True
+                Key  : Lower : Body                   : Upper : Active
+                None :   0.0 : multi.temp - prod.temp :   0.0 :   True
 
         6 Declarations: flow mass temp_equality splitfrac flow_split mass_split
     tru : Size=1, Index=None, Active=True
@@ -1287,21 +1489,21 @@ class TestArc(unittest.TestCase):
 
         4 Constraint Declarations
             inlet_flow_insum : Size=3, Index=comp, Active=True
-                Key : Lower : Body                                      : Upper : Active
-                  a :   0.0 : stream1_expanded.flow[a] - tru.flow_in[a] :   0.0 :   True
-                  b :   0.0 : stream1_expanded.flow[b] - tru.flow_in[b] :   0.0 :   True
-                  c :   0.0 : stream1_expanded.flow[c] - tru.flow_in[c] :   0.0 :   True
+                Key : Lower : Body                                                                  : Upper : Active
+                  a :   0.0 : stream1_expanded.flow[a] + stream10_expanded.flow[a] - tru.flow_in[a] :   0.0 :   True
+                  b :   0.0 : stream1_expanded.flow[b] + stream10_expanded.flow[b] - tru.flow_in[b] :   0.0 :   True
+                  c :   0.0 : stream1_expanded.flow[c] + stream10_expanded.flow[c] - tru.flow_in[c] :   0.0 :   True
             inlet_mass_insum : Size=1, Index=None, Active=True
-                Key  : Lower : Body                             : Upper : Active
-                None :   0.0 : stream1_expanded.mass - tru.mass :   0.0 :   True
+                Key  : Lower : Body                                                      : Upper : Active
+                None :   0.0 : stream1_expanded.mass + stream10_expanded.mass - tru.mass :   0.0 :   True
             outlet_flow_outsum : Size=3, Index=comp, Active=True
-                Key : Lower : Body                                       : Upper : Active
-                  a :   0.0 : stream4_expanded.flow[a] - tru.flow_out[a] :   0.0 :   True
-                  b :   0.0 : stream4_expanded.flow[b] - tru.flow_out[b] :   0.0 :   True
-                  c :   0.0 : stream4_expanded.flow[c] - tru.flow_out[c] :   0.0 :   True
+                Key : Lower : Body                                                                  : Upper : Active
+                  a :   0.0 : stream5_expanded.flow[a] + stream8_expanded.flow[a] - tru.flow_out[a] :   0.0 :   True
+                  b :   0.0 : stream5_expanded.flow[b] + stream8_expanded.flow[b] - tru.flow_out[b] :   0.0 :   True
+                  c :   0.0 : stream5_expanded.flow[c] + stream8_expanded.flow[c] - tru.flow_out[c] :   0.0 :   True
             outlet_mass_outsum : Size=1, Index=None, Active=True
-                Key  : Lower : Body                             : Upper : Active
-                None :   0.0 : stream4_expanded.mass - tru.mass :   0.0 :   True
+                Key  : Lower : Body                                                     : Upper : Active
+                None :   0.0 : stream5_expanded.mass + stream8_expanded.mass - tru.mass :   0.0 :   True
 
         2 Port Declarations
             inlet : Size=1, Index=None
@@ -1317,24 +1519,39 @@ class TestArc(unittest.TestCase):
 
         10 Declarations: flow_in flow_out mass temp inlet outlet inlet_flow_insum inlet_mass_insum outlet_flow_outsum outlet_mass_outsum
 
-5 Arc Declarations
+10 Arc Declarations
     stream1 : Size=1, Index=None, Active=False
         Key  : Ports                    : Directed : Active
         None : (feed.outlet, tru.inlet) :     True :  False
+    stream10 : Size=1, Index=None, Active=False
+        Key  : Ports                   : Directed : Active
+        None : (multi.port, tru.inlet) :     True :  False
     stream2 : Size=1, Index=None, Active=False
         Key  : Ports                     : Directed : Active
         None : (feed.outlet, prod.inlet) :     True :  False
     stream3 : Size=1, Index=None, Active=False
-        Key  : Ports                    : Directed : Active
-        None : (feed.outlet, node.port) :     True :  False
+        Key  : Ports                     : Directed : Active
+        None : (feed.outlet, node1.port) :     True :  False
     stream4 : Size=1, Index=None, Active=False
         Key  : Ports                    : Directed : Active
-        None : (tru.outlet, prod.inlet) :     True :  False
+        None : (node1.port, node2.port) :     True :  False
     stream5 : Size=1, Index=None, Active=False
-        Key  : Ports                   : Directed : Active
-        None : (node.port, prod.inlet) :     True :  False
+        Key  : Ports                    : Directed : Active
+        None : (tru.outlet, prod.inlet) :     True :  False
+    stream6 : Size=1, Index=None, Active=False
+        Key  : Ports                    : Directed : Active
+        None : (node2.port, prod.inlet) :     True :  False
+    stream7 : Size=1, Index=None, Active=False
+        Key  : Ports                     : Directed : Active
+        None : (feed.outlet, multi.port) :     True :  False
+    stream8 : Size=1, Index=None, Active=False
+        Key  : Ports                    : Directed : Active
+        None : (tru.outlet, multi.port) :     True :  False
+    stream9 : Size=1, Index=None, Active=False
+        Key  : Ports                    : Directed : Active
+        None : (multi.port, prod.inlet) :     True :  False
 
-15 Declarations: comp feed tru node prod stream1 stream2 stream3 stream4 stream5 stream1_expanded stream2_expanded stream3_expanded stream4_expanded stream5_expanded
+27 Declarations: comp feed tru node1 node2 multi prod stream1 stream2 stream3 stream4 stream5 stream6 stream7 stream8 stream9 stream10 stream1_expanded stream2_expanded stream3_expanded stream4_expanded stream5_expanded stream6_expanded stream7_expanded stream8_expanded stream9_expanded stream10_expanded
 """)
 
 

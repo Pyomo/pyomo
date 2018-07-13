@@ -353,26 +353,60 @@ class Port(IndexedComponent):
                        ("Name", "Value"), _line_generator)
 
     def Equality(port, name, index_set):
-        cname = name + "_equality"
+        """Arc Expansion procedure to generate simple equality constraints."""
         # Iterate over every arc off this port. Since this function will
         # be called for every port, we need to check if it already exists.
         for arc in port.arcs():
-            eblock = arc.expanded_block
-            if eblock.component(cname) is not None:
-                continue
-            port1, port2 = arc.ports
-            def rule(m, *args):
-                if len(args):
-                    return port1.vars[name][args] == port2.vars[name][args]
-                else:
-                    return port1.vars[name] == port2.vars[name]
-            con = Constraint(index_set, rule=rule)
-            arc.expanded_block.add_component(cname, con)
+            Port._add_equality_constraint(arc, name, index_set)
 
     def Extensive(port, name, index_set, write_var_sum=True):
+        """
+        Arc Expansion procedure for extensive variable properties.
+
+        This procedure is the rule to use when variable quantities should
+        be split for outlets and combined for inlets.
+
+        This will first go through every destination of the port and create
+        a new variable on the arc's expanded block of the same index as the
+        current variable being processed. It will also create a splitfrac
+        variable on the expanded block as well. Then it will generate
+        constraints for the new variable that relates it to its "parent"
+        variable by the split fraction. Following this, an indexed constraint
+        is written that states that the sum of all the new variables equals
+        the parent. However, if write_var_sum=False is passed, instead of
+        this last indexed constraint, a single constraint will be written
+        the states the sum of the split fractions equals 1.
+
+        Then, this procedure will go through every source of the port and
+        create a new variable (or use the same one as above), and then
+        write a constraint that states the sum of all the incoming new
+        variables must equal the parent variable.
+
+        Model simplifications:
+
+            If the port has a 1-to-1 connection on either side, it will not
+                create the new variables and instead write a simple
+                equality constraint for that side.
+
+            If the port has arcs on both sides but at least on of the sides
+                is 1-to-1, it will not write the bal constraint, since this
+                would be equivalent to the insum or outsum constraints.
+
+            If the outlet side is not 1-to-1 but there is only one outlet,
+                it will not create a splitfrac variable or write the split
+                constraint, but it will still write the outsum constraint
+                which will be a simple equality.
+
+            If the port only contains a single Extensive variable, the
+                splitfrac variables and the splitting constraints will
+                be skipped since they will be unnecessary.
+
+            Note: If split fractions are skipped, the write_var_sum=False
+                option is not allowed.
+        """
         port_parent = port.parent_block()
-        in_vars = Port.Combine(port, name, index_set)
-        out_vars = Port.Split(port, name, index_set, write_var_sum)
+        out_vars = Port._Split(port, name, index_set, write_var_sum)
+        in_vars = Port._Combine(port, name, index_set)
 
         if len(in_vars) and len(out_vars):
             # Create balance constraint: sum of in == sum of out
@@ -386,67 +420,100 @@ class Port(IndexedComponent):
             con = Constraint(index_set, rule=rule)
             port_parent.add_component(cname, con)
 
-    def Combine(port, name, index_set):
+    def _Combine(port, name, index_set):
         port_parent = port.parent_block()
         var = port.vars[name]
         in_vars = []
+        sources = port.sources()
 
-        for arc in port.sources():
-            eblock = arc.expanded_block
+        if not len(sources):
+            return in_vars
 
-            # Same as Port.Split
-            evar = eblock.component(name)
-            if evar is None:
-                evar = Var(index_set)
-                eblock.add_component(name, evar)
-            in_vars.append(evar)
+        if len(sources) == 1 and len(sources[0].source.dests()) == 1:
+            # This is a 1-to-1 connection, no need for evar, just equality.
+            arc = sources[0]
+            Port._add_equality_constraint(arc, name, index_set)
+            return in_vars
 
-        # Create constraint: var == sum of evars
-        if len(in_vars):
-            # Same logic as Port.Split
-            cname = unique_component_name(port_parent, "%s_%s_insum" %
-                (alphanum_label_from_name(port.local_name), name))
-            def rule(m, *args):
-                if len(args):
-                    return sum(evar[args] for evar in in_vars) == var[args]
-                else:
-                    return sum(evar for evar in in_vars) == var
-            con = Constraint(index_set, rule=rule)
-            port_parent.add_component(cname, con)
-
-        return in_vars
-
-    def Split(port, name, index_set, write_var_sum=True):
-        port_parent = port.parent_block()
-        var = port.vars[name]
-        out_vars = []
-
-        for arc in port.dests():
+        for arc in sources:
             eblock = arc.expanded_block
 
             # Make and record new variables for every arc with this member.
-            # Name is same, conflicts are prevented by a check in Port.add.
-            # The new var will mirror the original var and have same index set.
-            # This function will be called for both the source and destination
-            # of each arc, but we only need one evar per arc, so check if it
-            # already exists before making a new one.
-            evar = eblock.component(name)
-            if evar is None:
-                evar = Var(index_set)
-                eblock.add_component(name, evar)
+            evar = Port._create_evar(eblock, name, index_set)
+            in_vars.append(evar)
+
+        # Create constraint: var == sum of evars
+        # Same logic as Port._Split
+        cname = unique_component_name(port_parent, "%s_%s_insum" %
+            (alphanum_label_from_name(port.local_name), name))
+        def rule(m, *args):
+            if len(args):
+                return sum(evar[args] for evar in in_vars) == var[args]
+            else:
+                return sum(evar for evar in in_vars) == var
+        con = Constraint(index_set, rule=rule)
+        port_parent.add_component(cname, con)
+
+        return in_vars
+
+    def _Split(port, name, index_set, write_var_sum=True):
+        port_parent = port.parent_block()
+        var = port.vars[name]
+        out_vars = []
+        no_splitfrac = False
+        dests = port.dests()
+
+        if not len(dests):
+            return out_vars
+
+        if len(dests) == 1:
+            # No need for splitting on one outlet.
+            no_splitfrac = True
+            if len(dests[0].destination.sources()) == 1:
+                # This is a 1-to-1 connection, no need for evar, just equality.
+                arc = dests[0]
+                Port._add_equality_constraint(arc, name, index_set)
+                return out_vars
+
+        for arc in dests:
+            eblock = arc.expanded_block
+
+            # Make and record new variables for every arc with this member.
+            evar = Port._create_evar(eblock, name, index_set)
             out_vars.append(evar)
+
+            if no_splitfrac:
+                continue
 
             # Create and potentially initialize split fraction variables.
             # This function will be called for every Extensive member of this
             # port, but we only need one splitfrac variable per arc, so check
-            # if it already exists before making a new one.
+            # if it already exists before making a new one. However, we do not
+            # need a splitfrac if there is only one Extensive data object,
+            # so first check whether or not we need it.
+
             if eblock.component("splitfrac") is None:
-                eblock.splitfrac = Var()
-                splitfracspec = port.get_split_fraction(arc)
-                if splitfracspec is not None:
-                    eblock.splitfrac = splitfracspec[0]
-                    if splitfracspec[1]:
-                        eblock.splitfrac.fix()
+                num_data_objs = 0
+                for k, v in iteritems(port.vars):
+                    if port._rules[k][0] is Port.Extensive:
+                        if v.is_indexed():
+                            num_data_objs += len(v)
+                        else:
+                            num_data_objs += 1
+
+                if num_data_objs == 1:
+                    print(6)
+                    # Do not make splitfrac, do not make split constraints.
+                    no_splitfrac = True
+                    continue
+
+                else:
+                    eblock.splitfrac = Var()
+                    splitfracspec = port.get_split_fraction(arc)
+                    if splitfracspec is not None:
+                        eblock.splitfrac = splitfracspec[0]
+                        if splitfracspec[1]:
+                            eblock.splitfrac.fix()
 
             # Create constraint for this member using splitfrac.
             cname = "%s_split" % name
@@ -458,34 +525,69 @@ class Port(IndexedComponent):
             con = Constraint(index_set, rule=rule)
             eblock.add_component(cname, con)
 
-        if len(out_vars):
-            if write_var_sum:
-                # Create var total sum constraint: var == sum of evars
-                # Need to alphanum port name in case it is indexed.
-                cname = unique_component_name(port_parent, "%s_%s_outsum" %
-                    (alphanum_label_from_name(port.local_name), name))
-                def rule(m, *args):
-                    if len(args):
-                        return sum(evar[args] for evar in out_vars) == var[args]
-                    else:
-                        return sum(evar for evar in out_vars) == var
-                con = Constraint(index_set, rule=rule)
-                port_parent.add_component(cname, con)
-            else:
-                # OR create constraint on splitfrac vars: sum == 1
-                cname = unique_component_name(port_parent,
-                    "%s_frac_sum" % alphanum_label_from_name(port.local_name))
-                con = Constraint(expr=
-                    sum(a.expanded_block.splitfrac for a in port.dests()) == 1)
-                port_parent.add_component(cname, con)
+        if write_var_sum:
+            # Create var total sum constraint: var == sum of evars
+            # Need to alphanum port name in case it is indexed.
+            cname = unique_component_name(port_parent, "%s_%s_outsum" %
+                (alphanum_label_from_name(port.local_name), name))
+            def rule(m, *args):
+                if len(args):
+                    return sum(evar[args] for evar in out_vars) == var[args]
+                else:
+                    return sum(evar for evar in out_vars) == var
+            con = Constraint(index_set, rule=rule)
+            port_parent.add_component(cname, con)
+        else:
+            # OR create constraint on splitfrac vars: sum == 1
+            if no_splitfrac:
+                raise ValueError(
+                    "Cannot choose to write split fraction sum constraint for "
+                    "ports with a single destination or a single Extensive "
+                    "variable.\nSplit fractions are skipped in this case to "
+                    "simplify the model.\nPlease use write_var_sum=True on "
+                    "this port (the default).")
+            cname = unique_component_name(port_parent,
+                "%s_frac_sum" % alphanum_label_from_name(port.local_name))
+            con = Constraint(expr=
+                sum(a.expanded_block.splitfrac for a in dests) == 1)
+            port_parent.add_component(cname, con)
 
         return out_vars
+
+    def _add_equality_constraint(arc, name, index_set):
+        # This function will add the equality constraint if it doesn't exist.
+        eblock = arc.expanded_block
+        cname = name + "_equality"
+        if eblock.component(cname) is not None:
+            # already exists, skip
+            return
+        port1, port2 = arc.ports
+        def rule(m, *args):
+            if len(args):
+                return port1.vars[name][args] == port2.vars[name][args]
+            else:
+                return port1.vars[name] == port2.vars[name]
+        con = Constraint(index_set, rule=rule)
+        eblock.add_component(cname, con)
+
+    def _create_evar(eblock, name, index_set):
+        # Name is same, conflicts are prevented by a check in Port.add.
+        # The new var will mirror the original var and have same index set.
+        # We only need one evar per arc, so check if it already exists
+        # before making a new one.
+        evar = eblock.component(name)
+        if evar is None:
+            evar = Var(index_set)
+            eblock.add_component(name, evar)
+        return evar
 
     # Python 2 compatibility
     Equality = staticmethod(Equality)
     Extensive = staticmethod(Extensive)
-    Combine = staticmethod(Combine)
-    Split = staticmethod(Split)
+    _Combine = staticmethod(_Combine)
+    _Split = staticmethod(_Split)
+    _add_equality_constraint = staticmethod(_add_equality_constraint)
+    _create_evar = staticmethod(_create_evar)
 
 
 class SimplePort(Port, _PortData):
