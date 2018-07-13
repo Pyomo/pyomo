@@ -285,14 +285,6 @@ class Arc(ActiveIndexedComponent):
                 self._setitem_when_not_present(idx, tmp)
         timer.report()
 
-    def deconstruct(self):
-        """Remove self from port lists"""
-        for port in self.ports:
-            port._arcs.remove(self)
-        if self._directed:
-            self.source._dests.remove(self)
-            self.destination._sources.remove(self)
-
     def _validate_init_vals(self, vals):
         # returns dict version of vals if not already dict
         if type(vals) is not dict:

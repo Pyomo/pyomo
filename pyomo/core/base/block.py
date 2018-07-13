@@ -1006,9 +1006,6 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # if name not in self._decl:
         #    return
 
-        # Call deconstruction routine in case there is any cleanup
-        obj.deconstruct()
-
         name = obj.local_name
 
         # Replace the component in the master list with a None placeholder
