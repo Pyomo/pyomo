@@ -73,7 +73,7 @@ class _PortData(ComponentData):
         raise AttributeError("'%s' object has no attribute '%s'"
                              % (self.__class__.__name__, name))
 
-    def arcs(self, active=True):
+    def arcs(self, active=False):
         """A list of Arcs in which this Port is a member"""
         if not active:
             return list(self._arcs)
@@ -83,7 +83,7 @@ class _PortData(ComponentData):
                 tmp.append(a)
         return tmp
 
-    def sources(self, active=True):
+    def sources(self, active=False):
         """A list of Arcs in which this Port is a destination"""
         if not active:
             return list(self._sources)
@@ -93,7 +93,7 @@ class _PortData(ComponentData):
                 tmp.append(a)
         return tmp
 
-    def dests(self, active=True):
+    def dests(self, active=False):
         """A list of Arcs in which this Port is a source"""
         if not active:
             return list(self._dests)
@@ -356,7 +356,7 @@ class Port(IndexedComponent):
         """Arc Expansion procedure to generate simple equality constraints."""
         # Iterate over every arc off this port. Since this function will
         # be called for every port, we need to check if it already exists.
-        for arc in port.arcs():
+        for arc in port.arcs(active=True):
             Port._add_equality_constraint(arc, name, index_set)
 
     def Extensive(port, name, index_set, write_var_sum=True):
@@ -424,12 +424,12 @@ class Port(IndexedComponent):
         port_parent = port.parent_block()
         var = port.vars[name]
         in_vars = []
-        sources = port.sources()
+        sources = port.sources(active=True)
 
         if not len(sources):
             return in_vars
 
-        if len(sources) == 1 and len(sources[0].source.dests()) == 1:
+        if len(sources) == 1 and len(sources[0].source.dests(active=True)) == 1:
             # This is a 1-to-1 connection, no need for evar, just equality.
             arc = sources[0]
             Port._add_equality_constraint(arc, name, index_set)
@@ -461,7 +461,7 @@ class Port(IndexedComponent):
         var = port.vars[name]
         out_vars = []
         no_splitfrac = False
-        dests = port.dests()
+        dests = port.dests(active=True)
 
         if not len(dests):
             return out_vars
@@ -469,7 +469,7 @@ class Port(IndexedComponent):
         if len(dests) == 1:
             # No need for splitting on one outlet.
             no_splitfrac = True
-            if len(dests[0].destination.sources()) == 1:
+            if len(dests[0].destination.sources(active=True)) == 1:
                 # This is a 1-to-1 connection, no need for evar, just equality.
                 arc = dests[0]
                 Port._add_equality_constraint(arc, name, index_set)

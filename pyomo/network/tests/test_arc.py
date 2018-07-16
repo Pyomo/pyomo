@@ -1092,6 +1092,7 @@ class TestArc(unittest.TestCase):
         m.prod.inlet.add(m.prod.temp, "temp")
 
         # Arcs
+        m.stream0 = Arc(source=m.tru.outlet, destination=m.node1.port)
         m.stream1 = Arc(source=m.feed.outlet, destination=m.tru.inlet)
         m.stream2 = Arc(source=m.feed.outlet, destination=m.prod.inlet)
         m.stream3 = Arc(source=m.feed.outlet, destination=m.node1.port)
@@ -1105,6 +1106,8 @@ class TestArc(unittest.TestCase):
 
         # SplitFrac specifications
         m.feed.outlet.set_split_fraction(m.stream1, .6, fix=True)
+
+        m.stream0.deactivate()
 
         TransformationFactory('network.expand_arcs').apply_to(m)
 
@@ -1597,7 +1600,10 @@ class TestArc(unittest.TestCase):
 
         10 Declarations: flow_in flow_out mass temp inlet outlet inlet_flow_insum inlet_mass_insum outlet_flow_outsum outlet_mass_outsum
 
-10 Arc Declarations
+11 Arc Declarations
+    stream0 : Size=1, Index=None, Active=False
+        Key  : Ports                    : Directed : Active
+        None : (tru.outlet, node1.port) :     True :  False
     stream1 : Size=1, Index=None, Active=False
         Key  : Ports                    : Directed : Active
         None : (feed.outlet, tru.inlet) :     True :  False
@@ -1629,7 +1635,7 @@ class TestArc(unittest.TestCase):
         Key  : Ports                    : Directed : Active
         None : (multi.port, prod.inlet) :     True :  False
 
-27 Declarations: comp feed tru node1 node2 multi prod stream1 stream2 stream3 stream4 stream5 stream6 stream7 stream8 stream9 stream10 stream1_expanded stream2_expanded stream3_expanded stream4_expanded stream5_expanded stream6_expanded stream7_expanded stream8_expanded stream9_expanded stream10_expanded
+28 Declarations: comp feed tru node1 node2 multi prod stream0 stream1 stream2 stream3 stream4 stream5 stream6 stream7 stream8 stream9 stream10 stream1_expanded stream2_expanded stream3_expanded stream4_expanded stream5_expanded stream6_expanded stream7_expanded stream8_expanded stream9_expanded stream10_expanded
 """)
 
 
