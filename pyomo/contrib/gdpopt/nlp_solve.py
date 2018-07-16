@@ -3,7 +3,8 @@ in Logic-based outer approximation.
 """
 from __future__ import division
 
-from pyomo.contrib.gdpopt.util import is_feasible
+from pyomo.contrib.gdpopt.data_class import SubproblemResult
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, is_feasible
 from pyomo.core import Constraint, TransformationFactory, minimize, value
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel import ComponentSet
@@ -47,46 +48,47 @@ def solve_NLP(nlp_model, solve_data, config):
     for xfrm in preprocessing_transformations:
         TransformationFactory(xfrm).apply_to(nlp_model)
 
-    initialize_NLP(nlp_model)
+    initialize_NLP(nlp_model, solve_data)
 
     # Callback immediately before solving NLP subproblem
-    config.subprob_presolve(nlp_model, solve_data)
+    config.call_before_subproblem_solve(nlp_model, solve_data)
 
-    nlp_solver = SolverFactory(config.nlp)
+    nlp_solver = SolverFactory(config.nlp_solver)
     if not nlp_solver.available():
-        raise RuntimeError("NLP solver %s is not available." % config.nlp)
-    results = nlp_solver.solve(nlp_model, load_solutions=False,
-                               **config.nlp_options)
+        raise RuntimeError("NLP solver %s is not available." % config.nlp_solver)
+    with SuppressInfeasibleWarning():
+        results = nlp_solver.solve(nlp_model, **config.nlp_solver_args)
+
+    nlp_result = SubproblemResult()
+    nlp_result.feasible = True
+    nlp_result.var_values = list(v.value for v in GDPopt.working_var_list)
+    nlp_result.pyomo_results = results
+    nlp_result.dual_values = list(
+        nlp_model.dual.get(c, None)
+        for c in GDPopt.working_constraints_list)
 
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
-        nlp_feasible = True
-        nlp_model.solutions.load_from(results)
+        pass
     elif subprob_terminate_cond is tc.infeasible:
         config.logger.info('NLP subproblem was locally infeasible.')
-        # Suppress the warning message by setting solver status to ok.
-        results.solver.status = SolverStatus.ok
-        nlp_model.solutions.load_from(results)
-        nlp_feasible = False
+        nlp_result.feasible = False
     elif subprob_terminate_cond is tc.maxIterations:
         # TODO try something else? Reinitialize with different initial
         # value?
         config.logger.info(
             'NLP subproblem failed to converge within iteration limit.')
-        results.solver.status = SolverStatus.ok
-        nlp_model.solutions.load_from(results)
         if is_feasible(nlp_model, config):
             config.logger.info(
                 'NLP solution is still feasible. '
                 'Using potentially suboptimal feasible solution.')
-            nlp_feasible = True
         else:
-            nlp_feasible = False
+            nlp_result.feasible = False
     elif subprob_terminate_cond is tc.internalSolverError:
         # Possible that IPOPT had a restoration failture
         config.logger.info(
             "NLP solver had an internal failure: %s" % results.solver.message)
-        nlp_feasible = False
+        nlp_result.feasible = False
     else:
         raise ValueError(
             'GDPopt unable to handle NLP subproblem termination '
@@ -94,19 +96,13 @@ def solve_NLP(nlp_model, solve_data, config):
             % (subprob_terminate_cond, results))
 
     # Call the NLP post-solve callback
-    config.subprob_postsolve(nlp_model, solve_data)
+    config.call_after_subproblem_solve(nlp_model, solve_data)
 
     # if feasible, call the NLP post-feasible callback
-    if nlp_feasible:
-        config.subprob_postfeas(nlp_model, solve_data)
+    if nlp_result.feasible:
+        config.call_after_subproblem_feasible(nlp_model, solve_data)
 
-    return (
-        nlp_feasible,  # If solution is feasible.
-        # Variable values
-        list(v.value for v in GDPopt.working_var_list),
-        # Dual values
-        list(nlp_model.dual.get(c, None)
-             for c in GDPopt.working_constraints_list))
+    return nlp_result
 
 
 def detect_unfixed_discrete_vars(model):
@@ -121,7 +117,7 @@ def detect_unfixed_discrete_vars(model):
     return var_set
 
 
-def initialize_NLP(model):
+def initialize_NLP(model, solve_data):
     """Perform initialization of the NLP.
 
     Presently, this just restores the variable to the original model values.
@@ -129,7 +125,7 @@ def initialize_NLP(model):
     """
     # restore original variable values
     for var, old_value in zip(model.GDPopt_utils.working_var_list,
-                              model.GDPopt_utils.initial_var_values):
+                              solve_data.initial_var_values):
         if not var.fixed and not var.is_binary():
             if old_value is not None:
                 if var.has_lb() and old_value < var.lb:
