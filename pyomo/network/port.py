@@ -25,6 +25,7 @@ from pyomo.core.base.indexed_component import \
     IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.numvalue import NumericValue, value
+from pyomo.core.expr.current import identify_variables
 from pyomo.core.base.label import alphanum_label_from_name
 from pyomo.core.base.plugin import register_component, \
     IPyomoScriptModifyInstance, TransformationFactory
@@ -171,6 +172,14 @@ class _PortData(ComponentData):
                              % (name, self.name))
         self.vars.pop(name)
         self._rules.pop(name)
+
+    def fix(self):
+        for v in self._iter_vars():
+            if v.is_expression_type():
+                for var in identify_variables(v, include_fixed=False):
+                    var.fix()
+            elif not v.is_fixed():
+                v.fix()
 
     def _iter_vars(self):
         for var in itervalues(self.vars):

@@ -122,6 +122,19 @@ class TestPort(unittest.TestCase):
         pipe.composition['c'].fix(1)
         self.assertTrue( pipe.OUT.is_fixed())
 
+        m = ConcreteModel()
+        m.SPECIES = Set(initialize=['a','b','c'])
+        m.flow = Var()
+        m.composition = Var(m.SPECIES)
+        m.pIn  = Var( within=NonNegativeReals )
+
+        m.port = Port()
+        m.port.add(m.flow, "flow")
+        m.port.add(-m.pIn, "pressure")
+        m.port.add(m.composition, "composition")
+        m.port.fix()
+        self.assertTrue(m.port.is_fixed())
+
     def test_polynomial_degree(self):
         pipe = ConcreteModel()
         pipe.SPECIES = Set(initialize=['a','b','c'])
