@@ -14,8 +14,6 @@ import pyomo.core.plugins.transform.relax_integrality
 import pyomo.core.plugins.transform.expand_connectors
 # import pyomo.core.plugins.transform.equality_transform
 import pyomo.core.plugins.transform.nonnegative_transform
-# import pyomo.core.plugins.transform.dual_transformation
-import pyomo.core.plugins.transform.linear_dual
 import pyomo.core.plugins.transform.radix_linearization
 import pyomo.core.plugins.transform.discrete_vars
 # import pyomo.core.plugins.transform.util
