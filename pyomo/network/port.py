@@ -174,6 +174,10 @@ class _PortData(ComponentData):
         self._rules.pop(name)
 
     def fix(self):
+        """
+        Fix all variables in the port at their current values.
+        For expressions, fix every variable in the expression.
+        """
         for v in self._iter_vars():
             if v.is_expression_type():
                 for var in identify_variables(v, include_fixed=False):
