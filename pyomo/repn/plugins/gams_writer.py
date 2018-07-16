@@ -27,7 +27,7 @@ from pyomo.core.base.component import ActiveComponent
 from pyomo.core.kernel.component_interface import IComponent
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
-from pyomo.repn.plugins.problem_utils import valid_expr_ctypes_minlp, \
+from pyomo.repn.util import valid_expr_ctypes_minlp, \
     valid_active_ctypes_minlp
 import pyomo.common.plugin
 
