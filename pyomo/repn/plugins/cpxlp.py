@@ -732,7 +732,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         # We print X to CPLEX format as X(i,j,k,...) where i, j, k, ... are the
         # indices of X.
         #
-        SOSlines = StringIO()
+        SOSlines = []
         sos1 = solver_capability("sos1")
         sos2 = solver_capability("sos2")
         writtenSOS = False
@@ -753,7 +753,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     raise ValueError(
                         "Solver does not support SOS level %s constraints" % (level))
                 if writtenSOS == False:
-                    SOSlines.write("SOS\n")
+                    SOSlines.append("SOS\n")
                     writtenSOS = True
                 # This updates the referenced_variable_ids, just in case
                 # there is a variable that only appears in an
@@ -857,7 +857,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
 
         # Write the SOS section
-        output.append(SOSlines.getvalue())
+        output.append( "".join(SOSlines) )
 
         #
         # wrap-up
