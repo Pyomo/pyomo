@@ -74,33 +74,33 @@ class _PortData(ComponentData):
         raise AttributeError("'%s' object has no attribute '%s'"
                              % (self.__class__.__name__, name))
 
-    def arcs(self, active=False):
+    def arcs(self, active=None):
         """A list of Arcs in which this Port is a member"""
-        if not active:
+        if active is None:
             return list(self._arcs)
         tmp = []
         for a in self._arcs:
-            if a.active:
+            if a.active == active:
                 tmp.append(a)
         return tmp
 
-    def sources(self, active=False):
+    def sources(self, active=None):
         """A list of Arcs in which this Port is a destination"""
-        if not active:
+        if active is None:
             return list(self._sources)
         tmp = []
         for a in self._sources:
-            if a.active:
+            if a.active == active:
                 tmp.append(a)
         return tmp
 
-    def dests(self, active=False):
+    def dests(self, active=None):
         """A list of Arcs in which this Port is a source"""
-        if not active:
+        if active is None:
             return list(self._dests)
         tmp = []
         for a in self._dests:
-            if a.active:
+            if a.active == active:
                 tmp.append(a)
         return tmp
 
@@ -193,7 +193,7 @@ class _PortData(ComponentData):
         """
         Set the split fraction value for an arc when using Port.Extensive
         """
-        if arc not in self.dests(active=False):
+        if arc not in self.dests():
             raise ValueError("Port '%s' is not a source of Arc '%s', cannot "
                              "set split fraction" % (self.name, arc.name))
         self._splitfracs[arc] = dict(val=val, fix=fix)
