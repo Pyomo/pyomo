@@ -11,10 +11,44 @@ from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
 from pyomo.contrib.gdpopt.nlp_solve import (solve_NLP,
                                             update_nlp_progress_indicators)
-from pyomo.contrib.gdpopt.util import copy_and_fix_mip_values_to_nlp
-from pyomo.core import (Block, Constraint, Objective, TransformationFactory,
-                        Var, maximize, minimize)
+from pyomo.contrib.gdpopt.util import (_DoNothing,
+                                       copy_and_fix_mip_values_to_nlp)
+from pyomo.core import (Block, Constraint, Objective, Suffix,
+                        TransformationFactory, Var, maximize, minimize)
 from pyomo.gdp import Disjunct
+
+
+def GDPopt_initialize_master(solve_data, config):
+    """Initialize the decomposition algorithm.
+
+    This includes generating the initial cuts require to build the master
+    problem.
+
+    """
+    config.logger.info("---Starting GDPopt initialization---")
+    m = solve_data.working_model
+    if not hasattr(m, 'dual'):  # Set up dual value reporting
+        m.dual = Suffix(direction=Suffix.IMPORT)
+    m.dual.activate()
+
+    # Set up the linear GDP model
+    solve_data.linear_GDP = m.clone()
+    # deactivate nonlinear constraints
+    for c in solve_data.linear_GDP.GDPopt_utils.\
+            working_nonlinear_constraints:
+        c.deactivate()
+
+    # Initialization strategies
+    init_strategy = valid_init_strategies.get(config.init_strategy, None)
+    if init_strategy is not None:
+        init_strategy(solve_data, config)
+    else:
+        raise ValueError(
+            'Unknown initialization strategy: %s. '
+            'Valid strategies include: %s'
+            % (config.init_strategy,
+               ", ".join(k for (k, v) in valid_init_strategies.items()
+                         if v is not None)))
 
 
 def init_custom_disjuncts(solve_data, config):
@@ -37,30 +71,63 @@ def init_custom_disjuncts(solve_data, config):
             if orig_disj in active_disjunct_set:
                 clone_disj.indicator_var.fix(1)
         mip_result = solve_linear_GDP(linear_GDP, solve_data, config)
-        if mip_result:
-            _, mip_var_values = mip_result
-            # use the mip_var_values to create the NLP subproblem
+        if mip_result.feasible:
+            # use the mip variable values to create the NLP subproblem
             nlp_model = solve_data.working_model.clone()
             # copy in the discrete variable values
             copy_and_fix_mip_values_to_nlp(
                 nlp_model.GDPopt_utils.working_var_list,
-                mip_var_values, config)
+                mip_result.var_values, config)
             TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
             solve_data.nlp_iteration += 1
             nlp_result = solve_NLP(nlp_model, solve_data, config)
-            nlp_feasible, nlp_var_values, nlp_duals = nlp_result
-            if nlp_feasible:
+            if nlp_result.feasible:
                 update_nlp_progress_indicators(nlp_model, solve_data, config)
-                add_outer_approximation_cuts(
-                    nlp_var_values, nlp_duals, solve_data, config)
+                add_outer_approximation_cuts(nlp_result, solve_data, config)
             add_integer_cut(
-                mip_var_values, solve_data, config, feasible=nlp_feasible)
+                mip_result.var_values, solve_data,
+                config, feasible=nlp_result.feasible)
         else:
             config.logger.error(
                 'Linear GDP infeasible for user-specified '
                 'custom initialization disjunct set %s. '
                 'Skipping that set and continuing on.'
                 % list(disj.name for disj in active_disjunct_set))
+
+
+def init_fixed_disjuncts(solve_data, config):
+    """Initialize by solving the problem with the current disjunct values."""
+    # TODO error checking to make sure that the user gave proper disjuncts
+
+    # fix the disjuncts in the linear GDP and send for solution.
+    solve_data.mip_iteration += 1
+    config.logger.info(
+        "Generating initial linear GDP approximation by "
+        "solving subproblem with original user-specified disjunct values.")
+    linear_GDP = solve_data.linear_GDP.clone()
+    TransformationFactory('gdp.fix_disjuncts').apply_to(linear_GDP)
+    mip_result = solve_linear_GDP(linear_GDP, solve_data, config)
+    if mip_result.feasible:
+        # use the mip variable values to create the NLP subproblem
+        nlp_model = solve_data.working_model.clone()
+        # copy in the discrete variable values
+        copy_and_fix_mip_values_to_nlp(
+            nlp_model.GDPopt_utils.working_var_list,
+            mip_result.var_values, config)
+        TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
+        solve_data.nlp_iteration += 1
+        nlp_result = solve_NLP(nlp_model, solve_data, config)
+        if nlp_result.feasible:
+            update_nlp_progress_indicators(nlp_model, solve_data, config)
+            add_outer_approximation_cuts(nlp_result, solve_data, config)
+        add_integer_cut(
+            mip_result.var_values, solve_data, config,
+            feasible=nlp_result.feasible)
+    else:
+        config.logger.error(
+            'Linear GDP infeasible for initial user-specified '
+            'disjunct values. '
+            'Skipping initialization.')
 
 
 def init_max_binaries(solve_data, config):
@@ -87,23 +154,22 @@ def init_max_binaries(solve_data, config):
 
     # Solve
     mip_results = solve_linear_GDP(linear_GDP, solve_data, config)
-    if mip_results:
-        _, mip_var_values = mip_results
-        # use the mip_var_values to create the NLP subproblem
+    if mip_results.feasible:
+        # use the mip variable values to create the NLP subproblem
         nlp_model = solve_data.working_model.clone()
         # copy in the discrete variable values
         copy_and_fix_mip_values_to_nlp(nlp_model.GDPopt_utils.working_var_list,
-                                       mip_var_values, config)
+                                       mip_results.var_values, config)
         TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
         solve_data.nlp_iteration += 1
         nlp_result = solve_NLP(nlp_model, solve_data, config)
-        nlp_feasible, nlp_var_values, nlp_duals = nlp_result
-        if nlp_feasible:
+        if nlp_result.feasible:
             update_nlp_progress_indicators(nlp_model, solve_data, config)
             add_outer_approximation_cuts(
-                nlp_var_values, nlp_duals, solve_data, config)
+                nlp_result, solve_data, config)
         add_integer_cut(
-            mip_var_values, solve_data, config, feasible=nlp_feasible)
+            mip_results.var_values, solve_data, config,
+            feasible=nlp_result.feasible)
     else:
         config.logger.info(
             "Linear relaxation for initialization was infeasible. "
@@ -124,6 +190,8 @@ def init_set_covering(solve_data, config):
     config.logger.info(
         "Generating initial linear GDP approximation by solving subproblems "
         "to cover all nonlinear disjuncts.")
+    # List of True/False if the corresponding disjunct in
+    # working_disjuncts_list still needs to be covered by the initialization
     disjunct_needs_cover = list(
         any(constr.body.polynomial_degree() not in (0, 1)
             for constr in disj.component_data_objects(
@@ -137,34 +205,32 @@ def init_set_covering(solve_data, config):
         linear_GDP = solve_data.linear_GDP.clone()
         linear_GDP.GDPopt_utils.no_backtracking.activate()
         # Solve set covering MIP
-        mip_results = solve_set_cover_MIP(
+        mip_result = solve_set_cover_MIP(
             linear_GDP, disjunct_needs_cover, solve_data, config)
-        if not mip_results:
+        if not mip_result.feasible:
             # problem is infeasible. break
             return False
         # solve local NLP
-        _, mip_var_values, mip_disjunct_values = mip_results
         nlp_model = solve_data.working_model.clone()
         copy_and_fix_mip_values_to_nlp(nlp_model.GDPopt_utils.working_var_list,
-                                       mip_var_values, config)
+                                       mip_result.var_values, config)
         TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
         solve_data.nlp_iteration += 1
         nlp_result = solve_NLP(nlp_model, solve_data, config)
-        nlp_feasible, nlp_var_values, nlp_duals = nlp_result
-        if nlp_feasible:
+        if nlp_result.feasible:
             # if successful, updated sets
             active_disjuncts = list(
                 fabs(val - 1) <= config.integer_tolerance
-                for val in mip_disjunct_values)
+                for val in mip_result.disjunct_values)
             disjunct_needs_cover = list(
                 (needed_cover and not was_active)
                 for (needed_cover, was_active) in zip(disjunct_needs_cover,
                                                       active_disjuncts))
             update_nlp_progress_indicators(nlp_model, solve_data, config)
-            add_outer_approximation_cuts(
-                nlp_var_values, nlp_duals, solve_data, config)
+            add_outer_approximation_cuts(nlp_result, solve_data, config)
         add_integer_cut(
-            mip_var_values, solve_data, config, feasible=nlp_feasible)
+            mip_result.var_values, solve_data, config,
+            feasible=nlp_result.feasible)
 
         iter_count += 1
 
@@ -205,11 +271,8 @@ def solve_set_cover_MIP(linear_GDP_model, disj_needs_cover,
             constr.deactivate()
 
     mip_results = solve_linear_GDP(m, solve_data, config)
-    if mip_results:
+    if mip_results.feasible:
         config.logger.info('Solved set covering MIP')
-        return mip_results + (
-            list(disj.indicator_var.value
-                 for disj in GDPopt.working_disjuncts_list),)
     else:
         config.logger.info(
             'Set covering problem is infeasible. '
@@ -224,4 +287,15 @@ def solve_set_cover_MIP(linear_GDP_model, disj_needs_cover,
             solve_data.LB = float('inf')
         else:
             solve_data.UB = float('-inf')
-        return False
+
+    return mip_results
+
+
+# Valid initialization strategies
+valid_init_strategies = {
+    'no_init': _DoNothing,
+    'set_covering': init_set_covering,
+    'max_binary': init_max_binaries,
+    'fix_disjuncts': init_fixed_disjuncts,
+    'custom_disjuncts': init_custom_disjuncts
+}

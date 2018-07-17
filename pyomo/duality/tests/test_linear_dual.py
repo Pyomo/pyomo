@@ -15,7 +15,7 @@ import os
 from os.path import abspath, dirname, normpath, join
 
 currdir = dirname(abspath(__file__))
-exdir = normpath(join(currdir,'..', '..','..','..','examples','pyomo','core'))
+exdir = normpath(join(currdir,'..','..','..','examples','pyomo','core'))
 
 import pyutilib.th as unittest
 
@@ -121,7 +121,7 @@ class Reformulate(unittest.TestCase, CommonTests):
     def run_bilevel(self,  *args, **kwds):
         args = list(args)
         args.append('--output='+self.problem+'_result.lp')
-        kwds['transform'] = 'core.linear_dual'
+        kwds['transform'] = 'duality.linear_dual'
         CommonTests.run_bilevel(self, *args, **kwds)
 
     def referenceFile(self, problem, solver):
