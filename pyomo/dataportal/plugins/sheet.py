@@ -41,9 +41,8 @@ except ImportError:
     xlrd_available=False
 
 from pyomo.common.plugin import alias
-from pyomo.core.data.TableData import TableData
-
-from pyomo.core.plugins.data.db_table import pyodbc_available, pyodbc_db_Table, pypyodbc_available, pypyodbc_db_Table
+from pyomo.dataportal import TableData
+from pyomo.dataportal.plugins.db_table import pyodbc_available, pyodbc_db_Table, pypyodbc_available, pypyodbc_db_Table
 
 
 class SheetTable(TableData):

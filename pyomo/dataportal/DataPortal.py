@@ -11,7 +11,7 @@
 __all__ = ['DataPortal']
 
 import logging
-from pyomo.core.base.plugin import *
+from pyomo.dataportal.factory import DataManagerFactory, UnknownDataManager
 
 logger = logging.getLogger('pyomo.core')
 

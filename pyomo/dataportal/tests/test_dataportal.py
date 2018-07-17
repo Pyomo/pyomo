@@ -13,12 +13,12 @@
 
 import os
 from os.path import abspath, dirname
-pyomo_dir=dirname(dirname(abspath(__file__)))+os.sep+".."+os.sep+".."
+pyomo_dir=dirname(dirname(abspath(__file__)))+os.sep+".."
 
 import pyutilib.common
 import pyutilib.th as unittest
 
-from pyomo.core.base.plugin import DataManagerFactory
+from pyomo.dataportal.factory import DataManagerFactory
 from pyomo.environ import *
 
 try:

@@ -12,9 +12,7 @@ import os.path
 import csv
 
 from pyomo.common.plugin import alias
-
-from pyomo.core.base.param import Param
-from pyomo.core.data.TableData import TableData
+from pyomo.dataportal import TableData
 
 
 class CSVTable(TableData):
@@ -32,6 +30,7 @@ class CSVTable(TableData):
         self.FILE.close()
 
     def read(self):
+        from pyomo.core.base.param import Param
         if not os.path.exists(self.filename):           #pragma:nocover
             raise IOError("Cannot find file '%s'" % self.filename)
         self.FILE = open(self.filename, 'r')
