@@ -704,6 +704,11 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 else:
                     assert constraint_data.has_lb()
 
+            # A simple hack to avoid caching super large files
+            if len(output) > 1024:
+                output_file.write( "".join(output) )
+                output = []
+
         if not have_nontrivial:
             logger.warning('Empty constraint block written in LP format '  \
                   '- solver may error')
