@@ -11,6 +11,7 @@ from pyomo.environ import (Binary, ConcreteModel, Constraint, ConstraintList,
 from pyomo.repn import generate_standard_repn
 from pyomo.gdp import Disjunct, Disjunction
 
+glpk_available = SolverFactory('glpk').available()
 
 class TestInducedLinearity(unittest.TestCase):
     """Tests induced linearity."""
@@ -55,6 +56,7 @@ class TestInducedLinearity(unittest.TestCase):
         self.assertEqual(len(effectively_discrete), 1)
         self.assertEqual(effectively_discrete[m.a], [m.disj.constr])
 
+    @unittest.skipIf(not glpk_available, 'GLPK not available')
     def test_determine_valid_values(self):
         m = ConcreteModel()
         m.x = Var()
@@ -71,6 +73,7 @@ class TestInducedLinearity(unittest.TestCase):
         valid_values = set([1, 2, 3, 4, 5])
         self.assertEqual(set(var_to_values_map[m.x]), valid_values)
 
+    @unittest.skipIf(not glpk_available, 'GLPK not available')
     def test_induced_linearity_case2(self):
         m = ConcreteModel()
         m.x = Var([0], bounds=(-3, 8))
@@ -97,6 +100,7 @@ class TestInducedLinearity(unittest.TestCase):
             ComponentSet(select_one_repn.linear_vars),
             ComponentSet(xfrmed_blk.x_active[i] for i in xfrmed_blk.valid_values))
 
+    @unittest.skipIf(not glpk_available, 'GLPK not available')
     def test_bilinear_in_disjuncts(self):
         m = ConcreteModel()
         m.x = Var([0], bounds=(-3, 8))
@@ -126,6 +130,7 @@ class TestInducedLinearity(unittest.TestCase):
         self.assertEqual(
             m.disjctn.disjuncts[1].constraint[1].body.polynomial_degree(), 1)
 
+    @unittest.skipIf(not glpk_available, 'GLPK not available')
     def test_induced_linear_in_disjunct(self):
         m = ConcreteModel()
         m.x = Var([0], bounds=(-3, 8))
@@ -143,13 +148,12 @@ class TestInducedLinearity(unittest.TestCase):
             [m.x[0] * m.v[1] == 4]
         ])
         TransformationFactory('contrib.induced_linearity').apply_to(m)
-        # self.assertEqual(
-        #     m.disjctn.disjuncts[0].constraint[1].body.polynomial_degree(), 1)
-        # self.assertEqual(
-        #     m.bilinear_outside.body.polynomial_degree(), 2)
-        # self.assertEqual(
-        #     m.disjctn.disjuncts[1].constraint[1].body.polynomial_degree(), 2)
-        m.pprint()
+        self.assertEqual(
+            m.disjctn.disjuncts[0].constraint[1].body.polynomial_degree(), 1)
+        self.assertEqual(
+            m.bilinear_outside.body.polynomial_degree(), 2)
+        self.assertEqual(
+            m.disjctn.disjuncts[1].constraint[1].body.polynomial_degree(), 2)
 
 
 if __name__ == '__main__':
