@@ -182,6 +182,10 @@ class _IndexedComponent_slice_iter(object):
                             raise
                         break
                     self._iter_stack[idx] = None
+                else:
+                    raise RuntimeError(
+                        "Unexpected entry in _IndexedComponent_slice "
+                        "_call_stack: %s" % (_call[0],))
                 idx += 1
 
             if idx == len(self._slice._call_stack):
@@ -228,7 +232,7 @@ class _IndexedComponent_slice_iter(object):
 
 
 class _IndexedComponent_slice(object):
-    """Special iterable class for slicing through hierarchical component trees
+    """Special class for slicing through hierarchical component trees
 
     The basic concept is to interrupt the normal slice generation
     procedure to return a specialized iterable class (this object).  This
