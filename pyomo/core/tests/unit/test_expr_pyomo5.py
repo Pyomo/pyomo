@@ -28,7 +28,7 @@ from pyomo.environ import *
 from pyomo.core.expr import expr_common
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel import expression, expression_dict, variable, expression, objective
-from pyomo.core.expr.numvalue import potentially_variable, native_types, nonpyomo_leaf_types
+from pyomo.core.expr.numvalue import native_types, nonpyomo_leaf_types, NumericConstant, as_numeric, is_potentially_variable
 from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.param import _ParamData, SimpleParam
 from pyomo.core.base.label import *
@@ -4581,7 +4581,7 @@ class TestIsFixedIsConstant(unittest.TestCase):
         expr = self.instance.e + self.instance.e
         self.assertEqual(is_fixed(expr), True)
         self.assertEqual(is_constant(expr), True)
-        self.assertEqual(potentially_variable(expr), False)
+        self.assertEqual(is_potentially_variable(expr), False)
         #
         # Sum of unfixed variables:  not fixed, not constant, pvar
         #
@@ -5008,24 +5008,19 @@ class TestIsFixedIsConstant(unittest.TestCase):
         m.x = Expression()
         e = m.x
         self.assertEqual(e.is_potentially_variable(), True)
-        self.assertEqual(potentially_variable(e), True)
+        self.assertEqual(is_potentially_variable(e), True)
 
         e = m.x + 1
         self.assertEqual(e.is_potentially_variable(), True)
-        self.assertEqual(potentially_variable(e), True)
+        self.assertEqual(is_potentially_variable(e), True)
 
         e = m.x**2
         self.assertEqual(e.is_potentially_variable(), True)
-        self.assertEqual(potentially_variable(e), True)
+        self.assertEqual(is_potentially_variable(e), True)
 
         e = m.x**2/(m.x + 1)
         self.assertEqual(e.is_potentially_variable(), True)
-        self.assertEqual(potentially_variable(e), True)
-
-    def test_misc(self):
-        self.assertEqual(potentially_variable(0), False)
-        self.assertEqual(potentially_variable('a'), False)
-        self.assertEqual(potentially_variable(None), False)
+        self.assertEqual(is_potentially_variable(e), True)
 
     def test_external_func(self):
         m = ConcreteModel()

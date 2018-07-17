@@ -8,54 +8,29 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-#
-# Test replace_power function in gams writer
-#
-
-
 import pyutilib.th as unittest
 from pyomo.core.base import NumericLabeler, SymbolMap
 from pyomo.environ import (Block, ConcreteModel, Connector, Constraint,
-                           Objective, Var)
-from pyomo.repn.plugins.gams_writer import expression_to_string, replace_power
+                           Objective, Var, TransformationFactory)
+from pyomo.repn.plugins.gams_writer import (
+    expression_to_string, split_long_line, StorageTreeChecker)
+from six import StringIO
 
 
 class GAMSTests(unittest.TestCase):
-
-    def test_gams_replace_power(self):
-        line1 = "x**2.01"
-        self.assertTrue(replace_power(line1) == line1)
-
-        line2 = "abc**2.0"
-        self.assertTrue(replace_power(line2) == "power(abc, 2.0)")
-
-        line3 = "log( abc**2.0 )"
-        self.assertTrue(replace_power(line3) == "log( power(abc, 2.0) )")
-
-        line4 = "log( abc**2.0 ) + 5"
-        self.assertTrue(replace_power(line4) == "log( power(abc, 2.0) ) + 5")
-
-        line5 = "exp( abc**2.0 ) + 5"
-        self.assertTrue(replace_power(line5) == "exp( power(abc, 2.0) ) + 5")
-
-        line6 = "log( abc**2.0 )**4"
-        self.assertTrue(replace_power(line6) ==
-                        "power(log( power(abc, 2.0) ), 4)")
-
-        line6 = "log( abc**2.0 )**4.5"
-        self.assertTrue(replace_power(line6) == line6)
 
     def test_power_function_to_string(self):
         m = ConcreteModel()
         m.x = Var()
         lbl = NumericLabeler('x')
         smap = SymbolMap(lbl)
-        self.assertEquals(expression_to_string(
-            m.x ** -3, lbl, smap=smap), "power(x1, -3)")
-        self.assertEquals(expression_to_string(
-            m.x ** 0.33, smap=smap), "x1 ** 0.33")
-        self.assertEquals(expression_to_string(
-            pow(m.x, 2), smap=smap), "power(x1, 2)")
+        tc = StorageTreeChecker(m)
+        self.assertEqual(expression_to_string(
+            m.x ** -3, tc, lbl, smap=smap), "power(x1, -3)")
+        self.assertEqual(expression_to_string(
+            m.x ** 0.33, tc, smap=smap), "x1 ** 0.33")
+        self.assertEqual(expression_to_string(
+            pow(m.x, 2), tc, smap=smap), "power(x1, 2)")
 
     def test_fixed_var_to_string(self):
         m = ConcreteModel()
@@ -65,20 +40,20 @@ class GAMSTests(unittest.TestCase):
         m.z.fix(-3)
         lbl = NumericLabeler('x')
         smap = SymbolMap(lbl)
-        self.assertEquals(expression_to_string(
-            m.x + m.y - m.z, lbl, smap=smap), "x1 + x2 - (-3)")
+        tc = StorageTreeChecker(m)
+        self.assertEqual(expression_to_string(
+            m.x + m.y - m.z, tc, lbl, smap=smap), "x1 + x2 - (-3)")
         m.z.fix(-400)
-        self.assertEquals(expression_to_string(
-            m.z + m.y - m.z, smap=smap), "(-400) + x2 - (-400)")
+        self.assertEqual(expression_to_string(
+            m.z + m.y - m.z, tc, smap=smap), "(-400) + x2 - (-400)")
         m.z.fix(8.8)
-        self.assertEquals(expression_to_string(
-            m.x + m.z - m.y, smap=smap), "x1 + (8.8) - x2")
+        self.assertEqual(expression_to_string(
+            m.x + m.z - m.y, tc, smap=smap), "x1 + (8.8) - x2")
         m.z.fix(-8.8)
-        self.assertEquals(expression_to_string(
-            m.x * m.z - m.y, smap=smap), "x1*(-8.8) - x2")
+        self.assertEqual(expression_to_string(
+            m.x * m.z - m.y, tc, smap=smap), "x1*(-8.8) - x2")
 
     def test_gams_connector_in_active_constraint(self):
-        """Test connector in active constraint for GAMS writer."""
         m = ConcreteModel()
         m.b1 = Block()
         m.b2 = Block()
@@ -90,8 +65,34 @@ class GAMSTests(unittest.TestCase):
         m.b2.c.add(m.b2.x)
         m.c = Constraint(expr=m.b1.c == m.b2.c)
         m.o = Objective(expr=m.b1.x)
+        os = StringIO()
         with self.assertRaises(RuntimeError):
-            m.write('testgmsfile.gms')
+            m.write(os, format="gams")
+
+    def test_gams_expanded_connectors(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.CON1 = Connector()
+        m.CON1.add(m.x, 'v')
+        m.CON2 = Connector()
+        m.CON2.add(m.y, 'v')
+        m.c = Constraint(expr=m.CON1 + m.CON2 >= 10)
+        TransformationFactory("core.expand_connectors").apply_to(m)
+        m.o = Objective(expr=m.x)
+        os = StringIO()
+        io_options = dict(symbolic_solver_labels=True)
+        m.write(os, format="gams", io_options=io_options)
+        # no error if we're here, but check for some identifying string
+        self.assertIn("x + y", os.getvalue())
+
+    def test_split_long_line(self):
+        pat = "var1 + log(var2 / 9) - "
+        line = (pat * 10000) + "x"
+        self.assertEqual(split_long_line(line),
+            pat * 3478 + "var1 +\nlog(var2 / 9) - " +
+            pat * 3477 + "var1 +\nlog(var2 / 9) - " +
+            pat * 3043 + "x")
 
 
 if __name__ == "__main__":

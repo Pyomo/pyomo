@@ -9,9 +9,10 @@
 #  ___________________________________________________________________________
 
 
+from pyomo.environ import *
+from pyomo.solvers.plugins.solvers.GAMS import GAMSShell, GAMSDirect
 import pyutilib.th as unittest
 from pyutilib.misc import capture_output
-from pyomo.environ import *
 import os, shutil
 from tempfile import mkdtemp
 
@@ -243,6 +244,56 @@ class GAMSTests(unittest.TestCase):
 
             self.assertEqual(results.solver.termination_condition,
                              TerminationCondition.optimal)
+
+    def test_subsolver_notation(self):
+        opt1 = SolverFactory("gams:ipopt", solver_io="gms")
+        self.assertTrue(isinstance(opt1, GAMSShell))
+        self.assertEqual(opt1.options["solver"], "ipopt")
+
+        opt2 = SolverFactory("gams:baron", solver_io="python")
+        self.assertTrue(isinstance(opt2, GAMSDirect))
+        self.assertEqual(opt2.options["solver"], "baron")
+
+        opt3 = SolverFactory("py:gams")
+        self.assertTrue(isinstance(opt3, GAMSDirect))
+        opt3.options["keepfiles"] = True
+        self.assertEqual(opt3.options["keepfiles"], True)
+
+        opt4 = SolverFactory("py:gams:cbc")
+        self.assertTrue(isinstance(opt4, GAMSDirect))
+        self.assertEqual(opt4.options["solver"], "cbc")
+
+    @unittest.skipIf(not gamspy_available,
+                     "The 'gams' python bindings are not available")
+    def test_options_py(self):
+        with SolverFactory("gams", solver_io="python") as opt:
+
+            m = ConcreteModel()
+            m.x = Var()
+            m.c = Constraint(expr= m.x >= 10)
+            m.o = Objective(expr= m.x)
+
+            opt.options["load_solutions"] = False # set option
+            opt.solve(m) # use option
+            self.assertEqual(m.x.value, None)
+            opt.solve(m, load_solutions=True) # overwrite option
+            self.assertEqual(m.x.value, 10)
+
+    @unittest.skipIf(not gamsgms_available,
+                     "The 'gams' executable is not available")
+    def test_options_gms(self):
+        with SolverFactory("gams", solver_io="gms") as opt:
+
+            m = ConcreteModel()
+            m.x = Var()
+            m.c = Constraint(expr= m.x >= 10)
+            m.o = Objective(expr= m.x)
+
+            opt.options["load_solutions"] = False # set option
+            opt.solve(m) # use option
+            self.assertEqual(m.x.value, None)
+            opt.solve(m, load_solutions=True) # overwrite option
+            self.assertEqual(m.x.value, 10)
 
 class GAMSLogfileTestBase(unittest.TestCase):
     def setUp(self):

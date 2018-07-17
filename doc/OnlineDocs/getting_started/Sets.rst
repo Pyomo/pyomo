@@ -13,9 +13,6 @@ a set and postpones creation of its members:
 
 The ``Set`` function takes optional arguments such as:
 
-.. autosummary::
-   :nosignatures:
-
 - doc = String describing the set
 - dimen = Dimension of the members of the set
 - filter = A boolean function used during construction to indicate if a potential new member should be assigned to the set
@@ -123,9 +120,6 @@ Predefined Virtual Sets
 For use in specifying domains for sets, parameters and variables, Pyomo
 provides the following pre-defined virtual sets:
 
-.. autosummary::
-   :nosignatures:
-
 - Any = all possible values
 - Reals = floating point values
 - PositiveReals = strictly positive floating point values
@@ -186,9 +180,6 @@ Consider the following simple version of minimum cost flow problem:
 	\end{array}
 
 where
-
-.. autosummary::
-   :nosignatures:
 
 - Set: Nodes :math:`\equiv \mathcal{N}`
 - Set: Arcs :math:`\equiv \mathcal{A} \subseteq \mathcal{N} \times \mathcal{N}`
@@ -297,7 +288,3 @@ Here is the first few lines of a model that illustrates this:
 
 .. literalinclude:: spyfiles/Spy4Sets_Declare_constraints_example.spy
    :language: python
-
-.. rubric:: References
-
-.. [PyomoBookII] Hart, W.E.; Laird, C.; Watson, J.-P.; Woodruff, D.L.; Hackebeil, G.A.; Nicholson, B.L.; Siirola, J.D.: Pyomo – Optimization Modeling in Python, Springer, 2017.

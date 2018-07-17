@@ -9,11 +9,10 @@
 #  ___________________________________________________________________________
 
 import pyomo.core.expr
-from pyomo.core.expr.numvalue import potentially_variable
+from pyomo.core.expr.numvalue import is_numeric_data
 from pyomo.core.kernel.component_interface import \
     (IComponent,
-     _ActiveComponentMixin,
-     _ActiveComponentContainerMixin,
+     _ActiveObjectMixin,
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.kernel.component_dict import ComponentDict
@@ -23,7 +22,7 @@ from pyomo.core.kernel.component_list import ComponentList
 import six
 from six.moves import zip
 
-class ISOS(IComponent, _ActiveComponentMixin):
+class ISOS(IComponent, _ActiveObjectMixin):
     """
     The interface for Special Ordered Sets.
     """
@@ -66,6 +65,7 @@ class sos(ISOS):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_variables",
                  "_weights",
@@ -73,6 +73,7 @@ class sos(ISOS):
                  "__weakref__")
     def __init__(self, variables, weights=None, level=1):
         self._parent = None
+        self._storage_key = None
         self._active = True
         self._variables = tuple(variables)
         self._weights = None
@@ -82,10 +83,10 @@ class sos(ISOS):
         else:
             self._weights = tuple(weights)
             for w in self._weights:
-                if potentially_variable(w):
+                if not is_numeric_data(w):
                     raise ValueError(
                         "Weights for Special Ordered Sets must be "
-                        "expressions restricted to data")
+                        "expressions restricted to numeric data")
 
         assert len(self._variables) == len(self._weights)
         assert self._level >= 1
@@ -115,12 +116,13 @@ def sos2(variables, weights=None):
     return sos(variables, weights=weights, level=2)
 
 class sos_tuple(ComponentTuple,
-                _ActiveComponentContainerMixin):
+                _ActiveObjectMixin):
     """A tuple-style container for Special Ordered Sets."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_data")
     if six.PY3:
@@ -132,16 +134,18 @@ class sos_tuple(ComponentTuple,
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         self._active = True
         super(sos_tuple, self).__init__(*args, **kwds)
 
 class sos_list(ComponentList,
-               _ActiveComponentContainerMixin):
+               _ActiveObjectMixin):
     """A list-style container for Special Ordered Sets."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_data")
     if six.PY3:
@@ -153,16 +157,18 @@ class sos_list(ComponentList,
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         self._active = True
         super(sos_list, self).__init__(*args, **kwds)
 
 class sos_dict(ComponentDict,
-               _ActiveComponentContainerMixin):
+               _ActiveObjectMixin):
     """A dict-style container for Special Ordered Sets."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
                  "_data")
     if six.PY3:
@@ -174,5 +180,6 @@ class sos_dict(ComponentDict,
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         self._active = True
         super(sos_dict, self).__init__(*args, **kwds)

@@ -1,0 +1,26 @@
+from pyomo.pysp.annotations import StochasticObjectiveAnnotation
+
+model = ConcreteModel()
+
+# data that is initialized on a per-scenario basis
+p = ...
+q = ...
+
+# first-stage variable
+model.x = Var()
+# second-stage variable
+model.y = Var()
+
+# first-stage cost expression
+model.FirstStageCost = Expression(expr= 5.0 * model.x)
+# second-stage cost expression
+model.SecondStageCost = Expression(expr= p * model.x + q * model.y)
+
+# define the objective as the sum of the
+# stage-cost expressions
+model.TotalCost = Objective(expr= model.FirstStageCost + model.SecondStageCost)
+
+# declare that model.x and model.y have stochastic cost
+# coefficients in the second stage
+model.stoch_objective = StochasticObjectiveAnnotation()
+model.stoch_objective.declare(model.TotalCost, variables=[model.x, model.y])

@@ -23,7 +23,7 @@ from pyomo.core.expr.current import Expr_if
 from pyomo.core.expr import expr_common, current as EXPR
 from pyomo.repn import *
 from pyomo.environ import *
-from pyomo.core.base.numvalue import native_numeric_types
+from pyomo.core.base.numvalue import native_numeric_types, as_numeric
 from pyomo.core.kernel import expression, variable
 
 from six import iteritems

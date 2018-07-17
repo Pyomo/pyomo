@@ -99,12 +99,11 @@ class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManage
                                           active_import_suffix_generator(arg))
                 else:
                     assert isinstance(arg, IBlockStorage)
-                    model_suffixes = list(name for (name,comp) \
+                    model_suffixes = list(comp.storage_key for comp \
                                           in pyomo.core.base.component_suffix.\
                                           import_suffix_generator(arg,
                                                                   active=True,
-                                                                  descend_into=False,
-                                                                  return_key=True))
+                                                                  descend_into=False))
                 if len(model_suffixes) > 0:
                     kwds_suffixes = kwds.setdefault('suffixes',[])
                     for name in model_suffixes:
