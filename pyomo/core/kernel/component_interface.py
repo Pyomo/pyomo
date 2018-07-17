@@ -93,6 +93,10 @@ class ICategorizedObject(object):
     # Interface
     #
 
+    def is_component_type(self):
+        """Return True if this class is a Pyomo component"""
+        return self._is_component
+
     @property
     def ctype(self):
         """The object's category type."""

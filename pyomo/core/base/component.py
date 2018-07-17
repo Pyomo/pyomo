@@ -486,6 +486,10 @@ class Component(_ComponentBase):
         """Return true if this component is indexed"""
         return False
 
+    def is_component_type(self):
+        """Return True if this class is a Pyomo component"""
+        return True
+
     def clear_suffix_value(self, suffix_or_name, expand=True):
         """Clear the suffix value for this component data"""
         if isinstance(suffix_or_name, six.string_types):
@@ -777,6 +781,10 @@ class ComponentData(_ComponentBase):
     def is_indexed(self):
         """Return true if this component is indexed"""
         return False
+
+    def is_component_type(self):
+        """Return True if this class is a Pyomo component"""
+        return True
 
     def clear_suffix_value(self, suffix_or_name, expand=True):
         """Set the suffix value for this component data"""
