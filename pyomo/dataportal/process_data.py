@@ -18,9 +18,8 @@ from pyutilib.misc import quote_split, Options
 import pyutilib.common
 from pyutilib.misc import flatten
 
-from pyomo.core.base.plugin import *
-from pyomo.core.base.sets import Set
-from pyomo.core.data.parse_datacmds import parse_data_commands
+from pyomo.dataportal.parse_datacmds import parse_data_commands
+from pyomo.dataportal.factory import DataManagerFactory, UnknownDataManager
 
 try:
     from collections import OrderedDict
@@ -784,6 +783,8 @@ def _process_table(cmd, _model, _data, _default, options=None):
 
 def _process_load(cmd, _model, _data, _default, options=None):
     #print("LOAD %s" % cmd)
+    from pyomo.core import Set
+
     _cmd_len = len(cmd)
     _options = {}
     _options['filename'] = cmd[1]

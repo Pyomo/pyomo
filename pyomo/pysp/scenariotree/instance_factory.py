@@ -22,9 +22,9 @@ from pyutilib.misc import (ArchiveReaderFactory,
                            ArchiveReader,
                            PauseGC)
 
+from pyomo.dataportal import DataPortal
 from pyomo.core import (Block,
                         IPyomoScriptModifyInstance,
-                        DataPortal,
                         AbstractModel)
 from pyomo.core.base.block import _BlockData
 from pyomo.common.plugin import ExtensionPoint

@@ -8,14 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.plugin import PluginGlobals
-PluginGlobals.add_env("pyomo")
+from pyomo.core.base import Var, Param, Expression, Objective, Block, \
+    Constraint, Suffix
 
-from pyomo.core.expr import *
-import pyomo.core.kernel
-import pyomo.core.base._pyomo
-from pyomo.core.base import *
-import pyomo.core.preprocess
-from pyomo.core.util import *
-
-PluginGlobals.pop_env()
+valid_expr_ctypes_minlp = {Var, Param, Expression, Objective}
+valid_active_ctypes_minlp = {Block, Constraint, Objective, Suffix}
