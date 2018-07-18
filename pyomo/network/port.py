@@ -31,6 +31,8 @@ from pyomo.core.base.plugin import register_component, \
     IPyomoScriptModifyInstance, TransformationFactory
 from pyomo.core.kernel.component_map import ComponentMap
 
+from pyomo.network.util import replicate_var
+
 logger = logging.getLogger('pyomo.network')
 
 
@@ -452,7 +454,7 @@ class Port(IndexedComponent):
             eblock = arc.expanded_block
 
             # Make and record new variables for every arc with this member.
-            evar = Port._create_evar(eblock, name, index_set)
+            evar = Port._create_evar(port.vars[name], name, eblock, index_set)
             in_vars.append(evar)
 
         # Create constraint: var == sum of evars
@@ -492,7 +494,7 @@ class Port(IndexedComponent):
             eblock = arc.expanded_block
 
             # Make and record new variables for every arc with this member.
-            evar = Port._create_evar(eblock, name, index_set)
+            evar = Port._create_evar(port.vars[name], name, eblock, index_set)
             out_vars.append(evar)
 
             if no_splitfrac:
@@ -582,15 +584,14 @@ class Port(IndexedComponent):
         con = Constraint(index_set, rule=rule)
         eblock.add_component(cname, con)
 
-    def _create_evar(eblock, name, index_set):
+    def _create_evar(member, name, eblock, index_set):
         # Name is same, conflicts are prevented by a check in Port.add.
         # The new var will mirror the original var and have same index set.
         # We only need one evar per arc, so check if it already exists
         # before making a new one.
         evar = eblock.component(name)
         if evar is None:
-            evar = Var(index_set)
-            eblock.add_component(name, evar)
+            evar = replicate_var(member, name, eblock, index_set)
         return evar
 
     # Python 2 compatibility

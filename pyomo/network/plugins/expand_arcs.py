@@ -13,13 +13,15 @@ logger = logging.getLogger('pyomo.network')
 
 from six import next, iteritems, itervalues
 
+from pyomo.common.modeling import unique_component_name
+
 from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.core.base.plugin import alias
 from pyomo.core.base.indexed_component import UnindexedComponent_set
 from pyomo.core.base import Transformation, Var, Block, SortComponents
-from pyomo.network import Arc
-from pyomo.common.modeling import unique_component_name
 
+from pyomo.network import Arc
+from pyomo.network.util import replicate_var
 
 # keyword arguments for component_objects and component_data_objects
 obj_iter_kwds = dict(ctype=Arc, active=True, sort=SortComponents.deterministic)
@@ -208,30 +210,12 @@ class ExpandArcs(Transformation):
                 if k in p.vars and p.vars[k] is not None:
                     continue
 
-                var_args = {}
-                try:
-                    var_args['domain'] = v[0].domain
-                except AttributeError:
-                    pass
-                try:
-                    var_args['bounds'] = v[0].bounds
-                except AttributeError:
-                    pass
-
-                if v[1] >= 0:
-                    new_var = Var(v[0].index_set(), **var_args)
-                else:
-                    new_var = Var(**var_args)
                 vname = unique_component_name(
                     block, '%s_auto_%s' % (p.getname(
-                        fully_qualified=True, name_buffer=self._name_buffer), k))
-                block.add_component(vname, new_var)
-                if v[1] >= 0:
-                    for i in v[0].index_set():
-                        # set bounds for every member in case they differ
-                        new_var[i].domain = v[0][i].domain
-                        new_var[i].setlb(v[0][i].lb)
-                        new_var[i].setub(v[0][i].ub)
+                        fully_qualified=True, name_buffer=self._name_buffer),k))
+
+                new_var = replicate_var(v[0], vname, block)
+
                 # add this new variable to the port so that it has a rule
                 p.add(new_var, k, rule=v[3])
 
