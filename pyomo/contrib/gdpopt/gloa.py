@@ -16,8 +16,8 @@ def solve_GLOA_master(solve_data, config):
     GDPopt = m.GDPopt_utils
     solve_data.mip_iteration += 1
 
-    mip_results = solve_linear_GDP(m, solve_data, config)
-    if mip_results:
+    mip_result = solve_linear_GDP(m, solve_data, config)
+    if mip_result.feasible:
         if GDPopt.objective.sense == minimize:
             solve_data.LB = max(value(GDPopt.objective.expr), solve_data.LB)
         else:
@@ -29,7 +29,7 @@ def solve_GLOA_master(solve_data, config):
         ] = (
             value(GDPopt.objective.expr),
             value(GDPopt.objective.expr),
-            mip_results[1]  # mip_var_values
+            mip_result.var_values
         )
         config.logger.info(
             'ITER %s.%s.%s-MIP: OBJ: %s  LB: %s  UB: %s'
@@ -50,9 +50,9 @@ def solve_GLOA_master(solve_data, config):
         else:
             solve_data.UB = float('-inf')
     # Call the MILP post-solve callback
-    config.master_postsolve(m, solve_data)
+    config.call_after_master_solve(m, solve_data)
 
-    return mip_results
+    return mip_result
 
 
 def solve_global_NLP(mip_var_values, solve_data, config):

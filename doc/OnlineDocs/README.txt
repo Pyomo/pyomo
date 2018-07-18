@@ -9,7 +9,7 @@ GETTING STARTED
 
   vi *.rst
 
-3.  Build the documentation
+2.  Build the documentation
 
   make html
 

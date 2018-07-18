@@ -101,16 +101,6 @@ class Test(unittest.TestCase):
 
         self._check_baseline(model, file_determinism=2)
 
-    def test_var_on_other_model(self):
-        other = ConcreteModel()
-        other.a = Var()
-
-        model = ConcreteModel()
-        model.x = Var()
-        model.c = Constraint(expr=other.a + 2*model.x <= 0)
-        model.obj = Objective(expr=model.x)
-        self._check_baseline(model)
-
     def test_var_on_deactivated_block(self):
         model = ConcreteModel()
         model.x = Var()
@@ -121,56 +111,43 @@ class Test(unittest.TestCase):
         model.obj = Objective(expr=model.x)
         self._check_baseline(model)
 
-    def test_var_on_nonblock(self):
-        class Foo(Block().__class__):
-            def __init__(self, *args, **kwds):
-                kwds.setdefault('ctype',Foo)
-                super(Foo,self).__init__(*args, **kwds)
-
-        model = ConcreteModel()
-        model.x = Var()
-        model.other = Foo()
-        model.other.a = Var()
-        model.c = Constraint(expr=model.other.a + 2*model.x <= 0)
-        model.obj = Objective(expr=model.x)
-        self._check_baseline(model)
-
     def test_expr_xfrm(self):
-        from pyomo.repn.plugins.gams_writer import expression_to_string
+        from pyomo.repn.plugins.gams_writer import (
+            expression_to_string, StorageTreeChecker)
         from pyomo.core.expr.symbol_map import SymbolMap
         M = ConcreteModel()
         M.abc = Var()
 
         smap = SymbolMap()
+        tc = StorageTreeChecker(M)
 
         expr = M.abc**2.0
         self.assertEqual(str(expr), "abc**2.0")
-        self.assertEqual(expression_to_string(expr, smap=smap), "power(abc, 2.0)")
+        self.assertEqual(expression_to_string(expr, tc, smap=smap), "power(abc, 2.0)")
 
         expr = log( M.abc**2.0 )
         self.assertEqual(str(expr), "log(abc**2.0)")
-        self.assertEqual(expression_to_string(expr, smap=smap), "log(power(abc, 2.0))")
+        self.assertEqual(expression_to_string(expr, tc, smap=smap), "log(power(abc, 2.0))")
 
         expr = log( M.abc**2.0 ) + 5
         self.assertEqual(str(expr), "log(abc**2.0) + 5")
-        self.assertEqual(expression_to_string(expr, smap=smap), "log(power(abc, 2.0)) + 5")
+        self.assertEqual(expression_to_string(expr, tc, smap=smap), "log(power(abc, 2.0)) + 5")
 
         expr = exp( M.abc**2.0 ) + 5
         self.assertEqual(str(expr), "exp(abc**2.0) + 5")
-        self.assertEqual(expression_to_string(expr, smap=smap), "exp(power(abc, 2.0)) + 5")
+        self.assertEqual(expression_to_string(expr, tc, smap=smap), "exp(power(abc, 2.0)) + 5")
 
         expr = log( M.abc**2.0 )**4
         self.assertEqual(str(expr), "log(abc**2.0)**4")
-        self.assertEqual(expression_to_string(expr, smap=smap), "power(log(power(abc, 2.0)), 4)")
+        self.assertEqual(expression_to_string(expr, tc, smap=smap), "power(log(power(abc, 2.0)), 4)")
 
         expr = log( M.abc**2.0 )**4.5
         self.assertEqual(str(expr), "log(abc**2.0)**4.5")
-        self.assertEqual(expression_to_string(expr, smap=smap), "log(power(abc, 2.0)) ** 4.5")
+        self.assertEqual(expression_to_string(expr, tc, smap=smap), "log(power(abc, 2.0)) ** 4.5")
 
 
 
-#class TestGams_writer(unittest.TestCase):
-class TestGams_writer(object):
+class TestGams_writer(unittest.TestCase):
 
     def _cleanup(self, fname):
         try:
@@ -195,24 +172,8 @@ class TestGams_writer(object):
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
         self.assertRaises(
-            KeyError,
+            RuntimeError,
             model.write, test_fname, format='gams')
-        self._cleanup(test_fname)
-
-    def test_var_on_deactivated_block(self):
-        model = ConcreteModel()
-        model.x = Var()
-        model.other = Block()
-        model.other.a = Var()
-        model.other.deactivate()
-        model.c = Constraint(expr=model.other.a + 2*model.x <= 0)
-        model.obj = Objective(expr=model.x)
-
-        baseline_fname, test_fname = self._get_fnames()
-        self._cleanup(test_fname)
-        self.assertRaises(
-            KeyError,
-            model.write, test_fname, format='gams' )
         self._cleanup(test_fname)
 
     def test_var_on_nonblock(self):

@@ -13,8 +13,8 @@ import os.path
 from pyutilib.misc import Options
 
 from pyomo.common.plugin import alias, Plugin, implements
-from pyomo.core.base.plugin import IDataManager
-from pyomo.core.data.process_data import _process_include
+from pyomo.dataportal.factory import IDataManager
+from pyomo.dataportal.process_data import _process_include
 
 
 class PyomoDataCommands(Plugin):

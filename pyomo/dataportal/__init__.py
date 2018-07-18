@@ -8,10 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.plugin import PluginGlobals
-PluginGlobals.add_env("pyomo")
-
-from pyomo.repn.standard_repn import *
-from pyomo.repn.standard_aux import *
-
-PluginGlobals.pop_env()
+import pyomo.dataportal.parse_datacmds
+from pyomo.dataportal.TableData import TableData
+from pyomo.dataportal.DataPortal import DataPortal
+from pyomo.dataportal.factory import DataManagerFactory, UnknownDataManager

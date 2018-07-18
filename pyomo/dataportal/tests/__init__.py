@@ -7,5 +7,6 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-import pyomo.core.data.parse_datacmds
+#
+# Pyomo unit tests
+#

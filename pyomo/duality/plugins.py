@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import logging
-
+from six import iteritems
 
 import pyomo.common
 from pyomo.common.plugin import alias
@@ -25,9 +25,10 @@ from pyomo.core.base import (Transformation,
                              Block,
                              Model,
                              ConcreteModel)
-from pyomo.repn.collect import collect_linear_terms
+from pyomo.duality.collect import collect_linear_terms
 
-from six import iteritems
+def load():
+    pass
 
 logger = logging.getLogger('pyomo.core')
 
@@ -40,7 +41,7 @@ logger = logging.getLogger('pyomo.core')
 #
 class LinearDual_PyomoTransformation(Transformation):
 
-    alias('core.linear_dual', doc="Dualize a linear model")
+    alias('duality.linear_dual', doc="Dualize a linear model")
 
     def __init__(self):
         super(LinearDual_PyomoTransformation, self).__init__()
