@@ -24,7 +24,7 @@ from pyomo.core.base import (
     SymbolMap, ShortNameLabeler, NumericLabeler, Block, Constraint, Expression,
     Objective, Var, Param, minimize, Suffix, SortComponents)
 from pyomo.core.base.component import ActiveComponent
-from pyomo.core.kernel.component_interface import IComponent
+from pyomo.core.kernel.base import ICategorizedObject
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
 from pyomo.repn.util import valid_expr_ctypes_minlp, \
@@ -123,7 +123,7 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
         return True, str(value(node))
 
     def ctype(self, comp):
-        if isinstance(comp, IComponent):
+        if isinstance(comp, ICategorizedObject):
             return comp.ctype
         else:
             return comp.type()
@@ -210,11 +210,14 @@ class StorageTreeChecker(object):
             return False
 
     def parent_block(self, comp):
-        pb = comp.parent_block
-        if isinstance(comp, IComponent):
-            return pb
+        if isinstance(comp, ICategorizedObject):
+            parent = comp.parent
+            while (parent is not None) and \
+                  (not parent._is_heterogeneous_container):
+                parent = parent.parent
+            return parent
         else:
-            return pb()
+            return comp.parent_block()
 
     def raise_error(self, comp):
         raise RuntimeError(
