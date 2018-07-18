@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -38,14 +38,14 @@ model.CON2a = Constraint(expr=model.v*1.0/model.p/model.p*(model.x-model.y) == 2
 model.CON3a = Constraint(expr=model.v*(model.x-model.y)/model.p/model.q == 2.0)
 model.CON4a = Constraint(expr=model.v*(model.x/model.p/model.q-model.y/model.p/model.q) == 2.0)
 model.CON5a = Constraint(expr=model.v*(model.x-model.y)*(1.0/model.p/model.q) == 2.0)
-model.CON6a = Constraint(expr=model.v*(model.x-model.y) == 2.0*model.p*model.q)
+model.CON6a = Constraint(expr=model.v*(model.x-model.y) - 2.0*model.p*model.q == 0)
 
 model.CON1b = Constraint(expr=1.0/(model.p*model.q)*model.v*(model.x-model.y) == 2.0)
 model.CON2b = Constraint(expr=model.v*1.0/(model.p*model.p)*(model.x-model.y) == 2.0)
 model.CON3b = Constraint(expr=model.v*(model.x-model.y)/(model.p*model.q) == 2.0)
 model.CON4b = Constraint(expr=model.v*(model.x/(model.p*model.q)-model.y/(model.p*model.q)) == 2.0)
 model.CON5b = Constraint(expr=model.v*(model.x-model.y)*(1.0/(model.p*model.q)) == 2.0)
-model.CON6b = Constraint(expr=model.v*(model.x-model.y) == 2.0*(model.p*model.q))
+model.CON6b = Constraint(expr=model.v*(model.x-model.y) - 2.0*(model.p*model.q) == 0)
 
 model.CON1c = Constraint(expr=1.0/(model.p+model.q)*model.v*(model.x-model.y) == 2.0)
 model.CON2c = Constraint(expr=model.v*1.0/(model.p+model.p)*(model.x-model.y) == 2.0)
@@ -59,5 +59,4 @@ model.CON2d = Constraint(expr=model.v*1.0/((model.p+model.p)**2)*(model.x-model.
 model.CON3d = Constraint(expr=model.v*(model.x-model.y)/((model.p+model.q)**2) == 2.0)
 model.CON4d = Constraint(expr=model.v*(model.x/((model.p+model.q)**2)-model.y/((model.p+model.q)**2)) == 2.0)
 model.CON5d = Constraint(expr=model.v*(model.x-model.y)*(1.0/((model.p+model.q)**2)) == 2.0)
-model.CON6d = Constraint(expr=model.v*(model.x-model.y) == 2.0*((model.p+model.q)**2))
-
+model.CON6d = Constraint(expr=model.v*(model.x-model.y) - 2.0*((model.p+model.q)**2) == 0)

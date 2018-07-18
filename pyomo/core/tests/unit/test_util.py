@@ -15,6 +15,7 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
+import pyomo.core.expr.current as EXPR
 import pyutilib.th as unittest
 
 from pyomo.environ import *
@@ -27,41 +28,61 @@ def constr_rule(model,a):
 
 class Test(unittest.TestCase):
 
+    def test_expr0(self):
+        model = AbstractModel()
+        model.A = Set(initialize=[1,2,3])
+        model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
+        model.C = Param(model.A,initialize={1:100,2:200,3:300}, mutable=False)
+        model.x = Var(model.A)
+        model.y = Var(model.A)
+        instance=model.create_instance()
+        expr = sum_product(instance.B,instance.y)
+        baseline = "B[1]*y[1] + B[2]*y[2] + B[3]*y[3]"
+        self.assertEqual( str(expr), baseline )
+        expr = sum_product(instance.C,instance.y)
+        self.assertEqual( str(expr), "100*y[1] + 200*y[2] + 300*y[3]" )
+
     def test_expr1(self):
         model = AbstractModel()
         model.A = Set(initialize=[1,2,3])
         model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
+        model.C = Param(model.A,initialize={1:100,2:200,3:300}, mutable=False)
         model.x = Var(model.A)
         model.y = Var(model.A)
         instance=model.create_instance()
-        expr = dot_product(instance.x,instance.B,instance.y)
-        self.assertEqual(
-            str(expr),
-            "x[1] * B[1] * y[1] + x[2] * B[2] * y[2] + x[3] * B[3] * y[3]" )
+        expr = sum_product(instance.x,instance.B,instance.y)
+        baseline = "B[1]*x[1]*y[1] + B[2]*x[2]*y[2] + B[3]*x[3]*y[3]"
+        self.assertEqual( str(expr), baseline )
+        expr = sum_product(instance.x,instance.C,instance.y)
+        self.assertEqual( str(expr), "100*x[1]*y[1] + 200*x[2]*y[2] + 300*x[3]*y[3]" )
 
     def test_expr2(self):
         model = AbstractModel()
         model.A = Set(initialize=[1,2,3])
         model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
+        model.C = Param(model.A,initialize={1:100,2:200,3:300}, mutable=False)
         model.x = Var(model.A)
         model.y = Var(model.A)
         instance=model.create_instance()
-        expr = dot_product(instance.x,instance.B,instance.y, index=[1,3])
-        self.assertEqual(
-            str(expr),
-            "x[1] * B[1] * y[1] + x[3] * B[3] * y[3]" )
+        expr = sum_product(instance.x,instance.B,instance.y, index=[1,3])
+        baseline = "B[1]*x[1]*y[1] + B[3]*x[3]*y[3]"
+        self.assertEqual( str(expr), baseline )
+        expr = sum_product(instance.x,instance.C,instance.y, index=[1,3])
+        self.assertEqual( str(expr), "100*x[1]*y[1] + 300*x[3]*y[3]" )
 
     def test_expr3(self):
         model = AbstractModel()
         model.A = Set(initialize=[1,2,3])
         model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
+        model.C = Param(model.A,initialize={1:100,2:200,3:300}, mutable=False)
         model.x = Var(model.A)
         model.y = Var(model.A)
         instance=model.create_instance()
-        expr = dot_product(instance.x,instance.B,denom=instance.y, index=[1,3])
-        self.assertEqual(
-            str(expr),
-            "x[1] * B[1] / y[1] + x[3] * B[3] / y[3]" )
+        expr = sum_product(instance.x,instance.B,denom=instance.y, index=[1,3])
+        baseline = "B[1]*x[1]*(1/y[1]) + B[3]*x[3]*(1/y[3])"
+        self.assertEqual( str(expr), baseline )
+        expr = sum_product(instance.x,instance.C,denom=instance.y, index=[1,3])
+        self.assertEqual( str(expr), "100*x[1]*(1/y[1]) + 300*x[3]*(1/y[3])" )
 
     def test_expr4(self):
         model = AbstractModel()
@@ -70,10 +91,9 @@ class Test(unittest.TestCase):
         model.x = Var(model.A)
         model.y = Var(model.A)
         instance=model.create_instance()
-        expr = dot_product(denom=[instance.y,instance.x])
-        self.assertEqual(
-            str(expr),
-            "1 / ( y[1] * x[1] ) + 1 / ( y[2] * x[2] ) + 1 / ( y[3] * x[3] )" )
+        expr = sum_product(denom=[instance.y,instance.x])
+        baseline = "(1/(y[1]*x[1])) + (1/(y[2]*x[2])) + (1/(y[3]*x[3]))"
+        self.assertEqual( str(expr), baseline )
 
     def test_expr5(self):
         model = ConcreteModel()
@@ -95,12 +115,40 @@ class Test(unittest.TestCase):
         OUTPUT.close()
         self.assertFileEqualsBaseline(currdir+"test_expr5.out",currdir+"test_expr5.txt")
 
-    def test_prod(self):
+    def test_prod1(self):
         self.assertEqual(prod([1,2,3,5]),30)
+
+    def test_prod2(self):
+        model = ConcreteModel()
+        model.A = Set(initialize=[1,2,3], doc='set A')
+        model.x = Var(model.A)
+        expr = prod(model.x[i] for i in model.x)
+        baseline = "x[1]*x[2]*x[3]"
+        self.assertEqual( str(expr), baseline )
+        expr = prod(model.x)
+        self.assertEqual( expr, 6)
+
+    def test_sum1(self):
+        self.assertEqual(quicksum([1,2,3,5]),11)
+
+    def test_sum2(self):
+        model = ConcreteModel()
+        model.A = Set(initialize=[1,2,3], doc='set A')
+        model.x = Var(model.A)
+        expr = quicksum(model.x[i] for i in model.x)
+        baseline = "x[1] + x[2] + x[3]"
+        self.assertEqual( str(expr), baseline )
+
+    def test_sum3(self):
+        model = ConcreteModel()
+        model.A = Set(initialize=[1,2,3], doc='set A')
+        model.x = Var(model.A)
+        expr = quicksum(model.x)
+        self.assertEqual( expr, 6)
 
     def test_summation_error1(self):
         try:
-            dot_product()
+            sum_product()
             self.fail("Expected ValueError")
         except ValueError:
             pass
@@ -112,7 +160,7 @@ class Test(unittest.TestCase):
         model.x = Var(model.A)
         instance=model.create_instance()
         try:
-            expr = dot_product(instance.x,instance.B)
+            expr = sum_product(instance.x,instance.B)
             self.fail("Expected ValueError")
         except ValueError:
             pass
@@ -124,7 +172,7 @@ class Test(unittest.TestCase):
         model.x = Var(model.A)
         instance=model.create_instance()
         try:
-            expr = dot_product(denom=(instance.x,instance.B))
+            expr = sum_product(denom=(instance.x,instance.B))
             self.fail("Expected ValueError")
         except ValueError:
             pass

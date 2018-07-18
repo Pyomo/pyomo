@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -35,22 +35,22 @@ except AttributeError:                         #pragma:nocover
 from pyutilib.math import *
 from pyutilib.misc import tuplize, Container, PauseGC, Bunch
 
-import pyomo.util
-from pyomo.util.deprecation import deprecation_warning
-from pyomo.util.plugin import ExtensionPoint
-from pyomo.util._task import pyomo_api
-from pyomo.util.deprecation import deprecation_warning
+import pyomo.common
+from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.plugin import ExtensionPoint
+from pyomo.common._task import pyomo_api
+from pyomo.common.deprecation import deprecation_warning
 
-from pyomo.core.kernel import expr_common
+from pyomo.core.expr import expr_common
+from pyomo.core.expr.symbol_map import SymbolMap
 
 from pyomo.core.base.var import _VarData, Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.set_types import *
 from pyomo.core.base.suffix import active_import_suffix_generator
-from pyomo.core.base.symbol_map import SymbolMap
 from pyomo.core.base.indexed_component import IndexedComponent
-from pyomo.core.base.DataPortal import *
+from pyomo.dataportal import DataPortal
 from pyomo.core.base.plugin import *
 from pyomo.core.base.numvalue import *
 from pyomo.core.base.block import SimpleBlock
@@ -231,18 +231,20 @@ class ModelSolutions(object):
         # If there is a warning, then print a warning message.
         #
         if (results.solver.status == pyomo.opt.SolverStatus.warning):
-            logger.warn('Loading a SolverResults object with a '
-                        'warning status into model=%s;\n'
-                        '    message from solver=%s'
-                        % (instance.name, results.solver.Message))
+            logger.warning(
+                'Loading a SolverResults object with a '
+                'warning status into model=%s;\n'
+                '    message from solver=%s'
+                % (instance.name, results.solver.Message))
         #
         # If the solver status not one of either OK or Warning, then generate an error.
         #
         elif results.solver.status != pyomo.opt.SolverStatus.ok:
             if (results.solver.status == pyomo.opt.SolverStatus.aborted) and \
                (len(results.solution) > 0):
-                logger.warn("Loading a SolverResults object with "
-                            "an 'aborted' status, but containing a solution")
+                logger.warning(
+                    "Loading a SolverResults object with "
+                    "an 'aborted' status, but containing a solution")
             else:
                 raise ValueError("Cannot load a SolverResults object "
                                  "with bad status: %s"
@@ -683,7 +685,7 @@ arguments (which have been ignored):"""
             return self.clone()
 
         if report_timing:
-            pyomo.util.timing.report_timing()
+            pyomo.common.timing.report_timing()
 
         if name is None:
             name = self.name
@@ -768,7 +770,7 @@ arguments (which have been ignored):"""
         with PauseGC() as pgc:
             if preprocessor is None:
                 preprocessor = self.config.preprocessor
-            pyomo.util.PyomoAPIFactory(preprocessor)(self.config, model=self)
+            pyomo.common.PyomoAPIFactory(preprocessor)(self.config, model=self)
 
     def load(self, arg, namespaces=[None], profile_memory=0, report_timing=None):
         """
@@ -777,7 +779,7 @@ arguments (which have been ignored):"""
         if report_timing is not None:
             deprecation_warning(
                 "The report_timing argument to Model.load() is deprecated.  "
-                "Use pyomo.util.timing.report_timing() to enable reporting "
+                "Use pyomo.common.timing.report_timing() to enable reporting "
                 "construction timing")
         if arg is None or isinstance(arg, basestring):
             dp = DataPortal(filename=arg, model=self)
@@ -868,7 +870,6 @@ from solvers are immediately loaded into the original model instance.""")
                     continue
 
                 self._initialize_component(modeldata, namespaces, component_name, profile_memory)
-
                 if False:
                     total_time = time.time() - start_time
                     if isinstance(component, IndexedComponent):
@@ -1013,4 +1014,3 @@ Model._Block_reserved_words = set(dir(ConcreteModel()))
 register_component(Model, 'Model objects can be used as a component of other models.')
 register_component(ConcreteModel, 'A concrete optimization model that does not defer construction of components.')
 register_component(AbstractModel, 'An abstract optimization model that defers construction of components.')
-

@@ -34,7 +34,7 @@ def Make_bounds(model,i):
 model.Make = Var(model.PROD, bounds=Make_bounds)
 
 def Objective_rule(model):
-    return summation(model.profit, model.Make)
+    return sum_product(model.profit, model.Make)
 model.Total_Profit = Objective(rule=Objective_rule, sense=maximize)
 
 def Time_rule(model):
@@ -44,5 +44,5 @@ def Time_rule(model):
     return ans < model.avail
 
 def XTime_rule(model):
-    return summation(model.Make, denom=(model.rate,) ) < model.avail
+    return sum_product(model.Make, denom=(model.rate,) ) < model.avail
 #model.Time = Constraint(rule=Time_rule)

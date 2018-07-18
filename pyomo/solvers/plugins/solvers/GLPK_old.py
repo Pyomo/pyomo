@@ -14,7 +14,7 @@ import re
 import sys
 
 from pyutilib.common import ApplicationError
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 from pyutilib.misc import Bunch, Options
 from pyutilib.services import register_executable, registered_executable
 from pyutilib.services import TempfileManager
@@ -51,7 +51,7 @@ GLP_UNBND  = 6  # solution is unbounded
 class GLPKSHELL_4_42(SystemCallSolver):
     """Shell interface to the GLPK LP/MIP solver"""
 
-    pyomo.util.plugin.alias(
+    pyomo.common.plugin.alias(
         '_glpk_shell_4_42',
         doc='Shell interface to the GNU Linear Programming Kit (4.42-4.59)')
 

@@ -1,6 +1,3 @@
-Importing module=/Users/ghackebeil/Projects/Pyomo/pyomo/examples/pysp/networkflow/models/ReferenceModel.py
-Module successfully loaded
-WARNING: yacc table file version is out of date
 Loading reference model and scenario tree
 Starting confidence interval calculation...
 Problem contains 10 scenarios, of which 2 will be used to find a solution xhat.

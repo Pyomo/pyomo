@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -12,13 +12,13 @@ import time
 import pyutilib.misc
 import pyomo.opt
 #from pyomo.bilevel.components import SubModel
-import pyomo.util
+import pyomo.common
 from pyomo.core import TransformationFactory, Var, Set
 
 
 class BILEVEL_Solver3(pyomo.opt.OptSolver):
 
-    pyomo.util.plugin.alias('bilevel_blp_local', doc='Local solver for continuous bilevel linear problems')
+    pyomo.common.plugin.alias('bilevel_blp_local', doc='Local solver for continuous bilevel linear problems')
 
     def __init__(self, **kwds):
         kwds['type'] = 'bilevel_blp_local'
@@ -133,4 +133,3 @@ class BILEVEL_Solver3(pyomo.opt.OptSolver):
         #
         self._instance = None
         return results
-

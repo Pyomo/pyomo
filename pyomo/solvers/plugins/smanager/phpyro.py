@@ -20,7 +20,7 @@ import pyutilib.pyro
 from pyutilib.pyro import using_pyro3, using_pyro4
 from pyutilib.pyro import Pyro as _pyro
 from pyutilib.pyro.util import _connection_problem
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
 
@@ -34,7 +34,7 @@ from six.moves import xrange
 
 class SolverManager_PHPyro(AsynchronousSolverManager):
 
-    pyomo.util.plugin.alias('phpyro',
+    pyomo.common.plugin.alias('phpyro',
                             doc="Specialized PH solver manager that uses pyro")
 
     def __init__(self, host=None, port=None, verbose=False):

@@ -8,14 +8,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.core.expr.numvalue import value
 from pyomo.core.base.PyomoModel import ConcreteModel
-from pyomo.solvers.plugins.solvers.cplex_direct import CPLEXDirect
-from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-from pyomo.util.plugin import alias
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 from pyomo.core.base.sos import SOSConstraint
-from pyomo.core.kernel.numvalue import value
+from pyomo.solvers.plugins.solvers.cplex_direct import CPLEXDirect
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
+from pyomo.common.plugin import alias
 
 
 class CPLEXPersistent(PersistentSolver, CPLEXDirect):
@@ -69,7 +69,6 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
             if tmp_ndx > ndx:
                 self._pyomo_var_to_ndx_map[tmp_var] -= 1
         self._ndx_count -= 1
-        del self._solver_var_to_pyomo_var_map[solver_var]
         del self._pyomo_var_to_ndx_map[pyomo_var]
         self._solver_model.variables.delete(solver_var)
 
@@ -77,18 +76,23 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
         CPLEXDirect._warm_start(self)
 
     def update_var(self, var):
-        """
-        Update a variable in the solver's model. This will update bounds, fix/unfix the variable as needed, and update
-        the variable type.
+        """Update a single variable in the solver's model.
+
+        This will update bounds, fix/unfix the variable as needed, and
+        update the variable type.
 
         Parameters
         ----------
-        var: Var
+        var: Var (scalar Var or single _VarData)
+
         """
-        if var.is_indexed():
-            for child_var in var.values():
-                self.compile_var(child_var)
-            return
+        # see PR #366 for discussion about handling indexed
+        # objects and keeping compatibility with the
+        # pyomo.kernel objects
+        #if var.is_indexed():
+        #    for child_var in var.values():
+        #        self.compile_var(child_var)
+        #    return
         if var not in self._pyomo_var_to_solver_var_map:
             raise ValueError('The Var provided to compile_var needs to be added first: {0}'.format(var))
         cplex_var = self._pyomo_var_to_solver_var_map[var]

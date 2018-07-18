@@ -2,12 +2,15 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.core.expr.numvalue import (NumericValue,
+                                      is_numeric_data,
+                                      value)
 from pyomo.core.kernel.component_interface import \
     (IComponent,
      _abstract_readwrite_property,
@@ -18,8 +21,6 @@ from pyomo.core.kernel.component_tuple import (ComponentTuple,
                                                create_component_tuple)
 from pyomo.core.kernel.component_list import (ComponentList,
                                               create_component_list)
-from pyomo.core.kernel.numvalue import (NumericValue,
-                                        value)
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet,
                                          BooleanSet,
@@ -28,6 +29,9 @@ from pyomo.core.kernel.set_types import (RealSet,
 
 import six
 from six.moves import xrange
+
+_pos_inf = float('inf')
+_neg_inf = float('-inf')
 
 def _extract_domain_type_and_bounds(domain_type,
                                     domain,
@@ -136,14 +140,54 @@ class IVariable(IComponent, NumericValue):
         :const:`None` or negative infinity"""
         lb = self.lb
         return (lb is not None) and \
-            (value(lb) != float('-inf'))
+            (value(lb) != _neg_inf)
 
     def has_ub(self):
         """Returns :const:`False` when the upper bound is
         :const:`None` or positive infinity"""
         ub = self.ub
         return (ub is not None) and \
-            (value(ub) != float('inf'))
+            (value(ub) != _pos_inf)
+
+    @property
+    def lslack(self):
+        """Lower slack (value - lb). Returns :const:`None` if
+        the variable value is :const:`None`."""
+        val = self.value
+        if val is None:
+            return None
+        lb = self.lb
+        if lb is None:
+            lb = _neg_inf
+        else:
+            lb = value(lb)
+        return val - lb
+
+    @property
+    def uslack(self):
+        """Upper slack (ub - value). Returns :const:`None` if
+        the variable value is :const:`None`."""
+        val = self.value
+        if val is None:
+            return None
+        ub = self.ub
+        if ub is None:
+            ub = _pos_inf
+        else:
+            ub = value(ub)
+        return ub - val
+
+    @property
+    def slack(self):
+        """min(lslack, uslack). Returns :const:`None` if
+        the variable value is :const:`None`."""
+        # this method is written so that constraint
+        # types that build the body expression on the
+        # fly do not have to here
+        val = self.value
+        if val is None:
+            return None
+        return min(self.lslack, self.uslack)
 
     #
     # Convenience methods mainly used by the solver
@@ -203,7 +247,17 @@ class IVariable(IComponent, NumericValue):
         constant in an expression."""
         return False
 
-    def _potentially_variable(self):
+    def is_parameter_type(self):
+        """Returns :const:`False` because this is not a
+        parameter object."""
+        return False
+
+    def is_variable_type(self):
+        """Returns :const:`True` because this is a
+        variable object."""
+        return True
+
+    def is_potentially_variable(self):
         """Returns :const:`True` because this is a
         variable."""
         return True
@@ -264,6 +318,7 @@ class variable(IVariable):
             :meth:`fix` method. Default is :const:`False`.
 
     Examples:
+        >>> import pyomo.kernel as pmo
         >>> # A continuous variable with infinite bounds
         >>> x = pmo.variable()
         >>> # A binary variable
@@ -275,6 +330,7 @@ class variable(IVariable):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_domain_type",
                  "_lb",
                  "_ub",
@@ -291,6 +347,7 @@ class variable(IVariable):
                  value=None,
                  fixed=False):
         self._parent = None
+        self._storage_key = None
         self._domain_type = RealSet
         self._lb = lb
         self._ub = ub
@@ -310,6 +367,11 @@ class variable(IVariable):
         return self._lb
     @lb.setter
     def lb(self, lb):
+        if (lb is not None) and \
+           (not is_numeric_data(lb)):
+            raise ValueError(
+                    "Variable lower bounds must be numbers or "
+                    "expressions restricted to numeric data.")
         self._lb = lb
 
     @property
@@ -318,6 +380,11 @@ class variable(IVariable):
         return self._ub
     @ub.setter
     def ub(self, ub):
+        if (ub is not None) and \
+           (not is_numeric_data(ub)):
+            raise ValueError(
+                    "Variable upper bounds must be numbers or "
+                    "expressions restricted to numeric data.")
         self._ub = ub
 
     @property
@@ -376,6 +443,7 @@ class variable_tuple(ComponentTuple):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_data")
     if six.PY3:
         # This has to do with a bug in the abc module
@@ -386,6 +454,7 @@ class variable_tuple(ComponentTuple):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         super(variable_tuple, self).__init__(*args, **kwds)
 
 def create_variable_tuple(size, *args, **kwds):
@@ -419,6 +488,7 @@ class variable_list(ComponentList):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_data")
     if six.PY3:
         # This has to do with a bug in the abc module
@@ -429,6 +499,7 @@ class variable_list(ComponentList):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         super(variable_list, self).__init__(*args, **kwds)
 
 def create_variable_list(size, *args, **kwds):
@@ -462,6 +533,7 @@ class variable_dict(ComponentDict):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_data")
     if six.PY3:
         # This has to do with a bug in the abc module
@@ -472,6 +544,7 @@ class variable_dict(ComponentDict):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         super(variable_dict, self).__init__(*args, **kwds)
 
 def create_variable_dict(keys, *args, **kwds):

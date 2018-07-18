@@ -2,14 +2,16 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
 import sys
 
+from pyomo.core.expr import expr_common
+from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.component_interface import \
     (IComponent,
      _abstract_readwrite_property,
@@ -18,13 +20,13 @@ from pyomo.core.kernel.component_dict import ComponentDict
 from pyomo.core.kernel.component_tuple import ComponentTuple
 from pyomo.core.kernel.component_list import ComponentList
 
-import pyomo.core.kernel.expr_common
-from pyomo.core.kernel.numvalue import (NumericValue,
-                                        is_fixed,
-                                        is_constant,
-                                        potentially_variable,
-                                        value,
-                                        as_numeric)
+from pyomo.core.expr.numvalue import (NumericValue,
+                                      is_fixed,
+                                      is_constant,
+                                      is_variable_type,
+                                      is_potentially_variable,
+                                      is_numeric_data,
+                                      value)
 
 import six
 
@@ -66,31 +68,46 @@ class IIdentityExpression(NumericValue):
         """A boolean indicating whether this expression is constant."""
         return is_constant(self._expr)
 
+    def is_variable_type(self):
+        """A boolean indicating whether this expression is a
+        variable object."""
+        return is_variable_type(self._expr)
+
     def is_fixed(self):
         """A boolean indicating whether this expression is fixed."""
         return is_fixed(self._expr)
 
-    def _potentially_variable(self):
+    def is_potentially_variable(self):
         """A boolean indicating whether this expression can
         reference variables."""
-        return potentially_variable(self._expr)
+        return is_potentially_variable(self._expr)
 
-    #
-    # Ducktyping _ExpressionBase functionality
-    #
+    def is_named_expression_type(self):
+        """A boolean indicating whether this in a named expression."""
+        return True
 
-    def is_expression(self):
+    def is_expression_type(self):
         """A boolean indicating whether this in an expression."""
         return True
 
     @property
-    def _args(self):
+    def _args_(self):
         """A tuple of subexpressions involved in this expressions operation."""
         return (self._expr,)
 
-    def _arguments(self):
-        """A generator of subexpressions involved in this expressions operation."""
+    @property
+    def args(self):
+        """A tuple of subexpressions involved in this expressions operation."""
         yield self._expr
+
+    def nargs(self):
+        """Length of self._nargs()"""
+        return 1
+
+    def arg(self, i):
+        if i != 0:
+            raise KeyError("Unexpected argument id")
+        return self._expr
 
     def polynomial_degree(self):
         """The polynomial degree of the stored expression."""
@@ -98,35 +115,47 @@ class IIdentityExpression(NumericValue):
             return 0
         return self._expr.polynomial_degree()
 
-    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
+    def _compute_polynomial_degree(self, values):
+        return values[0]
+
+    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         """Convert this expression into a string."""
-        if ostream is None:
-            ostream = sys.stdout
-        _verbose = pyomo.core.kernel.expr_common.TO_STRING_VERBOSE if \
-            verbose is None else verbose
-        if _verbose:
-            ostream.write(self._to_string_label())
-            ostream.write("{")
+        return EXPR.expression_to_string(self, verbose=verbose, labeler=labeler, smap=smap, compute_values=compute_values)
+
+    def _to_string(self, values, verbose, smap, compute_values):
+        if verbose:
+            name = self.getname()
+            if name == None:
+                return "<%s>{%s}" % (self.__class__.__name__, values[0])
+            else:
+                if name[0] == '<':
+                    name = ""
+                return "%s{%s}" % (name, values[0])
         if self._expr is None:
-            ostream.write("Undefined")
-        elif isinstance(self._expr, NumericValue):
-            self._expr.to_string(ostream=ostream,
-                                 verbose=verbose,
-                                 precedence=precedence,
-                                 labeler=labeler)
-        else:
-            as_numeric(self._expr).to_string(ostream=ostream,
-                                             verbose=verbose,
-                                             precedence=precedence,
-                                             labeler=labeler)
-        if _verbose:
-            ostream.write("}")
+            return "%s{Undefined}" % str(self)
+        return values[0]
+
+    def _precedence(self):
+        return 0
 
     def clone(self):
         raise NotImplementedError     #pragma:nocover
 
-    def _to_string_label(self):
-        raise NotImplementedError     #pragma:nocover
+    def _apply_operation(self, result):
+        return result[0]
+
+    def _is_fixed(self, values):
+        return values[0]
+
+    def create_node_with_local_data(self, values):
+        """
+        Construct an expression after constructing the
+        contained expression.
+
+        This class provides a consistent interface for constructing a
+        node, which is used in tree visitor scripts.
+        """
+        return self.__class__(expr=values[0])
 
 class noclone(IIdentityExpression):
     """
@@ -159,20 +188,15 @@ class noclone(IIdentityExpression):
         self._expr = state[0]
 
     def __str__(self):
-        out = six.StringIO()
-        self.to_string(ostream=out, verbose=False)
-        return "{"+out.getvalue()+"}"
+        return "{%s}" % EXPR.expression_to_string(self)
 
     #
-    # Ducktyping _ExpressionBase functionality
+    # Ducktyping ExpressionBase functionality
     #
 
     def clone(self):
         """Return a clone of this expression (no-op)."""
         return self
-
-    def _to_string_label(self):
-        return ""
 
 class IExpression(IComponent, IIdentityExpression):
     """
@@ -198,21 +222,26 @@ class IExpression(IComponent, IIdentityExpression):
         """A boolean indicating whether this expression is constant."""
         return False
 
-    def _potentially_variable(self):
+    def is_parameter_type(self):
+        """A boolean indicating whether this expression is a parameter object."""
+        return False
+
+    def is_variable_type(self):
+        """A boolean indicating whether this expression is a variable object."""
+        return False
+
+    def is_potentially_variable(self):
         """A boolean indicating whether this expression can
         reference variables."""
         return True
 
     #
-    # Ducktyping _ExpressionBase functionality
+    # Ducktyping ExpressionBase functionality
     #
 
     def clone(self):
         """Return a clone of this expression (no-op)."""
         return self
-
-    def _to_string_label(self):
-        return self.__str__()
 
 class expression(IExpression):
     """A named, mutable expression."""
@@ -220,10 +249,12 @@ class expression(IExpression):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_expr",
                  "__weakref__")
     def __init__(self, expr=None):
         self._parent = None
+        self._storage_key = None
         self._expr = None
 
         # call the setter
@@ -251,7 +282,7 @@ class data_expression(expression):
     # Overload a few methods
     #
 
-    def _potentially_variable(self):
+    def is_potentially_variable(self):
         """A boolean indicating whether this expression can
         reference variables."""
         return False
@@ -267,8 +298,10 @@ class data_expression(expression):
         return self._expr
     @expr.setter
     def expr(self, expr):
-        if potentially_variable(expr):
-            raise ValueError("Expression is not restricted to data.")
+        if (expr is not None) and \
+           (not is_numeric_data(expr)):
+            raise ValueError("Expression is not restricted to "
+                             "numeric data.")
         self._expr = expr
 
 class expression_tuple(ComponentTuple):
@@ -277,6 +310,7 @@ class expression_tuple(ComponentTuple):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_data")
     if six.PY3:
         # This has to do with a bug in the abc module
@@ -287,6 +321,7 @@ class expression_tuple(ComponentTuple):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         super(expression_tuple, self).__init__(*args, **kwds)
 
 class expression_list(ComponentList):
@@ -295,6 +330,7 @@ class expression_list(ComponentList):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_data")
     if six.PY3:
         # This has to do with a bug in the abc module
@@ -305,6 +341,7 @@ class expression_list(ComponentList):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         super(expression_list, self).__init__(*args, **kwds)
 
 class expression_dict(ComponentDict):
@@ -313,6 +350,7 @@ class expression_dict(ComponentDict):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_data")
     if six.PY3:
         # This has to do with a bug in the abc module
@@ -323,4 +361,5 @@ class expression_dict(ComponentDict):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         super(expression_dict, self).__init__(*args, **kwds)

@@ -10,7 +10,7 @@ from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
 from pyomo.core.kernel.component_interface import (ICategorizedObject,
                                                    IComponent,
-                                                   _ActiveComponentMixin)
+                                                   _ActiveObjectMixin)
 from pyomo.core.kernel.component_sos import (ISOS,
                                              sos,
                                              sos1,
@@ -29,21 +29,22 @@ from pyomo.core.base.sos import SOSConstraint
 class Test_sos(unittest.TestCase):
 
     def test_pprint(self):
+        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
         vlist = variable_list([variable(), variable()])
         s = sos(vlist)
-        pyomo.core.kernel.pprint(s)
+        pyomo.kernel.pprint(s)
         b = block()
         b.s = s
-        pyomo.core.kernel.pprint(s)
-        pyomo.core.kernel.pprint(b)
+        pyomo.kernel.pprint(s)
+        pyomo.kernel.pprint(b)
         m = block()
         m.b = b
-        pyomo.core.kernel.pprint(s)
-        pyomo.core.kernel.pprint(b)
-        pyomo.core.kernel.pprint(m)
+        pyomo.kernel.pprint(s)
+        pyomo.kernel.pprint(b)
+        pyomo.kernel.pprint(m)
 
     def test_ctype(self):
         s = sos([])
@@ -122,19 +123,19 @@ class Test_sos(unittest.TestCase):
         s = sos([])
         self.assertTrue(isinstance(s, ICategorizedObject))
         self.assertTrue(isinstance(s, IComponent))
-        self.assertTrue(isinstance(s, _ActiveComponentMixin))
+        self.assertTrue(isinstance(s, _ActiveObjectMixin))
         self.assertTrue(isinstance(s, ISOS))
 
         s = sos1([])
         self.assertTrue(isinstance(s, ICategorizedObject))
         self.assertTrue(isinstance(s, IComponent))
-        self.assertTrue(isinstance(s, _ActiveComponentMixin))
+        self.assertTrue(isinstance(s, _ActiveObjectMixin))
         self.assertTrue(isinstance(s, ISOS))
 
         s = sos2([])
         self.assertTrue(isinstance(s, ICategorizedObject))
         self.assertTrue(isinstance(s, IComponent))
-        self.assertTrue(isinstance(s, _ActiveComponentMixin))
+        self.assertTrue(isinstance(s, _ActiveObjectMixin))
         self.assertTrue(isinstance(s, ISOS))
 
     def test_bad_weights(self):

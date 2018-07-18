@@ -19,8 +19,9 @@ import pyutilib.th as unittest
 import pyutilib.services
 
 import pyomo.opt
-from pyomo.util.plugin import Plugin
+from pyomo.common.plugin import Plugin
 from pyomo.environ import *
+
 
 solvers = pyomo.opt.check_available_solvers('glpk')
 
@@ -279,14 +280,14 @@ class Test(unittest.TestCase):
         self.model.z4 = Var(self.model.S, self.model.T, domain=domainRule, bounds=(-10, 10))
 
         def objRule(model):
-            return sum(5*summation(model.__getattribute__(c+n)) \
+            return sum(5*sum_product(model.__getattribute__(c+n)) \
                        for c in ('x', 'y', 'z') for n in ('1', '2', '3', '4'))
 
         self.model.obj = Objective(rule=objRule)
 
-        transform = NonNegativeTransformation()
+        transform = TransformationFactory('core.nonnegative_vars')
         instance=self.model.create_instance()
-        transformed = transform(instance)
+        transformed = transform.create_using(instance)
 
         opt = SolverFactory("glpk")
 
@@ -396,7 +397,7 @@ class Test(unittest.TestCase):
                 self.model.__getattribute__("z"+n))))
 
         def objRule(model):
-            return sum(5*summation(model.__getattribute__(c+n)) \
+            return sum(5*sum_product(model.__getattribute__(c+n)) \
                        for c in ('x', 'y', 'z') for n in ('1', '2', '3', '4'))
 
         self.model.obj = Objective(rule=objRule)
@@ -481,7 +482,7 @@ class Test(unittest.TestCase):
         self.model.z4 = Var(self.model.S, self.model.T, domain=domainRule, bounds=(-10, 10))
 
         def objRule(model):
-            return sum(5*summation(model.__getattribute__(c+n)) \
+            return sum(5*sum_product(model.__getattribute__(c+n)) \
                        for c in ('x', 'y', 'z') for n in ('1', '2', '3', '4'))
 
         self.model.obj = Objective(rule=objRule)
@@ -599,7 +600,7 @@ class Test(unittest.TestCase):
                 self.model.__getattribute__("z"+n))))
 
         def objRule(model):
-            return sum(5*summation(model.__getattribute__(c+n)) \
+            return sum(5*sum_product(model.__getattribute__(c+n)) \
                        for c in ('x', 'y', 'z') for n in ('1', '2', '3', '4'))
 
         self.model.obj = Objective(rule=objRule)

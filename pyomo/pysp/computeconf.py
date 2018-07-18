@@ -25,7 +25,7 @@ from pyomo.core import *
 # plugin would yield a complete failure to solve cvar problems. see
 # related hacks below, searching for CVARHACK.
 from pyomo.opt import UndefinedData
-from pyomo.util import pyomo_command
+from pyomo.common import pyomo_command
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
 from pyomo.pysp.phinit import (construct_ph_options_parser,
@@ -394,7 +394,7 @@ def find_candidate(scenario_instance_factory,
 
             with ExtensiveFormAlgorithm(xhat_ph,
                                         options._ef_options,
-                                        prefix="ef_") as ef:
+                                        options_prefix="ef_") as ef:
 
                 ef.build_ef()
                 print("Solving the xhat extensive form.")
@@ -548,7 +548,7 @@ def run_conf(scenario_instance_factory,
             print("")
             gk_ef = ExtensiveFormAlgorithm(gk_ph,
                                            options._ef_options,
-                                           prefix="ef_")
+                                           options_prefix="ef_")
             gk_ef.build_ef()
             print("Solving the xstar extensive form.")
             # Instance preprocessing is managed within the

@@ -2,17 +2,17 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.kernel.numvalue import NumericValue
+import pyomo.core.expr
+from pyomo.core.expr.numvalue import NumericValue, value
 from pyomo.core.kernel.component_interface import \
     (IComponent,
-     _ActiveComponentMixin,
-     _ActiveComponentContainerMixin,
+     _ActiveObjectMixin,
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.kernel.component_dict import ComponentDict
@@ -20,7 +20,6 @@ from pyomo.core.kernel.component_tuple import ComponentTuple
 from pyomo.core.kernel.component_list import ComponentList
 from pyomo.core.kernel.component_constraint import (IConstraint,
                                                     constraint_tuple)
-from pyomo.core.kernel.numvalue import value
 
 import six
 from six.moves import zip, xrange
@@ -45,7 +44,7 @@ _noarg = object()
 #
 
 class _MatrixConstraintData(IConstraint,
-                            _ActiveComponentMixin):
+                            _ActiveObjectMixin):
     """
     A placeholder object for linear constraints in a
     matrix_constraint container. A user should not
@@ -56,38 +55,37 @@ class _MatrixConstraintData(IConstraint,
     _ctype = None
     _linear_canonical_form = True
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_active",
-                 "_index",
                  "__weakref__")
 
     def __init__(self, index):
         assert index >= 0
         self._parent = None
+        self._storage_key = index
         self._active = True
-        self._index = index
 
     @property
     def index(self):
         """The row index of this constraint in the parent matrix"""
-        return self._index
+        return self._storage_key
 
     @property
     def terms(self):
         """An iterator over the terms in the body of this
         constraint as (variable, coefficient) tuples"""
         parent = self.parent
-        variable_order = parent.variable_order
-        if variable_order is None:
+        x = parent.x
+        if x is None:
             raise ValueError(
                 "No variable order has been assigned")
         A = parent._A
         if parent._sparse:
-            for k in xrange(A.indptr[self._index],
-                            A.indptr[self._index+1]):
-                yield variable_order[A.indices[k]], A.data[k]
+            for k in xrange(A.indptr[self._storage_key],
+                            A.indptr[self._storage_key+1]):
+                yield x[A.indices[k]], A.data[k]
         else:
-            for item in zip(variable_order,
-                            A[self._index,:].tolist()):
+            for item in zip(x, A[self._storage_key,:].tolist()):
                 yield item
 
     #
@@ -98,7 +96,7 @@ class _MatrixConstraintData(IConstraint,
     def __call__(self, exception=True):
         # don't mask an exception in the terms
         # property method
-        if self.parent.variable_order is None:
+        if self.parent.x is None:
             raise ValueError(
                 "No variable order has been assigned")
         try:
@@ -120,7 +118,7 @@ class _MatrixConstraintData(IConstraint,
     @property
     def lb(self):
         """The lower bound of the constraint"""
-        return self.parent.lb[self._index]
+        return self.parent.lb[self._storage_key]
     @lb.setter
     def lb(self, lb):
         if self.equality:
@@ -133,12 +131,12 @@ class _MatrixConstraintData(IConstraint,
             raise ValueError("lb must be set to "
                              "a simple numeric type "
                              "or None")
-        self.parent.lb[self._index] = lb
+        self.parent.lb[self._storage_key] = lb
 
     @property
     def ub(self):
         """The upper bound of the constraint"""
-        return self.parent.ub[self._index]
+        return self.parent.ub[self._storage_key]
     @ub.setter
     def ub(self, ub):
         if self.equality:
@@ -151,7 +149,7 @@ class _MatrixConstraintData(IConstraint,
             raise ValueError("ub must be set to "
                              "a simple numeric type "
                              "or None")
-        self.parent.ub[self._index] = ub
+        self.parent.ub[self._storage_key] = ub
 
     @property
     def rhs(self):
@@ -164,7 +162,7 @@ class _MatrixConstraintData(IConstraint,
             raise ValueError(
                 "The rhs property can not be read "
                 "when the equality property is False.")
-        return self.parent.lb[self._index]
+        return self.parent.lb[self._storage_key]
     @rhs.setter
     def rhs(self, rhs):
         if rhs is None:
@@ -178,15 +176,15 @@ class _MatrixConstraintData(IConstraint,
             raise ValueError("rhs must be set to "
                              "a simple numeric type "
                              "or None")
-        self.parent.lb[self._index] = rhs
-        self.parent.ub[self._index] = rhs
-        self.parent.equality[self._index] = True
+        self.parent.lb[self._storage_key] = rhs
+        self.parent.ub[self._storage_key] = rhs
+        self.parent.equality[self._storage_key] = True
 
     @property
     def bounds(self):
         """The bounds of the constraint as a tuple (lb, ub)"""
-        return (self.parent.lb[self._index],
-                self.parent.ub[self._index])
+        return (self.parent.lb[self._storage_key],
+                self.parent.ub[self._storage_key])
     @bounds.setter
     def bounds(self, bounds_tuple):
         self.lb, self.ub = bounds_tuple
@@ -199,7 +197,7 @@ class _MatrixConstraintData(IConstraint,
         Disable equality by assigning
         :const:`False`. Equality can only be activated by
         assigning a value to the .rhs property."""
-        return self.parent.equality[self._index]
+        return self.parent.equality[self._storage_key]
     @equality.setter
     def equality(self, equality):
         if equality:
@@ -209,50 +207,55 @@ class _MatrixConstraintData(IConstraint,
                 "a value to the rhs property "
                 "(e.g., con.rhs = con.lb).")
         assert not equality
-        self.parent.equality[self._index] = False
+        self.parent.equality[self._storage_key] = False
 
     #
     # Define methods that writers expect when the
     # _linear_canonical_form flag is True
     #
 
-    def canonical_form(self):
-        from pyomo.repn.canonical_repn import \
-            coopr3_CompiledLinearCanonicalRepn
+    def canonical_form(self, compute_values=True):
+        """Build a canonical representation of the body of
+        this constraints"""
+        from pyomo.repn.standard_repn import StandardRepn
         variables = []
         coefficients = []
         constant = 0
         for v, c in self.terms:
+            # we call float to get rid of the numpy type
+            c = float(c)
             if not v.fixed:
                 variables.append(v)
                 coefficients.append(c)
             else:
-                constant += value(c) * v()
-        repn = coopr3_CompiledLinearCanonicalRepn()
-        repn.variables = tuple(variables)
-        repn.linear = tuple(coefficients)
+                if compute_values:
+                    constant += c * v()
+                else:
+                    constant += c * v
+        repn = StandardRepn()
+        repn.linear_vars = tuple(variables)
+        repn.linear_coefs = tuple(coefficients)
         repn.constant = constant
         return repn
 
 class matrix_constraint(constraint_tuple):
     """
-    A container for constraints of the form L <= Ax <= b.
+    A container for constraints of the form lb <= Ax <= ub.
 
     Args:
         A: A scipy sparse matrix or 2D numpy array (always
             copied)
         lb: A scalar or array with the same number of rows
-            as A that is set to the lower bound of the
+            as A that defines the lower bound of the
             constraints
         ub: A scalar or array with the same number of rows
-            as A that is set to the upper bound of the
+            as A that defines the upper bound of the
             constraints
         rhs: A scalar or array with the same number of rows
-            as A that is set to the right-hand side the
+            as A that defines the right-hand side of the
             constraints (implies equality constraints)
-        variable_order: A list with the same number of
-            columns as A that stores the variable associated
-            with each column
+        x: A list with the same number of columns as A that
+            stores the variable associated with each column
         sparse: Indicates whether or not sparse storage (CSR
             format) should be used to store A. Default is
             :const:`True`.
@@ -262,13 +265,13 @@ class matrix_constraint(constraint_tuple):
                  "_lb",
                  "_ub",
                  "_equality",
-                 "_variable_order")
+                 "_x")
     def __init__(self,
                  A,
                  lb=None,
                  ub=None,
                  rhs=None,
-                 variable_order=None,
+                 x=None,
                  sparse=True):
         if (not has_numpy) or (not has_scipy):     #pragma:nocover
             raise ValueError("This class requires numpy and scipy")
@@ -296,7 +299,7 @@ class matrix_constraint(constraint_tuple):
         self._equality.fill(False)
 
         # now use the setters to fill the arrays
-        self.variable_order = variable_order
+        self.x = x
         if rhs is None:
             self.lb = lb
             self.ub = ub
@@ -316,22 +319,22 @@ class matrix_constraint(constraint_tuple):
         return self._sparse
 
     @property
-    def variable_order(self):
+    def x(self):
         """The list of variables associated with the columns
         of the constraint matrix"""
-        return self._variable_order
-    @variable_order.setter
-    def variable_order(self, variable_order):
-        if variable_order is None:
-            self._variable_order = None
+        return self._x
+    @x.setter
+    def x(self, x):
+        if x is None:
+            self._x = None
         else:
-            variable_order = tuple(variable_order)
+            x = tuple(x)
             m,n = self._A.shape
-            if len(variable_order) != n:
+            if len(x) != n:
                 raise ValueError(
                     "Argument length must be %s "
-                    "not %s" % (n, len(variable_order)))
-            self._variable_order = variable_order
+                    "not %s" % (n, len(x)))
+            self._x = x
 
     @property
     def lb(self):
@@ -431,10 +434,10 @@ class matrix_constraint(constraint_tuple):
 
     def __call__(self, exception=True):
         """Compute the value of the body of this constraint"""
-        if self.variable_order is None:
+        if self.x is None:
             raise ValueError(
                 "No variable order has been assigned")
-        values = numpy.array([v.value for v in self.variable_order],
+        values = numpy.array([v.value for v in self.x],
                              dtype=float)
         if numpy.isnan(values).any():
             if exception:

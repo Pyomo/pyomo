@@ -2,17 +2,20 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
 import collections
+import logging
 
 from pyomo.core.kernel.component_tuple import ComponentTuple
 
 from six.moves import xrange as range
+
+logger = logging.getLogger('pyomo.core')
 
 class ComponentList(ComponentTuple,
                     collections.MutableSequence):
@@ -44,8 +47,17 @@ class ComponentList(ComponentTuple,
             if item._parent is None:
                 # be sure the current object is properly
                 # removed
+                logger.warning(
+                    "Implicitly replacing the entry %s (type=%s) "
+                    "with a new object (type=%s). This is usually "
+                    "indicative of a modeling error. To avoid this "
+                    "warning, delete the original object from the "
+                    "container before assigning a new object."
+                    % (self[i].name,
+                       self[i].__class__.__name__,
+                       item.__class__.__name__))
                 self._prepare_for_delete(self._data[i])
-                self._prepare_for_add(item)
+                self._prepare_for_add(i, item)
                 self._data[i] = item
                 return
             elif self._data[i] is item:

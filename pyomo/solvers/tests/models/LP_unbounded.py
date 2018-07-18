@@ -24,6 +24,7 @@ class LP_unbounded(_BaseTestModel):
 
     def __init__(self):
         _BaseTestModel.__init__(self)
+        self.solve_should_fail = True
         self.add_results(self.description+".json")
 
     def _generate_model(self):

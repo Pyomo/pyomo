@@ -1,6 +1,7 @@
 import pickle
 
 import pyutilib.th as unittest
+from pyomo.core.expr.numvalue import NumericValue
 import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
@@ -9,10 +10,9 @@ from pyomo.core.tests.unit.test_component_tuple import \
 from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
 from pyomo.core.kernel.component_interface import (ICategorizedObject,
-                                                   IActiveObject,
                                                    IComponent,
-                                                   _ActiveComponentMixin,
-                                                   IComponentContainer)
+                                                   IComponentContainer,
+                                                   _ActiveObjectMixin)
 from pyomo.core.kernel.component_objective import (IObjective,
                                                    objective,
                                                    objective_dict,
@@ -20,7 +20,6 @@ from pyomo.core.kernel.component_objective import (IObjective,
                                                    objective_list,
                                                    minimize,
                                                    maximize)
-from pyomo.core.kernel.numvalue import NumericValue
 from pyomo.core.kernel.component_variable import variable
 from pyomo.core.kernel.component_block import block
 from pyomo.core.kernel.set_types import (RealSet,
@@ -30,21 +29,22 @@ from pyomo.core.base.objective import Objective
 class Test_objective(unittest.TestCase):
 
     def test_pprint(self):
+        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
         v = variable()
         o = objective(expr=v**2)
-        pyomo.core.kernel.pprint(o)
+        pyomo.kernel.pprint(o)
         b = block()
         b.o = o
-        pyomo.core.kernel.pprint(o)
-        pyomo.core.kernel.pprint(b)
+        pyomo.kernel.pprint(o)
+        pyomo.kernel.pprint(b)
         m = block()
         m.b = b
-        pyomo.core.kernel.pprint(o)
-        pyomo.core.kernel.pprint(b)
-        pyomo.core.kernel.pprint(m)
+        pyomo.kernel.pprint(o)
+        pyomo.kernel.pprint(b)
+        pyomo.kernel.pprint(m)
 
     def test_ctype(self):
         o = objective()
@@ -94,9 +94,8 @@ class Test_objective(unittest.TestCase):
     def test_type(self):
         o = objective()
         self.assertTrue(isinstance(o, ICategorizedObject))
-        self.assertTrue(isinstance(o, IActiveObject))
         self.assertTrue(isinstance(o, IComponent))
-        self.assertTrue(isinstance(o, _ActiveComponentMixin))
+        self.assertTrue(isinstance(o, _ActiveObjectMixin))
         self.assertTrue(isinstance(o, IObjective))
         self.assertTrue(isinstance(o, NumericValue))
 

@@ -17,7 +17,7 @@ using_py3 = PY3
 
 import pyutilib.services
 
-from pyomo.util.plugin import *
+from pyomo.common.plugin import *
 from pyomo.opt.base import *
 from pyomo.solvers.plugins.converter.pico import PicoMIPConverter
 
@@ -171,6 +171,13 @@ class PyomoMIPConverter(SingletonPlugin):
             if args[1] == ProblemFormat.nl:
                 problem_filename = pyutilib.services.TempfileManager.\
                                    create_tempfile(suffix = '.pyomo.nl')
+                if io_options.get("symbolic_solver_labels", False):
+                    pyutilib.services.TempfileManager.add_tempfile(
+                        problem_filename[:-3]+".row",
+                        exists=False)
+                    pyutilib.services.TempfileManager.add_tempfile(
+                        problem_filename[:-3]+".col",
+                        exists=False)
             else:
                 assert args[1] == ProblemFormat.mps
                 problem_filename = pyutilib.services.TempfileManager.\

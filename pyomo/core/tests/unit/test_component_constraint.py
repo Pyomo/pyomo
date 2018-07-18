@@ -1,6 +1,8 @@
 import pickle
 
 import pyutilib.th as unittest
+from pyomo.core.expr import current as EXPR
+from pyomo.core.expr import inequality
 import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
@@ -9,10 +11,9 @@ from pyomo.core.tests.unit.test_component_tuple import \
 from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
 from pyomo.core.kernel.component_interface import (ICategorizedObject,
-                                                   IActiveObject,
                                                    IComponent,
-                                                   _ActiveComponentMixin,
-                                                   IComponentContainer)
+                                                   IComponentContainer,
+                                                   _ActiveObjectMixin)
 from pyomo.core.kernel.component_constraint import (IConstraint,
                                                     constraint,
                                                     linear_constraint,
@@ -28,24 +29,26 @@ from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet)
 from pyomo.core.base.constraint import Constraint
 
+
 class Test_constraint(unittest.TestCase):
 
     def test_pprint(self):
+        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
         v = variable()
-        c = constraint(1 <= v**2 <= 2)
-        pyomo.core.kernel.pprint(c)
+        c = constraint((1, v**2, 2))
+        pyomo.kernel.pprint(c)
         b = block()
         b.c = c
-        pyomo.core.kernel.pprint(c)
-        pyomo.core.kernel.pprint(b)
+        pyomo.kernel.pprint(c)
+        pyomo.kernel.pprint(b)
         m = block()
         m.b = b
-        pyomo.core.kernel.pprint(c)
-        pyomo.core.kernel.pprint(b)
-        pyomo.core.kernel.pprint(m)
+        pyomo.kernel.pprint(c)
+        pyomo.kernel.pprint(b)
+        pyomo.kernel.pprint(m)
 
     def test_ctype(self):
         c = constraint()
@@ -103,56 +106,73 @@ class Test_constraint(unittest.TestCase):
         c.lb = float('-inf')
         self.assertEqual(c.has_lb(), False)
         self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(type(c.lb), float)
         self.assertEqual(c.has_ub(), False)
-        self.assertEqual(c.ub, None)
+        self.assertIs(c.ub, None)
 
         c.ub = float('inf')
         self.assertEqual(c.has_lb(), False)
         self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(type(c.lb), float)
         self.assertEqual(c.has_ub(), False)
         self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(type(c.ub), float)
 
         c.lb = 0
         self.assertEqual(c.has_lb(), True)
         self.assertEqual(c.lb, 0)
+        self.assertEqual(type(c.lb), int)
         self.assertEqual(c.has_ub(), False)
         self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(type(c.ub), float)
 
         c.ub = 0
         self.assertEqual(c.has_lb(), True)
         self.assertEqual(c.lb, 0)
+        self.assertEqual(type(c.lb), int)
         self.assertEqual(c.has_ub(), True)
         self.assertEqual(c.ub, 0)
+        self.assertEqual(type(c.ub), int)
 
         c.lb = float('inf')
         self.assertEqual(c.has_lb(), True)
         self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(type(c.lb), float)
         self.assertEqual(c.has_ub(), True)
         self.assertEqual(c.ub, 0)
+        self.assertEqual(type(c.ub), int)
 
         c.ub = float('-inf')
         self.assertEqual(c.has_lb(), True)
         self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(type(c.lb), float)
         self.assertEqual(c.has_ub(), True)
         self.assertEqual(c.ub, float('-inf'))
+        self.assertEqual(type(c.ub), float)
 
         c.rhs = float('inf')
         self.assertEqual(c.has_lb(), True)
         self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(type(c.lb), float)
         self.assertEqual(c.has_ub(), False)
         self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(type(c.ub), float)
 
         c.rhs = float('-inf')
         self.assertEqual(c.has_lb(), False)
         self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(type(c.lb), float)
         self.assertEqual(c.has_ub(), True)
         self.assertEqual(c.ub, float('-inf'))
+        self.assertEqual(type(c.ub), float)
 
         c.equality = False
         pL = parameter()
         c.lb = pL
+        self.assertIs(c.lb, pL)
         pU = parameter()
         c.ub = pU
+        self.assertIs(c.ub, pU)
 
         with self.assertRaises(ValueError):
             self.assertEqual(c.has_lb(), False)
@@ -279,9 +299,8 @@ class Test_constraint(unittest.TestCase):
     def test_type(self):
         c = constraint()
         self.assertTrue(isinstance(c, ICategorizedObject))
-        self.assertTrue(isinstance(c, IActiveObject))
         self.assertTrue(isinstance(c, IComponent))
-        self.assertTrue(isinstance(c, _ActiveComponentMixin))
+        self.assertTrue(isinstance(c, _ActiveObjectMixin))
         self.assertTrue(isinstance(c, IConstraint))
 
     def test_active(self):
@@ -391,36 +410,36 @@ class Test_constraint(unittest.TestCase):
         eL = expression()
         eU = expression()
         with self.assertRaises(ValueError):
-            c.expr = (eL <= e <= eU)
+            c.expr = (eL, e, eU)
         e.expr = 1.0
         eL.expr = 1.0
         eU.expr = 1.0
         with self.assertRaises(ValueError):
-            c.expr = (eL <= e <= eU)
-        with self.assertRaises(ValueError):
+            c.expr = (eL, e, eU)
+        with self.assertRaises(TypeError):
             c.lb = eL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.ub = eU
 
         vL = variable()
         vU = variable()
         with self.assertRaises(ValueError):
-            c.expr = (vL <= e <= vU)
-        with self.assertRaises(ValueError):
+            c.expr = (vL, e, vU)
+        with self.assertRaises(TypeError):
             c.lb = vL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.ub = vU
 
         e.expr = 1.0
         vL.value = 1.0
         vU.value = 1.0
         with self.assertRaises(ValueError):
-            c.expr = (vL <= e <= vU)
-        with self.assertRaises(ValueError):
+            c.expr = (vL, e, vU)
+        with self.assertRaises(TypeError):
             c.lb = vL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.ub = vU
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.rhs = vL
 
         # the fixed status of a variable
@@ -428,18 +447,18 @@ class Test_constraint(unittest.TestCase):
         vL.fixed = True
         vU.fixed = True
         with self.assertRaises(ValueError):
-            c.expr = (vL <= e <= vU)
-        with self.assertRaises(ValueError):
+            c.expr = (vL, e, vU)
+        with self.assertRaises(TypeError):
             c.lb = vL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.ub = vU
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.rhs = vL
 
         vL.value = 1.0
         vU.value = 1.0
         with self.assertRaises(ValueError):
-            c.expr = (vL <= 0.0 <= vU)
+            c.expr = (vL, 0.0, vU)
         c.body = -2.0
         c.lb = 1.0
         c.ub = 1.0
@@ -476,53 +495,53 @@ class Test_constraint(unittest.TestCase):
     def test_fixed_variable_stays_in_body(self):
         c = constraint()
         x = variable(value=0.5)
-        c.expr = (0 <= x <= 1)
-        self.assertEqual(c.lb(), 0)
+        c.expr = (0, x, 1)
+        self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 0.5)
-        self.assertEqual(c.ub(), 1)
+        self.assertEqual(c.ub, 1)
         x.value = 2
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 2)
-        self.assertEqual(c.ub(), 1)
+        self.assertEqual(c.ub, 1)
 
         # ensure the variable is not moved into the upper or
         # lower bound expression (this used to be a bug)
         x.fix(0.5)
-        c.expr = (0 <= x <= 1)
-        self.assertEqual(c.lb(), 0)
+        c.expr = (0, x, 1)
+        self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 0.5)
-        self.assertEqual(c.ub(), 1)
+        self.assertEqual(c.ub, 1)
         x.value = 2
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 2)
-        self.assertEqual(c.ub(), 1)
+        self.assertEqual(c.ub, 1)
 
         x.free()
         x.value = 1
         c.expr = (0 == x)
         self.assertEqual(c.equality, True)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 1)
-        self.assertEqual(c.ub(), 0)
+        self.assertEqual(c.ub, 0)
         c.expr = (x == 0)
         self.assertEqual(c.equality, True)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 1)
-        self.assertEqual(c.ub(), 0)
+        self.assertEqual(c.ub, 0)
 
         # ensure the variable is not moved into the upper or
         # lower bound expression (this used to be a bug)
         x.fix()
         c.expr = (0 == x)
         self.assertEqual(c.equality, True)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 1)
-        self.assertEqual(c.ub(), 0)
+        self.assertEqual(c.ub, 0)
         c.expr = (x == 0)
         self.assertEqual(c.equality, True)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 1)
-        self.assertEqual(c.ub(), 0)
+        self.assertEqual(c.ub, 0)
 
         # ensure the variable is not moved into the upper or
         # lower bound expression (this used to be a bug)
@@ -530,16 +549,16 @@ class Test_constraint(unittest.TestCase):
         c.expr = (0 == x)
         x.fix()
         self.assertEqual(c.equality, True)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 1)
-        self.assertEqual(c.ub(), 0)
+        self.assertEqual(c.ub, 0)
         x.free()
         c.expr = (x == 0)
         x.fix()
         self.assertEqual(c.equality, True)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 1)
-        self.assertEqual(c.ub(), 0)
+        self.assertEqual(c.ub, 0)
 
     def test_data_bounds(self):
         c = constraint()
@@ -547,7 +566,7 @@ class Test_constraint(unittest.TestCase):
 
         pL = parameter()
         pU = parameter()
-        c.expr = (pL <= e <= pU)
+        c.expr = (pL, e, pU)
         self.assertIs(c.body, e)
         self.assertIs(c.lb, pL)
         self.assertIs(c.ub, pU)
@@ -555,7 +574,7 @@ class Test_constraint(unittest.TestCase):
         self.assertIs(c.body, e)
         self.assertIs(c.lb, pL)
         self.assertIs(c.ub, pU)
-        c.expr = (pL <= e <= pU)
+        c.expr = (pL, e, pU)
         self.assertIs(c.body, e)
         self.assertIs(c.lb, pL)
         self.assertIs(c.ub, pU)
@@ -563,7 +582,7 @@ class Test_constraint(unittest.TestCase):
         e.expr = 1.0
         eL = data_expression()
         eU = data_expression()
-        c.expr = (eL <= e <= eU)
+        c.expr = (eL, e, eU)
         self.assertIs(c.body, e)
         self.assertIs(c.lb, eL)
         self.assertIs(c.ub, eU)
@@ -571,7 +590,7 @@ class Test_constraint(unittest.TestCase):
         self.assertIs(c.body, e)
         self.assertIs(c.lb, eL)
         self.assertIs(c.ub, eU)
-        c.expr = (eL <= e <= eU)
+        c.expr = (eL, e, eU)
         self.assertIs(c.body, e)
         self.assertIs(c.lb, eL)
         self.assertIs(c.ub, eU)
@@ -600,7 +619,7 @@ class Test_constraint(unittest.TestCase):
         c = constraint(expr=(p + 1)**2 <= x)
         self.assertEqual(c.equality, False)
 
-        c = constraint(expr=p <= x <= p + 1)
+        c = constraint(expr=(p, x, p + 1))
         self.assertEqual(c.equality, False)
 
         c = constraint(expr=x - p >= 0)
@@ -617,9 +636,6 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.equality, False)
 
         c = constraint(expr=x >= (p + 1)**2)
-        self.assertEqual(c.equality, False)
-
-        c = constraint(expr=p + 1 >= x >= p)
         self.assertEqual(c.equality, False)
 
         c = constraint(expr=(p, x, None))
@@ -659,7 +675,7 @@ class Test_constraint(unittest.TestCase):
         c = constraint(expr=x <= (p + 1)**2)
         self.assertEqual(c.equality, False)
 
-        c = constraint(expr=p + 1 <= x <= p)
+        c = constraint(expr=(p + 1, x, p))
         self.assertEqual(c.equality, False)
 
         c = constraint(expr=0 >= x - p)
@@ -676,9 +692,6 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.equality, False)
 
         c = constraint(expr=(p + 1)**2 >= x)
-        self.assertEqual(c.equality, False)
-
-        c = constraint(expr=p >= x >= p + 1)
         self.assertEqual(c.equality, False)
 
         c = constraint(expr=(None, x, p))
@@ -718,43 +731,72 @@ class Test_constraint(unittest.TestCase):
         c = constraint(expr=x == p + 1)
         self.assertEqual(c.equality, True)
 
-        c = constraint(expr=p <= x <= p)
-        self.assertTrue(c.ub is p)
-        # GH: Not sure if we are supposed to detect equality
-        #     in this situation. I would rather us not, for
-        #     the sake of making the code less complicated.
-        #     Either way, I am not going to test for it here.
-        #self.assertEqual(c.equality, <blah>)
-
         c = constraint(expr=(x, p))
         self.assertTrue(c.ub is p)
+        self.assertTrue(c.lb is p)
+        self.assertTrue(c.rhs is p)
+        self.assertIs(c.body, x)
         self.assertEqual(c.equality, True)
 
         c = constraint(expr=(p, x))
         self.assertTrue(c.ub is p)
+        self.assertTrue(c.lb is p)
+        self.assertTrue(c.rhs is p)
+        self.assertIs(c.body, x)
+        self.assertEqual(c.equality, True)
+
+        c = constraint(expr=EXPR.EqualityExpression((p, x)))
+        self.assertTrue(c.ub is p)
+        self.assertTrue(c.lb is p)
+        self.assertTrue(c.rhs is p)
+        self.assertIs(c.body, x)
+        self.assertEqual(c.equality, True)
+
+        c = constraint(expr=EXPR.EqualityExpression((x, p)))
+        self.assertTrue(c.ub is p)
+        self.assertTrue(c.lb is p)
+        self.assertTrue(c.rhs is p)
+        self.assertIs(c.body, x)
         self.assertEqual(c.equality, True)
 
     def test_tuple_construct_equality(self):
         x = variable()
         c = constraint((0.0, x))
         self.assertEqual(c.equality, True)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(type(c.lb), float)
         self.assertIs(c.body, x)
-        self.assertEqual(c.ub(), 0)
+        self.assertEqual(c.ub, 0)
+        self.assertEqual(type(c.ub), float)
 
-        c = constraint((x, 0.0))
+        c = constraint((x, 0))
         self.assertEqual(c.equality, True)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(type(c.lb), int)
         self.assertIs(c.body, x)
-        self.assertEqual(c.ub(), 0)
+        self.assertEqual(c.ub, 0)
+        self.assertEqual(type(c.ub), int)
 
     def test_tuple_construct_inf_equality(self):
         x = variable()
-        with self.assertRaises(ValueError):
-            constraint((x, float('inf')))
-
-        with self.assertRaises(ValueError):
-            constraint((float('inf'), x))
+        c = constraint((x, float('inf')))
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(type(c.lb), float)
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(type(c.ub), float)
+        self.assertEqual(c.rhs, float('inf'))
+        self.assertEqual(type(c.rhs), float)
+        self.assertIs(c.body, x)
+        c = constraint((float('inf'), x))
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(type(c.lb), float)
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(type(c.ub), float)
+        self.assertEqual(c.rhs, float('inf'))
+        self.assertEqual(type(c.rhs), float)
+        self.assertIs(c.body, x)
 
     def test_tuple_construct_1sided_inequality(self):
         y = variable()
@@ -762,11 +804,11 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.equality, False)
         self.assertIs(c.lb, None)
         self.assertIs(c.body, y)
-        self.assertEqual(c.ub(), 1)
+        self.assertEqual(c.ub, 1)
 
         c = constraint((0, y, None))
         self.assertEqual(c.equality, False)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertIs   (c.body, y)
         self.assertIs(c.ub, None)
 
@@ -774,15 +816,19 @@ class Test_constraint(unittest.TestCase):
         y = variable()
         c = constraint((float('-inf'), y, 1))
         self.assertEqual(c.equality, False)
-        self.assertIs(c.lb, None)
+        self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(type(c.lb), float)
         self.assertIs(c.body, y)
-        self.assertEqual(c.ub(), 1)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(type(c.ub), int)
 
         c = constraint((0, y, float('inf')))
         self.assertEqual(c.equality, False)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(type(c.lb), int)
         self.assertIs(c.body, y)
-        self.assertIs(c.ub, None)
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(type(c.ub), float)
 
     def test_tuple_construct_unbounded_inequality(self):
         y = variable()
@@ -794,9 +840,11 @@ class Test_constraint(unittest.TestCase):
 
         c = constraint((float('-inf'), y, float('inf')))
         self.assertEqual(c.equality, False)
-        self.assertIs(c.lb, None)
+        self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(type(c.lb), float)
         self.assertIs(c.body, y)
-        self.assertIs(c.ub, None)
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(type(c.ub), float)
 
     def test_tuple_construct_invalid_1sided_inequality(self):
         x = variable()
@@ -812,11 +860,11 @@ class Test_constraint(unittest.TestCase):
         y = variable()
         c = constraint((0, y, 1))
         self.assertEqual(c.equality, False)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertIs(c.body, y)
-        self.assertEqual(c.ub(), 1)
+        self.assertEqual(c.ub, 1)
 
-    def test_tuple_construct_invalid_2sided_inequality(self):
+    def test_construct_invalid_2sided_inequality(self):
         x = variable()
         y = variable()
         z = variable()
@@ -825,6 +873,16 @@ class Test_constraint(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             constraint((0, y, z))
+
+    def test_tuple_construct_invalid_2sided_inequality(self):
+        x = variable()
+        y = variable()
+        z = variable()
+        with self.assertRaises(ValueError):
+            constraint(EXPR.RangedExpression((x,y,1),(False,False)))
+
+        with self.assertRaises(ValueError):
+            constraint(EXPR.RangedExpression((0,y,z),(False,False)))
 
     def test_expr_construct_equality(self):
         x = variable(value=1)
@@ -850,10 +908,18 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.ub(), 0)
 
         c = constraint()
-        with self.assertRaises(ValueError):
-            c.expr = (x == float('inf'))
-        with self.assertRaises(ValueError):
-            c.expr = (float('inf') == x)
+        c.expr = (x == float('inf'))
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(c.rhs, float('inf'))
+        self.assertIs(c.body, x)
+        c.expr = (float('inf') == x)
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(c.rhs, float('inf'))
+        self.assertIs(c.body, x)
 
     def test_strict_inequality_failure(self):
         x = variable()
@@ -862,19 +928,49 @@ class Test_constraint(unittest.TestCase):
         with self.assertRaises(ValueError):
             c.expr = (x < 0)
         with self.assertRaises(ValueError):
+            c.expr = EXPR.inequality(body=x,upper=0,strict=True)
+        c.expr = (x <= 0)
+        c.expr = EXPR.inequality(body=x,upper=0,strict=False)
+        with self.assertRaises(ValueError):
             c.expr = (x > 0)
+        with self.assertRaises(ValueError):
+            c.expr = EXPR.inequality(body=x,lower=0,strict=True)
+        c.expr = (x >= 0)
+        c.expr = EXPR.inequality(body=x,lower=0,strict=False)
         with self.assertRaises(ValueError):
             c.expr = (x < y)
         with self.assertRaises(ValueError):
+            c.expr = EXPR.inequality(body=x,upper=y,strict=True)
+        c.expr = (x <= y)
+        c.expr = EXPR.inequality(body=x,upper=y,strict=False)
+        with self.assertRaises(ValueError):
             c.expr = (x > y)
+        with self.assertRaises(ValueError):
+            c.expr = EXPR.inequality(body=x,lower=y,strict=True)
+        c.expr = (x >= y)
+        c.expr = EXPR.inequality(body=x,lower=y,strict=False)
+        with self.assertRaises(ValueError):
+            c.expr = EXPR.RangedExpression((0,x,1),(True,True))
+        with self.assertRaises(ValueError):
+            c.expr = EXPR.RangedExpression((0,x,1),(False,True))
+        with self.assertRaises(ValueError):
+            c.expr = EXPR.RangedExpression((0,x,1),(True,False))
+        c.expr = EXPR.RangedExpression((0,x,1),(False,False))
 
     def test_expr_construct_inf_equality(self):
         x = variable()
-        with self.assertRaises(ValueError):
-            constraint(x == float('inf'))
-
-        with self.assertRaises(ValueError):
-            constraint(float('inf') == x)
+        c = constraint(x == float('inf'))
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(c.rhs, float('inf'))
+        self.assertIs(c.body, x)
+        c = constraint(float('inf') == x)
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(c.rhs, float('inf'))
+        self.assertIs(c.body, x)
 
     def test_expr_construct_1sided_inequality(self):
         y = variable()
@@ -908,17 +1004,17 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.equality, False)
         self.assertIs(c.lb, None)
         self.assertIs(c.body, y)
-        self.assertIs(c.ub, None)
+        self.assertEqual(c.ub, float('inf'))
 
         c = constraint(float('-inf') <= y)
         self.assertEqual(c.equality, False)
-        self.assertIs(c.lb, None)
+        self.assertEqual(c.lb, float('-inf'))
         self.assertIs(c.body, y)
         self.assertIs(c.ub, None)
 
         c = constraint(y >= float('-inf'))
         self.assertEqual(c.equality, False)
-        self.assertIs(c.lb, None)
+        self.assertEqual(c.lb, float('-inf'))
         self.assertIs(c.body, y)
         self.assertIs(c.ub, None)
 
@@ -926,68 +1022,114 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.equality, False)
         self.assertIs(c.lb, None)
         self.assertIs(c.body, y)
-        self.assertIs(c.ub, None)
+        self.assertEqual(c.ub, float('inf'))
 
-    def test_expr_construct_invalid_unbounded_inequality(self):
+    def test_expr_construct_unbounded_inequality(self):
         y = variable()
-        with self.assertRaises(ValueError):
-            constraint(y <= float('-inf'))
-
-        with self.assertRaises(ValueError):
-            constraint(float('inf') <= y)
-
-        with self.assertRaises(ValueError):
-            constraint(y >= float('inf'))
-
-        with self.assertRaises(ValueError):
-            constraint(float('-inf') >= y)
+        c = constraint(y <= float('-inf'))
+        self.assertEqual(c.equality, False)
+        self.assertIs(c.lb, None)
+        self.assertEqual(c.ub, float('-inf'))
+        self.assertIs(c.body, y)
+        c = constraint(float('inf') <= y)
+        self.assertEqual(c.equality, False)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertIs(c.ub, None)
+        self.assertIs(c.body, y)
+        c = constraint(y >= float('inf'))
+        self.assertEqual(c.equality, False)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertIs(c.ub, None)
+        self.assertIs(c.body, y)
+        c = constraint(float('-inf') >= y)
+        self.assertEqual(c.equality, False)
+        self.assertIs(c.lb, None)
+        self.assertEqual(c.ub, float('-inf'))
+        self.assertIs(c.body, y)
 
     def test_expr_invalid_double_sided_inequality(self):
         x = variable()
         y = variable()
         c = constraint()
-        c.expr = (0 <= x - y <= 1)
-        self.assertEqual(c.lb(), 0)
-        self.assertEqual(c.ub(), 1)
+        c.expr = (0, x - y, 1)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(c.ub, 1)
         self.assertEqual(c.equality, False)
         with self.assertRaises(ValueError):
-            c.expr = (x <= x - y <= 1)
-        self.assertEqual(c.lb(), 0)
-        self.assertEqual(c.ub(), 1)
+            c.expr = (x, x - y, 1)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(c.ub, 1)
         self.assertEqual(c.equality, False)
         with self.assertRaises(ValueError):
-            c.expr = (0 <= x - y <= y)
-        self.assertEqual(c.lb(), 0)
-        self.assertEqual(c.ub(), 1)
+            c.expr = (0, x - y, y)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(c.ub, 1)
         self.assertEqual(c.equality, False)
         with self.assertRaises(ValueError):
-            c.expr = (x >= x - y >= 1)
-        self.assertEqual(c.lb(), 0)
-        self.assertEqual(c.ub(), 1)
+            c.expr = (1, x - y, x)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(c.ub, 1)
         self.assertEqual(c.equality, False)
         with self.assertRaises(ValueError):
-            c.expr = (0 >= x - y >= y)
+            c.expr = (y, x-y, 0)
 
     def test_equality_infinite(self):
         c = constraint()
         v = variable()
         c.expr = (v == 1)
-        with self.assertRaises(ValueError):
-            c.expr = (v == float('inf'))
-        with self.assertRaises(ValueError):
-            c.expr = (v, float('inf'))
-        with self.assertRaises(ValueError):
-            c.expr = (float('inf') == v)
-        with self.assertRaises(ValueError):
-            c.expr = (float('inf'), v)
-        with self.assertRaises(ValueError):
-            c.expr = (v == float('-inf'))
-        with self.assertRaises(ValueError):
-            c.expr = (v, float('-inf'))
-        with self.assertRaises(ValueError):
-            c.expr = (float('-inf') == v)
-        with self.assertRaises(ValueError):
-            c.expr = (float('-inf'), v)
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, 1)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(c.rhs, 1)
+        self.assertIs(c.body, v)
+        c.expr = (v == float('inf'))
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(c.rhs, float('inf'))
+        self.assertIs(c.body, v)
+        c.expr = (v, float('inf'))
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(c.rhs, float('inf'))
+        self.assertIs(c.body, v)
+        c.expr = (float('inf') == v)
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(c.rhs, float('inf'))
+        self.assertIs(c.body, v)
+        c.expr = (float('inf'), v)
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.ub, float('inf'))
+        self.assertEqual(c.rhs, float('inf'))
+        self.assertIs(c.body, v)
+        c.expr = (v == float('-inf'))
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(c.ub, float('-inf'))
+        self.assertEqual(c.rhs, float('-inf'))
+        self.assertIs(c.body, v)
+        c.expr = (v, float('-inf'))
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(c.ub, float('-inf'))
+        self.assertEqual(c.rhs, float('-inf'))
+        self.assertIs(c.body, v)
+        c.expr = (float('-inf') == v)
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(c.ub, float('-inf'))
+        self.assertEqual(c.rhs, float('-inf'))
+        self.assertIs(c.body, v)
+        c.expr = (float('-inf'), v)
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(c.ub, float('-inf'))
+        self.assertEqual(c.rhs, float('-inf'))
+        self.assertIs(c.body, v)
 
     def test_equality_nonnumeric(self):
         c = constraint()
@@ -1003,6 +1145,7 @@ class Test_constraint(unittest.TestCase):
         L = 1
         U = 5
 
+        # equality
         cE = constraint(rhs=L, body=x)
         x.value = 4
         self.assertEqual(cE.body(), 4)
@@ -1027,6 +1170,7 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cE.lslack, None)
         self.assertEqual(cE.uslack, None)
 
+        # equality
         cE = constraint(rhs=U, body=x)
         x.value = 4
         self.assertEqual(cE.body(), 4)
@@ -1043,7 +1187,15 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cE.slack, -5)
         self.assertEqual(cE.lslack, -5)
         self.assertEqual(cE.uslack, 5)
+        x.value = None
+        with self.assertRaises(ValueError):
+            cE.body()
+        self.assertEqual(cE.body(exception=False), None)
+        self.assertEqual(cE.slack, None)
+        self.assertEqual(cE.lslack, None)
+        self.assertEqual(cE.uslack, None)
 
+        # lower finite
         cL = constraint(lb=L, body=x)
         x.value = 4
         self.assertEqual(cL.body(), 4)
@@ -1060,7 +1212,15 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cL.slack, -1)
         self.assertEqual(cL.lslack, -1)
         self.assertEqual(cL.uslack, float('inf'))
+        x.value = None
+        with self.assertRaises(ValueError):
+            cL.body()
+        self.assertEqual(cL.body(exception=False), None)
+        self.assertEqual(cL.slack, None)
+        self.assertEqual(cL.lslack, None)
+        self.assertEqual(cL.uslack, None)
 
+        # lower unbounded
         cL = constraint(lb=float('-inf'), body=x)
         x.value = 4
         self.assertEqual(cL.body(), 4)
@@ -1077,7 +1237,15 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cL.slack, float('inf'))
         self.assertEqual(cL.lslack, float('inf'))
         self.assertEqual(cL.uslack, float('inf'))
+        x.value = None
+        with self.assertRaises(ValueError):
+            cL.body()
+        self.assertEqual(cL.body(exception=False), None)
+        self.assertEqual(cL.slack, None)
+        self.assertEqual(cL.lslack, None)
+        self.assertEqual(cL.uslack, None)
 
+        # upper finite
         cU = constraint(body=x, ub=U)
         x.value = 4
         self.assertEqual(cU.body(), 4)
@@ -1094,7 +1262,15 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cU.slack, 5)
         self.assertEqual(cU.lslack, float('inf'))
         self.assertEqual(cU.uslack, 5)
+        x.value = None
+        with self.assertRaises(ValueError):
+            cU.body()
+        self.assertEqual(cU.body(exception=False), None)
+        self.assertEqual(cU.slack, None)
+        self.assertEqual(cU.lslack, None)
+        self.assertEqual(cU.uslack, None)
 
+        # upper unbounded
         cU = constraint(body=x, ub=float('inf'))
         x.value = 4
         self.assertEqual(cU.body(), 4)
@@ -1111,7 +1287,15 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cU.slack, float('inf'))
         self.assertEqual(cU.lslack, float('inf'))
         self.assertEqual(cU.uslack, float('inf'))
+        x.value = None
+        with self.assertRaises(ValueError):
+            cU.body()
+        self.assertEqual(cU.body(exception=False), None)
+        self.assertEqual(cU.slack, None)
+        self.assertEqual(cU.lslack, None)
+        self.assertEqual(cU.uslack, None)
 
+        # range finite
         cR = constraint(lb=L, body=x, ub=U)
         x.value = 4
         self.assertEqual(cR.body(), 4)
@@ -1128,7 +1312,15 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cR.slack, -1)
         self.assertEqual(cR.lslack, -1)
         self.assertEqual(cR.uslack, 5)
+        x.value = None
+        with self.assertRaises(ValueError):
+            cR.body()
+        self.assertEqual(cR.body(exception=False), None)
+        self.assertEqual(cR.slack, None)
+        self.assertEqual(cR.lslack, None)
+        self.assertEqual(cR.uslack, None)
 
+        # range unbounded (None)
         cR = constraint(body=x)
         x.value = 4
         self.assertEqual(cR.body(), 4)
@@ -1145,7 +1337,15 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cR.slack, float('inf'))
         self.assertEqual(cR.lslack, float('inf'))
         self.assertEqual(cR.uslack, float('inf'))
+        x.value = None
+        with self.assertRaises(ValueError):
+            cR.body()
+        self.assertEqual(cR.body(exception=False), None)
+        self.assertEqual(cR.slack, None)
+        self.assertEqual(cR.lslack, None)
+        self.assertEqual(cR.uslack, None)
 
+        # range unbounded
         cR = constraint(body=x, lb=float('-inf'), ub=float('inf'))
         x.value = 4
         self.assertEqual(cR.body(), 4)
@@ -1162,23 +1362,84 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cR.slack, float('inf'))
         self.assertEqual(cR.lslack, float('inf'))
         self.assertEqual(cR.uslack, float('inf'))
+        x.value = None
+        with self.assertRaises(ValueError):
+            cR.body()
+        self.assertEqual(cR.body(exception=False), None)
+        self.assertEqual(cR.slack, None)
+        self.assertEqual(cR.lslack, None)
+        self.assertEqual(cR.uslack, None)
+
+        # range finite (parameter)
+        cR = constraint(body=x,
+                        lb=parameter(L),
+                        ub=parameter(U))
+        x.value = 4
+        self.assertEqual(cR.body(), 4)
+        self.assertEqual(cR.slack, 1)
+        self.assertEqual(cR.lslack, 3)
+        self.assertEqual(cR.uslack, 1)
+        x.value = 6
+        self.assertEqual(cR.body(), 6)
+        self.assertEqual(cR.slack, -1)
+        self.assertEqual(cR.lslack, 5)
+        self.assertEqual(cR.uslack, -1)
+        x.value = 0
+        self.assertEqual(cR.body(), 0)
+        self.assertEqual(cR.slack, -1)
+        self.assertEqual(cR.lslack, -1)
+        self.assertEqual(cR.uslack, 5)
+        x.value = None
+        with self.assertRaises(ValueError):
+            cR.body()
+        self.assertEqual(cR.body(exception=False), None)
+        self.assertEqual(cR.slack, None)
+        self.assertEqual(cR.lslack, None)
+        self.assertEqual(cR.uslack, None)
+
+        # range unbounded (parameter)
+        cR = constraint(body=x,
+                        lb=parameter(float('-inf')),
+                        ub=parameter(float('inf')))
+        x.value = 4
+        self.assertEqual(cR.body(), 4)
+        self.assertEqual(cR.slack, float('inf'))
+        self.assertEqual(cR.lslack, float('inf'))
+        self.assertEqual(cR.uslack, float('inf'))
+        x.value = 6
+        self.assertEqual(cR.body(), 6)
+        self.assertEqual(cR.slack, float('inf'))
+        self.assertEqual(cR.lslack, float('inf'))
+        self.assertEqual(cR.uslack, float('inf'))
+        x.value = 0
+        self.assertEqual(cR.body(), 0)
+        self.assertEqual(cR.slack, float('inf'))
+        self.assertEqual(cR.lslack, float('inf'))
+        self.assertEqual(cR.uslack, float('inf'))
+        x.value = None
+        with self.assertRaises(ValueError):
+            cR.body()
+        self.assertEqual(cR.body(exception=False), None)
+        self.assertEqual(cR.slack, None)
+        self.assertEqual(cR.lslack, None)
+        self.assertEqual(cR.uslack, None)
 
     def test_expr(self):
 
         x = variable(value=1.0)
         c = constraint()
-        c.expr = (2 >= x >= 0)
+        c.expr = (0, x, 2)
         self.assertEqual(c(), 1)
         self.assertEqual(c.body(), 1)
-        self.assertEqual(c.lb(), 0)
-        self.assertEqual(c.ub(), 2)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(c.ub, 2)
         self.assertEqual(c.equality, False)
 
-        c.expr = (0 >= x >= -2)
+        c.expr = (-2, x, 0)
         self.assertEqual(c(), 1)
         self.assertEqual(c.body(), 1)
-        self.assertEqual(c.lb(), -2)
-        self.assertEqual(c.ub(), 0)
+        self.assertEqual(c.lb, -2)
+        self.assertEqual(c.ub, 0)
         self.assertEqual(c.equality, False)
 
     def test_expr_getter(self):
@@ -1201,11 +1462,11 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.ub(), 1)
         self.assertEqual(c.equality, False)
 
-        c.expr = 0 <= v <= 1
+        c.expr = (0, v, 1)
         self.assertIsNot(c.expr, None)
-        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.lb, 0)
         self.assertIs(c.body, v)
-        self.assertEqual(c.ub(), 1)
+        self.assertEqual(c.ub, 1)
         self.assertEqual(c.equality, False)
 
         c.expr = v == 1
@@ -1229,6 +1490,7 @@ class Test_constraint(unittest.TestCase):
         with self.assertRaises(ValueError):
             c.expr = (True)
 
+    @unittest.skipIf(not EXPR._using_chained_inequality, "Chained inequalities are not supported.")
     def test_chainedInequalityError(self):
         x = variable()
         c = constraint()
@@ -1334,16 +1596,16 @@ class Test_linear_constraint(unittest.TestCase):
         # is still in the early stages.
         v = variable()
         c = linear_constraint(lb=1, terms=[(v,1)], ub=1)
-        pyomo.core.kernel.pprint(c)
+        pyomo.kernel.pprint(c)
         b = block()
         b.c = c
-        pyomo.core.kernel.pprint(c)
-        pyomo.core.kernel.pprint(b)
+        pyomo.kernel.pprint(c)
+        pyomo.kernel.pprint(b)
         m = block()
         m.b = b
-        pyomo.core.kernel.pprint(c)
-        pyomo.core.kernel.pprint(b)
-        pyomo.core.kernel.pprint(m)
+        pyomo.kernel.pprint(c)
+        pyomo.kernel.pprint(b)
+        pyomo.kernel.pprint(m)
 
     def test_ctype(self):
         c = linear_constraint([],[])
@@ -1464,12 +1726,19 @@ class Test_linear_constraint(unittest.TestCase):
         self.assertEqual(c.body(), 6)
         self.assertEqual(c(), 6)
 
+        c.terms = ()
+        self.assertEqual(c.lb, 1)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(c.rhs, 1)
+        self.assertEqual(c.body, 0)
+        self.assertEqual(c(), 0)
+        self.assertEqual(tuple(c.terms), ())
+
     def test_type(self):
         c = linear_constraint([],[])
         self.assertTrue(isinstance(c, ICategorizedObject))
-        self.assertTrue(isinstance(c, IActiveObject))
         self.assertTrue(isinstance(c, IComponent))
-        self.assertTrue(isinstance(c, _ActiveComponentMixin))
+        self.assertTrue(isinstance(c, _ActiveObjectMixin))
         self.assertTrue(isinstance(c, IConstraint))
 
     def test_active(self):
@@ -1549,40 +1818,40 @@ class Test_linear_constraint(unittest.TestCase):
 
         eL = expression()
         eU = expression()
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.rhs = eL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.lb = eL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.ub = eU
 
         vL = variable()
         vU = variable()
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.rhs = vL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.lb = vL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.ub = vU
 
         vL.value = 1.0
         vU.value = 1.0
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.rhs = vL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.lb = vL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.ub = vU
 
         # the fixed status of a variable
         # does not change this restriction
         vL.fixed = True
         vU.fixed = True
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.rhs = vL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.lb = vL
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             c.ub = vU
 
         vL.value = -1
@@ -1604,9 +1873,9 @@ class Test_linear_constraint(unittest.TestCase):
         self.assertEqual(c(), 0.5)
         self.assertEqual(c.ub, 1)
         repn = c.canonical_form()
-        self.assertEqual(len(repn.variables), 1)
-        self.assertIs(repn.variables[0], x)
-        self.assertEqual(repn.linear, (1,))
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], x)
+        self.assertEqual(repn.linear_coefs, (1,))
         self.assertEqual(repn.constant, 0)
         x.value = 2
         self.assertEqual(c.lb, 0)
@@ -1614,9 +1883,9 @@ class Test_linear_constraint(unittest.TestCase):
         self.assertEqual(c(), 2)
         self.assertEqual(c.ub, 1)
         repn = c.canonical_form()
-        self.assertEqual(len(repn.variables), 1)
-        self.assertIs(repn.variables[0], x)
-        self.assertEqual(repn.linear, (1,))
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], x)
+        self.assertEqual(repn.linear_coefs, (1,))
         self.assertEqual(repn.constant, 0)
 
         x.fix(0.5)
@@ -1626,8 +1895,8 @@ class Test_linear_constraint(unittest.TestCase):
         self.assertEqual(c(), 1)
         self.assertEqual(c.ub, 1)
         repn = c.canonical_form()
-        self.assertEqual(repn.variables, ())
-        self.assertEqual(repn.linear, ())
+        self.assertEqual(repn.linear_vars, ())
+        self.assertEqual(repn.linear_coefs, ())
         self.assertEqual(repn.constant, 1)
         x.value = 2
         self.assertEqual(c.lb, 0)
@@ -1635,8 +1904,8 @@ class Test_linear_constraint(unittest.TestCase):
         self.assertEqual(c(), 4)
         self.assertEqual(c.ub, 1)
         repn = c.canonical_form()
-        self.assertEqual(repn.variables, ())
-        self.assertEqual(repn.linear, ())
+        self.assertEqual(repn.linear_vars, ())
+        self.assertEqual(repn.linear_coefs, ())
         self.assertEqual(repn.constant, 4)
 
         x.free()
@@ -1648,9 +1917,9 @@ class Test_linear_constraint(unittest.TestCase):
         self.assertEqual(c(), 1)
         self.assertEqual(c.ub, 0)
         repn = c.canonical_form()
-        self.assertEqual(len(repn.variables), 1)
-        self.assertIs(repn.variables[0], x)
-        self.assertEqual(repn.linear, (1,))
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], x)
+        self.assertEqual(repn.linear_coefs, (1,))
         self.assertEqual(repn.constant, 0)
 
         x.fix()
@@ -1661,8 +1930,8 @@ class Test_linear_constraint(unittest.TestCase):
         self.assertEqual(c(), 1)
         self.assertEqual(c.ub, 0)
         repn = c.canonical_form()
-        self.assertEqual(repn.variables, ())
-        self.assertEqual(repn.linear, ())
+        self.assertEqual(repn.linear_vars, ())
+        self.assertEqual(repn.linear_coefs, ())
         self.assertEqual(repn.constant, 1)
 
         x.free()
@@ -1674,8 +1943,8 @@ class Test_linear_constraint(unittest.TestCase):
         self.assertEqual(c(), 1)
         self.assertEqual(c.ub, 0)
         repn = c.canonical_form()
-        self.assertEqual(repn.variables, ())
-        self.assertEqual(repn.linear, ())
+        self.assertEqual(repn.linear_vars, ())
+        self.assertEqual(repn.linear_coefs, ())
         self.assertEqual(repn.constant, 1)
 
     def test_data_bounds(self):
@@ -1687,13 +1956,17 @@ class Test_linear_constraint(unittest.TestCase):
         pL = parameter()
         pU = parameter()
         c.lb = pL
+        self.assertIs(c.lb, pL)
         c.ub = pU
+        self.assertIs(c.ub, pU)
 
         e.expr = 1.0
         eL = data_expression()
         eU = data_expression()
         c.lb = eL
+        self.assertIs(c.lb, eL)
         c.ub = eU
+        self.assertIs(c.ub, eU)
 
     def test_call(self):
         c = linear_constraint([],[])
@@ -1707,17 +1980,17 @@ class Test_linear_constraint(unittest.TestCase):
             c(exception=True)
         self.assertEqual(c(exception=False), None)
         repn = c.canonical_form()
-        self.assertEqual(len(repn.variables), 1)
-        self.assertIs(repn.variables[0], v)
-        self.assertEqual(repn.linear, (2,))
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], v)
+        self.assertEqual(repn.linear_coefs, (2,))
         self.assertEqual(repn.constant, 0)
 
         v.value = 2
         self.assertEqual(c(), 4)
         repn = c.canonical_form()
-        self.assertEqual(len(repn.variables), 1)
-        self.assertIs(repn.variables[0], v)
-        self.assertEqual(repn.linear, (2,))
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], v)
+        self.assertEqual(repn.linear_coefs, (2,))
         self.assertEqual(repn.constant, 0)
 
         v.value = None
@@ -1729,19 +2002,95 @@ class Test_linear_constraint(unittest.TestCase):
             c(exception=True)
         self.assertEqual(c(exception=False), None)
         repn = c.canonical_form()
-        self.assertEqual(len(repn.variables), 1)
-        self.assertIs(repn.variables[0], v)
-        self.assertEqual(repn.linear, (1,))
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], v)
+        self.assertEqual(repn.linear_coefs, (1,))
         self.assertEqual(repn.constant, 0)
 
         v.value = 2
         self.assertEqual(c(), 2)
         repn = c.canonical_form()
-        self.assertEqual(len(repn.variables), 1)
-        self.assertIs(repn.variables[0], v)
-        self.assertEqual(repn.linear, (1,))
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], v)
+        self.assertEqual(repn.linear_coefs, (1,))
         self.assertEqual(repn.constant, 0)
 
+    def test_canonical_form(self):
+        v = variable()
+        e = expression()
+        p = parameter(value=1)
+
+        c = linear_constraint()
+        self.assertEqual(c._linear_canonical_form, True)
+
+        #
+        # compute_values = True
+        #
+
+        c.terms = [(v,p)]
+        repn = c.canonical_form()
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], v)
+        self.assertEqual(repn.linear_coefs, (1,))
+        self.assertEqual(repn.constant, 0)
+
+        v.fix(2)
+        repn = c.canonical_form()
+        self.assertEqual(len(repn.linear_vars), 0)
+        self.assertEqual(len(repn.linear_coefs), 0)
+        self.assertEqual(repn.constant, 2)
+
+        v.free()
+        e.expr = v
+        c.terms = [(e,p)]
+        repn = c.canonical_form()
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], v)
+        self.assertEqual(repn.linear_coefs, (1,))
+        self.assertEqual(repn.constant, 0)
+
+        v.fix(2)
+        repn = c.canonical_form()
+        self.assertEqual(len(repn.linear_vars), 0)
+        self.assertEqual(len(repn.linear_coefs), 0)
+        self.assertEqual(repn.constant, 2)
+
+        #
+        # compute_values = False
+        #
+
+        v.free()
+        c.terms = [(v,p)]
+        repn = c.canonical_form(compute_values=False)
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], v)
+        self.assertEqual(len(repn.linear_coefs), 1)
+        self.assertIs(repn.linear_coefs[0], p)
+        self.assertEqual(repn.linear_coefs[0](), 1)
+        self.assertEqual(repn.constant, 0)
+
+        v.fix(2)
+        repn = c.canonical_form(compute_values=False)
+        self.assertEqual(len(repn.linear_vars), 0)
+        self.assertEqual(len(repn.linear_coefs), 0)
+        self.assertEqual(repn.constant(), 2)
+
+        v.free()
+        e.expr = v
+        c.terms = [(e,p)]
+        repn = c.canonical_form(compute_values=False)
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], v)
+        self.assertEqual(len(repn.linear_coefs), 1)
+        self.assertIs(repn.linear_coefs[0], p)
+        self.assertEqual(repn.linear_coefs[0](), 1)
+        self.assertEqual(repn.constant, 0)
+
+        v.fix(2)
+        repn = c.canonical_form(compute_values=False)
+        self.assertEqual(len(repn.linear_vars), 0)
+        self.assertEqual(len(repn.linear_coefs), 0)
+        self.assertEqual(repn.constant(), 2)
 
 class Test_constraint_dict(_TestActiveComponentDictBase,
                            unittest.TestCase):

@@ -18,10 +18,10 @@ import weakref
 import logging
 from inspect import isclass
 from operator import itemgetter, attrgetter
-from six import iteritems, itervalues, StringIO, string_types, \
+from six import iteritems, iterkeys, itervalues, StringIO, string_types, \
     advance_iterator, PY3
 
-from pyomo.util.timing import ConstructionTimer
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import *  # register_component, ModelComponentFactory
 from pyomo.core.base.component import Component, ActiveComponentData, \
     ComponentUID
@@ -498,10 +498,8 @@ class _BlockData(ActiveComponentData):
         ans = dict(self.__dict__)
         ans.update(super(_BlockData, self).__getstate__())
         # Note sure why we are deleting these...
-        if '_canonical_repn' in ans:
-            del ans['_canonical_repn']
-        if '_ampl_repn' in ans:
-            del ans['_ampl_repn']
+        if '_repn' in ans:
+            del ans['_repn']
         return ans
 
     #
@@ -673,8 +671,8 @@ class _BlockData(ActiveComponentData):
             super(_BlockData, self).__delattr__(name)
 
     def set_value(self, val):
-        for k,v in iteritems(getattr(self, '_decl', {})):
-            super(_BlockData, self).__delattr__(k)
+        for k in list(getattr(self, '_decl', {})):
+            self.del_component(k)
         self._ctypes = {}
         self._decl = {}
         self._decl_order = []
@@ -1123,9 +1121,22 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # NonNegativeReals, etc) that are not "owned" by any blocks and
         # should be preserved as singletons.
         #
-        new_block = copy.deepcopy(
-            self, {'__block_scope__': {id(self): True, id(None): False}})
-        new_block._parent = None
+        save_parent, self._parent = self._parent, None
+        try:
+            new_block = copy.deepcopy(
+                self, {
+                    '__block_scope__': {id(self): True, id(None): False},
+                    '__paranoid__': False,
+                    })
+        except:
+            new_block = copy.deepcopy(
+                self, {
+                    '__block_scope__': {id(self): True, id(None): False},
+                    '__paranoid__': True,
+                    })
+        finally:
+            self._parent = save_parent
+
         return new_block
 
     def contains_component(self, ctype):

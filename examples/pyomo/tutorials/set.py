@@ -11,8 +11,7 @@
 #
 # Imports
 #
-from pyomo.core import *
-import pyomo.environ
+from pyomo.environ import *
 
 ##
 ## Creating a model

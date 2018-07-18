@@ -46,7 +46,7 @@ model.Level = Var(model.ACT, bounds=Level_bounds, doc='level for each activity')
 # ***********************************
 
 def Total_Cost_rule(model):
-    return summation(model.cost, model.Level)
+    return sum_product(model.cost, model.Level)
 model.Total_Cost = Objective(rule=Total_Cost_rule, doc='minimize total cost')
 
 def Demand_rule(model, i):

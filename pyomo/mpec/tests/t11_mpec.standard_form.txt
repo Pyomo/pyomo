@@ -1,17 +1,17 @@
 cc : Size=1, Index=None, Active=True
-    Key  : Arg0                     : Arg1 : Active
-    None : 2.0  <=  y + x1  <=  3.0 :   x1 :   True
+    Key  : Arg0                 : Arg1 : Active
+    None : 2  <=  y + x1  <=  3 :   x1 :   True
     1 Var Declarations
         v : Size=1, Index=None
             Key  : Lower : Value : Upper : Fixed : Stale : Domain
-            None :   2.0 :  None :   3.0 : False :  True :  Reals
+            None :     2 :  None :     3 : False :  True :  Reals
 
     2 Constraint Declarations
         c : Size=1, Index=None, Active=True
             Key  : Lower : Body : Upper : Active
             None :  -Inf :   x1 :  +Inf :   True
         ve : Size=1, Index=None, Active=True
-            Key  : Lower : Body          : Upper : Active
-            None :   0.0 : cc.v - y - x1 :   0.0 :   True
+            Key  : Lower : Body            : Upper : Active
+            None :   0.0 : cc.v - (y + x1) :   0.0 :   True
 
     3 Declarations: c v ve

@@ -1,0 +1,31 @@
+from pyomo.pysp.annotations import StochasticConstraintBodyAnnotation
+
+model = ConcreteModel()
+
+# data that is initialized on a per-scenario basis
+p = ...
+q = ...
+
+# first-stage variable
+model.x = Var()
+# second-stage variables
+model.y = Var()
+model.SecondStageCostVar = Var()
+
+# first-stage cost expression
+model.FirstStageCost = Expression(expr= 5.0 * model.x)
+# second-stage cost expression
+model.SecondStageCost = Expression(expr= p * model.x + q * model.y)
+
+# define the objective using SecondStageCostVar
+# in place of SecondStageCost
+model.TotalCost = Objective(expr= model.FirstStageCost + model.SecondStageCostVar)
+
+# set the variable SecondStageCostVar equal to the
+# expression SecondStageCost using an equality constraint
+model.ComputeSecondStageCost = Constraint(expr= model.SecondStageCostVar == model.SecondStageCost)
+
+# declare that model.x and model.y have stochastic constraint matrix
+# coefficients in the ComputeSecondStageCost constraint
+model.stoch_matrix = StochasticConstraintBodyAnnotation()
+model.stoch_matrix.declare(model.ComputeSecondStageCost, variables=[model.x, model.y])

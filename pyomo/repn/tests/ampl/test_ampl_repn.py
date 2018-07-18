@@ -1,8 +1,7 @@
 import pyutilib.th as unittest
 
 from pyomo.core import *
-from pyomo.repn.ampl_repn import _generate_ampl_repn as gar
-from pyomo.repn.ampl_repn import AmplRepn
+from pyomo.repn.standard_repn import generate_standard_repn as gar
 
 
 class AmplRepnTests(unittest.TestCase):
@@ -18,8 +17,11 @@ class AmplRepnTests(unittest.TestCase):
         m.obj = Objective(expr=m.x**2)
 
         test = gar(m.con.body)
-        self.assertEqual(test._constant, 0)
-        self.assertEqual(test._linear_vars, {})
-        self.assertEqual(test._linear_terms_coef, {})
-        self.assertEqual(test._nonlinear_vars, {id(m.x): m.x})
-        self.assertIs(test._nonlinear_expr, m.con.body)
+        self.assertEqual(test.constant, 0)
+        self.assertEqual(test.linear_vars, tuple())
+        self.assertEqual(test.linear_coefs, tuple())
+        self.assertEqual(set(id(v) for v in test.nonlinear_vars), set([id(m.x)]))
+        self.assertIs(test.nonlinear_expr, m.con.body)
+
+if __name__ == "__main__":
+    unittest.main()

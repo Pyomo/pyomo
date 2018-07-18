@@ -134,10 +134,11 @@ class _staticvariable(IVariable):
     ub = None
     fixed = False
     stale = False
-    __slots__ = ("value","_parent")
+    __slots__ = ("value","_parent","_storage_key")
     def __init__(self):
         self.value = None
         self._parent = None
+        self._storage_key = None
 
 def build_staticvariable():
     """Build a static variable with no references to
@@ -308,7 +309,7 @@ def build_linear_constraint_list():
 def build_matrix_constraint():
     """Build a constraint_list with no references to external
     objects so its size can be computed."""
-    return matrix_constraint(A, rhs=b, variable_order=X_kernel)
+    return matrix_constraint(A, rhs=b, x=X_kernel)
 
 def build_Block():
     """Build a Block with a few components."""

@@ -1,0 +1,3 @@
+param N := 640;
+param M := 640;
+param P := 1;
