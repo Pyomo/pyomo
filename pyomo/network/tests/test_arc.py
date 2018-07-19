@@ -1163,12 +1163,7 @@ class TestArc(unittest.TestCase):
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
                 None :  None :  None :  None : False :  True :  Reals
 
-        6 Constraint Declarations
-            port_flow_bal : Size=3, Index=comp, Active=True
-                Key : Lower : Body                                                                                                         : Upper : Active
-                  a :   0.0 : stream7_expanded.flow[a] + stream8_expanded.flow[a] - (stream9_expanded.flow[a] + stream10_expanded.flow[a]) :   0.0 :   True
-                  b :   0.0 : stream7_expanded.flow[b] + stream8_expanded.flow[b] - (stream9_expanded.flow[b] + stream10_expanded.flow[b]) :   0.0 :   True
-                  c :   0.0 : stream7_expanded.flow[c] + stream8_expanded.flow[c] - (stream9_expanded.flow[c] + stream10_expanded.flow[c]) :   0.0 :   True
+        4 Constraint Declarations
             port_flow_insum : Size=3, Index=comp, Active=True
                 Key : Lower : Body                                                                : Upper : Active
                   a :   0.0 : stream7_expanded.flow[a] + stream8_expanded.flow[a] - multi.flow[a] :   0.0 :   True
@@ -1179,9 +1174,6 @@ class TestArc(unittest.TestCase):
                   a :   0.0 : stream9_expanded.flow[a] + stream10_expanded.flow[a] - multi.flow[a] :   0.0 :   True
                   b :   0.0 : stream9_expanded.flow[b] + stream10_expanded.flow[b] - multi.flow[b] :   0.0 :   True
                   c :   0.0 : stream9_expanded.flow[c] + stream10_expanded.flow[c] - multi.flow[c] :   0.0 :   True
-            port_mass_bal : Size=1, Index=None, Active=True
-                Key  : Lower : Body                                                                                             : Upper : Active
-                None :   0.0 : stream7_expanded.mass + stream8_expanded.mass - (stream9_expanded.mass + stream10_expanded.mass) :   0.0 :   True
             port_mass_insum : Size=1, Index=None, Active=True
                 Key  : Lower : Body                                                       : Upper : Active
                 None :   0.0 : stream7_expanded.mass + stream8_expanded.mass - multi.mass :   0.0 :   True
@@ -1196,7 +1188,7 @@ class TestArc(unittest.TestCase):
                      : mass :    1 : multi.mass
                      : temp :    1 : multi.temp
 
-        10 Declarations: flow mass temp port port_flow_outsum port_flow_insum port_flow_bal port_mass_outsum port_mass_insum port_mass_bal
+        8 Declarations: flow mass temp port port_flow_outsum port_flow_insum port_mass_outsum port_mass_insum
     node1 : Size=1, Index=None, Active=True
         3 Var Declarations
             flow : Size=3, Index=comp
