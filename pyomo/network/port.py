@@ -423,18 +423,6 @@ class Port(IndexedComponent):
         out_vars = Port._Split(port, name, index_set, write_var_sum)
         in_vars = Port._Combine(port, name, index_set)
 
-        if len(in_vars) and len(out_vars):
-            # Create balance constraint: sum of in == sum of out
-            cname = unique_component_name(port_parent,
-                "%s_%s_bal" % (alphanum_label_from_name(port.local_name), name))
-            def rule(m, *args):
-                if len(args) == 0:
-                    args = None
-                return (sum(evar[args] for evar in in_vars) ==
-                        sum(evar[args] for evar in out_vars))
-            con = Constraint(index_set, rule=rule)
-            port_parent.add_component(cname, con)
-
     def _Combine(port, name, index_set):
         port_parent = port.parent_block()
         var = port.vars[name]
