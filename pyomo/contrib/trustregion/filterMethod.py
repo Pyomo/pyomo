@@ -1,5 +1,5 @@
 from pyomo.contrib.trustregion.param import *
-
+from pyomo.util.config import ConfigBlock
 
 class FilterElement:
 
@@ -8,9 +8,11 @@ class FilterElement:
         self.infeasible = infeasible
 
     def compare(self, x):
-        if (x.objective >= self.objective and x.infeasible >= self.infeasible):
+        if (x.objective >= self.objective and
+            x.infeasible >= self.infeasible):
             return -1
-        if (x.objective <= self.objective and x.infeasible <= self.infeasible):
+        if (x.objective <= self.objective and
+            x.infeasible <= self.infeasible):
             return 1
         return 0
 
@@ -28,7 +30,7 @@ class Filter:
         self.filteR.append(x)
 
     def checkAcceptable(self, x):
-        if (x.infeasible > THETA_MAX):
+        if x.infeasible > CONFIG.theta_max:
             return False
         for i in self.filteR:
             if (i.compare(x) == -1):
