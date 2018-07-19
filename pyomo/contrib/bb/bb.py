@@ -1,4 +1,3 @@
-
 __all__ = ['BBSolver', 'BranchAndBound']
 
 import itertools
@@ -33,11 +32,13 @@ class PriorityQueue(object):
         return heappop(self.pq)[2]
 
     def prune(self, cutoff):
+
         val = self.sense*cutoff
         i = len(self.pq) - 1
         if i<0:
             return
-        k = i//2
+        k = (i+1)//2
+
         work = []
         #
         # Check all leaves
@@ -51,18 +52,19 @@ class PriorityQueue(object):
         #
         # Check all parents
         #
-        while len(work) > 0:
+
+        while (len(work) > 0):
             i = work.pop(0)
-            if self.pq[i][0] >= val:
+            if (i <= len(self.pq) - 1)  and (i >= 0) and (self.pq[i][0] >= val):
                 self._remove(i)
                 # Add parents to the work list
                 work.append( (i + 1)//2 - 1 )
-            i -= 1
-            
+
     def _remove(self, k):
         'Mark an existing task as None.  Raise KeyError if not found.'
         self.pq[k] = self.pq.pop()
         heapify(self.pq)
+
 
 
 class BBSolver(object):
@@ -114,6 +116,7 @@ class SerialBBSolver(BBSolver):
                           + str(incumbent_value) + " bnd=" + str(subproblem.bound))
 
             bound = subproblem.compute_bound()
+            # print("raw bound: %f" % bound)
             nbounded += 1
             if sense*bound <= sense*incumbent_value:   # TOLERANCE
                 #
@@ -137,6 +140,7 @@ class SerialBBSolver(BBSolver):
         #
         # Save information and return
         #
+
         run_time = clock() - start_time
         print(str(nbounded) + " subproblems bounded")
         print("Run time " + str(run_time) + " seconds")
@@ -147,7 +151,7 @@ class SerialBBSolver(BBSolver):
 
 class BranchAndBound(object):
 
-    __slots__ = ('sense', 'context', 'bound', 
+    __slots__ = ('sense', 'context', 'bound',
                  'solution', 'solution_value')
 
     def __init__(self, context, sense):
@@ -187,7 +191,7 @@ class BranchAndBound(object):
 
     def separate(self):
         """
-        Perform computations needed to setup the 
+        Perform computations needed to setup the
         construction of child subproblems.
 
         Return:
@@ -200,11 +204,11 @@ class BranchAndBound(object):
         Return True if this is a terminal subproblem.
         """
         raise RuntimeError("terminal method is undefined.")
-   
-    def get_solution(self): 
+
+    def get_solution(self):
         """
         Return a solution, if we can find one easily.
-       
+
         If no solution is available, then return (None, None).
         Otherwise, return (value, solution).
         """
@@ -222,4 +226,3 @@ class BranchAndBound(object):
         An auxilliary function that prints a solution.
         """
         print(solution)
-
