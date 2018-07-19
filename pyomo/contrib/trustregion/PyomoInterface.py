@@ -1,6 +1,8 @@
+import sys
 import os
 import numpy as np
 from pyutilib.math import infinity
+from pyutilib.services import TempfileManager
 from pyomo.common.modeling import randint, unique_component_name
 from pyomo.core import Block, Var, Param, Set, VarList, ConstraintList, Constraint, Objective, RangeSet, value, ConcreteModel, Reals, sqrt, minimize, maximize
 from pyomo.core.expr import current as EXPR
@@ -12,6 +14,7 @@ from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
 from pyomo.contrib.trustregion.GeometryGenerator import (
     generate_quadratic_rom_geometry
 )
+from pyomo.contrib.trustregion.readgjh import *
 from pyomo.contrib.trustregion.helper import *
 
 class ROMType:
@@ -27,13 +30,22 @@ class ReplaceEFVisitor(EXPR.ExpressionReplacementVisitor):
         self.efSet = efSet
 
     def visit(self, node, values):
+        
+        sys.stdout.write('visit: \n  node = %s\n' % node)
+        for i in range(len(values)):
+            sys.stdout.write('  values[%d] = %s\n' % (i,values[i]))
+        
         if node.__class__ is not EXPR.ExternalFunctionExpression:
+            sys.stdout.write('  node not ExternalFunctionExpression\n')
             return node
         if id(node._fcn) not in self.efSet:
+            sys.stdout.write('  node not in efSet\n')
             return node
         # At this point we know this is an ExternalFunctionExpression
         # node that we want to replace with an auliliary variable (y)
         new_args = []
+        fixed_vars = []
+        fixed_yn = []
         seen = ComponentSet()
         # TODO: support more than PythonCallbackFunctions
         assert isinstance(node._fcn, PythonCallbackFunction)
@@ -48,12 +60,15 @@ class ReplaceEFVisitor(EXPR.ExpressionReplacementVisitor):
         # things later; i.e., accessing the private _fcn attribute
         # below).
         for arg in list(values)[1:]:
-            if type(arg) in nonpyomo_leaf_types or arg.is_fixed():
-                # We currently do not allow constants or parameters for
+            
+            sys.stdout.write('    %s:  node is a PythonCallbackFuction\n' % arg)
+            if type(arg) in nonpyomo_leaf_types:
+                # We currently do not allow parameters for
                 # the external functions.
+                sys.stdout.write('  type is %s' % type(arg))
                 raise RuntimeError(
                     "TrustRegion does not support black boxes with "
-                    "constant or parameter inputs\n\tExpression: %s"
+                    "parameter inputs\n\tExpression: %s"
                     % (node,) )
             if arg.is_expression_type():
                 # All expressions (including simple linear expressions)
@@ -64,18 +79,32 @@ class ReplaceEFVisitor(EXPR.ExpressionReplacementVisitor):
                 _x.set_value( value(arg) )
                 self.trf.conset.add(_x == arg)
                 new_args.append(_x)
+                sys.stdout.write('    %s:  replacing expression with %s\n' % (arg, value(arg)))
             else:
                 # The only thing left is bare variables: check for duplicates.
+                sys.stdout.write('     arg = %s\n' % arg)
                 if arg in seen:
                     raise RuntimeError(
                         "TrustRegion does not support black boxes with "
                         "duplicate input arguments\n\tExpression: %s"
                         % (node,) )
                 seen.add(arg)
+                if arg.is_fixed():
+                    sys.stdout.write('    arg is fixed\n')
+                    fixed_vars.append(arg)
+                    fixed_yn.append(True)
+                else:
+                    fixed_yn.append(False)
                 new_args.append(arg)
+        for p in range(len(new_args)):
+            sys.stdout.write('new_args[%d]: %s\n' % (p,new_args[p]))
+        for p in range(len(fixed_vars)):
+            sys.stdout.write('fixed_vars:[%d]: %s\n' % (p, fixed_vars[p]))
         _y = self.trf.y.add()
         self.trf.external_fcns.append(node)
         self.trf.exfn_xvars.append(new_args)
+        self.trf.exfn_fixed_vars.append(fixed_vars)
+        self.trf.exfn_fixed_yn.append(fixed_yn)
         return _y
 
 class PyomoInterface:
@@ -94,6 +123,7 @@ class PyomoInterface:
 
     '''
 
+    TempfileManager.tempdir = "."
     solver = 'ipopt'
     solver_io = 'nl'
     stream_solver = False # True prints solver output to screen
@@ -164,6 +194,8 @@ class PyomoInterface:
         TRF.conset = ConstraintList()
         TRF.external_fcns = []
         TRF.exfn_xvars = []
+        TRF.exfn_fixed_vars = []
+        TRF.exfn_fixed_yn = []
 
         # TODO: Copy constraints onto block so that transformation can be reversed.
 
@@ -198,15 +230,45 @@ class PyomoInterface:
         # TODO: build dict for exfn_xvars
         # assume it is not bottleneck of the code
         self.exfn_xvars_ind = []
+        self.exfn_fixed_xvars_ind = []
         for varss in TRF.exfn_xvars:
+            sys.stdout.write('varss [')
+            for p in range(len(varss)):
+                sys.stdout.write('%s ' % varss[p])
+            sys.stdout.write(']')
             listtmp = []
+            fixedtmp = []
             for var in varss:
+                sys.stdout.write('  var: %s' % var)
                 for i in range(len(TRF.xvars)):
                     if(id(var)==id(TRF.xvars[i])):
                         listtmp.append(i)
+                        if (TRF.xvars[i].is_fixed()):
+                            fixedtmp.append(i)
+                        sys.stdout.write('    listtmp:')
+                        sys.stdout.write(' '.join(str(x) for x in listtmp))
+                        sys.stdout.write('\n    fixedtmp:')
+                        sys.stdout.write(' '.join(str(x) for x in fixedtmp))
                         break
 
             self.exfn_xvars_ind.append(listtmp)
+            self.exfn_fixed_xvars_ind.append(fixedtmp)
+        
+        sys.stdout.write('\nTRF:')
+        for i in range(len(TRF.xvars)):
+            sys.stdout.write('  xvars[%d] = %s' % (i,TRF.xvars[i]))
+        for i in range(len(TRF.zvars)):
+            sys.stdout.write('  zvars[%d] = %s' % (i, TRF.zvars[i]))
+        for i in range(len(TRF.external_fcns)):
+            sys.stdout.write('  external_fcns[%d] = %s'% (i, TRF.external_fcns[i]))
+        for i in range(len(TRF.exfn_xvars)):
+            for j in range(len(TRF.exfn_xvars[i])):
+                sys.stdout.write('  exfn_xvars[%d][%d] = %s' % (i, j, TRF.exfn_xvars[i][j]))
+        for i in range(len(TRF.exfn_fixed_vars)):
+            for j in range(len(TRF.exfn_fixed_vars[i])):
+                sys.stdout.write('  fixed_vars[%d][%d] = %s' % (i, j, TRF.exfn_fixed_vars[i][j]))
+        sys.stdout.write('  exfn_xvars_ind:' % self.exfn_xvars_ind)
+        sys.stdout.write('  exfn_fixed_xvars_ind:' % self.exfn_fixed_xvars_ind)
 
         return TRF
 
@@ -471,9 +533,12 @@ class PyomoInterface:
         self.deactiveExtraConObj()
         self.activateRomCons(x, rom_params)
 
-        optGJH = SolverFactory('contrib.gjh')
-        optGJH.solve(model, tee=False, symbolic_solver_labels=True)
-        g, J, varlist, conlist = model._gjh_info
+        optGJH = SolverFactory('gjh', solver_io='nl')
+
+        optGJH.solve(
+            model, keepfiles=True, tee=False, symbolic_solver_labels=True)
+
+        g, J, varlist, conlist = readgjh()
 
         l = ConcreteModel()
         l.v = Var(varlist, domain=Reals)
@@ -581,16 +646,28 @@ class PyomoInterface:
 
                 # Check if it works with Ampl
                 fcn  =  self.TRF.external_fcns[i]._fcn
-                values = [];
+                values = []
+                not_fixed = []
                 for j in self.exfn_xvars_ind[i]:
                     values.append(x[j])
-
+                    if j in self.exfn_fixed_xvars_ind[i]:
+                        not_fixed.append(False)
+                    else:
+                        not_fixed.append(True)
+                # print values
+                print('values:', values)
+                print('not_fixed:', not_fixed)
                 for j in range(0, len(values)):
                     radius = radius_base # * scale[j]
-                    values[j] = values[j] + radius
-                    y2 = fcn._fcn(*values)
-                    rom_params[i].append((y2 - y1[i]) / radius)
-                    values[j] = values[j] - radius
+                    if not_fixed[j]:
+                        values[j] = values[j] + radius
+                        print('notfixedvalue+radius:', values)
+                        y2 = fcn._fcn(*values)
+                        rom_params[i].append((y2 - y1[i]) / radius)
+                        values[j] = values[j] - radius
+                        print('notfixedvalue-radius:', values)
+                    print('values:', values)
+                    sys.stdout.write('\n')
 
         elif(self.romtype==ROMType.quadratic):
             #Quad ROM
