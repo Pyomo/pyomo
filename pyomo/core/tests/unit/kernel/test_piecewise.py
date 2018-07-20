@@ -9,8 +9,9 @@ from pyomo.core.tests.unit.kernel.test_list_container import \
     _TestActiveListContainerBase
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
-     ICategorizedObjectContainer,
-     IHeterogeneousContainer)
+     ICategorizedObjectContainer)
+from pyomo.core.kernel.heterogeneous_container import \
+    IHeterogeneousContainer
 from pyomo.core.kernel.block import (IBlock,
                                      block,
                                      block_dict,

@@ -17,7 +17,7 @@ except:                                           #pragma:nocover
     from collections import Sequence as _Sequence
     from collections import Set as _Set
 
-from pyomo.core.kernel.base import \
+from pyomo.core.kernel.homogeneous_container import \
     IHomogeneousContainer
 
 from six.moves import xrange as range

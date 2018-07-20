@@ -10,8 +10,9 @@ from pyomo.core.tests.unit.kernel.test_list_container import \
     _TestActiveListContainerBase
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
-     ICategorizedObjectContainer,
-     IHomogeneousContainer)
+     ICategorizedObjectContainer)
+from pyomo.core.kernel.homogeneous_container import \
+    IHomogeneousContainer
 from pyomo.core.kernel.tuple_container import TupleContainer
 from pyomo.core.kernel.constraint import (IConstraint,
                                           constraint,

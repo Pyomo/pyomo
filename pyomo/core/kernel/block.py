@@ -24,9 +24,10 @@ else:
 
 from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.kernel.base import \
-    (IHeterogeneousContainer,
-     _no_ctype,
+    (_no_ctype,
      _convert_ctype)
+from pyomo.core.kernel.heterogeneous_container import \
+    IHeterogeneousContainer
 from pyomo.core.kernel.container_utils import \
     define_simple_containers
 

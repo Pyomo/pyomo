@@ -16,8 +16,9 @@ import pyomo.kernel as pmo
 from pyomo.common.log import LoggingIntercept
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
-     ICategorizedObjectContainer,
-     IHomogeneousContainer)
+     ICategorizedObjectContainer)
+from pyomo.core.kernel.homogeneous_container import \
+    IHomogeneousContainer
 from pyomo.core.kernel.list_container import ListContainer
 from pyomo.core.kernel.block import (IBlock,
                                      block,

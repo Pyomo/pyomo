@@ -28,7 +28,7 @@ except:                                           #pragma:nocover
     from collections import MutableMapping as _MutableMapping
     from collections import Mapping as _Mapping
 
-from pyomo.core.kernel.base import \
+from pyomo.core.kernel.homogeneous_container import \
     IHomogeneousContainer
 
 import six

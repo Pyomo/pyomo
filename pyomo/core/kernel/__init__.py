@@ -11,6 +11,8 @@
 from pyomo.core.expr import *
 import pyomo.core.kernel.register_numpy_types
 import pyomo.core.kernel.base
+import pyomo.core.kernel.homogeneous_container
+import pyomo.core.kernel.heterogeneous_container
 import pyomo.core.kernel.component_map
 import pyomo.core.kernel.component_set
 import pyomo.core.kernel.variable

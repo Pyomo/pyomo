@@ -168,7 +168,7 @@ del pyomo
 # Ducktyping to work with a solver interfaces. Ideally,
 # everything below here could be deleted one day.
 #
-from pyomo.core.kernel.base import IHeterogeneousContainer
+from pyomo.core.kernel.heterogeneous_container import IHeterogeneousContainer
 def _component_data_objects(self, *args, **kwds):
     # this is not yet handled
     kwds.pop('sort', None)

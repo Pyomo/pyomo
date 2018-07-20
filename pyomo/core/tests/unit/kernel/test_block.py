@@ -18,8 +18,9 @@ from pyomo.core.tests.unit.kernel.test_list_container import \
     _TestActiveListContainerBase
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
-     ICategorizedObjectContainer,
-     IHeterogeneousContainer)
+     ICategorizedObjectContainer)
+from pyomo.core.kernel.heterogeneous_container import \
+    IHeterogeneousContainer
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.suffix import suffix
 from pyomo.core.kernel.constraint import (IConstraint,
