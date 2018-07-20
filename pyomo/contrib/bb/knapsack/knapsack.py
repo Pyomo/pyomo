@@ -1,5 +1,5 @@
 
-from bb import BranchAndBound
+from pyomo.contrib.bb import BranchAndBound
 import re
 import copy
 import math
