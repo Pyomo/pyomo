@@ -34,6 +34,7 @@ class Bilinear_Transformation(Transformation):
         # TODO: This data should be stored differently.  We cannot nest this transformation with itself
         if getattr(instance, 'bilinear_data_', None) is None:
             instance.bilinear_data_ = Block()
+            instance.bilinear_data_.cache = {}
             instance.bilinear_data_.vlist = VarList()
             instance.bilinear_data_.vlist_boolean = []
             instance.bilinear_data_.IDX = Set()
@@ -86,47 +87,53 @@ class Bilinear_Transformation(Transformation):
             for vars_, coef_ in zip(terms.quadratic_vars, terms.quadratic_coefs):
                 #
                 if isinstance(vars_[0].domain, BooleanSet):
-                    instance.bilinear_data_.vlist_boolean.append(vars_[0])
-                    v = instance.bilinear_data_.vlist.add()
-                    bounds = vars_[1].bounds
-                    v.setlb(bounds[0])
-                    v.setub(bounds[1])
-                    id_ = len(instance.bilinear_data_.vlist)
-                    instance.bilinear_data_.IDX.add(id_)
-                    # First disjunct
-                    d0 = instance.bilinear_data_.disjuncts_[id_,0]
-                    d0.c1 = Constraint(expr=vars_[0] == 1)
-                    d0.c2 = Constraint(expr=v == coef_*vars_[1])
-                    # Second disjunct
-                    d1 = instance.bilinear_data_.disjuncts_[id_,1]
-                    d1.c1 = Constraint(expr=vars_[0] == 0)
-                    d1.c2 = Constraint(expr=v == 0)
-                    # Disjunction
-                    instance.bilinear_data_.disjunction_data[id_] = [instance.bilinear_data_.disjuncts_[id_,0], instance.bilinear_data_.disjuncts_[id_,1]]
-                    instance.bilinear_data_.disjunction_data[id_] = [instance.bilinear_data_.disjuncts_[id_,0], instance.bilinear_data_.disjuncts_[id_,1]]
+                    v = instance.bilinear_data_.cache.get( (id(vars_[0]),id(vars_[1])), None )
+                    if v is None:
+                        instance.bilinear_data_.vlist_boolean.append(vars_[0])
+                        v = instance.bilinear_data_.vlist.add()
+                        instance.bilinear_data_.cache[id(vars_[0]), id(vars_[1])] = v
+                        bounds = vars_[1].bounds
+                        v.setlb(bounds[0])
+                        v.setub(bounds[1])
+                        id_ = len(instance.bilinear_data_.vlist)
+                        instance.bilinear_data_.IDX.add(id_)
+                        # First disjunct
+                        d0 = instance.bilinear_data_.disjuncts_[id_,0]
+                        d0.c1 = Constraint(expr=vars_[0] == 1)
+                        d0.c2 = Constraint(expr=v == vars_[1])
+                        # Second disjunct
+                        d1 = instance.bilinear_data_.disjuncts_[id_,1]
+                        d1.c1 = Constraint(expr=vars_[0] == 0)
+                        d1.c2 = Constraint(expr=v == 0)
+                        # Disjunction
+                        instance.bilinear_data_.disjunction_data[id_] = [instance.bilinear_data_.disjuncts_[id_,0], instance.bilinear_data_.disjuncts_[id_,1]]
+                        instance.bilinear_data_.disjunction_data[id_] = [instance.bilinear_data_.disjuncts_[id_,0], instance.bilinear_data_.disjuncts_[id_,1]]
                     # The disjunctive variable is the expression
-                    e += v
+                    e += coef_*v
                 #
                 elif isinstance(vars_[1].domain, BooleanSet):
-                    instance.bilinear_data_.vlist_boolean.append(vars_[1])
-                    v = instance.bilinear_data_.vlist.add()
-                    bounds = vars_[0].bounds
-                    v.setlb(bounds[0])
-                    v.setub(bounds[1])
-                    id_ = len(instance.bilinear_data_.vlist)
-                    instance.bilinear_data_.IDX.add(id_)
-                    # First disjunct
-                    d0 = instance.bilinear_data_.disjuncts_[id_,0]
-                    d0.c1 = Constraint(expr=vars_[1] == 1)
-                    d0.c2 = Constraint(expr=v == coef_*vars_[0])
-                    # Second disjunct
-                    d1 = instance.bilinear_data_.disjuncts_[id_,1]
-                    d1.c1 = Constraint(expr=vars_[1] == 0)
-                    d1.c2 = Constraint(expr=v == 0)
-                    # Disjunction
-                    instance.bilinear_data_.disjunction_data[id_] = [instance.bilinear_data_.disjuncts_[id_,0], instance.bilinear_data_.disjuncts_[id_,1]]
+                    v = instance.bilinear_data_.cache.get( (id(vars_[1]),id(vars_[0])), None )
+                    if v is None:
+                        instance.bilinear_data_.vlist_boolean.append(vars_[1])
+                        v = instance.bilinear_data_.vlist.add()
+                        instance.bilinear_data_.cache[id(vars_[1]), id(vars_[0])] = v
+                        bounds = vars_[0].bounds
+                        v.setlb(bounds[0])
+                        v.setub(bounds[1])
+                        id_ = len(instance.bilinear_data_.vlist)
+                        instance.bilinear_data_.IDX.add(id_)
+                        # First disjunct
+                        d0 = instance.bilinear_data_.disjuncts_[id_,0]
+                        d0.c1 = Constraint(expr=vars_[1] == 1)
+                        d0.c2 = Constraint(expr=v == vars_[0])
+                        # Second disjunct
+                        d1 = instance.bilinear_data_.disjuncts_[id_,1]
+                        d1.c1 = Constraint(expr=vars_[1] == 0)
+                        d1.c2 = Constraint(expr=v == 0)
+                        # Disjunction
+                        instance.bilinear_data_.disjunction_data[id_] = [instance.bilinear_data_.disjuncts_[id_,0], instance.bilinear_data_.disjuncts_[id_,1]]
                     # The disjunctive variable is the expression
-                    e += v
+                    e += coef_*v
                 else:
                     # If neither variable is boolean, just reinsert the original bilinear term
                     e += coef_*vars_[0]*vars_[1]

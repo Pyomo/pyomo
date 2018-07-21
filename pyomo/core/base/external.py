@@ -18,7 +18,7 @@ from ctypes import (
     Structure, POINTER, CFUNCTYPE, cdll, byref,
     c_int, c_long, c_ulong, c_double, c_byte, c_char_p, c_void_p )
 
-from pyomo.core.expr.numvalue import as_numeric, native_types, NonNumericValue
+from pyomo.core.expr.numvalue import native_types, NonNumericValue
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import Component
 

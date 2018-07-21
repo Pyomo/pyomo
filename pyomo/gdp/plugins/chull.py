@@ -15,7 +15,7 @@ import textwrap
 import pyomo.common.config as cfg
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.plugin import alias
-from pyomo.core.expr.numvalue import native_numeric_types
+from pyomo.core.expr.numvalue import native_numeric_types, ZeroConstant
 from pyomo.core.expr import current as EXPR
 from pyomo.core import *
 from pyomo.core.base.block import SortComponents
@@ -28,7 +28,7 @@ from pyomo.core.base import Transformation
 from pyomo.core import (
     Block, Connector, Constraint, Param, Set, Suffix, Var,
     Expression, SortComponents, TraversalStrategy,
-    Any, Reals, NumericConstant, value
+    Any, Reals, value
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import clone_without_expression_components, target_list
@@ -588,9 +588,9 @@ class ConvexHull_Transformation(Transformation):
 
         var_substitute_map = dict((id(v), newV) for v, newV in
                                   iteritems(chull['disaggregatedVars']))
-        zero_substitute_map = dict((id(v), NumericConstant(0)) for v, newV in
+        zero_substitute_map = dict((id(v), ZeroConstant) for v, newV in
                                    iteritems(chull['disaggregatedVars']))
-        zero_substitute_map.update((id(v), NumericConstant(0))
+        zero_substitute_map.update((id(v), ZeroConstant)
                                    for v in localVars)
 
         # Transform each component within this disjunct

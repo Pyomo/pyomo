@@ -116,13 +116,12 @@ from pyomo.core.kernel.component_block import _block_base
 # this method in most places.
 def _component_map(self, *args, **kwds):
     import six
-    kwds['return_key'] = True
     kwds['include_all_parents'] = False
     traversal = self.preorder_traversal(*args, **kwds)
     d = {}
-    for key, obj in traversal:
+    for obj in traversal:
         if obj._is_component:
-            d[key] = obj
+            d[obj.storage_key] = obj
     return d
 _block_base.component_map = _component_map
 del _component_map
