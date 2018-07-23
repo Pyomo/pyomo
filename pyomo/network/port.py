@@ -78,30 +78,23 @@ class _PortData(ComponentData):
 
     def arcs(self, active=None):
         """A list of Arcs in which this Port is a member"""
-        if active is None:
-            return list(self._arcs)
-        tmp = []
-        for a in self._arcs:
-            if a.active == active:
-                tmp.append(a)
-        return tmp
+        return self._collect_ports(active, self._arcs)
 
     def sources(self, active=None):
         """A list of Arcs in which this Port is a destination"""
-        if active is None:
-            return list(self._sources)
-        tmp = []
-        for a in self._sources:
-            if a.active == active:
-                tmp.append(a)
-        return tmp
+        return self._collect_ports(active, self._sources)
 
     def dests(self, active=None):
         """A list of Arcs in which this Port is a source"""
+        return self._collect_ports(active, self._dests)
+
+    def _collect_ports(self, active, port_list):
+        # need to call the weakrefs
         if active is None:
-            return list(self._dests)
+            return [_a() for _a in port_list]
         tmp = []
-        for a in self._dests:
+        for _a in port_list:
+            a = _a()
             if a.active == active:
                 tmp.append(a)
         return tmp

@@ -121,20 +121,22 @@ class _ArcData(ActiveComponentData):
 
         if self.ports is not None:
             # we are reassigning this arc's values, clean up port lists
+            weakref_self = weakref_ref(self)
             for port in self.ports:
-                port._arcs.remove(self)
+                port._arcs.remove(weakref_self)
             if self._directed:
-                self.source._dests.remove(self)
-                self.destination._sources.remove(self)
+                self.source._dests.remove(weakref_self)
+                self.destination._sources.remove(weakref_self)
 
         self._ports = tuple(ports) if ports is not None \
             else (source, destination)
         self._directed = source is not None
+        weakref_self = weakref_ref(self)
         for port in self._ports:
-            port._arcs.append(self)
+            port._arcs.append(weakref_self)
         if self._directed:
-            source._dests.append(self)
-            destination._sources.append(self)
+            source._dests.append(weakref_self)
+            destination._sources.append(weakref_self)
 
     def _validate_ports(self, source, destination, ports):
         port_types = {SimplePort, _PortData}
