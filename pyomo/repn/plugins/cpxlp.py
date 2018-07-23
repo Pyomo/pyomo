@@ -795,6 +795,13 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                (id(vardata) not in self._referenced_variable_ids):
                 continue
 
+            name_to_output = variable_symbol_dictionary[id(vardata)]
+            if name_to_output == "e":
+                raise ValueError(
+                    "Attempting to write variable with name 'e' in a CPLEX LP "
+                    "formatted file will cause a parse failure due to confusion with "
+                    "numeric values expressed in scientific notation")
+
             # track the number of integer and binary variables, so we know whether
             # to output the general / binary sections below.
             if vardata.is_binary():
@@ -805,13 +812,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 raise TypeError("Invalid domain type for variable with name '%s'. "
                                 "Variable is not continuous, integer, or binary."
                                 % (vardata.name))
-
-            name_to_output = variable_symbol_dictionary[id(vardata)]
-            if name_to_output == "e":
-                raise ValueError(
-                    "Attempting to write variable with name 'e' in a CPLEX LP "
-                    "formatted file will cause a parse failure due to confusion with "
-                    "numeric values expressed in scientific notation")
 
             if vardata.fixed:
                 if not output_fixed_variable_bounds:
