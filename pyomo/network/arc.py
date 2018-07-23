@@ -29,11 +29,10 @@ logger = logging.getLogger('pyomo.network')
 def _iterable_to_dict(vals, directed, name):
     if type(vals) is not dict:
         # check that it's a two-member iterable
-        ports = None
-        if hasattr(vals, "__iter__"):
-            # note: every iterable except strings has an __iter__ attribute
-            # but strings are not valid anyway
+        try:
             ports = tuple(vals)
+        except TypeError:
+            ports = None
         if ports is None or len(ports) != 2:
             raise ValueError(
                 "Value for arc '%s' is not either a "
