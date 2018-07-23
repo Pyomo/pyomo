@@ -225,10 +225,53 @@ class TestArc(unittest.TestCase):
         self.assertEqual(len(m.p1.arcs()), 0)
         self.assertEqual(len(m.p2.arcs()), 0)
 
+        self.assertIn(m.a, m.p3.dests())
+        self.assertIn(m.a, m.p4.sources())
+        self.assertIn(m.a, m.p3.arcs())
+        self.assertIn(m.a, m.p4.arcs())
+
+        m.a = dict(ports=(m.p3, m.p4), directed=False)
+
         self.assertEqual(len(m.p3.dests()), 0)
         self.assertEqual(len(m.p4.sources()), 0)
         self.assertIn(m.a, m.p3.arcs())
         self.assertIn(m.a, m.p4.arcs())
+
+        m.a = (m.p1, m.p2)
+
+        self.assertEqual(len(m.p3.dests()), 0)
+        self.assertEqual(len(m.p4.sources()), 0)
+        self.assertEqual(len(m.p3.arcs()), 0)
+        self.assertEqual(len(m.p4.arcs()), 0)
+
+        self.assertEqual(len(m.p1.dests()), 0)
+        self.assertEqual(len(m.p2.sources()), 0)
+        self.assertIn(m.a, m.p1.arcs())
+        self.assertIn(m.a, m.p2.arcs())
+
+        m.a = dict(ports=(m.p3, m.p4), directed=True)
+
+        self.assertEqual(len(m.p1.dests()), 0)
+        self.assertEqual(len(m.p2.sources()), 0)
+        self.assertEqual(len(m.p1.arcs()), 0)
+        self.assertEqual(len(m.p2.arcs()), 0)
+
+        self.assertIn(m.a, m.p3.dests())
+        self.assertIn(m.a, m.p4.sources())
+        self.assertIn(m.a, m.p3.arcs())
+        self.assertIn(m.a, m.p4.arcs())
+
+        m.a = (m.p1, m.p2)
+
+        self.assertEqual(len(m.p3.dests()), 0)
+        self.assertEqual(len(m.p4.sources()), 0)
+        self.assertEqual(len(m.p3.arcs()), 0)
+        self.assertEqual(len(m.p4.arcs()), 0)
+
+        self.assertIn(m.a, m.p1.dests())
+        self.assertIn(m.a, m.p2.sources())
+        self.assertIn(m.a, m.p1.arcs())
+        self.assertIn(m.a, m.p2.arcs())
 
     def test_pprint(self):
         m = ConcreteModel()

@@ -26,6 +26,30 @@ import logging, sys
 logger = logging.getLogger('pyomo.network')
 
 
+def _iterable_to_dict(vals, directed, name):
+    if type(vals) is not dict:
+        # check that it's a two-member iterable
+        ports = None
+        if hasattr(vals, "__iter__"):
+            # note: every iterable except strings has an __iter__ attribute
+            # but strings are not valid anyway
+            ports = tuple(vals)
+        if ports is None or len(ports) != 2:
+            raise ValueError(
+                "Value for arc '%s' is not either a "
+                "dict or a two-member iterable." % name)
+        if directed:
+            source, destination = ports
+            ports = None
+        else:
+            source = destination = None
+        vals = dict(source=source, destination=destination,
+                    ports=ports, directed=directed)
+    elif "directed" not in vals:
+        vals["directed"] = directed
+    return vals
+
+
 class _ArcData(ActiveComponentData):
     """This class defines the data for a single Arc."""
 
@@ -108,14 +132,35 @@ class _ArcData(ActiveComponentData):
         If these values are being reassigned, note that the defaults
         are still None, so you may need to repass some attributes.
         """
+        vals = _iterable_to_dict(vals, self._directed, self.name)
+
         source = vals.pop("source", None)
         destination = vals.pop("destination", None)
         ports = vals.pop("ports", None)
+        directed = vals.pop("directed", None)
 
         if len(vals):
             raise ValueError(
-                "set_value passed unrecognized keyword arguments:\n\t" +
-                "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(vals)))
+                "set_value passed unrecognized keywords in val:\n\t" +
+                "\n\t".join("%s = %s" % (k, v) for k, v in iteritems(vals)))
+
+        if directed is not None:
+            if source is None and destination is None:
+                if directed and ports is not None:
+                    # implicitly directed ports tuple, transfer to src and dest
+                    try:
+                        source, destination = ports
+                        ports = None
+                    except:
+                        raise ValueError(
+                            "Failed to unpack 'ports' argument of arc '%s'. "
+                            "Argument must be a 2-member tuple or list."
+                            % self.name)
+            elif not directed:
+                # throw an error if they gave an inconsistent directed value
+                raise ValueError(
+                    "Passed False value for 'directed' for arc '%s', but "
+                    "specified source or destination." % self.name)
 
         self._validate_ports(source, destination, ports)
 
@@ -145,8 +190,7 @@ class _ArcData(ActiveComponentData):
                 raise ValueError(msg +
                     "cannot specify 'source' or 'destination' "
                     "when using 'ports' argument.")
-            if (type(ports) not in (list, tuple) or
-                len(ports) != 2):
+            if (type(ports) not in (list, tuple) or len(ports) != 2):
                 raise ValueError(msg +
                     "argument 'ports' must be list or tuple "
                     "containing exactly 2 Ports.")
@@ -223,7 +267,7 @@ class Arc(ActiveIndexedComponent):
         source = kwds.pop("source", kwds.pop("src", None))
         destination = kwds.pop("destination", kwds.pop("dest", None))
         ports = kwds.pop("ports", None)
-        self._directed = kwds.pop("directed", None)
+        self._init_directed = kwds.pop("directed", None)
         self._rule = kwds.pop('rule', None)
         kwds.setdefault("ctype", Arc)
 
@@ -259,6 +303,7 @@ class Arc(ActiveIndexedComponent):
         if not self.is_indexed():
             if self._rule is None:
                 tmp = self._init_vals
+                tmp["directed"] = self._init_directed
             else:
                 try:
                     tmp = self._rule(self_parent)
@@ -269,7 +314,7 @@ class Arc(ActiveIndexedComponent):
                         "arc %s:\n%s: %s"
                         % (self.name, type(err).__name__, err))
                     raise
-            tmp = self._validate_init_vals(tmp)
+                tmp = _iterable_to_dict(tmp, self._init_directed, self.name)
             self._setitem_when_not_present(None, tmp)
         else:
             if self._init_vals is not None:
@@ -286,39 +331,9 @@ class Arc(ActiveIndexedComponent):
                         "arc %s with index %s:\n%s: %s"
                         % (self.name, str(idx), type(err).__name__, err))
                     raise
-                tmp = self._validate_init_vals(tmp)
+                tmp = _iterable_to_dict(tmp, self._init_directed, self.name)
                 self._setitem_when_not_present(idx, tmp)
         timer.report()
-
-    def _validate_init_vals(self, vals):
-        # returns dict version of vals if not already dict
-        if type(vals) is not dict:
-            # check that it's a two-member iterable
-            ports = None
-            if hasattr(vals, "__iter__"):
-                # note: every iterable except strings has an __iter__ attribute
-                # but strings are not valid anyway
-                ports = tuple(vals)
-            if ports is None or len(ports) != 2:
-                raise ValueError(
-                    "Arc rule for '%s' did not return either a "
-                    "dict or a two-member iterable." % self.name)
-            if self._directed:
-                vals = {"source": ports[0], "destination": ports[1]}
-            else:
-                vals = {"ports": ports}
-        elif self._directed is not None:
-            # if for some reason they specified directed, check it
-            s = vals.get("source", None)
-            d = vals.get("destination", None)
-            c = vals.get("ports", None)
-            if (((s is not None or d is not None) and not self._directed)
-                or (c is not None and self._directed)):
-                raise ValueError(
-                    "Passed incorrect value for 'directed' for arc "
-                    "'%s'. Value is set automatically when using keywords."
-                    % self.name)
-        return vals
 
     def _pprint(self):
         """Return data that will be printed for this component."""
