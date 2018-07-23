@@ -198,7 +198,16 @@ class TestPort(unittest.TestCase):
         m.p.add(m.x)
         self.assertTrue(m.p.is_binary())
 
+        m.p.add(-m.x, "foo")
+        self.assertTrue(m.p.is_binary())
+
         m.p.add(m.y)
+        self.assertFalse(m.p.is_binary())
+
+        m.p.remove('y')
+        self.assertTrue(m.p.is_binary())
+
+        m.p.add(-m.y, "bar")
         self.assertFalse(m.p.is_binary())
 
     def test_integer(self):
@@ -212,7 +221,16 @@ class TestPort(unittest.TestCase):
         m.p.add(m.x)
         self.assertTrue(m.p.is_integer())
 
+        m.p.add(-m.x, "foo")
+        self.assertTrue(m.p.is_integer())
+
         m.p.add(m.y)
+        self.assertFalse(m.p.is_integer())
+
+        m.p.remove('y')
+        self.assertTrue(m.p.is_integer())
+
+        m.p.add(-m.y, "bar")
         self.assertFalse(m.p.is_integer())
 
     def test_continuous(self):
@@ -226,7 +244,16 @@ class TestPort(unittest.TestCase):
         m.p.add(m.x)
         self.assertTrue(m.p.is_continuous())
 
+        m.p.add(-m.x, "foo")
+        self.assertTrue(m.p.is_continuous())
+
         m.p.add(m.y)
+        self.assertFalse(m.p.is_continuous())
+
+        m.p.remove('y')
+        self.assertTrue(m.p.is_continuous())
+
+        m.p.add(-m.y, "bar")
         self.assertFalse(m.p.is_continuous())
 
     def test_getattr(self):

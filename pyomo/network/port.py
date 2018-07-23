@@ -105,7 +105,7 @@ class _PortData(ComponentData):
 
     def polynomial_degree(self):
         ans = 0
-        for v in self._iter_vars():
+        for v in self.iter_vars():
             tmp = v.polynomial_degree()
             if tmp is None:
                 return None
@@ -114,20 +114,23 @@ class _PortData(ComponentData):
 
     def is_fixed(self):
         """Return True if all vars/expressions in the Port are fixed"""
-        return all(v.is_fixed() for v in self._iter_vars())
+        return all(v.is_fixed() for v in self.iter_vars())
 
     def is_potentially_variable(self):
         """Return True as ports may (should!) contain variables"""
         return True
 
     def is_binary(self):
-        return len(self) and all(v.is_binary() for v in self._iter_vars())
+        return len(self) and all(
+            v.is_binary() for v in self.iter_vars(expr_vars=True))
 
     def is_integer(self):
-        return len(self) and all(v.is_integer() for v in self._iter_vars())
+        return len(self) and all(
+            v.is_integer() for v in self.iter_vars(expr_vars=True))
 
     def is_continuous(self):
-        return len(self) and all(v.is_continuous() for v in self._iter_vars())
+        return len(self) and all(
+            v.is_continuous() for v in self.iter_vars(expr_vars=True))
 
     def add(self, var, name=None, rule=None, **kwds):
         """
@@ -173,19 +176,29 @@ class _PortData(ComponentData):
         Fix all variables in the port at their current values.
         For expressions, fix every variable in the expression.
         """
-        for v in self._iter_vars():
-            if v.is_expression_type():
-                for var in identify_variables(v, include_fixed=False):
-                    var.fix()
-            elif not v.is_fixed():
-                v.fix()
+        for v in self.iter_vars(expr_vars=True, fixed=False):
+            v.fix()
 
-    def _iter_vars(self):
-        for var in itervalues(self.vars):
-            if not hasattr(var, 'is_indexed') or not var.is_indexed():
-                yield var
+    def iter_vars(self, expr_vars=False, fixed=True):
+        """
+        Iterate through every member of the port, going through
+        the indices of indexed members.
+
+        If expr_vars, call identify_variables on expression type members.
+        If not fixed, exclude fixed variables/expressions.
+        """
+        for mem in itervalues(self.vars):
+            if not hasattr(mem, 'is_indexed') or not mem.is_indexed():
+                itr = (mem,)
             else:
-                for v in itervalues(var):
+                itr = itervalues(mem)
+            for v in itr:
+                if not fixed and v.is_fixed():
+                    continue
+                if v.is_expression_type() and expr_vars:
+                    for var in identify_variables(v, include_fixed=fixed):
+                        yield var
+                else:
                     yield v
 
     def set_split_fraction(self, arc, val, fix=True):
