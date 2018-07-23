@@ -76,7 +76,7 @@ class _ArcData(ActiveComponentData):
         # directed can be true before construction
         # so make sure ports is not None
         return self._ports[0] if (
-            self._directed is True and self._ports is not None
+            self._directed and self._ports is not None
             ) else None
 
     src = source
@@ -84,7 +84,7 @@ class _ArcData(ActiveComponentData):
     @property
     def destination(self):
         return self._ports[1] if (
-            self._directed is True and self._ports is not None
+            self._directed and self._ports is not None
             ) else None
 
     dest = destination
@@ -303,7 +303,7 @@ class Arc(ActiveIndexedComponent):
                 raise ValueError(
                     "Arc rule for '%s' did not return either a "
                     "dict or a two-member iterable." % self.name)
-            if self._directed is True:
+            if self._directed:
                 vals = {"source": ports[0], "destination": ports[1]}
             else:
                 vals = {"ports": ports}
@@ -312,8 +312,8 @@ class Arc(ActiveIndexedComponent):
             s = vals.get("source", None)
             d = vals.get("destination", None)
             c = vals.get("ports", None)
-            if (((s is not None or d is not None) and self._directed is False)
-                or (c is not None and self._directed is True)):
+            if (((s is not None or d is not None) and not self._directed)
+                or (c is not None and self._directed)):
                 raise ValueError(
                     "Passed incorrect value for 'directed' for arc "
                     "'%s'. Value is set automatically when using keywords."
