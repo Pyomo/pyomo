@@ -373,6 +373,7 @@ class Port(IndexedComponent):
                        ((k, v) for k, v in iteritems(self._data)),
                        ("Name", "Value"), _line_generator)
 
+    @staticmethod
     def Equality(port, name, index_set):
         """Arc Expansion procedure to generate simple equality constraints."""
         # Iterate over every arc off this port. Since this function will
@@ -380,6 +381,7 @@ class Port(IndexedComponent):
         for arc in port.arcs(active=True):
             Port._add_equality_constraint(arc, name, index_set)
 
+    @staticmethod
     def Extensive(port, name, index_set, write_var_sum=True):
         """
         Arc Expansion procedure for extensive variable properties.
@@ -429,6 +431,7 @@ class Port(IndexedComponent):
         out_vars = Port._Split(port, name, index_set, write_var_sum)
         in_vars = Port._Combine(port, name, index_set)
 
+    @staticmethod
     def _Combine(port, name, index_set):
         port_parent = port.parent_block()
         var = port.vars[name]
@@ -465,6 +468,7 @@ class Port(IndexedComponent):
 
         return in_vars
 
+    @staticmethod
     def _Split(port, name, index_set, write_var_sum=True):
         port_parent = port.parent_block()
         var = port.vars[name]
@@ -562,6 +566,7 @@ class Port(IndexedComponent):
 
         return out_vars
 
+    @staticmethod
     def _add_equality_constraint(arc, name, index_set):
         # This function will add the equality constraint if it doesn't exist.
         eblock = arc.expanded_block
@@ -578,6 +583,7 @@ class Port(IndexedComponent):
         con = Constraint(index_set, rule=rule)
         eblock.add_component(cname, con)
 
+    @staticmethod
     def _create_evar(member, name, eblock, index_set):
         # Name is same, conflicts are prevented by a check in Port.add.
         # The new var will mirror the original var and have same index set.
@@ -587,14 +593,6 @@ class Port(IndexedComponent):
         if evar is None:
             evar = replicate_var(member, name, eblock, index_set)
         return evar
-
-    # Python 2 compatibility
-    Equality = staticmethod(Equality)
-    Extensive = staticmethod(Extensive)
-    _Combine = staticmethod(_Combine)
-    _Split = staticmethod(_Split)
-    _add_equality_constraint = staticmethod(_add_equality_constraint)
-    _create_evar = staticmethod(_create_evar)
 
 
 class SimplePort(Port, _PortData):
