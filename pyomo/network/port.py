@@ -179,7 +179,7 @@ class _PortData(ComponentData):
         for v in self.iter_vars(expr_vars=True, fixed=False):
             v.fix()
 
-    def iter_vars(self, expr_vars=False, fixed=True):
+    def iter_vars(self, expr_vars=False, fixed=True, with_names=False):
         """
         Iterate through every member of the port, going through
         the indices of indexed members.
@@ -187,7 +187,7 @@ class _PortData(ComponentData):
         If expr_vars, call identify_variables on expression type members.
         If not fixed, exclude fixed variables/expressions.
         """
-        for mem in itervalues(self.vars):
+        for name, mem in iteritems(self.vars):
             if not mem.is_indexed():
                 itr = (mem,)
             else:
@@ -197,9 +197,15 @@ class _PortData(ComponentData):
                     continue
                 if v.is_expression_type() and expr_vars:
                     for var in identify_variables(v, include_fixed=fixed):
-                        yield var
+                        if with_names:
+                            yield name, var
+                        else:
+                            yield var
                 else:
-                    yield v
+                    if with_names:
+                        yield name, v
+                    else:
+                        yield v
 
     def set_split_fraction(self, arc, val, fix=True):
         """
