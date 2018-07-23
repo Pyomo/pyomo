@@ -10,7 +10,7 @@
 
 __all__ = [ 'Arc' ]
 
-from pyomo.network.port import (SimplePort, IndexedPort, _PortData)
+from pyomo.network.port import Port
 from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
     UnindexedComponent_set)
@@ -139,7 +139,6 @@ class _ArcData(ActiveComponentData):
             destination._sources.append(weakref_self)
 
     def _validate_ports(self, source, destination, ports):
-        port_types = {SimplePort, _PortData}
         msg = "Arc %s: " % self.name
         if ports is not None:
             if source is not None or destination is not None:
@@ -151,35 +150,37 @@ class _ArcData(ActiveComponentData):
                 raise ValueError(msg +
                     "argument 'ports' must be list or tuple "
                     "containing exactly 2 Ports.")
-            for c in ports:
-                if type(c) not in port_types:
-                    if type(c) is IndexedPort:
+            for p in ports:
+                try:
+                    if p.type() is not Port:
                         raise ValueError(msg +
-                            "found IndexedPort '%s' in 'ports', must "
-                            "use single Ports for Arc." % c.name)
+                            "found object '%s' in 'ports' not "
+                            "of type Port." % p.name)
+                    elif p.is_indexed():
+                        raise ValueError(msg +
+                            "found indexed Port '%s' in 'ports', must "
+                            "use single Ports for Arc." % p.name)
+                except AttributeError:
                     raise ValueError(msg +
                         "found object '%s' in 'ports' not "
-                        "of type Port." % str(c))
+                        "of type Port." % str(p))
         else:
             if source is None or destination is None:
                 raise ValueError(msg +
                     "must specify both 'source' and 'destination' "
                     "for directed Arc.")
-            if type(source) not in port_types:
-                if type(source) is IndexedPort:
+            for p, side in [(source, "source"), (destination, "destination")]:
+                try:
+                    if p.type() is not Port:
+                        raise ValueError(msg +
+                            "%s object '%s' not of type Port." % (p.name, side))
+                    elif p.is_indexed():
+                        raise ValueError(msg +
+                            "found indexed Port '%s' as %s, must use "
+                            "single Ports for Arc." % (source.name, side))
+                except AttributeError:
                     raise ValueError(msg +
-                        "found IndexedPort '%s' as source, must use "
-                        "single Ports for Arc." % source.name)
-                raise ValueError(msg +
-                    "source object '%s' not of type Port." % str(source))
-            if type(destination) not in port_types:
-                if type(destination) is IndexedPort:
-                    raise ValueError(msg +
-                        "found IndexedPort '%s' as destination, must use "
-                        "single Ports for Arc." % destination.name)
-                raise ValueError(msg +
-                    "destination object '%s' not of type Port."
-                    % str(destination))
+                        "%s object '%s' not of type Port." % (str(p), side))
 
 
 class Arc(ActiveIndexedComponent):
