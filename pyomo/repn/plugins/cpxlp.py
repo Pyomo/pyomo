@@ -795,6 +795,24 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                (id(vardata) not in self._referenced_variable_ids):
                 continue
 
+            name_to_output = variable_symbol_dictionary[id(vardata)]
+            if name_to_output == "e":
+                raise ValueError(
+                    "Attempting to write variable with name 'e' in a CPLEX LP "
+                    "formatted file will cause a parse failure due to confusion with "
+                    "numeric values expressed in scientific notation")
+
+            # track the number of integer and binary variables, so we know whether
+            # to output the general / binary sections below.
+            if vardata.is_binary():
+                binary_vars.append(name_to_output)
+            elif vardata.is_integer():
+                integer_vars.append(name_to_output)
+            elif not vardata.is_continuous():
+                raise TypeError("Invalid domain type for variable with name '%s'. "
+                                "Variable is not continuous, integer, or binary."
+                                % (vardata.name))
+
             if vardata.fixed:
                 if not output_fixed_variable_bounds:
                     raise ValueError(
@@ -808,45 +826,31 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     raise ValueError("Variable cannot be fixed to a value of None.")
                 vardata_lb = value(vardata.value)
                 vardata_ub = value(vardata.value)
+
+                output.append("   ")
+                output.append(lb_string_template
+                                      % (_no_negative_zero(vardata_lb)))
+                output.append(name_to_output)
+                output.append(ub_string_template
+                                      % (_no_negative_zero(vardata_ub)))
             else:
                 vardata_lb = _get_bound(vardata.lb)
                 vardata_ub = _get_bound(vardata.ub)
 
-            name_to_output = variable_symbol_dictionary[id(vardata)]
+                # Pyomo assumes that the default variable bounds are -inf and +inf
+                output.append("   ")
+                if vardata.has_lb():
+                    output.append(lb_string_template
+                                      % (_no_negative_zero(vardata_lb)))
+                else:
+                    output.append(" -inf <= ")
 
-            # track the number of integer and binary variables, so we know whether
-            # to output the general / binary sections below.
-            if vardata.is_binary():
-                binary_vars.append(name_to_output)
-            elif vardata.is_integer():
-                integer_vars.append(name_to_output)
-            elif not vardata.is_continuous():
-                raise TypeError("Invalid domain type for variable with name '%s'. "
-                                "Variable is not continuous, integer, or binary."
-                                % (vardata.name))
-
-            # in the CPLEX LP file format, the default variable
-            # bounds are 0 and +inf.  These bounds are in
-            # conflict with Pyomo, which assumes -inf and +inf
-            # (which we would argue is more rational).
-            output.append("   ")
-            if vardata.has_lb():
-                output.append(lb_string_template
-                                  % (_no_negative_zero(vardata_lb)))
-            else:
-                output.append(" -inf <= ")
-            if name_to_output == "e":
-                raise ValueError(
-                    "Attempting to write variable with name 'e' in a CPLEX LP "
-                    "formatted file will cause a parse failure due to confusion with "
-                    "numeric values expressed in scientific notation")
-
-            output.append(name_to_output)
-            if vardata.has_ub():
-                output.append(ub_string_template
-                                  % (_no_negative_zero(vardata_ub)))
-            else:
-                output.append(" <= +inf\n")
+                output.append(name_to_output)
+                if vardata.has_ub():
+                    output.append(ub_string_template
+                                      % (_no_negative_zero(vardata_ub)))
+                else:
+                    output.append(" <= +inf\n")
 
         if len(integer_vars) > 0:
 
