@@ -13,9 +13,7 @@ import os.path
 import re
 
 from pyomo.common.plugin import alias
-
-from pyomo.core.base.param import Param
-from pyomo.core.data.TableData import TableData
+from pyomo.dataportal import TableData
 
 
 class TextTable(TableData):
@@ -35,6 +33,8 @@ class TextTable(TableData):
             self.FILE.close()
 
     def read(self):
+        from pyomo.core.base.param import Param
+
         if not os.path.exists(self.filename):
             raise IOError("Cannot find file '%s'" % self.filename)
         self.FILE = open(self.filename, 'r')

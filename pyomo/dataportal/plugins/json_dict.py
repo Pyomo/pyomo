@@ -19,7 +19,7 @@ except ImportError:
 from pyutilib.misc import Options
 
 from pyomo.common.plugin import alias, Plugin, implements
-from pyomo.core.base.plugin import IDataManager
+from pyomo.dataportal.factory import IDataManager
 import six
 
 

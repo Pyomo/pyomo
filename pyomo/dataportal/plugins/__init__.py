@@ -8,10 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.plugin import PluginGlobals
-PluginGlobals.add_env("pyomo")
+def load():
+    import pyomo.dataportal.plugins.csv_table
+    import pyomo.dataportal.plugins.datacommands
+    import pyomo.dataportal.plugins.db_table
+    import pyomo.dataportal.plugins.json_dict
+    import pyomo.dataportal.plugins.sheet
+    import pyomo.dataportal.plugins.text
+    import pyomo.dataportal.plugins.xml_table
 
-from pyomo.repn.standard_repn import *
-from pyomo.repn.standard_aux import *
-
-PluginGlobals.pop_env()

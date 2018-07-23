@@ -10,14 +10,14 @@ from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel import ComponentMap, ComponentSet
 
 
-def add_outer_approximation_cuts(var_values, duals, solve_data, config):
+def add_outer_approximation_cuts(nlp_result, solve_data, config):
     """Add outer approximation cuts to the linear GDP model."""
     m = solve_data.linear_GDP
     GDPopt = m.GDPopt_utils
     sign_adjust = -1 if GDPopt.objective.sense == minimize else 1
 
     # copy values over
-    for var, val in zip(GDPopt.working_var_list, var_values):
+    for var, val in zip(GDPopt.working_var_list, nlp_result.var_values):
         if val is not None and not var.fixed:
             var.value = val
 
@@ -26,7 +26,8 @@ def add_outer_approximation_cuts(var_values, duals, solve_data, config):
 
     nonlinear_constraints = ComponentSet(GDPopt.working_nonlinear_constraints)
     counter = 0
-    for constr, dual_value in zip(GDPopt.working_constraints_list, duals):
+    for constr, dual_value in zip(GDPopt.working_constraints_list,
+                                  nlp_result.dual_values):
         if dual_value is None or constr not in nonlinear_constraints:
             continue
 

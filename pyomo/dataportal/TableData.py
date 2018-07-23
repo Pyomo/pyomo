@@ -12,14 +12,10 @@ __all__ = ['TableData']
 
 from six.moves import xrange
 
-from pyomo.common.plugin import Plugin, implements
 from pyutilib.misc import Options
-
-from pyomo.core.base import value
-from pyomo.core.base.plugin import IDataManager
-from pyomo.core.base.sets import Set
-from pyomo.core.base.param import Param
-from pyomo.core.data.process_data import _process_data
+from pyomo.common.plugin import Plugin, implements
+from pyomo.dataportal.factory import IDataManager
+from pyomo.dataportal.process_data import _process_data
 
 
 class TableData(Plugin):
@@ -114,6 +110,9 @@ class TableData(Plugin):
         self._info = None
 
     def _set_data(self, headers, rows):
+        from pyomo.core.base.sets import Set
+        from pyomo.core.base.param import Param
+
         header_index = []
         if self.options.select is None:
             for i in xrange(len(headers)):
@@ -223,6 +222,8 @@ class TableData(Plugin):
             raise ValueError(msg % self.options.format)
 
     def _get_table(self):
+        from pyomo.core.expr import value
+
         tmp = []
         if not self.options.columns is None:
             tmp.append(self.options.columns)

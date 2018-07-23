@@ -50,7 +50,7 @@ from pyomo.core.base.objective import Objective
 from pyomo.core.base.set_types import *
 from pyomo.core.base.suffix import active_import_suffix_generator
 from pyomo.core.base.indexed_component import IndexedComponent
-from pyomo.core.base.DataPortal import *
+from pyomo.dataportal import DataPortal
 from pyomo.core.base.plugin import *
 from pyomo.core.base.numvalue import *
 from pyomo.core.base.block import SimpleBlock
