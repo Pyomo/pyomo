@@ -229,7 +229,7 @@ class Arc(ActiveIndexedComponent):
 
         super(Arc, self).__init__(*args, **kwds)
 
-        if source is destination is ports is None:
+        if source is None and destination is None and ports is None:
             self._init_vals = None
         else:
             self._init_vals = dict(
