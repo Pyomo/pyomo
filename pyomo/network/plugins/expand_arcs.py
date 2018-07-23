@@ -135,7 +135,7 @@ class ExpandArcs(Transformation):
                     continue
                 # OK: New var, so add it to the reference list
                 _len = (
-                    -1 if not hasattr(v, 'is_indexed') or not v.is_indexed()
+                    -1 if not v.is_indexed()
                     else len(v))
                 ref[k] = (v, _len, p, p._rules[k][0])
 
@@ -169,7 +169,7 @@ class ExpandArcs(Transformation):
                         p_is_partial = True
                     continue
                 _len = (
-                    -1 if not hasattr(_v, 'is_indexed') or not _v.is_indexed()
+                    -1 if not _v.is_indexed()
                     else len(_v))
                 if (_len >= 0) ^ (v[1] >= 0):
                     raise ValueError(

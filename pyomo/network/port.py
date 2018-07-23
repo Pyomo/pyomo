@@ -188,7 +188,7 @@ class _PortData(ComponentData):
         If not fixed, exclude fixed variables/expressions.
         """
         for mem in itervalues(self.vars):
-            if not hasattr(mem, 'is_indexed') or not mem.is_indexed():
+            if not mem.is_indexed():
                 itr = (mem,)
             else:
                 itr = itervalues(mem)
@@ -331,7 +331,7 @@ class Port(IndexedComponent):
             for _k, _v in sorted(iteritems(v.vars)):
                 if _v is None:
                     _len = '-'
-                elif hasattr(_v, '__len__'):
+                elif _v.is_indexed():
                     _len = len(_v)
                 else:
                     _len = 1
@@ -362,7 +362,7 @@ class Port(IndexedComponent):
             for _k, _v in sorted(iteritems(v.vars)):
                 if _v is None:
                     _val = '-'
-                elif not hasattr(_v, 'is_indexed') or not _v.is_indexed():
+                elif not _v.is_indexed():
                     _val = str(value(_v))
                 else:
                     _val = "{%s}" % (
