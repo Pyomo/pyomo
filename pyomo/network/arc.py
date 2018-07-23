@@ -188,8 +188,8 @@ class Arc(ActiveIndexedComponent):
     Component used for connecting the members of two Port objects.
 
     Constructor arguments:
-        source          A single Port for a directed arc
-        destination     A single Port for a directed arc
+        source          A single Port for a directed arc. Aliases to src
+        destination     A single Port for a directed arc. Aliases to dest
         ports           A two-member list or tuple of single Ports
                             for an undirected arc
         directed        True if directed. Use along with rule to be able to
@@ -200,8 +200,10 @@ class Arc(ActiveIndexedComponent):
         name            A name for this component
 
     Public attributes
-        source          The source Port when directed, else None
-        destination     The destination Port when directed, else None
+        source          The source Port when directed, else None.
+                            Aliases to src
+        destination     The destination Port when directed, else None.
+                            Aliases to dest
         ports           A tuple containing both ports. If directed, this
                             is in the order (source, destination)
         directed        True if directed, False if not
