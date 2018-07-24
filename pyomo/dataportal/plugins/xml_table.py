@@ -15,8 +15,8 @@ except:
     import xml.etree.ElementTree as ET
 
 from pyomo.common.plugin import alias
-from pyomo.core.base.param import Param
-from pyomo.core.data.TableData import TableData
+from pyomo.dataportal import TableData
+
 
 class XMLTable(TableData):
 
@@ -33,6 +33,8 @@ class XMLTable(TableData):
         pass
 
     def read(self):
+        from pyomo.core.base.param import Param
+
         if not os.path.exists(self.filename):
             raise IOError("Cannot find file '%s'" % self.filename)
         #
