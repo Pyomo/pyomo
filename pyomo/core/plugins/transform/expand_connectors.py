@@ -14,7 +14,8 @@ logger = logging.getLogger('pyomo.core')
 from six import next, iteritems, itervalues
 
 from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel import ComponentMap, ComponentSet
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.base.plugin import alias
 from pyomo.core.base import Transformation, Connector, Constraint, \
     ConstraintList, Var, VarList, TraversalStrategy, SortComponents
