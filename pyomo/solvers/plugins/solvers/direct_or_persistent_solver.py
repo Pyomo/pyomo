@@ -10,7 +10,7 @@
 
 from pyomo.core.base.PyomoModel import Model
 from pyomo.core.base.block import Block, _BlockData
-from pyomo.core.kernel.component_block import IBlockStorage
+from pyomo.core.kernel.block import IBlock
 from pyomo.opt.base.solvers import OptSolver
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 import pyutilib.common
@@ -144,7 +144,7 @@ class DirectOrPersistentSolver(OptSolver):
         # If we ever only want to support the load_vars, load_duals, etc. methods, then this can be deleted.
         if self._save_results:
             self._smap_id = id(self._symbol_map)
-            if isinstance(self._pyomo_model, IBlockStorage):
+            if isinstance(self._pyomo_model, IBlock):
                 # BIG HACK (see pyomo.core.kernel write function)
                 if not hasattr(self._pyomo_model, "._symbol_maps"):
                     setattr(self._pyomo_model, "._symbol_maps", {})
@@ -173,7 +173,7 @@ class DirectOrPersistentSolver(OptSolver):
 
     """ This method should be implemented by subclasses."""
     def _set_instance(self, model, kwds={}):
-        if not isinstance(model, (Model, IBlockStorage, Block, _BlockData)):
+        if not isinstance(model, (Model, IBlock, Block, _BlockData)):
             msg = "The problem instance supplied to the {0} plugin " \
                   "'_presolve' method must be a Model or a Block".format(type(self))
             raise ValueError(msg)

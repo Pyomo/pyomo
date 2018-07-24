@@ -9,9 +9,9 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.expr.numvalue import *
-from pyomo.core.kernel import (ComponentMap,
-                               minimize,
-                               maximize)
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.objective import (minimize,
+                                         maximize)
 from pyomo.core.base.config import PyomoOptions
 
 from pyomo.core.base.expression import *

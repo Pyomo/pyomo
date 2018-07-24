@@ -23,10 +23,12 @@ from pyomo.opt.base.solvers import _extract_version
 import pyutilib.subprocess
 from pyutilib.misc import Options, quote_split
 
-from pyomo.core.kernel.component_block import IBlockStorage
+from pyomo.core.kernel.block import IBlock
+from pyomo.core.kernel.objective import IObjective
+from pyomo.core.kernel.variable import IVariable
 
 import pyomo.core.base.suffix
-import pyomo.core.kernel.component_suffix
+import pyomo.core.kernel.suffix
 
 from pyomo.opt.results import (SolverResults, SolverStatus, Solution,
     SolutionStatus, TerminationCondition, ProblemSense)
@@ -229,7 +231,7 @@ class GAMSDirect(_GAMSSolver):
         # model file will be written. The writer also passes this StringIO
         # back, but output_file is defined in advance for clarity.
         output_file = StringIO()
-        if isinstance(model, IBlockStorage):
+        if isinstance(model, IBlock):
             # Kernel blocks have slightly different write method
             smap_id = model.write(filename=output_file,
                                   format=ProblemFormat.gams,
@@ -307,9 +309,9 @@ class GAMSDirect(_GAMSSolver):
         ####################################################################
 
         # import suffixes must be on the top-level model
-        if isinstance(model, IBlockStorage):
+        if isinstance(model, IBlock):
             model_suffixes = list(comp.storage_key for comp \
-                                  in pyomo.core.kernel.component_suffix.\
+                                  in pyomo.core.kernel.suffix.\
                                   import_suffix_generator(model,
                                                           active=True,
                                                           descend_into=False))
@@ -449,11 +451,11 @@ class GAMSDirect(_GAMSSolver):
 
         for sym, ref in iteritems(symbolMap.bySymbol):
             obj = ref()
-            if isinstance(model, IBlockStorage):
+            if isinstance(model, IBlock):
                 # Kernel variables have no 'parent_component'
-                if obj.ctype is Objective:
+                if obj.ctype is IObjective:
                     soln.objective[sym] = {'Value': objctvval}
-                if obj.ctype is not Var:
+                if obj.ctype is not IVariable:
                     continue
             else:
                 if obj.parent_component().type() is Objective:
@@ -519,7 +521,7 @@ class GAMSDirect(_GAMSSolver):
 
         results._smap_id = smap_id
         results._smap = None
-        if isinstance(model, IBlockStorage):
+        if isinstance(model, IBlock):
             if len(results.solution) == 1:
                 results.solution(0).symbol_map = \
                     getattr(model, "._symbol_maps")[results._smap_id]
@@ -685,7 +687,7 @@ class GAMSShell(_GAMSSolver):
         results_filename = os.path.join(tmpdir, put_results + ".dat")
         statresults_filename = os.path.join(tmpdir, put_results + "stat.dat")
 
-        if isinstance(model, IBlockStorage):
+        if isinstance(model, IBlock):
             # Kernel blocks have slightly different write method
             smap_id = model.write(filename=output_filename,
                                   format=ProblemFormat.gams,
@@ -764,9 +766,9 @@ class GAMSShell(_GAMSSolver):
         ####################################################################
 
         # import suffixes must be on the top-level model
-        if isinstance(model, IBlockStorage):
+        if isinstance(model, IBlock):
             model_suffixes = list(comp.storage_key for comp \
-                                  in pyomo.core.kernel.component_suffix.\
+                                  in pyomo.core.kernel.suffix.\
                                   import_suffix_generator(model,
                                                           active=True,
                                                           descend_into=False))
@@ -918,11 +920,11 @@ class GAMSShell(_GAMSSolver):
         has_rc_info = True
         for sym, ref in iteritems(symbolMap.bySymbol):
             obj = ref()
-            if isinstance(model, IBlockStorage):
+            if isinstance(model, IBlock):
                 # Kernel variables have no 'parent_component'
-                if obj.ctype is Objective:
+                if obj.ctype is IObjective:
                     soln.objective[sym] = {'Value': objctvval}
-                if obj.ctype is not Var:
+                if obj.ctype is not IVariable:
                     continue
             else:
                 if obj.parent_component().type() is Objective:
@@ -991,7 +993,7 @@ class GAMSShell(_GAMSSolver):
 
         results._smap_id = smap_id
         results._smap = None
-        if isinstance(model, IBlockStorage):
+        if isinstance(model, IBlock):
             if len(results.solution) == 1:
                 results.solution(0).symbol_map = \
                     getattr(model, "._symbol_maps")[results._smap_id]

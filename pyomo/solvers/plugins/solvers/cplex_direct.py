@@ -19,7 +19,7 @@ from pyomo.core.expr.numvalue import value
 from pyomo.repn import generate_standard_repn
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
-import pyomo.core.kernel
+from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt.results.results_ import SolverResults
@@ -423,9 +423,9 @@ class CPLEXDirect(DirectSolver):
         if obj.active is False:
             raise ValueError('Cannot add inactive objective to solver.')
 
-        if obj.sense == pyomo.core.kernel.minimize:
+        if obj.sense == minimize:
             sense = self._solver_model.objective.sense.minimize
-        elif obj.sense == pyomo.core.kernel.maximize:
+        elif obj.sense == maximize:
             sense = self._solver_model.objective.sense.maximize
         else:
             raise ValueError('Objective sense is not recognized: {0}'.format(obj.sense))
@@ -524,9 +524,9 @@ class CPLEXDirect(DirectSolver):
             soln.status = SolutionStatus.error
 
         if cpxprob.objective.get_sense() == cpxprob.objective.sense.minimize:
-            self.results.problem.sense = pyomo.core.kernel.minimize
+            self.results.problem.sense = minimize
         elif cpxprob.objective.get_sense() == cpxprob.objective.sense.maximize:
-            self.results.problem.sense = pyomo.core.kernel.maximize
+            self.results.problem.sense = maximize
         else:
             raise RuntimeError('Unrecognized cplex objective sense: {0}'.\
                                format(cpxprob.objective.get_sense()))
