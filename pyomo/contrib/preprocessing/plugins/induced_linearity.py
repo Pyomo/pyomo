@@ -14,6 +14,7 @@ from math import fabs
 
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.plugin import alias
+from pyomo.common.config import ConfigBlock, ConfigValue, NonNegativeFloat
 from pyomo.contrib.preprocessing.util import SuppressConstantObjectiveWarning
 from pyomo.core import (Binary, Block, Constraint, Objective, Set,
                         TransformationFactory, Var, summation, value)
@@ -48,30 +49,44 @@ class InducedLinearity(IsomorphicTransformation):
     alias('contrib.induced_linearity',
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
-    def _apply_to(self, model):
+    CONFIG = ConfigBlock("contrib.induced_linearity")
+    CONFIG.declare('equality_tolerance', ConfigValue(
+        default=1E-6,
+        domain=NonNegativeFloat,
+        description="Tolerance on equality constraints."
+    ))
+    CONFIG.declare('pruning_solver', ConfigValue(
+        default='glpk',
+        description="Solver to use when pruning possible values."
+    ))
+
+    def _apply_to(self, model, **kwds):
         """Apply the transformation to the given model."""
-        _process_container(model)
-        _process_subcontainers(model)
+        config = self.CONFIG(kwds.pop('options', {}))
+        config.set_value(kwds)
+        _process_container(model, config)
+        _process_subcontainers(model, config)
 
 
-def _process_subcontainers(blk):
+def _process_subcontainers(blk, config):
     for disj in blk.component_data_objects(
             Disjunct, active=True, descend_into=True):
-        _process_container(disj)
-        _process_subcontainers(disj)
+        _process_container(disj, config)
+        _process_subcontainers(disj, config)
 
 
-def _process_container(blk):
-    equality_tolerance = 1E-6
+def _process_container(blk, config):
     if not hasattr(blk, '_induced_linearity_info'):
         blk._induced_linearity_info = Block()
+    else:
+        assert blk._induced_linearity_info.type() == Block
     eff_discr_vars = detect_effectively_discrete_vars(
-        blk, equality_tolerance)
+        blk, config.equality_tolerance)
     # TODO will need to go through this for each disjunct, since it does
     # not (should not) descend into Disjuncts.
 
     # Determine the valid values for the effectively discrete variables
-    possible_var_values = determine_valid_values(blk, eff_discr_vars)
+    possible_var_values = determine_valid_values(blk, eff_discr_vars, config)
 
     # Collect find bilinear expressions that can be reformulated using
     # knowledge of effectively discrete variables
@@ -91,7 +106,7 @@ def _process_container(blk):
             # processed_pairs.add((v1, v2))  # TODO is this necessary?
 
 
-def determine_valid_values(block, discr_var_to_constrs_map):
+def determine_valid_values(block, discr_var_to_constrs_map, config):
     """Calculate valid values for each effectively discrete variable.
 
     We need the set of possible values for the effectively discrete variable in
@@ -116,7 +131,7 @@ def determine_valid_values(block, discr_var_to_constrs_map):
             var_coef = sum(coef for i, coef in enumerate(repn.linear_coefs)
                            if repn.linear_vars[i] is eff_discr_var)
             const = -(repn.constant - constr.upper) / var_coef
-            possible_vals = frozenset((const,))
+            possible_vals = set((const,))
             for i, var in enumerate(repn.linear_vars):
                 if var is eff_discr_var:
                     continue
@@ -124,12 +139,12 @@ def determine_valid_values(block, discr_var_to_constrs_map):
                 if var.is_binary():
                     var_values = (0, coef)
                 elif var.is_integer():
-                    var_values = range(var.lb, var.ub + 1)
+                    var_values = [v * coef for v in range(var.lb, var.ub + 1)]
                 else:
                     raise ValueError(
                         '%s has unacceptable variable domain: %s' %
                         (var.name, var.domain))
-                possible_vals = frozenset(
+                possible_vals = set(
                     (v1 + v2 for v1 in possible_vals for v2 in var_values))
             old_possible_vals = possible_values.get(eff_discr_var, None)
             if old_possible_vals is not None:
@@ -137,19 +152,24 @@ def determine_valid_values(block, discr_var_to_constrs_map):
             else:
                 possible_values[eff_discr_var] = possible_vals
 
-    possible_values = prune_possible_values(block, possible_values)
+    possible_values = prune_possible_values(block, possible_values, config)
 
     return possible_values
 
 
-def prune_possible_values(block_scope, possible_values):
+def prune_possible_values(block_scope, possible_values, config):
     # Prune the set of possible values by solving a series of feasibility
     # problems
     top_level_scope = block_scope.model()
-    top_level_scope._possible_values = possible_values
-    top_level_scope._possible_value_vars = list(v for v in possible_values)
-    top_level_scope._tmp_block_scope = (block_scope,)
+    tmp_name = unique_component_name(
+        top_level_scope, '_induced_linearity_prune_data')
+    tmp_orig_blk = Block()
+    setattr(top_level_scope, tmp_name, tmp_orig_blk)
+    tmp_orig_blk._possible_values = possible_values
+    tmp_orig_blk._possible_value_vars = list(v for v in possible_values)
+    tmp_orig_blk._tmp_block_scope = (block_scope,)
     model = top_level_scope.clone()
+    tmp_clone_blk = getattr(model, tmp_name)
     for obj in model.component_data_objects(Objective, active=True):
         obj.deactivate()
     for constr in model.component_data_objects(
@@ -157,31 +177,32 @@ def prune_possible_values(block_scope, possible_values):
         if constr.body.polynomial_degree() not in (1, 0):
             constr.deactivate()
     if block_scope.type() == Disjunct:
-        disj = model._tmp_block_scope[0]
+        disj = tmp_clone_blk._tmp_block_scope[0]
         disj.indicator_var.fix(1)
         TransformationFactory('gdp.bigm').apply_to(model)
-    model.test_feasible = Constraint()
-    model._obj = Objective(expr=1)
-    for eff_discr_var, vals in model._possible_values.items():
+    tmp_clone_blk.test_feasible = Constraint()
+    tmp_clone_blk._obj = Objective(expr=1)
+    for eff_discr_var, vals in tmp_clone_blk._possible_values.items():
         val_feasible = {}
         for val in vals:
-            model.test_feasible.set_value(eff_discr_var == val)
+            tmp_clone_blk.test_feasible.set_value(eff_discr_var == val)
             with SuppressConstantObjectiveWarning():
-                res = SolverFactory('glpk').solve(model)
+                res = SolverFactory(config.pruning_solver).solve(model)
             if res.solver.termination_condition is tc.infeasible:
                 val_feasible[val] = False
-        model._possible_values[eff_discr_var] = frozenset(
-            v for v in model._possible_values[eff_discr_var]
+        tmp_clone_blk._possible_values[eff_discr_var] = set(
+            v for v in tmp_clone_blk._possible_values[eff_discr_var]
             if val_feasible.get(v, True))
-    for i, var in enumerate(top_level_scope._possible_value_vars):
-        possible_values[var] = model._possible_values[model._possible_value_vars[i]]
+    for i, var in enumerate(tmp_orig_blk._possible_value_vars):
+        possible_values[var] = tmp_clone_blk._possible_values[
+            tmp_clone_blk._possible_value_vars[i]]
 
     return possible_values
 
 
 def _process_bilinear_constraints(block, v1, v2, var_values, bilinear_constrs):
     # TODO check that the appropriate variable bounds exist.
-    if not (v2.has_lb() and v2.has_lb()):
+    if not (v2.has_lb() and v2.has_ub()):
         logger.warning(textwrap.dedent("""\
             Attempting to transform bilinear term {v1} * {v2} using effectively
             discrete variable {v1}, but {v2} is missing a lower or upper bound:
@@ -251,7 +272,7 @@ def _reformulate_case_2(blk, v1, v2, bilinear_constr):
 
 
 def zero_if_None(val):
-    return val if val is not None else 0
+    return 0 if val is None else val
 
 
 def _bilinear_expressions(model):

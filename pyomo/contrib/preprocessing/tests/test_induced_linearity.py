@@ -10,6 +10,7 @@ from pyomo.environ import (Binary, ConcreteModel, Constraint, ConstraintList,
                            summation)
 from pyomo.repn import generate_standard_repn
 from pyomo.gdp import Disjunct, Disjunction
+from pyutilib.misc import Bunch
 
 glpk_available = SolverFactory('glpk').available()
 
@@ -69,7 +70,9 @@ class TestInducedLinearity(unittest.TestCase):
         m.logical.add(expr=m.y[3] + m.y[4] == 1)
         m.logical.add(expr=m.y[2] + m.y[4] <= 1)
         var_to_values_map = determine_valid_values(
-            m, detect_effectively_discrete_vars(m, 1E-6))
+            m, detect_effectively_discrete_vars(m, 1E-6), Bunch(
+                equality_tolerance=1E-6,
+                pruning_solver='glpk'))
         valid_values = set([1, 2, 3, 4, 5])
         self.assertEqual(set(var_to_values_map[m.x]), valid_values)
 
