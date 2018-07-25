@@ -122,7 +122,7 @@ elif config == "booktests" or config == "book":
         output = _run_cmd("python/bin/python src/pyomo/scripts/get_pyomo_extras.py -v", shell=True)
     elif _run_cmd is subprocess.check_output:
         output = _run_cmd("python/bin/python src/pyomo/scripts/get_pyomo_extras.py -v", shell=True)
-        print(output.decode('ascii'))
+        print(output.decode('utf-8'))
     else:
         assert False
     # Test
