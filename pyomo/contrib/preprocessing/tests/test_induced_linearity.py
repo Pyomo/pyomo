@@ -1,18 +1,19 @@
 """Tests the induced linearity module."""
 import pyutilib.th as unittest
-from pyomo.contrib.preprocessing.plugins.induced_linearity import (_bilinear_expressions,
-                                                                   detect_effectively_discrete_vars,
-                                                                   determine_valid_values)
-from pyomo.core.kernel import ComponentSet
+from pyomo.contrib.preprocessing.plugins.induced_linearity import (
+    _bilinear_expressions,
+    detect_effectively_discrete_vars,
+    determine_valid_values)
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.environ import (Binary, ConcreteModel, Constraint, ConstraintList,
-                           Integers, NonNegativeReals, Objective, RangeSet,
-                           SolverFactory, TransformationFactory, Var, exp,
-                           summation)
-from pyomo.repn import generate_standard_repn
+                           Integers, RangeSet, SolverFactory,
+                           TransformationFactory, Var, exp)
 from pyomo.gdp import Disjunct, Disjunction
+from pyomo.repn import generate_standard_repn
 from pyutilib.misc import Bunch
 
 glpk_available = SolverFactory('glpk').available()
+
 
 class TestInducedLinearity(unittest.TestCase):
     """Tests induced linearity."""

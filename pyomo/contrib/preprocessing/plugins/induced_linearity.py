@@ -18,7 +18,8 @@ from pyomo.common.config import ConfigBlock, ConfigValue, NonNegativeFloat
 from pyomo.contrib.preprocessing.util import SuppressConstantObjectiveWarning
 from pyomo.core import (Binary, Block, Constraint, Objective, Set,
                         TransformationFactory, Var, summation, value)
-from pyomo.core.kernel import ComponentMap, ComponentSet
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.gdp import Disjunct
 from pyomo.opt import TerminationCondition as tc
