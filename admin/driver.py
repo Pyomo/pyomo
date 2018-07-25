@@ -192,7 +192,7 @@ def perform_tests(package, coverage=False, omit=None, cat='nightly'):
         cmd = [os.path.join( os.environ['WORKSPACE'],'python','bin','test.'+package ), '--cat', cat]
     cmd.append('-v')
     if coverage:
-        cmd.append('--coverage')
+        cmd.extend(['--coverage','--cover-erase'])
     if 'TEST_PACKAGES' in os.environ:
         cmd = cmd + re.split('[ \t]+', os.environ['TEST_PACKAGES'].strip())
     sys.stdout.write( "Running Command: %s\n" % " ".join(cmd) )
