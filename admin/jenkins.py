@@ -22,6 +22,12 @@ hname = hname.split('.')[0]
 print("\nStarting jenkins.py")
 print("Configuration=%s" % config)
 
+if os.environ.get('WORKSPACE', None) is None:
+    sys.stdout.write(
+        "\n(INFO) WORKSPACE environment vatiable not found."
+        "\n       Assuming WORKSPACE==%s\n\n" % (os.getcwd(),) )
+    os.environ['WORKSPACE'] = os.getcwd()
+
 os.environ['CONFIGFILE'] = os.environ['WORKSPACE']+'/src/pyomo/admin/config.ini'
 #
 # Is the following even needed?
@@ -126,3 +132,5 @@ elif config == "booktests" or config == "book":
 elif config == "perf":
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
     driver.perform_build('pyomo', cat='performance')
+else:
+    raise RuntimeError("Unknown Jenkins configuration: '%s'" % (config,))
