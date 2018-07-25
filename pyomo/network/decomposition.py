@@ -11,7 +11,7 @@
 __all__ = [ 'SequentialDecomposition' ]
 
 from pyomo.network import Port, Arc
-from pyomo.core import Constraint, value
+from pyomo.core import Constraint, value, Objective
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.expr.current import identify_variables
 from pyomo.repn import generate_standard_repn
@@ -45,9 +45,9 @@ class SequentialDecomposition(object):
         G = self.create_graph(model)
 
         order = self.calculation_order(G)
-        self.run_order(order, function)
+        self.run_order(G, order, function)
 
-        tset = self.tear_set()
+        tset = self.tear_set(G)
         if not len(tset):
             return
 
@@ -63,7 +63,7 @@ class SequentialDecomposition(object):
                     if ei in tset:
                         tears.append(ei)
 
-                kwds = dict(G=G, order=order, tears=tears)
+                kwds = dict(G=G, order=order, func=func, tears=tears)
                 if "iterlim" in self.options:
                     kwds["iterlim"] = self.options["iterlim"]
                 if "tol" in self.options:
@@ -86,11 +86,11 @@ class SequentialDecomposition(object):
 
         self.cache.clear()
 
-    def run_order(self, order, function):
+    def run_order(self, G, order, function):
         fixed_inputs = self.fixed_inputs()
         fixed_outputs = ComponentSet()
-        tset = self.tear_set()
-        edge_map = self.edge_to_idx()
+        tset = self.tear_set(G)
+        edge_map = self.edge_to_idx(G)
         for lev in order:
             for unit in lev:
                 function(unit)
@@ -102,12 +102,13 @@ class SequentialDecomposition(object):
                     dests = p.dests()
                     if not len(dests):
                         continue
-                    for var in p.iter_vars(expr_vars=True, include_fixed=False):
+                    for var in p.iter_vars(expr_vars=True, fixed=False):
                         fixed_outputs.add(var)
                         var.fix()
                     for arc in dests:
                         # make sure the edge (index) is not in the tear set
-                        if edge_map[(arc.src, arc.dest)] not in tset:
+                        edge = (arc.src.parent_block(), arc.dest.parent_block())
+                        if edge_map[edge] not in tset:
                             self.pass_values(arc, fixed_inputs)
                     for var in fixed_outputs:
                         var.free()
@@ -159,6 +160,8 @@ class SequentialDecomposition(object):
             "This probably means either the split fraction was not specified "
             "or the next port's member was a multivariable expression.\n"
             "Values may be arbitrary." % arc.name)
+        from pyomo.environ import SolverFactory
+        eblock.o = Objective(expr=1)
         opt = SolverFactory(self.options["solver"])
         kwds = self.options["solver_options"]
         opt.solve(eblock, **kwds)
@@ -231,7 +234,7 @@ class SequentialDecomposition(object):
     def tear_error(self, G, tears):
         svals = []
         dvals = []
-        edge_list = self.idx_to_edge()
+        edge_list = self.idx_to_edge(G)
         for tear in tears:
             s = []
             d = []
@@ -399,7 +402,7 @@ class SequentialDecomposition(object):
     #
     ########################################################################
 
-    def solve_tear_direct(self, G, order, tears, iterlim=40, tol=1.0e-5):
+    def solve_tear_direct(self, G, order, func, tears, iterlim=40, tol=1.0e-5):
         """
         Use direct substitution to solve tears. If multiple tears are
         given they are solved simultaneously.
@@ -419,7 +422,7 @@ class SequentialDecomposition(object):
 
         if not len(tears):
             # no need to iterate just run the calculations
-            self.run_order(order)
+            self.run_order(G, order, func)
             return hist
 
         while True:
@@ -434,12 +437,12 @@ class SequentialDecomposition(object):
             for tear in tears:
                 arc = G.edges[edge_list[tear]]["arc"]
                 self.pass_values(arc, fixed_inputs=self.fixed_inputs())
-            self.run_order(order)
+            self.run_order(G, order, func)
             itercount += 1
 
         return hist
 
-    def solve_tear_wegstein(self, G, order, tears,
+    def solve_tear_wegstein(self, G, order, func, tears,
             iterlim=40, tol=1.0e-5, thetaMin=-5, thetaMax=0):
         """
         Use Wegstein to solve tears. If multiple tears are given
@@ -462,7 +465,7 @@ class SequentialDecomposition(object):
 
         if not len(tears):
             # no need to iterate just run the calculations
-            self.run_order(order)
+            self.run_order(G, order, func)
             return hist
 
         gofx, x, xmin, xmax = self.generate_weg_lists(G, tears)
@@ -490,7 +493,7 @@ class SequentialDecomposition(object):
         self.set_tear_weg(G, tears, gofx)
 
         while True:
-            self.run_order(order)
+            self.run_order(G, order, func)
 
             gofx = self.generate_gofx(G, tears)
             gofx = numpy.array(gofx)
