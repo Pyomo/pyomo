@@ -132,3 +132,5 @@ elif config == "booktests" or config == "book":
 elif config == "perf":
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
     driver.perform_build('pyomo', cat='performance')
+else:
+    raise RuntimeError("Unknown Jenkins configuration: '%s'" % (config,))
