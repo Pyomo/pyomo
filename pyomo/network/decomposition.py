@@ -284,6 +284,7 @@ class SequentialDecomposition(object):
         in each tear.
         """
         fixed_inputs = self.fixed_inputs()
+        edge_list = self.idx_to_edge(G)
         i = 0
         for tear in tears:
             arc = G.edges[edge_list[tear]]["arc"]
@@ -317,20 +318,20 @@ class SequentialDecomposition(object):
                 i += 1
 
     def generate_gofx(self, G, tears):
+        edge_list = self.idx_to_edge(G)
         gofx = []
         for tear in tears:
             arc = G.edges[edge_list[tear]]["arc"]
-            _gofx = []
             for name, mem in arc.src.iter_vars(with_names=True):
                 sf = arc.expanded_block.component("splitfrac")
                 if sf is not None:
-                    _gofx.append(value(mem * sf))
+                    gofx.append(value(mem * sf))
                 else:
-                    _gofx.append(value(mem))
-            gofx.append(_gofx)
+                    gofx.append(value(mem))
         return gofx
 
     def generate_weg_lists(self, G, tears):
+        edge_list = self.idx_to_edge(G)
         gofx = []
         x = []
         xmin = []
@@ -339,30 +340,22 @@ class SequentialDecomposition(object):
         for tear in tears:
             arc = G.edges[edge_list[tear]]["arc"]
             src, dest = arc.src, arc.dest
-            _gofx = []
-            _x = []
-            _xmax = []
-            _xmin = []
             sf = arc.expanded_block.component("splitfrac")
             for name, mem in src.iter_vars(with_names=True):
                 if sf is not None:
-                    _gofx.append(value(mem * sf))
+                    gofx.append(value(mem * sf))
                 else:
-                    _gofx.append(value(mem))
+                    gofx.append(value(mem))
                 try:
                     index = mem.index()
                 except AttributeError:
                     index = None
                 obj = self.source_dest_peer(arc, name, index)
                 val = value(obj)
-                _x.append(val)
+                x.append(val)
                 # TODO: what to do if it doesn't have bound(s)
-                _xmax.append(obj.ub if obj.has_ub() else val)
-                _xmin.append(obj.lb if obj.has_lb() else val)
-            gofx.append(_gofx)
-            x.append(_x)
-            xmax.append(_xmax)
-            xmin.append(_xmin)
+                xmax.append(obj.ub if obj.has_ub() else val)
+                xmin.append(obj.lb if obj.has_lb() else val)
 
         return gofx, x, xmin, xmax
 
@@ -450,6 +443,8 @@ class SequentialDecomposition(object):
             self.run_order(G, order, function)
             return hist
 
+        edge_list = self.idx_to_edge(G)
+
         while True:
             err = self.tear_error(G, tears)
             hist.append(err)
@@ -531,7 +526,7 @@ class SequentialDecomposition(object):
 
             if numpy.max(numpy.abs(err)) < tol:
                 break
-            if itercount > itLimit - 1:
+            if itercount > iterlim - 1:
                 logger.warning("Wegstein failed to converge in %s iterations"
                     % iterlim)
                 return hist
