@@ -125,11 +125,10 @@ class MILP_unused_vars_kernel(MILP_unused_vars):
         model.x_unused_initialy_stale = pmo.variable(domain=pmo.Integers)
         model.x_unused_initialy_stale.stale = True
 
-        model.X_unused = pmo.create_variable_dict(keys=model.s,
-                                                  domain=pmo.Integers)
-        model.X_unused_initialy_stale = \
-            pmo.create_variable_dict(keys=model.s,
-                                     domain=pmo.Integers)
+        model.X_unused = pmo.variable_dict(
+            (i, pmo.variable(domain=pmo.Integers)) for i in model.s)
+        model.X_unused_initialy_stale = pmo.variable_dict(
+            (i, pmo.variable(domain=pmo.Integers)) for i in model.s)
         for i in model.s:
             model.X_unused[i].stale = False
             model.X_unused_initialy_stale[i].stale = True
@@ -140,10 +139,10 @@ class MILP_unused_vars_kernel(MILP_unused_vars):
         model.x_initialy_stale = pmo.variable(domain=pmo.Integers)
         model.x_initialy_stale.stale = True
 
-        model.X = pmo.create_variable_dict(keys=model.s,
-                                           domain=pmo.Integers)
-        model.X_initialy_stale = pmo.create_variable_dict(keys=model.s,
-                                                          domain=pmo.Integers)
+        model.X = pmo.variable_dict(
+            (i, pmo.variable(domain=pmo.Integers)) for i in model.s)
+        model.X_initialy_stale = pmo.variable_dict(
+            (i, pmo.variable(domain=pmo.Integers)) for i in model.s)
         for i in model.s:
             model.X[i].stale = False
             model.X_initialy_stale[i].stale = True
@@ -169,9 +168,9 @@ class MILP_unused_vars_kernel(MILP_unused_vars):
         model.b = pmo.block()
         model.B = pmo.block_dict()
         model.b.b = flat_model.clone()
-        model.B[1] = pmo.tiny_block()
+        model.B[1] = pmo.block()
         model.B[1].b = flat_model.clone()
-        model.B[2] = pmo.tiny_block()
+        model.B[2] = pmo.block()
         model.B[2].b = flat_model.clone()
 
         model.b.deactivate()

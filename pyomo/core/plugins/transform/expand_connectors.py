@@ -11,12 +11,14 @@
 import logging
 logger = logging.getLogger('pyomo.core')
 
-from six import next, iteritems, iterkeys, itervalues
+from six import next, iteritems, itervalues
 
 from pyomo.core.expr import current as EXPR
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.base.plugin import alias
 from pyomo.core.base import Transformation, Connector, Constraint, \
-    ConstraintList, Var, VarList, TraversalStrategy
+    ConstraintList, Var, VarList, TraversalStrategy, SortComponents
 from pyomo.core.base.connector import _ConnectorData, SimpleConnector
 
 class ExpandConnectors(Transformation):
@@ -37,55 +39,79 @@ class ExpandConnectors(Transformation):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
             logger.debug("   Connectors found!")
 
+        self._name_buffer = {}
+
         #
         # At this point, there are connectors in the model, so we must
         # look for constraints that involve connectors and expand them.
         #
-        connector_types = set([SimpleConnector, _ConnectorData])
-        constraint_list = []
+        # List of the connectors in the order in which we found them
+        # (this should be deterministic, provided that the user's model
+        # is deterministic)
         connector_list = []
-        matched_connectors = {}
-        found = dict()
-        for constraint in instance.component_data_objects(Constraint):
+        # list of constraints with connectors: tuple(constraint, connector_set)
+        # (this should be deterministic, provided that the user's model
+        # is deterministic)
+        constraint_list = []
+        # ID of the next connector group (set of matched connectors)
+        groupID = 0
+        # connector_groups stars out as a dict of {id(set): (groupID, set)}
+        # If you sort by the groupID, then this will be deterministic.
+        connector_groups = dict()
+        # map of connector to the set of connectors that must match it
+        matched_connectors = ComponentMap()
+        # The set of connectors found in the current constraint
+        found = ComponentSet()
+
+        connector_types = set([SimpleConnector, _ConnectorData])
+        for constraint in instance.component_data_objects(
+                Constraint, sort=SortComponents.deterministic):
+            ref = None
             for c in EXPR.identify_components(constraint.body, connector_types):
-                if c.__class__ in connector_types:
-                    found[id(c)] = c
-            if not found:
-                continue
-
-            # Note that it is important to copy the set of found
-            # connectors, since the matching routine below will
-            # manipulate sets in place.
-            found_this_constraint = dict(found)
-            constraint_list.append( (constraint, found_this_constraint) )
-
-            # Find all the connectors that are used in the constraint,
-            # so we know which connectors to validate against each
-            # other.  Note that the validation must be transitive (that
-            # is, if con1 has a & b and con2 has b & c, then a,b, and c
-            # must all validate against each other.
-            for cId, c in iteritems(found_this_constraint):
-                if cId in matched_connectors:
-                    oldSet = matched_connectors[cId]
-                    found.update( oldSet )
-                    for _cId in oldSet:
-                        matched_connectors[_cId] = found
+                found.add(c)
+                if c in matched_connectors:
+                    if ref is None:
+                        # The first connector in this constraint has
+                        # already been seen.  We will use that Set as
+                        # the reference
+                        ref = matched_connectors[c]
+                    elif ref is not matched_connectors[c]:
+                        # We already have a reference group; merge this
+                        # new group into it.
+                        #
+                        # Optimization: this merge is linear in the size
+                        # of the src set.  If the reference set is
+                        # smaller, save time by switching to a new
+                        # reference set.
+                        src = matched_connectors[c]
+                        if len(ref) < len(src):
+                            ref, src = src, ref
+                        ref.update(src)
+                        for _ in src:
+                            matched_connectors[_] = ref
+                        del connector_groups[id(src)]
+                    # else: pass
+                    #   The new group *is* the reference group;
+                    #   there is nothing to do.
                 else:
+                    # The connector has not been seen before.
                     connector_list.append(c)
-                matched_connectors[cId] = found
-
-            # Reset found back to empty (this is more efficient as the
-            # bulk of the constraints in the model will not have
-            # connectors - so if we did this at the top of the loop, we
-            # would spend a lot of time clearing empty sets
-            found = {}
+                    if ref is None:
+                        # This is the first connector in the constraint:
+                        # start a new reference set.
+                        ref = ComponentSet()
+                        connector_groups[id(ref)] = (groupID, ref)
+                        groupID += 1
+                    # This connector hasn't been seen.  Record it.
+                    ref.add(c)
+                    matched_connectors[c] = ref
+            if ref is not None:
+                constraint_list.append((constraint, found))
+                found = ComponentSet()
 
         # Validate all connector sets and expand the empty ones
         known_conn_sets = {}
-        for connector in connector_list:
-            conn_set = matched_connectors[id(connector)]
-            if id(conn_set) in known_conn_sets:
-                continue
+        for groupID, conn_set in sorted(itervalues(connector_groups)):
             known_conn_sets[id(conn_set)] \
                 = self._validate_and_expand_connector_set(conn_set)
 
@@ -93,8 +119,10 @@ class ExpandConnectors(Transformation):
         for constraint, conn_set in constraint_list:
             cList = ConstraintList()
             constraint.parent_block().add_component(
-                '%s.expanded' % ( constraint.local_name, ), cList )
-            connId = next(iterkeys(conn_set))
+                '%s.expanded' % ( constraint.getname(
+                    fully_qualified=False, name_buffer=self._name_buffer), ),
+                cList )
+            connId = next(iter(conn_set))
             ref = known_conn_sets[id(matched_connectors[connId])]
             for k,v in sorted(iteritems(ref)):
                 if v[1] >= 0:
@@ -103,7 +131,7 @@ class ExpandConnectors(Transformation):
                     _iter = (v[0],)
                 for idx in _iter:
                     substitution = {}
-                    for c in itervalues(conn_set):
+                    for c in conn_set:
                         if v[1] >= 0:
                             new_v = c.vars[k][idx]
                         elif k in c.aggregators:
@@ -123,13 +151,17 @@ class ExpandConnectors(Transformation):
             for var, aggregator in iteritems(conn.aggregators):
                 c = Constraint(expr=aggregator(block, conn.vars[var]))
                 block.add_component(
-                    '%s.%s.aggregate' % (conn.local_name, var), c )
+                    '%s.%s.aggregate' % (
+                        conn.getname(
+                            fully_qualified=True,
+                            name_buffer=self._name_buffer),
+                        var), c )
 
 
     def _validate_and_expand_connector_set(self, connectors):
         ref = {}
         # First, go through the connectors and get the superset of all fields
-        for c in itervalues(connectors):
+        for c in connectors:
             for k,v in iteritems(c.vars):
                 if k in ref:
                     # We have already seen this var
@@ -154,7 +186,7 @@ class ExpandConnectors(Transformation):
 
         # Now make sure that connectors match
         empty_or_partial = []
-        for c in itervalues(connectors):
+        for c in connectors:
             c_is_partial = False
             if not c.vars:
                 # This is an empty connector and should be defined with
@@ -204,7 +236,8 @@ class ExpandConnectors(Transformation):
         if len(empty_or_partial) > 1:
             # This is expensive (names aren't cheap), but does result in
             # a deterministic ordering
-            empty_or_partial.sort(key=lambda x: x.name)
+            empty_or_partial.sort(key=lambda x: x.getname(
+                fully_qualified=True, name_buffer=self._name_buffer))
 
         # Fill in any empty connectors
         for c in empty_or_partial:
@@ -227,7 +260,11 @@ class ExpandConnectors(Transformation):
                 except AttributeError:
                     pass
                 new_var = Var( *idx, **var_args )
-                block.add_component('%s.auto.%s' % ( c.local_name, k ), new_var)
+                block.add_component(
+                    '%s.auto.%s' % (
+                        c.getname(fully_qualified=True,
+                                  name_buffer=self._name_buffer), k ),
+                    new_var)
                 if idx:
                     for i in idx[0]:
                         new_var[i].domain = v[0][i].domain

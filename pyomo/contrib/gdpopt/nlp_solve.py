@@ -7,7 +7,7 @@ from pyomo.contrib.gdpopt.data_class import SubproblemResult
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, is_feasible
 from pyomo.core import Constraint, TransformationFactory, minimize, value
 from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel import ComponentSet
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory, SolverStatus
 
