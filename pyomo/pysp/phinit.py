@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -33,8 +33,8 @@ except AttributeError:
 from pyutilib.pyro import shutdown_pyro_components
 from pyutilib.misc import import_file
 
-from pyomo.util import pyomo_command
-from pyomo.util.plugin import ExtensionPoint
+from pyomo.common import pyomo_command
+from pyomo.common.plugin import ExtensionPoint
 from pyomo.core.base import maximize, minimize, Var, Suffix
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
@@ -179,7 +179,7 @@ def construct_ph_options_parser(usage_string):
     phOpts.add_argument("--async",
       help="Run PH in asychronous mode after iteration 0. Default is False.",
       action="store_true",
-      dest="async",
+      dest="async_mode",
       default=False)
     phOpts.add_argument("--async-buffer-length",
       help="Number of scenarios to collect, if in async mode, before doing statistics and weight updates. Default is 1.",
@@ -722,11 +722,11 @@ def PHAlgorithmBuilder(options, scenario_tree):
 
             for name, obj in inspect.getmembers(sys.modules[module_to_find],
                                                 inspect.isclass):
-                import pyomo.util
+                import pyomo.common
                 # the second condition gets around goofyness related
                 # to issubclass returning True when the obj is the
                 # same as the test class.
-                if issubclass(obj, pyomo.util.plugin.SingletonPlugin) and name != "SingletonPlugin":
+                if issubclass(obj, pyomo.common.plugin.SingletonPlugin) and name != "SingletonPlugin":
                     for plugin in solution_writer_plugins(all=True):
                         if isinstance(plugin, obj):
                             plugin.enable()
@@ -835,11 +835,11 @@ def PHAlgorithmBuilder(options, scenario_tree):
 
             for name, obj in inspect.getmembers(sys.modules[module_to_find],
                                                 inspect.isclass):
-                import pyomo.util
+                import pyomo.common
                 # the second condition gets around goofyness related
                 # to issubclass returning True when the obj is the
                 # same as the test class.
-                if issubclass(obj, pyomo.util.plugin.SingletonPlugin) and name != "SingletonPlugin":
+                if issubclass(obj, pyomo.common.plugin.SingletonPlugin) and name != "SingletonPlugin":
                     ph_extension_point = ExtensionPoint(IPHExtension)
                     for plugin in ph_extension_point(all=True):
                         if isinstance(plugin, obj):
@@ -1127,10 +1127,8 @@ def run_ph(options, ph):
             # ef solve that is about to occur.
             for instance in ph._instances.values():
                 for block in instance.block_data_objects(active=True):
-                    block._gen_obj_ampl_repn = True
-                    block._gen_con_ampl_repn = True
-                    block._gen_obj_canonical_repn = True
-                    block._gen_con_canonical_repn = True
+                    block._gen_obj_repn = True
+                    block._gen_con_repn = True
 
         ph_solver_manager = ph._solver_manager
         ph._solver_manager = None

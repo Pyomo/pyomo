@@ -1,3 +1,7 @@
+branches:
+  only:
+    - master
+
 environment:
 
   matrix:
@@ -6,48 +10,38 @@ environment:
     # http://www.appveyor.com/docs/installed-software#python
     # The list here is complete at the time of writing.
 
-    - PYTHON_VERSION: 2.7
-      #PYTHON: "C:\\Python27"
-      PYTHON: "C:\\Miniconda-x64"
-      CATEGORY: "nightly"
+    #- PYTHON_VERSION: 2.7
+    #  PYTHON: "C:\\Miniconda-x64"
+    #  CATEGORY: "nightly"
 
-    # Removing testing of 3.4, as it inexplicably runs >10x slower than
-    # other Python versions and regularly times out (60 minutes)
-    - PYTHON_VERSION: 3.4
-      #PYTHON: "C:\\Python34"
-      PYTHON: "C:\\Miniconda34-x64"
-      CATEGORY: "nightly"
+    #- PYTHON_VERSION: 3.4
+    #  PYTHON: "C:\\Miniconda34-x64"
+    #  CATEGORY: "nightly"
 
-    - PYTHON_VERSION: 3.5
-      #PYTHON: "C:\\Python35"
-      PYTHON: "C:\\Miniconda35-x64"
-      CATEGORY: "nightly"
+    #- PYTHON_VERSION: 3.5
+    #  PYTHON: "C:\\Miniconda35-x64"
+    #  CATEGORY: "nightly"
 
-    - PYTHON_VERSION: 3.6
-      #PYTHON: "C:\\Python36"
-      PYTHON: "C:\\Miniconda36-x64"
-      CATEGORY: "nightly"
+    #- PYTHON_VERSION: 3.6
+    #  PYTHON: "C:\\Miniconda36-x64"
+    #  CATEGORY: "nightly"
 
     - PYTHON_VERSION: 2.7
-      #PYTHON: "C:\\Python27"
       PYTHON: "C:\\Miniconda-x64"
       CATEGORY: "nightly"
       EXTRAS: YES
 
-    - PYTHON_VERSION: 3.4
-      #PYTHON: "C:\\Python34"
-      PYTHON: "C:\\Miniconda34-x64"
-      CATEGORY: "nightly"
-      EXTRAS: YES
+    #- PYTHON_VERSION: 3.4
+    #  PYTHON: "C:\\Miniconda34-x64"
+    #  CATEGORY: "nightly"
+    #  EXTRAS: YES
 
     - PYTHON_VERSION: 3.5
-      #PYTHON: "C:\\Python35"
       PYTHON: "C:\\Miniconda35-x64"
       CATEGORY: "nightly"
       EXTRAS: YES
 
     - PYTHON_VERSION: 3.6
-      #PYTHON: "C:\\Python36"
       PYTHON: "C:\\Miniconda36-x64"
       CATEGORY: "nightly"
       EXTRAS: YES
@@ -75,17 +69,10 @@ install:
   - conda config --set always_yes yes
   - conda update -q -y conda
   - conda config --set auto_update_conda false
+  - conda install anaconda
   #
-  - "%CONDAFORGE% setuptools pip"
-  - python -m pip install coverage
+  - "%CONDAFORGE% setuptools pip coverage sphinx_rtd_theme"
   - python -m pip install codecov
-  - IF DEFINED YAML (python -m pip install pyyaml)
-  - "IF DEFINED PYRO (python -m pip install %PYRO%)"
-  - python -m pip install xlrd
-  - python -m pip install openpyxl
-  - python -m pip install sphinx_rtd_theme
-  - "%ANACONDA% pandas networkx"
-  - "%ANACONDA% scipy"
   #
   # Install GAMS
   #
@@ -95,7 +82,9 @@ install:
   #
   # Install pyomo.extras
   #
-  - "IF DEFINED EXTRAS (%CONDAFORGE% numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill)"
+  - "IF DEFINED EXTRAS (%CONDAFORGE% pymysql pyro4)"
+  #- "IF DEFINED EXTRAS (%CONDAFORGE% numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill)"
+  #- "IF DEFINED EXTRAS (%CONDAFORGE% mkl)"
   #
   - "%CONDAFORGE% glpk"
   - "glpsol -v"
@@ -115,7 +104,7 @@ install:
   - "SET PATH=%cd%\\bin;%PATH%"
   - "python pyomo\\contrib\\trustregion\\getGJH.py %cd%\\bin"
   - "gjh -v"
-  - "python pyomo\\util\\getGSL.py %cd%\\bin"
+  - "python pyomo\\common\\getGSL.py %cd%\\bin"
   #
   # Verify the python version
   - python --version
@@ -144,7 +133,7 @@ test_script:
   - "test.pyomo -v --cat=%CATEGORY% pyomo %BUILD_DIR%\\pyomo-model-libraries"
 
   # Run documentation tests
-  - "nosetests -v --with-doctest --doctest-extension=.rst doc\\OnlineDocs"
+  #- "nosetests -v --with-doctest --doctest-extension=.rst doc\\OnlineDocs"
 
 
 #after_test:

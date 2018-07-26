@@ -18,16 +18,16 @@ import subprocess
 import pyutilib.services
 import pyutilib.misc
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
-from pyomo.core.kernel.component_block import IBlockStorage
+from pyomo.core.kernel.block import IBlock
 
 logger = logging.getLogger('pyomo.solvers')
 
-from six import iteritems
+from six import iteritems, StringIO
 
 try:
     unicode
@@ -38,7 +38,7 @@ class GUROBI(OptSolver):
     """The GUROBI LP/MIP solver
     """
 
-    pyomo.util.plugin.alias('gurobi', doc='The GUROBI LP/MIP solver')
+    pyomo.common.plugin.alias('gurobi', doc='The GUROBI LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
         try:
@@ -83,7 +83,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
     """Shell interface to the GUROBI LP/MIP solver
     """
 
-    pyomo.util.plugin.alias('_gurobi_shell',  doc='Shell interface to the GUROBI LP/MIP solver')
+    pyomo.common.plugin.alias('_gurobi_shell',  doc='Shell interface to the GUROBI LP/MIP solver')
 
     def __init__(self, **kwds):
         #
@@ -172,7 +172,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # **Note**: This assumes that the symbol_map is "clean", i.e.,
         # contains only references to the variables encountered in constraints
         output_index = 0
-        if isinstance(instance, IBlockStorage):
+        if isinstance(instance, IBlock):
             smap = getattr(instance,"._symbol_maps")\
                    [self._smap_id]
         else:
@@ -262,17 +262,14 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        outname = pyutilib.services.TempfileManager.create_tempfile(suffix = '.gurobi.version')
-        with open(outname,'w') as f:
-            # **Note, adding a 'timelimit' keyword here results in empty output for some reason
-            results = pyutilib.subprocess.run([solver_exec],
-                                              stdin=('from gurobipy import *; '
-                                                     'print(gurobi.version()); exit()'),
-                                              ostream=f)
+        f = StringIO()
+        results = pyutilib.subprocess.run([solver_exec],
+                                          stdin=('from gurobipy import *; '
+                                                 'print(gurobi.version()); exit()'),
+                                          ostream=f)
         tmp = None
         try:
-            with open(outname,'r') as f:
-                tmp = tuple(eval(f.read().strip()))
+            tmp = tuple(eval(f.getvalue().strip()))
             while(len(tmp) < 4):
                 tmp += (0,)
         except SyntaxError:

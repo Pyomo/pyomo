@@ -1,0 +1,11 @@
+from pyomo.opt import SolverStatus, TerminationCondition
+
+#...
+
+if (results.solver.status == SolverStatus.ok) and (results.solver.termination_condition == TerminationCondition.optimal):
+     print ("this is feasible and optimal")
+elif results.solver.termination_condition == TerminationCondition.infeasible:
+     print ("do something about it? or exit?")
+else:
+     # something else is wrong
+     print (str(results.solver))

@@ -54,4 +54,4 @@ model.linearized_constraint = Piecewise(model.INDEX1,        # indexing sets
 # maximize the sum of Z over its index
 # This is just a simple example of how to implement indexed variables. All indices
 # of Z will have the same solution.
-model.obj = Objective(expr= summation(model.Z) , sense=maximize)
+model.obj = Objective(expr= sum_product(model.Z) , sense=maximize)

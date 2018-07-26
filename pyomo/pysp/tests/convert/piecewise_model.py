@@ -26,7 +26,7 @@ def create_instance(scenario_name):
     model.StageCost = Expression([1,2])
     model.StageCost.add(1, model.fx)
     model.StageCost.add(2, -model.fz + model.r - cnt)
-    model.o = Objective(expr=summation(model.StageCost))
+    model.o = Objective(expr=sum_product(model.StageCost))
 
     model.ZERO = Param(initialize=0, mutable=True)
     if cnt == 0:
@@ -45,7 +45,7 @@ def create_instance(scenario_name):
                                     force_pw=True)
 
     model.c_second_stage = Constraint(expr= model.x + model.r * cnt >= -100)
-    model.r_second_stage = Constraint(expr= -cnt <= model.r <= 0)
+    model.r_second_stage = Constraint(expr= inequality(-cnt, model.r, 0))
     # exercise more of the code by making this an indexed
     # block
     model.p_second_stage = Piecewise([1], model.fz, model.z,

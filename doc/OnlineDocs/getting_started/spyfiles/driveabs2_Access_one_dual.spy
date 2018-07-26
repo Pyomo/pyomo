@@ -1,0 +1,2 @@
+# access one dual
+print ("Dual for Film=", instance.dual[instance.AxbConstraint['Film']])

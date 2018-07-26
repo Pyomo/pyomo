@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 #
-# Unit Tests for nontrivial Bounds (_SumExpression, _ProductExpression)
+# Unit Tests for nontrivial Bounds
 #
 
 import os

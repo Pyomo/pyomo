@@ -9,14 +9,12 @@ before diving into multi-stage plus integers.
 financial_planning.py:  the deterministic LP model.
 financial_planning.dat: data file for the deterministic LP (expected-case parameters).
 
-The deterministic model can be solved simply by the following command-line: pyomo financial_planning.py financial_planning.dat
+The deterministic model can be solved simply by the following command-line: pyomo solve financial_planning.py financial_planning.dat
 
-The optimal objective value for the deterministic expected-value model is 4743.938125. The optimal
-solution puts all investments into stocks, which is correct given the greater expected return.
-DEBUG: The objective value, however, is *not* correct - at least relative to Birge/Louveaux.
-DEBUG: THE AMOUNTS INVESTED ARE CORRECT, AS IS THE GROWTH IN $$$. 
-DEBUG: WE END UP WITH A TARGET SURPLUS, WHICH IS WRONG - WE HAVE A DEFICIT!
+the objective function value is 4743.94
 
+The stochastic model can be solved with a command line like:
 
+runef -i scenariodata/ -m models --solve --solver=gurobi
 
-
+The solution to the stochastic version has objective function value (expected code) $-1514

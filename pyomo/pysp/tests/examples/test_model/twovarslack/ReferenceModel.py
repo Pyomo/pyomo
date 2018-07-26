@@ -31,7 +31,7 @@ model.y_is_geq_x = Constraint(model.xIndex, rule=y_is_geq_x_rule)
 # you can get y=zero with anything, but for y=one, you need at least one one
 # but if you don't have at least one one, you have to have y=0
 def y_is_leq_sum_x_rule(model):
-    return model.y <= summation(model.x)
+    return model.y <= sum_product(model.x)
 model.y_is_leq_sum_x = Constraint(rule=y_is_leq_sum_x_rule)
 
 def slacker_rule(model):

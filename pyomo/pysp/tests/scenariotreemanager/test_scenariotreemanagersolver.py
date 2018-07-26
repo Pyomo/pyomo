@@ -12,10 +12,6 @@
 import os
 import time
 import subprocess
-try:
-    from collections import OrderedDict
-except ImportError:                         #pragma:nocover
-    from ordereddict import OrderedDict
 
 from pyutilib.pyro import using_pyro3, using_pyro4
 from pyomo.pysp.util.misc import (_get_test_nameserver,
@@ -579,14 +575,14 @@ class _ScenarioTreeManagerSolverTesterBase(object):
                 problem.validate_solve(self, sp, results, names=names)
             with self._init(problem.get_factory()) as sp:
                 with ScenarioTreeManagerSolverFactory(sp, _default_test_options) as manager:
-                    job = manager.solve_scenarios(async=True,
+                    job = manager.solve_scenarios(async_call=True,
                                                   check_status=True,
                                                   scenarios=names)
                     results = job.complete()
                 problem.validate_solve(self, sp, results, names=names)
             with self._init(problem.get_factory()) as sp:
                 with ScenarioTreeManagerSolverFactory(sp, _default_test_options) as manager:
-                    job = manager.solve_scenarios(async=True,
+                    job = manager.solve_scenarios(async_call=True,
                                                   check_status=False,
                                                   scenarios=names)
                     results = job.complete()
@@ -608,13 +604,13 @@ class _ScenarioTreeManagerSolverTesterBase(object):
                     manager.solve_scenarios(check_status=True)
         with self._init(problem.get_factory()) as sp:
             with ScenarioTreeManagerSolverFactory(sp, _default_test_options) as manager:
-                job = manager.solve_scenarios(async=True,
+                job = manager.solve_scenarios(async_call=True,
                                               check_status=True)
                 with self.assertRaises(PySPFailedSolveStatus):
                     job.complete()
         with self._init(problem.get_factory()) as sp:
             with ScenarioTreeManagerSolverFactory(sp, _default_test_options) as manager:
-                job = manager.solve_scenarios(async=True,
+                job = manager.solve_scenarios(async_call=True,
                                               check_status=False)
                 results = job.complete()
             problem.validate_solve(self, sp, results)
@@ -634,7 +630,7 @@ class _ScenarioTreeManagerSolverTesterBase(object):
                 problem.validate_solve(self, sp, results, names=names)
             with self._init(problem.get_factory()) as sp:
                 with ScenarioTreeManagerSolverFactory(sp, _default_test_options) as manager:
-                    job = manager.solve_scenarios(async=True,
+                    job = manager.solve_scenarios(async_call=True,
                                                   check_status=False,
                                                   scenarios=names)
                     results = job.complete()
@@ -663,14 +659,14 @@ class _ScenarioTreeManagerSolverTesterBase(object):
                 problem.validate_solve(self, sp, results, names=names)
             with self._init(problem.get_factory()) as sp:
                 with ScenarioTreeManagerSolverFactory(sp, _default_test_options) as manager:
-                    job = manager.solve_bundles(async=True,
+                    job = manager.solve_bundles(async_call=True,
                                                 check_status=True,
                                                 bundles=names)
                     results = job.complete()
                 problem.validate_solve(self, sp, results, names=names)
             with self._init(problem.get_factory()) as sp:
                 with ScenarioTreeManagerSolverFactory(sp, _default_test_options) as manager:
-                    job = manager.solve_bundles(async=True,
+                    job = manager.solve_bundles(async_call=True,
                                                 check_status=False,
                                                 bundles=names)
                     results = job.complete()
@@ -688,13 +684,13 @@ class _ScenarioTreeManagerSolverTesterBase(object):
                     manager.solve_bundles(check_status=True)
         with self._init(problem.get_factory()) as sp:
             with ScenarioTreeManagerSolverFactory(sp, _default_test_options) as manager:
-                job = manager.solve_bundles(async=True,
+                job = manager.solve_bundles(async_call=True,
                                             check_status=True)
                 with self.assertRaises(PySPFailedSolveStatus):
                     job.complete()
         with self._init(problem.get_factory()) as sp:
             with ScenarioTreeManagerSolverFactory(sp, _default_test_options) as manager:
-                job = manager.solve_bundles(async=True,
+                job = manager.solve_bundles(async_call=True,
                                             check_status=False)
                 results = job.complete()
             problem.validate_solve(self, sp, results)
@@ -714,7 +710,7 @@ class _ScenarioTreeManagerSolverTesterBase(object):
                 problem.validate_solve(self, sp, results, names=names)
             with self._init(problem.get_factory()) as sp:
                 with ScenarioTreeManagerSolverFactory(sp, _default_test_options) as manager:
-                    job = manager.solve_bundles(async=True,
+                    job = manager.solve_bundles(async_call=True,
                                                 check_status=False,
                                                 bundles=names)
                     results = job.complete()

@@ -43,7 +43,7 @@ def Buy_bounds(model, i):
 model.Buy = Var(model.FOOD, bounds=Buy_bounds)
 
 def Objective_rule(model):
-    return summation(model.cost, model.Buy)
+    return sum_product(model.cost, model.Buy)
 model.totalcost = Objective(rule=Objective_rule)
 
 def Diet_rule(model, i):

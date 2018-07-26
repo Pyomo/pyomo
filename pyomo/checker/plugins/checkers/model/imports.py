@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import ast
-import pyomo.util.plugin
+import pyomo.common.plugin
 
 from pyomo.checker.plugins.checker import IterativeTreeChecker
 
@@ -20,7 +20,7 @@ class Imports(IterativeTreeChecker):
     exists somewhere within the initial imports block
     """
 
-    pyomo.util.plugin.alias('model.imports', 'Check if pyomo.core or pyomo.environ has been imported.')
+    pyomo.common.plugin.alias('model.imports', 'Check if pyomo.core or pyomo.environ has been imported.')
 
     def beginChecking(self, runner, script):
         self.pyomoImported = False

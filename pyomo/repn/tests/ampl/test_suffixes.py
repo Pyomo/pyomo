@@ -42,7 +42,7 @@ class TestSuffix(unittest.TestCase):
         model.junk.set_value(model.y,2)
         model.junk_inactive.set_value(model.y,2)
 
-        model.obj = Objective(expr=model.x+summation(model.y))
+        model.obj = Objective(expr=model.x+sum_product(model.y))
         model.junk.set_value(model.obj,3)
         model.junk_inactive.set_value(model.obj,3)
 
@@ -83,7 +83,7 @@ class TestSuffix(unittest.TestCase):
         model.junk.set_value(model.y,2)
         model.junk_inactive.set_value(model.y,2)
 
-        model.obj = Objective(expr=model.x+summation(model.y))
+        model.obj = Objective(expr=model.x+sum_product(model.y))
         model.junk.set_value(model.obj,3)
         model.junk_inactive.set_value(model.obj,3)
 
@@ -115,7 +115,7 @@ class TestSuffix(unittest.TestCase):
         model = ConcreteModel()
         model.ref = Suffix(direction=Suffix.EXPORT,datatype=Suffix.INT)
         model.y = Var([1,2,3])
-        model.obj = Objective(expr=summation(model.y))
+        model.obj = Objective(expr=sum_product(model.y))
 
         # The NL writer will convert this constraint to ref and sosno
         # suffixes on model.y
@@ -148,7 +148,7 @@ class TestSuffix(unittest.TestCase):
         model = ConcreteModel()
         model.sosno = Suffix(direction=Suffix.EXPORT,datatype=Suffix.INT)
         model.y = Var([1,2,3])
-        model.obj = Objective(expr=summation(model.y))
+        model.obj = Objective(expr=sum_product(model.y))
 
         # The NL writer will convert this constraint to ref and sosno
         # suffixes on model.y
@@ -180,7 +180,7 @@ class TestSuffix(unittest.TestCase):
         model = ConcreteModel()
         model.sosno = Suffix(direction=Suffix.EXPORT,datatype=None)
         model.y = Var([1,2,3])
-        model.obj = Objective(expr=summation(model.y))
+        model.obj = Objective(expr=sum_product(model.y))
 
         # The NL writer will convert this constraint to ref and sosno
         # suffixes on model.y

@@ -10,7 +10,7 @@
 
 import logging
 
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 from pyomo.core.base import (Transformation,
                              Constraint,
                              Block,

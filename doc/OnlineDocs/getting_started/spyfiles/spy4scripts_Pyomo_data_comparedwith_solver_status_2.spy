@@ -1,0 +1,10 @@
+from pyomo.opt import TerminationCondition
+
+...
+
+results = opt.solve(model, load_solutions=False)
+if results.solver.termination_condition == TerminationCondition.optimal:
+    model.solutions.load_from(results)
+else:
+    print ("Solution is not optimal")
+    # now do something about it? or exit? ...

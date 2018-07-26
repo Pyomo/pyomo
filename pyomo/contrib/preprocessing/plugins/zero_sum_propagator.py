@@ -2,12 +2,10 @@
 import textwrap
 
 from pyomo.core.base.constraint import Constraint
-from pyomo.core.kernel.numvalue import value
+from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.repn.canonical_repn import generate_canonical_repn
-from pyomo.util.plugin import alias
-
-__author__ = "Qi Chen <https://github.com/qtothec>"
+from pyomo.repn.standard_repn import generate_standard_repn
+from pyomo.common.plugin import alias
 
 
 class ZeroSumPropagator(IsomorphicTransformation):
@@ -21,10 +19,6 @@ class ZeroSumPropagator(IsomorphicTransformation):
 
     alias('contrib.propagate_zero_sum',
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
-
-    def __init__(self):
-        """Initialize the transformation."""
-        super(ZeroSumPropagator, self).__init__()
 
     def _apply_to(self, instance):
         """Apply the transformation.
@@ -44,45 +38,45 @@ class ZeroSumPropagator(IsomorphicTransformation):
             if not constr.body.polynomial_degree() == 1:
                 continue  # constraint not linear. Skip.
 
-            repn = generate_canonical_repn(constr.body)
+            repn = generate_standard_repn(constr.body)
             if (constr.has_ub() and (
                 (repn.constant is None and value(constr.upper) == 0) or
                 repn.constant == value(constr.upper)
-                    )):
+            )):
                 # term1 + term2 + term3 + ... <= 0
                 # all var terms need to be non-negative
                 if all(
                     # variable has 0 coefficient
                     coef == 0 or
                     # variable is non-negative and has non-negative coefficient
-                    (repn.variables[i].has_lb() and
-                     value(repn.variables[i].lb) >= 0 and
+                    (repn.linear_vars[i].has_lb() and
+                     value(repn.linear_vars[i].lb) >= 0 and
                      coef >= 0) or
                     # variable is non-positive and has non-positive coefficient
-                    (repn.variables[i].has_ub() and
-                     value(repn.variables[i].ub) <= 0 and
-                     coef <= 0) for i, coef in enumerate(repn.linear)):
-                    for i, coef in enumerate(repn.linear):
+                    (repn.linear_vars[i].has_ub() and
+                     value(repn.linear_vars[i].ub) <= 0 and
+                     coef <= 0) for i, coef in enumerate(repn.linear_coefs)):
+                    for i, coef in enumerate(repn.linear_coefs):
                         if not coef == 0:
-                            repn.variables[i].fix(0)
+                            repn.linear_vars[i].fix(0)
                     continue
             if (constr.has_lb() and (
                 (repn.constant is None and value(constr.lower) == 0) or
                 repn.constant == value(constr.lower)
-                    )):
+            )):
                 # term1 + term2 + term3 + ... >= 0
                 # all var terms need to be non-positive
                 if all(
                     # variable has 0 coefficient
                     coef == 0 or
                     # variable is non-negative and has non-positive coefficient
-                    (repn.variables[i].has_lb() and
-                     value(repn.variables[i].lb) >= 0 and
+                    (repn.linear_vars[i].has_lb() and
+                     value(repn.linear_vars[i].lb) >= 0 and
                      coef <= 0) or
                     # variable is non-positive and has non-negative coefficient
-                    (repn.variables[i].has_ub() and
-                     value(repn.variables[i].ub) <= 0 and
-                     coef >= 0) for i, coef in enumerate(repn.linear)):
-                    for i, coef in enumerate(repn.linear):
+                    (repn.linear_vars[i].has_ub() and
+                     value(repn.linear_vars[i].ub) <= 0 and
+                     coef >= 0) for i, coef in enumerate(repn.linear_coefs)):
+                    for i, coef in enumerate(repn.linear_coefs):
                         if not coef == 0:
-                            repn.variables[i].fix(0)
+                            repn.linear_vars[i].fix(0)
