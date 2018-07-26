@@ -217,6 +217,11 @@ def value(obj, exception=True):
         #
         # Here, we try to catch the exception
         #
+
+        # This import needs to be deferred to here due to circular
+        # imports
+        from pyomo.core.expr.current import TemplateExpressionError
+
         try:
             tmp = obj(exception=True)
             if tmp is None:
@@ -224,6 +229,11 @@ def value(obj, exception=True):
                     "No value for uninitialized NumericValue object %s"
                     % (obj.name,))
             return tmp
+        except TemplateExpressionError:
+            # Template expressions work by catching this error type. So
+            # we should defer this error handling and not log an error
+            # message.
+            raise
         except:
             logger.error(
                 "evaluating object as numeric value: %s\n    (object: %s)\n%s"
