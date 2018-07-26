@@ -44,10 +44,10 @@ from pyomo.core.base import param
 import pyomo.core.base.suffix
 from pyomo.repn.standard_repn import StandardRepn, generate_standard_repn
 
-import pyomo.core.kernel.component_suffix
-from pyomo.core.kernel.component_block import IBlockStorage
-from pyomo.core.kernel.component_expression import IIdentityExpression
-from pyomo.core.kernel.component_variable import IVariable
+import pyomo.core.kernel.suffix
+from pyomo.core.kernel.block import IBlock
+from pyomo.core.kernel.expression import IIdentityExpression
+from pyomo.core.kernel.variable import IVariable
 
 from six import itervalues, iteritems
 from six.moves import xrange, zip
@@ -1206,52 +1206,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
             subsection_timer.report("Partition variable types")
             subsection_timer.reset()
 
-        ##################################################
-        ############ # LQM additions start here ##########
-        ##################################################
-
-        ###
-        # Generate file containing matrices for continuity variables between blocks.
-        # This checks for a LOCAL suffix 'lqm' on variables.
-        ###
-        lqm_suffix = model.component("lqm")
-        if (lqm_suffix is None) or \
-           (not (lqm_suffix.type() is Suffix)) or \
-           (not lqm_suffix.active) or \
-           (not (lqm_suffix.getDirection() is Suffix.LOCAL)):
-            lqm_suffix = None
-        if lqm_suffix is not None:
-            lqm_var_column_ids = []
-            for var_ID in full_var_list:
-                lqm = lqm_suffix.get(Vars_dict[var_ID])
-                if lqm != -1:
-                    # store the column index (and translate to one-based indexing
-                    lqm_var_column_ids.append(self_ampl_var_id[var_ID]+1)
-
-            num_lqm_vars = len(lqm_var_column_ids)
-            if num_lqm_vars > 0:
-                lqm_output_name = OUTPUT.name.split('.')[0]+".lqm"
-                LQM_OUTPUT = open(lqm_output_name,'w')
-                LQM_OUTPUT.write("Matrix Li\n")
-                LQM_OUTPUT.write("%d\n"%(len(full_var_list)))
-                LQM_OUTPUT.write("%d\n"%(num_lqm_vars))
-                LQM_OUTPUT.write("%d\n"%(num_lqm_vars))
-                # The matrix uses one based indexing
-                for row_id, col_id in enumerate(lqm_var_column_ids,1):
-                    LQM_OUTPUT.write("%d %d 1\n" % (row_id, col_id))
-                LQM_OUTPUT.write("Matrix Qi\n")
-                LQM_OUTPUT.write("%d\n" % (num_lqm_vars))
-                LQM_OUTPUT.write("%d\n" % (num_lqm_vars))
-                LQM_OUTPUT.write("%d\n" % (num_lqm_vars))
-                # one based indexing
-                for counter in xrange(1,num_lqm_vars+1):
-                    LQM_OUTPUT.write("%d %d -1\n" % (counter, counter))
-                LQM_OUTPUT.close()
-
-        ##################################################
-        ############ # LQM additions end here ############
-        ##################################################
-
 #        end_time = time.clock()
 #        print (end_time - start_time)
 
@@ -1397,9 +1351,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
         obj_tag = 2
         prob_tag = 3
         suffix_dict = {}
-        if isinstance(model, IBlockStorage):
+        if isinstance(model, IBlock):
             suffix_gen = lambda b: ((suf.storage_key, suf) \
-                                    for suf in pyomo.core.kernel.component_suffix.\
+                                    for suf in pyomo.core.kernel.suffix.\
                                     export_suffix_generator(b,
                                                             active=True,
                                                             descend_into=False))

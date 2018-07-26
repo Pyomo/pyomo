@@ -624,6 +624,10 @@ class NumericValue(object):
         """Return True if this numeric value is an expression"""
         return False
 
+    def is_component_type(self):
+        """Return True if this class is a Pyomo component"""
+        return False
+
     def is_relational(self):
         """
         Return True if this numeric value represents a relational expression.

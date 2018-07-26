@@ -23,8 +23,8 @@ from pyomo.core.expr.current import Expr_if
 from pyomo.core.expr import expr_common, current as EXPR
 from pyomo.repn import *
 from pyomo.environ import *
+import pyomo.kernel
 from pyomo.core.base.numvalue import native_numeric_types, as_numeric
-from pyomo.core.kernel import expression, variable
 
 from six import iteritems
 from six.moves import range
@@ -3624,7 +3624,7 @@ class Test(unittest.TestCase):
         self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_expr_identity2(self):
-        o = expression()
+        o = pyomo.kernel.expression()
         o.expr = 2
 
         e = 1000*o
@@ -3673,7 +3673,7 @@ class Test(unittest.TestCase):
         self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_expr_const1(self):
-        o = expression()
+        o = pyomo.kernel.expression()
         o.expr = as_numeric(2)
 
         e = 1000*o
@@ -4049,9 +4049,9 @@ class Test(unittest.TestCase):
         #self.assertEqual(str(rep.to_expression()), "100*g(0, 1, 2.0, '3', v)")
 
     def test_ducktyping(self):
-        class vtype(variable):
+        class vtype(pyomo.kernel.variable):
             pass
-        class Etype(expression):
+        class Etype(pyomo.kernel.expression):
             pass
 
         E = Etype()

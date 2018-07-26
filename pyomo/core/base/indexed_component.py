@@ -341,7 +341,8 @@ class IndexedComponent(Component):
         #
         self._data = {}
         #
-        if len(args) == 0:
+        if len(args) == 0 or (len(args) == 1 and
+                              args[0] is UnindexedComponent_set):
             #
             # If no indexing sets are provided, generate a dummy index
             #
