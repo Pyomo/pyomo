@@ -8,7 +8,8 @@ from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
                         Objective, Reals, Suffix, Var, minimize, value)
 from pyomo.core.base.symbolic import differentiate
 from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel import ComponentMap, ComponentSet
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt import SolverFactory
 from pyomo.opt.results import ProblemSense
 

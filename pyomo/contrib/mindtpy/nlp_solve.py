@@ -6,7 +6,7 @@ from pyomo.contrib.mindtpy.cut_generation import (add_gbd_cut, add_oa_cut,
 from pyomo.contrib.mindtpy.util import copy_values, add_feas_slacks
 from pyomo.core import (Constraint, Objective, TransformationFactory, Var,
                         minimize, value)
-from pyomo.core.kernel import ComponentMap
+from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning

@@ -7,7 +7,7 @@ from pyomo.core import Constraint, Var, minimize, value
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.current import ExpressionReplacementVisitor
 from pyomo.repn import generate_standard_repn
-from pyomo.core.kernel import ComponentSet
+from pyomo.core.kernel.component_set import ComponentSet
 
 
 def add_objective_linearization(solve_data, config):
