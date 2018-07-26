@@ -33,6 +33,7 @@ class SequentialDecomposition(object):
         # defaults
         self.options["solver"] = "ipopt"
         self.options["solver_options"] = {}
+        self.options["solve_tears"] = True
         self.options["tearsolver"] = "Direct"
         self.options["tearTolType"] = "abs"
 
@@ -45,17 +46,18 @@ class SequentialDecomposition(object):
         G = self.create_graph(model)
 
         order = self.calculation_order(G)
-        self.run_order(G, order, function)
+        # self.run_order(G, order, function)
 
         tset = self.tear_set(G)
-        if not len(tset):
+        if not self.options["solve_tears"] or not len(tset):
+            # Not solving tears, we're done
             return
 
         sccNodes, sccEdges, sccOrder = self.scc_collect(G)
 
         for lev in sccOrder:
             for sccIndex in lev:
-                order = self.calculation_order(nodes=sccNodes[sccIndex])
+                order = self.calculation_order(G, nodes=sccNodes[sccIndex])
 
                 # only pass tears that are part of this SCC
                 tears = []
@@ -63,7 +65,7 @@ class SequentialDecomposition(object):
                     if ei in tset:
                         tears.append(ei)
 
-                kwds = dict(G=G, order=order, func=func, tears=tears)
+                kwds = dict(G=G, order=order, function=function, tears=tears)
                 if "iterlim" in self.options:
                     kwds["iterlim"] = self.options["iterlim"]
                 if "tol" in self.options:
@@ -78,6 +80,7 @@ class SequentialDecomposition(object):
                     if "thetaMin" in self.options:
                         kwds["thetaMin"] = self.options["thetaMin"]
                     if "thetaMax" in self.options:
+
                         kwds["thetaMax"] = self.options["thetaMax"]
                     self.solve_tear_wegstein(**kwds)
 
@@ -93,11 +96,27 @@ class SequentialDecomposition(object):
         edge_map = self.edge_to_idx(G)
         for lev in order:
             for unit in lev:
+                # make sure all inputs are fixed
+                for p in unit.component_data_objects(Port):
+                    if not len(p.sources()):
+                        continue
+                    for var in p.iter_vars(expr_vars=True, fixed=False):
+                        if unit not in fixed_inputs:
+                            fixed_inputs[unit] = ComponentSet()
+                        fixed_inputs[unit].add(var)
+                        if var.value is None:
+                            var.value = 0
+                        var.fix()
+
                 function(unit)
+
+                # free the inputs that were not already fixed
                 if unit in fixed_inputs:
                     for var in fixed_inputs[unit]:
                         var.free()
                     fixed_inputs[unit].clear()
+
+                # pass the values downstream for all outlet ports
                 for p in unit.component_data_objects(Port):
                     dests = p.dests()
                     if not len(dests):
@@ -160,6 +179,7 @@ class SequentialDecomposition(object):
             "This probably means either the split fraction was not specified "
             "or the next port's member was a multivariable expression.\n"
             "Values may be arbitrary." % arc.name)
+
         from pyomo.environ import SolverFactory
         eblock.o = Objective(expr=1)
         opt = SolverFactory(self.options["solver"])
@@ -349,6 +369,10 @@ class SequentialDecomposition(object):
     def cacher(self, key, fcn, *args):
         if key in self.cache:
             return self.cache[key]
+        if key in self.options:
+            res = self.options[key]
+            self.cache[key] = res
+            return res
         res = fcn(*args)
         self.cache[key] = res
         return res
@@ -402,7 +426,8 @@ class SequentialDecomposition(object):
     #
     ########################################################################
 
-    def solve_tear_direct(self, G, order, func, tears, iterlim=40, tol=1.0e-5):
+    def solve_tear_direct(self, G, order, function, tears,
+            iterlim=40, tol=1.0e-5):
         """
         Use direct substitution to solve tears. If multiple tears are
         given they are solved simultaneously.
@@ -422,7 +447,7 @@ class SequentialDecomposition(object):
 
         if not len(tears):
             # no need to iterate just run the calculations
-            self.run_order(G, order, func)
+            self.run_order(G, order, function)
             return hist
 
         while True:
@@ -437,12 +462,12 @@ class SequentialDecomposition(object):
             for tear in tears:
                 arc = G.edges[edge_list[tear]]["arc"]
                 self.pass_values(arc, fixed_inputs=self.fixed_inputs())
-            self.run_order(G, order, func)
+            self.run_order(G, order, function)
             itercount += 1
 
         return hist
 
-    def solve_tear_wegstein(self, G, order, func, tears,
+    def solve_tear_wegstein(self, G, order, function, tears,
             iterlim=40, tol=1.0e-5, thetaMin=-5, thetaMax=0):
         """
         Use Wegstein to solve tears. If multiple tears are given
@@ -465,7 +490,7 @@ class SequentialDecomposition(object):
 
         if not len(tears):
             # no need to iterate just run the calculations
-            self.run_order(G, order, func)
+            self.run_order(G, order, function)
             return hist
 
         gofx, x, xmin, xmax = self.generate_weg_lists(G, tears)
@@ -493,7 +518,7 @@ class SequentialDecomposition(object):
         self.set_tear_weg(G, tears, gofx)
 
         while True:
-            self.run_order(G, order, func)
+            self.run_order(G, order, function)
 
             gofx = self.generate_gofx(G, tears)
             gofx = numpy.array(gofx)
@@ -579,7 +604,7 @@ class SequentialDecomposition(object):
         outEdges = []
         inEdges = []
         for nset in strngComps:
-            e, ie, oe = self.sub_graph_edges(nset)
+            e, ie, oe = self.sub_graph_edges(G, nset)
             sccEdges.append(e)
             inEdges.append(ie)
             outEdges.append(oe)
@@ -939,7 +964,7 @@ class SequentialDecomposition(object):
 
         return tearSet
 
-    def sub_graph_edges(self, nodes):
+    def sub_graph_edges(self, G, nodes):
         """
         This function returns a list of edge indexes that are
         included in a subgraph given by a list of nodes.
@@ -1066,13 +1091,15 @@ class SequentialDecomposition(object):
             for ei in excludeEdges:
                 exclude.add(edge_list[ei])
 
+        all_nodes = self.idx_to_node(G)
+
         if nodes is None:
-            nodes = G.nodes
+            nodes = all_nodes
 
         node_map = self.node_to_idx(G)
 
         i = -1
-        for node in nodes:
+        for node in all_nodes:
             # every node gets a list so that we can consistently map from index
             # to the same node every time, but if that node is not part of the
             # nodes list, then its lists will be empty
