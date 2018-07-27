@@ -4,7 +4,7 @@ from pyomo.contrib.preprocessing.plugins.var_aggregator import (_build_equality_
                                                                 _get_equality_linked_variables,
                                                                 max_if_not_None,
                                                                 min_if_not_None)
-from pyomo.core.kernel import ComponentSet
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.environ import (ConcreteModel, Constraint, ConstraintList,
                            Objective, RangeSet, SolverFactory,
                            TransformationFactory, Var)

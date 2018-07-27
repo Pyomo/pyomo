@@ -56,15 +56,13 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
         AbstractProblemWriter.__init__(self, ProblemFormat.cpxlp)
 
-        # the LP writer is responsible for tracking which variables are
-        # referenced in constraints, so that one doesn't end up with a
-        # zillion "unreferenced variables" warning messages. stored at
-        # the object level to avoid additional method arguments.
-        # dictionary of id(_VarData)->_VarData.
+        # The LP writer tracks which variables are
+        # referenced in constraints, so that a user does not end up with a
+        # zillion "unreferenced variables" warning messages.
+        # This dictionary maps id(_VarData) -> _VarData.
         self._referenced_variable_ids = {}
 
-        # Keven Hunter made a nice point about using %.16g in his attachment
-        # to ticket #4319. I am adjusting this to %.17g as this mocks the
+        # Per ticket #4319, we are using %.17g, which mocks the
         # behavior of using %r (i.e., float('%r'%<number>) == <number>) with
         # the added benefit of outputting (+/-). The only case where this
         # fails to mock the behavior of %r is for large (long) integers (L),
@@ -75,6 +73,15 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         #               and you will need to go add extra logic to output
         #               the number's sign.
         self._precision_string = '.17g'
+        self.linear_coef_string_template = '%+'+self._precision_string+' %s\n'
+        self.quad_coef_string_template =   '%+'+self._precision_string+' '
+        self.obj_string_template =         '%+'+self._precision_string+' %s\n'
+        self.sos_template_string =         "%s:%"+self._precision_string+"\n"
+        self.eq_string_template =          "= %"+self._precision_string+'\n'
+        self.geq_string_template =         ">= %"+self._precision_string+'\n\n'
+        self.leq_string_template =         "<= %"+self._precision_string+'\n\n'
+        self.lb_string_template =          "%"+self._precision_string+" <= "
+        self.ub_string_template =          " <= %"+self._precision_string+"\n"
 
     def __call__(self,
                  model,
@@ -107,19 +114,18 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
         labeler = io_options.pop("labeler", None)
 
-        # How much effort do we want to put into ensuring the
+        # Specify how much effort do we want to put into ensuring the
         # LP file is written deterministically for a Pyomo model:
         #    0 : None
         #    1 : sort keys of indexed components (default)
         #    2 : sort keys AND sort names (over declaration order)
         file_determinism = io_options.pop("file_determinism", 1)
 
-        # user defined orderings for variable and constraint
-        # output
+        # Specify orderings for variable and constraint output
         row_order = io_options.pop("row_order", None)
         column_order = io_options.pop("column_order", None)
 
-        # make sure the ONE_VAR_CONSTANT variable appears in
+        # Make sure the ONE_VAR_CONSTANT variable appears in
         # the objective even if the constant part of the
         # objective is zero
         force_objective_constant = \
@@ -135,12 +141,15 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                              "'symbolic_solver_labels' and 'labeler' "
                              "I/O options is forbidden")
 
+        #
+        # Create labeler
+        #
         if symbolic_solver_labels:
             labeler = TextLabeler()
         elif labeler is None:
             labeler = NumericLabeler('x')
 
-        # clear the collection of referenced variables.
+        # Clear the collection of referenced variables.
         self._referenced_variable_ids.clear()
 
         if output_filename is None:
@@ -173,7 +182,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
     def _print_expr_canonical(self,
                               x,
-                              output_file,
+                              output,
                               object_symbol_dictionary,
                               variable_symbol_dictionary,
                               is_objective,
@@ -191,10 +200,10 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
           x: A Pyomo canonical expression to write in LP format
         """
         assert (not force_objective_constant) or (is_objective)
+        linear_coef_string_template = self.linear_coef_string_template
+        quad_coef_string_template = self.quad_coef_string_template
 
         constant=True
-        linear_coef_string_template = '%+'+self._precision_string+' %s\n'
-        quad_coef_string_template = '%+'+self._precision_string+' '
         #
         # Linear
         #
@@ -210,14 +219,14 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 names = [variable_symbol_dictionary[id(var)] for var in x.linear_vars]
                     
                 for i, name in sorted(enumerate(names), key=lambda x: x[1]):
-                    output_file.write(linear_coef_string_template % (x.linear_coefs[i], name))
+                    output.append(linear_coef_string_template % (x.linear_coefs[i], name))
             else:
                 #
                 # Order columns by the value of column_order[]
                 #
                 for i, var in sorted(enumerate(x.linear_vars), key=lambda x: column_order[x[1]]):
                     name = variable_symbol_dictionary[id(var)]
-                    output_file.write(linear_coef_string_template % (x.linear_coefs[i], name))
+                    output.append(linear_coef_string_template % (x.linear_coefs[i], name))
         #
         # Quadratic
         #
@@ -227,7 +236,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 self._referenced_variable_ids[id(var1)] = var1
                 self._referenced_variable_ids[id(var2)] = var2
 
-            output_file.write("+ [\n")
+            output.append("+ [\n")
 
             if column_order is None:
                 #
@@ -256,13 +265,13 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     #
                     if is_objective:
                         tmp = 2*x.quadratic_coefs[i]
-                        output_file.write(quad_coef_string_template % tmp)
+                        output.append(quad_coef_string_template % tmp)
                     else:
-                        output_file.write(quad_coef_string_template % x.quadratic_coefs[i])
+                        output.append(quad_coef_string_template % x.quadratic_coefs[i])
                     if i in quad:
-                        output_file.write("%s ^ 2\n" % (names_[0]))
+                        output.append("%s ^ 2\n" % (names_[0]))
                     else:
-                        output_file.write("%s * %s\n" % (names_[0], names_[1]))
+                        output.append("%s * %s\n" % (names_[0], names_[1]))
             else:
                 #
                 # Order columns by the value of column_order[]
@@ -289,22 +298,22 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     # Ref: ILog CPlex 8.0 User's Manual, p197.
                     #
                     if is_objective:
-                        output_file.write(quad_coef_string_template % 2*x.quadratic_coefs[i])
+                        output.append(quad_coef_string_template % 2*x.quadratic_coefs[i])
                     else:
-                        output_file.write(quad_coef_string_template % x.quadratic_coefs[i])
+                        output.append(quad_coef_string_template % x.quadratic_coefs[i])
                     if i in quad:
-                        output_file.write("%s ^ 2\n" % cols_[1])
+                        output.append("%s ^ 2\n" % cols_[1])
                     else:
-                        output_file.write("%s * %s\n" % (cols_[1], cols_[2]))
+                        output.append("%s * %s\n" % (cols_[1], cols_[2]))
 
-            output_file.write("]")
+            output.append("]")
 
             if is_objective:
-                output_file.write(' / 2\n')
+                output.append(' / 2\n')
                 # divide by 2 because LP format requires /2 for all the quadratic
                 # terms.  Weird.  Ref: ILog CPlex 8.0 User's Manual, p197
             else:
-                output_file.write("\n")
+                output.append("\n")
 
         if constant and not is_objective:
             # If we made it to here we are outputing
@@ -313,7 +322,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             # constraint for the benefit of solvers like
             # Glpk that cannot parse an LP file without
             # a variable on the left hand side.
-            output_file.write(linear_coef_string_template % (0, 'ONE_VAR_CONSTANT'))
+            output.append(linear_coef_string_template % (0, 'ONE_VAR_CONSTANT'))
 
         #
         # Constant offset
@@ -321,10 +330,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         # Currently, it appears that we only need to print
         # the constant offset term for objectives.
         #
-        obj_string_template = '%+'+self._precision_string+' %s\n'
         if is_objective and (force_objective_constant or (x.constant != 0.0)):
-            output_file.write(obj_string_template
-                              % (x.constant, 'ONE_VAR_CONSTANT'))
+            output.append(self.obj_string_template % (x.constant, 'ONE_VAR_CONSTANT'))
 
         #
         # Return constant offset
@@ -336,10 +343,11 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                  labeler,
                  variable_symbol_map,
                  soscondata,
-                 output_file):
+                 output):
         """
         Prints the SOS constraint associated with the _SOSConstraintData object
         """
+        sos_template_string = self.sos_template_string
 
         if hasattr(soscondata, 'get_items'):
             sos_items = list(soscondata.get_items())
@@ -351,10 +359,9 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
         level = soscondata.level
 
-        output_file.write('%s: S%s::\n'
+        output.append('%s: S%s::\n'
                           % (symbol_map.getSymbol(soscondata,labeler), level))
 
-        sos_template_string = "%s:%"+self._precision_string+"\n"
         for vardata, weight in sos_items:
             weight = _get_bound(weight)
             if weight < 0:
@@ -368,7 +375,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     "currently not supported. Deactive this constraint in order to "
                     "proceed." % (soscondata.name, vardata.name))
             self._referenced_variable_ids[id(vardata)] = vardata
-            output_file.write(sos_template_string
+            output.append(sos_template_string
                               % (variable_symbol_map.getSymbol(vardata),
                                  weight))
 
@@ -384,6 +391,12 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         skip_trivial_constraints=False,
                         force_objective_constant=False,
                         include_all_variable_bounds=False):
+
+        eq_string_template = self.eq_string_template
+        leq_string_template = self.leq_string_template
+        geq_string_template = self.geq_string_template
+        ub_string_template = self.ub_string_template
+        lb_string_template = self.lb_string_template
 
         symbol_map = SymbolMap()
         variable_symbol_map = SymbolMap()
@@ -455,7 +468,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         #
         # NOTE: this *must* use the "\* ... *\" comment format: the GLPK
         # LP parser does not correctly handle other formats (notably, "%").
-        output_file.write(
+        output = []
+        output.append(
             "\\* Source Pyomo model name=%s *\\\n\n" % (model.name,) )
 
         #
@@ -495,9 +509,9 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
                 symbol_map.alias(objective_data, '__default_objective__')
                 if objective_data.is_minimizing():
-                    output_file.write("min \n")
+                    output.append("min \n")
                 else:
-                    output_file.write("max \n")
+                    output.append("max \n")
 
                 if gen_obj_repn:
                     repn = generate_standard_repn(objective_data.expr)
@@ -524,12 +538,12 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         "has nonlinear terms that are not quadratic."
                         % objective_data.name)
 
-                output_file.write(
+                output.append(
                     object_symbol_dictionary[id(objective_data)]+':\n')
 
                 offset = print_expr_canonical(
                     repn,
-                    output_file,
+                    output,
                     object_symbol_dictionary,
                     variable_symbol_dictionary,
                     True,
@@ -549,9 +563,9 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         # to whine elsewhere. Output a warning if the constraint block is empty,
         # so users can quickly determine the cause of the solve failure.
 
-        output_file.write("\n")
-        output_file.write("s.t.\n")
-        output_file.write("\n")
+        output.append("\n")
+        output.append("s.t.\n")
+        output.append("\n")
 
         have_nontrivial = False
 
@@ -598,9 +612,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             yield_all_constraints = constraint_generator
 
         # FIXME: This is a hack to get nested blocks working...
-        eq_string_template = "= %"+self._precision_string+'\n'
-        geq_string_template = ">= %"+self._precision_string+'\n\n'
-        leq_string_template = "<= %"+self._precision_string+'\n\n'
         for constraint_data, repn in yield_all_constraints():
             have_nontrivial = True
 
@@ -635,60 +646,68 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             if constraint_data.equality:
                 assert value(constraint_data.lower) == \
                     value(constraint_data.upper)
-                label = 'c_e_' + con_symbol + '_'
+                label = 'c_e_%s_' % con_symbol
                 alias_symbol_func(symbol_map, constraint_data, label)
-                output_file.write(label+':\n')
+                output.append(label)
+                output.append(':\n')
                 offset = print_expr_canonical(repn,
-                                              output_file,
+                                              output,
                                               object_symbol_dictionary,
                                               variable_symbol_dictionary,
                                               False,
                                               column_order)
                 bound = constraint_data.lower
                 bound = _get_bound(bound) - offset
-                output_file.write(eq_string_template
+                output.append(eq_string_template
                                   % (_no_negative_zero(bound)))
-                output_file.write("\n")
+                output.append("\n")
             else:
                 if constraint_data.has_lb():
                     if constraint_data.has_ub():
-                        label = 'r_l_' + con_symbol + '_'
+                        label = 'r_l_%s_' % con_symbol
                     else:
-                        label = 'c_l_' + con_symbol + '_'
+                        label = 'c_l_%s_' % con_symbol
                     alias_symbol_func(symbol_map, constraint_data, label)
-                    output_file.write(label+':\n')
+                    output.append(label)
+                    output.append(':\n')
                     offset = print_expr_canonical(repn,
-                                                  output_file,
+                                                  output,
                                                   object_symbol_dictionary,
                                                   variable_symbol_dictionary,
                                                   False,
                                                   column_order)
                     bound = constraint_data.lower
                     bound = _get_bound(bound) - offset
-                    output_file.write(geq_string_template
+                    output.append(geq_string_template
                                       % (_no_negative_zero(bound)))
                 else:
                     assert constraint_data.has_ub()
 
                 if constraint_data.has_ub():
                     if constraint_data.has_lb():
-                        label = 'r_u_' + con_symbol + '_'
+                        label = 'r_u_%s_' % con_symbol
                     else:
-                        label = 'c_u_' + con_symbol + '_'
+                        label = 'c_u_%s_' % con_symbol
                     alias_symbol_func(symbol_map, constraint_data, label)
-                    output_file.write(label+':\n')
+                    output.append(label)
+                    output.append(':\n')
                     offset = print_expr_canonical(repn,
-                                                  output_file,
+                                                  output,
                                                   object_symbol_dictionary,
                                                   variable_symbol_dictionary,
                                                   False,
                                                   column_order)
                     bound = constraint_data.upper
                     bound = _get_bound(bound) - offset
-                    output_file.write(leq_string_template
+                    output.append(leq_string_template
                                       % (_no_negative_zero(bound)))
                 else:
                     assert constraint_data.has_lb()
+
+            # A simple hack to avoid caching super large files
+            if len(output) > 1024:
+                output_file.write( "".join(output) )
+                output = []
 
         if not have_nontrivial:
             logger.warning('Empty constraint block written in LP format '  \
@@ -700,9 +719,9 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         # to the value 1.  This is used when quadratic terms are present.
         # worst-case, if not used, is that CPLEX easily pre-processes it out.
         prefix = ""
-        output_file.write('%sc_e_ONE_VAR_CONSTANT: \n' % prefix)
-        output_file.write('%sONE_VAR_CONSTANT = 1.0\n' % prefix)
-        output_file.write("\n")
+        output.append('%sc_e_ONE_VAR_CONSTANT: \n' % prefix)
+        output.append('%sONE_VAR_CONSTANT = 1.0\n' % prefix)
+        output.append("\n")
 
         # SOS constraints
         #
@@ -718,7 +737,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         # We print X to CPLEX format as X(i,j,k,...) where i, j, k, ... are the
         # indices of X.
         #
-        SOSlines = StringIO()
+        SOSlines = []
         sos1 = solver_capability("sos1")
         sos2 = solver_capability("sos2")
         writtenSOS = False
@@ -739,7 +758,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     raise ValueError(
                         "Solver does not support SOS level %s constraints" % (level))
                 if writtenSOS == False:
-                    SOSlines.write("SOS\n")
+                    SOSlines.append("SOS\n")
                     writtenSOS = True
                 # This updates the referenced_variable_ids, just in case
                 # there is a variable that only appears in an
@@ -756,14 +775,11 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         # Bounds
         #
 
-        output_file.write("bounds\n")
+        output.append("bounds\n")
 
         # Scan all variables even if we're only writing a subset of them.
         # required because we don't store maps by variable type currently.
 
-        # FIXME: This is a hack to get nested blocks working...
-        lb_string_template = "%"+self._precision_string+" <= "
-        ub_string_template = " <= %"+self._precision_string+"\n"
         # Track the number of integer and binary variables, so you can
         # output their status later.
         integer_vars = []
@@ -779,6 +795,24 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                (id(vardata) not in self._referenced_variable_ids):
                 continue
 
+            name_to_output = variable_symbol_dictionary[id(vardata)]
+            if name_to_output == "e":
+                raise ValueError(
+                    "Attempting to write variable with name 'e' in a CPLEX LP "
+                    "formatted file will cause a parse failure due to confusion with "
+                    "numeric values expressed in scientific notation")
+
+            # track the number of integer and binary variables, so we know whether
+            # to output the general / binary sections below.
+            if vardata.is_binary():
+                binary_vars.append(name_to_output)
+            elif vardata.is_integer():
+                integer_vars.append(name_to_output)
+            elif not vardata.is_continuous():
+                raise TypeError("Invalid domain type for variable with name '%s'. "
+                                "Variable is not continuous, integer, or binary."
+                                % (vardata.name))
+
             if vardata.fixed:
                 if not output_fixed_variable_bounds:
                     raise ValueError(
@@ -792,66 +826,53 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     raise ValueError("Variable cannot be fixed to a value of None.")
                 vardata_lb = value(vardata.value)
                 vardata_ub = value(vardata.value)
+
+                output.append("   ")
+                output.append(lb_string_template
+                                      % (_no_negative_zero(vardata_lb)))
+                output.append(name_to_output)
+                output.append(ub_string_template
+                                      % (_no_negative_zero(vardata_ub)))
             else:
                 vardata_lb = _get_bound(vardata.lb)
                 vardata_ub = _get_bound(vardata.ub)
 
-            name_to_output = variable_symbol_dictionary[id(vardata)]
+                # Pyomo assumes that the default variable bounds are -inf and +inf
+                output.append("   ")
+                if vardata.has_lb():
+                    output.append(lb_string_template
+                                      % (_no_negative_zero(vardata_lb)))
+                else:
+                    output.append(" -inf <= ")
 
-            # track the number of integer and binary variables, so we know whether
-            # to output the general / binary sections below.
-            if vardata.is_binary():
-                binary_vars.append(name_to_output)
-            elif vardata.is_integer():
-                integer_vars.append(name_to_output)
-            elif not vardata.is_continuous():
-                raise TypeError("Invalid domain type for variable with name '%s'. "
-                                "Variable is not continuous, integer, or binary."
-                                % (vardata.name))
-
-            # in the CPLEX LP file format, the default variable
-            # bounds are 0 and +inf.  These bounds are in
-            # conflict with Pyomo, which assumes -inf and +inf
-            # (which we would argue is more rational).
-            output_file.write("   ")
-            if vardata.has_lb():
-                output_file.write(lb_string_template
-                                  % (_no_negative_zero(vardata_lb)))
-            else:
-                output_file.write(" -inf <= ")
-            if name_to_output == "e":
-                raise ValueError(
-                    "Attempting to write variable with name 'e' in a CPLEX LP "
-                    "formatted file will cause a parse failure due to confusion with "
-                    "numeric values expressed in scientific notation")
-
-            output_file.write(name_to_output)
-            if vardata.has_ub():
-                output_file.write(ub_string_template
-                                  % (_no_negative_zero(vardata_ub)))
-            else:
-                output_file.write(" <= +inf\n")
+                output.append(name_to_output)
+                if vardata.has_ub():
+                    output.append(ub_string_template
+                                      % (_no_negative_zero(vardata_ub)))
+                else:
+                    output.append(" <= +inf\n")
 
         if len(integer_vars) > 0:
 
-            output_file.write("general\n")
+            output.append("general\n")
             for var_name in integer_vars:
-                output_file.write('  %s\n' % var_name)
+                output.append('  %s\n' % var_name)
 
         if len(binary_vars) > 0:
 
-            output_file.write("binary\n")
+            output.append("binary\n")
             for var_name in binary_vars:
-                output_file.write('  %s\n' % var_name)
+                output.append('  %s\n' % var_name)
 
 
         # Write the SOS section
-        output_file.write(SOSlines.getvalue())
+        output.append( "".join(SOSlines) )
 
         #
         # wrap-up
         #
-        output_file.write("end\n")
+        output.append("end\n")
+        output_file.write( "".join(output) )
 
         # Clean up the symbol map to only contain variables referenced
         # in the active constraints **Note**: warm start method may
