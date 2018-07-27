@@ -26,6 +26,7 @@ from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
 from pyomo.core.base.suffix import Suffix
+import pyomo.core.base.var
 
 
 logger = logging.getLogger('pyomo.solvers')
@@ -539,9 +540,9 @@ class GurobiDirect(DirectSolver):
         self.results.problem.name = gprob.ModelName
 
         if gprob.ModelSense == 1:
-            self.results.problem.sense = pyomo.core.kernel.minimize
+            self.results.problem.sense = minimize
         elif gprob.ModelSense == -1:
-            self.results.problem.sense = pyomo.core.kernel.maximize
+            self.results.problem.sense = maximize
         else:
             raise RuntimeError('Unrecognized gurobi objective sense: {0}'.format(gprob.ModelSense))
 
