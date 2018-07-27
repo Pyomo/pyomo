@@ -19,7 +19,7 @@ from pyomo.core.expr.numvalue import value
 from pyomo.repn import generate_standard_repn
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
-import pyomo.core.kernel
+from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt.results.results_ import SolverResults
@@ -385,9 +385,9 @@ class GurobiDirect(DirectSolver):
         if obj.active is False:
             raise ValueError('Cannot add inactive objective to solver.')
 
-        if obj.sense == pyomo.core.kernel.minimize:
+        if obj.sense == minimize:
             sense = self._gurobipy.GRB.MINIMIZE
-        elif obj.sense == pyomo.core.kernel.maximize:
+        elif obj.sense == maximize:
             sense = self._gurobipy.GRB.MAXIMIZE
         else:
             raise ValueError('Objective sense is not recognized: {0}'.format(obj.sense))
