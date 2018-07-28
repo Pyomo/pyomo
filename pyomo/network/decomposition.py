@@ -574,14 +574,13 @@ class SequentialDecomposition(object):
                 scomp = []
                 while True:
                     w = stk.pop()
-                    scomp.append(node_list[w])
+                    scomp.append(i2n[w])
                     if w == v:
                         break
                 strngComps.append(scomp)
             return depth
 
-        adj, _ = self.adj_lists(G)
-        node_list = self.idx_to_node(G)
+        i2n, adj, _ = self.adj_lists(G)
 
         stk        = []  # node stack
         strngComps = []  # list of SCCs
@@ -652,7 +651,7 @@ class SequentialDecomposition(object):
     def calculation_order(self, G, roots=None, nodes=None):
         """Rely on tree_order to return a calculation order of nodes."""
         tset = self.tear_set(G)
-        adj, adjR = self.adj_lists(G, excludeEdges=tset, nodes=nodes)
+        i2n, adj, adjR = self.adj_lists(G, excludeEdges=tset, nodes=nodes)
 
         order = []
         if roots is not None:
@@ -666,11 +665,10 @@ class SequentialDecomposition(object):
         orderIndex = self.tree_order(adj, adjR, rootsIndex)
 
         # convert indexes to actual nodes
-        node_list = self.idx_to_node(G)
         for i in range(len(orderIndex)):
             order.append([])
             for j in range(len(orderIndex[i])):
-                order[i].append(node_list[orderIndex[i][j]])
+                order[i].append(i2n[orderIndex[i][j]])
 
         return order
 
@@ -1040,7 +1038,7 @@ class SequentialDecomposition(object):
             pointStack.pop()
             return f
 
-        adj, _ = self.adj_lists(G) # adjacency (successor) matrix of indexes
+        i2n, adj, _ = self.adj_lists(G) # adjacency (successor) matrix of indexes
         pointStack  = [] # node stack
         markStack = [] # nodes that have been marked
         cycles = [] # list of cycles found
@@ -1054,10 +1052,9 @@ class SequentialDecomposition(object):
                 mark[i] = False
 
         # Turn node indexes back into nodes
-        node_list = self.idx_to_node(G)
         for cycle in cycles:
             for i in range(len(cycle)):
-                cycle[i] = node_list[cycle[i]]
+                cycle[i] = i2n[cycle[i]]
 
         # Now find list of edges in the cycle
         edge_map = self.edge_to_idx(G)
@@ -1086,26 +1083,29 @@ class SequentialDecomposition(object):
             for ei in excludeEdges:
                 exclude.add(edge_list[ei])
 
-        all_nodes = self.idx_to_node(G)
-
         if nodes is None:
-            nodes = all_nodes
+            nodes = self.idx_to_node(G)
 
-        node_map = self.node_to_idx(G)
+        # we might not be including every node in these lists, so we need
+        # custom maps to get between indexes and nodes
+        i = -1
+        i2n = [None] * len(nodes)
+        n2i = dict()
+        for node in nodes:
+            i += 1
+            n2i[node] = i
+            i2n[i] = node
 
         i = -1
-        for node in all_nodes:
-            # every node gets a list so that we can consistently map from index
-            # to the same node every time, but if that node is not part of the
-            # nodes list, then its lists will be empty
+        for node in nodes:
             i += 1
             adj.append([])
             adjR.append([])
             for suc in G.successors(node):
                 if suc in nodes and (node, suc) not in exclude:
-                    adj[i].append(node_map[suc])
+                    adj[i].append(n2i[suc])
             for pre in G.predecessors(node):
                 if pre in nodes and (pre, node) not in exclude:
-                    adjR[i].append(node_map[pre])
+                    adjR[i].append(n2i[pre])
 
-        return adj, adjR
+        return i2n, adj, adjR
