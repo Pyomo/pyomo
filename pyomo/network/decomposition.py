@@ -431,7 +431,7 @@ class SequentialDecomposition(object):
         def fcn(G):
             if key in self.options:
                 res = self.options[key]
-                if not self.check_tear_set(res):
+                if not self.check_tear_set(G, res):
                     raise ValueError("Tear set found in options is "
                                      "insufficient to solve network")
                 self.cache[key] = res
@@ -871,7 +871,7 @@ class SequentialDecomposition(object):
 
         return order
 
-    def check_tear_set(self, tset):
+    def check_tear_set(self, G, tset):
         """
         Check whether the specified tear streams are sufficient.
         If the graph minus the tear edges is not a tree then the
