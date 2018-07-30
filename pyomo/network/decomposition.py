@@ -11,7 +11,8 @@
 __all__ = [ 'SequentialDecomposition' ]
 
 from pyomo.network import Port, Arc
-from pyomo.core import Constraint, value, Objective
+from pyomo.core import Constraint, value, Objective, Var, ConcreteModel, \
+    Binary, minimize, Expression
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.expr.current import identify_variables
 from pyomo.repn import generate_standard_repn
@@ -22,30 +23,62 @@ import copy, logging
 from six import iteritems, itervalues
 
 logger = logging.getLogger('pyomo.network')
+logger.setLevel(logging.INFO) # TODO: option to set logging level somewhere?
 
 
 class SequentialDecomposition(object):
-    """A sequential modular decomposition tool"""
+    """
+    A sequential decomposition tool for Pyomo network models.
+
+    Options for various methods, accessed via self.options:
+        solver                  Name of solver to use for passing values
+                                    when there is more than one free var
+        solver_io               Solver IO keyword for the above solver
+        solver_options          Keyword options to pass to solve method
+        tear_solver             Name of solver to use for select_tear_mip
+        tear_solver_io          Solver IO keyword for the above solver
+        tear_solver_options     Keyword options to pass to solve method
+        run_first_pass          Boolean indicating whether or not to run
+                                    through network before running the
+                                    tear stream convergence procedure
+        solve_tears             Boolean indicating whether or not to run
+                                    iterations to converge tear streams
+        tear_method             Method to use for converging tear streams,
+                                    either "Direct" or "Wegstein"
+
+    TODO: other options
+    """
 
     def __init__(self):
         self.cache = {}
         self.options = Options()
         # defaults
         self.options["solver"] = "ipopt"
+        self.options["solver_io"] = None
         self.options["solver_options"] = {}
+        self.options["tear_solver"] = "cplex"
+        self.options["tear_solver_io"] = "python"
+        self.options["tear_solver_options"] = {}
+        self.options["run_first_pass"] = True
         self.options["solve_tears"] = True
-        self.options["tearsolver"] = "Direct"
+        self.options["tear_method"] = "Direct"
 
     def run(self, model, function):
         """
-        Initialize a Pyomo network model using sequential modular simulation.
+        Compute a Pyomo network model using sequential decomposition.
+
+        Arguments:
+            model           A Pyomo model
+            function        A function to be called on each block/node
+                                in the network
         """
         self.cache.clear()
 
         G = self.create_graph(model)
 
-        order = self.calculation_order(G)
-        # self.run_order(G, order, function)
+        if self.options["run_first_pass"]:
+            order = self.calculation_order(G)
+            self.run_order(G, order, function)
 
         tset = self.tear_set(G)
         if not self.options["solve_tears"] or not len(tset):
@@ -65,31 +98,40 @@ class SequentialDecomposition(object):
                         tears.append(ei)
 
                 kwds = dict(G=G, order=order, function=function, tears=tears)
-                if "iterlim" in self.options:
-                    kwds["iterlim"] = self.options["iterlim"]
+                if "iterLim" in self.options:
+                    kwds["iterLim"] = self.options["iterLim"]
                 if "tol" in self.options:
                     kwds["tol"] = self.options["tol"]
 
-                tearsolver = self.options["tearsolver"]
+                tear_method = self.options["tear_method"]
 
-                if tearsolver == "Direct":
+                if tear_method == "Direct":
                     self.solve_tear_direct(**kwds)
 
-                elif tearsolver == "Wegstein":
-                    if "thetaMin" in self.options:
-                        kwds["thetaMin"] = self.options["thetaMin"]
-                    if "thetaMax" in self.options:
-                        kwds["thetaMax"] = self.options["thetaMax"]
+                elif tear_method == "Wegstein":
+                    if "accelMin" in self.options:
+                        kwds["accelMin"] = self.options["accelMin"]
+                    if "accelMax" in self.options:
+                        kwds["accelMax"] = self.options["accelMax"]
                     if "tearTolType" in self.options:
                         kwds["tearTolType"] = self.options["tearTolType"]
                     self.solve_tear_wegstein(**kwds)
 
                 else:
-                    raise ValueError("Invalid tearsolver '%s'" % tearsolver)
+                    raise ValueError(
+                        "Invalid tear_method '%s'" % (tear_method,))
 
         self.cache.clear()
 
     def run_order(self, G, order, function):
+        """
+        Run computations in the order provided by calling the function.
+
+        Arguments:
+            G               A networkx graph corresponding to order
+            order           The order in which to run each node in the graph
+            function        The function to be called on each block/node
+        """
         fixed_inputs = self.fixed_inputs()
         fixed_outputs = ComponentSet()
         tset = self.tear_set(G)
@@ -158,6 +200,8 @@ class SequentialDecomposition(object):
             repn = generate_standard_repn(con.body)
             if repn.is_fixed():
                 # the port member's peer was already fixed
+                # TODO: what if we have two fixed but different values
+                # at either end of the port?
                 continue
             if not (repn.is_linear() and len(repn.linear_vars) == 1):
                 # TODO: need to confirm this is the right thing to do
@@ -182,7 +226,8 @@ class SequentialDecomposition(object):
 
         from pyomo.environ import SolverFactory
         eblock.o = Objective(expr=1)
-        opt = SolverFactory(self.options["solver"])
+        opt = SolverFactory(self.options["solver"],
+                            solver_io=self.options["solver_io"])
         kwds = self.options["solver_options"]
         opt.solve(eblock, **kwds)
 
@@ -252,6 +297,10 @@ class SequentialDecomposition(object):
         return G
 
     def tear_error(self, G, tears):
+        """
+        Returns a numpy array of differences between src and dest values
+        for all edges in the tears list of edge indexes.
+        """
         svals = []
         dvals = []
         edge_list = self.idx_to_edge(G)
@@ -273,45 +322,55 @@ class SequentialDecomposition(object):
         dvals = numpy.array(dvals)
         return svals - dvals
 
-    def set_tear_weg(self, G, tears, x):
+    def pass_tear_weg(self, G, tears, x):
         """
-        Transfer the value of the two sides of a set of tear streams
-        to the value x, which is a list of values for each connection
-        in each tear.
+        Set the destination value of all tear edges to the corresponding
+        value in the numpy array x.
         """
         fixed_inputs = self.fixed_inputs()
         edge_list = self.idx_to_edge(G)
         i = 0
         for tear in tears:
             arc = G.edges[edge_list[tear]]["arc"]
-            dest = arc.dest
+            src, dest = arc.src, arc.dest
             dest_unit = dest.parent_block()
-            for name, mem in dest.iter_vars(with_names=True):
+
+            if dest_unit not in fixed_inputs:
+                fixed_inputs[dest_unit] = ComponentSet()
+
+            need_to_solve = False
+            for name, mem in src.iter_vars(with_names=True):
                 try:
                     index = mem.index()
                 except AttributeError:
                     index = None
                 obj = self.source_dest_peer(arc, name, index)
                 if obj.is_variable_type():
-                    obj.value = x[i]
+                    if not obj.is_fixed():
+                        # TODO: what should we do if it is fixed?
+                        fixed_inputs[dest_unit].add(obj)
+                        obj.fix(x[i])
                 else:
                     repn = generate_standard_repn(obj - x[i])
-                    if repn.is_fixed():
-                        # the port member's peer was already fixed
-                        continue
-                    if not (repn.is_linear() and len(repn.linear_vars) == 1):
-                        # TODO: what do to if we're underspecified,
-                        # make a block and stuff it with constraints and solve?
-                        need_to_solve = True
-                        logger.warning("Dest member '%s' of arc '%s' has more "
-                            "than one free variable." % (name, arc.name))
-                        continue
-                    # fix the value of the single variable
-                    val = (0 - repn.constant) / repn.linear_coefs[0]
-                    var = repn.linear_vars[0]
-                    fixed_inputs[dest_unit].add(var)
-                    var.fix(val)
+                    if not repn.is_fixed():
+                        # TODO: what should we do if it is fixed?
+                        if repn.is_linear() and len(repn.linear_vars) == 1:
+                            # fix the value of the single variable
+                            val = (0 - repn.constant) / repn.linear_coefs[0]
+                            var = repn.linear_vars[0]
+                            fixed_inputs[dest_unit].add(var)
+                            var.fix(val)
+                        else:
+                            # TODO: what to do if we're underspecified, make
+                            # a model and stuff it with constraints and solve?
+                            need_to_solve = True
+                            logger.warning("Dest member '%s' of arc '%s' has "
+                                "more than one free variable." %
+                                (name, arc.name))
                 i += 1
+
+            if need_to_solve:
+                raise Exception("I haven't figured this out yet")
 
     def generate_gofx(self, G, tears):
         edge_list = self.idx_to_edge(G)
@@ -350,28 +409,38 @@ class SequentialDecomposition(object):
                 val = value(obj)
                 x.append(val)
                 # TODO: what to do if it doesn't have bound(s)
-                xmax.append(obj.ub if obj.has_ub() else val)
-                xmin.append(obj.lb if obj.has_lb() else val)
+                try:
+                    xmax.append(obj.ub if obj.has_ub() else val)
+                    xmin.append(obj.lb if obj.has_lb() else val)
+                except AttributeError:
+                    # expressions don't have bounds
+                    xmax.append(val)
+                    xmin.append(val)
 
         return gofx, x, xmin, xmax
 
     def cacher(self, key, fcn, *args):
         if key in self.cache:
             return self.cache[key]
-        if key in self.options:
-            res = self.options[key]
-            self.cache[key] = res
-            return res
         res = fcn(*args)
         self.cache[key] = res
         return res
 
     def tear_set(self, G):
-        """Returns first tear set returned from select_tear"""
+        key = "tear_set"
         def fcn(G):
-            res = self.select_tear(G)
-            return res[0][0]
-        return self.cacher("tear_set", fcn, G)
+            if key in self.options:
+                res = self.options[key]
+                if not self.check_tear_set(res):
+                    raise ValueError("Tear set found in options is "
+                                     "insufficient to solve network")
+                self.cache[key] = res
+                return res
+            kwds = dict(G=G)
+            if "select_tear_method" in self.options:
+                kwds["method"] = self.options["select_tear_method"]
+            return self.select_tear(**kwds)
+        return self.cacher(key, fcn, G)
 
     def fixed_inputs(self):
         return self.cacher("fixed_inputs", dict)
@@ -416,7 +485,7 @@ class SequentialDecomposition(object):
     ########################################################################
 
     def solve_tear_direct(self, G, order, function, tears,
-            iterlim=40, tol=1.0e-5):
+            iterLim=40, tol=1.0e-5):
         """
         Use direct substitution to solve tears. If multiple tears are
         given they are solved simultaneously.
@@ -424,7 +493,7 @@ class SequentialDecomposition(object):
         Arguments:
             order           List of lists of order in which to calculate nodes
             tears           List of tear edge indexes
-            iterlim        Limit on the number of iterations to run
+            iterLim         Limit on the number of iterations to run
             tol             Tolerance at which iteration can be stopped
 
         Returns:
@@ -432,12 +501,14 @@ class SequentialDecomposition(object):
                 output values at each iteration.
         """
         hist = [] # error at each iteration in every variable
-        itercount = 1 # iteration counter
+        itercount = 0 # iteration counter
 
         if not len(tears):
             # no need to iterate just run the calculations
             self.run_order(G, order, function)
             return hist
+
+        logger.info("Starting Direct tear convergence")
 
         fixed_outputs = ComponentSet()
         edge_list = self.idx_to_edge(G)
@@ -445,12 +516,16 @@ class SequentialDecomposition(object):
         while True:
             err = self.tear_error(G, tears)
             hist.append(err)
+
             if numpy.max(numpy.abs(err)) < tol:
+                logger.info("Direct converged in %s iterations" % itercount)
                 break
-            if itercount >= iterlim:
+
+            if itercount >= iterLim:
                 logger.warning("Direct failed to converge in %s iterations"
-                    % iterlim)
+                    % iterLim)
                 return hist
+
             for tear in tears:
                 # fix everything then call pass values
                 arc = G.edges[edge_list[tear]]["arc"]
@@ -461,28 +536,33 @@ class SequentialDecomposition(object):
                 for var in fixed_outputs:
                     var.free()
                 fixed_outputs.clear()
-            self.run_order(G, order, function)
+
             itercount += 1
+            logger.info("Running Direct iteration %s" % itercount)
+            self.run_order(G, order, function)
 
         return hist
 
-    def solve_tear_wegstein(self, G, order, function, tears, iterlim=40,
-        tol=1.0e-5, thetaMin=-5, thetaMax=0, tearTolType="abs"):
+    def solve_tear_wegstein(self, G, order, function, tears, iterLim=40,
+        tol=1.0e-5, accelMin=-5, accelMax=0, tearTolType="abs"):
         """
         Use Wegstein to solve tears. If multiple tears are given
         they are solved simultaneously.
 
         Arguments:
-        order = list of nodes order in which to calculate nodes
-                    (can be a subset of all nodes)
-        tears = list of tear edges indexes if more than one they
-                are solved simultaneously
-        ---Return Value---
-        This returns a 2 element list.
-        0 - status code, 0 means completed normally
-        1 - error history list of lists of differences between input
-            and output that are supposed to be equal.  Each list is
-            one iteration.
+            order           List of lists of order in which to calculate nodes
+            tears           List of tear edge indexes
+            iterLim         Limit on the number of iterations to run
+            tol             Tolerance at which iteration can be stopped
+            accelMin        Minimum value for Wegstein acceleration factor
+            accelMax        Maximum value for Wegstein acceleration factor
+            tearTolType     Interpretation of tolerance value, either:
+                                "abs" - Absolute tolerance
+                                "rel" - Relative tolerance (to bound range)
+
+        Returns:
+            List of lists of error history, differences between input and
+                output values at each iteration.
         """
         hist = [] # error at each iteration in every variable
         itercount = 0 # iteration counter
@@ -491,6 +571,8 @@ class SequentialDecomposition(object):
             # no need to iterate just run the calculations
             self.run_order(G, order, function)
             return hist
+
+        logger.info("Starting Wegstein tear convergence")
 
         gofx, x, xmin, xmax = self.generate_weg_lists(G, tears)
         gofx = numpy.array(gofx)
@@ -501,23 +583,27 @@ class SequentialDecomposition(object):
 
         if tearTolType == "abs":
             err = gofx - x
-        elif tearTolType == "rng":
+        elif tearTolType == "rel":
             err = (gofx - x) / xrng
         else:
-            raise ValueError("Invalid tearTolType '%s'" % tearTolType)
+            raise ValueError("Invalid tearTolType '%s'" % (tearTolType,))
         hist.append(err)
 
         # check if it's already solved
         if numpy.max(numpy.abs(err)) < tol:
+            logger.info("Wegstein converged in %s iterations" % itercount)
             return hist
 
-        #if not solved yet do one direct step
+        # if not solved yet do one direct step
         x_prev = x
         gofx_prev = gofx
         x = gofx
-        self.set_tear_weg(G, tears, gofx)
+        self.pass_tear_weg(G, tears, gofx)
 
         while True:
+            itercount += 1
+
+            logger.info("Running Wegstein iteration %s" % itercount)
             self.run_order(G, order, function)
 
             gofx = self.generate_gofx(G, tears)
@@ -525,34 +611,40 @@ class SequentialDecomposition(object):
 
             if tearTolType == "abs":
                 err = gofx - x
-            elif tearTolType == "rng":
+            elif tearTolType == "rel":
                 err = (gofx - x) / xrng
             hist.append(err)
 
             if numpy.max(numpy.abs(err)) < tol:
+                logger.info("Wegstein converged in %s iterations" % itercount)
                 break
-            if itercount > iterlim - 1:
+
+            if itercount > iterLim:
                 logger.warning("Wegstein failed to converge in %s iterations"
-                    % iterlim)
+                    % iterLim)
                 return hist
 
             denom = x - x_prev
+            # this will divide by 0 at some points but we handle that below,
+            # so ignore division warnings
+            old_settings = numpy.seterr(all='ignore')
             slope = numpy.divide((gofx - gofx_prev), denom)
-            # if x and previous x are same just do direct sub
-            # for those elements
+            numpy.seterr(**old_settings)
+            # if isnan or isinf then x and x_prev were the same,
+            # so just do direct sub for those elements
             slope[numpy.isnan(slope)] = 0.0
-            theta = 1.0 / (1.0 - slope)
-            theta[theta < thetaMin] = thetaMin
-            theta[theta > thetaMax] = thetaMax
+            slope[numpy.isinf(slope)] = 0.0
+            accel = slope / (slope - 1)
+            accel[accel < accelMin] = accelMin
+            accel[accel > accelMax] = accelMax
             x_prev = x
             gofx_prev = gofx
-            x = (1.0 - theta) * x_prev + (theta) * gofx_prev
-            self.set_tear_weg(G, tears, x)
-            itercount += 1
+            x = accel * x_prev + (1 - accel) * gofx_prev
+            self.pass_tear_weg(G, tears, x)
 
         return hist
 
-    def scc_collect(self, G):
+    def scc_collect(self, G, excludeEdges=None):
         """
         This is an algorithm for finding strongly connected components (SCCs)
         in a graph. It is based on Tarjan. 1972 Depth-First Search and Linear
@@ -585,7 +677,7 @@ class SequentialDecomposition(object):
                 strngComps.append(scomp)
             return depth
 
-        i2n, adj, _ = self.adj_lists(G)
+        i2n, adj, _ = self.adj_lists(G, excludeEdges=excludeEdges)
 
         stk        = []  # node stack
         strngComps = []  # list of SCCs
@@ -779,7 +871,94 @@ class SequentialDecomposition(object):
 
         return order
 
-    def select_tear(self, G):
+    def check_tear_set(self, tset):
+        """
+        Check whether the specified tear streams are sufficient.
+        If the graph minus the tear edges is not a tree then the
+        tear set is not sufficient to solve the graph.
+        """
+        sccNodes, _, _ = self.scc_collect(G, excludeEdges=tset)
+        for nodes in sccNodes:
+            if len(nodes) > 1:
+                return False
+        return True
+
+    def select_tear(self, G, method="mip"):
+        """
+        Call the specified tear selection procedure,
+        either "mip" or "heuristic".
+        """
+        if method == "mip":
+            return self.select_tear_mip(G)
+        elif method == "heuristic":
+            # tset is the first list in the first return value
+            return self.select_tear_heuristic(G)[0][0]
+        else:
+            raise ValueError("Invalid method '%s'" % (method,))
+
+    def select_tear_mip(self, G):
+        """
+        This finds optimal sets of tear edges based on two criteria.
+        The primary objective is to minimize the maximum number of
+        times any cycle is broken. The seconday criteria is to
+        minimize the number of tears. This function creates a MIP
+        problem in Pyomo with a doubly weighted objective and solves
+        it with the solver specifications in the options container.
+        """
+        edge_list = self.idx_to_edge(G)
+
+        model = ConcreteModel()
+
+        bin_list = []
+        for i in range(len(edge_list)):
+            # add a binary "torn" variable for every edge
+            vname = "edge%s" % i
+            var = Var(domain=Binary)
+            bin_list.append(var)
+            model.add_component(vname, var)
+
+        # var containing the maximum number of times any cycle is torn
+        mct = model.max_cycle_tears = Var()
+
+        _, cycleEdges = self.all_cycles(G)
+
+        for i in range(len(cycleEdges)):
+            ecyc = cycleEdges[i]
+
+            # expression containing sum of tears for each cycle
+            ename = "cycle_sum%s" % i
+            expr = Expression(expr=sum(bin_list[i] for i in ecyc))
+            model.add_component(ename, expr)
+
+            # every cycle must have at least 1 tear
+            cname_min = "cycle_min%s" % i
+            con_min = Constraint(expr=expr >= 1)
+            model.add_component(cname_min, con_min)
+
+            # mct >= cycle_sum for all cycles, thus it becomes the max
+            cname_mct = mct.name + "_geq%s" % i
+            con_mct = Constraint(expr=mct >= expr)
+            model.add_component(cname_mct, con_mct)
+
+        # weigh the primary objective much greater than the secondary
+        obj_expr = 1000 * mct + sum(var for var in bin_list)
+        model.obj = Objective(expr=obj_expr, sense=minimize)
+
+        from pyomo.environ import SolverFactory
+        opt = SolverFactory(self.options["tear_solver"],
+                            solver_io=self.options["tear_solver_io"])
+        kwds = self.options["tear_solver_options"]
+        opt.solve(model, **kwds)
+
+        # collect final list by adding every edge with a "True" binary var
+        tset = []
+        for i in range(len(bin_list)):
+            if bin_list[i].value == 1:
+                tset.append(i)
+
+        return tset
+
+    def select_tear_heuristic(self, G):
         """
         This finds optimal sets of tear edges based on two criteria.
         The primary objective is to minimize the maximum number of
@@ -992,17 +1171,18 @@ class SequentialDecomposition(object):
 
     def cycle_edge_matrix(self, G):
         """
-        Return a cycle-edge incidence matrix and a
-        list of list of all edges in all cycles.
+        Return a cycle-edge incidence matrix, a list of list of nodes in
+        each cycle, and a list of list of edge indexes in each cycle.
         """
-        cycles, cycleEdges = self.all_cycles(G)  # call cycle finding algorithm
-        # Create empty incidence matrix
+        cycles, cycleEdges = self.all_cycles(G) # call cycle finding algorithm
+
+        # Create empty incidence matrix and then fill it out
         ceMat = numpy.zeros((len(cycleEdges), G.number_of_edges()),
                             dtype=numpy.dtype(int))
-        # Fill out incidence matrix
         for i in range(len(cycleEdges)):
             for e in cycleEdges[i]:
                 ceMat[i, e] = 1
+
         return ceMat, cycles, cycleEdges
 
     def all_cycles(self, G):
@@ -1011,7 +1191,9 @@ class SequentialDecomposition(object):
         The algorithm is based on Tarjan 1973 Enumeration of the
         elementary circuits of a directed graph, SIAM J. Comput. v3 n2 1973.
 
-        Returns a list of lists of nodes in each cycle, and another for edges.
+        Returns:
+            List of lists of nodes in each cycle
+            List of lists of edge indexes in each cycle
         """
 
         def backtrack(v):
@@ -1043,7 +1225,7 @@ class SequentialDecomposition(object):
             pointStack.pop()
             return f
 
-        i2n, adj, _ = self.adj_lists(G) # adjacency (successor) matrix of indexes
+        i2n, adj, _ = self.adj_lists(G)
         pointStack  = [] # node stack
         markStack = [] # nodes that have been marked
         cycles = [] # list of cycles found
