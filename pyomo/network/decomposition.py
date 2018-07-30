@@ -35,7 +35,6 @@ class SequentialDecomposition(object):
         self.options["solver_options"] = {}
         self.options["solve_tears"] = True
         self.options["tearsolver"] = "Direct"
-        self.options["tearTolType"] = "abs"
 
     def run(self, model, function):
         """
@@ -80,8 +79,9 @@ class SequentialDecomposition(object):
                     if "thetaMin" in self.options:
                         kwds["thetaMin"] = self.options["thetaMin"]
                     if "thetaMax" in self.options:
-
                         kwds["thetaMax"] = self.options["thetaMax"]
+                    if "tearTolType" in self.options:
+                        kwds["tearTolType"] = self.options["tearTolType"]
                     self.solve_tear_wegstein(**kwds)
 
                 else:
@@ -256,23 +256,19 @@ class SequentialDecomposition(object):
         dvals = []
         edge_list = self.idx_to_edge(G)
         for tear in tears:
-            s = []
-            d = []
             arc = G.edges[edge_list[tear]]["arc"]
             src, dest = arc.src, arc.dest
             sf = arc.expanded_block.component("splitfrac")
             for name, mem in src.iter_vars(with_names=True):
                 if sf is not None:
-                    s.append(value(mem * sf))
+                    svals.append(value(mem * sf))
                 else:
-                    s.append(value(mem))
+                    svals.append(value(mem))
                 try:
                     index = mem.index()
                 except AttributeError:
                     index = None
-                d.append(value(self.source_dest_peer(arc, name, index)))
-            svals.append(s)
-            dvals.append(d)
+                dvals.append(value(self.source_dest_peer(arc, name, index)))
         svals = numpy.array(svals)
         dvals = numpy.array(dvals)
         return svals - dvals
@@ -443,6 +439,7 @@ class SequentialDecomposition(object):
             self.run_order(G, order, function)
             return hist
 
+        fixed_outputs = ComponentSet()
         edge_list = self.idx_to_edge(G)
 
         while True:
@@ -455,15 +452,22 @@ class SequentialDecomposition(object):
                     % iterlim)
                 return hist
             for tear in tears:
+                # fix everything then call pass values
                 arc = G.edges[edge_list[tear]]["arc"]
+                for var in arc.source.iter_vars(expr_vars=True, fixed=False):
+                    fixed_outputs.add(var)
+                    var.fix()
                 self.pass_values(arc, fixed_inputs=self.fixed_inputs())
+                for var in fixed_outputs:
+                    var.free()
+                fixed_outputs.clear()
             self.run_order(G, order, function)
             itercount += 1
 
         return hist
 
-    def solve_tear_wegstein(self, G, order, function, tears,
-            iterlim=40, tol=1.0e-5, thetaMin=-5, thetaMax=0):
+    def solve_tear_wegstein(self, G, order, function, tears, iterlim=40,
+        tol=1.0e-5, thetaMin=-5, thetaMax=0, tearTolType="abs"):
         """
         Use Wegstein to solve tears. If multiple tears are given
         they are solved simultaneously.
@@ -495,11 +499,12 @@ class SequentialDecomposition(object):
         xmax = numpy.array(xmax)
         xrng = xmax - xmin
 
-        tearTolType = self.options["tearTolType"]
         if tearTolType == "abs":
             err = gofx - x
         elif tearTolType == "rng":
             err = (gofx - x) / xrng
+        else:
+            raise ValueError("Invalid tearTolType '%s'" % tearTolType)
         hist.append(err)
 
         # check if it's already solved
