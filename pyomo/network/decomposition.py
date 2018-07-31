@@ -14,6 +14,7 @@ from pyomo.network import Port, Arc
 from pyomo.core import Constraint, value, Objective, Var, ConcreteModel, \
     Binary, minimize, Expression
 from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.expr.current import identify_variables
 from pyomo.repn import generate_standard_repn
 from pyutilib.misc import Options
@@ -106,26 +107,27 @@ class SequentialDecomposition(object):
 
         The procedure will use this custom tear set instead of finding
         its own, thus it can save some time. Additionally, this will be
-        useful for knowing which edges will need guesses
+        useful for knowing which edges will need guesses.
 
         Arguments:
             G               A networkx graph corresponding to tset
-            tset            A list of tuples representing edges to tear
+            tset            A list of Arcs representing edges to tear
 
         Returns:
             The tear set list represented by edge indexes
         """
+        arc_map = self.arc_to_edge(G)
         edge_map = self.edge_to_idx(G)
         res = []
-        for edge in tset:
-            res.append(edge_map[edge])
+        for arc in tset:
+            res.append(edge_map[arc_map[arc]])
         self.options["tear_set"] = res
         return res
 
-    def tear_set_edges(self, G, method="mip", **kwds):
+    def tear_set_arcs(self, G, method="mip", **kwds):
         """
         Call the specified tear selection method and return a list
-        of edge tuples representing the selected tear edges.
+        of arcs representing the selected tear edges.
 
         The **kwds will be passed to the method.
         """
@@ -137,23 +139,34 @@ class SequentialDecomposition(object):
         else:
             raise ValueError("Invalid method '%s'" % (method,))
 
-        return self.indexes_to_edges(G, tset)
+        return self.indexes_to_arcs(G, tset)
 
-    def indexes_to_edges(self, G, lst):
+    def indexes_to_arcs(self, G, lst):
         """
-        Converts a list of edge indexes to the edge tuples.
+        Converts a list of edge indexes to the corresponding Arcs.
 
         Arguments:
             G               A networkx graph corresponding to lst
             lst             A list of edge indexes to convert to tuples
 
         Returns:
-            A list of edge tuples
+            A list of arcs
         """
         edge_list = self.idx_to_edge(G)
         res = []
         for ei in lst:
-            res.append(edge_list[ei])
+            edge = edge_list[ei]
+            res.append(G.edges[edge]["arc"])
+        return res
+
+    def arc_to_edge(self, G):
+        """
+        Returns a map from arcs to edge tuples for a given graph.
+        """
+        res = ComponentMap()
+        for edge in G.edges:
+            arc = G.edges[edge]["arc"]
+            res[arc] = edge
         return res
 
     def run(self, model, function):
@@ -257,7 +270,8 @@ class SequentialDecomposition(object):
                         var.fix()
                     for arc in dests:
                         # make sure the edge (index) is not in the tear set
-                        edge = (arc.src.parent_block(), arc.dest.parent_block())
+                        edge = (arc.src.parent_block(),
+                                arc.dest.parent_block(), 0)
                         if edge_map[edge] not in tset:
                             self.pass_values(arc, fixed_inputs)
                     for var in fixed_outputs:
@@ -368,7 +382,7 @@ class SequentialDecomposition(object):
 
     def create_graph(self, model):
         """
-        Returns a networkx representation of a Pyomo connected network.
+        Returns a networkx MultiDiGraph of a Pyomo network model.
 
         The nodes are units and the edges follow Pyomo Arc objects. Nodes
         that get added to the graph are determined by the parent blocks
@@ -378,7 +392,7 @@ class SequentialDecomposition(object):
         or not they are active (since this needs to be done after expansion),
         and they all need to be directed.
         """
-        G = nx.DiGraph()
+        G = nx.MultiDiGraph()
 
         for arc in model.component_data_objects(Arc):
             if not arc.directed:
@@ -386,9 +400,8 @@ class SequentialDecomposition(object):
                                  "a graph for a model. Found undirected "
                                  "Arc: '%s'" % arc.name)
             src, dest = arc.src.parent_block(), arc.dest.parent_block()
-            if G.has_edge(src, dest):
-                # multilpe arcs between two units
-                raise Exception("I haven't figured this out yet")
+            # if G.has_edge(src, dest):
+            #     raise Exception("I haven't figured this out yet")
             G.add_edge(src, dest, arc=arc)
 
         return G
@@ -886,6 +899,7 @@ class SequentialDecomposition(object):
         adj = [] # SCC adjacency list
         adjR = [] # SCC reverse adjacency list
         for i in range(len(sccNodes)):
+            # TODO: move this into the loop below
             adj.append([])
             adjR.append([])
 
@@ -1211,7 +1225,7 @@ class SequentialDecomposition(object):
                     cyc(suc, depth)
                 elif depths[suc] < depths[node]:
                     # found a back edge, add to tear set
-                    tearSet.append(edge_list.index((node, suc)))
+                    tearSet.append(edge_list.index((node, suc, 0)))
 
         tearSet = []  # list of back/tear edges
         edge_list = self.idx_to_edge(G)
@@ -1243,7 +1257,7 @@ class SequentialDecomposition(object):
         oe = []  # out edges
         edge_list = self.idx_to_edge(G)
         for i in range(G.number_of_edges()):
-            src, dest = edge_list[i]
+            src, dest, _ = edge_list[i]
             if src in nodes:
                 if dest in nodes:
                     # it's in the sub graph
@@ -1302,7 +1316,7 @@ class SequentialDecomposition(object):
                     g = backtrack(si)
                     f = f or g
 
-            if f == True:
+            if f:
                 while markStack[-1] != v:
                     u = markStack.pop()
                     mark[u] = False
@@ -1336,8 +1350,9 @@ class SequentialDecomposition(object):
         for cyc in cycles:
             ecyc = []
             for i in range(len(cyc) - 1):
-                ecyc.append(edge_map[(cyc[i], cyc[i+1])])
-            ecyc.append(edge_map[(cyc[-1], cyc[0])]) # edge from end to start
+                # TODO: can't hardcode the 0 as the third index
+                ecyc.append(edge_map[(cyc[i], cyc[i + 1], 0)])
+            ecyc.append(edge_map[(cyc[-1], cyc[0], 0)]) # edge from end to start
             cycleEdges.append(ecyc)
         return cycles, cycleEdges
 
@@ -1376,10 +1391,10 @@ class SequentialDecomposition(object):
             adj.append([])
             adjR.append([])
             for suc in G.successors(node):
-                if suc in nodes and (node, suc) not in exclude:
+                if suc in nodes and (node, suc, 0) not in exclude:
                     adj[i].append(n2i[suc])
             for pre in G.predecessors(node):
-                if pre in nodes and (pre, node) not in exclude:
+                if pre in nodes and (pre, node, 0) not in exclude:
                     adjR[i].append(n2i[pre])
 
         return i2n, adj, adjR
