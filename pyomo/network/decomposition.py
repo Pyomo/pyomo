@@ -30,38 +30,131 @@ class SequentialDecomposition(object):
     """
     A sequential decomposition tool for Pyomo network models.
 
-    Options for various methods, accessed via self.options:
-        solver                  Name of solver to use for passing values
-                                    when there is more than one free var
-        solver_io               Solver IO keyword for the above solver
-        solver_options          Keyword options to pass to solve method
-        tear_solver             Name of solver to use for select_tear_mip
-        tear_solver_io          Solver IO keyword for the above solver
-        tear_solver_options     Keyword options to pass to solve method
+    Options, accessed via self.options:
+        graph                   A networkx graph representing the model to
+                                    be solved
+                                    Default: None (will compute it)
+        tear_set                A list of indexes representing edges to be
+                                    torn. Can be set with a list of edge
+                                    tuples via set_tear_set
+                                    Default: None (will compute it)
+        select_tear_method      Which method to use to select a tear set,
+                                    either "mip" or "heuristic"
+                                    Default: "mip"
         run_first_pass          Boolean indicating whether or not to run
                                     through network before running the
                                     tear stream convergence procedure
+                                    Default: True
         solve_tears             Boolean indicating whether or not to run
                                     iterations to converge tear streams
+                                    Default: True
         tear_method             Method to use for converging tear streams,
                                     either "Direct" or "Wegstein"
-
-    TODO: other options
+                                    Default: "Direct"
+        iterLim                 Limit on the number of tear iterations
+                                    Default: 40
+        tol                     Tolerance at which to stop tear iterations
+                                    Default: 1.0E-5
+        accelMin                Min value for Wegstein acceleration factor
+                                    Default: -5
+        accelMax                Max value for Wegstein acceleration factor
+                                    Default: 0
+        tearTolType             Type of Wegstein tolerance value, either:
+                                    "abs" - Absolute tolerance
+                                    "rel" - Relative tolerance (to bound range)
+                                    Default: "abs"
+        solver                  Name of solver to use for passing values
+                                    when there is more than one free var
+                                    Default: "baron"
+        solver_io               Solver IO keyword for the above solver
+                                    Default: None
+        solver_options          Keyword options to pass to solve method
+                                    Default: {}
+        tear_solver             Name of solver to use for select_tear_mip
+                                    Default: "cplex"
+        tear_solver_io          Solver IO keyword for the above solver
+                                    Default: "python"
+        tear_solver_options     Keyword options to pass to solve method
+                                    Default: {}
     """
 
     def __init__(self):
         self.cache = {}
-        self.options = Options()
+        options = self.options = Options()
         # defaults
-        self.options["solver"] = "baron"
-        self.options["solver_io"] = None
-        self.options["solver_options"] = {}
-        self.options["tear_solver"] = "cplex"
-        self.options["tear_solver_io"] = "python"
-        self.options["tear_solver_options"] = {}
-        self.options["run_first_pass"] = True
-        self.options["solve_tears"] = True
-        self.options["tear_method"] = "Direct"
+        options["graph"] = None
+        options["tear_set"] = None
+        options["select_tear_method"] = "mip"
+        options["run_first_pass"] = True
+        options["solve_tears"] = True
+        options["tear_method"] = "Direct"
+        options["iterLim"] = 40
+        options["tol"] = 1.0E-5
+        options["accelMin"] = -5
+        options["accelMax"] = 0
+        options["tearTolType"] = "abs"
+        options["solver"] = "baron"
+        options["solver_io"] = None
+        options["solver_options"] = {}
+        options["tear_solver"] = "cplex"
+        options["tear_solver_io"] = "python"
+        options["tear_solver_options"] = {}
+
+    def set_tear_set(self, G, tset):
+        """
+        Set a custom tear set to be used when running the decomposition.
+
+        The procedure will use this custom tear set instead of finding
+        its own, thus it can save some time. Additionally, this will be
+        useful for knowing which edges will need guesses
+
+        Arguments:
+            G               A networkx graph corresponding to tset
+            tset            A list of tuples representing edges to tear
+
+        Returns:
+            The tear set list represented by edge indexes
+        """
+        edge_map = self.edge_to_idx(G)
+        res = []
+        for edge in tset:
+            res.append(edge_map[edge])
+        self.options["tear_set"] = res
+        return res
+
+    def tear_set_edges(self, G, method="mip", **kwds):
+        """
+        Call the specified tear selection method and return a list
+        of edge tuples representing the selected tear edges.
+
+        The **kwds will be passed to the method.
+        """
+        if method == "mip":
+            tset = self.select_tear_mip(G, **kwds)
+        elif method == "heuristic":
+            # tset is the first list in the first return value
+            tset = self.select_tear_heuristic(G, **kwds)[0][0]
+        else:
+            raise ValueError("Invalid method '%s'" % (method,))
+
+        return self.indexes_to_edges(G, tset)
+
+    def indexes_to_edges(self, G, lst):
+        """
+        Converts a list of edge indexes to the edge tuples.
+
+        Arguments:
+            G               A networkx graph corresponding to lst
+            lst             A list of edge indexes to convert to tuples
+
+        Returns:
+            A list of edge tuples
+        """
+        edge_list = self.idx_to_edge(G)
+        res = []
+        for ei in lst:
+            res.append(edge_list[ei])
+        return res
 
     def run(self, model, function):
         """
@@ -74,7 +167,9 @@ class SequentialDecomposition(object):
         """
         self.cache.clear()
 
-        G = self.create_graph(model)
+        G = self.options["graph"]
+        if G is None:
+            G = self.create_graph(model)
 
         if self.options["run_first_pass"]:
             order = self.calculation_order(G)
@@ -97,11 +192,8 @@ class SequentialDecomposition(object):
                     if ei in tset:
                         tears.append(ei)
 
-                kwds = dict(G=G, order=order, function=function, tears=tears)
-                if "iterLim" in self.options:
-                    kwds["iterLim"] = self.options["iterLim"]
-                if "tol" in self.options:
-                    kwds["tol"] = self.options["tol"]
+                kwds = dict(G=G, order=order, function=function, tears=tears,
+                    iterLim=self.options["iterLim"], tol=self.options["tol"])
 
                 tear_method = self.options["tear_method"]
 
@@ -109,12 +201,9 @@ class SequentialDecomposition(object):
                     self.solve_tear_direct(**kwds)
 
                 elif tear_method == "Wegstein":
-                    if "accelMin" in self.options:
-                        kwds["accelMin"] = self.options["accelMin"]
-                    if "accelMax" in self.options:
-                        kwds["accelMax"] = self.options["accelMax"]
-                    if "tearTolType" in self.options:
-                        kwds["tearTolType"] = self.options["tearTolType"]
+                    kwds["accelMin"] = self.options["accelMin"]
+                    kwds["accelMax"] = self.options["accelMax"]
+                    kwds["tearTolType"] = self.options["tearTolType"]
                     self.solve_tear_wegstein(**kwds)
 
                 else:
@@ -297,9 +386,70 @@ class SequentialDecomposition(object):
                                  "a graph for a model. Found undirected "
                                  "Arc: '%s'" % arc.name)
             src, dest = arc.src.parent_block(), arc.dest.parent_block()
+            if G.has_edge(src, dest):
+                # multilpe arcs between two units
+                raise Exception("I haven't figured this out yet")
             G.add_edge(src, dest, arc=arc)
 
         return G
+
+    def select_tear_mip(self, G, solver, solver_io=None, solver_options={}):
+        """
+        This finds optimal sets of tear edges based on two criteria.
+        The primary objective is to minimize the maximum number of
+        times any cycle is broken. The seconday criteria is to
+        minimize the number of tears. This function creates a MIP
+        problem in Pyomo with a doubly weighted objective and solves
+        it with the solver specifications in the options container.
+        """
+        model = ConcreteModel()
+
+        bin_list = []
+        for i in range(G.number_of_edges()):
+            # add a binary "torn" variable for every edge
+            vname = "edge%s" % i
+            var = Var(domain=Binary)
+            bin_list.append(var)
+            model.add_component(vname, var)
+
+        # var containing the maximum number of times any cycle is torn
+        mct = model.max_cycle_tears = Var()
+
+        _, cycleEdges = self.all_cycles(G)
+
+        for i in range(len(cycleEdges)):
+            ecyc = cycleEdges[i]
+
+            # expression containing sum of tears for each cycle
+            ename = "cycle_sum%s" % i
+            expr = Expression(expr=sum(bin_list[i] for i in ecyc))
+            model.add_component(ename, expr)
+
+            # every cycle must have at least 1 tear
+            cname_min = "cycle_min%s" % i
+            con_min = Constraint(expr=expr >= 1)
+            model.add_component(cname_min, con_min)
+
+            # mct >= cycle_sum for all cycles, thus it becomes the max
+            cname_mct = mct.name + "_geq%s" % i
+            con_mct = Constraint(expr=mct >= expr)
+            model.add_component(cname_mct, con_mct)
+
+        # weigh the primary objective much greater than the secondary
+        obj_expr = 1000 * mct + sum(var for var in bin_list)
+        model.obj = Objective(expr=obj_expr, sense=minimize)
+
+        from pyomo.environ import SolverFactory
+        opt = SolverFactory(solver, solver_io=solver_io)
+        opt.solve(model, **solver_options)
+
+        # collect final list by adding every edge with a "True" binary var
+        tset = []
+        for i in range(len(bin_list)):
+            if bin_list[i].value == 1:
+                tset.append(i)
+
+        return tset
 
     def tear_error(self, G, tears):
         """
@@ -434,17 +584,25 @@ class SequentialDecomposition(object):
     def tear_set(self, G):
         key = "tear_set"
         def fcn(G):
-            if key in self.options:
-                res = self.options[key]
+            res = self.options[key]
+            if res is not None:
                 if not self.check_tear_set(G, res):
                     raise ValueError("Tear set found in options is "
                                      "insufficient to solve network")
                 self.cache[key] = res
                 return res
-            kwds = dict(G=G)
-            if "select_tear_method" in self.options:
-                kwds["method"] = self.options["select_tear_method"]
-            return self.select_tear(**kwds)
+
+            method = self.options["select_tear_method"]
+            if method == "mip":
+                return self.select_tear_mip(G,
+                                            self.options["tear_solver"],
+                                            self.options["tear_solver_io"],
+                                            self.options["tear_solver_options"])
+            elif method == "heuristic":
+                # tset is the first list in the first return value
+                return self.select_tear_heuristic(G)[0][0]
+            else:
+                raise ValueError("Invalid select_tear_method '%s'" % (method,))
         return self.cacher(key, fcn, G)
 
     def fixed_inputs(self):
@@ -489,8 +647,7 @@ class SequentialDecomposition(object):
     #
     ########################################################################
 
-    def solve_tear_direct(self, G, order, function, tears,
-            iterLim=40, tol=1.0e-5):
+    def solve_tear_direct(self, G, order, function, tears, iterLim, tol):
         """
         Use direct substitution to solve tears. If multiple tears are
         given they are solved simultaneously.
@@ -548,8 +705,8 @@ class SequentialDecomposition(object):
 
         return hist
 
-    def solve_tear_wegstein(self, G, order, function, tears, iterLim=40,
-        tol=1.0e-5, accelMin=-5, accelMax=0, tearTolType="abs"):
+    def solve_tear_wegstein(self, G, order, function, tears, iterLim,
+        tol, accelMin, accelMax, tearTolType):
         """
         Use Wegstein to solve tears. If multiple tears are given
         they are solved simultaneously.
@@ -887,81 +1044,6 @@ class SequentialDecomposition(object):
             if len(nodes) > 1:
                 return False
         return True
-
-    def select_tear(self, G, method="mip"):
-        """
-        Call the specified tear selection procedure,
-        either "mip" or "heuristic".
-        """
-        if method == "mip":
-            return self.select_tear_mip(G)
-        elif method == "heuristic":
-            # tset is the first list in the first return value
-            return self.select_tear_heuristic(G)[0][0]
-        else:
-            raise ValueError("Invalid method '%s'" % (method,))
-
-    def select_tear_mip(self, G):
-        """
-        This finds optimal sets of tear edges based on two criteria.
-        The primary objective is to minimize the maximum number of
-        times any cycle is broken. The seconday criteria is to
-        minimize the number of tears. This function creates a MIP
-        problem in Pyomo with a doubly weighted objective and solves
-        it with the solver specifications in the options container.
-        """
-        edge_list = self.idx_to_edge(G)
-
-        model = ConcreteModel()
-
-        bin_list = []
-        for i in range(len(edge_list)):
-            # add a binary "torn" variable for every edge
-            vname = "edge%s" % i
-            var = Var(domain=Binary)
-            bin_list.append(var)
-            model.add_component(vname, var)
-
-        # var containing the maximum number of times any cycle is torn
-        mct = model.max_cycle_tears = Var()
-
-        _, cycleEdges = self.all_cycles(G)
-
-        for i in range(len(cycleEdges)):
-            ecyc = cycleEdges[i]
-
-            # expression containing sum of tears for each cycle
-            ename = "cycle_sum%s" % i
-            expr = Expression(expr=sum(bin_list[i] for i in ecyc))
-            model.add_component(ename, expr)
-
-            # every cycle must have at least 1 tear
-            cname_min = "cycle_min%s" % i
-            con_min = Constraint(expr=expr >= 1)
-            model.add_component(cname_min, con_min)
-
-            # mct >= cycle_sum for all cycles, thus it becomes the max
-            cname_mct = mct.name + "_geq%s" % i
-            con_mct = Constraint(expr=mct >= expr)
-            model.add_component(cname_mct, con_mct)
-
-        # weigh the primary objective much greater than the secondary
-        obj_expr = 1000 * mct + sum(var for var in bin_list)
-        model.obj = Objective(expr=obj_expr, sense=minimize)
-
-        from pyomo.environ import SolverFactory
-        opt = SolverFactory(self.options["tear_solver"],
-                            solver_io=self.options["tear_solver_io"])
-        kwds = self.options["tear_solver_options"]
-        opt.solve(model, **kwds)
-
-        # collect final list by adding every edge with a "True" binary var
-        tset = []
-        for i in range(len(bin_list)):
-            if bin_list[i].value == 1:
-                tset.append(i)
-
-        return tset
 
     def select_tear_heuristic(self, G):
         """
