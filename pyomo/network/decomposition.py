@@ -53,7 +53,7 @@ class SequentialDecomposition(object):
         self.cache = {}
         self.options = Options()
         # defaults
-        self.options["solver"] = "ipopt"
+        self.options["solver"] = "baron"
         self.options["solver_io"] = None
         self.options["solver_options"] = {}
         self.options["tear_solver"] = "cplex"
@@ -218,6 +218,8 @@ class SequentialDecomposition(object):
         if not need_to_solve:
             return
 
+        raise Exception("I haven't figured this out yet")
+
         logger.warning(
             "Need to call solver for underspecified constraints of arc '%s'.\n"
             "This probably means either the split fraction was not specified "
@@ -225,6 +227,9 @@ class SequentialDecomposition(object):
             "Values may be arbitrary." % arc.name)
 
         from pyomo.environ import SolverFactory
+        # TODO: even if this is the right thing to do, we can't just create
+        # this dummy objective on the actual model. We're gonna need to create
+        # a new model if we have to solve like this.
         eblock.o = Objective(expr=1)
         opt = SolverFactory(self.options["solver"],
                             solver_io=self.options["solver_io"])
@@ -627,7 +632,7 @@ class SequentialDecomposition(object):
             denom = x - x_prev
             # this will divide by 0 at some points but we handle that below,
             # so ignore division warnings
-            old_settings = numpy.seterr(all='ignore')
+            old_settings = numpy.seterr(divide='ignore', invalid='ignore')
             slope = numpy.divide((gofx - gofx_prev), denom)
             numpy.seterr(**old_settings)
             # if isnan or isinf then x and x_prev were the same,
