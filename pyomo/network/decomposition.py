@@ -400,20 +400,18 @@ class SequentialDecomposition(object):
                                  "a graph for a model. Found undirected "
                                  "Arc: '%s'" % arc.name)
             src, dest = arc.src.parent_block(), arc.dest.parent_block()
-            # if G.has_edge(src, dest):
-            #     raise Exception("I haven't figured this out yet")
             G.add_edge(src, dest, arc=arc)
 
         return G
 
-    def select_tear_mip(self, G, solver, solver_io=None, solver_options={}):
+    def select_tear_mip_model(self, G):
         """
-        This finds optimal sets of tear edges based on two criteria.
-        The primary objective is to minimize the maximum number of
-        times any cycle is broken. The seconday criteria is to
-        minimize the number of tears. This function creates a MIP
-        problem in Pyomo with a doubly weighted objective and solves
-        it with the solver specifications in the options container.
+        Generate a model for selecting tears from the given graph.
+
+        Returns:
+            The model
+            A list of the binary variables representing each edge,
+                indexed by the edge index of the graph
         """
         model = ConcreteModel()
 
@@ -451,6 +449,20 @@ class SequentialDecomposition(object):
         # weigh the primary objective much greater than the secondary
         obj_expr = 1000 * mct + sum(var for var in bin_list)
         model.obj = Objective(expr=obj_expr, sense=minimize)
+
+        return model, bin_list
+
+    def select_tear_mip(self, G, solver, solver_io=None, solver_options={}):
+        """
+        This finds optimal sets of tear edges based on two criteria.
+        The primary objective is to minimize the maximum number of
+        times any cycle is broken. The seconday criteria is to
+        minimize the number of tears.
+
+        This function creates a MIP problem in Pyomo with a doubly
+        weighted objective and solves it with the solver arguments.
+        """
+        model, bin_list = self.select_tear_mip_model(G)
 
         from pyomo.environ import SolverFactory
         opt = SolverFactory(solver, solver_io=solver_io)
@@ -856,11 +868,11 @@ class SequentialDecomposition(object):
 
         stk        = []  # node stack
         strngComps = []  # list of SCCs
-        ndepth     = [None] * G.number_of_nodes()
-        back       = [None] * G.number_of_nodes()
+        ndepth     = [None] * len(i2n)
+        back       = [None] * len(i2n)
 
         # find the SCCs
-        for v in range(G.number_of_nodes()):
+        for v in range(len(i2n)):
             if ndepth[v] == None:
                 sc(v, stk, 0, strngComps)
 
@@ -898,8 +910,8 @@ class SequentialDecomposition(object):
         """
         adj = [] # SCC adjacency list
         adjR = [] # SCC reverse adjacency list
+        # populate with empty lists before running the loop below
         for i in range(len(sccNodes)):
-            # TODO: move this into the loop below
             adj.append([])
             adjR.append([])
 
@@ -922,7 +934,15 @@ class SequentialDecomposition(object):
         return self.tree_order(adj, adjR)
 
     def calculation_order(self, G, roots=None, nodes=None):
-        """Rely on tree_order to return a calculation order of nodes."""
+        """
+        Rely on tree_order to return a calculation order of nodes.
+
+        Arguments:
+            roots           List of nodes to consider as tree roots,
+                                if None then the actual roots are used
+            nodes           Subset of nodes to consider in the tree,
+                                if None then all nodes are used
+        """
         tset = self.tear_set(G)
         i2n, adj, adjR = self.adj_lists(G, excludeEdges=tset, nodes=nodes)
 
@@ -978,7 +998,7 @@ class SequentialDecomposition(object):
         for i, l in enumerate(adjR):
             adjR[i] = set(l)
 
-        if roots == None:
+        if roots is None:
             roots = []
             mark = [True] * len(adj) # mark all nodes if no roots specified
             r = [True] * len(adj)
@@ -1064,13 +1084,16 @@ class SequentialDecomposition(object):
         This finds optimal sets of tear edges based on two criteria.
         The primary objective is to minimize the maximum number of
         times any cycle is broken. The seconday criteria is to
-        minimize the number of tears. This function uses a branch
-        and bound type approach.
+        minimize the number of tears.
 
-        Output:
+        This function uses a branch and bound type approach.
+
+        Returns:
             List of lists of tear sets. All the tear sets returned
-            are equally good there are often a very large number of
-            equally good tear sets.
+                are equally good. There are often a very large number
+                of equally good tear sets.
+            The max number of times any single loop is torn
+            The total number of loops
 
         Improvemnts for the future.
         I think I can imporve the efficency of this, but it is good
@@ -1275,7 +1298,7 @@ class SequentialDecomposition(object):
         Return a cycle-edge incidence matrix, a list of list of nodes in
         each cycle, and a list of list of edge indexes in each cycle.
         """
-        cycles, cycleEdges = self.all_cycles(G) # call cycle finding algorithm
+        cycleNodes, cycleEdges = self.all_cycles(G) # call cycle finding algorithm
 
         # Create empty incidence matrix and then fill it out
         ceMat = numpy.zeros((len(cycleEdges), G.number_of_edges()),
@@ -1284,7 +1307,7 @@ class SequentialDecomposition(object):
             for e in cycleEdges[i]:
                 ceMat[i, e] = 1
 
-        return ceMat, cycles, cycleEdges
+        return ceMat, cycleNodes, cycleEdges
 
     def all_cycles(self, G):
         """
@@ -1297,23 +1320,26 @@ class SequentialDecomposition(object):
             List of lists of edge indexes in each cycle
         """
 
-        def backtrack(v):
+        def backtrack(v, pre_key=None):
             # sub-function recursive part
             f = False
-            pointStack.append(v)
+            pointStack.append((v, pre_key))
             mark[v] = True
             markStack.append(v)
-            sis = list(adj[v])
+            sucs = list(adj[v])
 
-            for si in sis:
-                # iterate over successor indexes
+            for si, key in sucs:
+                # iterate over successor indexes and keys
                 if si < ni:
-                    adj[v].remove(si)
+                    adj[v].remove((si, key))
                 elif si == ni:
                     f = True
-                    cycles.append(list(pointStack))
+                    cyc = list(pointStack) # copy
+                    # append the original point again so we get the last edge
+                    cyc.append((si, key))
+                    cycles.append(cyc)
                 elif not mark[si]:
-                    g = backtrack(si)
+                    g = backtrack(si, key)
                     f = f or g
 
             if f:
@@ -1326,13 +1352,13 @@ class SequentialDecomposition(object):
             pointStack.pop()
             return f
 
-        i2n, adj, _ = self.adj_lists(G)
-        pointStack  = [] # node stack
+        i2n, adj, _ = self.adj_lists(G, multi=True)
+        pointStack  = [] # stack of (node, key) tuples
         markStack = [] # nodes that have been marked
         cycles = [] # list of cycles found
-        mark = [False] * G.number_of_nodes() # if a node is marked
+        mark = [False] * len(i2n) # if a node is marked
 
-        for ni in range(G.number_of_nodes()):
+        for ni in range(len(i2n)):
             # iterate over node indexes
             backtrack(ni)
             while len(markStack) > 0:
@@ -1340,9 +1366,16 @@ class SequentialDecomposition(object):
                 mark[i] = False
 
         # Turn node indexes back into nodes
+        cycleNodes = []
         for cycle in cycles:
+            cycleNodes.append([])
             for i in range(len(cycle)):
-                cycle[i] = i2n[cycle[i]]
+                ni, key = cycle[i]
+                # change the node index in cycles to a node as well
+                cycle[i] = (i2n[ni], key)
+                cycleNodes[-1].append(i2n[ni])
+            # pop the last node since it is the same as the first
+            cycleNodes[-1].pop()
 
         # Now find list of edges in the cycle
         edge_map = self.edge_to_idx(G)
@@ -1350,18 +1383,30 @@ class SequentialDecomposition(object):
         for cyc in cycles:
             ecyc = []
             for i in range(len(cyc) - 1):
-                # TODO: can't hardcode the 0 as the third index
-                ecyc.append(edge_map[(cyc[i], cyc[i + 1], 0)])
-            ecyc.append(edge_map[(cyc[-1], cyc[0], 0)]) # edge from end to start
+                pre, suc, key = cyc[i][0], cyc[i + 1][0], cyc[i + 1][1]
+                ecyc.append(edge_map[(pre, suc, key)])
             cycleEdges.append(ecyc)
-        return cycles, cycleEdges
 
-    def adj_lists(self, G, excludeEdges=None, nodes=None):
+        return cycleNodes, cycleEdges
+
+    def adj_lists(self, G, excludeEdges=None, nodes=None, multi=False):
         """
-        Returns an adjacency matrix and a reverse adjacency matrix
-        of node indexes for a DiGraph. Pass a list of edge indexes to
-        ignore certain edges when considering neighbors. Pass a list of
-        nodes to only form the adjacencies from those nodes.
+        Returns an adjacency list and a reverse adjacency list
+        of node indexes for a MultiDiGraph.
+
+        Arguments:
+            G               A networkx MultiDiGraph
+            excludeEdges    List of edge indexes to ignore when
+                                considering neighbors
+            nodes           List of nodes to form the adjacencies from
+            multi           If True, adjacency lists will contains tuples
+                                of (node, key) for every edge between
+                                two nodes
+
+        Returns:
+            Map from index to node for all nodes included in nodes
+            Adjacency list of successor indexes
+            Reverse adjacency list of predecessor indexes
         """
         adj = []
         adjR = []
@@ -1377,9 +1422,9 @@ class SequentialDecomposition(object):
 
         # we might not be including every node in these lists, so we need
         # custom maps to get between indexes and nodes
-        i = -1
         i2n = [None] * len(nodes)
         n2i = dict()
+        i = -1
         for node in nodes:
             i += 1
             n2i[node] = i
@@ -1390,11 +1435,31 @@ class SequentialDecomposition(object):
             i += 1
             adj.append([])
             adjR.append([])
-            for suc in G.successors(node):
-                if suc in nodes and (node, suc, 0) not in exclude:
-                    adj[i].append(n2i[suc])
-            for pre in G.predecessors(node):
-                if pre in nodes and (pre, node, 0) not in exclude:
-                    adjR[i].append(n2i[pre])
+
+            seen = set()
+            for edge in G.out_edges(node, keys=True):
+                suc, key = edge[1], edge[2]
+                if not multi and suc in seen:
+                    # we only need to add the neighbor once
+                    continue
+                if suc in nodes and edge not in exclude:
+                    # only add neighbor to seen if the edge is not excluded
+                    seen.add(suc)
+                    if multi:
+                        adj[i].append((n2i[suc], key))
+                    else:
+                        adj[i].append(n2i[suc])
+
+            seen = set()
+            for edge in G.in_edges(node, keys=True):
+                pre, key = edge[0], edge[2]
+                if not multi and pre in seen:
+                    continue
+                if pre in nodes and edge not in exclude:
+                    seen.add(pre)
+                    if multi:
+                        adjR[i].append((n2i[pre], key))
+                    else:
+                        adjR[i].append(n2i[pre])
 
         return i2n, adj, adjR
