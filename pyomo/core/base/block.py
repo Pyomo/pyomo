@@ -21,7 +21,7 @@ from operator import itemgetter, attrgetter
 from six import iteritems, iterkeys, itervalues, StringIO, string_types, \
     advance_iterator, PY3
 
-from pyomo.util.timing import ConstructionTimer
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import *  # register_component, ModelComponentFactory
 from pyomo.core.base.component import Component, ActiveComponentData, \
     ComponentUID
@@ -498,10 +498,8 @@ class _BlockData(ActiveComponentData):
         ans = dict(self.__dict__)
         ans.update(super(_BlockData, self).__getstate__())
         # Note sure why we are deleting these...
-        if '_canonical_repn' in ans:
-            del ans['_canonical_repn']
-        if '_ampl_repn' in ans:
-            del ans['_ampl_repn']
+        if '_repn' in ans:
+            del ans['_repn']
         return ans
 
     #

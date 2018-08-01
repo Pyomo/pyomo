@@ -132,7 +132,7 @@ class TestMPSOrdering(unittest.TestCase):
         components["obj"] = Objective(expr=model.a)
         components["con1"] = Constraint(expr=model.a >= 0)
         components["con2"] = Constraint(expr=model.a <= 1)
-        components["con3"] = Constraint(expr=0 <= model.a <= 1)
+        components["con3"] = Constraint(expr=(0, model.a, 1))
         components["con4"] = Constraint([1,2], rule=lambda m, i: model.a == i)
 
         # add components in random order
@@ -151,7 +151,7 @@ class TestMPSOrdering(unittest.TestCase):
         components["obj"] = Objective(expr=model.a)
         components["con1"] = Constraint(expr=model.a >= 0)
         components["con2"] = Constraint(expr=model.a <= 1)
-        components["con3"] = Constraint(expr=0 <= model.a <= 1)
+        components["con3"] = Constraint(expr=(0, model.a, 1))
         components["con4"] = Constraint([1,2], rule=lambda m, i: model.a == i)
 
         # add components in random order

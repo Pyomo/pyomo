@@ -13,10 +13,10 @@ O0 0	#o
 o2	#*
 o5	#pow
 v0	#z
-n2.0
+n2
 o5	#pow
 n5.0
-n2.0
+n2
 x1	# initial guess
 0 1
 r	#0 ranges (rhs's)

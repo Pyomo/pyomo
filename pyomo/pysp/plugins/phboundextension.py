@@ -17,7 +17,7 @@ import os
 import logging
 import copy
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.pysp import phextension
 from pyomo.core.base import minimize
 from pyomo.opt import UndefinedData
@@ -319,11 +319,11 @@ class _PHBoundExtensionImpl(_PHBoundBase):
         self.ReportBoundHistory()
         self.ReportBestBound()
 
-class phboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundExtensionImpl):
+class phboundextension(pyomo.common.plugin.SingletonPlugin, _PHBoundExtensionImpl):
 
-    pyomo.util.plugin.implements(phextension.IPHExtension)
+    pyomo.common.plugin.implements(phextension.IPHExtension)
 
-    pyomo.util.plugin.alias("phboundextension")
+    pyomo.common.plugin.alias("phboundextension")
 
     def __init__(self):
 

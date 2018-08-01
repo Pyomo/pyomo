@@ -18,16 +18,16 @@ var z >= 7;
 minimize obj: z+x*x+y;
 
 s.t.
-	constr:
-		y*y >= a;
+        constr:
+                y*y >= a;
 
-	constr2:
-		y <= x/a;
+        constr2:
+                y <= x/a;
 
-	constr3:
-		z <= y + a;
+        constr3:
+                z <= y + a;
 
 option substout 0;
 option presolve 0;
 option auxfiles 'rc';
-write gjunk;
+write gsmall8.ampl;

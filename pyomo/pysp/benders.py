@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.util import pyomo_command
+from pyomo.common import pyomo_command
 from pyomo.pysp.solvers.benders import *
 
 @pyomo_command('runbenders', 'Optimize with the Benders solver')

@@ -16,7 +16,7 @@ import random
 
 import pyutilib.th as unittest
 
-from pyomo.util.getGSL import find_GSL
+from pyomo.common.getGSL import find_GSL
 from pyomo.environ import *
 import pyomo.opt
 
@@ -164,7 +164,7 @@ class TestNLWriter(unittest.TestCase):
             variable_baseline,
             delete=True)
 
-        self.assertIsNot(m._ampl_repn, None)
+        self.assertIsNot(m._repn, None)
 
         m.x.fix()
         self._cleanup(test_fname)
@@ -187,7 +187,7 @@ class TestNLWriter(unittest.TestCase):
             fixed_baseline,
             delete=True)
         self._cleanup(test_fname)
-        
+
 
 if __name__ == "__main__":
     unittest.main()

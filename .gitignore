@@ -4,6 +4,7 @@
 .ropeproject
 
 # Python generates numerous files when byte compiling / installing packages
+*.pyx
 *.pyc
 *.pyo
 *.egg-info

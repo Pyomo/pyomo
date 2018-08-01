@@ -11,7 +11,7 @@ cc : Size=1, Index=None, Active=True
             Key  : Lower : Body             : Upper : Active
             None :   1.0 : x1 + 2*x2 + 3*x3 :  +Inf :   True
         ve : Size=1, Index=None, Active=True
-            Key  : Lower : Body          : Upper : Active
-            None :   0.0 : cc.v - y - x1 :   0.0 :   True
+            Key  : Lower : Body            : Upper : Active
+            None :   0.0 : cc.v - (y + x1) :   0.0 :   True
 
     3 Declarations: c v ve

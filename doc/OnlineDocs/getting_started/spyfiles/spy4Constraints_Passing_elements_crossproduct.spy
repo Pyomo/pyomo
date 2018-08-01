@@ -1,0 +1,6 @@
+model.A = RangeSet(1,10)
+model.a = Param(model.A, within=PositiveReals)
+model.ToBuy = Var(model.A)
+def bud_rule(model, i):
+    return model.a[i]*model.ToBuy[i] <= i
+aBudget = Constraint(model.A, rule=bud_rule)

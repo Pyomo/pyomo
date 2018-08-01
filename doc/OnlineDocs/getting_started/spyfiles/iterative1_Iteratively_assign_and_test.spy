@@ -1,0 +1,6 @@
+    expr = 0
+    for j in instance.x:
+        if pyo.value(instance.x[j]) == 0:
+            expr += instance.x[j]
+        else:
+            expr += (1-instance.x[j])

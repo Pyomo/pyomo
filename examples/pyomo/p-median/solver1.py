@@ -10,7 +10,7 @@
 
 # Imports from Pyomo and PyUtilib
 from pyomo.core import *
-from pyomo.util.plugin import *
+from pyomo.common.plugin import *
 from pyomo.opt import *
 
 

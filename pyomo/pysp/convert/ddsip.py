@@ -16,7 +16,7 @@ import filecmp
 import logging
 
 from pyomo.opt import WriterFactory
-from pyomo.core.base.numvalue import value
+from pyomo.core.base.numvalue import value, as_numeric
 from pyomo.core.base.block import (Block,
                                    _BlockData,
                                    SortComponents)
@@ -24,7 +24,6 @@ from pyomo.core.base.var import Var, _VarData
 from pyomo.core.base.constraint import Constraint, _ConstraintData
 from pyomo.core.base.suffix import ComponentMap
 from pyomo.core.base import TextLabeler, NumericLabeler
-from pyomo.repn import LinearCanonicalRepn
 from pyomo.pysp.scenariotree.manager import InvocationType
 from pyomo.pysp.annotations import (locate_annotations,
                                     StochasticConstraintBoundsAnnotation,
@@ -33,9 +32,11 @@ from pyomo.pysp.annotations import (locate_annotations,
                                     StochasticVariableBoundsAnnotation)
 from pyomo.pysp.convert.smps import (map_variable_stages,
                                      map_constraint_stages,
+                                     build_repns,
                                      _safe_remove_file,
                                      _no_negative_zero,
                                      _deterministic_check_value,
+                                     _deterministic_check_constant,
                                      ProblemStats)
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
@@ -56,7 +57,7 @@ logger = logging.getLogger('pyomo.pysp')
 def _convert_external_setup(worker, scenario, *args, **kwds):
     reference_model = scenario._instance
     #
-    # We will be tweaking the canonical_repn objects on objectives
+    # We will be tweaking the standard_repn objects on objectives
     # and constraints, so cache anything related to this here so
     # that this function does not have any side effects on the
     # instance after returning
@@ -66,18 +67,18 @@ def _convert_external_setup(worker, scenario, *args, **kwds):
             active=True,
             descend_into=True):
         block_cached_attrs = {}
-        if hasattr(block, "_gen_obj_canonical_repn"):
-            block_cached_attrs["_gen_obj_canonical_repn"] = \
-                block._gen_obj_canonical_repn
-            del block._gen_obj_canonical_repn
-        if hasattr(block, "_gen_con_canonical_repn"):
-            block_cached_attrs["_gen_con_canonical_repn"] = \
-                block._gen_con_canonical_repn
-            del block._gen_con_canonical_repn
-        if hasattr(block, "_canonical_repn"):
-            block_cached_attrs["_canonical_repn"] = \
-                block._canonical_repn
-            del block._canonical_repn
+        if hasattr(block, "_gen_obj_repn"):
+            block_cached_attrs["_gen_obj_repn"] = \
+                block._gen_obj_repn
+            del block._gen_obj_repn
+        if hasattr(block, "_gen_con_repn"):
+            block_cached_attrs["_gen_con_repn"] = \
+                block._gen_con_repn
+            del block._gen_con_repn
+        if hasattr(block, "_repn"):
+            block_cached_attrs["_repn"] = \
+                block._repn
+            del block._repn
         cached_attrs.append((block, block_cached_attrs))
 
     try:
@@ -89,6 +90,12 @@ def _convert_external_setup(worker, scenario, *args, **kwds):
         raise
     finally:
         for block, block_cached_attrs in cached_attrs:
+            if hasattr(block, "_gen_obj_repn"):
+                del block._gen_obj_repn
+            if hasattr(block, "_gen_con_repn"):
+                del block._gen_con_repn
+            if hasattr(block, "_repn"):
+                del block._repn
             for name in block_cached_attrs:
                 setattr(block, name, block_cached_attrs[name])
 
@@ -212,10 +219,21 @@ def _convert_external_setup_without_cleanup(
                StochasticConstraintBodyAnnotation.__name__,
                StochasticObjectiveAnnotation.__name__))
 
+    assert not hasattr(reference_model, "_repn")
+    repn_cache = build_repns(reference_model)
+    assert hasattr(reference_model, "_repn")
+    assert not reference_model._gen_obj_repn
+    assert not reference_model._gen_con_repn
+    # compute values
+    for block_repns in repn_cache.values():
+        for repn in block_repns.values():
+            repn.constant = value(repn.constant)
+            repn.linear_coefs = [value(c) for c in repn.linear_coefs]
+            repn.quadratic_coefs = [value(c) for c in repn.quadratic_coefs]
+
     #
     # Write the LP file once to obtain the symbol map
     #
-    assert not hasattr(reference_model, "_canonical_repn")
     output_filename = os.path.join(output_directory,
                                    scenario.name+".lp.setup")
     with WriterFactory("lp") as writer:
@@ -226,7 +244,6 @@ def _convert_external_setup_without_cleanup(
                                           lambda x: True,
                                           io_options)
         assert output_fname == output_filename
-    assert hasattr(reference_model, "_canonical_repn")
     _safe_remove_file(output_filename)
 
     StageToVariableMap = map_variable_stages(
@@ -257,19 +274,9 @@ def _convert_external_setup_without_cleanup(
     firststage = scenario_tree.stages[0]
     secondstage = scenario_tree.stages[1]
 
-    # disable these as they do not need to be regenerated and
-    # we will be modifiying them
-    canonical_repn_cache = {}
-    for block in reference_model.block_data_objects(
-            active=True,
-            descend_into=True):
-        canonical_repn_cache[id(block)] = block._canonical_repn
-        block._gen_obj_canonical_repn = False
-        block._gen_con_canonical_repn = False
-
     #
     # Make sure the objective references all first stage variables.
-    # We do this by directly modifying the canonical_repn of the
+    # We do this by directly modifying the _repn of the
     # objective which the LP/MPS writer will reference next time we call
     # it. In addition, make sure that the first second-stage variable
     # in our column ordering also appears in the objective so that
@@ -280,7 +287,7 @@ def _convert_external_setup_without_cleanup(
     objective_object = scenario._instance_objective
     assert objective_object is not None
     objective_block = objective_object.parent_block()
-    objective_repn = canonical_repn_cache[id(objective_block)][objective_object]
+    objective_repn = repn_cache[id(objective_block)][objective_object]
 
     #
     # Create column (variable) ordering maps for LP/MPS files
@@ -366,7 +373,7 @@ def _convert_external_setup_without_cleanup(
             lines = []
             for id_ in sorted(rootnode._variable_ids):
                 var = st_symbol_map.bySymbol[id_]
-                if not var.is_expression():
+                if not var.is_expression_type():
                     lp_label = symbol_map.byObject[id(var)]
                     lines.append("%s %s\n" % (lp_label, id_))
             f.writelines(lines)
@@ -434,8 +441,8 @@ def _convert_external_setup_without_cleanup(
                                    StochasticConstraintBoundsAnnotation.__name__))
 
                     constraint_repn = \
-                        canonical_repn_cache[id(con.parent_block())][con]
-                    if not isinstance(constraint_repn, LinearCanonicalRepn):
+                        repn_cache[id(con.parent_block())][con]
+                    if not constraint_repn.is_linear():
                         raise RuntimeError("Only linear constraints are "
                                            "accepted for conversion to DDSIP format. "
                                            "Constraint %s is not linear."
@@ -465,10 +472,10 @@ def _convert_external_setup_without_cleanup(
                             # with all stochastic values set to zero. This will
                             # allow an easy test for missing user annotations.
                             modified_constraint_lb[con] = con.lower
-                            con._lower = _deterministic_check_value
+                            con._lower = _deterministic_check_constant
                             if con_label.startswith('c_e_'):
                                 modified_constraint_ub[con] = con.upper
-                                con._upper = _deterministic_check_value
+                                con._upper = _deterministic_check_constant
                         elif con_label.startswith('r_l_') :
                             if (include_bound is True) or \
                                (include_bound[0] is True):
@@ -482,7 +489,7 @@ def _convert_external_setup_without_cleanup(
                                 # with all stochastic values set to zero. This will
                                 # allow an easy test for missing user annotations.
                                 modified_constraint_lb[con] = con.lower
-                                con._lower = _deterministic_check_value
+                                con._lower = _deterministic_check_constant
                         elif con_label.startswith('c_u_'):
                             assert (include_bound is True) or \
                                    (include_bound[1] is True)
@@ -496,7 +503,7 @@ def _convert_external_setup_without_cleanup(
                             # with all stochastic values set to zero. This will
                             # allow an easy test for missing user annotations.
                             modified_constraint_ub[con] = con.upper
-                            con._upper = _deterministic_check_value
+                            con._upper = _deterministic_check_constant
                         elif con_label.startswith('r_u_'):
                             if (include_bound is True) or \
                                (include_bound[1] is True):
@@ -510,7 +517,7 @@ def _convert_external_setup_without_cleanup(
                                 # with all stochastic values set to zero. This will
                                 # allow an easy test for missing user annotations.
                                 modified_constraint_ub[con] = con.upper
-                                con._upper = _deterministic_check_value
+                                con._upper = _deterministic_check_constant
                         else:
                             assert False
 
@@ -541,28 +548,28 @@ def _convert_external_setup_without_cleanup(
                                 % (con.name,
                                    StochasticConstraintBodyAnnotation.__name__))
                     constraint_repn = \
-                        canonical_repn_cache[id(con.parent_block())][con]
-                    if not isinstance(constraint_repn, LinearCanonicalRepn):
+                        repn_cache[id(con.parent_block())][con]
+                    if not constraint_repn.is_linear():
                         raise RuntimeError("Only linear constraints are "
                                            "accepted for conversion to DDSIP format. "
                                            "Constraint %s is not linear."
                                            % (con.name))
-                    assert len(constraint_repn.variables) > 0
+                    assert len(constraint_repn.linear_vars) > 0
                     if var_list is None:
-                        var_list = constraint_repn.variables
+                        var_list = constraint_repn.linear_vars
                     assert len(var_list) > 0
                     symbols = constraint_symbols[con]
                     # sort the variable list by the column ordering
                     # so that we have deterministic output
                     var_list = list(var_list)
                     var_list.sort(key=lambda _v: column_order[_v])
-                    new_coefs = list(constraint_repn.linear)
+                    new_coefs = list(constraint_repn.linear_coefs)
                     for var in var_list:
                         assert isinstance(var, _VarData)
                         assert not var.fixed
                         var_coef = None
-                        for i, (_var, coef) in enumerate(zip(constraint_repn.variables,
-                                                            constraint_repn.linear)):
+                        for i, (_var, coef) in enumerate(zip(constraint_repn.linear_vars,
+                                                             constraint_repn.linear_coefs)):
                             if _var is var:
                                 var_coef = coef
                                 # We are going to rewrite with core problem file
@@ -587,7 +594,7 @@ def _convert_external_setup_without_cleanup(
                             f_mat.write(matrix_template
                                         % (_no_negative_zero(value(var_coef))))
 
-                    constraint_repn.linear = tuple(new_coefs)
+                    constraint_repn.linear_coefs = tuple(new_coefs)
 
     #
     # Stochastic Objective
@@ -617,25 +624,25 @@ def _convert_external_setup_without_cleanup(
                     objective_variables, include_constant = \
                         stochastic_objective.default
 
-                if not isinstance(objective_repn, LinearCanonicalRepn):
+                if not objective_repn.is_linear():
                     raise RuntimeError("Only linear stochastic objectives are "
                                        "accepted for conversion to DDSIP format. "
                                        "Objective %s is not linear."
                                        % (objective_object.name))
                 if objective_variables is None:
-                    objective_variables = objective_repn.variables
+                    objective_variables = objective_repn.linear_vars
                 stochastic_objective_label = symbol_map.byObject[id(objective_object)]
                 # sort the variable list by the column ordering
                 # so that we have deterministic output
                 objective_variables = list(objective_variables)
                 objective_variables.sort(key=lambda _v: column_order[_v])
                 assert (len(objective_variables) > 0) or include_constant
-                new_coefs = list(objective_repn.linear)
+                new_coefs = list(objective_repn.linear_coefs)
                 for var in objective_variables:
                     assert isinstance(var, _VarData)
                     var_coef = None
-                    for i, (_var, coef) in enumerate(zip(objective_repn.variables,
-                                                        objective_repn.linear)):
+                    for i, (_var, coef) in enumerate(zip(objective_repn.linear_vars,
+                                                         objective_repn.linear_coefs)):
                         if _var is var:
                             var_coef = coef
                             # We are going to rewrite the core problem file
@@ -658,7 +665,7 @@ def _convert_external_setup_without_cleanup(
                     f_obj.write(obj_template
                                 % (_no_negative_zero(value(var_coef))))
 
-                objective_repn.linear = tuple(new_coefs)
+                objective_repn.linear_coefs = tuple(new_coefs)
                 if include_constant:
                     obj_constant = objective_repn.constant
                     # We are going to rewrite the core problem file
@@ -689,9 +696,9 @@ def _convert_external_setup_without_cleanup(
 
     # reset bounds on any constraints that were modified
     for con, lower in iteritems(modified_constraint_lb):
-        con._lower = lower
+        con._lower = as_numeric(lower)
     for con, upper in iteritems(modified_constraint_ub):
-        con._upper = upper
+        con._upper = as_numeric(upper)
 
     return (firststage_variable_count,
             secondstage_variable_count,

@@ -1,0 +1,3 @@
+def profrul(model):
+    return summation(model.p, model.x) + model.y
+model.Obj = Objective(rule=ObjRule, sense=maximize)

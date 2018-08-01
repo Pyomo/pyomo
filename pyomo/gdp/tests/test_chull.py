@@ -11,7 +11,8 @@
 import pyutilib.th as unittest
 
 from pyomo.environ import *
-from pyomo.core.base import expr_common, expr as EXPR
+from pyomo.repn import generate_standard_repn
+
 from pyomo.gdp import *
 import pyomo.gdp.tests.models as models
 
@@ -27,15 +28,19 @@ from nose.tools import set_trace
 
 EPS = TransformationFactory('gdp.chull').CONFIG.EPS
 
+def check_linear_coef(self, repn, var, coef):
+    var_id = None
+    for i,v in enumerate(repn.linear_vars):
+        if v is var:
+            var_id = i
+    self.assertIsNotNone(var_id)
+    self.assertEqual(repn.linear_coefs[var_id], coef)
+
+
 class TwoTermDisj(unittest.TestCase):
-    # make sure that we are using coopr3 expressions...
     def setUp(self):
-        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
         # set seed to test unique namer
         random.seed(666)
-
-    def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_transformation_block(self):
         m = models.makeTwoTermDisj_Nonlinear()
@@ -144,55 +149,22 @@ class TwoTermDisj(unittest.TestCase):
         cons = disj1c['ub']
         self.assertIsNone(cons.lower)
         self.assertEqual(cons.upper, 0)
-        self.assertEqual(len(cons.body._args), 3)
-        self.assertEqual(len(cons.body._coef), 3)
-        self.assertEqual(cons.body._coef[0], 1)
-        # first term
-        firstterm = cons.body._args[0]
-        self.assertEqual(len(firstterm._numerator), 2)
-        self.assertEqual(len(firstterm._denominator), 0)
-        self.check_furman_et_al_denominator(firstterm._numerator[0],
-                                       m.d[0].indicator_var)
-        sub_part = firstterm._numerator[1]
-        self.assertEqual(len(sub_part._coef), 2)
-        self.assertEqual(len(sub_part._args), 2)
-        self.assertEqual(sub_part._coef[0], 1)
-        self.assertEqual(sub_part._coef[1], 1)
-        x_part = sub_part._args[0]
-        self.assertEqual(len(x_part._numerator), 1)
-        self.assertIs(x_part._numerator[0], disjBlock[0].x)
-        self.assertEqual(len(x_part._denominator), 1)
-        self.check_furman_et_al_denominator(x_part._denominator[0],
-                                            m.d[0].indicator_var)
-        y_part = sub_part._args[1]
-        self.assertEqual(len(y_part._args), 2)
-        self.assertEqual(y_part._args[1], 2)
-        y_frac = y_part._args[0]
-        self.assertEqual(len(y_frac._numerator), 1)
-        self.assertIs(y_frac._numerator[0], disjBlock[0].y)
-        self.assertEqual(len(y_frac._denominator), 1)
-        self.check_furman_et_al_denominator(y_frac._denominator[0],
-                                            m.d[0].indicator_var)
-
-        self.assertEqual(cons.body._coef[1], -1)
-        secondterm = cons.body._args[1]
-        self.assertEqual(len(secondterm._numerator), 2)
-        self.assertEqual(len(secondterm._denominator), 0)
-        self.assertEqual(secondterm._coef, EPS)
-        h0 = secondterm._numerator[0]
-        self.assertEqual(len(h0._args), 2)
-        self.assertEqual(len(h0._coef), 2)
-        self.assertEqual(h0._const, 0)
-        self.assertEqual(len(h0._args[1]._args), 2)
-        self.assertEqual(h0._args[0], 0)
-        self.assertEqual(h0._args[1]._args[0], 0)
-        self.assertEqual(h0._args[1]._args[1], 2)
-        self.assertEqual(h0._coef[0], 1)
-        self.assertEqual(h0._coef[1], 1)
-
-        self.assertEqual(cons.body._coef[2], -14)
-        thirdterm = cons.body._args[2]
-        self.assertIs(thirdterm, m.d[0].indicator_var)
+        repn = generate_standard_repn(cons.body)
+        self.assertFalse(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 1)
+        # This is a weak test, but as good as any to ensure that the
+        # substitution was done correctly
+        EPS_1 = 1-EPS
+        self.assertEqual(
+            str(cons.body),
+            "(%s*d[0].indicator_var + %s)*("
+            "_pyomo_gdp_chull_relaxation.relaxedDisjuncts[0].x*"
+            "(1/(%s*d[0].indicator_var + %s)) + "
+            "(_pyomo_gdp_chull_relaxation.relaxedDisjuncts[0].y*"
+            "(1/(%s*d[0].indicator_var + %s)))**2) - "
+            "%s*(0.0 + 0.0**2)*(1 - d[0].indicator_var) "
+            "- 14.0*d[0].indicator_var"
+            % (EPS_1, EPS, EPS_1, EPS, EPS_1, EPS, EPS))
 
     def test_transformed_constraints_linear(self):
         m = models.makeTwoTermDisj_Nonlinear()
@@ -207,12 +179,14 @@ class TwoTermDisj(unittest.TestCase):
         cons = c1['lb']
         self.assertIsNone(cons.lower)
         self.assertEqual(cons.upper, 0)
-        self.assertEqual(len(cons.body._args), 2)
-        self.assertEqual(len(cons.body._coef), 2)
-        self.assertEqual(cons.body._coef[0], 2)
-        self.assertIs(cons.body._args[0], m.d[1].indicator_var)
-        self.assertEqual(cons.body._coef[1], -1)
-        self.assertIs(cons.body._args[1], disjBlock[1].x)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 2)
+        check_linear_coef(self, repn, disjBlock[1].x, -1)
+        check_linear_coef(self, repn, m.d[1].indicator_var, 2)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(disjBlock[1].x.lb, 0)
+        self.assertEqual(disjBlock[1].x.ub, 8)
 
         c2 = disjBlock[1].component("d[1].c2")
         # 'eq' is preserved
@@ -220,12 +194,14 @@ class TwoTermDisj(unittest.TestCase):
         cons = c2['eq']
         self.assertEqual(cons.lower, 0)
         self.assertEqual(cons.upper, 0)
-        self.assertEqual(len(cons.body._args), 2)
-        self.assertEqual(len(cons.body._coef), 2)
-        self.assertEqual(cons.body._coef[0], 1)
-        self.assertIs(cons.body._args[0], disjBlock[1].w)
-        self.assertEqual(cons.body._coef[1], -3)
-        self.assertIs(cons.body._args[1], m.d[1].indicator_var)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 2)
+        check_linear_coef(self, repn, disjBlock[1].w, 1)
+        check_linear_coef(self, repn, m.d[1].indicator_var, -3)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(disjBlock[1].w.lb, 0)
+        self.assertEqual(disjBlock[1].w.ub, 7)
 
         c3 = disjBlock[1].component("d[1].c3")
         # bounded inequality is split
@@ -233,21 +209,22 @@ class TwoTermDisj(unittest.TestCase):
         cons = c3['lb']
         self.assertIsNone(cons.lower)
         self.assertEqual(cons.upper, 0)
-        self.assertEqual(len(cons.body._args), 2)
-        self.assertEqual(len(cons.body._coef), 2)
-        self.assertEqual(cons.body._coef[0], 1)
-        self.assertIs(cons.body._args[0], m.d[1].indicator_var)
-        self.assertEqual(cons.body._coef[1], -1)
-        self.assertIs(cons.body._args[1], disjBlock[1].x)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 2)
+        check_linear_coef(self, repn, disjBlock[1].x, -1)
+        check_linear_coef(self, repn, m.d[1].indicator_var, 1)
+        self.assertEqual(repn.constant, 0)
+
         cons = c3['ub']
         self.assertIsNone(cons.lower)
         self.assertEqual(cons.upper, 0)
-        self.assertEqual(len(cons.body._args), 2)
-        self.assertEqual(len(cons.body._coef), 2)
-        self.assertEqual(cons.body._coef[0], 1)
-        self.assertIs(cons.body._args[0], disjBlock[1].x)
-        self.assertEqual(cons.body._coef[1], -3)
-        self.assertIs(cons.body._args[1], m.d[1].indicator_var)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 2)
+        check_linear_coef(self, repn, disjBlock[1].x, 1)
+        check_linear_coef(self, repn, m.d[1].indicator_var, -3)
+        self.assertEqual(repn.constant, 0)
 
     def check_bound_constraints(self, cons, disvar, indvar, lb, ub):
         self.assertIsInstance(cons, Constraint)
@@ -256,21 +233,22 @@ class TwoTermDisj(unittest.TestCase):
         varlb = cons['lb']
         self.assertIsNone(varlb.lower)
         self.assertEqual(varlb.upper, 0)
-        self.assertEqual(len(varlb.body._args), 2)
-        self.assertEqual(len(varlb.body._coef), 2)
-        self.assertEqual(varlb.body._coef[0], lb)
-        self.assertIs(varlb.body._args[0], indvar)
-        self.assertEqual(varlb.body._coef[1], -1)
-        self.assertIs(varlb.body._args[1], disvar)
+        repn = generate_standard_repn(varlb.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 2)
+        check_linear_coef(self, repn, indvar, lb)
+        check_linear_coef(self, repn, disvar, -1)
+
         varub = cons['ub']
         self.assertIsNone(varub.lower)
         self.assertEqual(varub.upper, 0)
-        self.assertEqual(len(varub.body._args), 2)
-        self.assertEqual(len(varub.body._coef), 2)
-        self.assertEqual(varub.body._coef[0], 1)
-        self.assertIs(varub.body._args[0], disvar)
-        self.assertEqual(varub.body._coef[1], -1*ub)
-        self.assertIs(varub.body._args[1], indvar)
+        repn = generate_standard_repn(varub.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 2)
+        check_linear_coef(self, repn, indvar, -ub)
+        check_linear_coef(self, repn, disvar, 1)
 
     def test_disaggregatedVar_bounds(self):
         m = models.makeTwoTermDisj_Nonlinear()
@@ -295,15 +273,12 @@ class TwoTermDisj(unittest.TestCase):
         self.assertIsInstance(xorC, Constraint)
         self.assertEqual(len(xorC), 1)
 
-        self.assertEqual(xorC.lower, 1)
-        self.assertEqual(xorC.upper, 1)
-        self.assertEqual(xorC.body._const, 0)
-        self.assertEqual(len(xorC.body._args), 2)
-        self.assertEqual(len(xorC.body._coef), 2)
-        self.assertIs(xorC.body._args[0], m.d[0].indicator_var)
-        self.assertIs(xorC.body._args[1], m.d[1].indicator_var)
-        self.assertEqual(xorC.body._coef[0], 1)
-        self.assertEqual(xorC.body._coef[1], 1)
+        repn = generate_standard_repn(xorC.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 2)
+        check_linear_coef(self, repn, m.d[0].indicator_var, 1)
+        check_linear_coef(self, repn, m.d[1].indicator_var, 1)
 
     def test_error_for_or(self):
         m = models.makeTwoTermDisj_Nonlinear()
@@ -317,16 +292,13 @@ class TwoTermDisj(unittest.TestCase):
             m)
 
     def check_disaggregation_constraint(self, cons, var, disvar1, disvar2):
+        repn = generate_standard_repn(cons.body)
         self.assertEqual(cons.lower, 0)
         self.assertEqual(cons.upper, 0)
-        self.assertEqual(len(cons.body._args), 3)
-        self.assertEqual(len(cons.body._coef), 3)
-        self.assertEqual(cons.body._coef[0], 1)
-        self.assertIs(cons.body._args[0], var)
-        self.assertEqual(cons.body._coef[1], -1)
-        self.assertIs(cons.body._args[1], disvar1)
-        self.assertEqual(cons.body._coef[2], -1)
-        self.assertIs(cons.body._args[2], disvar2)
+        self.assertEqual(len(repn.linear_vars), 3)
+        check_linear_coef(self, repn, var, 1)
+        check_linear_coef(self, repn, disvar1, -1)
+        check_linear_coef(self, repn, disvar2, -1)
 
     def test_disaggregation_constraint(self):
         m = models.makeTwoTermDisj_Nonlinear()
@@ -569,14 +541,13 @@ class IndexedDisjunction(unittest.TestCase):
             cons = disaggregationCons[i]
             self.assertEqual(cons.lower, 0)
             self.assertEqual(cons.upper, 0)
-            self.assertEqual(len(cons.body._args), 3)
-            self.assertEqual(len(cons.body._coef), 3)
-            self.assertEqual(cons.body._coef[0], 1)
-            self.assertEqual(cons.body._coef[1], -1)
-            self.assertEqual(cons.body._coef[2], -1)
-            self.assertIs(cons.body._args[0], m.x[i[0]])
-            self.assertIs(cons.body._args[1], disVars[0])
-            self.assertIs(cons.body._args[2], disVars[1])
+            repn = generate_standard_repn(cons.body)
+            self.assertTrue(repn.is_linear())
+            self.assertEqual(repn.constant, 0)
+            self.assertEqual(len(repn.linear_vars), 3)
+            check_linear_coef(self, repn, m.x[i[0]], 1)
+            check_linear_coef(self, repn, disVars[0], -1)
+            check_linear_coef(self, repn, disVars[1], -1)
 
     # TODO: also test disaggregation constraints for when we have a disjunction
     # where the indices are tuples. (This is to test that when we combine the

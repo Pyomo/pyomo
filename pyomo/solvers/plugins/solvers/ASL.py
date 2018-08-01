@@ -16,12 +16,13 @@ import pyutilib.services
 import pyutilib.common
 import pyutilib.misc
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.core.base import TransformationFactory
+from pyomo.core.kernel.block import IBlock
 from pyomo.solvers.mockmip import MockMIP
 
 import logging
@@ -32,7 +33,7 @@ class ASL(SystemCallSolver):
     """A generic optimizer that uses the AMPL Solver Library to interface with applications.
     """
 
-    pyomo.util.plugin.alias('asl', doc='Interface for solvers using the AMPL Solver Library')
+    pyomo.common.plugin.alias('asl', doc='Interface for solvers using the AMPL Solver Library')
 
     def __init__(self, **kwds):
         #
@@ -173,7 +174,8 @@ class ASL(SystemCallSolver):
         return pyutilib.misc.Bunch(cmd=cmd, log_file=self._log_file, env=env)
 
     def _presolve(self, *args, **kwds):
-        if not isinstance(args[0], six.string_types):
+        if (not isinstance(args[0], six.string_types)) and \
+           (not isinstance(args[0], IBlock)):
             self._instance = args[0]
             xfrm = TransformationFactory('mpec.nl')
             xfrm.apply_to(self._instance)
@@ -208,7 +210,7 @@ class MockASL(ASL,MockMIP):
     """A Mock ASL solver used for testing
     """
 
-    pyomo.util.plugin.alias('_mock_asl')
+    pyomo.common.plugin.alias('_mock_asl')
 
     def __init__(self, **kwds):
         try:

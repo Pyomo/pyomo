@@ -1,0 +1,4 @@
+for var in instance.component_data_objects(pyo.Var, active=True):
+    if var.domain is pyo.IntegerSet or var.domain is pyo.BooleanSet:
+        print ("fixing "+str(v))
+        var.fixed = True # fix the current value

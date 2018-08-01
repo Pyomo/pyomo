@@ -15,7 +15,7 @@ import logging
 import six
 from six.moves import zip, xrange
 
-from pyomo.util.timing import ConstructionTimer
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.plugin import register_component
 from pyomo.core.base.component import ActiveComponentData

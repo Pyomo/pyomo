@@ -2,7 +2,6 @@
     "Problem": [
         {
             "Lower bound": 0.0, 
-            "Name": "unknown", 
             "Number of constraints": 6, 
             "Number of nonzeros": 9, 
             "Number of objectives": 1, 
@@ -22,19 +21,12 @@
             "Message": null, 
             "Objective": {}, 
             "Problem": {}, 
-            "Status": "feasible", 
             "Variable": {}
         }
     ], 
     "Solver": [
         {
             "Error rc": 0, 
-            "Statistics": {
-                "Branch and bound": {
-                    "Number of bounded subproblems": 0, 
-                    "Number of created subproblems": 0
-                }
-            }, 
             "Status": "ok", 
             "Termination condition": "optimal"
         }

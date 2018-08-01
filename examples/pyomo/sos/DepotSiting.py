@@ -32,7 +32,7 @@ model.SiteSelectedSOS = SOSConstraint(var=model.SiteSelected, sos=1)
 
 # ensure that one of the sites is selected (enforce binary).
 def enforce_site_selected_binary_rule(model):
-    return summation(model.SiteSelected) == 1
+    return sum_product(model.SiteSelected) == 1
 model.EnforceSiteSelectedBinary = Constraint(rule=enforce_site_selected_binary_rule)
 
 # the objective is to minimize the cost to satisfy all customers.

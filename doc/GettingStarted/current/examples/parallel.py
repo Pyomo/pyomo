@@ -25,7 +25,7 @@ model = AbstractModel()
 model.n = Param(default=4)
 model.x = Var(RangeSet(model.n), within=Binary)
 def o_rule(model):
-    return summation(model.x)
+    return sum_product(model.x)
 model.o = Objective(rule=o_rule)
 model.c = ConstraintList()
 
