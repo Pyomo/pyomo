@@ -20,13 +20,31 @@ m = ConcreteModel()
 
 m.tf = Param(initialize=20)
 m.t = ContinuousSet(bounds=(0,m.tf))
-m.i = Set(initialize=[0,1,2,3,4,5])
-m.j = Set(initialize=[0,1])
-m.ij = Set(initialize=[(0,0),(0,1),(1,0),(1,1),(2,0),(2,1),(3,0),(4,0)])
+m.i = Set(initialize=[0,1,2,3,4,5],ordered=True)
+m.j = Set(initialize=[0,1],ordered=True)
+m.ij = Set(initialize=[(0,0),(0,1),(1,0),(1,1),(2,0),(2,1),(3,0),(4,0)],ordered=True)
+
+#Set Perturbations
+m.epsDelta = Param(initialize = 0.75001)
+
+q_del={}
+q_del[(0,0)] = 1.001
+q_del[(0,1)] = 1.001
+q_del[(1,0)] = 1.001
+q_del[(1,1)] = 1.001
+q_del[(2,0)] = 0.83001
+q_del[(2,1)] = 0.83001
+q_del[(3,0)] = 0.42001
+q_del[(4,0)] = 0.17001
+m.qqDelta = Param(m.ij, initialize=q_del)
+
+m.aaDelta = Param(initialize = .0001001)
+
 
 #Set Parameters
 
 m.eps = Param(initialize = 0.75, mutable=True)
+
 m.sig = Param(initialize = 0.15, mutable=True)
 m.xi  = Param(initialize = 0.983, mutable=True)
 m.omeg  = Param(initialize = 1.0/10, mutable=True)
@@ -121,7 +139,6 @@ q[(4,0)] = 0.17
 m.qq = Param(m.ij, initialize=q, mutable=True)
 
 m.aa = Param(initialize = 0.0001, mutable=True)
-
 
 #Set Variables
 

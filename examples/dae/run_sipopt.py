@@ -28,6 +28,23 @@ from HIV_Transmission_discrete import m
 
 
 #------------------------------------------#
+#	User Inputs
+#------------------------------------------#
+paramSubList = [m.aa,m.eps,m.qq]
+perturbList = [m.aaDelta, m.epsDelta, m.qqDelta]
+
+paramPerturbMap = ComponentMap(zip(paramSubList,perturbList))
+
+#Expand parameter component
+perturbSubMap = {}
+paramFullList = []
+for parameter in paramSubList:
+    #Loop over each ParamData in the paramter (will this work on sparse params?)
+    for kk in parameter:
+        perturbSubMap[id(parameter[kk])]=paramPerturbMap[parameter][kk]
+        paramFullList.append(parameter[kk])
+
+#------------------------------------------#
 #       Model Translations
 #------------------------------------------#
 
@@ -35,13 +52,13 @@ m.b=Block()
 
 #add variable components for identified parameters
 #Parameters must be mutable
-m.b.add_component(m.aa.local_name+'_var',Var())
+m.b.add_component(unique_component_name(m,m.aa.local_name+'_var'),Var())
 m.b.add_component(m.eps.local_name+'_var',Var())
 m.b.add_component(m.qq.local_name+'_var',Var(m.qq._data.keys()))
 
 
 #----------------------------------------------------------#
-# We should consider cloning the whole model. 
+# Should we consider cloning the whole model? 
 #	- current code deactivates user's Objective
 #	 and Constraints. 
 #	- substitutions with Expressions are problematic
@@ -55,30 +72,24 @@ m.b.add_component(m.qq.local_name+'_var',Var(m.qq._data.keys()))
 
 #Param substitution map
 varSubList = [m.b.aa_var, m.b.eps_var, m.b.qq_var]
-paramSubList = [m.aa,m.eps,m.qq]
-#varSubList = [m.b.aa_var]
-#paramSubList = [m.aa]
 paramCompMap = ComponentMap(zip(paramSubList, varSubList))
-expParamList = ComponentMap(zip(paramSubList, paramSubList))
 
-#Loop through components to build substiution map
+#Loop through components to build substitution map
 variableSubMap = {}
-paramDict = {}
-#import pdb;pdb.set_trace()
+#paramFullList = []
 for parameter in paramSubList:
     #Loop over each ParamData in the paramter (will this work on sparse params?)
     for kk in parameter:
         variableSubMap[id(parameter[kk])]=paramCompMap[parameter][kk]
         #variableSubMap[id(pp)] = paramCompMap[pp][kk]
-        paramDict[id(parameter[kk])]=expParamList[parameter][kk]
+#        paramFullList.append(parameter[kk])
 
-#----------------------------------------------------------#
+#------------------------------------------i----------------#
 #Objective, Expression, and Constraints will ALL be cloned
 #	regardless if needed.
 #	Need to consider an efficient way to handle cloning
 #	only when needed.
 #----------------------------------------------------------#
-
 
 #substitute the Objectives
 for cc in list(m.component_data_objects(Objective,
@@ -142,83 +153,60 @@ for cc in list(m.component_data_objects(Constraint,
 
 #-----------------------------------------------------#
 #
-#  Need to figure out how to loop through a range
-#  index and still call the appropriate components
-#  from the varSubList and paramSubList.
-#
+#  paramData to varData constraint list
+#  
 #-----------------------------------------------------#
 
-#m.b.paramConst = Constraint(range(len(variableSubMap.keys())))
-#for ii,jj in variableSubMap.items():
-#    import pdb;pdb.set_trace()
-#    m.b.paramConst[ii]=paramDict[ii].value==jj
-#    print(kk)
-#    print(ii)
-#    print(jj)
-#    print('--------')
-#    kk += 1
-#    #m.b.paramConst=ii==jj
-     #
-     #
+m.b.paramConst = ConstraintList()
+for ii in paramFullList:
+    jj=variableSubMap[id(ii)]
+    m.b.paramConst.add(ii==jj)
 
-for ii,jj in variableSubMap.items():
-    m.b.add_component(jj.local_name+'_con',
-                      Constraint(expr=paramDict[ii].value==jj))
-
-#add #constraints, based on parameter values for sIPOPT
-##m.a#dd_component(m.aa.local_name+'_con',Constraint(expr=m.aa_var==m.aa))
-##m.a#dd_component(m.eps.local_name+'_con',Constraint(expr=m.eps_var==m.eps))
-##   #
-##def# _qq_vals(m,*args):
-##   # return m.qq_var[args]==m.qq[args]
-##   #
-##m.a#dd_component(m.qq.local_name+'_con',Constraint(m.qq._index,rule=_qq_vals))
-#    #
-#m.pp#rint()
-#    #
-##---#-------------------------------------#
-##   #        sIPOPT
-##---#-------------------------------------#
-#    #
-##Cre#ate the ipopt_sens (aka sIPOPT) solver plugin using the ASL interface
-#solv#er = 'ipopt_sens'
-#solv#er_io = 'nl'
-#stre#am_solver = True    #True prints solver output to screen
-#keep#files = False   #True prints intermediate file names (.nl, .sol, ....)
-#opt #= SolverFactory(solver, solver_io=solver_io)
-#    #
-#if o#pt is None:
-#    #print("")
-#    #print("ERROR: Unable to create solver plugin for 'ipopt_sens' ")
-#    #print("")
-#    #exit(1)
-#    #
-##Dec#lare Suffixes
-#m.se#ns_state_0 = Suffix(direction=Suffix.EXPORT)
-#m.se#ns_state_1 = Suffix(direction=Suffix.EXPORT)
-#m.se#ns_state_value_1 = Suffix(direction=Suffix.EXPORT)
-#m.se#ns_sol_state_1 = Suffix(direction=Suffix.IMPORT)
-#m.se#ns_init_constr = Suffix(direction=Suffix.EXPORT)
-#    #
-##set# sIPOPT data
-#opt.#options['run_sens'] = 'yes'
-#m.se#ns_state_0[m.qq_var[(0,0)]] = 1
-##m.s#ens_state_0[m.eps_var] = 2
-#m.sens_state_1[m.qq_var[(0,0)]] = 1
-##m.sens_state_1[m.eps_var] = 2
-#m.sens_state_value_1[m.qq_var[(0,0)]] = 0.9999
-##m.sens_state_value_1[m.eps_var] = 0.75
-#m.sens_init_constr[m.qq_con[(0,0)]] = 1
-##m.sens_init_constr[m.eps_con] = 2
+    
+#----------------------------------------#
+#           sIPOPT
+#----------------------------------------#
+    
+##Create the ipopt_sens (aka sIPOPT) solver plugin using the ASL interface
+#solver = 'ipopt_sens'
+#solver_io = 'nl'
+#stream_solver = True    #True prints solver output to screen
+#keepfiles = False   #True prints intermediate file names (.nl, .sol, ....)
+#opt = SolverFactory(solver, solver_io=solver_io)
+#
+#if opt is None:
+#    print("")
+#    print("ERROR: Unable to create solver plugin for 'ipopt_sens' ")
+#    print("")
+#    exit(1)
+#    
+##Declare Suffixes
+#m.sens_state_0 = Suffix(direction=Suffix.EXPORT)
+#m.sens_state_1 = Suffix(direction=Suffix.EXPORT)
+#m.sens_state_value_1 = Suffix(direction=Suffix.EXPORT)
+#m.sens_sol_state_1 = Suffix(direction=Suffix.IMPORT)
+#m.sens_init_constr = Suffix(direction=Suffix.EXPORT)
+#
+#
+##set sIPOPT data
+#opt.options['run_sens'] = 'yes'
+#
+#kk=1
+#for ii in paramFullList:
+#    m.sens_state_0[variableSubMap[id(ii)]] = kk
+#    m.sens_state_1[variableSubMap[id(ii)]] = kk
+#    m.sens_state_value_1[variableSubMap[id(ii)]] = perturbSubMap[id(ii)]
+#    m.sens_init_constr[variableSubMap[id(ii)]] = kk-1
+#    
 #
 ##Send the model to the ipopt_sens and collect the solution
 #results = opt.solve(m, keepfiles=keepfiles, tee=stream_solver)
 #
 ##Print solution
 #print("Nominal and perturbed solution:")
-#for vv in [m.qq_var[(0,0)],m.L[m.tf]]:
+#for vv in [m.b.qq_var[(0,0)],m.L[m.tf]]:
 #    print("%5s %14g %14g" % (vv, value(vv), m.sens_sol_state_1[vv]))
-#
+##
 #
 #
 #
