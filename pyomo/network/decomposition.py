@@ -49,6 +49,11 @@ class SequentialDecomposition(object):
         solve_tears             Boolean indicating whether or not to run
                                     iterations to converge tear streams
                                     Default: True
+        guesses                 ComponentMap of guesses to use for first pass
+                                    (see set_guesses_for method)
+                                    Default: ComponentMap()
+        default_guess           Value to use if a free variable has no guess
+                                    Default: None
         tear_method             Method to use for converging tear streams,
                                     either "Direct" or "Wegstein"
                                     Default: "Direct"
@@ -88,6 +93,8 @@ class SequentialDecomposition(object):
         options["select_tear_method"] = "mip"
         options["run_first_pass"] = True
         options["solve_tears"] = True
+        options["guesses"] = ComponentMap()
+        options["default_guess"] = None
         options["tear_method"] = "Direct"
         options["iterLim"] = 40
         options["tol"] = 1.0E-5
@@ -101,7 +108,32 @@ class SequentialDecomposition(object):
         options["tear_solver_io"] = "python"
         options["tear_solver_options"] = {}
 
-    def set_tear_set(self, G, tset):
+    def set_guesses_for(self, port, guesses):
+        """
+        Set the guesses for the given port.
+
+        These guesses will be checked for all free variables that are
+        encountered during the first pass run. If a free variable has
+        no guess, its current value will be used. If its current value
+        is None, the default_guess option will be used. If that is None,
+        an error will be raised.
+
+        All port variables that are downstream of a non-tear edge will
+        already be fixed. If there is a guess for a fixed variable, it
+        will be silently ignored.
+
+        The guesses should be a dict that maps the following:
+            Port Member Name -> Value
+
+        Or, for indexed members, multiple dicts that map:
+            Port Member Name -> Index -> Value
+
+        While this method makes things more convenient, all it does is:
+            self.options["guesses"][port] = guesses
+        """
+        self.options["guesses"][port] = guesses
+
+    def set_tear_set(self, tset):
         """
         Set a custom tear set to be used when running the decomposition.
 
@@ -110,19 +142,12 @@ class SequentialDecomposition(object):
         useful for knowing which edges will need guesses.
 
         Arguments:
-            G               A networkx graph corresponding to tset
             tset            A list of Arcs representing edges to tear
 
-        Returns:
-            The tear set list represented by edge indexes
+        While this method makes things more convenient, all it does is:
+            self.options["tear_set"] = tset
         """
-        arc_map = self.arc_to_edge(G)
-        edge_map = self.edge_to_idx(G)
-        res = []
-        for arc in tset:
-            res.append(edge_map[arc_map[arc]])
-        self.options["tear_set"] = res
-        return res
+        self.options["tear_set"] = tset
 
     def tear_set_arcs(self, G, method="mip", **kwds):
         """
@@ -159,16 +184,6 @@ class SequentialDecomposition(object):
             res.append(G.edges[edge]["arc"])
         return res
 
-    def arc_to_edge(self, G):
-        """
-        Returns a map from arcs to edge tuples for a given graph.
-        """
-        res = ComponentMap()
-        for edge in G.edges:
-            arc = G.edges[edge]["arc"]
-            res[arc] = edge
-        return res
-
     def run(self, model, function):
         """
         Compute a Pyomo network model using sequential decomposition.
@@ -186,7 +201,7 @@ class SequentialDecomposition(object):
 
         if self.options["run_first_pass"]:
             order = self.calculation_order(G)
-            self.run_order(G, order, function)
+            self.run_order(G, order, function, use_guesses=True)
 
         tset = self.tear_set(G)
         if not self.options["solve_tears"] or not len(tset):
@@ -225,7 +240,7 @@ class SequentialDecomposition(object):
 
         self.cache.clear()
 
-    def run_order(self, G, order, function):
+    def run_order(self, G, order, function, use_guesses=False):
         """
         Run computations in the order provided by calling the function.
 
@@ -233,6 +248,8 @@ class SequentialDecomposition(object):
             G               A networkx graph corresponding to order
             order           The order in which to run each node in the graph
             function        The function to be called on each block/node
+            use_guesses     If True, will check the guesses dict when fixing
+                                free variables before calling function
         """
         fixed_inputs = self.fixed_inputs()
         fixed_outputs = ComponentSet()
@@ -244,13 +261,43 @@ class SequentialDecomposition(object):
                 for p in unit.component_data_objects(Port):
                     if not len(p.sources()):
                         continue
-                    for var in p.iter_vars(expr_vars=True, fixed=False):
+
+                    for name, var in p.iter_vars(expr_vars=True, fixed=False,
+                            with_names=True):
+
                         if unit not in fixed_inputs:
                             fixed_inputs[unit] = ComponentSet()
+
+                        val = None
+                        if use_guesses:
+                            guesses = self.options["guesses"]
+                            try:
+                                if var.is_indexed():
+                                    val = guesses[p][name][var.index()]
+                                else:
+                                    val = guesses[p][name]
+                            except KeyError:
+                                pass
+
+                        if val is None:
+                            if var.value is not None:
+                                val = var.value
+                            else:
+                                default = self.options["default_guess"]
+                                if default is not None:
+                                    val = default
+
+                        if val is None:
+                            raise RuntimeError(
+                                "Encountered a free inlet variable '%s' on "
+                                "port '%s' with no %scurrent value, or "
+                                "default_guess option, while attempting to "
+                                "compute the unit." %
+                                ("guess, " if use_guesses else "",
+                                    var.name, p.name))
+
                         fixed_inputs[unit].add(var)
-                        if var.value is None:
-                            var.value = 0
-                        var.fix()
+                        var.fix(val)
 
                 function(unit)
 
@@ -270,9 +317,8 @@ class SequentialDecomposition(object):
                         var.fix()
                     for arc in dests:
                         # make sure the edge (index) is not in the tear set
-                        edge = (arc.src.parent_block(),
-                                arc.dest.parent_block(), 0)
-                        if edge_map[edge] not in tset:
+                        arc_map = self.arc_to_edge(G)
+                        if edge_map[arc_map[arc]] not in tset:
                             self.pass_values(arc, fixed_inputs)
                     for var in fixed_outputs:
                         var.free()
@@ -609,8 +655,13 @@ class SequentialDecomposition(object):
     def tear_set(self, G):
         key = "tear_set"
         def fcn(G):
-            res = self.options[key]
-            if res is not None:
+            tset = self.options[key]
+            if tset is not None:
+                arc_map = self.arc_to_edge(G)
+                edge_map = self.edge_to_idx(G)
+                res = []
+                for arc in tset:
+                    res.append(edge_map[arc_map[arc]])
                 if not self.check_tear_set(G, res):
                     raise ValueError("Tear set found in options is "
                                      "insufficient to solve network")
@@ -629,6 +680,16 @@ class SequentialDecomposition(object):
             else:
                 raise ValueError("Invalid select_tear_method '%s'" % (method,))
         return self.cacher(key, fcn, G)
+
+    def arc_to_edge(self, G):
+        """Returns a mapping from arcs to edges for a graph"""
+        def fcn(G):
+            res = ComponentMap()
+            for edge in G.edges:
+                arc = G.edges[edge]["arc"]
+                res[arc] = edge
+            return res
+        return self.cacher("arc_to_edge", fcn, G)
 
     def fixed_inputs(self):
         return self.cacher("fixed_inputs", dict)
@@ -1242,13 +1303,14 @@ class SequentialDecomposition(object):
             # this is a recursive function
             depths[node] = depth
             depth += 1
-            for suc in G.successors(node):
+            for edge in G.out_edges(node, keys=True):
+                suc, key = edge[1], edge[2]
                 if depths[suc] is None:
                     parents[suc] = node
                     cyc(suc, depth)
                 elif depths[suc] < depths[node]:
                     # found a back edge, add to tear set
-                    tearSet.append(edge_list.index((node, suc, 0)))
+                    tearSet.append(edge_list.index((node, suc, key)))
 
         tearSet = []  # list of back/tear edges
         edge_list = self.idx_to_edge(G)
