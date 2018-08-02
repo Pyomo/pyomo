@@ -100,8 +100,8 @@ class GAMSTests(unittest.TestCase):
         m.c = Constraint(expr=m.x == 2)
         m.o = Objective(expr=m.x)
         os = StringIO()
-        m.write(os, format="gams", io_options=dict(solver="baron"))
-        self.assertIn("option lp=baron", os.getvalue())
+        m.write(os, format="gams", io_options=dict(solver="gurobi"))
+        self.assertIn("option lp=gurobi", os.getvalue())
 
 
 if __name__ == "__main__":
