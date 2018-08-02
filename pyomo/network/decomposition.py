@@ -24,7 +24,6 @@ import copy, logging, time
 from six import iteritems, itervalues
 
 logger = logging.getLogger('pyomo.network')
-logger.setLevel(logging.INFO) # TODO: option to set logging level somewhere?
 
 
 class SequentialDecomposition(object):
@@ -57,6 +56,8 @@ class SequentialDecomposition(object):
         almost_equal_tol        Difference below which numbers are considered
                                     equal when checking port value agreement
                                     Default: 1.0E-8
+        log_info                Set logger level to INFO during run
+                                    Default: False
         tear_method             Method to use for converging tear streams,
                                     either "Direct" or "Wegstein"
                                     Default: "Direct"
@@ -102,6 +103,7 @@ class SequentialDecomposition(object):
         options["guesses"] = ComponentMap()
         options["default_guess"] = None
         options["almost_equal_tol"] = 1.0E-8
+        options["log_info"] = False
         options["tear_method"] = "Direct"
         options["iterLim"] = 40
         options["tol"] = 1.0E-5
@@ -205,6 +207,10 @@ class SequentialDecomposition(object):
             function        A function to be called on each block/node
                                 in the network
         """
+        if self.options["log_info"]:
+            old_log_level = logger.level
+            logger.setLevel(logging.INFO)
+
         start = time.time()
         logger.info("Starting Sequential Decomposition")
 
@@ -217,6 +223,7 @@ class SequentialDecomposition(object):
         tset = self.tear_set(G)
 
         if self.options["run_first_pass"]:
+            logger.info("Starting first pass run of network")
             order = self.calculation_order(G)
             self.run_order(G, order, function, tset, use_guesses=True)
 
@@ -266,6 +273,9 @@ class SequentialDecomposition(object):
         end = time.time()
         logger.info("Finished Sequential Decomposition in %.2f seconds" %
             (end - start))
+
+        if self.options["log_info"]:
+            logger.setLevel(old_log_level)
 
     def run_order(self, G, order, function, ignore=None, use_guesses=False):
         """
