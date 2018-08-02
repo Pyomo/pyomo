@@ -631,11 +631,11 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 (2 if (categorized_vars.binary or categorized_vars.ints)
                  else 0)]
 
-        if (solver is not None and
-            mtype.upper() not in valid_solvers[solver.upper()]):
-            raise ValueError("GAMS writer passed solver (%s) "
-                             "unsuitable for model type (%s)"
-                             % (solver, mtype))
+        if solver is not None:
+            if mtype.upper() not in valid_solvers[solver.upper()]:
+                raise ValueError("GAMS writer passed solver (%s) "
+                                 "unsuitable for model type (%s)"
+                                 % (solver, mtype))
             output_file.write("option %s=%s;\n" % (mtype, solver))
 
         if add_options is not None:
