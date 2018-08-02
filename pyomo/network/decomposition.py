@@ -385,9 +385,6 @@ class SequentialDecomposition(object):
             if repn.is_fixed():
                 # the port member's peer was already fixed
                 if abs(value(con.lower) - repn.constant) > eq_tol:
-                    print(con.expr)
-                    print(con.parent_block().parent_block().shfn.side_1_outlet[0.0].flow_mol.value)
-                    print(con.parent_block().parent_block().atemp1.inlet[0.0].flow_mol.value)
                     raise RuntimeError(
                         "Found connected ports '%s' and '%s' both with fixed "
                         "but different values (by > %s) for constraint '%s'" %
