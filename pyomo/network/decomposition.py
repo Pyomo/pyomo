@@ -608,6 +608,7 @@ class SequentialDecomposition(object):
         """
         fixed_inputs = self.fixed_inputs()
         edge_list = self.idx_to_edge(G)
+        eq_tol = self.options["almost_equal_tol"]
         i = 0
         for tear in tears:
             arc = G.edges[edge_list[tear]]["arc"]
@@ -623,26 +624,28 @@ class SequentialDecomposition(object):
                 except AttributeError:
                     index = None
                 obj = self.source_dest_peer(arc, name, index)
-                if obj.is_variable_type():
-                    if not obj.is_fixed():
-                        # TODO: what should we do if it is fixed?
-                        fixed_inputs[dest_unit].add(obj)
-                        obj.fix(x[i])
+                if obj.is_fixed():
+                    if abs(value(obj) - x[i]) > eq_tol:
+                        raise RuntimeError(
+                            "Found connected ports '%s' and '%s' both with "
+                            "fixed but different values (by > %s) for member "
+                            "'%s'" % (src, dest, eq_tol, name))
+                elif obj.is_variable_type():
+                    fixed_inputs[dest_unit].add(obj)
+                    obj.fix(x[i])
                 else:
                     repn = generate_standard_repn(obj - x[i])
-                    if not repn.is_fixed():
-                        # TODO: what should we do if it is fixed?
-                        if repn.is_linear() and len(repn.linear_vars) == 1:
-                            # fix the value of the single variable
-                            val = (0 - repn.constant) / repn.linear_coefs[0]
-                            var = repn.linear_vars[0]
-                            fixed_inputs[dest_unit].add(var)
-                            var.fix(val)
-                        else:
-                            raise RuntimeError(
-                                "Dest member '%s' of arc '%s' had more than "
-                                "one free variable when trying to pass a value "
-                                "to it" % (name, arc.name))
+                    if repn.is_linear() and len(repn.linear_vars) == 1:
+                        # fix the value of the single variable
+                        val = (0 - repn.constant) / repn.linear_coefs[0]
+                        var = repn.linear_vars[0]
+                        fixed_inputs[dest_unit].add(var)
+                        var.fix(val)
+                    else:
+                        raise RuntimeError(
+                            "Dest member '%s' of arc '%s' had more than "
+                            "one free variable when trying to pass a value "
+                            "to it" % (name, arc.name))
                 i += 1
 
     def generate_gofx(self, G, tears):
