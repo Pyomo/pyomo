@@ -20,7 +20,7 @@ from pyomo.repn import generate_standard_repn
 from pyutilib.misc import Options
 import networkx as nx
 import numpy
-import copy, logging
+import copy, logging, time
 from six import iteritems, itervalues
 
 logger = logging.getLogger('pyomo.network')
@@ -197,9 +197,10 @@ class SequentialDecomposition(object):
             function        A function to be called on each block/node
                                 in the network
         """
-        self.cache.clear()
-
+        start = time.time()
         logger.info("Starting Sequential Decomposition")
+
+        self.cache.clear()
 
         G = self.options["graph"]
         if G is None:
@@ -245,6 +246,10 @@ class SequentialDecomposition(object):
                         "Invalid tear_method '%s'" % (tear_method,))
 
         self.cache.clear()
+
+        end = time.time()
+        logger.info("Finished Sequential Decomposition in %.2f seconds" %
+            (end - start))
 
     def run_order(self, G, order, function, use_guesses=False):
         """
