@@ -69,6 +69,9 @@ class SequentialDecomposition(object):
                                     "abs" - Absolute tolerance
                                     "rel" - Relative tolerance (to bound range)
                                     Default: "abs"
+        almost_equal_tol        Difference below which numbers are considered
+                                    equal when checking port value agreement
+                                    Default: 1.0E-8
         solver                  Name of solver to use for passing values
                                     when there is more than one free var
                                     Default: "baron"
@@ -101,6 +104,7 @@ class SequentialDecomposition(object):
         options["accelMin"] = -5
         options["accelMax"] = 0
         options["tearTolType"] = "abs"
+        options["almost_equal_tol"] = 1.0E-8
         options["solver"] = "baron"
         options["solver_io"] = None
         options["solver_options"] = {}
@@ -206,16 +210,22 @@ class SequentialDecomposition(object):
         if G is None:
             G = self.create_graph(model)
 
+        tset = self.tear_set(G)
+
         if self.options["run_first_pass"]:
             order = self.calculation_order(G)
-            self.run_order(G, order, function, use_guesses=True)
+            self.run_order(G, order, function, tset, use_guesses=True)
 
-        tset = self.tear_set(G)
         if not self.options["solve_tears"] or not len(tset):
             # Not solving tears, we're done
+            end = time.time()
+            logger.info("Finished Sequential Decomposition in %.2f seconds" %
+                (end - start))
             return
 
-        sccNodes, sccEdges, sccOrder = self.scc_collect(G)
+        logger.info("Starting tear convergence procedure")
+
+        sccNodes, sccEdges, sccOrder, outEdges = self.scc_collect(G)
 
         for lev in sccOrder:
             for sccIndex in lev:
@@ -223,12 +233,13 @@ class SequentialDecomposition(object):
 
                 # only pass tears that are part of this SCC
                 tears = []
-                for ei in sccEdges[sccIndex]:
-                    if ei in tset:
+                for ei in tset:
+                    if ei in sccEdges[sccIndex]:
                         tears.append(ei)
 
                 kwds = dict(G=G, order=order, function=function, tears=tears,
-                    iterLim=self.options["iterLim"], tol=self.options["tol"])
+                    iterLim=self.options["iterLim"], tol=self.options["tol"],
+                    outEdges=outEdges[sccIndex])
 
                 tear_method = self.options["tear_method"]
 
@@ -251,7 +262,7 @@ class SequentialDecomposition(object):
         logger.info("Finished Sequential Decomposition in %.2f seconds" %
             (end - start))
 
-    def run_order(self, G, order, function, use_guesses=False):
+    def run_order(self, G, order, function, ignore=None, use_guesses=False):
         """
         Run computations in the order provided by calling the function.
 
@@ -259,12 +270,12 @@ class SequentialDecomposition(object):
             G               A networkx graph corresponding to order
             order           The order in which to run each node in the graph
             function        The function to be called on each block/node
+            ignore          Edge indexes to ignore when passing values
             use_guesses     If True, will check the guesses dict when fixing
                                 free variables before calling function
         """
         fixed_inputs = self.fixed_inputs()
         fixed_outputs = ComponentSet()
-        tset = self.tear_set(G)
         edge_map = self.edge_to_idx(G)
         for lev in order:
             for unit in lev:
@@ -340,9 +351,8 @@ class SequentialDecomposition(object):
                         fixed_outputs.add(var)
                         var.fix()
                     for arc in dests:
-                        # make sure the edge (index) is not in the tear set
                         arc_map = self.arc_to_edge(G)
-                        if edge_map[arc_map[arc]] not in tset:
+                        if edge_map[arc_map[arc]] not in ignore:
                             self.pass_values(arc, fixed_inputs)
                     for var in fixed_outputs:
                         var.free()
@@ -356,6 +366,7 @@ class SequentialDecomposition(object):
         eblock = arc.expanded_block
         dest = arc.destination
         dest_unit = dest.parent_block()
+        eq_tol = self.options["almost_equal_tol"]
 
         if dest_unit not in fixed_inputs:
             fixed_inputs[dest_unit] = ComponentSet()
@@ -373,8 +384,14 @@ class SequentialDecomposition(object):
             repn = generate_standard_repn(con.body)
             if repn.is_fixed():
                 # the port member's peer was already fixed
-                # TODO: what if we have two fixed but different values
-                # at either end of the port?
+                if abs(value(con.lower) - repn.constant) > eq_tol:
+                    print(con.expr)
+                    print(con.parent_block().parent_block().shfn.side_1_outlet[0.0].flow_mol.value)
+                    print(con.parent_block().parent_block().atemp1.inlet[0.0].flow_mol.value)
+                    raise RuntimeError(
+                        "Found connected ports '%s' and '%s' both with fixed "
+                        "but different values (by > %s) for constraint '%s'" %
+                        (arc.src, dest, eq_tol, con.name))
                 continue
             if not (repn.is_linear() and len(repn.linear_vars) == 1):
                 # TODO: need to confirm this is the right thing to do
@@ -383,7 +400,9 @@ class SequentialDecomposition(object):
                     "variable." % con.name)
                 continue
             # fix the value of the single variable to satisfy the constraint
-            val = (con.lower - repn.constant) / repn.linear_coefs[0]
+            # con.lower is usually a NumericConstant so call value on it,
+            # which isn't necessary but just in case it is something else too
+            val = (value(con.lower) - repn.constant) / repn.linear_coefs[0]
             var = repn.linear_vars[0]
             fixed_inputs[dest_unit].add(var)
             var.fix(val)
@@ -572,7 +591,37 @@ class SequentialDecomposition(object):
         dvals = numpy.array(dvals)
         return svals - dvals
 
-    def pass_tear_weg(self, G, tears, x):
+    def pass_edges(self, G, edges):
+        """Call pass values for a list of edge indexes"""
+        fixed_outputs = ComponentSet()
+        edge_list = self.idx_to_edge(G)
+        for ei in edges:
+            arc = G.edges[edge_list[ei]]["arc"]
+            for var in arc.source.iter_vars(expr_vars=True, fixed=False):
+                fixed_outputs.add(var)
+                var.fix()
+            self.pass_values(arc, self.fixed_inputs())
+            for var in fixed_outputs:
+                var.free()
+            fixed_outputs.clear()
+
+
+    def pass_tear_direct(self, G, tears):
+        fixed_outputs = ComponentSet()
+        edge_list = self.idx_to_edge(G)
+
+        for tear in tears:
+            # fix everything then call pass values
+            arc = G.edges[edge_list[tear]]["arc"]
+            for var in arc.source.iter_vars(expr_vars=True, fixed=False):
+                fixed_outputs.add(var)
+                var.fix()
+            self.pass_values(arc, fixed_inputs=self.fixed_inputs())
+            for var in fixed_outputs:
+                var.free()
+            fixed_outputs.clear()
+
+    def pass_tear_wegstein(self, G, tears, x):
         """
         Set the destination value of all tear edges to the corresponding
         value in the numpy array x.
@@ -757,7 +806,8 @@ class SequentialDecomposition(object):
     #
     ########################################################################
 
-    def solve_tear_direct(self, G, order, function, tears, iterLim, tol):
+    def solve_tear_direct(self, G, order, function, tears, outEdges, iterLim,
+            tol):
         """
         Use direct substitution to solve tears. If multiple tears are
         given they are solved simultaneously.
@@ -773,24 +823,22 @@ class SequentialDecomposition(object):
                 output values at each iteration.
         """
         hist = [] # error at each iteration in every variable
-        itercount = 0 # iteration counter
 
         if not len(tears):
             # no need to iterate just run the calculations
-            self.run_order(G, order, function)
+            self.run_order(G, order, function, tears)
             return hist
 
         logger.info("Starting Direct tear convergence")
 
-        fixed_outputs = ComponentSet()
-        edge_list = self.idx_to_edge(G)
+        ignore = tears + outEdges
+        itercount = 0
 
         while True:
             err = self.tear_error(G, tears)
             hist.append(err)
 
             if numpy.max(numpy.abs(err)) < tol:
-                logger.info("Direct converged in %s iterations" % itercount)
                 break
 
             if itercount >= iterLim:
@@ -798,24 +846,19 @@ class SequentialDecomposition(object):
                     % iterLim)
                 return hist
 
-            for tear in tears:
-                # fix everything then call pass values
-                arc = G.edges[edge_list[tear]]["arc"]
-                for var in arc.source.iter_vars(expr_vars=True, fixed=False):
-                    fixed_outputs.add(var)
-                    var.fix()
-                self.pass_values(arc, fixed_inputs=self.fixed_inputs())
-                for var in fixed_outputs:
-                    var.free()
-                fixed_outputs.clear()
+            self.pass_tear_direct(G, tears)
 
             itercount += 1
             logger.info("Running Direct iteration %s" % itercount)
-            self.run_order(G, order, function)
+            self.run_order(G, order, function, ignore)
+
+        self.pass_edges(G, outEdges)
+
+        logger.info("Direct converged in %s iterations" % itercount)
 
         return hist
 
-    def solve_tear_wegstein(self, G, order, function, tears, iterLim,
+    def solve_tear_wegstein(self, G, order, function, tears, outEdges, iterLim,
         tol, accelMin, accelMax, tearTolType):
         """
         Use Wegstein to solve tears. If multiple tears are given
@@ -837,14 +880,16 @@ class SequentialDecomposition(object):
                 output values at each iteration.
         """
         hist = [] # error at each iteration in every variable
-        itercount = 0 # iteration counter
 
         if not len(tears):
             # no need to iterate just run the calculations
-            self.run_order(G, order, function)
+            self.run_order(G, order, function, tears)
             return hist
 
         logger.info("Starting Wegstein tear convergence")
+
+        itercount = 0
+        ignore = tears + outEdges
 
         gofx, x, xmin, xmax = self.generate_weg_lists(G, tears)
         gofx = numpy.array(gofx)
@@ -870,13 +915,13 @@ class SequentialDecomposition(object):
         x_prev = x
         gofx_prev = gofx
         x = gofx
-        self.pass_tear_weg(G, tears, gofx)
+        self.pass_tear_wegstein(G, tears, gofx)
 
         while True:
             itercount += 1
 
             logger.info("Running Wegstein iteration %s" % itercount)
-            self.run_order(G, order, function)
+            self.run_order(G, order, function, ignore)
 
             gofx = self.generate_gofx(G, tears)
             gofx = numpy.array(gofx)
@@ -888,7 +933,6 @@ class SequentialDecomposition(object):
             hist.append(err)
 
             if numpy.max(numpy.abs(err)) < tol:
-                logger.info("Wegstein converged in %s iterations" % itercount)
                 break
 
             if itercount > iterLim:
@@ -912,7 +956,11 @@ class SequentialDecomposition(object):
             x_prev = x
             gofx_prev = gofx
             x = accel * x_prev + (1 - accel) * gofx_prev
-            self.pass_tear_weg(G, tears, x)
+            self.pass_tear_wegstein(G, tears, x)
+
+        self.pass_edges(G, outEdges)
+
+        logger.info("Wegstein converged in %s iterations" % itercount)
 
         return hist
 
@@ -924,8 +972,9 @@ class SequentialDecomposition(object):
 
         Returns:
             List of lists of nodes in each SCC
-            List of lists of edges in each SCC
+            List of lists of edge indexes in each SCC
             List of lists for order in which to calculate SCCs
+            List of lists of edge indexes leaving the SCC
         """
         def sc(v, stk, depth, strngComps):
             # recursive sub-function for backtracking
@@ -972,7 +1021,7 @@ class SequentialDecomposition(object):
             inEdges.append(ie)
             outEdges.append(oe)
         sccOrder = self.scc_calculation_order(sccNodes, inEdges, outEdges)
-        return sccNodes, sccEdges, sccOrder
+        return sccNodes, sccEdges, sccOrder, outEdges
 
     def scc_calculation_order(self, sccNodes, ie, oe):
         """
@@ -989,8 +1038,8 @@ class SequentialDecomposition(object):
 
         Arguments:
             sccNodes        List of lists of nodes in each SCC
-            ie              List of lists of in edges to SCCs
-            oe              List of lists of out edged to SCCs
+            ie              List of lists of in edge indexes to SCCs
+            oe              List of lists of out edge indexes to SCCs
 
         """
         adj = [] # SCC adjacency list
@@ -1158,7 +1207,7 @@ class SequentialDecomposition(object):
         If the graph minus the tear edges is not a tree then the
         tear set is not sufficient to solve the graph.
         """
-        sccNodes, _, _ = self.scc_collect(G, excludeEdges=tset)
+        sccNodes, _, _, _ = self.scc_collect(G, excludeEdges=tset)
         for nodes in sccNodes:
             if len(nodes) > 1:
                 return False
@@ -1357,9 +1406,11 @@ class SequentialDecomposition(object):
         included in a subgraph given by a list of nodes.
 
         Returns:
-            List of edges in the subgraph
-            List of edges starting outside the subgraph and ending inside
-            List of edges starting inside the subgraph and ending outside
+            List of edge indexes in the subgraph
+            List of edge indexes starting outside the subgraph
+                and ending inside
+            List of edge indexes starting inside the subgraph
+                and ending outside
         """
         e = []   # edges that connect two nodes in the subgraph
         ie = []  # in edges
