@@ -406,48 +406,16 @@ class SequentialDecomposition(object):
                         (arc.src, dest, eq_tol, con.name))
                 continue
             if not (repn.is_linear() and len(repn.linear_vars) == 1):
-                # TODO: need to confirm this is the right thing to do
-                need_to_solve = True
-                logger.warning("Constraint '%s' has more than one free "
-                    "variable." % con.name)
-                continue
+                raise RuntimeError(
+                    "Constraint '%s' had more than one free variable when "
+                    "trying to pass a value to its destination" % con.name)
             # fix the value of the single variable to satisfy the constraint
-            # con.lower is usually a NumericConstant so call value on it,
-            # which isn't necessary but just in case it is something else too
+            # con.lower is usually a NumericConstant but call value on it
+            # just in case it is something else
             val = (value(con.lower) - repn.constant) / repn.linear_coefs[0]
             var = repn.linear_vars[0]
             fixed_inputs[dest_unit].add(var)
             var.fix(val)
-
-        if not need_to_solve:
-            return
-
-        raise Exception("I haven't figured this out yet")
-
-        logger.warning(
-            "Need to call solver for underspecified constraints of arc '%s'.\n"
-            "This probably means either the split fraction was not specified "
-            "or the next port's member was a multivariable expression.\n"
-            "Values may be arbitrary." % arc.name)
-
-        from pyomo.environ import SolverFactory
-        # TODO: even if this is the right thing to do, we can't just create
-        # this dummy objective on the actual model. We're gonna need to create
-        # a new model if we have to solve like this.
-        eblock.o = Objective(expr=1)
-        opt = SolverFactory(self.options["solver"],
-                            solver_io=self.options["solver_io"])
-        kwds = self.options["solver_options"]
-        opt.solve(eblock, **kwds)
-
-        for name, mem in dest.iter_vars(with_names=True):
-            # go and fix the rest of the newly evaluated variables
-            try:
-                index = mem.index()
-            except AttributeError:
-                index = None
-            obj = self.source_dest_peer(arc, name, index)
-            self.fix(obj, fixed_inputs[dest_unit])
 
     def source_dest_peer(self, arc, name, index=None):
         """
@@ -649,7 +617,6 @@ class SequentialDecomposition(object):
             if dest_unit not in fixed_inputs:
                 fixed_inputs[dest_unit] = ComponentSet()
 
-            need_to_solve = False
             for name, mem in src.iter_vars(with_names=True):
                 try:
                     index = mem.index()
@@ -672,16 +639,11 @@ class SequentialDecomposition(object):
                             fixed_inputs[dest_unit].add(var)
                             var.fix(val)
                         else:
-                            # TODO: what to do if we're underspecified, make
-                            # a model and stuff it with constraints and solve?
-                            need_to_solve = True
-                            logger.warning("Dest member '%s' of arc '%s' has "
-                                "more than one free variable." %
-                                (name, arc.name))
+                            raise RuntimeError(
+                                "Dest member '%s' of arc '%s' had more than "
+                                "one free variable when trying to pass a value "
+                                "to it" % (name, arc.name))
                 i += 1
-
-            if need_to_solve:
-                raise Exception("I haven't figured this out yet")
 
     def generate_gofx(self, G, tears):
         edge_list = self.idx_to_edge(G)
