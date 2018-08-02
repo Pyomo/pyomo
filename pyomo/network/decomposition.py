@@ -18,10 +18,15 @@ from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.expr.current import identify_variables
 from pyomo.repn import generate_standard_repn
 from pyutilib.misc import Options
-import networkx as nx
-import numpy
 import copy, logging, time
 from six import iteritems, itervalues
+
+try:
+    import networkx as nx
+    import numpy
+    imports_available = True
+except ImportError:
+    imports_available = False
 
 logger = logging.getLogger('pyomo.network')
 
@@ -92,6 +97,9 @@ class SequentialDecomposition(object):
     """
 
     def __init__(self):
+        if not imports_available:
+            raise ImportError("This class requires numpy and networkx")
+
         self.cache = {}
         options = self.options = Options()
         # defaults
