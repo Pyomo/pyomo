@@ -128,6 +128,10 @@ class SequentialDecomposition(object):
         Or, for indexed members, multiple dicts that map:
             Port Member Name -> Index -> Value
 
+        This dict cannot be used to pass guesses for variables within
+        expression type members. Guesses for those variables must be
+        assigned to the variable's current value before calling run.
+
         While this method makes things more convenient, all it does is:
             self.options["guesses"][port] = guesses
         """
@@ -195,6 +199,8 @@ class SequentialDecomposition(object):
         """
         self.cache.clear()
 
+        logger.info("Starting Sequential Decomposition")
+
         G = self.options["graph"]
         if G is None:
             G = self.create_graph(model)
@@ -257,35 +263,49 @@ class SequentialDecomposition(object):
         edge_map = self.edge_to_idx(G)
         for lev in order:
             for unit in lev:
+                if unit not in fixed_inputs:
+                    fixed_inputs[unit] = ComponentSet()
+
                 # make sure all inputs are fixed
                 for p in unit.component_data_objects(Port):
                     if not len(p.sources()):
                         continue
 
+                    if use_guesses:
+                        for name, mem in iteritems(p.vars):
+                            try:
+                                entry = self.options["guesses"][p][name]
+                            except KeyError:
+                                continue
+                            if isinstance(entry, dict):
+                                for k in entry:
+                                    var = mem[k]
+                                    if (not var.is_variable_type() or
+                                            var.is_fixed()):
+                                        # expr vars guessed by current value
+                                        # silently ignore vars already fixed
+                                        continue
+                                    fixed_inputs[unit].add(var)
+                                    var.fix(entry[k])
+                            elif mem.is_indexed():
+                                raise TypeError(
+                                    "Member name '%s' in port '%s' must map "
+                                    "to a dict for indexed member" %
+                                    (name, p.name))
+                            elif mem.is_variable_type() and not mem.is_fixed():
+                                fixed_inputs[unit].add(mem)
+                                mem.fix(entry)
+
                     for name, var in p.iter_vars(expr_vars=True, fixed=False,
                             with_names=True):
 
-                        if unit not in fixed_inputs:
-                            fixed_inputs[unit] = ComponentSet()
-
                         val = None
-                        if use_guesses:
-                            guesses = self.options["guesses"]
-                            try:
-                                if var.is_indexed():
-                                    val = guesses[p][name][var.index()]
-                                else:
-                                    val = guesses[p][name]
-                            except KeyError:
-                                pass
-
-                        if val is None:
-                            if var.value is not None:
-                                val = var.value
-                            else:
-                                default = self.options["default_guess"]
-                                if default is not None:
-                                    val = default
+                        if var.value is not None:
+                            val = var.value
+                        else:
+                            default = self.options["default_guess"]
+                            if default is not None:
+                                val = default
 
                         if val is None:
                             raise RuntimeError(
@@ -302,10 +322,9 @@ class SequentialDecomposition(object):
                 function(unit)
 
                 # free the inputs that were not already fixed
-                if unit in fixed_inputs:
-                    for var in fixed_inputs[unit]:
-                        var.free()
-                    fixed_inputs[unit].clear()
+                for var in fixed_inputs[unit]:
+                    var.free()
+                fixed_inputs[unit].clear()
 
                 # pass the values downstream for all outlet ports
                 for p in unit.component_data_objects(Port):
