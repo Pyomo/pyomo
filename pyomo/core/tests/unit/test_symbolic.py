@@ -236,7 +236,6 @@ class SymbolicDerivatives(unittest.TestCase):
         self.assertTrue(e.is_expression_type())
         self.assertEqual(s(e), s(m.x**-1.0 * 1.0/log(10) * log(m.x)**-1.0))
 
-
     def test_sqrt_function(self):
         m = ConcreteModel()
         m.x = Var()
@@ -244,7 +243,6 @@ class SymbolicDerivatives(unittest.TestCase):
         e = differentiate(sqrt(m.x), wrt=m.x)
         self.assertTrue(e.is_expression_type())
         self.assertEqual(s(e), s(0.5 * m.x**-0.5))
-
 
     def test_nondifferentiable(self):
         m = ConcreteModel()
