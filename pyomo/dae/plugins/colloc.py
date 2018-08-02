@@ -295,8 +295,10 @@ class Collocation_Discretization_Transformation(Transformation):
             if self._ncp[currentds] > 10:
                 raise ValueError("Numpy was not found so the maximum number "
                                  "of collocation points is 10")
-            from pyomo.dae.utilities import (legendre_tau_dict, legendre_adot_dict,
-                                             legendre_adotdot_dict, legendre_afinal_dict)
+            from pyomo.dae.utilities import (legendre_tau_dict,
+                                             legendre_adot_dict,
+                                             legendre_adotdot_dict,
+                                             legendre_afinal_dict)
             self._tau[currentds] = legendre_tau_dict[self._ncp[currentds]]
             self._adot[currentds] = legendre_adot_dict[self._ncp[currentds]]
             self._adotdot[currentds] = \
@@ -318,7 +320,6 @@ class Collocation_Discretization_Transformation(Transformation):
             self._adotdot[currentds] = adotdot
             self._afinal[currentds] = afinal
 
-
     def _apply_to(self, instance, **kwds):
         """
         Applies specified collocation transformation to a modeling instance
@@ -334,7 +335,8 @@ class Collocation_Discretization_Transformation(Transformation):
                       ContinuousSets.
         scheme        Indicates which finite difference method to apply.
                       Options are 'LAGRANGE-RADAU' and 'LAGRANGE-LEGENDRE'. 
-                      The default scheme is Lagrange polynomials with Radau roots.
+                      The default scheme is Lagrange polynomials with Radau
+                      roots.
         """
 
         tmpnfe = kwds.pop('nfe', 10)
