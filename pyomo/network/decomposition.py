@@ -54,6 +54,9 @@ class SequentialDecomposition(object):
                                     Default: ComponentMap()
         default_guess           Value to use if a free variable has no guess
                                     Default: None
+        almost_equal_tol        Difference below which numbers are considered
+                                    equal when checking port value agreement
+                                    Default: 1.0E-8
         tear_method             Method to use for converging tear streams,
                                     either "Direct" or "Wegstein"
                                     Default: "Direct"
@@ -61,6 +64,9 @@ class SequentialDecomposition(object):
                                     Default: 40
         tol                     Tolerance at which to stop tear iterations
                                     Default: 1.0E-5
+        report_diffs            Report the matrix of differences across tear
+                                    streams for every iteration
+                                    Default: False
         accelMin                Min value for Wegstein acceleration factor
                                     Default: -5
         accelMax                Max value for Wegstein acceleration factor
@@ -69,9 +75,6 @@ class SequentialDecomposition(object):
                                     "abs" - Absolute tolerance
                                     "rel" - Relative tolerance (to bound range)
                                     Default: "abs"
-        almost_equal_tol        Difference below which numbers are considered
-                                    equal when checking port value agreement
-                                    Default: 1.0E-8
         solver                  Name of solver to use for passing values
                                     when there is more than one free var
                                     Default: "baron"
@@ -98,13 +101,14 @@ class SequentialDecomposition(object):
         options["solve_tears"] = True
         options["guesses"] = ComponentMap()
         options["default_guess"] = None
+        options["almost_equal_tol"] = 1.0E-8
         options["tear_method"] = "Direct"
         options["iterLim"] = 40
         options["tol"] = 1.0E-5
+        options["report_diffs"] = False
         options["accelMin"] = -5
         options["accelMax"] = 0
         options["tearTolType"] = "abs"
-        options["almost_equal_tol"] = 1.0E-8
         options["solver"] = "baron"
         options["solver_io"] = None
         options["solver_options"] = {}
@@ -239,7 +243,8 @@ class SequentialDecomposition(object):
 
                 kwds = dict(G=G, order=order, function=function, tears=tears,
                     iterLim=self.options["iterLim"], tol=self.options["tol"],
-                    outEdges=outEdges[sccIndex])
+                    outEdges=outEdges[sccIndex],
+                    report_diffs=self.options["report_diffs"])
 
                 tear_method = self.options["tear_method"]
 
@@ -562,7 +567,7 @@ class SequentialDecomposition(object):
 
         return tset
 
-    def tear_error(self, G, tears):
+    def tear_diff(self, G, tears):
         """
         Returns a numpy array of differences between src and dest values
         for all edges in the tears list of edge indexes.
@@ -804,7 +809,7 @@ class SequentialDecomposition(object):
     ########################################################################
 
     def solve_tear_direct(self, G, order, function, tears, outEdges, iterLim,
-            tol):
+            tol, report_diffs):
         """
         Use direct substitution to solve tears. If multiple tears are
         given they are solved simultaneously.
@@ -816,10 +821,10 @@ class SequentialDecomposition(object):
             tol             Tolerance at which iteration can be stopped
 
         Returns:
-            List of lists of error history, differences between input and
+            List of lists of diff history, differences between input and
                 output values at each iteration.
         """
-        hist = [] # error at each iteration in every variable
+        hist = [] # diff at each iteration in every variable
 
         if not len(tears):
             # no need to iterate just run the calculations
@@ -832,8 +837,11 @@ class SequentialDecomposition(object):
         itercount = 0
 
         while True:
-            err = self.tear_error(G, tears)
+            err = self.tear_diff(G, tears)
             hist.append(err)
+
+            if report_diffs:
+                print("Diff matrix:\n%s" % err)
 
             if numpy.max(numpy.abs(err)) < tol:
                 break
@@ -856,7 +864,7 @@ class SequentialDecomposition(object):
         return hist
 
     def solve_tear_wegstein(self, G, order, function, tears, outEdges, iterLim,
-        tol, accelMin, accelMax, tearTolType):
+        tol, report_diffs, accelMin, accelMax, tearTolType):
         """
         Use Wegstein to solve tears. If multiple tears are given
         they are solved simultaneously.
@@ -873,10 +881,10 @@ class SequentialDecomposition(object):
                                 "rel" - Relative tolerance (to bound range)
 
         Returns:
-            List of lists of error history, differences between input and
+            List of lists of diff history, differences between input and
                 output values at each iteration.
         """
-        hist = [] # error at each iteration in every variable
+        hist = [] # diff at each iteration in every variable
 
         if not len(tears):
             # no need to iterate just run the calculations
@@ -903,6 +911,9 @@ class SequentialDecomposition(object):
             raise ValueError("Invalid tearTolType '%s'" % (tearTolType,))
         hist.append(err)
 
+        if report_diffs:
+            print("Diff matrix:\n%s" % err)
+
         # check if it's already solved
         if numpy.max(numpy.abs(err)) < tol:
             logger.info("Wegstein converged in %s iterations" % itercount)
@@ -928,6 +939,9 @@ class SequentialDecomposition(object):
             elif tearTolType == "rel":
                 err = (gofx - x) / xrng
             hist.append(err)
+
+            if report_diffs:
+                print("Diff matrix:\n%s" % err)
 
             if numpy.max(numpy.abs(err)) < tol:
                 break
