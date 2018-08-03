@@ -2,8 +2,6 @@
 import pyutilib.th as unittest
 from pyomo.environ import (ConcreteModel, TransformationFactory, value, Var)
 
-__author__ = "Qi Chen <https://github.com/qtothec>"
-
 
 class TestConstraintToVarBoundTransform(unittest.TestCase):
     """Tests detection of fixed variables."""
