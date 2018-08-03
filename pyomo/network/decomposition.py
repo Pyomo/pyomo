@@ -427,27 +427,22 @@ class SequentialDecomposition(object):
         """
         dest = arc.dest
         srcs = dest.sources() # we know there's at least one source
-        for name, mem in iteritems(dest.vars):
+        for name, obj in dest.iter_vars(with_names=True):
             if dest._rules[name][0] is not Port.Extensive:
                 continue
-            if mem.is_indexed():
-                objs = [mem[idx] for idx in mem]
-                itr = [
-                [arc.expanded_block.component(name)[idx] for arc in srcs]
-                for idx in mem]
+            if dest.vars[name].is_indexed():
+                i = obj.index()
+                evars = [arc.expanded_block.component(name)[i] for arc in srcs]
             else:
-                objs = [mem]
-                itr = [[arc.expanded_block.component(name) for arc in srcs]]
-            for i in range(len(itr)):
-                evars = itr[i]
-                if evars[0] is None:
-                    # no evars, so this arc is 1-to-1
-                    return
-                if not all(evar.is_fixed() for evar in evars):
-                    # we wait until they are all fixed to fix the total
-                    continue
-                total = sum(value(evar) for evar in evars)
-                self.pass_single_value(dest, name, objs[i], total, fixed)
+                evars = [arc.expanded_block.component(name) for arc in srcs]
+            if evars[0] is None:
+                # no evars, so this arc is 1-to-1
+                return
+            if not all(evar.is_fixed() for evar in evars):
+                # we wait until they are all fixed to fix the total
+                continue
+            total = sum(value(evar) for evar in evars)
+            self.pass_single_value(dest, name, obj, total, fixed)
 
     def pass_single_value(self, port, name, member, val, fixed):
         """
