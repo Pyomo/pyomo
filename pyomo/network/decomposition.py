@@ -406,7 +406,8 @@ class SequentialDecomposition(object):
             if not (repn.is_linear() and len(repn.linear_vars) == 1):
                 raise RuntimeError(
                     "Constraint '%s' had more than one free variable when "
-                    "trying to pass a value to its destination" % con.name)
+                    "trying to pass a value to its destination. Please fix "
+                    "more variables before passing across this arc." % con.name)
             # fix the value of the single variable to satisfy the constraint
             # con.lower is usually a NumericConstant but call value on it
             # just in case it is something else
@@ -665,7 +666,8 @@ class SequentialDecomposition(object):
                         raise RuntimeError(
                             "Dest member '%s' of arc '%s' had more than "
                             "one free variable when trying to pass a value "
-                            "to it" % (name, arc.name))
+                            "to it. Please fix more variables before passing "
+                            "across this arc." % (name, arc.name))
                 i += 1
 
     def generate_gofx(self, G, tears):
