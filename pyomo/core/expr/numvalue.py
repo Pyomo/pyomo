@@ -28,12 +28,6 @@ from pyomo.core.expr.expr_errors import TemplateExpressionError
 logger = logging.getLogger('pyomo.core')
 
 
-# class TemplateExpressionError(ValueError):
-
-#     def __init__(self, template, *args, **kwds):
-#         self.template = template
-#         super(TemplateExpressionError, self).__init__(*args, **kwds)
-
 def _generate_sum_expression(etype, _self, _other):
     raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
 def _generate_mul_expression(etype, _self, _other):
