@@ -61,7 +61,6 @@ __all__ = (
 'ExpressionValueVisitor',
 'ExpressionReplacementVisitor',
 'LinearDecompositionError',
-'TemplateExpressionError',
 'SumExpressionBase',
 '_MutableSumExpression',    # This should not be referenced, except perhaps while testing code
 '_MutableLinearExpression',     # This should not be referenced, except perhaps while testing code
@@ -100,7 +99,8 @@ from pyomo.core.expr.numvalue import \
      nonpyomo_leaf_types,
      native_numeric_types,
      as_numeric,
-     value)
+     value,
+     TemplateExpressionError)
 from pyomo.core.expr.expr_common import \
     (_add, _sub, _mul, _div,
      _pow, _neg, _abs, _inplace,
@@ -109,14 +109,6 @@ from pyomo.core.expr.expr_common import \
      _imul, _idiv, _ipow, _lt, _le,
      _eq)
 from pyomo.core.expr import expr_common as common
-
-
-class TemplateExpressionError(ValueError):
-
-    def __init__(self, template, *args, **kwds):
-        self.template = template
-        super(TemplateExpressionError, self).__init__(*args, **kwds)
-
 
 
 if _using_chained_inequality:               #pragma: no cover

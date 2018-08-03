@@ -6405,7 +6405,7 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertRaises(EXPR.FixedExpressionError, EXPR.evaluate_expression, e, constant=True)
 
     def test_template_expr(self):
-        from pyomo.core.expr.current import TemplateExpressionError
+        from pyomo.core.expr.numvalue import TemplateExpressionError
 
         m = ConcreteModel()
         m.I = RangeSet(1,9)
