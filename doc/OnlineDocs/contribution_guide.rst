@@ -19,9 +19,10 @@ Coding Standards
     
     * Required: 4 space indentation (no tabs)
     * Desired: PEP8
-    * Outside ``pyomo.contrib``: No use of __author__ 
-    * Inside ``pyomo.contrib``: __author__ should be set to your GitHub
-      ID and also included in the Sphinx documentation
+    * No use of __author__ 
+    * Inside ``pyomo.contrib``: Contact information for the contribution
+      maintainer (such as a Github ID) should be included in the Sphinx
+      documentation
 
 Sphinx-compliant documentation is required for:
     
@@ -55,9 +56,10 @@ Review Process
 --------------
 
 After a PR is opened it will be reviewed by at least two members of the
-core development team. Pull requests opened by a core developer only
-require one review. The reviewers will decide if they think a PR should
-be merged or if more changes are necessary.
+core development team. The core development team consists of anyone with
+write-access to the Pyomo repository. Pull requests opened by a core
+developer only require one review. The reviewers will decide if they
+think a PR should be merged or if more changes are necessary.
 
 Reviewers look for:
     
