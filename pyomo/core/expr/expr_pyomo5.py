@@ -99,8 +99,7 @@ from pyomo.core.expr.numvalue import \
      nonpyomo_leaf_types,
      native_numeric_types,
      as_numeric,
-     value,
-     TemplateExpressionError)
+     value)
 from pyomo.core.expr.expr_common import \
     (_add, _sub, _mul, _div,
      _pow, _neg, _abs, _inplace,
@@ -109,6 +108,7 @@ from pyomo.core.expr.expr_common import \
      _imul, _idiv, _ipow, _lt, _le,
      _eq)
 from pyomo.core.expr import expr_common as common
+from pyomo.core.expr.expr_errors import TemplateExpressionError
 
 
 if _using_chained_inequality:               #pragma: no cover

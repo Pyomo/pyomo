@@ -14,7 +14,7 @@ from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import (
     NumericValue, native_numeric_types, as_numeric, value )
 import pyomo.core.base
-from pyomo.core.expr.numvalue import TemplateExpressionError
+from pyomo.core.expr.expr_errors import TemplateExpressionError
 
 class IndexTemplate(NumericValue):
     """A "placeholder" for an index value in template expressions.
