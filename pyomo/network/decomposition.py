@@ -515,6 +515,10 @@ class SequentialDecomposition(object):
                 raise ValueError("All Arcs must be directed when creating "
                                  "a graph for a model. Found undirected "
                                  "Arc: '%s'" % arc.name)
+            if arc.expanded_block is None:
+                raise ValueError("All Arcs must be expanded when creating "
+                                 "a graph for a model. Found unexpanded "
+                                 "Arc: '%s'" % arc.name)
             src, dest = arc.src.parent_block(), arc.dest.parent_block()
             G.add_edge(src, dest, arc=arc)
 
