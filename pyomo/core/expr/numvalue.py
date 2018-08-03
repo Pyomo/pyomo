@@ -23,7 +23,10 @@ from pyomo.core.expr.expr_common import \
      _iadd, _isub, _imul, _idiv,
      _ipow, _lt, _le, _eq)
 
+from pyomo.core.expr.expr_errors import TemplateExpressionError
+
 logger = logging.getLogger('pyomo.core')
+
 
 def _generate_sum_expression(etype, _self, _other):
     raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
@@ -217,6 +220,7 @@ def value(obj, exception=True):
         #
         # Here, we try to catch the exception
         #
+
         try:
             tmp = obj(exception=True)
             if tmp is None:
@@ -224,6 +228,11 @@ def value(obj, exception=True):
                     "No value for uninitialized NumericValue object %s"
                     % (obj.name,))
             return tmp
+        except TemplateExpressionError:
+            # Template expressions work by catching this error type. So
+            # we should defer this error handling and not log an error
+            # message.
+            raise
         except:
             logger.error(
                 "evaluating object as numeric value: %s\n    (object: %s)\n%s"
