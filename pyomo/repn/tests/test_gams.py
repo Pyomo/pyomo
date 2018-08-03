@@ -94,6 +94,15 @@ class GAMSTests(unittest.TestCase):
             pat * 3477 + "var1 +\nlog(var2 / 9) - " +
             pat * 3043 + "x")
 
+    def test_solver_arg(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.c = Constraint(expr=m.x == 2)
+        m.o = Objective(expr=m.x)
+        os = StringIO()
+        m.write(os, format="gams", io_options=dict(solver="gurobi"))
+        self.assertIn("option lp=gurobi", os.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()
