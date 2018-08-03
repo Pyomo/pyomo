@@ -319,8 +319,8 @@ class SequentialDecomposition(object):
                                     var.fix(entry[k])
                             elif mem.is_indexed():
                                 raise TypeError(
-                                    "Member name '%s' in port '%s' must map "
-                                    "to a dict for indexed member" %
+                                    "Guess for indexed member '%s' in port "
+                                    "'%s' must map to a dict of indexes" %
                                     (name, p.name))
                             elif mem.is_variable_type() and not mem.is_fixed():
                                 fixed_inputs[unit].add(mem)
@@ -417,6 +417,63 @@ class SequentialDecomposition(object):
             fixed_inputs[dest_unit].add(var)
             var.fix(val)
 
+        self.check_combine_fix(arc, fixed_inputs[dest_unit])
+
+    def check_combine_fix(self, arc, fixed):
+        """
+        For all extensive port members, check if all of the expanded
+        variables are fixed, and if so then combine their values and
+        fix the dest port member at their sum.
+        """
+        dest = arc.dest
+        sources = dest.sources() # we know there's at least one source
+        for name in dest.vars:
+            if dest._rules[name][0] is not Port.Extensive:
+                continue
+            evars = [arc.expanded_block.component(name) for arc in sources]
+            if evars[0] is None:
+                # no evars, so the dest member should already be fixed
+                continue
+            if not all(evar.is_fixed() for evar in evars):
+                # we wait until they are all fixed to fix the total
+                continue
+            total = sum(value(evar) for evar in evars)
+            mem = dest.vars[name]
+            self.pass_single_value(dest, name, mem, total, fixed)
+
+    def pass_single_value(self, port, name, member, val, fixed):
+        """
+        Fix the value of the port member and add it to the fixed set.
+        If the member is an expression, appropriately fix the value of
+        its free variable. Error if the member is already fixed but
+        different from val, or if the member has more than one free
+        variable."
+        """
+        eq_tol = self.options["almost_equal_tol"]
+        if member.is_fixed():
+            if abs(value(member) - val) > eq_tol:
+                raise RuntimeError(
+                    "Member '%s' of port '%s' is already fixed but has a "
+                    "different value (by > %s) than what is being passed to it"
+                    % (name, port.name, eq_tol))
+        elif member.is_variable_type():
+            fixed.add(member)
+            member.fix(val)
+        else:
+            repn = generate_standard_repn(member - val)
+            if repn.is_linear() and len(repn.linear_vars) == 1:
+                # fix the value of the single variable
+                fval = (0 - repn.constant) / repn.linear_coefs[0]
+                var = repn.linear_vars[0]
+                fixed.add(var)
+                var.fix(fval)
+            else:
+                raise RuntimeError(
+                    "Member '%s' of port '%s' had more than "
+                    "one free variable when trying to pass a value "
+                    "to it. Please fix more variables before passing "
+                    "to this port." % (name, port.name))
+
     def source_dest_peer(self, arc, name, index=None):
         """
         Return the object that is the peer to the source port's member.
@@ -435,19 +492,6 @@ class SequentialDecomposition(object):
             return mem[index]
         else:
             return mem
-
-    def fix(self, obj, fixed):
-        """
-        Fix a variable or every variable in an expression,
-        recording the variable if it was not already fixed.
-        """
-        if obj.is_expression_type():
-            for var in identify_variables(obj, include_fixed=False):
-                fixed.add(var)
-                var.fix()
-        elif not obj.is_fixed():
-            fixed.add(obj)
-            obj.fix()
 
     def create_graph(self, model):
         """
@@ -625,12 +669,11 @@ class SequentialDecomposition(object):
 
     def pass_tear_wegstein(self, G, tears, x):
         """
-        Set the destination value of all tear edges to the corresponding
-        value in the numpy array x.
+        Set the destination value of all tear edges to
+        the corresponding value in the numpy array x.
         """
         fixed_inputs = self.fixed_inputs()
         edge_list = self.idx_to_edge(G)
-        eq_tol = self.options["almost_equal_tol"]
         i = 0
         for tear in tears:
             arc = G.edges[edge_list[tear]]["arc"]
@@ -645,31 +688,12 @@ class SequentialDecomposition(object):
                     index = mem.index()
                 except AttributeError:
                     index = None
-                obj = self.source_dest_peer(arc, name, index)
-                if obj.is_fixed():
-                    if abs(value(obj) - x[i]) > eq_tol:
-                        raise RuntimeError(
-                            "Found connected ports '%s' and '%s' both with "
-                            "fixed but different values (by > %s) for member "
-                            "'%s'" % (src, dest, eq_tol, name))
-                elif obj.is_variable_type():
-                    fixed_inputs[dest_unit].add(obj)
-                    obj.fix(x[i])
-                else:
-                    repn = generate_standard_repn(obj - x[i])
-                    if repn.is_linear() and len(repn.linear_vars) == 1:
-                        # fix the value of the single variable
-                        val = (0 - repn.constant) / repn.linear_coefs[0]
-                        var = repn.linear_vars[0]
-                        fixed_inputs[dest_unit].add(var)
-                        var.fix(val)
-                    else:
-                        raise RuntimeError(
-                            "Dest member '%s' of arc '%s' had more than "
-                            "one free variable when trying to pass a value "
-                            "to it. Please fix more variables before passing "
-                            "across this arc." % (name, arc.name))
+                peer = self.source_dest_peer(arc, name, index)
+                self.pass_single_value(dest, name, peer, x[i],
+                    fixed_inputs[dest_unit])
                 i += 1
+
+            self.check_combine_fix(arc, fixed_inputs[dest_unit])
 
     def generate_gofx(self, G, tears):
         edge_list = self.idx_to_edge(G)
@@ -695,8 +719,8 @@ class SequentialDecomposition(object):
                     index = mem.index()
                 except AttributeError:
                     index = None
-                obj = self.source_dest_peer(arc, name, index)
-                x.append(value(obj))
+                peer = self.source_dest_peer(arc, name, index)
+                x.append(value(peer))
         x = numpy.array(x)
         return x
 
