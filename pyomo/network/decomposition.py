@@ -290,6 +290,7 @@ class SequentialDecomposition(object):
         fixed_inputs = self.fixed_inputs()
         fixed_outputs = ComponentSet()
         edge_map = self.edge_to_idx(G)
+        guesses = self.options["guesses"]
         for lev in order:
             for unit in lev:
                 if unit not in fixed_inputs:
@@ -300,10 +301,10 @@ class SequentialDecomposition(object):
                     if not len(p.sources()):
                         continue
 
-                    if use_guesses:
+                    if use_guesses and p in guesses:
                         for name, mem in iteritems(p.vars):
                             try:
-                                entry = self.options["guesses"][p][name]
+                                entry = guesses[p][name]
                             except KeyError:
                                 continue
                             if isinstance(entry, dict):
