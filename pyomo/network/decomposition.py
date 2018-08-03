@@ -378,7 +378,7 @@ class SequentialDecomposition(object):
         were not already fixed in the provided dict that maps blocks to sets.
         """
         eblock = arc.expanded_block
-        dest = arc.destination
+        src, dest = arc.src, arc.dest
         dest_unit = dest.parent_block()
         eq_tol = self.options["almost_equal_tol"]
 
@@ -402,7 +402,7 @@ class SequentialDecomposition(object):
                     raise RuntimeError(
                         "Found connected ports '%s' and '%s' both with fixed "
                         "but different values (by > %s) for constraint '%s'" %
-                        (arc.src, dest, eq_tol, con.name))
+                        (src, dest, eq_tol, con.name))
                 continue
             if not (repn.is_linear() and len(repn.linear_vars) == 1):
                 raise RuntimeError(
@@ -426,20 +426,28 @@ class SequentialDecomposition(object):
         fix the dest port member at their sum.
         """
         dest = arc.dest
-        sources = dest.sources() # we know there's at least one source
-        for name in dest.vars:
+        srcs = dest.sources() # we know there's at least one source
+        for name, mem in iteritems(dest.vars):
             if dest._rules[name][0] is not Port.Extensive:
                 continue
-            evars = [arc.expanded_block.component(name) for arc in sources]
-            if evars[0] is None:
-                # no evars, so the dest member should already be fixed
-                continue
-            if not all(evar.is_fixed() for evar in evars):
-                # we wait until they are all fixed to fix the total
-                continue
-            total = sum(value(evar) for evar in evars)
-            mem = dest.vars[name]
-            self.pass_single_value(dest, name, mem, total, fixed)
+            if mem.is_indexed():
+                objs = [mem[idx] for idx in mem]
+                itr = [
+                [arc.expanded_block.component(name)[idx] for arc in srcs]
+                for idx in mem]
+            else:
+                objs = [mem]
+                itr = [[arc.expanded_block.component(name) for arc in srcs]]
+            for i in range(len(itr)):
+                evars = itr[i]
+                if evars[0] is None:
+                    # no evars, so this arc is 1-to-1
+                    return
+                if not all(evar.is_fixed() for evar in evars):
+                    # we wait until they are all fixed to fix the total
+                    continue
+                total = sum(value(evar) for evar in evars)
+                self.pass_single_value(dest, name, objs[i], total, fixed)
 
     def pass_single_value(self, port, name, member, val, fixed):
         """
@@ -643,7 +651,7 @@ class SequentialDecomposition(object):
         edge_list = self.idx_to_edge(G)
         for ei in edges:
             arc = G.edges[edge_list[ei]]["arc"]
-            for var in arc.source.iter_vars(expr_vars=True, fixed=False):
+            for var in arc.src.iter_vars(expr_vars=True, fixed=False):
                 fixed_outputs.add(var)
                 var.fix()
             self.pass_values(arc, self.fixed_inputs())
@@ -659,7 +667,7 @@ class SequentialDecomposition(object):
         for tear in tears:
             # fix everything then call pass values
             arc = G.edges[edge_list[tear]]["arc"]
-            for var in arc.source.iter_vars(expr_vars=True, fixed=False):
+            for var in arc.src.iter_vars(expr_vars=True, fixed=False):
                 fixed_outputs.add(var)
                 var.fix()
             self.pass_values(arc, fixed_inputs=self.fixed_inputs())
