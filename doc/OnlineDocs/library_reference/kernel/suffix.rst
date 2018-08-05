@@ -1,6 +1,6 @@
 Suffixes
 ========
 
-.. automodule:: pyomo.core.kernel.component_suffix
+.. automodule:: pyomo.core.kernel.suffix
    :show-inheritance:
    :members:

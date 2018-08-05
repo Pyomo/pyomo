@@ -30,8 +30,8 @@ from pyomo.opt.parallel.pyro import PyroAsynchronousActionManager
 from pyomo.core.base import Block
 import pyomo.core.base.suffix
 
-from pyomo.core.kernel.component_block import IBlockStorage
-import pyomo.core.kernel.component_suffix
+from pyomo.core.kernel.block import IBlock
+import pyomo.core.kernel.suffix
 
 import six
 
@@ -86,7 +86,7 @@ class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManage
         # constructed! Collect suffix names to try and import from solution.
         #
         for arg in args:
-            if isinstance(arg, (Block, IBlockStorage)):
+            if isinstance(arg, (Block, IBlock)):
                 if isinstance(arg, Block):
                     if not arg.is_constructed():
                         raise RuntimeError(
@@ -98,9 +98,9 @@ class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManage
                                           in pyomo.core.base.suffix.\
                                           active_import_suffix_generator(arg))
                 else:
-                    assert isinstance(arg, IBlockStorage)
+                    assert isinstance(arg, IBlock)
                     model_suffixes = list(comp.storage_key for comp \
-                                          in pyomo.core.base.component_suffix.\
+                                          in pyomo.core.base.suffix.\
                                           import_suffix_generator(arg,
                                                                   active=True,
                                                                   descend_into=False))

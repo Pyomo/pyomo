@@ -7,7 +7,8 @@ from pyomo.core import (Block, ConstraintList, NonNegativeReals, VarList,
                         minimize, value)
 from pyomo.core.base.symbolic import differentiate
 from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel import ComponentMap, ComponentSet
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_set import ComponentSet
 
 
 def add_outer_approximation_cuts(nlp_result, solve_data, config):

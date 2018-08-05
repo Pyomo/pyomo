@@ -22,7 +22,7 @@ import pyutilib.th as unittest
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.testcases import test_scenarios
-from pyomo.core.kernel.component_block import IBlockStorage
+from pyomo.core.kernel.block import IBlock
 
 # The test directory
 thisDir = dirname(abspath( __file__ ))
@@ -78,7 +78,7 @@ def create_test_method(model,
             return
 
         # validate the solution returned by the solver
-        if isinstance(model_class.model, IBlockStorage):
+        if isinstance(model_class.model, IBlock):
             model_class.model.load_solution(results.Solution)
         else:
             model_class.model.solutions.load_from(results, default_variable_value=opt.default_variable_value())
@@ -99,7 +99,7 @@ def create_test_method(model,
                 os.remove(save_filename)
 
         if not rc[0]:
-            if not isinstance(model_class.model, IBlockStorage):
+            if not isinstance(model_class.model, IBlock):
                 try:
                     model_class.model.solutions.store_to(results)
                 except ValueError:
