@@ -171,6 +171,15 @@ class _PortData(ComponentData):
         self.vars.pop(name)
         self._rules.pop(name)
 
+    def rule_for(self, name):
+        return self._rules[name][0]
+
+    def is_equality(self, name):
+        return self.rule_for(name) is Port.Equality
+
+    def is_extensive(self, name):
+        return self.rule_for(name) is Port.Extensive
+
     def fix(self):
         """
         Fix all variables in the port at their current values.
@@ -325,7 +334,7 @@ class Port(IndexedComponent):
                 tmp.add(None, key)
             if self._extends:
                 for key, val in iteritems(self._extends.vars):
-                    tmp.add(val, key, self._extends._rules[key][0])
+                    tmp.add(val, key, self._extends.rule_for(key))
             if self._initialize:
                 self._add_from_container(tmp, self._initialize)
             if self._rule:
@@ -530,7 +539,7 @@ class Port(IndexedComponent):
             if eblock.component("splitfrac") is None:
                 num_data_objs = 0
                 for k, v in iteritems(port.vars):
-                    if port._rules[k][0] is Port.Extensive:
+                    if port.is_extensive(k):
                         if v.is_indexed():
                             num_data_objs += len(v)
                         else:

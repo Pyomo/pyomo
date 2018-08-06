@@ -334,7 +334,9 @@ class TestPort(unittest.TestCase):
         m.p1.add(m.x, rule=Port.Extensive)
         m.p2 = Port(extends=m.p1)
         self.assertIs(m.p2.x, m.x)
-        self.assertIs(m.p2._rules['x'][0], Port.Extensive)
+        self.assertIs(m.p2.rule_for('x'), Port.Extensive)
+        self.assertTrue(m.p2.is_extensive('x'))
+        self.assertFalse(m.p2.is_equality('x'))
 
     def test_add_from_containers(self):
         m = ConcreteModel()
@@ -349,15 +351,26 @@ class TestPort(unittest.TestCase):
         self.assertIs(m.p1.x, m.x)
         self.assertIs(m.p1.y, m.y)
         self.assertIs(m.p2.x, m.x)
-        self.assertIs(m.p2._rules['x'][0], Port.Equality)
+        self.assertTrue(m.p2.is_equality('x'))
         self.assertIs(m.p2.y, m.y)
-        self.assertIs(m.p2._rules['y'][0], Port.Extensive)
+        self.assertTrue(m.p2.is_extensive('y'))
         self.assertIs(m.p3.this, m.x)
         self.assertIs(m.p3.that, m.y)
         self.assertIs(m.p4.this, m.x)
-        self.assertIs(m.p4._rules['this'][0], Port.Equality)
+        self.assertTrue(m.p4.is_equality('this'))
         self.assertIs(m.p4.that, m.y)
-        self.assertIs(m.p4._rules['that'][0], Port.Extensive)
+        self.assertTrue(m.p4.is_extensive('that'))
+
+    def test_fix_unfix(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.port = Port()
+        m.port.add(m.x)
+        m.x.value = 10
+        m.port.fix()
+        self.assertTrue(m.x.is_fixed())
+        m.port.unfix()
+        self.assertFalse(m.x.is_fixed())
 
     def test_iter_vars(self):
         def contains(item, container):

@@ -402,7 +402,7 @@ class SequentialDecomposition(object):
                 if var.is_fixed():
                     # silently ignore vars already fixed
                     continue
-                if (port._rules[name][0] is Port.Extensive and
+                if (port.is_extensive(name) and
                         srcs[0].expanded_block.component(name) is not None):
                     for arc, val in entry:
                         evar = arc.expanded_block.component(name)[idx]
@@ -427,7 +427,7 @@ class SequentialDecomposition(object):
         sources = port.sources()
         for name, obj in port.iter_vars(fixed=False, names=True):
             evars = None
-            if port._rules[name][0] is Port.Extensive:
+            if port.is_extensive(name):
                 # collect evars if there are any
                 if obj.is_indexed():
                     i = obj.index()
@@ -534,7 +534,7 @@ class SequentialDecomposition(object):
         return the appropriate index of the peer.
         """
         # check the rule on source but dest should be the same
-        if arc.src._rules[name][0] is Port.Extensive:
+        if arc.src.is_extensive(name):
             evar = arc.expanded_block.component(name)
             if evar is not None:
                 # 1-to-1 arcs don't make evar because they're an equality
