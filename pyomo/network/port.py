@@ -519,8 +519,10 @@ class Port(IndexedComponent):
                             num_data_objs += len(v)
                         else:
                             num_data_objs += 1
+                        if len(num_data_objs) > 1:
+                            break
 
-                if num_data_objs == 1:
+                if num_data_objs <= 1:
                     # Do not make splitfrac, do not make split constraints.
                     no_splitfrac = True
                     continue
