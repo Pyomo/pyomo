@@ -411,7 +411,7 @@ class SequentialDecomposition(object):
                             continue
                         fixed.add(evar)
                         evar.fix(val)
-                elif not var.is_variable_type():
+                elif var.is_expression_type():
                     raise ValueError(
                         "Cannot provide guess for expression type member "
                         "'%s%s' of port '%s', must set current value of "
