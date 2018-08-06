@@ -179,6 +179,16 @@ class _PortData(ComponentData):
         for v in self.iter_vars(expr_vars=True, fixed=False):
             v.fix()
 
+    def unfix(self):
+        """
+        Unfix all variables in the port.
+        For expressions, unfix every variable in the expression.
+        """
+        for v in self.iter_vars(expr_vars=True, fixed=True):
+            v.unfix()
+
+    free = unfix
+
     def iter_vars(self, expr_vars=False, fixed=None, names=False):
         """
         Iterate through every member of the port, going through
