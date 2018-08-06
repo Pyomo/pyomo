@@ -239,18 +239,18 @@ class _PortData(ComponentData):
         if arc not in self.dests():
             raise ValueError("Port '%s' is not a source of Arc '%s', cannot "
                              "set split fraction" % (self.name, arc.name))
-        self._splitfracs[arc] = dict(val=val, fix=fix)
+        self._splitfracs[arc] = (val, fix)
 
     def get_split_fraction(self, arc):
         """
         Returns a tuple (val, fix) for the split fraction of
-        this arc if it exists, and otherwise None
+        this arc if it exists, and otherwise None.
         """
-        d = self._splitfracs.get(arc, None)
-        if d is None:
+        res = self._splitfracs.get(arc, None)
+        if res is None:
             return None
         else:
-            return d["val"], d["fix"]
+            return res
 
 
 class Port(IndexedComponent):
