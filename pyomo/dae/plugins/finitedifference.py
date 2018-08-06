@@ -21,7 +21,7 @@ from pyomo.dae.misc import add_discretization_equations
 from pyomo.dae.misc import block_fully_discretized
 from pyomo.core.base.block import TraversalStrategy
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.dae')
 
 
 def _central_transform(v, s):
@@ -195,10 +195,11 @@ class Finite_Difference_Transformation(Transformation):
                 generate_finite_elements(ds, self._nfe[currentds])
                 if not ds.get_changed():
                     if len(ds) - 1 > self._nfe[currentds]:
-                        print("***WARNING: More finite elements were found in "
-                              "ContinuousSet '%s' than the number of finite "
-                              "elements specified in apply. The larger number "
-                              "of finite elements will be used." % ds.name)
+                        logger.warn("More finite elements were found in "
+                                    "ContinuousSet '%s' than the number of "
+                                    "finite elements specified in apply. The "
+                                    "larger number of finite elements will be "
+                                    "used." % ds.name)
 
                 self._nfe[ds.name] = len(ds) - 1
                 self._fe[ds.name] = sorted(ds)

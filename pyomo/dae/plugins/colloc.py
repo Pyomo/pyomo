@@ -34,7 +34,7 @@ try:
 except ImportError:
     numpy_available = False
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.dae')
 
 
 def _lagrange_radau_transform(v, s):
@@ -404,10 +404,11 @@ class Collocation_Discretization_Transformation(Transformation):
                 generate_finite_elements(ds, self._nfe[currentds])
                 if not ds.get_changed():
                     if len(ds) - 1 > self._nfe[currentds]:
-                        print("***WARNING: More finite elements were found in "
-                              "ContinuousSet '%s' than the number of finite "
-                              "elements specified in apply. The larger number "
-                              "of finite elements will be used." % ds.name)
+                        logger.warn("More finite elements were found in "
+                                    "ContinuousSet '%s' than the number of "
+                                    "finite elements specified in apply. The "
+                                    "larger number of finite elements will be "
+                                    "used." % ds.name)
 
                 self._nfe[ds.name] = len(ds) - 1
                 self._fe[ds.name] = sorted(ds)
@@ -440,7 +441,7 @@ class Collocation_Discretization_Transformation(Transformation):
                             " first or second derivative with respect to a "
                             "particular ContinuousSet" % (d.name, i.name))
                     scheme = self._scheme[count - 1]
-                    # print("%s %s" % (i.name, scheme.__name__))
+
                     newexpr = create_partial_expression(scheme, oldexpr, i,
                                                         loc)
                     d.set_derivative_expression(newexpr)
