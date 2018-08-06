@@ -314,10 +314,12 @@ class Port(IndexedComponent):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):  #pragma:nocover
             logger.debug( "Constructing Port, name=%s, from data=%s"
                           % (self.name, data) )
+
         if self._constructed:
             return
+
         timer = ConstructionTimer(self)
-        self._constructed=True
+        self._constructed = True
 
         # Construct _PortData objects for all index values
         if self.is_indexed():
@@ -325,6 +327,13 @@ class Port(IndexedComponent):
         else:
             self._data[None] = self
             self._initialize_members([None])
+
+        # get rid of these references
+        self._rule = None
+        self._initialize = None
+        self._implicit = None
+        self._extends = None # especially important as this is another port
+
         timer.report()
 
     def _initialize_members(self, initSet):
