@@ -463,8 +463,7 @@ class SequentialDecomposition(object):
                 self.combine_and_fix(port, name, obj, evars, fixed)
             else:
                 if obj.is_expression_type():
-                    for var in identify_variables(obj,
-                            include_fixed=False):
+                    for var in identify_variables(obj, include_fixed=False):
                         self.check_value_fix(port, var, default, fixed,
                             use_guesses)
                 else:
@@ -521,10 +520,7 @@ class SequentialDecomposition(object):
                     "Member '%s' of port '%s' is already fixed but has a "
                     "different value (by > %s) than what is being passed to it"
                     % (name, port.name, eq_tol))
-        elif member.is_variable_type():
-            fixed.add(member)
-            member.fix(val)
-        else:
+        elif member.is_expression_type():
             repn = generate_standard_repn(member - val)
             if repn.is_linear() and len(repn.linear_vars) == 1:
                 # fix the value of the single variable
@@ -538,6 +534,9 @@ class SequentialDecomposition(object):
                     "one free variable when trying to pass a value "
                     "to it. Please fix more variables before passing "
                     "to this port." % (name, port.name))
+        else:
+            fixed.add(member)
+            member.fix(val)
 
     def source_dest_peer(self, arc, name, index=None):
         """
