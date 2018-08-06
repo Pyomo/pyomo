@@ -7,7 +7,8 @@ import textwrap
 from pyomo.core.base import Block, Constraint, VarList, Objective
 from pyomo.core.expr.current import ExpressionReplacementVisitor
 from pyomo.core.expr.numvalue import value
-from pyomo.core.kernel import ComponentMap, ComponentSet
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
 from pyomo.common.plugin import alias

@@ -126,9 +126,10 @@ class LP_unused_vars_kernel(LP_unused_vars):
         model.x_unused_initialy_stale = pmo.variable()
         model.x_unused_initialy_stale.stale = True
 
-        model.X_unused = pmo.create_variable_dict(keys=model.s)
-        model.X_unused_initialy_stale = \
-            pmo.create_variable_dict(keys=model.s)
+        model.X_unused = pmo.variable_dict(
+            (i, pmo.variable()) for i in model.s)
+        model.X_unused_initialy_stale = pmo.variable_dict(
+            (i, pmo.variable()) for i in model.s)
 
         for i in model.X_unused:
             model.X_unused[i].stale = False
@@ -140,8 +141,10 @@ class LP_unused_vars_kernel(LP_unused_vars):
         model.x_initialy_stale = pmo.variable()
         model.x_initialy_stale.stale = True
 
-        model.X = pmo.create_variable_dict(keys=[1,2])
-        model.X_initialy_stale = pmo.create_variable_dict(keys=[1,2])
+        model.X = pmo.variable_dict(
+            (i, pmo.variable()) for i in model.s)
+        model.X_initialy_stale = pmo.variable_dict(
+            (i, pmo.variable()) for i in model.s)
         for i in model.X:
             model.X[i].stale = False
             model.X_initialy_stale[i].stale = True

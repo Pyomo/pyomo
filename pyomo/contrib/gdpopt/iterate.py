@@ -3,8 +3,9 @@ from __future__ import division
 
 from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
                                                  add_outer_approximation_cuts)
-from pyomo.contrib.gdpopt.gloa import solve_GLOA_master, solve_global_NLP
-from pyomo.contrib.gdpopt.loa import solve_LOA_master, solve_LOA_subproblem
+from pyomo.contrib.gdpopt.mip_solve import solve_GLOA_master, solve_LOA_master
+from pyomo.contrib.gdpopt.nlp_solve import (solve_global_NLP,
+                                            solve_LOA_subproblem)
 
 
 def GDPopt_iteration_loop(solve_data, config):
