@@ -70,16 +70,16 @@ class SequentialDecomposition(object):
                                     Default: 40
         tol                     Tolerance at which to stop tear iterations
                                     Default: 1.0E-5
-        tearTolType             Type of tolerance value, either:
+        tol_type                Type of tolerance value, either:
                                     "abs" - Absolute
                                     "rel" - Relative (to current value)
                                     Default: "abs"
         report_diffs            Report the matrix of differences across tear
                                     streams for every iteration
                                     Default: False
-        accelMin                Min value for Wegstein acceleration factor
+        accel_min               Min value for Wegstein acceleration factor
                                     Default: -5
-        accelMax                Max value for Wegstein acceleration factor
+        accel_max               Max value for Wegstein acceleration factor
                                     Default: 0
         tear_solver             Name of solver to use for select_tear_mip
                                     Default: "cplex"
@@ -108,10 +108,10 @@ class SequentialDecomposition(object):
         options["tear_method"] = "Direct"
         options["iterLim"] = 40
         options["tol"] = 1.0E-5
-        options["tearTolType"] = "abs"
+        options["tol_type"] = "abs"
         options["report_diffs"] = False
-        options["accelMin"] = -5
-        options["accelMax"] = 0
+        options["accel_min"] = -5
+        options["accel_max"] = 0
         options["tear_solver"] = "cplex"
         options["tear_solver_io"] = "python"
         options["tear_solver_options"] = {}
@@ -255,7 +255,7 @@ class SequentialDecomposition(object):
 
                 kwds = dict(G=G, order=order, function=function, tears=tears,
                     iterLim=self.options["iterLim"], tol=self.options["tol"],
-                    tearTolType=self.options["tearTolType"],
+                    tol_type=self.options["tol_type"],
                     report_diffs=self.options["report_diffs"],
                     outEdges=outEdges[sccIndex])
 
@@ -265,8 +265,8 @@ class SequentialDecomposition(object):
                     self.solve_tear_direct(**kwds)
 
                 elif tear_method == "Wegstein":
-                    kwds["accelMin"] = self.options["accelMin"]
-                    kwds["accelMax"] = self.options["accelMax"]
+                    kwds["accel_min"] = self.options["accel_min"]
+                    kwds["accel_max"] = self.options["accel_max"]
                     self.solve_tear_wegstein(**kwds)
 
                 else:
@@ -645,12 +645,12 @@ class SequentialDecomposition(object):
 
         return tset
 
-    def compute_err(self, svals, dvals, tearTolType):
-        if tearTolType not in ("abs", "rel"):
-            raise ValueError("Invalid tearTolType '%s'" % (tearTolType,))
+    def compute_err(self, svals, dvals, tol_type):
+        if tol_type not in ("abs", "rel"):
+            raise ValueError("Invalid tol_type '%s'" % (tol_type,))
 
         diff = svals - dvals
-        if tearTolType == "abs":
+        if tol_type == "abs":
             err = diff
         else:
             # relative: divide by current value of svals
@@ -867,7 +867,7 @@ class SequentialDecomposition(object):
     ########################################################################
 
     def solve_tear_direct(self, G, order, function, tears, outEdges, iterLim,
-            tol, tearTolType, report_diffs):
+            tol, tol_type, report_diffs):
         """
         Use direct substitution to solve tears. If multiple tears are
         given they are solved simultaneously.
@@ -896,7 +896,7 @@ class SequentialDecomposition(object):
 
         while True:
             svals, dvals = self.tear_diff_direct(G, tears)
-            err = self.compute_err(svals, dvals, tearTolType)
+            err = self.compute_err(svals, dvals, tol_type)
             hist.append(err)
 
             if report_diffs:
@@ -923,7 +923,7 @@ class SequentialDecomposition(object):
         return hist
 
     def solve_tear_wegstein(self, G, order, function, tears, outEdges, iterLim,
-        tol, tearTolType, report_diffs, accelMin, accelMax):
+        tol, tol_type, report_diffs, accel_min, accel_max):
         """
         Use Wegstein to solve tears. If multiple tears are given
         they are solved simultaneously.
@@ -933,9 +933,9 @@ class SequentialDecomposition(object):
             tears           List of tear edge indexes
             iterLim         Limit on the number of iterations to run
             tol             Tolerance at which iteration can be stopped
-            accelMin        Minimum value for Wegstein acceleration factor
-            accelMax        Maximum value for Wegstein acceleration factor
-            tearTolType     Interpretation of tolerance value, either:
+            accel_min        Minimum value for Wegstein acceleration factor
+            accel_max        Maximum value for Wegstein acceleration factor
+            tol_type     Interpretation of tolerance value, either:
                                 "abs" - Absolute tolerance
                                 "rel" - Relative tolerance (to bound range)
 
@@ -958,7 +958,7 @@ class SequentialDecomposition(object):
         gofx = self.generate_gofx(G, tears)
         x = self.generate_first_x(G, tears)
 
-        err = self.compute_err(gofx, x, tearTolType)
+        err = self.compute_err(gofx, x, tol_type)
         hist.append(err)
 
         if report_diffs:
@@ -983,7 +983,7 @@ class SequentialDecomposition(object):
 
             gofx = self.generate_gofx(G, tears)
 
-            err = self.compute_err(gofx, x, tearTolType)
+            err = self.compute_err(gofx, x, tol_type)
             hist.append(err)
 
             if report_diffs:
@@ -1008,8 +1008,8 @@ class SequentialDecomposition(object):
             slope[numpy.isnan(slope)] = 0
             slope[numpy.isinf(slope)] = 0
             accel = slope / (slope - 1)
-            accel[accel < accelMin] = accelMin
-            accel[accel > accelMax] = accelMax
+            accel[accel < accel_min] = accel_min
+            accel[accel > accel_max] = accel_max
             x_prev = x
             gofx_prev = gofx
             x = accel * x_prev + (1 - accel) * gofx_prev
