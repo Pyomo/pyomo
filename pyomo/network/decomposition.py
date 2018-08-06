@@ -425,7 +425,7 @@ class SequentialDecomposition(object):
 
     def load_values(self, port, default, fixed, use_guesses):
         sources = port.sources()
-        for name, obj in port.iter_vars(fixed=False, with_names=True):
+        for name, obj in port.iter_vars(fixed=False, names=True):
             evars = None
             if port._rules[name][0] is Port.Extensive:
                 # collect evars if there are any
@@ -679,7 +679,7 @@ class SequentialDecomposition(object):
             arc = G.edges[edge_list[tear]]["arc"]
             src, dest = arc.src, arc.dest
             sf = arc.expanded_block.component("splitfrac")
-            for name, mem in src.iter_vars(with_names=True):
+            for name, mem in src.iter_vars(names=True):
                 if sf is not None:
                     svals.append(value(mem * sf))
                 else:
@@ -739,7 +739,7 @@ class SequentialDecomposition(object):
             if dest_unit not in fixed_inputs:
                 fixed_inputs[dest_unit] = ComponentSet()
 
-            for name, mem in src.iter_vars(with_names=True):
+            for name, mem in src.iter_vars(names=True):
                 try:
                     index = mem.index()
                 except AttributeError:
@@ -768,7 +768,7 @@ class SequentialDecomposition(object):
         x = []
         for tear in tears:
             arc = G.edges[edge_list[tear]]["arc"]
-            for name, mem in arc.src.iter_vars(with_names=True):
+            for name, mem in arc.src.iter_vars(names=True):
                 try:
                     index = mem.index()
                 except AttributeError:

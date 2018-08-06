@@ -179,13 +179,17 @@ class _PortData(ComponentData):
         for v in self.iter_vars(expr_vars=True, fixed=False):
             v.fix()
 
-    def iter_vars(self, expr_vars=False, fixed=True, with_names=False):
+    def iter_vars(self, expr_vars=False, fixed=None, names=False):
         """
         Iterate through every member of the port, going through
         the indices of indexed members.
 
-        If expr_vars, call identify_variables on expression type members.
-        If not fixed, exclude fixed variables/expressions.
+        Arguments:
+            expr_vars       If True, call identify_variables on expression
+                                type members
+            fixed           Only include variables/expressions with this
+                                type of fixed
+            names           If True, yield (name, var/expr) pairs
         """
         for name, mem in iteritems(self.vars):
             if not mem.is_indexed():
@@ -193,16 +197,18 @@ class _PortData(ComponentData):
             else:
                 itr = itervalues(mem)
             for v in itr:
-                if not fixed and v.is_fixed():
+                if fixed is not None and v.is_fixed() != fixed:
                     continue
-                if v.is_expression_type() and expr_vars:
-                    for var in identify_variables(v, include_fixed=fixed):
-                        if with_names:
+                if expr_vars and v.is_expression_type():
+                    for var in identify_variables(v):
+                        if fixed is not None and var.is_fixed() != fixed:
+                            continue
+                        if names:
                             yield name, var
                         else:
                             yield var
                 else:
-                    if with_names:
+                    if names:
                         yield name, v
                     else:
                         yield v
@@ -519,7 +525,7 @@ class Port(IndexedComponent):
                             num_data_objs += len(v)
                         else:
                             num_data_objs += 1
-                        if len(num_data_objs) > 1:
+                        if num_data_objs > 1:
                             break
 
                 if num_data_objs <= 1:
