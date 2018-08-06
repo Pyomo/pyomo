@@ -136,6 +136,13 @@ class SequentialDecomposition(object):
         Or, for indexed members, multiple dicts that map:
             Port Member Name -> Index -> Value
 
+        For extensive members, "Value" must be a list of tuples of the
+        form (arc, value) to guess a value for the expanded variable
+        of the specified arc. However, if the arc connecting this port
+        is a 1-to-1 arc with its peer, then there will be no expanded
+        variable for the single arc, so a regular "Value" should be
+        provided.
+
         This dict cannot be used to pass guesses for variables within
         expression type members. Guesses for those variables must be
         assigned to the variable's current value before calling run.
@@ -291,77 +298,34 @@ class SequentialDecomposition(object):
         fixed_outputs = ComponentSet()
         edge_map = self.edge_to_idx(G)
         guesses = self.options["guesses"]
+        default = self.options["default_guess"]
         for lev in order:
             for unit in lev:
                 if unit not in fixed_inputs:
                     fixed_inputs[unit] = ComponentSet()
+                fixed_ins = fixed_inputs[unit]
 
                 # make sure all inputs are fixed
-                for p in unit.component_data_objects(Port):
-                    if not len(p.sources()):
+                for port in unit.component_data_objects(Port):
+                    if not len(port.sources()):
                         continue
-
-                    if use_guesses and p in guesses:
-                        for name, mem in iteritems(p.vars):
-                            try:
-                                entry = guesses[p][name]
-                            except KeyError:
-                                continue
-                            if isinstance(entry, dict):
-                                for k in entry:
-                                    var = mem[k]
-                                    if (not var.is_variable_type() or
-                                            var.is_fixed()):
-                                        # expr vars guessed by current value
-                                        # silently ignore vars already fixed
-                                        continue
-                                    fixed_inputs[unit].add(var)
-                                    var.fix(entry[k])
-                            elif mem.is_indexed():
-                                raise TypeError(
-                                    "Guess for indexed member '%s' in port "
-                                    "'%s' must map to a dict of indexes" %
-                                    (name, p.name))
-                            elif mem.is_variable_type() and not mem.is_fixed():
-                                fixed_inputs[unit].add(mem)
-                                mem.fix(entry)
-
-                    for name, var in p.iter_vars(expr_vars=True, fixed=False,
-                            with_names=True):
-
-                        val = None
-                        if var.value is not None:
-                            val = var.value
-                        else:
-                            default = self.options["default_guess"]
-                            if default is not None:
-                                val = default
-
-                        if val is None:
-                            raise RuntimeError(
-                                "Encountered a free inlet variable '%s' on "
-                                "port '%s' with no %scurrent value, or "
-                                "default_guess option, while attempting to "
-                                "compute the unit." %
-                                ("guess, " if use_guesses else "",
-                                    var.name, p.name))
-
-                        fixed_inputs[unit].add(var)
-                        var.fix(val)
+                    if use_guesses and port in guesses:
+                        self.load_guesses(guesses, port, fixed_ins)
+                    self.load_values(port, default, fixed_ins, use_guesses)
 
                 function(unit)
 
                 # free the inputs that were not already fixed
-                for var in fixed_inputs[unit]:
+                for var in fixed_ins:
                     var.free()
-                fixed_inputs[unit].clear()
+                fixed_ins.clear()
 
                 # pass the values downstream for all outlet ports
-                for p in unit.component_data_objects(Port):
-                    dests = p.dests()
+                for port in unit.component_data_objects(Port):
+                    dests = port.dests()
                     if not len(dests):
                         continue
-                    for var in p.iter_vars(expr_vars=True, fixed=False):
+                    for var in port.iter_vars(expr_vars=True, fixed=False):
                         fixed_outputs.add(var)
                         var.fix()
                     for arc in dests:
@@ -417,32 +381,117 @@ class SequentialDecomposition(object):
             fixed_inputs[dest_unit].add(var)
             var.fix(val)
 
-        self.check_combine_fix(arc, fixed_inputs[dest_unit])
+    def load_guesses(self, guesses, port, fixed):
+        srcs = port.sources()
+        for name, mem in iteritems(port.vars):
+            try:
+                entry = guesses[port][name]
+            except KeyError:
+                continue
 
-    def check_combine_fix(self, arc, fixed):
-        """
-        For all extensive port members, check if all of the expanded
-        variables are fixed, and if so then combine their values and
-        fix the dest port member at their sum.
-        """
-        dest = arc.dest
-        srcs = dest.sources() # we know there's at least one source
-        for name, obj in dest.iter_vars(with_names=True):
-            if dest._rules[name][0] is not Port.Extensive:
-                continue
-            if dest.vars[name].is_indexed():
-                i = obj.index()
-                evars = [arc.expanded_block.component(name)[i] for arc in srcs]
+            if isinstance(entry, dict):
+                itr = [(mem[k], entry[k], k) for k in entry]
+            elif mem.is_indexed():
+                raise TypeError(
+                    "Guess for indexed member '%s' in port '%s' must map to a "
+                    "dict of indexes" % (name, port.name))
             else:
-                evars = [arc.expanded_block.component(name) for arc in srcs]
-            if evars[0] is None:
-                # no evars, so this arc is 1-to-1
-                return
-            if not all(evar.is_fixed() for evar in evars):
-                # we wait until they are all fixed to fix the total
-                continue
-            total = sum(value(evar) for evar in evars)
-            self.pass_single_value(dest, name, obj, total, fixed)
+                itr = [(mem, entry, None)]
+
+            for var, entry, idx in itr:
+                if var.is_fixed():
+                    # silently ignore vars already fixed
+                    continue
+                if (port._rules[name][0] is Port.Extensive and
+                        srcs[0].expanded_block.component(name) is not None):
+                    for arc, val in entry:
+                        evar = arc.expanded_block.component(name)[idx]
+                        if evar.is_fixed():
+                            # silently ignore vars already fixed
+                            continue
+                        fixed.add(evar)
+                        evar.fix(val)
+                elif not var.is_variable_type():
+                    raise ValueError(
+                        "Cannot provide guess for expression type member "
+                        "'%s%s' of port '%s', must set current value of "
+                        "variables within expression" % (
+                            name,
+                            ("[%s]" % str(idx)) if mem.is_indexed() else "",
+                            port.name))
+                else:
+                    fixed.add(var)
+                    var.fix(entry)
+
+    def load_values(self, port, default, fixed, use_guesses):
+        sources = port.sources()
+        for name, obj in port.iter_vars(fixed=False, with_names=True):
+            evars = None
+            if port._rules[name][0] is Port.Extensive:
+                # collect evars if there are any
+                if obj.is_indexed():
+                    i = obj.index()
+                    evars = [arc.expanded_block.component(name)[i]
+                        for arc in sources]
+                else:
+                    evars = [arc.expanded_block.component(name)
+                        for arc in sources]
+                if evars[0] is None:
+                    # no evars, so this arc is 1-to-1
+                    evars = None
+            if evars is not None:
+                for evar in evars:
+                    if evar.is_fixed():
+                        continue
+                    self.check_value_fix(port, evar, default, fixed,
+                        use_guesses, extensive=True)
+                # now all evars should be fixed so combine them
+                # and fix the value of the extensive port member
+                self.combine_and_fix(port, name, obj, evars, fixed)
+            else:
+                if obj.is_expression_type():
+                    for var in identify_variables(obj,
+                            include_fixed=False):
+                        self.check_value_fix(port, var, default, fixed,
+                            use_guesses)
+                else:
+                    self.check_value_fix(port, obj, default, fixed,
+                        use_guesses)
+
+    def check_value_fix(self, port, var, default, fixed, use_guesses,
+            extensive=False):
+        """
+        Try to fix the var at its current value or the default, else error
+        """
+        val = None
+        if var.value is not None:
+            val = var.value
+        elif default is not None:
+            val = default
+
+        if val is None:
+            raise RuntimeError(
+                "Encountered a free inlet %svariable '%s' %s port '%s' with no "
+                "%scurrent value, or default_guess option, while attempting "
+                "to compute the unit." % (
+                    "extensive " if extensive else "",
+                    var.name,
+                    ("on", "to")[int(extensive)],
+                    port.name,
+                    "guess, " if use_guesses else ""))
+
+        fixed.add(var)
+        var.fix(val)
+
+    def combine_and_fix(self, port, name, obj, evars, fixed):
+        """
+        For an extensive port member, combine the values of all
+        expanded variables and fix the port member at their sum.
+        Assumes that all expanded variables are fixed.
+        """
+        assert all(evar.is_fixed() for evar in evars)
+        total = sum(value(evar) for evar in evars)
+        self.pass_single_value(port, name, obj, total, fixed)
 
     def pass_single_value(self, port, name, member, val, fixed):
         """
@@ -700,14 +749,12 @@ class SequentialDecomposition(object):
                     fixed_inputs[dest_unit])
                 i += 1
 
-            self.check_combine_fix(arc, fixed_inputs[dest_unit])
-
     def generate_gofx(self, G, tears):
         edge_list = self.idx_to_edge(G)
         gofx = []
         for tear in tears:
             arc = G.edges[edge_list[tear]]["arc"]
-            for name, mem in arc.src.iter_vars(with_names=True):
+            for mem in arc.src.iter_vars():
                 sf = arc.expanded_block.component("splitfrac")
                 if sf is not None:
                     gofx.append(value(mem * sf))
