@@ -451,10 +451,6 @@ class Port(IndexedComponent):
                 create the new variables and instead write a simple
                 equality constraint for that side.
 
-            If the port has arcs on both sides but at least on of the sides
-                is 1-to-1, it will not write the bal constraint, since this
-                would be equivalent to the insum or outsum constraints.
-
             If the outlet side is not 1-to-1 but there is only one outlet,
                 it will not create a splitfrac variable or write the split
                 constraint, but it will still write the outsum constraint
