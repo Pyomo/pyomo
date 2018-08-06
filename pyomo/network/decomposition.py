@@ -402,26 +402,39 @@ class SequentialDecomposition(object):
                 if var.is_fixed():
                     # silently ignore vars already fixed
                     continue
-                if (port.is_extensive(name) and
-                        srcs[0].expanded_block.component(name) is not None):
+                has_evars = False
+                if port.is_extensive(name):
                     for arc, val in entry:
-                        evar = arc.expanded_block.component(name)[idx]
+                        if arc not in srcs:
+                            raise ValueError(
+                                "Found a guess for extensive member '%s' on "
+                                "port '%s' using arc '%s' that is not a source "
+                                "of this port" % (name, port.name, arc.name))
+                        evar = arc.expanded_block.component(name)
+                        if evar is None:
+                            # no evars, 1-to-1 arc
+                            break
+                        has_evars = True
+                        # even if idx is None, we know evar is a Var and
+                        # indexing by None into SimpleVars returns itself
+                        evar = evar[idx]
                         if evar.is_fixed():
                             # silently ignore vars already fixed
                             continue
                         fixed.add(evar)
                         evar.fix(val)
-                elif var.is_expression_type():
-                    raise ValueError(
-                        "Cannot provide guess for expression type member "
-                        "'%s%s' of port '%s', must set current value of "
-                        "variables within expression" % (
-                            name,
-                            ("[%s]" % str(idx)) if mem.is_indexed() else "",
-                            port.name))
-                else:
-                    fixed.add(var)
-                    var.fix(entry)
+                if not has_evars:
+                    if var.is_expression_type():
+                        raise ValueError(
+                            "Cannot provide guess for expression type member "
+                            "'%s%s' of port '%s', must set current value of "
+                            "variables within expression" % (
+                                name,
+                                ("[%s]" % str(idx)) if mem.is_indexed() else "",
+                                port.name))
+                    else:
+                        fixed.add(var)
+                        var.fix(entry)
 
     def load_values(self, port, default, fixed, use_guesses):
         sources = port.sources()
