@@ -31,7 +31,7 @@ from pyomo.dae.misc import get_index_information
 try:
     import numpy
     numpy_available = True
-except ImportError:
+except ImportError:  # pragma:nocover
     numpy_available = False
 
 logger = logging.getLogger('pyomo.dae')
