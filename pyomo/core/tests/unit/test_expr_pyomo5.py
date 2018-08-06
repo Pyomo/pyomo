@@ -25,15 +25,15 @@ import pyutilib.th as unittest
 from pyutilib.th import nottest
 
 from pyomo.environ import *
+import pyomo.kernel
 from pyomo.core.expr import expr_common
 from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel import expression, expression_dict, variable, expression, objective
 from pyomo.core.expr.numvalue import native_types, nonpyomo_leaf_types, NumericConstant, as_numeric, is_potentially_variable
 from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.param import _ParamData, SimpleParam
 from pyomo.core.base.label import *
 from pyomo.core.base.template_expr import IndexTemplate
-
+from pyomo.core.expr.expr_errors import TemplateExpressionError
 
 
 class TestExpression_EvaluateNumericConstant(unittest.TestCase):
@@ -5876,14 +5876,14 @@ class TestNamedExpressionDuckTyping(unittest.TestCase):
         self.check_api(M.e[0])
 
     def test_expression(self):
-        x = variable()
-        e = expression()
+        x = pyomo.kernel.variable()
+        e = pyomo.kernel.expression()
         e.expr = x
         self.check_api(e)
 
     def test_objective(self):
-        x = variable()
-        e = objective()
+        x = pyomo.kernel.variable()
+        e = pyomo.kernel.objective()
         e.expr = x
         self.check_api(e)
 
@@ -5928,7 +5928,7 @@ class TestNumValueDuckTyping(unittest.TestCase):
         self.check_api(M.x[0])
 
     def test_variable(self):
-        x = variable()
+        x = pyomo.kernel.variable()
         self.check_api(x)
 
 
@@ -6405,8 +6405,6 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertRaises(EXPR.FixedExpressionError, EXPR.evaluate_expression, e, constant=True)
 
     def test_template_expr(self):
-        from pyomo.core.expr.current import TemplateExpressionError
-
         m = ConcreteModel()
         m.I = RangeSet(1,9)
         m.x = Var(m.I, initialize=lambda m,i: i+1)

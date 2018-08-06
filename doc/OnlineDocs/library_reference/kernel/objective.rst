@@ -5,22 +5,22 @@ Summary
 ~~~~~~~
 .. autosummary::
 
-   pyomo.core.kernel.component_objective.objective
-   pyomo.core.kernel.component_objective.objective_tuple
-   pyomo.core.kernel.component_objective.objective_list
-   pyomo.core.kernel.component_objective.objective_dict
+   pyomo.core.kernel.objective.objective
+   pyomo.core.kernel.objective.objective_tuple
+   pyomo.core.kernel.objective.objective_list
+   pyomo.core.kernel.objective.objective_dict
 
 Member Documentation
 ~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: pyomo.core.kernel.component_objective.objective
+.. autoclass:: pyomo.core.kernel.objective.objective
    :show-inheritance:
    :members:
-.. autoclass:: pyomo.core.kernel.component_objective.objective_tuple
+.. autoclass:: pyomo.core.kernel.objective.objective_tuple
    :show-inheritance:
    :members:
-.. autoclass:: pyomo.core.kernel.component_objective.objective_list
+.. autoclass:: pyomo.core.kernel.objective.objective_list
    :show-inheritance:
    :members:
-.. autoclass:: pyomo.core.kernel.component_objective.objective_dict
+.. autoclass:: pyomo.core.kernel.objective.objective_dict
    :show-inheritance:
    :members:

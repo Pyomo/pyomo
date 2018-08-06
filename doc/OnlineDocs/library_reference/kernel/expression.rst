@@ -5,22 +5,22 @@ Summary
 ~~~~~~~
 .. autosummary::
 
-   pyomo.core.kernel.component_expression.expression
-   pyomo.core.kernel.component_expression.expression_tuple
-   pyomo.core.kernel.component_expression.expression_list
-   pyomo.core.kernel.component_expression.expression_dict
+   pyomo.core.kernel.expression.expression
+   pyomo.core.kernel.expression.expression_tuple
+   pyomo.core.kernel.expression.expression_list
+   pyomo.core.kernel.expression.expression_dict
 
 Member Documentation
 ~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: pyomo.core.kernel.component_expression.expression
+.. autoclass:: pyomo.core.kernel.expression.expression
    :show-inheritance:
    :members:
-.. autoclass:: pyomo.core.kernel.component_expression.expression_tuple
+.. autoclass:: pyomo.core.kernel.expression.expression_tuple
    :show-inheritance:
    :members:
-.. autoclass:: pyomo.core.kernel.component_expression.expression_list
+.. autoclass:: pyomo.core.kernel.expression.expression_list
    :show-inheritance:
    :members:
-.. autoclass:: pyomo.core.kernel.component_expression.expression_dict
+.. autoclass:: pyomo.core.kernel.expression.expression_dict
    :show-inheritance:
    :members:

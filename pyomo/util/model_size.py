@@ -3,7 +3,7 @@ import logging
 
 from pyomo.core import Block, Constraint, Var
 from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel import ComponentSet
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
 from pyutilib.misc import Container
 

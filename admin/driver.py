@@ -114,6 +114,20 @@ def perform_install(package, config=None, user='hudson', dest='python', virtuale
             os.path.join(os.environ['WORKSPACE'], 'build', 'bin'),
             os.environ['PATH'] )
 
+    # We must cleanup old PYC files for the case that sources were
+    # renamed/deleted (coverage will fail if it finds PYC files
+    # without corresponding PY files).
+    sys.stdout.write("\n")
+    for dirpath, dnames, fnames in os.walk(
+        os.path.join(os.environ['WORKSPACE'],'src')):
+        for fname in fnames:
+            if not fname.endswith(('.pyc','.PYC')):
+                continue
+            if fname[:-1] not in fnames:
+                sys.stdout.write("Removing dangling PYC file: %s\n"
+                                 % os.path.join(dirpath, fname))
+                os.remove(os.path.join(dirpath, fname))
+
     python=os.environ.get('PYTHON','')
     if python == '':
         python = sys.executable
@@ -178,7 +192,7 @@ def perform_tests(package, coverage=False, omit=None, cat='nightly'):
         cmd = [os.path.join( os.environ['WORKSPACE'],'python','bin','test.'+package ), '--cat', cat]
     cmd.append('-v')
     if coverage:
-        cmd.append('--coverage')
+        cmd.extend(['--coverage','--cover-erase'])
     if 'TEST_PACKAGES' in os.environ:
         cmd = cmd + re.split('[ \t]+', os.environ['TEST_PACKAGES'].strip())
     sys.stdout.write( "Running Command: %s\n" % " ".join(cmd) )

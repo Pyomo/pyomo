@@ -34,8 +34,8 @@ from pyomo.core.base.set_types import *
 #CLH: EXPORT suffixes "constraint_types" and "branching_priorities"
 #     pass their respective information to the .bar file
 import pyomo.core.base.suffix
-import pyomo.core.kernel.component_suffix
-from pyomo.core.kernel.component_block import IBlockStorage
+import pyomo.core.kernel.suffix
+from pyomo.core.kernel.block import IBlock
 
 logger = logging.getLogger('pyomo.core')
 
@@ -197,9 +197,9 @@ class ProblemWriter_bar(AbstractProblemWriter):
         #
         # Check for active suffixes to export
         #
-        if isinstance(model, IBlockStorage):
+        if isinstance(model, IBlock):
             suffix_gen = lambda b: ((suf.storage_key, suf) \
-                                    for suf in pyomo.core.kernel.component_suffix.\
+                                    for suf in pyomo.core.kernel.suffix.\
                                     export_suffix_generator(b,
                                                             active=True,
                                                             descend_into=False))
@@ -335,7 +335,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # Example: ' x[1] ' -> ' x3 '
         #FIXME: 7/18/14 CLH: This may cause mistakes if spaces in
         #                    variable names are allowed
-        if isinstance(model, IBlockStorage):
+        if isinstance(model, IBlock):
             mutable_param_gen = lambda b: \
                                 b.components(ctype=Param,
                                              descend_into=False)
