@@ -131,7 +131,12 @@ class _ArcData(ActiveComponentData):
         If these values are being reassigned, note that the defaults
         are still None, so you may need to repass some attributes.
         """
-        vals = _iterable_to_dict(vals, self._directed, self.name)
+        # the following allows m.a = Arc(directed=True); m.a = (m.p, m.q)
+        # and m.a will be directed
+        d = self._directed if self._directed is not None else \
+            self.parent_component()._init_directed
+
+        vals = _iterable_to_dict(vals, d, self.name)
 
         source = vals.pop("source", None)
         destination = vals.pop("destination", None)
