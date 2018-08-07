@@ -349,7 +349,19 @@ class SequentialDecomposition(object):
         if dest_unit not in fixed_inputs:
             fixed_inputs[dest_unit] = ComponentSet()
 
-        need_to_solve = False
+        sf = eblock.component("splitfrac")
+        if sf is not None and not sf.is_fixed():
+            # fix the splitfrac if it has a current value or else error
+            if sf.value is not None:
+                fixed_inputs[dest_unit].add(sf)
+                sf.fix()
+            else:
+                raise RuntimeError(
+                    "Found free splitfrac for arc '%s' with no current value. "
+                    "Please use the set_split_fraction method on its source "
+                    "port to set this value before expansion, or set its value "
+                    "manually if expansion has already occured." % arc.name)
+
         for con in eblock.component_data_objects(Constraint, active=True):
             # we expect to find equality constraints with one linear variable
             if not con.equality:

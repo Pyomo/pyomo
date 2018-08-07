@@ -236,7 +236,8 @@ class _PortData(ComponentData):
 
     def set_split_fraction(self, arc, val, fix=True):
         """
-        Set the split fraction value for an arc when using Port.Extensive
+        Set the split fraction value to be used for an arc during
+        arc expansion when using Port.Extensive.
         """
         if arc not in self.dests():
             raise ValueError("Port '%s' is not a source of Arc '%s', cannot "
