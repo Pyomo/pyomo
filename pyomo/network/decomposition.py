@@ -768,8 +768,8 @@ class SequentialDecomposition(object):
         gofx = []
         for tear in tears:
             arc = G.edges[edge_list[tear]]["arc"]
+            sf = arc.expanded_block.component("splitfrac")
             for mem in arc.src.iter_vars():
-                sf = arc.expanded_block.component("splitfrac")
                 if sf is not None:
                     gofx.append(value(mem * sf))
                 else:
