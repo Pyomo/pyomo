@@ -144,6 +144,8 @@ class _PortData(ComponentData):
                             options include Port.Extensive. Customs are allowed
             **kwds      Keyword arguments that will be passed to rule
         """
+        if var is not None:
+            var = as_numeric(var)
         if name is None:
             name = var.local_name
         if name in self.vars and self.vars[name] is not None:
@@ -151,7 +153,7 @@ class _PortData(ComponentData):
             logger.warning("Implicitly replacing variable '%s' in Port '%s'.\n"
                            "To avoid this warning, use Port.remove() first."
                            % (name, self.name))
-        self.vars[name] = as_numeric(var) if var is not None else None
+        self.vars[name] = var
         if rule is None:
             rule = Port.Equality
         if rule is Port.Extensive:
