@@ -4554,6 +4554,8 @@ class TestIsFixedIsConstant(unittest.TestCase):
         self.model.c = Param(initialize=1, mutable=True)
         self.model.d = Param(initialize=d_fn, mutable=True)
         self.model.e = Param(initialize=d_fn, mutable=False)
+        self.model.f = Param(initialize=0, mutable=True)
+        self.model.g = Var(initialize=0)
         self.instance = self.model.create_instance()
 
     def tearDown(self):
@@ -4697,6 +4699,13 @@ class TestIsFixedIsConstant(unittest.TestCase):
         self.assertEqual(expr.is_constant(), False)
         self.assertEqual(expr.is_potentially_variable(), True)
         #
+        # Product of unfixed variable and zero parameter: fixed, not constant, pvar
+        #
+        expr = self.instance.f * self.instance.b
+        self.assertEqual(expr.is_fixed(), True)
+        self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr.is_potentially_variable(), True)
+        #
         # Product of unfixed variables:  not fixed, not constant, pvar
         #
         expr = self.instance.a * self.instance.b
@@ -4717,6 +4726,15 @@ class TestIsFixedIsConstant(unittest.TestCase):
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
         self.instance.a.fixed = False
+        self.assertEqual(expr.is_potentially_variable(), True)
+        #
+        # Product of unfixed variable and fixed zero variable: fixed, not constant, pvar
+        #
+        expr = self.instance.a * self.instance.g
+        self.instance.a.fixed = False
+        self.instance.g.fixed = True
+        self.assertEqual(expr.is_fixed(), True)
+        self.assertEqual(expr.is_constant(), False)
         self.assertEqual(expr.is_potentially_variable(), True)
 
         #
