@@ -33,7 +33,7 @@ from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.param import _ParamData, SimpleParam
 from pyomo.core.base.label import *
 from pyomo.core.base.template_expr import IndexTemplate
-
+from pyomo.core.expr.expr_errors import TemplateExpressionError
 
 
 class TestExpression_EvaluateNumericConstant(unittest.TestCase):
@@ -6405,8 +6405,6 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertRaises(EXPR.FixedExpressionError, EXPR.evaluate_expression, e, constant=True)
 
     def test_template_expr(self):
-        from pyomo.core.expr.current import TemplateExpressionError
-
         m = ConcreteModel()
         m.I = RangeSet(1,9)
         m.x = Var(m.I, initialize=lambda m,i: i+1)
