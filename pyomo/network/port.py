@@ -24,7 +24,7 @@ from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import \
     IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
-from pyomo.core.base.numvalue import NumericValue, value
+from pyomo.core.base.numvalue import as_numeric, value
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.base.label import alphanum_label_from_name
 from pyomo.core.base.plugin import register_component, \
@@ -151,7 +151,7 @@ class _PortData(ComponentData):
             logger.warning("Implicitly replacing variable '%s' in Port '%s'.\n"
                            "To avoid this warning, use Port.remove() first."
                            % (name, self.name))
-        self.vars[name] = var
+        self.vars[name] = as_numeric(var) if var is not None else None
         if rule is None:
             rule = Port.Equality
         if rule is Port.Extensive:
