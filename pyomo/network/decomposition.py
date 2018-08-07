@@ -424,6 +424,8 @@ class SequentialDecomposition(object):
                         fixed.add(evar)
                         evar.fix(val)
                 if not has_evars:
+                    # the only NumericValues in Pyomo that return True
+                    # for is_fixed are expressions and variables
                     if var.is_expression_type():
                         raise ValueError(
                             "Cannot provide guess for expression type member "
