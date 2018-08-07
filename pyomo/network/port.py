@@ -424,7 +424,8 @@ class Port(IndexedComponent):
             Port._add_equality_constraint(arc, name, index_set)
 
     @staticmethod
-    def Extensive(port, name, index_set, write_var_sum=True):
+    def Extensive(port, name, index_set, include_splitfrac=False,
+            write_var_sum=True):
         """
         Arc Expansion procedure for extensive variable properties.
 
@@ -443,9 +444,9 @@ class Port(IndexedComponent):
         the states the sum of the split fractions equals 1.
 
         Then, this procedure will go through every source of the port and
-        create a new variable (or use the same one as above), and then
-        write a constraint that states the sum of all the incoming new
-        variables must equal the parent variable.
+        create a new variable (unless it already exists), and then write
+        a constraint that states the sum of all the incoming new variables
+        must equal the parent variable.
 
         Model simplifications:
 
@@ -460,13 +461,15 @@ class Port(IndexedComponent):
 
             If the port only contains a single Extensive variable, the
                 splitfrac variables and the splitting constraints will
-                be skipped since they will be unnecessary.
+                be skipped since they will be unnecessary. However, they
+                can be still be included by passing include_splitfrac=True.
 
             Note: If split fractions are skipped, the write_var_sum=False
                 option is not allowed.
         """
         port_parent = port.parent_block()
-        out_vars = Port._Split(port, name, index_set, write_var_sum)
+        out_vars = Port._Split(port, name, index_set,
+            include_splitfrac=include_splitfrac, write_var_sum=write_var_sum)
         in_vars = Port._Combine(port, name, index_set)
 
     @staticmethod
@@ -507,7 +510,8 @@ class Port(IndexedComponent):
         return in_vars
 
     @staticmethod
-    def _Split(port, name, index_set, write_var_sum=True):
+    def _Split(port, name, index_set, include_splitfrac=False,
+            write_var_sum=True):
         port_parent = port.parent_block()
         var = port.vars[name]
         out_vars = []
@@ -519,7 +523,16 @@ class Port(IndexedComponent):
 
         if len(dests) == 1:
             # No need for splitting on one outlet.
+            # Make sure they do not try to fix splitfrac not at 1.
+            splitfracspec = port.get_split_fraction(dests[0])
+            if splitfracspec is not None:
+                if splitfracspec[0] != 1 and splitfracspec[1] == True:
+                    raise ValueError(
+                        "Cannot fix splitfrac not at 1 for port '%s' with a "
+                        "single dest '%s'" % (port.name, dests[0].name))
+
             no_splitfrac = True
+
             if len(dests[0].destination.sources(active=True)) == 1:
                 # This is a 1-to-1 connection, no need for evar, just equality.
                 arc = dests[0]
@@ -544,28 +557,39 @@ class Port(IndexedComponent):
             # so first check whether or not we need it.
 
             if eblock.component("splitfrac") is None:
-                num_data_objs = 0
-                for k, v in iteritems(port.vars):
-                    if port.is_extensive(k):
-                        if v.is_indexed():
-                            num_data_objs += len(v)
-                        else:
-                            num_data_objs += 1
-                        if num_data_objs > 1:
-                            break
+                if not include_splitfrac:
+                    num_data_objs = 0
+                    for k, v in iteritems(port.vars):
+                        if port.is_extensive(k):
+                            if v.is_indexed():
+                                num_data_objs += len(v)
+                            else:
+                                num_data_objs += 1
+                            if num_data_objs > 1:
+                                break
 
-                if num_data_objs <= 1:
-                    # Do not make splitfrac, do not make split constraints.
-                    no_splitfrac = True
-                    continue
+                    if num_data_objs <= 1:
+                        # Do not make splitfrac, do not make split constraints.
+                        # Make sure they didn't specify splitfracs.
+                        # This inner loop will only run once.
+                        for arc in dests:
+                            if port.get_split_fraction(arc) is not None:
+                                raise ValueError(
+                                    "Cannot specify splitfracs for port '%s' "
+                                    "(found arc '%s') because this port only "
+                                    "has one variable. To have control over "
+                                    "splitfracs, please pass the "
+                                    " include_splitfrac=True argument." %
+                                    (port.name, arc.name))
+                        no_splitfrac = True
+                        continue
 
-                else:
-                    eblock.splitfrac = Var()
-                    splitfracspec = port.get_split_fraction(arc)
-                    if splitfracspec is not None:
-                        eblock.splitfrac = splitfracspec[0]
-                        if splitfracspec[1]:
-                            eblock.splitfrac.fix()
+                eblock.splitfrac = Var()
+                splitfracspec = port.get_split_fraction(arc)
+                if splitfracspec is not None:
+                    eblock.splitfrac = splitfracspec[0]
+                    if splitfracspec[1]:
+                        eblock.splitfrac.fix()
 
             # Create constraint for this member using splitfrac.
             cname = "%s_split" % name
