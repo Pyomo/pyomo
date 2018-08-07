@@ -87,9 +87,12 @@ class SequentialDecomposition(object):
                                     Default: "python"
         tear_solver_options     Keyword options to pass to solve method
                                     Default: {}
+
+    Note: set initial options by passing keywords to __init__
     """
 
-    def __init__(self):
+    def __init__(self, **kwds):
+        """Pass kwds to update the options attribute after setting defaults"""
         if not imports_available:
             raise ImportError("This class requires numpy and networkx")
 
@@ -115,6 +118,8 @@ class SequentialDecomposition(object):
         options["tear_solver"] = "cplex"
         options["tear_solver_io"] = "python"
         options["tear_solver_options"] = {}
+
+        options.update(kwds)
 
     def set_guesses_for(self, port, guesses):
         """
