@@ -19,7 +19,7 @@ from pyomo.dae.misc import expand_components
 from pyomo.dae.misc import create_partial_expression
 from pyomo.dae.misc import add_discretization_equations
 from pyomo.dae.misc import block_fully_discretized
-from pyomo.core.base.block import TraversalStrategy
+from pyomo.dae.diffvar import DAE_Error
 
 logger = logging.getLogger('pyomo.dae')
 
@@ -125,11 +125,6 @@ class Finite_Difference_Transformation(Transformation):
             'CENTRAL': (_central_transform, _central_transform_order2),
             'FORWARD': (_forward_transform, _forward_transform_order2)}
 
-    def _setup(self, instance):
-        instance = instance.clone()
-        instance.construct()
-        return instance
-
     def _apply_to(self, instance, **kwds):
         """
         Applies the transformation to a modeling instance
@@ -160,6 +155,10 @@ class Finite_Difference_Transformation(Transformation):
                                  "been applied to the ContinuousSet '%s'" %
                                  (tmpds.get_discretization_info()['scheme'],
                                   tmpds.name))
+
+        if tmpnfe <= 0:
+            raise ValueError(
+                "The number of finite elements must be at least 1")
 
         if None in self._nfe:
             raise ValueError(
