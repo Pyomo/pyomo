@@ -17,6 +17,16 @@ from pyomo.environ import *
 from pyomo.network import *
 from types import MethodType
 
+try:
+    import numpy, networkx
+    import_available = True
+except ImportError:
+    import_available = False
+
+gams_available = SolverFactory('gams').available(exception_flag=False)
+
+@unittest.skipIf(not import_available, "numpy or networkx not available")
+@unittest.skipIf(not gams_available, "GAMS solver not available")
 class TestArc(unittest.TestCase):
 
     def is_converged(self, arc, tol=1.0E-5):
