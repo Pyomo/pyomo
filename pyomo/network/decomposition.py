@@ -366,6 +366,42 @@ class SequentialDecomposition(object):
                     "Please use the set_split_fraction method on its source "
                     "port to set this value before expansion, or set its value "
                     "manually if expansion has already occured." % arc.name)
+        elif sf is None:
+            # if there is no splitfrac, but we have extensive members, then we
+            # need to manually set the evar values because there will be no
+            # *_split constraints on the eblock, so it is up to us to set it
+            # TODO: what if there is no splitfrac, but it's missing because
+            # there's only 1 variable per port so it was simplified out?
+            # How do we specify the downstream evars? If we assume that the
+            # user's function will satisfy the *_outsum constraint before
+            # returning, then the evars would at least be specified such that
+            # they satisfy the total sum constraint. But I would think we don't
+            # want to rely on the user calling solve on their unit before
+            # returning, especially since the outsum constraint was auto
+            # generated and not one they made themselves.
+            # Potential Solution: allow the user to specify a splitfrac
+            # (via set_split_fraction or something else) that will be used here
+            # and is only relevant to this SM, and if they didn't specify
+            # anything, throw an error.
+            for name, mem in iteritems(src.vars):
+                if not src.is_extensive(name):
+                    continue
+                evar = eblock.component(name)
+                if evar is None:
+                    continue
+                if len(src.dests()) > 1:
+                    raise Exception(
+                        "This still needs to be figured out (arc '%s')" %
+                        arc.name)
+                # TODO: for now we know it's obvious what to do if there is
+                # only 1 destination
+                if mem.is_indexed():
+                    evars = [(evar[i], i) for i in evar]
+                else:
+                    evars = [(evar, None)]
+                for evar, idx in evars:
+                    fixed_inputs[dest_unit].add(evar)
+                    evar.fix(value(mem[idx] if mem.is_indexed() else mem))
 
         for con in eblock.component_data_objects(Constraint, active=True):
             # we expect to find equality constraints with one linear variable
@@ -494,7 +530,7 @@ class SequentialDecomposition(object):
             evars = None
             if port.is_extensive(name):
                 # collect evars if there are any
-                if obj.is_indexed():
+                if obj.parent_component().is_indexed():
                     i = obj.index()
                     evars = [arc.expanded_block.component(name)[i]
                         for arc in sources]
@@ -714,7 +750,8 @@ class SequentialDecomposition(object):
             src, dest = arc.src, arc.dest
             sf = arc.expanded_block.component("splitfrac")
             for name, mem in src.iter_vars(names=True):
-                if sf is not None:
+                if src.is_extensive(name) and sf is not None:
+                    # TODO: same as above, what if there's no splitfrac
                     svals.append(value(mem * sf))
                 else:
                     svals.append(value(mem))
@@ -788,9 +825,11 @@ class SequentialDecomposition(object):
         gofx = []
         for tear in tears:
             arc = G.edges[edge_list[tear]]["arc"]
+            src = arc.src
             sf = arc.expanded_block.component("splitfrac")
-            for mem in arc.src.iter_vars():
-                if sf is not None:
+            for name, mem in src.iter_vars(names=True):
+                if src.is_extensive(name) and sf is not None:
+                    # TODO: same as above, what if there's no splitfrac
                     gofx.append(value(mem * sf))
                 else:
                     gofx.append(value(mem))
