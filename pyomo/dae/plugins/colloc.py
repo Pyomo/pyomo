@@ -10,6 +10,7 @@
 
 import logging
 from six.moves import xrange
+from six import next
 
 from pyomo.core.base.plugin import alias
 from pyomo.core.base import Transformation
@@ -583,6 +584,7 @@ class Collocation_Discretization_Transformation(Transformation):
         else:
             self._reduced_cp[var.name] = {ds.name: ncp}
 
+        # TODO: Use unique_component_name for this
         list_name = var.local_name + "_interpolation_constraints"
 
         instance.add_component(list_name, ConstraintList())
@@ -611,7 +613,7 @@ class Collocation_Discretization_Transformation(Transformation):
                         tfit = t[tmp2 - ncp + 1:tmp2 + 1]
                         coeff = self._interpolation_coeffs(ti, tfit)
                         conlist.add(var[idx(n, i, k)] ==
-                                    sum(var[idx(n, i, j)] * coeff.next()
+                                    sum(var[idx(n, i, j)] * next(coeff)
                                         for j in xrange(tot_ncp - ncp + 1,
                                                         tot_ncp + 1)))
 
