@@ -1,68 +1,68 @@
-from pyomo.core.base.constraint import Constraint
-from pyomo.core.kernel.numvalue import value
-from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.repn.canonical_repn import generate_canonical_repn
-from pyomo.util.plugin import alias
 import logging
 import textwrap
-logger=logging.getLogger('pyomo.core')
+
+from pyomo.core import Constraint, value
+from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
+from pyomo.repn.standard_repn import generate_standard_repn
+from pyomo.common.plugin import alias
+
+logger = logging.getLogger('pyomo.contrib.preprocessing')
+
+
 class TightenContraintFromVars(IsomorphicTransformation):
-    """Tightens bound on linear constraints, by iterating through each variable and
-    tightening the constraint bounds accordingly
+    """Tightens upper and lower bound on linear constraints.
+
+    Iterates through each variable and tightens the constraint bounds using
+    the inferred values from the variable bounds.
+
     """
 
+    alias('core.tighten_constraints_from_vars',
+          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
-    alias('core.tighten_constraint_from_vars',doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
-    def __init__(self):
-        super( TightenContraintFromVars, self).__init__()
-
-    def _apply_to(self,instance):
-
-        for constr in instance.component_data_objects(ctype = Constraint,
-                                                        active = True,
-                                                        descend_into=True):
+    def _apply_to(self, instance):
+        for constr in instance.component_data_objects(
+                ctype=Constraint, active=True, descend_into=True):
             if not constr.body.polynomial_degree() == 1:
                 continue
+                # For now, analysis only implemented for linear constraints
 
-            #tighten the constraint bound as much as possible
-            repn = generate_canonical_repn(constr.body)
-            UB = 0
+            # tighten the constraint bound as much as possible
+            repn = generate_standard_repn(constr.body)
+            LB = UB = 0
             if repn.constant:
-                UB = -1 * repn.constant
-            LB = UB
-            #loop through each coefficent and variable pair
-            for i, coef in enumerate(repn.linear):
-                #TODO: ROunding issues
-                #Calculate bounds using interval arithmetic
+                LB = UB = -1 * repn.constant
+            # loop through each coefficent and variable pair
+            for i, coef in enumerate(repn.linear_coefs):
+                # TODO: ROunding issues
+                # Calculate bounds using interval arithmetic
                 if coef >= 0:
-                    if repn.variables[i].ub:
-                        UB = UB + coef * value(repn.variables[i].ub)
+                    if repn.linear_vars[i].has_ub():
+                        UB = UB + coef * value(repn.linear_vars[i].ub)
                     else:
                         UB = float('Inf')
-                    if repn.variables[i].lb:
-                        LB = LB + coef * value(repn.variables[i].lb)
+                    if repn.linear_vars[i].has_lb():
+                        LB = LB + coef * value(repn.linear_vars[i].lb)
                     else:
-                        LB = -float('Inf')
+                        LB = float('-Inf')
                 else:
-                    if repn.variables[i].ub:
-                        UB = UB + coef * value(repn.variables[i].lb)
+                    # coef is negative, so signs switch
+                    if repn.linear_vars[i].has_ub():
+                        UB = UB + coef * value(repn.linear_vars[i].lb)
                     else:
-                        LB = -float('Inf')
-                    if repn.variables[i].lb:
-                        LB = LB + coef * value(repn.variables[i].ub)
+                        LB = float('-Inf')
+                    if repn.linear_vars[i].has_lb():
+                        LB = LB + coef * value(repn.linear_vars[i].ub)
                     else:
                         UB = float('Inf')
-            #if bound is tighter, replace bound
-            if(constr.has_ub() and value(constr.upper) > UB) or (not constr.has_ub()):
-                if UB == float('Inf'):
-                    constr._upper = None
-                else:
-                    constr._upper = float(UB)
-            if(constr.has_lb() and value(constr.lower) < LB) or (not constr.has_lb()):
-                if LB == -float('Inf'):
-                    constr._lower = None
-                else:
-                    constr._lower = float(LB)
+
+            # if inferred bound is tighter, replace bound
+            new_ub = min(value(constr.upper), UB) if constr.has_ub() else UB
+            new_lb = max(value(constr.lower), LB) if constr.has_lb() else LB
+            constr.set_value((new_lb, constr.body, new_ub))
 
             if UB < LB:
-                logger.error("Infeasible variable bounds")
+                logger.error(
+                    "Infeasible variable bounds: "
+                    "Constraint %s has inferred LB %s > UB %s" %
+                    (constr.name, new_lb, new_ub))
