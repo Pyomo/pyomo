@@ -1,0 +1,3 @@
+model.Z = Set()
+model.Y = Param(model.Z)
+model.W = Param(model.Z)

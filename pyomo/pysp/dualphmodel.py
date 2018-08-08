@@ -12,7 +12,7 @@ import copy
 
 from pyomo.core import *
 from pyomo.opt import SolverFactory
-from pyomo.core.base.expr import _ExpressionBase
+from pyomo.core.expr.current import ExpressionBase
 from pyomo.pysp.phutils import update_all_rhos, find_active_objective
 
 from six import iteritems
@@ -64,7 +64,7 @@ class DualPHModel(object):
         model.del_component('beta')
         model.beta = Var(model.cuts,within=NonNegativeReals)
         model.del_component('beta_sum_one')
-        model.beta_sum_one = Constraint(expr=summation(model.beta)==1)
+        model.beta_sum_one = Constraint(expr=sum_product(model.beta)==1)
         model.del_component('obj')
         model.obj = Objective(expr=sum(self._alphas[i]*model.beta[i] for i in model.cuts))
 
@@ -75,7 +75,7 @@ class DualPHModel(object):
                 block = getattr(model,tree_node._name)
                 def _c_rule(block,i):
                     lhs = sum(model.beta[k]*self._wbars[k][tree_node._name][block.id_to_var[i][0]][block.id_to_var[i][1]] for k in model.beta.index_set())
-                    if not isinstance(lhs,_ExpressionBase):
+                    if not isinstance(lhs,ExpressionBase):
                         return Constraint.Skip
                     return lhs == 0
                 block.del_component('con')

@@ -1,0 +1,35 @@
+g3 1 1 0	# problem unknown
+ 2 0 1 0 0 	# vars, constraints, objectives, ranges, eqns
+ 0 1 0 0 0 0	# nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	# network constraints: nonlinear, linear
+ 0 2 0 	# nonlinear vars in constraints, objectives, both
+ 0 1 0 1	# linear network variables; functions; arith, flags
+ 0 0 0 0 0 	# discrete variables: binary, integer, nonlinear (b,c,o)
+ 0 2 	# nonzeros in Jacobian, obj. gradient
+ 1 1	# max name lengths: constraints, variables
+ 0 0 0 0 0	# common exprs: b,c,o,c1,o1
+F0 1 -1 gsl_hypot
+O0 0	#o
+o2	#*
+o5	#pow
+v1	#z
+n2
+o5	#pow
+f0 2	#hypot
+n3
+o0	#+
+n1
+v0	#y
+n2
+x2	# initial guess
+0 3
+1 1
+r	#0 ranges (rhs's)
+b	#2 bounds (on variables)
+2 0
+3
+k1	#intermediate Jacobian column lengths
+0
+G0 2
+0 0
+1 0

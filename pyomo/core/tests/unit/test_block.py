@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -26,9 +26,9 @@ import pyutilib.th as unittest
 import pyutilib.services
 
 from pyomo.environ import *
-from pyomo.util.log import LoggingIntercept
+from pyomo.common.log import LoggingIntercept
 from pyomo.core.base.block import SimpleBlock
-from pyomo.core.base.expr import identify_variables
+from pyomo.core.expr import current as EXPR
 from pyomo.opt import *
 
 from pyomo.gdp import Disjunct
@@ -620,7 +620,7 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(value(self.block.x), 6)
         self.assertEqual(value(p), 6)
         self.block.x = None
-        self.assertEqual(self.block.x.value, None)
+        self.assertEqual(self.block.x._value, None)
 
     def test_iterate_hierarchy_defaults(self):
         self.assertIs( TraversalStrategy.BFS,
@@ -1632,11 +1632,11 @@ class TestBlock(unittest.TestCase):
         self.assertIs(n.c.parent_block(), n)
         self.assertIs(n.c.parent_component(), n.c)
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(m.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(m.c.body)),
             sorted(id(x) for x in (m.x,m.y[1])),
         )
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(n.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(n.c.body)),
             sorted(id(x) for x in (n.x,n.y[1])),
         )
 
@@ -1664,11 +1664,11 @@ class TestBlock(unittest.TestCase):
         self.assertIs(n.b.c.parent_block(), n.b)
         self.assertIs(n.b.c.parent_component(), n.b.c)
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(m.b.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(m.b.c.body)),
             sorted(id(x) for x in (m.x, m.y[1], m.b.x, m.b.y[1])),
         )
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(n.b.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(n.b.c.body)),
             sorted(id(x) for x in (n.x, n.y[1], n.b.x, n.b.y[1])),
         )
 
@@ -1703,11 +1703,11 @@ class TestBlock(unittest.TestCase):
         self.assertIs(n.c.parent_block(), n)
         self.assertIs(n.c.parent_component(), n.c)
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(m.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(m.c.body)),
             sorted(id(x) for x in (m.x,m.y[1])),
         )
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(n.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(n.c.body)),
             sorted(id(x) for x in (n.x,n.y[1])),
         )
 
@@ -1735,11 +1735,11 @@ class TestBlock(unittest.TestCase):
         self.assertIs(n.b.c.parent_block(), n.b)
         self.assertIs(n.b.c.parent_component(), n.b.c)
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(m.b.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(m.b.c.body)),
             sorted(id(x) for x in (m.x, m.y[1], m.b.x, m.b.y[1])),
         )
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(n.b.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(n.b.c.body)),
             sorted(id(x) for x in (n.x, n.y[1], n.b.x, n.b.y[1])),
         )
 
@@ -1779,11 +1779,11 @@ class TestBlock(unittest.TestCase):
         self.assertIs(nb.c.parent_block(), nb)
         self.assertIs(nb.c.parent_component(), nb.c)
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(m.b.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(m.b.c.body)),
             sorted(id(x) for x in (m.x, m.y[1], m.b.x, m.b.y[1])),
         )
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(nb.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(nb.c.body)),
             sorted(id(x) for x in (m.x, m.y[1], nb.x, nb.y[1])),
         )
 
@@ -1803,12 +1803,28 @@ class TestBlock(unittest.TestCase):
         m.b.bad2 = foo()
         m.b.c = Constraint(expr=m.x**2 + m.y[1] + m.b.x**2 + m.b.y[1] <= 10)
 
+        # Check the paranoid warning
+        OUTPUT = StringIO()
+        with LoggingIntercept(OUTPUT, 'pyomo.core'):
+            nb = deepcopy(m.b)
+        # without the scope, the whole model is cloned!
+        self.assertIn("'unknown' contains an uncopyable field 'bad1'",
+                      OUTPUT.getvalue())
+        self.assertIn("'b' contains an uncopyable field 'bad2'",
+                      OUTPUT.getvalue())
+        self.assertIn("'__paranoid__'", OUTPUT.getvalue())
+        self.assertTrue(hasattr(m.b, 'bad2'))
+        self.assertFalse(hasattr(nb, 'bad2'))
+
         # Simple tests for the subblock
         OUTPUT = StringIO()
         with LoggingIntercept(OUTPUT, 'pyomo.core'):
             nb = m.b.clone()
-        self.assertIn("Component 'b' contains an uncopyable field 'bad2'",
+        self.assertNotIn("'unknown' contains an uncopyable field 'bad1'",
+                         OUTPUT.getvalue())
+        self.assertIn("'b' contains an uncopyable field 'bad2'",
                       OUTPUT.getvalue())
+        self.assertNotIn("'__paranoid__'", OUTPUT.getvalue())
         self.assertTrue(hasattr(m.b, 'bad2'))
         self.assertFalse(hasattr(nb, 'bad2'))
 
@@ -1816,10 +1832,11 @@ class TestBlock(unittest.TestCase):
         OUTPUT = StringIO()
         with LoggingIntercept(OUTPUT, 'pyomo.core'):
             n = m.clone()
-        self.assertIn("Component 'unknown' contains an uncopyable field 'bad1'",
+        self.assertIn("'unknown' contains an uncopyable field 'bad1'",
                       OUTPUT.getvalue())
-        self.assertIn("Component 'b' contains an uncopyable field 'bad2'",
+        self.assertIn("'b' contains an uncopyable field 'bad2'",
                       OUTPUT.getvalue())
+        self.assertNotIn("'__paranoid__'", OUTPUT.getvalue())
         self.assertTrue(hasattr(m, 'bad1'))
         self.assertFalse(hasattr(n, 'bad1'))
         self.assertTrue(hasattr(m.b, 'bad2'))
@@ -1845,11 +1862,11 @@ class TestBlock(unittest.TestCase):
         self.assertIs(n.c.parent_block(), n)
         self.assertIs(n.c.parent_component(), n.c)
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(m.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(m.c.body)),
             sorted(id(x) for x in (m.x,m.y[1])),
         )
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(n.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(n.c.body)),
             sorted(id(x) for x in (n.x,n.y[1])),
         )
 
@@ -1877,13 +1894,61 @@ class TestBlock(unittest.TestCase):
         self.assertIs(n.b.c.parent_block(), n.b)
         self.assertIs(n.b.c.parent_component(), n.b.c)
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(m.b.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(m.b.c.body)),
             sorted(id(x) for x in (m.x, m.y[1], m.b.x, m.b.y[1])),
         )
         self.assertEqual(
-            sorted(id(x) for x in identify_variables(n.b.c.body)),
+            sorted(id(x) for x in EXPR.identify_variables(n.b.c.body)),
             sorted(id(x) for x in (n.x, n.y[1], n.b.x, n.b.y[1])),
         )
+
+    def test_pprint(self):
+        m = HierarchicalModel().model
+        buf = StringIO()
+        m.pprint(ostream=buf)
+        ref = """3 Set Declarations
+    a1_IDX : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=Insertion, Bounds=(4, 5)
+        [5, 4]
+    a3_IDX : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=Insertion, Bounds=(6, 7)
+        [6, 7]
+    a_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 2, 3]
+
+3 Block Declarations
+    a : Size=3, Index=a_index, Active=True
+        a[1] : Active=True
+            2 Block Declarations
+                c : Size=2, Index=a1_IDX, Active=True
+                    a[1].c[4] : Active=True
+                        0 Declarations: 
+                    a[1].c[5] : Active=True
+                        0 Declarations: 
+                d : Size=1, Index=None, Active=True
+                    0 Declarations: 
+
+            2 Declarations: d c
+        a[2] : Active=True
+            0 Declarations: 
+        a[3] : Active=True
+            2 Block Declarations
+                e : Size=1, Index=None, Active=True
+                    0 Declarations: 
+                f : Size=2, Index=a3_IDX, Active=True
+                    a[3].f[6] : Active=True
+                        0 Declarations: 
+                    a[3].f[7] : Active=True
+                        0 Declarations: 
+
+            2 Declarations: e f
+    b : Size=1, Index=None, Active=True
+        0 Declarations: 
+    c : Size=1, Index=None, Active=True
+        0 Declarations: 
+
+6 Declarations: a1_IDX a3_IDX c a_index a b
+"""
+        print(buf.getvalue())
+        self.assertEqual(ref, buf.getvalue())
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve1(self):
@@ -1891,7 +1956,7 @@ class TestBlock(unittest.TestCase):
         model.A = RangeSet(1,4)
         model.x = Var(model.A, bounds=(-1,1))
         def obj_rule(model):
-            return summation(model.x)
+            return sum_product(model.x)
         model.obj = Objective(rule=obj_rule)
         def c_rule(model):
             expr = 0
@@ -1953,7 +2018,7 @@ class TestBlock(unittest.TestCase):
         model.A = RangeSet(1,4)
         model.x = Var(model.A, bounds=(-1,1))
         def obj_rule(model):
-            return summation(model.x)
+            return sum_product(model.x)
         model.obj = Objective(rule=obj_rule)
         def c_rule(model):
             expr = 0
@@ -1982,7 +2047,7 @@ class TestBlock(unittest.TestCase):
         model.b.A = RangeSet(1,4)
         model.b.x = Var(model.b.A, bounds=(-1,1))
         def obj_rule(block):
-            return summation(block.x)
+            return sum_product(block.x)
         model.b.obj = Objective(rule=obj_rule)
         def c_rule(model):
             expr = model.y
@@ -2010,7 +2075,7 @@ class TestBlock(unittest.TestCase):
         model.B = Set(initialize=['A B', 'C,D', 'E'])
         model.x = Var(model.A, model.B, bounds=(-1,1))
         def obj_rule(model):
-            return summation(model.x)
+            return sum_product(model.x)
         model.obj = Objective(rule=obj_rule)
         def c_rule(model):
             expr = model.y
@@ -2087,6 +2152,17 @@ class TestBlock(unittest.TestCase):
         self.assertIs(m.b.add_component, 6)
         m.b.foo = 7
         self.assertIs(m.b.foo, 7)
+
+    def test_write_exceptions(self):
+        m = Block()
+        with self.assertRaisesRegexp(
+                ValueError, ".*Could not infer file format from file name"):
+            m.write(filename="foo.bogus")
+
+        with self.assertRaisesRegexp(
+                ValueError, ".*Cannot write model in format"):
+            m.write(format="bogus")
+
 
 
 if __name__ == "__main__":

@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -14,20 +14,18 @@ import sys
 import logging
 from weakref import ref as weakref_ref
 
-from pyomo.util.timing import ConstructionTimer
-from pyomo.core.base.component import (ComponentData,
-                                       register_component)
+from pyomo.common.timing import ConstructionTimer
+
+from pyomo.core.expr import current as EXPR
+from pyomo.core.base.component import ComponentData
+from pyomo.core.base.plugin import register_component
 from pyomo.core.base.indexed_component import (
     IndexedComponent,
-    UnindexedComponent_set,
-    normalize_index, )
+    UnindexedComponent_set, )
 from pyomo.core.base.misc import (apply_indexed_rule,
                                   tabular_writer)
 from pyomo.core.base.numvalue import (NumericValue,
                                       as_numeric)
-import pyomo.core.base.expr
-from pyomo.core.base.expr_common import \
-    ensure_independent_trees as safe_mode
 from pyomo.core.base.util import is_functor
 
 from six import iteritems
@@ -37,7 +35,7 @@ logger = logging.getLogger('pyomo.core')
 
 class _ExpressionData(NumericValue):
     """
-    An object that defines an expression that is never cloned
+    An object that defines a named expression.
 
     Public Class Attributes
         expr       The expression owned by this data.
@@ -55,28 +53,39 @@ class _ExpressionData(NumericValue):
             return None
         return self.expr(exception=exception)
 
-    #
-    # Ducktyping _ExpressionBase functionality
-    #
+    def is_named_expression_type(self):
+        """A boolean indicating whether this in a named expression."""
+        return True
 
-    def is_expression(self):
+    def is_expression_type(self):
         """A boolean indicating whether this in an expression."""
         return True
 
+    def arg(self, index):
+        if index < 0 or index >= 1:
+            raise KeyError("Invalid index for expression argument: %d" % index)
+        return self.expr
+
     @property
-    def _args(self):
-        """A tuple of subexpressions involved in this expressions operation."""
+    def _args_(self):
         return (self.expr,)
 
-    def _arguments(self):
-        """A tuple of subexpressions involved in this expressions operation."""
-        return (self.expr,)
+    @property
+    def args(self):
+        yield self.expr
+
+    def nargs(self):
+        return 1
 
     def _precedence(self):
         return 0
 
-    def _to_string_prefix(self, ostream, verbose):
-        ostream.write(self.name)
+    def _to_string(self, values, verbose, smap, compute_values):
+        if verbose:
+            return "%s{%s}" % (str(self), values[0])
+        if self.expr is None:
+            return "%s{None}" % str(self)
+        return values[0]
 
     def clone(self):
         """Return a clone of this expression (no-op)."""
@@ -87,46 +96,15 @@ class _ExpressionData(NumericValue):
         # result
         return result[0]
 
-    def _is_constant_combiner(self):
-        # We cannot allow elimination/simplification of Expression objects
-        return lambda x: False
-
-    def _is_fixed_combiner(self):
-        return lambda x: x[0]
-
-    def _potentially_variable_combiner(self):
-        # Expression objects are potentially variable by definition
-        return lambda x: True
-
     def polynomial_degree(self):
         """A tuple of subexpressions involved in this expressions operation."""
         return self.expr.polynomial_degree()
 
-    def _polynomial_degree(self, result):
-        return result.pop()
+    def _compute_polynomial_degree(self, result):
+        return result[0]
 
-    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
-        if ostream is None:
-            ostream = sys.stdout
-        _verbose = pyomo.core.base.expr_common.TO_STRING_VERBOSE if \
-            verbose is None else verbose
-        if _verbose:
-            ostream.write(str(self))
-            ostream.write("{")
-        if self.expr is None:
-            ostream.write("Undefined")
-        else:
-            self.expr.to_string( ostream=ostream, verbose=verbose,
-                                   precedence=precedence, labeler=labeler )
-        if _verbose:
-            ostream.write("}")
-
-    @property
-    def _parent_expr(self):
-        return None
-    @_parent_expr.setter
-    def _parent_expr(self, value):
-        raise NotImplementedError
+    def _is_fixed(self, values):
+        return values[0]
 
     #
     # Abstract Interface
@@ -151,8 +129,9 @@ class _ExpressionData(NumericValue):
 
     # _ExpressionData should never return False because
     # they can store subexpressions that contain variables
-    def _potentially_variable(self):
+    def is_potentially_variable(self):
         return True
+
 
 class _GeneralExpressionDataImpl(_ExpressionData):
     """
@@ -166,36 +145,39 @@ class _GeneralExpressionDataImpl(_ExpressionData):
         expr       The expression owned by this data.
     """
 
-    __pickle_slots__ = ('_expr',)
+    __pickle_slots__ = ('_expr', '_is_owned')
 
     # any derived classes need to declare these as their slots,
     # but ignore them in their __getstate__ implementation
-    __expression_slots__ = __pickle_slots__ + (('_parent_expr',) if safe_mode else ())
+    __expression_slots__ = __pickle_slots__
 
     __slots__ = ()
 
-    def __init__(self, expr):
+    def __init__(self, expr=None):
         self._expr = as_numeric(expr) if (expr is not None) else None
-        if safe_mode:
-            self._parent_expr = None
+        self._is_owned = True
+
+    def create_node_with_local_data(self, values):
+        """
+        Construct a simple expression after constructing the 
+        contained expression.
+   
+        This class provides a consistent interface for constructing a
+        node, which is used in tree visitor scripts.
+        """
+        obj = SimpleExpression()
+        obj.construct()
+        obj.expr = values[0]
+        return obj
 
     def __getstate__(self):
         state = super(_GeneralExpressionDataImpl, self).__getstate__()
         for i in _GeneralExpressionDataImpl.__expression_slots__:
             state[i] = getattr(self, i)
-        if safe_mode:
-            state['_parent_expr'] = None
-            if self._parent_expr is not None:
-                _parent_expr = self._parent_expr()
-                if _parent_expr is not None:
-                    state['_parent_expr'] = _parent_expr
         return state
 
     def __setstate__(self, state):
         super(_GeneralExpressionDataImpl, self).__setstate__(state)
-        if safe_mode:
-            if self._parent_expr is not None:
-                self._parent_expr = weakref_ref(self._parent_expr)
 
     #
     # Abstract Interface
@@ -255,7 +237,7 @@ class _GeneralExpressionData(_GeneralExpressionDataImpl,
 
     __slots__ = _GeneralExpressionDataImpl.__expression_slots__
 
-    def __init__(self, expr, component=None):
+    def __init__(self, expr=None, component=None):
         _GeneralExpressionDataImpl.__init__(self, expr)
         # Inlining ComponentData.__init__
         self._component = weakref_ref(component) if (component is not None) \
@@ -272,6 +254,7 @@ class Expression(IndexedComponent):
         rule        A rule function used to initialize this object.
     """
 
+    _ComponentDataClass = _GeneralExpressionData
     NoConstraint    = (1000,)
     Skip            = (1000,)
 
@@ -330,9 +313,9 @@ class Expression(IndexedComponent):
             ostream,
             prefix+tab,
             ((k,v) for k,v in iteritems(self._data)),
-            ( "Key","Value" ),
+            ( "Value", ),
             lambda k, v: \
-               [k, "Undefined" if v.expr is None else v()])
+               ["Undefined" if v.expr is None else v()])
 
     #
     # A utility to extract all index-value pairs defining this
@@ -361,29 +344,12 @@ class Expression(IndexedComponent):
         for index, new_value in iteritems(new_values):
             self._data[index].set_value(new_value)
 
-    def _default(self, index):
-        raise KeyError(str(index))
-
-    def __setitem__(self, ndx, val):
-        #
-        # Get the expression data object
-        #
-        exprdata = None
-        if ndx in self._data:
-            exprdata = self._data[ndx]
-        else:
-            _ndx = normalize_index(ndx)
-            if _ndx in self._data:
-                exprdata = self._data[_ndx]
-        if exprdata is None:
-            raise KeyError(
-                "Cannot set the value of Expression '%s' with "
-                "invalid index '%s'"
-                % (self.name, str(ndx)))
-        #
-        # Set the value
-        #
-        exprdata.set_value(val)
+    def _getitem_when_not_present(self, index):
+        # TBD: Is this desired behavior?  I can see implicitly setting
+        # an Expression if it was not originally defined, but I am less
+        # convinced that implicitly creating an Expression (like what
+        # works with a Var) makes sense.  [JDS 25 Nov 17]
+        return self._setitem_when_not_present(index, None)
 
     def construct(self, data=None):
         """ Apply the rule to construct values in this set """
@@ -440,7 +406,7 @@ class Expression(IndexedComponent):
 class SimpleExpression(_GeneralExpressionData, Expression):
 
     def __init__(self, *args, **kwds):
-        _GeneralExpressionData.__init__(self, None, component=self)
+        _GeneralExpressionData.__init__(self, expr=None, component=self)
         Expression.__init__(self, *args, **kwds)
 
     #

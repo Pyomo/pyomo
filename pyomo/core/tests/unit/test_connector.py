@@ -72,14 +72,14 @@ class TestConnector(unittest.TestCase):
         pipe.OUT.add(pipe.pOut, "pressure")
         self.assertEqual(len(pipe.OUT), 1)
         self.assertEqual(len(pipe.OUT.vars), 2)
-        self.assertFalse(pipe.OUT.vars['flow'].is_expression())
+        self.assertFalse(pipe.OUT.vars['flow'].is_expression_type())
 
         pipe.IN = Connector()
         pipe.IN.add(-pipe.flow, "flow")
         pipe.IN.add(pipe.pIn, "pressure")
         self.assertEqual(len(pipe.IN), 1)
         self.assertEqual(len(pipe.IN.vars), 2)
-        self.assertTrue(pipe.IN.vars['flow'].is_expression())
+        self.assertTrue(pipe.IN.vars['flow'].is_expression_type())
         
     def test_add_indexed_vars(self):
         pipe = ConcreteModel()
@@ -194,7 +194,7 @@ class TestConnector(unittest.TestCase):
     Key  : Name        : Size : Variable
     None :      comp_a :    1 : composition[a]
          : composition :    3 : composition
-         :        flow :    1 : -1 * flow
+         :        flow :    1 : - flow
          :    pressure :    1 : pIn
 """)
 
@@ -208,12 +208,12 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """IN : Size=3, Index=SPECIES
     Key : Name     : Size : Variable
-      a :     flow :    1 : composition[a] * flow
-        : pressure :    1 : pIn
-      b :     flow :    1 : composition[b] * flow
-        : pressure :    1 : pIn
-      c :     flow :    1 : composition[c] * flow
-        : pressure :    1 : pIn
+      a :     flow :    1 : composition[a]*flow
+        : pressure :    1 :                 pIn
+      b :     flow :    1 : composition[b]*flow
+        : pressure :    1 :                 pIn
+      c :     flow :    1 : composition[c]*flow
+        : pressure :    1 :                 pIn
 """)
         
     def test_display(self):
@@ -353,9 +353,9 @@ class TestConnector(unittest.TestCase):
         m.component('c.expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=2, Index=c.expanded_index, Active=True
-    Key : Lower : Body   : Upper : Active
-      1 :   1.0 : -1 * x :   1.0 :   True
-      2 :   1.0 :  1 + y :   1.0 :   True
+    Key : Lower : Body  : Upper : Active
+      1 :   1.0 :   - x :   1.0 :   True
+      2 :   1.0 : 1 + y :   1.0 :   True
 """)
 
 
@@ -466,9 +466,9 @@ class TestConnector(unittest.TestCase):
         m.component('c.expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=2, Index=c.expanded_index, Active=True
-    Key : Lower : Body                 : Upper : Active
-      1 :   0.0 : -1 * x - ECON.auto.x :   0.0 :   True
-      2 :   0.0 :  1 + y - ECON.auto.y :   0.0 :   True
+    Key : Lower : Body                : Upper : Active
+      1 :   0.0 :   - x - ECON.auto.x :   0.0 :   True
+      2 :   0.0 : 1 + y - ECON.auto.y :   0.0 :   True
 """)
 
 

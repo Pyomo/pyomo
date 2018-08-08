@@ -80,7 +80,8 @@ class LP_duals_minimize_kernel(LP_duals_minimize):
         model._name = self.description
 
         model.s = list(range(1,13))
-        model.x = pmo.create_variable_dict(keys=model.s)
+        model.x = pmo.variable_dict(
+            (i, pmo.variable()) for i in model.s)
         model.x[1].lb = -1
         model.x[1].ub = 1
         model.x[2].lb = -1

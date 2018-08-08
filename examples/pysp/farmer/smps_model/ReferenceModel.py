@@ -15,8 +15,7 @@
 #
 
 from pyomo.core import *
-from pyomo.pysp.annotations import (PySP_ConstraintStageAnnotation,
-                                    PySP_StochasticMatrixAnnotation)
+from pyomo.pysp.annotations import StochasticConstraintBodyAnnotation
 
 #
 # Model
@@ -73,7 +72,7 @@ model.QuantityPurchased = Var(model.CROPS,
 #
 
 def ConstrainTotalAcreage_rule(model):
-    return summation(model.DevotedAcreage) <= model.TOTAL_ACREAGE
+    return sum_product(model.DevotedAcreage) <= model.TOTAL_ACREAGE
 model.ConstrainTotalAcreage = \
     Constraint(rule=ConstrainTotalAcreage_rule)
 
@@ -105,13 +104,13 @@ model.LimitAmountSold = \
 #
 
 def ComputeFirstStageCost_rule(model):
-    return summation(model.PlantingCostPerAcre, model.DevotedAcreage)
+    return sum_product(model.PlantingCostPerAcre, model.DevotedAcreage)
 model.FirstStageCost = Expression(rule=ComputeFirstStageCost_rule)
 
 def ComputeSecondStageCost_rule(model):
-    expr = summation(model.PurchasePrice, model.QuantityPurchased)
-    expr -= summation(model.SubQuotaSellingPrice, model.QuantitySubQuotaSold)
-    expr -= summation(model.SuperQuotaSellingPrice, model.QuantitySuperQuotaSold)
+    expr = sum_product(model.PurchasePrice, model.QuantityPurchased)
+    expr -= sum_product(model.SubQuotaSellingPrice, model.QuantitySubQuotaSold)
+    expr -= sum_product(model.SuperQuotaSellingPrice, model.QuantitySuperQuotaSold)
     return expr
 model.SecondStageCost = Expression(rule=ComputeSecondStageCost_rule)
 
@@ -129,20 +128,9 @@ model.Total_Cost_Objective = Objective(rule=total_cost_rule,
 
 def declare_annotations_rule(model):
     #
-    # Annotate constraint stages
-    #
-    model.constraint_stage = PySP_ConstraintStageAnnotation()
-    # first-stage constraints
-    model.constraint_stage.declare(model.ConstrainTotalAcreage, 1)
-    # second-stage constraints
-    model.constraint_stage.declare(model.EnforceQuotas, 2)
-    model.constraint_stage.declare(model.EnforceCattleFeedRequirement, 2)
-    model.constraint_stage.declare(model.LimitAmountSold, 2)
-
-    #
     # Annotate stochastic constraint matrix coefficients
     #
-    model.stoch_matrix = PySP_StochasticMatrixAnnotation()
+    model.stoch_matrix = StochasticConstraintBodyAnnotation()
     # DevotedAcreage[i] has a stochastic coefficient in two constraints
     for i in model.CROPS:
         model.stoch_matrix.declare(model.EnforceCattleFeedRequirement[i],

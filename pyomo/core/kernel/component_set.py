@@ -2,18 +2,24 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import collections
+try:
+    # python 3.7+
+    from collections.abc import MutableSet as _MutableSet
+    from collections.abc import Set as _Set
+except:                                           #pragma:nocover
+    from collections import MutableSet as _MutableSet
+    from collections import Set as _Set
 
 import six
 from six import itervalues, iteritems
 
-class ComponentSet(collections.MutableSet):
+class ComponentSet(_MutableSet):
     """
     This class is a replacement for set that allows Pyomo
     modeling components to be used as entries. The
@@ -104,7 +110,7 @@ class ComponentSet(collections.MutableSet):
     # plain dictionary mapping key->(type(val), id(val)) and
     # compare that instead.
     def __eq__(self, other):
-        if not isinstance(other, collections.Set):
+        if not isinstance(other, _Set):
             return False
         return set((type(val), id(val))
                    for val in self) == \

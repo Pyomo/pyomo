@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.kernel as pmo
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, Set, ConstraintList, summation, Block
+from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, Set, ConstraintList, sum_product, Block
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 @register_model
@@ -61,8 +61,8 @@ class LP_unused_vars(_BaseTestModel):
 
         model.obj = Objective(expr= model.x + \
                                     model.x_initialy_stale + \
-                                    summation(model.X) + \
-                                    summation(model.X_initialy_stale))
+                                    sum_product(model.X) + \
+                                    sum_product(model.X_initialy_stale))
 
         model.c = ConstraintList()
         model.c.add( model.x          >= 1 )
@@ -126,9 +126,10 @@ class LP_unused_vars_kernel(LP_unused_vars):
         model.x_unused_initialy_stale = pmo.variable()
         model.x_unused_initialy_stale.stale = True
 
-        model.X_unused = pmo.create_variable_dict(keys=model.s)
-        model.X_unused_initialy_stale = \
-            pmo.create_variable_dict(keys=model.s)
+        model.X_unused = pmo.variable_dict(
+            (i, pmo.variable()) for i in model.s)
+        model.X_unused_initialy_stale = pmo.variable_dict(
+            (i, pmo.variable()) for i in model.s)
 
         for i in model.X_unused:
             model.X_unused[i].stale = False
@@ -140,8 +141,10 @@ class LP_unused_vars_kernel(LP_unused_vars):
         model.x_initialy_stale = pmo.variable()
         model.x_initialy_stale.stale = True
 
-        model.X = pmo.create_variable_dict(keys=[1,2])
-        model.X_initialy_stale = pmo.create_variable_dict(keys=[1,2])
+        model.X = pmo.variable_dict(
+            (i, pmo.variable()) for i in model.s)
+        model.X_initialy_stale = pmo.variable_dict(
+            (i, pmo.variable()) for i in model.s)
         for i in model.X:
             model.X[i].stale = False
             model.X_initialy_stale[i].stale = True
@@ -173,7 +176,7 @@ class LP_unused_vars_kernel(LP_unused_vars):
         model.B[2].b = flat_model.clone()
 
         model.b.deactivate()
-        model.B.deactivate()
+        model.B.deactivate(shallow=False)
         model.b.b.activate()
         model.B[1].b.activate()
         model.B[2].b.deactivate()

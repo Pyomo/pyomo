@@ -1,10 +1,6 @@
 RUNNING - run args=['lagrangeParam.py', '-r', '1.0', '--solver=cplex', '--model-directory=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/models-cc', '--instance-directory=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/1ef3-cc']
 Loading reference model and scenario tree
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/models-cc/ReferenceModel.py
-Module successfully loaded
 From LagrangeParametric, status = options set	STARTTIME = 1442519228.2
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/models-cc/ReferenceModel.py
-Module successfully loaded
 Initializing PH
 
 min 3 scenarios

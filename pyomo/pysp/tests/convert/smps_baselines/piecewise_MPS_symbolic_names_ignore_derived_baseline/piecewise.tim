@@ -1,0 +1,5 @@
+TIME piecewise
+PERIODS IMPLICIT
+    fx o TIME1
+    fz c_e_p_second_stage(1)_INC_constraint1_ TIME2
+ENDATA

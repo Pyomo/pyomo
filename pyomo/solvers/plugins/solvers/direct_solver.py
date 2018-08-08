@@ -10,9 +10,9 @@
 
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
 from pyomo.core.base.block import _BlockData
-from pyomo.core.kernel.component_block import IBlockStorage
+from pyomo.core.kernel.block import IBlock
 from pyomo.core.base.suffix import active_import_suffix_generator
-from pyomo.core.kernel.component_suffix import import_suffix_generator
+from pyomo.core.kernel.suffix import import_suffix_generator
 import pyutilib.misc
 import pyutilib.common
 import time
@@ -33,7 +33,7 @@ class DirectSolver(DirectOrPersistentSolver):
 
         args
         ----
-        pyomo Model or IBlockStorage
+        pyomo Model or IBlock
 
         kwds
         ----
@@ -60,7 +60,7 @@ class DirectSolver(DirectOrPersistentSolver):
 
         self._set_instance(model, kwds)
 
-        DirectOrPersistentSolver._presolve(self, *args, **kwds)
+        DirectOrPersistentSolver._presolve(self, **kwds)
 
     def solve(self, *args, **kwds):
         """ Solve the problem """
@@ -72,7 +72,7 @@ class DirectSolver(DirectOrPersistentSolver):
         #
         _model = None
         for arg in args:
-            if isinstance(arg, (_BlockData, IBlockStorage)):
+            if isinstance(arg, (_BlockData, IBlock)):
                 if isinstance(arg, _BlockData):
                     if not arg.is_constructed():
                         raise RuntimeError(
@@ -84,10 +84,11 @@ class DirectSolver(DirectOrPersistentSolver):
                 if isinstance(arg, _BlockData):
                     model_suffixes = list(name for (name,comp) in active_import_suffix_generator(arg))
                 else:
-                    assert isinstance(arg, IBlockStorage)
-                    model_suffixes = list(name for (name,comp) in import_suffix_generator(arg, active=True,
-                                                                                          descend_into=False,
-                                                                                          return_key=True))
+                    assert isinstance(arg, IBlock)
+                    model_suffixes = list(comp.storage_key for comp in
+                                          import_suffix_generator(arg,
+                                                                  active=True,
+                                                                  descend_into=False))
 
                 if len(model_suffixes) > 0:
                     kwds_suffixes = kwds.setdefault('suffixes',[])
@@ -154,7 +155,7 @@ class DirectSolver(DirectOrPersistentSolver):
                 result._smap_id = self._smap_id
                 result._smap = None
                 if _model:
-                    if isinstance(_model, IBlockStorage):
+                    if isinstance(_model, IBlock):
                         if len(result.solution) == 1:
                             result.solution(0).symbol_map = \
                                 getattr(_model, "._symbol_maps")[result._smap_id]
@@ -162,7 +163,6 @@ class DirectSolver(DirectOrPersistentSolver):
                                 self._default_variable_value
                             if self._load_solutions:
                                 _model.load_solution(result.solution(0))
-                                result.solution.clear()
                         else:
                             assert len(result.solution) == 0
                         # see the hack in the write method
@@ -171,6 +171,9 @@ class DirectSolver(DirectOrPersistentSolver):
                         assert len(getattr(_model, "._symbol_maps")) == 1
                         delattr(_model, "._symbol_maps")
                         del result._smap_id
+                        if self._load_solutions and \
+                           (len(result.solution) == 0):
+                            logger.error("No solution is available")
                     else:
                         if self._load_solutions:
                             _model.solutions.load_from(

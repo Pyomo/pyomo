@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -21,7 +21,7 @@ import pyutilib.misc
 import pyutilib.common
 import pyutilib.subprocess
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -51,7 +51,7 @@ def configure_cbc():
     cbc_exec = pyutilib.services.registered_executable("cbc").get_path()
     results = pyutilib.subprocess.run( [cbc_exec,"-stop"], timelimit=1 )
     _cbc_version = _extract_version(results[1])
-    results = pyutilib.subprocess.run( 
+    results = pyutilib.subprocess.run(
         [cbc_exec,"dummy","-AMPL","-stop"], timelimit=1 )
     _cbc_compiled_with_asl = not ('No match for AMPL' in results[1])
     if _cbc_version is not None:
@@ -61,7 +61,7 @@ class CBC(OptSolver):
     """The CBC LP/MIP solver
     """
 
-    pyomo.util.plugin.alias('cbc', doc='The CBC LP/MIP solver')
+    pyomo.common.plugin.alias('cbc', doc='The CBC LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
         configure_cbc()
@@ -91,7 +91,7 @@ class CBC(OptSolver):
             # the _cbc_compiled_with_asl and
             # _cbc_old_version flags are tristate
             # (None, False, True), so don't
-            # simplify the if statements from 
+            # simplify the if statements from
             # checking "is"
             if _cbc_compiled_with_asl is not False:
                 if _cbc_old_version is True:
@@ -123,7 +123,7 @@ class CBCSHELL(SystemCallSolver):
     """Shell interface to the CBC LP/MIP solver
     """
 
-    pyomo.util.plugin.alias('_cbc_shell',  doc='Shell interface to the CBC LP/MIP solver')
+    pyomo.common.plugin.alias('_cbc_shell',  doc='Shell interface to the CBC LP/MIP solver')
 
     def __init__(self, **kwds):
         #
@@ -151,8 +151,8 @@ class CBCSHELL(SystemCallSolver):
         self._capabilities.linear = True
         self._capabilities.integer = True
         # The quadratic capabilities may be true but there is
-        # some weirdness in the solution file that this 
-        # plugin does not handle correctly  (extra variables 
+        # some weirdness in the solution file that this
+        # plugin does not handle correctly  (extra variables
         # added that are not in the symbol map?)
         self._capabilities.quadratic_objective = False
         self._capabilities.quadratic_constraint = False
@@ -177,7 +177,7 @@ class CBCSHELL(SystemCallSolver):
         if prob_format == ProblemFormat.nl:
             return ResultsFormat.sol
         return ResultsFormat.soln
-        
+
     # Nothing needs to be done here
     #def _presolve(self, *args, **kwds):
     #    # let the base class handle any remaining keywords/actions.
@@ -265,6 +265,7 @@ class CBCSHELL(SystemCallSolver):
 
             if self._timelimit is not None and self._timelimit > 0.0:
                 cmd.extend(['-sec', str(self._timelimit)])
+                cmd.extend(['-timeMode', "elapsed"])
             if "debug" in self.options:
                 cmd.extend(["-log","5"])
             for key, val in _check_and_escape_options(self.options):
@@ -277,6 +278,7 @@ class CBCSHELL(SystemCallSolver):
         else:
             if self._timelimit is not None and self._timelimit > 0.0:
                 cmd.extend(['-sec', str(self._timelimit)])
+                cmd.extend(['-timeMode', "elapsed"])
             if "debug" in self.options:
                 cmd.extend(["-log","5"])
             # these must go after options that take a value
@@ -287,12 +289,12 @@ class CBCSHELL(SystemCallSolver):
                 else:
                     action_options.append('-'+key)
             cmd.extend(["-printingOptions", "all",
-                        "-import", problem_files[0],
-                        "-import",
-                        "-stat=1",
-                        "-solve", 
-                        "-solu", self._soln_file])
+                        "-import", problem_files[0]])
             cmd.extend(action_options)
+            cmd.extend(["-stat=1",
+                        "-solve",
+                        "-solu", self._soln_file])
+
         return pyutilib.misc.Bunch(cmd=cmd, log_file=self._log_file, env=None)
 
     def process_logfile(self):
@@ -389,6 +391,10 @@ class CBCSHELL(SystemCallSolver):
                 results.solver.system_time=float(tokens[1])
             if len(tokens) == 2 and tokens[0] == "user":
                 results.solver.user_time=float(tokens[1])
+            if len(tokens) == 10 and "Presolve" in tokens and  \
+               "iterations" in tokens and tokens[0] == "Optimal" and "objective" == tokens[1]:
+                soln.status = SolutionStatus.optimal
+                soln.objective['__default_objective__']['Value'] = float(tokens[2])
             results.solver.user_time=-1.0
 
         if soln.objective['__default_objective__']['Value'] == "1e+50":
@@ -460,69 +466,71 @@ class CBCSHELL(SystemCallSolver):
         processing_constraints = None # None means header, True means constraints, False means variables.
         header_processed = False
         optim_value = None
-        range_duals = {}
+
         try:
             INPUT = open(self._soln_file,"r")
         except IOError:
             INPUT = []
+
         for line in INPUT:
             tokens = re.split('[ \t]+',line.strip())
-            #
-            # Ignore warnings of values out of bounds
-            #
-            if tokens[0] == "**":
-                tokens = tokens[1:]
+
             #
             # These are the only header entries CBC will generate (identified via browsing CbcSolver.cpp)
             #
-            if tokens[0] == "Optimal":
-                solution.status = SolutionStatus.optimal
-                solution.gap = 0.0
-                optim_value = float(tokens[-1])
-
-            elif tokens[0] == "Unbounded" or (len(tokens)>2 and tokens[0] == "Problem" and tokens[2] == 'unbounded') or (len(tokens)>1 and tokens[0] ==    'Dual' and tokens[1] == 'infeasible'):
-                results.solver.termination_condition = TerminationCondition.unbounded
-                solution.gap = None
-                results.solution.delete(0)
-                INPUT.close()
-                return
-
-            elif tokens[0] == "Infeasible" or tokens[0] == 'PrimalInfeasible' or (len(tokens)>1 and tokens[0] == 'Integer' and tokens[1] == 'infeasible'):
-                results.solver.termination_condition = TerminationCondition.infeasible
-                solution.gap = None
-                results.solution.delete(0)
-                INPUT.close()
-                return
-
-            elif len(tokens) > 2 and tokens[0:3] == ['Stopped','on','time']:
-                if tokens[4] == 'objective':
-                    results.solver.termination_condition = TerminationCondition.maxTimeLimit
-                    solution.gap = None
+            if not header_processed:
+                if tokens[0] == "Optimal":
+                    solution.status = SolutionStatus.optimal
+                    solution.gap = 0.0
                     optim_value = float(tokens[-1])
-                elif len(tokens) > 8 and tokens[3:9] == ['(no', 'integer', 'solution', '-', 'continuous', 'used)']:
-                    results.solver.termination_condition = TerminationCondition.intermediateNonInteger
+
+                elif tokens[0] == "Unbounded" or (len(tokens)>2 and tokens[0] == "Problem" and tokens[2] == 'unbounded') or (len(tokens)>1 and tokens[0] ==    'Dual' and tokens[1] == 'infeasible'):
+                    results.solver.termination_condition = TerminationCondition.unbounded
                     solution.gap = None
-                    optim_value = float(tokens[-1])
-                else:
-                    print("***WARNING: CBC plugin currently not processing this solution status correctly. Full status line is: "+line.strip())
+                    results.solution.delete(0)
+                    INPUT.close()
+                    return
 
-            elif tokens[0] in ("Optimal", "Infeasible", "Unbounded", "Stopped", "Integer", "Status"):
-                print("***WARNING: CBC plugin currently not processing solution status="+tokens[0]+" correctly. Full status line is: "+line.strip())
+                elif tokens[0] == "Infeasible" or tokens[0] == 'PrimalInfeasible' or (len(tokens)>1 and tokens[0] == 'Integer' and tokens[1] == 'infeasible'):
+                    results.solver.termination_condition = TerminationCondition.infeasible
+                    solution.gap = None
+                    results.solution.delete(0)
+                    INPUT.close()
+                    return
 
-            if tokens[0] in ("Optimal", "Infeasible", "Unbounded", "Stopped", "Integer", "Status"):
-                if optim_value:
-                    solution.objective['__default_objective__']['Value'] = optim_value
-                    if results.problem.sense == ProblemSense.maximize:
-                        solution.objective['__default_objective__']['Value'] *= -1
-                header_processed = True
+                elif len(tokens) > 2 and tokens[0:3] == ['Stopped','on','time']:
+                    if tokens[4] == 'objective':
+                        results.solver.termination_condition = TerminationCondition.maxTimeLimit
+                        solution.gap = None
+                        optim_value = float(tokens[-1])
+                    elif len(tokens) > 8 and tokens[3:9] == ['(no', 'integer', 'solution', '-', 'continuous', 'used)']:
+                        results.solver.termination_condition = TerminationCondition.intermediateNonInteger
+                        solution.gap = None
+                        optim_value = float(tokens[-1])
+                    else:
+                        print("***WARNING: CBC plugin currently not processing this solution status correctly. Full status line is: "+line.strip())
 
-            elif tokens[0] == "0": # indicates section start.
-                if processing_constraints is None:
-                    processing_constraints = True
-                elif processing_constraints is True:
-                    processing_constraints = False
-                else:
-                    raise RuntimeError("CBC plugin encountered unexpected line=("+line.strip()+") in solution file="+self._soln_file+"; constraint and variable sections already processed!")
+                elif tokens[0] in ("Optimal", "Infeasible", "Unbounded", "Stopped", "Integer", "Status"):
+                    print("***WARNING: CBC plugin currently not processing solution status="+tokens[0]+" correctly. Full status line is: "+line.strip())
+
+            # most of the first tokens should be integers
+            # if it's not an integer, only then check the list of results
+            try:
+                row_number = int( tokens[0])
+                if row_number == 0: # indicates section start.
+                    if processing_constraints is None:
+                        processing_constraints = True
+                    elif processing_constraints is True:
+                        processing_constraints = False
+                    else:
+                        raise RuntimeError("CBC plugin encountered unexpected line=("+line.strip()+") in solution file="+self._soln_file+"; constraint and variable sections already processed!")
+            except ValueError:
+                if tokens[0] in ("Optimal", "Infeasible", "Unbounded", "Stopped", "Integer", "Status"):
+                    if optim_value:
+                        solution.objective['__default_objective__']['Value'] = optim_value
+                        if results.problem.sense == ProblemSense.maximize:
+                            solution.objective['__default_objective__']['Value'] *= -1
+                    header_processed = True
 
             if (processing_constraints is True) and (extract_duals is True):
                 if len(tokens) == 4:
@@ -533,14 +541,24 @@ class CBCSHELL(SystemCallSolver):
                     raise RuntimeError("Unexpected line format encountered in CBC solution file - line="+line)
 
                 constraint = tokens[1]
-                constraint_ax = eval(tokens[2]) # CBC reports the constraint row times the solution vector - not the slack.
-                constraint_dual = eval(tokens[3])
-                if constraint.startswith('c_'):
+                constraint_ax = float(tokens[2]) # CBC reports the constraint row times the solution vector - not the slack.
+                constraint_dual = float(tokens[3])
+                if constraint[:2] == 'c_':
                     solution.constraint[constraint] = {"Dual" : constraint_dual}
-                elif constraint.startswith('r_l_'):
-                    range_duals.setdefault(constraint[4:],[0,0])[0] = constraint_dual
-                elif constraint.startswith('r_u_'):
-                    range_duals.setdefault(constraint[4:],[0,0])[1] = constraint_dual
+                elif constraint[:2] == 'r_':
+                    # For the range constraints, supply only the dual with the largest
+                    # magnitude (at least one should always be numerically zero)
+                    existing_constraint_dual_dict = solution.constraint.get( 'r_l_' + constraint[4:], None )
+                    if existing_constraint_dual_dict:
+                        # if a constraint dual is already saved, then update it if its
+                        # magnitude is larger than existing; this avoids checking vs
+                        # zero (avoiding problems with solver tolerances)
+                        existing_constraint_dual = existing_constraint_dual_dict["Dual"]
+                        if abs( constraint_dual) > abs(existing_constraint_dual):
+                            solution.constraint[ 'r_l_' + constraint[4:] ] = {"Dual": constraint_dual}
+                    else:
+                        # if no constraint with that name yet, just save it in the solution constraint dictionary
+                        solution.constraint[ 'r_l_' + constraint[4:] ] = {"Dual": constraint_dual}
 
             elif processing_constraints is False:
                 if len(tokens) == 4:
@@ -552,10 +570,10 @@ class CBCSHELL(SystemCallSolver):
                                        "in CBC solution file - line="+line)
 
                 variable_name = tokens[1]
-                variable_value = eval(tokens[2])
+                variable_value = float(tokens[2])
                 variable = solution.variable[variable_name] = {"Value" : variable_value}
                 if extract_reduced_costs is True:
-                    variable_reduced_cost = eval(tokens[3]) # currently ignored.
+                    variable_reduced_cost = float(tokens[3]) # currently ignored.
                     variable["Rc"] = variable_reduced_cost
 
             elif header_processed is True:
@@ -570,21 +588,12 @@ class CBCSHELL(SystemCallSolver):
         if not type(INPUT) is list:
             INPUT.close()
 
-        # For the range constraints, supply only the dual with the largest
-        # magnitude (at least one should always be numerically zero)
-        soln_constraints = solution.constraint
-        for key,(ld,ud) in iteritems(range_duals):
-            if abs(ld) > abs(ud):
-                soln_constraints['r_l_'+key] = {"Dual" : ld}
-            else:
-                soln_constraints['r_l_'+key] = {"Dual" : ud}        # Use the same key
-
 
 class MockCBC(CBCSHELL,MockMIP):
     """A Mock CBC solver used for testing
     """
 
-    pyomo.util.plugin.alias('_mock_cbc')
+    pyomo.common.plugin.alias('_mock_cbc')
 
     def __init__(self, **kwds):
         try:

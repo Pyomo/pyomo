@@ -1,0 +1,22 @@
+2 Set Declarations
+    b_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 2, 3]
+    c_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 2, 3]
+
+3 Param Declarations
+    a : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :   1.1
+    b : Size=3, Index=b_index, Domain=Any, Default=None, Mutable=False
+        Key : Value
+          1 :     1
+          2 :     2
+          3 :     3
+    c : Size=3, Index=c_index, Domain=Any, Default=None, Mutable=False
+        Key : Value
+          1 :     1
+          2 :     2
+          3 :     3
+
+5 Declarations: a b_index b c_index c

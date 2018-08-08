@@ -150,13 +150,13 @@ class CCTests(object):
     def test_t11(self):
         # 2 <= y + x1 <= 3  _|_  x1
         M = self._setup()
-        M.cc = Complementarity(expr=complements(2 <= M.y + M.x1 <= 3, M.x1))
+        M.cc = Complementarity(expr=complements(inequality(2, M.y + M.x1, 3), M.x1))
         self._test("t11", M)
 
     def test_t12(self):
         # x1  _|_  2 <= y + x1 <= 3"""
         M = self._setup()
-        M.cc = Complementarity(expr=complements(M.x1, 2 <= M.y + M.x1 <= 3))
+        M.cc = Complementarity(expr=complements(M.x1, inequality(2, M.y + M.x1, 3)))
         self._test("t12", M)
 
     def test_t13(self):
@@ -257,7 +257,7 @@ class CCTests(object):
     def test_cov10(self):
         # Testing construction with a badly formed expression
         M = self._setup()
-        M.cc = Complementarity(expr=complements(M.y <= M.x1 <= 1, M.x2))
+        M.cc = Complementarity(expr=complements(inequality(M.y, M.x1, 1), M.x2))
         try:
             M.cc.to_standard_form()
             self.fail("Expected a RuntimeError")
@@ -267,7 +267,7 @@ class CCTests(object):
     def test_cov11(self):
         # Testing construction with a badly formed expression
         M = self._setup()
-        M.cc = Complementarity(expr=complements(1 <= M.x1 <= M.y, M.x2))
+        M.cc = Complementarity(expr=complements(inequality(1, M.x1, M.y), M.x2))
         try:
             M.cc.to_standard_form()
             self.fail("Expected a RuntimeError")

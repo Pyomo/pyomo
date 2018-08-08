@@ -2,9 +2,13 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/km08tbkv05ik14n9/branch/master?svg=true)](https://ci.appveyor.com/project/WilliamHart/pyomo/branch/master)
 [![codecov](https://codecov.io/gh/Pyomo/pyomo/branch/master/graph/badge.svg)](https://codecov.io/gh/Pyomo/pyomo)
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/Pyomo/pyomo/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/Pyomo/pyomo/?branch=master)
+[![Documentation Status](https://readthedocs.org/projects/pyomo/badge/?version=latest)](http://pyomo.readthedocs.org/en/latest/)
+
+[![GitHub contributors](https://img.shields.io/github/contributors/pyomo/pyomo.svg)](https://github.com/pyomo/pyomo/graphs/contributors)
+[![Merged PRs](https://img.shields.io/github/issues-pr-closed-raw/pyomo/pyomo.svg?label=merged+PRs)](https://github.com/pyomo/pyomo/pulls?q=is:pr+is:merged)
+[![Issue stats](http://isitmaintained.com/badge/resolution/pyomo/pyomo.svg)](http://isitmaintained.com/project/pyomo/pyomo)
 [![Research software impact](http://depsy.org/api/package/pypi/Pyomo/badge.svg)](http://depsy.org/package/python/Pyomo)
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](http://www.repostatus.org/badges/latest/active.svg)](http://www.repostatus.org/#active)
-[![Documentation Status](https://readthedocs.org/projects/pyomo/badge/?version=latest)](http://pyomo.readthedocs.org/en/latest/)
 
 ## Pyomo Overview
 
@@ -14,9 +18,15 @@ Pyomo is a Python-based open-source software package that supports a diverse set
 * [About Pyomo](http://www.pyomo.org/about)
 * [Download](http://www.pyomo.org/installation/)
 * [Documentation](http://www.pyomo.org/documentation/)
+* [Performance Plots](https://software.sandia.gov/downloads/pub/pyomo/performance/index.html)
 * [Blog](http://www.pyomo.org/blog/)
 
 Pyomo is available under the BSD License.
+
+Pyomo is currently tested with the following Python implementations:
+
+* CPython: 2.7, 3.4, 3.5, 3.6, 3.7
+* PyPy: 2, 3
 
 ### Installation
 
@@ -27,7 +37,7 @@ Pyomo is available under the BSD License.
 --->
 
     pip install pyomo
-    
+
 #### BinStar [![Binstar Badge](https://anaconda.org/conda-forge/pyomo/badges/version.svg)](https://anaconda.org/conda-forge/pyomo) [![Binstar Badge](https://anaconda.org/conda-forge/pyomo/badges/downloads.svg)](https://anaconda.org/conda-forge/pyomo)
 
     conda install -c https://conda.anaconda.org/conda-forge pyomo

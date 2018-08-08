@@ -1,0 +1,6 @@
+from pyomo.environ import *
+
+model = ConcreteModel()
+model.x = Var()
+model.y = Var([1,2,3])
+model.foo = Suffix()

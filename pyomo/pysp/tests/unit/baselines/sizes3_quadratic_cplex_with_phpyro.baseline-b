@@ -18,7 +18,7 @@ Listening for work from dispatcher...
 Client attempting to find Pyro dispatcher object...
 Dispatcher Object URI: PYRO://134.253.194.1:7766/86fdc2012827217077fdbd479937e98f07
 Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 10283@snotra.sandia.gov
-Trying to import module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/sizes/config/rhosetter.py
+Importing module=/Users/ghackebeil/Projects/Pyomo/pyomo/examples/pysp/sizes/config/rhosetter.py
 Module successfully loaded
 Initializing PH
 

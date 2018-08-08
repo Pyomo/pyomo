@@ -1,0 +1,9 @@
+fx fx
+p_first_stage_INC_bin_y(1) p_first_stage.INC_bin_y:#1
+p_first_stage_INC_bin_y(2) p_first_stage.INC_bin_y:#2
+p_first_stage_INC_bin_y(3) p_first_stage.INC_bin_y:#3
+p_first_stage_INC_delta(1) p_first_stage.INC_delta:#1
+p_first_stage_INC_delta(2) p_first_stage.INC_delta:#2
+p_first_stage_INC_delta(3) p_first_stage.INC_delta:#3
+p_first_stage_INC_delta(4) p_first_stage.INC_delta:#4
+x x

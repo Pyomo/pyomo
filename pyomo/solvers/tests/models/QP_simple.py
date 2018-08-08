@@ -41,7 +41,7 @@ class QP_simple(_BaseTestModel):
         model.inactive_obj.deactivate()
         model.obj = Objective(expr=model.x**2 + 3.0*model.inactive_obj**2 + 1.0)
         model.c1 = Constraint(expr=model.a <= model.y)
-        model.c2 = Constraint(expr=2.0 <= model.x/model.a - model.y <= 10)
+        model.c2 = Constraint(expr=(2.0, model.x/model.a - model.y, 10))
 
     def warmstart_model(self):
         assert self.model is not None
@@ -87,7 +87,7 @@ class QP_simple_kernel(QP_simple):
         model.inactive_obj.deactivate()
         model.obj = pmo.objective(model.x**2 + 3.0*model.inactive_obj**2 + 1.0)
         model.c1 = pmo.constraint(model.a <= model.y)
-        model.c2 = pmo.constraint(2.0 <= model.x/model.a - model.y <= 10)
+        model.c2 = pmo.constraint((2.0, model.x/model.a - model.y, 10))
 
 @register_model
 class QP_simple_nosuffixes_kernel(QP_simple_kernel):

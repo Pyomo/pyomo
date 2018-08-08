@@ -1,0 +1,75 @@
+set Nodes := S1 S2 S3 S4 S5 S6 PRD SNK ;
+set Screens := S1 S2 S3 S4 S5 S6 ;
+set Components := st fib ;
+set GoodComponents := fib ;
+set BadComponents := st ;
+
+param AcceptedLeftover :=
+      st    0.1
+;
+
+param AcceptanceFactor:
+        st    fib :=
+    S1  0.29  0.74
+    S2	0.13  0.79
+    S3	0.06  0.71
+    S4	0.15  0.71
+    S5	0.2   0.7
+    S6	0.17  0.85
+;
+
+param ScreenCostCoeff1 :=
+      S1    1.21
+      S2    1.01
+      S3    1.08
+      S4    1.15
+      S5    1.15
+      S6    1.28
+;
+
+param ExpScreenCostCoeff :=
+      S1    0.59
+      S2    0.68
+      S3    0.51
+      S4    0.64
+      S5    0.64
+      S6    0.56
+;
+
+param InitialComponentFlow :=
+      st    1
+      fib   0.675
+;		   
+
+param ScreenFlowLB :=
+      S1    0.1
+      S2    0.1
+      S3    0.1
+      S4    0.1
+      S5    0.1
+      S6    0.1
+;
+
+param RejectRateLB :=
+      S1    0.1
+      S2    0.1
+      S3    0.1
+      S4    0.1
+      S5    0.1
+      S6    0.1
+;
+
+param RejectRateUB :=
+      S1    0.9
+      S2    0.9
+      S3    0.9
+      S4    0.9
+      S5    0.9
+      S6    0.9
+;
+
+param FiberWeight := 400 ;
+param StickiesWeight := 200 ;
+param CostWeight := 15 ;
+
+

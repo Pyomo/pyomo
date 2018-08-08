@@ -19,10 +19,8 @@ del cl[0]
 # Dict containers
 #
 
-# uses OrderedDict when ordered=True
 vd = pmo.variable_dict(
-    ((str(i), pmo.variable()) for i in range(10)),
-    ordered=True)
+    ((str(i), pmo.variable()) for i in range(10)))
 
 cd = pmo.constraint_dict(
     (i, pmo.constraint(v == 1)) for i,v in vd.items())

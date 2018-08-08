@@ -106,6 +106,7 @@ class CommonTests:
             if key.startswith('test'):
                 getattr(self,key).__doc__ = " (%s)" % getattr(self,key).__name__
 
+    @unittest.category('fragile')
     def test_bard511(self):
         self.problem='test_bard511'
         self.run_bilevel( join(exdir,'bard_5_1_1.py') )
@@ -133,6 +134,12 @@ class Reformulate(unittest.TestCase, CommonTests):
     def check(self, problem, solver):
         self.assertFileEqualsBaseline( join(currdir,self.problem+'_linear_mpec.out'),
                                            self.referenceFile(problem,solver), tolerance=1e-5 )
+
+    @unittest.category('fragile')
+    def test_bqp(self):
+        self.problem='test_bqp1'
+        self.run_bilevel( join(exdir,'bqp_example1.py') )
+        self.check( 'bqp1', 'linear_mpec' )
 
 
 class Solver(unittest.TestCase):

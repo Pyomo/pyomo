@@ -1,6 +1,4 @@
 Importing model and scenario tree files
-Importing module=/Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/sizes/models/ReferenceModel.py
-Module successfully loaded
 Time to import model and scenario tree structure files=0.02 seconds
 Scenario Tree Detail
 ----------------------------------------------------
@@ -113,16 +111,16 @@ Initializing ScenarioTreeManagerClientSerial with options:
  -        compile_scenario_instances: False
  -                      output_times: False
  *                    model_location: /Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/sizes/models
- -                   model_directory: None
+ -                   model_directory: None (DEPRECATED)
  *            scenario_tree_location: /Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/sizes/SIZES3
- -                instance_directory: None
+ -                instance_directory: None (DEPRECATED)
  -       objective_sense_stage_based: None
  -        postinit_callback_location: ()
- -                    bounds_cfgfile: None
+ -                    bounds_cfgfile: None (DEPRECATED)
  - aggregategetter_callback_location: ()
- -                 aggregate_cfgfile: None
+ -                 aggregate_cfgfile: None (DEPRECATED)
  -         scenario_tree_random_seed: None
- -                scenario_tree_seed: None
+ -                scenario_tree_seed: None (DEPRECATED)
  - scenario_tree_downsample_fraction: 1.0
  -     scenario_bundle_specification: None
  -             create_random_bundles: 0
@@ -141,13 +139,13 @@ Initializing ScenarioTreeManagerClientSerial with options:
  -                         pyro_host: None
  -                         pyro_port: None
  -                     pyro_shutdown: False
- -             pyro_shutdown_workers: False
+ -                     shutdown_pyro: None (DEPRECATED)
+ -             output_solver_results: False
  -            symbolic_solver_labels: False
  -                 output_solver_log: False
  -                 keep_solver_files: False
- -             output_solver_results: False
- -                     shutdown_pyro: None
- -             shutdown_pyro_workers: None
+ -             pyro_shutdown_workers: False
+ -             shutdown_pyro_workers: None (DEPRECATED)
  -    activate_jsonio_solution_saver: None
 
 Constructing scenario tree instances

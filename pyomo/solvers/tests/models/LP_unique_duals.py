@@ -65,7 +65,7 @@ class LP_unique_duals(_BaseTestModel):
         model.x = Var(model.N, within=NonNegativeReals)
         model.y = Var(model.M, within=NonNegativeReals)
 
-        model.cost = Objective(expr=summation(model.c, model.x))
+        model.cost = Objective(expr=sum_product(model.c, model.x))
 
         model.primalcon = Constraint(model.M, rule=primalcon_rule)
 

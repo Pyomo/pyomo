@@ -12,16 +12,20 @@
 #
 
 import pickle
+import six
 import os
 import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
+import platform
 
 import pyutilib.th as unittest
-
 from pyomo.environ import *
+import pyomo.core.expr.current as EXPR
 
-import six
+
+using_pypy = platform.python_implementation() == "PyPy"
+
 
 def obj_rule(model):
     return sum(model.x[a] + model.y[a] for a in model.A)
@@ -44,8 +48,12 @@ class Test(unittest.TestCase):
 
         # Verify the block attributes
         for idx in ref._data.keys():
-            ref_c = ref[idx].component_map()
-            new_c = new[idx].component_map()
+            # It is important to lookup using ref._data[idx] and not
+            # ref[idx], as the model may not be constructed, and
+            # accessing __getitem__ on an abstract model generates an
+            # exception.
+            ref_c = ref._data[idx].component_map()
+            new_c = new._data[idx].component_map()
             self.assertEqual( sorted(ref_c.keys()), sorted(new_c.keys()) )
             for a in ref_c.keys():
                 self.assertEqual(type(ref_c[a]),  type(new_c[a]))
@@ -259,10 +267,9 @@ class Test(unittest.TestCase):
         pickle_str = pickle.dumps(model)
         tmodel = pickle.loads(pickle_str)
         instance=tmodel.create_instance()
-        expr = dot_product(instance.x,instance.B,instance.y)
-        self.assertEquals(
-            str(expr),
-            "x[1] * B[1] * y[1] + x[2] * B[2] * y[2] + x[3] * B[3] * y[3]" )
+        expr = sum_product(instance.x,instance.B,instance.y)
+        baseline = "B[1]*x[1]*y[1] + B[2]*x[2]*y[2] + B[3]*x[3]*y[3]"
+        self.assertEquals( str(expr), baseline )
 
     # same as above, but pickles the constructed AbstractModel and
     # then operates on the unpickled instance.
@@ -277,10 +284,9 @@ class Test(unittest.TestCase):
         tmp=model.create_instance()
         pickle_str = pickle.dumps(tmp)
         instance = pickle.loads(pickle_str)
-        expr = dot_product(instance.x,instance.B,instance.y)
-        self.assertEquals(
-            str(expr),
-            "x[1] * B[1] * y[1] + x[2] * B[2] * y[2] + x[3] * B[3] * y[3]" )
+        expr = sum_product(instance.x,instance.B,instance.y)
+        baseline = "B[1]*x[1]*y[1] + B[2]*x[2]*y[2] + B[3]*x[3]*y[3]"
+        self.assertEquals( str(expr), baseline )
 
     # verifies that the use of lambda expressions as rules yields model instances
     # that are not pickle'able.
@@ -304,6 +310,9 @@ class Test(unittest.TestCase):
         instance = model.create_instance()
         if (not six.PY3) and ('dill' in sys.modules):
             pickle.dumps(instance)
+        elif using_pypy:
+            str_ = pickle.dumps(instance)
+            tmp_ = pickle.loads(str_)
         else:
             with self.assertRaises((pickle.PicklingError,
                                     TypeError,
