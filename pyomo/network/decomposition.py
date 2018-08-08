@@ -116,7 +116,7 @@ class SequentialDecomposition(object):
         options["accel_min"] = -5
         options["accel_max"] = 0
         options["tear_solver"] = "cplex"
-        options["tear_solver_io"] = "python"
+        options["tear_solver_io"] = None
         options["tear_solver_options"] = {}
 
         options.update(kwds)
@@ -666,6 +666,9 @@ class SequentialDecomposition(object):
 
         from pyomo.environ import SolverFactory
         opt = SolverFactory(solver, solver_io=solver_io)
+        if not opt.available(exception_flag=False):
+            raise ValueError("Solver '%s' (solver_io=%r) is not available, please pass a "
+                             "different solver" % (solver, solver_io))
         opt.solve(model, **solver_options)
 
         # collect final list by adding every edge with a "True" binary var
