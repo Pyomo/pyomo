@@ -271,7 +271,7 @@ class TestSequentialDecomposition(unittest.TestCase):
 
         return m
 
-    def simple_recycle_test(self, tear_method):
+    def simple_recycle_run(self, tear_method):
         m = self.simple_recycle_model()
 
         def function(unit):
@@ -411,7 +411,7 @@ class TestSequentialDecomposition(unittest.TestCase):
 
         return m
 
-    def extensive_recycle_test(self, tear_method):
+    def extensive_recycle_run(self, tear_method):
         m = self.extensive_recycle_model()
 
         def function(unit):
@@ -446,16 +446,16 @@ class TestSequentialDecomposition(unittest.TestCase):
                 places=5)
 
     def test_simple_recycle_direct(self):
-        self.simple_recycle_test("Direct")
+        self.simple_recycle_run("Direct")
 
     def test_simple_recycle_wegstein(self):
-        self.simple_recycle_test("Wegstein")
+        self.simple_recycle_run("Wegstein")
 
     def test_extensive_recycle_direct(self):
-        self.extensive_recycle_test("Direct")
+        self.extensive_recycle_run("Direct")
 
     def test_extensive_recycle_wegstein(self):
-        self.extensive_recycle_test("Wegstein")
+        self.extensive_recycle_run("Wegstein")
 
     @unittest.skipIf(not gams_available, "GAMS solver not available")
     def test_tear_selection(self):
