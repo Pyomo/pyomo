@@ -1809,6 +1809,17 @@ class ProductExpression(ExpressionBase):
     def getname(self, *args, **kwds):
         return 'prod'
 
+    def _is_fixed(self, args):
+        # Anything times 0 equals 0, so one of the children is
+        # fixed and has a value of 0, then this expression is fixed
+        assert(len(args) == 2)
+        if all(args):
+            return True
+        for i in (0, 1):
+            if args[i] and value(self._args_[i]) == 0:
+                return True
+        return False
+
     def _apply_operation(self, result):
         _l, _r = result
         return _l * _r

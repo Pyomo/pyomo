@@ -12,7 +12,6 @@ Python scripts using Pyomo.
 
    expressions/index.rst
    aml/index.rst
-   kernel/index.rst
    data/index.rst
    solvers/index.rst
 
