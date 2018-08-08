@@ -29,7 +29,7 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 
-logger = logging.getLogger('pyomo.solver')
+logger = logging.getLogger('pyomo.contrib.multistart')
 
 
 class MultiStart(OptSolver):
