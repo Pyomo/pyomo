@@ -13,7 +13,7 @@ from six.moves import xrange
 
 from pyomo.core.base.plugin import alias
 from pyomo.core.base import Transformation
-from pyomo.core import Var
+from pyomo.core import Var, ConstraintList
 from pyomo.dae import ContinuousSet, DerivativeVar, Integral
 from pyomo.dae.misc import generate_finite_elements
 from pyomo.dae.misc import generate_colloc_points
@@ -23,6 +23,7 @@ from pyomo.dae.misc import add_discretization_equations
 from pyomo.dae.misc import add_continuity_equations
 from pyomo.dae.misc import block_fully_discretized
 from pyomo.dae.misc import get_index_information
+from pyomo.dae.diffvar import DAE_Error
 
 # If the user has numpy then the collocation points and the a matrix for
 # the Runge-Kutta basis formulation will be calculated as needed.
@@ -523,10 +524,7 @@ class Collocation_Discretization_Transformation(Transformation):
         if contset.type() is not ContinuousSet:
             raise TypeError("The component specified using the 'contset' "
                             "keyword must be a ContinuousSet")
-        ds = instance.find_component(contset.name)
-        if ds is None:
-            raise ValueError("ContinuousSet '%s' is not a valid component of "
-                             "the discretized model instance" % contset.name)
+        ds = contset
 
         if len(self._ncp) == 0:
             raise RuntimeError("This method should only be called after using "
@@ -546,12 +544,6 @@ class Collocation_Discretization_Transformation(Transformation):
         if var.type() is not Var:
             raise TypeError("The component specified using the 'var' keyword "
                             "must be a variable")
-        tmpvar = instance.find_component(var.name)
-        if tmpvar is None:
-            raise ValueError("Variable '%s' is not a valid component of the "
-                             "discretized model instance" % var.name)
-
-        var = tmpvar
 
         if ncp is None:
             raise TypeError(
@@ -569,7 +561,10 @@ class Collocation_Discretization_Transformation(Transformation):
             return instance
 
         # Check to see if the continuousset is an indexing set of the variable
-        if var.dim() == 1:
+        if var.dim() == 0:
+            raise IndexError("ContinuousSet '%s' is not an indexing set of"
+                             " the variable '%s'" % (ds.name, var.name))
+        elif var.dim() == 1:
             if ds not in var._index:
                 raise IndexError("ContinuousSet '%s' is not an indexing set of"
                                  " the variable '%s'" % (ds.name, var.name))
