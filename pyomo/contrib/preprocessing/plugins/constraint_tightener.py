@@ -31,7 +31,7 @@ class TightenContraintFromVars(IsomorphicTransformation):
             repn = generate_standard_repn(constr.body)
             LB = UB = 0
             if repn.constant:
-                LB = UB = -1 * repn.constant
+                LB = UB = repn.constant
             # loop through each coefficent and variable pair
             for i, coef in enumerate(repn.linear_coefs):
                 # TODO: ROunding issues
@@ -47,11 +47,11 @@ class TightenContraintFromVars(IsomorphicTransformation):
                         LB = float('-Inf')
                 else:
                     # coef is negative, so signs switch
-                    if repn.linear_vars[i].has_ub():
+                    if repn.linear_vars[i].has_lb():
                         UB = UB + coef * value(repn.linear_vars[i].lb)
                     else:
                         LB = float('-Inf')
-                    if repn.linear_vars[i].has_lb():
+                    if repn.linear_vars[i].has_ub():
                         LB = LB + coef * value(repn.linear_vars[i].ub)
                     else:
                         UB = float('Inf')
