@@ -15,6 +15,8 @@ class TestIntervalTightener(unittest.TestCase):
         m.v4 = Var(initialize=1, bounds=(1, 1))
         m.c1 = Constraint(expr=m.v1 >= m.v2 + m.v3 + m.v4 + 1)
 
+        self.assertEqual(value(m.c1.upper), 0)
+        self.assertFalse(m.c1.has_lb())
         TransformationFactory('core.tighten_constraints_from_vars').apply_to(m)
         self.assertEqual(value(m.c1.upper), 0)
         self.assertEqual(value(m.c1.lower), 0)
@@ -27,6 +29,8 @@ class TestIntervalTightener(unittest.TestCase):
         m.v4 = Var(initialize=1, bounds=(1, 1))
         m.c1 = Constraint(expr=m.v1 <= m.v2 + m.v3 + m.v4)
 
+        self.assertEqual(value(m.c1.upper), 0)
+        self.assertFalse(m.c1.has_lb())
         TransformationFactory('core.tighten_constraints_from_vars').apply_to(m)
         self.assertEqual(value(m.c1.upper), 0)
         self.assertEqual(value(m.c1.lower), -8)
@@ -40,6 +44,8 @@ class TestIntervalTightener(unittest.TestCase):
         m.v4 = Var(initialize=1, bounds=(1, 1))
         m.c1 = Constraint(expr=m.v1 <= 2 * m.v2 + m.v3 + m.v4)
 
+        self.assertEqual(value(m.c1.upper), 0)
+        self.assertFalse(m.c1.has_lb())
         TransformationFactory('core.tighten_constraints_from_vars').apply_to(m)
         self.assertEqual(value(m.c1.upper), -1)
         self.assertEqual(value(m.c1.lower), -13)
@@ -53,6 +59,8 @@ class TestIntervalTightener(unittest.TestCase):
         m.v4 = Var(initialize=1, bounds=(1, 1))
         m.c1 = Constraint(expr=m.v1 <= 2 * m.v2 + m.v3 + m.v4)
 
+        self.assertEqual(value(m.c1.upper), 0)
+        self.assertFalse(m.c1.has_lb())
         TransformationFactory('core.tighten_constraints_from_vars').apply_to(m)
         self.assertEqual(value(m.c1.upper), 0)
         self.assertFalse(m.c1.has_lb())
@@ -66,6 +74,8 @@ class TestIntervalTightener(unittest.TestCase):
         m.v4 = Var(initialize=1, bounds=(1, 1))
         m.c1 = Constraint(expr=m.v1 <= 2 * m.v2 + m.v3 + m.v4)
 
+        self.assertEqual(value(m.c1.upper), 0)
+        self.assertFalse(m.c1.has_lb())
         TransformationFactory('core.tighten_constraints_from_vars').apply_to(m)
         self.assertEqual(value(m.c1.upper), -1)
         self.assertFalse(m.c1.has_lb())
@@ -74,6 +84,9 @@ class TestIntervalTightener(unittest.TestCase):
         m = ConcreteModel()
         m.v1 = Var()
         m.c1 = Constraint(expr=m.v1 * m.v1 >= 2)
+
+        self.assertEqual(value(m.c1.lower), 2)
+        self.assertFalse(m.c1.has_ub())
         TransformationFactory('core.tighten_constraints_from_vars').apply_to(m)
         self.assertEqual(value(m.c1.lower), 2)
         self.assertFalse(m.c1.has_ub())
