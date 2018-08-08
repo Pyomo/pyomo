@@ -1,0 +1,2 @@
+model.D = Set(initialize=range(9))
+model.E = Set(initialize=(i for i in model.B if i%2 == 0))

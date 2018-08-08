@@ -29,6 +29,7 @@ class Base_BilevelTransformation(Transformation):
         var = {}
         submodel = None
         for (name, data) in instance.component_map(active=True).items():
+            #print((name, data))
             if isinstance(data,Var):
                 var[name] = data
             elif isinstance(data,SubModel):
@@ -44,8 +45,13 @@ class Base_BilevelTransformation(Transformation):
         # Fix variables
         #
         if submodel._fixed:
-            fixed = [i.local_name for i in submodel._fixed]
+            fixed = []
             unfixed = []
+            for i in submodel._fixed:
+                name = i.name
+                fixed.append(name)
+                if not name in var:
+                    var[name] = i
             for v in var:
                 if not v in fixed:
                     unfixed.append((v,getattr(submodel._parent(),v).is_indexed()))
@@ -66,12 +72,16 @@ class Base_BilevelTransformation(Transformation):
             unfixed = []
             for (name, data) in submodel.component_map(active=True).items():
                 if isinstance(data,Var):
-                    unfixed.append((data.local_name, data.is_indexed()))
+                    unfixed.append((data.name, data.is_indexed()))
         #
         self._submodel           = sub
         self._upper_vars         = var
         self._fixed_upper_vars   = fixed
         self._unfixed_upper_vars = unfixed
+        #print("HERE")
+        #print(self._upper_vars)
+        #print(self._fixed_upper_vars)
+        #print(self._unfixed_upper_vars)
         instance._transformation_data[tname].fixed = [ComponentUID(var[v]) for v in fixed]
         return submodel
 

@@ -1,0 +1,4 @@
+for v in instance.component_objects(pyo.Var, active=True):
+    print("Variable",v)
+    for index in v:
+        print ("   ",index, pyo.value(v[index]))

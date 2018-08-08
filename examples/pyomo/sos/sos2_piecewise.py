@@ -43,7 +43,7 @@ model.x = Var(model.index_set) # domain variable
 model.Fx = Var(model.index_set) # range variable
 model.y = Var(model.sos_var_indices,within=NonNegativeReals) # SOS2 variable
 
-model.obj = Objective(expr=summation(model.Fx), sense=maximize)
+model.obj = Objective(expr=sum_product(model.Fx), sense=maximize)
 
 def constraint1_rule(model,t):
     return model.x[t] == sum(model.y[t,i]*DOMAIN_PTS[t][i] for i in xrange(len(DOMAIN_PTS[t])) )

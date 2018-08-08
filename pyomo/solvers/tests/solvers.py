@@ -76,13 +76,7 @@ def test_solver_cases(*args):
     A function for accessing _test_solver_casess as global state
     """
     if len(_test_solver_cases) == 0:
-        logger_solvers = logging.getLogger('pyomo.solvers')
-        _level_solvers = logger_solvers.getEffectiveLevel()
-        logger_solvers.setLevel( logging.ERROR )
-
-        logger_opt = logging.getLogger('pyomo.opt')
-        _level_opt = logger_opt.getEffectiveLevel()
-        logger_opt.setLevel( logging.ERROR )
+        logging.disable(logging.WARNING)
 
         #
         # CPLEX
@@ -123,8 +117,8 @@ def test_solver_cases(*args):
         # CPLEX PERSISTENT
         #
 
-        _test_solver_cases['_cplex_persistent', 'python'] = initialize(
-            name='_cplex_persistent',
+        _test_solver_cases['cplex_persistent', 'python'] = initialize(
+            name='cplex_persistent',
             io='python',
             capabilities=_cplex_capabilities,
             import_suffixes=['slack','dual','rc'])
@@ -187,6 +181,16 @@ def test_solver_cases(*args):
             io='python',
             capabilities=_gurobi_capabilities,
             import_suffixes=['slack','dual','rc'])
+
+        #
+        # Gurobi PERSISTENT
+        #
+
+        _test_solver_cases['gurobi_persistent', 'python'] = initialize(
+            name='gurobi_persistent',
+            io='python',
+            capabilities=_gurobi_capabilities,
+            import_suffixes=['slack', 'dual', 'rc'])
 
         #
         # GLPK
@@ -363,8 +367,7 @@ def test_solver_cases(*args):
             import_suffixes=['dual'])
 
 
-        logger_opt.setLevel( _level_opt )
-        logger_solvers.setLevel( _level_solvers )
+        logging.disable(logging.NOTSET)
 
         #
         # Error Checks

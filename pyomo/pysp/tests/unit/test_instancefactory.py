@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -18,7 +18,15 @@ from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
 from pyomo.pysp.scenariotree.tree_structure_model import \
     CreateAbstractScenarioTreeModel
+from pyomo.pysp.scenariotree.tree_structure import \
+    ScenarioTree
 from pyomo.pysp.util.misc import load_external_module
+
+try:
+    import networkx
+    has_networkx = True
+except:
+    has_networkx = False
 
 has_yaml = False
 try:
@@ -37,6 +45,8 @@ def setUpModule():
     reference_test_model = load_external_module(
         join(testdatadir, "reference_test_model.py"))[0].model
 
+
+@unittest.category('smoke','nightly','expensive')
 class Test(unittest.TestCase):
 
     @classmethod
@@ -52,6 +62,10 @@ class Test(unittest.TestCase):
             del sys.modules["reference_test_model_with_callback"]
         if "reference_test_scenario_tree_model" in sys.modules:
             del sys.modules["reference_test_scenario_tree_model"]
+        if "ScenarioStructure" in sys.modules:
+            del sys.modules["ScenarioStructure"]
+        if "both_callbacks" in sys.modules:
+            del sys.modules["both_callbacks"]
 
     def _get_testfname_prefix(self):
         class_name, test_name = self.id().split('.')[-2:]
@@ -91,28 +105,42 @@ class Test(unittest.TestCase):
                                                        verbose=True)
         self.assertEqual(scenario_tree.contains_bundles(), True)
         self.assertEqual(len(scenario_tree.bundles), 3)
-        scenario_tree = factory.generate_scenario_tree(bundles=join(testdatadir, "bundles.dat"),
-                                                       verbose=True)
-        self.assertEqual(scenario_tree.contains_bundles(), True)
-        self.assertEqual(len(scenario_tree.bundles), 3)
-        scenario_tree = factory.generate_scenario_tree(bundles=join(testdatadir, "bundles"),
-                                                       verbose=True)
-        self.assertEqual(scenario_tree.contains_bundles(), True)
-        self.assertEqual(len(scenario_tree.bundles), 3)
-        if (factory.data_directory() is not None) and \
-           exists(join(factory.data_directory(), "bundles.dat")):
-            scenario_tree = factory.generate_scenario_tree(bundles="bundles.dat",
-                                                           verbose=True)
+        if factory._scenario_tree is not None:
+            self.assertTrue(factory._scenario_tree_model is None)
+            with self.assertRaises(ValueError):
+                scenario_tree = factory.generate_scenario_tree(
+                    bundles=join(testdatadir, "bundles.dat"),
+                    verbose=True)
+        else:
+            scenario_tree = factory.generate_scenario_tree(
+                bundles=join(testdatadir, "bundles.dat"),
+                verbose=True)
             self.assertEqual(scenario_tree.contains_bundles(), True)
             self.assertEqual(len(scenario_tree.bundles), 3)
-            scenario_tree = factory.generate_scenario_tree(bundles="bundles",
-                                                           verbose=True)
+            scenario_tree = factory.generate_scenario_tree(
+                bundles=join(testdatadir, "bundles"),
+                verbose=True)
             self.assertEqual(scenario_tree.contains_bundles(), True)
             self.assertEqual(len(scenario_tree.bundles), 3)
-        with self.assertRaises(ValueError):
-            scenario_tree = factory.generate_scenario_tree(bundles="bundles.notexists",
-                                                           verbose=True)
+            if (factory.data_directory() is not None) and \
+               exists(join(factory.data_directory(), "bundles.dat")):
+                scenario_tree = factory.generate_scenario_tree(
+                    bundles="bundles.dat",
+                    verbose=True)
+                self.assertEqual(scenario_tree.contains_bundles(), True)
+                self.assertEqual(len(scenario_tree.bundles), 3)
+                scenario_tree = factory.generate_scenario_tree(
+                    bundles="bundles",
+                    verbose=True)
+                self.assertEqual(scenario_tree.contains_bundles(), True)
+                self.assertEqual(len(scenario_tree.bundles), 3)
+            with self.assertRaises(ValueError):
+                scenario_tree = factory.generate_scenario_tree(
+                    bundles="bundles.notexists",
+                    verbose=True)
 
+    # model: name of .py file with model
+    # scenario_tree: name of .dat file
     def test_init1(self):
         self.assertTrue("reference_test_model" not in sys.modules)
         with ScenarioTreeInstanceFactory(
@@ -126,6 +154,8 @@ class Test(unittest.TestCase):
             self._check_factory(factory)
         self.assertTrue("reference_test_model" in sys.modules)
 
+    # model: name of directory with ReferenceModel.py with model
+    # scenario_tree: name of directory with ScenarioStructure.dat
     def test_init1_default(self):
         self.assertTrue("ReferenceModel" not in sys.modules)
         with ScenarioTreeInstanceFactory(
@@ -137,6 +167,8 @@ class Test(unittest.TestCase):
             self._check_factory(factory)
         self.assertTrue("ReferenceModel" in sys.modules)
 
+    # model: name of archive with .py file with model
+    # scenario_tree: name of .dat file
     def test_init2(self):
         self.assertTrue("reference_test_model" not in sys.modules)
         with ScenarioTreeInstanceFactory(
@@ -150,6 +182,8 @@ class Test(unittest.TestCase):
             self._check_factory(factory)
         self.assertTrue("reference_test_model" in sys.modules)
 
+    # model: name of archive containing ReferenceModel.py with model
+    # scenario_tree: name of directory with ScenarioStructure.dat file
     def test_init2_default(self):
         self.assertTrue("ReferenceModel" not in sys.modules)
         with ScenarioTreeInstanceFactory(
@@ -161,6 +195,8 @@ class Test(unittest.TestCase):
             self._check_factory(factory)
         self.assertTrue("ReferenceModel" in sys.modules)
 
+    # model: name of .py file with model
+    # scenario_tree: name of archive with .dat file
     def test_init3(self):
         self.assertTrue("reference_test_model" not in sys.modules)
         with ScenarioTreeInstanceFactory(
@@ -174,6 +210,8 @@ class Test(unittest.TestCase):
             self._check_factory(factory)
         self.assertTrue("reference_test_model" in sys.modules)
 
+    # model: name of directory with ReferenceModel.py file with model
+    # scenario_tree: name of archive with ScenarioStructure.dat file
     def test_init3_default(self):
         self.assertTrue("ReferenceModel" not in sys.modules)
         with ScenarioTreeInstanceFactory(
@@ -186,6 +224,8 @@ class Test(unittest.TestCase):
             self._check_factory(factory)
         self.assertTrue("ReferenceModel" in sys.modules)
 
+    # model: name of archive with .py file with model
+    # scenario_tree: name of copy of archive with .dat file
     def test_init4(self):
         self.assertTrue("reference_test_model" not in sys.modules)
         archive_copy = self._get_testfname_prefix()+".archive_copy.tgz"
@@ -204,6 +244,8 @@ class Test(unittest.TestCase):
         os.remove(archive_copy)
         self.assertTrue("reference_test_model" in sys.modules)
 
+    # model: name of archive with ReferenceModel.py file with model
+    # scenario_tree: name of copy of archive with ScenarioStructure.dat file
     def test_init4_default(self):
         self.assertTrue("ReferenceModel" not in sys.modules)
         archive_copy = self._get_testfname_prefix()+".archive_copy.tgz"
@@ -221,6 +263,8 @@ class Test(unittest.TestCase):
         os.remove(archive_copy)
         self.assertTrue("ReferenceModel" in sys.modules)
 
+    # model: name of archive with .py file with model
+    # scenario_tree: name of same archive with .dat file
     def test_init5(self):
         self.assertTrue("reference_test_model" not in sys.modules)
         with ScenarioTreeInstanceFactory(
@@ -235,6 +279,8 @@ class Test(unittest.TestCase):
         self.assertEqual(len(factory._archives), 0)
         self.assertTrue("reference_test_model" in sys.modules)
 
+    # model: name of archive with ReferenceModel.py file with model
+    # scenario_tree: name of same archive with ScenarioStructure.dat file
     def test_init5_default(self):
         self.assertTrue("ReferenceModel" not in sys.modules)
         with ScenarioTreeInstanceFactory(
@@ -247,6 +293,8 @@ class Test(unittest.TestCase):
         self.assertEqual(len(factory._archives), 0)
         self.assertTrue("ReferenceModel" in sys.modules)
 
+    # model: name of .py file with model
+    # scenario_tree: Pyomo scenario tree model
     def test_init6(self):
         self.assertTrue("reference_test_model" not in sys.modules)
         scenario_tree_model = CreateAbstractScenarioTreeModel().\
@@ -286,6 +334,8 @@ class Test(unittest.TestCase):
         self.assertEqual(len(factory._archives), 0)
         self.assertTrue("reference_test_model" in sys.modules)
 
+    # model: Pyomo model
+    # scenario_tree: Pyomo scenario tree model
     def test_init7(self):
         self.assertTrue("reference_test_model" not in sys.modules)
         scenario_tree_model = CreateAbstractScenarioTreeModel().\
@@ -299,7 +349,7 @@ class Test(unittest.TestCase):
         with ScenarioTreeInstanceFactory(
                 model=reference_test_model,
                 scenario_tree=scenario_tree_model,
-                data_location=testdatadir) as factory:
+                data=testdatadir) as factory:
             self.assertTrue(factory.model_directory() is None)
             self.assertTrue(factory.scenario_tree_directory() is None)
             self._check_factory(factory)
@@ -313,6 +363,8 @@ class Test(unittest.TestCase):
             self._check_factory(factory)
         self.assertEqual(len(factory._archives), 0)
 
+    # model: Pyomo model
+    # scenario_tree: name of .py file with Pyomo scenario tree model
     def test_init8(self):
         self.assertTrue("reference_test_model" not in sys.modules)
         self.assertTrue("reference_test_scenario_tree_model" not in sys.modules)
@@ -320,7 +372,7 @@ class Test(unittest.TestCase):
                 model=reference_test_model,
                 scenario_tree=join(testdatadir,
                                    "reference_test_scenario_tree_model.py"),
-                data_location=testdatadir) as factory:
+                data=testdatadir) as factory:
             self.assertTrue(factory.model_directory() is None)
             self.assertTrue(factory.scenario_tree_directory() is not None)
             self.assertTrue(factory._scenario_tree_module is not None)
@@ -330,6 +382,8 @@ class Test(unittest.TestCase):
         self.assertTrue("reference_test_model" not in sys.modules)
         self.assertTrue("reference_test_scenario_tree_model" in sys.modules)
 
+    # model: name of .py file with model callback
+    # scenario_tree: name of .dat file
     def test_init9(self):
         self.assertTrue("reference_test_model_with_callback" not in sys.modules)
         with ScenarioTreeInstanceFactory(
@@ -344,13 +398,16 @@ class Test(unittest.TestCase):
         self.assertEqual(len(factory._archives), 0)
         self.assertTrue("reference_test_model_with_callback" in sys.modules)
 
+    # model: name of directory with ReferenceModel.py file with model
+    # scenario_tree: name of .dat file
+    # data: name of directory with yaml files
     @unittest.skipIf(not has_yaml, "PyYAML is not available")
     def test_init10(self):
         with ScenarioTreeInstanceFactory(
                 model=testdatadir,
                 scenario_tree=join(testdatadir,
                                    "reference_test_scenario_tree.dat"),
-                data_location=join(testdatadir, "yaml_data")) as factory:
+                data=join(testdatadir, "yaml_data")) as factory:
             self.assertEqual(len(factory._archives), 0)
             self.assertTrue(factory.model_directory() is not None)
             self.assertTrue(factory.scenario_tree_directory() is not None)
@@ -359,6 +416,9 @@ class Test(unittest.TestCase):
             self._check_factory(factory)
         self.assertEqual(len(factory._archives), 0)
 
+    # model: Pyomo model
+    # scenario_tree: Pyomo scenario tree model
+    # data: name of directory with .dat files
     def test_init11(self):
         self.assertTrue("reference_test_model" not in sys.modules)
         scenario_tree_model = CreateAbstractScenarioTreeModel().\
@@ -368,19 +428,22 @@ class Test(unittest.TestCase):
         with ScenarioTreeInstanceFactory(
                 model=reference_test_model,
                 scenario_tree=scenario_tree_model,
-                data_location=testdatadir) as factory:
+                data=testdatadir) as factory:
             self.assertTrue(factory.model_directory() is None)
             self.assertTrue(factory.scenario_tree_directory() is None)
             self._check_factory(factory)
         self.assertEqual(factory._closed, True)
         self.assertEqual(len(factory._archives), 0)
 
+    # model: model callback
+    # scenario_tree: Pyomo scenario tree model
     def test_init12(self):
         self.assertTrue("reference_test_model" not in sys.modules)
         scenario_tree_model = CreateAbstractScenarioTreeModel().\
             create_instance(
                 join(testdatadir, "reference_test_scenario_tree.dat"))
-        def scenario_model_callback(scenario_name, node_list):
+        def scenario_model_callback(scenario_tree, scenario_name, node_list):
+            self.assertIs(scenario_tree, scenario_tree_model)
             instance = reference_test_model.create_instance()
             if scenario_name == "s1":
                 instance.p = 1.0
@@ -399,9 +462,247 @@ class Test(unittest.TestCase):
         self.assertEqual(factory._closed, True)
         self.assertEqual(len(factory._archives), 0)
 
-Test = unittest.category('smoke','nightly','expensive')(Test)
+    # model: Pyomo model
+    # scenario_tree: Pyomo scenario tree model
+    def test_init13(self):
+        model = reference_test_model.create_instance()
+        scenario_tree_model = CreateAbstractScenarioTreeModel().\
+            create_instance(
+                join(testdatadir, "reference_test_scenario_tree.dat"))
+        with ScenarioTreeInstanceFactory(
+                model=model,
+                scenario_tree=scenario_tree_model) as factory:
+            self.assertTrue(factory.model_directory() is None)
+            self.assertTrue(factory.scenario_tree_directory() is None)
+
+            scenario_tree = factory.generate_scenario_tree()
+            instances = factory.construct_instances_for_scenario_tree(
+                scenario_tree,
+                verbose=True)
+            self.assertEqual(len(instances), 3)
+            self.assertEqual(instances["s1"].p(), model.p())
+            self.assertEqual(instances["s2"].p(), model.p())
+            self.assertEqual(instances["s3"].p(), model.p())
+
+        self.assertEqual(factory._closed, True)
+        self.assertEqual(len(factory._archives), 0)
+
+    # model: Pyomo model
+    # scenario_tree: Pyomo scenario tree model
+    # data: name of a directory with .dat files
+    def test_init14(self):
+        self.assertTrue("reference_test_model" not in sys.modules)
+        scenario_tree_model = CreateAbstractScenarioTreeModel().\
+            create_instance(
+                join(testdatadir, "reference_test_scenario_tree.dat"))
+        with ScenarioTreeInstanceFactory(
+                model=reference_test_model,
+                scenario_tree=scenario_tree_model,
+                data=testdatadir) as factory:
+            scenario_tree = factory.generate_scenario_tree()
+        self.assertEqual(factory._closed, True)
+        self.assertEqual(len(factory._archives), 0)
+        # start with a scenario tree (not a scenario tree model)
+        with ScenarioTreeInstanceFactory(
+                model=reference_test_model,
+                scenario_tree=scenario_tree,
+                data=testdatadir) as factory:
+            self._check_factory(factory)
+        self.assertEqual(factory._closed, True)
+        self.assertEqual(len(factory._archives), 0)
+
+    # model: name of a .py file with model
+    # scenario_tree: name of a .py file
+    # data: name of a directory with .dat files
+    @unittest.skipIf(not has_networkx, "Requires networkx module")
+    def test_init15(self):
+        self.assertTrue("reference_test_model" not in sys.modules)
+        with ScenarioTreeInstanceFactory(
+                model=join(testdatadir,
+                           "reference_test_model.py"),
+                scenario_tree=join(testdatadir,
+                                   "ScenarioStructure.py")) as factory:
+            self.assertEqual(len(factory._archives), 0)
+            self.assertTrue(factory.model_directory() is not None)
+            self.assertTrue(factory.scenario_tree_directory() is not None)
+            self._check_factory(factory)
+        self.assertTrue("reference_test_model" in sys.modules)
+
+    # model: name of a .py file with model
+    # scenario_tree: networkx tree
+    @unittest.skipIf(not has_networkx, "Requires networkx module")
+    def test_init16(self):
+        self.assertTrue("reference_test_model" not in sys.modules)
+        self.assertTrue("ScenarioStructure" not in sys.modules)
+        nx_tree = load_external_module(os.path.join(testdatadir,
+                                                    "ScenarioStructure.py"))[0].G
+        with ScenarioTreeInstanceFactory(
+                model=join(testdatadir,
+                           "reference_test_model.py"),
+                scenario_tree=nx_tree) as factory:
+            self.assertEqual(len(factory._archives), 0)
+            self.assertTrue(factory.model_directory() is not None)
+            self.assertTrue(factory.scenario_tree_directory() is None)
+            self._check_factory(factory)
+        self.assertTrue("reference_test_model" in sys.modules)
+        self.assertTrue("ScenarioStructure" in sys.modules)
+
+    # model: name of a .py file with model
+    # scenario_tree: networkx tree
+    @unittest.skipIf(not has_networkx, "Requires networkx module")
+    def test_init17(self):
+        self.assertTrue("reference_test_model" not in sys.modules)
+        self.assertTrue("ScenarioStructure" not in sys.modules)
+        nx_tree = load_external_module(os.path.join(testdatadir,
+                                                    "ScenarioStructure.py"))[0].G
+        with ScenarioTreeInstanceFactory(
+                model=join(testdatadir,
+                           "reference_test_model.py"),
+                scenario_tree=nx_tree) as factory:
+            self.assertEqual(len(factory._archives), 0)
+            self.assertTrue(factory.model_directory() is not None)
+            self.assertTrue(factory.scenario_tree_directory() is None)
+            self._check_factory(factory)
+
+            scenario_tree = factory.generate_scenario_tree()
+            self.assertEqual(scenario_tree.contains_bundles(), False)
+            # check that we can modify the networkx tree to redefine
+            # bundles
+            nx_tree.node["s1"]["bundle"] = 0
+            nx_tree.node["s2"]["bundle"] = 0
+            nx_tree.node["s3"]["bundle"] = 0
+            scenario_tree = factory.generate_scenario_tree()
+            self.assertEqual(scenario_tree.contains_bundles(), True)
+            self.assertEqual(len(scenario_tree.bundles), 1)
+            nx_tree.node["s1"]["bundle"] = 0
+            nx_tree.node["s2"]["bundle"] = 1
+            nx_tree.node["s3"]["bundle"] = 2
+            scenario_tree = factory.generate_scenario_tree()
+            self.assertEqual(scenario_tree.contains_bundles(), True)
+            self.assertEqual(len(scenario_tree.bundles), 3)
+            nx_tree.node["s1"]["bundle"] = None
+            nx_tree.node["s2"]["bundle"] = None
+            nx_tree.node["s3"]["bundle"] = None
+            scenario_tree = factory.generate_scenario_tree()
+            self.assertEqual(scenario_tree.contains_bundles(), False)
+
+        self.assertTrue("reference_test_model" in sys.modules)
+        self.assertTrue("ScenarioStructure" in sys.modules)
+
+    # model: model callback
+    # scenario_tree: networkx tree
+    @unittest.skipIf(not has_networkx, "Requires networkx module")
+    def test_init18(self):
+        self.assertTrue("reference_test_model" not in sys.modules)
+        self.assertTrue("ScenarioStructure" not in sys.modules)
+        nx_tree = load_external_module(os.path.join(testdatadir,
+                                                    "ScenarioStructure.py"))[0].G
+        def scenario_model_callback(scenario_tree, scenario_name, node_list):
+            self.assertIs(scenario_tree, nx_tree)
+            instance = reference_test_model.create_instance()
+            if scenario_name == "s1":
+                instance.p = 1.0
+            elif scenario_name == "s2":
+                instance.p = 2.0
+            else:
+                assert scenario_name == "s3"
+                instance.p = 3.0
+            return instance
+        with ScenarioTreeInstanceFactory(
+                model=scenario_model_callback,
+                scenario_tree=nx_tree) as factory:
+            self.assertTrue(factory.model_directory() is None)
+            self.assertTrue(factory.scenario_tree_directory() is None)
+            self._check_factory(factory)
+        self.assertEqual(factory._closed, True)
+        self.assertEqual(len(factory._archives), 0)
+
+    # model: model callback
+    # scenario_tree: name of .dat file
+    def test_init19(self):
+        self.assertTrue("reference_test_model" not in sys.modules)
+        def scenario_model_callback(scenario_tree, scenario_name, node_list):
+            self.assertTrue(isinstance(scenario_tree, ScenarioTree))
+            instance = reference_test_model.create_instance()
+            if scenario_name == "s1":
+                instance.p = 1.0
+            elif scenario_name == "s2":
+                instance.p = 2.0
+            else:
+                assert scenario_name == "s3"
+                instance.p = 3.0
+            return instance
+        with ScenarioTreeInstanceFactory(
+                model=scenario_model_callback,
+                scenario_tree=join(testdatadir,
+                                   "reference_test_scenario_tree.dat")) as factory:
+            self.assertTrue(factory.model_directory() is None)
+            self.assertTrue(factory.scenario_tree_directory() is not None)
+            self._check_factory(factory)
+        self.assertEqual(factory._closed, True)
+        self.assertEqual(len(factory._archives), 0)
+
+    # model: model callback
+    # scenario_tree: PySP scenario tree
+    def test_init20(self):
+        self.assertTrue("reference_test_model" not in sys.modules)
+        def scenario_model_callback(scenario_tree, scenario_name, node_list):
+            self.assertTrue(isinstance(scenario_tree, ScenarioTree))
+            instance = reference_test_model.create_instance()
+            if scenario_name == "s1":
+                instance.p = 1.0
+            elif scenario_name == "s2":
+                instance.p = 2.0
+            else:
+                assert scenario_name == "s3"
+                instance.p = 3.0
+            return instance
+        with ScenarioTreeInstanceFactory(
+                model=scenario_model_callback,
+                scenario_tree=join(testdatadir,
+                                   "reference_test_scenario_tree.dat")) as factory:
+            my_scenario_tree = factory.generate_scenario_tree()
+        with ScenarioTreeInstanceFactory(
+                model=scenario_model_callback,
+                scenario_tree=my_scenario_tree) as factory:
+            self.assertTrue(factory.model_directory() is None)
+            self.assertTrue(factory.scenario_tree_directory() is None)
+            self._check_factory(factory)
+        self.assertEqual(factory._closed, True)
+        self.assertEqual(len(factory._archives), 0)
+
+    # model: name of .py file with model callback
+    # scenario_tree: name of same .py file with scenario tree callback
+    @unittest.skipIf(not has_networkx, "Requires networkx module")
+    def test_init21(self):
+        self.assertTrue("both_callbacks" not in sys.modules)
+        with ScenarioTreeInstanceFactory(
+                model=join(testdatadir,
+                           "both_callbacks.py"),
+                scenario_tree=join(testdatadir,
+                                   "both_callbacks.py")) as factory:
+            self.assertEqual(len(factory._archives), 0)
+            self.assertTrue(factory.model_directory() is not None)
+            self.assertTrue(factory.scenario_tree_directory() is not None)
+            self._check_factory(factory)
+        self.assertEqual(len(factory._archives), 0)
+        self.assertTrue("both_callbacks" in sys.modules)
+
+    # model: name of .py file with model callback
+    # scenario_tree: None (which implies the model filename)
+    @unittest.skipIf(not has_networkx, "Requires networkx module")
+    def test_init22(self):
+        self.assertTrue("both_callbacks" not in sys.modules)
+        with ScenarioTreeInstanceFactory(
+                model=join(testdatadir,
+                           "both_callbacks.py"),
+                scenario_tree=None) as factory:
+            self.assertEqual(len(factory._archives), 0)
+            self.assertTrue(factory.model_directory() is not None)
+            self.assertTrue(factory.scenario_tree_directory() is not None)
+            self._check_factory(factory)
+        self.assertEqual(len(factory._archives), 0)
+        self.assertTrue("both_callbacks" in sys.modules)
 
 if __name__ == "__main__":
-    #import logging
-    #logging.getLogger('pyomo.pysp').setLevel(logging.DEBUG)
     unittest.main()

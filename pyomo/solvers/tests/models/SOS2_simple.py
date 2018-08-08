@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.kernel as pmo
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, SOSConstraint, NonNegativeReals, ConstraintList, summation
+from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, SOSConstraint, NonNegativeReals, ConstraintList, sum_product
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 @register_model
@@ -46,13 +46,13 @@ class SOS2_simple(_BaseTestModel):
         model.lmbda = Var([1,2,3])
         model.obj = Objective(expr=model.p+model.n)
         model.c1 = ConstraintList()
-        model.c1.add(0.0 <= model.lmbda[1] <= 1.0)
-        model.c1.add(0.0 <= model.lmbda[2] <= 1.0)
+        model.c1.add((0.0, model.lmbda[1], 1.0))
+        model.c1.add((0.0, model.lmbda[2], 1.0))
         model.c1.add(0.0 <= model.lmbda[3])
         model.c2 = SOSConstraint(var=model.lmbda, index=[1,2,3], sos=2)
-        model.c3 = Constraint(expr=summation(model.lmbda) == 1)
-        model.c4 = Constraint(expr=model.f==summation(model.fi,model.lmbda))
-        model.c5 = Constraint(expr=model.x==summation(model.xi,model.lmbda))
+        model.c3 = Constraint(expr=sum_product(model.lmbda) == 1)
+        model.c4 = Constraint(expr=model.f==sum_product(model.fi,model.lmbda))
+        model.c5 = Constraint(expr=model.x==sum_product(model.xi,model.lmbda))
         model.x = 2.75
         model.x.fixed = True
 
@@ -92,11 +92,12 @@ class SOS2_simple_kernel(SOS2_simple):
         model.xi[3] = pmo.parameter(value=3.0)
         model.p = pmo.variable(domain=NonNegativeReals)
         model.n = pmo.variable(domain=NonNegativeReals)
-        model.lmbda = pmo.create_variable_dict(range(1,4))
+        model.lmbda = pmo.variable_dict(
+            (i, pmo.variable()) for i in range(1,4))
         model.obj = pmo.objective(model.p+model.n)
         model.c1 = pmo.constraint_dict()
-        model.c1[1] = pmo.constraint(0.0 <= model.lmbda[1] <= 1.0)
-        model.c1[2] = pmo.constraint(0.0 <= model.lmbda[2] <= 1.0)
+        model.c1[1] = pmo.constraint((0.0, model.lmbda[1], 1.0))
+        model.c1[2] = pmo.constraint((0.0, model.lmbda[2], 1.0))
         model.c1[3] = pmo.constraint(0.0 <= model.lmbda[3])
         model.c2 = pmo.sos2(model.lmbda.values())
         model.c3 = pmo.constraint(sum(model.lmbda.values()) == 1)

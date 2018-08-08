@@ -2,6 +2,7 @@ import weakref
 import logging
 from copy import deepcopy
 
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import Component, ComponentData
 
 logger = logging.getLogger('pyomo.core')
@@ -33,8 +34,8 @@ __all__ = ['Alias']
 #     plugins (e.g., extra variables), but I think when an expression
 #     is generated due to forwarding NumValue base class methods, this
 #     results in the Alias (e.g., for a Var) getting replaced with its
-#     aliased object in the expression. So problem writers and
-#     canonical_repn could possibly never encounter Aliases (if we're
+#     aliased object in the expression. So problem writers
+#     could possibly never encounter Aliases (if we're
 #     careful).
 
 class Alias(Component):
@@ -88,7 +89,9 @@ class Alias(Component):
                                  "from data=%s", name, str(data))
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed = True
+        timer.report()
 
     def _pprint(self):
         if self.aliased_object is None:

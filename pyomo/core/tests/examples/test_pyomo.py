@@ -46,7 +46,7 @@ def filter_fn(line):
 _diff_tol = 1e-6
 
 solvers = None
-class Test(unittest.TestCase):
+class BaseTester(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -93,9 +93,12 @@ class Test(unittest.TestCase):
     def run_pyomo(self, cmd, root=None):
         return pyutilib.subprocess.run('pyomo solve --solver=glpk --results-format=json --save-results=%s.jsn ' % (root) +cmd, outfile=root+'.out')
 
+
+class TestJson(BaseTester):
+
     def test1_simple_pyomo_execution(self):
         # Simple execution of 'pyomo'
-        self.pyomo(currdir+'pmedian.py pmedian.dat', root=currdir+'test1')
+        self.pyomo([currdir+'pmedian.py',currdir+'pmedian.dat'], root=currdir+'test1')
         self.assertMatchesJsonBaseline(currdir+"test1.jsn", currdir+"test1.txt",tolerance=_diff_tol)
         os.remove(currdir+'test1.out')
 
@@ -166,7 +169,7 @@ class Test(unittest.TestCase):
     def test8_instanceonly_option(self):
         #"""Run pyomo with --instance-only option"""
         output = self.pyomo('--instance-only pmedian.py pmedian.dat', root=currdir+'test8')
-        self.assertEqual(type(output.retval.instance), pyomo.core.AbstractModel)
+        self.assertEqual(type(output.retval.instance), pyomo.core.ConcreteModel)
         # Check that the results file was NOT created
         self.assertRaises(OSError, lambda: os.remove(currdir+'test8.jsn'))
         os.remove(currdir+'test8.out')
@@ -174,7 +177,7 @@ class Test(unittest.TestCase):
     def test8b_instanceonly_option(self):
         # Run pyomo with --instance-only option (configfile)
         output = self.pyomo(currdir+'test8b.json', root=currdir+'test8')
-        self.assertEqual(type(output.retval.instance), pyomo.core.AbstractModel)
+        self.assertEqual(type(output.retval.instance), pyomo.core.ConcreteModel)
         # Check that the results file was NOT created
         self.assertRaises(OSError, lambda: os.remove(currdir+'test8.jsn'))
         os.remove(currdir+'test8.out')
@@ -182,14 +185,14 @@ class Test(unittest.TestCase):
     def test9_disablegc_option(self):
         #"""Run pyomo with --disable-gc option"""
         output = self.pyomo('--disable-gc pmedian.py pmedian.dat', root=currdir+'test9')
-        self.assertEqual(type(output.retval.instance), pyomo.core.AbstractModel)
+        self.assertEqual(type(output.retval.instance), pyomo.core.ConcreteModel)
         os.remove(currdir+'test9.jsn')
         os.remove(currdir+'test9.out')
 
     def test9b_disablegc_option(self):
         # Run pyomo with --disable-gc option (configfile)
         output = self.pyomo(currdir+'test9b.json', root=currdir+'test9')
-        self.assertEqual(type(output.retval.instance), pyomo.core.AbstractModel)
+        self.assertEqual(type(output.retval.instance), pyomo.core.ConcreteModel)
         os.remove(currdir+'test9.jsn')
         os.remove(currdir+'test9.out')
 
@@ -239,7 +242,7 @@ class Test(unittest.TestCase):
 
 
 @unittest.skipIf(not yaml_available, "YAML not available available")
-class TestWithYaml(Test):
+class TestWithYaml(BaseTester):
 
     def test15b_simple_pyomo_execution(self):
         # Simple execution of 'pyomo' with options

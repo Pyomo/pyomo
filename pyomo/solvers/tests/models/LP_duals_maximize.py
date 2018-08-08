@@ -85,7 +85,8 @@ class LP_duals_maximize_kernel(LP_duals_maximize):
         model.pos1 = pmo.parameter(value=1.0)
 
         model.s = list(range(1,13))
-        model.x = pmo.create_variable_dict(keys=model.s)
+        model.x = pmo.variable_dict(
+            (i, pmo.variable()) for i in model.s)
         model.x[1].lb = model.neg1
         model.x[1].ub = model.pos1
         model.x[2].lb = model.neg1

@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -12,19 +12,15 @@ __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 
 import pyutilib.misc
 
+from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
-from pyomo.core.base.template_expr import TemplateExpressionError
-from pyomo.util import DeveloperError
+from pyomo.common import DeveloperError
 
 from six import PY3, itervalues, iteritems, advance_iterator
 import sys
 
-import logging
-logger = logging.getLogger('pyomo.core')
-
 UnindexedComponent_set = set([None])
-
 
 def normalize_index(index):
     """
@@ -32,14 +28,63 @@ def normalize_index(index):
     return just the element.  If it has length > 1, then
     return a tuple.
     """
-    ndx = pyutilib.misc.flatten(index)
-    if type(ndx) is list:
-        if len(ndx) == 1:
-            ndx = ndx[0]
+    idx = pyutilib.misc.flatten(index)
+    if type(idx) is list:
+        if len(idx) == 1:
+            idx = idx[0]
         else:
-            ndx = tuple(ndx)
-    return ndx
+            idx = tuple(idx)
+    return idx
 normalize_index.flatten = True
+
+class _NotFound(object):
+    pass
+
+#
+# Get the fully-qualified name for this index.  If there isn't anything
+# in the _data dict (and there shouldn't be), then add something, get
+# the name, and remove it.  This allows us to get the name of something
+# that we haven't added yet without changing the state of the constraint
+# object.
+#
+def _get_indexed_component_data_name(component, index):
+    """Returns the fully-qualified component name for an unconstructed index.
+
+    The ComponentData.name property assumes that the ComponentData has
+    already been assigned to the owning Component.  This is a problem
+    during the process of constructing a ComponentData instance, as we
+    may need to throw an exception before the ComponentData is added to
+    the owning component.  In those cases, we can use this function to
+    generate the fully-qualified name without (permanently) adding the
+    object to the Component.
+
+    """
+    if not component.is_indexed():
+        return component.name
+    elif index in component._data:
+        ans = component._data[index].name
+    else:
+        for i in range(5):
+            try:
+                component._data[index] = component._ComponentDataClass(
+                    *((None,)*i), component=component)
+                i = None
+                break
+            except:
+                pass
+        if i is not None:
+            # None of the generic positional arguments worked; raise an
+            # exception
+            component._data[index] = component._ComponentDataClass(
+                component=component)
+        try:
+            ans = component._data[index].name
+        except:
+            ans = component.name + '[{unknown index}]'
+        finally:
+            del component._data[index]
+    return ans
+
 
 class _IndexedComponent_slicer(object):
     """Special iterator for slicing through hierarchical component trees
@@ -173,7 +218,7 @@ class _IndexedComponent_slicer(object):
         max_fixed = 0 if not fixed else max(fixed)
 
         for index in component.__iter__():
-            # We want a tuple of indices, so convert scalard to tuples
+            # We want a tuple of indices, so convert scalars to tuples
             _idx = index if type(index) is tuple else (index,)
 
             # Veryfy the number of indices: if there is a wildcard
@@ -192,7 +237,10 @@ class _IndexedComponent_slicer(object):
                     flag = False
                     break
             if flag:
-                yield component._data[index]
+                # Note: it is important to use __getitem__, as the
+                # derived class may implement a non-standard storage
+                # mechanism (e.g., Param)
+                yield component[index]
 
     def __getattr__(self, name):
         """Override the "." operator to defer resolution until iteration.
@@ -219,13 +267,20 @@ class _IndexedComponent_slicer(object):
         return self
 
     def __call__(self, *idx, **kwds):
-        """Override the "()" operator to defer resolution until iteration.
+        """Special handling of the "()" operator for component slices.
 
-        Creating a slice of a component returns a
-        _IndexedComponent_slicer object.  Subsequent attempts to call
-        items hit this method.  When combined with the __getattr__
-        method, this allows us to defer general method calls (like
-        "component()") until iteration time.
+        Creating a slice of a component returns a _IndexedComponent_slicer
+        object.  Subsequent attempts to call items hit this method.  We
+        handle the __call__ method separately based on the item ( identifier
+        immediately before the "()") being called:
+
+        - if the item was 'component', then we defer resolution of this call
+        until we are actually iterating over the slicer.  This allows users
+        to do operations like `m.b[:].component('foo').bar[:]`
+
+        - if the item is anything else, then we will immediately iterate over
+        the slicer and call the item.  THis allows "vector-like" operations
+        like: `m.x[:,1].fix(0)`.
         """
         self._iter_stack.append(None)
         self._call_stack.append( (
@@ -250,6 +305,12 @@ class IndexedComponent(Component):
     keys of self._data.  This class supports a concept of a default
     component data value.  When enabled, the default does not
     change the access and iteration methods.
+
+    IndexedComponent may be given a set over which indexing is restricted.
+    Alternatively, IndexedComponent may be indexed over Any
+    (pyomo.core.base.set_types.Any), in which case the IndexedComponent
+    behaves like a dictionary - any hashable object can be used as a key
+    and keys can be added on the fly.
 
     Constructor arguments:
         ctype       The class type for the derived subclass
@@ -280,7 +341,8 @@ class IndexedComponent(Component):
         #
         self._data = {}
         #
-        if len(args) == 0:
+        if len(args) == 0 or (len(args) == 1 and
+                              args[0] is UnindexedComponent_set):
             #
             # If no indexing sets are provided, generate a dummy index
             #
@@ -329,9 +391,9 @@ class IndexedComponent(Component):
 
     def to_dense_data(self):
         """TODO"""
-        for ndx in self._index:
-            if ndx not in self._data:
-                self._default(ndx)
+        for idx in self._index:
+            if idx not in self._data:
+                self._getitem_when_not_present(idx)
 
     def clear(self):
         """Clear the data in this component"""
@@ -363,9 +425,9 @@ class IndexedComponent(Component):
         """
         return len(self._data)
 
-    def __contains__(self, ndx):
+    def __contains__(self, idx):
         """Return true if the index is in the dictionary"""
-        return ndx in self._data
+        return idx in self._data
 
     def __iter__(self):
         """Iterate over the keys in the dictionary"""
@@ -447,97 +509,199 @@ You can silence this warning by one of three ways:
         """Return an iterator of the component data objects in the dictionary"""
         for key in self:
             yield self[key]
-    
+
     def iteritems(self):
         """Return an iterator of (index,data) tuples from the dictionary"""
         for key in self:
             yield key, self[key]
 
-    def __getitem__(self, ndx):
+    def __getitem__(self, index):
         """
         This method returns the data corresponding to the given index.
         """
-        try:
-            _validIndex = ndx in self._data
-        except TypeError:
-            # Process alternatives
-            return self._processUnhashableIndex(ndx, sys.exc_info()[1])
+        if self._constructed is False:
+            self._not_constructed_error(index)
 
-        if _validIndex:
-            # Return the data from the dictionary
-            if ndx is None and not self.is_indexed():
-                return self
+        try:
+            obj = self._data.get(index, _NotFound)
+        except TypeError:
+            obj = _NotFound
+            index = self._processUnhashableIndex(index)
+            if index.__class__ is _IndexedComponent_slicer:
+                return index
+
+        if obj is _NotFound:
+            # Not good: we have to defer this import to now
+            # due to circular imports (expr imports _VarData
+            # imports indexed_component, but we need expr
+            # here
+            from pyomo.core.expr import current as EXPR
+            if index.__class__ is EXPR.GetItemExpression:
+                return index
+            index = self._validate_index(index)
+            # _processUnhashableIndex could have found a slice, or
+            # _validate could have found an Ellipsis and returned a
+            # slicer
+            if index.__class__ is _IndexedComponent_slicer:
+                return index
+            obj = self._data.get(index, _NotFound)
+            #
+            # Call the _getitem_when_not_present helper to retrieve/return
+            # the default value
+            #
+            if obj is _NotFound:
+                return self._getitem_when_not_present(index)
+
+        return obj
+
+    def __setitem__(self, index, val):
+        #
+        # Set the value: This relies on _setitem_when_not_present() to
+        # insert the correct ComponentData into the _data dictionary
+        # when it is not present and _setitem_impl to update an existing
+        # entry.
+        #
+        # Note: it is important that we check _constructed is False and not
+        # just evaluates to false: when constructing immutable Params,
+        # _constructed will be None during the construction process when
+        # setting the value is valid.
+        #
+        if self._constructed is False:
+            self._not_constructed_error(index)
+
+        try:
+            obj = self._data.get(index, _NotFound)
+        except TypeError:
+            obj = _NotFound
+            index = self._processUnhashableIndex(index)
+
+        if obj is not _NotFound:
+            return self._setitem_impl(index, obj, val)
+        else:
+            # If we didn't find the index in the data, then we need to
+            # validate it against the underlying set (as long as
+            # _processUnhashableIndex didn't return a slicer)
+            index = self._validate_index(index)
+        #
+        # Call the _setitem_impl helper to populate the _data
+        # dictionary and set the value
+        #
+        # Note that we need to RECHECK the class against
+        # _IndexedComponent_slicer, as _validate_index could have found
+        # an Ellipsis (which is hashable) and returned a slicer
+        #
+        if index.__class__ is _IndexedComponent_slicer:
+            # support "m.x[:,1] = 5" through a simple recursive call.
+            #
+            # Note that the slicer will only slice over *existing*
+            # entries, but they may not be in the data dictionary.  Make
+            # a copy of the slicer items *before* we start iterating
+            # over it in case the setter changes the _data dictionary.
+            for idx in list(index):
+                obj = self._data.get(idx, _NotFound)
+                if obj is _NotFound:
+                    self._setitem_when_not_present(idx, val)
+                else:
+                    self._setitem_impl(idx, obj, val)
+        else:
+            obj = self._data.get(index, _NotFound)
+            if obj is _NotFound:
+                return self._setitem_when_not_present(index, val)
             else:
-                return self._data[ndx]
-        if not self._constructed:
-            # Generate an error because the component is not constructed
-            if not self.is_indexed():
-                idx_str = ''
-            elif ndx.__class__ is tuple:
-                idx_str = "[" + ",".join(str(i) for i in ndx) + "]"
-            else:
-                idx_str = "[" + str(ndx) + "]"
-            raise ValueError(
-                "Error retrieving component %s%s: The component has "
-                "not been constructed." % ( self.name, idx_str,) )
-        if ndx is None and not self.is_indexed():
-            self._data[ndx] = self  # FIXME: should this be a weakref?!?
-            return self
-        if ndx is Ellipsis or ndx.__class__ is tuple and Ellipsis in ndx:
-            return self._processUnhashableIndex(ndx, sys.exc_info()[1])
+                return self._setitem_impl(index, obj, val)
+
+    def __delitem__(self, index):
+        if self._constructed is False:
+            self._not_constructed_error(index)
+        try:
+            obj = self._data.get(index, _NotFound)
+        except TypeError:
+            obj = _NotFound
+            index = self._processUnhashableIndex(index)
+
+        if obj is _NotFound:
+            index = self._validate_index(index)
+
+        # this supports "del m.x[:,1]" through a simple recursive call
+        if type(index) is _IndexedComponent_slicer:
+            # Make a copy of the slicer items *before* we start
+            # iterating over it (since we will be removing items!).
+            for idx in list(index):
+                del self[idx]
+        else:
+            # Handle the normal deletion operation
+            if self.is_indexed():
+                # Remove reference to this object
+                self._data[index]._component = None
+            del self._data[index]
+
+    def _not_constructed_error(self, idx):
+        # Generate an error because the component is not constructed
+        if not self.is_indexed():
+            idx_str = ''
+        elif idx.__class__ is tuple:
+            idx_str = "[" + ",".join(str(i) for i in idx) + "]"
+        else:
+            idx_str = "[" + str(idx) + "]"
+        raise ValueError(
+            "Error retrieving component %s%s: The component has "
+            "not been constructed." % (self.name, idx_str,))
+
+    def _validate_index(self, idx):
         if not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
-            # Return the default value if the global flag dictates
-            # that we should bypass all index checking and domain
-            # validation
-            return self._default(ndx)
-        if ndx in self._index:
-            # After checking that the index is valid, return the
-            # default value.
-            # Note: This check is potentially expensive (e.g., when
-            # the indexing set is a complex set operation)!
-            return self._default(ndx)
+            # Return whatever index was provided if the global flag dictates
+            # that we should bypass all index checking and domain validation
+            return idx
+
+        # This is only called through __{get,set,del}item__, which has
+        # already trapped unhashable objects.
+        if idx in self._index:
+            # If the index is in the underlying index set, then return it
+            #  Note: This check is potentially expensive (e.g., when the
+            # indexing set is a complex set operation)!
+            return idx
+
+        if idx is _IndexedComponent_slicer:
+            return idx
+
         if normalize_index.flatten:
             # Now we normalize the index and check again.  Usually,
             # indices will be already be normalized, so we defer the
             # "automatic" call to normalize_index until now for the
-            # sake of efficiency.  Also note that we cannot get here
-            # unless the component *is* indexed, so we do not need
-            # any special traps for None or is_indexed().
-            ndx = normalize_index(ndx)
-            if ndx in self._data:
-                # Note that ndx != None at this point
-                return self._data[ndx]
-            elif not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
-                return self._default(ndx)
-            elif ndx in self._index:
-                return self._default(ndx)
-
+            # sake of efficiency.
+            idx = normalize_index(idx)
+            if idx in self._data:
+                return idx
+            if idx in self._index:
+                return idx
+        # There is the chance that the index contains an Ellipsis,
+        # so we should generate a slicer
+        if idx is Ellipsis or idx.__class__ is tuple and Ellipsis in idx:
+            return self._processUnhashableIndex(idx)
         #
         # Generate different errors, depending on the state of the index.
         #
         if not self.is_indexed():
-            msg = "Error accessing indexed component: " \
-                  "Cannot treat the scalar component '%s' as an array" \
-                  % ( self.name, )
-            raise KeyError(msg)
+            raise KeyError(
+                "Cannot treat the scalar component '%s'"
+                "as an indexed component" % ( self.name, ))
         #
         # Raise an exception
         #
-        msg = "Error accessing indexed component: " \
-                  "Index '%s' is not valid for array component '%s'" \
-                  % ( ndx, self.name, )
-        raise KeyError(msg)
+        raise KeyError(
+            "Index '%s' is not valid for indexed component '%s'"
+            % ( idx, self.name, ))
 
-
-    def _processUnhashableIndex(self, ndx, _exception):
+    def _processUnhashableIndex(self, idx, _exception=None):
         """Process a call to __getitem__ with unhashable elements
 
         There are three basic ways to get here:
-          1) the index constains one or more slices or ellipsis
+          1) the index contains one or more slices or ellipsis
           2) the index contains an unhashable type (e.g., a Pyomo
              (Simple)Component
           3) the index contains an IndexTemplate
         """
+        from pyomo.core.expr import current as EXPR
         #
         # Iterate through the index and look for slices and constant
         # components
@@ -549,16 +713,18 @@ You can silence this warning by one of three ways:
         #
         # Setup the slice template (in fixed)
         #
-        if type(ndx) not in (tuple, list):
-            ndx = [ndx]
-        else:
+        if type(idx) is tuple:
             # We would normally do "flatten()" here, but the current
             # (10/2016) implementation of flatten() is too aggressive:
             # it will attempt to expand *any* iterable, including
             # SimpleParam.
-            ndx = pyutilib.misc.flatten_tuple(tuple(ndx))
+            idx = pyutilib.misc.flatten_tuple(idx)
+        elif type(idx) is list:
+            idx = pyutilib.misc.flatten_tuple(tuple(idx))
+        else:
+            idx = (idx,)
 
-        for i,val in enumerate(ndx):
+        for i,val in enumerate(idx):
             if type(val) is slice:
                 if val.start is not None or val.stop is not None:
                     raise IndexError(
@@ -574,7 +740,7 @@ You can silence this warning by one of three ways:
                     if ellipsis is None:
                         sliced[i] = val
                     else:
-                        sliced[i-len(ndx)] = val
+                        sliced[i-len(idx)] = val
                     continue
 
             if val is Ellipsis:
@@ -586,49 +752,27 @@ You can silence this warning by one of three ways:
                 ellipsis = i
                 continue
 
-            try:
-                _num_val = val.as_numeric()
+            if hasattr(val, 'is_expression_type'):
+                _num_val = val
                 # Attempt to retrieve the numeric value .. if this
                 # is a template expression generation, then it
                 # should raise a TemplateExpressionError
                 try:
-                    # Disable all logging for the time being.  We are
-                    # not keeping the result of this calculation - only
-                    # seeing if it is possible.  Any errors generated
-                    # evaluating the expression are not informative to
-                    # the user
-                    active_level = logging.root.manager.disable
-                    logging.disable(logging.CRITICAL)
-                    _num_val()
-                except TemplateExpressionError:
-                    # Not good: we have to defer this import to now
-                    # due to circular imports (expr imports _VarData
-                    # imports indexed_component, but we need expr
-                    # here
-                    from pyomo.core.base import expr as EXPR
-                    return EXPR._GetItemExpression(self, tuple(ndx))
-                except:
-                    # There are other ways we could get an exception
-                    # that is not TemplateExpressionError; most notably,
-                    # evaluating a Param / Var that is not initialized.
-                    # At this point, we will silently eat that
-                    # error... it will come back again below.
-                    pass
-                finally:
-                    logging.disable(active_level)
-
-                if _num_val.is_constant():
+                    val = EXPR.evaluate_expression(val, constant=True)
                     _found_numeric = True
-                    val = _num_val()
-                elif _num_val.is_fixed():
-                    raise RuntimeError(
-"""Error retrieving the value of an indexed item %s:
-index %s is a fixed but not constant value.  This is likely not what you
-meant to do, as if you later change the fixed value of the object this
-lookup will not change.  If you understand the implications of using
-fixed but not constant values, you can get the current value using the
-value() function.""" % ( self.name, i ))
-                else:
+
+                except TemplateExpressionError:
+                    #
+                    # The index is a template expression, so return the 
+                    # templatized expression.
+                    #
+                    from pyomo.core.expr import current as EXPR
+                    return EXPR.GetItemExpression(tuple(idx), self)
+
+                except EXPR.NonConstantExpressionError:
+                    #
+                    # The expression contains an unfixed variable
+                    #
                     raise RuntimeError(
 """Error retrieving the value of an indexed item %s:
 index %s is not a constant value.  This is likely not what you meant to
@@ -636,29 +780,96 @@ do, as if you later change the fixed value of the object this lookup
 will not change.  If you understand the implications of using
 non-constant values, you can get the current value of the object using
 the value() function.""" % ( self.name, i ))
-            except AttributeError:
-                pass
+
+                except EXPR.FixedExpressionError:
+                    #
+                    # The expression contains a fixed variable
+                    #
+                    raise RuntimeError(
+"""Error retrieving the value of an indexed item %s:
+index %s is a fixed but not constant value.  This is likely not what you
+meant to do, as if you later change the fixed value of the object this
+lookup will not change.  If you understand the implications of using
+fixed but not constant values, you can get the current value using the
+value() function.""" % ( self.name, i ))
+                #
+                # There are other ways we could get an exception such as
+                # evaluating a Param / Var that is not initialized.
+                # These exceptions will continue up the call stack.
+                #
+
+            # verify that the value is hashable
+            hash(val)
             if ellipsis is None:
                 fixed[i] = val
             else:
-                fixed[i - len(ndx)] = val
+                fixed[i - len(idx)] = val
 
         if sliced or ellipsis is not None:
             return _IndexedComponent_slicer(self, fixed, sliced, ellipsis)
         elif _found_numeric:
-            new_ndx = tuple( fixed[i] for i in range(len(ndx)) )
-            return self[ new_ndx ]
+            if len(idx) == 1:
+                return fixed[0]
+            else:
+                return tuple( fixed[i] for i in range(len(idx)) )
+        elif _exception is not None:
+            raise
         else:
-            raise TypeError(
-                "%s found when trying to retrieve index for component %s"
-                % (_exception, self.name) )
+            raise DeveloperError(
+                "Unknown problem encountered when trying to retrieve "
+                "index for component %s" % (self.name,) )
 
+    def _getitem_when_not_present(self, index):
+        """Returns/initializes a value when the index is not in the _data dict.
 
-    def _default(self, index):
-        """Returns the default component data value"""
-        raise DeveloperError(
-            "Derived component %s failed to define _default()."
-            % (self.__class__.__name__,))
+        Override this method if the component allows implicit member
+        construction.  For classes that do not support a 'default' (at
+        this point, everything except Param and Var), requesting
+        _getitem_when_not_present will generate a KeyError (just like a
+        normal dict).
+
+        Implementations may assume that the index has already been validated
+        and is a legitimate entry in the _data dict.
+
+        """
+        raise KeyError(index)
+
+    def _setitem_impl(self, index, obj, value):
+        """Perform the fundamental object value storage
+
+        Components that want to implement a nonstandard storage mechanism
+        should override this method.
+
+        Implementations may assume that the index has already been
+        validated and is a legitimate pre-existing entry in the _data
+        dict.
+
+        """
+        obj.set_value(value)
+        return obj
+
+    def _setitem_when_not_present(self, index, value):
+        """Perform the fundamental component item creation and storage.
+
+        Components that want to implement a nonstandard storage mechanism
+        should override this method.
+
+        Implementations may assume that the index has already been
+        validated and is a legitimate entry in the _data dict.
+        """
+        #
+        # If we are a scalar, then idx will be None (_validate_index ensures
+        # this)
+        if index is None and not self.is_indexed():
+            obj = self._data[index] = self
+        else:
+            obj = self._data[index] = self._ComponentDataClass(component=self)
+        try:
+            obj.set_value(value)
+            return obj
+        except:
+            del self._data[index]
+            raise
 
     def set_value(self, value):
         """Set the value of a scalar component."""
@@ -713,13 +924,14 @@ class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
 
     def activate(self):
         """Set the active attribute to True"""
-        ActiveComponent.activate(self)
-        for component_data in itervalues(self):
-            component_data._active = True
+        super(ActiveIndexedComponent, self).activate()
+        if self.is_indexed():
+            for component_data in itervalues(self):
+                component_data.activate()
 
     def deactivate(self):
         """Set the active attribute to False"""
-        ActiveComponent.deactivate(self)
-        for component_data in itervalues(self):
-            component_data._active = False
-
+        super(ActiveIndexedComponent, self).deactivate()
+        if self.is_indexed():
+            for component_data in itervalues(self):
+                component_data.deactivate()

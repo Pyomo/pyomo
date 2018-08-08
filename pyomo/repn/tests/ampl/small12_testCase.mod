@@ -63,4 +63,4 @@ s.t.
 option substout 0;
 option presolve 0;
 option auxfiles 'rc';
-write gjunk;
+write gsmall12.ampl;

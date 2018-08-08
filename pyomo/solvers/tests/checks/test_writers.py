@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -22,7 +22,7 @@ import pyutilib.th as unittest
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.testcases import test_scenarios
-from pyomo.core.kernel.component_block import IBlockStorage
+from pyomo.core.kernel.block import IBlock
 
 # The test directory
 thisDir = dirname(abspath( __file__ ))
@@ -32,7 +32,7 @@ _cleanup_expected_failures = True
 
 
 #
-# A function that function that returns a function that gets
+# A function that returns a function that gets
 # added to a test class.
 #
 def create_test_method(model,
@@ -78,7 +78,7 @@ def create_test_method(model,
             return
 
         # validate the solution returned by the solver
-        if isinstance(model_class.model, IBlockStorage):
+        if isinstance(model_class.model, IBlock):
             model_class.model.load_solution(results.Solution)
         else:
             model_class.model.solutions.load_from(results, default_variable_value=opt.default_variable_value())
@@ -99,7 +99,7 @@ def create_test_method(model,
                 os.remove(save_filename)
 
         if not rc[0]:
-            if not isinstance(model_class.model, IBlockStorage):
+            if not isinstance(model_class.model, IBlock):
                 try:
                     model_class.model.solutions.store_to(results)
                 except ValueError:
@@ -132,6 +132,7 @@ def create_test_method(model,
     # Return a normal test
     return writer_test
 
+cls = None
 
 #
 # Create test driver classes for each test model
@@ -173,7 +174,6 @@ for key, value in test_scenarios():
 # Reset the cls variable, since it contains a unittest.TestCase subclass.
 # This prevents this class from being processed twice!
 cls = None
-
 
 if __name__ == "__main__":
     unittest.main()

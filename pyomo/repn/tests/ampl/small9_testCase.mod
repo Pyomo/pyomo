@@ -20,22 +20,22 @@ fix y := 0.0;
 minimize obj: x;
 
 s.t.
-	con1:
-		x*y*z + x == 1.0;
-	con2:
-		x*p*z + x == 1.0;
-	con3:
-		x*q*z + x == 1.0;
+        con1:
+                x*y*z + x == 1.0;
+        con2:
+                x*p*z + x == 1.0;
+        con3:
+                x*q*z + x == 1.0;
 # AMPL differs from Pyomo in these cases that involve immutable params (q).
 # These never actually become constraints in Pyomo, and for good reason.
-	con4:
-		x*y*z == 1.0;
-	con5:
-		x*p*z == 1.0;
-#	con6:
-#		x*q*z == 1.0;
+        con4:
+                x*y*z == 1.0;
+        con5:
+                x*p*z == 1.0;
+#        con6:
+#                x*q*z == 1.0;
 
 option substout 0;
 option presolve 0;
 option auxfiles 'rc';
-write gjunk;
+write gsmall9.ampl;

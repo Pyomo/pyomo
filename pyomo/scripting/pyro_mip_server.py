@@ -31,7 +31,7 @@ import pyutilib.services
 import pyutilib.pyro
 from pyutilib.pyro import using_pyro4
 import pyutilib.common
-from pyomo.util import pyomo_command
+from pyomo.common import pyomo_command
 from pyomo.opt.base import SolverFactory, ConverterError
 
 import six

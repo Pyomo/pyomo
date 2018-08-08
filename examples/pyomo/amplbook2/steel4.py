@@ -38,7 +38,7 @@ def Make_bounds(model,i):
 model.Make = Var(model.PROD, bounds=Make_bounds)
 
 def Objective_rule (model):
-    return summation(model.profit, model.Make)
+    return sum_product(model.profit, model.Make)
 model.Total_Profit = Objective(rule=Objective_rule, sense=maximize)
 
 def Timelim_rule(model, s):

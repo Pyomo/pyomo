@@ -9,13 +9,18 @@ GETTING STARTED
 
   vi *.rst
 
-3.  Build the documentation
+2.  Build the documentation
 
   make html
 
 or
 
   make latexpdf
+
+NOTE:  If the local python is not on your path, then you may need to 
+invoke 'make' differently.  For example, using the PyUtilib 'lbin' command:
+
+  lbin make html
 
 3.  Admire your work
 

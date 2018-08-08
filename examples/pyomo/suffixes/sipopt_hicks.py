@@ -184,14 +184,14 @@ cperturbed = np.zeros((nfe*ncp,1))
 tnominal = np.zeros((nfe*ncp,1))
 tperturbed = np.zeros((nfe*ncp,1))
 for k,(i,j) in enumerate(collocation_idx(nfe, ncp)):
-    cnominal[k] = model.c[i,j]
-    tnominal[k] = model.t[i,j]
-    cperturbed[k] = model.sens_sol_state_1[model.c[i,j]]
-    tperturbed[k] = model.sens_sol_state_1[model.t[i,j]]
+    cnominal[k] = value(model.c[i,j])
+    tnominal[k] = value(model.t[i,j])
+    cperturbed[k] = value(model.sens_sol_state_1[model.c[i,j]])
+    tperturbed[k] = value(model.sens_sol_state_1[model.t[i,j]])
 
 plt.subplot(2,1,1)
 plt.plot(times, cnominal, label='c_nominal')
-plt.hold(True)
+#plt.hold(True)
 plt.plot(times, cperturbed, label='c_perturbed')
 plt.xlim([min(times),max(times)])
 plt.legend(loc=0)

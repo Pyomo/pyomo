@@ -19,7 +19,7 @@ from pyomo.pysp.phutils import (reset_nonconverged_variables,
                                 extractVariableNameAndIndex,
                                 reset_stage_cost_variables)
 from pyomo.pysp.solutionwriter import ISolutionWriterExtension
-from pyomo.util.plugin import ExtensionPoint
+from pyomo.common.plugin import ExtensionPoint
 
 # Tear the scenario instances off the ef instance when it is no longer required
 # so warnings are not generated next time scenarios instances are placed inside
@@ -48,7 +48,7 @@ def solve_ph_code(ph, options):
 
       with ExtensiveFormAlgorithm(ph,
                                   options._ef_options,
-                                  prefix="ef_") as ef:
+                                  options_prefix="ef_") as ef:
          ef.build_ef()
          failure = ef.solve(io_options=\
                             {'output_fixed_variable_bounds':

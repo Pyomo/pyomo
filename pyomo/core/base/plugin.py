@@ -14,7 +14,6 @@ __all__ = ['pyomo_callback',
         'ModelComponentFactory',
         'register_component',
         'IPyomoPresolver', 'IPyomoPresolveAction',
-        'DataManagerFactory',
         'IParamRepresentation',
         'ParamRepresentationFactory',
         'IModelTransformation',
@@ -31,11 +30,16 @@ __all__ = ['pyomo_callback',
         'Transformation',
         'IModelTransformation',
         'TransformationFactory',
-        'UnknownDataManager'
         ]
 
-import pyutilib.misc
 import logging
+import pyutilib.misc
+from pyomo.common.deprecation import deprecated
+from pyomo.common.modeling import unique_component_name
+from pyomo.common.plugin import (
+    alias, implements, Interface, Plugin, PluginFactory, CreatePluginFactory,
+    PluginError, ExtensionPoint )
+from pyomo.common.timing import TransformationTimer
 
 logger = logging.getLogger('pyomo.core')
 registered_callback = {}
@@ -55,9 +59,6 @@ def pyomo_callback( name ):
         registered_callback[name] = f
         return f
     return fn
-
-
-from pyomo.util.plugin import *
 
 
 class IPyomoScriptPreprocess(Interface):
@@ -188,86 +189,6 @@ def register_component(cls, description):
         component = cls
 
 
-class IDataManager(Interface):
-
-    def available(self):
-        """ Returns True if the data manager can be executed """
-        pass
-
-    def requirements(self):
-        """ Return a string describing the packages that need to be installed for this plugin to be available """
-        pass
-
-    def initialize(self, filename, **kwds):
-        """ Prepare to read a data file. """
-        pass
-
-    def add_options(self, **kwds):
-        """ Add options """
-        pass
-
-    def open(self):
-        """ Open the data file. """
-        pass
-
-    def close(self):
-        """ Close the data file. """
-        pass
-
-    def read(self):
-        """ Read the data file. """
-        pass
-
-    def process(self, model, data, default):
-        """ Process the data. """
-        pass
-
-    def clear(self):
-        """ Reset Plugin. """
-        pass
-
-
-class UnknownDataManager(Plugin):
-
-    implements(IDataManager)
-
-    def __init__(self, *args, **kwds):
-        Plugin.__init__(self, **kwds)
-        #
-        # The 'type' is the class type of the solver instance
-        #
-        self.type = kwds["type"]
-
-    def available(self):
-        return False
-
-
-#
-# A DataManagerFactory is an instance of a plugin factory that is
-# customized with a custom __call__ method
-#
-DataManagerFactory = CreatePluginFactory(IDataManager)
-#
-# This is the custom __call__ method
-#
-def __datamanager_call__(self, _name=None, args=[], **kwds):
-    if _name is None:
-        return self
-    _name=str(_name)
-    if _name in IDataManager._factory_active:
-        dm = PluginFactory(IDataManager._factory_cls[_name], args, **kwds)
-        if not dm.available():
-            raise PluginError("Cannot process data in %s files.  The following python packages need to be installed: %s" % (_name, dm.requirements()))
-    else:
-        dm = UnknownDataManager(type=_name)
-    return dm
-#
-# Adding the the custom __call__ method to DataManagerFactory
-#
-pyutilib.misc.add_method(DataManagerFactory, __datamanager_call__, name='__call__')
-
-
-
 class IModelTransformation(Interface):
 
     def apply(self, model, **kwds):
@@ -310,16 +231,12 @@ class Transformation(Plugin):
         kwds["name"] = kwds.get("name", "transformation")
         super(Transformation, self).__init__(**kwds)
 
+    @deprecated(
+        "Transformation.apply() has been deprecated.  Please use either "
+        "Transformation.apply_to() for in-place transformations or "
+        "Transformation.create_using() for transformations that create a "
+        "new, independent transformed model instance.")
     def apply(self, model, **kwds):
-        """DEPRECATION WARNING: Transformation.apply() has been deprecated.
-        Please use either Transformation.apply_to() for in-place
-        transformations or Transformation.create_using() for transformations
-        that create a new, independent transformed model instance."""
-        logger.warning(
-"""DEPRECATION WARNING: Transformation.apply() has been deprecated.
-Please use either Transformation.apply_to() for in-place transformations
-or Transformation.create_using() for transformations that create a new,
-independent transformed model instance.""")
         inplace = kwds.pop('inplace', True)
         if inplace:
             self.apply_to(model, **kwds)
@@ -330,32 +247,47 @@ independent transformed model instance.""")
         """
         Apply the transformation to the given model.
         """
+        timer = TransformationTimer(self, 'in-place')
         if not hasattr(model, '_transformation_data'):
             model._transformation_data = TransformationData()
         self._apply_to(model, **kwds)
+        timer.report()
 
     def create_using(self, model, **kwds):
         """
         Create a new model with this transformation
         """
+        timer = TransformationTimer(self, 'out-of-place')
         if not hasattr(model, '_transformation_data'):
             model._transformation_data = TransformationData()
-        return self._create_using(model, **kwds)
+        new_model = self._create_using(model, **kwds)
+        timer.report()
+        return new_model
 
     def _apply_to(self, model, **kwds):
-        raise RuntimeError("The Transformation.apply_to method is not implemented.")
+        raise RuntimeError(
+            "The Transformation.apply_to method is not implemented.")
 
     def _create_using(self, model, **kwds):
+        # Put all the kwds onto the model so that when we clone the
+        # model any references to things on the model are correctly
+        # updated to point to the new instance.  Note that users &
+        # transformation developers cannot rely on things happening by
+        # argument side effect.
+        name = unique_component_name(model, '_kwds')
+        setattr(model, name, kwds)
         instance = model.clone()
+        kwds = getattr(instance, name)
+        delattr(model, name)
+        delattr(instance, name)
         self._apply_to(instance, **kwds)
         return instance
 
 
 TransformationFactory = CreatePluginFactory(IModelTransformation)
 
-
-def Xapply_transformation(*args, **kwds):
-    """This function is deprecated"""
+@deprecated()
+def apply_transformation(*args, **kwds):
     if len(args) is 0:
         return TransformationFactory.services()
     xfrm = TransformationFactory(args[0])

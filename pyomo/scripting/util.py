@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -19,7 +19,7 @@ import time
 import json
 from six import itervalues, iterkeys, iteritems
 from six.moves import xrange
-from pyomo.util import pyomo_api
+from pyomo.common import pyomo_api
 
 try:
     import yaml
@@ -58,13 +58,14 @@ except:
 memory_data = Options()
 
 import pyutilib.misc
-from pyomo.util.plugin import ExtensionPoint, Plugin, implements
+from pyomo.common.plugin import ExtensionPoint, Plugin, implements
 from pyutilib.misc import Container
 from pyutilib.services import TempfileManager
 
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
+from pyomo.dataportal import DataPortal
 from pyomo.core import *
 from pyomo.core.base import TextLabeler
 import pyomo.core.base
@@ -82,7 +83,7 @@ modelapi = {    'pyomo_create_model':IPyomoScriptCreateModel,
                 'pyomo_postprocess':IPyomoScriptPostprocess}
 
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.scripting')
 start_time = 0.0
 
 
@@ -142,7 +143,8 @@ def setup_environment(data):
         else:
             action = "running"
 
-        msg = "Unexpected exception (%s) while %s %s:\n" % (etype.__name__, action, name)
+        msg = "Unexpected exception (%s) while %s %s:\n    " \
+              % (etype.__name__, action, name)
 
         #
         # This handles the case where the error is propagated by a KeyError.
@@ -152,7 +154,7 @@ def setup_environment(data):
         #
         valueStr = str(value)
         if etype == KeyError:
-            valueStr = valueStr.replace("\\n","\n")
+            valueStr = valueStr.replace(r"\n","\n")
             if valueStr[0] == valueStr[-1] and valueStr[0] in "\"'":
                 valueStr = valueStr[1:-1]
 
@@ -218,7 +220,9 @@ def apply_preprocessing(data, parser=None):
             raise IOError("File "+file+" does not exist!")
     #
     filter_excepthook=True
+    tick = time.time()
     data.local.usermodel = pyutilib.misc.import_file(data.options.model.filename, clear_cache=True)
+    data.local.time_initial_import = time.time()-tick
     filter_excepthook=False
 
     usermodel_dir = dir(data.local.usermodel)
@@ -233,7 +237,7 @@ def apply_preprocessing(data, parser=None):
                     return self.fn(**kwds)
             tmp = TMP()
             data.local._usermodel_plugins.append( tmp )
-            #print "HERE", modelapi[key], pyomo.util.plugin.interface_services[modelapi[key]]
+            #print "HERE", modelapi[key], pyomo.common.plugin.interface_services[modelapi[key]]
 
     #print "HERE", data.options._usermodel_plugins
 
@@ -304,7 +308,12 @@ def create_model(data):
             raise SystemExit(msg % data.options.model.filename)
         else:
             model_options = data.options.model.options.value()
+            tick = time.time()
             model = ep.service().apply( options = pyutilib.misc.Container(*data.options), model_options=pyutilib.misc.Container(*model_options) )
+            if data.options.runtime.report_timing is True:
+                print("      %6.2f seconds required to construct instance" % (time.time() - tick))
+                data.local.time_initial_import = None
+                tick = time.time()
     else:
         if model_name not in _models:
             msg = "Model '%s' is not defined in file '%s'!"
@@ -343,79 +352,84 @@ def create_model(data):
         # TODO: use a better test for ConcreteModel
         #
         instance = model
+        if data.options.runtime.report_timing is True and not data.local.time_initial_import is None:
+            print("      %6.2f seconds required to construct instance" % (data.local.time_initial_import))
+    else:
+        tick = time.time()
+        if len(data.options.data.files) > 1:
+            #
+            # Load a list of *.dat files
+            #
+            for file in data.options.data.files:
+                suffix = (file).split(".")[-1]
+                if suffix != "dat":
+                    msg = 'When specifiying multiple data files, they must all '  \
+                          'be *.dat files.  File specified: %s'
+                    raise SystemExit(msg % str( file ))
 
-    elif len(data.options.data.files) > 1:
-        #
-        # Load a list of *.dat files
-        #
-        for file in data.options.data.files:
-            suffix = (file).split(".")[-1]
-            if suffix != "dat":
-                msg = 'When specifiying multiple data files, they must all '  \
-                      'be *.dat files.  File specified: %s'
-                raise SystemExit(msg % str( file ))
+                modeldata.load(filename=file, model=model)
 
-            modeldata.load(filename=file, model=model)
-
-        instance = model.create_instance(modeldata,
-                                         namespaces=data.options.data.namespaces,
-                                         profile_memory=data.options.runtime.profile_memory,
-                                         report_timing=data.options.runtime.report_timing)
-
-    elif len(data.options.data.files) == 1:
-        #
-        # Load a *.dat file or process a *.py data file
-        #
-        suffix = (data.options.data.files[0]).split(".")[-1].lower()
-        if suffix == "dat":
-            instance = model.create_instance(data.options.data.files[0],
+            instance = model.create_instance(modeldata,
                                              namespaces=data.options.data.namespaces,
                                              profile_memory=data.options.runtime.profile_memory,
                                              report_timing=data.options.runtime.report_timing)
-        elif suffix == "py":
-            userdata = pyutilib.misc.import_file(data.options.data.files[0], clear_cache=True)
-            if "modeldata" in dir(userdata):
-                if len(ep) == 1:
-                    msg = "Cannot apply 'pyomo_create_modeldata' and use the" \
-                          " 'modeldata' object that is provided in the model"
+
+        elif len(data.options.data.files) == 1:
+            #
+            # Load a *.dat file or process a *.py data file
+            #
+            suffix = (data.options.data.files[0]).split(".")[-1].lower()
+            if suffix == "dat":
+                instance = model.create_instance(data.options.data.files[0],
+                                                 namespaces=data.options.data.namespaces,
+                                                 profile_memory=data.options.runtime.profile_memory,
+                                                 report_timing=data.options.runtime.report_timing)
+            elif suffix == "py":
+                userdata = pyutilib.misc.import_file(data.options.data.files[0], clear_cache=True)
+                if "modeldata" in dir(userdata):
+                    if len(ep) == 1:
+                        msg = "Cannot apply 'pyomo_create_modeldata' and use the" \
+                              " 'modeldata' object that is provided in the model"
+                        raise SystemExit(msg)
+
+                    if userdata.modeldata is None:
+                        msg = "'modeldata' object is 'None' in module %s"
+                        raise SystemExit(msg % str( data.options.data.files[0] ))
+
+                    modeldata=userdata.modeldata
+
+                else:
+                    if len(ep) == 0:
+                        msg = "Neither 'modeldata' nor 'pyomo_create_dataportal' "  \
+                              'is defined in module %s'
+                        raise SystemExit(msg % str( data.options.data.files[0] ))
+
+                modeldata.read(model)
+                instance = model.create_instance(modeldata,
+                                                 namespaces=data.options.data.namespaces,
+                                                 profile_memory=data.options.runtime.profile_memory,
+                                                 report_timing=data.options.runtime.report_timing)
+            elif suffix == "yml" or suffix == 'yaml':
+                try:
+                    import yaml
+                except:
+                    msg = "Cannot apply load data from a YAML file: PyYaml is not installed"
                     raise SystemExit(msg)
 
-                if userdata.modeldata is None:
-                    msg = "'modeldata' object is 'None' in module %s"
-                    raise SystemExit(msg % str( data.options.data.files[0] ))
-
-                modeldata=userdata.modeldata
-
+                modeldata = yaml.load(open(data.options.data.files[0]))
+                instance = model.create_instance(modeldata,
+                                                 namespaces=data.options.data.namespaces,
+                                                 profile_memory=data.options.runtime.profile_memory,
+                                                 report_timing=data.options.runtime.report_timing)
             else:
-                if len(ep) == 0:
-                    msg = "Neither 'modeldata' nor 'pyomo_create_dataportal' "  \
-                          'is defined in module %s'
-                    raise SystemExit(msg % str( data.options.data.files[0] ))
-
-            modeldata.read(model)
-            instance = model.create_instance(modeldata,
-                                             namespaces=data.options.data.namespaces,
-                                             profile_memory=data.options.runtime.profile_memory,
-                                             report_timing=data.options.runtime.report_timing)
-        elif suffix == "yml" or suffix == 'yaml':
-            try:
-                import yaml
-            except:
-                msg = "Cannot apply load data from a YAML file: PyYaml is not installed"
-                raise SystemExit(msg)
-
-            modeldata = yaml.load(open(data.options.data.files[0]))
-            instance = model.create_instance(modeldata,
-                                             namespaces=data.options.data.namespaces,
-                                             profile_memory=data.options.runtime.profile_memory,
-                                             report_timing=data.options.runtime.report_timing)
+                raise ValueError("Unknown data file type: "+data.options.data.files[0])
         else:
-            raise ValueError("Unknown data file type: "+data.options.data.files[0])
-    else:
-        instance = model.create_instance(modeldata,
-                                         namespaces=data.options.data.namespaces,
-                                         profile_memory=data.options.runtime.profile_memory,
-                                         report_timing=data.options.runtime.report_timing)
+            instance = model.create_instance(modeldata,
+                                             namespaces=data.options.data.namespaces,
+                                             profile_memory=data.options.runtime.profile_memory,
+                                             report_timing=data.options.runtime.report_timing)
+        if data.options.runtime.report_timing is True:
+            print("      %6.2f seconds required to construct instance" % (time.time() - tick))
 
     #
     modify_start_time = time.time()
@@ -796,7 +810,7 @@ def finalize(data, model=None, instance=None, results=None):
     ##gc.collect()
     ##print gc.get_referrers(_tmp)
     ##import pyomo.core.base.plugin
-    ##print pyomo.util.plugin.interface_services[pyomo.core.base.plugin.IPyomoScriptSaveResults]
+    ##print pyomo.common.plugin.interface_services[pyomo.core.base.plugin.IPyomoScriptSaveResults]
     ##print "HERE - usermodel_plugins"
     ##
     if not data.options.runtime.logging == 'quiet':
@@ -820,51 +834,51 @@ def finalize(data, model=None, instance=None, results=None):
             print('\n# Leaving Interpreter, back to Pyomo\n')
 
 
-def configure_loggers(options=None, reset=False):
-    if reset:
+def configure_loggers(options=None, shutdown=False):
+    if shutdown:
         options = Options()
         options.runtime = Options()
         options.runtime.logging = 'quiet'
-        logging.getLogger('pyomo.core').handlers = []
-        logging.getLogger('pyomo').handlers = []
-        logging.getLogger('pyutilib').handlers = []
+        if configure_loggers.fileLogger is not None:
+            logging.getLogger('pyomo').handlers = []
+            logging.getLogger('pyutilib').handlers = []
+            configure_loggers.fileLogger.close()
+            configure_loggers.fileLogger = None
+            # TBD: This seems dangerous in Windows, as the process will
+            # have multiple open file handles pointint to the same file.
+            pyutilib.misc.reset_redirect()
+
     #
     # Configure the logger
     #
     if options.runtime is None:
         options.runtime = Options()
     if options.runtime.logging == 'quiet':
-        logging.getLogger('pyomo.opt').setLevel(logging.ERROR)
-        logging.getLogger('pyomo.core').setLevel(logging.ERROR)
         logging.getLogger('pyomo').setLevel(logging.ERROR)
-        logging.getLogger('pyutilib').setLevel(logging.ERROR)
     elif options.runtime.logging == 'warning':
-        logging.getLogger('pyomo.opt').setLevel(logging.WARNING)
-        logging.getLogger('pyomo.core').setLevel(logging.WARNING)
         logging.getLogger('pyomo').setLevel(logging.WARNING)
-        logging.getLogger('pyutilib').setLevel(logging.WARNING)
     elif options.runtime.logging == 'info':
-        logging.getLogger('pyomo.opt').setLevel(logging.INFO)
-        logging.getLogger('pyomo.core').setLevel(logging.INFO)
         logging.getLogger('pyomo').setLevel(logging.INFO)
         logging.getLogger('pyutilib').setLevel(logging.INFO)
     elif options.runtime.logging == 'verbose':
-        logger.setLevel(logging.DEBUG)
         logging.getLogger('pyomo').setLevel(logging.DEBUG)
         logging.getLogger('pyutilib').setLevel(logging.DEBUG)
     elif options.runtime.logging == 'debug':
-        logging.getLogger('pyomo.opt').setLevel(logging.DEBUG)
-        logging.getLogger('pyomo.core').setLevel(logging.DEBUG)
         logging.getLogger('pyomo').setLevel(logging.DEBUG)
         logging.getLogger('pyutilib').setLevel(logging.DEBUG)
+
     if options.runtime.logfile:
-        logging.getLogger('pyomo.opt').handlers = []
-        logging.getLogger('pyomo.core').handlers = []
+        configure_loggers.fileLogger \
+            = logging.FileHandler(options.runtime.logfile, 'w')
         logging.getLogger('pyomo').handlers = []
         logging.getLogger('pyutilib').handlers = []
-        logging.getLogger('pyomo.core').addHandler( logging.FileHandler(options.runtime.logfile, 'w'))
-        logging.getLogger('pyomo').addHandler( logging.FileHandler(options.runtime.logfile, 'w'))
-        logging.getLogger('pyutilib').addHandler( logging.FileHandler(options.runtime.logfile, 'w'))
+        logging.getLogger('pyomo').addHandler(configure_loggers.fileLogger)
+        logging.getLogger('pyutilib').addHandler(configure_loggers.fileLogger)
+        # TBD: This seems dangerous in Windows, as the process will
+        # have multiple open file handles pointint to the same file.
+        pyutilib.misc.setup_redirect(options.runtime.logfile)
+
+configure_loggers.fileLogger = None
 
 @pyomo_api(namespace='pyomo.script')
 def run_command(command=None, parser=None, args=None, name='unknown', data=None, options=None):
@@ -922,22 +936,15 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
     #
     configure_loggers(options=options)
     #
-    # Setup I/O redirect to a file
-    #
-    logfile = options.runtime.logfile
-    if not logfile is None:
-        pyutilib.misc.setup_redirect(logfile)
-    #
     # Call the main Pyomo runner with profiling
     #
     TempfileManager.push()
     pcount = options.runtime.profile_count
     if pcount > 0:
         if not pstats_available:
-            if not logfile is None:
-                pyutilib.misc.reset_redirect()
             msg = "Cannot use the 'profile' option.  The Python 'pstats' "    \
                   'package cannot be imported!'
+            configure_loggers(shutdown=True)
             raise ValueError(msg)
         tfile = TempfileManager.create_tempfile(suffix=".profile")
         tmp = profile.runctx(
@@ -971,6 +978,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             # exit.  Otherwise, print an "Exiting..." message.
             #
             if __debug__ and (options.runtime.logging == 'debug' or options.runtime.catch_errors):
+                configure_loggers(shutdown=True)
                 sys.exit(0)
             print('Exiting %s: %s' % (name, str(err)))
             errorcode = err.code
@@ -981,8 +989,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             # pass the exception up the chain (to pyomo_excepthook)
             #
             if __debug__ and (options.runtime.logging == 'debug' or options.runtime.catch_errors):
-                if not logfile is None:
-                    pyutilib.misc.reset_redirect()
+                configure_loggers(shutdown=True)
                 TempfileManager.pop(remove=not options.runtime.keep_files)
                 raise
 
@@ -997,7 +1004,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             else:
                 action = "running"
 
-            msg = "Unexpected exception while %s %s:\n" % (action, model)
+            msg = "Unexpected exception while %s %s:\n    " % (action, model)
             #
             # This handles the case where the error is propagated by a KeyError.
             # KeyError likes to pass raw strings that don't handle newlines
@@ -1008,11 +1015,10 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             if type(err) == KeyError and errStr != "None":
                 errStr = str(err).replace(r"\n","\n")[1:-1]
 
-            logging.getLogger('pyomo.core').error(msg+errStr)
+            logger.error(msg+errStr)
             errorcode = 1
 
-    if not logfile is None:
-        pyutilib.misc.reset_redirect()
+    configure_loggers(shutdown=True)
 
     if options.runtime.disable_gc:
         gc.enable()
@@ -1038,5 +1044,3 @@ def get_config_values(filename):
         INPUT.close()
         return val
     raise IOError("ERROR: Unexpected configuration file '%s'" % filename)
-
-

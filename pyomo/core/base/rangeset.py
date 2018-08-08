@@ -14,12 +14,12 @@ import logging
 import math
 from six.moves import xrange
 
+from pyomo.common.timing import ConstructionTimer
+from pyomo.core.expr.numvalue import value
 from pyomo.core.base.sets import OrderedSimpleSet
-from pyomo.core.base.expr import _ExpressionBase
 from pyomo.core.base.set_types import Integers, Reals
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.numvalue import value
-from pyomo.core.base.component import register_component
+from pyomo.core.base.plugin import register_component
 
 logger = logging.getLogger('pyomo.core')
 
@@ -72,6 +72,7 @@ class RangeSet(OrderedSimpleSet):
         """
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed=True
         #
         # We call value() here for cases like Expressions, mutable
@@ -114,6 +115,7 @@ class RangeSet(OrderedSimpleSet):
         # Set the bounds information
         #
         self._bounds = (self._start_val, ub)
+        timer.report()
 
     def __len__(self):
         """

@@ -30,9 +30,9 @@ indexed1
         Key  : Lower : Body : Upper : Active
         None :   0.0 :    x :  +Inf :   True
     d : Size=3, Index=A, Active=True
-        Key : Lower : Body  : Upper : Active
-          1 :  -Inf :     x :   0.0 :   True
-          2 :  -Inf : 2 * x :   0.0 :   True
-          3 :  -Inf : 3 * x :   0.0 :   True
+        Key : Lower : Body : Upper : Active
+          1 :  -Inf :    x :   0.0 :   True
+          2 :  -Inf :  2*x :   0.0 :   True
+          3 :  -Inf :  3*x :   0.0 :   True
 
 8 Declarations: A B x y_index y o c d

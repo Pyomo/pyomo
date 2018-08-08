@@ -15,12 +15,13 @@ __all__ = ('Suffix',
 import logging
 import pprint
 
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.base.component import (ActiveComponent,
-                                       register_component)
+from pyomo.core.base.plugin import register_component
+from pyomo.core.base.component import ActiveComponent
 
 from six import iteritems, itervalues
-from pyomo.util.deprecation import deprecated
+from pyomo.common.deprecation import deprecated
 
 logger = logging.getLogger('pyomo.core')
 
@@ -217,10 +218,12 @@ class Suffix(ComponentMap, ActiveComponent):
         if self._constructed is True:
             return
 
+        timer = ConstructionTimer(self)
         self._constructed = True
 
         if self._rule is not None:
             self.update_values(self._rule(self._parent()))
+        timer.report()
 
     @deprecated('Suffix.exportEnabled is replaced with Suffix.export_enabled.')
     def exportEnabled(self):

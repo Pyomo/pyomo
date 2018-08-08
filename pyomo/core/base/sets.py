@@ -23,12 +23,16 @@ from weakref import ref as weakref_ref
 
 from pyutilib.misc import flatten_tuple as pyutilib_misc_flatten_tuple
 
-from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
-from pyomo.core.base.component import Component, register_component, ComponentData
-from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
+from pyomo.common.timing import ConstructionTimer
+from pyomo.core.base.misc import apply_indexed_rule, \
+    apply_parameterized_indexed_rule, sorted_robust
+from pyomo.core.base.plugin import register_component
+from pyomo.core.base.component import Component, ComponentData
+from pyomo.core.base.indexed_component import IndexedComponent, \
+    UnindexedComponent_set
 from pyomo.core.base.numvalue import native_numeric_types
 
-from six import itervalues, iteritems
+from six import itervalues, iteritems, string_types
 from six.moves import xrange
 
 logger = logging.getLogger('pyomo.core')
@@ -106,6 +110,22 @@ def simple_set_rule( fn ):
     return wrapper_function
 
 
+def _value_sorter(self, obj):
+    """Utility to sort the values of a Set.
+
+    This returns the values of the Set in a consistent order.  For
+    ordered Sets, simply return the ordered list.  For unordered Sets,
+    first try the standard sorted order, and if that fails (for example
+    with mixed-type Sets in Python3), use the sorted_robust utility to
+    generate sortable keys.
+
+    """
+    if self.ordered:
+        return obj.value
+    else:
+        return sorted_robust(obj)
+
+
 # A trivial class that we can use to test if an object is a "legitimate"
 # set (either SimpleSet, or a member of an IndexedSet)
 class _SetDataBase(ComponentData):
@@ -121,11 +141,12 @@ class _SetData(_SetDataBase):
         bounds      A tuple of bounds for set values: (lower, upper)
 
     Public Class Attributes:
-        value       The set values
+        value_list  The list of values
+        value       The set of values
         _bounds     The tuple of bound values
     """
 
-    __slots__ = ('value', '_bounds')
+    __slots__ = ('value_list', 'value', '_bounds')
 
     def __init__(self, owner, bounds):
         #
@@ -182,6 +203,7 @@ class _SetData(_SetDataBase):
         Reset the set data
         """
         self.value = set()
+        self.value_list = []
 
     def _add(self, val, verify=True):
         """
@@ -191,14 +213,27 @@ class _SetData(_SetDataBase):
         """
         if verify:
             self._component()._verify(val)
-        self.value.add(val)
+        if not val in self.value:
+            self.value.add(val)
+            self.value_list.append(val)
 
     def _discard(self, val):
         """
         Discard an element of this set.  This does not return an error
         if the element does not already exist.
+
+        NOTE: This operation is probably expensive, as it should require a walk through a list.  An
+        OrderedDict object might be more efficient, but it's notoriously slow in Python 2.x
+
+        NOTE: We could make this more efficient by mimicing the logic in the _OrderedSetData class.
+        But that would make the data() method expensive (since it is creating a set).  It's
+        not obvious which is the better choice.
         """
-        self.value.discard(val)
+        try:
+            self.value.remove(val)
+            self.value_list.remove(val)
+        except KeyError:
+            pass
 
     def __len__(self):
         """
@@ -210,7 +245,7 @@ class _SetData(_SetDataBase):
         """
         Return an iterator for the set.
         """
-        return self.value.__iter__()
+        return self.value_list.__iter__()
 
     def __contains__(self, val):
         """
@@ -652,9 +687,16 @@ class Set(IndexedComponent):
             tmp_dimen = 1
         if self.initialize is not None:
             #
-            # Convert initialization value to a list (which are copyable)
+            # Convert initialization value to a list (which are
+            # copyable).  There are subtlies here: dict should be left
+            # alone (as dict's are used for initializing indezed Sets),
+            # and lists should be left alone (for efficiency).  tuples,
+            # generators, and iterators like dict.keys() [in Python 3.x]
+            # should definitely be converted to lists.
             #
-            if type(self.initialize) in (tuple, types.GeneratorType):
+            if type(self.initialize) is tuple \
+                    or ( hasattr(self.initialize, "__iter__")
+                         and not hasattr(self.initialize, "__getitem__") ):
                 self.initialize = list(self.initialize)
             #
             # Try to guess dimen from the initialize list
@@ -1073,6 +1115,7 @@ class SimpleSetBase(Set):
                 logger.debug("Constructing SimpleSet, name="+self.name+", from data="+repr(values))
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed=True
 
         if self.initialize is None:                             # TODO: deprecate this functionality
@@ -1203,6 +1246,7 @@ class SimpleSetBase(Set):
                 self.add(val)
             if all_numeric:
                 self._bounds = (first,last)
+        timer.report()
 
 
 class SimpleSet(SimpleSetBase,_SetData):
@@ -1292,7 +1336,7 @@ class SetOf(SimpleSet):
         """
         Disabled construction method
         """
-        pass
+        ConstructionTimer(self).report()
 
     def __len__(self):
         """
@@ -1374,7 +1418,7 @@ class _SetOperator(SimpleSet):
 
     def construct(self, values=None):
         """ Disabled construction method """
-        pass
+        timer = ConstructionTimer(self).report()
 
     def __len__(self):
         """The number of items in the set."""
@@ -1617,7 +1661,7 @@ class IndexedSet(Set):
             #
             pass
 
-    def _default(self, index):
+    def _getitem_when_not_present(self, index):
         """
         Return the default component data value
 
@@ -1679,9 +1723,8 @@ class IndexedSet(Set):
              ("Bounds", self._bounds)],
             iteritems(self._data),
             ("Members",),
-            lambda k, v: [
-                #"Virtual" if not v.concrete or v.virtual else \
-                v.value if self.ordered else sorted(v) ] )
+            lambda k, v: [ _value_sorter(self, v) ]
+            )
 
     def construct(self, values=None):
         """
@@ -1691,6 +1734,7 @@ class IndexedSet(Set):
                 logger.debug("Constructing IndexedSet, name="+self.name+", from data="+repr(values))
         if self._constructed:
             return
+        timer = ConstructionTimer(self)
         self._constructed=True
         #
         if self.initialize is None:             # TODO: deprecate this functionality
@@ -1763,7 +1807,7 @@ class IndexedSet(Set):
                     for val in self.initialize[key]:
                         tmp._add(val)
                     self._data[key] = tmp
-
+        timer.report()
 
 
 register_component(SetOf, "Define a Pyomo Set component using an iterable data object.")
