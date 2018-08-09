@@ -85,17 +85,67 @@ def _get_indexed_component_data_name(component, index):
             del component._data[index]
     return ans
 
+
+class _slice_generator(object):
+    """Utility (iterator) for generating the elements of one slice
+
+    Iterate through the component index and yield the component data
+    values that match the slice template.
+    """
+    def __init__(self, component, fixed, sliced, ellipsis):
+        self.component = component
+        self.fixed = fixed
+        self.sliced = sliced
+        self.ellipsis = ellipsis
+
+        self.explicit_index_count = len(fixed) + len(sliced)
+        self.index_iter = component.__iter__()
+
+    def next(self):
+        return self.__next__()
+
+    def __next__(self):
+        while 1:
+            # Note: running off the end of the underlying iterator will
+            # generate a StopIteration exception that will propagate up
+            # and end this iterator.
+            index = advance_iterator(self.index_iter)
+
+            # We want a tuple of indices, so convert scalars to tuples
+            _idx = index if type(index) is tuple else (index,)
+
+            # Verify the number of indices: if there is a wildcard
+            # slice, then there must be enough indices to at least match
+            # the fixed indices.  Without the wildcard slice, the number
+            # of indices must match exactly.
+            if self.ellipsis is not None:
+                if self.explicit_index_count > len(_idx):
+                    continue
+            elif len(_idx) != self.explicit_index_count:
+                continue
+
+            valid = True
+            for key, val in iteritems(self.fixed):
+                if not val == _idx[key]:
+                    valid = False
+                    break
+            if valid:
+                # Note: it is important to use __getitem__, as the
+                # derived class may implement a non-standard storage
+                # mechanism (e.g., Param)
+                return self.component[index]
+
 class _IndexedComponent_slice_iter(object):
     def __init__(self, component_slice):
-        # _iter_stack holds either an iterator (if this level in the
-        # hierarchy is a slice) or None (if this level is either a
-        # SimpleComponent or is explicitly indexed).
+        # _iter_stack holds a list of elements X where X is either an
+        # _slice_generator iterator (if this level in the hierarchy is a
+        # slice) or None (if this level is either a SimpleComponent,
+        # attribute, method, or is explicitly indexed).
         self._slice = component_slice
         assert( self._slice._call_stack[0][0]
                 == _IndexedComponent_slice.slice_info )
         self._iter_stack = [None]*len(self._slice._call_stack)
-        self._iter_stack[0] = self._slice_generator(
-            *self._slice._call_stack[0][1] )
+        self._iter_stack[0] = _slice_generator(*self._slice._call_stack[0][1])
 
     def next(self):
         """__next__() iterator for Py2 compatibility"""
@@ -155,7 +205,7 @@ class _IndexedComponent_slice_iter(object):
                         # so we don't need the overhead of the
                         # _IndexedComponent_slice object)
                         assert len(_comp._call_stack) == 1
-                        self._iter_stack[idx] = self._slice_generator(
+                        self._iter_stack[idx] = _slice_generator(
                             *_comp._call_stack[0][1])
                         try:
                             _comp = advance_iterator(self._iter_stack[idx])
@@ -191,44 +241,6 @@ class _IndexedComponent_slice_iter(object):
             if idx == len(self._slice._call_stack):
                 # We have a concrete object at the end of the chain. Return it
                 return _comp
-
-    def _slice_generator(self, component, fixed, sliced, ellipsis):
-        """Utility method (generator) for generating the elements of one slice
-
-        Iterate through the component index and yield the component data
-        values that match the slice template.
-        """
-        # Handle the Ellipsis that can match any number of indices
-        explicit_index_count = len(fixed) + len(sliced)
-        if ellipsis is not None:
-            explicit_index_count = -1 - explicit_index_count
-
-        max_fixed = 0 if not fixed else max(fixed)
-
-        for index in component.__iter__():
-            # We want a tuple of indices, so convert scalars to tuples
-            _idx = index if type(index) is tuple else (index,)
-
-            # Veryfy the number of indices: if there is a wildcard
-            # slice, then there must be enough indices to at least match
-            # the fixed indices.  Without the wildcard slice, the number
-            # of indices must match exactly.
-            if explicit_index_count < 0:
-                if -explicit_index_count - 1 > len(_idx):
-                    continue
-            elif len(_idx) != explicit_index_count:
-                continue
-
-            flag = True
-            for key, val in iteritems(fixed):
-                if not val == _idx[key]:
-                    flag = False
-                    break
-            if flag:
-                # Note: it is important to use __getitem__, as the
-                # derived class may implement a non-standard storage
-                # mechanism (e.g., Param)
-                yield component[index]
 
 
 class _IndexedComponent_slice(object):
