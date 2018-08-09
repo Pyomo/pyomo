@@ -14,7 +14,7 @@ from pyomo.opt.results import ProblemSense
 from six import StringIO
 from pyomo.common.log import LoggingIntercept
 import timeit
-from contextlib import ContextDecorator, contextmanager
+from contextlib import contextmanager
 
 
 class _DoNothing(object):
@@ -438,18 +438,13 @@ def copy_and_fix_mip_values_to_nlp(var_list, val_list, config):
                 var.fix(val)
 
 
-class time_code(ContextDecorator):
-    def __init__(self, timing_data_obj, code_block_name):
-        self._time_obj = timing_data_obj
-        self._block_name = code_block_name
-
-    def __enter__(self):
-        self._start_time = timeit.default_timer()
-
-    def __exit__(self, *exc_details):
-        elapsed_time = timeit.default_timer() - self._start_time
-        prev_time = self._time_obj.get(self._block_name, 0)
-        self._time_obj[self._block_name] = prev_time + elapsed_time
+@contextmanager
+def time_code(timing_data_obj, code_block_name):
+    start_time = timeit.default_timer()
+    yield
+    elapsed_time = timeit.default_timer() - start_time
+    prev_time = timing_data_obj.get(code_block_name, 0)
+    timing_data_obj[code_block_name] = prev_time + elapsed_time
 
 
 @contextmanager
