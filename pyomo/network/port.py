@@ -24,7 +24,7 @@ from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import \
     IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
-from pyomo.core.base.numvalue import NumericValue, value
+from pyomo.core.base.numvalue import as_numeric, value
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.base.label import alphanum_label_from_name
 from pyomo.core.base.plugin import register_component, \
@@ -144,6 +144,13 @@ class _PortData(ComponentData):
                             options include Port.Extensive. Customs are allowed
             **kwds      Keyword arguments that will be passed to rule
         """
+        if var is not None:
+            try:
+                # indexed components are ok, but as_numeric will error on them
+                # make sure they have this attribute
+                var.is_indexed()
+            except AttributeError:
+                var = as_numeric(var)
         if name is None:
             name = var.local_name
         if name in self.vars and self.vars[name] is not None:
@@ -171,6 +178,15 @@ class _PortData(ComponentData):
         self.vars.pop(name)
         self._rules.pop(name)
 
+    def rule_for(self, name):
+        return self._rules[name][0]
+
+    def is_equality(self, name):
+        return self.rule_for(name) is Port.Equality
+
+    def is_extensive(self, name):
+        return self.rule_for(name) is Port.Extensive
+
     def fix(self):
         """
         Fix all variables in the port at their current values.
@@ -179,13 +195,27 @@ class _PortData(ComponentData):
         for v in self.iter_vars(expr_vars=True, fixed=False):
             v.fix()
 
-    def iter_vars(self, expr_vars=False, fixed=True, with_names=False):
+    def unfix(self):
+        """
+        Unfix all variables in the port.
+        For expressions, unfix every variable in the expression.
+        """
+        for v in self.iter_vars(expr_vars=True, fixed=True):
+            v.unfix()
+
+    free = unfix
+
+    def iter_vars(self, expr_vars=False, fixed=None, names=False):
         """
         Iterate through every member of the port, going through
         the indices of indexed members.
 
-        If expr_vars, call identify_variables on expression type members.
-        If not fixed, exclude fixed variables/expressions.
+        Arguments:
+            expr_vars       If True, call identify_variables on expression
+                                type members
+            fixed           Only include variables/expressions with this
+                                type of fixed
+            names           If True, yield (name, var/expr) pairs
         """
         for name, mem in iteritems(self.vars):
             if not mem.is_indexed():
@@ -193,39 +223,42 @@ class _PortData(ComponentData):
             else:
                 itr = itervalues(mem)
             for v in itr:
-                if not fixed and v.is_fixed():
+                if fixed is not None and v.is_fixed() != fixed:
                     continue
-                if v.is_expression_type() and expr_vars:
-                    for var in identify_variables(v, include_fixed=fixed):
-                        if with_names:
+                if expr_vars and v.is_expression_type():
+                    for var in identify_variables(v):
+                        if fixed is not None and var.is_fixed() != fixed:
+                            continue
+                        if names:
                             yield name, var
                         else:
                             yield var
                 else:
-                    if with_names:
+                    if names:
                         yield name, v
                     else:
                         yield v
 
     def set_split_fraction(self, arc, val, fix=True):
         """
-        Set the split fraction value for an arc when using Port.Extensive
+        Set the split fraction value to be used for an arc during
+        arc expansion when using Port.Extensive.
         """
         if arc not in self.dests():
             raise ValueError("Port '%s' is not a source of Arc '%s', cannot "
                              "set split fraction" % (self.name, arc.name))
-        self._splitfracs[arc] = dict(val=val, fix=fix)
+        self._splitfracs[arc] = (val, fix)
 
     def get_split_fraction(self, arc):
         """
         Returns a tuple (val, fix) for the split fraction of
-        this arc if it exists, and otherwise None
+        this arc if it exists, and otherwise None.
         """
-        d = self._splitfracs.get(arc, None)
-        if d is None:
+        res = self._splitfracs.get(arc, None)
+        if res is None:
             return None
         else:
-            return d["val"], d["fix"]
+            return res
 
 
 class Port(IndexedComponent):
@@ -289,10 +322,12 @@ class Port(IndexedComponent):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):  #pragma:nocover
             logger.debug( "Constructing Port, name=%s, from data=%s"
                           % (self.name, data) )
+
         if self._constructed:
             return
+
         timer = ConstructionTimer(self)
-        self._constructed=True
+        self._constructed = True
 
         # Construct _PortData objects for all index values
         if self.is_indexed():
@@ -300,6 +335,13 @@ class Port(IndexedComponent):
         else:
             self._data[None] = self
             self._initialize_members([None])
+
+        # get rid of these references
+        self._rule = None
+        self._initialize = None
+        self._implicit = None
+        self._extends = None # especially important as this is another port
+
         timer.report()
 
     def _initialize_members(self, initSet):
@@ -309,7 +351,7 @@ class Port(IndexedComponent):
                 tmp.add(None, key)
             if self._extends:
                 for key, val in iteritems(self._extends.vars):
-                    tmp.add(val, key, self._extends._rules[key][0])
+                    tmp.add(val, key, self._extends.rule_for(key))
             if self._initialize:
                 self._add_from_container(tmp, self._initialize)
             if self._rule:
@@ -388,7 +430,8 @@ class Port(IndexedComponent):
             Port._add_equality_constraint(arc, name, index_set)
 
     @staticmethod
-    def Extensive(port, name, index_set, write_var_sum=True):
+    def Extensive(port, name, index_set, include_splitfrac=False,
+            write_var_sum=True):
         """
         Arc Expansion procedure for extensive variable properties.
 
@@ -407,19 +450,15 @@ class Port(IndexedComponent):
         the states the sum of the split fractions equals 1.
 
         Then, this procedure will go through every source of the port and
-        create a new variable (or use the same one as above), and then
-        write a constraint that states the sum of all the incoming new
-        variables must equal the parent variable.
+        create a new variable (unless it already exists), and then write
+        a constraint that states the sum of all the incoming new variables
+        must equal the parent variable.
 
         Model simplifications:
 
             If the port has a 1-to-1 connection on either side, it will not
                 create the new variables and instead write a simple
                 equality constraint for that side.
-
-            If the port has arcs on both sides but at least on of the sides
-                is 1-to-1, it will not write the bal constraint, since this
-                would be equivalent to the insum or outsum constraints.
 
             If the outlet side is not 1-to-1 but there is only one outlet,
                 it will not create a splitfrac variable or write the split
@@ -428,13 +467,15 @@ class Port(IndexedComponent):
 
             If the port only contains a single Extensive variable, the
                 splitfrac variables and the splitting constraints will
-                be skipped since they will be unnecessary.
+                be skipped since they will be unnecessary. However, they
+                can be still be included by passing include_splitfrac=True.
 
             Note: If split fractions are skipped, the write_var_sum=False
                 option is not allowed.
         """
         port_parent = port.parent_block()
-        out_vars = Port._Split(port, name, index_set, write_var_sum)
+        out_vars = Port._Split(port, name, index_set,
+            include_splitfrac=include_splitfrac, write_var_sum=write_var_sum)
         in_vars = Port._Combine(port, name, index_set)
 
     @staticmethod
@@ -475,7 +516,8 @@ class Port(IndexedComponent):
         return in_vars
 
     @staticmethod
-    def _Split(port, name, index_set, write_var_sum=True):
+    def _Split(port, name, index_set, include_splitfrac=False,
+            write_var_sum=True):
         port_parent = port.parent_block()
         var = port.vars[name]
         out_vars = []
@@ -487,7 +529,16 @@ class Port(IndexedComponent):
 
         if len(dests) == 1:
             # No need for splitting on one outlet.
+            # Make sure they do not try to fix splitfrac not at 1.
+            splitfracspec = port.get_split_fraction(dests[0])
+            if splitfracspec is not None:
+                if splitfracspec[0] != 1 and splitfracspec[1] == True:
+                    raise ValueError(
+                        "Cannot fix splitfrac not at 1 for port '%s' with a "
+                        "single dest '%s'" % (port.name, dests[0].name))
+
             no_splitfrac = True
+
             if len(dests[0].destination.sources(active=True)) == 1:
                 # This is a 1-to-1 connection, no need for evar, just equality.
                 arc = dests[0]
@@ -512,26 +563,39 @@ class Port(IndexedComponent):
             # so first check whether or not we need it.
 
             if eblock.component("splitfrac") is None:
-                num_data_objs = 0
-                for k, v in iteritems(port.vars):
-                    if port._rules[k][0] is Port.Extensive:
-                        if v.is_indexed():
-                            num_data_objs += len(v)
-                        else:
-                            num_data_objs += 1
+                if not include_splitfrac:
+                    num_data_objs = 0
+                    for k, v in iteritems(port.vars):
+                        if port.is_extensive(k):
+                            if v.is_indexed():
+                                num_data_objs += len(v)
+                            else:
+                                num_data_objs += 1
+                            if num_data_objs > 1:
+                                break
 
-                if num_data_objs == 1:
-                    # Do not make splitfrac, do not make split constraints.
-                    no_splitfrac = True
-                    continue
+                    if num_data_objs <= 1:
+                        # Do not make splitfrac, do not make split constraints.
+                        # Make sure they didn't specify splitfracs.
+                        # This inner loop will only run once.
+                        for arc in dests:
+                            if port.get_split_fraction(arc) is not None:
+                                raise ValueError(
+                                    "Cannot specify splitfracs for port '%s' "
+                                    "(found arc '%s') because this port only "
+                                    "has one variable. To have control over "
+                                    "splitfracs, please pass the "
+                                    " include_splitfrac=True argument." %
+                                    (port.name, arc.name))
+                        no_splitfrac = True
+                        continue
 
-                else:
-                    eblock.splitfrac = Var()
-                    splitfracspec = port.get_split_fraction(arc)
-                    if splitfracspec is not None:
-                        eblock.splitfrac = splitfracspec[0]
-                        if splitfracspec[1]:
-                            eblock.splitfrac.fix()
+                eblock.splitfrac = Var()
+                splitfracspec = port.get_split_fraction(arc)
+                if splitfracspec is not None:
+                    eblock.splitfrac = splitfracspec[0]
+                    if splitfracspec[1]:
+                        eblock.splitfrac.fix()
 
             # Create constraint for this member using splitfrac.
             cname = "%s_split" % name
