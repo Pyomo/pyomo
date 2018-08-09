@@ -138,7 +138,7 @@ class ExpandArcs(Transformation):
                 _len = (
                     -1 if not v.is_indexed()
                     else len(v))
-                ref[k] = (v, _len, p, p._rules[k][0])
+                ref[k] = (v, _len, p, p.rule_for(k))
 
         if not ref:
             logger.warning(
@@ -189,7 +189,7 @@ class ExpandArcs(Transformation):
                         "Port mismatch: Port variable '%s' has "
                         "mismatched indices on ports '%s' and '%s'" %
                         (k, v[2].name, p.name))
-                if p._rules[k][0] is not v[3]:
+                if p.rule_for(k) is not v[3]:
                     raise ValueError(
                         "Port mismatch: Port variable '%s' has "
                         "different rules on ports '%s' and '%s'" %
