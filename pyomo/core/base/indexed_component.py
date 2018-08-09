@@ -709,7 +709,7 @@ You can silence this warning by one of three ways:
             "Index '%s' is not valid for indexed component '%s'"
             % ( idx, self.name, ))
 
-    def _processUnhashableIndex(self, idx, _exception=None):
+    def _processUnhashableIndex(self, idx):
         """Process a call to __getitem__ with unhashable elements
 
         There are three basic ways to get here:
@@ -829,8 +829,6 @@ value() function.""" % ( self.name, i ))
                 return fixed[0]
             else:
                 return tuple( fixed[i] for i in range(len(idx)) )
-        elif _exception is not None:
-            raise
         else:
             raise DeveloperError(
                 "Unknown problem encountered when trying to retrieve "
