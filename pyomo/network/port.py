@@ -145,7 +145,12 @@ class _PortData(ComponentData):
             **kwds      Keyword arguments that will be passed to rule
         """
         if var is not None:
-            var = as_numeric(var)
+            try:
+                # indexed components are ok, but as_numeric will error on them
+                # make sure they have this attribute
+                var.is_indexed()
+            except AttributeError:
+                var = as_numeric(var)
         if name is None:
             name = var.local_name
         if name in self.vars and self.vars[name] is not None:
