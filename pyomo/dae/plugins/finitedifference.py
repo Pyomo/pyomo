@@ -168,7 +168,7 @@ class Finite_Difference_Transformation(Transformation):
                 "set, you must declare a new transformation object")
 
         if len(self._nfe) == 0 and tmpds is None:
-            # Same discretization on all differentialsets
+            # Same discretization on all ContinuousSets
             self._nfe[None] = tmpnfe
             currentds = None
         else:
@@ -202,7 +202,7 @@ class Finite_Difference_Transformation(Transformation):
 
                 self._nfe[ds.name] = len(ds) - 1
                 self._fe[ds.name] = sorted(ds)
-                # Adding discretization information to the differentialset
+                # Adding discretization information to the ContinuousSet
                 # object itself so that it can be accessed outside of the
                 # discretization object
                 disc_info = ds.get_discretization_info()
