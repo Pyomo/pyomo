@@ -17,8 +17,8 @@ from os.path import abspath, dirname
 
 import pyutilib.th as unittest
 
-from pyomo.environ import *
-from pyomo.dae import *
+from pyomo.environ import ConcreteModel, AbstractModel, Set
+from pyomo.dae import ContinuousSet
 from pyomo.common.log import LoggingIntercept
 from six import StringIO
 
