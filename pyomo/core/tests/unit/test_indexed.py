@@ -142,7 +142,7 @@ class TestIndexedComponent(unittest.TestCase):
 class TestComponentSlices(unittest.TestCase):
     def setUp(self):
         def _c(b, i, j):
-            b.x = Var(b.model().K)
+            b.x = Var(b.model().K, initialize=lambda m,k: i*100+j*10+k)
 
         def _b(b, i, j):
             _c(b,i,j)
@@ -155,6 +155,7 @@ class TestComponentSlices(unittest.TestCase):
         m.I = RangeSet(1,3)
         m.J = RangeSet(4,6)
         m.K = RangeSet(7,9)
+        m.x = Var(m.K, initialize=lambda m,k: k)
         m.b = Block(m.I, m.J, rule=_b)
         m.bb = Block(m.I, m.J, m.K, rule=_bb)
 
@@ -319,6 +320,39 @@ class TestComponentSlices(unittest.TestCase):
         ans = self.m.component('b')[1,:].component('c')[:,5].x[:].is_fixed()
         self.assertIsInstance(ans, list)
         self.assertEqual( ans, [False]*(9*3) )
+
+    def test_setattr_slices(self):
+        init_sum = sum(self.m.b[:,:].c[:,:].x[:].value)
+        init_vals = list(self.m.b[1,:].c[:,4].x[:].value)
+        _ans = self.m.b[1,:].c[:,4].x[:].value = 0
+        new_sum = sum(self.m.b[:,:].c[:,:].x[:].value)
+        new_vals = list(self.m.b[1,:].c[:,4].x[:].value)
+        self.assertEqual(len(init_vals), len(new_vals))
+        self.assertNotEqual(init_vals, new_vals)
+        self.assertEqual(sum(new_vals), 0)
+        self.assertEqual(init_sum-sum(init_vals), new_sum)
+
+    def test_setitem_slices(self):
+        init_sum = sum(self.m.b[:,:].c[:,:].x[:].value)
+        init_vals = list(self.m.b[1,:].c[:,4].x[:].value)
+        self.m.b[1,:].c[:,4].x[:] = 0
+        new_sum = sum(self.m.b[:,:].c[:,:].x[:].value)
+        new_vals = list(self.m.b[1,:].c[:,4].x[:].value)
+        self.assertEqual(len(init_vals), len(new_vals))
+        self.assertNotEqual(init_vals, new_vals)
+        self.assertEqual(sum(new_vals), 0)
+        self.assertEqual(init_sum-sum(init_vals), new_sum)
+
+    def test_setitem_component(self):
+        init_sum = sum(self.m.x[:].value)
+        init_vals = list(self.m.x[:].value)
+        self.m.x[:] = 0
+        new_sum = sum(self.m.x[:].value)
+        new_vals = list(self.m.x[:].value)
+        self.assertEqual(len(init_vals), len(new_vals))
+        self.assertNotEqual(init_vals, new_vals)
+        self.assertEqual(sum(new_vals), 0)
+        self.assertEqual(init_sum-sum(init_vals), new_sum)
 
     def test_empty_slices(self):
         _slicer = self.m.b[1,:].c[:,1].x
