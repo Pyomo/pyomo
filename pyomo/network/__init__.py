@@ -13,5 +13,6 @@ PluginGlobals.add_env("pyomo")
 
 from pyomo.network.arc import *
 from pyomo.network.port import *
+from pyomo.network.decomposition import *
 
 PluginGlobals.pop_env()

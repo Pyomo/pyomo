@@ -334,7 +334,9 @@ class TestPort(unittest.TestCase):
         m.p1.add(m.x, rule=Port.Extensive)
         m.p2 = Port(extends=m.p1)
         self.assertIs(m.p2.x, m.x)
-        self.assertIs(m.p2._rules['x'][0], Port.Extensive)
+        self.assertIs(m.p2.rule_for('x'), Port.Extensive)
+        self.assertTrue(m.p2.is_extensive('x'))
+        self.assertFalse(m.p2.is_equality('x'))
 
     def test_add_from_containers(self):
         m = ConcreteModel()
@@ -349,15 +351,106 @@ class TestPort(unittest.TestCase):
         self.assertIs(m.p1.x, m.x)
         self.assertIs(m.p1.y, m.y)
         self.assertIs(m.p2.x, m.x)
-        self.assertIs(m.p2._rules['x'][0], Port.Equality)
+        self.assertTrue(m.p2.is_equality('x'))
         self.assertIs(m.p2.y, m.y)
-        self.assertIs(m.p2._rules['y'][0], Port.Extensive)
+        self.assertTrue(m.p2.is_extensive('y'))
         self.assertIs(m.p3.this, m.x)
         self.assertIs(m.p3.that, m.y)
         self.assertIs(m.p4.this, m.x)
-        self.assertIs(m.p4._rules['this'][0], Port.Equality)
+        self.assertTrue(m.p4.is_equality('this'))
         self.assertIs(m.p4.that, m.y)
-        self.assertIs(m.p4._rules['that'][0], Port.Extensive)
+        self.assertTrue(m.p4.is_extensive('that'))
+
+    def test_fix_unfix(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.port = Port()
+        m.port.add(m.x)
+        m.x.value = 10
+        m.port.fix()
+        self.assertTrue(m.x.is_fixed())
+        m.port.unfix()
+        self.assertFalse(m.x.is_fixed())
+
+    def test_iter_vars(self):
+        def contains(item, container):
+            # use this instead of "in" to avoid "==" operation
+            return any(item is mem for mem in container)
+
+        m = ConcreteModel()
+        m.s = RangeSet(5)
+        m.x = Var()
+        m.y = Var()
+        m.z = Var(m.s)
+        m.a = Var()
+        m.b = Var()
+        m.c = Var()
+        expr = m.a + m.b * m.c
+        p = m.p = Port()
+
+        v = list(p.iter_vars())
+        self.assertEqual(len(v), 0)
+
+        p.add(m.x)
+        v = list(p.iter_vars())
+        self.assertEqual(len(v), 1)
+
+        p.add(m.y)
+        v = list(p.iter_vars())
+        self.assertEqual(len(v), 2)
+
+        p.add(m.z)
+        v = list(p.iter_vars())
+        self.assertEqual(len(v), 7)
+        self.assertTrue(contains(m.x, v))
+        self.assertTrue(contains(m.z[3], v))
+
+        p.add(expr, "expr")
+        v = list(p.iter_vars())
+        self.assertEqual(len(v), 8)
+        self.assertTrue(contains(m.x, v))
+        self.assertTrue(contains(m.z[3], v))
+        self.assertTrue(contains(expr, v))
+
+        m.x.fix(0)
+        v = list(p.iter_vars())
+        self.assertEqual(len(v), 8)
+
+        v = list(p.iter_vars(fixed=False))
+        self.assertEqual(len(v), 7)
+        self.assertTrue(contains(m.z[3], v))
+        self.assertTrue(contains(expr, v))
+
+        v = list(p.iter_vars(fixed=True))
+        self.assertEqual(len(v), 1)
+        self.assertIn(m.x, v)
+
+        v = list(p.iter_vars(expr_vars=True))
+        self.assertEqual(len(v), 10)
+        self.assertFalse(contains(expr, v))
+        self.assertTrue(contains(m.a, v))
+        self.assertTrue(contains(m.b, v))
+
+        m.a.fix(0)
+        v = list(p.iter_vars(expr_vars=True, fixed=False))
+        self.assertEqual(len(v), 8)
+
+        m.b.fix(0)
+        m.c.fix(0)
+        v = list(p.iter_vars(expr_vars=True, fixed=False))
+        self.assertEqual(len(v), 6)
+
+        v = list(p.iter_vars(fixed=False))
+        self.assertEqual(len(v), 6)
+        self.assertFalse(contains(expr, v))
+
+        v = list(p.iter_vars(expr_vars=True, names=True))
+        self.assertEqual(len(v), 10)
+        self.assertEqual(len(v[0]), 2)
+        for t in v:
+            if t[0] == 'x':
+                self.assertIs(t[1], m.x)
+                break
 
     def test_pprint(self):
         pipe = ConcreteModel()
