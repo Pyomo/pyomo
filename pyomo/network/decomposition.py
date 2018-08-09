@@ -530,16 +530,19 @@ class SequentialDecomposition(object):
             evars = None
             if port.is_extensive(name):
                 # collect evars if there are any
-                if obj.parent_component().is_indexed():
-                    i = obj.index()
-                    evars = [arc.expanded_block.component(name)[i]
-                        for arc in sources]
-                else:
-                    evars = [arc.expanded_block.component(name)
-                        for arc in sources]
+                evars = [arc.expanded_block.component(name) for arc in sources]
                 if evars[0] is None:
                     # no evars, so this arc is 1-to-1
                     evars = None
+                else:
+                    try:
+                        # index into them if necessary, now that
+                        # we know they are not None
+                        i = obj.index()
+                        for j in range(len(evars)):
+                            evars[j] = evars[j][i]
+                    except AttributeError:
+                        pass
             if evars is not None:
                 for evar in evars:
                     if evar.is_fixed():
