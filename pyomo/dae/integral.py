@@ -14,32 +14,9 @@ from pyomo.dae.diffvar import DAE_Error
 from pyomo.core.base.expression import (Expression,
                                         _GeneralExpressionData,
                                         SimpleExpression)
+from pyomo.dae.misc import create_access_function, create_partial_expression
 
 __all__ = ('Integral', )
-
-
-def create_access_function(var):
-    """
-    This method returns a function that returns a component by calling
-    it rather than indexing it
-    """
-    def _fun(*args):
-        return var[args]
-    return _fun
-
-
-def create_partial_expression(scheme, expr, ind, loc):
-    """
-    This method returns a function which applies a discretization scheme
-    to an expression along a particular indexind set. This is admittedly a
-    convoluted looking implementation. The idea is that we only apply a
-    discretization scheme to one indexing set at a time but we also want
-    the function to be expanded over any other indexing sets.
-    """
-    def _fun(*args):
-        return scheme(lambda i:
-                      expr(*(args[0:loc] + (i,) + args[loc + 1:])), ind)
-    return lambda *args: _fun(*args)(args[loc])
 
 
 class Integral(Expression):
