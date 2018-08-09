@@ -28,7 +28,7 @@ gams_available = SolverFactory('gams').available(exception_flag=False)
 @unittest.skipIf(not import_available, "numpy or networkx not available")
 class TestSequentialDecomposition(unittest.TestCase):
 
-    def is_converged(self, arc, tol=1.0E-5):
+    def is_converged(self, arc, rel=False, tol=1.0E-5):
         eblock = arc.expanded_block
         for name in arc.src.vars:
             if arc.src.vars[name].is_indexed():
@@ -45,7 +45,10 @@ class TestSequentialDecomposition(unittest.TestCase):
                         sval = value(arc.src.vars[name][i])
                     if dval is None:
                         dval = value(arc.dest.vars[name][i])
-                    if abs(sval - dval) > tol:
+                    diff = abs(sval - dval)
+                    if rel:
+                        diff = diff / sval
+                    if diff > tol:
                         return False
             else:
                 sval = dval = None
@@ -60,7 +63,10 @@ class TestSequentialDecomposition(unittest.TestCase):
                     sval = value(arc.src.vars[name])
                 if dval is None:
                     dval = value(arc.dest.vars[name])
-                if abs(sval - dval) > tol:
+                diff = abs(sval - dval)
+                if rel:
+                    diff = diff / sval
+                if diff > tol:
                     return False
 
         return True
@@ -382,13 +388,15 @@ class TestSequentialDecomposition(unittest.TestCase):
 
         return m
 
-    def simple_recycle_run(self, tear_method):
+    def simple_recycle_run(self, tear_method, tol_type):
+        rel = tol_type == "rel"
         m = self.simple_recycle_model()
 
         def function(unit):
             unit.initialize()
 
-        seq = SequentialDecomposition(tear_method=tear_method)
+        seq = SequentialDecomposition(tear_method=tear_method,
+            tol_type=tol_type)
         tset = [m.stream_splitter_to_mixer]
         seq.set_tear_set(tset)
         splitter_to_mixer_guess = {
@@ -403,7 +411,7 @@ class TestSequentialDecomposition(unittest.TestCase):
         m.mixer.expr_var_in_side_2 = 0
         seq.run(m, function)
 
-        self.check_recycle_model(m)
+        self.check_recycle_model(m, rel=rel)
 
     def extensive_recycle_model(self):
         def build_in_out(b):
@@ -565,13 +573,15 @@ class TestSequentialDecomposition(unittest.TestCase):
 
         return m
 
-    def extensive_recycle_run(self, tear_method):
+    def extensive_recycle_run(self, tear_method, tol_type):
+        rel = tol_type == "rel"
         m = self.extensive_recycle_model()
 
         def function(unit):
             unit.initialize()
 
-        seq = SequentialDecomposition(tear_method=tear_method)
+        seq = SequentialDecomposition(tear_method=tear_method,
+            tol_type=tol_type)
         tset = [m.stream_splitter_to_mixer]
         seq.set_tear_set(tset)
         splitter_to_mixer_guess = {
@@ -588,16 +598,23 @@ class TestSequentialDecomposition(unittest.TestCase):
         seq.set_guesses_for(m.mixer.inlet, splitter_to_mixer_guess)
         seq.run(m, function)
 
-        self.check_recycle_model(m)
+        self.check_recycle_model(m, rel=rel)
 
-        self.assertAlmostEqual(
-            value(m.prod.inlet.mass),
-            value(m.feed.outlet.mass),
-            places=5)
+        if rel:
+            s = value(m.prod.inlet.mass)
+            d = value(m.feed.outlet.mass)
+            self.assertAlmostEqual(
+                (s - d) / s, 0,
+                places=5)
+        else:
+            self.assertAlmostEqual(
+                value(m.prod.inlet.mass),
+                value(m.feed.outlet.mass),
+                places=5)
 
-    def check_recycle_model(self, m):
+    def check_recycle_model(self, m, rel=False):
         for arc in m.component_data_objects(Arc):
-            self.assertTrue(self.is_converged(arc))
+            self.assertTrue(self.is_converged(arc, rel=rel))
 
         for port in m.component_data_objects(Port):
             self.assertTrue(self.intensive_equal(
@@ -605,44 +622,89 @@ class TestSequentialDecomposition(unittest.TestCase):
                 temperature=value(m.feed.outlet.temperature),
                 pressure=value(m.feed.outlet.pressure)))
 
-        # in == out
-        for i in m.feed.outlet.flow:
+        if rel:
+            # in == out
+            for i in m.feed.outlet.flow:
+                s = value(m.prod.inlet.flow[i])
+                d = value(m.feed.outlet.flow[i])
+                self.assertAlmostEqual(
+                    (s - d) / s, 0,
+                    places=5)
+            for i in m.feed.outlet.expr_idx:
+                s = value(m.prod.inlet.expr_idx[i])
+                d = value(m.feed.outlet.expr_idx[i])
+                self.assertAlmostEqual(
+                    (s - d) / s, 0,
+                    places=5)
+            s = value(m.prod.inlet.expr)
+            d = value(m.feed.outlet.expr)
             self.assertAlmostEqual(
-                value(m.prod.inlet.flow[i]),
-                value(m.feed.outlet.flow[i]),
+                (s - d) / s, 0,
                 places=5)
-        for i in m.feed.outlet.expr_idx:
+
+            # check the expressions work, should be negative in prod
+            for i in m.feed.outlet.expr_idx:
+                s = value(-m.prod.actual_var_idx_in[i])
+                d = value(m.feed.expr_var_idx_out[i])
+                self.assertAlmostEqual(
+                    (s - d) / s, 0,
+                    places=5)
+            s = value(-m.prod.actual_var_in)
+            d = value(m.feed.expr_var_out)
             self.assertAlmostEqual(
-                value(m.prod.inlet.expr_idx[i]),
-                value(m.feed.outlet.expr_idx[i]),
+                (s - d) / s, 0,
                 places=5)
-        self.assertAlmostEqual(
-            value(m.prod.inlet.expr),
-            value(m.feed.outlet.expr),
-            places=5)
-
-        # check the expressions work, should be negative in prod
-        for i in m.feed.outlet.expr_idx:
+        else:
+            # in == out
+            for i in m.feed.outlet.flow:
+                self.assertAlmostEqual(
+                    value(m.prod.inlet.flow[i]),
+                    value(m.feed.outlet.flow[i]),
+                    places=5)
+            for i in m.feed.outlet.expr_idx:
+                self.assertAlmostEqual(
+                    value(m.prod.inlet.expr_idx[i]),
+                    value(m.feed.outlet.expr_idx[i]),
+                    places=5)
             self.assertAlmostEqual(
-                value(-m.prod.actual_var_idx_in[i]),
-                value(m.feed.expr_var_idx_out[i]),
+                value(m.prod.inlet.expr),
+                value(m.feed.outlet.expr),
                 places=5)
-        self.assertAlmostEqual(
-            value(-m.prod.actual_var_in),
-            value(m.feed.expr_var_out),
-            places=5)
 
-    def test_simple_recycle_direct(self):
-        self.simple_recycle_run("Direct")
+            # check the expressions work, should be negative in prod
+            for i in m.feed.outlet.expr_idx:
+                self.assertAlmostEqual(
+                    value(-m.prod.actual_var_idx_in[i]),
+                    value(m.feed.expr_var_idx_out[i]),
+                    places=5)
+            self.assertAlmostEqual(
+                value(-m.prod.actual_var_in),
+                value(m.feed.expr_var_out),
+                places=5)
 
-    def test_simple_recycle_wegstein(self):
-        self.simple_recycle_run("Wegstein")
+    def test_simple_recycle_direct_abs(self):
+        self.simple_recycle_run(tear_method="Direct", tol_type="abs")
 
-    def test_extensive_recycle_direct(self):
-        self.extensive_recycle_run("Direct")
+    def test_simple_recycle_wegstein_abs(self):
+        self.simple_recycle_run(tear_method="Wegstein", tol_type="abs")
 
-    def test_extensive_recycle_wegstein(self):
-        self.extensive_recycle_run("Wegstein")
+    def test_simple_recycle_direct_rel(self):
+        self.simple_recycle_run(tear_method="Direct", tol_type="rel")
+
+    def test_simple_recycle_wegstein_rel(self):
+        self.simple_recycle_run(tear_method="Wegstein", tol_type="rel")
+
+    def test_extensive_recycle_direct_abs(self):
+        self.extensive_recycle_run(tear_method="Direct", tol_type="abs")
+
+    def test_extensive_recycle_wegstein_abs(self):
+        self.extensive_recycle_run(tear_method="Wegstein", tol_type="abs")
+
+    def test_extensive_recycle_direct_rel(self):
+        self.extensive_recycle_run(tear_method="Direct", tol_type="rel")
+
+    def test_extensive_recycle_wegstein_rel(self):
+        self.extensive_recycle_run(tear_method="Wegstein", tol_type="rel")
 
     @unittest.skipIf(not gams_available, "GAMS solver not available")
     def test_tear_selection(self):
