@@ -157,7 +157,7 @@ class _PortData(ComponentData):
                 Function implementing the desired expansion procedure
                 for this member. `Port.Equality` by default, other
                 options include `Port.Extensive`. Customs are allowed.
-            **kwds
+            kwds
                 Keyword arguments that will be passed to rule
         """
         if var is not None:
