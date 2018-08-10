@@ -456,21 +456,21 @@ class _IndexedComponent_slice(object):
 
     def iterkeys(self):
         _iter = self.__iter__()
-        return list(_iter.get_last_index() for _ in _iter)
+        return (_iter.get_last_index() for _ in _iter)
 
     def values(self):
         return list(self.itervalues())
 
     def itervalues(self):
         _iter = self.__iter__()
-        return list(_iter.get_last_index() for _ in _iter)
+        return (_iter.get_last_index() for _ in _iter)
 
     def items(self):
         return list(self.iteritems())
 
     def iteritems(self):
         _iter = self.__iter__()
-        return list((_iter.get_last_index(), _) for _ in _iter)
+        return ((_iter.get_last_index(), _) for _ in _iter)
 
 if sys.version_info[0] >= 3:
     _IndexedComponent_slice.keys = _IndexedComponent_slice.iterkeys
