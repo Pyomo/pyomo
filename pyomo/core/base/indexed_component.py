@@ -99,10 +99,11 @@ class _slice_generator(object):
         self.ellipsis = ellipsis
 
         self.explicit_index_count = len(fixed) + len(sliced)
-        self.index_iter = component.__iter__()
+        self.component_iter = component.__iter__()
         self.last_index = None
 
     def next(self):
+        """__next__() iterator for Py2 compatibility"""
         return self.__next__()
 
     def __next__(self):
@@ -117,8 +118,8 @@ class _slice_generator(object):
 
             # Verify the number of indices: if there is a wildcard
             # slice, then there must be enough indices to at least match
-            # the fixed indices.  Without the wildcard slice, the number
-            # of indices must match exactly.
+            # the fixed indices.  Without the wildcard slice (ellipsis),
+            # the number of indices must match exactly.
             if self.ellipsis is not None:
                 if self.explicit_index_count > len(_idx):
                     continue
@@ -151,6 +152,10 @@ class _IndexedComponent_slice_iter(object):
                 == _IndexedComponent_slice.slice_info )
         self._iter_stack = [None]*len(self._slice._call_stack)
         self._iter_stack[0] = _slice_generator(*self._slice._call_stack[0][1])
+
+    def __iter__(self):
+        """This class implements the iterator API"""
+        return self
 
     def next(self):
         """__next__() iterator for Py2 compatibility"""
@@ -325,7 +330,7 @@ class _IndexedComponent_slice(object):
         set_attr('attribute_errors_generate_exceptions', True)
 
     def __iter__(self):
-        """This class implements the iterator API"""
+        """Return an iterator over this slice"""
         return _IndexedComponent_slice_iter(self)
 
     def __getattr__(self, name):
