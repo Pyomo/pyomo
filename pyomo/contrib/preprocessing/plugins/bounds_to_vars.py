@@ -3,7 +3,9 @@
 from __future__ import division
 
 import textwrap
+from math import fabs
 
+from pyomo.common.config import ConfigBlock, ConfigValue, NonNegativeFloat
 from pyomo.common.plugin import alias
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.numvalue import value
@@ -17,12 +19,25 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
     Looks for constraints of form k*v + c1 <= c2. Changes bound on v to match
     (c2 - c1)/k if it results in a tighter bound. Also does the same thing for
     lower bounds.
+
     """
 
     alias('contrib.constraints_to_var_bounds',
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
-    def _apply_to(self, model):
+    CONFIG = ConfigBlock("ConstraintToVarBounds")
+    CONFIG.declare("tolerance", ConfigValue(
+        default=1E-13, domain=NonNegativeFloat,
+        description="tolerance on bound equality (LB == UB)"
+    ))
+    CONFIG.declare("detect_fixed", ConfigValue(
+        default=True, domain=bool,
+        description="If True, fix variable when LB == UB."
+    ))
+
+    def _apply_to(self, model, **kwds):
+        config = self.CONFIG(kwds)
+
         for constr in model.component_data_objects(
                 ctype=Constraint, active=True, descend_into=True):
             # Check if the constraint is k * x + c1 <= c2 or c2 <= k * x + c1
@@ -59,17 +74,25 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
                     var.setub(min(var_ub, new_ub))
 
             if var is not None and var.value is not None:
-                # Sometimes deactivating the constraint will remove a
-                # variable from all active constraints, so that it won't be
-                # updated during the optimization. Therefore, we need to
-                # shift the value of var as necessary in order to keep it
-                # within its implied bounds, as the constraint we are
-                # deactivating is not an invalid constraint, but rather we
-                # are moving its implied bound directly onto the variable.
-                if var.has_lb():
-                    var_value = max(var.value, var.lb)
-                if var.has_ub():
-                    var_value = min(var.value, var.ub)
-                var.set_value(var_value)
+                _adjust_var_value_if_not_feasible(var)
+
+            if (config.detect_fixed and var.has_lb() and var.has_ub() and
+                    fabs(value(var.lb) - value(var.ub)) <= config.tolerance):
+                var.fix(var.lb)
 
             constr.deactivate()
+
+
+def _adjust_var_value_if_not_feasible(var):
+    # Sometimes deactivating the constraint will remove a
+    # variable from all active constraints, so that it won't be
+    # updated during the optimization. Therefore, we need to
+    # shift the value of var as necessary in order to keep it
+    # within its implied bounds, as the constraint we are
+    # deactivating is not an invalid constraint, but rather we
+    # are moving its implied bound directly onto the variable.
+    if var.has_lb():
+        var_value = max(var.value, var.lb)
+    if var.has_ub():
+        var_value = min(var.value, var.ub)
+    var.set_value(var_value)
