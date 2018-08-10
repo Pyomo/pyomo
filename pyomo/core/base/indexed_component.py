@@ -806,7 +806,7 @@ You can silence this warning by one of three ways:
             # indexing set is a complex set operation)!
             return idx
 
-        if idx is _IndexedComponent_slice:
+        if idx.__class__ is _IndexedComponent_slice:
             return idx
 
         if normalize_index.flatten:
