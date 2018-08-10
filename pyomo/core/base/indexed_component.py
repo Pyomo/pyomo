@@ -440,6 +440,17 @@ class _IndexedComponent_slice(object):
             # recursion in python2.6
             return list( i for i in self )
 
+    def duplicate(self):
+        ans = _IndexedComponent_slice(None,None,None,None)
+        ans.call_errors_generate_exceptions \
+            = self.call_errors_generate_exceptions
+        ans.key_errors_generate_exceptions \
+            = self.key_errors_generate_exceptions
+        ans.attribute_errors_generate_exceptions \
+            = self.attribute_errors_generate_exceptions
+        ans._call_stack = list(self._call_stack)
+        return ans
+
     def keys(self):
         return list(self.iterkeys())
 
