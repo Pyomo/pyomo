@@ -17,7 +17,7 @@ from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.common import DeveloperError
 
-from six import PY3, itervalues, iteritems, advance_iterator
+from six import PY3, iterkeys, itervalues, iteritems, advance_iterator
 import sys
 
 UnindexedComponent_set = set([None])
@@ -110,7 +110,7 @@ class _slice_generator(object):
             # Note: running off the end of the underlying iterator will
             # generate a StopIteration exception that will propagate up
             # and end this iterator.
-            index = advance_iterator(self.index_iter)
+            index = advance_iterator(self.component_iter)
 
             # We want a tuple of indices, so convert scalars to tuples
             _idx = index if type(index) is tuple else (index,)
@@ -140,12 +140,13 @@ class _slice_generator(object):
                 return self.component[index]
 
 class _IndexedComponent_slice_iter(object):
-    def __init__(self, component_slice):
+    def __init__(self, component_slice, advance_iter=advance_iterator):
         # _iter_stack holds a list of elements X where X is either an
         # _slice_generator iterator (if this level in the hierarchy is a
         # slice) or None (if this level is either a SimpleComponent,
         # attribute, method, or is explicitly indexed).
         self._slice = component_slice
+        self.advance_iter = advance_iter
         assert( self._slice._call_stack[0][0]
                 == _IndexedComponent_slice.slice_info )
         self._iter_stack = [None]*len(self._slice._call_stack)
@@ -166,7 +167,7 @@ class _IndexedComponent_slice_iter(object):
                 idx -= 1
             # Get the next element in the deepest active slice
             try:
-                _comp = advance_iterator(self._iter_stack[idx])
+                _comp = self.advance_iter(self._iter_stack[idx])
                 idx += 1
             except StopIteration:
                 if not idx:
@@ -212,7 +213,7 @@ class _IndexedComponent_slice_iter(object):
                         self._iter_stack[idx] = _slice_generator(
                             *_comp._call_stack[0][1])
                         try:
-                            _comp = advance_iterator(self._iter_stack[idx])
+                            _comp = self.advance_iter(self._iter_stack[idx])
                         except StopIteration:
                             # We got a slicer, but the slicer doesn't
                             # matching anything.  We should break here,
