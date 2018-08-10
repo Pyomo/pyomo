@@ -43,20 +43,20 @@ concrete Pyomo model:
 
 .. doctest::
 
-   >>> from pyomo.environ import *
-   >>> from pyomo.network import *
-   >>> m = ConcreteModel()
-   >>> m.x = Var()
-   >>> m.y = Var(['a', 'b']) # can be indexed
-   >>> m.z = Var()
-   >>> m.e = 5 * m.z # you can add Pyomo expressions too
-   >>> m.w = Var()
+    >>> from pyomo.environ import *
+    >>> from pyomo.network import *
+    >>> m = ConcreteModel()
+    >>> m.x = Var()
+    >>> m.y = Var(['a', 'b']) # can be indexed
+    >>> m.z = Var()
+    >>> m.e = 5 * m.z # you can add Pyomo expressions too
+    >>> m.w = Var()
 
-   >>> m.p = Port()
-   >>> m.add(m.x) # implicitly name the port member "x"
-   >>> m.add(m.y, "foo") # name the member "foo"
-   >>> m.add(m.e, rule=Port.Extensive) # specify a rule
-   >>> m.add(m.w, rule=Port.Extensive, write_var_sum=False) # keyword arg
+    >>> m.p = Port()
+    >>> m.add(m.x) # implicitly name the port member "x"
+    >>> m.add(m.y, "foo") # name the member "foo"
+    >>> m.add(m.e, rule=Port.Extensive) # specify a rule
+    >>> m.add(m.w, rule=Port.Extensive, write_var_sum=False) # keyword arg
 
 Arc
 ***
@@ -75,16 +75,71 @@ concrete Pyomo model:
 
 .. doctest::
 
-   >>> from pyomo.environ import *
-   >>> from pyomo.network import *
-   >>> m = ConcreteModel()
-   >>> m.x = Var()
-   >>> m.y = Var(['a', 'b'])
-   >>> m.u = Var()
-   >>> m.v = Var(['a', 'b']) # indexes need to match
+    >>> from pyomo.environ import *
+    >>> from pyomo.network import *
+    >>> m = ConcreteModel()
+    >>> m.x = Var()
+    >>> m.y = Var(['a', 'b'])
+    >>> m.u = Var()
+    >>> m.v = Var(['a', 'b']) # indexes need to match
 
-   >>> m.p = Port(initialize=[m.x, m.y])
-   >>> m.q = Port(initialize={"x": m.u, "y": m.v}) # names need to match
-   >>> m.a = Arc(source=m.p, destination=m.q) # directed
-   >>> m.b = Arc(ports=(m.p, m.q)) # undirected
-   >>> m.c = Arc(ports=(m.p, m.q), directed=True) # directed
+    >>> m.p = Port(initialize=[m.x, m.y])
+    >>> m.q = Port(initialize={"x": m.u, "y": m.v}) # names need to match
+    >>> m.a = Arc(source=m.p, destination=m.q) # directed
+    >>> m.b = Arc(ports=(m.p, m.q)) # undirected
+    >>> m.c = Arc(ports=(m.p, m.q), directed=True) # directed
+
+Arc Expansion Transformation
+----------------------------
+
+The examples above show how to declare and instantiate a
+:py:class:`Port <pyomo.network.Port>` and an
+:py:class:`Arc <pyomo.network.Arc>`. These two components form the basis of
+the higher level representation of a connected network with sets of related
+variable quantities. Once a network model has been constructed, Pyomo Network
+implements a transformation that will expand all (active) arcs on the model
+and automatically generate the appropriate constraints. The constraints
+created for each port member will be indexed by the same indexing set as
+the port member itself.
+
+During transformation, a new block is created on the model for each arc
+(located on the arc's parent block), which serves to contain all of the auto
+generated constraints for that arc. At the end of transformation, a reference
+is created on the arc that points to this new block, available via the arc
+property `arc.expanded_block`.
+
+The constraints produced by this transformation depend on the rule assigned
+for each port member and can be different between members on the same port.
+For example, you can have two different members on a port where one member's
+rule is :py:func:`Port.Equality <pyomo.network.Port.Equality>` and the other
+member's rule is :py:func:`Port.Extensive <pyomo.network.Port.Extensive>`.
+
+:py:func:`Port.Equality <pyomo.network.Port.Equality>` is the default rule
+for port members. This rule simply generates equality constraints on the
+expanded block between the source port's member and the destination port's
+member. Another implemented expansion method is
+:py:func:`Port.Extensive <pyomo.network.Port.Extensive>`, which essentially
+represents implied splitting and mixing of certain variable quantities.
+Users can refer to the documentation of the static method itself for more
+details on how this implicit splitting and mixing is implemented.
+Additionally, should users desire, the expansion API supports custom rules
+that can be implemented to generate whatever is needed for special cases.
+
+The following code demonstrates how to call the transformation to expand
+the arcs on a model:
+
+.. doctest::
+
+    >>> from pyomo.environ import *
+    >>> from pyomo.network import *
+    >>> m = ConcreteModel()
+    >>> m.x = Var()
+    >>> m.y = Var(['a', 'b'])
+    >>> m.u = Var()
+    >>> m.v = Var(['a', 'b'])
+
+    >>> m.p = Port(initialize=[m.x, (m.y, Port.Extensive)]) # rules must match
+    >>> m.q = Port(initialize={"x": m.u, "y": (m.v, Port.Extensive)})
+    >>> m.a = Arc(source=m.p, destination=m.q)
+
+    >>> TransformationFactory("network.expand_arcs").apply_to(m)
