@@ -4,11 +4,12 @@ from math import fabs
 
 from six import iteritems
 
+from pyomo.common.config import ConfigBlock, ConfigValue, NonNegativeFloat
+from pyomo.common.plugin import alias
 from pyomo.core.base.var import Var
 from pyomo.core.expr.numvalue import value
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.common.plugin import alias
 
 
 class FixedVarDetector(IsomorphicTransformation):
@@ -20,25 +21,24 @@ class FixedVarDetector(IsomorphicTransformation):
 
     """
 
-    alias(
-        'contrib.detect_fixed_vars',
-        doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
+    alias('contrib.detect_fixed_vars',
+          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
+
+    CONFIG = ConfigBlock("FixedVarDetector")
+    CONFIG.declare("tmp", ConfigValue(
+        default=False, domain=bool,
+        description="True to store the set of transformed variables and "
+        "their old values so that they can be restored."
+    ))
+    CONFIG.declare("tolerance", ConfigValue(
+        default=1E-13, domain=NonNegativeFloat,
+        description="tolerance on bound equality (LB == UB)"
+    ))
 
     def _apply_to(self, instance, **kwargs):
-        """Apply the transformation.
+        config = self.CONFIG(kwargs)
 
-        Args:
-            instance: Pyomo model object to transform.
-
-        Kwargs:
-            tmp: True to store the set of transformed variables and their old
-                values so that they can be restored.
-            tol: tolerance on bound equality (LB == UB)
-        """
-        tmp = kwargs.pop('tmp', False)
-        tol = kwargs.pop('tolerance', 1E-13)
-
-        if tmp:
+        if config.tmp:
             instance._xfrm_detect_fixed_vars_old_values = ComponentMap()
 
         for var in instance.component_data_objects(
@@ -47,8 +47,8 @@ class FixedVarDetector(IsomorphicTransformation):
                 # if the variable is already fixed, or if it is missing a
                 # bound, we skip it.
                 continue
-            if fabs(value(var.lb - var.ub)) <= tol:
-                if tmp:
+            if fabs(value(var.lb) - value(var.ub)) <= config.tolerance:
+                if config.tmp:
                     instance._xfrm_detect_fixed_vars_old_values[var] = \
                         var.value
                 var.fix(var.lb)
