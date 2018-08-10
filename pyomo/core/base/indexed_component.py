@@ -720,13 +720,14 @@ You can silence this warning by one of three ways:
             obj = _NotFound
             index = self._processUnhashableIndex(index)
 
-        if obj is not _NotFound:
-            return self._setitem_impl(index, obj, val)
-        elif index.__class__ is not _IndexedComponent_slice:
+        if obj is _NotFound:
             # If we didn't find the index in the data, then we need to
             # validate it against the underlying set (as long as
             # _processUnhashableIndex didn't return a slicer)
-            index = self._validate_index(index)
+            if index.__class__ is not _IndexedComponent_slice:
+                index = self._validate_index(index)
+        else:
+            return self._setitem_impl(index, obj, val)
         #
         # Call the _setitem_impl helper to populate the _data
         # dictionary and set the value
@@ -738,19 +739,14 @@ You can silence this warning by one of three ways:
         if index.__class__ is _IndexedComponent_slice:
             # support "m.x[:,1] = 5" through a simple recursive call.
             #
+            # Assert that this slice ws just generated
+            assert len(index._call_stack) == 1
+            #
             # Note that the slicer will only slice over *existing*
             # entries, but they may not be in the data dictionary.  Make
             # a copy of the slicer items *before* we start iterating
             # over it in case the setter changes the _data dictionary.
-            idx_iter = index.__iter__()
-            entries = []
-            while 1:
-                try:
-                    obj = advance_iterator(idx_iter)
-                except StopIteration:
-                    break
-                entries.append((idx_iter.get_last_index(), obj))
-            for idx,obj in list(entries):
+            for idx, obj in list(iteritems(index)):
                 self._setitem_impl(idx, obj, val)
         else:
             obj = self._data.get(index, _NotFound)
