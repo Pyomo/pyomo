@@ -324,12 +324,16 @@ class TestComponentSlices(unittest.TestCase):
     def test_setattr_slices(self):
         init_sum = sum(self.m.b[:,:].c[:,:].x[:].value)
         init_vals = list(self.m.b[1,:].c[:,4].x[:].value)
-        _ans = self.m.b[1,:].c[:,4].x[:].value = 0
+        self.m.b[1,:].c[:,4].x[:].value = 0
         new_sum = sum(self.m.b[:,:].c[:,:].x[:].value)
         new_vals = list(self.m.b[1,:].c[:,4].x[:].value)
+        # nothing got deleted
         self.assertEqual(len(init_vals), len(new_vals))
+        # the lists values were changes
         self.assertNotEqual(init_vals, new_vals)
+        # the set values are all now zero
         self.assertEqual(sum(new_vals), 0)
+        # nothing outside the set values changed
         self.assertEqual(init_sum-sum(init_vals), new_sum)
 
     def test_setitem_slices(self):
@@ -338,9 +342,13 @@ class TestComponentSlices(unittest.TestCase):
         self.m.b[1,:].c[:,4].x[:] = 0
         new_sum = sum(self.m.b[:,:].c[:,:].x[:].value)
         new_vals = list(self.m.b[1,:].c[:,4].x[:].value)
+        # nothing got deleted
         self.assertEqual(len(init_vals), len(new_vals))
+        # the lists values were changes
         self.assertNotEqual(init_vals, new_vals)
+        # the set values are all now zero
         self.assertEqual(sum(new_vals), 0)
+        # nothing outside the set values changed
         self.assertEqual(init_sum-sum(init_vals), new_sum)
 
     def test_setitem_component(self):
@@ -349,10 +357,37 @@ class TestComponentSlices(unittest.TestCase):
         self.m.x[:] = 0
         new_sum = sum(self.m.x[:].value)
         new_vals = list(self.m.x[:].value)
+        # nothing got deleted
         self.assertEqual(len(init_vals), len(new_vals))
+        # the lists values were changes
         self.assertNotEqual(init_vals, new_vals)
+        # the set values are all now zero
         self.assertEqual(sum(new_vals), 0)
+        # nothing outside the set values changed
         self.assertEqual(init_sum-sum(init_vals), new_sum)
+
+    def test_delitem_slices(self):
+        init_all = list(self.m.b[:,:].c[:,:].x[:])
+        init_tgt = list(self.m.b[1,:].c[:,4].x[:])
+        del self.m.b[1,:].c[:,4].x[:]
+        new_all = list(self.m.b[:,:].c[:,:].x[:])
+        new_tgt = list(self.m.b[1,:].c[:,4].x[:])
+
+        self.assertEqual(len(init_tgt), 3*3*3)
+        self.assertEqual(len(init_all), (3*3)*(3*3)*3)
+        self.assertEqual(len(new_tgt), 0)
+        self.assertEqual(len(new_all), (3*3)*(3*3)*3 - 3*3*3)
+
+    def test_delitem_component(self):
+        init_all = list(self.m.b[:,:])
+        init_tgt = list(self.m.b[1,:])
+        del self.m.b[1,:]
+        new_all = list(self.m.b[:,:])
+        new_tgt = list(self.m.b[1,:])
+        self.assertEqual(len(init_tgt), 3)
+        self.assertEqual(len(init_all), 3*3)
+        self.assertEqual(len(new_tgt), 0)
+        self.assertEqual(len(new_all), 2*3)
 
     def test_empty_slices(self):
         _slicer = self.m.b[1,:].c[:,1].x
