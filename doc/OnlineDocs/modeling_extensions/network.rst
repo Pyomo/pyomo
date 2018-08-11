@@ -53,10 +53,10 @@ concrete Pyomo model:
     >>> m.w = Var()
 
     >>> m.p = Port()
-    >>> m.add(m.x) # implicitly name the port member "x"
-    >>> m.add(m.y, "foo") # name the member "foo"
-    >>> m.add(m.e, rule=Port.Extensive) # specify a rule
-    >>> m.add(m.w, rule=Port.Extensive, write_var_sum=False) # keyword arg
+    >>> m.p.add(m.x) # implicitly name the port member "x"
+    >>> m.p.add(m.y, "foo") # name the member "foo"
+    >>> m.p.add(m.e, rule=Port.Extensive) # specify a rule
+    >>> m.p.add(m.w, rule=Port.Extensive, write_var_sum=False) # keyword arg
 
 Arc
 ***
@@ -298,15 +298,29 @@ class:
 
     >>> from pyomo.environ import *
     >>> from pyomo.network import *
-    >>> m = ... # insert building some network model
+    >>> m = ConcreteModel()
+    >>> m.unit1 = Block()
+    >>> m.unit1.x = Var()
+    >>> m.unit1.y = Var(['a', 'b'])
+    >>> m.unit2 = Block()
+    >>> m.unit2.x = Var()
+    >>> m.unit2.y = Var(['a', 'b'])
+    >>> m.unit1.port = Port(initialize=[m.unit1.x, (m.unit1.y, Port.Extensive)])
+    >>> m.unit2.port = Port(initialize=[m.unit2.x, (m.unit2.y, Port.Extensive)])
+    >>> m.a = Arc(source=m.unit1.port, destination=m.unit2.port)
     >>> TransformationFactory("network.expand_arcs").apply_to(m)
 
+    >>> m.unit1.x.fix(10)
+    >>> m.unit1.y['a'].fix(15)
+    >>> m.unit1.y['b'].fix(20)
+
     >>> seq = SequentialDecomposition(tol=1.0E-3) # options can go to init
-    >>> seq.options.tear_solver = "gurobi" # options can be set after too
-    >>> seq.set_tear_set([...])
-    >>> seq.set_guesses_for(m.unit.inlet, {...})
+    >>> seq.options.select_tear_method = "heuristic" # or set them like so
+    >>> # seq.set_tear_set([...]) # assign a custom tear set
+    >>> # seq.set_guesses_for(m.unit.inlet, {...}) # choose guesses
     >>> def initialize(b):
-    ...     b.initialize()
+    ...     # b.initialize()
+    ...     pass
     ...
     >>> seq.run(m, initialize)
 
