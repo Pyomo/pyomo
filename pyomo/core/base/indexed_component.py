@@ -364,10 +364,11 @@ class _IndexedComponent_slice(object):
     def __setattr__(self, name, value):
         """Override the "." operator implementing attribute assignment
 
-        Creating a slice of a component returns a
-        _IndexedComponent_slice object.  A subsequent attempts to assign
-        to a slice attribute hits this method.
+        This supports notation similar to:
 
+            del model.b[:].c.x = 5
+        
+        and immediately evaluates the slice.
         """
         # Don't overload any pre-existing attributes
         if name in self.__dict__:
@@ -393,9 +394,11 @@ class _IndexedComponent_slice(object):
     def __setitem__(self, idx, val):
         """Override the "[]" operator for setting item values.
 
-        Creating a slice of a component returns a
-        _IndexedComponent_slice object.  Subsequent attempts to query
-        items hit this method.
+        This supports notation similar to:
+
+            del model.b[:].c.x[1,:] = 5
+        
+        and immediately evaluates the slice.
         """
         self._call_stack.append( (
             _IndexedComponent_slice.set_item, idx, val ) )
@@ -406,9 +409,11 @@ class _IndexedComponent_slice(object):
     def __delitem__(self, idx):
         """Override the "del []" operator for deleting item values.
 
-        Creating a slice of a component returns a
-        _IndexedComponent_slice object.  Subsequent attempts to query
-        items hit this method.
+        This supports notation similar to:
+
+            del model.b[:].c.x[1,:]
+        
+        and immediately evaluates the slice.
         """
         self._call_stack.append( (
             _IndexedComponent_slice.del_item, idx ) )
