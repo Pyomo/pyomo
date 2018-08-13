@@ -273,9 +273,17 @@ class _IndexedComponent_slice_iter(object):
                     self._iter_stack[idx] = None
                 elif _call[0] == _IndexedComponent_slice.del_item:
                     assert idx == len(self._slice._call_stack) - 1
+                    # The problem here is that _call[1] may be a slice.
+                    # If it is, but we are in something like a
+                    # _ReferenceDict, where the caller actually wants a
+                    # specific index from the slice, we cannot simply
+                    # delete the slice from the component.  Instead, we
+                    # will look for the component (generating a slice if
+                    # appropriate).  If it returns a slice, we can use
+                    # our current advance_iter to walk it and delete the
+                    # appropriate keys
                     try:
-                        del _comp[_call[1]]
-                        _comp = None
+                        _tmp = _comp.__getitem__( _call[1] )
                     except KeyError:
                         # Since we are slicing, we may only be
                         # interested in things that match.  We will
@@ -285,6 +293,26 @@ class _IndexedComponent_slice_iter(object):
                         if self._slice.key_errors_generate_exceptions:
                             raise
                         break
+                    if _tmp.__class__ is _IndexedComponent_slice:
+                        # Extract the _slice_generator and evaluate it.
+                        assert len(_tmp._call_stack) == 1
+                        _iter = _IndexedComponent_slice_iter(
+                            _tmp, self.advance_iter)
+                        _idx_to_del = []
+                        # Two passes, so that we don't edit the _data
+                        # dicts while we are iterating over them
+                        for _ in _iter:
+                            _idx_to_del.append(_iter.get_last_index())
+                        for _idx in _idx_to_del:
+                            del _comp[_idx]
+                        self._iter_stack[idx] = None
+                        idx -= 1
+                        _comp = None
+                        break
+                    else:
+                        # No try-catch, since we know this key is valid
+                        del _comp[_call[1]]
+                        _comp = None
                     self._iter_stack[idx] = None
                 else:
                     raise RuntimeError(
@@ -1125,12 +1153,12 @@ class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
 class _fill_in_known_wildcards(object):
     def __init__(self, wildcard_values):
         self.key = wildcard_values
-        self.last_slice = None
+        self.known_slices = set()
 
     def __call__(self, _slice):
-        if self.last_slice is _slice:
+        if _slice in self.known_slices:
             raise StopIteration()
-        self.last_slice = _slice
+        self.known_slices.add(_slice)
 
         if _slice.ellipsis is not None:
             raise RuntimeError(
@@ -1140,6 +1168,7 @@ class _fill_in_known_wildcards(object):
             _slice.fixed[i] if i in _slice.fixed else self.key.pop(0)
             for i in range(_slice.explicit_index_count))
         if idx in _slice.component:
+            _slice.last_index = idx
             return _slice.component[idx]
         else:
             raise KeyError("KeyError: %s" % (idx,))
@@ -1150,7 +1179,10 @@ class _ReferenceDict(collections.MutableMapping):
         self._slice = component_slice
 
     def __getitem__(self, key):
-        return self._find_element(self._slice, key)
+        try:
+            return self._execute(self._slice, key)
+        except StopIteration:
+            raise KeyError("KeyError: %s" % (key,))
 
     def __setitem__(self, key, val):
         tmp = self._slice.duplicate()
@@ -1173,7 +1205,10 @@ class _ReferenceDict(collections.MutableMapping):
         else:
             raise DeveloperError(
                 "Unexpected slice _call_stack operation: %s" % op)
-        return self._find_element(tmp, key)
+        try:
+            self._execute(tmp, key)
+        except StopIteration:
+            pass
 
     def __delitem__(self, key):
         tmp = self._slice.duplicate()
@@ -1193,7 +1228,10 @@ class _ReferenceDict(collections.MutableMapping):
         else:
             raise DeveloperError(
                 "Unexpected slice _call_stack operation: %s" % op)
-        return self._find_element(tmp, key)
+        try:
+            self._execute(tmp, key)
+        except StopIteration:
+            pass
 
     def __iter__(self):
         return self._slice.wildcard_keys()
@@ -1201,11 +1239,8 @@ class _ReferenceDict(collections.MutableMapping):
     def __len__(self):
         return sum(1 for i in self._slice)
 
-    def _find_element(self, _slice, key):
+    def _execute(self, _slice, key):
         key = list(pyutilib.misc.flatten_tuple(key))
         _iter = _IndexedComponent_slice_iter(
             _slice, _fill_in_known_wildcards(key))
-        try:
-            return advance_iterator(_iter)
-        except StopIteration:
-            raise KeyError("KeyError: %s" % (key,))
+        return advance_iterator(_iter)
