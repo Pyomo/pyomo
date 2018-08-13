@@ -197,7 +197,6 @@ class _IndexedComponent_slice_iter(object):
                         if self._slice.attribute_errors_generate_exceptions:
                             raise
                         break
-                    self._iter_stack[idx] = None
                 elif _call[0] == _IndexedComponent_slice.get_item:
                     try:
                         _comp = _comp.__getitem__( _call[1] )
@@ -242,7 +241,6 @@ class _IndexedComponent_slice_iter(object):
                         if self._slice.call_errors_generate_exceptions:
                             raise
                         break
-                    self._iter_stack[idx] = None
                 elif _call[0] == _IndexedComponent_slice.set_attribute:
                     assert idx == len(self._slice._call_stack) - 1
                     try:
@@ -255,12 +253,10 @@ class _IndexedComponent_slice_iter(object):
                         if self._slice.attribute_errors_generate_exceptions:
                             raise
                         break
-                    self._iter_stack[idx] = None
                 elif _call[0] == _IndexedComponent_slice.set_item:
                     assert idx == len(self._slice._call_stack) - 1
                     try:
                         _comp[_call[1]] = _call[2]
-                        _comp = None
                     except KeyError:
                         # Since we are slicing, we may only be
                         # interested in things that match.  We will
@@ -270,7 +266,6 @@ class _IndexedComponent_slice_iter(object):
                         if self._slice.key_errors_generate_exceptions:
                             raise
                         break
-                    self._iter_stack[idx] = None
                 elif _call[0] == _IndexedComponent_slice.del_item:
                     assert idx == len(self._slice._call_stack) - 1
                     # The problem here is that _call[1] may be a slice.
@@ -305,15 +300,10 @@ class _IndexedComponent_slice_iter(object):
                             _idx_to_del.append(_iter.get_last_index())
                         for _idx in _idx_to_del:
                             del _comp[_idx]
-                        self._iter_stack[idx] = None
-                        idx -= 1
-                        _comp = None
                         break
                     else:
                         # No try-catch, since we know this key is valid
                         del _comp[_call[1]]
-                        _comp = None
-                    self._iter_stack[idx] = None
                 else:
                     raise RuntimeError(
                         "Unexpected entry in _IndexedComponent_slice "
