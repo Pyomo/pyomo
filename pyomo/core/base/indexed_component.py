@@ -255,8 +255,17 @@ class _IndexedComponent_slice_iter(object):
                         break
                 elif _call[0] == _IndexedComponent_slice.set_item:
                     assert idx == len(self._slice._call_stack) - 1
+                    # The problem here is that _call[1] may be a slice.
+                    # If it is, but we are in something like a
+                    # _ReferenceDict, where the caller actually wants a
+                    # specific index from the slice, we cannot simply
+                    # set every element of the slice.  Instead, we will
+                    # look for the component (generating a slice if
+                    # appropriate).  If it returns a slice, we can use
+                    # our current advance_iter to walk it and set only
+                    # the appropriate keys
                     try:
-                        _comp[_call[1]] = _call[2]
+                        _tmp = _comp.__getitem__( _call[1] )
                     except KeyError:
                         # Since we are slicing, we may only be
                         # interested in things that match.  We will
@@ -266,6 +275,17 @@ class _IndexedComponent_slice_iter(object):
                         if self._slice.key_errors_generate_exceptions:
                             raise
                         break
+                    if _tmp.__class__ is _IndexedComponent_slice:
+                        # Extract the _slice_generator and evaluate it.
+                        assert len(_tmp._call_stack) == 1
+                        _iter = _IndexedComponent_slice_iter(
+                            _tmp, self.advance_iter)
+                        for _ in _iter:
+                            _comp[_iter.get_last_index()] = _call[2]
+                        break
+                    else:
+                        # No try-catch, since we know this key is valid
+                        _comp[_call[1]] = _call[2]
                 elif _call[0] == _IndexedComponent_slice.del_item:
                     assert idx == len(self._slice._call_stack) - 1
                     # The problem here is that _call[1] may be a slice.
