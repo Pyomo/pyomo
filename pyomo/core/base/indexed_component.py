@@ -17,7 +17,7 @@ from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.common import DeveloperError
 
-from six import PY3, iterkeys, itervalues, iteritems, advance_iterator
+from six import PY3, itervalues, iteritems, advance_iterator
 import sys
 
 UnindexedComponent_set = set([None])
@@ -451,26 +451,18 @@ class _IndexedComponent_slice(object):
         ans._call_stack = list(self._call_stack)
         return ans
 
-    def keys(self):
-        return list(self.iterkeys())
+    def wildcard_keys(self):
+        _iter = self.__iter__()
+        return (_iter.get_last_index_wildcards() for _ in _iter)
 
-    def iterkeys(self):
+    def expanded_keys(self):
         _iter = self.__iter__()
         return (_iter.get_last_index() for _ in _iter)
 
-    def values(self):
-        return list(self.itervalues())
-
-    def itervalues(self):
-        _iter = self.__iter__()
-        return (_iter.get_last_index() for _ in _iter)
-
-    def items(self):
-        return list(self.iteritems())
-
-    def iteritems(self):
+    def expanded_items(self):
         _iter = self.__iter__()
         return ((_iter.get_last_index(), _) for _ in _iter)
+
 
 if sys.version_info[0] >= 3:
     _IndexedComponent_slice.keys = _IndexedComponent_slice.iterkeys
@@ -786,7 +778,7 @@ You can silence this warning by one of three ways:
             # entries, but they may not be in the data dictionary.  Make
             # a copy of the slicer items *before* we start iterating
             # over it in case the setter changes the _data dictionary.
-            for idx, obj in list(iteritems(index)):
+            for idx, obj in list(index.expanded_items()):
                 self._setitem_impl(idx, obj, val)
         else:
             obj = self._data.get(index, _NotFound)
@@ -815,7 +807,7 @@ You can silence this warning by one of three ways:
             assert len(index._call_stack) == 1
             # Make a copy of the slicer items *before* we start
             # iterating over it (since we will be removing items!).
-            for idx in list(iterkeys(index)):
+            for idx in list(index.expanded_keys()):
                 del self[idx]
         else:
             # Handle the normal deletion operation

@@ -156,6 +156,7 @@ class TestComponentSlices(unittest.TestCase):
         m.J = RangeSet(4,6)
         m.K = RangeSet(7,9)
         m.x = Var(m.K, initialize=lambda m,k: k)
+        m.y = Var(m.I, m.J, initialize=lambda m,i,j: i*10+j)
         m.b = Block(m.I, m.J, rule=_b)
         m.bb = Block(m.I, m.J, m.K, rule=_bb)
 
@@ -366,6 +367,20 @@ class TestComponentSlices(unittest.TestCase):
         # nothing outside the set values changed
         self.assertEqual(init_sum-sum(init_vals), new_sum)
 
+        init_sum = sum(self.m.y[:,:].value)
+        init_vals = list(self.m.y[1,:].value)
+        self.m.y[1,:] = 0
+        new_sum = sum(self.m.y[:,:].value)
+        new_vals = list(self.m.y[1,:].value)
+        # nothing got deleted
+        self.assertEqual(len(init_vals), len(new_vals))
+        # the lists values were changes
+        self.assertNotEqual(init_vals, new_vals)
+        # the set values are all now zero
+        self.assertEqual(sum(new_vals), 0)
+        # nothing outside the set values changed
+        self.assertEqual(init_sum-sum(init_vals), new_sum)
+
     def test_delitem_slices(self):
         init_all = list(self.m.b[:,:].c[:,:].x[:])
         init_tgt = list(self.m.b[1,:].c[:,4].x[:])
@@ -379,6 +394,12 @@ class TestComponentSlices(unittest.TestCase):
         self.assertEqual(len(new_all), (3*3)*(3*3)*3 - 3*3*3)
 
     def test_delitem_component(self):
+        init_all = list(self.m.bb[:,:,:])
+        del self.m.bb[:,:,:]
+        new_all = list(self.m.bb[:,:,:])
+        self.assertEqual(len(init_all), 3*3*3)
+        self.assertEqual(len(new_all), 0)
+
         init_all = list(self.m.b[:,:])
         init_tgt = list(self.m.b[1,:])
         del self.m.b[1,:]
