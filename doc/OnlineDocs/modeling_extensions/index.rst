@@ -9,4 +9,4 @@ Modeling Extensions
    mpec.rst
    gdp.rst
    pysp.rst
-
+   network.rst

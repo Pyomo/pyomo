@@ -90,15 +90,22 @@ class FOQUSGraph(object):
         Use direct substitution to solve tears. If multiple tears are
         given they are solved simultaneously.
 
-        Arguments:
-            order           List of lists of order in which to calculate nodes
-            tears           List of tear edge indexes
-            iterLim         Limit on the number of iterations to run
-            tol             Tolerance at which iteration can be stopped
+        Arguments
+        ---------
+            order
+                List of lists of order in which to calculate nodes
+            tears
+                List of tear edge indexes
+            iterLim
+                Limit on the number of iterations to run
+            tol
+                Tolerance at which iteration can be stopped
 
-        Returns:
-            List of lists of diff history, differences between input and
-                output values at each iteration.
+        Returns
+        -------
+            list
+                List of lists of diff history, differences between input and
+                output values at each iteration
         """
         hist = [] # diff at each iteration in every variable
 
@@ -146,20 +153,29 @@ class FOQUSGraph(object):
         Use Wegstein to solve tears. If multiple tears are given
         they are solved simultaneously.
 
-        Arguments:
-            order           List of lists of order in which to calculate nodes
-            tears           List of tear edge indexes
-            iterLim         Limit on the number of iterations to run
-            tol             Tolerance at which iteration can be stopped
-            accel_min        Minimum value for Wegstein acceleration factor
-            accel_max        Maximum value for Wegstein acceleration factor
-            tol_type     Interpretation of tolerance value, either:
-                                "abs" - Absolute tolerance
-                                "rel" - Relative tolerance (to bound range)
+        Arguments
+        ---------
+            order
+                List of lists of order in which to calculate nodes
+            tears
+                List of tear edge indexes
+            iterLim
+                Limit on the number of iterations to run
+            tol
+                Tolerance at which iteration can be stopped
+            accel_min
+                Minimum value for Wegstein acceleration factor
+            accel_max
+                Maximum value for Wegstein acceleration factor
+            tol_type
+                Type of tolerance value, either "abs" (absolute) or
+                "rel" (relative to current value)
 
-        Returns:
-            List of lists of diff history, differences between input and
-                output values at each iteration.
+        Returns
+        -------
+            list
+                List of lists of diff history, differences between input and
+                output values at each iteration
         """
         hist = [] # diff at each iteration in every variable
 
@@ -245,11 +261,16 @@ class FOQUSGraph(object):
         in a graph. It is based on Tarjan. 1972 Depth-First Search and Linear
         Graph Algorithms, SIAM J. Comput. v1 no. 2 1972
 
-        Returns:
-            List of lists of nodes in each SCC
-            List of lists of edge indexes in each SCC
-            List of lists for order in which to calculate SCCs
-            List of lists of edge indexes leaving the SCC
+        Returns
+        -------
+            sccNodes
+                List of lists of nodes in each SCC
+            sccEdges
+                List of lists of edge indexes in each SCC
+            sccOrder
+                List of lists for order in which to calculate SCCs
+            outEdges
+                List of lists of edge indexes leaving the SCC
         """
         def sc(v, stk, depth, strngComps):
             # recursive sub-function for backtracking
@@ -302,19 +323,18 @@ class FOQUSGraph(object):
         """
         This determines the order in which to do calculations for strongly
         connected components. It is used to help determine the most efficient
-        order to solve tear streams. For example, if you have a graph like
-        the following, you would want to do tear streams in SCC0 before SCC1
-        and SCC2 to prevent extra iterations. This just makes an adjacency
-        list with the SCCs as nodes and calls the tree order function.
+        order to solve tear streams to prevent extra iterations. This just
+        makes an adjacency list with the SCCs as nodes and calls the tree
+        order function.
 
-        SCC0--+-->--SCC1
-              |
-              +-->--SCC2
-
-        Arguments:
-            sccNodes        List of lists of nodes in each SCC
-            ie              List of lists of in edge indexes to SCCs
-            oe              List of lists of out edge indexes to SCCs
+        Arguments
+        ---------
+            sccNodes
+                List of lists of nodes in each SCC
+            ie
+                List of lists of in edge indexes to SCCs
+            oe
+                List of lists of out edge indexes to SCCs
 
         """
         adj = [] # SCC adjacency list
@@ -344,13 +364,16 @@ class FOQUSGraph(object):
 
     def calculation_order(self, G, roots=None, nodes=None):
         """
-        Rely on tree_order to return a calculation order of nodes.
+        Rely on tree_order to return a calculation order of nodes
 
-        Arguments:
-            roots           List of nodes to consider as tree roots,
-                                if None then the actual roots are used
-            nodes           Subset of nodes to consider in the tree,
-                                if None then all nodes are used
+        Arguments
+        ---------
+            roots
+                List of nodes to consider as tree roots,
+                if None then the actual roots are used
+            nodes
+                Subset of nodes to consider in the tree,
+                if None then all nodes are used
         """
         tset = self.tear_set(G)
         i2n, adj, adjR = self.adj_lists(G, excludeEdges=tset, nodes=nodes)
@@ -389,13 +412,17 @@ class FOQUSGraph(object):
         nodes that lead to a particular node will be visited
         before it.
 
-        Arguments:
-            adj: an adjeceny list for a directed tree. This uses
+        Arguments
+        ---------
+            adj
+                An adjeceny list for a directed tree. This uses
                 generic integer node indexes, not node names from the
                 graph itself. This allows this to be used on sub-graphs
                 and graps of components more easily.
-            adjR: the reverse adjacency list coresponing to adj
-            roots: list of node indexes to start from. These do not
+            adjR
+                The reverse adjacency list coresponing to adj
+            roots
+                List of node indexes to start from. These do not
                 need to be the root nodes of the tree, in some cases
                 like when a node changes the changes may only affect
                 nodes reachable in the tree from the changed node, in
@@ -497,31 +524,40 @@ class FOQUSGraph(object):
 
         This function uses a branch and bound type approach.
 
-        Returns:
-            List of lists of tear sets. All the tear sets returned
+        Returns
+        -------
+            tsets
+                List of lists of tear sets. All the tear sets returned
                 are equally good. There are often a very large number
                 of equally good tear sets.
-            The max number of times any single loop is torn
-            The total number of loops
+            upperbound_loop
+                The max number of times any single loop is torn
+            upperbound_total
+                The total number of loops
 
-        Improvemnts for the future.
+        Improvemnts for the future
+
         I think I can imporve the efficency of this, but it is good
         enough for now. Here are some ideas for improvement:
-            1) Reduce the number of redundant solutions. It is possible
-               to find tears sets [1,2] and [2,1]. I eliminate
-               redundent solutions from the results, but they can
-               occur and it reduces efficency.
-            2) Look at strongly connected components instead of whole
-               graph. This would cut back on the size of graph we are
-               looking at. The flowsheets are rarely one strongly
-               conneted component.
-            3) When you add an edge to a tear set you could reduce the
-               size of the problem in the branch by only looking at
-               strongly connected components with that edge removed.
-            4) This returns all equally good optimal tear sets. That
-               may not really be necessary. For very large flowsheets,
-               there could be an extremely large number of optimial tear
-               edge sets.
+
+            1. Reduce the number of redundant solutions. It is possible
+            to find tears sets [1,2] and [2,1]. I eliminate
+            redundent solutions from the results, but they can
+            occur and it reduces efficency.
+
+            2. Look at strongly connected components instead of whole
+            graph. This would cut back on the size of graph we are
+            looking at. The flowsheets are rarely one strongly
+            conneted component.
+
+            3. When you add an edge to a tear set you could reduce the
+            size of the problem in the branch by only looking at
+            strongly connected components with that edge removed.
+
+            4. This returns all equally good optimal tear sets. That
+            may not really be necessary. For very large flowsheets,
+            there could be an extremely large number of optimial tear
+            edge sets.
         """
 
         def sear(depth, prevY):
@@ -680,11 +716,15 @@ class FOQUSGraph(object):
         This function returns a list of edge indexes that are
         included in a subgraph given by a list of nodes.
 
-        Returns:
-            List of edge indexes in the subgraph
-            List of edge indexes starting outside the subgraph
+        Returns
+        -------
+            edges
+                List of edge indexes in the subgraph
+            inEdges
+                List of edge indexes starting outside the subgraph
                 and ending inside
-            List of edge indexes starting inside the subgraph
+            outEdges
+                List of edge indexes starting inside the subgraph
                 and ending outside
         """
         e = []   # edges that connect two nodes in the subgraph
@@ -727,9 +767,12 @@ class FOQUSGraph(object):
         The algorithm is based on Tarjan 1973 Enumeration of the
         elementary circuits of a directed graph, SIAM J. Comput. v3 n2 1973.
 
-        Returns:
-            List of lists of nodes in each cycle
-            List of lists of edge indexes in each cycle
+        Returns
+        -------
+            cycleNodes
+                List of lists of nodes in each cycle
+            cycleEdges
+                List of lists of edge indexes in each cycle
         """
 
         def backtrack(v, pre_key=None):
@@ -806,19 +849,26 @@ class FOQUSGraph(object):
         Returns an adjacency list and a reverse adjacency list
         of node indexes for a MultiDiGraph.
 
-        Arguments:
-            G               A networkx MultiDiGraph
-            excludeEdges    List of edge indexes to ignore when
-                                considering neighbors
-            nodes           List of nodes to form the adjacencies from
-            multi           If True, adjacency lists will contains tuples
-                                of (node, key) for every edge between
-                                two nodes
+        Arguments
+        ---------
+            G
+                A networkx MultiDiGraph
+            excludeEdges
+                List of edge indexes to ignore when considering neighbors
+            nodes
+                List of nodes to form the adjacencies from
+            multi
+                If True, adjacency lists will contains tuples of
+                (node, key) for every edge between two nodes
 
-        Returns:
-            Map from index to node for all nodes included in nodes
-            Adjacency list of successor indexes
-            Reverse adjacency list of predecessor indexes
+        Returns
+        -------
+            i2n
+                Map from index to node for all nodes included in nodes
+            adj
+                Adjacency list of successor indexes
+            adjR
+                Reverse adjacency list of predecessor indexes
         """
         adj = []
         adjR = []
