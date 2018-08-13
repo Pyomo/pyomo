@@ -17,6 +17,7 @@ from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.common import DeveloperError
 
+import collections
 from six import PY3, itervalues, iteritems, advance_iterator
 import sys
 
@@ -1114,3 +1115,92 @@ class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
         if self.is_indexed():
             for component_data in itervalues(self):
                 component_data.deactivate()
+
+
+class _fill_in_known_wildcards(object):
+    def __init__(self, wildcard_values):
+        self.key = wildcard_values
+        self.last_slice = None
+
+    def __call__(self, _slice):
+        if self.last_slice is _slice:
+            raise StopIteration()
+        self.last_slice = _slice
+
+        if _slice.ellipsis is not None:
+            raise RuntimeError(
+                "Cannot lookup elements in a _ReferenceDict when the "
+                "underlying slice object contains ellipsis")
+        idx = tuple(
+            _slice.fixed[i] if i in _slice.fixed else self.key.pop(0)
+            for i in range(_slice.explicit_index_count))
+        if idx in _slice.component:
+            return _slice.component[idx]
+        else:
+            raise KeyError("KeyError: %s" % (idx,))
+
+
+class _ReferenceDict(collections.MutableMapping):
+    def __init__(self, component_slice):
+        self._slice = component_slice
+
+    def __getitem__(self, key):
+        return self._find_element(self._slice, key)
+
+    def __setitem__(self, key, val):
+        tmp = self._slice.duplicate()
+        op = tmp._call_stack[-1][0]
+        if op == _IndexedComponent_slice.get_item:
+            tmp._call_stack[-1] = (
+                _IndexedComponent_slice.set_item,
+                tmp._call_stack[-1][1],
+                val )
+        elif op == _IndexedComponent_slice.slice_info:
+            tmp._call_stack[-1] = (
+                _IndexedComponent_slice.set_item,
+                tmp,
+                val )
+        elif op == _IndexedComponent_slice.get_attribute:
+            tmp._call_stack[-1] = (
+                _IndexedComponent_slice.set_attribute,
+                tmp._call_stack[-1][1],
+                val )
+        else:
+            raise DeveloperError(
+                "Unexpected slice _call_stack operation: %s" % op)
+        return self._find_element(tmp, key)
+
+    def __delitem__(self, key):
+        tmp = self._slice.duplicate()
+        op = tmp._call_stack[-1][0]
+        if op == _IndexedComponent_slice.get_item:
+            tmp._call_stack[-1] = (
+                _IndexedComponent_slice.del_item,
+                tmp._call_stack[-1][1] )
+        elif op == _IndexedComponent_slice.slice_info:
+            tmp._call_stack[-1] = (
+                _IndexedComponent_slice.del_item,
+                tmp )
+        elif op == _IndexedComponent_slice.get_attribute:
+            tmp._call_stack[-1] = (
+                _IndexedComponent_slice.del_attribute,
+                tmp._call_stack[-1][1] )
+        else:
+            raise DeveloperError(
+                "Unexpected slice _call_stack operation: %s" % op)
+        return self._find_element(tmp, key)
+
+    def __iter__(self):
+        return self._slice.wildcard_keys()
+
+    def __len__(self):
+        return sum(1 for i in self._slice)
+
+    def _find_element(self, _slice, key):
+        key = list(pyutilib.misc.flatten_tuple(key))
+        _iter = _IndexedComponent_slice_iter(
+            _slice, _fill_in_known_wildcards(key))
+        try:
+            return advance_iterator(_iter)
+        except StopIteration:
+            raise KeyError("KeyError: %s" % (key,))

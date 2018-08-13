@@ -21,6 +21,7 @@ from pyomo.environ import *
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.indexed_component import _IndexedComponent_slice
 
+from six import itervalues
 
 class TestSimpleVar(unittest.TestCase):
 
@@ -453,6 +454,79 @@ class TestComponentSlices(unittest.TestCase):
         self.assertIsInstance(_slicer, _IndexedComponent_slice)
         _slicer.call_errors_generate_exceptions = True
         self.assertRaises( TypeError, _slicer.next )
+
+from pyomo.core.base.indexed_component import _ReferenceDict
+class TestComponentReferences(unittest.TestCase):
+    def setUp(self):
+        self.m = m = ConcreteModel()
+        @m.Block([1,2], [4,5])
+        def b(b,i,j):
+            b.x = Var([7,8],[10,11], initialize=0)
+
+    def test_simple_lookup(self):
+        m = self.m
+
+        rd = _ReferenceDict(m.b[:,:].x[:,:])
+        self.assertIs(rd[1,5,7,10], m.b[1,5].x[7,10])
+
+        rd = _ReferenceDict(m.b[:,4].x[8,:])
+        self.assertIs(rd[1,10], m.b[1,4].x[8,10])
+
+    def test_len(self):
+        m = self.m
+
+        rd = _ReferenceDict(m.b[:,:].x[:,:])
+        self.assertEqual(len(rd), 2*2*2*2)
+
+        rd = _ReferenceDict(m.b[:,4].x[8,:])
+        self.assertEqual(len(rd), 2*2)
+
+    def test_simple_assignment(self):
+        m = self.m
+
+        rd = _ReferenceDict(m.b[:,:].x[:,:])
+        self.assertEqual( sum(x.value for x in itervalues(rd)), 0 )
+        rd[1,5,7,10] = 10
+        self.assertEqual( m.b[1,5].x[7,10].value, 10 )
+        self.assertEqual( sum(x.value for x in itervalues(rd)), 10 )
+
+        rd = _ReferenceDict(m.b[:,4].x[8,:])
+        self.assertEqual( sum(x.value for x in itervalues(rd)), 0 )
+        rd[1,10] = 20
+        self.assertEqual( m.b[1,4].x[8,10].value, 20 )
+        self.assertEqual( sum(x.value for x in itervalues(rd)), 20 )
+
+    def test_simple_attribute_assignment(self):
+        m = self.m
+
+        rd = _ReferenceDict(m.b[:,:].x[:,:])
+        self.assertEqual( sum(x.value for x in itervalues(rd)), 0 )
+        rd[1,5,7,10].value = 10
+        self.assertEqual( m.b[1,5].x[7,10].value, 10 )
+        self.assertEqual( sum(x.value for x in itervalues(rd)), 10 )
+
+        rd = _ReferenceDict(m.b[:,4].x[8,:])
+        self.assertEqual( sum(x.value for x in itervalues(rd)), 0 )
+        rd[1,10].value = 20
+        self.assertEqual( m.b[1,4].x[8,10].value, 20 )
+        self.assertEqual( sum(x.value for x in itervalues(rd)), 20 )
+
+    def test_simple_deletion(self):
+        m = self.m
+
+        rd = _ReferenceDict(m.b[:,:].x[:,:])
+        self.assertEqual(len(list(x.value for x in itervalues(rd))), 2*2*2*2)
+        self.assertTrue((1,5,7,10) in rd)
+        del rd[1,5,7,10]
+        self.assertFalse((1,5,7,10) in rd)
+        self.assertEqual(len(list(x.value for x in itervalues(rd))), 2*2*2*2-1)
+
+        rd = _ReferenceDict(m.b[:,4].x[8,:])
+        self.assertEqual(len(list(x.value for x in itervalues(rd))), 2*2)
+        self.assertTrue((1,10) in rd)
+        del rd[1,10]
+        self.assertFalse((1,10) in rd)
+        self.assertEqual(len(list(x.value for x in itervalues(rd))), 2*2-1)
 
 
 if __name__ == "__main__":
