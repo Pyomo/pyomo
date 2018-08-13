@@ -10,9 +10,11 @@ from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverFactory
-from pyomo.opt.results import ProblemSense, SolverResults
+from pyomo.opt.results import ProblemSense
 from six import StringIO
 from pyomo.common.log import LoggingIntercept
+import timeit
+from contextlib import contextmanager
 
 
 class _DoNothing(object):
@@ -68,16 +70,24 @@ def model_is_valid(solve_data, config):
                 "Your model is an NLP (nonlinear program). "
                 "Using NLP solver %s to solve." % config.nlp_solver)
             SolverFactory(config.nlp_solver).solve(
-                solve_data.original_model, **config.nlp_options)
+                solve_data.original_model, **config.nlp_solver_args)
             return False
         else:
             config.logger.info(
                 "Your model is an LP (linear program). "
                 "Using LP solver %s to solve." % config.mip_solver)
             SolverFactory(config.mip_solver).solve(
-                solve_data.original_model, **config.mip_options)
+                solve_data.original_model, **config.mip_solver_args)
             return False
 
+    # TODO if any continuous variables are multipled with binary ones, need
+    # to do some kind of transformation (Glover?) or throw an error message
+    return True
+
+
+def process_objective(solve_data, config):
+    m = solve_data.working_model
+    GDPopt = m.GDPopt_utils
     # Handle missing or multiple objectives
     objs = list(m.component_data_objects(
         ctype=Objective, active=True, descend_into=True))
@@ -111,10 +121,6 @@ def model_is_valid(solve_data, config):
     GDPopt.objective = Objective(
         expr=GDPopt.objective_value, sense=main_obj.sense)
 
-    # TODO if any continuous variables are multipled with binary ones, need
-    # to do some kind of transformation (Glover?) or throw an error message
-    return True
-
 
 def a_logger(str_or_logger):
     """Returns a logger when passed either a logger name or logger object."""
@@ -134,14 +140,19 @@ def copy_var_list_values(from_list, to_list, config, skip_stale=False):
             if skip_stale:
                 v_to.stale = False
         except ValueError as err:
-            if 'is not in domain Binary' in err.message:
-                # Check to see if this is just a tolerance issue
-                v_from_val = value(v_from, exception=False)
-                if (fabs(v_from_val - 1) <= config.integer_tolerance or
-                        fabs(v_from_val) <= config.integer_tolerance):
-                    v_to.set_value(round(v_from_val))
-                else:
-                    raise
+            err_msg = getattr(err, 'message', str(err))
+            var_val = value(v_from)
+            rounded_val = round(var_val)
+            # Check to see if this is just a tolerance issue
+            if 'is not in domain Binary' in err_msg and (
+                    fabs(var_val - 1) <= config.integer_tolerance or
+                    fabs(var_val) <= config.integer_tolerance):
+                v_to.set_value(rounded_val)
+            elif 'is not in domain Integers' in err_msg and (
+                    fabs(var_val - rounded_val) <= config.integer_tolerance):
+                v_to.set_value(rounded_val)
+            else:
+                raise
 
 
 def is_feasible(model, config):
@@ -227,9 +238,13 @@ def build_ordered_component_lists(model, prefix='working'):
                 ctype=Disjunction, active=True,
                 descend_into=(Disjunct, Block))))
 
-    # Identify the non-fixed variables in (potentially) active constraints
+    # Identify the non-fixed variables in (potentially) active constraints and
+    # objective functions
     for constr in getattr(GDPopt, '%s_constraints_list' % prefix):
         for v in EXPR.identify_variables(constr.body, include_fixed=False):
+            var_set.add(v)
+    for obj in model.component_data_objects(ctype=Objective, active=True):
+        for v in EXPR.identify_variables(obj.expr, include_fixed=False):
             var_set.add(v)
     # Disjunct indicator variables might not appear in active constraints. In
     # fact, if we consider them Logical variables, they should not appear in
@@ -252,9 +267,9 @@ def build_ordered_component_lists(model, prefix='working'):
 
 
 def record_original_model_statistics(solve_data, config):
-    """Record problem statistics for original model and setup SolverResults."""
+    """Record problem statistics for original model."""
     # Create the solver results object
-    res = solve_data.results = SolverResults()
+    res = solve_data.results
     prob = res.problem
     origGDPopt = solve_data.original_model.GDPopt_utils
     res.problem.name = solve_data.working_model.name
@@ -421,3 +436,38 @@ def copy_and_fix_mip_values_to_nlp(var_list, val_list, config):
                 var.fix(int(round(val)))
             else:
                 var.fix(val)
+
+
+@contextmanager
+def time_code(timing_data_obj, code_block_name):
+    start_time = timeit.default_timer()
+    yield
+    elapsed_time = timeit.default_timer() - start_time
+    prev_time = timing_data_obj.get(code_block_name, 0)
+    timing_data_obj[code_block_name] = prev_time + elapsed_time
+
+
+@contextmanager
+def restore_logger_level(logger):
+    old_logger_level = logger.getEffectiveLevel()
+    yield
+    logger.setLevel(old_logger_level)
+
+
+@contextmanager
+def create_utility_block(model, name):
+    created_util_block = False
+    # Create a model block on which to store GDPopt-specific utility
+    # modeling objects.
+    if hasattr(model, name):
+        raise RuntimeError(
+            "GDPopt needs to create a Block named %s "
+            "on the model object, but an attribute with that name "
+            "already exists." % name)
+    else:
+        created_util_block = True
+        model.GDPopt_utils = Block(
+            doc="Container for GDPopt solver utility modeling objects")
+    yield
+    if created_util_block:
+        model.del_component(name)

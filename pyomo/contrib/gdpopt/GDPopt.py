@@ -35,15 +35,20 @@ from pyomo.contrib.gdpopt.master_initialize import (GDPopt_initialize_master,
 from pyomo.contrib.gdpopt.util import (_DoNothing, a_logger,
                                        build_ordered_component_lists,
                                        clone_orig_model_with_lists,
-                                       copy_var_list_values, model_is_valid,
+                                       copy_var_list_values,
+                                       create_utility_block, model_is_valid,
+                                       process_objective,
                                        record_original_model_statistics,
                                        record_working_model_statistics,
-                                       reformulate_integer_variables)
-from pyomo.core.base import Block, ConstraintList, value
+                                       reformulate_integer_variables,
+                                       restore_logger_level, time_code)
+from pyomo.core.base import ConstraintList, value
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt.base import IOptSolver
+from pyomo.opt.results import SolverResults
+from pyutilib.misc import Container
 
-__version__ = (0, 4, 0)
+__version__ = (0, 4, 1)
 
 
 class GDPoptSolver(pyomo.common.plugin.Plugin):
@@ -101,6 +106,10 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         description="Nonlinear solver to use"))
     nlp_solver_args = CONFIG.declare(
         "nlp_solver_args", ConfigBlock(implicit=True))
+    CONFIG.declare("call_before_master_solve", ConfigValue(
+        default=_DoNothing,
+        description="callback hook before calling the master problem solver"
+    ))
     CONFIG.declare("call_after_master_solve", ConfigValue(
         default=_DoNothing,
         description="callback hook after a solution of the master problem"
@@ -197,26 +206,17 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
         solve_data = GDPoptSolveData()
-        created_GDPopt_block = False
+        solve_data.results = SolverResults()
+        solve_data.timing = Container()
 
         old_logger_level = config.logger.getEffectiveLevel()
-        try:
+        with time_code(solve_data.timing, 'total'), \
+                restore_logger_level(config.logger), \
+                create_utility_block(model, 'GDPopt_utils'):
             if config.tee and old_logger_level > logging.INFO:
                 # If the logger does not already include INFO, include it.
                 config.logger.setLevel(logging.INFO)
             config.logger.info("---Starting GDPopt---")
-
-            # Create a model block on which to store GDPopt-specific utility
-            # modeling objects.
-            if hasattr(model, 'GDPopt_utils'):
-                raise RuntimeError(
-                    "GDPopt needs to create a Block named GDPopt_utils "
-                    "on the model object, but an attribute with that name "
-                    "already exists.")
-            else:
-                created_GDPopt_block = True
-                model.GDPopt_utils = Block(
-                    doc="Container for GDPopt solver utility modeling objects")
 
             solve_data.original_model = model
 
@@ -228,6 +228,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
             # Reformulate integer variables to binary
             reformulate_integer_variables(solve_data.working_model, config)
+            process_objective(solve_data, config)
 
             # Save ordered lists of main modeling components, so that data can
             # be easily transferred between future model clones.
@@ -281,10 +282,12 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             solve_data.feasible_solution_improved = False
 
             # Initialize the master problem
-            GDPopt_initialize_master(solve_data, config)
+            with time_code(solve_data.timing, 'initialization'):
+                GDPopt_initialize_master(solve_data, config)
 
             # Algorithm main loop
-            GDPopt_iteration_loop(solve_data, config)
+            with time_code(solve_data.timing, 'main loop'):
+                GDPopt_iteration_loop(solve_data, config)
 
             # Update values in working model
             copy_var_list_values(
@@ -303,7 +306,6 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             solve_data.results.problem.lower_bound = solve_data.LB
             solve_data.results.problem.upper_bound = solve_data.UB
 
-        finally:
-            config.logger.setLevel(old_logger_level)
-            if created_GDPopt_block:
-                model.del_component('GDPopt_utils')
+        solve_data.results.solver.timing = solve_data.timing
+
+        return solve_data.results
