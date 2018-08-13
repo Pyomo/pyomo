@@ -239,10 +239,11 @@ class _IndexedComponent_slice_iter(object):
         # slice) or None (if this level is either a SimpleComponent,
         # attribute, method, or is explicitly indexed).
         self._slice = component_slice
+        if self._slice._call_stack[0][0] != _IndexedComponent_slice.slice_info:
+            raise DeveloperError("Unexpected call_stack flag encountered: %s"
+                                 % self._slice._call_stack[0][0])
         self.advance_iter = advance_iter
-        print self._slice._call_stack[0][0]
-        assert( self._slice._call_stack[0][0]
-                == _IndexedComponent_slice.slice_info )
+        self._slice = component_slice
         self._iter_stack = [None]*len(self._slice._call_stack)
         self._iter_stack[0] = _slice_generator(*self._slice._call_stack[0][1])
 
