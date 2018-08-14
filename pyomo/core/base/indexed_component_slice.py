@@ -542,6 +542,12 @@ class _ReferenceDict(collections.MutableMapping):
     def __len__(self):
         return sum(1 for i in self._slice)
 
+    def __contains__(self, key):
+        try:
+            return super(_ReferenceDict, self).__contains__(key)
+        except AttributeError, KeyError:
+            return False
+
     def _get_iter(self, _slice, key):
         if key.__class__ not in (tuple, list):
             key = (key,)
