@@ -12,7 +12,7 @@ import logging
 
 from pyomo.core.base.plugin import alias
 from pyomo.core.base import Transformation
-from pyomo.core import Var
+from pyomo.core import Var, Expression, Objective
 from pyomo.dae import ContinuousSet, DerivativeVar, Integral
 from pyomo.dae.misc import generate_finite_elements
 from pyomo.dae.misc import expand_components

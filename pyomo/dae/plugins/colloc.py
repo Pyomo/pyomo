@@ -14,7 +14,7 @@ from six import next
 
 from pyomo.core.base.plugin import alias
 from pyomo.core.base import Transformation
-from pyomo.core import Var, ConstraintList
+from pyomo.core import Var, ConstraintList, Expression, Objective
 from pyomo.dae import ContinuousSet, DerivativeVar, Integral
 from pyomo.dae.misc import generate_finite_elements
 from pyomo.dae.misc import generate_colloc_points
