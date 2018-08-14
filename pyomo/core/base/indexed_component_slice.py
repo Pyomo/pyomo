@@ -474,7 +474,7 @@ class _ReferenceDict(collections.MutableMapping):
 
     def __getitem__(self, key):
         try:
-            return self._execute(self._slice, key)
+            return advance_iterator(self._get_iter(self._slice, key))
         except StopIteration:
             raise KeyError("KeyError: %s" % (key,))
 
@@ -500,7 +500,8 @@ class _ReferenceDict(collections.MutableMapping):
             raise DeveloperError(
                 "Unexpected slice _call_stack operation: %s" % op)
         try:
-            self._execute(tmp, key)
+            _iter = self._get_iter(tmp, key)
+            advance_iterator(_iter)
         except StopIteration:
             pass
 
@@ -508,14 +509,23 @@ class _ReferenceDict(collections.MutableMapping):
         tmp = self._slice.duplicate()
         op = tmp._call_stack[-1][0]
         if op == _IndexedComponent_slice.get_item:
+            # If the last attribute of the slice gets an item,
+            # change it to delete the item
             tmp._call_stack[-1] = (
                 _IndexedComponent_slice.del_item,
                 tmp._call_stack[-1][1] )
         elif op == _IndexedComponent_slice.slice_info:
-            tmp._call_stack[-1] = (
-                _IndexedComponent_slice.del_item,
-                tmp )
+            assert len(tmp._call_stack) == 1
+            _iter = self._get_iter(tmp, key)
+            try:
+                advance_iterator(_iter)
+                del _iter._iter_stack[0].component[_iter.get_last_index()]
+                return
+            except StopIteration:
+                raise KeyError("KeyError: %s" % (key,))
         elif op == _IndexedComponent_slice.get_attribute:
+            # If the last attribute of the slice retrieves an attribute,
+            # change it to delete the attribute
             tmp._call_stack[-1] = (
                 _IndexedComponent_slice.del_attribute,
                 tmp._call_stack[-1][1] )
@@ -523,7 +533,7 @@ class _ReferenceDict(collections.MutableMapping):
             raise DeveloperError(
                 "Unexpected slice _call_stack operation: %s" % op)
         try:
-            self._execute(tmp, key)
+            advance_iterator(self._get_iter(tmp, key))
         except StopIteration:
             pass
 
@@ -533,11 +543,12 @@ class _ReferenceDict(collections.MutableMapping):
     def __len__(self):
         return sum(1 for i in self._slice)
 
-    def _execute(self, _slice, key):
+    def _get_iter(self, _slice, key):
+        if key.__class__ not in (tuple, list):
+            key = (key,)
         key = list(flatten_tuple(key))
-        _iter = _IndexedComponent_slice_iter(
+        return _IndexedComponent_slice_iter(
             _slice, _fill_in_known_wildcards(key))
-        return advance_iterator(_iter)
 
 
 class _ReferenceSet(collections.Set):
