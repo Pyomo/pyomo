@@ -418,7 +418,7 @@ class _IndexedComponent_slice_iter(object):
                         # No try-catch, since we know this key is valid
                         del _comp[_call[1]]
                 else:
-                    raise RuntimeError(
+                    raise DeveloperError(
                         "Unexpected entry in _IndexedComponent_slice "
                         "_call_stack: %s" % (_call[0],))
                 idx += 1
@@ -463,7 +463,9 @@ class _fill_in_known_wildcards(object):
             _slice.last_index = idx
             return _slice.component[idx]
         else:
-            raise KeyError("KeyError: %s" % (idx,))
+            raise KeyError(
+                "Index '%s' is not valid for indexed component '%s'"
+                % (idx, _slice.component.name))
 
 
 class _ReferenceDict(collections.MutableMapping):
