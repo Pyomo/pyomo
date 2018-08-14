@@ -500,8 +500,7 @@ class _ReferenceDict(collections.MutableMapping):
             raise DeveloperError(
                 "Unexpected slice _call_stack operation: %s" % op)
         try:
-            _iter = self._get_iter(tmp, key)
-            advance_iterator(_iter)
+            advance_iterator(self._get_iter(tmp, key))
         except StopIteration:
             pass
 
