@@ -29,6 +29,7 @@ class _IndexedComponent_slice(object):
     slice_info = 0
     get_attribute = 1
     set_attribute = 4
+    del_attribute = 7
     get_item = 2
     set_item = 5
     del_item = 6
@@ -417,6 +418,18 @@ class _IndexedComponent_slice_iter(object):
                     else:
                         # No try-catch, since we know this key is valid
                         del _comp[_call[1]]
+                elif _call[0] == _IndexedComponent_slice.del_attribute:
+                    assert idx == len(self._slice._call_stack) - 1
+                    try:
+                        _comp = delattr(_comp, _call[1])
+                    except AttributeError:
+                        # Since we are slicing, we may only be interested in
+                        # things that match.  We will allow users to
+                        # (silently) ignore any attribute errors generated
+                        # by concrete indices in the slice hierarchy...
+                        if self._slice.attribute_errors_generate_exceptions:
+                            raise
+                        break
                 else:
                     raise DeveloperError(
                         "Unexpected entry in _IndexedComponent_slice "
