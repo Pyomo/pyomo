@@ -19,7 +19,8 @@ import pyutilib.th as unittest
 from six import itervalues
 
 from pyomo.environ import *
-from pyomo.core.base.reference import _ReferenceDict
+from pyomo.core.base.sets import _SetProduct
+from pyomo.core.base.reference import _ReferenceDict, Reference
 
 
 class TestReferenceDict(unittest.TestCase):
@@ -158,7 +159,7 @@ class TestReferenceDict(unittest.TestCase):
 
         with self.assertRaisesRegexp(
                 KeyError,
-                r"'\(8, 10\)' is not valid for indexed component 'b\[1,4\].x'"):
+                r"\(8, 10\) is not valid for indexed component 'b\[1,4\].x'"):
             del rd[10]
 
         rd = _ReferenceDict(m.b[1,:].x[8,0])
@@ -211,6 +212,50 @@ class TestReferenceDict(unittest.TestCase):
         self.assertTrue( hasattr(m.b[2,4], 'z') )
         self.assertFalse( hasattr(m.b[2,5], 'z') )
         self.assertEqual(len(list(x.value for x in itervalues(rd))), 2-1)
+
+class TestReference(unittest.TestCase):
+    def test_single_reference(self):
+        m = ConcreteModel()
+        m.b = Block([1,2])
+        m.b[1].x = Var(bounds=(1,None))
+        m.b[2].x = Var(bounds=(2,None))
+        m.r = Reference(m.b[:].x)
+
+        self.assertIs(m.r.type(), Var)
+        self.assertIs(m.r.index_set(), m.b.index_set())
+        self.assertEqual(len(m.r), 2)
+        self.assertEqual(m.r[1].lb, 1)
+        self.assertEqual(m.r[2].lb, 2)
+        self.assertIn(1, m.r)
+        self.assertIn(2, m.r)
+        self.assertNotIn(3, m.r)
+        with self.assertRaises(KeyError):
+            m.r[3]
+
+    def test_nested_reference(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,2])
+        m.J = Set(initialize=[3,4])
+        @m.Block(m.I)
+        def b(b,i):
+            b.x = Var(b.model().J, bounds=(i,None))
+
+        m.r = Reference(m.b[:].x[:])
+
+        self.assertIs(m.r.type(), Var)
+        self.assertIs(type(m.r.index_set()), _SetProduct)
+        self.assertIs(m.r.index_set().set_tuple[0], m.I)
+        self.assertIs(m.r.index_set().set_tuple[1], m.J)
+        self.assertEqual(len(m.r), 2*2)
+        self.assertEqual(m.r[1,3].lb, 1)
+        self.assertEqual(m.r[2,4].lb, 2)
+        self.assertIn((1,3), m.r)
+        self.assertIn((2,4), m.r)
+        self.assertNotIn(0, m.r)
+        self.assertNotIn((1,0), m.r)
+        self.assertNotIn((1,3,0), m.r)
+        with self.assertRaises(KeyError):
+            m.r[0]
 
 
 
