@@ -69,7 +69,8 @@ def solve_NLP(nlp_model, solve_data, config):
         for c in GDPopt.working_constraints_list)
 
     subprob_terminate_cond = results.solver.termination_condition
-    if subprob_terminate_cond is tc.optimal:
+    if (subprob_terminate_cond is tc.optimal or
+            subprob_terminate_cond is tc.locallyOptimal):
         pass
     elif subprob_terminate_cond is tc.infeasible:
         config.logger.info('NLP subproblem was locally infeasible.')

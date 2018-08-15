@@ -34,62 +34,116 @@ logger = logging.getLogger('pyomo.network')
 
 class SequentialDecomposition(FOQUSGraph):
     """
-    A sequential decomposition tool for Pyomo network models.
+    A sequential decomposition tool for Pyomo Network models
 
-    Options, accessed via self.options:
-        graph                   A networkx graph representing the model to
-                                    be solved
-                                    Default: None (will compute it)
-        tear_set                A list of indexes representing edges to be
-                                    torn. Can be set with a list of edge
-                                    tuples via set_tear_set
-                                    Default: None (will compute it)
-        select_tear_method      Which method to use to select a tear set,
-                                    either "mip" or "heuristic"
-                                    Default: "mip"
-        run_first_pass          Boolean indicating whether or not to run
-                                    through network before running the
-                                    tear stream convergence procedure
-                                    Default: True
-        solve_tears             Boolean indicating whether or not to run
-                                    iterations to converge tear streams
-                                    Default: True
-        guesses                 ComponentMap of guesses to use for first pass
-                                    (see set_guesses_for method)
-                                    Default: ComponentMap()
-        default_guess           Value to use if a free variable has no guess
-                                    Default: None
-        almost_equal_tol        Difference below which numbers are considered
-                                    equal when checking port value agreement
-                                    Default: 1.0E-8
-        log_info                Set logger level to INFO during run
-                                    Default: False
-        tear_method             Method to use for converging tear streams,
-                                    either "Direct" or "Wegstein"
-                                    Default: "Direct"
-        iterLim                 Limit on the number of tear iterations
-                                    Default: 40
-        tol                     Tolerance at which to stop tear iterations
-                                    Default: 1.0E-5
-        tol_type                Type of tolerance value, either:
-                                    "abs" - Absolute
-                                    "rel" - Relative (to current value)
-                                    Default: "abs"
-        report_diffs            Report the matrix of differences across tear
-                                    streams for every iteration
-                                    Default: False
-        accel_min               Min value for Wegstein acceleration factor
-                                    Default: -5
-        accel_max               Max value for Wegstein acceleration factor
-                                    Default: 0
-        tear_solver             Name of solver to use for select_tear_mip
-                                    Default: "cplex"
-        tear_solver_io          Solver IO keyword for the above solver
-                                    Default: "python"
-        tear_solver_options     Keyword options to pass to solve method
-                                    Default: {}
+    The following parameters can be set upon construction of this class
+    or via the `options` attribute.
 
-    Note: set initial options by passing keywords to __init__
+    Parameters
+    ----------
+        graph: `MultiDiGraph`
+            A networkx graph representing the model to be solved.
+
+            `default=None (will compute it)`
+
+        tear_set: `list`
+            A list of indexes representing edges to be torn. Can be set with
+            a list of edge tuples via set_tear_set.
+
+            `default=None (will compute it)`
+
+        select_tear_method: `str`
+            Which method to use to select a tear set, either "mip" or
+            "heuristic".
+
+            `default="mip"`
+
+        run_first_pass: `bool`
+            Boolean indicating whether or not to run through network before
+            running the tear stream convergence procedure.
+
+            `default=True`
+
+        solve_tears: `bool`
+            Boolean indicating whether or not to run iterations to converge
+            tear streams.
+
+            `default=True`
+
+        guesses: `ComponentMap`
+            ComponentMap of guesses to use for first pass
+            (see set_guesses_for method).
+
+            `default=ComponentMap()`
+
+        default_guess: `float`
+            Value to use if a free variable has no guess.
+
+            `default=None`
+
+        almost_equal_tol: `float`
+            Difference below which numbers are considered equal when checking
+            port value agreement.
+
+            `default=1.0E-8`
+
+        log_info: `bool`
+            Set logger level to INFO during run.
+
+            `default=False`
+
+        tear_method: `str`
+            Method to use for converging tear streams, either "Direct" or
+            "Wegstein".
+
+            `default="Direct"`
+
+        iterLim: `int`
+            Limit on the number of tear iterations.
+
+            `default=40`
+
+        tol: `float`
+            Tolerance at which to stop tear iterations.
+
+            `default=1.0E-5`
+
+        tol_type: `str`
+            Type of tolerance value, either "abs" (absolute) or
+            "rel" (relative to current value).
+
+            `default="abs"`
+
+        report_diffs: `bool`
+            Report the matrix of differences across tear streams for
+            every iteration.
+
+            `default=False`
+
+        accel_min: `float`
+            Min value for Wegstein acceleration factor.
+
+            `default=-5`
+
+        accel_max: `float`
+            Max value for Wegstein acceleration factor.
+
+            `default=0`
+
+        tear_solver: `str`
+            Name of solver to use for select_tear_mip.
+
+            `default="cplex"`
+
+        tear_solver_io: `str`
+            Solver IO keyword for the above solver.
+
+            `default=None`
+
+        tear_solver_options: `dict`
+            Keyword options to pass to solve method.
+
+            `default={}`
     """
 
     def __init__(self, **kwds):
@@ -124,7 +178,7 @@ class SequentialDecomposition(FOQUSGraph):
 
     def set_guesses_for(self, port, guesses):
         """
-        Set the guesses for the given port.
+        Set the guesses for the given port
 
         These guesses will be checked for all free variables that are
         encountered during the first pass run. If a free variable has
@@ -137,9 +191,11 @@ class SequentialDecomposition(FOQUSGraph):
         will be silently ignored.
 
         The guesses should be a dict that maps the following:
+
             Port Member Name -> Value
 
         Or, for indexed members, multiple dicts that map:
+
             Port Member Name -> Index -> Value
 
         For extensive members, "Value" must be a list of tuples of the
@@ -154,23 +210,27 @@ class SequentialDecomposition(FOQUSGraph):
         assigned to the variable's current value before calling run.
 
         While this method makes things more convenient, all it does is:
-            self.options["guesses"][port] = guesses
+
+            `self.options["guesses"][port] = guesses`
         """
         self.options["guesses"][port] = guesses
 
     def set_tear_set(self, tset):
         """
-        Set a custom tear set to be used when running the decomposition.
+        Set a custom tear set to be used when running the decomposition
 
         The procedure will use this custom tear set instead of finding
         its own, thus it can save some time. Additionally, this will be
         useful for knowing which edges will need guesses.
 
-        Arguments:
-            tset            A list of Arcs representing edges to tear
+        Arguments
+        ---------
+            tset
+                A list of Arcs representing edges to tear
 
         While this method makes things more convenient, all it does is:
-            self.options["tear_set"] = tset
+
+            `self.options["tear_set"] = tset`
         """
         self.options["tear_set"] = tset
 
@@ -179,7 +239,7 @@ class SequentialDecomposition(FOQUSGraph):
         Call the specified tear selection method and return a list
         of arcs representing the selected tear edges.
 
-        The **kwds will be passed to the method.
+        The kwds will be passed to the method.
         """
         if method == "mip":
             tset = self.select_tear_mip(G, **kwds)
@@ -193,11 +253,14 @@ class SequentialDecomposition(FOQUSGraph):
 
     def indexes_to_arcs(self, G, lst):
         """
-        Converts a list of edge indexes to the corresponding Arcs.
+        Converts a list of edge indexes to the corresponding Arcs
 
-        Arguments:
-            G               A networkx graph corresponding to lst
-            lst             A list of edge indexes to convert to tuples
+        Arguments
+        ---------
+            G
+                A networkx graph corresponding to lst
+            lst
+                A list of edge indexes to convert to tuples
 
         Returns:
             A list of arcs
@@ -211,12 +274,14 @@ class SequentialDecomposition(FOQUSGraph):
 
     def run(self, model, function):
         """
-        Compute a Pyomo network model using sequential decomposition.
+        Compute a Pyomo Network model using sequential decomposition
 
-        Arguments:
-            model           A Pyomo model
-            function        A function to be called on each block/node
-                                in the network
+        Arguments
+        ---------
+            model
+                A Pyomo model
+            function
+                A function to be called on each block/node in the network
         """
         if self.options["log_info"]:
             old_log_level = logger.level
@@ -290,15 +355,21 @@ class SequentialDecomposition(FOQUSGraph):
 
     def run_order(self, G, order, function, ignore=None, use_guesses=False):
         """
-        Run computations in the order provided by calling the function.
+        Run computations in the order provided by calling the function
 
-        Arguments:
-            G               A networkx graph corresponding to order
-            order           The order in which to run each node in the graph
-            function        The function to be called on each block/node
-            ignore          Edge indexes to ignore when passing values
-            use_guesses     If True, will check the guesses dict when fixing
-                                free variables before calling function
+        Arguments
+        ---------
+            G
+                A networkx graph corresponding to order
+            order
+                The order in which to run each node in the graph
+            function
+                The function to be called on each block/node
+            ignore
+                Edge indexes to ignore when passing values
+            use_guesses
+                If True, will check the guesses dict when fixing
+                free variables before calling function
         """
         fixed_inputs = self.fixed_inputs()
         fixed_outputs = ComponentSet()
@@ -618,7 +689,7 @@ class SequentialDecomposition(FOQUSGraph):
 
     def create_graph(self, model):
         """
-        Returns a networkx MultiDiGraph of a Pyomo network model.
+        Returns a networkx MultiDiGraph of a Pyomo network model
 
         The nodes are units and the edges follow Pyomo Arc objects. Nodes
         that get added to the graph are determined by the parent blocks
@@ -646,11 +717,13 @@ class SequentialDecomposition(FOQUSGraph):
 
     def select_tear_mip_model(self, G):
         """
-        Generate a model for selecting tears from the given graph.
+        Generate a model for selecting tears from the given graph
 
-        Returns:
-            The model
-            A list of the binary variables representing each edge,
+        Returns
+        -------
+            model
+            bin_list
+                A list of the binary variables representing each edge,
                 indexed by the edge index of the graph
         """
         model = ConcreteModel()
@@ -720,6 +793,7 @@ class SequentialDecomposition(FOQUSGraph):
         return tset
 
     def compute_err(self, svals, dvals, tol_type):
+        """Compute the diff between svals and dvals for the given tol_type"""
         if tol_type not in ("abs", "rel"):
             raise ValueError("Invalid tol_type '%s'" % (tol_type,))
 
@@ -784,6 +858,7 @@ class SequentialDecomposition(FOQUSGraph):
 
 
     def pass_tear_direct(self, G, tears):
+        """Pass values across all tears in the given tear set"""
         fixed_outputs = ComponentSet()
         edge_list = self.idx_to_edge(G)
 
