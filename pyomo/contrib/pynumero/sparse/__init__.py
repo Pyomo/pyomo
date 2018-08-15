@@ -4,3 +4,4 @@ from .csc import *
 from .csr import *
 from .block_vector import *
 from .block_matrix import *
+from .extract import tril, triu

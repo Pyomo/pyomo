@@ -1,5 +1,6 @@
 import unittest
 import sys
+import os
 
 try:
     from pyomo.contrib.pynumero.sparse import (COOMatrix,
@@ -19,6 +20,7 @@ except:
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
 
+@unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
 class TestCOOMatrix(unittest.TestCase):
 
     def setUp(self):
@@ -136,6 +138,7 @@ class TestCOOMatrix(unittest.TestCase):
         self.assertListEqual(mm.toarray().flatten().tolist(), mm2.flatten().tolist())
 
 
+@unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
 class TestCOOSymMatrix(unittest.TestCase):
 
     def setUp(self):
@@ -393,6 +396,7 @@ class TestCOOSymMatrix(unittest.TestCase):
         self.assertListEqual(mm.toarray().flatten().tolist(), test_m.flatten().tolist())
 
 
+@unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
 class TestEmptyMatrix(unittest.TestCase):
 
     def test_constructor(self):
@@ -417,6 +421,7 @@ class TestEmptyMatrix(unittest.TestCase):
         self.assertIsInstance(mcsc, CSCMatrix)
 
 
+@unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
 class TestIdentityMatrix(unittest.TestCase):
 
     def test_constructor(self):

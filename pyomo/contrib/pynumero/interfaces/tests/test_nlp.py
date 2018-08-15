@@ -1,5 +1,6 @@
 import pyomo.environ as pe
 import unittest
+import os
 
 try:
     from pyomo.contrib.pynumero.interfaces.nlp import PyomoNLP, AmplNLP
@@ -46,6 +47,7 @@ def create_rosenbrock_model(n_vars):
     return model
 
 
+@unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
 class TestNLP(unittest.TestCase):
 
     @classmethod

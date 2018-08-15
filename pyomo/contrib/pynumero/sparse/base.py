@@ -1,4 +1,6 @@
 
+
+# ToDo: make this an abstract class
 class SparseBase(object):
 
     def __init__(self):
@@ -23,3 +25,6 @@ class SparseBase(object):
 
     def set_shape(self, shape):
         raise RuntimeError('set shape is not supported')
+
+    def tofullmatrix(self):
+        return NotImplemented

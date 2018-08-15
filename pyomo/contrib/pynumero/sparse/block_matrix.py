@@ -21,6 +21,7 @@ import numpy as np
 
 __all__ = ['BlockMatrix', 'BlockSymMatrix']
 
+
 # ToDo: better exception handling
 class BlockMatrix(SparseBase):
     """

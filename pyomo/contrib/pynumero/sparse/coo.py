@@ -19,6 +19,8 @@ from scipy.sparse.sputils import (upcast,
                                   isscalarlike,
                                   get_index_dtype)
 
+from pyomo.contrib.pynumero.sparse.utils import is_symmetric_dense
+
 try:
     from pyomo.contrib.pynumero.extensions.sparseutils import sym_coo_matvec
 except ImportError as e:
@@ -52,7 +54,13 @@ class COOMatrix(SparseBase, scipy_coo_matrix):
     j[:] the column indices of the matrix entries
     Where A[i[k], j[k]] = data[k]. When shape is not specified, it is inferred from the index arrays
     """
-    def __init__(self, arg1, shape=None, dtype=None, copy=False):
+    def __init__(self, arg1, shape=None, dtype=None, copy=False, **kwargs):
+
+        # include upper triangular if arg1 is symmetric
+        expand_symmetry = kwargs.pop('expand_symmetry', True)
+        if expand_symmetry and isinstance(arg1, SparseBase):
+            if arg1.is_symmetric:
+                arg1 = arg1.tofullmatrix().tocoo()
 
         scipy_coo_matrix.__init__(self, arg1, shape=shape, dtype=dtype, copy=copy)
         SparseBase.__init__(self)
@@ -132,6 +140,10 @@ class COOMatrix(SparseBase, scipy_coo_matrix):
                 x.sum_duplicates()
             return x
 
+    def tocoo(self, copy=False):
+        # copy only there to agree with the signature
+        return self
+
     def todok(self, copy=False):
         # ToDo: decide if we should suppert this
         raise NotImplementedError('Not supported')
@@ -143,6 +155,9 @@ class COOMatrix(SparseBase, scipy_coo_matrix):
     def tolil(self, copy=False):
         # ToDo: decide if we should suppert this
         raise NotImplementedError('Not supported')
+
+    def tofullmatrix(self):
+        return self
 
     def transpose(self, axes=None, copy=False):
         """
@@ -234,12 +249,29 @@ class COOSymMatrix(COOMatrix):
     j[:] the column indices of the matrix entries
     Where A[i[k], j[k]] = data[k]. When shape is not specified, it is inferred from the index arrays
     """
-    def __init__(self, arg1, shape=None, dtype=None, copy=False):
+    def __init__(self, arg1, shape=None, dtype=None, copy=False, **kwargs):
 
-        # TODO: check if arg1 is np.array and remove upper triangular
-        super(COOSymMatrix, self).__init__(arg1, shape=shape, dtype=dtype, copy=copy)
+        # check if dense matrix is symmetric
+        if isinstance(arg1, np.ndarray):
+            if not is_symmetric_dense(arg1):
+                raise RuntimeError("ndarray is not symmetric")
+            # keep only lower triangular
+            arg1 = np.tril(arg1)
 
-        # add check to veryfy square matrix
+        # symmetric matrices don't expand symmetry
+        expand_symmetry = kwargs.pop('expand_symmetry', False)
+
+        error_msg = "Symmetric matrices only store lower triangular"
+        assert not expand_symmetry, error_msg
+
+        super(COOSymMatrix, self).__init__(arg1,
+                                           shape=shape,
+                                           dtype=dtype,
+                                           copy=copy,
+                                           expand_symmetry=expand_symmetry,
+                                           **kwargs)
+
+        # add check to verify square matrix
         if self.shape[0] != self.shape[1]:
             raise RuntimeError('A rectangular matrix is not symmetric')
 
@@ -250,7 +282,8 @@ class COOSymMatrix(COOMatrix):
         # check only lower triangular entries
         diff = self.row - self.col
         if np.any(diff < 0):
-            raise RuntimeError('COOSymMatrix only store lower triangular entries. j>i not allowed in irow jcol')
+            error_msg = 'COOSymMatrix only store lower triangular entries.'
+            raise RuntimeError(error_msg)
 
         # makes sparse matrix symmetric
         self._symmetric = True

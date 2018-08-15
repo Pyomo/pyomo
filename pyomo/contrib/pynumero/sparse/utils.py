@@ -1,16 +1,18 @@
-from pyutilib.misc.timing import tic, toc
-from pyomo.contrib.pynumero.sparse import (COOMatrix,
-                             COOSymMatrix,
-                             CSCMatrix,
-                             CSCSymMatrix,
-                             CSRMatrix,
-                             CSRSymMatrix)
+from pyomo.contrib.pynumero.sparse.base import SparseBase
+from pyomo.contrib.pynumero.sparse.extract import triu, tril
+from scipy.sparse.sputils import isscalarlike
 
 import numpy as np
 
 
-
 def read_matrix(filename, matrix_format='coo', verbose=False, offset=1):
+    from pyomo.contrib.pynumero.sparse import (COOMatrix,
+                                               COOSymMatrix,
+                                               CSCMatrix,
+                                               CSCSymMatrix,
+                                               CSRMatrix,
+                                               CSRSymMatrix)
+
 
     with open(filename, 'r') as f:
         header = f.readline()
@@ -72,3 +74,69 @@ def write_matrix(filename, matrix, offset=1):
         f.write("{} {} {}\n".format(m.shape[0], m.shape[1], m.nnz))
         for i in range(m.nnz):
             f.write("{} {} {}\n".format(m.row[i] + offset, m.col[i] + offset, m.data[i]))
+
+
+def is_symmetric_dense(mat):
+
+    flag = False
+    if isinstance(mat, np.ndarray):
+        if mat.ndim != 2 and mat.shape[0] != mat.shape[1]:
+            if np.allclose(mat, mat.T, atol=1e-6):
+                flag = True
+    elif isscalarlike(mat):
+        flag = True
+    else:
+        raise RuntimeError("Format not recognized {}".format(type(mat)))
+    return flag
+
+
+def is_symmetric(mat):
+
+    # Note: this check is expensive
+    flag = False
+    if isinstance(mat, np.ndarray):
+        flag = is_symmetric_dense(mat)
+    elif isinstance(mat, SparseBase):
+        if mat.is_symmetric:
+            flag = mat.is_symmetric
+        else:
+            if mat.shape[0] != mat.shape[1]:
+                flag = False
+            else:
+                # get upper and lower triangular
+                l = tril(mat)
+                u = triu(mat)
+                diff = l - u.transpose()
+                z = np.zeros(diff.nnz)
+                flag = np.allclose(diff, z, atol=1e-6)
+    elif isscalarlike(mat):
+        flag = True
+    else:
+        raise RuntimeError("Format not recognized {}".format(type(mat)))
+    return flag
+
+
+def _conver_matrix_to_symmetric(mat):
+    from pyomo.contrib.pynumero.sparse import (COOSymMatrix,
+                                               CSCMatrix,
+                                               CSCSymMatrix,
+                                               CSRMatrix,
+                                               CSRSymMatrix)
+    # Note this is only valid for pynumero matrices
+    error_msg = "Only supported for pynumero.Sparse matrices"
+    assert isinstance(mat, SparseBase), error_msg
+
+    if mat.is_symmetric:
+        return mat
+
+    if not is_symmetric(mat):
+        err_msg = "Cannot convert matrix because it has no symmetry"
+        raise RuntimeError(err_msg)
+
+    l = tril(mat)
+    if isinstance(mat, CSCMatrix):
+        return CSCSymMatrix(l)
+    elif isinstance(mat, CSRMatrix):
+        return CSRSymMatrix(l)
+    else:
+        return COOSymMatrix(l)

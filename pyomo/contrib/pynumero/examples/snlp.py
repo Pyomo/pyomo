@@ -113,7 +113,7 @@ full_kkt = kkt.tofullmatrix()
 plt.spy(full_kkt)
 plt.title('Karush-Kuhn-Tucker Matrix\n')
 plt.show()
-"""
+
 from pyomo.contrib.pynumero.algorithms.stochastic_kkt import build_permuted_kkt
 
 jac_g = nlp.jacobian_g(x)
@@ -123,7 +123,7 @@ hess_lag = nlp.hessian_lag(x, y)
 print([hess_lag[sid, sid].nnz for sid in range(nlp.nblocks)])
 print([hess_lag[sid, sid].getallnnz() for sid in range(nlp.nblocks)])
 print([nlp._nlps[sid].nnz_hessian_lag for sid in range(nlp.nblocks)])
-kkt2, _ = build_permuted_kkt(nlp, x, y)
+kkt2, rhs2 = build_permuted_kkt(nlp, x, y)
 print(kkt2.getallnnz())
 print(kkt2)
 full_kkt2 = kkt2.tofullmatrix()
@@ -131,4 +131,4 @@ print(full_kkt2)
 plt.spy(full_kkt2)
 plt.title('Karush-Kuhn-Tucker Matrix\n')
 plt.show()
-"""
+

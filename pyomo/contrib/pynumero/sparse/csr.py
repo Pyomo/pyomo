@@ -17,7 +17,7 @@ except ImportError as e:
 
 from scipy.sparse import _sparsetools
 from pyomo.contrib.pynumero.sparse.base import SparseBase
-
+from pyomo.contrib.pynumero.sparse.utils import is_symmetric_dense
 import numpy as np
 
 __all__ = ['CSRMatrix', 'CSRSymMatrix']
@@ -25,7 +25,14 @@ __all__ = ['CSRMatrix', 'CSRSymMatrix']
 
 class CSRMatrix(SparseBase, scipy_csr_matrix):
 
-    def __init__(self, arg1, shape=None, dtype=None, copy=False):
+    def __init__(self, arg1, shape=None, dtype=None, copy=False, **kwargs):
+
+        # include upper triangular if arg1 is symmetric
+        expand_symmetry = kwargs.pop('expand_symmetry', True)
+        if expand_symmetry and isinstance(arg1, SparseBase):
+            if arg1.is_symmetric:
+                arg1 = arg1.tofullmatrix().tocsr()
+
         scipy_csr_matrix.__init__(self, arg1, shape=shape, dtype=dtype, copy=copy)
         SparseBase.__init__(self)
 
@@ -62,6 +69,13 @@ class CSRMatrix(SparseBase, scipy_csr_matrix):
         from pyomo.contrib.pynumero.sparse.coo import COOMatrix
         return COOMatrix((self.data, (row, col)), self.shape, copy=copy,
                          dtype=self.dtype)
+
+    def tocsr(self, copy=False):
+        # copy only there to agree with the signature
+        return self
+
+    def tofullmatrix(self):
+        return self
 
     def transpose(self, axes=None, copy=False):
         if axes is not None:
@@ -113,9 +127,27 @@ class CSRMatrix(SparseBase, scipy_csr_matrix):
 # this matrix will only store the lower triangular indices
 class CSRSymMatrix(CSRMatrix):
 
-    def __init__(self, arg1, shape=None, dtype=None, copy=False):
+    def __init__(self, arg1, shape=None, dtype=None, copy=False, **kwargs):
 
-        super().__init__(arg1, shape=shape, dtype=dtype, copy=copy)
+        # check if dense matrix is symmetric
+        if isinstance(arg1, np.ndarray):
+            if not is_symmetric_dense(arg1):
+                raise RuntimeError("ndarray is not symmetric")
+            # keep only lower triangular
+            arg1 = np.tril(arg1)
+
+        # symmetric matrices don't expand symmetry
+        expand_symmetry = kwargs.pop('expand_symmetry', False)
+
+        error_msg = "Symmetric matrices only store lower triangular"
+        assert not expand_symmetry, error_msg
+
+        super().__init__(arg1,
+                         shape=shape,
+                         dtype=dtype,
+                         copy=copy,
+                         expand_symmetry=expand_symmetry,
+                         **kwargs)
 
         # add check to veryfy square matrix
         if self.shape[0] != self.shape[1]:
