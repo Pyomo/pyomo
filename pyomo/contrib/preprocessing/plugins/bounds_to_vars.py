@@ -5,7 +5,8 @@ from __future__ import division
 import textwrap
 from math import fabs
 
-from pyomo.common.config import ConfigBlock, ConfigValue, NonNegativeFloat
+from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
+                                 add_docstring_list)
 from pyomo.common.plugin import alias
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.numvalue import value
@@ -16,14 +17,14 @@ from pyomo.repn import generate_standard_repn
 class ConstraintToVarBoundTransform(IsomorphicTransformation):
     """Change constraints to be a bound on the variable.
 
-    Looks for constraints of form k*v + c1 <= c2. Changes bound on v to match
-    (c2 - c1)/k if it results in a tighter bound. Also does the same thing for
-    lower bounds.
+    Looks for constraints of form: :math:`k*v + c_1 \\leq c_2`. Changes
+    variable lower bound on :math:`v` to match :math:`(c_2 - c_1)/k` if it
+    results in a tighter bound. Also does the same thing for lower bounds.
+
+    Arguments below are specified for the `apply_to` and `create_using`
+    functions.
 
     """
-
-    alias('contrib.constraints_to_var_bounds',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     CONFIG = ConfigBlock("ConstraintToVarBounds")
     CONFIG.declare("tolerance", ConfigValue(
@@ -32,8 +33,13 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
     ))
     CONFIG.declare("detect_fixed", ConfigValue(
         default=True, domain=bool,
-        description="If True, fix variable when LB == UB."
+        description="If True, fix variable when abs(LB - UB) <= tolerance."
     ))
+
+    __doc__ = add_docstring_list(__doc__, CONFIG)
+
+    alias('contrib.constraints_to_var_bounds',
+          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, model, **kwds):
         config = self.CONFIG(kwds)

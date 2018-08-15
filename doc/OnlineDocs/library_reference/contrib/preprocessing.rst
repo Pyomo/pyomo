@@ -1,0 +1,76 @@
+Pyomo Nonlinear Preprocessing
+=============================
+
+``pyomo.contrib.preprocessing`` is a contributed library of preprocessing
+transformations intended to operate upon nonlinear and mixed-integer nonlinear
+programs (NLPs and MINLPs), as well as generalized disjunctive programs (GDPs).
+
+This contributed package is maintained by `Qi Chen
+<https://github.com/qtothec>`_ and `his colleagues from Carnegie Mellon
+University <http://capd.cheme.cmu.edu/>`_.
+
+The following preprocessing transformations are available. However, some may
+later be deprecated or combined, depending on their usefulness.
+
+.. currentmodule:: pyomo.contrib.preprocessing.plugins
+
+.. autosummary::
+    :nosignatures:
+
+    var_aggregator.VariableAggregator
+    bounds_to_vars.ConstraintToVarBoundTransform
+    induced_linearity.InducedLinearity
+    constraint_tightener.TightenContraintFromVars
+    deactivate_trivial_constraints.TrivialConstraintDeactivator
+    detect_fixed_vars.FixedVarDetector
+    equality_propagate.FixedVarPropagator
+    equality_propagate.VarBoundPropagator
+    init_vars.InitMidpoint
+    init_vars.InitZero
+    remove_zero_terms.RemoveZeroTerms
+    strip_bounds.VariableBoundStripper
+    zero_sum_propagator.ZeroSumPropagator
+
+
+Variable Aggregator
+-------------------
+
+The following code snippet shows demonstrates usage of the variable aggregation
+transformation on a concrete Pyomo model:
+
+.. doctest::
+
+    >>> from pyomo.environ import *
+    >>> m = ConcreteModel()
+    >>> m.v1 = Var(initialize=1, bounds=(1, 8))
+    >>> m.v2 = Var(initialize=2, bounds=(0, 3))
+    >>> m.v3 = Var(initialize=3, bounds=(-7, 4))
+    >>> m.v4 = Var(initialize=4, bounds=(2, 6))
+    >>> m.c1 = Constraint(expr=m.v1 == m.v2)
+    >>> m.c2 = Constraint(expr=m.v2 == m.v3)
+    >>> m.c3 = Constraint(expr=m.v3 == m.v4)
+    >>> TransformationFactory('contrib.aggregate_vars').apply_to(m)
+    >>> m.pprint()
+
+.. autoclass:: pyomo.contrib.preprocessing.plugins.var_aggregator.VariableAggregator
+    :members: apply_to, create_using, update_variables
+
+
+Explicit Constraints to Variable Bounds
+---------------------------------------
+
+.. doctest::
+
+    >>> from pyomo.environ import *
+    >>> m = ConcreteModel()
+    >>> m.v1 = Var(initialize=1)
+    >>> m.v2 = Var(initialize=2)
+    >>> m.v3 = Var(initialize=3)
+    >>> m.c1 = Constraint(expr=m.v1 == 2)
+    >>> m.c2 = Constraint(expr=m.v2 >= -2)
+    >>> m.c3 = Constraint(expr=m.v3 <= 5)
+    >>> TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
+    >>> m.pprint()
+
+.. autoclass:: pyomo.contrib.preprocessing.plugins.bounds_to_vars.ConstraintToVarBoundTransform
+    :members: apply_to, create_using
