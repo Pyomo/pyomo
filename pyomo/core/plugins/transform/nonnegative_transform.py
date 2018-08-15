@@ -10,7 +10,7 @@
 
 import copy
 
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 from pyomo.core.expr import current as EXPR
 
 from pyomo.core import *

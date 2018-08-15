@@ -1,0 +1,1 @@
+model.MyConstraint = Constraint(model.I,model.KV,rule=c1Rule)

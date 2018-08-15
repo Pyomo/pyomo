@@ -40,7 +40,7 @@ def configure_glpk_direct():
 
 from pyutilib.misc import Bunch, Options
 
-from pyomo.util.plugin import alias
+from pyomo.common.plugin import alias
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *

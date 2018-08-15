@@ -23,7 +23,7 @@ import pyomo
 import pyomo.opt
 from pyomo.opt.base.solvers import UnknownSolver
 
-pyomo.util.plugin.push('pyomo.solvers.test')
+pyomo.common.plugin.push('pyomo.solvers.test')
 
 old_tempdir = None
 def setUpModule():
@@ -36,7 +36,7 @@ def tearDownModule():
 
 class TestWriter(pyomo.opt.AbstractProblemWriter):
 
-    pyomo.util.plugin.alias('wtest3')
+    pyomo.common.plugin.alias('wtest3')
 
     def __init__(self, name=None):
         pyomo.opt.AbstractProblemWriter.__init__(self,name)
@@ -44,7 +44,7 @@ class TestWriter(pyomo.opt.AbstractProblemWriter):
 
 class TestReader(pyomo.opt.AbstractResultsReader):
 
-    pyomo.util.plugin.alias('rtest3')
+    pyomo.common.plugin.alias('rtest3')
 
     def __init__(self, name=None):
         pyomo.opt.AbstractResultsReader.__init__(self,name)
@@ -52,7 +52,7 @@ class TestReader(pyomo.opt.AbstractResultsReader):
 
 class TestSolver(pyomo.opt.OptSolver):
 
-    pyomo.util.plugin.alias('stest3')
+    pyomo.common.plugin.alias('stest3')
 
     def __init__(self, **kwds):
         kwds['type'] = 'stest_type'
@@ -62,14 +62,14 @@ class TestSolver(pyomo.opt.OptSolver):
     def enabled(self):
         return False
 
-pyomo.util.plugin.pop()
+pyomo.common.plugin.pop()
 
 
 class OptFactoryDebug(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        import pyomo.util.plugin
+        import pyomo.common.plugin
         import pyomo.environ
         import pyomo.solvers.plugins
 

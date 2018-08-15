@@ -20,7 +20,7 @@ from six import iterkeys, iteritems, StringIO
 from six.moves import xrange
 
 from pyutilib.misc import PauseGC
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
 from pyomo.core.base import \
@@ -49,8 +49,8 @@ def _get_bound(exp):
 
 class ProblemWriter_cpxlp(AbstractProblemWriter):
 
-    pyomo.util.plugin.alias('cpxlp', 'Generate the corresponding CPLEX LP file')
-    pyomo.util.plugin.alias('lp', 'Generate the corresponding CPLEX LP file')
+    pyomo.common.plugin.alias('cpxlp', 'Generate the corresponding CPLEX LP file')
+    pyomo.common.plugin.alias('lp', 'Generate the corresponding CPLEX LP file')
 
     def __init__(self):
 
@@ -208,6 +208,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 # Order columns by dictionary names
                 #
                 names = [variable_symbol_dictionary[id(var)] for var in x.linear_vars]
+                    
                 for i, name in sorted(enumerate(names), key=lambda x: x[1]):
                     output_file.write(linear_coef_string_template % (x.linear_coefs[i], name))
             else:
@@ -413,33 +414,33 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         #
         all_blocks = []
         variable_list = []
-        for block in model.block_data_objects(active=True,
-                                              sort=sortOrder):
-
-            all_blocks.append(block)
-
-            for vardata in block.component_data_objects(
-                    Var,
-                    active=True,
-                    sort=sortOrder,
-                    descend_into=False):
-
-                variable_list.append(vardata)
-                variable_label_pairs.append(
-                    (vardata,create_symbol_func(symbol_map,
-                                                vardata,
-                                                labeler)))
         #
         # WEH - TODO:  See if this is faster
+        # NOTE: This loop doesn't find all of the variables.  :(
         #
-        #all_blocks = list( model.block_data_objects(
-        #        active=True, sort=sortOrder) )
-        #variable_list = list( model.component_data_objects(
-        #        Var, sort=sortOrder) )
-        #variable_label_pairs = list(
-        #    (vardata, create_symbol_func(symbol_map, vardata, labeler))
-        #    for vardata in variable_list )
-
+        #for block in model.block_data_objects(active=True,
+        #                                      sort=sortOrder):
+        #
+        #    all_blocks.append(block)
+        #
+        #    for vardata in block.component_data_objects(
+        #            Var,
+        #            active=True,
+        #            sort=sortOrder,
+        #            descend_into=False):
+        #
+        #        variable_list.append(vardata)
+        #        variable_label_pairs.append(
+        #            (vardata,create_symbol_func(symbol_map,
+        #                                        vardata,
+        #                                        labeler)))
+        all_blocks = list( model.block_data_objects(
+                active=True, sort=sortOrder) )
+        variable_list = list( model.component_data_objects(
+                Var, sort=sortOrder) )
+        variable_label_pairs = list(
+            (vardata, create_symbol_func(symbol_map, vardata, labeler))
+            for vardata in variable_list )
         variable_symbol_map.addSymbols(variable_label_pairs)
 
         # and extract the information we'll need for rapid labeling.

@@ -36,11 +36,12 @@ __all__ = ['pyomo_callback',
 
 import logging
 import pyutilib.misc
-from pyomo.util.deprecation import deprecated
-from pyomo.util.plugin import (
+from pyomo.common.deprecation import deprecated
+from pyomo.common.modeling import unique_component_name
+from pyomo.common.plugin import (
     alias, implements, Interface, Plugin, PluginFactory, CreatePluginFactory,
     PluginError, ExtensionPoint )
-from pyomo.util.timing import TransformationTimer
+from pyomo.common.timing import TransformationTimer
 
 logger = logging.getLogger('pyomo.core')
 registered_callback = {}
@@ -350,7 +351,17 @@ class Transformation(Plugin):
             "The Transformation.apply_to method is not implemented.")
 
     def _create_using(self, model, **kwds):
+        # Put all the kwds onto the model so that when we clone the
+        # model any references to things on the model are correctly
+        # updated to point to the new instance.  Note that users &
+        # transformation developers cannot rely on things happening by
+        # argument side effect.
+        name = unique_component_name(model, '_kwds')
+        setattr(model, name, kwds)
         instance = model.clone()
+        kwds = getattr(instance, name)
+        delattr(model, name)
+        delattr(instance, name)
         self._apply_to(instance, **kwds)
         return instance
 

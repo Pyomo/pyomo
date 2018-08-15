@@ -1,17 +1,22 @@
-import unittest
-
+import pyutilib.th as unittest
 try:
-    from pyomo.contrib.pynumero.sparse import (COOMatrix,
-                                               COOSymMatrix,
-                                               BlockMatrix,
-                                               BlockSymMatrix,
-                                               SparseBase,
-                                               BlockVector)
     from scipy.sparse import bmat
     import numpy as np
-except:
-    raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
+except ImportError:
+    raise unittest.SkipTest(
+        "Pynumero needs scipy and numpy to run block matrix tests")
 
+from pyomo.contrib.pynumero.extensions.sparseutils import SparseLib
+if not SparseLib.available():
+    raise unittest.SkipTest(
+        "Pynumero needs the SparseUtils extension to run block matrix tests")
+
+from pyomo.contrib.pynumero.sparse import (COOMatrix,
+                                           COOSymMatrix,
+                                           BlockMatrix,
+                                           BlockSymMatrix,
+                                           SparseBase,
+                                           BlockVector)
 
 class TestBlockMatrix(unittest.TestCase):
     def setUp(self):

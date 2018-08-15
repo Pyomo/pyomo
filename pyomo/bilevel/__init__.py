@@ -10,7 +10,7 @@
 
 # Package files
 
-from pyomo.util.plugin import PluginGlobals
+from pyomo.common.plugin import PluginGlobals
 PluginGlobals.add_env("pyomo")
 
 from pyomo.bilevel.components import *

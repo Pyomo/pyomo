@@ -12,7 +12,7 @@ from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 
 from pyomo.core.expr import current as EXPR
-from pyomo.core.expr.numvalue import NumericValue, native_numeric_types, as_numeric
+from pyomo.core.expr.numvalue import NumericValue, native_numeric_types
 from pyomo.core.base.plugin import register_component
 from pyomo.core.base.template_expr import IndexTemplate, _GetItemIndexer
 
@@ -200,13 +200,11 @@ if scipy_available:
         """
 
         def __init__(self, templatemap):
-            super(Pyomo2Scipy_Visitor,self).__init__(self)
+            super(Pyomo2Scipy_Visitor,self).__init__()
             self.templatemap = templatemap
 
         def visiting_potential_leaf(self, node):
-            if type(node) in native_numeric_types or \
-                not node.is_expression_type() or\
-                type(node) is IndexTemplate:
+            if type(node) is IndexTemplate:
                 return True, node
 
             if type(node) is EXPR.GetItemExpression:
@@ -219,7 +217,8 @@ if scipy_available:
                         node._base.name, ','.join(str(x) for x in _id._args) )
                 return True, self.templatemap[_id]
 
-            return False, None
+            return super(
+                Pyomo2Scipy_Visitor, self).visiting_potential_leaf(node)
 
 
 def convert_pyomo2scipy(expr, templatemap):
@@ -255,7 +254,7 @@ if casadi_available:
 	    """
 
         def __init__(self, templatemap):
-            super(Substitute_Pyomo2Casadi_Visitor,self).__init__(self)
+            super(Substitute_Pyomo2Casadi_Visitor,self).__init__()
             self.templatemap = templatemap
 
         def visit(self, node, values):
@@ -623,6 +622,14 @@ class Simulator:
                 return residual
             self._rhsfun = _rhsfun   
             
+        # Add any diffvars not added by expression walker to self._templatemap
+        if self._intpackage == 'casadi':
+            for _id in diffvars:
+                if _id not in templatemap:
+                    name = "%s[%s]" % (
+                        _id._base.name, ','.join(str(x) for x in _id._args))
+                    templatemap[_id] = casadi.SX.sym(name)
+
         self._contset = contset
         self._cstemplate = cstemplate
         self._diffvars = diffvars

@@ -1,15 +1,15 @@
-import unittest
-
+import pyutilib.th as unittest
 try:
-    from pyomo.contrib.pynumero.linalg.solvers import MA27LinearSolver
-    from pyomo.contrib.pynumero.sparse import (COOMatrix,
-                                               COOSymMatrix,
-                                               BlockSymMatrix,
-                                               BlockMatrix,
-                                               BlockVector)
     import numpy as np
-except:
+except ImportError:
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
+
+from pyomo.contrib.pynumero.linalg.solvers import MA27LinearSolver
+from pyomo.contrib.pynumero.sparse import (COOMatrix,
+                                           COOSymMatrix,
+                                           BlockSymMatrix,
+                                           BlockMatrix,
+                                           BlockVector)
 
 @unittest.skip
 class TestMA27(unittest.TestCase):

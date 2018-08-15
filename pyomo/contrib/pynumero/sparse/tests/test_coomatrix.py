@@ -1,23 +1,30 @@
-import unittest
 import sys
 import os
+import pyutilib.th as unittest
 
 try:
-    from pyomo.contrib.pynumero.sparse import (COOMatrix,
-                                               COOSymMatrix,
-                                               SparseBase,
-                                               IdentityMatrix,
-                                               EmptyMatrix)
-
-    from pyomo.contrib.pynumero.sparse.csr import CSRMatrix, CSRSymMatrix
-    from pyomo.contrib.pynumero.sparse.csc import CSCMatrix, CSCSymMatrix
-
     from scipy.sparse.csr import csr_matrix
     from scipy.sparse.csc import csc_matrix
     from scipy.sparse.coo import coo_matrix
     import numpy as np
-except:
-    raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
+except ImportError:
+    raise unittest.SkipTest(
+        "Pynumero needs scipy and numpy to run COO matrix tests")
+
+from pyomo.contrib.pynumero.extensions.sparseutils import SparseLib
+if not SparseLib.available():
+    raise unittest.SkipTest(
+        "Pynumero needs the SparseUtils extension to run COO matrix tests")
+
+
+from pyomo.contrib.pynumero.sparse import (COOMatrix,
+                                           COOSymMatrix,
+                                           SparseBase,
+                                           IdentityMatrix,
+                                           EmptyMatrix)
+
+from pyomo.contrib.pynumero.sparse.csr import CSRMatrix, CSRSymMatrix
+from pyomo.contrib.pynumero.sparse.csc import CSCMatrix, CSCSymMatrix
 
 
 @unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")

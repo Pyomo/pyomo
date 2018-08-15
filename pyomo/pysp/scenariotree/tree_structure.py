@@ -1906,6 +1906,18 @@ class ScenarioTree(object):
     def get_bundle(self, name):
         return self._scenario_bundle_map[name]
 
+    def get_subproblem(self, name):
+        if self.contains_bundles():
+            return self._scenario_bundle_map[name]
+        else:
+            return self._scenario_map[name]
+
+    def get_scenario_bundle(self, name):
+        if not self.contains_bundles():
+            return None
+        else:
+            return self._scenario_bundle_map[name]
+
     # there are many contexts where manipulators of a scenario
     # tree simply need an arbitrary scenario to proceed...
     def get_arbitrary_scenario(self):

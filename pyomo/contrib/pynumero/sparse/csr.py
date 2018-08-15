@@ -149,6 +149,7 @@ class CSRSymMatrix(CSRMatrix):
                          expand_symmetry=expand_symmetry,
                          **kwargs)
 
+
         # add check to veryfy square matrix
         if self.shape[0] != self.shape[1]:
             raise RuntimeError('A rectangular matrix is not symmetric')

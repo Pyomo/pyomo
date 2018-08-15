@@ -24,9 +24,9 @@ from pyomo.core.expr.numvalue import (NumericValue,
                                       is_fixed,
                                       is_constant,
                                       is_variable_type,
-                                      potentially_variable,
-                                      value,
-                                      as_numeric)
+                                      is_potentially_variable,
+                                      is_numeric_data,
+                                      value)
 
 import six
 
@@ -80,7 +80,7 @@ class IIdentityExpression(NumericValue):
     def is_potentially_variable(self):
         """A boolean indicating whether this expression can
         reference variables."""
-        return potentially_variable(self._expr)
+        return is_potentially_variable(self._expr)
 
     def is_named_expression_type(self):
         """A boolean indicating whether this in a named expression."""
@@ -147,7 +147,7 @@ class IIdentityExpression(NumericValue):
     def _is_fixed(self, values):
         return values[0]
 
-    def create_node_with_local_data(self, values, memo=None):
+    def create_node_with_local_data(self, values):
         """
         Construct an expression after constructing the
         contained expression.
@@ -155,8 +155,6 @@ class IIdentityExpression(NumericValue):
         This class provides a consistent interface for constructing a
         node, which is used in tree visitor scripts.
         """
-        if id(self) in memo:
-            return memo[id(self)]
         return self.__class__(expr=values[0])
 
 class noclone(IIdentityExpression):
@@ -224,6 +222,10 @@ class IExpression(IComponent, IIdentityExpression):
         """A boolean indicating whether this expression is constant."""
         return False
 
+    def is_parameter_type(self):
+        """A boolean indicating whether this expression is a parameter object."""
+        return False
+
     def is_variable_type(self):
         """A boolean indicating whether this expression is a variable object."""
         return False
@@ -247,10 +249,12 @@ class expression(IExpression):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_expr",
                  "__weakref__")
     def __init__(self, expr=None):
         self._parent = None
+        self._storage_key = None
         self._expr = None
 
         # call the setter
@@ -294,8 +298,10 @@ class data_expression(expression):
         return self._expr
     @expr.setter
     def expr(self, expr):
-        if potentially_variable(expr):
-            raise ValueError("Expression is not restricted to data.")
+        if (expr is not None) and \
+           (not is_numeric_data(expr)):
+            raise ValueError("Expression is not restricted to "
+                             "numeric data.")
         self._expr = expr
 
 class expression_tuple(ComponentTuple):
@@ -304,6 +310,7 @@ class expression_tuple(ComponentTuple):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_data")
     if six.PY3:
         # This has to do with a bug in the abc module
@@ -314,6 +321,7 @@ class expression_tuple(ComponentTuple):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         super(expression_tuple, self).__init__(*args, **kwds)
 
 class expression_list(ComponentList):
@@ -322,6 +330,7 @@ class expression_list(ComponentList):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_data")
     if six.PY3:
         # This has to do with a bug in the abc module
@@ -332,6 +341,7 @@ class expression_list(ComponentList):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         super(expression_list, self).__init__(*args, **kwds)
 
 class expression_dict(ComponentDict):
@@ -340,6 +350,7 @@ class expression_dict(ComponentDict):
     # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
+                 "_storage_key",
                  "_data")
     if six.PY3:
         # This has to do with a bug in the abc module
@@ -350,4 +361,5 @@ class expression_dict(ComponentDict):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._storage_key = None
         super(expression_dict, self).__init__(*args, **kwds)

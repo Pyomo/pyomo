@@ -19,7 +19,7 @@ import pyutilib.th as unittest
 import pyutilib.services
 
 import pyomo.opt
-from pyomo.util.plugin import Plugin
+from pyomo.common.plugin import Plugin
 from pyomo.environ import *
 
 

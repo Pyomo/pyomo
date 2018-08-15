@@ -1,8 +1,13 @@
+import pyutilib.th as unittest
+try:
+    import numpy as np
+except ImportError:
+    raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
+
 from pyomo.contrib.pynumero.interfaces import PyomoNLP, AmplNLP
 from pyomo.contrib.pynumero.algorithms import basic_sqp
 import pyomo.environ as pe
 import pyomo.dae as dae
-import unittest
 
 
 @unittest.skip

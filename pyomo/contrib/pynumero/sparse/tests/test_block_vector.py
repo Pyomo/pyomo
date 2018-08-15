@@ -1,12 +1,11 @@
-import unittest
 import sys
-
+import pyutilib.th as unittest
 try:
-    from pyomo.contrib.pynumero.sparse import BlockVector
     import numpy as np
-except:
+except ImportError:
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
+from pyomo.contrib.pynumero.sparse import BlockVector
 
 class TestBlockVector(unittest.TestCase):
 
@@ -353,3 +352,5 @@ class TestBlockVector(unittest.TestCase):
         self.assertListEqual(v.tolist(), v2.tolist())
 
 
+if __name__ == '__main__':
+    unittest.main()

@@ -7,3 +7,4 @@ def load():
     import pyomo.contrib.preprocessing.plugins.strip_bounds
     import pyomo.contrib.preprocessing.plugins.zero_sum_propagator
     import pyomo.contrib.preprocessing.plugins.bounds_to_vars
+    import pyomo.contrib.preprocessing.plugins.var_aggregator
