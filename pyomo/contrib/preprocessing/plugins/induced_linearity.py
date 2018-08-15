@@ -37,13 +37,15 @@ class InducedLinearity(IsomorphicTransformation):
     expressions, which may then be induced to be linear.
 
     The overall algorithm flow can be summarized as:
+
     1. Detect effectively discrete variables and the constraints that
-    imply discreteness.
+       imply discreteness.
     2. Determine the set of valid values for each effectively discrete variable
-        - NOTE: 1, 2 must incorporate scoping considerations (Disjuncts)
     3. Find nonlinear expressions in which effectively discrete variables
-    participate.
+       participate.
     4. Reformulate nonlinear expressions appropriately.
+
+    .. note:: Tasks 1 & 2 must incorporate scoping considerations (Disjuncts)
 
     """
 

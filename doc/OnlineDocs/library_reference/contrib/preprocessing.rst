@@ -74,3 +74,71 @@ Explicit Constraints to Variable Bounds
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.bounds_to_vars.ConstraintToVarBoundTransform
     :members: apply_to, create_using
+
+
+Induced Linearity Reformulation
+-------------------------------
+
+.. autoclass:: pyomo.contrib.preprocessing.plugins.induced_linearity.InducedLinearity
+    :members: apply_to, create_using
+
+
+Constraint Bounds Tightener
+---------------------------
+
+.. autoclass:: pyomo.contrib.preprocessing.plugins.constraint_tightener.TightenContraintFromVars
+    :members: apply_to, create_using
+
+Trivial Constraint Deactivation
+-------------------------------
+
+.. autoclass:: pyomo.contrib.preprocessing.plugins.deactivate_trivial_constraints.TrivialConstraintDeactivator
+    :members: apply_to, create_using
+
+Fixed Variable Detection
+------------------------
+
+.. autoclass:: pyomo.contrib.preprocessing.plugins.detect_fixed_vars.FixedVarDetector
+    :members: apply_to, create_using
+
+Fixed Variable Equality Propagator
+----------------------------------
+
+.. autoclass:: pyomo.contrib.preprocessing.plugins.equality_propagate.FixedVarPropagator
+    :members: apply_to, create_using
+
+Variable Bound Equality Propagator
+----------------------------------
+
+.. autoclass:: pyomo.contrib.preprocessing.plugins.equality_propagate.VarBoundPropagator
+    :members: apply_to, create_using
+
+Variable Midpoint Initializer
+-----------------------------
+
+.. autoclass:: pyomo.contrib.preprocessing.plugins.init_vars.InitMidpoint
+    :members: apply_to, create_using
+
+Variable Zero Initializer
+-------------------------
+
+.. autoclass:: pyomo.contrib.preprocessing.plugins.init_vars.InitZero
+    :members: apply_to, create_using
+
+Zero Term Remover
+-----------------
+
+.. autoclass:: pyomo.contrib.preprocessing.plugins.remove_zero_terms.RemoveZeroTerms
+    :members: apply_to, create_using
+
+Variable Bound Remover
+----------------------
+
+.. autoclass:: pyomo.contrib.preprocessing.plugins.strip_bounds.VariableBoundStripper
+    :members: apply_to, create_using
+
+Zero Sum Propagator
+-------------------
+
+.. autoclass:: pyomo.contrib.preprocessing.plugins.zero_sum_propagator.ZeroSumPropagator
+    :members: apply_to, create_using
