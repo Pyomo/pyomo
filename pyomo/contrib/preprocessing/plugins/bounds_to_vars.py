@@ -21,8 +21,8 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
     variable lower bound on :math:`v` to match :math:`(c_2 - c_1)/k` if it
     results in a tighter bound. Also does the same thing for lower bounds.
 
-    Arguments below are specified for the `apply_to` and `create_using`
-    functions.
+    Keyword arguments below are specified for the ``apply_to`` and
+    ``create_using`` functions.
 
     """
 
