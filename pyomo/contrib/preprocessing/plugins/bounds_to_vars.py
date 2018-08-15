@@ -29,11 +29,12 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
     CONFIG = ConfigBlock("ConstraintToVarBounds")
     CONFIG.declare("tolerance", ConfigValue(
         default=1E-13, domain=NonNegativeFloat,
-        description="tolerance on bound equality (LB == UB)"
+        description="tolerance on bound equality (:math:`LB = UB`)"
     ))
     CONFIG.declare("detect_fixed", ConfigValue(
         default=True, domain=bool,
-        description="If True, fix variable when abs(LB - UB) <= tolerance."
+        description="If True, fix variable when "
+        ":math:`| LB - UB | \\leq tolerance`."
     ))
 
     __doc__ = add_docstring_list(__doc__, CONFIG)

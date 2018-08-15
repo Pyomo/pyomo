@@ -3,7 +3,8 @@
 import logging
 import textwrap
 
-from pyomo.common.config import ConfigBlock, ConfigValue, NonNegativeFloat
+from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
+                                 add_docstring_list)
 from pyomo.common.plugin import alias
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.numvalue import value
@@ -16,24 +17,24 @@ logger = logging.getLogger('pyomo.contrib.preprocessing')
 class TrivialConstraintDeactivator(IsomorphicTransformation):
     """Deactivates trivial constraints.
 
-    These are constraints of form constant = constant or constant <= constant.
-    These constraints typically arise when variables are fixed.
+    Trivial constraints take form :math:`k_1 = k_2` or :math:`k_1 \\leq k_2`,
+    where :math:`k_1` and :math:`k_2` are constants. These constraints
+    typically arise when variables are fixed.
+
+    Keyword arguments below are specified for the ``apply_to`` and
+    ``create_using`` functions.
 
     """
-
-    alias(
-        'contrib.deactivate_trivial_constraints',
-        doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     CONFIG = ConfigBlock("TrivialConstraintDeactivator")
     CONFIG.declare("tmp", ConfigValue(
         default=False, domain=bool,
         description="True to store a set of transformed constraints for future"
-        "reversion of the transformation."
+        " reversion of the transformation."
     ))
     CONFIG.declare("ignore_infeasible", ConfigValue(
         default=False, domain=bool,
-        description="True to skip over trivial constraints that are"
+        description="True to skip over trivial constraints that are "
         "infeasible instead of raising a ValueError."
     ))
     CONFIG.declare("return_trivial", ConfigValue(
@@ -45,6 +46,11 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
         default=1E-13, domain=NonNegativeFloat,
         description="tolerance on constraint violations"
     ))
+
+    __doc__ = add_docstring_list(__doc__, CONFIG)
+
+    alias('contrib.deactivate_trivial_constraints',
+          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, instance, **kwargs):
         config = self.CONFIG(kwargs)

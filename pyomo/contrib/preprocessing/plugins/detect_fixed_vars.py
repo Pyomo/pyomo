@@ -4,7 +4,8 @@ from math import fabs
 
 from six import iteritems
 
-from pyomo.common.config import ConfigBlock, ConfigValue, NonNegativeFloat
+from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
+                                 add_docstring_list)
 from pyomo.common.plugin import alias
 from pyomo.core.base.var import Var
 from pyomo.core.expr.numvalue import value
@@ -15,14 +16,14 @@ from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 class FixedVarDetector(IsomorphicTransformation):
     """Detects variables that are de-facto fixed but not considered fixed.
 
-    Descends through the model. For each variable found, check to see if var.lb
-    is within some tolerance of var.ub. If so, fix the variable to the value of
-    var.lb.
+    For each variable :math:`v` found on the model, check to see if its lower
+    bound :math:`v^{LB}` is within some tolerance of its upper bound
+    :math:`v^{UB}`. If so, fix the variable to the value of :math:`v^{LB}`.
+
+    Keyword arguments below are specified for the ``apply_to`` and
+    ``create_using`` functions.
 
     """
-
-    alias('contrib.detect_fixed_vars',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     CONFIG = ConfigBlock("FixedVarDetector")
     CONFIG.declare("tmp", ConfigValue(
@@ -34,6 +35,11 @@ class FixedVarDetector(IsomorphicTransformation):
         default=1E-13, domain=NonNegativeFloat,
         description="tolerance on bound equality (LB == UB)"
     ))
+
+    __doc__ = add_docstring_list(__doc__, CONFIG)
+
+    alias('contrib.detect_fixed_vars',
+          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, instance, **kwargs):
         config = self.CONFIG(kwargs)

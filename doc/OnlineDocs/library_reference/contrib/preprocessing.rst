@@ -86,6 +86,9 @@ Induced Linearity Reformulation
 Constraint Bounds Tightener
 ---------------------------
 
+This transformation was developed by `Sunjeev Kale
+<https://github.com/sjkale>`_ at Carnegie Mellon University.
+
 .. autoclass:: pyomo.contrib.preprocessing.plugins.constraint_tightener.TightenContraintFromVars
     :members: apply_to, create_using
 
