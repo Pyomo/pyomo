@@ -9,9 +9,19 @@
 #  ___________________________________________________________________________
 
 import collections
-from six import advance_iterator
+from six import iteritems, advance_iterator
 
 from pyutilib.misc import flatten_tuple
+from pyomo.core.base.sets import SetOf, _SetProduct
+from pyomo.core.base.indexed_component import IndexedComponent
+from pyomo.core.base.indexed_component_slice import (
+    _IndexedComponent_slice, _IndexedComponent_slice_iter
+)
+
+_NotSpecified = object()
+
+class UnitentifiableWildcardSets(Exception):
+    pass
 
 class _fill_in_known_wildcards(object):
     def __init__(self, wildcard_values):
@@ -148,3 +158,76 @@ class _ReferenceSet(collections.Set):
 
     def __len__(self):
         return len(self._ref)
+
+
+def _get_base_sets(_set):
+    if isinstance(_set, _SetProduct):
+        for subset in _set.set_tuple:
+            for _ in _get_base_sets(subset):
+                yield _
+    else:
+        yield _set
+
+def _identify_wildcard_sets(iter_stack, index):
+    if index is None:
+        return index
+
+    tmp = [None]*len(iter_stack)
+    for i, level in enumerate(iter_stack):
+        if level is not None:
+            base_sets = list(_get_base_sets(level.component.index_set()))
+            if len(base_sets) != level.explicit_index_count:
+                return None
+            wildcard_sets = { i: base_sets[i]
+                              for i in range(len(base_sets))
+                              if i not in level.fixed }
+            tmp[i] = wildcard_sets
+    if not index:
+        return tmp
+
+    if len(index) != len(tmp):
+        return None
+    for i, level in enumerate(tmp):
+        if level is None:
+            if index[i] is not None:
+                return None
+            continue
+        else:
+            if index[i] is None:
+                return None
+        if (index[i] is None) ^ (level is None):
+            return None
+        if len(index[i]) != len(level):
+            return None
+        if any(index[i].get(j,None) is not _set for j,_set in iteritems(level)):
+            return None
+    return index
+
+def Reference(reference, ctype=_NotSpecified):
+    _data = _ReferenceDict(reference)
+    _iter = iter(reference)
+    ctypes = set()
+    index = []
+    for obj in _iter:
+        ctypes.add(obj.type())
+        index = _identify_wildcard_sets(_iter._iter_stack, index)
+    if index is None:
+        index = SetOf(_ReferenceSet(_data))
+    else:
+        wildcards = sum((sorted(iteritems(lvl)) for lvl in index
+                         if lvl is not None), [])
+        index = wildcards[0][1]
+        for idx in wildcards[1:]:
+            index = index * idx[1]
+    if ctype is _NotSpecified:
+        if len(ctypes) == 1:
+            ctype = ctypes.pop()
+        else:
+            ctype = IndexedComponent
+    elif ctype is None:
+        ctype = IndexedComponent
+
+    obj = ctype(index, ctype=ctype)
+    obj._constructed = True
+    obj._data = _data
+    return obj
