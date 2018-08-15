@@ -27,9 +27,15 @@ class _fill_in_known_wildcards(object):
             raise RuntimeError(
                 "Cannot lookup elements in a _ReferenceDict when the "
                 "underlying slice object contains ellipsis")
-        idx = tuple(
-            _slice.fixed[i] if i in _slice.fixed else self.key.pop(0)
-            for i in range(_slice.explicit_index_count))
+        try:
+            idx = tuple(
+                _slice.fixed[i] if i in _slice.fixed else self.key.pop(0)
+                for i in range(_slice.explicit_index_count))
+        except IndexError:
+            raise KeyError(
+                "Insufficient wildcards to populate slice of indexed "
+                "component '%s'" % (_slice.component.name,))
+
         if idx in _slice.component:
             _slice.last_index = idx
             return _slice.component[idx]
