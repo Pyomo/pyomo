@@ -475,6 +475,9 @@ class _fill_in_known_wildcards(object):
         if idx in _slice.component:
             _slice.last_index = idx
             return _slice.component[idx]
+        elif len(idx) == 1 and idx[0] in _slice.component:
+            _slice.last_index = idx
+            return _slice.component[idx[0]]
         else:
             raise KeyError(
                 "Index '%s' is not valid for indexed component '%s'"
