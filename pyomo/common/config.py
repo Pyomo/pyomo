@@ -139,10 +139,10 @@ def add_docstring_list(docstring, configblock):
     """Returns the docstring with a formatted configuration arguments listing."""
     return docstring + "    ".join(
         configblock.generate_documentation(
-            block_start="Keyword Arguments\n-----------------\n",
+            block_start="Args:\n",
             block_end="",
-            item_start="%s\n",
-            item_body="  %s",
+            item_start="    %s: ",
+            item_body="%s",
             item_end="",
             indent_spacing=0
         ).splitlines(True))
