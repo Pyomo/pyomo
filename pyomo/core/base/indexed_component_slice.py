@@ -441,17 +441,18 @@ class _IndexedComponent_slice_iter(object):
                 return _comp
 
     def get_last_index(self):
-        return tuple(
-            x.last_index
-            for x in self._iter_stack if x is not None
+        return sum(
+            ( x.last_index for x in self._iter_stack if x is not None ),
+            ()
         )
 
     def get_last_index_wildcards(self):
-        return tuple(
-            tuple( x.last_index[i]
-                   for i in range(len(x.last_index))
-                   if i not in x.fixed )
-            for x in self._iter_stack if x is not None
+        return sum(
+            ( tuple( x.last_index[i]
+                     for i in range(len(x.last_index))
+                     if i not in x.fixed )
+              for x in self._iter_stack if x is not None ),
+            ()
         )
 
 
