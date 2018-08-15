@@ -229,8 +229,15 @@ class _slice_generator(object):
                 # mechanism (e.g., Param)
                 return self.component[index]
 
+# Mock up a callable object with a "check_complete" method
+def _advance_iter(_iter):
+    return advance_iterator(_iter)
+def _advance_iter_check_complete():
+    pass
+_advance_iter.check_complete = _advance_iter_check_complete
+
 class _IndexedComponent_slice_iter(object):
-    def __init__(self, component_slice, advance_iter=advance_iterator):
+    def __init__(self, component_slice, advance_iter=_advance_iter):
         # _iter_stack holds a list of elements X where X is either an
         # _slice_generator iterator (if this level in the hierarchy is a
         # slice) or None (if this level is either a SimpleComponent,
@@ -371,9 +378,15 @@ class _IndexedComponent_slice_iter(object):
                         _iter = _IndexedComponent_slice_iter(
                             _tmp, self.advance_iter)
                         for _ in _iter:
+                            # Check to make sure the custom iterator
+                            # (i.e._fill_in_known_wildcards) is complete
+                            self.advance_iter.check_complete()
                             _comp[_iter.get_last_index()] = _call[2]
                         break
                     else:
+                        # Check to make sure the custom iterator
+                        # (i.e._fill_in_known_wildcards) is complete
+                        self.advance_iter.check_complete()
                         # No try-catch, since we know this key is valid
                         _comp[_call[1]] = _call[2]
                 elif _call[0] == _IndexedComponent_slice.del_item:
@@ -408,6 +421,9 @@ class _IndexedComponent_slice_iter(object):
                         # dicts while we are iterating over them
                         for _ in _iter:
                             _idx_to_del.append(_iter.get_last_index())
+                        # Check to make sure the custom iterator
+                        # (i.e._fill_in_known_wildcards) is complete
+                        self.advance_iter.check_complete()
                         for _idx in _idx_to_del:
                             del _comp[_idx]
                         break
@@ -433,6 +449,9 @@ class _IndexedComponent_slice_iter(object):
                 idx += 1
 
             if idx == len(self._slice._call_stack):
+                # Check to make sure the custom iterator
+                # (i.e._fill_in_known_wildcards) is complete
+                self.advance_iter.check_complete()
                 # We have a concrete object at the end of the chain. Return it
                 return _comp
 

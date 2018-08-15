@@ -25,7 +25,8 @@ class UnitentifiableWildcardSets(Exception):
 
 class _fill_in_known_wildcards(object):
     def __init__(self, wildcard_values):
-        self.key = wildcard_values
+        self.base_key = wildcard_values
+        self.key = list(wildcard_values)
         self.known_slices = set()
 
     def __call__(self, _slice):
@@ -43,8 +44,9 @@ class _fill_in_known_wildcards(object):
                 for i in range(_slice.explicit_index_count))
         except IndexError:
             raise KeyError(
-                "Insufficient wildcards to populate slice of indexed "
-                "component '%s'" % (_slice.component.name,))
+                "Insufficient values for slice of indexed component '%s'"
+                "(found evaluating slice index %s)"
+                % (_slice.component.name, self.base_key))
 
         if idx in _slice.component:
             _slice.last_index = idx
@@ -54,8 +56,14 @@ class _fill_in_known_wildcards(object):
             return _slice.component[idx[0]]
         else:
             raise KeyError(
-                "Index '%s' is not valid for indexed component '%s'"
-                % (idx, _slice.component.name))
+                "Index %s is not valid for indexed component '%s' "
+                "(found evaluating slice index %s)"
+                % (idx, _slice.component.name, self.base_key))
+
+    def check_complete(self):
+        if self.key:
+            raise KeyError("Extra (unused) values for slice index %s"
+                           % ( self.base_key, ))
 
 
 class _ReferenceDict(collections.MutableMapping):
@@ -141,9 +149,8 @@ class _ReferenceDict(collections.MutableMapping):
     def _get_iter(self, _slice, key):
         if key.__class__ not in (tuple, list):
             key = (key,)
-        key = list(flatten_tuple(key))
         return _IndexedComponent_slice_iter(
-            _slice, _fill_in_known_wildcards(key))
+            _slice, _fill_in_known_wildcards(flatten_tuple(key)))
 
 
 class _ReferenceSet(collections.Set):
