@@ -182,28 +182,36 @@ def _identify_wildcard_sets(iter_stack, index):
     tmp = [None]*len(iter_stack)
     for i, level in enumerate(iter_stack):
         if level is not None:
-            base_sets = list(_get_base_sets(level.component.index_set()))
-            if len(base_sets) != level.explicit_index_count:
+            offset = 0
+            wildcard_sets = {}
+            for j,s in enumerate(_get_base_sets(level.component.index_set())):
+                if s.dimen is None:
+                    return None
+                wild = sum( 1 for k in range(s.dimen)
+                            if k+offset not in level.fixed )
+                if wild == s.dimen:
+                    wildcard_sets[j] = s
+                elif wild != 0:
+                    # This is a multidimentional set, and we are slicing
+                    # through part of it.  We can't extract that subset,
+                    # so we quit.
+                    return None
+                offset += s.dimen
+            if offset != level.explicit_index_count:
                 return None
-            wildcard_sets = { i: base_sets[i]
-                              for i in range(len(base_sets))
-                              if i not in level.fixed }
             tmp[i] = wildcard_sets
     if not index:
         return tmp
 
-    if len(index) != len(tmp):
-        return None
+    # Any of the following would preclude identifying common sets.
+    # However, I can't see a way to actually create any of these
+    # situations (i.e., I can't test them).  Assertions are left in for
+    # defensive programming.
+    assert len(index) == len(tmp)
     for i, level in enumerate(tmp):
+        assert (index[i] is None) == (level is None)
         if level is None:
-            if index[i] is not None:
-                return None
             continue
-        else:
-            if index[i] is None:
-                return None
-        if (index[i] is None) ^ (level is None):
-            return None
         if len(index[i]) != len(level):
             return None
         if any(index[i].get(j,None) is not _set for j,_set in iteritems(level)):
