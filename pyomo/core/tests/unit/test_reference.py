@@ -19,7 +19,7 @@ import pyutilib.th as unittest
 from six import itervalues
 
 from pyomo.environ import *
-from pyomo.core.base.sets import _SetProduct
+from pyomo.core.base.sets import _SetProduct, SetOf
 from pyomo.core.base.reference import _ReferenceDict, Reference
 
 
@@ -254,6 +254,125 @@ class TestReference(unittest.TestCase):
         self.assertNotIn(0, m.r)
         self.assertNotIn((1,0), m.r)
         self.assertNotIn((1,3,0), m.r)
+        with self.assertRaises(KeyError):
+            m.r[0]
+
+    def test_nested_reference_multidim_set(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,2])
+        m.J = Set(initialize=[(3,3),(4,4)])
+        @m.Block(m.I)
+        def b(b,i):
+            b.x = Var(b.model().J, bounds=(i,None))
+
+        m.r = Reference(m.b[:].x[:,:])
+
+        self.assertIs(m.r.type(), Var)
+        self.assertIs(type(m.r.index_set()), _SetProduct)
+        self.assertIs(m.r.index_set().set_tuple[0], m.I)
+        self.assertIs(m.r.index_set().set_tuple[1], m.J)
+        self.assertEqual(len(m.r), 2*2)
+        self.assertEqual(m.r[1,3,3].lb, 1)
+        self.assertEqual(m.r[2,4,4].lb, 2)
+        self.assertIn((1,3,3), m.r)
+        self.assertIn((2,4,4), m.r)
+        self.assertNotIn(0, m.r)
+        self.assertNotIn((1,0), m.r)
+        self.assertNotIn((1,3,0), m.r)
+        self.assertNotIn((1,3,3,0), m.r)
+        with self.assertRaises(KeyError):
+            m.r[0]
+
+    def test_nested_reference_partial_multidim_set(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,2])
+        m.J = Set(initialize=[(3,3),(4,4)])
+        @m.Block(m.I)
+        def b(b,i):
+            b.x = Var(b.model().J, bounds=(i,None))
+
+        m.r = Reference(m.b[:].x[3,:])
+
+        self.assertIs(m.r.type(), Var)
+        self.assertIs(type(m.r.index_set()), SetOf)
+        self.assertEqual(len(m.r), 2*1)
+        self.assertEqual(m.r[1,3].lb, 1)
+        self.assertEqual(m.r[2,3].lb, 2)
+        self.assertIn((1,3), m.r)
+        self.assertNotIn((2,4), m.r)
+        self.assertNotIn(0, m.r)
+        self.assertNotIn((1,0), m.r)
+        self.assertNotIn((1,3,0), m.r)
+        with self.assertRaises(KeyError):
+            m.r[0]
+
+    def test_nested_reference_nonuniform_indexes(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,2])
+        m.J = Set(initialize=[3,4])
+        @m.Block(m.I)
+        def b(b,i):
+            b.x = Var([3,4], bounds=(i,None))
+
+        m.r = Reference(m.b[:].x[:])
+
+        self.assertIs(m.r.type(), Var)
+        self.assertIs(type(m.r.index_set()), SetOf)
+        self.assertEqual(len(m.r), 2*2)
+        self.assertEqual(m.r[1,3].lb, 1)
+        self.assertEqual(m.r[2,4].lb, 2)
+        self.assertIn((1,3), m.r)
+        self.assertIn((2,4), m.r)
+        self.assertNotIn(0, m.r)
+        self.assertNotIn((1,0), m.r)
+        self.assertNotIn((1,3,0), m.r)
+        with self.assertRaises(KeyError):
+            m.r[0]
+
+    def test_nested_reference_nondimen_set(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,2])
+        m.J = Set(initialize=[3,4], dimen=None)
+        @m.Block(m.I)
+        def b(b,i):
+            b.x = Var(b.model().J, bounds=(i,None))
+
+        m.r = Reference(m.b[:].x[:])
+
+        self.assertIs(m.r.type(), Var)
+        self.assertIs(type(m.r.index_set()), SetOf)
+        self.assertEqual(len(m.r), 2*2)
+        self.assertEqual(m.r[1,3].lb, 1)
+        self.assertEqual(m.r[2,4].lb, 2)
+        self.assertIn((1,3), m.r)
+        self.assertIn((2,4), m.r)
+        self.assertNotIn(0, m.r)
+        self.assertNotIn((1,0), m.r)
+        self.assertNotIn((1,3,0), m.r)
+        with self.assertRaises(KeyError):
+            m.r[0]
+
+    def test_nested_reference_nonuniform_index_size(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,2])
+        m.J = Set(initialize=[3,4])
+        m.b = Block(m.I)
+        m.b[1].x = Var([(3,3),(3,4),(4,3),(4,4)], bounds=(1,None))
+        m.b[2].x = Var(m.J, m.J, bounds=(2,None))
+
+        m.r = Reference(m.b[:].x[:,:])
+
+        self.assertIs(m.r.type(), Var)
+        self.assertIs(type(m.r.index_set()), SetOf)
+        self.assertEqual(len(m.r), 2*2*2)
+        self.assertEqual(m.r[1,3,3].lb, 1)
+        self.assertEqual(m.r[2,4,3].lb, 2)
+        self.assertIn((1,3,3), m.r)
+        self.assertIn((2,4,4), m.r)
+        self.assertNotIn(0, m.r)
+        self.assertNotIn((1,0), m.r)
+        self.assertNotIn((1,3,0), m.r)
+        self.assertNotIn((1,3,3,0), m.r)
         with self.assertRaises(KeyError):
             m.r[0]
 
