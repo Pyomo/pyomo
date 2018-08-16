@@ -18,7 +18,9 @@ except ImportError as e:
                       'Make sure libpynumero_SPARSE is installed and added to path.')
 
 from pyomo.contrib.pynumero.sparse.base import SparseBase
-from pyomo.contrib.pynumero.sparse.utils import is_symmetric_dense
+from pyomo.contrib.pynumero.sparse.utils import (is_symmetric_dense,
+                                                 _convert_matrix_to_symmetric,
+                                                 _is_symmetric_numerically)
 import numpy as np
 
 __all__ = ['CSCMatrix', 'CSCSymMatrix']
@@ -90,7 +92,7 @@ class CSCMatrix(SparseBase, scipy_csc_matrix):
         return CSRMatrix((self.data, self.indices,
                           self.indptr), (N, M), copy=copy)
 
-    def _with_data(self,data,copy=True):
+    def _with_data(self, data,copy=True):
         """Returns a matrix with the same sparsity structure as self,
         but with different data.  By default the structure arrays
         (i.e. .indptr and .indices) are copied.
@@ -103,16 +105,42 @@ class CSCMatrix(SparseBase, scipy_csc_matrix):
                                   shape=self.shape, dtype=data.dtype)
 
     def _add_sparse(self, other):
-        if other.is_symmetric:
+        if hasattr(other, 'is_symmetric') and other.is_symmetric:
             return super(CSCMatrix, self)._add_sparse(other.tofullmatrix())
         else:
             return super(CSCMatrix, self)._add_sparse(other)
 
     def _sub_sparse(self, other):
-        if other.is_symmetric:
+        if hasattr(other, 'is_symmetric') and other.is_symmetric:
             return super(CSCMatrix, self)._sub_sparse(other.tofullmatrix())
         else:
             return super(CSCMatrix, self)._sub_sparse(other)
+
+    def _mul_sparse_matrix(self, other):
+
+        if isinstance(other, SparseBase):
+            if other.is_symmetric:
+                expanded_other = other.tofullmatrix()
+                result = super()._mul_sparse_matrix(expanded_other)
+                if self.shape[0] == expanded_other.shape[1]:
+                    if _is_symmetric_numerically(result):
+                        return _convert_matrix_to_symmetric(result, check_symmetry=False)
+                return result
+            from pyomo.contrib.pynumero.sparse.block_matrix import BlockMatrix
+            if isinstance(other, BlockMatrix):
+                raise NotImplementedError("Not supported yet")
+                expanded_other = other.tocsc()
+                result = super()._mul_sparse_matrix(expanded_other)
+                if self.shape[0] == expanded_other.shape[1]:
+                    if _is_symmetric_numerically(result):
+                        return _convert_matrix_to_symmetric(result, check_symmetry=False)
+                return result
+
+        result = super()._mul_sparse_matrix(other)
+        if self.shape[0] == other.shape[1]:
+            if _is_symmetric_numerically(result):
+                return _convert_matrix_to_symmetric(result, check_symmetry=False)
+        return result
 
     def getcol(self, j):
         return CSCMatrix(super(CSCMatrix, self).getcol(j))
@@ -231,13 +259,13 @@ class CSCSymMatrix(CSCMatrix):
         raise NotImplementedError('Not supported')
 
     def _add_sparse(self, other):
-        if other.is_symmetric:
+        if hasattr(other, 'is_symmetric') and other.is_symmetric:
             return self.tocsr()._add_sparse(other)
         else:
             return self.tofullmatrix()._add_sparse(other)
 
     def _sub_sparse(self, other):
-        if other.is_symmetric:
+        if hasattr(other, 'is_symmetric') and other.is_symmetric:
             # ToDo: check if binopt works here directly
             return self.tocsr()._sub_sparse(other)
         else:
@@ -277,7 +305,28 @@ class CSCSymMatrix(CSCMatrix):
         raise NotImplementedError('Not supported')
 
     def _mul_sparse_matrix(self, other):
-        raise NotImplementedError('Not supported')
+
+        expanded_sym = self.tofullcsc()
+        if isinstance(other, SparseBase):
+            if other.is_symmetric:
+                expanded_other = other.tofullcsc()
+                result = expanded_sym * expanded_other
+                return _convert_matrix_to_symmetric(result, check_symmetry=False)
+            from pyomo.contrib.pynumero.sparse.block_matrix import BlockMatrix
+            if isinstance(other, BlockMatrix):
+                raise NotImplementedError("Not supported yet")
+                expanded_other = other.tocsc()
+                result = expanded_sym * expanded_other
+                if expanded_sym.shape[0] == expanded_other.shape[1]:
+                    if _is_symmetric_numerically(result):
+                        return _convert_matrix_to_symmetric(result, check_symmetry=False)
+                return result
+
+        result = expanded_sym * other
+        if expanded_sym.shape[0] == other.shape[1]:
+            if _is_symmetric_numerically(result):
+                return _convert_matrix_to_symmetric(result, check_symmetry=False)
+        return result
 
     def getcol(self, j):
         return self.tofullmatrix().getcol(j)

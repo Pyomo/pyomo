@@ -17,14 +17,17 @@ if not SparseLib.available():
         "Pynumero needs the SparseUtils extension to run COO matrix tests")
 
 
-from pyomo.contrib.pynumero.sparse import (COOMatrix,
-                                           COOSymMatrix,
-                                           SparseBase,
-                                           IdentityMatrix,
-                                           EmptyMatrix)
+from pyomo.contrib.pynumero.sparse.base import SparseBase
+from pyomo.contrib.pynumero.sparse.coo import (COOMatrix,
+                                               COOSymMatrix,
+                                               IdentityMatrix,
+                                               EmptyMatrix)
 
 from pyomo.contrib.pynumero.sparse.csr import CSRMatrix, CSRSymMatrix
 from pyomo.contrib.pynumero.sparse.csc import CSCMatrix, CSCSymMatrix
+from pyomo.contrib.pynumero.sparse.utils import (_is_symmetric_numerically,
+                                                 _convert_matrix_to_symmetric,
+                                                 is_symmetric_dense)
 
 
 @unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
@@ -104,6 +107,13 @@ class TestCOOMatrix(unittest.TestCase):
         self.assertIsInstance(mm, CSRMatrix)
         self.assertListEqual(mm.toarray().flatten().tolist(), mm2.flatten().tolist())
 
+        m2 = coo_matrix((self.basic_m.data,
+                        (self.basic_m.row, self.basic_m.col)),
+                        shape=self.basic_m.shape)
+        mm = m + m2
+        self.assertIsInstance(mm, CSRMatrix)
+        self.assertListEqual(mm.toarray().flatten().tolist(), mm2.flatten().tolist())
+
         m2 = IdentityMatrix(4)
         mm = m + m2
         test_m = np.array([[5., 0., 9., 0.],
@@ -143,6 +153,88 @@ class TestCOOMatrix(unittest.TestCase):
         mm2 = test_m
         self.assertIsInstance(mm, CSRMatrix)
         self.assertListEqual(mm.toarray().flatten().tolist(), mm2.flatten().tolist())
+
+    def test_mul_sparse_matrix(self):
+
+        # test unsymmetric times unsymmetric
+        m = self.basic_m
+        dense_m = m.toarray()
+        res = m * m
+        dense_res = np.matmul(dense_m, dense_m)
+        self.assertFalse(res.is_symmetric)
+        self.assertTrue(np.allclose(res.toarray(), dense_res))
+
+        # test symmetric result
+        m = self.basic_m
+        dense_m = m.toarray()
+        res = m.transpose() * m
+        dense_res = np.matmul(dense_m.transpose(), dense_m)
+        self.assertTrue(res.is_symmetric)
+        self.assertTrue(np.allclose(res.toarray(), dense_res))
+
+        # test unsymmetric with rectangular
+        m = self.basic_m
+        dense_m2 = np.array([[1.0, 2.0],
+                             [3.0, 4.0],
+                             [5.0, 6.0],
+                             [7.0, 8.0]])
+
+        m2 = COOMatrix(dense_m2)
+        res = m * m2
+        dense_res = np.matmul(m.toarray(), dense_m2)
+        self.assertFalse(res.is_symmetric)
+        self.assertTrue(np.allclose(res.toarray(), dense_res))
+
+        # test unsymmetric with rectangular scipycoo
+        m = self.basic_m
+        dense_m2 = np.array([[1.0, 2.0],
+                             [3.0, 4.0],
+                             [5.0, 6.0],
+                             [7.0, 8.0]])
+
+        m2 = coo_matrix(dense_m2)
+        res = m * m2
+        dense_res = np.matmul(m.toarray(), dense_m2)
+        self.assertFalse(res.is_symmetric)
+        self.assertTrue(np.allclose(res.toarray(), dense_res))
+
+    def test_is_symmetric_dense(self):
+
+        test_m = np.array([[2., 0., 0., 1.],
+                           [0., 3., 0., 0.],
+                           [0., 0., 4., 0.],
+                           [1., 0., 0., 5.]])
+
+        flag = is_symmetric_dense(test_m)
+        self.assertTrue(flag)
+
+        usm = self.basic_m.toarray()
+        flag = is_symmetric_dense(usm)
+        self.assertFalse(flag)
+
+    def test_is_symmetric_numerically(self):
+
+        test_m = np.array([[2., 0., 0., 1.],
+                           [0., 3., 0., 0.],
+                           [0., 0., 4., 0.],
+                           [1., 0., 0., 5.]])
+
+        m = COOMatrix(test_m)
+        self.assertTrue(_is_symmetric_numerically(m))
+        self.assertFalse(_is_symmetric_numerically(self.basic_m))
+
+    def test_convert_matrix_to_symmetric(self):
+
+        test_m = np.array([[2., 0., 0., 1.],
+                           [0., 3., 0., 0.],
+                           [0., 0., 4., 0.],
+                           [1., 0., 0., 5.]])
+
+        m = COOMatrix(test_m)
+        sm = _convert_matrix_to_symmetric(m)
+        self.assertTrue(sm.is_symmetric)
+        mm = sm.toarray()
+        self.assertTrue(np.allclose(mm, test_m, atol=1e-6))
 
 
 @unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
@@ -402,6 +494,63 @@ class TestCOOSymMatrix(unittest.TestCase):
         self.assertIsInstance(mm, CSRMatrix)
         self.assertListEqual(mm.toarray().flatten().tolist(), test_m.flatten().tolist())
 
+    def test_mul_sparse_matrix(self):
+
+        # test symmetric times symmetric
+        m = self.g_matrix
+        dense_m = m.toarray()
+        res = m * m
+        dense_res = np.matmul(dense_m, dense_m)
+        self.assertTrue(res.is_symmetric)
+        self.assertTrue(np.allclose(res.toarray(), dense_res))
+
+        # test symmetric times unsymmetric
+        m = self.basic_m
+        dense_m2 = np.array([[1.0, 2.0],
+                             [3.0, 4.0],
+                             [5.0, 6.0],
+                             [7.0, 8.0]])
+
+        m2 = COOMatrix(dense_m2)
+        res = m * m2
+        dense_res = np.matmul(m.toarray(), dense_m2)
+        self.assertFalse(res.is_symmetric)
+        self.assertTrue(np.allclose(res.toarray(), dense_res))
+
+        # test symmetric times full symmetric
+        m2 = self.full_m
+        dense_m = m.toarray()
+        dense_m2 = m2.toarray()
+        res = m * m2
+        dense_res = np.matmul(dense_m, dense_m2)
+        self.assertTrue(res.is_symmetric)
+        self.assertTrue(np.allclose(res.toarray(), dense_res))
+
+        # test symmetric times full scipycoo
+        m2 = coo_matrix((self.full_m.data,
+                        (self.full_m.row, self.full_m.col)),
+                        shape=self.full_m.shape)
+
+        dense_m = m.toarray()
+        dense_m2 = m2.toarray()
+        res = m * m2
+        dense_res = np.matmul(dense_m, dense_m2)
+        self.assertTrue(res.is_symmetric)
+        self.assertTrue(np.allclose(res.toarray(), dense_res))
+
+        m = self.basic_m
+        dense_m2 = np.array([[1.0, 2.0],
+                             [3.0, 4.0],
+                             [5.0, 6.0],
+                             [7.0, 8.0]])
+
+        m2 = coo_matrix(dense_m2)
+        res = m * m2
+        dense_res = np.matmul(m.toarray(), dense_m2)
+        self.assertFalse(res.is_symmetric)
+        self.assertTrue(np.allclose(res.toarray(), dense_res))
+
+        # ToDo: add test with block matrix
 
 @unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
 class TestEmptyMatrix(unittest.TestCase):

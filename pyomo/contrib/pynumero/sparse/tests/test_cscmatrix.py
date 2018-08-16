@@ -22,14 +22,14 @@ except:
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
 
-class TestCSRMatrix(unittest.TestCase):
+class TestCSCMatrix(unittest.TestCase):
 
     def setUp(self):
 
         row = np.array([0, 3, 1, 0])
         col = np.array([0, 3, 1, 2])
         data = np.array([4., 5., 7., 9.])
-        m = CSRMatrix((data, (row, col)), shape=(4, 4))
+        m = CSCMatrix((data, (row, col)), shape=(4, 4))
         m.name = 'basic_matrix'
         self.basic_m = m
 
@@ -44,8 +44,6 @@ class TestCSRMatrix(unittest.TestCase):
     def test_shape(self):
         self.assertEqual(self.basic_m.shape[0], 4)
         self.assertEqual(self.basic_m.shape[1], 4)
-
-    # ToDo: test_tocoo, test_tocsc
 
     def test_getrow(self):
         m = self.basic_m
@@ -73,7 +71,7 @@ class TestCSRMatrix(unittest.TestCase):
                            [0., 0., 0., 0.],
                            [0., 0., 0., 5.]])
         mm2 = test_m * 2
-        self.assertIsInstance(mm, CSRMatrix)
+        self.assertIsInstance(mm, CSCMatrix)
         self.assertTrue(np.allclose(mm.toarray(), mm2))
 
         m2 = IdentityMatrix(4)
@@ -83,7 +81,7 @@ class TestCSRMatrix(unittest.TestCase):
                            [0., 0., 1., 0.],
                            [0., 0., 0., 6.]])
         mm2 = test_m
-        self.assertIsInstance(mm, CSRMatrix)
+        self.assertIsInstance(mm, CSCMatrix)
         self.assertTrue(np.allclose(mm.toarray(), mm2))
 
         mm = m2 + m
@@ -94,7 +92,7 @@ class TestCSRMatrix(unittest.TestCase):
         m = self.basic_m
         mm = m - m
         mm2 = np.zeros(m.shape, dtype=np.double)
-        self.assertIsInstance(mm, CSRMatrix)
+        self.assertIsInstance(mm, CSCMatrix)
         self.assertTrue(np.allclose(mm.toarray(), mm2))
 
         m2 = IdentityMatrix(4)
@@ -104,7 +102,7 @@ class TestCSRMatrix(unittest.TestCase):
                            [0., 0., -1., 0.],
                            [0., 0., 0., 4.]])
         mm2 = test_m
-        self.assertIsInstance(mm, CSRMatrix)
+        self.assertIsInstance(mm, CSCMatrix)
         self.assertTrue(np.allclose(mm.toarray(), mm2))
 
         test_m = np.array([[-3., 0., -9., 0.],
@@ -141,7 +139,7 @@ class TestCSRMatrix(unittest.TestCase):
                              [5.0, 6.0],
                              [7.0, 8.0]])
 
-        m2 = CSRMatrix(dense_m2)
+        m2 = CSCMatrix(dense_m2)
         res = m * m2
         dense_res = np.matmul(m.toarray(), dense_m2)
         self.assertFalse(res.is_symmetric)
@@ -154,7 +152,7 @@ class TestCSRMatrix(unittest.TestCase):
                              [5.0, 6.0],
                              [7.0, 8.0]])
 
-        m2 = csr_matrix(dense_m2)
+        m2 = csc_matrix(dense_m2)
         res = m * m2
         dense_res = np.matmul(m.toarray(), dense_m2)
         self.assertFalse(res.is_symmetric)
@@ -167,7 +165,7 @@ class TestCSRMatrix(unittest.TestCase):
                            [0., 0., 4., 0.],
                            [1., 0., 0., 5.]])
 
-        m = CSRMatrix(test_m)
+        m = CSCMatrix(test_m)
         self.assertTrue(_is_symmetric_numerically(m))
         self.assertFalse(_is_symmetric_numerically(self.basic_m))
 
@@ -178,7 +176,7 @@ class TestCSRMatrix(unittest.TestCase):
                            [0., 0., 4., 0.],
                            [1., 0., 0., 5.]])
 
-        m = CSRMatrix(test_m)
+        m = CSCMatrix(test_m)
         sm = _convert_matrix_to_symmetric(m)
         self.assertTrue(sm.is_symmetric)
         mm = sm.toarray()

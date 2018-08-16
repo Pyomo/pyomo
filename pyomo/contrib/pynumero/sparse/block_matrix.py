@@ -13,11 +13,14 @@ where m_{i,j} are sparse matrices
 """
 
 from scipy.sparse.sputils import upcast, isscalarlike, get_index_dtype
-from pyomo.contrib.pynumero.sparse import (COOMatrix,
-                             COOSymMatrix,
-                             SparseBase,
-                             BlockVector)
+from pyomo.contrib.pynumero.sparse.base import SparseBase
+from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
+from pyomo.contrib.pynumero.sparse.coo import COOMatrix, COOSymMatrix
 import numpy as np
+
+from pyomo.contrib.pynumero.sparse.utils import (is_symmetric_dense,
+                                                 _convert_matrix_to_symmetric,
+                                                 _is_symmetric_numerically)
 
 __all__ = ['BlockMatrix', 'BlockSymMatrix']
 
@@ -326,6 +329,15 @@ class BlockMatrix(SparseBase):
 
         """
         return np.asmatrix(self.toarray())
+
+    def _mul_sparse_matrix(self, other):
+
+        assert other.shape == self.shape, "Dimension missmatch"
+
+        if not isinstance(other, BlockMatrix):
+            return self.tocsr()._mul_sparse_matrix(other)
+        else:
+            raise NotImplementedError("Not supported yet")
 
     def transpose(self, axes=None, copy=False):
         """
@@ -939,6 +951,28 @@ class BlockSymMatrix(BlockMatrix):
         """
         return self.tofullmatrix().tocoo()
 
+    def tofullcsr(self):
+        """
+        Convert this matrix to CSRMatrix format.
+
+        Returns
+        -------
+        CSRMatrix
+
+        """
+        return self.tofullmatrix().tocsr()
+
+    def tofullcsc(self):
+        """
+        Convert this matrix to CSCMatrix format.
+
+        Returns
+        -------
+        CSCMatrix
+
+        """
+        return self.tofullmatrix().tocsc()
+
     def toarray(self):
         """
         Return a dense ndarray representation of this matrix.
@@ -964,6 +998,16 @@ class BlockSymMatrix(BlockMatrix):
 
         """
         return np.asmatrix(self.toarray())
+
+    def _mul_sparse_matrix(self, other):
+
+        assert other.shape == self.shape, "Dimension missmatch"
+
+        if not isinstance(other, BlockMatrix):
+            expanded_sym = self.tofullcsr()
+            return expanded_sym._mul_sparse_matrix(other)
+        else:
+            raise NotImplementedError("Not supported yet")
 
     def __mul__(self, other):
         self._check_mask()

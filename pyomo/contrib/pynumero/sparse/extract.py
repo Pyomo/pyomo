@@ -3,7 +3,7 @@ Mimics scipy matrices to extract upper and lower triangular matrices
 
 """
 
-from pyomo.contrib.pynumero.sparse import SparseBase
+from pyomo.contrib.pynumero.sparse.base import SparseBase
 
 
 def tril(A, k=0, format=None):
@@ -123,6 +123,8 @@ def triu(A, k=0, format=None):
     if isinstance(A, SparseBase):
         if A.is_symmetric:
             A = A.tofullmatrix().tocoo()
+        else:
+            A = COOMatrix(A, copy=False)
     else:
         A = COOMatrix(A, copy=False)
     mask = A.row + k <= A.col

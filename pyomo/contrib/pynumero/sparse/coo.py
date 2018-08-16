@@ -27,7 +27,7 @@ except ImportError as e:
     print('{}'.format(e))
     raise ImportError('Error importing sparseutils while running coo interface. '
                       'Make sure libpynumero_SPARSE is installed and added to path.')
-from pyomo.contrib.pynumero.sparse import SparseBase
+from pyomo.contrib.pynumero.sparse.base import SparseBase
 import numpy as np
 
 
@@ -205,13 +205,13 @@ class COOMatrix(SparseBase, scipy_coo_matrix):
         return super(COOMatrix, self)._mul_vector(other)
 
     def _add_sparse(self, other):
-        if other.is_symmetric:
+        if hasattr(other, 'is_symmetric') and other.is_symmetric:
             return super(COOMatrix, self)._add_sparse(other.tofullmatrix())
         else:
             return super(COOMatrix, self)._add_sparse(other)
 
     def _sub_sparse(self, other):
-        if other.is_symmetric:
+        if hasattr(other, 'is_symmetric') and other.is_symmetric:
             return super(COOMatrix, self)._sub_sparse(other.tofullmatrix())
         else:
             return super(COOMatrix, self)._sub_sparse(other)
@@ -471,13 +471,13 @@ class COOSymMatrix(COOMatrix):
         return self.transpose().conj()
 
     def _add_sparse(self, other):
-        if other.is_symmetric:
+        if hasattr(other, 'is_symmetric') and other.is_symmetric:
             return self.tocsr()._add_sparse(other)
         else:
             return self.tofullmatrix()._add_sparse(other)
 
     def _sub_sparse(self, other):
-        if other.is_symmetric:
+        if hasattr(other, 'is_symmetric') and other.is_symmetric:
             return self.tocsr()._sub_sparse(other)
         else:
             return self.tofullmatrix()._sub_sparse(other)
@@ -508,8 +508,7 @@ class COOSymMatrix(COOMatrix):
         raise NotImplementedError('Not supported')
 
     def _mul_sparse_matrix(self, other):
-        # ToDo: need to add support for this
-        raise NotImplementedError('Not supported')
+        return self.tocsr()._mul_sparse_matrix(other)
 
     def _with_data(self, data, copy=True):
         """Returns a matrix with the same sparsity structure as self,
