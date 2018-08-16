@@ -170,11 +170,6 @@ class _IndexedComponent_slice(object):
         return ((_iter.get_last_index(), _) for _ in _iter)
 
 
-if PY3:
-    _IndexedComponent_slice.keys = _IndexedComponent_slice.iterkeys
-    _IndexedComponent_slice.values = _IndexedComponent_slice.itervalues
-    _IndexedComponent_slice.items = _IndexedComponent_slice.iteritems
-
 class _slice_generator(object):
     """Utility (iterator) for generating the elements of one slice
 
