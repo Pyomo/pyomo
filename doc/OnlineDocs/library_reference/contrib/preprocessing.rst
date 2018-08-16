@@ -50,6 +50,9 @@ transformation on a concrete Pyomo model:
     >>> m.c2 = Constraint(expr=m.v2 == m.v3)
     >>> m.c3 = Constraint(expr=m.v3 == m.v4)
     >>> TransformationFactory('contrib.aggregate_vars').apply_to(m)
+
+To see the results of the transformation, you could then use the command
+
     >>> m.pprint()
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.var_aggregator.VariableAggregator
@@ -70,7 +73,6 @@ Explicit Constraints to Variable Bounds
     >>> m.c2 = Constraint(expr=m.v2 >= -2)
     >>> m.c3 = Constraint(expr=m.v3 <= 5)
     >>> TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
-    >>> m.pprint()
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.bounds_to_vars.ConstraintToVarBoundTransform
     :members: apply_to, create_using
