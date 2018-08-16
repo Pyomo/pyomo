@@ -20,9 +20,6 @@ from pyomo.core.base.indexed_component_slice import (
 
 _NotSpecified = object()
 
-class UnitentifiableWildcardSets(Exception):
-    pass
-
 class _fill_in_known_wildcards(object):
     def __init__(self, wildcard_values):
         self.base_key = wildcard_values
