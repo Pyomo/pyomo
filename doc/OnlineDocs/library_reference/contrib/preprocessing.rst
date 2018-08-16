@@ -35,7 +35,7 @@ later be deprecated or combined, depending on their usefulness.
 Variable Aggregator
 -------------------
 
-The following code snippet shows demonstrates usage of the variable aggregation
+The following code snippet demonstrates usage of the variable aggregation
 transformation on a concrete Pyomo model:
 
 .. doctest::
@@ -52,6 +52,8 @@ transformation on a concrete Pyomo model:
     >>> TransformationFactory('contrib.aggregate_vars').apply_to(m)
 
 To see the results of the transformation, you could then use the command
+
+.. code::
 
     >>> m.pprint()
 
