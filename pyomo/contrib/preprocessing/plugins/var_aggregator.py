@@ -165,8 +165,23 @@ def max_if_not_None(iterable):
 class VariableAggregator(IsomorphicTransformation):
     """Aggregate model variables that are linked by equality constraints.
 
-    TODO: Caution: unclear what happens to "capital-E" Expressions at this point
-    in time.
+    Before:
+
+    .. math::
+
+        x &= y \\\\
+        a &= 2x + 6y + 7 \\\\
+        b &= 5y + 6 \\\\
+
+    After:
+
+    .. math::
+
+        z &= x = y \\\\
+        a &= 8z + 7 \\\\
+        b &= 5z + 6
+
+    .. warning:: TODO: unclear what happens to "capital-E" Expressions at this point in time.
 
     """
 
