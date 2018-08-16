@@ -100,25 +100,25 @@ Trivial Constraint Deactivation
 -------------------------------
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.deactivate_trivial_constraints.TrivialConstraintDeactivator
-    :members: apply_to, create_using
+    :members: apply_to, create_using, revert
 
 Fixed Variable Detection
 ------------------------
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.detect_fixed_vars.FixedVarDetector
-    :members: apply_to, create_using
+    :members: apply_to, create_using, revert
 
 Fixed Variable Equality Propagator
 ----------------------------------
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.equality_propagate.FixedVarPropagator
-    :members: apply_to, create_using
+    :members: apply_to, create_using, revert
 
 Variable Bound Equality Propagator
 ----------------------------------
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.equality_propagate.VarBoundPropagator
-    :members: apply_to, create_using
+    :members: apply_to, create_using, revert
 
 Variable Midpoint Initializer
 -----------------------------
@@ -142,7 +142,7 @@ Variable Bound Remover
 ----------------------
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.strip_bounds.VariableBoundStripper
-    :members: apply_to, create_using
+    :members: apply_to, create_using, revert
 
 Zero Sum Propagator
 -------------------
