@@ -15,7 +15,7 @@ with a diverse set of optimization capabilities.
    developer_reference/index.rst
    solvers/persistent_solvers.rst
    library_reference/index.rst
-   pyomo_contrib.rst
+   contribution_guide.rst
    bibliography.rst
 
 Indices and Tables

@@ -50,7 +50,24 @@ def _iterable_to_dict(vals, directed, name):
 
 
 class _ArcData(ActiveComponentData):
-    """This class defines the data for a single Arc."""
+    """
+    This class defines the data for a single Arc
+
+    Attributes
+    ----------
+        source: `Port`
+            The source Port when directed, else None. Aliases to src.
+        destination: `Port`
+            The destination Port when directed, else None. Aliases to dest.
+        ports: `tuple`
+            A tuple containing both ports. If directed, this is in the
+            order (source, destination).
+        directed: `bool`
+            True if directed, False if not
+        expanded_block: `Block`
+            A reference to the block on which expanded constraints for this
+            arc were placed
+    """
 
     __slots__ = ('_ports', '_directed', '_expanded_block')
 
@@ -81,7 +98,7 @@ class _ArcData(ActiveComponentData):
     # can quietly rely on the super() class's implementation.
 
     def __getattr__(self, name):
-        """Returns self.expanded_block.name if it exists"""
+        """Returns `self.expanded_block.name` if it exists"""
         eb = self.expanded_block
         if eb is not None:
             try:
@@ -125,13 +142,13 @@ class _ArcData(ActiveComponentData):
         return self._expanded_block
 
     def set_value(self, vals):
-        """
-        Set the port attributes on this arc.
+        """Set the port attributes on this arc"""
+        # the following allows m.a = Arc(directed=True); m.a = (m.p, m.q)
+        # and m.a will be directed
+        d = self._directed if self._directed is not None else \
+            self.parent_component()._init_directed
 
-        If these values are being reassigned, note that the defaults
-        are still None, so you may need to repass some attributes.
-        """
-        vals = _iterable_to_dict(vals, self._directed, self.name)
+        vals = _iterable_to_dict(vals, d, self.name)
 
         source = vals.pop("source", None)
         destination = vals.pop("destination", None)
@@ -228,28 +245,22 @@ class _ArcData(ActiveComponentData):
 
 class Arc(ActiveIndexedComponent):
     """
-    Component used for connecting the members of two Port objects.
+    Component used for connecting the members of two Port objects
 
-    Constructor arguments:
-        source          A single Port for a directed arc. Aliases to src
-        destination     A single Port for a directed arc. Aliases to dest
-        ports           A two-member list or tuple of single Ports
-                            for an undirected arc
-        directed        True if directed. Use along with rule to be able to
-                            return an implied (source, destination) tuple
-        rule            A function that returns either a dictionary of the
-                            arc arguments or a two-member iterable of ports
-        doc             A text string describing this component
-        name            A name for this component
-
-    Public attributes
-        source          The source Port when directed, else None.
-                            Aliases to src
-        destination     The destination Port when directed, else None.
-                            Aliases to dest
-        ports           A tuple containing both ports. If directed, this
-                            is in the order (source, destination)
-        directed        True if directed, False if not
+    Parameters
+    ----------
+        source: `Port`
+            A single Port for a directed arc. Aliases to src.
+        destination: `Port`
+            A single`Port for a directed arc. Aliases to dest.
+        ports
+            A two-member list or tuple of single Ports for an undirected arc
+        directed: `bool`
+            Set True for directed. Use along with `rule` to be able to
+            return an implied (source, destination) tuple.
+        rule: `function`
+            A function that returns either a dictionary of the arc arguments
+            or a two-member iterable of ports
     """
 
     _ComponentDataClass = _ArcData

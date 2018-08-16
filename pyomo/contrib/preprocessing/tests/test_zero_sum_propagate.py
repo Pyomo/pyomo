@@ -3,8 +3,6 @@ import pyutilib.th as unittest
 from pyomo.environ import (ConcreteModel, Constraint, TransformationFactory,
                            Var, NonNegativeReals, NonPositiveReals, Binary)
 
-__author__ = "Qi Chen <https://github.com/qtothec>"
-
 
 class TestZeroSumPropagate(unittest.TestCase):
     """Tests zero sum propagation."""

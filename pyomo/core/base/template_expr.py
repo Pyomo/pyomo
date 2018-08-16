@@ -14,7 +14,7 @@ from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import (
     NumericValue, native_numeric_types, as_numeric, value )
 import pyomo.core.base
-
+from pyomo.core.expr.expr_errors import TemplateExpressionError
 
 class IndexTemplate(NumericValue):
     """A "placeholder" for an index value in template expressions.
@@ -74,7 +74,7 @@ class IndexTemplate(NumericValue):
         """
         if self._value is None:
             if exception:
-                raise EXPR.TemplateExpressionError(self)
+                raise TemplateExpressionError(self)
             return None
         else:
             return self._value
@@ -164,7 +164,7 @@ class _GetItemIndexer(object):
                 val = value(x)
                 self._args.append(val)
                 _hash.append(val)
-            except EXPR.TemplateExpressionError as e:
+            except TemplateExpressionError as e:
                 if x is not e.template:
                     raise TypeError(
                         "Cannot use the param substituter with expression "
