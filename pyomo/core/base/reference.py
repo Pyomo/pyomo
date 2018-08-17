@@ -304,7 +304,7 @@ def Reference(reference, ctype=_NotSpecified):
 
         >>> m.r2 = Reference(m.b[:,3].x)
         >>> m.r2.pprint()
-        r2 : Size=2, Index=r2_index
+        r2 : Size=2, Index=b_index_0
             Key  : Lower : Value : Upper : Fixed : Stale : Domain
             (1,) :     1 :  None :     3 : False :  True :  Reals
             (2,) :     2 :  None :     3 : False :  True :  Reals
