@@ -21,12 +21,40 @@ from pyomo.core.base.indexed_component_slice import (
 _NotSpecified = object()
 
 class _fill_in_known_wildcards(object):
+    """Variant of "six.advance_iterator" that substitutes wildcard values
+
+    This object is initialized with a tuple of index values.  Calling
+    the resulting object on a :py:class:`_slice_generator` will
+    "advance" the iterator, substituting values from the tuple into the
+    slice wildcards (":" indices), and returning the resulting object.
+    The motivation for implementing this as an iterator is so that we
+    can re-use all the logic from
+    :py:meth:`_IndexedComponent_slice_iter.__next__` when looking up
+    specific indices within the slice.
+
+    Parameters
+    ----------
+    wildcard_values : tuple of index values
+        a tuple containing index values to substitute into the slice wildcards
+    """
     def __init__(self, wildcard_values):
         self.base_key = wildcard_values
         self.key = list(wildcard_values)
         self.known_slices = set()
 
     def __call__(self, _slice):
+        """Advance the specified slice generator, substituting wildcard values
+
+        This advances the passed :py:class:`_slice_generator
+        <pyomo.core.base.indexed_component_slice._slice_generator>` by
+        substituting values from the `wildcard_values` list for any
+        wildcard slices ("`:`").
+
+        Parameters
+        ----------
+        _slice : pyomo.core.base.indexed_component_slice._slice_generator
+            the slice to advance
+        """
         if _slice in self.known_slices:
             raise StopIteration()
         self.known_slices.add(_slice)
@@ -216,6 +244,105 @@ def _identify_wildcard_sets(iter_stack, index):
     return index
 
 def Reference(reference, ctype=_NotSpecified):
+    """Generate a reference component from a component slice.
+
+    Reference generates a *reference component*; that is, an indexed
+    component that does not contain data, but instead references data
+    stored in other components as defined by a component slice.  The
+    ctype parameter sets the :py:meth:`Component.type` of the resulting
+    indexed component.  If the ctype parameter is not set and all data
+    identified by the slice (at construction time) share a common
+    :py:meth:`Component.type`, then that type is assumed.  If either the
+    ctype parameter is ``None`` or the data has more than one ctype, the
+    resulting indexed component will have a ctype of
+    :py:class:`IndexedComponent`.
+
+    If the indices associated with wildcards in the component slice all
+    refer to the same :py:class:`Set` objects for all data identifed by
+    the slice, then the resulting indexed component will be indexed by
+    the product of those sets.  However, if all data do not share common
+    set objects, or only a subset of indices in a multidimentional set
+    appear as wildcards, then the resulting indexed component will be
+    indexed by a :py:class:`SetOf` containing a
+    :py:class:`_ReferenceSet` for the slice.
+
+    Parameters
+    ----------
+    reference : :py:class:`_IndexedComponent_slice`
+        component slice that defines the data to include in the
+        Reference component
+
+    ctype : type [optional]
+        the type used to create the resulting indexed component.  If not
+        specified, the data's ctype will be used (if all data share a
+        common ctype).  If multiple data ctypes are found or ctype is
+        ``None``, then :py:class:`IndexedComponent` will be used.
+
+    Examples
+    --------
+
+    .. doctest::
+
+        >>> from pyomo.environ import *
+        >>> m = ConcreteModel()
+        >>> @m.Block([1,2],[3,4])
+        ... def b(b,i,j):
+        ...     b.x = Var(bounds=(i,j))
+        ...
+        >>> m.r1 = Reference(m.b[:,:].x)
+        >>> m.r1.pprint()
+        r1 : Size=4, Index=r1_index
+            Key    : Lower : Value : Upper : Fixed : Stale : Domain
+            (1, 3) :     1 :  None :     3 : False :  True :  Reals
+            (1, 4) :     1 :  None :     4 : False :  True :  Reals
+            (2, 3) :     2 :  None :     3 : False :  True :  Reals
+            (2, 4) :     2 :  None :     4 : False :  True :  Reals
+
+    Reference components may also refer to subsets of the original data:
+
+    .. doctest::
+
+        >>> m.r2 = Reference(m.b[:,3].x)
+        >>> m.r2.pprint()
+        r2 : Size=2, Index=r2_index
+            Key  : Lower : Value : Upper : Fixed : Stale : Domain
+            (1,) :     1 :  None :     3 : False :  True :  Reals
+            (2,) :     2 :  None :     3 : False :  True :  Reals
+
+    Reference components may have wildcards at multiple levels of the
+    model hierarchy:
+
+    .. doctest::
+
+        >>> from pyomo.environ import *
+        >>> m = ConcreteModel()
+        >>> @m.Block([1,2])
+        ... def b(b,i):
+        ...     b.x = Var([3,4], bounds=(i,None))
+        ...
+        >>> m.r3 = Reference(m.b[:].x[:])
+        >>> m.r3.pprint()
+        r3 : Size=4, Index=r3_index
+            Key    : Lower : Value : Upper : Fixed : Stale : Domain
+            (1, 3) :     1 :  None :  None : False :  True :  Reals
+            (1, 4) :     1 :  None :  None : False :  True :  Reals
+            (2, 3) :     2 :  None :  None : False :  True :  Reals
+            (2, 4) :     2 :  None :  None : False :  True :  Reals
+
+    The resulting reference component may be used just like any other
+    component.  Changes to the stored data will be reflected in the
+    original objects:
+
+    .. doctest::
+
+        >>> m.r3[1,4] = 10
+        >>> m.b[1].x.pprint()
+        x : Size=2, Index=b[1].x_index
+            Key : Lower : Value : Upper : Fixed : Stale : Domain
+              3 :     1 :  None :  None : False :  True :  Reals
+              4 :     1 :    10 :  None : False : False :  Reals
+
+    """
     _data = _ReferenceDict(reference)
     _iter = iter(reference)
     ctypes = set()
