@@ -387,7 +387,7 @@ You can silence this warning by one of three ways:
         if index.__class__ is _IndexedComponent_slice:
             # support "m.x[:,1] = 5" through a simple recursive call.
             #
-            # Assert that this slice ws just generated
+            # Assert that this slice was just generated
             assert len(index._call_stack) == 1
             #
             # Note that the slicer will only slice over *existing*
