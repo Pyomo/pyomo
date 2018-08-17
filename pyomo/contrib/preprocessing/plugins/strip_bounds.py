@@ -6,29 +6,36 @@ from pyomo.core.base.var import Var
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.set_types import Reals
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
+from pyomo.common.config import ConfigBlock, ConfigValue, add_docstring_list
 
 
 class VariableBoundStripper(NonIsomorphicTransformation):
-    """Strips bounds from variables."""
+    """Strips bounds from variables.
+
+    Keyword arguments below are specified for the ``apply_to`` and
+    ``create_using`` functions.
+
+    """
+
+    CONFIG = ConfigBlock()
+    CONFIG.declare("strip_domains", ConfigValue(
+        default=True, domain=bool,
+        description="strip the domain for discrete variables as well"
+    ))
+    CONFIG.declare("reversible", ConfigValue(
+        default=False, domain=bool,
+        description="Whether the bound stripping will be temporary. "
+        "If so, store information for reversion."
+    ))
+
+    __doc__ = add_docstring_list(__doc__, CONFIG)
 
     alias('contrib.strip_var_bounds',
           doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
-    def _apply_to(self, instance, strip_domains=True, reversible=False):
-        """Apply the transformation.
-
-        Args:
-            instance (Block): the block on which to strip variable bounds
-            strip_domains (bool, optional): strip the domain for discrete
-                variables as well
-            reversible (bool, optional): Whether the bound stripping will be
-                temporary. If so, store information for reversion.
-
-        Returns:
-            None
-
-        """
-        if reversible:
+    def _apply_to(self, instance, **kwds):
+        config = self.CONFIG(kwds)
+        if config.reversible:
             if any(hasattr(instance, map_name) for map_name in [
                     '_tmp_var_bound_strip_lb',
                     '_tmp_var_bound_strip_ub',
@@ -42,16 +49,16 @@ class VariableBoundStripper(NonIsomorphicTransformation):
             instance._tmp_var_bound_strip_ub = ComponentMap()
             instance._tmp_var_bound_strip_domain = ComponentMap()
         for var in instance.component_data_objects(ctype=Var):
-            if strip_domains and not var.domain == Reals:
-                if reversible:
+            if config.strip_domains and not var.domain == Reals:
+                if config.reversible:
                     instance._tmp_var_bound_strip_domain[var] = var.domain
                 var.domain = Reals
             if var.has_lb():
-                if reversible:
+                if config.reversible:
                     instance._tmp_var_bound_strip_lb[var] = var.lb
                 var.setlb(None)
             if var.has_ub():
-                if reversible:
+                if config.reversible:
                     instance._tmp_var_bound_strip_ub[var] = var.ub
                 var.setub(None)
 

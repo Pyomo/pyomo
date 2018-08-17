@@ -14,7 +14,7 @@ class InitMidpoint(IsomorphicTransformation):
 
     - If the variable does not have bounds, set the value to zero.
     - If the variable is missing one bound, set the value to that of the
-        existing bound.
+      existing bound.
     """
 
     alias(
@@ -51,7 +51,7 @@ class InitZero(IsomorphicTransformation):
     """Initializes non-fixed variables to zeros.
 
     - If setting the variable value to zero will violate a bound, set the
-        variable value to the relevant bound value.
+      variable value to the relevant bound value.
 
     """
 
