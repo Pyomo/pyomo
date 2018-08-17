@@ -10,7 +10,7 @@
 
 class ConverterError(Exception):
     """
-    An exception used there is an error converting a problem.
+    An exception used when there is an error converting a problem.
     """
 
     def __init__(self,*args,**kargs):
