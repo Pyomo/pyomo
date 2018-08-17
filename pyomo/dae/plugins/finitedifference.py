@@ -239,6 +239,23 @@ class Finite_Difference_Transformation(Transformation):
                 add_discretization_equations(d.parent_block(), d)
                 d.parent_block().reclassify_component_type(d, Var)
 
+                # Keep track of any reclassified DerivativeVar components so
+                # that the Simulator can easily identify them if the model
+                # is simulated after discretization
+                # TODO: Update the discretization transformations to use
+                # a Block to add things to the model and store discretization
+                # information. Using a list for now because the simulator
+                # does not yet support models containing active Blocks
+                reclassified_list = getattr(block,
+                                    '_pyomo_dae_reclassified_derivativevars',
+                                    None)
+                if reclassified_list is None:
+                    block._pyomo_dae_reclassified_derivativevars = list()
+                    reclassified_list = \
+                        block._pyomo_dae_reclassified_derivativevars
+
+                reclassified_list.append(d)
+
         # Reclassify Integrals if all ContinuousSets have been discretized
         if block_fully_discretized(block):
 

@@ -1275,6 +1275,41 @@ class TestSimulationInterface():
         # os.system('diff ' + ofile + ' ' + bfile)
         self.assertFileEqualsBaseline(ofile, bfile, tolerance=0.01)
 
+    def _test_disc_first(self, tname):
+
+        ofile = join(currdir, tname + '.' + self.sim_mod + '.out')
+        bfile = join(currdir, tname + '.' + self.sim_mod + '.txt')
+        setup_redirect(ofile)
+
+        # create model
+        exmod = import_file(join(exdir, tname + '.py'))
+        m = exmod.create_model()
+
+        # Discretize model
+        discretizer = TransformationFactory('dae.collocation')
+        discretizer.apply_to(m, nfe=10, ncp=5)
+
+        # Simulate model
+        sim = Simulator(m, package=self.sim_mod)
+
+        if hasattr(m, 'var_input'):
+            tsim, profiles = sim.simulate(numpoints=100,
+                                          varying_inputs=m.var_input)
+        else:
+            tsim, profiles = sim.simulate(numpoints=100)
+
+        # Initialize model
+        sim.initialize_model()
+
+        self._print(m, profiles)
+
+        reset_redirect()
+        if not os.path.exists(bfile):
+            os.rename(ofile, bfile)
+
+        # os.system('diff ' + ofile + ' ' + bfile)
+        self.assertFileEqualsBaseline(ofile, bfile, tolerance=0.01)
+
 
 @unittest.skipIf(not scipy_available, "Scipy is not available")
 class TestScipySimulation(unittest.TestCase, TestSimulationInterface):
@@ -1284,9 +1319,17 @@ class TestScipySimulation(unittest.TestCase, TestSimulationInterface):
         tname = 'simulator_ode_example'
         self._test(tname)
 
+    def test_ode_example2(self):
+        tname = 'simulator_ode_example'
+        self._test_disc_first(tname)
+
     def test_ode_multindex_example(self):
         tname = 'simulator_ode_multindex_example'
         self._test(tname)
+
+    def test_ode_multindex_example2(self):
+        tname = 'simulator_ode_multindex_example'
+        self._test_disc_first(tname)
 
 
 @unittest.skipIf(not casadi_available, "Casadi is not available")
@@ -1297,17 +1340,33 @@ class TestCasadiSimulation(unittest.TestCase, TestSimulationInterface):
         tname = 'simulator_ode_example'
         self._test(tname)
 
+    def test_ode_example2(self):
+        tname = 'simulator_ode_example'
+        self._test_disc_first(tname)
+
     def test_ode_multindex_example(self):
         tname = 'simulator_ode_multindex_example'
         self._test(tname)
+
+    def test_ode_multindex_example2(self):
+        tname = 'simulator_ode_multindex_example'
+        self._test_disc_first(tname)
 
     def test_dae_example(self):
         tname = 'simulator_dae_example'
         self._test(tname)
 
+    def test_dae_example(self):
+        tname = 'simulator_dae_example'
+        self._test_disc_first(tname)
+
     def test_dae_multindex_example(self):
         tname = 'simulator_dae_multindex_example'
         self._test(tname)
+
+    def test_dae_multindex_example(self):
+        tname = 'simulator_dae_multindex_example'
+        self._test_disc_first(tname)
 
 
 if __name__ == "__main__":

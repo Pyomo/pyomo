@@ -62,6 +62,9 @@ class TestFiniteDiff(unittest.TestCase):
         for idx, val in enumerate(list(m.t)):
             self.assertAlmostEqual(val, expected_disc_points[idx])
 
+        self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
+        self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
+
         output = \
 """\
 dv1_disc_eq : Size=5, Index=t, Active=True
@@ -87,6 +90,10 @@ dv1_disc_eq : Size=5, Index=t, Active=True
         self.assertTrue(hasattr(m, 'dv1dt2_disc_eq'))
         self.assertTrue(len(m.dv1dt2_disc_eq) == 1)
         self.assertTrue(len(m.v1) == 3)
+
+        self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
+        self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
+        self.assertTrue(m.dv1dt2 in m._pyomo_dae_reclassified_derivativevars)
 
         output = \
 """\
@@ -117,6 +124,9 @@ dv1dt2_disc_eq : Size=1, Index=t, Active=True
         for idx, val in enumerate(list(m.t)):
             self.assertAlmostEqual(val, expected_disc_points[idx])
 
+        self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
+        self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
+
         output = \
 """\
 dv1_disc_eq : Size=5, Index=t, Active=True
@@ -142,6 +152,10 @@ dv1_disc_eq : Size=5, Index=t, Active=True
         self.assertTrue(hasattr(m, 'dv1dt2_disc_eq'))
         self.assertTrue(len(m.dv1dt2_disc_eq) == 1)
         self.assertTrue(len(m.v1) == 3)
+
+        self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
+        self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
+        self.assertTrue(m.dv1dt2 in m._pyomo_dae_reclassified_derivativevars)
 
         output = \
 """\

@@ -433,6 +433,11 @@ class Simulator:
 
         # Ensure that there is at least one derivative in the model
         derivs = m.component_map(DerivativeVar)
+        derivs = list(derivs.keys())
+
+        if hasattr(m, '_pyomo_dae_reclassified_derivativevars'):
+            for d in m._pyomo_dae_reclassified_derivativevars:
+                derivs.append(d.name)
         if len(derivs) == 0:
             raise DAE_Error("Cannot simulate a model with no derivatives")
 
@@ -607,7 +612,7 @@ class Simulator:
         algvars = []
 
         for item in iterkeys(templatemap):
-            if item._base.name in derivs.keys():
+            if item._base.name in derivs:
                 # Make sure there are no DerivativeVars in the
                 # template map
                 raise DAE_Error(

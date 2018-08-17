@@ -76,6 +76,9 @@ class TestCollocation(unittest.TestCase):
         for idx, val in enumerate(list(m.t)):
             self.assertAlmostEqual(val, expected_disc_points[idx])
 
+        self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
+        self.assertTrue(m._pyomo_dae_reclassified_derivativevars[0] is m.dv1)
+
         output = \
 """\
 dv1_disc_eq : Size=15, Index=t, Active=True
@@ -111,6 +114,10 @@ dv1_disc_eq : Size=15, Index=t, Active=True
         self.assertTrue(hasattr(m, 'dv1dt2_disc_eq'))
         self.assertTrue(len(m.dv1dt2_disc_eq) == 4)
         self.assertTrue(len(m.v1) == 5)
+
+        self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
+        self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
+        self.assertTrue(m.dv1dt2 in m._pyomo_dae_reclassified_derivativevars)
 
         output = \
 """\
@@ -154,6 +161,9 @@ dv1dt2_disc_eq : Size=4, Index=t, Active=True
         for idx, val in enumerate(list(m.t)):
             self.assertAlmostEqual(val, expected_disc_points[idx])
 
+        self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
+        self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
+
         output = \
 """\
 dv1_disc_eq : Size=15, Index=t, Active=True
@@ -191,6 +201,10 @@ dv1_disc_eq : Size=15, Index=t, Active=True
         self.assertTrue(len(m.dv1dt2_disc_eq) == 4)
         self.assertTrue(len(m.v1_t_cont_eq) == 2)
         self.assertTrue(len(m.v1) == 7)
+
+        self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
+        self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
+        self.assertTrue(m.dv1dt2 in m._pyomo_dae_reclassified_derivativevars)
 
         output = \
 """\
@@ -234,6 +248,10 @@ dv1dt2_disc_eq : Size=4, Index=t, Active=True
         for idx, val in enumerate(list(m.t)):
             self.assertAlmostEqual(val, expected_disc_points[idx])
 
+        self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
+        self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
+        self.assertTrue(m.dv2 in m._pyomo_dae_reclassified_derivativevars)
+
     # test collocation discretization on var indexed by multiple ContinuousSets
     def test_disc_multi_index2(self):
         m = self.m.clone()
@@ -259,6 +277,11 @@ dv1dt2_disc_eq : Size=4, Index=t, Active=True
 
         for idx, val in enumerate(list(m.t2)):
             self.assertAlmostEqual(val, expected_t2_disc_points[idx])
+
+        self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
+        self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
+        self.assertTrue(m.dv2dt in m._pyomo_dae_reclassified_derivativevars)
+        self.assertTrue(m.dv2dt2 in m._pyomo_dae_reclassified_derivativevars)
 
     # test passing the discretization invalid options
     def test_disc_invalid_options(self):
