@@ -203,8 +203,13 @@ class PyomoInterface:
             con.set_value((con.lower, self.substituteEF(con.body,TRF,efSet), con.upper))
         for obj in model.component_data_objects(Objective,active=True):
             obj.set_value(self.substituteEF(obj.expr,TRF,efSet))
-            ## Assume only one ative objective function here
+            ## Assume only one active objective function here
             self.objective=obj
+
+        # Make sure at least one external function defined; otherwise no need for TRF solver
+        if len(TRF.external_fcns) == 0:
+            raise RuntimeError(
+                    "TrustRegion requires at least one external function")
 
         if self.objective.sense == maximize:
             self.objective.expr = -1* self.objective.expr
