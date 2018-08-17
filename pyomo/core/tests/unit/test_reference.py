@@ -214,6 +214,22 @@ class TestReferenceDict(unittest.TestCase):
         self.assertEqual(len(list(x.value for x in itervalues(rd))), 2-1)
 
 class TestReference(unittest.TestCase):
+    def test_constructor_error(self):
+        m = ConcreteModel()
+        m.x = Var([1,2])
+        self.assertRaisesRegexp(
+            TypeError,
+            "First argument to Reference constructors must be a "
+            "component slice.*received IndexedVar",
+            Reference, m.x
+            )
+        self.assertRaisesRegexp(
+            TypeError,
+            "First argument to Reference constructors must be a "
+            "component slice.*received None",
+            Reference, None
+            )
+
     def test_single_reference(self):
         m = ConcreteModel()
         m.b = Block([1,2])

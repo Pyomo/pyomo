@@ -343,6 +343,10 @@ def Reference(reference, ctype=_NotSpecified):
               4 :     1 :    10 :  None : False : False :  Reals
 
     """
+    if not isinstance(reference, _IndexedComponent_slice):
+        raise TypeError(
+            "First argument to Reference constructors must be a "
+            "component slice (received %s)" % (type(reference).__name__,))
     _data = _ReferenceDict(reference)
     _iter = iter(reference)
     ctypes = set()
