@@ -18,6 +18,7 @@ from scipy.sparse.sputils import (upcast,
                                   isdense,
                                   isscalarlike,
                                   get_index_dtype)
+from scipy.sparse import issparse
 
 from pyomo.contrib.pynumero.sparse.utils import is_symmetric_dense
 
@@ -159,6 +160,9 @@ class COOMatrix(SparseBase, scipy_coo_matrix):
     def tofullmatrix(self):
         return self
 
+    def toscipy(self):
+        return scipy_coo_matrix(self)
+
     def transpose(self, axes=None, copy=False):
         """
         Reverses the dimensions of the sparse matrix.
@@ -205,20 +209,26 @@ class COOMatrix(SparseBase, scipy_coo_matrix):
         return super(COOMatrix, self)._mul_vector(other)
 
     def _add_sparse(self, other):
-        if hasattr(other, 'is_symmetric') and other.is_symmetric:
-            return super(COOMatrix, self)._add_sparse(other.tofullmatrix())
-        else:
+        if isinstance(other, SparseBase):
+            if other.is_symmetric:
+                return super(COOMatrix, self)._add_sparse(other.tofullmatrix())
             return super(COOMatrix, self)._add_sparse(other)
+        if issparse(other):
+            raise RuntimeError("Addition not supported with scipy matrices")
+        raise RuntimeError("Sparse format not recognized {}".format(type(other)))
 
     def _sub_sparse(self, other):
-        if hasattr(other, 'is_symmetric') and other.is_symmetric:
-            return super(COOMatrix, self)._sub_sparse(other.tofullmatrix())
-        else:
+        if isinstance(other, SparseBase):
+            if other.is_symmetric:
+                return super(COOMatrix, self)._sub_sparse(other.tofullmatrix())
             return super(COOMatrix, self)._sub_sparse(other)
+        if issparse(other):
+            raise RuntimeError("Subtraction not supported with scipy matrices")
+        raise RuntimeError("Sparse format not recognized {}".format(type(other)))
 
     def getcol(self, j):
         from pyomo.contrib.pynumero.sparse.csc import CSCMatrix
-        return CSCMatrix(super(COOMatrix, self).getcol(j))
+        return CSCMatrix(self.toscipy().getcol(j))
 
     def getrow(self, i):
         from pyomo.contrib.pynumero.sparse.csr import CSRMatrix
@@ -467,20 +477,29 @@ class COOSymMatrix(COOMatrix):
         # ToDo: decide if we should suppert this
         raise NotImplementedError('Not supported')
 
+    def toscipy(self):
+        return scipy_coo_matrix(self.tofullmatrix())
+
     def getH(self):
         return self.transpose().conj()
 
     def _add_sparse(self, other):
-        if hasattr(other, 'is_symmetric') and other.is_symmetric:
-            return self.tocsr()._add_sparse(other)
-        else:
+        if isinstance(other, SparseBase):
+            if other.is_symmetric:
+                return self.tocsr()._add_sparse(other)
             return self.tofullmatrix()._add_sparse(other)
+        if issparse(other):
+            raise RuntimeError("Addition not supported with scipy matrices")
+        raise RuntimeError("Sparse format not recognized {}".format(type(other)))
 
     def _sub_sparse(self, other):
-        if hasattr(other, 'is_symmetric') and other.is_symmetric:
-            return self.tocsr()._sub_sparse(other)
-        else:
+        if isinstance(other, SparseBase):
+            if other.is_symmetric:
+                return self.tocsr()._sub_sparse(other)
             return self.tofullmatrix()._sub_sparse(other)
+        if issparse(other):
+            raise RuntimeError("Subtraction not supported with scipy matrices")
+        raise RuntimeError("Sparse format not recognized {}".format(type(other)))
 
     def _add_dense(self, other):
         return self.tofullmatrix()._add_dense(other)

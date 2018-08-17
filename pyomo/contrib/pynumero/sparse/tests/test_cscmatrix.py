@@ -153,10 +153,8 @@ class TestCSCMatrix(unittest.TestCase):
                              [7.0, 8.0]])
 
         m2 = csc_matrix(dense_m2)
-        res = m * m2
-        dense_res = np.matmul(m.toarray(), dense_m2)
-        self.assertFalse(res.is_symmetric)
-        self.assertTrue(np.allclose(res.toarray(), dense_res))
+        with self.assertRaises(Exception) as context:
+            res = m * m2
 
     def test_is_symmetric_numerically(self):
 

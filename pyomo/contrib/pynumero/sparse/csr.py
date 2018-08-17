@@ -2,9 +2,11 @@ from scipy.sparse import csr_matrix as scipy_csr_matrix
 from scipy.sparse import coo_matrix as scipy_coo_matrix
 from scipy.sparse.sputils import (upcast,
                                   upcast_char,
-                                  get_index_dtype)
+                                  get_index_dtype,
+                                  )
 
 from scipy.sparse._sparsetools import csr_tocsc
+from scipy.sparse import issparse
 
 try:
     from pyomo.contrib.pynumero.extensions.sparseutils import (sym_csr_matvec,
@@ -104,16 +106,22 @@ class CSRMatrix(SparseBase, scipy_csr_matrix):
                                   shape=self.shape, dtype=data.dtype)
 
     def _add_sparse(self, other):
-        if hasattr(other, 'is_symmetric') and other.is_symmetric:
-            return super(CSRMatrix, self)._add_sparse(other.tofullmatrix())
-        else:
+        if isinstance(other, SparseBase):
+            if other.is_symmetric:
+                return super(CSRMatrix, self)._add_sparse(other.tofullmatrix())
             return super(CSRMatrix, self)._add_sparse(other)
+        if issparse(other):
+            raise RuntimeError("Addition not supported with scipy matrices")
+        raise RuntimeError("Sparse format not recognized {}".format(type(other)))
 
     def _sub_sparse(self, other):
-        if hasattr(other, 'is_symmetric') and other.is_symmetric:
-            return super(CSRMatrix, self)._sub_sparse(other.tofullmatrix())
-        else:
+        if isinstance(other, SparseBase):
+            if other.is_symmetric:
+                return super(CSRMatrix, self)._sub_sparse(other.tofullmatrix())
             return super(CSRMatrix, self)._sub_sparse(other)
+        if issparse(other):
+            raise RuntimeError("Subtraction not supported with scipy matrices")
+        raise RuntimeError("Sparse format not recognized {}".format(type(other)))
 
     def _mul_sparse_matrix(self, other):
 
@@ -135,18 +143,24 @@ class CSRMatrix(SparseBase, scipy_csr_matrix):
                         return _convert_matrix_to_symmetric(result, check_symmetry=False)
                 return result
 
-        result = super()._mul_sparse_matrix(other)
-        if self.shape[0] == other.shape[1]:
-            if _is_symmetric_numerically(result):
-                return _convert_matrix_to_symmetric(result, check_symmetry=False)
-        return result
+            result = super()._mul_sparse_matrix(other)
+            if self.shape[0] == other.shape[1]:
+                if _is_symmetric_numerically(result):
+                    return _convert_matrix_to_symmetric(result, check_symmetry=False)
+            return result
+        if issparse(other):
+            raise RuntimeError("Multiplication not supported with scipy matrices")
+        raise RuntimeError("Sparse format not recognized {}".format(type(other)))
 
     def getcol(self, j):
         from pyomo.contrib.pynumero.sparse.csc import CSCMatrix
-        return CSCMatrix(super(CSRMatrix, self).getcol(j))
+        return CSCMatrix(self.toscipy().getcol(j))
 
     def getrow(self, i):
         return CSRMatrix(super(CSRMatrix, self).getrow(i))
+
+    def toscipy(self):
+        return scipy_csr_matrix(self)
 
     def __repr__(self):
         return 'CSRMatrix{}'.format(self.shape)
@@ -258,17 +272,26 @@ class CSRSymMatrix(CSRMatrix):
     def tolil(self, copy=False):
         raise NotImplementedError('Not supported')
 
+    def toscipy(self):
+        return scipy_csr_matrix(self.tofullmatrix())
+
     def _add_sparse(self, other):
-        if hasattr(other, 'is_symmetric') and other.is_symmetric:
-            return self._binopt(other, '_plus_')
-        else:
+        if isinstance(other, SparseBase):
+            if other.is_symmetric:
+                return self._binopt(other, '_plus_')
             return self.tofullmatrix()._add_sparse(other)
+        if issparse(other):
+            raise RuntimeError("Addition not supported with scipy matrices")
+        raise RuntimeError("Sparse format not recognized {}".format(type(other)))
 
     def _sub_sparse(self, other):
-        if hasattr(other, 'is_symmetric') and other.is_symmetric:
-            return self._binopt(other, '_minus_')
-        else:
+        if isinstance(other, SparseBase):
+            if other.is_symmetric:
+                return self._binopt(other, '_minus_')
             return self.tofullmatrix()._sub_sparse(other)
+        if issparse(other):
+            raise RuntimeError("Subtraction not supported with scipy matrices")
+        raise RuntimeError("Sparse format not recognized {}".format(type(other)))
 
     def _add_dense(self, other):
         return self.tofullcoo()._add_dense(other)
@@ -323,12 +346,14 @@ class CSRSymMatrix(CSRMatrix):
                     if _is_symmetric_numerically(result):
                         return _convert_matrix_to_symmetric(result, check_symmetry=False)
                 return result
-
-        result = expanded_sym * other
-        if expanded_sym.shape[0] == other.shape[1]:
-            if _is_symmetric_numerically(result):
-                return _convert_matrix_to_symmetric(result, check_symmetry=False)
-        return result
+            result = expanded_sym * other
+            if expanded_sym.shape[0] == other.shape[1]:
+                if _is_symmetric_numerically(result):
+                    return _convert_matrix_to_symmetric(result, check_symmetry=False)
+            return result
+        if issparse(other):
+            raise RuntimeError("Multiplication not supported with scipy matrices")
+        raise RuntimeError("Sparse format not recognized {}".format(type(other)))
 
     def getcol(self, j):
         return self.tofullmatrix().getcol(j)

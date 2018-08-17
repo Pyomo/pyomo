@@ -563,6 +563,10 @@ class StubNLP(NLP):
         # build maps for g
         self._build_g_maps()
 
+        # bounds on d extracted from g
+        self._lower_d = np.compress(self._d_mask, self._lower_g)
+        self._upper_d = np.compress(self._d_mask, self._upper_g)
+
         # internal pointer for evaluation of g
         self._g_rhs = self._upper_g.copy()
         self._g_rhs[~self._c_mask] = 0.0
@@ -625,6 +629,25 @@ class StubNLP(NLP):
         self._init_x.flags.writeable = False
         self._init_y.flags.writeable = False
 
+        # make maps and masks not rewritable
+        self._c_mask.flags.writeable = False
+        self._c_map.flags.writeable = False
+        self._d_mask.flags.writeable = False
+        self._d_map.flags.writeable = False
+
+        self._lower_x_mask.flags.writeable = False
+        self._upper_x_mask.flags.writeable = False
+        self._lower_g_mask.flags.writeable = False
+        self._upper_g_mask.flags.writeable = False
+        self._lower_d_mask.flags.writeable = False
+        self._upper_d_mask.flags.writeable = False
+
+        self._lower_x_map.flags.writeable = False
+        self._upper_x_map.flags.writeable = False
+        self._lower_g_map.flags.writeable = False
+        self._upper_g_map.flags.writeable = False
+        self._lower_d_map.flags.writeable = False
+        self._upper_d_map.flags.writeable = False
 
     @property
     def nx(self):
@@ -701,6 +724,22 @@ class StubNLP(NLP):
         return self._upper_x
 
     @property
+    def mask_xl(self):
+        return self._lower_x_mask
+
+    @property
+    def mask_xu(self):
+        return self._upper_x_mask
+
+    @property
+    def mask_c(self):
+        return self._c_mask
+
+    @property
+    def mask_d(self):
+        return self._d_mask
+
+    @property
     def gl(self):
         """
         Return lower bounds of general inequality constraints.
@@ -715,6 +754,38 @@ class StubNLP(NLP):
         in a 1d-array
         """
         return self._upper_g
+
+    @property
+    def dl(self):
+        """
+        Return lower bounds of inequality constraints.
+        in a 1d-array
+        """
+        return self._lower_d
+
+    @property
+    def du(self):
+        """
+        Return upper bounds of inequality constraints.
+        in a 1d-array
+        """
+        return self._upper_d
+
+    @property
+    def mask_gl(self):
+        return self._lower_g_mask
+
+    @property
+    def mask_gu(self):
+        return self._upper_g_mask
+
+    @property
+    def mask_dl(self):
+        return self._lower_d_mask
+
+    @property
+    def mask_du(self):
+        return self._upper_d_mask
 
     @property
     def x_init(self):
@@ -849,10 +920,70 @@ class StubNLP(NLP):
         self._d_mask = abs_bounds_difference >= tolerance_equalities
         self._d_map = self._d_mask.nonzero()[0]
 
-        self._lower_d_mask = np.isfinite(self._lower_g) * self._d_mask
-        self._lower_d_map = self._lower_d_mask.nonzero()[0]
-        self._upper_d_mask = np.isfinite(self._upper_g) * self._d_mask
-        self._upper_d_map = self._upper_d_mask.nonzero()[0]
+        self._lower_g_mask = np.isfinite(self._lower_g) * self._d_mask
+        self._lower_g_map = self._lower_g_mask.nonzero()[0]
+        self._upper_g_mask = np.isfinite(self._upper_g) * self._d_mask
+        self._upper_g_map = self._upper_g_mask.nonzero()[0]
+
+        self._lower_d_mask = np.isin(self._d_map, self._lower_g_map)
+        self._lower_d_map = np.where(self._lower_d_mask)[0]
+        self._upper_d_mask = np.isin(self._d_map, self._upper_g_map)
+        self._upper_d_map = np.where(self._upper_d_mask)[0]
+
+    def matrix_pxl(self):
+
+        # compression matrix lower bounds on x
+        row = np.arange(len(self._lower_x_map), dtype=np.int)
+        col = self._lower_x_map
+        data = np.ones(len(self._lower_x_map))
+        return CSRMatrix((data, (row, col)),
+                         shape=(len(self._lower_x_map), self.nx))
+
+    def matrix_pxu(self):
+
+        # compression matrix upper bounds on x
+        row = np.arange(len(self._upper_x_map), dtype=np.int)
+        col = self._upper_x_map
+        data = np.ones(len(self._upper_x_map))
+        return CSRMatrix((data, (row, col)),
+                         shape=(len(self._upper_x_map), self.nx))
+
+    """
+    def matrix_pgl(self):
+
+        # compression matrix lower bounds on g
+        row = np.arange(len(self._lower_g_map), dtype=np.int)
+        col = self._lower_g_map
+        data = np.ones(len(self._lower_g_map))
+        return CSRMatrix((data, (row, col)),
+                         shape=(len(self._lower_g_map), self.ng))
+
+    def matrix_pgu(self):
+
+        # compression matrix upper bounds on g
+        row = np.arange(len(self._upper_g_map), dtype=np.int)
+        col = self._upper_g_map
+        data = np.ones(len(self._upper_g_map))
+        return CSRMatrix((data, (row, col)),
+                         shape=(len(self._upper_g_map), self.ng))
+    """
+
+    def matrix_pdl(self):
+        # compression matrix lower bounds on d
+        row = np.arange(len(self._lower_d_map), dtype=np.int)
+        col = self._lower_d_map
+        data = np.ones(len(self._lower_d_map))
+        return CSRMatrix((data, (row, col)),
+                         shape=(len(self._lower_d_map), self.nd))
+
+    def matrix_pdu(self):
+
+        # compression matrix upper bounds on d
+        row = np.arange(len(self._upper_d_map), dtype=np.int)
+        col = self._upper_d_map
+        data = np.ones(len(self._upper_d_map))
+        return CSRMatrix((data, (row, col)),
+                         shape=(len(self._upper_d_map), self.nd))
 
     def create_vector_x(self, subset=None):
         """Return 1d-array of vector of primal variables
@@ -1257,7 +1388,6 @@ class AmplNLP(StubNLP):
     filename of .col file with identity of variables (optional)
     """
 
-    # ToDo: add access to d_l d_u
     # ToDo: change on x_l and x_u, g_u, g_l?
 
     def __init__(self, model, row_filename=None, col_filename=None):

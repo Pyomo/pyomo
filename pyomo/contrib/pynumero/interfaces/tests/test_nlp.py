@@ -100,13 +100,13 @@ class TestNLP(unittest.TestCase):
         d_map = [2, 3, 4]
         self.assertListEqual(self.nlp1._d_map.tolist(), d_map)
         lower_d_mask = [False, False, False, True, True]
-        self.assertListEqual(self.nlp1._lower_d_mask.tolist(), lower_d_mask)
+        self.assertListEqual(self.nlp1._lower_g_mask.tolist(), lower_d_mask)
         upper_d_mask = [False, False, True, False, False]
-        self.assertListEqual(self.nlp1._upper_d_mask.tolist(), upper_d_mask)
+        self.assertListEqual(self.nlp1._upper_g_mask.tolist(), upper_d_mask)
         lower_d_map = [3, 4]
-        self.assertListEqual(self.nlp1._lower_d_map.tolist(), lower_d_map)
+        self.assertListEqual(self.nlp1._lower_g_map.tolist(), lower_d_map)
         upper_d_map = [2]
-        self.assertListEqual(self.nlp1._upper_d_map.tolist(), upper_d_map)
+        self.assertListEqual(self.nlp1._upper_g_map.tolist(), upper_d_map)
 
     def test_xl(self):
         xl = [-np.inf, 0, 0]

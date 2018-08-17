@@ -129,7 +129,10 @@ def _is_symmetric_numerically(mat):
 
 def _convert_matrix_to_symmetric(mat, check_symmetry=True):
 
-    if hasattr(mat, 'is_symmetric') and mat.is_symmetric:
+    if not isinstance(mat, SparseBase):
+        raise RuntimeError("Operation only supported for pynumero matrices")
+
+    if mat.is_symmetric:
         return mat
 
     if check_symmetry and not _is_symmetric_numerically(mat):

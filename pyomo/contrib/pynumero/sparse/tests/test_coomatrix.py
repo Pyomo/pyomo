@@ -110,9 +110,8 @@ class TestCOOMatrix(unittest.TestCase):
         m2 = coo_matrix((self.basic_m.data,
                         (self.basic_m.row, self.basic_m.col)),
                         shape=self.basic_m.shape)
-        mm = m + m2
-        self.assertIsInstance(mm, CSRMatrix)
-        self.assertListEqual(mm.toarray().flatten().tolist(), mm2.flatten().tolist())
+        with self.assertRaises(Exception) as context:
+            mm = m + m2
 
         m2 = IdentityMatrix(4)
         mm = m + m2
@@ -193,10 +192,8 @@ class TestCOOMatrix(unittest.TestCase):
                              [7.0, 8.0]])
 
         m2 = coo_matrix(dense_m2)
-        res = m * m2
-        dense_res = np.matmul(m.toarray(), dense_m2)
-        self.assertFalse(res.is_symmetric)
-        self.assertTrue(np.allclose(res.toarray(), dense_res))
+        with self.assertRaises(Exception) as context:
+            res = m * m2
 
     def test_is_symmetric_dense(self):
 
@@ -533,10 +530,9 @@ class TestCOOSymMatrix(unittest.TestCase):
 
         dense_m = m.toarray()
         dense_m2 = m2.toarray()
-        res = m * m2
-        dense_res = np.matmul(dense_m, dense_m2)
-        self.assertTrue(res.is_symmetric)
-        self.assertTrue(np.allclose(res.toarray(), dense_res))
+        with self.assertRaises(Exception) as context:
+            res = m * m2
+
 
         m = self.basic_m
         dense_m2 = np.array([[1.0, 2.0],
@@ -545,10 +541,8 @@ class TestCOOSymMatrix(unittest.TestCase):
                              [7.0, 8.0]])
 
         m2 = coo_matrix(dense_m2)
-        res = m * m2
-        dense_res = np.matmul(m.toarray(), dense_m2)
-        self.assertFalse(res.is_symmetric)
-        self.assertTrue(np.allclose(res.toarray(), dense_res))
+        with self.assertRaises(Exception) as context:
+            res = m * m2
 
         # ToDo: add test with block matrix
 
