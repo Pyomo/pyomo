@@ -12,14 +12,13 @@
 # NOTE: deprecated code
 #
 
-from pyomo.common.plugin import alias
-
 from pyomo.core import *
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.core.plugins.transform.standard_form import StandardForm
 from pyomo.core.plugins.transform.util import partial, process_canonical_repn
 
 
+@TransformationFactory.register("core.lagrangian_dual", doc="Create the LP dual model.")
 class DualTransformation(IsomorphicTransformation):
     """
     Creates a standard form Pyomo model that is equivalent to another model
@@ -35,7 +34,6 @@ class DualTransformation(IsomorphicTransformation):
         neg_suffix                  Defaults to _minus
     """
 
-    alias("core.lagrangian_dual", doc="Create the LP dual model.")
 
     def __init__(self, **kwds):
         kwds['name'] = "linear_dual"
