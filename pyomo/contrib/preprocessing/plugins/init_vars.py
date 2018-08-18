@@ -17,7 +17,7 @@ class InitMidpoint(IsomorphicTransformation):
 
     - If the variable does not have bounds, set the value to zero.
     - If the variable is missing one bound, set the value to that of the
-        existing bound.
+      existing bound.
     """
 
     def _apply_to(self, instance, overwrite=False):
@@ -53,7 +53,7 @@ class InitZero(IsomorphicTransformation):
     """Initialize non-fixed variables to zero.
 
     - If setting the variable value to zero will violate a bound, set the
-        variable value to the relevant bound value.
+      variable value to the relevant bound value.
 
     """
 

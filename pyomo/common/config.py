@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -101,7 +101,7 @@ class Path(object):
         #print "normalizing path '%s' " % (path,),
         path = str(path)
         if path is None or Path.SuppressPathExpansion:
-            return path 
+            return path
 
         if self.basePath:
             base = self.basePath
@@ -135,3 +135,15 @@ class PathList(Path):
             return [ super(PathList, self).__call__(data) ]
 
 
+def add_docstring_list(docstring, configblock):
+    """Returns the docstring with a formatted configuration arguments listing."""
+    return docstring + "    ".join(
+        configblock.generate_documentation(
+            block_start="Keyword Arguments\n-----------------\n",
+            block_end="",
+            item_start="%s\n",
+            item_body="  %s",
+            item_end="",
+            indent_spacing=0,
+            width=256
+        ).splitlines(True))

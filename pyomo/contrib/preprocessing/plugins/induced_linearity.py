@@ -12,6 +12,8 @@ import logging
 import textwrap
 from math import fabs
 
+from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
+                                 add_docstring_list)
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.config import ConfigBlock, ConfigValue, NonNegativeFloat
 from pyomo.contrib.preprocessing.util import SuppressConstantObjectiveWarning
@@ -33,18 +35,24 @@ logger = logging.getLogger('pyomo.contrib.preprocessing')
 class InducedLinearity(IsomorphicTransformation):
     """Reformulate nonlinear constraints with induced linearity.
 
-    Finds continuous variables v where v = d1 + d2 + d3, where d's are discrete
-    variables. These continuous variables may participate nonlinearly in other
-    expressions, which may then be induced to be linear.
+    Finds continuous variables :math:`v` where :math:`v = d_1 + d_2 + d_3`,
+    where :math:`d`'s are discrete variables. These continuous variables may
+    participate nonlinearly in other expressions, which may then be induced to
+    be linear.
 
     The overall algorithm flow can be summarized as:
+
     1. Detect effectively discrete variables and the constraints that
-    imply discreteness.
+       imply discreteness.
     2. Determine the set of valid values for each effectively discrete variable
-        - NOTE: 1, 2 must incorporate scoping considerations (Disjuncts)
     3. Find nonlinear expressions in which effectively discrete variables
-    participate.
+       participate.
     4. Reformulate nonlinear expressions appropriately.
+
+    .. note:: Tasks 1 & 2 must incorporate scoping considerations (Disjuncts)
+
+    Keyword arguments below are specified for the ``apply_to`` and
+    ``create_using`` functions.
 
     """
 
@@ -58,6 +66,8 @@ class InducedLinearity(IsomorphicTransformation):
         default='glpk',
         description="Solver to use when pruning possible values."
     ))
+
+    __doc__ = add_docstring_list(__doc__, CONFIG)
 
     def _apply_to(self, model, **kwds):
         """Apply the transformation to the given model."""

@@ -9,72 +9,79 @@ from pyomo.core.base.symbolic import differentiate
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.contrib.gdpopt.util import time_code
 
 
 def add_outer_approximation_cuts(nlp_result, solve_data, config):
     """Add outer approximation cuts to the linear GDP model."""
-    m = solve_data.linear_GDP
-    GDPopt = m.GDPopt_utils
-    sign_adjust = -1 if GDPopt.objective.sense == minimize else 1
+    with time_code(solve_data.timing, 'OA cut generation'):
+        m = solve_data.linear_GDP
+        GDPopt = m.GDPopt_utils
+        sign_adjust = -1 if GDPopt.objective.sense == minimize else 1
 
-    # copy values over
-    for var, val in zip(GDPopt.working_var_list, nlp_result.var_values):
-        if val is not None and not var.fixed:
-            var.value = val
+        # copy values over
+        for var, val in zip(GDPopt.working_var_list, nlp_result.var_values):
+            if val is not None and not var.fixed:
+                var.value = val
 
-    # TODO some kind of special handling if the dual is phenomenally small?
-    config.logger.debug('Adding OA cuts.')
+        # TODO some kind of special handling if the dual is phenomenally small?
+        config.logger.debug('Adding OA cuts.')
 
-    nonlinear_constraints = ComponentSet(GDPopt.working_nonlinear_constraints)
-    counter = 0
-    for constr, dual_value in zip(GDPopt.working_constraints_list,
-                                  nlp_result.dual_values):
-        if dual_value is None or constr not in nonlinear_constraints:
-            continue
+        nonlinear_constraints = ComponentSet(GDPopt.working_nonlinear_constraints)
+        counter = 0
+        if not hasattr(GDPopt, 'jacobians'):
+            GDPopt.jacobians = ComponentMap()
+        for constr, dual_value in zip(GDPopt.working_constraints_list,
+                                      nlp_result.dual_values):
+            if dual_value is None or constr not in nonlinear_constraints:
+                continue
 
-        # Determine if the user pre-specified that OA cuts should not be
-        # generated for the given constraint.
-        parent_block = constr.parent_block()
-        ignore_set = getattr(parent_block, 'GDPopt_ignore_OA', None)
-        config.logger.debug('Ignore_set %s' % ignore_set)
-        if (ignore_set and (constr in ignore_set or
-                            constr.parent_component() in ignore_set)):
+            # Determine if the user pre-specified that OA cuts should not be
+            # generated for the given constraint.
+            parent_block = constr.parent_block()
+            ignore_set = getattr(parent_block, 'GDPopt_ignore_OA', None)
+            config.logger.debug('Ignore_set %s' % ignore_set)
+            if (ignore_set and (constr in ignore_set or
+                                constr.parent_component() in ignore_set)):
+                config.logger.debug(
+                    'OA cut addition for %s skipped because it is in '
+                    'the ignore set.' % constr.name)
+                continue
+
             config.logger.debug(
-                'OA cut addition for %s skipped because it is in '
-                'the ignore set.' % constr.name)
-            continue
+                "Adding OA cut for %s with dual value %s"
+                % (constr.name, dual_value))
 
-        config.logger.debug(
-            "Adding OA cut for %s with dual value %s"
-            % (constr.name, dual_value))
+            # TODO make this more efficient by not having to use
+            # differentiate() at each iteration.
+            jacobians = GDPopt.jacobians.get(constr, None)
+            if jacobians is None:
+                constr_vars = list(EXPR.identify_variables(constr.body))
+                jac_list = differentiate(constr.body, wrt_list=constr_vars)
+                jacobians = ComponentMap(zip(constr_vars, jac_list))
+                GDPopt.jacobians[constr] = jacobians
 
-        # TODO make this more efficient by not having to use differentiate()
-        # at each iteration.
-        constr_vars = list(EXPR.identify_variables(constr.body))
-        jac_list = differentiate(constr.body, wrt_list=constr_vars)
-        jacobians = ComponentMap(zip(constr_vars, jac_list))
+            # Create a block on which to put outer approximation cuts.
+            oa_utils = parent_block.component('GDPopt_OA')
+            if oa_utils is None:
+                oa_utils = parent_block.GDPopt_OA = Block(
+                    doc="Block holding outer approximation cuts "
+                    "and associated data.")
+                oa_utils.GDPopt_OA_cuts = ConstraintList()
+                oa_utils.GDPopt_OA_slacks = VarList(
+                    bounds=(0, config.max_slack),
+                    domain=NonNegativeReals, initialize=0)
 
-        # Create a block on which to put outer approximation cuts.
-        oa_utils = parent_block.component('GDPopt_OA')
-        if oa_utils is None:
-            oa_utils = parent_block.GDPopt_OA = Block(
-                doc="Block holding outer approximation cuts "
-                "and associated data.")
-            oa_utils.GDPopt_OA_cuts = ConstraintList()
-            oa_utils.GDPopt_OA_slacks = VarList(
-                bounds=(0, config.max_slack),
-                domain=NonNegativeReals, initialize=0)
+            oa_cuts = oa_utils.GDPopt_OA_cuts
+            slack_var = oa_utils.GDPopt_OA_slacks.add()
+            oa_cuts.add(
+                expr=copysign(1, sign_adjust * dual_value) * (
+                    value(constr.body) + sum(
+                        value(jacobians[var]) * (var - value(var))
+                        for var in jacobians)) + slack_var <= 0)
+            counter += 1
 
-        oa_cuts = oa_utils.GDPopt_OA_cuts
-        slack_var = oa_utils.GDPopt_OA_slacks.add()
-        oa_cuts.add(
-            expr=copysign(1, sign_adjust * dual_value) * (
-                value(constr.body) + sum(
-                    value(jacobians[var]) * (var - value(var))
-                    for var in constr_vars)) + slack_var <= 0)
-        counter += 1
-
-    config.logger.info('Added %s OA cuts' % counter)
+        config.logger.info('Added %s OA cuts' % counter)
 
 
 def add_integer_cut(var_values, solve_data, config, feasible=False):
