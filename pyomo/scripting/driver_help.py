@@ -144,7 +144,7 @@ def help_writers():
     print("")
     print("Pyomo Problem Writers")
     print("---------------------")
-    for writer in sorted(WriterFactory.services()):
+    for writer in sorted(WriterFactory):
         print("  "+writer)
         print(wrapper.fill(WriterFactory.doc(writer)))
 
@@ -176,7 +176,7 @@ def help_datamanagers(options):
     print("")
     print("Pyomo Data Managers")
     print("-------------------")
-    for xform in sorted(DataManagerFactory.services()):
+    for xform in sorted(DataManagerFactory):
         print("  "+xform)
         print(wrapper.fill(DataManagerFactory.doc(xform)))
 
@@ -299,7 +299,7 @@ def help_transformations():
     print("")
     print("Pyomo Model Transformations")
     print("---------------------------")
-    for xform in sorted(TransformationFactory.services()):
+    for xform in sorted(TransformationFactory):
         print("  "+xform)
         print(wrapper.fill(TransformationFactory.doc(xform)))
 
@@ -329,7 +329,7 @@ def help_solvers():
     print("------------------------")
     print(wrapper.fill("The serial, pyro and phpyro solver managers support the following solver interfaces:"))
     print("")
-    solver_list = pyomo.opt.SolverFactory.services()
+    solver_list = list(pyomo.opt.SolverFactory)
     solver_list = sorted( filter(lambda x: '_' != x[0], solver_list) )
     n = max(map(len, solver_list))
     wrapper = textwrap.TextWrapper(subsequent_indent=' '*(n+9))
