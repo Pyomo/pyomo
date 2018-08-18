@@ -32,9 +32,6 @@ class VariableBoundStripper(NonIsomorphicTransformation):
 
     __doc__ = add_docstring_list(__doc__, CONFIG)
 
-    alias('contrib.strip_var_bounds',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
-
     def _apply_to(self, instance, **kwds):
         config = self.CONFIG(kwds)
         if config.reversible:

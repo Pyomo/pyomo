@@ -312,7 +312,7 @@ def help_solvers():
 
     print(wrapper.fill("Pyomo uses 'solver managers' to execute 'solvers' that perform optimization and other forms of model analysis.  A solver directly executes an optimizer, typically using an executable found on the user's PATH environment.  Solver managers support a flexible mechanism for asyncronously executing solvers either locally or remotely.  The following solver managers are available in Pyomo:"))
     print("")
-    solvermgr_list = pyomo.opt.SolverManagerFactory.services()
+    solvermgr_list = list(pyomo.opt.SolverManagerFactory)
     solvermgr_list = sorted( filter(lambda x: '_' != x[0], solvermgr_list) )
     n = max(map(len, solvermgr_list))
     wrapper = textwrap.TextWrapper(subsequent_indent=' '*(n+9))

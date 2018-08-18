@@ -41,9 +41,6 @@ class FixedVarDetector(IsomorphicTransformation):
 
     __doc__ = add_docstring_list(__doc__, CONFIG)
 
-    alias('contrib.detect_fixed_vars',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
-
     def _apply_to(self, instance, **kwargs):
         config = self.CONFIG(kwargs)
 

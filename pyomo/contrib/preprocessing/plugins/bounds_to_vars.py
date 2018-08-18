@@ -41,9 +41,6 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
 
     __doc__ = add_docstring_list(__doc__, CONFIG)
 
-    alias('contrib.constraints_to_var_bounds',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
-
     def _apply_to(self, model, **kwds):
         config = self.CONFIG(kwds)
 
