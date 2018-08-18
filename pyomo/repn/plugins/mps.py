@@ -45,9 +45,9 @@ def _get_bound(exp):
         return value(exp)
     raise ValueError("non-fixed bound or weight: " + str(exp))
 
+
 @WriterFactory.register('mps', 'Generate the corresponding MPS file')
 class ProblemWriter_mps(AbstractProblemWriter):
-
 
     def __init__(self):
 
