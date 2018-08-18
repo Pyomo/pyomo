@@ -23,14 +23,13 @@ import pyomo.opt
 from pyomo.opt.parallel.manager import (ActionManagerError,
                                         ActionStatus,
                                         ActionHandle)
-from pyomo.opt.parallel.async_solver import AsynchronousSolverManager
+from pyomo.opt.parallel.async_solver import AsynchronousSolverManager, SolverManagerFactory
 
 import six
 from six import string_types
 
+@SolverManagerFactory.register("serial", doc="Synchronously execute solvers locally")
 class SolverManager_Serial(AsynchronousSolverManager):
-
-    alias("serial", doc="Synchronously execute solvers locally")
 
     def clear(self):
         """

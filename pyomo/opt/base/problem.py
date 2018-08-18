@@ -34,3 +34,13 @@ class AbstractProblemWriter(object):
 
     def __call__(self, model, filename, solver_capability, **kwds): #pragma:nocover
         raise TypeError("Method __call__ undefined in writer for format "+str(self.format))
+
+    #
+    # Support "with" statements.
+    #
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
+
