@@ -11,12 +11,13 @@
 import time
 import pyutilib.misc
 import pyomo.opt
+from pyomo.opt import SolverFactory
 from pyomo.core import TransformationFactory
 
 
+@SolverFactory.register('mpec_nlp', doc='MPEC solver that optimizes a nonlinear transformation')
 class MPEC_Solver1(pyomo.opt.OptSolver):
 
-    pyomo.common.plugin.alias('mpec_nlp', doc='MPEC solver that optimizes a nonlinear transformation')
 
     def __init__(self, **kwds):
         kwds['type'] = 'mpec_nlp'

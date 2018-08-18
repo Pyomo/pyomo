@@ -2,13 +2,13 @@
 import textwrap
 
 from pyomo.core.base.constraint import Constraint
+from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.base.suffix import Suffix
 from pyomo.core.expr.numvalue import value
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.common.plugin import alias
 
 
 def _build_equality_set(m):
@@ -66,8 +66,11 @@ def _detect_fixed_variables(m):
     return new_fixed_vars
 
 
+
+@TransformationFactory.register('contrib.propagate_fixed_vars',
+          doc="Propagate variable fixing for equalities of type x = y.")
 class FixedVarPropagator(IsomorphicTransformation):
-    """Propagates variable fixing for equalities of type x = y.
+    """Propagate variable fixing for equalities of type x = y.
 
     If x is fixed and y is not fixed, then this transformation will fix y to
     the value of x.
@@ -76,9 +79,6 @@ class FixedVarPropagator(IsomorphicTransformation):
     whereby the transformed variables are saved and can be later unfixed.
 
     """
-
-    alias('contrib.propagate_fixed_vars',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, instance, tmp=False):
         """Apply the transformation.
@@ -139,16 +139,15 @@ class FixedVarPropagator(IsomorphicTransformation):
         del instance._tmp_propagate_fixed
 
 
+@TransformationFactory.register('contrib.propagate_eq_var_bounds',
+          doc="Propagate variable bounds for equalities of type x = y.")
 class VarBoundPropagator(IsomorphicTransformation):
-    """Propagates variable bounds for equalities of type x = y.
+    """Propagate variable bounds for equalities of type x = y.
 
     If x has a tighter bound then y, then this transformation will adjust the
     bounds on y to match those of x.
 
     """
-
-    alias('contrib.propagate_eq_var_bounds',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, instance, tmp=False):
         """Apply the transformation.

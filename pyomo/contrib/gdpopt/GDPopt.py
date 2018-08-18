@@ -25,7 +25,6 @@ from __future__ import division
 
 import logging
 
-import pyomo.common.plugin
 from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue, In,
                                  NonNegativeFloat, NonNegativeInt)
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
@@ -40,20 +39,17 @@ from pyomo.contrib.gdpopt.util import (_DoNothing, a_logger,
                                        record_working_model_statistics,
                                        reformulate_integer_variables)
 from pyomo.core.base import Block, ConstraintList, value
+from pyomo.opt.base import SolverFactory
 from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.opt.base import IOptSolver
 
 __version__ = (0, 4, 0)
 
 
-class GDPoptSolver(pyomo.common.plugin.Plugin):
-    """A decomposition-based GDP solver."""
-
-    pyomo.common.plugin.implements(IOptSolver)
-    pyomo.common.plugin.alias(
-        'gdpopt',
+@SolverFactory.register('gdpopt',
         doc='The GDPopt decomposition-based '
         'Generalized Disjunctive Programming (GDP) solver')
+class GDPoptSolver(object):
+    """A decomposition-based GDP solver."""
 
     _metasolver = False
 
@@ -307,3 +303,13 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             config.logger.setLevel(old_logger_level)
             if created_GDPopt_block:
                 model.del_component('GDPopt_utils')
+
+    #
+    # Support "with" statements.
+    #
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
+

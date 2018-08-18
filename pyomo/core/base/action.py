@@ -14,13 +14,14 @@ import logging
 import types
 
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
 
 logger = logging.getLogger('pyomo.core')
 
 
+@ModelComponentFactory.register("A component that performs arbitrary actions during model construction.  The action rule is applied to every index value.")
 class BuildAction(IndexedComponent):
     """A build action, which executes a rule for all valid indices.
 
@@ -64,4 +65,3 @@ class BuildAction(IndexedComponent):
                 apply_indexed_rule(self, self._rule, self._parent(), index)
         timer.report()
 
-register_component(BuildAction, "A component that performs arbitrary actions during model construction.  The action rule is applied to every index value.")

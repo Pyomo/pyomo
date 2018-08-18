@@ -4,13 +4,15 @@ from __future__ import division
 
 import textwrap
 
+from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.common.plugin import alias
 from pyomo.repn import generate_standard_repn
 
 
+@TransformationFactory.register('contrib.constraints_to_var_bounds',
+          doc="Change constraints to be a bound on the variable.")
 class ConstraintToVarBoundTransform(IsomorphicTransformation):
     """Change constraints to be a bound on the variable.
 
@@ -18,9 +20,6 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
     (c2 - c1)/k if it results in a tighter bound. Also does the same thing for
     lower bounds.
     """
-
-    alias('contrib.constraints_to_var_bounds',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, model):
         """Apply the transformation to the given model."""

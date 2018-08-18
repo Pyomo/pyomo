@@ -12,6 +12,7 @@ import logging
 
 from pyomo.common.plugin import alias
 from pyomo.core.base import (Transformation,
+                             TransformationFactory,
                              Constraint,
                              Block,
                              Param,
@@ -37,9 +38,9 @@ logger = logging.getLogger('pyomo.core')
 #   x2 >= 0
 #   x1*x2 <= 0
 #
+@TransformationFactory.register('mpec.simple_nonlinear', doc="Nonlinear transformations of complementarity conditions when all variables are non-negative")
 class MPEC1_Transformation(Transformation):
 
-    alias('mpec.simple_nonlinear', doc="Nonlinear transformations of complementarity conditions when all variables are non-negative")
 
     def __init__(self):
         super(MPEC1_Transformation, self).__init__()

@@ -10,8 +10,7 @@
 
 import logging
 
-from pyomo.core.base.plugin import alias
-from pyomo.core.base import Transformation
+from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core import *
 from pyomo.dae import *
 from pyomo.dae.misc import generate_finite_elements
@@ -109,13 +108,13 @@ def _backward_transform_order2(v, s):
     return _bwd_fun
 
 
+@TransformationFactory.register('dae.finite_difference', doc="Discretizes a DAE model using "
+          "a finite difference method transforming the model into an NLP.")
 class Finite_Difference_Transformation(Transformation):
     """
     Transformation that applies finite difference methods to
     DAE, ODE, or PDE models.
     """
-    alias('dae.finite_difference', doc="Discretizes a DAE model using "
-          "a finite difference method transforming the model into an NLP.")
 
     def __init__(self):
         super(Finite_Difference_Transformation, self).__init__()

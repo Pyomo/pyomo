@@ -1,18 +1,17 @@
 """Transformation to strip variable bounds from a model."""
 import textwrap
 
-from pyomo.common.plugin import alias
+from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.base.var import Var
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.set_types import Reals
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
 
 
+@TransformationFactory.register('contrib.strip_var_bounds',
+          doc="Strip bounds from varaibles.")
 class VariableBoundStripper(NonIsomorphicTransformation):
-    """Strips bounds from variables."""
-
-    alias('contrib.strip_var_bounds',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
+    """Strip bounds from variables."""
 
     def _apply_to(self, instance, strip_domains=True, reversible=False):
         """Apply the transformation.

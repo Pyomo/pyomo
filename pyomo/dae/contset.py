@@ -11,7 +11,7 @@
 import logging
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import *
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.sets import OrderedSimpleSet
 from pyomo.core.base.numvalue import native_numeric_types
 
@@ -19,6 +19,9 @@ logger = logging.getLogger('pyomo.core')
 __all__ = ['ContinuousSet']
 
 
+@ModelComponentFactory.register(
+                   "A bounded continuous numerical range optionally containing"
+                   " discrete points of interest.")
 class ContinuousSet(OrderedSimpleSet):
     """ Represents a bounded continuous domain
 
@@ -255,6 +258,3 @@ class ContinuousSet(OrderedSimpleSet):
         self._fe = sorted(self)
         timer.report()
 
-register_component(ContinuousSet,
-                   "A bounded continuous numerical range optionally containing"
-                   " discrete points of interest.")

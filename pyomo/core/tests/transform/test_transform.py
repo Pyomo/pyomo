@@ -51,15 +51,7 @@ class Test(unittest.TestCase):
 
     def test_transform_dir(self):
         model = AbstractModel()
-        self.assertTrue(set(TransformationFactory.services()) >= set(['core.relax_integrality']))
-
-    def test_transform_error1(self):
-        model = AbstractModel()
-        try:
-            TransformationFactory.services('foo')
-            self.fail("Expected ValueError")
-        except TypeError:
-            pass
+        self.assertTrue(set(TransformationFactory) >= set(['core.relax_integrality']))
 
     def test_relax_integrality1(self):
         # Coverage of the _clear_attribute method

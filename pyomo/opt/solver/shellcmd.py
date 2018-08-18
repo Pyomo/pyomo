@@ -27,6 +27,7 @@ from pyomo.opt.results import SolverStatus, SolverResults
 
 logger = logging.getLogger('pyomo.opt')
 
+
 class SystemCallSolver(OptSolver):
     """ A generic command line solver """
 

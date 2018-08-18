@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.dae.contset import ContinuousSet
 from pyomo.dae.diffvar import DAE_Error
 from pyomo.core.base.expression import (Expression,
@@ -42,6 +42,7 @@ def create_partial_expression(scheme, expr, ind, loc):
     return lambda *args: _fun(*args)(args[loc])
 
 
+@ModelComponentFactory.register("Integral Expression in a DAE model.")
 class Integral(Expression):
     """
     Represents an integral over a continuous domain
@@ -278,4 +279,3 @@ class IndexedIntegral(Integral):
         self._data[index] = cdata
         return cdata
 
-register_component(Integral, "Integral Expression in a DAE model.")

@@ -13,7 +13,7 @@ from pyomo.dae.diffvar import DAE_Error
 
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import NumericValue, native_numeric_types
-from pyomo.core.base.plugin import register_component
+#from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.template_expr import IndexTemplate, _GetItemIndexer
 
 from six import iterkeys, itervalues

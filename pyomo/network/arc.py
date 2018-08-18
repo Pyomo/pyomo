@@ -15,7 +15,7 @@ from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
     UnindexedComponent_set)
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.plugin import (register_component,
+from pyomo.core.base.plugin import (ModelComponentFactory,
     IPyomoScriptModifyInstance, TransformationFactory)
 from pyomo.common.plugin import Plugin, implements
 from pyomo.common.timing import ConstructionTimer
@@ -231,6 +231,7 @@ class _ArcData(ActiveComponentData):
                         "%s object '%s' not of type Port." % (str(p), side))
 
 
+@ModelComponentFactory.register("Component used for connecting two Ports.")
 class Arc(ActiveIndexedComponent):
     """
     Component used for connecting the members of two Port objects.
@@ -393,4 +394,3 @@ class IndexedArc(Arc):
         return self._expanded_block
 
 
-register_component(Arc, "Component used for connecting two Ports.")

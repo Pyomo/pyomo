@@ -8,14 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyutilib.component.core import alias
 from pyutilib.misc.config import ConfigBlock, ConfigList, ConfigValue
 from pyomo.opt.base.problem import *
 
 
+@ProblemConfigFactory.register('default')
 class Default_Config(BaseProblemConfig):
-
-    alias('default')
 
     def config_block(self, init=False):
         config, blocks = minlp_config_block(init=init)

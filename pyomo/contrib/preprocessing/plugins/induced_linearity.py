@@ -13,7 +13,6 @@ import textwrap
 from math import fabs
 
 from pyomo.common.modeling import unique_component_name
-from pyomo.common.plugin import alias
 from pyomo.common.config import ConfigBlock, ConfigValue, NonNegativeFloat
 from pyomo.contrib.preprocessing.util import SuppressConstantObjectiveWarning
 from pyomo.core import (Binary, Block, Constraint, Objective, Set,
@@ -29,6 +28,8 @@ from pyomo.repn import generate_standard_repn
 logger = logging.getLogger('pyomo.contrib.preprocessing')
 
 
+@TransformationFactory.register('contrib.induced_linearity',
+          doc="Reformulate nonlinear constraints with induced linearity.")
 class InducedLinearity(IsomorphicTransformation):
     """Reformulate nonlinear constraints with induced linearity.
 
@@ -46,9 +47,6 @@ class InducedLinearity(IsomorphicTransformation):
     4. Reformulate nonlinear expressions appropriately.
 
     """
-
-    alias('contrib.induced_linearity',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     CONFIG = ConfigBlock("contrib.induced_linearity")
     CONFIG.declare('equality_tolerance', ConfigValue(
