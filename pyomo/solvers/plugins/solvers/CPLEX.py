@@ -18,7 +18,6 @@ import pyutilib.services
 import pyutilib.common
 import pyutilib.misc
 
-import pyomo.common.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -67,11 +66,11 @@ _validate_file_name.allowed_characters = r"a-zA-Z0-9 \.\-_\%s" % (os.path.sep,)
 _validate_file_name.illegal_characters = re.compile(
     '[^%s]' % (_validate_file_name.allowed_characters,))
 
+
+@SolverFactory.register('cplex', doc='The CPLEX LP/MIP solver')
 class CPLEX(OptSolver):
     """The CPLEX LP/MIP solver
     """
-
-    pyomo.common.plugin.alias('cplex', doc='The CPLEX LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
         try:
@@ -112,11 +111,10 @@ class CPLEX(OptSolver):
         return opt
 
 
+@SolverFactory.register('_cplex_shell', doc='Shell interface to the CPLEX LP/MIP solver')
 class CPLEXSHELL(ILMLicensedSystemCallSolver):
     """Shell interface to the CPLEX LP/MIP solver
     """
-
-    pyomo.common.plugin.alias('_cplex_shell', doc='Shell interface to the CPLEX LP/MIP solver')
 
     def __init__(self, **kwds):
         #
@@ -775,11 +773,11 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
         return results
 
+
+@SolverFactory.register('_mock_cplex')
 class MockCPLEX(CPLEXSHELL,MockMIP):
     """A Mock CPLEX solver used for testing
     """
-
-    pyomo.common.plugin.alias('_mock_cplex')
 
     def __init__(self, **kwds):
         try:

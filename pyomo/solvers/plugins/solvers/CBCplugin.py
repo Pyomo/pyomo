@@ -21,7 +21,6 @@ import pyutilib.misc
 import pyutilib.common
 import pyutilib.subprocess
 
-import pyomo.common.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -57,11 +56,11 @@ def configure_cbc():
     if _cbc_version is not None:
         _cbc_old_version = _cbc_version < (2,7,0,0)
 
+
+@SolverFactory.register('cbc', doc='The CBC LP/MIP solver')
 class CBC(OptSolver):
     """The CBC LP/MIP solver
     """
-
-    pyomo.common.plugin.alias('cbc', doc='The CBC LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
         configure_cbc()
@@ -119,11 +118,11 @@ class CBC(OptSolver):
         return opt
 
 
+
+@SolverFactory.register('_cbc_shell',  doc='Shell interface to the CBC LP/MIP solver')
 class CBCSHELL(SystemCallSolver):
     """Shell interface to the CBC LP/MIP solver
     """
-
-    pyomo.common.plugin.alias('_cbc_shell',  doc='Shell interface to the CBC LP/MIP solver')
 
     def __init__(self, **kwds):
         #
@@ -589,11 +588,10 @@ class CBCSHELL(SystemCallSolver):
             INPUT.close()
 
 
+@SolverFactory.register('_mock_cbc')
 class MockCBC(CBCSHELL,MockMIP):
     """A Mock CBC solver used for testing
     """
-
-    pyomo.common.plugin.alias('_mock_cbc')
 
     def __init__(self, **kwds):
         try:

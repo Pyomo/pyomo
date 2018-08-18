@@ -13,7 +13,6 @@ import os
 import pyutilib.services
 import pyutilib.misc
 
-import pyomo.common.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -27,12 +26,13 @@ try:
 except:
     basestring = str
 
+
+@SolverFactory.register('conopt', doc='The CONOPT NLP solver')
 class CONOPT(SystemCallSolver):
     """
     An interface to the CONOPT optimizer that uses the AMPL Solver Library.
     """
 
-    pyomo.common.plugin.alias('conopt', doc='The CONOPT NLP solver')
 
     def __init__(self, **kwds):
         #

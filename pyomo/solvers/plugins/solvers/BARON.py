@@ -18,7 +18,6 @@ import tempfile
 import pyutilib.services
 from pyutilib.misc import Options
 
-import pyomo.common.plugin as plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -33,11 +32,11 @@ from six.moves import xrange, zip
 
 logger = logging.getLogger('pyomo.solvers')
 
+@SolverFactory.register('baron',  doc='The BARON MINLP solver')
 class BARONSHELL(SystemCallSolver):
     """The BARON MINLP solver
     """
 
-    plugin.alias('baron',  doc='The BARON MINLP solver')
 
     def __init__(self, **kwds):
         #

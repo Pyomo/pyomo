@@ -12,6 +12,8 @@ from os.path import join, dirname, abspath
 import json
 import six
 
+import pyutilib.th as unittest
+
 import pyomo.kernel as pmo
 from pyomo.core.kernel.block import IBlock
 from pyomo.core import Suffix, Var, Constraint, Objective
@@ -24,6 +26,7 @@ thisDir = dirname(abspath( __file__ ))
 _test_models = {}
 
 
+@unittest.nottest
 def test_models(arg=None):
     if arg is None:
         return _test_models

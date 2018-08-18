@@ -13,7 +13,6 @@ import os
 import pyutilib.services
 import pyutilib.misc
 
-import pyomo.common.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -27,12 +26,12 @@ try:
 except:
     basestring = str
 
+
+@SolverFactory.register('ipopt', doc='The Ipopt NLP solver')
 class IPOPT(SystemCallSolver):
     """
     An interface to the Ipopt optimizer that uses the AMPL Solver Library.
     """
-
-    pyomo.common.plugin.alias('ipopt', doc='The Ipopt NLP solver')
 
     def __init__(self, **kwds):
         #

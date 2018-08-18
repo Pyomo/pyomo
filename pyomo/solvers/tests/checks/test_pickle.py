@@ -28,6 +28,7 @@ from pyomo.solvers.tests.testcases import test_scenarios
 # A function that returns a function that gets
 # added to a test class.
 #
+@unittest.nottest
 def create_test_method(model, solver, io,
                        test_case,
                        symbolic_labels):
@@ -35,6 +36,7 @@ def create_test_method(model, solver, io,
     # Ignore expected failures?
     is_expected_failure = False
 
+    @unittest.nottest
     def pickle_test(self):
 
         # Instantiate the model class
@@ -103,11 +105,13 @@ def create_test_method(model, solver, io,
 
     # Skip this test if the status is 'skip'
     if test_case.status == 'skip':
+        @unittest.nottest
         def skipping_test(self):
             return self.skipTest(test_case.msg)
         return skipping_test
 
     if is_expected_failure:
+        @unittest.nottest
         @unittest.expectedFailure
         def failing_writer_test(self):
             return pickle_test(self)
