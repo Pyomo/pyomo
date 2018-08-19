@@ -514,6 +514,21 @@ def grossmann_twoDisj():
     
     return m
 
+def twoDisj_nonlin_convex():
+    m = ConcreteModel()
+    m.x = Var(bounds=(0,21))
+    m.y = Var(bounds=(0,10))
+
+    m.circle1 = Disjunct()
+    m.circle1.cons = Constraint(expr=m.x**2 + m.y**2 <= 4)
+    m.circle2 = Disjunct()
+    m.circle2.cons = Constraint(expr=(m.x - 5)**2 + (m.y - 5)**2 <= 1)
+
+    m.disjunction = Disjunction(expr=[m.circle1, m.circle2])
+
+    m.obj = Objective(expr=2*m.x + m.y, sense=maximize)
+    return m
+
 # TODO: these are things to use to test targets. Because I think you should be
 # able to solve m.b below and get what you expect, not have all the constraints
 # from your disjunctions get moved onto the model.
