@@ -20,7 +20,7 @@ from pyomo.repn import generate_standard_repn
 import random
 from six import StringIO
 
-from nose.tools import set_trace
+from nose.tools import set_trace, raises
 
 solvers = pyomo.opt.check_available_solvers('ipopt')
 
@@ -211,3 +211,58 @@ class Grossmann_TestCases(unittest.TestCase):
 
         m.y.fix(7)
         self.assertGreaterEqual(0, value(cut))
+
+class NonlinearConvex(unittest.TestCase):
+    # TODO: this is a really weak test because it is not actually *this*
+    # apply_to call that raises the exception. But on the other hand that
+    # exception is tested in bigm, so maybe it doesn't matter much.
+    @raises(GDP_Error)
+    def test_complain_if_no_bigm(self):
+        m = models.twoDisj_nonlin_convex()
+        TransformationFactory('gdp.cuttingplane').apply_to(m)
+
+    def test_cuts_with_tighter_m(self):
+        m = models.twoDisj_nonlin_convex()
+        # This bigM value comes from the fact that both disjunts are contained
+        # in the box defined by the box 0 <= x <= 6, 0 <= y <= 6.
+        TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=68)
+        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+
+        self.assertEqual(len(cuts), 1)
+
+        set_trace()
+
+        m.x.fix(5.928)
+        m.y.fix(5.372)
+        m.circle1.indicator_var.fix(0)
+        m.circle2.indicator_var.fix(1)
+
+        set_trace()
+        
+        # cuts off optimal solution by about 0.5
+        self.assertGreaterEqual(0, value(cuts[0].body))
+
+    def test_cuts_with_weak_m(self):
+        m = models.twoDisj_nonlin_convex()
+
+        # the optimal solution is approximately x = 5.928, y = 5.372
+
+        # TODO: An additional bug is that this whole thing crashes when I use
+        # couenne...?
+        TransformationFactory('gdp.cuttingplane').apply_to(m, solver='baron',
+                                                           bigM=537)
+        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        self.assertEqual(len(cuts), 5)
+
+        set_trace()
+        
+        m.x.fix(5.928)
+        m.y.fix(5.372)
+        m.circle1.indicator_var.fix(0)
+        m.circle2.indicator_var.fix(1)
+
+        set_trace()
+        
+        self.assertGreaterEqual(0, value(cuts[0].body))
+        
+        
