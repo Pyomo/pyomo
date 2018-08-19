@@ -1,31 +1,40 @@
+from __future__ import division
+
 from pyomo.environ import *
 from pyomo.gdp import *
 
-'''Problem from http://www.minlp.org/library/problem/index.php?i=172&lib=GDP
-We are minimizing the cost of a design of a plant with parallel processing units and storage tanks
-in between. We decide the number and volume of units, and the volume and location of the storage
-tanks. The problem is convexified and has a nonlinear objective and global constraints
+'''Problem from http://www.minlp.org/library/problem/index.php?i=172&lib=GDP We
+are minimizing the cost of a design of a plant with parallel processing units
+and storage tanks in between. We decide the number and volume of units, and the
+volume and location of the storage tanks. The problem is convexified and has a
+nonlinear objective and global constraints
 
-NOTE: When I refer to 'gams' in the comments, that is Batch101006_BM.gms for now. It's confusing
-because the _opt file is different (It has hard-coded bigM parameters so that each constraint 
-has the "optimal" bigM).'''
+NOTE: When I refer to 'gams' in the comments, that is Batch101006_BM.gms for
+now. It's confusing because the _opt file is different (It has hard-coded bigM
+parameters so that each constraint has the optimal bigM).
+
+'''
 
 model = AbstractModel()
 
 # TODO: it looks like they set a bigM for each j. Which I need to look up how to do...
 model.BigM = Suffix(direction=Suffix.LOCAL)
-model.BigM[None] = 1000
+model.BigM[None] = 1000000
 
 
 ## Constants from GAMS
-StorageTankSizeFactor = 2*5 # btw, I know 2*5 is 10... I don't know why it's written this way in GAMS?
+StorageTankSizeFactor = 2*5
 StorageTankSizeFactorByProd = 3
 MinFlow = -log(10000)
+# V.LO(J) and V.UP(J)
 VolumeLB = log(300)
 VolumeUB = log(3500)
+# VST.LO(J) and VST.UP(J)
 StorageTankSizeLB = log(100)
 StorageTankSizeUB = log(15000)
+# N.UP(J)
 UnitsInPhaseUB = log(6)
+# MI.UP(J)
 UnitsOutOfPhaseUB = log(6)
 # TODO: YOU ARE HERE. YOU HAVEN'T ACTUALLY MADE THESE THE BOUNDS YET, NOR HAVE YOU FIGURED OUT WHOSE
 # BOUNDS THEY ARE. AND THERE ARE MORE IN GAMS.
@@ -35,8 +44,11 @@ UnitsOutOfPhaseUB = log(6)
 # Sets
 ##########
 
+# I
 model.PRODUCTS = Set()
+# J
 model.STAGES = Set(ordered=True)
+# M
 model.PARALLELUNITS = Set(ordered=True)
 
 # TODO: this seems like an over-complicated way to accomplish this task...
@@ -53,14 +65,22 @@ model.STAGESExceptLast = Set(initialize=model.STAGES, filter=filter_out_last)
 # Parameters
 ###############
 
+# H
 model.HorizonTime = Param()
+# ALPHA
 model.Alpha1 = Param()
+# COSST TODO: maybe?
 model.Alpha2 = Param()
+# TODO
 model.Beta1 = Param()
+# TODO
 model.Beta2 = Param()
 
-model.ProductionAmount = Param(model.PRODUCTS)
+# Q(I)
+model.ProductionRate = Param(model.PRODUCTS)
+# S(I, J)
 model.ProductSizeFactor = Param(model.PRODUCTS, model.STAGES)
+# T(I, J)
 model.ProcessingTime = Param(model.PRODUCTS, model.STAGES)
 
 # These are hard-coded in the GAMS file, hence the defaults
@@ -112,21 +132,42 @@ model.unitsOutOfPhaseUB = Param(model.STAGES, default=UnitsOutOfPhaseUB)
 # TODO: I am beginning to think these are my only variables actually.
 # GAMS never un-logs them, I don't think. And I think the GAMs ones
 # must be the log ones.
+
+# V(J)
 def get_volume_bounds(model, j):
     return (model.volumeLB[j], model.volumeUB[j])
-model.volume_log = Var(model.STAGES, bounds=get_volume_bounds)
-model.batchSize_log = Var(model.PRODUCTS, model.STAGES)
-model.cycleTime_log = Var(model.PRODUCTS)
+model.volume_log = Var(model.STAGES, within=NonNegativeReals,
+                       bounds=get_volume_bounds)
+# B(I, J)
+def get_batchSize_bounds(model, i, j):
+    lb = model.ProductionRate[i]*max(model.ProcessingTime[i,jj]/
+                                     exp(model.unitsInPhaseUB[jj]) 
+                                     for jj in model.STAGES)
+    ub = min(model.ProductionRate[i], 
+             min(exp(model.volumeUB[jj])/model.ProductSizeFactor[i,jj] 
+                 for jj in model.STAGES))
+    return (lb, ub)
+model.batchSize_log = Var(model.PRODUCTS, model.STAGES, within=NonNegativeReals,
+                          bounds=get_batchSize_bounds)
+# TL(I, J) TODO: you have the wrong index here?
+model.cycleTime_log = Var(model.PRODUCTS, within=NonNegativeReals)
+# MI(J)
 def get_unitsOutOfPhase_bounds(model, j):
     return (0, model.unitsOutOfPhaseUB[j])
-model.unitsOutOfPhase_log = Var(model.STAGES, bounds=get_unitsOutOfPhase_bounds)
+model.unitsOutOfPhase_log = Var(model.STAGES, within=NonNegativeReals,
+                                bounds=get_unitsOutOfPhase_bounds)
+# N(J)
 def get_unitsInPhase_bounds(model, j):
     return (0, model.unitsInPhaseUB[j])
-model.unitsInPhase_log = Var(model.STAGES, bounds=get_unitsInPhase_bounds)
+model.unitsInPhase_log = Var(model.STAGES, within=NonNegativeReals,
+                             bounds=get_unitsInPhase_bounds)
+# VST(J)
 def get_storageTankSize_bounds(model, j):
     return (model.storageTankSizeLB[j], model.storageTankSizeUB[j])
-# TODO: these bounds make it infeasible...
-model.storageTankSize_log = Var(model.STAGES, bounds=get_storageTankSize_bounds)
+# TODO: these bounds make it infeasible... (At least in the version in the
+# formulation)
+model.storageTankSize_log = Var(model.STAGES, within=NonNegativeReals,
+                                bounds=get_storageTankSize_bounds)
 
 # binary variables for deciding number of parallel units in and out of phase
 model.outOfPhase = Var(model.STAGES, model.PARALLELUNITS, within=Binary)
@@ -158,7 +199,7 @@ def processing_time_rule(model, j, i):
 model.processing_time = Constraint(model.STAGES, model.PRODUCTS, rule=processing_time_rule)
 
 def finish_in_time_rule(model):
-    return model.HorizonTime >= sum(model.ProductionAmount[i]*exp(model.cycleTime_log[i]) \
+    return model.HorizonTime >= sum(model.ProductionRate[i]*exp(model.cycleTime_log[i]) \
                                     for i in model.PRODUCTS)
 model.finish_in_time = Constraint(rule=finish_in_time_rule)
 
