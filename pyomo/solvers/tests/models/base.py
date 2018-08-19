@@ -127,7 +127,8 @@ class _BaseTestModel(object):
 
             return opt, results
         finally:
-            opt.deactivate()
+            pass
+            #opt.deactivate()
         del opt
         return None, None
 
