@@ -24,7 +24,7 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.solvers.mockmip import MockMIP
-from pyomo.core.kernel.component_block import IBlockStorage
+from pyomo.core.kernel.block import IBlock
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -173,7 +173,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # **Note**: This assumes that the symbol_map is "clean", i.e.,
         # contains only references to the variables encountered in constraints
         output_index = 0
-        if isinstance(instance, IBlockStorage):
+        if isinstance(instance, IBlock):
             smap = getattr(instance,"._symbol_maps")\
                    [self._smap_id]
         else:

@@ -92,7 +92,8 @@ class SOS2_simple_kernel(SOS2_simple):
         model.xi[3] = pmo.parameter(value=3.0)
         model.p = pmo.variable(domain=NonNegativeReals)
         model.n = pmo.variable(domain=NonNegativeReals)
-        model.lmbda = pmo.create_variable_dict(range(1,4))
+        model.lmbda = pmo.variable_dict(
+            (i, pmo.variable()) for i in range(1,4))
         model.obj = pmo.objective(model.p+model.n)
         model.c1 = pmo.constraint_dict()
         model.c1[1] = pmo.constraint((0.0, model.lmbda[1], 1.0))

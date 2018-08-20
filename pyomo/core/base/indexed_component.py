@@ -12,7 +12,7 @@ __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 
 import pyutilib.misc
 
-from pyomo.core.expr.current import TemplateExpressionError
+from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.common import DeveloperError
@@ -341,7 +341,8 @@ class IndexedComponent(Component):
         #
         self._data = {}
         #
-        if len(args) == 0:
+        if len(args) == 0 or (len(args) == 1 and
+                              args[0] is UnindexedComponent_set):
             #
             # If no indexing sets are provided, generate a dummy index
             #

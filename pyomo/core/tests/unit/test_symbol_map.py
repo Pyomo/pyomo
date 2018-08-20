@@ -3,7 +3,7 @@ import pickle
 import pyutilib.th as unittest
 import pyomo.environ
 from pyomo.core.expr.symbol_map import SymbolMap
-from pyomo.core.kernel.component_variable import variable
+from pyomo.core.kernel.variable import variable
 
 class TestSymbolMap(unittest.TestCase):
 

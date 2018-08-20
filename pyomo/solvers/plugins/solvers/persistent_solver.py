@@ -12,9 +12,9 @@ from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPe
 from pyomo.core.base.PyomoModel import ConcreteModel
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.objective import Objective
-from pyomo.core.kernel.component_block import IBlockStorage
+from pyomo.core.kernel.block import IBlock
 from pyomo.core.base.suffix import active_import_suffix_generator
-from pyomo.core.kernel.component_suffix import import_suffix_generator
+from pyomo.core.kernel.suffix import import_suffix_generator
 import pyutilib.misc
 import pyutilib.common
 import time
@@ -351,7 +351,7 @@ class PersistentSolver(DirectOrPersistentSolver):
             model_suffixes = list(name for (name, comp) in active_import_suffix_generator(self._pyomo_model))
 
         else:
-            assert isinstance(self._pyomo_model, IBlockStorage)
+            assert isinstance(self._pyomo_model, IBlock)
             model_suffixes = list(comp.storage_key for comp in
                                   import_suffix_generator(self._pyomo_model,
                                                           active=True,
@@ -422,7 +422,7 @@ class PersistentSolver(DirectOrPersistentSolver):
                 result._smap = None
                 _model = self._pyomo_model
                 if _model:
-                    if isinstance(_model, IBlockStorage):
+                    if isinstance(_model, IBlock):
                         if len(result.solution) == 1:
                             result.solution(0).symbol_map = \
                                 getattr(_model, "._symbol_maps")[result._smap_id]

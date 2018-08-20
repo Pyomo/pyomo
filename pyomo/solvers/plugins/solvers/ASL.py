@@ -22,6 +22,7 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.core.base import TransformationFactory
+from pyomo.core.kernel.block import IBlock
 from pyomo.solvers.mockmip import MockMIP
 
 import logging
@@ -173,7 +174,8 @@ class ASL(SystemCallSolver):
         return pyutilib.misc.Bunch(cmd=cmd, log_file=self._log_file, env=env)
 
     def _presolve(self, *args, **kwds):
-        if not isinstance(args[0], six.string_types):
+        if (not isinstance(args[0], six.string_types)) and \
+           (not isinstance(args[0], IBlock)):
             self._instance = args[0]
             xfrm = TransformationFactory('mpec.nl')
             xfrm.apply_to(self._instance)

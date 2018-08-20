@@ -21,7 +21,7 @@ from pyomo.common.plugin import *
 from pyomo.opt.base import *
 from pyomo.solvers.plugins.converter.pico import PicoMIPConverter
 
-from pyomo.core.kernel.component_block import IBlockStorage
+from pyomo.core.kernel.block import IBlock
 
 class PyomoMIPConverter(SingletonPlugin):
 
@@ -80,7 +80,7 @@ class PyomoMIPConverter(SingletonPlugin):
             problem_filename = pyutilib.services.TempfileManager.\
                                create_tempfile(suffix = '.pyomo.lp')
             if instance is not None:
-                if isinstance(instance, IBlockStorage):
+                if isinstance(instance, IBlock):
                     symbol_map_id = instance.write(
                         problem_filename,
                         format=ProblemFormat.cpxlp,
@@ -126,7 +126,7 @@ class PyomoMIPConverter(SingletonPlugin):
             problem_filename = pyutilib.services.TempfileManager.\
                                create_tempfile(suffix = '.pyomo.bar')
             if instance is not None:
-                if isinstance(instance, IBlockStorage):
+                if isinstance(instance, IBlock):
                     symbol_map_id = instance.write(
                         problem_filename,
                         format=ProblemFormat.bar,
@@ -183,7 +183,7 @@ class PyomoMIPConverter(SingletonPlugin):
                 problem_filename = pyutilib.services.TempfileManager.\
                                    create_tempfile(suffix = '.pyomo.mps')
             if instance is not None:
-                if isinstance(instance, IBlockStorage):
+                if isinstance(instance, IBlock):
                     symbol_map_id = instance.write(
                         problem_filename,
                         format=args[1],
@@ -246,7 +246,7 @@ class PyomoMIPConverter(SingletonPlugin):
                 problem_filename = pyutilib.services.TempfileManager.\
                                create_tempfile(suffix='pyomo.osil')
                 if instance:
-                    if isinstance(instance, IBlockStorage):
+                    if isinstance(instance, IBlock):
                         symbol_map_id = instance.write(
                             problem_filename,
                             format=ProblemFormat.osil,
