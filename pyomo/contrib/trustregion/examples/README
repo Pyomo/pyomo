@@ -1,0 +1,12 @@
+
+1. Example1.py: original example
+2. Example2TRF.py: test fixed results
+   Example2Pyomo.py: perform same calculation using Pyomo with ipopt.
+To compare values:
+pyomo solve --solver=ipopt Example2TRF.py 2>&1|tee Example2TRF.out
+grep "Function Value:" Example2TRF.out | cut -d":" -f2
+pyomo solve --solver=ipopt Example2Pyomo.py 2>&1|tee Example2Pyomo.out
+grep "Function Value:" Example2Pyomo.out | cut -d":" -f2
+
+3. Example3.py: check that at least one external function has been defined.
+Should return runtime error.
