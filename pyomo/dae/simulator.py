@@ -63,7 +63,7 @@ try:
             'atanh': casadi.atanh,
             'ceil': casadi.ceil,
             'floor': casadi.floor}
-except ImportError:  # pragma:nocover
+except ImportError:
     casadi_available = False
 
 
