@@ -13,13 +13,13 @@ import re
 import sys
 import pyutilib.services
 from pyutilib.misc import Bunch
-from pyomo.util.plugin import alias
-from pyomo.core.kernel.numvalue import is_fixed
-from pyomo.repn import generate_canonical_repn, LinearCanonicalRepn, canonical_degree
+from pyomo.common.plugin import alias
+from pyomo.core.expr.numvalue import is_fixed
+from pyomo.core.expr.numvalue import value
+from pyomo.repn import generate_standard_repn
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
-from pyomo.core.kernel.numvalue import value
-import pyomo.core.kernel
+from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt.results.results_ import SolverResults
@@ -186,60 +186,33 @@ class CPLEXDirect(DirectSolver):
     def _get_expr_from_pyomo_repn(self, repn, max_degree=2):
         referenced_vars = ComponentSet()
 
-        degree = canonical_degree(repn)
+        degree = repn.polynomial_degree()
         if (degree is None) or (degree > max_degree):
             raise DegreeError('CPLEXDirect does not support expressions of degree {0}.'.format(degree))
 
-        if isinstance(repn, LinearCanonicalRepn):
-            new_expr = _CplexExpr()
+        new_expr = _CplexExpr()
+        if len(repn.linear_vars) > 0:
+            referenced_vars.update(repn.linear_vars)
+            new_expr.variables.extend(self._pyomo_var_to_ndx_map[i] for i in repn.linear_vars)
+            new_expr.coefficients.extend(repn.linear_coefs)
 
-            if repn.constant is not None:
-                new_expr.offset = repn.constant
+        for i, v in enumerate(repn.quadratic_vars):
+            x, y = v
+            new_expr.q_coefficients.append(repn.quadratic_coefs[i])
+            new_expr.q_variables1.append(self._pyomo_var_to_ndx_map[x])
+            new_expr.q_variables2.append(self._pyomo_var_to_ndx_map[y])
+            referenced_vars.add(x)
+            referenced_vars.add(y)
 
-            if (repn.linear is not None) and (len(repn.linear) > 0):
-                list(map(referenced_vars.add, repn.variables))
-                new_expr.variables.extend(self._pyomo_var_to_ndx_map[var] for var in repn.variables)
-                new_expr.coefficients.extend(coeff for coeff in repn.linear)
-
-        else:
-            new_expr = _CplexExpr()
-            if 0 in repn:
-                new_expr.offset = repn[0][None]
-
-            if 1 in repn:
-                for ndx, coeff in repn[1].items():
-                    new_expr.coefficients.append(coeff)
-                    var = repn[-1][ndx]
-                    new_expr.variables.append(self._pyomo_var_to_ndx_map[var])
-                    referenced_vars.add(var)
-
-            if 2 in repn:
-                for key, coeff in repn[2].items():
-                    new_expr.q_coefficients.append(coeff)
-                    indices = list(key.keys())
-                    if len(indices) == 1:
-                        ndx = indices[0]
-                        var = repn[-1][ndx]
-                        referenced_vars.add(var)
-                        cplex_var = self._pyomo_var_to_ndx_map[var]
-                        new_expr.q_variables1.append(cplex_var)
-                        new_expr.q_variables2.append(cplex_var)
-                    else:
-                        ndx = indices[0]
-                        var = repn[-1][ndx]
-                        referenced_vars.add(var)
-                        cplex_var = self._pyomo_var_to_ndx_map[var]
-                        new_expr.q_variables1.append(cplex_var)
-                        ndx = indices[1]
-                        var = repn[-1][ndx]
-                        referenced_vars.add(var)
-                        cplex_var = self._pyomo_var_to_ndx_map[var]
-                        new_expr.q_variables2.append(cplex_var)
+        new_expr.offset = repn.constant
 
         return new_expr, referenced_vars
 
     def _get_expr_from_pyomo_expr(self, expr, max_degree=2):
-        repn = generate_canonical_repn(expr)
+        if max_degree == 2:
+            repn = generate_standard_repn(expr, quadratic=True)
+        else:
+            repn = generate_standard_repn(expr, quadratic=False)
 
         try:
             cplex_expr, referenced_vars = self._get_expr_from_pyomo_repn(repn, max_degree)
@@ -318,10 +291,6 @@ class CPLEXDirect(DirectSolver):
         if con._linear_canonical_form:
             cplex_expr, referenced_vars = self._get_expr_from_pyomo_repn(
                 con.canonical_form(),
-                self._max_constraint_degree)
-        elif isinstance(con, LinearCanonicalRepn):
-            cplex_expr, referenced_vars = self._get_expr_from_pyomo_repn(
-                con,
                 self._max_constraint_degree)
         else:
             cplex_expr, referenced_vars = self._get_expr_from_pyomo_expr(
@@ -454,9 +423,9 @@ class CPLEXDirect(DirectSolver):
         if obj.active is False:
             raise ValueError('Cannot add inactive objective to solver.')
 
-        if obj.sense == pyomo.core.kernel.minimize:
+        if obj.sense == minimize:
             sense = self._solver_model.objective.sense.minimize
-        elif obj.sense == pyomo.core.kernel.maximize:
+        elif obj.sense == maximize:
             sense = self._solver_model.objective.sense.maximize
         else:
             raise ValueError('Objective sense is not recognized: {0}'.format(obj.sense))
@@ -555,9 +524,9 @@ class CPLEXDirect(DirectSolver):
             soln.status = SolutionStatus.error
 
         if cpxprob.objective.get_sense() == cpxprob.objective.sense.minimize:
-            self.results.problem.sense = pyomo.core.kernel.minimize
+            self.results.problem.sense = minimize
         elif cpxprob.objective.get_sense() == cpxprob.objective.sense.maximize:
-            self.results.problem.sense = pyomo.core.kernel.maximize
+            self.results.problem.sense = maximize
         else:
             raise RuntimeError('Unrecognized cplex objective sense: {0}'.\
                                format(cpxprob.objective.get_sense()))

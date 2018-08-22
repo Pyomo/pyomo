@@ -1,0 +1,7 @@
+
+if instance.x[2] == 0:
+    instance.x[2].setlb(1)
+    instance.x[2].setub(1)
+else:
+    instance.x[2].setlb(0)
+    instance.x[2].setub(0)

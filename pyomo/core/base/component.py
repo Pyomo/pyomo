@@ -17,7 +17,7 @@ import sys
 from copy import deepcopy
 from pickle import PickleError
 
-import pyomo.util
+import pyomo.common
 from pyomo.core.base.misc import tabular_writer
 
 from six import iteritems, string_types
@@ -46,12 +46,12 @@ def _name_index_generator(idx):
         return "[" + _escape(str(idx)) + "]"
 
 
-def name(component, index=None, fully_qualified=False):
+def name(component, index=None, fully_qualified=False, relative_to=None):
     """
     Return a string representation of component for a specific
     index value.
     """
-    base = component.getname(fully_qualified=fully_qualified)
+    base = component.getname(fully_qualified=fully_qualified, relative_to=relative_to)
     if index is None:
         return base
     else:
@@ -87,7 +87,7 @@ class _ComponentBase(object):
         # copy.
         #
         # Nominally, expressions only point to ComponentData
-        # derivatives.  However, with the developemtn of Expression
+        # derivatives.  However, with the development of Expression
         # Templates (and the corresponding _GetItemExpression object),
         # expressions can refer to container (non-Simple) components, so
         # we need to override __deepcopy__ for both Component and
@@ -288,7 +288,7 @@ class Component(_ComponentBase):
         # Verify that ctype has been specified.
         #
         if self._type is None:
-            raise pyomo.util.DeveloperError(
+            raise pyomo.common.DeveloperError(
                 "Must specify a component type for class %s!"
                 % ( type(self).__name__, ) )
         #
@@ -429,13 +429,16 @@ class Component(_ComponentBase):
         """Return the component name"""
         return self.name
 
-    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
-        """Write the component name to a buffer"""
-        if ostream is None:
-            ostream = sys.stdout
-        ostream.write(self.__str__())
+    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
+        """Return the component name"""
+        if compute_values:
+            try:
+                return str(self())
+            except:
+                pass
+        return self.name
 
-    def getname(self, fully_qualified=False, name_buffer=None):
+    def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
         """
         Returns the component name associated with this object.
 
@@ -443,12 +446,17 @@ class Component(_ComponentBase):
             fully_qualified     Generate full name from nested block names
             name_buffer         Can be used to optimize iterative name
                                     generation (using a dictionary)
+            relative_to         When generating a fully qualified name,
+                                    stop at this block.
         """
         if fully_qualified:
             pb = self.parent_block()
-            if pb is not None and pb is not self.model():
-                ans = pb.getname(fully_qualified, name_buffer) \
-                      + "." + self._name
+            if relative_to is None:
+                relative_to = self.model()
+            if pb is not None and pb is not relative_to:
+                ans = pb.getname(fully_qualified, name_buffer, relative_to) + "." + self._name
+            elif pb is None and relative_to != self.model():
+                raise RuntimeError("The relative_to argument was specified but not found in the block hierarchy: %s" % str(relative_to))
             else:
                 ans = self._name
         else:
@@ -474,29 +482,13 @@ class Component(_ComponentBase):
                 "is assigned to a Block.\nTriggered by attempting to set "
                 "component '%s' to name '%s'" % (self.name,val))
 
-    def pprint(self, ostream=None, verbose=False, prefix=""):
-        """Print component information"""
-        if ostream is None:
-            ostream = sys.stdout
-        tab="    "
-        ostream.write(prefix+self.local_name+" : ")
-        if self.doc is not None:
-            ostream.write(self.doc+'\n'+prefix+tab)
-
-        _attr, _data, _header, _fcn = self._pprint()
-
-        ostream.write(", ".join("%s=%s" % (k,v) for k,v in _attr))
-        ostream.write("\n")
-        if not self._constructed:
-            ostream.write(prefix+tab+"Not constructed\n")
-            return
-
-        if _data is not None:
-            tabular_writer( ostream, prefix+tab, _data, _header, _fcn )
-
     def is_indexed(self):
         """Return true if this component is indexed"""
         return False
+
+    def is_component_type(self):
+        """Return True if this class is a Pyomo component"""
+        return True
 
     def clear_suffix_value(self, suffix_or_name, expand=True):
         """Clear the suffix value for this component data"""
@@ -732,19 +724,24 @@ class ComponentData(_ComponentBase):
         """Return a string with the component name and index"""
         return self.name
 
-    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
+    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         """
-        Write the component name and index to a buffer,
+        Return a string representation of this component,
         applying the labeler if passed one.
         """
-        if ostream is None:
-            ostream = sys.stdout
+        if compute_values:
+            try:
+                return str(self())
+            except:
+                pass
+        if smap:
+            return smap.getSymbol(self, labeler)
         if labeler is not None:
-            ostream.write(labeler(self))
+            return labeler(self)
         else:
-            ostream.write(self.__str__())
+            return self.__str__()
 
-    def getname(self, fully_qualified=False, name_buffer=None):
+    def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
         """Return a string with the component name and index"""
         #
         # Using the buffer, which is a dictionary:  id -> string
@@ -756,11 +753,11 @@ class ComponentData(_ComponentBase):
         c = self.parent_component()
         if c is self:
             # This is a scalar component, so call the Component.getname() method
-            return super(ComponentData, self).getname(fully_qualified, name_buffer)
+            return super(ComponentData, self).getname(fully_qualified, name_buffer, relative_to)
         #
         # Get the name of the component
         #
-        base = c.getname(fully_qualified, name_buffer)
+        base = c.getname(fully_qualified, name_buffer, relative_to)
         if name_buffer is not None:
             # Iterate through the dictionary and generate all names in the buffer
             for idx, obj in iteritems(c):
@@ -784,6 +781,10 @@ class ComponentData(_ComponentBase):
     def is_indexed(self):
         """Return true if this component is indexed"""
         return False
+
+    def is_component_type(self):
+        """Return True if this class is a Pyomo component"""
+        return True
 
     def clear_suffix_value(self, suffix_or_name, expand=True):
         """Set the suffix value for this component data"""
@@ -1250,5 +1251,3 @@ ComponentUID.tDict.update( (ComponentUID.tKeys[i], v)
                            for i,v in enumerate(ComponentUID.tList) )
 ComponentUID.tDict.update( (v, ComponentUID.tKeys[i])
                            for i,v in enumerate(ComponentUID.tList) )
-
-

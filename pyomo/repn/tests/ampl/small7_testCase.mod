@@ -32,21 +32,21 @@ s.t.
                 v*(x/p/q-y/p/q) = 2.0;
         CON5a:
                 v*(x-y)*(1.0/p/q) = 2.0;
-	CON6a:
-		v*(x-y) = 2.0*p*q;
+        CON6a:
+                v*(x-y) = 2.0*p*q;
 
         CON1b:
                 1.0/(p*q)*v*(x-y) = 2.0;
-        CON2b:  
-		v*(1.0/(p*q))*(x-y) = 2.0;
+        CON2b:
+                v*(1.0/(p*q))*(x-y) = 2.0;
         CON3b:
                 v*(x-y)/(p*q) = 2.0;
         CON4b:
                 v*(x/(p*q)-y/(p*q)) = 2.0;
         CON5b:
                 v*(x-y)*(1.0/(p*q)) = 2.0;
-	CON6b:
-		v*(x-y) = 2.0*(p*q);
+        CON6b:
+                v*(x-y) = 2.0*(p*q);
 
         CON1c:
                 1.0/(p+q)*v*(x-y) = 2.0;
@@ -58,8 +58,8 @@ s.t.
                 v*(x/(p+q)-y/(p+q)) = 2.0;
         CON5c:
                 v*(x-y)*(1.0/(p+q)) = 2.0;
-	CON6c:
-		v*(x-y) = 2.0*(p+q);
+        CON6c:
+                v*(x-y) = 2.0*(p+q);
 
 
         CON1d:
@@ -72,8 +72,8 @@ s.t.
                 v*(x/((p+q)^2)-y/((p+q)^2)) = 2.0;
         CON5d:
                 v*(x-y)*(1.0/((p+q)^2)) = 2.0;
-	CON6d:
-		v*(x-y) = 2.0*((p+q)^2);
+        CON6d:
+                v*(x-y) = 2.0*((p+q)^2);
 
 data;
 var x := 1.0;
@@ -85,4 +85,4 @@ fix p := 2.0;
 option substout 0;
 option presolve 0;
 option auxfiles 'rc';
-write gjunk;
+write gsmall7.ampl;

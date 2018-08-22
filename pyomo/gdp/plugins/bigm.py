@@ -13,20 +13,21 @@
 import logging
 import textwrap
 
-from pyomo.util.config import ConfigBlock, ConfigValue
-
-from pyomo.core import (Block, Connector, Constraint, Param, Set, Suffix, Var,
-                        value)
+from pyomo.core import (
+    Block, Connector, Constraint, Param, Set, Suffix, Var,
+    Expression, SortComponents, TraversalStrategy, Any, value
+)
 from pyomo.core.base import Transformation
-from pyomo.core.base.block import SortComponents, TraversalStrategy
 from pyomo.core.base.component import ComponentUID, ActiveComponent
-from pyomo.core.base.set_types import Any
-from pyomo.core.kernel import ComponentMap, ComponentSet
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
+from pyomo.gdp.util import target_list
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
-from pyomo.repn import LinearCanonicalRepn, generate_canonical_repn
-from pyomo.util.modeling import unique_component_name
-from pyomo.util.plugin import alias
+from pyomo.repn import generate_standard_repn
+from pyomo.common.config import ConfigBlock, ConfigValue
+from pyomo.common.modeling import unique_component_name
+from pyomo.common.plugin import alias
 from six import iterkeys, iteritems
 
 logger = logging.getLogger('pyomo.gdp.bigm')
@@ -57,7 +58,7 @@ class BigM_Transformation(Transformation):
        3) if 'None' is in the bigM argument dict
        4) if the constraint or the constraint parent_component appear in
           a BigM Suffix attached to any parent_block() beginning with the
-          constraint's parent_block and moving up to the the root model.
+          constraint's parent_block and moving up to the root model.
        5) if None appears in a BigM Suffix attached to any
           parent_block() between the constraint and the root model.
        6) if the constraint is linear, estimate M using the variable bounds
@@ -76,7 +77,7 @@ class BigM_Transformation(Transformation):
             'relaxedConstraints': ComponentMap(constraint: relaxed_constraint)
         }
 
-    In addition, any block or disjunct containind a relaxed disjunction
+    In addition, any block or disjunct containing a relaxed disjunction
     will have a "_gdp_transformation_info" dict with the following
     entry:
 
@@ -97,15 +98,26 @@ class BigM_Transformation(Transformation):
     alias('gdp.bigm', doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     CONFIG = ConfigBlock("gdp.bigm")
+    CONFIG.declare('targets', ConfigValue(
+        default=None,
+        domain=target_list,
+        description="target or list of targets that will be relaxed",
+        doc="""
+
+        This specifies the list of targets to relax as either a
+        component, ComponentUID, or string that can be passed to a
+        ComponentUID; or an iterable of these types.  If None (default),
+        the entire model is transformed."""
+    ))
     CONFIG.declare('bigM', ConfigValue(
         default=None,
         domain=_to_dict,
         description="Big-M value used for constraint relaxation",
         doc="""
 
-            A user-specified value (or dict) of M values that override
-            M-values found through model Suffixes or that would
-            otherwise be calculated using variable domains."""
+        A user-specified value (or dict) of M values that override
+        M-values found through model Suffixes or that would otherwise be
+        calculated using variable domains."""
     ))
 
     def __init__(self):
@@ -115,6 +127,7 @@ class BigM_Transformation(Transformation):
             Constraint:  self._xform_constraint,
             Var:         False,
             Connector:   False,
+            Expression:  False,
             Suffix:      False,
             Param:       False,
             Set:         False,
@@ -135,13 +148,13 @@ class BigM_Transformation(Transformation):
             block = block.parent_block()
         return suffix_list
 
-    def _apply_to(self, instance, targets=None, **kwds):
-        config = self.CONFIG().set_value(kwds.pop('options', {}))
+    def _apply_to(self, instance, **kwds):
+        config = self.CONFIG(kwds.pop('options', {}))
 
-        # For now, we're not accepting options. We will let args override
-        # suffixes and estimate as a last resort. More specific args/suffixes
-        # override ones anywhere in the tree. Suffixes lower down in the tree
-        # override ones higher up.
+        # We will let args override suffixes and estimate as a last
+        # resort. More specific args/suffixes override ones anywhere in
+        # the tree. Suffixes lower down in the tree override ones higher
+        # up.
         if 'default_bigM' in kwds:
             logger.warn("DEPRECATED: the 'default_bigM=' argument has been "
                         "replaced by 'bigM='")
@@ -164,6 +177,7 @@ class BigM_Transformation(Transformation):
         # DisjstuffDatas are deactivated.
         transBlock.disjContainers = ComponentSet()
 
+        targets = config.targets
         if targets is None:
             targets = (instance, )
             _HACK_transform_whole_instance = True
@@ -174,8 +188,6 @@ class BigM_Transformation(Transformation):
             if t is None:
                 raise GDP_Error(
                     "Target %s is not a component on the instance!" % _t)
-            if not t.active:
-                continue
 
             if t.type() is Disjunction:
                 if t.parent_component() is t:
@@ -193,7 +205,6 @@ class BigM_Transformation(Transformation):
                     "Target %s was not a Block, Disjunct, or Disjunction. "
                     "It was of type %s and can't be transformed."
                     % (t.name, type(t)))
-
         # Go through our dictionary of indexed things and deactivate
         # the containers that don't have any active guys inside of
         # them. So the invalid component logic will tell us if we
@@ -304,6 +315,8 @@ class BigM_Transformation(Transformation):
         obj.deactivate()
 
     def _transformDisjunctionData(self, obj, transBlock, bigM, index):
+        if not obj.active:
+            return  # Do not process a deactivated disjunction
         parent_component = obj.parent_component()
         transBlock.disjContainers.add(parent_component)
         orConstraint = self._getXorConstraint(parent_component)
@@ -350,7 +363,7 @@ class BigM_Transformation(Transformation):
                 else:
                     raise GDP_Error(
                         "The disjunct %s is deactivated, but the "
-                        "indicator_var is fixed to %. This makes no sense."
+                        "indicator_var is fixed to %s. This makes no sense."
                         % ( obj.name, value(obj.indicator_var) ))
             if not infodict.get('relaxed', False):
                 raise GDP_Error(
@@ -388,6 +401,14 @@ class BigM_Transformation(Transformation):
            disjParent not in transBlock.disjContainers:
             transBlock.disjContainers.add(disjParent)
 
+        # This is crazy, but if the disjunction has been previously
+        # relaxed, the disjunct *could* be deactivated.  This is a big
+        # deal for CHull, as it uses the component_objects /
+        # component_data_objects generators.  For BigM, that is OK,
+        # because we never use those generators with active=True.  I am
+        # only noting it here for the future when someone (me?) is
+        # comparing the two relaxations.
+        #
         # Transform each component within this disjunct
         self._transform_block_components(obj, obj, infodict, bigM, suffix_list)
 
@@ -474,8 +495,9 @@ class BigM_Transformation(Transformation):
         # directly.  (We are passing the disjunct through so that when
         # we find constraints, _xform_constraint will have access to
         # the correct indicator variable.
-        self._transform_block_components(
-            block, disjunct, infodict, bigMargs, suffix_list)
+        for i in sorted(iterkeys(block)):
+            self._transform_block_components(
+                block[i], disjunct, infodict, bigMargs, suffix_list)
 
     def _xform_constraint(self, obj, disjunct, infodict,
                           bigMargs, suffix_list):
@@ -512,7 +534,6 @@ class BigM_Transformation(Transformation):
             c = obj[i]
             if not c.active:
                 continue
-            c.deactivate()
 
             # first, we see if an M value was specified in the arguments.
             # (This returns None if not)
@@ -625,18 +646,17 @@ class BigM_Transformation(Transformation):
 
     def _estimate_M(self, expr, name):
         # Calculate a best guess at M
-        repn = generate_canonical_repn(expr)
+        repn = generate_standard_repn(expr)
         M = [0, 0]
 
-        if isinstance(repn, LinearCanonicalRepn):
+        if not repn.is_nonlinear():
             if repn.constant is not None:
                 for i in (0, 1):
                     if M[i] is not None:
                         M[i] += repn.constant
 
-            for i, coef in enumerate(repn.linear or []):
-                var = repn.variables[i]
-                coef = repn.linear[i]
+            for i, coef in enumerate(repn.linear_coefs or []):
+                var = repn.linear_vars[i]
                 bounds = (value(var.lb), value(var.ub))
                 for i in (0, 1):
                     # reverse the bounds if the coefficient is negative

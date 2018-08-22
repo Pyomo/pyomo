@@ -1,55 +1,51 @@
+branches:
+  only:
+    - master
+
 environment:
 
   matrix:
 
     # For Python versions available on Appveyor, see
     # http://www.appveyor.com/docs/installed-software#python
-    # The list here is complete (excluding Python 2.6, which
-    # isn't covered by this document) at the time of writing.
+    # The list here is complete at the time of writing.
 
-    - PYTHON_VERSION: 2.7
-      #PYTHON: "C:\\Python27"
-      PYTHON: "C:\\Miniconda-x64"
-      CATEGORY: "nightly"
-
-    # Removing testing of 3.4, as it inexplicably runs >10x slower than
-    # other Python versions and regularly times out (60 minutes)
-    #- PYTHON_VERSION: 3.4
-    #  #PYTHON: "C:\\Python34"
-    #  PYTHON: "C:\\Miniconda3-x64"
+    #- PYTHON_VERSION: 2.7
+    #  PYTHON: "C:\\Miniconda-x64"
     #  CATEGORY: "nightly"
 
-    - PYTHON_VERSION: 3.5
-      #PYTHON: "C:\\Python35"
-      PYTHON: "C:\\Miniconda35-x64"
-      CATEGORY: "nightly"
+    #- PYTHON_VERSION: 3.4
+    #  PYTHON: "C:\\Miniconda34-x64"
+    #  CATEGORY: "nightly"
 
-    - PYTHON_VERSION: 3.6
-      #PYTHON: "C:\\Python36"
-      PYTHON: "C:\\Miniconda36-x64"
-      CATEGORY: "nightly"
+    #- PYTHON_VERSION: 3.5
+    #  PYTHON: "C:\\Miniconda35-x64"
+    #  CATEGORY: "nightly"
+
+    #- PYTHON_VERSION: 3.6
+    #  PYTHON: "C:\\Miniconda36-x64"
+    #  CATEGORY: "nightly"
 
     - PYTHON_VERSION: 2.7
-      #PYTHON: "C:\\Python27"
       PYTHON: "C:\\Miniconda-x64"
       CATEGORY: "nightly"
       EXTRAS: YES
 
+    #- PYTHON_VERSION: 3.4
+    #  PYTHON: "C:\\Miniconda34-x64"
+    #  CATEGORY: "nightly"
+    #  EXTRAS: YES
+
+    - PYTHON_VERSION: 3.5
+      PYTHON: "C:\\Miniconda35-x64"
+      CATEGORY: "nightly"
+      EXTRAS: YES
+
     - PYTHON_VERSION: 3.6
-      #PYTHON: "C:\\Python36"
       PYTHON: "C:\\Miniconda36-x64"
       CATEGORY: "nightly"
       EXTRAS: YES
 
-
-    ##- PYTHON: "C:\\Python33"
-    #- PYTHON: "C:\\Python34"
-    #- PYTHON: "C:\\Python27-x64"
-    ##- PYTHON: "C:\\Python33-x64"
-    ##  DISTUTILS_USE_SDK: "1"
-    #- PYTHON: "C:\\Python34-x64"
-    #  DISTUTILS_USE_SDK: "1"
-    #- PYTHON: "C:\\Python35-x64"
 
 install:
   # We need wheel installed to build wheels
@@ -65,25 +61,18 @@ install:
   - SET CONDA_INSTALL=conda install -q -y
   - "SET ANACONDA=%CONDA_INSTALL% -c anaconda"
   - "SET CONDAFORGE=%CONDA_INSTALL% -c conda-forge --no-update-dependencies"
-  - "SET CACHEMEORG=%CONDA_INSTALL% -c cachemeorg --no-update-dependencies"
   #
   # Update conda, then force it to NOT update itself again
   #
-  - conda config --set always_yes yes
-  - conda update -q -y -c anaconda conda
-  - conda config --set auto_update_conda false
+  # Somehow, the update from anaconda stalls for Python 3.4. So we're not specifying the channel here.
   #
-  - "%CONDAFORGE% setuptools pip"
-  - "IF %PYTHON_VERSION%==2.6 (python -m pip install ordereddict)"
-  - python -m pip install coverage
+  - conda config --set always_yes yes
+  - conda update -q -y conda
+  - conda config --set auto_update_conda false
+  - conda install anaconda
+  #
+  - "%CONDAFORGE% setuptools pip coverage sphinx_rtd_theme"
   - python -m pip install codecov
-  - IF DEFINED YAML (python -m pip install pyyaml)
-  - "IF DEFINED PYRO (python -m pip install %PYRO%)"
-  - python -m pip install xlrd
-  - python -m pip install openpyxl
-  - python -m pip install sphinx_rtd_theme
-  - "%ANACONDA% pandas networkx"
-  - "IF NOT %PYTHON_VERSION%==2.6 (%ANACONDA% scipy)"
   #
   # Install GAMS
   #
@@ -93,12 +82,14 @@ install:
   #
   # Install pyomo.extras
   #
-  - "IF DEFINED EXTRAS (%CONDAFORGE% pyomo.extras)"
+  - "IF DEFINED EXTRAS (%CONDAFORGE% pymysql pyro4)"
+  #- "IF DEFINED EXTRAS (%CONDAFORGE% numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill)"
+  #- "IF DEFINED EXTRAS (%CONDAFORGE% mkl)"
   #
   - "%CONDAFORGE% glpk"
   - "glpsol -v"
   # NOTE: conda-forge doesn't build ipopt for Windows....
-  - "%CACHEMEORG% ipopt_bin"
+  - "%CONDAFORGE% ipopt"
   - "ipopt -v"
   #
   # Clone but don't install pyomo-model-libraries
@@ -106,6 +97,14 @@ install:
   - "git clone https://github.com/Pyomo/pyomo-model-libraries.git"
   - "python -m pip install git+https://github.com/PyUtilib/pyutilib"
   - "python setup.py develop"
+  #
+  # Fetch additional solvers
+  #
+  - "mkdir %cd%\\bin"
+  - "SET PATH=%cd%\\bin;%PATH%"
+  - "python pyomo\\contrib\\trustregion\\getGJH.py %cd%\\bin"
+  - "gjh -v"
+  - "python pyomo\\common\\getGSL.py %cd%\\bin"
   #
   # Verify the python version
   - python --version
@@ -134,7 +133,7 @@ test_script:
   - "test.pyomo -v --cat=%CATEGORY% pyomo %BUILD_DIR%\\pyomo-model-libraries"
 
   # Run documentation tests
-  - "nosetests -v --with-doctest --doctest-extension=.rst doc\\OnlineDocs"
+  #- "nosetests -v --with-doctest --doctest-extension=.rst doc\\OnlineDocs"
 
 
 #after_test:

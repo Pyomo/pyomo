@@ -1,0 +1,6 @@
+def pyomo_preprocess(**kwds):
+   options = kwds.get('options',None)
+   if options == None:
+      print ("No command line options were given.")
+   else:
+      print ("Command line arguments were: %s" % options)

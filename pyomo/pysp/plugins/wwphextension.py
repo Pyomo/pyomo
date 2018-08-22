@@ -14,7 +14,7 @@ import math
 import os
 import random
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 from pyomo.pysp import phextension
 from pyomo.pysp.phutils import *
 from pyomo.pysp.phsolverserverutils import \
@@ -107,7 +107,7 @@ def collect_node_variable_bounds(tree_node):
     var_bounds = {}
     for variable_id, vardatas in iteritems(tree_node._variable_datas):
         vardata = vardatas[0][0]
-        if not vardata.is_expression():
+        if not vardata.is_expression_type():
             var_bounds[variable_id] = (vardata.lb, vardata.ub)
         else:
             # Expression
@@ -130,14 +130,14 @@ def external_collect_variable_bounds(ph,
     return variable_bounds
 
 #==================================================
-class wwphextension(pyomo.util.plugin.SingletonPlugin):
+class wwphextension(pyomo.common.plugin.SingletonPlugin):
 
-    pyomo.util.plugin.implements(phextension.IPHExtension)
+    pyomo.common.plugin.implements(phextension.IPHExtension)
 
     # the below is a hack to get this extension into the
     # set of IPHExtension objects, so it can be queried
     # automagically by PH.
-    pyomo.util.plugin.alias("WWPHExtension")
+    pyomo.common.plugin.alias("WWPHExtension")
 
     def __init__(self, *args, **kwds):
 

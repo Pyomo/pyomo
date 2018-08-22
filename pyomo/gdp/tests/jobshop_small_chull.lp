@@ -83,7 +83,6 @@ c_u__pyomo_gdp_chull_relaxation_relaxedDisjuncts(0)_t(A)_bounds(ub)_:
 <= 0
 
 c_u__pyomo_gdp_chull_relaxation_relaxedDisjuncts(0)_NoClash(A_B_3_0)_c(ub)_:
-+0 NoClash(A_B_3_0)_indicator_var
 -1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(0)_t(A)
 +1 _pyomo_gdp_chull_relaxation_relaxedDisjuncts(0)_t(B)
 <= 0

@@ -20,15 +20,15 @@ try:
 except:
     from ordereddict import OrderedDict
 
-from pyomo.util.modeling import unique_component_name
-from pyomo.util.plugin import alias
+from pyomo.common.modeling import unique_component_name
+from pyomo.common.plugin import alias
 from pyomo.core import (
     Any, Block, Constraint, Objective, Param, Var, SortComponents,
     Transformation, TransformationFactory, value
 )
 from pyomo.opt import SolverFactory
 
-from pyomo.gdp import Disjunct, Disjunction
+from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
     verify_successful_solve, NORMAL, INFEASIBLE, NONOPTIMAL
 )

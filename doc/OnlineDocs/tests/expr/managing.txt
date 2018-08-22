@@ -1,0 +1,5 @@
+sin(x) + 2*x
+sum(sin(x), prod(2, x))
+sin(x1) + 2*x2
+-3 + 2*y + x*y + sin(x)
+p[0]*x[0] + p[1]*x[1] + p[2]*x[2] + p[3]*x[3] + p[4]*x[4]

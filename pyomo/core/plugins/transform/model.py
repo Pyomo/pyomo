@@ -34,7 +34,7 @@ def to_standard_form(self):
     class, and store Python floats (C doubles).
     """
 
-    from pyomo.repn import generate_canonical_repn
+    from pyomo.repn import generate_standard_repn
 
 
     # We first need to create an map of all variables to their column
@@ -108,13 +108,13 @@ def to_standard_form(self):
 
                     # Process the body
                     terms = self._process_canonical_repn(
-                        generate_canonical_repn(con.body, var_id_map))
+                        generate_standard_repn(con.body, var_id_map))
 
                     # Process the bounds of the constraint
                     if con.equality:
                         # Equality constraint, only check lower bound
                         lb = self._process_canonical_repn(
-                            generate_canonical_repn(con.lower, var_id_map))
+                            generate_standard_repn(con.lower, var_id_map))
 
                         # Update terms
                         for k in lb:
@@ -134,7 +134,7 @@ def to_standard_form(self):
                             tmp = dict(terms)
 
                             ub = self._process_canonical_repn(
-                                generate_canonical_repn(con.upper, var_id_map))
+                                generate_standard_repn(con.upper, var_id_map))
 
                             # Update terms
                             for k in ub:
@@ -153,7 +153,7 @@ def to_standard_form(self):
                             tmp = dict(terms)
 
                             lb = self._process_canonical_repn(
-                                generate_canonical_repn(con.lower, var_id_map))
+                                generate_standard_repn(con.lower, var_id_map))
 
                             # Update terms
                             for k in lb:
@@ -178,7 +178,7 @@ def to_standard_form(self):
                     obj = obj_set._data[ndx]
                     # Process the objective
                     terms = self._process_canonical_repn(
-                        generate_canonical_repn(obj.expr, var_id_map))
+                        generate_standard_repn(obj.expr, var_id_map))
 
                     objectives[(obj_set_name, ndx)] = terms
 

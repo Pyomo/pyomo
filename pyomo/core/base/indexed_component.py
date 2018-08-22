@@ -12,16 +12,13 @@ __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 
 import pyutilib.misc
 
+from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
-from pyomo.core.base.template_expr import TemplateExpressionError
-from pyomo.util import DeveloperError
+from pyomo.common import DeveloperError
 
 from six import PY3, itervalues, iteritems, advance_iterator
 import sys
-
-import logging
-logger = logging.getLogger('pyomo.core')
 
 UnindexedComponent_set = set([None])
 
@@ -344,7 +341,8 @@ class IndexedComponent(Component):
         #
         self._data = {}
         #
-        if len(args) == 0:
+        if len(args) == 0 or (len(args) == 1 and
+                              args[0] is UnindexedComponent_set):
             #
             # If no indexing sets are provided, generate a dummy index
             #
@@ -537,8 +535,8 @@ You can silence this warning by one of three ways:
             # due to circular imports (expr imports _VarData
             # imports indexed_component, but we need expr
             # here
-            from pyomo.core.base import expr as EXPR
-            if index.__class__ is EXPR._GetItemExpression:
+            from pyomo.core.expr import current as EXPR
+            if index.__class__ is EXPR.GetItemExpression:
                 return index
             index = self._validate_index(index)
             # _processUnhashableIndex could have found a slice, or
@@ -703,6 +701,7 @@ You can silence this warning by one of three ways:
              (Simple)Component
           3) the index contains an IndexTemplate
         """
+        from pyomo.core.expr import current as EXPR
         #
         # Iterate through the index and look for slices and constant
         # components
@@ -753,48 +752,27 @@ You can silence this warning by one of three ways:
                 ellipsis = i
                 continue
 
-            if hasattr(val, 'as_numeric'):
-                _num_val = val.as_numeric()
+            if hasattr(val, 'is_expression_type'):
+                _num_val = val
                 # Attempt to retrieve the numeric value .. if this
                 # is a template expression generation, then it
                 # should raise a TemplateExpressionError
                 try:
-                    # Disable all logging for the time being.  We are
-                    # not keeping the result of this calculation - only
-                    # seeing if it is possible.  Any errors generated
-                    # evaluating the expression are not informative to
-                    # the user
-                    logging.disable(logging.CRITICAL)
-                    _num_val()
-                except TemplateExpressionError:
-                    # Not good: we have to defer this import to now
-                    # due to circular imports (expr imports _VarData
-                    # imports indexed_component, but we need expr
-                    # here
-                    from pyomo.core.base import expr as EXPR
-                    return EXPR._GetItemExpression(self, idx)
-                except:
-                    # There are other ways we could get an exception
-                    # that is not TemplateExpressionError; most notably,
-                    # evaluating a Param / Var that is not initialized.
-                    # At this point, we will silently eat that
-                    # error... it will come back again below.
-                    pass
-                finally:
-                    logging.disable(logging.NOTSET)
-
-                if _num_val.is_constant():
+                    val = EXPR.evaluate_expression(val, constant=True)
                     _found_numeric = True
-                    val = _num_val()
-                elif _num_val.is_fixed():
-                    raise RuntimeError(
-"""Error retrieving the value of an indexed item %s:
-index %s is a fixed but not constant value.  This is likely not what you
-meant to do, as if you later change the fixed value of the object this
-lookup will not change.  If you understand the implications of using
-fixed but not constant values, you can get the current value using the
-value() function.""" % ( self.name, i ))
-                else:
+
+                except TemplateExpressionError:
+                    #
+                    # The index is a template expression, so return the 
+                    # templatized expression.
+                    #
+                    from pyomo.core.expr import current as EXPR
+                    return EXPR.GetItemExpression(tuple(idx), self)
+
+                except EXPR.NonConstantExpressionError:
+                    #
+                    # The expression contains an unfixed variable
+                    #
                     raise RuntimeError(
 """Error retrieving the value of an indexed item %s:
 index %s is not a constant value.  This is likely not what you meant to
@@ -802,6 +780,24 @@ do, as if you later change the fixed value of the object this lookup
 will not change.  If you understand the implications of using
 non-constant values, you can get the current value of the object using
 the value() function.""" % ( self.name, i ))
+
+                except EXPR.FixedExpressionError:
+                    #
+                    # The expression contains a fixed variable
+                    #
+                    raise RuntimeError(
+"""Error retrieving the value of an indexed item %s:
+index %s is a fixed but not constant value.  This is likely not what you
+meant to do, as if you later change the fixed value of the object this
+lookup will not change.  If you understand the implications of using
+fixed but not constant values, you can get the current value using the
+value() function.""" % ( self.name, i ))
+                #
+                # There are other ways we could get an exception such as
+                # evaluating a Param / Var that is not initialized.
+                # These exceptions will continue up the call stack.
+                #
+
             # verify that the value is hashable
             hash(val)
             if ellipsis is None:
@@ -939,4 +935,3 @@ class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
         if self.is_indexed():
             for component_data in itervalues(self):
                 component_data.deactivate()
-

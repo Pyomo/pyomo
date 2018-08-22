@@ -1,0 +1,20 @@
+print(model.foo.get(model.x))         # -> 1.0
+print(model.foo[model.x])             # -> 1.0
+
+print(model.foo.get(model.y[1]))      # -> -1.0
+print(model.foo[model.y[1]])          # -> -1.0
+
+print(model.foo.get(model.y[2]))      # -> 0.0
+print(model.foo[model.y[2]])          # -> 0.0
+
+print(model.foo.get(model.y))         # -> 50.0
+print(model.foo[model.y])             # -> 50.0
+
+del model.foo[model.y]
+
+print(model.foo.get(model.y))         # -> None
+
+try:
+   print(model.foo[model.y])          # -> raise KeyError
+except KeyError:
+   pass

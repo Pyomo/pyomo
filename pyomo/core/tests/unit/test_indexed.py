@@ -135,7 +135,7 @@ class TestIndexedComponent(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var([1,2,3], initialize=lambda m,x: 2*x)
         self.assertRaisesRegexp(
-            TypeError, 'unhashable type',
+            TypeError, '.*',
             m.x.__getitem__, {})
 
 

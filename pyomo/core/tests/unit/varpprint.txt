@@ -8,11 +8,9 @@
 
 2 Param Declarations
     A : Size=1, Index=None, Domain=Any, Default=-1, Mutable=True
-        Key  : Value
-        None :    -1
+        Key : Value
     B : Size=1, Index=None, Domain=Any, Default=-2, Mutable=True
-        Key  : Value
-        None :    -2
+        Key : Value
 
 4 Var Declarations
     b : Size=3, Index=a

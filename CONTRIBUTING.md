@@ -1,6 +1,23 @@
 Contributing to Pyomo
 =====================
 
+Online Documentation
+--------------------
+
+Detailed contribution guidelines may be found in our [online documentation](http://pyomo.readthedocs.io/en/latest/contribution_guide.html).
+
+Pull Requests
+-------------
+
+Pyomo manages source code contributions via pull requests. For a pull request
+to be accepted, it must satisfy all code integration and coverage tests, and
+then pass review by two core developers. For core developers, authorship of a
+pull request counts as a review.
+
+Submitted code that addresses an issue should include a test exercising the
+relevant case. New functionality should include tests to establish validity of
+its results and/or effects.
+
 Legal Disclaimer
 ----------------
 

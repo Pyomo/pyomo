@@ -20,7 +20,7 @@ currdir = dirname(abspath(__file__))+os.sep
 import pyutilib.th as unittest
 import pyutilib.services
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 import pyomo.opt
 import pyomo.opt.blackbox
 
@@ -41,7 +41,7 @@ class TestProblem1(pyomo.opt.blackbox.MixedIntOptProblem):
 
 class TestSolverManager(pyomo.opt.parallel.AsynchronousSolverManager):
 
-    pyomo.util.plugin.alias('smtest')
+    pyomo.common.plugin.alias('smtest')
 
     def __init__(self, **kwds):
         kwds['type'] = 'smtest_type'

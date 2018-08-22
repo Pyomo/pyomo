@@ -121,6 +121,4 @@ class LP_inactive_index_kernel(LP_inactive_index):
         model.B[2].c = pmo.constraint(model.z >= 1)
 
         model.b.deactivate()
-        model.B.deactivate()
-        model.B[2].activate()
-
+        model.B[1].deactivate()

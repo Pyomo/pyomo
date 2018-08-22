@@ -16,8 +16,8 @@ from six import iteritems, itervalues, iterkeys
 from six.moves import xrange
 from weakref import ref as weakref_ref
 
-from pyomo.util.timing import ConstructionTimer
-from pyomo.util.plugin import Plugin, implements
+from pyomo.common.timing import ConstructionTimer
+from pyomo.common.plugin import Plugin, implements
 
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent
@@ -74,7 +74,7 @@ class _ConnectorData(ComponentData, NumericValue):
         """
         return False
 
-    def _potentially_variable(self):
+    def is_potentially_variable(self):
         """Return True as connectors may (should!) contain variables"""
         return True
 
@@ -142,6 +142,8 @@ class Connector(IndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Connector:
             return super(Connector, cls).__new__(cls)
+        logger.warning("DEPRECATED: The Connector component is deprecated. "
+            "It has been replaced by Port in the pyomo.network package.")
         if args == ():
             return SimpleConnector.__new__(SimpleConnector)
         else:

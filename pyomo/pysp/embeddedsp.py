@@ -14,7 +14,7 @@ import itertools
 import random
 import math
 
-import pyomo.core.base.expr
+from pyomo.core.expr import current as EXPR
 import pyomo.core.base.param
 from pyomo.core.base import ComponentUID
 from pyomo.core.base.numvalue import is_fixed, is_constant
@@ -331,59 +331,17 @@ class EmbeddedSP(object):
 
     @staticmethod
     def _collect_mutable_parameters(exp):
-        """
-        A helper function for querying a pyomo expression for
-        mutable parameters.
-        """
-        if is_constant(exp) or isinstance(exp, _VarData):
-            return {}
-        elif exp.is_expression():
-            ans = {}
-            if exp.__class__ is pyomo.core.base.expr._ProductExpression:
-                for subexp in exp._numerator:
-                    ans.update(EmbeddedSP.\
-                               _collect_mutable_parameters(subexp))
-                for subexp in exp._denominator:
-                    ans.update(EmbeddedSP.\
-                               _collect_mutable_parameters(subexp))
-            else:
-                # This is fragile: we assume that all other expression
-                # objects "play nice" and just use the _args member.
-                for subexp in exp._args:
-                    ans.update(EmbeddedSP.\
-                               _collect_mutable_parameters(subexp))
-            return ans
-        elif isinstance(exp, _ParamData):
-            return {id(exp): exp}
-        else:
-            raise ValueError("Unexpected expression type: "+str(exp))
+        ans = {}
+        for param in EXPR.identify_mutable_parameters(exp):
+            ans[id(param)] = param
+        return ans
 
     @staticmethod
     def _collect_variables(exp):
-        if is_constant(exp):
-            return {}
-        elif exp.is_expression():
-            ans = {}
-            if exp.__class__ is pyomo.core.base.expr._ProductExpression:
-                for subexp in exp._numerator:
-                    ans.update(EmbeddedSP.\
-                               _collect_variables(subexp))
-                for subexp in exp._denominator:
-                    ans.update(EmbeddedSP.\
-                               _collect_variables(subexp))
-            else:
-                # This is fragile: we assume that all other expression
-                # objects "play nice" and just use the _args member.
-                for subexp in exp._args:
-                    ans.update(EmbeddedSP.\
-                               _collect_variables(subexp))
-            return ans
-        elif isinstance(exp, _VarData):
-            return {id(exp): exp}
-        elif is_fixed(exp):
-            return {}
-        else:
-            raise ValueError("Unexpected expression type: "+str(exp))
+        ans = {}
+        for var in EXPR.identify_variables(exp):
+            ans[id(var)] = var
+        return ans
 
     def __init__(self, reference_model):
 
@@ -837,7 +795,7 @@ class EmbeddedSP(object):
             options,
             factory=factory)
         try:
-            init = manager.initialize(async=True)
+            init = manager.initialize(async_call=True)
             pcuids = ComponentMap()
             for param in self.stochastic_data:
                 pcuids[param] = ComponentUID(param)
@@ -851,7 +809,7 @@ class EmbeddedSP(object):
                     thisfile,
                     invocation_type=InvocationType.OnScenario(scenario.name),
                     function_args=(data,),
-                    oneway=True)
+                    oneway_call=True)
             manager.reference_model = model
         except:
             manager.close()

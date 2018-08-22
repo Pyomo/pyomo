@@ -1,0 +1,18 @@
+from pyomo.environ import *
+
+model = AbstractModel()
+model.x = Var()
+model.c = Constraint(expr= model.x >= 1)
+
+def foo_rule(m):
+   return ((m.x, 2.0), (m.c, 3.0))
+model.foo = Suffix(rule=foo_rule)
+
+# Instantiate the model
+inst = model.create_instance()
+try:
+    print(inst.foo[model.x]) # -> raise KeyError
+except KeyError:
+    print ("raised an error")
+print(inst.foo[inst.x])  # -> 2.0
+print(inst.foo[inst.c])  # -> 3.0

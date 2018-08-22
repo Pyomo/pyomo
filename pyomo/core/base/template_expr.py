@@ -8,21 +8,27 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.base.numvalue import (
+import copy
+import logging
+from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.numvalue import (
     NumericValue, native_numeric_types, as_numeric, value )
 import pyomo.core.base
-import logging
-
-class TemplateExpressionError(ValueError):
-    def __init__(self, template, *args, **kwds):
-        self.template = template
-        super(TemplateExpressionError, self).__init__(*args, **kwds)
-
+from pyomo.core.expr.expr_errors import TemplateExpressionError
 
 class IndexTemplate(NumericValue):
-    """This class can be used to greate "template expressions"
+    """A "placeholder" for an index value in template expressions.
+
+    This class is a placeholder for an index value within a template
+    expression.  That is, given the expression template for "m.x[i]",
+    where `m.z` is indexed by `m.I`, the expression tree becomes:
+
+    _GetItem:
+       - m.x
+       - IndexTemplate(_set=m.I, _value=None)
 
     Constructor Arguments:
+       _set: the Set from which this IndexTemplate can take values
     """
 
     __slots__ = ('_set', '_value')
@@ -56,7 +62,7 @@ class IndexTemplate(NumericValue):
         # "Normal" deepcopying outside the context of pyomo.
         #
         ans = memo[id(self)] = self.__class__.__new__(self.__class__)
-        ans.__setstate__(deepcopy(self.__getstate__(), memo))
+        ans.__setstate__(copy.deepcopy(self.__getstate__(), memo))
         return ans
 
     # Note: because NONE of the slots on this class need to be edited,
@@ -67,7 +73,9 @@ class IndexTemplate(NumericValue):
         Return the value of this object.
         """
         if self._value is None:
-            raise TemplateExpressionError(self)
+            if exception:
+                raise TemplateExpressionError(self)
+            return None
         else:
             return self._value
 
@@ -83,20 +91,23 @@ class IndexTemplate(NumericValue):
         """
         return False
 
-    def _potentially_variable(self):
-        """Returns True because this is a variable."""
+    def is_potentially_variable(self):
+        """Returns False because index values cannot be variables.
+
+        The IndexTemplate represents a placeholder for an index value
+        for an IndexedComponent, and at the moment, Pyomo does not
+        support variable indirection.
+        """
         return False
 
     def __str__(self):
         return self.getname()
 
-    def getname(self, fully_qualified=False, name_buffer=None):
-        return "{"+self._set.getname(fully_qualified, name_buffer)+"}"
+    def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
+        return "{"+self._set.getname(fully_qualified, name_buffer, relative_to)+"}"
 
-    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
-        if ostream is None:
-            ostream = sys.stdout
-        ostream.write( self.name )
+    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
+        return self.name
 
     def set_value(self, value):
         # It might be nice to check if the value is valid for the base
@@ -105,15 +116,27 @@ class IndexTemplate(NumericValue):
         self._value = value
 
 
+class ReplaceTemplateExpression(EXPR.ExpressionReplacementVisitor):
+
+    def __init__(self, substituter, *args):
+        super(ReplaceTemplateExpression, self).__init__()
+        self.substituter = substituter
+        self.substituter_args = args
+
+    def visiting_potential_leaf(self, node):
+        if type(node) is EXPR.GetItemExpression or type(node) is IndexTemplate:
+            return True, self.substituter(node, *self.substituter_args)
+
+        return super(
+            ReplaceTemplateExpression, self).visiting_potential_leaf(node)
+
+
 def substitute_template_expression(expr, substituter, *args):
     """Substitute IndexTemplates in an expression tree.
 
     This is a general utility function for walking the expression tree
-    ans subtituting all occurances of IndexTemplate and
-    _GetItemExpression nodes.  The routine is a general expression
-    walker for both Coopr3 / Pyomo4 expressions.  This borrows from
-    pseudo-visitor pattern to defer the actual substitution to the
-    substituter function / arguments passed to this method.
+    and subtituting all occurances of IndexTemplate and
+    _GetItemExpression nodes.
 
     Args:
         substituter: method taking (expression, *args) and returning 
@@ -123,67 +146,19 @@ def substitute_template_expression(expr, substituter, *args):
     Returns:
         a new expression tree with all substitutions done
     """
-    # Again, due to circular imports, we cannot import expr at the
-    # module scope because this module gets imported by expr
-    from pyomo.core.base import expr as EXPR
-    from pyomo.core.base import expr_common as common
-
-    _stack = [ [[expr.clone()], 0, 1, None] ]
-    _stack_idx = 0
-    while _stack_idx >= 0:
-        _ptr = _stack[_stack_idx]
-        while _ptr[1] < _ptr[2]:
-            _obj = _ptr[0][_ptr[1]]
-            _ptr[1] += 1            
-            _subType = type(_obj)
-            if _subType is EXPR._GetItemExpression or _subType is IndexTemplate:
-                if type(_ptr[0]) is tuple:
-                    _list = list(_ptr[0])
-                    _list[_ptr[1]-1] = substituter(_obj, *args)
-                    _ptr[0] = tuple(_list)
-                    _ptr[3]._args = _list
-                else:
-                    _ptr[0][_ptr[1]-1] = substituter(_obj, *args)
-            elif _subType in native_numeric_types or not _obj.is_expression():
-                continue
-            elif _subType is EXPR._ProductExpression:
-                # _ProductExpression is fundamentally different in
-                # Coopr3 / Pyomo4 expression systems and must be handled
-                # specially.
-                if common.mode is common.Mode.coopr3_trees:
-                    _lists = (_obj._numerator, _obj._denominator)
-                else:
-                    _lists = (_obj._args,)
-                for _list in _lists:
-                    if not _list:
-                        continue
-                    _stack_idx += 1
-                    _ptr = [_list, 0, len(_list), _obj]
-                    if _stack_idx < len(_stack):
-                        _stack[_stack_idx] = _ptr
-                    else:
-                        _stack.append( _ptr )
-            else:
-                if not _obj._args:
-                    continue
-                _stack_idx += 1
-                _ptr = [_obj._args, 0, len(_obj._args), _obj]
-                if _stack_idx < len(_stack):
-                    _stack[_stack_idx] = _ptr
-                else:
-                    _stack.append( _ptr )
-        _stack_idx -= 1
-    return _stack[0][0][0]
+    visitor = ReplaceTemplateExpression(substituter, *args)
+    return visitor.dfs_postorder_stack(expr)
 
 
 class _GetItemIndexer(object):
     # Note that this class makes the assumption that only one template
     # ever appears in an expression for a single index
+
     def __init__(self, expr):
         self._base = expr._base
         self._args = []
         _hash = [ id(self._base) ]
-        for x in expr._args:
+        for x in expr.args:
             try:
                 logging.disable(logging.CRITICAL)
                 val = value(x)
@@ -203,6 +178,12 @@ class _GetItemIndexer(object):
 
         self._hash = tuple(_hash)
 
+    def nargs(self):
+        return len(self._args)
+
+    def arg(self, i):
+        return self._args[i]
+
     def __hash__(self):
         return hash(self._hash)
 
@@ -216,6 +197,7 @@ class _GetItemIndexer(object):
         return "%s[%s]" % (
             self._base.name, ','.join(str(x) for x in self._args) )
 
+
 def substitute_getitem_with_param(expr, _map):
     """A simple substituter to replace _GetItem nodes with mutable Params.
 
@@ -223,7 +205,6 @@ def substitute_getitem_with_param(expr, _map):
     new Param.  For example, this method will create expressions
     suitable for passing to DAE integrators
     """
-
     if type(expr) is IndexTemplate:
         return expr
 

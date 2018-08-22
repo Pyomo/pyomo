@@ -1,6 +1,6 @@
 Utilities for Piecewise Functions
 =================================
 
-.. automodule:: pyomo.core.kernel.component_piecewise.util
+.. automodule:: pyomo.core.kernel.piecewise_library.util
    :show-inheritance:
    :members:

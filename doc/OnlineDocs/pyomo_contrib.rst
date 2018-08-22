@@ -1,8 +1,8 @@
-Third-Party Contributions
-=========================
+``pyomo.contrib``
+=================
 
 Pyomo uses the ``pyomo.contrib`` package to facilitate the inclusion
-of third-party contributions that enhance Pyomo's core functionaliy.
+of third-party contributions that enhance Pyomo's core functionality.
 The are two ways that ``pyomo.contrib`` can be used to integrate
 third-party packages:
 

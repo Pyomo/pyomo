@@ -155,7 +155,7 @@ def pyomo_create_model(options=None, model_options=None):
     # Objective
     #
     def cost_rule(model):
-        return summation(model.w, model.x)
+        return sum_product(model.w, model.x)
     model.cost = Objective(rule=cost_rule)
 
     #
