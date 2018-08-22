@@ -154,10 +154,18 @@ def sorted_robust(arg):
     (above) to generate sortable keys.
 
     """
+    # It is possible that arg is a generator.  We need to cache the
+    # elements returned by the generator in case 'sorted' raises an
+    # exception (this ensures we don't loose any elements).  Howevver,
+    # if we were passed a list, we do not want to make an unnecessary
+    # copy.  Tuples are OK because tuple(a) will not copy a if it is
+    # already a tuple.
+    if type(arg) is not list:
+        data = tuple(arg)
     try:
-        return sorted(arg)
+        return sorted(data)
     except:
-        return sorted(arg, key=_robust_sort_keyfcn())
+        return sorted(data, key=_robust_sort_keyfcn())
 
 
 def _safe_to_str(obj):
