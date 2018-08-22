@@ -338,8 +338,11 @@ class _FiniteSetMixin(object):
         """Return True if this is a finite discrete (iterable) Set"""
         return True
 
+    def data(self):
+        return tuple(self)
+
     def sorted(self):
-        return sorted_robust(self)
+        return sorted_robust(self.data())
 
     def ordered(self):
         return self.sorted()
@@ -371,8 +374,6 @@ class _FiniteSetData(_SetData, _FiniteSetMixin):
         """
         Return the number of elements in the set.
         """
-        # Note tha the sorted status has no bearing on the number of items,
-        # so there is no reason to check if the data is correctly sorted
         return len(self._values)
 
     def data(self):
@@ -398,6 +399,12 @@ class _FiniteSetData(_SetData, _FiniteSetMixin):
 
 class _OrderedSetMixin(_FiniteSetMixin):
     __slots__ = ()
+
+    def ordered(self):
+        return self.data()
+
+    def sorted(self):
+        return sorted_robust(self.data())
 
     def first(self):
         return self[1]
@@ -495,7 +502,7 @@ class _OrderedSetData(_FiniteSetData, _OrderedSetMixin):
         return tuple(self._ordered_values)
 
     def add(self, value):
-        # Note tha the sorted status has no bearing on insertion,
+        # Note that the sorted status has no bearing on insertion,
         # so there is no reason to check if the data is correctly sorted
         if self._domain is not None and value not in self._domain:
             raise ValueError("Cannot add value %s to set %s.\n"
@@ -526,16 +533,7 @@ class _OrderedSetData(_FiniteSetData, _OrderedSetMixin):
         """
         if self._is_sorted not in self._DataOK:
             self._sort()
-        if item >= 1:
-            if item > len(self):
-                raise IndexError("Cannot index a Set past the last element")
-            return self._ordered_values[item-1]
-        elif item < 0:
-            if len(self)+item < 0:
-                raise IndexError("Cannot index a Set before the first element")
-            return self._ordered_values[item]
-        else:
-            raise IndexError("Valid index values for sets are 1 .. len(set) or -1 .. -len(set)")
+        return self._ordered_values[self._resolveItemNum(item)]
 
     def ord(self, item):
         """
@@ -554,9 +552,6 @@ class _OrderedSetData(_FiniteSetData, _OrderedSetMixin):
                 "Cannot identify position of %s in Set %s: item not in Set"
                 % (item, self.name))
 
-    def ordered(self):
-        return self.data()
-
     def sorted(self):
         data = self.data()
         if self._is_sorted == self._Sorted:
@@ -569,6 +564,424 @@ class _OrderedSetData(_FiniteSetData, _OrderedSetMixin):
             self._is_sorted = self.parent_component().ordering(self)
         if self._is_sorted == self._SortNeeded:
             self._ordered_values = sorted_robust(self._ordered_values)
-            self._values = dict((j, i) for i, j in enumerate(self._ordered_values))
+            self._values = dict(
+                (j, i) for i, j in enumerate(self._ordered_values) )
             self._is_sorted = self._Sorted
 
+    def _resolveItemNum(self, item):
+        if item >= 1:
+            if item > len(self):
+                raise IndexError("Cannot index a Set past the last element")
+            return item - 1
+        elif item < 0:
+            item += len(self)
+            if item < 0:
+                raise IndexError("Cannot index a Set before the first element")
+            return item
+        else:
+            raise IndexError(
+                "Valid index values for sets are 1 .. len(set) or "
+                "-1 .. -len(set)")
+
+
+############################################################################
+# Set Operators
+############################################################################
+
+class _SetOperator(_SetData):
+    __slots__ = ('_sets','_implicit_subsets')
+
+    def __init__(self, set0, set1):
+        self._sets, self._implicit_subsets = self._processArgs(set0, set1)
+
+    def ranges(self):
+        return sum((s.ranges() for s in self._sets), ())
+
+    def _processArgs(self, *sets):
+        implicit = []
+        ans = []
+        for s in sets:
+            if isinstance(a, _SetData):
+                ans.append(s)
+            else:
+                ans.append(SetOf(s))
+                implicit.append(ans[-1])
+        return tuple(ans), tuple(implicit)
+
+############################################################################
+
+class _SetUnion(_SetOperator):
+    def __new__(cls, set0, set1):
+        if cls != _SetUnion:
+            return super(_SetUnion, cls).__new__(cls)
+
+        (set0, set1), implicit = self._processArgs(set0, set1)
+        if set0.is_ordered() and set1.is_ordered():
+            cls = _SetUnion_OrderedSet
+        elif set0.is_finite() and set1.is_finite():
+            cls = _SetUnion_FiniteSet
+        else:
+            cls = _SetUnion_InfiniteSet
+        return cls.__new__(cls)
+
+class _SetUnion_InfiniteSet(_SetUnion):
+
+    def __contains__(self, val):
+        return any(val in s for s in self._sets)
+
+
+class _SetUnion_FiniteSet(_SetUnion_InfiniteSet, _FiniteSetMixin):
+
+    def __iter__(self):
+        set0 = self._sets[0]
+        return itertools.chain(
+            iter(set0)
+            _ for _ in self._sets[1] if _ not in set0
+        )
+
+    def __len__(self):
+        """
+        Return the number of elements in the set.
+        """
+        # There is no easy way to tell how many duplicates there are in
+        # the second set.  Our only choice is to count them.  We will
+        # try and be a little efficient by using len() for the first
+        # set, though.
+        set0, set1 = self._sets
+        return len(set0) + sum(1 for s in set1 if s not in set0)
+
+
+class _SetUnion_OrderedSet(_SetUnion_FiniteSet, _OrderedSetMixin):
+
+    def __getitem__(self, item):
+        item = self._resolveItemNum(item)
+        set0_len = len(self._sets[0])
+        if item < set0_len:
+            return self._sets[0][item]
+        else:
+            item -= set0_len
+            set1_iter = iter(self._sets[1])
+            while item:
+                next(set1_iter)
+                item -= 1
+            return next(set1_iter)
+
+    def ord(self, item):
+        """
+        Return the position index of the input value.
+
+        Note that Pyomo Set objects have positions starting at 1 (not 0).
+
+        If the search item is not in the Set, then an IndexError is raised.
+        """
+        if item in self._sets[0]:
+            return self._sets[0].ord(item)
+        if item not in self._sets[1]:
+            raise IndexError(
+                "Cannot identify position of %s in Set %s: item not in Set"
+                % (item, self.name))
+        idx = len(self._sets[0]) + 1
+        _iter = iter(self._sets[1])
+        while next(_iter) != item:
+            idx += 1
+        return idx + 1
+
+
+############################################################################
+
+class _SetIntersection(_SetData):
+    def __new__(cls, set0, set1):
+        if cls != _SetUnion:
+            return super(_SetUnion, cls).__new__(cls)
+
+        (set0, set1), implicit = self._processArgs(set0, set1)
+        if set0.is_ordered() and set1.is_ordered():
+            cls = _SetIntersection_OrderedSet
+        elif set0.is_finite() and set1.is_finite():
+            cls = _SetIntersection_FiniteSet
+        else:
+            cls = _SetIntersection_InfiniteSet
+        return cls.__new__(cls)
+
+
+class _SetIntersection_InfiniteSet(_SetIntersection):
+
+    def __contains__(self, val):
+        return all(val in s for s in self._sets)
+
+
+class _SetIntersection_FiniteSet(_SetIntersection_InfiniteSet, _FiniteSetMixin):
+
+    def __iter__(self):
+        set0, set1 = self._sets
+        return (s for s in set0 if s in set1)
+
+    def __len__(self):
+        """
+        Return the number of elements in the set.
+        """
+        # There is no easy way to tell how many duplicates there are in
+        # the second set.  Our only choice is to count them.  We will
+        # try and be a little efficient by using len() for the first
+        # set, though.
+        return sum(1 for _ in self)
+
+
+class _SetIntersection_OrderedSet(_SetIntersection_FiniteSet, _OrderedSetMixin):
+
+    def __getitem__(self, item):
+        item = self._resolveItemNum(item)
+        _iter = iter(self)
+        while item:
+            next(_iter)
+            item -= 1
+        return next(_iter)
+
+    def ord(self, item):
+        """
+        Return the position index of the input value.
+
+        Note that Pyomo Set objects have positions starting at 1 (not 0).
+
+        If the search item is not in the Set, then an IndexError is raised.
+        """
+        if item not in self._sets[0] or item not in self._sets[1]:
+            raise IndexError(
+                "Cannot identify position of %s in Set %s: item not in Set"
+                % (item, self.name))
+        idx = 0
+        _iter = iter(self)
+        while next(_iter) != item:
+            idx += 1
+        return idx + 1
+
+############################################################################
+
+class _SetDifference(_SetOperator):
+    def __new__(cls, set0, set1):
+        if cls != _SetDifference:
+            return super(_SetDifference, cls).__new__(cls)
+
+        (set0, set1), implicit = self._processArgs(set0, set1)
+        if set0.is_ordered() and set1.is_ordered():
+            cls = _SetDifference_OrderedSet
+        elif set0.is_finite() and set1.is_finite():
+            cls = _SetDifference_FiniteSet
+        else:
+            cls = _SetDifference_InfiniteSet
+        return cls.__new__(cls)
+
+
+class _SetDifference_InfiniteSet(_SetDifference):
+
+    def __contains__(self, val):
+        return val in self._sets[0] and not val in self._sets[1]
+
+
+class _SetDifference_FiniteSet(_SetDifference_InfiniteSet, _FiniteSetMixin):
+
+    def __iter__(self):
+        set0, set1 = self._sets
+        return (_ for _ in set0 if _ not in set1)
+
+    def __len__(self):
+        """
+        Return the number of elements in the set.
+        """
+        return sum(1 for _ in self)
+
+
+class _SetDifference_OrderedSet(_SetDifference_FiniteSet, _OrderedSetMixin):
+
+    def __getitem__(self, item):
+        item = self._resolveItemNum(item)
+        _iter = iter(self)
+        while item:
+            next(_iter)
+            item -= 1
+        return next(_iter)
+
+    def ord(self, item):
+        """
+        Return the position index of the input value.
+
+        Note that Pyomo Set objects have positions starting at 1 (not 0).
+
+        If the search item is not in the Set, then an IndexError is raised.
+        """
+        if item not in self:
+            raise IndexError(
+                "Cannot identify position of %s in Set %s: item not in Set"
+                % (item, self.name))
+        idx = 0
+        _iter = iter(self)
+        while next(_iter) != item:
+            idx += 1
+        return idx + 1
+
+
+############################################################################
+
+class _SetSymmetricDifference(_SetOperator):
+    def __new__(cls, set0, set1):
+        if cls != _SetSymmetricDifference:
+            return super(_SetSymmetricDifference, cls).__new__(cls)
+
+        (set0, set1), implicit = self._processArgs(set0, set1)
+        if set0.is_ordered() and set1.is_ordered():
+            cls = _SetSymmetricDifference_OrderedSet
+        elif set0.is_finite() and set1.is_finite():
+            cls = _SetSymmetricDifference_FiniteSet
+        else:
+            cls = _SetSymmetricDifference_InfiniteSet
+        return cls.__new__(cls)
+
+
+class _SetSymmetricDifference_InfiniteSet(_SetSymmetricDifference):
+
+    def __contains__(self, val):
+        return (val in self._sets[0]) ^ (val in self._sets[1])
+
+
+class _SetSymmetricDifference_FiniteSet(_SetSymmetricDifference_InfiniteSet,
+                                        _FiniteSetMixin):
+
+    def __iter__(self):
+        set0, set1 = self._sets
+        return itertools.chain(
+            (_ for _ in set0 if _ not in set1),
+            (_ for _ in set1 if _ not in set0),
+        )
+
+    def __len__(self):
+        """
+        Return the number of elements in the set.
+        """
+        return sum(1 for _ in self)
+
+
+class _SetSymmetricDifference_OrderedSet(_SetSymmetricDifference_FiniteSet,
+                                         _OrderedSetMixin):
+
+    def __getitem__(self, item):
+        item = self._resolveItemNum(item)
+        _iter = iter(self)
+        while item:
+            next(_iter)
+            item -= 1
+        return next(_iter)
+
+    def ord(self, item):
+        """
+        Return the position index of the input value.
+
+        Note that Pyomo Set objects have positions starting at 1 (not 0).
+
+        If the search item is not in the Set, then an IndexError is raised.
+        """
+        if item not in self:
+            raise IndexError(
+                "Cannot identify position of %s in Set %s: item not in Set"
+                % (item, self.name))
+        idx = 0
+        _iter = iter(self)
+        while next(_iter) != item:
+            idx += 1
+        return idx + 1
+
+
+############################################################################
+
+class _SetProduct(_SetOperator):
+    def __new__(cls, set0, set1):
+        if cls != _SetProduct:
+            return super(_SetProduct, cls).__new__(cls)
+
+        (set0, set1), implicit = self._processArgs(set0, set1)
+        if set0.is_ordered() and set1.is_ordered():
+            cls = _SetProduct_OrderedSet
+        elif set0.is_finite() and set1.is_finite():
+            cls = _SetProduct_FiniteSet
+        else:
+            cls = _SetProduct_InfiniteSet
+        return cls.__new__(cls)
+
+
+class _SetProduct_InfiniteSet(_SetProduct):
+
+    def __contains__(self, val):
+        set0, set1 = self._sets
+        if len(val) == 2 and val[0] in set0 and val[1] in set1:
+            return True
+        val = flatten_tuple(val)
+        if self._sets[0].dimen:
+            return val[:set0.dimen] in set0 and val[set0.dimen:] in set1
+        if self._sets[1].dimen:
+            return val[:-set1.dimen] in set0 and val[-set1.dimen:] in set1
+        # At this point, neither base set has a fixed dimention.  The
+        # only thing we can do is test all possible split points.
+        for i in range(len(val)):
+            if val[:i] in set0 and val[i:] in set1:
+                return True
+        return False
+
+
+class _SetProduct_FiniteSet(_SetProduct_InfiniteSet, _FiniteSetMixin):
+
+    def __iter__(self):
+        return itertools.product(self._sets[0], self._sets[1])
+
+    def __len__(self):
+        """
+        Return the number of elements in the set.
+        """
+        return len(self._sets[0]) * len(self._sets[1])
+
+
+class _SetProduct_OrderedSet(_SetProduct_FiniteSet, _OrderedSetMixin):
+
+    def __getitem__(self, item):
+        item = self._resolveItemNum(item)
+        I_len = len(self._sets[0])
+        i = item // I_len
+        a = self._sets[0][i]
+        if type(a) is not tuple:
+            a = (a,)
+        b = self._sets[1][item - i*I_len]
+        if type(b) is not tuple:
+            b = (b,)
+        return a + b
+
+    def ord(self, item):
+        """
+        Return the position index of the input value.
+
+        Note that Pyomo Set objects have positions starting at 1 (not 0).
+
+        If the search item is not in the Set, then an IndexError is raised.
+        """
+        set0, set1 = self._sets
+        if len(val) == 2 and val[0] in set0 and val[1] in set1:
+            return (set0.ord(val[0])-1) * len(set0) + set1.ord(val[1])
+
+        val = flatten_tuple(val)
+        _idx = None
+        if set0.dimen \
+           and val[:set0.dimen] in set0 and val[set0.dimen:] in set1:
+            _idx = set0.dimen
+        elif set1.dimen \
+             and val[:-set1.dimen] in set1 and val[-set1.dimen:] in set1:
+            _idx = -set1.dimen
+        else:
+            # At this point, neither base set has a fixed dimention.  The
+            # only thing we can do is test all possible split points.
+            for i in range(len(val)):
+                if val[:i] in self._sets[0] and val[i:] in self._sets[1]:
+                    _idx = i
+                    break
+
+        if _idx is None:
+            raise IndexError(
+                "Cannot identify position of %s in Set %s: item not in Set"
+                % (item, self.name))
+        return (set0.ord(val[:_idx])-1) * len(set0) + set1.ord(val[_idx:])
