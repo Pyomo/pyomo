@@ -156,7 +156,7 @@ class Finite_Difference_Transformation(Transformation):
                                  (tmpds.get_discretization_info()['scheme'],
                                   tmpds.name))
 
-        if tmpnfe <= 0:
+        if tmpnfe < 1:
             raise ValueError(
                 "The number of finite elements must be at least 1")
 

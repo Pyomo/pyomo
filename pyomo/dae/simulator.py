@@ -27,7 +27,7 @@ logger = logging.getLogger('pyomo.core')
 numpy_available = True
 try:
     import numpy as np
-except ImportError:  # pragma:nocover
+except ImportError:
     numpy_available = True
 
 # Check integrator availability
@@ -38,7 +38,7 @@ try:
         # scipy is importable into PyPy, but ODE integrators don't work. (2/18)
         raise ImportError
     import scipy.integrate as scipy
-except ImportError:  # pragma:nocover
+except ImportError:
     scipy_available = False
 
 casadi_available = True
