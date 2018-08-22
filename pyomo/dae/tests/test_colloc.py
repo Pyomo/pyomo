@@ -16,6 +16,8 @@ from pyomo.environ import (Var, Set, ConcreteModel, value, Constraint,
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 
+from pyomo.repn import generate_standard_repn
+
 import os
 from six import StringIO
 from pyutilib.misc import setup_redirect, reset_redirect
@@ -32,6 +34,13 @@ try:
     numpy_available = True
 except ImportError:
     numpy_available = False
+
+
+def repn_to_rounded_dict(repn, digits):
+    temp = dict()
+    for i, v in enumerate(repn.linear_vars):
+        temp[id(v)] = round(repn.linear_coefs[i], digits)
+    return temp
 
 
 class TestCollocation(unittest.TestCase):
@@ -79,29 +88,25 @@ class TestCollocation(unittest.TestCase):
         self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
         self.assertTrue(m._pyomo_dae_reclassified_derivativevars[0] is m.dv1)
 
-        output = \
-"""\
-dv1_disc_eq : Size=15, Index=t, Active=True
-    Key      : Lower : Body                                                                                                                        : Upper : Active
-    0.310102 :   0.0 :   dv1[0.310102] - (-2.06969384567*v1[0] + 1.6123724357*v1[0.310102] + 0.583920042345*v1[1.289898] - 0.126598632371*v1[2.0]) :   0.0 :   True
-    1.289898 :   0.0 :   dv1[1.289898] - (0.86969384567*v1[0] - 1.78392004235*v1[0.310102] + 0.387627564304*v1[1.289898] + 0.526598632371*v1[2.0]) :   0.0 :   True
-         2.0 :   0.0 :                             dv1[2.0] - (-1.5*v1[0] + 2.76598632371*v1[0.310102] - 3.76598632371*v1[1.289898] + 2.5*v1[2.0]) :   0.0 :   True
-    2.310102 :   0.0 : dv1[2.310102] - (-2.06969384567*v1[2.0] + 1.6123724357*v1[2.310102] + 0.583920042345*v1[3.289898] - 0.126598632371*v1[4.0]) :   0.0 :   True
-    3.289898 :   0.0 : dv1[3.289898] - (0.86969384567*v1[2.0] - 1.78392004235*v1[2.310102] + 0.387627564304*v1[3.289898] + 0.526598632371*v1[4.0]) :   0.0 :   True
-         4.0 :   0.0 :                           dv1[4.0] - (-1.5*v1[2.0] + 2.76598632371*v1[2.310102] - 3.76598632371*v1[3.289898] + 2.5*v1[4.0]) :   0.0 :   True
-    4.310102 :   0.0 : dv1[4.310102] - (-2.06969384567*v1[4.0] + 1.6123724357*v1[4.310102] + 0.583920042345*v1[5.289898] - 0.126598632371*v1[6.0]) :   0.0 :   True
-    5.289898 :   0.0 : dv1[5.289898] - (0.86969384567*v1[4.0] - 1.78392004235*v1[4.310102] + 0.387627564304*v1[5.289898] + 0.526598632371*v1[6.0]) :   0.0 :   True
-         6.0 :   0.0 :                           dv1[6.0] - (-1.5*v1[4.0] + 2.76598632371*v1[4.310102] - 3.76598632371*v1[5.289898] + 2.5*v1[6.0]) :   0.0 :   True
-    6.310102 :   0.0 : dv1[6.310102] - (-2.06969384567*v1[6.0] + 1.6123724357*v1[6.310102] + 0.583920042345*v1[7.289898] - 0.126598632371*v1[8.0]) :   0.0 :   True
-    7.289898 :   0.0 : dv1[7.289898] - (0.86969384567*v1[6.0] - 1.78392004235*v1[6.310102] + 0.387627564304*v1[7.289898] + 0.526598632371*v1[8.0]) :   0.0 :   True
-         8.0 :   0.0 :                           dv1[8.0] - (-1.5*v1[6.0] + 2.76598632371*v1[6.310102] - 3.76598632371*v1[7.289898] + 2.5*v1[8.0]) :   0.0 :   True
-    8.310102 :   0.0 :  dv1[8.310102] - (-2.06969384567*v1[8.0] + 1.6123724357*v1[8.310102] + 0.583920042345*v1[9.289898] - 0.126598632371*v1[10]) :   0.0 :   True
-    9.289898 :   0.0 :  dv1[9.289898] - (0.86969384567*v1[8.0] - 1.78392004235*v1[8.310102] + 0.387627564304*v1[9.289898] + 0.526598632371*v1[10]) :   0.0 :   True
-          10 :   0.0 :                             dv1[10] - (-1.5*v1[8.0] + 2.76598632371*v1[8.310102] - 3.76598632371*v1[9.289898] + 2.5*v1[10]) :   0.0 :   True
-"""
-        out = StringIO()
-        m.dv1_disc_eq.pprint(ostream=out)
-        self.assertEqual(output, out.getvalue())
+        repn_baseline = {id(m.dv1[2.0]): 1.0,
+                         id(m.v1[0]): 1.5,
+                         id(m.v1[0.310102]): -2.76599,
+                         id(m.v1[1.289898]): 3.76599,
+                         id(m.v1[2.0]): -2.5}
+
+        repn = generate_standard_repn(m.dv1_disc_eq[2.0].body)
+        repn_gen = repn_to_rounded_dict(repn, 5)
+        self.assertEqual(repn_baseline, repn_gen)
+
+        repn_baseline = {id(m.dv1[4.0]): 1.0,
+                         id(m.v1[2.0]): 1.5,
+                         id(m.v1[2.310102]): -2.76599,
+                         id(m.v1[3.289898]): 3.76599,
+                         id(m.v1[4.0]): -2.5}
+
+        repn = generate_standard_repn(m.dv1_disc_eq[4.0].body)
+        repn_gen = repn_to_rounded_dict(repn, 5)
+        self.assertEqual(repn_baseline, repn_gen)
 
     # test collocation discretization with radau points
     # second order derivative indexed by single ContinuousSet
@@ -119,18 +124,23 @@ dv1_disc_eq : Size=15, Index=t, Active=True
         self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
         self.assertTrue(m.dv1dt2 in m._pyomo_dae_reclassified_derivativevars)
 
-        output = \
-"""\
-dv1dt2_disc_eq : Size=4, Index=t, Active=True
-    Key      : Lower : Body                                                                : Upper : Active
-    1.666667 :   0.0 :  dv1dt2[1.666667] - (0.24*v1[0] - 0.36*v1[1.666667] + 0.12*v1[5.0]) :   0.0 :   True
-         5.0 :   0.0 :       dv1dt2[5.0] - (0.24*v1[0] - 0.36*v1[1.666667] + 0.12*v1[5.0]) :   0.0 :   True
-    6.666667 :   0.0 : dv1dt2[6.666667] - (0.24*v1[5.0] - 0.36*v1[6.666667] + 0.12*v1[10]) :   0.0 :   True
-          10 :   0.0 :       dv1dt2[10] - (0.24*v1[5.0] - 0.36*v1[6.666667] + 0.12*v1[10]) :   0.0 :   True
-"""
-        out = StringIO()
-        m.dv1dt2_disc_eq.pprint(ostream=out)
-        self.assertEqual(output, out.getvalue())
+        repn_baseline = {id(m.dv1dt2[5.0]): 1,
+                         id(m.v1[0]): -0.24,
+                         id(m.v1[1.666667]): 0.36,
+                         id(m.v1[5.0]): -0.12}
+
+        repn = generate_standard_repn(m.dv1dt2_disc_eq[5.0].body)
+        repn_gen = repn_to_rounded_dict(repn, 5)
+        self.assertEqual(repn_baseline, repn_gen)
+
+        repn_baseline = {id(m.dv1dt2[10]): 1,
+                         id(m.v1[5.0]): -0.24,
+                         id(m.v1[6.666667]): 0.36,
+                         id(m.v1[10]): -0.12}
+
+        repn = generate_standard_repn(m.dv1dt2_disc_eq[10.0].body)
+        repn_gen = repn_to_rounded_dict(repn, 5)
+        self.assertEqual(repn_baseline, repn_gen)
 
     # test collocation discretization with legendre points 
     # on var indexed by single ContinuousSet
@@ -164,29 +174,25 @@ dv1dt2_disc_eq : Size=4, Index=t, Active=True
         self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
         self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
 
-        output = \
-"""\
-dv1_disc_eq : Size=15, Index=t, Active=True
-    Key      : Lower : Body                                                                                                      : Upper : Active
-    0.225403 :   0.0 :   dv1[0.225403] - (-3.0*v1[0] + 2.5*v1[0.225403] + 0.581988897472*v1[1.0] - 0.0819888974716*v1[1.774597]) :   0.0 :   True
-         1.0 :   0.0 :                dv1[1.0] - (1.5*v1[0] - 2.86374306092*v1[0.225403] + v1[1.0] + 0.36374306092*v1[1.774597]) :   0.0 :   True
-    1.774597 :   0.0 :      dv1[1.774597] - (-3.0*v1[0] + 5.08198889747*v1[0.225403] - 4.58198889747*v1[1.0] + 2.5*v1[1.774597]) :   0.0 :   True
-    2.225403 :   0.0 : dv1[2.225403] - (-3.0*v1[2.0] + 2.5*v1[2.225403] + 0.581988897472*v1[3.0] - 0.0819888974716*v1[3.774597]) :   0.0 :   True
-         3.0 :   0.0 :              dv1[3.0] - (1.5*v1[2.0] - 2.86374306092*v1[2.225403] + v1[3.0] + 0.36374306092*v1[3.774597]) :   0.0 :   True
-    3.774597 :   0.0 :    dv1[3.774597] - (-3.0*v1[2.0] + 5.08198889747*v1[2.225403] - 4.58198889747*v1[3.0] + 2.5*v1[3.774597]) :   0.0 :   True
-    4.225403 :   0.0 : dv1[4.225403] - (-3.0*v1[4.0] + 2.5*v1[4.225403] + 0.581988897472*v1[5.0] - 0.0819888974716*v1[5.774597]) :   0.0 :   True
-         5.0 :   0.0 :              dv1[5.0] - (1.5*v1[4.0] - 2.86374306092*v1[4.225403] + v1[5.0] + 0.36374306092*v1[5.774597]) :   0.0 :   True
-    5.774597 :   0.0 :    dv1[5.774597] - (-3.0*v1[4.0] + 5.08198889747*v1[4.225403] - 4.58198889747*v1[5.0] + 2.5*v1[5.774597]) :   0.0 :   True
-    6.225403 :   0.0 : dv1[6.225403] - (-3.0*v1[6.0] + 2.5*v1[6.225403] + 0.581988897472*v1[7.0] - 0.0819888974716*v1[7.774597]) :   0.0 :   True
-         7.0 :   0.0 :              dv1[7.0] - (1.5*v1[6.0] - 2.86374306092*v1[6.225403] + v1[7.0] + 0.36374306092*v1[7.774597]) :   0.0 :   True
-    7.774597 :   0.0 :    dv1[7.774597] - (-3.0*v1[6.0] + 5.08198889747*v1[6.225403] - 4.58198889747*v1[7.0] + 2.5*v1[7.774597]) :   0.0 :   True
-    8.225403 :   0.0 : dv1[8.225403] - (-3.0*v1[8.0] + 2.5*v1[8.225403] + 0.581988897472*v1[9.0] - 0.0819888974716*v1[9.774597]) :   0.0 :   True
-         9.0 :   0.0 :              dv1[9.0] - (1.5*v1[8.0] - 2.86374306092*v1[8.225403] + v1[9.0] + 0.36374306092*v1[9.774597]) :   0.0 :   True
-    9.774597 :   0.0 :    dv1[9.774597] - (-3.0*v1[8.0] + 5.08198889747*v1[8.225403] - 4.58198889747*v1[9.0] + 2.5*v1[9.774597]) :   0.0 :   True
-"""
-        out = StringIO()
-        m.dv1_disc_eq.pprint(ostream=out)
-        self.assertEqual(output, out.getvalue())
+        repn_baseline = {id(m.dv1[3.0]): 1,
+                         id(m.v1[2.0]): -1.5,
+                         id(m.v1[2.225403]): 2.86374,
+                         id(m.v1[3.0]): -1.0,
+                         id(m.v1[3.774597]): -0.36374}
+
+        repn = generate_standard_repn(m.dv1_disc_eq[3.0].body)
+        repn_gen = repn_to_rounded_dict(repn, 5)
+        self.assertEqual(repn_baseline, repn_gen)
+
+        repn_baseline = {id(m.dv1[5.0]): 1,
+                         id(m.v1[4.0]): -1.5,
+                         id(m.v1[4.225403]): 2.86374,
+                         id(m.v1[5.0]): -1.0,
+                         id(m.v1[5.774597]): -0.36374}
+
+        repn = generate_standard_repn(m.dv1_disc_eq[5.0].body)
+        repn_gen = repn_to_rounded_dict(repn, 5)
+        self.assertEqual(repn_baseline, repn_gen)
 
     # test collocation discretization with legendre points
     # second order derivative indexed by single ContinuousSet
@@ -206,18 +212,23 @@ dv1_disc_eq : Size=15, Index=t, Active=True
         self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
         self.assertTrue(m.dv1dt2 in m._pyomo_dae_reclassified_derivativevars)
 
-        output = \
-"""\
-dv1dt2_disc_eq : Size=4, Index=t, Active=True
-    Key      : Lower : Body                                                                                          : Upper : Active
-    1.056624 :   0.0 :   dv1dt2[1.056624] - (0.48*v1[0] - 0.655692193817*v1[1.056624] + 0.175692193817*v1[3.943376]) :   0.0 :   True
-    3.943376 :   0.0 :   dv1dt2[3.943376] - (0.48*v1[0] - 0.655692193817*v1[1.056624] + 0.175692193817*v1[3.943376]) :   0.0 :   True
-    6.056624 :   0.0 : dv1dt2[6.056624] - (0.48*v1[5.0] - 0.655692193817*v1[6.056624] + 0.175692193817*v1[8.943376]) :   0.0 :   True
-    8.943376 :   0.0 : dv1dt2[8.943376] - (0.48*v1[5.0] - 0.655692193817*v1[6.056624] + 0.175692193817*v1[8.943376]) :   0.0 :   True
-"""
-        out = StringIO()
-        m.dv1dt2_disc_eq.pprint(ostream=out)
-        self.assertEqual(output, out.getvalue())
+        repn_baseline = {id(m.dv1dt2[1.056624]): 1,
+                         id(m.v1[0]): -0.48,
+                         id(m.v1[1.056624]): 0.65569,
+                         id(m.v1[3.943376]): -0.17569}
+
+        repn = generate_standard_repn(m.dv1dt2_disc_eq[1.056624].body)
+        repn_gen = repn_to_rounded_dict(repn, 5)
+        self.assertEqual(repn_baseline, repn_gen)
+
+        repn_baseline = {id(m.dv1dt2[6.056624]): 1,
+                         id(m.v1[5.0]): -0.48,
+                         id(m.v1[6.056624]): 0.65569,
+                         id(m.v1[8.943376]): -0.17569}
+
+        repn = generate_standard_repn(m.dv1dt2_disc_eq[6.056624].body)
+        repn_gen = repn_to_rounded_dict(repn, 5)
+        self.assertEqual(repn_baseline, repn_gen)
 
     # test collocation discretization on var indexed by ContinuousSet and Set
     def test_disc_multi_index(self):
@@ -603,3 +614,7 @@ dv1dt2_disc_eq : Size=4, Index=t, Active=True
 
         self.assertTrue(hasattr(m3, 'u_interpolation_constraints'))
         self.assertEqual(len(m3.u_interpolation_constraints), 15)
+
+
+if __name__ == '__main__':
+    unittest.main()
