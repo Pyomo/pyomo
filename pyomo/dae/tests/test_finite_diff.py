@@ -21,7 +21,7 @@ from six import StringIO
 from pyutilib.misc import setup_redirect, reset_redirect
 from pyutilib.misc import import_file
 
-from pyomo.common.log import  LoggingIntercept
+from pyomo.common.log import LoggingIntercept
 
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
@@ -333,3 +333,6 @@ dv1dt2_disc_eq : Size=1, Index=t, Active=True
             self.fail('Expected DAE_Error')
         except DAE_Error:
             pass
+
+if __name__ == "__main__":
+    unittest.main()

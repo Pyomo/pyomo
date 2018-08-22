@@ -1137,8 +1137,7 @@ class TestCasadiSubstituters(unittest.TestCase):
         e = m.dv[t] + m.v[t] + m.y + t
         templatemap = {}
         e2 = substitute_pyomo2casadi(e, templatemap)
-        #e2 = substitute_template_expression(
-        #    e, substitute_getitem_with_casadi_sym, templatemap)
+
         self.assertEqual(len(templatemap), 2)
         self.assertIs(type(e2.arg(0)), casadi.SX)
         self.assertIs(type(e2.arg(1)), casadi.SX)
@@ -1157,10 +1156,7 @@ class TestCasadiSubstituters(unittest.TestCase):
 
         e = m.v[t] 
         templatemap = {}
-        #e2 = substitute_template_expression(
-        #    e, substitute_getitem_with_casadi_sym, templatemap)
-        #e3 = substitute_intrinsic_function(
-        #    e2, substitute_intrinsic_function_with_casadi)
+
         e3 = substitute_pyomo2casadi(e, templatemap)
         self.assertIs(type(e3), casadi.SX)
         
@@ -1176,10 +1172,7 @@ class TestCasadiSubstituters(unittest.TestCase):
 
         e = sin(m.dv[t]) + log(m.v[t]) + sqrt(m.y) + m.v[t] + t
         templatemap = {}
-        #e2 = substitute_template_expression(
-        #    e, substitute_getitem_with_casadi_sym, templatemap)
-        #e3 = substitute_intrinsic_function(
-        #    e2, substitute_intrinsic_function_with_casadi)
+
         e3 = substitute_pyomo2casadi(e, templatemap)
         self.assertIs(e3.arg(0)._fcn, casadi.sin)
         self.assertIs(e3.arg(1)._fcn, casadi.log)
@@ -1197,10 +1190,7 @@ class TestCasadiSubstituters(unittest.TestCase):
 
         e = sin(m.dv[t] + m.v[t]) + log(m.v[t] * m.y + m.dv[t]**2)
         templatemap = {}
-        #e2 = substitute_template_expression(
-        #    e, substitute_getitem_with_casadi_sym, templatemap)
-        #e3 = substitute_intrinsic_function(
-        #    e2, substitute_intrinsic_function_with_casadi)
+
         e3 = substitute_pyomo2casadi(e, templatemap)
         self.assertIs(e3.arg(0)._fcn, casadi.sin)
         self.assertIs(e3.arg(1)._fcn, casadi.log)
@@ -1217,10 +1207,7 @@ class TestCasadiSubstituters(unittest.TestCase):
 
         e = m.v[t] * sin(m.dv[t] + m.v[t]) * t
         templatemap = {}
-        #e2 = substitute_template_expression(
-        #    e, substitute_getitem_with_casadi_sym, templatemap)
-        #e3 = substitute_intrinsic_function(
-        #    e2, substitute_intrinsic_function_with_casadi)
+
         e3 = substitute_pyomo2casadi(e, templatemap)
         self.assertIs(type(e3.arg(0).arg(0)), casadi.SX)
         self.assertIs(e3.arg(0).arg(1)._fcn, casadi.sin)
@@ -1356,7 +1343,7 @@ class TestCasadiSimulation(unittest.TestCase, TestSimulationInterface):
         tname = 'simulator_dae_example'
         self._test(tname)
 
-    def test_dae_example(self):
+    def test_dae_example2(self):
         tname = 'simulator_dae_example'
         self._test_disc_first(tname)
 
@@ -1364,7 +1351,7 @@ class TestCasadiSimulation(unittest.TestCase, TestSimulationInterface):
         tname = 'simulator_dae_multindex_example'
         self._test(tname)
 
-    def test_dae_multindex_example(self):
+    def test_dae_multindex_example2(self):
         tname = 'simulator_dae_multindex_example'
         self._test_disc_first(tname)
 
