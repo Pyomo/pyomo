@@ -11,16 +11,9 @@ with a diverse set of optimization capabilities.
 .. toctree::
    :maxdepth: 2
 
+   installation.rst
    citing-pyomo.rst
-   getting_started/index.rst
-   tutorial/index.rst
-   data/index.rst
-   modeling_extensions/index.rst
-   developer_reference/index.rst
-   solvers/persistent_solvers.rst
-   library_reference/index.rst
-   contribution_guide.rst
-   bibliography.rst
+   pyomo_overview/index.rst
 
 Indices and Tables
 ------------------
