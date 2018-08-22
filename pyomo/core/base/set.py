@@ -6,18 +6,18 @@
 #  the U.S. Government retains certain rights in this software.
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
-from sys import exc_info
-
-from pyomo.core.base.misc import sorted_robust
-from pyomo.util.errors import DeveloperError
-from pyutilib.misc.misc import flatten_tuple
 
 __all__ = ['Set', 'set_options', 'simple_set_rule', 'SetOf']
 
+from sys import exc_info
 import logging
 
-from pyomo.util.deprecation import deprecated
+from pyutilib.misc.misc import flatten_tuple
+
+from pyomo.common.deprecation import deprecated
+from pyomo.common.errors import DeveloperError
 from pyomo.core.base.component import ComponentData
+from pyomo.core.base.misc import sorted_robust
 
 logger = logging.getLogger('pyomo.core')
 
@@ -27,7 +27,7 @@ def process_setarg(arg):
 
     This method is used by IndexedComponent
     """
-    if isinstance(arg,_SetDataBase):
+    if isinstance(arg,_SetData):
         # Argument is a non-indexed Set instance
         return arg
     elif isinstance(arg,IndexedSet):
@@ -98,14 +98,16 @@ def simple_set_rule( fn ):
 #
 # ALL:
 #   __contains__
+#   __len__ (Note: None for all infinite sets)
 #
-# CONCRETE: ALL +
-#   __iter__
-#   __len__
+# Note: FINITE implies DISCRETE. Infinite discrete sets cannot be iterated
+#
+# FINITE: ALL +
+#   __iter__, __reversed__
 #   add()
-#   sorted()
+#   sorted(), ordered()
 #
-# ORDERED: CONCRETE +
+# ORDERED: FINITE +
 #   __getitem__
 #   next(), prev(), first(), last()
 #   ord()
@@ -127,23 +129,26 @@ class _SetData(ComponentData):
         raise DeveloperError("Derived set class (%s) failed to "
                              "implement __contains__" % (type(self).__name__,))
 
-    def is_discrete(self):
-        """Return True if this is a discrete (iterable) Set"""
+    def __len__(self):
+        return None
+
+    def is_finite(self):
+        """Return True if this is a finite discrete (iterable) Set"""
         return False
 
     def __eq__(self, other):
         if self is other:
             return True
         if isinstance(other, _SetData):
-            other_is_discrete = other.is_discrete()
+            other_is_finite = other.is_finite()
         else:
-            other_is_discrete = True
+            other_is_finite = True
             try:
                 other = set(other)
             except:
                 pass
-        if self.is_discrete():
-            if not other_is_discrete:
+        if self.is_finite():
+            if not other_is_finite:
                 return False
             if len(self) != len(other):
                 return False
@@ -151,81 +156,79 @@ class _SetData(ComponentData):
                 if x not in other:
                     return False
             return True
-        elif other_is_discrete:
+        elif other_is_finite:
             return False
-        return self.bounds() == other.bounds()
+        return self.ranges() == other.ranges()
 
     def isdisjoint(self, other):
         # For efficiency, if the other is not a Set, we will try converting
         # it to a Python set() for efficient lookup.
         if isinstance(other, _SetData):
-            other_is_discrete = other.is_discrete()
+            other_is_finite = other.is_finite()
         else:
-            other_is_discrete = True
+            other_is_finite = True
             try:
                 other = set(other)
             except:
                 pass
-        if self.is_discrete():
+        if self.is_finite():
             for x in self:
                 if x in other:
                     return False
             return True
-        elif other_is_discrete:
+        elif other_is_finite:
             for x in other:
                 if x in self:
                     return False
             return True
         else:
-            _bounds = self.bounds()
-            if _bounds[0] in other or _bounds[1] in other:
-                return False
-            _bounds = other.bounds()
-            if _bounds[0] in self or _bounds[1] in self:
-                return False
-            return True
+            all(r.isdisjoint(s) for r in self.ranges() for s in other.ranges())
 
     def issubset(self, other):
         if isinstance(other, _SetData):
-            other_is_discrete = other.is_discrete()
+            other_is_finite = other.is_finite()
         else:
-            other_is_discrete = True
+            other_is_finite = True
             try:
                 other = set(other)
             except:
                 pass
-        if self.is_discrete():
+        if self.is_finite():
             for x in self:
                 if x not in other:
                     return False
             return True
-        elif other_is_discrete:
+        elif other_is_finite:
             return False
         else:
-            _bounds = self.bounds()
-            return _bounds[0] in other and _bounds[1] in other
+            for r in self.ranges():
+                if not any( r.issubset(s) for s in other.ranges() ):
+                    return False
+            return True
 
     def issuperset(self, other):
         # For efficiency, if the other is not a Set, we will try converting
         # it to a Python set() for efficient lookup.
         if isinstance(other, _SetData):
-            other_is_discrete = other.is_discrete()
+            other_is_finite = other.is_finite()
         else:
-            other_is_discrete = True
+            other_is_finite = True
             try:
                 other = set(other)
             except:
                 pass
-        if other_is_discrete:
+        if other_is_finite:
             for x in other:
                 if x not in self:
                     return False
             return True
-        elif self.is_discrete():
+        elif self.is_finite():
             return False
         else:
-            _bounds = other.bounds()
-            return _bounds[0] in self and _bounds[1] in self
+            for r in self.ranges():
+                if not any( s.issubset(r) for s in other.ranges() ):
+                    return False
+            return True
 
     def union(self, *args):
         """
@@ -305,15 +308,55 @@ class _SetData(ComponentData):
         return self >= other and not self == other
 
 
+class _InfiniteSet(_SetData):
+    __slots__ = ('_ranges',)
 
-class _DiscreteSetData(_SetData):
+    def __init__(self, *ranges):
+        for r in ranges:
+            if not isinstance(r, _InfiniteRange):
+                raise TypeError(
+                    "Arguments to _InfiniteSet must be _InfiniteRange objects")
+        self._ranges = ranges
+
+    def __contains__(self, val):
+        for r in self._ranges:
+            if val in r:
+                return True
+        return False
+
+    def ranges(self):
+        return self._ranges
+
+
+class _FiniteSetMixin(object):
+    __slots__ = ()
+
+    def __reversed__(self):
+        return reversed(self.__iter__())
+
+    def is_finite(self):
+        """Return True if this is a finite discrete (iterable) Set"""
+        return True
+
+    def sorted(self):
+        return sorted_robust(self)
+
+    def ordered(self):
+        return self.sorted()
+
+
+
+class _FiniteSetData(_SetData, _FiniteSetMixin):
     """A general unordered iterable Set"""
     __slots__ = ('_values', '_domain')
 
-    def __init__(self, component):
-        super(_DiscreteSetData, self).__init__(component)
+    def __init__(self, component, domain=None):
+        super(_FiniteSetData, self).__init__(component)
         self._values = set()
-        self._domain = None
+        if domain is None:
+            self._domain = Any
+        else:
+            self._domain = domain
 
     def __contains__(self, item):
         """
@@ -324,9 +367,6 @@ class _DiscreteSetData(_SetData):
     def __iter__(self):
         return iter(self._values)
 
-    def __reversed__(self):
-        return reversed(self._values)
-
     def __len__(self):
         """
         Return the number of elements in the set.
@@ -335,12 +375,8 @@ class _DiscreteSetData(_SetData):
         # so there is no reason to check if the data is correctly sorted
         return len(self._values)
 
-    def is_discrete(self):
-        """Return True if this is a discrete (iterable) Set"""
-        return True
-
     def data(self):
-        return list(self._values)
+        return tuple(self._values)
 
     def add(self, value):
         if self._domain is not None and value not in self._domain:
@@ -359,11 +395,70 @@ class _DiscreteSetData(_SetData):
             raise TypeError("Unable to insert '%s' into set %s:\n\t%s: %s"
                             % (value, self.name, exc[0].__name__, exc[1]))
 
-    def sorted(self):
-        return sorted_robust(self._values)
+
+class _OrderedSetMixin(_FiniteSetMixin):
+    __slots__ = ()
+
+    def first(self):
+        return self[1]
+
+    def last(self):
+        return self[len(self)]
+
+    def next(self, item, step=1):
+        """
+        Return the next item in the set.
+
+        The default behavior is to return the very next element. The `step`
+        option can specify how many steps are taken to get the next element.
+
+        If the search item is not in the Set, or the next element is beyond
+        the end of the set, then an IndexError is raised.
+        """
+        position = self.ord(item)
+        return self[position+step]
+
+    def nextw(self, item, step=1):
+        """
+        Return the next item in the set with wrapping if necessary.
+
+        The default behavior is to return the very next element. The `step`
+        option can specify how many steps are taken to get the next element.
+        If the next element is past the end of the Set, the search wraps back
+        to the beginning of the Set.
+
+        If the search item is not in the Set an IndexError is raised.
+        """
+        position = self.ord(item)
+        return self[(position+step-1) % len(self) + 1]
+
+    def prev(self, item, step=1):
+        """Return the previous item in the set.
+
+        The default behavior is to return the immediately previous
+        element. The `step` option can specify how many steps are taken
+        to get the previous element.
+
+        If the search item is not in the Set, or the previous element is
+        before the beginning of the set, then an IndexError is raised.
+        """
+        return self.next(item, -step)
+
+    def prevw(self, item, step=1):
+        """Return the previous item in the set with wrapping if necessary.
+
+        The default behavior is to return the immediately
+        previouselement. The `step` option can specify how many steps
+        are taken to get the previous element. If the previous element
+        is past the end of the Set, the search wraps back to the end of
+        the Set.
+
+        If the search item is not in the Set an IndexError is raised.
+        """
+        return self.nextw(item, -step)
 
 
-class _OrderedSetData(_DiscreteSetData):
+class _OrderedSetData(_FiniteSetData, _OrderedSetMixin):
     """
     This class defines the data for an ordered set.
 
@@ -394,38 +489,10 @@ class _OrderedSetData(_DiscreteSetData):
             self._sort()
         return iter(self._ordered_values)
 
-    def __reversed__(self):
-        """
-        Return an iterator for the set.
-        """
-        if self._is_sorted not in self._DataOK:
-            self._sort()
-        return reversed(self._ordered_values)
-
-    def __getitem__(self, item):
-        """
-        Return the specified member of the set.
-
-        The public Set API is 1-based, even though the
-        internal _lookup and _values are (pythonically) 0-based.
-        """
-        if self._is_sorted not in self._DataOK:
-            self._sort()
-        if item >= 1:
-            if item > len(self):
-                raise IndexError("Cannot index a Set past the last element")
-            return self._ordered_values[item-1]
-        elif item < 0:
-            if len(self)+item < 0:
-                raise IndexError("Cannot index a Set before the first element")
-            return self._ordered_values[item]
-        else:
-            raise IndexError("Valid index values for sets are 1 .. len(set) or -1 .. -len(set)")
-
     def data(self):
         if self._is_sorted not in self._DataOK:
             self._sort()
-        return list(self._ordered_values)
+        return tuple(self._ordered_values)
 
     def add(self, value):
         # Note tha the sorted status has no bearing on insertion,
@@ -450,18 +517,25 @@ class _OrderedSetData(_DiscreteSetData):
             raise TypeError("Unable to insert '%s' into set %s:\n\t%s: %s"
                             % (value, self.name, exc[0].__name__, exc[1]))
 
-    def sorted(self):
-        return self.data()
+    def __getitem__(self, item):
+        """
+        Return the specified member of the set.
 
-    def first(self):
+        The public Set API is 1-based, even though the
+        internal _lookup and _values are (pythonically) 0-based.
+        """
         if self._is_sorted not in self._DataOK:
             self._sort()
-        return self._ordered_values[0]
-
-    def last(self):
-        if self._is_sorted not in self._DataOK:
-            self._sort()
-        return self._ordered_values[-1]
+        if item >= 1:
+            if item > len(self):
+                raise IndexError("Cannot index a Set past the last element")
+            return self._ordered_values[item-1]
+        elif item < 0:
+            if len(self)+item < 0:
+                raise IndexError("Cannot index a Set before the first element")
+            return self._ordered_values[item]
+        else:
+            raise IndexError("Valid index values for sets are 1 .. len(set) or -1 .. -len(set)")
 
     def ord(self, item):
         """
@@ -480,58 +554,15 @@ class _OrderedSetData(_DiscreteSetData):
                 "Cannot identify position of %s in Set %s: item not in Set"
                 % (item, self.name))
 
-    def next(self, item, step=1):
-        """
-        Return the next item in the set.
+    def ordered(self):
+        return self.data()
 
-        The default behavior is to return the very next element. The `step`
-        option can specify how many steps are taken to get the next element.
-
-        If the search item is not in the Set, or the next element is beyond
-        the end of the set, then an IndexError is raised.
-        """
-        position = self.ord(item)
-        return self[position+step]
-
-    def nextw(self, item, step=1):
-        """
-        Return the next item in the set with wrapping if necessary.
-
-        The default behavior is to return the very next element. The `step`
-        option can specify how many steps are taken to get the next element.
-        If the next element is past the end of the Set, the search wraps back
-        to the beginning of the Set.
-
-        If the search item is not in the Set an IndexError is raised.
-        """
-        position = self.ord(item)
-        return self[(position+step-1) % len(self._values) + 1]
-
-    def prev(self, item, step=1):
-        """
-    Return the previous item in the set.
-
-    The default behavior is to return the immediately previous element. The
-    `step` option can specify how many steps are taken to get the previous
-    element.
-
-    If the search item is not in the Set, or the previous element is before
-    the beginning of the set, then an IndexError is raised.
-    """
-        return self.next(item, -step)
-
-    def prevw(self, item, step=1):
-        """
-    Return the previous item in the set with wrapping if necessary.
-
-    The default behavior is to return the immediately previouselement. The
-    `step` option can specify how many steps are taken to get the previous
-    element. If the previous element is past the end of the Set, the search
-    wraps back to the end of the Set.
-
-    If the search item is not in the Set an IndexError is raised.
-    """
-        return self.nextw(item, -step)
+    def sorted(self):
+        data = self.data()
+        if self._is_sorted == self._Sorted:
+            return data
+        else:
+            return sorted_robust(data)
 
     def _sort(self):
         if self._is_sorted is None:
