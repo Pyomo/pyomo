@@ -19,7 +19,6 @@ import pyutilib.th as unittest
 
 from pyomo.environ import *
 
-from six import itervalues
 
 class TestSimpleVar(unittest.TestCase):
 
