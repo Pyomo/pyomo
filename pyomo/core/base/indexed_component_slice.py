@@ -313,7 +313,7 @@ class _IndexedComponent_slice_iter(object):
                             _comp = self.advance_iter(self._iter_stack[idx])
                         except StopIteration:
                             # We got a slicer, but the slicer doesn't
-                            # matching anything.  We should break here,
+                            # match anything.  We should break here,
                             # which (due to 'while True' above) will
                             # walk back up to the next iterator and move
                             # on

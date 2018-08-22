@@ -217,7 +217,7 @@ def _identify_wildcard_sets(iter_stack, index):
                 if wild == s.dimen:
                     wildcard_sets[j] = s
                 elif wild != 0:
-                    # This is a multidimentional set, and we are slicing
+                    # This is a multidimensional set, and we are slicing
                     # through part of it.  We can't extract that subset,
                     # so we quit.
                     return None
