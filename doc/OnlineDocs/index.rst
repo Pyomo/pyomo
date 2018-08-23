@@ -21,6 +21,8 @@ with a diverse set of optimization capabilities.
    modeling_extensions/index.rst
    tutorial_examples.rst
    model_debugging/index.rst
+   advanced_topics/index.rst
+   developer_reference/index.rst
 
 Indices and Tables
 ------------------
