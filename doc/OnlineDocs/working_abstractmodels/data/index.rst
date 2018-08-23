@@ -1,7 +1,7 @@
 .. _page-managingdata:
 
-Managing Data in Pyomo Models
-=============================
+Advanced Topics: Managing Data in AbstractModels
+================================================
 
 There are roughly three ways of using data to construct a Pyomo
 model:

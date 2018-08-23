@@ -7,3 +7,4 @@ Working with AbstractModels
    importing_data.rst
    BuildAction.rst
    pyomo_command.rst
+   data/index.rst
