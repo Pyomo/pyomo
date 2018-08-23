@@ -15,6 +15,7 @@ with a diverse set of optimization capabilities.
    citing-pyomo.rst
    pyomo_overview/index.rst
    pyomo_modeling_components/index.rst
+   solving_pyomo_models.rst
 
 Indices and Tables
 ------------------
