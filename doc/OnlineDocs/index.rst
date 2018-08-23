@@ -23,6 +23,9 @@ with a diverse set of optimization capabilities.
    model_debugging/index.rst
    advanced_topics/index.rst
    developer_reference/index.rst
+   library_reference/index.rst
+   contribution_guide.rst
+   bibliography.rst
 
 Indices and Tables
 ------------------
