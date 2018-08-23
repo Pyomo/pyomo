@@ -14,6 +14,7 @@ with a diverse set of optimization capabilities.
    installation.rst
    citing-pyomo.rst
    pyomo_overview/index.rst
+   pyomo_modeling_components/index.rst
 
 Indices and Tables
 ------------------
