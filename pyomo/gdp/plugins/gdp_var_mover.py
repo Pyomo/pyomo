@@ -16,13 +16,14 @@ detect variables inside of Disjuncts or deactivated Blocks.
 
 import logging
 import textwrap
-from pyomo.common.plugin import alias
-from pyomo.core.base import Transformation, Block, Constraint
-from pyomo.gdp import Disjunct, GDP_Error
-from pyomo.core import TraversalStrategy
-from pyomo.common.deprecation import deprecated
 
 from six import itervalues
+
+from pyomo.common.deprecation import deprecated
+from pyomo.common.plugin import alias
+from pyomo.core import TraversalStrategy
+from pyomo.core.base import Block, Constraint, Transformation
+from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 
 logger = logging.getLogger('pyomo.gdp')
 
@@ -101,6 +102,10 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
                     Constraint, descend_into=Block, active=True)
                 for con in cons_in_disjunct:
                     con.deactivate()
+                disjtns_in_disjunct = disjunct.component_objects(
+                    Disjunction, descend_into=Block, active=True)
+                for disj in disjtns_in_disjunct:
+                    disj.deactivate()
 
     def _disjunct_not_fixed_true(self, disjunct):
         # Return true if the disjunct indicator variable is not fixed to True
