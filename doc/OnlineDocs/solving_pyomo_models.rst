@@ -40,6 +40,19 @@ If you have an AbstractModel, you must create a concrete instance of your model 
    >>> opt = pyo.SolverFactory('glpk')
    >>> opt.solve(instance)
 
+`pyomo solve` Command
+---------------------
+To solve a ConcreteModel contained in the file `my_model.py` using the `pyomo` command and the solver GLPK, use the following line in a terminal window
+
+   `$ pyomo solve my_model.py --solver='glpk'`
+
+To solve an AbstractModel contained in the file `my_model.py` with data in the file `my_data.dat` using the `pyomo` command and the solver GLPK, use the following line in a terminal window
+
+   `$ pyomo solve my_model.py my_data.dat --solver='glpk'`
+
+
+
+
 Supported Solvers
 -----------------
 Pyomo supports any solvers that read `.lp` or `.nl` files and also includes special interfaces to a few others.
