@@ -12,7 +12,7 @@ with a diverse set of optimization capabilities.
    :maxdepth: 2
 
    installation.rst
-   citing-pyomo.rst
+   citing_pyomo.rst
    pyomo_overview/index.rst
    pyomo_modeling_components/index.rst
    solving_pyomo_models.rst
