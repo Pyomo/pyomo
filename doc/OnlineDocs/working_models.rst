@@ -259,6 +259,8 @@ For abstract models this would be done prior to instantiation or
 else the ``activate`` and ``deactivate`` calls would be on
 the instance rather than the model.
 
+.. _VarAccess:
+
 Accessing Variable Values
 -------------------------
 
@@ -329,6 +331,8 @@ Another way to access all of the variables (particularly if there are blocks) is
    :language: python
 
 The use of ``True`` as an argument to ``cname`` indicates that the full name is desired.
+
+.. _ParmAccess:
 
 Accessing Parameter Values
 --------------------------
