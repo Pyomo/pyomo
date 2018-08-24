@@ -295,6 +295,21 @@ class _SetData(ComponentData):
     __xor__ = symmetric_difference
     __mul__ = cross
 
+    def __ror__(self, other):
+        return SetOf(other) | self
+
+    def __rand__(self, other):
+        return SetOf(other) & self
+
+    def __rsub__(self, other):
+        return SetOf(other) - self
+
+    def __rxor__(self, other):
+        return SetOf(other) ^ self
+
+    def __rmul__(self, other):
+        return SetOf(other) * self
+
     def __lt__(self,other):
         """
         Return True if the set is a strict subset of 'other'
