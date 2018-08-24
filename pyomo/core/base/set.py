@@ -749,9 +749,9 @@ class _SetIntersection(_SetData):
             return super(_SetUnion, cls).__new__(cls)
 
         (set0, set1), implicit = self._processArgs(set0, set1)
-        if set0.is_ordered() and set1.is_ordered():
+        if set0.is_ordered() or set1.is_ordered():
             cls = _SetIntersection_OrderedSet
-        elif set0.is_finite() and set1.is_finite():
+        elif set0.is_finite() or set1.is_finite():
             cls = _SetIntersection_FiniteSet
         else:
             cls = _SetIntersection_InfiniteSet
@@ -779,6 +779,10 @@ class _SetIntersection_FiniteSet(_SetIntersection_InfiniteSet, _FiniteSetMixin):
 
     def __iter__(self):
         set0, set1 = self._sets
+        if set1.is_ordered() and not set0.is_ordered():
+            set0, set1 = set1, set0
+        elif set1.is_finite() and not set0.is_finite():
+            set0, set1 = set1, set0
         return (s for s in set0 if s in set1)
 
     def __len__(self):
@@ -831,9 +835,9 @@ class _SetDifference(_SetOperator):
             return super(_SetDifference, cls).__new__(cls)
 
         (set0, set1), implicit = self._processArgs(set0, set1)
-        if set0.is_ordered() and set1.is_ordered():
+        if set0.is_ordered():
             cls = _SetDifference_OrderedSet
-        elif set0.is_finite() and set1.is_finite():
+        elif set0.is_finite():
             cls = _SetDifference_FiniteSet
         else:
             cls = _SetDifference_InfiniteSet
