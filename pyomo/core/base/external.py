@@ -129,9 +129,10 @@ class AMPLExternalFunction(ExternalFunction):
         if fixed is None:
             fixed = tuple( arg.__class__ in native_types or arg.is_fixed()
                            for arg in args )
+        N = len(args)
         f, arglist = self._evaluate(args, 2, fixed)
-        g = [arglist.derivs[i] for i in range(len(args))]
-        h = [arglist.hes[i] for i in range(len(args)**2)]
+        g = [arglist.derivs[i] for i in range(N)]
+        h = [arglist.hes[i] for i in range((N+N**2)//2)]
         return f, g, h
 
     def load_library(self):
@@ -274,7 +275,7 @@ class _ARGLIST(Structure):
         if fgh > 0:
             self.derivs = (c_double*N)(0.)
         if fgh > 1:
-            self.hes = (c_double*(N*N))(0.)
+            self.hes = (c_double*((N+N*N)//2))(0.)
 
         for i,v in enumerate(args):
             self.at[i] = i
