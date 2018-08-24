@@ -327,14 +327,14 @@ class _SetData(ComponentData):
         return self >= other and not self == other
 
 
-class _InfiniteSet(_SetData):
+class _InfiniteSetData(_SetData):
     __slots__ = ('_ranges',)
 
     def __init__(self, *ranges):
         for r in ranges:
             if not isinstance(r, _InfiniteRange):
-                raise TypeError(
-                    "Arguments to _InfiniteSet must be _InfiniteRange objects")
+                raise TypeError( "Arguments to _InfiniteSetData must be "
+                                 "_InfiniteRange objects" )
         self._ranges = ranges
 
     def __contains__(self, val):
