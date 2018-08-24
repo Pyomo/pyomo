@@ -487,6 +487,21 @@ class _OrderedSetMixin(_FiniteSetMixin):
         """
         return self.nextw(item, -step)
 
+    def _to_0_based_index(self, item):
+        if item >= 1:
+            if item > len(self):
+                raise IndexError("Cannot index a Set past the last element")
+            return item - 1
+        elif item < 0:
+            item += len(self)
+            if item < 0:
+                raise IndexError("Cannot index a Set before the first element")
+            return item
+        else:
+            raise IndexError(
+                "Valid index values for sets are 1 .. len(set) or "
+                "-1 .. -len(set)")
+
 
 class _OrderedSetData(_FiniteSetData, _OrderedSetMixin):
     """
@@ -556,7 +571,7 @@ class _OrderedSetData(_FiniteSetData, _OrderedSetMixin):
         """
         if self._is_sorted not in self._DataOK:
             self._sort()
-        return self._ordered_values[self._resolveItemNum(item)]
+        return self._ordered_values[self._to_0_based_index(item)]
 
     def ord(self, item):
         """
@@ -590,21 +605,6 @@ class _OrderedSetData(_FiniteSetData, _OrderedSetMixin):
             self._values = dict(
                 (j, i) for i, j in enumerate(self._ordered_values) )
             self._is_sorted = self._Sorted
-
-    def _resolveItemNum(self, item):
-        if item >= 1:
-            if item > len(self):
-                raise IndexError("Cannot index a Set past the last element")
-            return item - 1
-        elif item < 0:
-            item += len(self)
-            if item < 0:
-                raise IndexError("Cannot index a Set before the first element")
-            return item
-        else:
-            raise IndexError(
-                "Valid index values for sets are 1 .. len(set) or "
-                "-1 .. -len(set)")
 
 
 ############################################################################
@@ -682,16 +682,16 @@ class _SetUnion_OrderedSet(_SetUnion_FiniteSet, _OrderedSetMixin):
     __slots__ = tuple()
 
     def __getitem__(self, item):
-        item = self._resolveItemNum(item)
+        idx = self._to_0_based_index(item)
         set0_len = len(self._sets[0])
-        if item < set0_len:
-            return self._sets[0][item]
+        if idx < set0_len:
+            return self._sets[0][idx]
         else:
-            item -= set0_len
+            idx -= set0_len
             set1_iter = iter(self._sets[1])
-            while item:
+            while idx:
                 next(set1_iter)
-                item -= 1
+                idx -= 1
             return next(set1_iter)
 
     def ord(self, item):
@@ -763,11 +763,11 @@ class _SetIntersection_OrderedSet(_SetIntersection_FiniteSet, _OrderedSetMixin):
     __slots__ = tuple()
 
     def __getitem__(self, item):
-        item = self._resolveItemNum(item)
+        idx = self._to_0_based_index(item)
         _iter = iter(self)
-        while item:
+        while idx:
             next(_iter)
-            item -= 1
+            idx -= 1
         return next(_iter)
 
     def ord(self, item):
@@ -832,11 +832,11 @@ class _SetDifference_OrderedSet(_SetDifference_FiniteSet, _OrderedSetMixin):
     __slots__ = tuple()
 
     def __getitem__(self, item):
-        item = self._resolveItemNum(item)
+        idx = self._to_0_based_index(item)
         _iter = iter(self)
-        while item:
+        while idx:
             next(_iter)
-            item -= 1
+            idx -= 1
         return next(_iter)
 
     def ord(self, item):
@@ -907,11 +907,11 @@ class _SetSymmetricDifference_OrderedSet(_SetSymmetricDifference_FiniteSet,
     __slots__ = tuple()
 
     def __getitem__(self, item):
-        item = self._resolveItemNum(item)
+        idx = self._to_0_based_index(item)
         _iter = iter(self)
-        while item:
+        while idx:
             next(_iter)
-            item -= 1
+            idx -= 1
         return next(_iter)
 
     def ord(self, item):
@@ -989,13 +989,13 @@ class _SetProduct_OrderedSet(_SetProduct_FiniteSet, _OrderedSetMixin):
     __slots__ = tuple()
 
     def __getitem__(self, item):
-        item = self._resolveItemNum(item)
+        idx = self._to_0_based_index(item)
         I_len = len(self._sets[0])
-        i = item // I_len
+        i = idx // I_len
         a = self._sets[0][i]
         if type(a) is not tuple:
             a = (a,)
-        b = self._sets[1][item - i*I_len]
+        b = self._sets[1][idx - i*I_len]
         if type(b) is not tuple:
             b = (b,)
         return a + b
