@@ -10,10 +10,12 @@ logger = logging.getLogger('pyomo.contrib.preprocessing')
 
 
 class TightenContraintFromVars(IsomorphicTransformation):
-    """Tightens upper and lower bound on linear constraints.
+    """Tightens upper and lower bound on constraints based on variable bounds.
 
     Iterates through each variable and tightens the constraint bounds using
     the inferred values from the variable bounds.
+
+    For now, this only operates on linear constraints.
 
     """
 
@@ -23,18 +25,17 @@ class TightenContraintFromVars(IsomorphicTransformation):
     def _apply_to(self, instance):
         for constr in instance.component_data_objects(
                 ctype=Constraint, active=True, descend_into=True):
-            if not constr.body.polynomial_degree() == 1:
+            repn = generate_standard_repn(constr.body)
+            if not repn.is_linear():
                 continue
-                # For now, analysis only implemented for linear constraints
 
             # tighten the constraint bound as much as possible
-            repn = generate_standard_repn(constr.body)
             LB = UB = 0
             if repn.constant:
                 LB = UB = repn.constant
             # loop through each coefficent and variable pair
             for i, coef in enumerate(repn.linear_coefs):
-                # TODO: ROunding issues
+                # TODO: Rounding issues
                 # Calculate bounds using interval arithmetic
                 if coef >= 0:
                     if repn.linear_vars[i].has_ub():

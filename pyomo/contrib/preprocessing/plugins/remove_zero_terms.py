@@ -14,12 +14,12 @@ from pyutilib.math.util import isclose
 
 
 class RemoveZeroTerms(IsomorphicTransformation):
-    """Looks for 0 * var in a constraint and removes it.
+    """Looks for :math:`0 v` in a constraint and removes it.
 
-    Currently limited to processing linear constraints of the form x1 = 0 *
-    x3, occurring as a result of x2.fix(0).
+    Currently limited to processing linear constraints of the form :math:`x_1 =
+    0 x_3`, occurring as a result of fixing :math:`x_2 = 0`.
 
-    TODO: support nonlinear expressions
+    .. note:: TODO: support nonlinear expressions
 
     """
 

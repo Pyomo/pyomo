@@ -37,7 +37,14 @@ logger = logging.getLogger('pyomo.network')
 
 
 class _PortData(ComponentData):
-    """This class defines the data for a single Port."""
+    """
+    This class defines the data for a single Port
+
+    Attributes
+    ----------
+        vars:`dict`
+            A dictionary mapping added names to variables
+    """
 
     __slots__ = ('vars', '_arcs', '_sources', '_dests', '_rules', '_splitfracs')
 
@@ -68,7 +75,7 @@ class _PortData(ComponentData):
     # can quietly rely on the super() class's implementation.
 
     def __getattr__(self, name):
-        """Returns self.vars[name] if it exists"""
+        """Returns `self.vars[name]` if it exists"""
         if name in self.vars:
             return self.vars[name]
         # Since the base classes don't support getattr, we can just
@@ -104,6 +111,7 @@ class _PortData(ComponentData):
         raise ValueError("Cannot specify the value of a port: '%s'" % self.name)
 
     def polynomial_degree(self):
+        """Returns the maximum polynomial degree of all port members"""
         ans = 0
         for v in self.iter_vars():
             tmp = v.polynomial_degree()
@@ -121,28 +129,36 @@ class _PortData(ComponentData):
         return True
 
     def is_binary(self):
+        """Return True if all variables in the Port are binary"""
         return len(self) and all(
             v.is_binary() for v in self.iter_vars(expr_vars=True))
 
     def is_integer(self):
+        """Return True if all variables in the Port are integer"""
         return len(self) and all(
             v.is_integer() for v in self.iter_vars(expr_vars=True))
 
     def is_continuous(self):
+        """Return True if all variables in the Port are continuous"""
         return len(self) and all(
             v.is_continuous() for v in self.iter_vars(expr_vars=True))
 
     def add(self, var, name=None, rule=None, **kwds):
         """
-        Add a variable to this Port.
+        Add `var` to this Port, casting it to a Pyomo numeric if necessary
 
-        Arguments:
-            var         A variable or some NumericValue like an expression
-            name        Name to associate with this member of the Port
-            rule        Function implementing the desired expansion procedure 
-                            for this member. Port.Equality by default, other
-                            options include Port.Extensive. Customs are allowed
-            **kwds      Keyword arguments that will be passed to rule
+        Arguments
+        ---------
+            var
+                A variable or some `NumericValue` like an expression
+            name: `str`
+                Name to associate with this member of the Port
+            rule: `function`
+                Function implementing the desired expansion procedure
+                for this member. `Port.Equality` by default, other
+                options include `Port.Extensive`. Customs are allowed.
+            kwds
+                Keyword arguments that will be passed to rule
         """
         if var is not None:
             try:
@@ -179,12 +195,15 @@ class _PortData(ComponentData):
         self._rules.pop(name)
 
     def rule_for(self, name):
+        """Return the rule associated with the given port member"""
         return self._rules[name][0]
 
     def is_equality(self, name):
+        """Return True if the rule for this port member is Port.Equality"""
         return self.rule_for(name) is Port.Equality
 
     def is_extensive(self, name):
+        """Return True if the rule for this port member is Port.Extensive"""
         return self.rule_for(name) is Port.Extensive
 
     def fix(self):
@@ -210,12 +229,14 @@ class _PortData(ComponentData):
         Iterate through every member of the port, going through
         the indices of indexed members.
 
-        Arguments:
-            expr_vars       If True, call identify_variables on expression
-                                type members
-            fixed           Only include variables/expressions with this
-                                type of fixed
-            names           If True, yield (name, var/expr) pairs
+        Arguments
+        ---------
+            expr_vars: `bool`
+                If True, call `identify_variables` on expression type members
+            fixed: `bool`
+                Only include variables/expressions with this type of fixed
+            names: `bool`
+                If True, yield (name, var/expr) pairs
         """
         for name, mem in iteritems(self.vars):
             if not mem.is_indexed():
@@ -242,7 +263,7 @@ class _PortData(ComponentData):
     def set_split_fraction(self, arc, val, fix=True):
         """
         Set the split fraction value to be used for an arc during
-        arc expansion when using Port.Extensive.
+        arc expansion when using `Port.Extensive`.
         """
         if arc not in self.dests():
             raise ValueError("Port '%s' is not a source of Arc '%s', cannot "
@@ -251,8 +272,8 @@ class _PortData(ComponentData):
 
     def get_split_fraction(self, arc):
         """
-        Returns a tuple (val, fix) for the split fraction of
-        this arc if it exists, and otherwise None.
+        Returns a tuple (val, fix) for the split fraction of this arc that
+        was set via `set_split_fraction` if it exists, and otherwise None.
         """
         res = self._splitfracs.get(arc, None)
         if res is None:
@@ -263,36 +284,33 @@ class _PortData(ComponentData):
 
 class Port(IndexedComponent):
     """
-    A collection of variables, which may be connected to other ports.
+    A collection of variables, which may be connected to other ports
 
     The idea behind Ports is to create a bundle of variables that can
     be manipulated together by connecting them to other ports via Arcs.
     A preprocess transformation will look for Arcs and expand them into
     a series of constraints that involve the original variables contained
     within the Port. The way these constraints are built can be specified
-    for each Port member when adding things to the port, but by default
+    for each Port member when adding members to the port, but by default
     the Port members will be equated to each other. Additionally, other
     objects such as expressions can be added to Ports as long as they, or
     their indexed members, can be manipulated within constraint expressions.
 
-    Constructor arguments:
-        rule            A function that returns a dict of (name: var)
-                            pairs to be initially added to the Port.
-                            Instead of var it could also be a tuples of
-                            (var, rule). Or it could return an iterable
-                            of either vars or tuples of (var, rule) for
-                            implied names
-        initialize      Follows same specifications as rule's return
-                            value, gets initially added to the Port
-        implicit        An iterable of names to be initially added to
-                            the Port as implicit vars
-        extends         A Port whose vars will be added to this Port
-                            upon construction
-        doc             A text string describing this component
-        name            A name for this component
-
-    Public attributes (do not edit):
-        vars            A dictionary mapping added names to variables
+    Parameters
+    ----------
+        rule: `function`
+            A function that returns a dict of (name: var) pairs to be
+            initially added to the Port. Instead of var it could also be a
+            tuples of (var, rule). Or it could return an iterable of either
+            vars or tuples of (var, rule) for implied names.
+        initialize
+            Follows same specifications as rule's return value, gets
+            initially added to the Port
+        implicit
+            An iterable of names to be initially added to the Port as
+            implicit vars
+        extends: `Port`
+            A Port whose vars will be added to this Port upon construction
     """
 
     def __new__(cls, *args, **kwds):
@@ -423,7 +441,7 @@ class Port(IndexedComponent):
 
     @staticmethod
     def Equality(port, name, index_set):
-        """Arc Expansion procedure to generate simple equality constraints."""
+        """Arc Expansion procedure to generate simple equality constraints"""
         # Iterate over every arc off this port. Since this function will
         # be called for every port, we need to check if it already exists.
         for arc in port.arcs(active=True):
@@ -433,7 +451,7 @@ class Port(IndexedComponent):
     def Extensive(port, name, index_set, include_splitfrac=False,
             write_var_sum=True):
         """
-        Arc Expansion procedure for extensive variable properties.
+        Arc Expansion procedure for extensive variable properties
 
         This procedure is the rule to use when variable quantities should
         be split for outlets and combined for inlets.
@@ -442,12 +460,12 @@ class Port(IndexedComponent):
         a new variable on the arc's expanded block of the same index as the
         current variable being processed. It will also create a splitfrac
         variable on the expanded block as well. Then it will generate
-        constraints for the new variable that relates it to its "parent"
+        constraints for the new variable that relates it to the port member
         variable by the split fraction. Following this, an indexed constraint
         is written that states that the sum of all the new variables equals
-        the parent. However, if write_var_sum=False is passed, instead of
+        the parent. However, if `write_var_sum=False` is passed, instead of
         this last indexed constraint, a single constraint will be written
-        the states the sum of the split fractions equals 1.
+        that states the sum of the split fractions equals 1.
 
         Then, this procedure will go through every source of the port and
         create a new variable (unless it already exists), and then write
@@ -457,21 +475,22 @@ class Port(IndexedComponent):
         Model simplifications:
 
             If the port has a 1-to-1 connection on either side, it will not
-                create the new variables and instead write a simple
-                equality constraint for that side.
+            create the new variables and instead write a simple equality
+            constraint for that side.
 
             If the outlet side is not 1-to-1 but there is only one outlet,
-                it will not create a splitfrac variable or write the split
-                constraint, but it will still write the outsum constraint
-                which will be a simple equality.
+            it will not create a splitfrac variable or write the split
+            constraint, but it will still write the outsum constraint
+            which will be a simple equality.
 
             If the port only contains a single Extensive variable, the
-                splitfrac variables and the splitting constraints will
-                be skipped since they will be unnecessary. However, they
-                can be still be included by passing include_splitfrac=True.
+            splitfrac variables and the splitting constraints will
+            be skipped since they will be unnecessary. However, they
+            can be still be included by passing include_splitfrac=True.
 
-            Note: If split fractions are skipped, the write_var_sum=False
-                option is not allowed.
+        .. note::
+            If split fractions are skipped, the `write_var_sum=False`
+            option is not allowed.
         """
         port_parent = port.parent_block()
         out_vars = Port._Split(port, name, index_set,
