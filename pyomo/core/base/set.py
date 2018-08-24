@@ -634,6 +634,8 @@ class _SetOperator(_SetData):
 ############################################################################
 
 class _SetUnion(_SetOperator):
+    __slots__ = tuple()
+
     def __new__(cls, set0, set1):
         if cls != _SetUnion:
             return super(_SetUnion, cls).__new__(cls)
@@ -648,12 +650,14 @@ class _SetUnion(_SetOperator):
         return cls.__new__(cls)
 
 class _SetUnion_InfiniteSet(_SetUnion):
+    __slots__ = tuple()
 
     def __contains__(self, val):
         return any(val in s for s in self._sets)
 
 
 class _SetUnion_FiniteSet(_SetUnion_InfiniteSet, _FiniteSetMixin):
+    __slots__ = tuple()
 
     def __iter__(self):
         set0 = self._sets[0]
@@ -675,6 +679,7 @@ class _SetUnion_FiniteSet(_SetUnion_InfiniteSet, _FiniteSetMixin):
 
 
 class _SetUnion_OrderedSet(_SetUnion_FiniteSet, _OrderedSetMixin):
+    __slots__ = tuple()
 
     def __getitem__(self, item):
         item = self._resolveItemNum(item)
@@ -713,6 +718,8 @@ class _SetUnion_OrderedSet(_SetUnion_FiniteSet, _OrderedSetMixin):
 ############################################################################
 
 class _SetIntersection(_SetData):
+    __slots__ = tuple()
+
     def __new__(cls, set0, set1):
         if cls != _SetUnion:
             return super(_SetUnion, cls).__new__(cls)
@@ -728,12 +735,14 @@ class _SetIntersection(_SetData):
 
 
 class _SetIntersection_InfiniteSet(_SetIntersection):
+    __slots__ = tuple()
 
     def __contains__(self, val):
         return all(val in s for s in self._sets)
 
 
 class _SetIntersection_FiniteSet(_SetIntersection_InfiniteSet, _FiniteSetMixin):
+    __slots__ = tuple()
 
     def __iter__(self):
         set0, set1 = self._sets
@@ -751,6 +760,7 @@ class _SetIntersection_FiniteSet(_SetIntersection_InfiniteSet, _FiniteSetMixin):
 
 
 class _SetIntersection_OrderedSet(_SetIntersection_FiniteSet, _OrderedSetMixin):
+    __slots__ = tuple()
 
     def __getitem__(self, item):
         item = self._resolveItemNum(item)
@@ -781,6 +791,8 @@ class _SetIntersection_OrderedSet(_SetIntersection_FiniteSet, _OrderedSetMixin):
 ############################################################################
 
 class _SetDifference(_SetOperator):
+    __slots__ = tuple()
+
     def __new__(cls, set0, set1):
         if cls != _SetDifference:
             return super(_SetDifference, cls).__new__(cls)
@@ -796,12 +808,14 @@ class _SetDifference(_SetOperator):
 
 
 class _SetDifference_InfiniteSet(_SetDifference):
+    __slots__ = tuple()
 
     def __contains__(self, val):
         return val in self._sets[0] and not val in self._sets[1]
 
 
 class _SetDifference_FiniteSet(_SetDifference_InfiniteSet, _FiniteSetMixin):
+    __slots__ = tuple()
 
     def __iter__(self):
         set0, set1 = self._sets
@@ -815,6 +829,7 @@ class _SetDifference_FiniteSet(_SetDifference_InfiniteSet, _FiniteSetMixin):
 
 
 class _SetDifference_OrderedSet(_SetDifference_FiniteSet, _OrderedSetMixin):
+    __slots__ = tuple()
 
     def __getitem__(self, item):
         item = self._resolveItemNum(item)
@@ -846,6 +861,8 @@ class _SetDifference_OrderedSet(_SetDifference_FiniteSet, _OrderedSetMixin):
 ############################################################################
 
 class _SetSymmetricDifference(_SetOperator):
+    __slots__ = tuple()
+
     def __new__(cls, set0, set1):
         if cls != _SetSymmetricDifference:
             return super(_SetSymmetricDifference, cls).__new__(cls)
@@ -861,6 +878,7 @@ class _SetSymmetricDifference(_SetOperator):
 
 
 class _SetSymmetricDifference_InfiniteSet(_SetSymmetricDifference):
+    __slots__ = tuple()
 
     def __contains__(self, val):
         return (val in self._sets[0]) ^ (val in self._sets[1])
@@ -868,6 +886,7 @@ class _SetSymmetricDifference_InfiniteSet(_SetSymmetricDifference):
 
 class _SetSymmetricDifference_FiniteSet(_SetSymmetricDifference_InfiniteSet,
                                         _FiniteSetMixin):
+    __slots__ = tuple()
 
     def __iter__(self):
         set0, set1 = self._sets
@@ -885,6 +904,7 @@ class _SetSymmetricDifference_FiniteSet(_SetSymmetricDifference_InfiniteSet,
 
 class _SetSymmetricDifference_OrderedSet(_SetSymmetricDifference_FiniteSet,
                                          _OrderedSetMixin):
+    __slots__ = tuple()
 
     def __getitem__(self, item):
         item = self._resolveItemNum(item)
@@ -916,6 +936,8 @@ class _SetSymmetricDifference_OrderedSet(_SetSymmetricDifference_FiniteSet,
 ############################################################################
 
 class _SetProduct(_SetOperator):
+    __slots__ = tuple()
+
     def __new__(cls, set0, set1):
         if cls != _SetProduct:
             return super(_SetProduct, cls).__new__(cls)
@@ -931,6 +953,7 @@ class _SetProduct(_SetOperator):
 
 
 class _SetProduct_InfiniteSet(_SetProduct):
+    __slots__ = tuple()
 
     def __contains__(self, val):
         set0, set1 = self._sets
@@ -950,6 +973,7 @@ class _SetProduct_InfiniteSet(_SetProduct):
 
 
 class _SetProduct_FiniteSet(_SetProduct_InfiniteSet, _FiniteSetMixin):
+    __slots__ = tuple()
 
     def __iter__(self):
         return itertools.product(self._sets[0], self._sets[1])
@@ -962,6 +986,7 @@ class _SetProduct_FiniteSet(_SetProduct_InfiniteSet, _FiniteSetMixin):
 
 
 class _SetProduct_OrderedSet(_SetProduct_FiniteSet, _OrderedSetMixin):
+    __slots__ = tuple()
 
     def __getitem__(self, item):
         item = self._resolveItemNum(item)
