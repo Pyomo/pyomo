@@ -617,9 +617,6 @@ class _SetOperator(_SetData):
     def __init__(self, set0, set1):
         self._sets, self._implicit_subsets = self._processArgs(set0, set1)
 
-    def ranges(self):
-        return sum((s.ranges() for s in self._sets), ())
-
     def _processArgs(self, *sets):
         implicit = []
         ans = []
@@ -648,6 +645,21 @@ class _SetUnion(_SetOperator):
         else:
             cls = _SetUnion_InfiniteSet
         return cls.__new__(cls)
+
+    def ranges(self):
+        ans = list( self._sets[0].ranges() )
+        other = list( self._sets[1].ranges() )
+        while other:
+            ref = other.pop()
+            i = 0
+            while i < len(ans):
+                if not ref.isdisjoint(ans[i]):
+                    ref = ref.union(ans[i])
+                    ans.pop(i)
+                else:
+                    i += 1
+            ans.append(ref)
+        return ans
 
 class _SetUnion_InfiniteSet(_SetUnion):
     __slots__ = tuple()
@@ -733,6 +745,15 @@ class _SetIntersection(_SetData):
             cls = _SetIntersection_InfiniteSet
         return cls.__new__(cls)
 
+    def ranges(self):
+        ans = []
+        for a,b in itertools.product(
+                self._sets[0].ranges(), self._sets[1].ranges() ):
+            ref = a.intersection(b)
+            if ref is not None:
+                ans.append(ref)
+        return ans
+
 
 class _SetIntersection_InfiniteSet(_SetIntersection):
     __slots__ = tuple()
@@ -806,6 +827,17 @@ class _SetDifference(_SetOperator):
             cls = _SetDifference_InfiniteSet
         return cls.__new__(cls)
 
+    def ranges(self):
+        ans = []
+        for a in self._sets[0].ranges():
+            for b in self._sets[1].ranges():
+                a = a.difference(b)
+                if a is None:
+                    break
+            if a is not None:
+                ans.append(a)
+        return ans
+
 
 class _SetDifference_InfiniteSet(_SetDifference):
     __slots__ = tuple()
@@ -875,6 +907,18 @@ class _SetSymmetricDifference(_SetOperator):
         else:
             cls = _SetSymmetricDifference_InfiniteSet
         return cls.__new__(cls)
+
+    def ranges(self):
+        ans = []
+        for set_a, set_b in (self._sets, reversed(self._sets)):
+            for a in set_a:
+                for b in set_b:
+                    a = a.difference(b)
+                    if a is None:
+                        break
+                if a is not None:
+                    ans.append(a)
+        return ans
 
 
 class _SetSymmetricDifference_InfiniteSet(_SetSymmetricDifference):
