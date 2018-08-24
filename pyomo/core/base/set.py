@@ -366,6 +366,16 @@ class _FiniteSetMixin(object):
     def ordered(self):
         return self.sorted()
 
+    def bounds(self):
+        try:
+            lb = min(self)
+        except:
+            lb = None
+        try:
+            ub = max(self)
+        except:
+            ub = None
+        return lb,ub
 
 
 class _FiniteSetData(_SetData, _FiniteSetMixin):
