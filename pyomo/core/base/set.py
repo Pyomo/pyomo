@@ -133,7 +133,11 @@ class _SetData(ComponentData):
         return None
 
     def is_finite(self):
-        """Return True if this is a finite discrete (iterable) Set"""
+        """Returns True if this is a finite discrete (iterable) Set"""
+        return False
+
+    def is_ordered(self):
+        """Returns True if this is an ordered finite discrete (iterable) Set"""
         return False
 
     def __eq__(self, other):
@@ -335,7 +339,7 @@ class _FiniteSetMixin(object):
         return reversed(self.__iter__())
 
     def is_finite(self):
-        """Return True if this is a finite discrete (iterable) Set"""
+        """Returns True if this is a finite discrete (iterable) Set"""
         return True
 
     def data(self):
@@ -399,6 +403,10 @@ class _FiniteSetData(_SetData, _FiniteSetMixin):
 
 class _OrderedSetMixin(_FiniteSetMixin):
     __slots__ = ()
+
+    def is_ordered(self):
+        """Returns True if this is an ordered finite discrete (iterable) Set"""
+        return True
 
     def ordered(self):
         return self.data()
