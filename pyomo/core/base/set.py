@@ -1011,6 +1011,13 @@ class _SetProduct(_SetOperator):
             cls = _SetProduct_InfiniteSet
         return cls.__new__(cls)
 
+    def expand_crossproduct(self):
+        for s in self._sets:
+            if isinstance(s, _SetProduct):
+                for ss in s.expand_crossproduct():
+                    yield ss
+            else:
+                yield s
 
 class _SetProduct_InfiniteSet(_SetProduct):
     __slots__ = tuple()
