@@ -633,6 +633,8 @@ class _SetOperator(_SetData):
         for s in sets:
             if isinstance(a, _SetData):
                 ans.append(s)
+                if s.parent_block() is None:
+                    implicit.append(s)
             else:
                 ans.append(SetOf(s))
                 implicit.append(ans[-1])
