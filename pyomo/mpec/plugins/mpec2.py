@@ -11,7 +11,6 @@
 import logging
 from six import iterkeys
 
-from pyomo.common.plugin import alias
 from pyomo.core.expr import inequality
 from pyomo.core.base import (Transformation,
                              TransformationFactory,

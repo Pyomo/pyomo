@@ -10,7 +10,6 @@
 
 import logging
 
-from pyomo.common.plugin import alias
 from pyomo.core.base import (Transformation,
                              TransformationFactory,
                              Constraint,
