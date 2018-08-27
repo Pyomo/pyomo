@@ -27,6 +27,17 @@ try:
     _win32com=True
 except:
     _win32com=False #pragma:nocover
+
+if _win32com:
+    from pyutilib.excel.spreadsheet_win32com import ExcelSpreadsheet_win32com
+    tmp = ExcelSpreadsheet_win32com()
+    try:
+        tmp._excel_dispatch()
+        tmp._excel_quit()
+        _excel_available = True
+    except:
+        _excel_available = False
+
 try:
     import xlrd
     _xlrd=True
@@ -37,6 +48,7 @@ try:
     _openpyxl=True
 except:
     _openpyxl=False
+
 
 class PyomoTutorials(unittest.TestCase):
 
@@ -50,7 +62,7 @@ class PyomoTutorials(unittest.TestCase):
         pyutilib.misc.run_file(tutorial_dir+"data.py", logfile=currdir+"data.log", execdir=tutorial_dir)
         self.assertFileEqualsBaseline(currdir+"data.log", tutorial_dir+"data.out")
 
-    @unittest.skipIf(not (_win32com or _xlrd or _openpyxl), "Cannot real excel file.")
+    @unittest.skipIf(not ((_win32com and _excel_available) or _xlrd or _openpyxl), "Cannot read excel file.")
     def test_excel(self):
         pyutilib.misc.run_file(tutorial_dir+"excel.py", logfile=currdir+"excel.log", execdir=tutorial_dir)
         self.assertFileEqualsBaseline(currdir+"excel.log", tutorial_dir+"excel.out")
