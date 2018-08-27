@@ -29,7 +29,6 @@ from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter, WriterFactory
 from pyomo.repn.util import valid_expr_ctypes_minlp, \
     valid_active_ctypes_minlp
-import pyomo.common.plugin
 
 import logging
 
