@@ -8,8 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['GlpsolMIPConverter']
-
 import os
 import six
 
@@ -17,15 +15,11 @@ import pyutilib.subprocess
 import pyutilib.common
 import pyutilib.services
 from pyomo.opt.base import *
-from pyomo.common.plugin import *
+from pyomo.opt.base.convert import ProblemConverterFactory
 
 
-class GlpsolMIPConverter(SingletonPlugin):
-
-    implements(IProblemConverter)
-
-    def __init__(self,**kwds):
-        SingletonPlugin.__init__(self,**kwds)
+@ProblemConverterFactory.register('glpsol')
+class GlpsolMIPConverter(object):
 
     def can_convert(self, from_type, to_type):
         """Returns true if this object supports the specified conversion"""

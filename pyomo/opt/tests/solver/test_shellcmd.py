@@ -250,8 +250,6 @@ class TestSystemCallSolver(unittest.TestCase):
         try:
             for name in _test_names:
                 with SolverFactory(name, executable=isexe_nopath) as opt:
-                    if isinstance(opt, UnknownSolver):
-                        continue
                     self.assertEqual(opt._user_executable, isexe_abspath)
                     self.assertEqual(opt.executable(), isexe_abspath)
         finally:
@@ -263,24 +261,18 @@ class TestSystemCallSolver(unittest.TestCase):
     def test_SolverFactory_executable_isexe_relpath(self):
         for name in _test_names:
             with SolverFactory(name, executable=isexe_relpath) as opt:
-                if isinstance(opt, UnknownSolver):
-                    continue
                 self.assertEqual(opt._user_executable, isexe_abspath)
                 self.assertEqual(opt.executable(), isexe_abspath)
 
     def test_executable_isexe_abspath(self):
         for name in _test_names:
             with SolverFactory(name, executable=isexe_abspath) as opt:
-                if isinstance(opt, UnknownSolver):
-                    continue
                 self.assertEqual(opt._user_executable, isexe_abspath)
                 self.assertEqual(opt.executable(), isexe_abspath)
 
     def test_executable_isexe_abspath_user(self):
         for name in _test_names:
             with SolverFactory(name, executable=isexe_abspath_user) as opt:
-                if isinstance(opt, UnknownSolver):
-                    continue
                 self.assertEqual(opt._user_executable, isexe_abspath)
                 self.assertEqual(opt.executable(), isexe_abspath)
 

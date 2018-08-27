@@ -157,7 +157,7 @@ class SolverFactoryClass(Factory):
                 mode = kwds.get('solver_io', 'nl')
                 if mode is None:
                     mode = 'nl'
-                _implicit_solvers = {'nl': 'asl', 'os': '_ossolver' }
+                _implicit_solvers = {'nl': 'asl' }
                 if "executable" not in kwds:
                     kwds["executable"] = _name
                 if mode in _implicit_solvers:

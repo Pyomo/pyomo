@@ -8,28 +8,22 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['AmplMIPConverter']
-
 import os.path
-
 import pyutilib.subprocess
 import pyutilib.common
 import pyutilib.services
 
 from pyomo.opt.base import *
-from pyomo.common.plugin import *
+from pyomo.opt.base.convert import ProblemConverterFactory
 
 try:
     unicode
 except:
     basestring = unicode = str
 
-class AmplMIPConverter(SingletonPlugin):
 
-    implements(IProblemConverter)
-
-    def __init__(self,**kwds):
-        SingletonPlugin.__init__(self,**kwds)
+@ProblemConverterFactory.register('ampl')
+class AmplMIPConverter(object):
 
     def can_convert(self, from_type, to_type):
         """Returns true if this object supports the specified conversion"""

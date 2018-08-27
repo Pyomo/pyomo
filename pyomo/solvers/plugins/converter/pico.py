@@ -8,8 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['PicoMIPConverter']
-
 import six
 
 import os.path
@@ -19,15 +17,9 @@ import pyutilib.subprocess
 import pyutilib.services
 
 from pyomo.opt.base import *
-from pyomo.common.plugin import *
 
 
-class PicoMIPConverter(SingletonPlugin):
-
-    implements(IProblemConverter)
-
-    def __init__(self,**kwds):
-        SingletonPlugin.__init__(self,**kwds)
+class PicoMIPConverter(object):
 
     def can_convert(self, from_type, to_type):
         """Returns true if this object supports the specified conversion"""
