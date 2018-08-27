@@ -55,7 +55,7 @@ class PyomoTutorials(unittest.TestCase):
         pyutilib.misc.run_file(tutorial_dir+"data.py", logfile=currdir+"data.log", execdir=tutorial_dir)
         self.assertFileEqualsBaseline(currdir+"data.log", tutorial_dir+"data.out")
 
-    @unittest.skipIf(not (_win32com or _xlrd or _openpyxl or _pyodbc), "Cannot real excel file.")
+    @unittest.skipIf(not (_win32com or _xlrd or _openpyxl or _pyodbc), "Cannot read excel file.")
     def test_excel(self):
         pyutilib.misc.run_file(tutorial_dir+"excel.py", logfile=currdir+"excel.log", execdir=tutorial_dir)
         self.assertFileEqualsBaseline(currdir+"excel.log", tutorial_dir+"excel.out")
