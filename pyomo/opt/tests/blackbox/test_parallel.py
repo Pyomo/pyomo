@@ -20,11 +20,11 @@ currdir = dirname(abspath(__file__))+os.sep
 import pyutilib.th as unittest
 import pyutilib.services
 
-import pyomo.common.plugin
 import pyomo.opt
 import pyomo.opt.blackbox
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
+
 
 class TestProblem1(pyomo.opt.blackbox.MixedIntOptProblem):
 

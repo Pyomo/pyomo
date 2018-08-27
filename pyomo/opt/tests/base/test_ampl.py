@@ -45,11 +45,6 @@ class Test(unittest.TestCase):
     def tearDown(self):
         pyutilib.services.TempfileManager.clear_tempfiles()
         pyutilib.services.TempfileManager.tempdir = old_tempdir
-        #
-        # Reset all options
-        #
-        #for ep in pyomo.common.plugin.ExtensionPoint(pyomo.common.plugin.IOption):
-            #ep.reset()
 
     def test3_write_nl(self):
         """ Convert from AMPL to NL """

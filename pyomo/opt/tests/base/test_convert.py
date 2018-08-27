@@ -75,12 +75,6 @@ class OptConvertDebug(unittest.TestCase):
     def tearDown(self):
         pyutilib.services.TempfileManager.clear_tempfiles()
         pyutilib.services.TempfileManager.tempdir = old_tempdir
-        #
-        # Reset all options
-        #
-        #for ep in pyomo.common.plugin.ExtensionPoint(pyomo.common.plugin.IOption):
-            #ep.reset()
-        pass
 
     def test_nl_nl1(self):
         """ Convert from NL to NL """
