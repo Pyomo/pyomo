@@ -1707,7 +1707,7 @@ class ExternalFunctionExpression(ExpressionBase):
         return None
 
     def _apply_operation(self, result):
-        return self._fcn.evaluate( result )     #pragma: no cover
+        return self._fcn.evaluate( result )
 
     def _to_string(self, values, verbose, smap, compute_values):
         return "{0}({1})".format(self.getname(), ", ".join(values))
