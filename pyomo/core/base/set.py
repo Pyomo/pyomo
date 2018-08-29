@@ -707,6 +707,7 @@ class _SetOperator(_SetData):
     # Note: because None of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
 
+    @staticmethod()
     def _processArgs(self, *sets):
         implicit = []
         ans = []
@@ -729,7 +730,7 @@ class _SetUnion(_SetOperator):
         if cls != _SetUnion:
             return super(_SetUnion, cls).__new__(cls)
 
-        (set0, set1), implicit = self._processArgs(set0, set1)
+        (set0, set1), implicit = _SetOperator._processArgs(set0, set1)
         if set0.is_ordered() and set1.is_ordered():
             cls = _SetUnion_OrderedSet
         elif set0.is_finite() and set1.is_finite():
@@ -828,7 +829,7 @@ class _SetIntersection(_SetData):
         if cls != _SetUnion:
             return super(_SetUnion, cls).__new__(cls)
 
-        (set0, set1), implicit = self._processArgs(set0, set1)
+        (set0, set1), implicit = _SetOperator._processArgs(set0, set1)
         if set0.is_ordered() or set1.is_ordered():
             cls = _SetIntersection_OrderedSet
         elif set0.is_finite() or set1.is_finite():
@@ -914,7 +915,7 @@ class _SetDifference(_SetOperator):
         if cls != _SetDifference:
             return super(_SetDifference, cls).__new__(cls)
 
-        (set0, set1), implicit = self._processArgs(set0, set1)
+        (set0, set1), implicit = _SetOperator._processArgs(set0, set1)
         if set0.is_ordered():
             cls = _SetDifference_OrderedSet
         elif set0.is_finite():
@@ -995,7 +996,7 @@ class _SetSymmetricDifference(_SetOperator):
         if cls != _SetSymmetricDifference:
             return super(_SetSymmetricDifference, cls).__new__(cls)
 
-        (set0, set1), implicit = self._processArgs(set0, set1)
+        (set0, set1), implicit = _SetOperator._processArgs(set0, set1)
         if set0.is_ordered() and set1.is_ordered():
             cls = _SetSymmetricDifference_OrderedSet
         elif set0.is_finite() and set1.is_finite():
@@ -1082,7 +1083,7 @@ class _SetProduct(_SetOperator):
         if cls != _SetProduct:
             return super(_SetProduct, cls).__new__(cls)
 
-        (set0, set1), implicit = self._processArgs(set0, set1)
+        (set0, set1), implicit = _SetOperator._processArgs(set0, set1)
         if set0.is_ordered() and set1.is_ordered():
             cls = _SetProduct_OrderedSet
         elif set0.is_finite() and set1.is_finite():
