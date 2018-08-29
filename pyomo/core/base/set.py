@@ -767,8 +767,8 @@ class _SetUnion_FiniteSet(_SetUnion_InfiniteSet, _FiniteSetMixin):
     def __iter__(self):
         set0 = self._sets[0]
         return itertools.chain(
-            iter(set0)
-            _ for _ in self._sets[1] if _ not in set0
+            iter(set0),
+            (_ for _ in self._sets[1] if _ not in set0)
         )
 
     def __len__(self):
@@ -1148,7 +1148,7 @@ class _SetProduct_OrderedSet(_SetProduct_FiniteSet, _OrderedSetMixin):
             b = (b,)
         return a + b
 
-    def ord(self, item):
+    def ord(self, val):
         """
         Return the position index of the input value.
 
@@ -1179,5 +1179,5 @@ class _SetProduct_OrderedSet(_SetProduct_FiniteSet, _OrderedSetMixin):
         if _idx is None:
             raise IndexError(
                 "Cannot identify position of %s in Set %s: item not in Set"
-                % (item, self.name))
+                % (val, self.name))
         return (set0.ord(val[:_idx])-1) * len(set0) + set1.ord(val[_idx:])
