@@ -9,6 +9,7 @@
 
 __all__ = ['Set', 'set_options', 'simple_set_rule', 'SetOf']
 
+import itertools
 from sys import exc_info
 import logging
 
@@ -16,7 +17,8 @@ from pyutilib.misc.misc import flatten_tuple
 
 from pyomo.common.deprecation import deprecated
 from pyomo.common.errors import DeveloperError
-from pyomo.core.base.component import ComponentData
+from pyomo.core.base.component import Component, ComponentData
+from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import sorted_robust
 
 logger = logging.getLogger('pyomo.core')
