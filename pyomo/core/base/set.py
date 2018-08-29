@@ -454,6 +454,19 @@ class _FiniteSetData(_SetData, _FiniteSetMixin):
             raise TypeError("Unable to insert '%s' into set %s:\n\t%s: %s"
                             % (value, self.name, exc[0].__name__, exc[1]))
 
+    def remove(self, val):
+        self._values.remove(val)
+
+    def discard(self, val):
+        self._values.discard(val)
+
+    def clear(self):
+        self._values.clear()
+
+    def set_value(self, val):
+        self.clear()
+        for x in val:
+            self.add(x)
 
 class _OrderedSetMixin(_FiniteSetMixin):
     __slots__ = ()
@@ -612,6 +625,20 @@ class _OrderedSetData(_FiniteSetData, _OrderedSetMixin):
             exc = exc_info()
             raise TypeError("Unable to insert '%s' into set %s:\n\t%s: %s"
                             % (value, self.name, exc[0].__name__, exc[1]))
+
+    def remove(self, val):
+        idx = self._values.pop(val)
+        self._ordered_values.pop(idx)
+
+    def discard(self, val):
+        try:
+            self.remove(val)
+        except KeyError:
+            pass
+
+    def clear(self):
+        self._values.clear()
+        self._ordered_values.clear()
 
     def __getitem__(self, item):
         """
