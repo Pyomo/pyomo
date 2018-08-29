@@ -10,10 +10,10 @@
 
 __all__ = [ 'AbstractResultsReader', 'ReaderFactory' ]
 
-from pyomo.common.factory import Factory
+from pyomo.common.factory import CachedFactory
 
 
-ReaderFactory = Factory('problem reader')
+ReaderFactory = CachedFactory('problem reader')
 
 
 class AbstractResultsReader(object):
