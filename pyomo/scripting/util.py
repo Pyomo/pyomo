@@ -237,9 +237,6 @@ def apply_preprocessing(data, parser=None):
                     return self.fn(**kwds)
             tmp = TMP()
             data.local._usermodel_plugins.append( tmp )
-            #print "HERE", modelapi[key], pyomo.common.plugin.interface_services[modelapi[key]]
-
-    #print "HERE", data.options._usermodel_plugins
 
     if 'pyomo_preprocess' in usermodel_dir:
         if data.options.model.object_name in usermodel_dir:
