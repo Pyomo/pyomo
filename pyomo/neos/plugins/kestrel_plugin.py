@@ -16,7 +16,7 @@ from six.moves.xmlrpc_client import ProtocolError
 
 from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
-from pyomo.opt.base import SolverFactory, OptSolver
+from pyomo.opt.base import OptSolver
 from pyomo.core.base import Block
 import pyomo.neos.kestrel
 
@@ -38,7 +38,7 @@ def _neos_error(msg, results, current_message):
             logger.warn(line)
 
 
-@SolverFactory.register('neos', doc="Asynchronously execute solvers on the NEOS server")
+@SolverManagerFactory.register('neos', doc="Asynchronously execute solvers on the NEOS server")
 class SolverManager_NEOS(AsynchronousSolverManager):
 
     def clear(self):
