@@ -342,6 +342,18 @@ class _InfiniteSetData(_SetData):
                                  "_InfiniteRange objects" )
         self._ranges = ranges
 
+    def __getstate__(self):
+        """
+        This method must be defined because this class uses slots.
+        """
+        state = super(_InfiniteSetData, self).__getstate__()
+        for i in _InfiniteSetData.__slots__:
+            state[i] = getattr(self, i)
+        return state
+
+    # Note: because None of the slots on this class need to be edited,
+    # we don't need to implement a specialized __setstate__ method.
+
     def __contains__(self, val):
         for r in self._ranges:
             if val in r:
@@ -394,6 +406,18 @@ class _FiniteSetData(_SetData, _FiniteSetMixin):
             self._domain = Any
         else:
             self._domain = domain
+
+    def __getstate__(self):
+        """
+        This method must be defined because this class uses slots.
+        """
+        state = super(_FiniteSetData, self).__getstate__()
+        for i in _FiniteSetData.__slots__:
+            state[i] = getattr(self, i)
+        return state
+
+    # Note: because None of the slots on this class need to be edited,
+    # we don't need to implement a specialized __setstate__ method.
 
     def __contains__(self, item):
         """
@@ -541,6 +565,18 @@ class _OrderedSetData(_FiniteSetData, _OrderedSetMixin):
         self._ordered_values = []
         self._is_sorted = None
 
+    def __getstate__(self):
+        """
+        This method must be defined because this class uses slots.
+        """
+        state = super(_OrderedSetData, self).__getstate__()
+        for i in _OrderedSetData.__slots__:
+            state[i] = getattr(self, i)
+        return state
+
+    # Note: because None of the slots on this class need to be edited,
+    # we don't need to implement a specialized __setstate__ method.
+
     def __iter__(self):
         """
         Return an iterator for the set.
@@ -631,6 +667,18 @@ class _SetOperator(_SetData):
 
     def __init__(self, set0, set1):
         self._sets, self._implicit_subsets = self._processArgs(set0, set1)
+
+    def __getstate__(self):
+        """
+        This method must be defined because this class uses slots.
+        """
+        state = super(_SetOperator, self).__getstate__()
+        for i in _SetOperator.__slots__:
+            state[i] = getattr(self, i)
+        return state
+
+    # Note: because None of the slots on this class need to be edited,
+    # we don't need to implement a specialized __setstate__ method.
 
     def _processArgs(self, *sets):
         implicit = []
