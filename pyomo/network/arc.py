@@ -17,7 +17,6 @@ from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.plugin import (ModelComponentFactory,
     IPyomoScriptModifyInstance, TransformationFactory)
-from pyomo.common.plugin import Plugin, implements
 from pyomo.common.timing import ConstructionTimer
 from six import iteritems
 from weakref import ref as weakref_ref
