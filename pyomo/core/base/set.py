@@ -120,7 +120,10 @@ def simple_set_rule( fn ):
 
 # A trivial class that we can use to test if an object is a "legitimate"
 # set (either SimpleSet, or a member of an IndexedSet)
-class _SetData(ComponentData):
+class _SetDataBase(ComponentData):
+    pass
+
+class _SetData(_SetDataBase):
     """The base for all objects that can be used as a component indexing set.
 
     Derived versions of this class can be used as the Index for any
@@ -633,7 +636,7 @@ class _SetOperator(_SetData):
         implicit = []
         ans = []
         for s in sets:
-            if isinstance(a, _SetData):
+            if isinstance(s, _SetDataBase):
                 ans.append(s)
                 if s.parent_block() is None:
                     implicit.append(s)
