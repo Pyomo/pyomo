@@ -301,19 +301,19 @@ class _SetData(_SetDataBase):
     __mul__ = cross
 
     def __ror__(self, other):
-        return SetOf(other) | self
+        return Set(initialize=other) | self
 
     def __rand__(self, other):
-        return SetOf(other) & self
+        return Set(initialize=other) & self
 
     def __rsub__(self, other):
-        return SetOf(other) - self
+        return Set(initialize=other) - self
 
     def __rxor__(self, other):
-        return SetOf(other) ^ self
+        return Set(initialize=other) ^ self
 
     def __rmul__(self, other):
-        return SetOf(other) * self
+        return Set(initialize=other) * self
 
     def __lt__(self,other):
         """
@@ -689,7 +689,7 @@ class _SetOperator(_SetData):
                 if s.parent_block() is None:
                     implicit.append(s)
             else:
-                ans.append(SetOf(s))
+                ans.append(Set(initialize=s))
                 implicit.append(ans[-1])
         return tuple(ans), tuple(implicit)
 
