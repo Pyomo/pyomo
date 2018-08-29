@@ -57,6 +57,7 @@ __all__ = (
 'NPV_SumExpression',
 'NPV_UnaryFunctionExpression',
 'NPV_AbsExpression',
+'GenericExpressionVisitor',
 'SimpleExpressionVisitor',
 'ExpressionValueVisitor',
 'ExpressionReplacementVisitor',
@@ -287,7 +288,7 @@ class GenericExpressionVisitor(object):
 
         afterChild() is called by a node for every child node
         immediately after processing the node is complete before control
-        moves to the next child or up to tge parent node.  The node and
+        moves to the next child or up to the parent node.  The node and
         child node are passed, and nothing is returned.  If afterChild
         is not specified, no action takes place.
 
@@ -355,18 +356,25 @@ class GenericExpressionVisitor(object):
                 args = ()
             else:
                 args = expr.args
-        ptr = (None, expr, args, data, len(args), 0)
-        node = ptr[1]
+        node = expr
+        child_idx = 0
+        ptr = (None, node, args, data, len(args), child_idx)
 
         while 1:
-            i = ptr[5]
-            if i < ptr[4]:
+            if child_idx < ptr[4]:
                 # This node still has children to process
-                child = ptr[2][i]
-                # Update the child argument counter.  Because we are
-                # using tuples, we need to recreate the "ptr" object
-                # (linked list node)
-                ptr = ptr[:5] + (i+1,)
+                child = ptr[2][child_idx]
+                # Increment the child index pointer here for
+                # consistency.  Note that this means that for the bulk
+                # of the time, 'child_idx' is actually the index of the
+                # *next* child to be processed, and will not match the
+                # value of ptr[5].  This provides a modest performance
+                # improvement, as we only have to recreate the ptr tuple
+                # just before we descend further into the tree (i.e., we
+                # avoid recreating the tuples for the special case where
+                # beforeChild indicates that we should not descend
+                # further).
+                child_idx += 1
 
                 # Notify this node that we are about to descend into a
                 # child.
@@ -393,6 +401,11 @@ class GenericExpressionVisitor(object):
                         # next child node
                         continue
 
+                # Update the child argument counter in the stack.
+                # Because we are using tuples, we need to recreate the
+                # "ptr" object (linked list node)
+                ptr = ptr[:5] + (child_idx,)
+
                 # We are now going to actually enter this node.  The
                 # node will tell us the list of its child nodes that we
                 # need to process
@@ -414,8 +427,9 @@ class GenericExpressionVisitor(object):
                         args = ()
                     else:
                         args = child.args
-                ptr = (ptr, child, args, data, len(args), 0)
                 node = child
+                child_idx = 0
+                ptr = (ptr, node, args, data, len(args), child_idx)
 
             else:
                 # We are done with this node.  Call exitNode to compute
@@ -437,6 +451,7 @@ class GenericExpressionVisitor(object):
                 # Not done yet, update node to point to the new active
                 # node
                 node, child = ptr[1], node
+                child_idx = ptr[5]
 
                 # We need to alert the node to accept the child's result:
                 if self.acceptData is not None:
