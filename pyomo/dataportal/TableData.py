@@ -13,7 +13,6 @@ __all__ = ['TableData']
 from six.moves import xrange
 
 from pyutilib.misc import Options
-from pyomo.common.plugin import Plugin, implements
 from pyomo.dataportal.process_data import _process_data
 
 
