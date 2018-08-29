@@ -9,18 +9,19 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.deprecation import deprecated
-from pyomo.common.plugin import Plugin, implements
-from pyomo.core import IPyomoScriptModifyInstance, TransformationFactory
+from pyomo.core import TransformationFactory
 
 # This import ensures that gdp.bigm is registered, even if pyomo.environ
 # was never imported.
 import pyomo.gdp.plugins.bigm
 
+#
+# TODO - Should we keep this plugin?
+#
+@TransformationFactory.register("gdp._bigm")
 @deprecated('The GDP Pyomo script plugins are deprecated.  '
             'Use BuildActions or the --transform option.')
-class BigM_Transformation_PyomoScript_Plugin(Plugin):
-
-    implements(IPyomoScriptModifyInstance, service=True)
+class BigM_Transformation_PyomoScript_Plugin(object):
 
     def apply(self, **kwds):
         instance = kwds.pop('instance')

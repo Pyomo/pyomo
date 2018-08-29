@@ -9,22 +9,23 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.deprecation import deprecated
-from pyomo.common.plugin import Plugin, implements
-from pyomo.core import IPyomoScriptModifyInstance, TransformationFactory
+from pyomo.core import TransformationFactory
 
 # This import ensures that gdp.chull is registered, even if pyomo.environ
 # was never imported.
 import pyomo.gdp.plugins.chull
 
+#
+# TODO - Should we keep this transformation???
+#
+@TransformationFactory.register("gdp._chull")
 @deprecated('The GDP Pyomo script plugins are deprecated.  '
             'Use BuildActions or the --transform option.')
-class ConvexHull_Transformation_PyomoScript_Plugin(Plugin):
+class ConvexHull_Transformation_PyomoScript_Plugin(object):
     """Plugin to automatically call the GDP Convex Hull relaxation within
     the Pyomo script.
 
     """
-
-    implements(IPyomoScriptModifyInstance, service=True)
 
     def apply(self, **kwds):
         instance = kwds.pop('instance')

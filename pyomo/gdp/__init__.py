@@ -8,9 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.plugin import PluginGlobals
-PluginGlobals.add_env("pyomo")
-
 from pyomo.gdp.disjunct import GDP_Error, Disjunct, Disjunction
 
 # Do not import these files: importing them registers the transformation
@@ -18,4 +15,3 @@ from pyomo.gdp.disjunct import GDP_Error, Disjunct, Disjunction
 #import pyomo.gdp.bigm
 #import pyomo.gdp.chull
 
-PluginGlobals.pop_env()
