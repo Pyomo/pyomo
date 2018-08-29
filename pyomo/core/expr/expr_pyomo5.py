@@ -261,7 +261,7 @@ class GenericExpressionVisitor(object):
         enterNode()), and is expected to return the "result" for this
         node.  If not specified, the default action is to return the
         data object from enterNode().
- 
+
     descend, child_result = beforeChild(self, node, child):
 
         beforeChild() is called by a node for every child before
@@ -1062,7 +1062,7 @@ class _EvaluateConstantExpressionVisitor(ExpressionValueVisitor):
             if node._component()._mutable:
                 raise FixedExpressionError()
             return True, value(node)
-                
+
 
         if node.is_variable_type():
             if node.fixed:
@@ -1685,7 +1685,7 @@ class ExpressionBase(NumericValue):
             self.__class__ = self.__class__.__mro__[1]
 
         Note that this method is allowed to modify the current object
-        and return it.  But in some cases it may create a new 
+        and return it.  But in some cases it may create a new
         potentially variable object.
 
         Returns:
@@ -1742,7 +1742,7 @@ class ExpressionBase(NumericValue):
         a variable expression.
 
         This method returns :const:`True` when (a) the expression
-        tree contains one or more variables, or (b) the expression 
+        tree contains one or more variables, or (b) the expression
         tree contains a named expression. In both cases, the
         expression cannot be treated as constant since (a) the variables
         may not be fixed, or (b) the named expressions may be changed
@@ -2372,19 +2372,19 @@ class SumExpressionBase(_LinearOperatorExpression):
     """
     A base class for simple summation of expressions
 
-    The class hierarchy for summation is different than for other 
-    expression types.  For example, ProductExpression defines 
+    The class hierarchy for summation is different than for other
+    expression types.  For example, ProductExpression defines
     the class for representing binary products, and sub-classes are
     specializations of that class.
 
-    By contrast, the SumExpressionBase is not directly used to 
-    represent expressions.  Rather, this base class provides 
+    By contrast, the SumExpressionBase is not directly used to
+    represent expressions.  Rather, this base class provides
     commonly used methods and data.  The reason is that some
     subclasses of SumExpressionBase are binary while others
     are n-ary.
 
     Thus, developers will need to treat checks for summation
-    classes differently, depending on whether the binary/n-ary 
+    classes differently, depending on whether the binary/n-ary
     operations are different.
     """
 
