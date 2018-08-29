@@ -1,7 +1,7 @@
 Base Object Storage Interface
 =============================
 
-.. automodule:: pyomo.core.kernel.component_interface
+.. automodule:: pyomo.core.kernel.base
    :show-inheritance:
    :members:
    :private-members:

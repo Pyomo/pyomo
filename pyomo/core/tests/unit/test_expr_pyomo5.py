@@ -25,15 +25,15 @@ import pyutilib.th as unittest
 from pyutilib.th import nottest
 
 from pyomo.environ import *
+import pyomo.kernel
 from pyomo.core.expr import expr_common
 from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel import expression, expression_dict, variable, expression, objective
-from pyomo.core.expr.numvalue import potentially_variable, native_types, nonpyomo_leaf_types
+from pyomo.core.expr.numvalue import native_types, nonpyomo_leaf_types, NumericConstant, as_numeric, is_potentially_variable
 from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.param import _ParamData, SimpleParam
 from pyomo.core.base.label import *
 from pyomo.core.base.template_expr import IndexTemplate
-
+from pyomo.core.expr.expr_errors import TemplateExpressionError
 
 
 class TestExpression_EvaluateNumericConstant(unittest.TestCase):
@@ -4554,6 +4554,8 @@ class TestIsFixedIsConstant(unittest.TestCase):
         self.model.c = Param(initialize=1, mutable=True)
         self.model.d = Param(initialize=d_fn, mutable=True)
         self.model.e = Param(initialize=d_fn, mutable=False)
+        self.model.f = Param(initialize=0, mutable=True)
+        self.model.g = Var(initialize=0)
         self.instance = self.model.create_instance()
 
     def tearDown(self):
@@ -4581,7 +4583,7 @@ class TestIsFixedIsConstant(unittest.TestCase):
         expr = self.instance.e + self.instance.e
         self.assertEqual(is_fixed(expr), True)
         self.assertEqual(is_constant(expr), True)
-        self.assertEqual(potentially_variable(expr), False)
+        self.assertEqual(is_potentially_variable(expr), False)
         #
         # Sum of unfixed variables:  not fixed, not constant, pvar
         #
@@ -4697,6 +4699,13 @@ class TestIsFixedIsConstant(unittest.TestCase):
         self.assertEqual(expr.is_constant(), False)
         self.assertEqual(expr.is_potentially_variable(), True)
         #
+        # Product of unfixed variable and zero parameter: fixed, not constant, pvar
+        #
+        expr = self.instance.f * self.instance.b
+        self.assertEqual(expr.is_fixed(), True)
+        self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr.is_potentially_variable(), True)
+        #
         # Product of unfixed variables:  not fixed, not constant, pvar
         #
         expr = self.instance.a * self.instance.b
@@ -4717,6 +4726,15 @@ class TestIsFixedIsConstant(unittest.TestCase):
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
         self.instance.a.fixed = False
+        self.assertEqual(expr.is_potentially_variable(), True)
+        #
+        # Product of unfixed variable and fixed zero variable: fixed, not constant, pvar
+        #
+        expr = self.instance.a * self.instance.g
+        self.instance.a.fixed = False
+        self.instance.g.fixed = True
+        self.assertEqual(expr.is_fixed(), True)
+        self.assertEqual(expr.is_constant(), False)
         self.assertEqual(expr.is_potentially_variable(), True)
 
         #
@@ -5008,24 +5026,19 @@ class TestIsFixedIsConstant(unittest.TestCase):
         m.x = Expression()
         e = m.x
         self.assertEqual(e.is_potentially_variable(), True)
-        self.assertEqual(potentially_variable(e), True)
+        self.assertEqual(is_potentially_variable(e), True)
 
         e = m.x + 1
         self.assertEqual(e.is_potentially_variable(), True)
-        self.assertEqual(potentially_variable(e), True)
+        self.assertEqual(is_potentially_variable(e), True)
 
         e = m.x**2
         self.assertEqual(e.is_potentially_variable(), True)
-        self.assertEqual(potentially_variable(e), True)
+        self.assertEqual(is_potentially_variable(e), True)
 
         e = m.x**2/(m.x + 1)
         self.assertEqual(e.is_potentially_variable(), True)
-        self.assertEqual(potentially_variable(e), True)
-
-    def test_misc(self):
-        self.assertEqual(potentially_variable(0), False)
-        self.assertEqual(potentially_variable('a'), False)
-        self.assertEqual(potentially_variable(None), False)
+        self.assertEqual(is_potentially_variable(e), True)
 
     def test_external_func(self):
         m = ConcreteModel()
@@ -5881,14 +5894,14 @@ class TestNamedExpressionDuckTyping(unittest.TestCase):
         self.check_api(M.e[0])
 
     def test_expression(self):
-        x = variable()
-        e = expression()
+        x = pyomo.kernel.variable()
+        e = pyomo.kernel.expression()
         e.expr = x
         self.check_api(e)
 
     def test_objective(self):
-        x = variable()
-        e = objective()
+        x = pyomo.kernel.variable()
+        e = pyomo.kernel.objective()
         e.expr = x
         self.check_api(e)
 
@@ -5933,7 +5946,7 @@ class TestNumValueDuckTyping(unittest.TestCase):
         self.check_api(M.x[0])
 
     def test_variable(self):
-        x = variable()
+        x = pyomo.kernel.variable()
         self.check_api(x)
 
 
@@ -6410,8 +6423,6 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertRaises(EXPR.FixedExpressionError, EXPR.evaluate_expression, e, constant=True)
 
     def test_template_expr(self):
-        from pyomo.core.expr.current import TemplateExpressionError
-
         m = ConcreteModel()
         m.I = RangeSet(1,9)
         m.x = Var(m.I, initialize=lambda m,i: i+1)

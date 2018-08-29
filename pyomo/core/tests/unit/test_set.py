@@ -2979,6 +2979,8 @@ class TestSetErrors(PyomoModel):
             self.fail("test_getitem - cannot index an unordered set")
         except ValueError:
             pass
+        except IndexError:
+            pass
 
     def test_eq(self):
         a=Set(dimen=1,name="a",initialize=[1,2])

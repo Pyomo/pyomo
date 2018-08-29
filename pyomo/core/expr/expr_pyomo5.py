@@ -61,7 +61,6 @@ __all__ = (
 'ExpressionValueVisitor',
 'ExpressionReplacementVisitor',
 'LinearDecompositionError',
-'TemplateExpressionError',
 'SumExpressionBase',
 '_MutableSumExpression',    # This should not be referenced, except perhaps while testing code
 '_MutableLinearExpression',     # This should not be referenced, except perhaps while testing code
@@ -109,14 +108,7 @@ from pyomo.core.expr.expr_common import \
      _imul, _idiv, _ipow, _lt, _le,
      _eq)
 from pyomo.core.expr import expr_common as common
-
-
-class TemplateExpressionError(ValueError):
-
-    def __init__(self, template, *args, **kwds):
-        self.template = template
-        super(TemplateExpressionError, self).__init__(*args, **kwds)
-
+from pyomo.core.expr.expr_errors import TemplateExpressionError
 
 
 if _using_chained_inequality:               #pragma: no cover
@@ -1949,7 +1941,7 @@ class ExternalFunctionExpression(ExpressionBase):
         return None
 
     def _apply_operation(self, result):
-        return self._fcn.evaluate( result )     #pragma: no cover
+        return self._fcn.evaluate( result )
 
     def _to_string(self, values, verbose, smap, compute_values):
         return "{0}({1})".format(self.getname(), ", ".join(values))
@@ -2050,6 +2042,17 @@ class ProductExpression(ExpressionBase):
 
     def getname(self, *args, **kwds):
         return 'prod'
+
+    def _is_fixed(self, args):
+        # Anything times 0 equals 0, so one of the children is
+        # fixed and has a value of 0, then this expression is fixed
+        assert(len(args) == 2)
+        if all(args):
+            return True
+        for i in (0, 1):
+            if args[i] and value(self._args_[i]) == 0:
+                return True
+        return False
 
     def _apply_operation(self, result):
         _l, _r = result
@@ -2652,7 +2655,7 @@ class Expr_ifExpression(ExpressionBase):
     def _is_fixed(self, args):
         assert(len(args) == 3)
         if args[0]: #self._if.is_constant():
-            if self._if():
+            if value(self._if):
                 return args[1] #self._then.is_constant()
             else:
                 return args[2] #self._else.is_constant()
@@ -2678,7 +2681,7 @@ class Expr_ifExpression(ExpressionBase):
         _if, _then, _else = result
         if _if == 0:
             try:
-                return _then if self._if() else _else
+                return _then if value(self._if) else _else
             except ValueError:
                 pass
         return None
@@ -3099,15 +3102,16 @@ def _decompose_linear_terms(expr, multiplier=1):
 
 
 def _process_arg(obj):
-    if obj.__class__ is NumericConstant:
-        return value(obj)
-
     try:
         if obj.is_parameter_type() and not obj._component()._mutable and obj._constructed:
             # Return the value of an immutable SimpleParam or ParamData object
             return obj()
+
+        elif obj.__class__ is NumericConstant:
+            return obj.value
+
         return obj
-    except:
+    except AttributeError:
         if obj.is_indexed():
             raise TypeError(
                     "Argument for expression is an indexed numeric "

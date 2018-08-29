@@ -40,9 +40,9 @@ from pyomo.core.base.param import _ParamData
 from pyomo.core.base.numvalue import (NumericConstant,
                                       native_numeric_types,
                                       is_fixed)
-from pyomo.core.kernel.component_expression import IIdentityExpression, expression, noclone
-from pyomo.core.kernel.component_variable import IVariable
-from pyomo.core.kernel.component_objective import objective
+from pyomo.core.kernel.expression import IIdentityExpression, expression, noclone
+from pyomo.core.kernel.variable import IVariable
+from pyomo.core.kernel.objective import objective
 
 import six
 from six import iteritems
@@ -58,7 +58,7 @@ logger = logging.getLogger('pyomo.core')
 using_py3 = six.PY3
 
 from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
-from pyomo.core.kernel.component_variable import IVariable, variable
+from pyomo.core.kernel.variable import IVariable, variable
 
 
 #

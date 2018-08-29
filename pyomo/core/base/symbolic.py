@@ -14,6 +14,7 @@ from pyomo import core
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr import native_types
 from pyomo.common import DeveloperError
+from pyomo.core.expr.numvalue import value
 
 _sympy_available = True
 try:
@@ -53,6 +54,7 @@ try:
         sympy.atanh: lambda x: core.atanh(x),
         sympy.ceiling: lambda x: core.ceil(x),
         sympy.floor: lambda x: core.floor(x),
+        sympy.sqrt: lambda x: core.sqrt(x),
         sympy.Derivative: _nondifferentiable,
     }
 
@@ -74,6 +76,7 @@ try:
         'atanh': sympy.atanh,
         'ceil': sympy.ceiling,
         'floor': sympy.floor,
+        'sqrt': sympy.sqrt,
     }
 except ImportError: #pragma:nocover
     _sympy_available = False

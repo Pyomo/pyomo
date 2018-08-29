@@ -8,104 +8,227 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.environ
 from pyomo.version import version_info, __version__
+
+#
+# Load solver functionality
+#
+import pyomo.environ
 import pyomo.opt
 from pyomo.opt import (SolverFactory,
                        SolverStatus,
                        TerminationCondition)
-from pyomo.kernel.util import pprint
-from pyomo.core.kernel import *
 
-# set up the Block ctype
-from pyomo.core.base import Block
-block._ctype = Block
-block_tuple._ctype = Block
-block_list._ctype = Block
-block_dict._ctype = Block
-tiny_block._ctype = Block
-del Block
+#
+# Define the modeling namespace
+#
+from pyomo.core.expr import *
+import pyomo.core.kernel
+from pyomo.kernel.util import (generate_names,
+                               pprint)
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.core.kernel.variable import \
+    (variable,
+     variable_tuple,
+     variable_list,
+     variable_dict)
+from pyomo.core.kernel.constraint import \
+    (constraint,
+     linear_constraint,
+     constraint_tuple,
+     constraint_list,
+     constraint_dict)
+from pyomo.core.kernel.matrix_constraint import \
+    matrix_constraint
+from pyomo.core.kernel.parameter import \
+    (parameter,
+     parameter_tuple,
+     parameter_list,
+     parameter_dict)
+from pyomo.core.kernel.expression import \
+    (noclone,
+     expression,
+     data_expression,
+     expression_tuple,
+     expression_list,
+     expression_dict)
+from pyomo.core.kernel.objective import \
+    (maximize,
+     minimize,
+     objective,
+     objective_tuple,
+     objective_list,
+     objective_dict)
+from pyomo.core.kernel.sos import \
+    (sos,
+     sos1,
+     sos2,
+     sos_tuple,
+     sos_list,
+     sos_dict)
+from pyomo.core.kernel.suffix import \
+    (suffix,
+     export_suffix_generator,
+     import_suffix_generator,
+     local_suffix_generator,
+     suffix_generator)
+from pyomo.core.kernel.block import \
+    (block,
+     block_tuple,
+     block_list,
+     block_dict)
+from pyomo.core.kernel.piecewise_library.transforms import \
+    piecewise
+from pyomo.core.kernel.piecewise_library.transforms_nd import \
+    piecewise_nd
+from pyomo.core.kernel.set_types import \
+    (RealSet,
+     IntegerSet,
+     Reals,
+     PositiveReals,
+     NonPositiveReals,
+     NegativeReals,
+     NonNegativeReals,
+     PercentFraction,
+     UnitInterval,
+     Integers,
+     PositiveIntegers,
+     NonPositiveIntegers,
+     NegativeIntegers,
+     NonNegativeIntegers,
+     Boolean,
+     Binary,
+     RealInterval,
+     IntegerInterval)
 
-# set up the Var ctype
-from pyomo.core.base import Var
-variable._ctype = Var
-variable_tuple._ctype = Var
-variable_list._ctype = Var
-variable_dict._ctype = Var
-del Var
+#
+# allow the use of standard kernel modeling components
+# as the ctype argument for the general iterator method
+#
 
-# set up the Constraint ctype
-from pyomo.core.base import Constraint
-from pyomo.core.kernel.component_matrix_constraint \
-    import _MatrixConstraintData
-constraint._ctype = Constraint
-linear_constraint._ctype = Constraint
-constraint_tuple._ctype = Constraint
-constraint_list._ctype = Constraint
-constraint_dict._ctype = Constraint
-_MatrixConstraintData._ctype = Constraint
-matrix_constraint._ctype = Constraint
-del _MatrixConstraintData
-del Constraint
+from pyomo.core.kernel.base import _convert_ctype
+_convert_ctype[block] = \
+    pyomo.core.kernel.block.IBlock
+_convert_ctype[variable] = \
+    pyomo.core.kernel.variable.IVariable
+_convert_ctype[constraint] = \
+    pyomo.core.kernel.constraint.IConstraint
+_convert_ctype[parameter] = \
+    pyomo.core.kernel.parameter.IParameter
+_convert_ctype[expression] = \
+    pyomo.core.kernel.expression.IExpression
+_convert_ctype[objective] = \
+    pyomo.core.kernel.objective.IObjective
+_convert_ctype[sos] = \
+    pyomo.core.kernel.sos.ISOS
+_convert_ctype[suffix] = \
+    pyomo.core.kernel.suffix.ISuffix
+del _convert_ctype
 
-# set up the Param ctype
-from pyomo.core.base import Param
-parameter._ctype = Param
-parameter_tuple._ctype = Param
-parameter_list._ctype = Param
-parameter_dict._ctype = Param
-del Param
+#
+#
+# Hacks needed for this interface to work with Pyomo solvers
+#
+#
 
-# set up the Expression ctype
-from pyomo.core.base import Expression
-expression._ctype = Expression
-data_expression._ctype = Expression
-expression_tuple._ctype = Expression
-expression_list._ctype = Expression
-expression_dict._ctype = Expression
-del Expression
+#
+# Set up mappings between AML and Kernel ctypes
+#
 
-# set up the Objective ctype
-from pyomo.core.base import Objective
-objective._ctype = Objective
-objective_tuple._ctype = Objective
-objective_list._ctype = Objective
-objective_dict._ctype = Objective
-del Objective
-
-# set up the SOSConstraint ctype
-from pyomo.core.base import SOSConstraint
-sos._ctype = SOSConstraint
-sos_tuple._ctype = SOSConstraint
-sos_list._ctype = SOSConstraint
-sos_dict._ctype = SOSConstraint
-del SOSConstraint
-
-# set up the Suffix ctype
-from pyomo.core.base import Suffix
-suffix._ctype = Suffix
-del Suffix
+from pyomo.core.kernel.base import _convert_ctype
+_convert_ctype[pyomo.environ.Block] = \
+    pyomo.core.kernel.block.IBlock
+_convert_ctype[pyomo.environ.Var] = \
+    pyomo.core.kernel.variable.IVariable
+_convert_ctype[pyomo.environ.Constraint] = \
+    pyomo.core.kernel.constraint.IConstraint
+_convert_ctype[pyomo.environ.Param] = \
+    pyomo.core.kernel.parameter.IParameter
+_convert_ctype[pyomo.environ.Expression] = \
+    pyomo.core.kernel.expression.IExpression
+_convert_ctype[pyomo.environ.Objective] = \
+    pyomo.core.kernel.objective.IObjective
+_convert_ctype[pyomo.environ.SOSConstraint] = \
+    pyomo.core.kernel.sos.ISOS
+_convert_ctype[pyomo.environ.Suffix] = \
+    pyomo.core.kernel.suffix.ISuffix
+del _convert_ctype
 
 #
 # Now cleanup the namespace a bit
 #
-import pyomo.core.kernel.component_piecewise.util as \
+
+import pyomo.core.kernel.piecewise_library.util as \
     piecewise_util
-del component_interface
-del component_map
-del component_set
-del component_dict
-del component_tuple
-del component_list
-del component_block
-del component_variable
-del component_constraint
-del component_objective
-del component_expression
-del component_parameter
-del component_piecewise
-del component_sos
-del component_suffix
-del component_matrix_constraint
 del util
 del pyomo
+
+#
+# Ducktyping to work with a solver interfaces. Ideally,
+# everything below here could be deleted one day.
+#
+from pyomo.core.kernel.heterogeneous_container import IHeterogeneousContainer
+def _component_data_objects(self, *args, **kwds):
+    # this is not yet handled
+    kwds.pop('sort', None)
+    for component in self.components(*args, **kwds):
+        yield component
+IHeterogeneousContainer.component_data_objects = \
+    _component_data_objects
+del _component_data_objects
+
+def _component_objects(self, *args, **kwds):
+    # this is not yet handled
+    kwds.pop('sort', None)
+    # not handled
+    assert kwds.pop('descent_order', None) is None
+    active = kwds.pop('active', None)
+    descend_into = kwds.pop('descend_into', True)
+    if not descend_into:
+        assert active in (None, True)
+        # if not active, then nothing below is active
+        if (active is not None) and \
+           (not self.active):
+            return
+        items = (self,)
+    else:
+        items = self.heterogeneous_containers(active=active,
+                                              descend_into=True)
+    for item in items:
+        for child in item.children(*args, **kwds):
+            yield child
+IHeterogeneousContainer.component_objects = \
+    _component_objects
+del _component_objects
+del IHeterogeneousContainer
+
+def _block_data_objects(self, **kwds):
+    # this is not yet handled
+    kwds.pop('sort', None)
+    active = kwds.get("active", None)
+    assert active in (None, True)
+    # if not active, then nothing below is active
+    if (active is not None) and \
+       (not self.active):
+        return
+    yield self
+    for component in self.components(
+            ctype=self.ctype,
+            **kwds):
+        yield component
+block.block_data_objects = _block_data_objects
+del _block_data_objects
+
+# Note sure where this gets used or why we need it
+def _valid_problem_types(self):
+    import pyomo.opt
+    return [pyomo.opt.base.ProblemFormat.pyomo]
+block.valid_problem_types = _valid_problem_types
+del _valid_problem_types
+
+from pyomo.core.kernel.base import ICategorizedObject
+def _type(self):
+    return self._ctype
+ICategorizedObject.type = _type
+del ICategorizedObject

@@ -765,7 +765,7 @@ class Var(IndexedComponent):
                  )
 
 class SimpleVar(_GeneralVarData, Var):
-    """"A single variable."""
+    """A single variable."""
 
     def __init__(self, *args, **kwd):
         _GeneralVarData.__init__(self,

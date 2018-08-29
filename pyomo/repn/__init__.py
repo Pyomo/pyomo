@@ -11,7 +11,6 @@
 from pyomo.common.plugin import PluginGlobals
 PluginGlobals.add_env("pyomo")
 
-import pyomo.repn.collect
 from pyomo.repn.standard_repn import *
 from pyomo.repn.standard_aux import *
 

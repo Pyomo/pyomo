@@ -12,10 +12,16 @@
 import os
 import time
 import subprocess
-try:
-    from collections import OrderedDict
-except ImportError:                         #pragma:nocover
-    from ordereddict import OrderedDict
+import sys
+import collections
+if sys.version_info[:2] >= (3,6):
+    _ordered_dict_ = dict
+else:
+    try:
+        _ordered_dict_ = collections.OrderedDict
+    except ImportError:                         #pragma:nocover
+        import ordereddict
+        _ordered_dict_ = ordereddict.OrderedDict
 
 from pyutilib.pyro import using_pyro3, using_pyro4
 from pyomo.pysp.util.misc import (_get_test_nameserver,
@@ -153,16 +159,16 @@ def _PerBundleChained_noargs(worker, bundle):
 
 class _ScenarioTreeManagerTesterBase(object):
 
-    _bundle_dict3 = OrderedDict()
+    _bundle_dict3 = _ordered_dict_()
     _bundle_dict3['Bundle1'] = ['Scenario1']
     _bundle_dict3['Bundle2'] = ['Scenario2']
     _bundle_dict3['Bundle3'] = ['Scenario3']
 
-    _bundle_dict2 = OrderedDict()
+    _bundle_dict2 = _ordered_dict_()
     _bundle_dict2['Bundle1'] = ['Scenario1', 'Scenario2']
     _bundle_dict2['Bundle2'] = ['Scenario3']
 
-    _bundle_dict1 = OrderedDict()
+    _bundle_dict1 = _ordered_dict_()
     _bundle_dict1['Bundle1'] = ['Scenario1','Scenario2','Scenario3']
 
     @unittest.nottest

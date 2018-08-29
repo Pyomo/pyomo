@@ -1,7 +1,9 @@
+.. _disjunctstart:
+
 Disjunctions
 ============
 
-This is an advanced topic.
+This is an advanced topic. See also :ref:`gdpchapt`.
 
 A disjunction is a set of collections of variables, parameters, and constraints that are linked by an OR (really exclusive or) constraint. The simplest case is a 2-term disjunction:
 

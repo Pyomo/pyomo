@@ -199,7 +199,8 @@ def __solver_call__(self, _name=None, args=[], **kwds):
         logger.warning("Failed to create solver with name '%s':\n%s"
                      % (_name, err))
         opt = None
-    if opt is not None and subsolver is not None:
+    if opt is not None and _name != "py" and subsolver is not None:
+        # py just creates instance of its subsolver, no need for this option
         opt.set_options('solver='+subsolver)
     if opt is None:
         opt = UnknownSolver( type=_name, *args, **kwds )
@@ -545,11 +546,11 @@ class OptSolver(Plugin):
         #
         from pyomo.core.base.block import _BlockData
         import pyomo.core.base.suffix
-        from pyomo.core.kernel.component_block import IBlockStorage
-        import pyomo.core.kernel.component_suffix
+        from pyomo.core.kernel.block import IBlock
+        import pyomo.core.kernel.suffix
         _model = None
         for arg in args:
-            if isinstance(arg, (_BlockData, IBlockStorage)):
+            if isinstance(arg, (_BlockData, IBlock)):
                 if isinstance(arg, _BlockData):
                     if not arg.is_constructed():
                         raise RuntimeError(
@@ -563,13 +564,12 @@ class OptSolver(Plugin):
                                           in pyomo.core.base.suffix.\
                                           active_import_suffix_generator(arg))
                 else:
-                    assert isinstance(arg, IBlockStorage)
-                    model_suffixes = list(name for (name,comp) \
-                                          in pyomo.core.kernel.component_suffix.\
+                    assert isinstance(arg, IBlock)
+                    model_suffixes = list(comp.storage_key for comp
+                                          in pyomo.core.kernel.suffix.\
                                           import_suffix_generator(arg,
                                                                   active=True,
-                                                                  descend_into=False,
-                                                                  return_key=True))
+                                                                  descend_into=False))
 
                 if len(model_suffixes) > 0:
                     kwds_suffixes = kwds.setdefault('suffixes',[])
@@ -632,7 +632,7 @@ class OptSolver(Plugin):
             result._smap_id = self._smap_id
             result._smap = None
             if _model:
-                if isinstance(_model, IBlockStorage):
+                if isinstance(_model, IBlock):
                     if len(result.solution) == 1:
                         result.solution(0).symbol_map = \
                             getattr(_model, "._symbol_maps")[result._smap_id]
