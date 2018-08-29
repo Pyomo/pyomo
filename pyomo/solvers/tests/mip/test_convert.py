@@ -89,11 +89,6 @@ class Test(unittest.TestCase):
 
     def tearDown(self):
         pyutilib.services.TempfileManager.clear_tempfiles()
-        #
-        # Reset all options
-        #
-        #for ep in pyomo.common.plugin.ExtensionPoint(pyomoe.core.plugin.IOption):
-            #ep.reset()
 
     def test_nl_nl1(self):
         #""" Convert from NL to NL """

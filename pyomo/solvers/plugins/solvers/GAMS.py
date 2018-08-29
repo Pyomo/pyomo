@@ -96,8 +96,7 @@ class _GAMSSolver(object):
         return ans
 
     #
-    # Support "with" statements. Forgetting to call deactivate
-    # on Plugins is a common source of memory leaks
+    # Support "with" statements.
     #
     def __enter__(self):
         return self

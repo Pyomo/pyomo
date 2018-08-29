@@ -23,8 +23,6 @@ import pyomo
 import pyomo.opt
 from pyomo.opt.base.solvers import UnknownSolver
 
-pyomo.common.plugin.push('pyomo.solvers.test')
-
 old_tempdir = None
 def setUpModule():
     global old_tempdir
@@ -53,14 +51,11 @@ class TestSolver(pyomo.opt.OptSolver):
         kwds['doc'] = 'TestSolver Documentation'
         pyomo.opt.OptSolver.__init__(self,**kwds)
 
-pyomo.common.plugin.pop()
-
 
 class OptFactoryDebug(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        import pyomo.common.plugin
         import pyomo.environ
         import pyomo.solvers.plugins
 

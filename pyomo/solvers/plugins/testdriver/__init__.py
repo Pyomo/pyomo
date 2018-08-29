@@ -8,5 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.solvers.plugins.testdriver.mip
-import pyomo.solvers.plugins.testdriver.model
+# NOTE: These plugins are disabled.  They require the PyUtilib 
+# Plugin system, which is no longer supported in Pyomo.
+
+
+#import pyomo.solvers.plugins.testdriver.mip
+#import pyomo.solvers.plugins.testdriver.model
