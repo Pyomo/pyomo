@@ -9,15 +9,19 @@
 #  ___________________________________________________________________________
 
 
-class Factory(object):
+class CachedFactory(object):
     """
     A class that is used to define a factory for objects.
+
+    Factory objects are cached for future use.
     """
 
     def __init__(self, description=None):
         self._description = description
         self._cls = {}
         self._doc = {}
+        self._cached = True
+        self._cache = {}
 
     def __call__(self, name, exception=False):
         name = str(name)
@@ -27,6 +31,10 @@ class Factory(object):
             if self._description is None:
                 raise ValueError("Unknown factory object type: '%s'" % name)
             raise ValueError("Unknown %s: '%s'" % (self._description, name))
+        if self._cached:
+            if name not in self._cache:
+                self._cache[name] = self._cls[name]()
+            return self._cache[name]
         return self._cls[name]()
 
     def __iter__(self):
@@ -55,13 +63,15 @@ class Factory(object):
             return cls
         return fn
 
-    #
-    # Support "with" statements. Forgetting to call deactivate
-    # on Plugins is a common source of memory leaks
-    #
-    def __enter__(self):
-        return self
 
-    def __exit__(self, t, v, traceback):
-        pass
+class Factory(CachedFactory):
+    """
+    A class that is used to define a factory for objects.
+
+    Factory objects are *not* cached for future use.
+    """
+
+    def __init__(self, description=None):
+        CachedFactory.__init__(self, description)
+        self._cached = False
 
