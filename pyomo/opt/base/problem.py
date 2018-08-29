@@ -23,7 +23,7 @@ class BaseProblemConfig(object):
         pass
 
 
-WriterFactory = CachedFactory('problem writer')
+WriterFactory = Factory('problem writer')
 
 
 class AbstractProblemWriter(object):
