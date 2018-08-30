@@ -1,8 +1,8 @@
 from pyomo.contrib.pynumero.algorithms.print_utils import print_nlp_info, print_summary
 from pyomo.contrib.pynumero.sparse import BlockVector, BlockSymMatrix
 from pyomo.contrib.pynumero.algorithms import (InertiaCorrectionParams,
-                                 BasicFilterLineSearch,
-                                 newton_unconstrained)
+                                               BasicFilterLineSearch,
+                                               newton_unconstrained)
 from pyomo.contrib.pynumero.linalg.solvers import ma27_solver
 from pyomo.contrib.pynumero.interfaces import PyomoNLP
 import pyomo.environ as pe
@@ -167,17 +167,17 @@ def basic_sqp(nlp, **kwargs):
 
             if debug_mode:
                 ic_logger.debug("Solving system with:")
-                ic_logger.debug("\tdelta_x={}".format(inertia_params.dela_w))
+                ic_logger.debug("\tdelta_x={}".format(inertia_params.delta_w))
                 ic_logger.debug("\tdelta_c={}".format(inertia_params.delta_a))
                 ic_logger.debug("\tLast solve status: {}".format(status))
                 if status == 2:
                     ic_logger.debug("\tNumber of negative eigenvalues: {} ".format(lsolver._get_num_neg_evals()))
 
-            diag_correction[0: nx] = inertia_params.dela_w
+            diag_correction[0: nx] = inertia_params.delta_w
             diag_correction[nx: nx + nc] = inertia_params.delta_a
             status = lsolver.do_numeric_factorization(kkt, diagonal=diag_correction, desired_num_neg_eval=nc)
-            if inertia_params.dela_w > 0.0:
-                val_reg = inertia_params.dela_w
+            if inertia_params.delta_w > 0.0:
+                val_reg = inertia_params.delta_w
             done = inertia_params.ibr4(status)
 
             j += 1
@@ -225,6 +225,7 @@ def basic_sqp(nlp, **kwargs):
         # update rhs
         rhs[0] = -grad_x_lagrangian(df, kkt[1, 0], lam)
         rhs[1] = -res_c
+
     print("Reach limit iterations")
     return x, lam
 

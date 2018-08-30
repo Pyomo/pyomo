@@ -396,6 +396,7 @@ class BlockVector(object):
     def set_blocks(self, blocks):
         """
         Assign vectors in blocks
+
         Parameters
         ----------
         blocks: list of vectors
@@ -583,7 +584,7 @@ class BlockVector(object):
         self._check_mask()
         if np.isscalar(other):
             for idx, blk in enumerate(self._blocks):
-                self[idx] += other
+                self[idx] = self[idx] + other # maybe it suffice with doing self[idx] = self[idf] + other
             return self
         elif isinstance(other, BlockVector):
             other._check_mask()
@@ -591,7 +592,7 @@ class BlockVector(object):
             assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                                                               other.nblocks)
             for idx, blk in enumerate(self._blocks):
-                self[idx] += other[idx]
+                self[idx] = self[idx] + other[idx]
             return self
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Not supported addition of block vector with numpy array. Use non-member function')
@@ -602,7 +603,7 @@ class BlockVector(object):
         self._check_mask()
         if np.isscalar(other):
             for idx, blk in enumerate(self._blocks):
-                self[idx] -= other
+                self[idx] = self[idx] - other
             return self
         elif isinstance(other, BlockVector):
             other._check_mask()
@@ -610,7 +611,7 @@ class BlockVector(object):
             assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                                                               other.nblocks)
             for idx, blk in enumerate(self._blocks):
-                self[idx] -= other[idx]
+                self[idx] = self[idx] - other[idx]
             return self
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Not supported substraction of block vector with numpy array. Use non-member function')
@@ -621,7 +622,7 @@ class BlockVector(object):
         self._check_mask()
         if np.isscalar(other):
             for idx, blk in enumerate(self._blocks):
-                self[idx] *= other
+                self[idx] = self[idx] * other
             return self
         elif isinstance(other, BlockVector):
             other._check_mask()
@@ -629,7 +630,7 @@ class BlockVector(object):
             assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                                                               other.nblocks)
             for idx, blk in enumerate(self._blocks):
-                self[idx] *= other[idx]
+                self[idx] = self[idx] * other[idx]
             return self
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Not supported multiplication of block vector with numpy array. Use non-member function')
@@ -640,7 +641,7 @@ class BlockVector(object):
         self._check_mask()
         if np.isscalar(other):
             for idx, blk in enumerate(self._blocks):
-                self[idx] /= other
+                self[idx] = self[idx] / other
             return self
         elif isinstance(other, BlockVector):
             other._check_mask()
@@ -648,7 +649,7 @@ class BlockVector(object):
             assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                                                               other.nblocks)
             for idx, blk in enumerate(self._blocks):
-                self[idx] /= other[idx]
+                self[idx] = self[idx] / other[idx]
             return self
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Not supported division of block vector with numpy array. Use non-member function')
@@ -677,6 +678,13 @@ class BlockVector(object):
             self._blocks[key] = value
             self._block_mask[key] = True
             self._brow_lengths[key] = value.size
+
+    def __neg__(self):
+
+        v = BlockVector(self.nblocks)
+        for bid in range(self.nblocks):
+            v[bid] = -self[bid]
+        return v
 
     def __repr__(self):
         return '{}{}'.format(self.__class__.__name__,self.shape)

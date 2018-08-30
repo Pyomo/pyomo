@@ -14,7 +14,7 @@ class InertiaCorrectionParams(object):
         self.kappa_a = 1.0/4.0
         self.delta_w_last = 0.0
 
-        self.dela_w = 0.0
+        self.delta_w = 0.0
         self.delta_a = 0.0
         self._recorded_delta_w = 0.0
 
@@ -30,13 +30,13 @@ class InertiaCorrectionParams(object):
         self.kappa_a = 1.0 / 4.0
         self.delta_w_last = 0.0
 
-        self.dela_w = 0.0
+        self.delta_w = 0.0
         self.delta_a = 0.0
         self._recorded_delta_w = 0.0
 
     def ibr1(self, solve_status):
         if solve_status == 0:
-            self.dela_w = 0.0
+            self.delta_w = 0.0
             self.delta_a = 0.0
             return True
         self._ibr2(solve_status)
@@ -51,15 +51,15 @@ class InertiaCorrectionParams(object):
 
     def _ibr3(self):
         if self.delta_w_last == 0:
-            self.dela_w = self.delta_w_zero
+            self.delta_w = self.delta_w_zero
         else:
-            self.dela_w = max(self.delta_w_min,
-                              self.kappa_w_minus * self.delta_w_last)
+            self.delta_w = max(self.delta_w_min,
+                               self.kappa_w_minus * self.delta_w_last)
 
     def ibr4(self, solve_status):
         if solve_status == 0:
-            self.delta_w_last = self.dela_w
-            self.dela_w = 0.0
+            self.delta_w_last = self.delta_w
+            self.delta_w = 0.0
             self.delta_a = 0.0
             return True
         self._ibr5()
@@ -68,10 +68,10 @@ class InertiaCorrectionParams(object):
 
     def _ibr5(self):
         if self.delta_w_last == 0:
-            self.dela_w *= self.kappa_w_plus_hat
+            self.delta_w *= self.kappa_w_plus_hat
         else:
-            self.dela_w *= self.kappa_w_plus
+            self.delta_w *= self.kappa_w_plus
 
     def _ibr6(self):
-        if self.dela_w > self.delta_w_max:
+        if self.delta_w > self.delta_w_max:
             raise RuntimeError('Quiting: Problem could not be regularized. May need restoration')

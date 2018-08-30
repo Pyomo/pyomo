@@ -546,6 +546,8 @@ class TestCOOSymMatrix(unittest.TestCase):
 
         # ToDo: add test with block matrix
 
+    # ToDo: add tests for getallnnz
+
 @unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
 class TestEmptyMatrix(unittest.TestCase):
 

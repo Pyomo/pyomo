@@ -358,6 +358,10 @@ class CSCSymMatrix(CSCMatrix):
     def getrow(self, i):
         return self.tofullmatrix().getrow(i)
 
+    def getallnnz(self):
+        # ToDo: add support for this
+        raise NotImplementedError("Operation not supported yet")
+
     def __repr__(self):
         return 'CSCSymMatrix{}'.format(self.shape)
 

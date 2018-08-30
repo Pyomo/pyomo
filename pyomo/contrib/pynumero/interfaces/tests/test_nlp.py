@@ -55,6 +55,8 @@ def create_rosenbrock_model(n_vars):
 @unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
 class TestNLP(unittest.TestCase):
 
+    # ToDo: add tests for mask and maps
+
     @classmethod
     def setUpClass(cls):
 

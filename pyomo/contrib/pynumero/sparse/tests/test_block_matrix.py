@@ -164,6 +164,10 @@ class TestBlockMatrix(unittest.TestCase):
         data = self.basic_m.coo_data()
         self.assertListEqual(m.data.tolist(), data.tolist())
 
+    # ToDo: add tests for block matrices with block matrices in it
+    # ToDo: add tests for matrices with zeros in the diagonal
+    # ToDo: add tests for getallnnz
+    # ToDo: add tests for block matrices with coo and csc matrices
 
 class TestSymBlockMatrix(unittest.TestCase):
 

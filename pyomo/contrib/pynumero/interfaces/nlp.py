@@ -30,6 +30,8 @@ where c: R^{n_x} \rightarrow R^{n_c} are the equality constraints
 .. rubric:: Contents
 
 """
+import pyomo
+import pyomo.environ as aml
 
 try:
     import pyomo.contrib.pynumero.extensions.asl as _asl
@@ -130,6 +132,10 @@ class NLP(object):
         Return the number of inequality constraints.
         """
         return self._nd
+
+    @property
+    def model(self):
+        return self._model
 
     @property
     def nnz_jacobian_g(self):
@@ -531,6 +537,7 @@ class StubNLP(NLP):
         super(StubNLP, self).__init__(model)
 
         # ampl interface
+
         self._asl = _asl.AmplInterface(self._model)
 
         # dimensions
@@ -579,6 +586,10 @@ class StubNLP(NLP):
         self._irows_jac_g = np.zeros(self.nnz_jacobian_g, dtype=np.intc)
         self._jcols_jac_g = np.zeros(self.nnz_jacobian_g, dtype=np.intc)
         self._asl.struct_jac_g(self._irows_jac_g, self._jcols_jac_g)
+        #self._irows_jac_g = self._irows_jac_g.astype(np.int64, copy=True)
+        #self._jcols_jac_g = self._jcols_jac_g.astype(np.int64, copy=True)
+        #print(self._irows_jac_g.dtype)
+        #print(self._jcols_jac_g.dtype)
 
         # this is to index from zero the triplets
         self._irows_jac_g -= 1
@@ -616,6 +627,10 @@ class StubNLP(NLP):
         self._irows_hess = np.zeros(self.nnz_hessian_lag, dtype=np.intc)
         self._jcols_hess = np.zeros(self.nnz_hessian_lag, dtype=np.intc)
         self._asl.struct_hes_lag(self._irows_hess, self._jcols_hess)
+        #self._irows_hess = self._irows_hess.astype(np.int64, copy=True)
+        #self._jcols_hess = self._jcols_hess.astype(np.int64, copy=True)
+
+
         self._irows_hess -= 1
         self._jcols_hess -= 1
         self._irows_hess.flags.writeable = False
@@ -1649,12 +1664,15 @@ class PyomoNLP(StubNLP):
 
     def __init__(self, model):
 
-        # TODO: create maps id to name component directly with pyomo symbolic_labels
         temporal_dir = tempfile.mkdtemp()
         try:
             filename = os.path.join(temporal_dir, "pynumero_pyomo")
+            objectives = model.component_map(aml.Objective, active=True)
+            if len(objectives) == 0:
+                model._dummy_obj = aml.Objective(expr=0.0)
+
             model.write(filename+'.nl', 'nl', io_options={"symbolic_solver_labels": True})
-            import pyomo
+
             fname, symbolMap = pyomo.opt.WriterFactory('nl')(model, filename, lambda x:True, {})
             varToIndex = pyomo.core.kernel.ComponentMap()
             conToIndex = pyomo.core.kernel.ComponentMap()
@@ -1878,3 +1896,13 @@ class PyomoNLP(StubNLP):
         for c, idx in self._conToIndex.items():
             con_order[idx] = c.name
         return con_order
+
+    def variable_idx(self, var):
+        if var.is_indexed():
+            raise RuntimeError("Var must be not indexed")
+        return self._varToIndex[var]
+
+    def constraint_idx(self, constraint):
+        if constraint.is_indexed():
+            raise RuntimeError("Constraint must be not indexed")
+        return self._conToIndex[constraint]
