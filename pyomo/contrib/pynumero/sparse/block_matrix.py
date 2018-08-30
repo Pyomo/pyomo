@@ -208,11 +208,12 @@ class BlockMatrix(SparseBase):
         ii, jj = np.nonzero(self._block_mask)
         for i, j in zip(ii, jj):
             if self[i, j].is_symmetric:
-                nonzeros += self[i, j].getallnnz()
+                nnz = self[i, j].getallnnz()
             elif isinstance(self[i, j], BlockMatrix):
-                nonzeros += self[i, j].getallnnz()
+                nnz = self[i, j].getallnnz()
             else:
-                nonzeros += self._blocks[i, j].nnz
+                nnz = self._blocks[i, j].nnz
+            nonzeros += nnz
         return nonzeros
 
     def coo_data(self):
@@ -262,21 +263,23 @@ class BlockMatrix(SparseBase):
         shape = (row_offsets[-1], col_offsets[-1])
 
         nonzeros = self.getallnnz()
+
         data = np.empty(nonzeros, dtype=dtype)
         idx_dtype = get_index_dtype(maxval=max(shape))
-        row = np.empty(nonzeros, dtype=idx_dtype)
-        col = np.empty(nonzeros, dtype=idx_dtype)
+        row = -np.ones(nonzeros, dtype=idx_dtype)
+        col = -np.ones(nonzeros, dtype=idx_dtype)
 
         nnz = 0
         ii, jj = np.nonzero(self._block_mask)
         for i, j in zip(ii, jj):
-            #print(i, j)
             if self._blocks[i, j].is_symmetric:
                 B = self[i, j].tofullcoo()
             else:
                 B = self[i, j].tocoo()
             idx = slice(nnz, nnz + B.nnz)
             data[idx] = B.data
+            #row[idx] = (B.row + row_offsets[i]).astype(idx_dtype, copy=False)
+            #col[idx] = (B.col + col_offsets[j]).astype(idx_dtype, copy=False)
             row[idx] = B.row + row_offsets[i]
             col[idx] = B.col + col_offsets[j]
             nnz += B.nnz

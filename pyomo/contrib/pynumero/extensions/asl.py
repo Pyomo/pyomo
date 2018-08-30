@@ -32,6 +32,7 @@ class AmplInterface(object):
                 "ASL interface is not supported on this platform (%s)"
                 % (os.name,) )
 
+
         self.ASLib = ctypes.cdll.LoadLibrary(AmplInterface.libname)
 
         # define 1d array
@@ -73,6 +74,7 @@ class AmplInterface(object):
                                                                       array_1d_double,
                                                                       ctypes.c_int]
         self.ASLib.EXTERNAL_AmplInterface_get_bounds_info.restype = None
+
         # lower bounds on x
         self.ASLib.EXTERNAL_AmplInterface_x_lower_bounds.argtypes = [ctypes.c_void_p,
                                                                      array_1d_double,
@@ -208,7 +210,6 @@ class AmplInterface(object):
 
         assert self._obj, "Error building ASL interface. Possible error in nl-file"
 
-
         self._nx = self.get_n_vars()
         self._ny = self.get_n_constraints()
         self._nnz_jac_g = self.get_nnz_jac_g()
@@ -294,6 +295,7 @@ class AmplInterface(object):
                                                        irow_p,
                                                        jcol_p,
                                                        len(irow))
+
 
     def struct_hes_lag(self, irow, jcol):
         irow_p = irow.astype(np.intc, casting='safe', copy=False)

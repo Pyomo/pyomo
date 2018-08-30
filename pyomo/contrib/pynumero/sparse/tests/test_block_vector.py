@@ -351,6 +351,122 @@ class TestBlockVector(unittest.TestCase):
         v.copyto(v2)
         self.assertListEqual(v.tolist(), v2.tolist())
 
+    def test__iadd__(self):
+
+        v = BlockVector(2)
+        a = np.ones(5)
+        b = np.zeros(9)
+        v[0] = a
+        v[1] = b
+        v += 1.0
+
+        self.assertTrue(np.allclose(v[0], a+1))
+        self.assertTrue(np.allclose(v[1], b + 1))
+
+        v = BlockVector(2)
+        a = np.ones(5)
+        b = np.zeros(9)
+        v[0] = a
+        v[1] = b
+
+        v2 = BlockVector(2)
+        v2[0] = np.ones(5)
+        v2[1] = np.ones(9)
+
+        v += v2
+        self.assertTrue(np.allclose(v[0], a + 1))
+        self.assertTrue(np.allclose(v[1], b + 1))
+
+        self.assertTrue(np.allclose(v2[0], np.ones(5)))
+        self.assertTrue(np.allclose(v2[1], np.ones(9)))
+
+    def test__isub__(self):
+        v = BlockVector(2)
+        a = np.ones(5)
+        b = np.zeros(9)
+        v[0] = a
+        v[1] = b
+        v -= 5.0
+
+        self.assertTrue(np.allclose(v[0], a - 5.0))
+        self.assertTrue(np.allclose(v[1], b - 5.0))
+
+        v = BlockVector(2)
+        a = np.ones(5)
+        b = np.zeros(9)
+        v[0] = a
+        v[1] = b
+
+        v2 = BlockVector(2)
+        v2[0] = np.ones(5)
+        v2[1] = np.ones(9)
+
+        v -= v2
+        self.assertTrue(np.allclose(v[0], a - 1))
+        self.assertTrue(np.allclose(v[1], b - 1))
+
+        self.assertTrue(np.allclose(v2[0], np.ones(5)))
+        self.assertTrue(np.allclose(v2[1], np.ones(9)))
+
+    def test__imul__(self):
+        v = BlockVector(2)
+        a = np.ones(5)
+        b = np.arange(9)
+        v[0] = a
+        v[1] = b
+        v *= 2.0
+
+        self.assertTrue(np.allclose(v[0], a * 2.0))
+        self.assertTrue(np.allclose(v[1], b * 2.0))
+
+        v = BlockVector(2)
+        a = np.ones(5)
+        b = np.zeros(9)
+        v[0] = a
+        v[1] = b
+
+        v2 = BlockVector(2)
+        v2[0] = np.ones(5)*2
+        v2[1] = np.ones(9)*2
+
+        v *= v2
+        self.assertTrue(np.allclose(v[0], a * 2))
+        self.assertTrue(np.allclose(v[1], b * 2))
+
+        self.assertTrue(np.allclose(v2[0], np.ones(5)*2))
+        self.assertTrue(np.allclose(v2[1], np.ones(9)*2))
+
+    def test__itruediv__(self):
+        v = BlockVector(2)
+        a = np.ones(5)
+        b = np.arange(9)
+        v[0] = a
+        v[1] = b
+        v /= 2.0
+
+        self.assertTrue(np.allclose(v[0], a / 2.0))
+        self.assertTrue(np.allclose(v[1], b / 2.0))
+
+        v = BlockVector(2)
+        a = np.ones(5)
+        b = np.zeros(9)
+        v[0] = a
+        v[1] = b
+
+        v2 = BlockVector(2)
+        v2[0] = np.ones(5) * 2.0
+        v2[1] = np.ones(9) * 2.0
+
+        v /= v2
+        self.assertTrue(np.allclose(v[0], a / 2))
+        self.assertTrue(np.allclose(v[1], b / 2))
+
+        self.assertTrue(np.allclose(v2[0], np.ones(5) * 2))
+        self.assertTrue(np.allclose(v2[1], np.ones(9) * 2))
+
+    # ToDo: Need to add tests for all __blah__ operators
+    # ToDo: add tests for block vectors with block vectors in them
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -58,3 +58,6 @@ def compute_init_lam(nlp, x=None, lam_max=1e3):
     return sol[1]
     """
 
+
+def grad_x_lagrangian(grad_objective, jacobian, lam):
+    return grad_objective + jacobian.transpose()*lam

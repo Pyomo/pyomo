@@ -16,4 +16,5 @@ except ImportError:
 
 if numpy_available:
     from .nlp import *
-    from .stochastic_nlp import *
+    #from .nlp_compositions import *
+    #from .nlp_transformations import *

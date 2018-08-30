@@ -551,8 +551,8 @@ class COOSymMatrix(COOMatrix):
         """
         Return total number of nonzero values in the matrix
         """
-        d = self.diagonal()
-        nnz_diag = len(d[d!=0])
+        #d = self.diagonal()
+        nnz_diag = np.sum(self.row == self.col) #len(d[d!=0])
         lnnz = self.nnz - nnz_diag
         return lnnz*2 + nnz_diag
 

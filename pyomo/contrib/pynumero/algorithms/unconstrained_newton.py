@@ -75,10 +75,10 @@ def newton_unconstrained(nlp, **kwargs):
         j = 0
         val_reg = 0.0
         while not done:
-            diag_correction[0: nx] = inertia_params.dela_w
+            diag_correction[0: nx] = inertia_params.delta_w
             status = lsolver.do_numeric_factorization(hess, diagonal=diag_correction)
-            if inertia_params.dela_w > 0.0:
-                val_reg = inertia_params.dela_w
+            if inertia_params.delta_w > 0.0:
+                val_reg = inertia_params.delta_w
             done = inertia_params.ibr4(status)
             j += 1
             if j > reg_max_iter:
