@@ -236,7 +236,7 @@ class GenericExpressionVisitor(object):
         beforeChild(N1, N2)
           enterNode(N2)
           exitNode(N2)
-        acceptData(N1, data, child_result)
+        acceptChildResult(N1, data, child_result)
         afterChild(N1, N2)
       exitNode(N1)
 
@@ -270,19 +270,19 @@ class GenericExpressionVisitor(object):
         arguments.  beforeChild should return a tuple (descend,
         child_result).  If descend is False, the child node will not be
         entered and the value returned to child_result will be passed to
-        the node's acceptResult callback.  Returning None is equivalent
-        to (True, None).  The default behavior if not specified is
-        equivalent to (True, None).
+        the node's acceptChildResult callback.  Returning None is
+        equivalent to (True, None).  The default behavior if not
+        specified is equivalent to (True, None).
 
-    acceptData(self, node, data, child_result):
+    acceptChildResult(self, node, data, child_result):
 
-        acceptData() is called for each child result being returned to a
-        node.  This callback is responsible for recording the result for
-        later processing or passing up the tree.  It is passed the node,
-        the result data structure (see enterNode()), and the child
-        result.  No value is returned.  If acceptData is not specified,
-        it does nothing if data is None, otherwise it calls
-        data.append(result).
+        acceptChildResult() is called for each child result being
+        returned to a node.  This callback is responsible for recording
+        the result for later processing or passing up the tree.  It is
+        passed the node, the result data structure (see enterNode()),
+        and the child result.  No value is returned.  If
+        acceptChildResult is not specified, it does nothing if data is
+        None, otherwise it calls data.append(result).
 
     afterChild(self, node, child):
 
@@ -308,7 +308,7 @@ class GenericExpressionVisitor(object):
     """
 
     extentionPoints = ('enterNode','exitNode','beforeChild','afterChild',
-                       'acceptData','finalizeResult')
+                       'acceptChildResult','finalizeResult')
     def __init__(self, **kwds):
         # This is slightly tricky: We want derived classes to be able to
         # override the "None" defaults here, and for keyword arguments
@@ -389,8 +389,8 @@ class GenericExpressionVisitor(object):
                         # We are aborting processing of this child node.
                         # Tell this node to accept the child result and
                         # we will move along
-                        if self.acceptData:
-                            self.acceptData(node, ptr[3], child_result)
+                        if self.acceptChildResult:
+                            self.acceptChildResult(node, ptr[3], child_result)
                         else:
                             ptr[3].append(child_result)
                         # And let the node know that we are done with a
@@ -454,8 +454,8 @@ class GenericExpressionVisitor(object):
                 child_idx = ptr[5]
 
                 # We need to alert the node to accept the child's result:
-                if self.acceptData is not None:
-                    self.acceptData(node, ptr[3], node_result)
+                if self.acceptChildResult is not None:
+                    self.acceptChildResult(node, ptr[3], node_result)
                 elif ptr[3] is not None:
                     ptr[3].append(node_result)
 

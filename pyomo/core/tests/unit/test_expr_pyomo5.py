@@ -6537,7 +6537,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
         ref = [2]
         self.assertEqual(str(ans), str(ref))
 
-    def test_beforeChild_acceptData_afterChild(self):
+    def test_beforeChild_acceptChildResult_afterChild(self):
         counts = [0,0,0]
         def before(node, child):
             counts[0] += 1
@@ -6549,14 +6549,14 @@ class TestGenericExpressionVisitor(unittest.TestCase):
         def after(node, child):
             counts[2] += 1
         walker = EXPR.GenericExpressionVisitor(
-            beforeChild=before, acceptData=accept, afterChild=after)
+            beforeChild=before, acceptChildResult=accept, afterChild=after)
         ans = walker.walk_expression(self.e)
         m = self.m
         ref = []
         self.assertEqual(ans, ref)
         self.assertEquals(counts, [9,9,9])
 
-    def test_enterNode_acceptData_beforeChild(self):
+    def test_enterNode_acceptChildResult_beforeChild(self):
         ans = []
         def before(node, child):
             if type(child) in nonpyomo_leaf_types \
@@ -6568,7 +6568,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
         def enter(node):
             return node.args, ans
         walker = EXPR.GenericExpressionVisitor(
-            enterNode=enter, beforeChild=before, acceptData=accept)
+            enterNode=enter, beforeChild=before, acceptChildResult=accept)
         ans = walker.walk_expression(self.e)
         m = self.m
         ref = [m.x, 2, m.y, m.z, m.x, m.y]
@@ -6588,7 +6588,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
         def finalize(result):
             return len(result)
         walker = EXPR.GenericExpressionVisitor(
-            enterNode=enter, beforeChild=before, acceptData=accept,
+            enterNode=enter, beforeChild=before, acceptChildResult=accept,
             finalizeResult=finalize)
         ans = walker.walk_expression(self.e)
         self.assertEqual(ans, 6)
@@ -6614,7 +6614,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
             ans.append("Finalize")
         walker = EXPR.GenericExpressionVisitor(
             enterNode=enter, exitNode=exit, beforeChild=before, 
-            acceptData=accept, afterChild=after, finalizeResult=finalize)
+            acceptChildResult=accept, afterChild=after, finalizeResult=finalize)
         self.assertIsNone( walker.walk_expression(self.e) )
         self.assertEqual("\n".join(ans),"""Enter sum
 Before pow (from sum)
@@ -6682,7 +6682,7 @@ Finalize""")
             def beforeChild(self, node, child):
                 self.ans.append("Before %s (from %s)"
                                 % (name(child), name(node)))
-            def acceptData(self, node, data, child_result):
+            def acceptChildResult(self, node, data, child_result):
                 self.ans.append("Accept into %s" % (name(node)))
             def afterChild(self, node, child):
                 self.ans.append("After %s (from %s)"
