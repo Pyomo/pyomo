@@ -259,9 +259,10 @@ class GenericExpressionVisitor(object):
         exitNode() is called after the node is completely processed (as
         the walker returns up the tree to the parent node).  It is
         passed the node and the results data structure (defined by
-        enterNode()), and is expected to return the "result" for this
-        node.  If not specified, the default action is to return the
-        data object from enterNode().
+        enterNode() and possible further modified by
+        acceptChildResult()), and is expected to return the "result" for
+        this node.  If not specified, the default action is to return
+        the data object from enterNode().
 
     descend, child_result = beforeChild(self, node, child):
 
