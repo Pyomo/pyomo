@@ -15,7 +15,6 @@ from six import iteritems, itervalues
 from weakref import ref as weakref_ref
 
 from pyomo.common.timing import ConstructionTimer
-from pyomo.common.plugin import Plugin, implements
 from pyomo.common.modeling import unique_component_name
 
 from pyomo.core.base.var import Var
