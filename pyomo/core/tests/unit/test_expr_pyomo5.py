@@ -6417,6 +6417,14 @@ class TestGenericExpressionVisitor(unittest.TestCase):
         ]
         self.assertEqual(str(ans), str(ref))
 
+        ans = walker.walk_expression(m.x)
+        ref = []
+        self.assertEqual(str(ans), str(ref))
+
+        ans = walker.walk_expression(2)
+        ref = []
+        self.assertEqual(str(ans), str(ref))
+
     def test_enterNode(self):
         # This is an alternative way to implement the beforeChild test:
         def enter(node):
@@ -6425,7 +6433,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
                 return (), [node]
             return node.args, []
         walker = EXPR.GenericExpressionVisitor(
-            enterNode=enter, finalizeResult=finalize)
+            enterNode=enter)
         m = self.m
 
         ans = walker.walk_expression(self.e)
@@ -6442,6 +6450,33 @@ class TestGenericExpressionVisitor(unittest.TestCase):
 
         ans = walker.walk_expression(2)
         ref = [2]
+        self.assertEqual(str(ans), str(ref))
+
+    def test_enterNode_noLeafList(self):
+        # This is an alternative way to implement the beforeChild test:
+        def enter(node):
+            if type(node) in nonpyomo_leaf_types \
+               or not node.is_expression_type():
+                return (), node
+            return node.args, []
+        walker = EXPR.GenericExpressionVisitor(
+            enterNode=enter)
+        m = self.m
+
+        ans = walker.walk_expression(self.e)
+        ref = [
+            [m.x, 2],
+            m.y,
+            [m.z, [m.x, m.y]]
+        ]
+        self.assertEqual(str(ans), str(ref))
+
+        ans = walker.walk_expression(m.x)
+        ref = m.x
+        self.assertEqual(str(ans), str(ref))
+
+        ans = walker.walk_expression(2)
+        ref = 2
         self.assertEqual(str(ans), str(ref))
 
     def test_enterNode_withFinalize(self):
@@ -6502,27 +6537,13 @@ class TestGenericExpressionVisitor(unittest.TestCase):
         ref = [2]
         self.assertEqual(str(ans), str(ref))
 
-    def test_call_on_nonexpression(self):
-        def enter(node):
-            if type(node) in nonpyomo_leaf_types \
-               or not node.is_expression_type():
-                return (), node
-            return node.args, []
-        def finalize(result):
-            if type(result) is list:
-                return result
-            else:
-                return [result]
-        walker = EXPR.GenericExpressionVisitor(
-            enterNode=enter, finalizeResult=finalize)
-
     def test_beforeChild_acceptData_afterChild(self):
         counts = [0,0,0]
         def before(node, child):
             counts[0] += 1
             if type(child) in nonpyomo_leaf_types \
                or not child.is_expression_type():
-                return False, child
+                return False, None
         def accept(node, data, child_result):
             counts[1] += 1
         def after(node, child):
@@ -6535,7 +6556,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
         self.assertEqual(ans, ref)
         self.assertEquals(counts, [9,9,9])
 
-    def test_enterNode(self):
+    def test_enterNode_acceptData_beforeChild(self):
         ans = []
         def before(node, child):
             if type(child) in nonpyomo_leaf_types \
@@ -6545,11 +6566,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
             if data is not child_result:
                 data.append(child_result)
         def enter(node):
-            if type(node) in nonpyomo_leaf_types \
-               or not node.is_expression_type():
-                return (), ans
-            else:
-                return node.args, ans
+            return node.args, ans
         walker = EXPR.GenericExpressionVisitor(
             enterNode=enter, beforeChild=before, acceptData=accept)
         ans = walker.walk_expression(self.e)
@@ -6567,11 +6584,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
             if data is not child_result:
                 data.append(child_result)
         def enter(node):
-            if type(node) in nonpyomo_leaf_types \
-               or not node.is_expression_type():
-                return (), ans
-            else:
-                return node.args, ans
+            return node.args, ans
         def finalize(result):
             return len(result)
         walker = EXPR.GenericExpressionVisitor(
