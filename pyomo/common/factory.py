@@ -23,7 +23,12 @@ class CachedFactory(object):
         self._cached = True
         self._cache = {}
 
-    def __call__(self, name, exception=False):
+    def __call__(self, name, **kwds):
+        if 'exception' in kwds:
+            exception = kwds['exception']
+            del kwds['exception']
+        else:
+            exception = False
         name = str(name)
         if not name in self._cls:
             if not exception:
@@ -33,9 +38,9 @@ class CachedFactory(object):
             raise ValueError("Unknown %s: '%s'" % (self._description, name))
         if self._cached:
             if name not in self._cache:
-                self._cache[name] = self._cls[name]()
+                self._cache[name] = self._cls[name](**kwds)
             return self._cache[name]
-        return self._cls[name]()
+        return self._cls[name](**kwds)
 
     def __iter__(self):
         for name in self._cls:
