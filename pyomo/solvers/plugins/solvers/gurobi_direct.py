@@ -11,7 +11,7 @@
 import logging
 import re
 import sys
-import pyutilib.services
+import pyomo.common
 from pyutilib.misc import Bunch
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value

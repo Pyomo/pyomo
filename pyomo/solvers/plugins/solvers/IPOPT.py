@@ -10,7 +10,7 @@
 
 import os
 
-import pyutilib.services
+import pyomo.common
 import pyutilib.misc
 
 from pyomo.opt.base import *
@@ -61,7 +61,7 @@ class IPOPT(SystemCallSolver):
         return ResultsFormat.sol
 
     def _default_executable(self):
-        executable = pyutilib.services.registered_executable("ipopt")
+        executable = pyomo.common.registered_executable("ipopt")
         if executable is None:
             logger.warning("Could not locate the 'ipopt' executable, "
                            "which is required for solver %s" % self.name)
@@ -202,4 +202,4 @@ class IPOPT(SystemCallSolver):
                             assert "degrees of freedom" in res.solver.message
             return res
 
-pyutilib.services.register_executable(name="ipopt")
+pyomo.common.register_executable(name="ipopt")

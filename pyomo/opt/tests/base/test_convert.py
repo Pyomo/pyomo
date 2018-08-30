@@ -140,7 +140,7 @@ class OptConvertDebug(unittest.TestCase):
             ans = pyomo.opt.convert_problem( (currdir+"unknown.nl",), None, [pyomo.opt.ProblemFormat.cpxlp])
             self.fail("Expected pyomo.opt.ConverterError exception")
         except pyutilib.common.ApplicationError:
-            if pyutilib.services.registered_executable("pico_convert").enabled():
+            if pyomo.common.registered_executable("pico_convert").enabled():
                 self.fail("Expected ApplicationError because pico_convert is not available")
             return
         except pyomo.opt.ConverterError:
@@ -148,7 +148,7 @@ class OptConvertDebug(unittest.TestCase):
 
     def test_error9(self):
         """ The Opt configuration has not been initialized """
-        cmd = pyutilib.services.registered_executable("pico_convert")
+        cmd = pyomo.common.registered_executable("pico_convert")
         if not cmd is None:
             cmd.disable()
         try:

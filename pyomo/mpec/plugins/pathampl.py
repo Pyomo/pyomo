@@ -42,7 +42,7 @@ class PATHAMPL(ASL):
         self._capabilities.linear = True
 
     def _default_executable(self):
-        executable = pyutilib.services.registered_executable("pathampl")
+        executable = pyomo.common.registered_executable("pathampl")
         if executable is None:                      #pragma:nocover
             logger.warning("Could not locate the 'pathampl' executable, which is required for solver %s" % self.name)
             self.enable = False
@@ -54,4 +54,4 @@ class PATHAMPL(ASL):
         return ASL.create_command_line(self, executable, problem_files)
 
 
-pyutilib.services.register_executable(name="pathampl")
+pyomo.common.register_executable(name="pathampl")

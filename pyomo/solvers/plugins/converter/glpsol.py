@@ -13,7 +13,7 @@ import six
 
 import pyutilib.subprocess
 import pyutilib.common
-import pyutilib.services
+import pyomo.common
 from pyomo.opt.base import *
 from pyomo.opt.base.convert import ProblemConverterFactory
 
@@ -26,7 +26,7 @@ class GlpsolMIPConverter(object):
         #
         # Test if the glpsol executable is available
         #
-        if pyutilib.services.registered_executable("glpsol") is None:
+        if pyomo.common.registered_executable("glpsol") is None:
             return False
         #
         # Return True for specific from/to pairs
@@ -34,7 +34,7 @@ class GlpsolMIPConverter(object):
         if from_type == ProblemFormat.mod and to_type == ProblemFormat.cpxlp:
             return True
         if from_type == ProblemFormat.mod and to_type == ProblemFormat.mps:
-            if pyutilib.services.registered_executable("ampl") is None:
+            if pyomo.common.registered_executable("ampl") is None:
                 #
                 # Only convert mod->mps with ampl
                 #
@@ -45,7 +45,7 @@ class GlpsolMIPConverter(object):
         """Convert an instance of one type into another"""
         if not isinstance(args[2],six.string_types):
             raise ConverterError("Can only apply glpsol to convert file data")
-        cmd = pyutilib.services.registered_executable("glpsol").get_path()
+        cmd = pyomo.common.registered_executable("glpsol").get_path()
         if cmd is None:
             raise ConverterError("The 'glpsol' executable cannot be found")
         cmd = cmd +" --math"

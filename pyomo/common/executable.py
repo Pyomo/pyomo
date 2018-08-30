@@ -9,12 +9,16 @@
 #  ___________________________________________________________________________
 
 
-__all__ = ['register_executable', 'registered_executable']
+__all__ = ['register_executable', 'registered_executable', 'unregister_executable']
 
 import pyutilib.misc
 from pyomo.common.factory import CachedFactory
 
 ExecutableFactory = CachedFactory('executables')
+
+
+def unregister_executable(name):
+    ExecutableFactory.unregister(name)
 
 
 def register_executable(name, validate=None):
@@ -47,7 +51,7 @@ def registered_executable(name=None):
     If 'name' is None, then return a list of the names of all registered
     executables that are enabled.
 
-    If either this executable is not registered, then
+    If this executable is not registered or it cannot be found, then
     None is returned.  Otherwise, return the path to the executable.
 
     NOTE: Since ExecutableFactory is cached, the search for the 
@@ -57,6 +61,9 @@ def registered_executable(name=None):
     if name is None:
         return sorted(list(ExecutableFactory))
     if name in ExecutableFactory:
-        return ExecutableFactory(name).get_path()
+        tmp = ExecutableFactory(name)
+        if tmp.get_path() is None:
+            return None
+        return tmp
     return None
 

@@ -10,7 +10,7 @@
 
 import os
 
-import pyutilib.services
+import pyomo.common
 import pyutilib.misc
 
 from pyomo.opt.base import *
@@ -62,7 +62,7 @@ class CONOPT(SystemCallSolver):
         return ResultsFormat.sol
 
     def _default_executable(self):
-        executable = pyutilib.services.registered_executable("conopt")
+        executable = pyomo.common.registered_executable("conopt")
         if executable is None:
             logger.warning("Could not locate the 'conopt' executable, "
                            "which is required for solver %s" % self.name)
@@ -161,4 +161,4 @@ class CONOPT(SystemCallSolver):
             results.solver.status = SolverStatus.ok
         return results
 
-pyutilib.services.register_executable(name="conopt")
+pyomo.common.register_executable(name="conopt")

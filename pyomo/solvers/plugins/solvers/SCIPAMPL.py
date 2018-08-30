@@ -10,7 +10,7 @@
 
 import os
 
-import pyutilib.services
+import pyomo.common
 import pyutilib.misc
 
 from pyomo.opt.base import *
@@ -60,7 +60,7 @@ class SCIPAMPL(SystemCallSolver):
         return ResultsFormat.sol
 
     def _default_executable(self):
-        executable = pyutilib.services.registered_executable("scipampl")
+        executable = pyomo.common.registered_executable("scipampl")
         if executable is None:
             logger.warning("Could not locate the 'scipampl' executable, "
                            "which is required for solver %s" % self.name)
@@ -292,4 +292,4 @@ class SCIPAMPL(SystemCallSolver):
                     SolutionStatus.unknown
 
         return results
-pyutilib.services.register_executable(name="scipampl")
+pyomo.common.register_executable(name="scipampl")

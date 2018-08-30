@@ -15,7 +15,7 @@ import time
 import logging
 import subprocess
 
-import pyutilib.services
+import pyomo.common
 import pyutilib.misc
 
 from pyomo.opt.base import *
@@ -244,9 +244,9 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
 
     def _default_executable(self):
         if sys.platform == 'win32':
-            executable = pyutilib.services.registered_executable("gurobi.bat")
+            executable = pyomo.common.registered_executable("gurobi.bat")
         else:
-            executable = pyutilib.services.registered_executable("gurobi.sh")
+            executable = pyomo.common.registered_executable("gurobi.sh")
         if executable is None:
             logger.warning("Could not locate the 'gurobi' executable, "
                            "which is required for solver %s" % self.name)
@@ -537,6 +537,6 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         return results
 
 if sys.platform == 'win32':
-    pyutilib.services.register_executable(name='gurobi.bat')
+    pyomo.common.register_executable(name='gurobi.bat')
 else:
-    pyutilib.services.register_executable(name='gurobi.sh')
+    pyomo.common.register_executable(name='gurobi.sh')

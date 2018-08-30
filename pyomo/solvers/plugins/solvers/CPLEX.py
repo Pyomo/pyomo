@@ -14,7 +14,7 @@ import re
 import time
 import logging
 
-import pyutilib.services
+import pyomo.common
 import pyutilib.common
 import pyutilib.misc
 
@@ -259,7 +259,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                           % (end_time-start_time))
 
     def _default_executable(self):
-        executable = pyutilib.services.registered_executable("cplex")
+        executable = pyomo.common.registered_executable("cplex")
         if executable is None:
             logger.warning("Could not locate the 'cplex' executable"
                            ", which is required for solver %s"
@@ -805,6 +805,6 @@ class MockCPLEX(CPLEXSHELL,MockMIP):
         return MockMIP._execute_command(self, cmd)
 
 
-pyutilib.services.register_executable(name="cplex")
-pyutilib.services.register_executable(name="cplexamp")
+pyomo.common.register_executable(name="cplex")
+pyomo.common.register_executable(name="cplexamp")
 

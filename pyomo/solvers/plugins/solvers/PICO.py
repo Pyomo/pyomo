@@ -14,7 +14,7 @@ import os
 
 from six import iteritems
 
-import pyutilib.services
+import pyomo.common
 import pyutilib.common
 import pyutilib.common
 import pyutilib.misc
@@ -119,7 +119,7 @@ class PICOSHELL(SystemCallSolver):
         return ResultsFormat.soln
 
     def _default_executable(self):
-        executable = pyutilib.services.registered_executable("PICO")
+        executable = pyomo.common.registered_executable("PICO")
         if executable is None:
             logger.warning("Could not locate the 'PICO' executable, which is required for solver %s" % self.name)
             self.enable = False

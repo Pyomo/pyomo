@@ -161,7 +161,7 @@ class SystemCallSolver(OptSolver):
     #       adding an optional search_path keyword to the
     #       _default_executable method implemented by
     #       derived classes. How to propagate that through
-    #       the pyutilib.services.registered_executable
+    #       the pyomo.common.registered_executable
     #       framework once it gets there is another question
     #       (that I won't be dealing with today).
     #

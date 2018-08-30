@@ -15,7 +15,7 @@ import os, sys, math, logging, shutil, time
 from pyomo.core.base import Constraint, Var, value, Objective
 from pyomo.opt import ProblemFormat, SolverFactory
 
-import pyutilib.services
+import pyomo.common
 
 from pyomo.opt.base.solvers import _extract_version
 import pyutilib.subprocess
@@ -34,7 +34,7 @@ from pyomo.opt.results import (SolverResults, SolverStatus, Solution,
 
 logger = logging.getLogger('pyomo.solvers')
 
-pyutilib.services.register_executable(name="gams")
+pyomo.common.register_executable(name="gams")
 
 class _GAMSSolver(object):
     """Aggregate of common methods for GAMS interfaces"""
@@ -570,7 +570,7 @@ class GAMSShell(_GAMSSolver):
 
     def available(self, exception_flag=True):
         """True if the solver is available."""
-        exe = pyutilib.services.registered_executable("gams")
+        exe = pyomo.common.registered_executable("gams")
         if exception_flag is False:
             return exe is not None
         else:
@@ -582,7 +582,7 @@ class GAMSShell(_GAMSSolver):
                     "solver functionality is not available.")
 
     def _default_executable(self):
-        executable = pyutilib.services.registered_executable("gams")
+        executable = pyomo.common.registered_executable("gams")
         if executable is None:
             logger.warning("Could not locate the 'gams' executable, "
                            "which is required for solver gams")

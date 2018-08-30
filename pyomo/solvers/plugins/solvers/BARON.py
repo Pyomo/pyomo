@@ -15,7 +15,7 @@ import subprocess
 import re
 import tempfile
 
-import pyutilib.services
+import pyomo.common
 from pyutilib.misc import Options
 
 from pyomo.opt.base import *
@@ -157,7 +157,7 @@ class BARONSHELL(SystemCallSolver):
             return True
 
     def _default_executable(self):
-        executable = pyutilib.services.registered_executable("baron")
+        executable = pyomo.common.registered_executable("baron")
         if executable is None:
             logger.warning("Could not locate the 'baron' executable, "
                            "which is required for solver %s" % self.name)
@@ -568,4 +568,4 @@ the Pyomo model and BARON version) to the Pyomo Developers.""")
             # Fill the solution for most cases, except errors
             results.solution.insert(soln)
 
-pyutilib.services.register_executable(name="baron")
+pyomo.common.register_executable(name="baron")

@@ -12,7 +12,7 @@
 import os
 import six
 
-import pyutilib.services
+import pyomo.common
 import pyutilib.common
 import pyutilib.misc
 
@@ -73,11 +73,11 @@ class ASL(SystemCallSolver):
             logger.warning("No solver option specified for ASL solver interface")
             return None
         try:
-            pyutilib.services.register_executable(self.options.solver)
+            pyomo.common.register_executable(self.options.solver)
         except:
             logger.warning("No solver option specified for ASL solver interface")
             return None
-        executable = pyutilib.services.registered_executable(self.options.solver)
+        executable = pyomo.common.registered_executable(self.options.solver)
         if executable is None:
             logger.warning("Could not locate the '%s' executable, which is required for solver %s" % (self.options.solver, self.name))
             self.enable = False

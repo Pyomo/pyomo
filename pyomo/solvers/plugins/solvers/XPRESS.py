@@ -13,7 +13,7 @@ import os
 import re
 import logging
 
-import pyutilib.services
+import pyomo.common
 import pyutilib.common
 import pyutilib.misc
 
@@ -105,7 +105,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         return False
 
     def _default_executable(self):
-        executable = pyutilib.services.registered_executable("optimizer")
+        executable = pyomo.common.registered_executable("optimizer")
         if executable is None:
             logger.warning("Could not locate the 'optimizer' executable, "
                            "which is required for solver %s" % self.name)
@@ -433,5 +433,5 @@ class MockXPRESS(XPRESS_shell,MockMIP):
         return MockMIP._execute_command(self,cmd)
 
 
-pyutilib.services.register_executable(name="optimizer")
+pyomo.common.register_executable(name="optimizer")
 
