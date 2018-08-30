@@ -235,7 +235,7 @@ class GenericExpressionVisitor(object):
       {for N2 in N1.args:}
         beforeChild(N1, N2)
           enterNode(N2)
-          exitNode(N2)
+          exitNode(N2, data)
         acceptChildResult(N1, data, child_result)
         afterChild(N1, N2)
       exitNode(N1)
@@ -275,15 +275,16 @@ class GenericExpressionVisitor(object):
         equivalent to (True, None).  The default behavior if not
         specified is equivalent to (True, None).
 
-    acceptChildResult(self, node, data, child_result):
+    data = acceptChildResult(self, node, data, child_result):
 
         acceptChildResult() is called for each child result being
         returned to a node.  This callback is responsible for recording
         the result for later processing or passing up the tree.  It is
         passed the node, the result data structure (see enterNode()),
-        and the child result.  No value is returned.  If
-        acceptChildResult is not specified, it does nothing if data is
-        None, otherwise it calls data.append(result).
+        and the child result.  The data structure (possibly modified or
+        replaced) must be returned.  If acceptChildResult is not
+        specified, it does nothing if data is None, otherwise it calls
+        data.append(result).
 
     afterChild(self, node, child):
 
@@ -334,8 +335,8 @@ class GenericExpressionVisitor(object):
         #    ( pointer to parent,
         #      expression node,
         #      tuple/list of child nodes (arguments),
-        #      data object to aggregate results from child nodes,
         #      number of child nodes (arguments),
+        #      data object to aggregate results from child nodes,
         #      current child node )
         #
         # The walker only needs a single pointer to the end of the list
@@ -359,10 +360,10 @@ class GenericExpressionVisitor(object):
                 args = expr.args
         node = expr
         child_idx = 0
-        ptr = (None, node, args, data, len(args), child_idx)
+        ptr = (None, node, args, len(args), data, child_idx)
 
         while 1:
-            if child_idx < ptr[4]:
+            if child_idx < ptr[3]:
                 # This node still has children to process
                 child = ptr[2][child_idx]
                 # Increment the child index pointer here for
@@ -391,9 +392,10 @@ class GenericExpressionVisitor(object):
                         # Tell this node to accept the child result and
                         # we will move along
                         if self.acceptChildResult:
-                            self.acceptChildResult(node, ptr[3], child_result)
-                        else:
-                            ptr[3].append(child_result)
+                            data = self.acceptChildResult(
+                                node, data, child_result)
+                        elif data is not None:
+                            data.append(child_result)
                         # And let the node know that we are done with a
                         # child node
                         if self.afterChild is not None:
@@ -405,7 +407,7 @@ class GenericExpressionVisitor(object):
                 # Update the child argument counter in the stack.
                 # Because we are using tuples, we need to recreate the
                 # "ptr" object (linked list node)
-                ptr = ptr[:5] + (child_idx,)
+                ptr = ptr[:4] + (data, child_idx,)
 
                 # We are now going to actually enter this node.  The
                 # node will tell us the list of its child nodes that we
@@ -430,15 +432,15 @@ class GenericExpressionVisitor(object):
                         args = child.args
                 node = child
                 child_idx = 0
-                ptr = (ptr, node, args, data, len(args), child_idx)
+                ptr = (ptr, node, args, len(args), data, child_idx)
 
             else:
                 # We are done with this node.  Call exitNode to compute
                 # any result
                 if self.exitNode is not None:
-                    node_result = self.exitNode(node, ptr[3])
+                    node_result = self.exitNode(node, data)
                 else:
-                    node_result = ptr[3]
+                    node_result = data
 
                 # Pop the node off the linked list
                 ptr = ptr[0]
@@ -452,13 +454,14 @@ class GenericExpressionVisitor(object):
                 # Not done yet, update node to point to the new active
                 # node
                 node, child = ptr[1], node
+                data = ptr[4]
                 child_idx = ptr[5]
 
                 # We need to alert the node to accept the child's result:
                 if self.acceptChildResult is not None:
-                    self.acceptChildResult(node, ptr[3], node_result)
-                elif ptr[3] is not None:
-                    ptr[3].append(node_result)
+                    data = self.acceptChildResult(node, data, node_result)
+                elif data is not None:
+                    data.append(node_result)
 
                 # And let the node know that we are done with a child node
                 if self.afterChild is not None:
@@ -1012,12 +1015,14 @@ def _sizeof_expression(expr):
     #visitor = _SizeVisitor()
     #return visitor.xbfs(expr)
 
-    a = [0]
-    def count(node):
-        a[0] += 1
+    def enter(node):
+        return None, 1
+    def accept(node, data, child_result):
+        return data + child_result
     return GenericExpressionVisitor(
-        enterNode=count,
-        finalizeResult=lambda data: a[0]).walk_expression(expr)
+        enterNode=enter,
+        acceptChildResult=accept,
+    ).walk_expression(expr)
 
 # =====================================================
 #  evaluate_expression

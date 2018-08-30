@@ -28,6 +28,7 @@ from pyomo.environ import *
 import pyomo.kernel
 from pyomo.core.expr import expr_common
 from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.expr_pyomo5 import _sizeof_expression
 from pyomo.core.expr.numvalue import native_types, nonpyomo_leaf_types, NumericConstant, as_numeric, is_potentially_variable
 from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.param import _ParamData, SimpleParam
@@ -6425,6 +6426,19 @@ class TestGenericExpressionVisitor(unittest.TestCase):
         ref = []
         self.assertEqual(str(ans), str(ref))
 
+    def test_reduce_in_accept(self):
+        def enter(node):
+            return None, 1
+        def accept(node, data, child_result):
+            return data + child_result
+        walker = EXPR.GenericExpressionVisitor(
+            enterNode=enter, acceptChildResult=accept)
+        # 4 operators, 6 leaf nodes
+        self.assertEquals(walker.walk_expression(self.e), 10)
+
+    def test_sizeof_expression(self):
+        self.assertEquals(_sizeof_expression(self.e), 10)
+
     def test_enterNode(self):
         # This is an alternative way to implement the beforeChild test:
         def enter(node):
@@ -6552,8 +6566,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
             beforeChild=before, acceptChildResult=accept, afterChild=after)
         ans = walker.walk_expression(self.e)
         m = self.m
-        ref = []
-        self.assertEqual(ans, ref)
+        self.assertEqual(ans, None)
         self.assertEquals(counts, [9,9,9])
 
     def test_enterNode_acceptChildResult_beforeChild(self):
@@ -6565,6 +6578,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
         def accept(node, data, child_result):
             if data is not child_result:
                 data.append(child_result)
+            return data
         def enter(node):
             return node.args, ans
         walker = EXPR.GenericExpressionVisitor(
@@ -6583,6 +6597,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
         def accept(node, data, child_result):
             if data is not child_result:
                 data.append(child_result)
+            return data
         def enter(node):
             return node.args, ans
         def finalize(result):
