@@ -7,3 +7,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
+from pyomo.common.ext import _ImportRedirect
+
+ext = _ImportRedirect('pyomo.ext' if __name__ == '__main__' else __name__ + ".ext", 'pyomoext_%s').module
