@@ -563,7 +563,7 @@ def apply_optimizer(data, instance=None):
     solver_mngr_name = None
     if data.options.solvers[0].manager is None:
         solver_mngr_name = 'serial'
-    elif not data.options.solvers[0].manager in SolverManagerFactory.services():
+    elif not data.options.solvers[0].manager in SolverManagerFactory:
         raise ValueError("Unknown solver manager %s"
                          % data.options.solvers[0].manager)
     else:
